@@ -1,0 +1,51 @@
+@import 'tailwindcss';
+
+/* Map the runtime CSS variables into Tailwind's theme so utilities like `bg-bg0`,
+   `text-ink`, `text-primary`, and `border-line` resolve to the live, theme-switched
+   custom properties. `inline` keeps the var() reference in the generated utility, so
+   flipping [data-theme] re-themes everything with no rebuild. Token values live in
+   tokens.css (imported first in main.tsx). */
+@theme inline {
+  --color-bg0: var(--bg0);
+  --color-bg1: var(--bg1);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-primary: var(--primary);
+  --color-violet: var(--violet);
+  --color-blue: var(--blue);
+  --color-gold: var(--gold);
+  --color-card: var(--card);
+  --color-line: var(--line);
+  --color-on-primary: var(--on-primary);
+
+  --font-display: 'Fraunces', ui-serif, Georgia, serif;
+  --font-sans: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: radial-gradient(140% 120% at 50% -10%, var(--bg1), var(--bg0));
+    background-attachment: fixed;
+    color: var(--ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: var(--primary);
+    color: var(--on-primary);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 2px;
+  }
+}

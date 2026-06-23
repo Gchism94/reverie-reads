@@ -1,0 +1,99 @@
+/* Reverie design tokens — ported from design/from-design-tool (Reverie.dc.html),
+   the production-grade superset of design/DESIGN_SYSTEM.md.
+   Exactly two themes: Nocturne (dark, default) and Magnolia Dawn (light). */
+
+:root,
+[data-theme='nocturne'] {
+  --bg0: #0b0612;
+  --bg1: #15091f;
+  --ink: #f6e9f1;
+  --muted: #b08fae;
+  --primary: #e83a78;
+  --violet: #7b3fa0;
+  --blue: #16266a;
+  --gold: #f0b14e;
+  --card: rgba(42, 21, 58, 0.55);
+  --card-2: rgba(28, 13, 40, 0.72);
+  --card-solid: #1c0d28;
+  --line: rgba(240, 177, 78, 0.26);
+  --hair: rgba(240, 177, 78, 0.55);
+  --chip: rgba(255, 255, 255, 0.055);
+  --chip-border: rgba(246, 233, 241, 0.16);
+  --field: rgba(255, 255, 255, 0.05);
+  --shadow: 0 22px 60px rgba(0, 0, 0, 0.6);
+  --glow-a: #e83a78;
+  --glow-b: #7b3fa0;
+  --glow-c: #16266a;
+  --glow-d: #f0b14e;
+  --star: #f6e9f1;
+  --fog: rgba(123, 63, 160, 0.12);
+  --on-primary: #ffffff;
+  --vignette: rgba(5, 2, 10, 0.72);
+  --grain-opacity: 0.06;
+}
+
+[data-theme='dawn'] {
+  --bg0: #fbeee9;
+  --bg1: #f5e0e4;
+  --ink: #2a1320;
+  --muted: #9a6b86;
+  --primary: #d4396f;
+  --violet: #7b3fa0;
+  --blue: #2e3a73;
+  --gold: #c9842f;
+  --card: rgba(255, 252, 250, 0.72);
+  --card-2: rgba(255, 247, 245, 0.88);
+  --card-solid: #fff8f5;
+  --line: rgba(201, 132, 47, 0.32);
+  --hair: rgba(201, 132, 47, 0.6);
+  --chip: rgba(42, 19, 32, 0.05);
+  --chip-border: rgba(42, 19, 32, 0.14);
+  --field: rgba(42, 19, 32, 0.04);
+  --shadow: 0 22px 50px rgba(150, 95, 115, 0.28);
+  --glow-a: #f4b9c9;
+  --glow-b: #d4b8e6;
+  --glow-c: #f6cdb2;
+  --glow-d: #e7c06a;
+  --star: #c9842f;
+  --fog: rgba(201, 132, 47, 0.07);
+  --on-primary: #ffffff;
+  --vignette: rgba(244, 214, 205, 0.55);
+  --grain-opacity: 0.04;
+}
+
+/* The living night sky — soft glows that drift/breathe, faint twinkle, slow fog. */
+@keyframes rv-drift-a {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(7%, -5%) scale(1.18); }
+  100% { transform: translate(0, 0) scale(1); }
+}
+@keyframes rv-drift-b {
+  0% { transform: translate(0, 0) scale(1.1); }
+  50% { transform: translate(-8%, 5%) scale(1); }
+  100% { transform: translate(0, 0) scale(1.1); }
+}
+@keyframes rv-drift-c {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(5%, 6%) scale(1.22); }
+  100% { transform: translate(0, 0) scale(1); }
+}
+@keyframes rv-drift-d {
+  0% { transform: translate(0, 0) scale(1.05); }
+  50% { transform: translate(-6%, -6%) scale(1.15); }
+  100% { transform: translate(0, 0) scale(1.05); }
+}
+@keyframes rv-twinkle {
+  0%, 100% { opacity: 0.12; }
+  50% { opacity: 0.95; }
+}
+@keyframes rv-fog {
+  0% { transform: translateX(-12%); }
+  100% { transform: translateX(12%); }
+}
+
+/* Respect reduced motion: hold the sky perfectly still. */
+@media (prefers-reduced-motion: reduce) {
+  .rv-anim {
+    animation: none !important;
+  }
+}
