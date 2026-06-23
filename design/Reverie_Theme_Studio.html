@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reverie · Theme Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500;1,9..144,600&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Nocturne (default) */
+  --bg0:#0b0612; --bg1:#15091f;
+  --ink:#f6e9f1; --muted:#b08fae; --panel:rgba(26,14,36,.52); --line:rgba(246,233,241,.14);
+  --gold:#f0b14e; --primary:#e83a78; --accent:#b06fd6; --star:#ffd9ec; --vig:rgba(0,0,0,.55);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg0);color:var(--ink);font-family:"Hanken Grotesk",sans-serif;font-size:16px;line-height:1.55;
+  transition:color .8s ease;overflow-x:hidden;min-height:100vh}
+body[data-pal="dawn"]{--bg0:#fbeee9;--bg1:#f5e0e4;--ink:#2a1320;--muted:#9a6b86;--panel:rgba(255,251,248,.66);--line:rgba(42,19,32,.13);--gold:#c9842f;--primary:#d4396f;--accent:#7b3fa0;--star:rgba(176,84,124,.55);--vig:rgba(120,40,70,.06)}
+body[data-pal="gloaming"]{--bg0:#231830;--bg1:#3a2342;--ink:#f3e6ee;--muted:#bd9bb8;--panel:rgba(48,31,58,.5);--line:rgba(243,230,238,.15);--gold:#eab15a;--primary:#e0457b;--accent:#c77fd0;--star:#ffe1d0;--vig:rgba(10,4,18,.45)}
+
+/* ---- ambient night sky ---- */
+.ambient{position:fixed;inset:0;z-index:0;overflow:hidden}
+.sky{position:absolute;inset:0;opacity:0;transition:opacity 1.1s ease}
+.sky.active{opacity:1}
+.sky.nocturne{background:linear-gradient(160deg,#0b0612,#15091f 55%,#1d0a22)}
+.sky.dawn{background:linear-gradient(165deg,#fde8e6,#f9ddd9 45%,#f3e6f2)}
+.sky.gloaming{background:linear-gradient(170deg,#1a1230 0%,#36214a 55%,#5a2f50 80%,#7a3a52 100%)}
+.glow{position:absolute;width:74vw;height:74vw;border-radius:50%;filter:blur(34px);will-change:transform}
+.sky.nocturne .glow,.sky.gloaming .glow{mix-blend-mode:screen}
+.sky.dawn .glow{mix-blend-mode:normal;opacity:.85;filter:blur(46px)}
+.g1{left:-18vw;top:-16vw;animation:drift1 34s ease-in-out infinite alternate}
+.g2{right:-20vw;top:-10vw;animation:drift2 44s ease-in-out infinite alternate}
+.g3{left:8vw;bottom:-30vw;animation:drift3 38s ease-in-out infinite alternate}
+.g4{right:-6vw;bottom:-26vw;animation:drift4 50s ease-in-out infinite alternate}
+.sky.nocturne .g1{background:radial-gradient(circle at 50% 50%,rgba(216,27,106,.62),transparent 62%)}
+.sky.nocturne .g2{background:radial-gradient(circle at 50% 50%,rgba(123,45,160,.58),transparent 62%)}
+.sky.nocturne .g3{background:radial-gradient(circle at 50% 50%,rgba(150,23,51,.5),transparent 60%)}
+.sky.nocturne .g4{background:radial-gradient(circle at 50% 50%,rgba(24,38,102,.66),transparent 62%)}
+.sky.dawn .g1{background:radial-gradient(circle at 50% 50%,rgba(247,170,190,.6),transparent 60%)}
+.sky.dawn .g2{background:radial-gradient(circle at 50% 50%,rgba(206,180,235,.55),transparent 60%)}
+.sky.dawn .g3{background:radial-gradient(circle at 50% 50%,rgba(255,200,165,.5),transparent 58%)}
+.sky.dawn .g4{background:radial-gradient(circle at 50% 50%,rgba(180,196,240,.5),transparent 60%)}
+.sky.gloaming .g1{background:radial-gradient(circle at 50% 50%,rgba(224,102,138,.55),transparent 60%)}
+.sky.gloaming .g2{background:radial-gradient(circle at 50% 50%,rgba(162,59,120,.6),transparent 62%)}
+.sky.gloaming .g3{background:radial-gradient(circle at 50% 50%,rgba(120,60,120,.5),transparent 60%)}
+.sky.gloaming .g4{background:radial-gradient(circle at 50% 50%,rgba(31,42,85,.62),transparent 62%)}
+@keyframes drift1{from{transform:translate(0,0) scale(1)}to{transform:translate(8vw,6vw) scale(1.15)}}
+@keyframes drift2{from{transform:translate(0,0) scale(1.1)}to{transform:translate(-7vw,8vw) scale(.95)}}
+@keyframes drift3{from{transform:translate(0,0) scale(1)}to{transform:translate(6vw,-7vw) scale(1.2)}}
+@keyframes drift4{from{transform:translate(0,0) scale(1.05)}to{transform:translate(-8vw,-5vw) scale(.92)}}
+
+.stars{position:absolute;inset:0;transition:opacity 1.1s ease}
+.stars span{position:absolute;border-radius:50%;background:var(--star);opacity:.5;animation:tw var(--d,5s) ease-in-out infinite}
+@keyframes tw{0%,100%{opacity:.12}50%{opacity:.95}}
+.fog{position:absolute;left:-20%;right:-20%;bottom:0;height:62%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.05) 40%,rgba(255,255,255,.07) 60%,transparent);
+  animation:fogdrift 60s ease-in-out infinite alternate;pointer-events:none}
+body[data-pal="dawn"] .fog{background:linear-gradient(90deg,transparent,rgba(255,255,255,.35) 50%,transparent)}
+@keyframes fogdrift{from{transform:translateX(-8%)}to{transform:translateX(8%)}}
+.vignette{position:absolute;inset:0;background:radial-gradient(circle at 50% 38%,transparent 48%,var(--vig) 100%);transition:background .8s ease;pointer-events:none}
+.grain{position:absolute;inset:0;opacity:.05;pointer-events:none;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+/* ---- layout ---- */
+main{position:relative;z-index:2;max-width:980px;margin:0 auto;padding:clamp(34px,7vw,80px) 22px 70px}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.36em;text-transform:uppercase;color:var(--gold);transition:color .8s ease}
+.wordmark{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(52px,12vw,104px);line-height:.92;letter-spacing:-.03em;margin:14px 0 0;transition:color .8s}
+.wordmark .dot{color:var(--primary);transition:color .8s}
+.lede{font-family:"Fraunces",serif;font-style:italic;font-weight:400;font-size:clamp(17px,2.6vw,21px);color:var(--muted);max-width:30ch;margin:14px 0 0;transition:color .8s}
+.filigree{display:block;margin:26px 0 0;width:240px;height:30px;overflow:visible}
+
+/* palette switcher */
+.tabs{display:flex;gap:10px;flex-wrap:wrap;margin:34px 0 24px}
+.tab{cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--ink);backdrop-filter:blur(10px);
+  border-radius:999px;padding:11px 18px;font-family:"Hanken Grotesk";font-weight:600;font-size:14px;transition:.25s;display:flex;align-items:center;gap:9px}
+.tab:hover{border-color:var(--accent)}
+.tab .dotchip{width:11px;height:11px;border-radius:50%;box-shadow:0 0 10px currentColor}
+.tab.on{background:var(--ink);color:var(--bg0);border-color:var(--ink)}
+.tab.on .dotchip{box-shadow:none}
+
+/* stage: live preview + meta */
+.stage{display:grid;grid-template-columns:1.1fr .9fr;gap:26px;align-items:start}
+@media(max-width:760px){.stage{grid-template-columns:1fr}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:24px;padding:22px;backdrop-filter:blur(16px);
+  box-shadow:0 30px 70px -40px rgba(0,0,0,.6);transition:background .8s,border-color .8s}
+.panel .peyebrow{font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);transition:color .8s}
+.covers{display:flex;gap:14px;margin:14px 0 18px}
+.cv{flex:1;aspect-ratio:2/3;border-radius:12px;position:relative;overflow:hidden;display:flex;align-items:flex-end;padding:12px;
+  box-shadow:0 16px 30px -18px rgba(0,0,0,.7)}
+.cv .t{font-family:"Fraunces",serif;font-weight:600;font-size:15px;color:#fff;line-height:1.1;text-shadow:0 2px 10px rgba(0,0,0,.5);position:relative;z-index:1}
+.cv .fav{position:absolute;top:10px;right:10px;color:#fff;z-index:1;filter:drop-shadow(0 1px 4px rgba(0,0,0,.5))}
+.cv .sp{position:absolute;bottom:8px;left:12px;z-index:1;background:rgba(0,0,0,.5);color:#fff;font-size:10px;padding:2px 7px;border-radius:999px}
+.cv1{background:linear-gradient(150deg,var(--accent),var(--primary))}
+.cv2{background:linear-gradient(150deg,#1f2a6b,var(--accent))}
+.cv3{background:linear-gradient(150deg,var(--primary),var(--gold))}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.chip{font-size:12.5px;font-weight:600;padding:6px 12px;border-radius:999px;background:color-mix(in srgb,var(--accent) 22%,transparent);color:var(--ink);border:1px solid var(--line);transition:.8s}
+.row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.btn{border:0;border-radius:999px;padding:12px 20px;font-family:"Hanken Grotesk";font-weight:600;font-size:14.5px;cursor:pointer;transition:transform .15s,background .8s}
+.btn:hover{transform:translateY(-2px)}
+.btn-primary{background:linear-gradient(135deg,var(--primary),var(--gold));color:#fff;box-shadow:0 14px 30px -14px var(--primary)}
+.btn-ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.ring{position:relative;width:62px;height:62px;flex:0 0 62px;margin-left:auto}
+.ring svg{transform:rotate(-90deg)}
+.ring .rv{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:"Fraunces",serif;font-weight:600;font-size:16px}
+
+.meta h2{font-family:"Fraunces",serif;font-weight:600;font-size:30px;margin:2px 0 4px;transition:color .8s}
+.meta .sub{color:var(--muted);font-style:italic;font-family:"Fraunces",serif;margin-bottom:16px;transition:color .8s}
+.swatches{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.sw{border-radius:12px;border:1px solid var(--line);overflow:hidden;background:var(--panel)}
+.sw .chip-c{height:46px}
+.sw .lab{padding:7px 9px;font-size:11px}
+.sw .lab b{display:block;font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.02em}
+.sw .lab span{color:var(--muted)}
+
+/* names */
+.names{margin-top:48px}
+.names h3{font-family:"Fraunces",serif;font-weight:600;font-size:24px;margin:0 0 4px;transition:color .8s}
+.names .nlede{color:var(--muted);margin-bottom:20px}
+.namegrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.ncard{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:15px 17px;backdrop-filter:blur(10px);transition:.25s,background .8s}
+.ncard:hover{transform:translateY(-3px);border-color:var(--accent)}
+.ncard .nm{font-family:"Fraunces",serif;font-weight:600;font-size:20px}
+.ncard .gl{color:var(--muted);font-size:13.5px;margin-top:2px}
+footer{margin-top:46px;color:var(--muted);font-size:13px;text-align:center;transition:color .8s}
+.divline{height:1px;background:var(--line);margin:46px 0;transition:background .8s}
+@media(prefers-reduced-motion:reduce){.glow,.fog,.stars span{animation:none!important}}
+:focus-visible{outline:2px solid var(--gold);outline-offset:3px;border-radius:6px}
+</style>
+</head>
+<body data-pal="nocturne">
+<div class="ambient" aria-hidden="true">
+  <div class="sky nocturne active"><span class="glow g1"></span><span class="glow g2"></span><span class="glow g3"></span><span class="glow g4"></span></div>
+  <div class="sky dawn"><span class="glow g1"></span><span class="glow g2"></span><span class="glow g3"></span><span class="glow g4"></span></div>
+  <div class="sky gloaming"><span class="glow g1"></span><span class="glow g2"></span><span class="glow g3"></span><span class="glow g4"></span></div>
+  <div class="stars" id="stars"></div>
+  <div class="fog"></div>
+  <div class="vignette"></div>
+  <div class="grain"></div>
+</div>
+
+<main>
+  <div class="eyebrow">Reverie · Theme Studio</div>
+  <h1 class="wordmark">Reverie<span class="dot">.</span></h1>
+  <p class="lede">A library that reads like the Vieux Carré after dark — gaslight, wrought iron, and a sky that never quite holds still.</p>
+  <svg class="filigree" viewBox="0 0 240 30" aria-hidden="true">
+    <g fill="none" stroke="var(--gold)" stroke-width="1.4" stroke-linecap="round">
+      <path d="M120 15 q-26 -15 -50 -3 q-12 6 -24 1"/>
+      <path d="M120 15 q26 -15 50 -3 q12 6 24 1"/>
+      <path d="M120 4 v22"/>
+      <path d="M46 14 q-7 9 -16 6"/><path d="M194 14 q7 9 16 6"/>
+      <path d="M70 12 q-5 -7 -12 -7"/><path d="M170 12 q5 -7 12 -7"/>
+    </g>
+    <circle cx="120" cy="15" r="3.4" fill="var(--gold)"/>
+    <circle cx="120" cy="4" r="2" fill="var(--primary)"/>
+  </svg>
+
+  <nav class="tabs" id="tabs" aria-label="Choose a palette">
+    <button class="tab on" data-pal="nocturne"><span class="dotchip" style="color:#e83a78"></span>Nocturne</button>
+    <button class="tab" data-pal="dawn"><span class="dotchip" style="color:#d4396f"></span>Magnolia Dawn</button>
+    <button class="tab" data-pal="gloaming"><span class="dotchip" style="color:#e0457b"></span>Gloaming</button>
+  </nav>
+
+  <section class="stage">
+    <div class="panel" aria-label="Live preview">
+      <div class="peyebrow">Tonight's shelf</div>
+      <div class="covers">
+        <div class="cv cv1"><span class="fav">♥</span><span class="sp">🌶️🌶️🌶️🌶️</span><span class="t">A Court of Crimson Thorns</span></div>
+        <div class="cv cv2"><span class="sp">🌶️🌶️</span><span class="t">The Gaslit Vow</span></div>
+        <div class="cv cv3"><span class="t">Bayou & Bone</span></div>
+      </div>
+      <div class="chips"><span class="chip">Enemies to Lovers</span><span class="chip">Slow Burn</span><span class="chip">Fae Court</span></div>
+      <div class="row">
+        <button class="btn btn-primary">Start reading</button>
+        <button class="btn btn-ghost">🎲 Surprise me</button>
+        <div class="ring"><svg width="62" height="62"><circle cx="31" cy="31" r="26" fill="none" stroke="var(--line)" stroke-width="6"/><circle cx="31" cy="31" r="26" fill="none" stroke="var(--primary)" stroke-width="6" stroke-linecap="round" stroke-dasharray="163" stroke-dashoffset="98"/></svg><div class="rv">12</div></div>
+      </div>
+    </div>
+
+    <div class="meta">
+      <h2 id="pName">Nocturne</h2>
+      <p class="sub" id="pSub">Midnight in the Quarter.</p>
+      <div class="swatches" id="swatches"></div>
+    </div>
+  </section>
+
+  <div class="divline"></div>
+
+  <section class="names">
+    <h3>The three, named</h3>
+    <p class="nlede">Each palette is a time of night over the same street. Keep <em>Reverie</em> as the app and let these be its three moods — or borrow one as the name itself.</p>
+    <div class="namegrid">
+      <div class="ncard"><div class="nm">Nocturne</div><div class="gl">Deep gaslit midnight — magenta, violet, crimson, midnight blue. (Dark mode)</div></div>
+      <div class="ncard"><div class="nm">Magnolia Dawn</div><div class="gl">Morning light through lace; the same jewels, dressed for day. (Light mode)</div></div>
+      <div class="ncard"><div class="nm">Gloaming</div><div class="gl">The blue hour — dusk-rose fading up into bruised indigo. (In between)</div></div>
+    </div>
+
+    <h3 style="margin-top:34px">If you ever rename the app</h3>
+    <p class="nlede">Gothic, warm, unmistakably the Quarter — read this list out loud and see which one you'd want on the home screen.</p>
+    <div class="namegrid">
+      <div class="ncard"><div class="nm">Vesper</div><div class="gl">The evening star; the first hush of night.</div></div>
+      <div class="ncard"><div class="nm">Gloaming</div><div class="gl">Twilight itself — literary, cozy, a little witchy.</div></div>
+      <div class="ncard"><div class="nm">Vieux Carré</div><div class="gl">Literally "the Quarter." Old-world and unmistakable.</div></div>
+      <div class="ncard"><div class="nm">Lamplight</div><div class="gl">Gaslit, intimate, the glow you read by.</div></div>
+      <div class="ncard"><div class="nm">Velvet Hour</div><div class="gl">Plush and romantic — the hour you curl up with a book.</div></div>
+      <div class="ncard"><div class="nm">Belladonna</div><div class="gl">Beautiful nightshade. Gothic romance in a single word.</div></div>
+      <div class="ncard"><div class="nm">Lagniappe</div><div class="gl">New Orleans for "a little something extra."</div></div>
+      <div class="ncard"><div class="nm">Wisteria</div><div class="gl">Night-blooming, draped over an iron balcony.</div></div>
+    </div>
+  </section>
+
+  <footer>Tap a palette above — the sky drifts and the whole interface follows. Colors animate continuously; motion eases off if your device prefers reduced motion.</footer>
+</main>
+
+<script>
+const PALS={
+  nocturne:{name:"Nocturne",sub:"Midnight in the Quarter — gaslight on wet cobblestone.",
+    sw:[["#0b0612","Midnight"],["#e83a78","Neon magenta"],["#7b3fa0","Violet"],["#961733","Crimson"],["#16266a","Midnight blue"],["#f0b14e","Gaslamp gold"]]},
+  dawn:{name:"Magnolia Dawn",sub:"Morning light through lace curtains.",
+    sw:[["#fbeee9","Parchment"],["#d4396f","Bougainvillea"],["#7b3fa0","Plum ink"],["#a01e3c","Crimson"],["#2e3a73","Indigo"],["#c9842f","Antique gilt"]]},
+  gloaming:{name:"Gloaming",sub:"The blue hour, gas lamps just flickering on.",
+    sw:[["#231830","Dusk plum"],["#e0457b","Sunset rose"],["#c77fd0","Mauve"],["#a23b78","Magenta"],["#1f2a55","Deep indigo"],["#eab15a","Lamp amber"]]}
+};
+const skies={nocturne:document.querySelector(".sky.nocturne"),dawn:document.querySelector(".sky.dawn"),gloaming:document.querySelector(".sky.gloaming")};
+function setPal(p){
+  document.body.dataset.pal=p;
+  Object.entries(skies).forEach(([k,el])=>el.classList.toggle("active",k===p));
+  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("on",t.dataset.pal===p));
+  const d=PALS[p]; document.getElementById("pName").textContent=d.name; document.getElementById("pSub").textContent=d.sub;
+  document.getElementById("swatches").innerHTML=d.sw.map(([hex,lab])=>
+    `<div class="sw"><div class="chip-c" style="background:${hex}"></div><div class="lab"><b>${hex}</b><span>${lab}</span></div></div>`).join("");
+}
+document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>setPal(t.dataset.pal));
+// starfield
+const stars=document.getElementById("stars");
+let html="";
+for(let i=0;i<78;i++){const s=(Math.random()*1.8+0.6).toFixed(1);
+  html+=`<span style="left:${(Math.random()*100).toFixed(2)}%;top:${(Math.random()*78).toFixed(2)}%;width:${s}px;height:${s}px;--d:${(Math.random()*4+3).toFixed(1)}s;animation-delay:${(Math.random()*5).toFixed(1)}s"></span>`;}
+stars.innerHTML=html;
+setPal("nocturne");
+</script>
+</body>
+</html>

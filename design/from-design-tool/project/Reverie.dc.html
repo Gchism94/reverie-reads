@@ -1,0 +1,1401 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,500;1,9..144,600&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:#06030c;font-family:'Hanken Grotesk',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  ::selection{background:var(--primary);color:#fff}
+  /* theme tokens */
+  :root,[data-theme=nocturne]{
+    --bg0:#0b0612;--bg1:#15091f;--ink:#f6e9f1;--muted:#b08fae;
+    --primary:#e83a78;--violet:#7b3fa0;--blue:#16266a;--gold:#f0b14e;
+    --card:rgba(42,21,58,0.55);--card2:rgba(28,13,40,0.72);--cardSolid:#1c0d28;
+    --line:rgba(240,177,78,0.26);--hair:rgba(240,177,78,0.55);
+    --chip:rgba(255,255,255,0.055);--chipB:rgba(246,233,241,0.16);
+    --field:rgba(255,255,255,0.05);--shadow:0 22px 60px rgba(0,0,0,0.6);
+    --glowA:#e83a78;--glowB:#7b3fa0;--glowC:#16266a;--glowD:#f0b14e;
+    --star:#f6e9f1;--fog:rgba(123,63,160,0.12);--onPrimary:#fff;
+    --vig:rgba(5,2,10,0.72);--grainOp:0.06;
+  }
+  [data-theme=dawn]{
+    --bg0:#fbeee9;--bg1:#f5e0e4;--ink:#2a1320;--muted:#9a6b86;
+    --primary:#d4396f;--violet:#7b3fa0;--blue:#2e3a73;--gold:#c9842f;
+    --card:rgba(255,252,250,0.72);--card2:rgba(255,247,245,0.88);--cardSolid:#fff8f5;
+    --line:rgba(201,132,47,0.32);--hair:rgba(201,132,47,0.6);
+    --chip:rgba(42,19,32,0.05);--chipB:rgba(42,19,32,0.14);
+    --field:rgba(42,19,32,0.04);--shadow:0 22px 50px rgba(150,95,115,0.28);
+    --glowA:#f4b9c9;--glowB:#d4b8e6;--glowC:#f6cdb2;--glowD:#e7c06a;
+    --star:#c9842f;--fog:rgba(201,132,47,0.07);--onPrimary:#fff;
+    --vig:rgba(244,214,205,0.55);--grainOp:0.04;
+  }
+  @keyframes rvDriftA{0%{transform:translate(0,0) scale(1)}50%{transform:translate(7%,-5%) scale(1.18)}100%{transform:translate(0,0) scale(1)}}
+  @keyframes rvDriftB{0%{transform:translate(0,0) scale(1.1)}50%{transform:translate(-8%,5%) scale(1)}100%{transform:translate(0,0) scale(1.1)}}
+  @keyframes rvDriftC{0%{transform:translate(0,0) scale(1)}50%{transform:translate(5%,6%) scale(1.22)}100%{transform:translate(0,0) scale(1)}}
+  @keyframes rvDriftD{0%{transform:translate(0,0) scale(1.05)}50%{transform:translate(-6%,-6%) scale(1.15)}100%{transform:translate(0,0) scale(1.05)}}
+  @keyframes rvTwinkle{0%,100%{opacity:.12}50%{opacity:.95}}
+  @keyframes rvFog{0%{transform:translateX(-12%)}100%{transform:translateX(12%)}}
+  @keyframes rvGrain{0%{transform:translate(0,0)}10%{transform:translate(-3%,-2%)}20%{transform:translate(2%,3%)}30%{transform:translate(-2%,2%)}40%{transform:translate(3%,-3%)}50%{transform:translate(-3%,2%)}60%{transform:translate(2%,-2%)}70%{transform:translate(-2%,3%)}80%{transform:translate(3%,2%)}90%{transform:translate(-3%,-2%)}100%{transform:translate(0,0)}}
+  @keyframes rvSpin{to{transform:rotate(360deg)}}
+  @keyframes rvFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  @media (prefers-reduced-motion: reduce){
+    .rv-anim{animation:none !important}
+  }
+  .rv-scroll::-webkit-scrollbar{width:0;height:0}
+  .rv-scroll{scrollbar-width:none}
+  .rv-foc:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+</style>
+</helmet>
+
+<div data-theme="{{ theme }}" style="position:fixed;inset:0;display:flex;flex-direction:column;background:radial-gradient(140% 120% at 50% -10%, var(--bg1), var(--bg0));color:var(--ink);overflow:hidden;font-family:'Hanken Grotesk',sans-serif">
+
+  {{ skyStage }}
+
+  <!-- stage chrome -->
+  <header style="position:relative;z-index:5;display:flex;align-items:center;gap:18px;padding:14px 22px;flex:none">
+    <div style="display:flex;flex-direction:column;gap:2px;min-width:160px">
+      <div style="font-family:'Fraunces',serif;font-style:italic;font-weight:600;font-size:26px;letter-spacing:0.5px;line-height:1;color:var(--ink)">Reverie</div>
+      <div style="display:flex;align-items:center;gap:6px;margin-top:3px">
+        <span style="height:1px;flex:1;background:linear-gradient(90deg,transparent,var(--hair))"></span>
+        <span style="color:var(--gold);font-size:9px;letter-spacing:3px">✦</span>
+        <span style="height:1px;flex:1;background:linear-gradient(90deg,var(--hair),transparent)"></span>
+      </div>
+    </div>
+
+    <nav class="rv-scroll" style="flex:1;display:flex;gap:6px;overflow-x:auto;padding:4px 2px;align-items:center">
+      <sc-for list="{{ navItems }}" as="nav" hint-placeholder-count="10">
+        <button class="rv-foc" onClick="{{ nav.go }}" style="{{ nav.style }}">{{ nav.label }}</button>
+      </sc-for>
+    </nav>
+
+    <div style="display:flex;align-items:center;gap:10px;flex:none">
+      <button class="rv-foc" onClick="{{ openDesignSystem }}" style="{{ dsBtnStyle }}">Design system</button>
+      <button class="rv-foc" onClick="{{ toggleTheme }}" title="Toggle theme" style="display:flex;align-items:center;gap:8px;height:38px;padding:0 6px 0 14px;border-radius:30px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;backdrop-filter:blur(10px);font-family:inherit;font-size:12.5px;font-weight:600">
+        <span>{{ themeLabel }}</span>
+        <span style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--gold));display:flex;align-items:center;justify-content:center;font-size:13px">{{ themeIcon }}</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- main stage -->
+  <main style="position:relative;z-index:4;flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:0 22px 22px;gap:34px">
+
+    <!-- device -->
+    <sc-if value="{{ showPhone }}" hint-placeholder-val="{{ true }}">
+    <div style="position:relative;width:392px;height:min(812px,calc(100vh - 132px));flex:none;border-radius:54px;padding:11px;background:linear-gradient(150deg,#2a2030,#0a0610);box-shadow:0 40px 90px rgba(0,0,0,0.6),inset 0 0 0 1.5px rgba(255,255,255,0.06);">
+      <div style="position:absolute;inset:11px;border-radius:44px;box-shadow:inset 0 0 0 2px rgba(240,177,78,0.18);pointer-events:none;z-index:30"></div>
+      <div data-theme="{{ theme }}" style="position:relative;width:100%;height:100%;border-radius:44px;overflow:hidden;background:radial-gradient(130% 110% at 50% -10%, var(--bg1), var(--bg0));color:var(--ink)">
+
+        {{ skyPhone }}
+
+        <!-- status bar -->
+        <div style="position:relative;z-index:6;display:flex;align-items:center;justify-content:space-between;padding:14px 26px 6px;font-size:13px;font-weight:700;color:var(--ink)">
+          <span>{{ clock }}</span>
+          <span style="position:absolute;left:50%;top:9px;transform:translateX(-50%);width:104px;height:26px;background:#05030a;border-radius:16px"></span>
+          <span style="display:flex;gap:6px;align-items:center;font-size:12px">✦ ◗ ▮</span>
+        </div>
+
+        <!-- screen body -->
+        <div class="rv-scroll" style="position:relative;z-index:5;height:calc(100% - 42px);overflow-y:auto;overflow-x:hidden">
+          <div key="{{ screen }}" style="min-height:100%">
+            {{ screenNode }}
+          </div>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- design system board -->
+    <sc-if value="{{ showBoard }}" hint-placeholder-val="{{ false }}">
+      {{ boardNode }}
+    </sc-if>
+
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:&quot;100%&quot;,&quot;height&quot;:&quot;100%&quot;}}">
+class Component extends DCLogic {
+  constructor(props){
+    super(props);
+    const S = this.SERIES = {
+      'A Court of Thorns and Roses':{total:5,hue:328},
+      'Throne of Glass':{total:7,hue:286},
+      'Crescent City':{total:3,hue:300},
+      'Windy City':{total:5,hue:206},
+      'Pucked':{total:3,hue:344},
+      'Playing for Keeps':{total:5,hue:200},
+      'Crave':{total:5,hue:268},
+      'The Everflame':{total:2,hue:34},
+      'L.O.R.D.S.':{total:5,hue:350},
+      'Blood and Ash':{total:5,hue:312},
+      'Crowns of Nyaxia':{total:3,hue:276},
+      'Plated Prisoner':{total:5,hue:44},
+      'Dreamland Billionaires':{total:3,hue:214},
+      'Kings of Sin':{total:4,hue:338},
+      'Twisted':{total:4,hue:332},
+      'Legacy of Gods':{total:5,hue:258},
+      'Chestnut Springs':{total:5,hue:18},
+      'Hades x Persephone':{total:4,hue:264},
+      'Boys of Tommen':{total:4,hue:222},
+      'Ruinous Love':{total:3,hue:354},
+      'The Empyrean':{total:5,hue:282},
+      'Never After':{total:6,hue:248},
+      'Dark Olympus':{total:6,hue:198},
+      'Off-Campus':{total:5,hue:210},
+      'Standalone':{total:0,hue:300}
+    };
+    // [title, author, series, pos, subgenre, spice, fave, rating, status, format]
+    const R = [
+      ['A Court of Thorns and Roses','Sarah J. Maas','A Court of Thorns and Roses',1,'Romantasy',4,0,3.5,'read','paperback'],
+      ['A Court of Mist and Fury','Sarah J. Maas','A Court of Thorns and Roses',2,'Romantasy',4,1,5,'read','paperback'],
+      ['A Court of Wings and Ruin','Sarah J. Maas','A Court of Thorns and Roses',3,'Romantasy',4,0,4,'read','paperback'],
+      ['A Court of Frost and Starlight','Sarah J. Maas','A Court of Thorns and Roses',3.5,'Romantasy',3,0,3.5,'read','paperback'],
+      ['A Court of Silver Flames','Sarah J. Maas','A Court of Thorns and Roses',4,'Romantasy',5,1,4,'reading','hardcover'],
+      ['Throne of Glass','Sarah J. Maas','Throne of Glass',1,'Romantasy',2,0,3,'read','ebook'],
+      ['Crown of Midnight','Sarah J. Maas','Throne of Glass',2,'Romantasy',2,0,4,'read','ebook'],
+      ['Heir of Fire','Sarah J. Maas','Throne of Glass',3,'Romantasy',3,1,4.5,'read','ebook'],
+      ['Queen of Shadows','Sarah J. Maas','Throne of Glass',4,'Romantasy',3,0,4.5,'read','ebook'],
+      ['Empire of Storms','Sarah J. Maas','Throne of Glass',5,'Romantasy',3,1,5,'read','ebook'],
+      ['Tower of Dawn','Sarah J. Maas','Throne of Glass',6,'Romantasy',2,0,4,'read','ebook'],
+      ['Kingdom of Ash','Sarah J. Maas','Throne of Glass',7,'Romantasy',3,1,5,'read','ebook'],
+      ['House of Earth and Blood','Sarah J. Maas','Crescent City',1,'Romantasy',4,0,4.5,'read','hardcover'],
+      ['House of Sky and Breath','Sarah J. Maas','Crescent City',2,'Romantasy',4,0,4,'read','hardcover'],
+      ['House of Flame and Shadow','Sarah J. Maas','Crescent City',3,'Romantasy',4,1,4.5,'tbr','hardcover'],
+      ['Mile High','Liz Tomforde','Windy City',1,'Romance',3,0,4,'read','ebook'],
+      ['The Right Move','Liz Tomforde','Windy City',2,'Romance',2,1,4,'read','ebook'],
+      ['Caught Up','Liz Tomforde','Windy City',3,'Romance',3,0,3.5,'read','ebook'],
+      ['Play Along','Liz Tomforde','Windy City',4,'Romance',3,0,4,'reading','ebook'],
+      ['Rewind It Back','Liz Tomforde','Windy City',5,'Romance',3,0,null,'tbr','ebook'],
+      ['Consider Me','Becka Mack','Playing for Keeps',1,'Romance',3,0,2.5,'read','ebook'],
+      ['Unravel Me','Becka Mack','Playing for Keeps',2,'Romance',3,1,4,'read','ebook'],
+      ['Fall With Me','Becka Mack','Playing for Keeps',3,'Romance',3,0,4,'read','ebook'],
+      ['Crush','Tracy Wolff','Crave',1,'Romantasy',2,0,3,'read','paperback'],
+      ['Covet','Tracy Wolff','Crave',2,'Romantasy',2,0,3,'read','paperback'],
+      ['Court','Tracy Wolff','Crave',3,'Romantasy',2,0,4,'tbr','paperback'],
+      ['Spark of the Everflame','Penn Cole','The Everflame',1,'Romantasy',3,1,4,'read','ebook'],
+      ['Glow of the Everflame','Penn Cole','The Everflame',2,'Romantasy',3,0,null,'tbr','ebook'],
+      ['The Ritual','Shantel Tessier','L.O.R.D.S.',1,'Dark Romance',5,0,4,'read','paperback'],
+      ['The Sinner','Shantel Tessier','L.O.R.D.S.',2,'Dark Romance',5,0,3,'read','paperback'],
+      ['The Sacrifice','Shantel Tessier','L.O.R.D.S.',3,'Dark Romance',5,0,3,'tbr','paperback'],
+      ['From Blood and Ash','Jennifer L. Armentrout','Blood and Ash',1,'Romantasy',4,1,4,'read','ebook'],
+      ['A Kingdom of Flesh and Fire','Jennifer L. Armentrout','Blood and Ash',2,'Romantasy',4,0,4,'read','ebook'],
+      ['The Crown of Gilded Bones','Jennifer L. Armentrout','Blood and Ash',3,'Romantasy',4,0,3,'reading','ebook'],
+      ['The War of Two Queens','Jennifer L. Armentrout','Blood and Ash',4,'Romantasy',3,0,null,'tbr','ebook'],
+      ['The Serpent and the Wings of Night','Carissa Broadbent','Crowns of Nyaxia',1,'Romantasy',3,1,4,'read','paperback'],
+      ['The Ashes and the Star-Cursed King','Carissa Broadbent','Crowns of Nyaxia',2,'Romantasy',3,0,4,'read','paperback'],
+      ['Slaying the Vampire Conqueror','Carissa Broadbent','Crowns of Nyaxia',2.5,'Romantasy',3,0,null,'tbr','ebook'],
+      ['The Love Hypothesis','Ali Hazelwood','Standalone',null,'Romance',2,0,4,'read','paperback'],
+      ['Not in Love','Ali Hazelwood','Standalone',null,'Romance',3,0,3.5,'read','paperback'],
+      ['Deep End','Ali Hazelwood','Standalone',null,'Romance',3,1,null,'tbr','hardcover'],
+      ['Gild','Raven Kennedy','Plated Prisoner',1,'Romantasy',3,0,3,'read','ebook'],
+      ['Glint','Raven Kennedy','Plated Prisoner',2,'Romantasy',3,0,3.5,'read','ebook'],
+      ['Gleam','Raven Kennedy','Plated Prisoner',3,'Romantasy',3,0,null,'tbr','ebook'],
+      ['The Fine Print','Lauren Asher','Dreamland Billionaires',1,'Romance',3,0,3.5,'read','ebook'],
+      ['Terms and Conditions','Lauren Asher','Dreamland Billionaires',2,'Romance',3,0,3.5,'read','ebook'],
+      ['Final Offer','Lauren Asher','Dreamland Billionaires',3,'Romance',3,0,null,'tbr','ebook'],
+      ['King of Wrath','Ana Huang','Kings of Sin',1,'Romance',4,1,4,'read','ebook'],
+      ['King of Pride','Ana Huang','Kings of Sin',2,'Romance',4,0,4,'read','ebook'],
+      ['King of Greed','Ana Huang','Kings of Sin',3,'Romance',4,0,3,'tbr','ebook'],
+      ['Twisted Love','Ana Huang','Twisted',1,'Romance',3,0,3.5,'read','paperback'],
+      ['Twisted Games','Ana Huang','Twisted',2,'Romance',3,1,3.5,'read','paperback'],
+      ['Twisted Hate','Ana Huang','Twisted',3,'Romance',4,0,3.5,'read','paperback'],
+      ['Twisted Lies','Ana Huang','Twisted',4,'Romance',4,1,4,'reading','paperback'],
+      ['God of Malice','Rina Kent','Legacy of Gods',1,'Dark Romance',4,0,3.5,'read','ebook'],
+      ['God of Pain','Rina Kent','Legacy of Gods',2,'Dark Romance',4,0,3.5,'read','ebook'],
+      ['God of Ruin','Rina Kent','Legacy of Gods',4,'Dark Romance',4,1,4,'tbr','ebook'],
+      ['Flawless','Elsie Silver','Chestnut Springs',1,'Romance',3,0,4,'read','ebook'],
+      ['Heartless','Elsie Silver','Chestnut Springs',2,'Romance',3,1,4.5,'read','ebook'],
+      ['Powerless','Elsie Silver','Chestnut Springs',3,'Romance',3,0,4,'read','ebook'],
+      ['Reckless','Elsie Silver','Chestnut Springs',4,'Romance',3,0,4,'tbr','ebook'],
+      ['A Touch of Darkness','Scarlett St. Clair','Hades x Persephone',1,'Dark Romance',4,0,3.5,'read','paperback'],
+      ['A Touch of Ruin','Scarlett St. Clair','Hades x Persephone',2,'Dark Romance',4,0,3,'read','paperback'],
+      ['Binding 13','Chloe Walsh','Boys of Tommen',1,'Romance',2,1,4.5,'read','ebook'],
+      ['Keeping 13','Chloe Walsh','Boys of Tommen',2,'Romance',3,1,4.5,'reading','ebook'],
+      ['Butcher and Blackbird','Brynne Weaver','Ruinous Love',1,'Dark Romance',3,1,4,'read','paperback'],
+      ['Leather and Lark','Brynne Weaver','Ruinous Love',2,'Dark Romance',3,0,4,'read','paperback'],
+      ['Scythe and Sparrow','Brynne Weaver','Ruinous Love',3,'Dark Romance',3,0,null,'tbr','paperback'],
+      ['Fourth Wing','Rebecca Yarros','The Empyrean',1,'Romantasy',3,1,4.5,'read','hardcover'],
+      ['Iron Flame','Rebecca Yarros','The Empyrean',2,'Romantasy',3,1,4,'read','hardcover'],
+      ['Onyx Storm','Rebecca Yarros','The Empyrean',3,'Romantasy',3,0,4,'reading','hardcover'],
+      ['Hooked','Emily McIntire','Never After',1,'Dark Romance',3,0,3.5,'read','paperback'],
+      ['Scarred','Emily McIntire','Never After',2,'Dark Romance',3,0,3.5,'read','paperback'],
+      ['Wretched','Emily McIntire','Never After',3,'Dark Romance',3,0,null,'tbr','paperback'],
+      ['Neon Gods','Katee Robert','Dark Olympus',1,'Dark Romance',4,1,4,'read','ebook'],
+      ['Electric Idol','Katee Robert','Dark Olympus',2,'Dark Romance',4,0,3.5,'read','ebook'],
+      ['The Deal','Elle Kennedy','Off-Campus',1,'Romance',3,0,4,'read','ebook'],
+      ['The Mistake','Elle Kennedy','Off-Campus',2,'Romance',3,0,3.5,'read','ebook'],
+      ['The Score','Elle Kennedy','Off-Campus',3,'Romance',3,1,4,'read','ebook'],
+      ['The Goal','Elle Kennedy','Off-Campus',4,'Romance',3,0,4,'tbr','ebook']
+    ];
+    const tropeBank = ['Enemies to lovers','Fae','Slow burn','Touch her and die','Found family','Morally gray','Forced proximity','Grumpy x sunshine','Fated mates','Second chance','Forbidden','Only one bed','Why choose','Dark academia','Marriage of convenience'];
+    this.BOOKS = R.map((r,i)=>({
+      id:i+1,title:r[0],author:r[1],series:r[2],pos:r[3],sub:r[4],spice:r[5],
+      fave:!!r[6],rating:r[7],status:r[8],format:r[9],hue:(S[r[2]]||{hue:300}).hue,
+      tropes:[tropeBank[(i*3)%tropeBank.length],tropeBank[(i*5+2)%tropeBank.length],tropeBank[(i*7+4)%tropeBank.length]],
+      progress:r[8]==='reading'?[18,42,67,84,31][i%5]:(r[8]==='read'?100:0)
+    }));
+
+    this.skyStage = this.buildSky(64,'stage');
+    this.skyPhone = this.buildSky(34,'phone');
+
+    this.state = {
+      theme:'nocturne', screen:'home', view:'phone', bookId:5, libView:'grid',
+      filters:{q:'',sub:'all',status:'all',format:'all',fav:false,sort:'recent',seriesLen:'all'},
+      goal:120, name:'Genevieve'
+    };
+  }
+
+  buildSky(n, tag){
+    const h = React.createElement;
+    const rnd=(s)=>{let x=Math.sin(s)*10000;return x-Math.floor(x);};
+    const stars=[];
+    for(let i=0;i<n;i++){
+      const sz=0.6+rnd(i+tag.length)*1.8;
+      stars.push(h('span',{key:i,className:'rv-anim',style:{
+        position:'absolute',left:(rnd(i*1.3)*100)+'%',top:(rnd(i*2.7)*100)+'%',
+        width:sz+'px',height:sz+'px',borderRadius:'50%',background:'var(--star)',
+        boxShadow:'0 0 '+(sz*2)+'px var(--star)',
+        animation:`rvTwinkle ${(2.5+rnd(i)*4).toFixed(2)}s ease-in-out ${(rnd(i*9)*5).toFixed(2)}s infinite`
+      }}));
+    }
+    const glow=(g,kf,dur,pos,size)=>h('span',{key:g,className:'rv-anim',style:{
+      position:'absolute',left:pos[0],top:pos[1],width:size,height:size,borderRadius:'50%',
+      background:`radial-gradient(circle at 50% 50%, var(--${g}), transparent 68%)`,
+      filter:'blur(28px)',opacity:tag==='phone'?0.55:0.7,mixBlendMode:'screen',
+      animation:`${kf} ${dur}s ease-in-out infinite`
+    }});
+    return h('div',{'aria-hidden':'true',style:{position:'absolute',inset:0,overflow:'hidden',pointerEvents:'none',zIndex:0}},[
+      h('div',{key:'g',style:{position:'absolute',inset:'-15%'}},[
+        glow('glowA','rvDriftA',26,['8%','-6%'],'70%'),
+        glow('glowB','rvDriftB',34,['46%','30%'],'66%'),
+        glow('glowC','rvDriftC',40,['-6%','48%'],'60%'),
+        glow('glowD','rvDriftD',30,['62%','-4%'],'40%')
+      ]),
+      h('div',{key:'f',className:'rv-anim',style:{position:'absolute',inset:'-20%',
+        background:'linear-gradient(90deg,transparent,var(--fog),transparent)',
+        animation:'rvFog 24s ease-in-out infinite alternate',pointerEvents:'none'}}),
+      h('div',{key:'s',style:{position:'absolute',inset:0}},stars),
+      h('div',{key:'v',style:{position:'absolute',inset:0,boxShadow:`inset 0 0 ${tag==='phone'?120:240}px 40px var(--vig)`,pointerEvents:'none'}}),
+      h('div',{key:'gr',className:'rv-anim',style:{position:'absolute',inset:'-50%',opacity:'var(--grainOp)',pointerEvents:'none',
+        backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")",
+        animation:'rvGrain 1.2s steps(6) infinite'}})
+    ]);
+  }
+
+  // ---------- helpers ----------
+  go(s){ this.setState({screen:s, view:'phone'}); }
+  openDS(){ this.setState({view:'board'}); }
+  toggleTheme(){ this.setState(s=>({theme:s.theme==='nocturne'?'dawn':'nocturne'})); }
+  selectBook(id){ this.setState({bookId:id, screen:'book', view:'phone'}); }
+  toggleFav(id){ const b=this.BOOKS.find(x=>x.id===id); if(b) b.fave=!b.fave; this.forceUpdate(); }
+  setFilter(k,v){ this.setState(s=>({filters:{...s.filters,[k]:v}})); }
+
+  filtered(){
+    const f=this.state.filters; let list=this.BOOKS.slice();
+    if(f.q){const q=f.q.toLowerCase(); list=list.filter(b=>b.title.toLowerCase().includes(q)||b.author.toLowerCase().includes(q)||b.series.toLowerCase().includes(q));}
+    if(f.sub!=='all') list=list.filter(b=>b.sub===f.sub);
+    if(f.status!=='all') list=list.filter(b=>b.status===f.status);
+    if(f.format!=='all') list=list.filter(b=>b.format===f.format);
+    if(f.fav) list=list.filter(b=>b.fave);
+    if(f.seriesLen==='standalone') list=list.filter(b=>b.series==='Standalone');
+    else if(f.seriesLen==='series') list=list.filter(b=>b.series!=='Standalone');
+    if(f.sort==='rating') list.sort((a,b)=>(b.rating||0)-(a.rating||0));
+    else if(f.sort==='title') list.sort((a,b)=>a.title.localeCompare(b.title));
+    else if(f.sort==='spice') list.sort((a,b)=>b.spice-a.spice);
+    else if(f.sort==='author') list.sort((a,b)=>a.author.localeCompare(b.author));
+    return list;
+  }
+
+  renderVals(){
+    const st=this.state, self=this;
+    const SCREENS=[['home','Home'],['library','Library'],['book','Book'],['shelves','Shelves'],['planner','Planner'],['stats','Stats'],['match','Match'],['clubs','Clubs'],['add','Add'],['settings','Settings']];
+    const navBtn=(active)=>`flex:none;height:34px;padding:0 16px;border-radius:30px;border:1px solid ${active?'transparent':'var(--line)'};background:${active?'linear-gradient(135deg,var(--primary),var(--gold))':'var(--card)'};color:${active?'var(--onPrimary)':'var(--ink)'};cursor:pointer;font-family:inherit;font-size:12.5px;font-weight:600;letter-spacing:.2px;backdrop-filter:blur(10px);white-space:nowrap`;
+    const navItems=SCREENS.map(([k,l])=>({label:l,style:navBtn(st.view==='phone'&&st.screen===k),go:()=>self.go(k)}));
+
+    const now=new Date();
+    const hr=now.getHours();
+    const clock=now.toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}).replace(/\s?[AP]M/i,'');
+
+    return {
+      theme:st.theme, screen:st.screen,
+      navItems,
+      showPhone: st.view==='phone',
+      showBoard: st.view==='board',
+      skyStage:this.skyStage, skyPhone:this.skyPhone,
+      clock,
+      themeLabel: st.theme==='nocturne'?'Nocturne':'Magnolia Dawn',
+      themeIcon: st.theme==='nocturne'?'☾':'☀',
+      toggleTheme:()=>self.toggleTheme(),
+      openDesignSystem:()=>self.openDS(),
+      dsBtnStyle:`height:38px;padding:0 16px;border-radius:30px;border:1px solid ${st.view==='board'?'transparent':'var(--line)'};background:${st.view==='board'?'linear-gradient(135deg,var(--violet),var(--primary))':'var(--card)'};color:${st.view==='board'?'#fff':'var(--ink)'};cursor:pointer;backdrop-filter:blur(10px);font-family:inherit;font-size:12.5px;font-weight:600`,
+      screenNode: this.renderScreen(),
+      boardNode: this.renderBoard()
+    };
+  }
+
+  // placeholder until screens are added
+  renderScreen(){
+    const h=React.createElement; const s=this.state.screen;
+    if(s==='home') return this.homeUI();
+    if(s==='library') return this.libraryUI();
+    if(s==='book') return this.bookUI();
+    if(s==='shelves') return this.shelvesUI();
+    if(s==='planner') return this.plannerUI();
+    if(s==='add') return this.addUI();
+    if(s==='settings') return this.settingsUI();
+    if(s==='stats') return this.statsUI();
+    if(s==='match') return this.matchUI();
+    if(s==='clubs') return this.clubsUI();
+    return h('div',{style:{padding:'40px 22px',color:'var(--muted)'}},'Coming soon');
+  }
+
+  // shared controls
+  chip(label,active,on,opts){
+    const h=React.createElement; opts=opts||{};
+    return h('button',{key:label,className:'rv-foc',onClick:on,style:{display:'inline-flex',alignItems:'center',gap:'5px',height:'32px',padding:'0 13px',borderRadius:'20px',cursor:'pointer',
+      fontFamily:"'Hanken Grotesk',sans-serif",fontSize:'12.5px',fontWeight:active?700:500,whiteSpace:'nowrap',
+      border:'1px solid '+(active?'transparent':'var(--line)'),
+      color:active?'var(--onPrimary)':'var(--ink)',
+      background:active?'linear-gradient(135deg,var(--primary),var(--violet))':'var(--chip)',
+      boxShadow:active?'0 6px 16px -8px var(--primary)':'none'}},
+      opts.icon?h('span',{},opts.icon):null,label,opts.count!=null?h('span',{style:{opacity:.7,fontWeight:600}},opts.count):null);
+  }
+  segmented(options,value,onChange){
+    const h=React.createElement;
+    return h('div',{style:{display:'inline-flex',padding:'3px',borderRadius:'22px',background:'var(--chip)',border:'1px solid var(--line)',gap:'2px'}},
+      options.map(o=>h('button',{key:o.v,className:'rv-foc',onClick:()=>onChange(o.v),style:{height:'30px',padding:'0 14px',borderRadius:'18px',border:'none',cursor:'pointer',
+        fontFamily:"'Hanken Grotesk',sans-serif",fontSize:'12.5px',fontWeight:value===o.v?700:600,
+        color:value===o.v?'var(--onPrimary)':'var(--muted)',
+        background:value===o.v?'linear-gradient(135deg,var(--primary),var(--gold))':'transparent'}},o.l)));
+  }
+  searchBar(val,on,ph){
+    const h=React.createElement;
+    return h('div',{style:{display:'flex',alignItems:'center',gap:'9px',height:'42px',padding:'0 15px',borderRadius:'22px',background:'var(--field)',border:'1px solid var(--line)'}},
+      h('span',{style:{color:'var(--muted)',fontSize:'15px'}},'⌕'),
+      h('input',{value:val,onChange:e=>on(e.target.value),placeholder:ph||'Search',
+        style:{flex:1,border:'none',background:'transparent',outline:'none',color:'var(--ink)',fontFamily:"'Hanken Grotesk',sans-serif",fontSize:'14px'}}),
+      val?h('button',{onClick:()=>on(''),style:{border:'none',background:'none',color:'var(--muted)',cursor:'pointer',fontSize:'15px'}},'×'):null);
+  }
+  renderBoard(){
+    const h=React.createElement; const self=this;
+    const panel=(children,extra)=>h('div',{style:Object.assign({background:'var(--card)',border:'1px solid var(--line)',borderRadius:'20px',padding:'22px',backdropFilter:'blur(14px)',boxShadow:'var(--shadow)'},extra||{})},children);
+    const eyebrow=(t)=>h('div',{style:{fontSize:'11px',letterSpacing:'2px',textTransform:'uppercase',color:'var(--gold)',fontWeight:700,marginBottom:'14px'}},t);
+    const swatch=(name,hex,dark)=>h('div',{key:name+hex,style:{flex:'none'}},
+      h('div',{style:{width:'100%',height:'58px',borderRadius:'12px',background:hex,boxShadow:'inset 0 0 0 1px rgba(255,255,255,.12)'}}),
+      h('div',{style:{fontSize:'11px',fontWeight:600,color:'var(--ink)',marginTop:'6px'}},name),
+      h('div',{style:{fontSize:'10px',color:'var(--muted)',fontFamily:'monospace'}},hex));
+
+    const nocturne=[['bg base','#0b0612'],['bg raise','#15091f'],['ink','#f6e9f1'],['muted','#b08fae'],['magenta','#e83a78'],['violet','#7b3fa0'],['midnight','#16266a'],['gold','#f0b14e']];
+    const dawn=[['bg base','#fbeee9'],['bg raise','#f5e0e4'],['ink','#2a1320'],['muted','#9a6b86'],['magenta','#d4396f'],['plum','#7b3fa0'],['indigo','#2e3a73'],['gilt','#c9842f']];
+
+    const typeRow=(label,spec,style)=>h('div',{key:label,style:{display:'flex',alignItems:'baseline',gap:'18px',padding:'12px 0',borderTop:'1px solid var(--line)'}},
+      h('div',{style:{width:'118px',flex:'none'}},h('div',{style:{fontSize:'11px',color:'var(--gold)',fontWeight:700}},label),h('div',{style:{fontSize:'10px',color:'var(--muted)',marginTop:'2px'}},spec)),
+      h('div',{style:Object.assign({color:'var(--ink)',flex:1,minWidth:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'},style)},'Gaslight & magnolias'));
+
+    const sampleBook={id:1,title:'A Court of Silver Flames',author:'Sarah J. Maas',hue:328,spice:5,fave:true};
+
+    return h('div',{className:'rv-scroll',style:{width:'min(1000px,100%)',height:'100%',overflowY:'auto',padding:'4px 10px 30px'}},
+      // header
+      h('div',{style:{display:'flex',alignItems:'flex-end',justifyContent:'space-between',gap:'16px',marginBottom:'6px'}},
+        h('div',{},
+          h('div',{style:{fontSize:'11px',letterSpacing:'3px',textTransform:'uppercase',color:'var(--gold)',fontWeight:700}},'Reverie'),
+          h('div',{style:this.fr({fontStyle:'italic',fontWeight:600,fontSize:'40px',color:'var(--ink)',lineHeight:1.02,marginTop:'4px'})},'Design system'),
+          h('div',{style:{fontSize:'13px',color:'var(--muted)',marginTop:'6px',maxWidth:'440px',lineHeight:1.5}},'Gothic New Orleans after dark \u2014 gaslight, wrought iron, and a night sky that never quite holds still.')),
+        this.ghostBtn('‹ Back to app',()=>self.setState({view:'phone'}),{h:40})),
+      this.divider('18px 0 26px'),
+
+      h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'18px'}},
+        // Nocturne palette
+        panel([eyebrow('Nocturne \u2014 dark (default)'),
+          h('div',{style:{fontSize:'12px',color:'var(--muted)',marginBottom:'16px',marginTop:'-8px',lineHeight:1.45}},'Deep gaslit midnight. Lead with magenta + gold; no crimson anywhere.'),
+          h('div',{style:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'12px'}},nocturne.map(([n,x])=>swatch(n,x)))]),
+        // Dawn palette
+        panel([eyebrow('Magnolia Dawn \u2014 light'),
+          h('div',{style:{fontSize:'12px',color:'var(--muted)',marginBottom:'16px',marginTop:'-8px',lineHeight:1.45}},'Warm parchment daylight, morning light through lace. Same accent family.'),
+          h('div',{style:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'12px'}},dawn.map(([n,x])=>swatch(n,x)))])),
+
+      // gradient + type
+      h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1.3fr',gap:'18px',marginTop:'18px'}},
+        panel([eyebrow('Signature gradient'),
+          h('div',{style:{height:'70px',borderRadius:'14px',background:'linear-gradient(135deg,#e83a78,#f0b14e)',marginBottom:'12px'}}),
+          h('div',{style:{fontSize:'12px',color:'var(--ink)',fontWeight:600}},'Magenta \u2192 gold'),
+          h('div',{style:{fontSize:'11px',color:'var(--muted)',marginTop:'3px',lineHeight:1.45}},'Primary buttons, the goal ring, active states, every accent that needs to glow.'),
+          h('div',{style:{height:'46px',borderRadius:'12px',background:'linear-gradient(135deg,#7b3fa0,#e83a78)',margin:'14px 0 6px'}}),
+          h('div',{style:{fontSize:'11px',color:'var(--muted)'}},'Violet \u2192 magenta (filters, clubs)')]),
+        panel([eyebrow('Type \u2014 Fraunces + Hanken Grotesk'),
+          typeRow('Display XL','Fraunces italic 40',this.fr({fontStyle:'italic',fontWeight:600,fontSize:'34px',lineHeight:1})),
+          typeRow('Display','Fraunces italic 28',this.fr({fontStyle:'italic',fontWeight:600,fontSize:'25px'})),
+          typeRow('Section','Fraunces italic 20',this.fr({fontStyle:'italic',fontWeight:600,fontSize:'19px'})),
+          typeRow('Body','Hanken 14/1.5',{fontFamily:"'Hanken Grotesk',sans-serif",fontSize:'14px'}),
+          typeRow('Label','Hanken 11 caps',{fontFamily:"'Hanken Grotesk',sans-serif",fontSize:'11px',letterSpacing:'1.5px',textTransform:'uppercase',fontWeight:700,color:'var(--gold)'})])),
+
+      // filigree
+      h('div',{style:{marginTop:'18px'}},
+        panel([eyebrow('Filigree ornament'),
+          h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',gap:'20px',flexWrap:'wrap'}},
+            h('div',{style:{fontSize:'12px',color:'var(--muted)',maxWidth:'300px',lineHeight:1.5}},'A thin wrought-iron divider in gaslamp gold sits under the wordmark and breaks sections. Hairline rules everywhere are gold at low opacity.'),
+            h('div',{style:{flex:1,minWidth:'240px'}},this.divider('0'))) ])),
+
+      // components
+      h('div',{style:{marginTop:'18px'}},
+        panel([eyebrow('Components & states'),
+          h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'24px'}},
+            // buttons + chips + controls
+            h('div',{},
+              h('div',{style:{fontSize:'11px',color:'var(--muted)',fontWeight:700,marginBottom:'12px'}},'BUTTONS'),
+              h('div',{style:{display:'flex',gap:'10px',flexWrap:'wrap',marginBottom:'18px'}},
+                this.primaryBtn('Primary',()=>{},{icon:'✦'}),this.ghostBtn('Ghost',()=>{}),
+                h('button',{style:{height:'46px',padding:'0 18px',borderRadius:'26px',border:'none',background:'var(--chip)',color:'var(--ink)',fontFamily:"'Hanken Grotesk',sans-serif",fontWeight:600,fontSize:'14px',cursor:'pointer'}},'Soft')),
+              h('div',{style:{fontSize:'11px',color:'var(--muted)',fontWeight:700,marginBottom:'12px'}},'CHIPS / FILTERS \u00b7 on \u2194 off'),
+              h('div',{style:{display:'flex',gap:'8px',flexWrap:'wrap',marginBottom:'18px'}},
+                this.chip('Enemies to lovers',true,()=>{}),this.chip('Fae',false,()=>{}),this.chip('♥ Favorites',true,()=>{}),this.chip('Slow burn',false,()=>{})),
+              h('div',{style:{fontSize:'11px',color:'var(--muted)',fontWeight:700,marginBottom:'12px'}},'SEGMENTED'),
+              h('div',{style:{marginBottom:'18px'}},this.segmented([{v:'a',l:'Grid'},{v:'b',l:'Series'}],'a',()=>{})),
+              h('div',{style:{fontSize:'11px',color:'var(--muted)',fontWeight:700,marginBottom:'10px'}},'SEARCH'),
+              this.searchBar('','','Title, author, series\u2026'),
+              h('div',{style:{fontSize:'11px',color:'var(--muted)',fontWeight:700,margin:'18px 0 10px'}},'FOCUS \u00b7 keyboard ring'),
+              h('button',{style:{height:'42px',padding:'0 18px',borderRadius:'24px',border:'1px solid var(--line)',background:'var(--card)',color:'var(--ink)',fontFamily:'inherit',fontWeight:600,outline:'2px solid var(--gold)',outlineOffset:'2px',cursor:'pointer'}},'Focused')),
+            // cover, ring, spice, progress, spine
+            h('div',{},
+              h('div',{style:{fontSize:'11px',color:'var(--muted)',fontWeight:700,marginBottom:'12px'}},'COVER CARD'),
+              h('div',{style:{display:'flex',gap:'16px',alignItems:'flex-start',marginBottom:'18px'}},
+                h('div',{style:{width:'92px'}},this.cover(sampleBook,92)),
+                h('div',{style:{flex:1}},
+                  h('div',{style:{fontSize:'11px',color:'var(--muted)',fontWeight:700,marginBottom:'8px'}},'GOAL RING'),
+                  h('div',{style:{position:'relative',width:'90px'}},this.goalRing(64,120,90),
+                    h('div',{style:{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center'}},
+                      h('div',{style:this.fr({fontWeight:600,fontSize:'22px',color:'var(--ink)',lineHeight:1})},'64'),
+                      h('div',{style:{fontSize:'9px',color:'var(--muted)'}},'of 120'))))),
+              h('div',{style:{display:'flex',gap:'24px',marginBottom:'18px'}},
+                h('div',{},h('div',{style:{fontSize:'11px',color:'var(--muted)',fontWeight:700,marginBottom:'8px'}},'SPICE'),this.spiceDots(4,14)),
+                h('div',{},h('div',{style:{fontSize:'11px',color:'var(--muted)',fontWeight:700,marginBottom:'8px'}},'RATING'),this.starRating(4.5,14))),
+              h('div',{style:{fontSize:'11px',color:'var(--muted)',fontWeight:700,marginBottom:'8px'}},'PROGRESS'),
+              h('div',{style:{marginBottom:'18px'}},this.progressBar(67)),
+              h('div',{style:{fontSize:'11px',color:'var(--muted)',fontWeight:700,marginBottom:'8px'}},'SPINE SHELF \u00b7 centered spine flips to cover'),
+              this.spineShelf(this.BOOKS.filter(b=>b.status==='tbr').slice(0,7),{height:150})))])),
+
+      h('div',{style:{textAlign:'center',fontSize:'11px',color:'var(--muted)',marginTop:'24px'}},'Toggle the theme up top \u2014 the whole board re-skins. Motion respects prefers-reduced-motion.')
+    );
+  }
+
+  // ---------- shared UI builders ----------
+  pad(){ return {padding:'0 20px'}; }
+  fr(extra){ return Object.assign({fontFamily:"'Fraunces',serif"}, extra||{}); }
+
+  divider(w){
+    const h=React.createElement;
+    return h('div',{'aria-hidden':'true',style:{display:'flex',alignItems:'center',justifyContent:'center',gap:'9px',margin:(w||'16px 0')}},
+      h('span',{style:{height:'1px',width:'70px',background:'linear-gradient(90deg,transparent,var(--hair))'}}),
+      h('span',{style:{color:'var(--gold)',fontSize:'8px',letterSpacing:'4px',opacity:.9}},'◆'),
+      h('span',{style:{color:'var(--gold)',fontSize:'12px',marginTop:'-2px'}},'❦'),
+      h('span',{style:{color:'var(--gold)',fontSize:'8px',letterSpacing:'4px',opacity:.9}},'◆'),
+      h('span',{style:{height:'1px',width:'70px',background:'linear-gradient(90deg,var(--hair),transparent)'}})
+    );
+  }
+
+  sectionHead(title, sub, action){
+    const h=React.createElement;
+    return h('div',{style:{display:'flex',alignItems:'flex-end',justifyContent:'space-between',gap:'10px',margin:'0 0 12px'}},
+      h('div',{},
+        h('div',{style:this.fr({fontStyle:'italic',fontWeight:600,fontSize:'21px',color:'var(--ink)',lineHeight:1.05,letterSpacing:'.2px'})},title),
+        sub?h('div',{style:{fontSize:'11.5px',color:'var(--muted)',marginTop:'3px'}},sub):null),
+      action?h('button',{className:'rv-foc',onClick:action.on,style:{background:'none',border:'none',color:'var(--gold)',fontFamily:'inherit',fontSize:'12px',fontWeight:600,cursor:'pointer',letterSpacing:'.3px'}},action.label+' ›'):null
+    );
+  }
+
+  spiceDots(n,sz){
+    const h=React.createElement; const a=[];
+    for(let i=0;i<5;i++) a.push(h('span',{key:i,style:{fontSize:(sz||10)+'px',opacity:i<n?1:0.22,filter:i<n?'none':'grayscale(1)'}},'🌶️'));
+    return h('div',{style:{display:'flex',gap:'1px'}},a);
+  }
+
+  coverFace(b){
+    const h=React.createElement;
+    return h('div',{style:{position:'absolute',inset:0,borderRadius:'2px 5px 5px 2px',overflow:'hidden',
+        background:`linear-gradient(155deg, hsl(${b.hue} 58% 32%), hsl(${(b.hue+34)%360} 64% 14%))`,
+        boxShadow:'inset 0 0 0 1px rgba(255,255,255,.08)'}},
+      h('div',{style:{position:'absolute',inset:0,background:'repeating-linear-gradient(125deg,rgba(255,255,255,.05) 0 2px,transparent 2px 9px)'}}),
+      h('div',{style:{position:'absolute',left:0,top:0,bottom:0,width:'7px',background:'linear-gradient(90deg,rgba(0,0,0,.45),transparent)'}}),
+      h('div',{style:{position:'absolute',left:'9px',top:'9px',right:'8px',height:'1px',background:'var(--hair)',opacity:.7}}),
+      h('div',{style:{position:'absolute',left:'10px',right:'9px',top:'18px'}},
+        h('div',{style:this.fr({fontStyle:'italic',fontWeight:600,color:'#fdeef6',fontSize:'13px',lineHeight:1.12,textShadow:'0 1px 6px rgba(0,0,0,.5)'})},b.title)),
+      h('div',{style:{position:'absolute',left:'10px',right:'9px',bottom:'9px'}},
+        h('div',{style:{fontSize:'8.5px',letterSpacing:'.6px',textTransform:'uppercase',color:'rgba(255,255,255,.72)',marginBottom:'4px'}},b.author),
+        h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between'}}, this.spiceDots(b.spice,8), b.fave?h('span',{style:{color:'#ff5e93',fontSize:'11px'}},'♥'):null))
+    );
+  }
+
+  cover(b,w){
+    const h=React.createElement; const self=this;
+    return h('div',{className:'rv-foc',tabIndex:0,role:'button',onClick:()=>self.selectBook(b.id),
+      onKeyDown:(e)=>{if(e.key==='Enter')self.selectBook(b.id);},
+      style:{width:w+'px',aspectRatio:'2/3',position:'relative',borderRadius:'2px 6px 6px 2px',overflow:'hidden',cursor:'pointer',
+        boxShadow:'var(--shadow)',flex:'none',transition:'transform .25s'},
+      onMouseEnter:e=>e.currentTarget.style.transform='translateY(-4px)',
+      onMouseLeave:e=>e.currentTarget.style.transform='none'},
+      this.coverFace(b));
+  }
+
+  goalRing(val,goal,size){
+    const h=React.createElement; const s=size||120; const r=s/2-9; const C=2*Math.PI*r;
+    const p=Math.min(1,val/goal);
+    return h('svg',{width:s,height:s,viewBox:`0 0 ${s} ${s}`,style:{transform:'rotate(-90deg)',overflow:'visible'}},
+      h('defs',{},h('linearGradient',{id:'rvring',x1:'0',y1:'0',x2:'1',y2:'1'},
+        h('stop',{offset:'0%',stopColor:'var(--primary)'}),h('stop',{offset:'100%',stopColor:'var(--gold)'}))),
+      h('circle',{cx:s/2,cy:s/2,r:r,fill:'none',stroke:'var(--chipB)',strokeWidth:7}),
+      h('circle',{cx:s/2,cy:s/2,r:r,fill:'none',stroke:'url(#rvring)',strokeWidth:7,strokeLinecap:'round',
+        strokeDasharray:C,strokeDashoffset:C*(1-p),style:{transition:'stroke-dashoffset 1s ease'}})
+    );
+  }
+
+  primaryBtn(label,on,opts){
+    const h=React.createElement; opts=opts||{};
+    return h('button',{className:'rv-foc',onClick:on,style:{flex:opts.grow?'1':'none',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:'8px',
+      height:(opts.h||46)+'px',padding:'0 20px',borderRadius:'26px',border:'none',cursor:'pointer',fontFamily:"'Hanken Grotesk',sans-serif",fontSize:'14px',fontWeight:700,
+      color:'var(--onPrimary)',background:'linear-gradient(135deg,var(--primary),var(--gold))',boxShadow:'0 10px 26px -8px var(--primary)'}},
+      opts.icon?h('span',{style:{fontSize:'15px'}},opts.icon):null, label);
+  }
+  ghostBtn(label,on,opts){
+    const h=React.createElement; opts=opts||{};
+    return h('button',{className:'rv-foc',onClick:on,style:{flex:opts.grow?'1':'none',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:'8px',
+      height:(opts.h||46)+'px',padding:'0 18px',borderRadius:'26px',cursor:'pointer',fontFamily:"'Hanken Grotesk',sans-serif",fontSize:'14px',fontWeight:600,
+      color:'var(--ink)',background:'var(--card)',border:'1px solid var(--line)',backdropFilter:'blur(10px)'}},
+      opts.icon?h('span',{style:{fontSize:'15px'}},opts.icon):null, label);
+  }
+
+  card(children,extra){
+    const h=React.createElement;
+    return h('div',{style:Object.assign({background:'var(--card)',border:'1px solid var(--line)',borderRadius:'18px',backdropFilter:'blur(14px)',boxShadow:'var(--shadow)'},extra||{})},children);
+  }
+
+  // ---------- interactive spine shelf ----------
+  spineShelf(books,opts){
+    opts=opts||{}; const h=React.createElement; const self=this; const H=opts.height||196;
+    const activeIdx=opts.active!=null?opts.active:Math.min(1,books.length-1);
+    const items=books.map((b,i)=>h('div',{key:b.id,'data-i':i,style:{flex:'none',width:(i===activeIdx?'138px':'46px'),height:H+'px',perspective:'900px',cursor:'pointer',zIndex:(i===activeIdx?6:1),
+        transition:'width .42s cubic-bezier(.5,.1,.2,1)',scrollSnapAlign:'center'}},
+      h('div',{className:'rv-inner',style:{position:'relative',width:'100%',height:'100%',transformStyle:'preserve-3d',transition:'transform .55s cubic-bezier(.5,.1,.2,1)',transform:(i===activeIdx?'rotateY(180deg)':'rotateY(0deg)')}},
+        // spine face
+        h('div',{style:{position:'absolute',inset:0,backfaceVisibility:'hidden',borderRadius:'2px',overflow:'hidden',
+            background:`linear-gradient(180deg, hsl(${b.hue} 50% 26%), hsl(${(b.hue+30)%360} 56% 13%))`,
+            boxShadow:'inset -3px 0 7px rgba(0,0,0,.4),inset 2px 0 3px rgba(255,255,255,.12)',display:'flex',flexDirection:'column'}},
+          h('div',{style:{height:'4px',background:'var(--gold)',opacity:.85}}),
+          h('div',{style:{flex:1,display:'flex',alignItems:'center',justifyContent:'center',padding:'10px 0'}},
+            h('div',{style:this.fr({writingMode:'vertical-rl',transform:'rotate(180deg)',fontStyle:'italic',fontWeight:600,fontSize:'12.5px',color:'#fbeef5',letterSpacing:'.3px',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxHeight:'100%'})},b.title)),
+          h('div',{style:{padding:'6px 0',display:'flex',justifyContent:'center'}},
+            h('div',{style:{fontSize:'7px',letterSpacing:'.5px',color:'var(--gold)',writingMode:'vertical-rl',transform:'rotate(180deg)',textTransform:'uppercase',opacity:.9}},b.author.split(' ').slice(-1)[0]))
+        ),
+        // cover face (back)
+        h('div',{style:{position:'absolute',inset:0,backfaceVisibility:'hidden',transform:'rotateY(180deg)'}}, this.coverFace(b))
+      )
+    ));
+    return h('div',{ref:el=>self.initShelf(el),className:'rv-scroll',
+      style:{display:'flex',gap:'12px',overflowX:'auto',alignItems:'center',padding:'18px 0',scrollSnapType:'x mandatory'}}, items);
+  }
+
+  initShelf(el){
+    if(!el) return; const self=this;
+    const update=()=>{
+      const cx=el.scrollLeft+el.clientWidth/2; let best=null,bd=1e9;
+      const items=[...el.children];
+      items.forEach(it=>{const c=it.offsetLeft+it.offsetWidth/2;const d=Math.abs(c-cx);if(d<bd){bd=d;best=it;}});
+      items.forEach(it=>{const active=it===best;const inner=it.querySelector('.rv-inner');
+        it.style.width=active?'138px':'46px'; it.style.zIndex=active?'6':'1';
+        if(inner) inner.style.transform=active?'rotateY(180deg)':'rotateY(0deg)';
+      });
+    };
+    const setPad=()=>{const p=(el.clientWidth/2-23)+'px'; el.style.paddingLeft=p; el.style.paddingRight=(el.clientWidth/2-69)+'px';};
+    const centerActive=()=>{const a=[...el.children].find(it=>it.offsetWidth>100)||el.children[0]; if(a){const t=a.offsetLeft+a.offsetWidth/2-el.clientWidth/2; el.scrollLeft=Math.max(0,t);}};
+    if(el.__rvInit){ setPad(); update(); return; }
+    el.__rvInit=true;
+    let down=false,sx=0,sl=0,moved=false,ticking=false;
+    const onScroll=()=>{ if(ticking)return; ticking=true; setTimeout(()=>{update();ticking=false;},16); };
+    el.addEventListener('scroll',onScroll,{passive:true});
+    el.addEventListener('pointerdown',e=>{down=true;moved=false;sx=e.clientX;sl=el.scrollLeft;el.setPointerCapture(e.pointerId);});
+    el.addEventListener('pointermove',e=>{if(!down)return;const dx=e.clientX-sx;if(Math.abs(dx)>4)moved=true;el.scrollLeft=sl-dx;update();});
+    const end=()=>{down=false;};
+    el.addEventListener('pointerup',end); el.addEventListener('pointercancel',end);
+    el.addEventListener('click',e=>{if(moved){e.stopPropagation();e.preventDefault();}},true);
+    setPad(); centerActive(); update();
+    setTimeout(()=>{setPad();centerActive();update();},80);
+    setTimeout(()=>{setPad();update();},300);
+    window.addEventListener('resize',()=>{setPad();update();});
+  }
+
+  miniRow(b){
+    const h=React.createElement; const self=this;
+    return h('div',{key:b.id,className:'rv-foc',tabIndex:0,role:'button',onClick:()=>self.selectBook(b.id),
+      style:{display:'flex',gap:'12px',alignItems:'center',cursor:'pointer'}},
+      h('div',{style:{width:'42px',flex:'none',position:'relative',aspectRatio:'2/3',borderRadius:'2px 4px 4px 2px',overflow:'hidden'}},this.coverFace(b)),
+      h('div',{style:{minWidth:0,flex:1}},
+        h('div',{style:this.fr({fontStyle:'italic',fontWeight:600,fontSize:'14px',color:'var(--ink)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'})},b.title),
+        h('div',{style:{fontSize:'11px',color:'var(--muted)',marginTop:'1px'}},b.author)
+      )
+    );
+  }
+
+  progressBar(p){
+    const h=React.createElement;
+    return h('div',{style:{height:'6px',borderRadius:'4px',background:'var(--chipB)',overflow:'hidden'}},
+      h('div',{style:{width:p+'%',height:'100%',borderRadius:'4px',background:'linear-gradient(90deg,var(--primary),var(--gold))'}}));
+  }
+
+  // ===================== HOME =====================
+  homeUI(){
+    const h=React.createElement; const self=this; const st=this.state;
+    const hr=new Date().getHours();
+    const greet = hr<5?'Still awake':hr<12?'Good morning':hr<17?'Good afternoon':hr<21?'Good evening':'Burning the midnight oil';
+    const dateStr=new Date().toLocaleDateString([], {weekday:'long',month:'long',day:'numeric'});
+    const reading=this.BOOKS.filter(b=>b.status==='reading');
+    const tbr=this.BOOKS.filter(b=>b.status==='tbr');
+    const read=this.BOOKS.filter(b=>b.status==='read');
+    const readThisYear=64;
+    const soon=tbr.slice(0,6);
+    const soonDates=['Jul 9','Aug 2','Sep 17','Oct 1','Oct 28','Nov 14'];
+
+    return h('div',{style:{padding:'8px 0 30px'}},
+      // greeting
+      h('div',{style:this.pad()},
+        h('div',{style:{fontSize:'12px',letterSpacing:'.5px',color:'var(--muted)',textTransform:'uppercase'}},dateStr),
+        h('div',{style:this.fr({fontStyle:'italic',fontWeight:600,fontSize:'30px',lineHeight:1.06,color:'var(--ink)',marginTop:'4px',letterSpacing:'.3px'})},
+          greet+',', h('br'), st.name+'.')
+      ),
+      this.divider('18px 20px'),
+
+      // goal ring card
+      h('div',{style:this.pad()},
+        this.card([
+          h('div',{style:{display:'flex',alignItems:'center',gap:'18px',padding:'18px'}},
+            h('div',{style:{position:'relative',flex:'none'}}, this.goalRing(readThisYear,st.goal,118),
+              h('div',{style:{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center'}},
+                h('div',{style:this.fr({fontWeight:600,fontSize:'30px',color:'var(--ink)',lineHeight:1})},readThisYear),
+                h('div',{style:{fontSize:'10px',color:'var(--muted)',letterSpacing:'.5px'}},'of '+st.goal))),
+            h('div',{style:{flex:1}},
+              h('div',{style:this.fr({fontStyle:'italic',fontWeight:600,fontSize:'18px',color:'var(--ink)'})},'2026 reading goal'),
+              h('div',{style:{fontSize:'12.5px',color:'var(--muted)',marginTop:'4px',lineHeight:1.4}},'You\u2019re ',h('span',{style:{color:'var(--gold)',fontWeight:700}},'6 ahead'),' of pace. 56 to go before midnight on New Year\u2019s.'),
+              h('div',{style:{marginTop:'10px'}}, this.ghostBtn('See your stats',()=>self.go('stats'),{h:36})))
+          )
+        ])
+      ),
+
+      // reading now
+      h('div',{style:Object.assign({marginTop:'24px'},this.pad())},
+        this.sectionHead('Reading now', reading.length+' in progress', {label:'Library',on:()=>self.go('library')}),
+        h('div',{className:'rv-scroll',style:{display:'flex',gap:'13px',overflowX:'auto',margin:'0 -20px',padding:'2px 20px 6px'}},
+          reading.slice(0,4).map(b=>h('div',{key:b.id,style:{flex:'none',width:'250px'}},
+            this.card([
+              h('div',{className:'rv-foc',tabIndex:0,role:'button',onClick:()=>self.selectBook(b.id),style:{display:'flex',gap:'13px',padding:'13px',cursor:'pointer'}},
+                h('div',{style:{width:'60px',flex:'none',position:'relative',aspectRatio:'2/3',borderRadius:'2px 5px 5px 2px',overflow:'hidden',boxShadow:'0 8px 18px rgba(0,0,0,.4)'}},this.coverFace(b)),
+                h('div',{style:{flex:1,minWidth:0,display:'flex',flexDirection:'column'}},
+                  h('div',{style:this.fr({fontStyle:'italic',fontWeight:600,fontSize:'16px',color:'var(--ink)',lineHeight:1.12})},b.title),
+                  h('div',{style:{fontSize:'11px',color:'var(--muted)',marginTop:'2px'}},b.author),
+                  h('div',{style:{flex:1}}),
+                  h('div',{style:{display:'flex',justifyContent:'space-between',fontSize:'10.5px',color:'var(--muted)',marginBottom:'5px'}},
+                    h('span',{},'Chapter '+Math.round(b.progress/4)), h('span',{style:{color:'var(--gold)',fontWeight:700}},b.progress+'%')),
+                  this.progressBar(b.progress)))
+            ],{borderRadius:'18px'}))))
+      ),
+
+      // priority TBR spine shelf
+      h('div',{style:{marginTop:'26px'}},
+        h('div',{style:this.pad()}, this.sectionHead('Priority TBR', 'Pull a spine to open it', {label:'Shelves',on:()=>self.go('shelves')})),
+        this.spineShelf(tbr,{height:186})
+      ),
+
+      // coming soon
+      h('div',{style:Object.assign({marginTop:'14px'},this.pad())},
+        this.sectionHead('Coming soon','On your shelf with a release date'),
+        h('div',{className:'rv-scroll',style:{display:'flex',gap:'12px',overflowX:'auto',margin:'0 -20px',padding:'2px 20px 6px'}},
+          soon.map((b,i)=>h('div',{key:b.id,style:{flex:'none',width:'98px'}},
+            h('div',{className:'rv-foc',tabIndex:0,role:'button',onClick:()=>self.selectBook(b.id),style:{cursor:'pointer'}},
+              h('div',{style:{position:'relative',aspectRatio:'2/3',borderRadius:'2px 5px 5px 2px',overflow:'hidden',boxShadow:'var(--shadow)'}}, this.coverFace(b),
+                h('div',{style:{position:'absolute',top:'6px',left:'6px',background:'var(--gold)',color:'#23140a',fontSize:'8.5px',fontWeight:800,padding:'2px 6px',borderRadius:'20px',letterSpacing:'.3px'}},soonDates[i])),
+              h('div',{style:this.fr({fontStyle:'italic',fontSize:'12px',color:'var(--ink)',marginTop:'6px',lineHeight:1.1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'})},b.title)
+            )))
+        )
+      ),
+
+      // actions
+      h('div',{style:Object.assign({marginTop:'24px',display:'flex',gap:'11px'},this.pad())},
+        this.primaryBtn('Find my next read',()=>self.go('match'),{grow:true,icon:'✦'}),
+        this.ghostBtn('Surprise me',()=>{const t=this.BOOKS.filter(b=>b.status==='tbr');self.selectBook(t[Math.floor(Math.random()*t.length)].id);},{grow:true,icon:'🎲'})
+      )
+    );
+  }
+
+  // ===================== LIBRARY =====================
+  libraryUI(){
+    const h=React.createElement; const self=this; const st=this.state; const f=st.filters;
+    const subs=['Romantasy','Romance','Dark Romance'];
+    const formats=['ebook','paperback','hardcover','audio'];
+    const statuses=[['read','Read'],['reading','Reading'],['tbr','TBR']];
+    const tropes=['Enemies to lovers','Fae','Slow burn','Found family','Morally gray','Fated mates','Forbidden','Why choose'];
+    const list=this.filtered();
+    const activeCount=(f.sub!=='all'?1:0)+(f.status!=='all'?1:0)+(f.format!=='all'?1:0)+(f.fav?1:0)+(f.seriesLen!=='all'?1:0)+((st.tropeFilter&&st.tropeFilter.length)?1:0);
+
+    const header=h('div',{style:{position:'sticky',top:0,zIndex:8,background:'linear-gradient(180deg,var(--bg0),transparent)',padding:'10px 20px 12px'}},
+      h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'12px'}},
+        h('div',{style:this.fr({fontStyle:'italic',fontWeight:600,fontSize:'26px',color:'var(--ink)'})},'Library'),
+        h('div',{style:{fontSize:'12px',color:'var(--muted)'}},this.BOOKS.length+' books')),
+      this.searchBar(f.q,v=>self.setFilter('q',v),'Title, author, series\u2026'),
+      h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginTop:'12px',gap:'10px'}},
+        this.segmented([{v:'grid',l:'Grid'},{v:'series',l:'Series'}],st.libView,v=>self.setState({libView:v})),
+        h('button',{className:'rv-foc',onClick:()=>self.setState(s=>({filterOpen:!s.filterOpen})),style:{display:'inline-flex',alignItems:'center',gap:'7px',height:'36px',padding:'0 14px',borderRadius:'20px',cursor:'pointer',
+          border:'1px solid '+(activeCount?'transparent':'var(--line)'),background:activeCount?'linear-gradient(135deg,var(--primary),var(--violet))':'var(--card)',color:activeCount?'#fff':'var(--ink)',fontFamily:"'Hanken Grotesk',sans-serif",fontSize:'12.5px',fontWeight:600}},
+          '⚟ Filters', activeCount?h('span',{style:{background:'rgba(255,255,255,.25)',borderRadius:'10px',padding:'1px 6px',fontSize:'11px'}},activeCount):null))
+    );
+
+    // filter panel
+    const panel = st.filterOpen ? h('div',{style:{padding:'2px 20px 14px'}},
+      this.card([
+        h('div',{style:{padding:'16px'}},
+          this.filterGroup('Reading status', h('div',{style:{display:'flex',gap:'8px',flexWrap:'wrap'}},
+            this.chip('All',f.status==='all',()=>self.setFilter('status','all')),
+            statuses.map(([v,l])=>this.chip(l,f.status===v,()=>self.setFilter('status',v),{count:this.BOOKS.filter(b=>b.status===v).length})))),
+          this.filterGroup('Subgenre', h('div',{style:{display:'flex',gap:'8px',flexWrap:'wrap'}},
+            this.chip('All',f.sub==='all',()=>self.setFilter('sub','all')),
+            subs.map(sg=>this.chip(sg,f.sub===sg,()=>self.setFilter('sub',sg))))),
+          this.filterGroup('Tropes', h('div',{style:{display:'flex',gap:'8px',flexWrap:'wrap'}},
+            tropes.map(t=>{const on=(st.tropeFilter||[]).includes(t);return this.chip(t,on,()=>{const cur=st.tropeFilter||[];self.setState({tropeFilter:on?cur.filter(x=>x!==t):[...cur,t]});});}))),
+          this.filterGroup('Series length', h('div',{style:{display:'flex',gap:'8px',flexWrap:'wrap'}},
+            this.chip('All',f.seriesLen==='all',()=>self.setFilter('seriesLen','all')),
+            this.chip('Standalone',f.seriesLen==='standalone',()=>self.setFilter('seriesLen','standalone')),
+            this.chip('In a series',f.seriesLen==='series',()=>self.setFilter('seriesLen','series')),
+            this.chip('None set',f.seriesLen==='none',()=>self.setFilter('seriesLen','none')))),
+          this.filterGroup('Format', h('div',{style:{display:'flex',gap:'8px',flexWrap:'wrap'}},
+            this.chip('All',f.format==='all',()=>self.setFilter('format','all')),
+            formats.map(ft=>this.chip(ft.charAt(0).toUpperCase()+ft.slice(1),f.format===ft,()=>self.setFilter('format',ft))))),
+          h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginTop:'14px',paddingTop:'14px',borderTop:'1px solid var(--line)'}},
+            this.chip('♥ Favorites only',f.fav,()=>self.setFilter('fav',!f.fav)),
+            h('button',{onClick:()=>self.setState({filters:{q:'',sub:'all',status:'all',format:'all',fav:false,sort:'recent',seriesLen:'all'},tropeFilter:[]}),style:{border:'none',background:'none',color:'var(--gold)',fontFamily:'inherit',fontSize:'12px',fontWeight:600,cursor:'pointer'}},'Reset all'))
+        )
+      ])
+    ) : null;
+
+    const sortRow=h('div',{style:{display:'flex',alignItems:'center',gap:'8px',padding:'2px 20px 10px',overflowX:'auto'},className:'rv-scroll'},
+      h('span',{style:{fontSize:'11px',color:'var(--muted)',flex:'none'}},'Sort'),
+      [['recent','Recent'],['title','Title'],['rating','Rating'],['spice','Spice'],['author','Author']].map(([v,l])=>this.chip(l,f.sort===v,()=>self.setFilter('sort',v))));
+
+    let body;
+    if(st.libView==='series') body=this.seriesView(list);
+    else if(list.length===0) body=this.libraryEmpty();
+    else body=h('div',{style:{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'14px 12px',padding:'4px 20px 30px'}},
+      list.map(b=>h('div',{key:b.id},
+        this.cover(b,100),
+        h('div',{style:this.fr({fontStyle:'italic',fontSize:'12px',color:'var(--ink)',marginTop:'6px',lineHeight:1.1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'})},b.title),
+        h('div',{style:{fontSize:'10px',color:'var(--muted)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}},b.author))));
+
+    return h('div',{}, header, panel, st.libView==='grid'?sortRow:null, body);
+  }
+
+  filterGroup(label,content){
+    const h=React.createElement;
+    return h('div',{style:{marginBottom:'14px'}},
+      h('div',{style:{fontSize:'10.5px',letterSpacing:'1px',textTransform:'uppercase',color:'var(--muted)',marginBottom:'8px',fontWeight:700}},label),
+      content);
+  }
+
+  libraryEmpty(){
+    const h=React.createElement; const self=this;
+    return h('div',{style:{padding:'50px 30px',textAlign:'center'}},
+      h('div',{style:{fontSize:'34px',marginBottom:'10px'}},'🕯️'),
+      h('div',{style:this.fr({fontStyle:'italic',fontWeight:600,fontSize:'21px',color:'var(--ink)'})},'No books match'),
+      h('div',{style:{fontSize:'13px',color:'var(--muted)',marginTop:'8px',lineHeight:1.5}},'Loosen a filter, or add the book you\u2019re hunting for.'),
+      h('div',{style:{marginTop:'18px',display:'flex',gap:'10px',justifyContent:'center'}},
+        this.ghostBtn('Clear filters',()=>self.setState({filters:{q:'',sub:'all',status:'all',format:'all',fav:false,sort:'recent',seriesLen:'all'},tropeFilter:[]}),{h:40}),
+        this.primaryBtn('Add a book',()=>self.go('add'),{h:40,icon:'＋'})));
+  }
+
+  seriesView(list){
+    const h=React.createElement; const self=this; const S=this.SERIES;
+    const groups={};
+    list.forEach(b=>{ if(b.series==='Standalone')return; (groups[b.series]=groups[b.series]||[]).push(b); });
+    const names=Object.keys(groups).sort();
+    if(names.length===0) return this.libraryEmpty();
+    return h('div',{style:{padding:'4px 20px 30px',display:'flex',flexDirection:'column',gap:'18px'}},
+      names.map(name=>{
+        const owned=groups[name].slice().sort((a,b)=>(a.pos||0)-(b.pos||0));
+        const total=(S[name]||{total:owned.length}).total||owned.length;
+        const gap=Math.max(0,total-owned.length);
+        const readCount=owned.filter(b=>b.status==='read').length;
+        return h('div',{key:name},
+          h('div',{style:{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:'9px'}},
+            h('div',{style:this.fr({fontStyle:'italic',fontWeight:600,fontSize:'16px',color:'var(--ink)'})},name),
+            gap>0?h('span',{style:{fontSize:'10.5px',fontWeight:800,color:'#23140a',background:'var(--gold)',padding:'2px 8px',borderRadius:'12px'}},gap+' to get')
+              :h('span',{style:{fontSize:'10.5px',fontWeight:700,color:'var(--gold)'}},'Complete ✦')),
+          h('div',{className:'rv-scroll',style:{display:'flex',gap:'9px',overflowX:'auto',paddingBottom:'4px'}},
+            owned.map(b=>h('div',{key:b.id,style:{flex:'none',width:'62px'}},
+              h('div',{style:{position:'relative'}}, this.cover(b,62),
+                b.status==='read'?h('div',{style:{position:'absolute',top:'-5px',right:'-5px',width:'19px',height:'19px',borderRadius:'50%',background:'var(--gold)',color:'#23140a',fontSize:'11px',fontWeight:900,display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 2px 6px rgba(0,0,0,.4)'}},'✓'):null),
+              h('div',{style:{fontSize:'8.5px',color:'var(--muted)',textAlign:'center',marginTop:'3px'}},'#'+(b.pos||'?')))),
+            Array.from({length:gap}).map((_,i)=>h('div',{key:'g'+i,style:{flex:'none',width:'62px'}},
+              h('div',{style:{width:'62px',aspectRatio:'2/3',borderRadius:'2px 6px 6px 2px',border:'1.5px dashed var(--line)',display:'flex',alignItems:'center',justifyContent:'center',color:'var(--muted)',fontSize:'18px'}},'＋'),
+              h('div',{style:{fontSize:'8.5px',color:'var(--muted)',textAlign:'center',marginTop:'3px'}},'#'+(owned.length+i+1))))),
+          h('div',{style:{fontSize:'10.5px',color:'var(--muted)',marginTop:'5px'}},readCount+' of '+owned.length+' read \u00b7 own '+owned.length+' of '+total)
+        );
+      }));
+  }
+
+  // ===================== BOOK DETAIL =====================
+  bookUI(){
+    const h=React.createElement; const self=this; const b=this.BOOKS.find(x=>x.id===this.state.bookId)||this.BOOKS[0];
+    const S=this.SERIES; const total=(S[b.series]||{}).total;
+    const statusOpts=[['tbr','Want to read'],['reading','Reading'],['read','Read']];
+    const rereads=this.rereadLog(b);
+    const shelves=['Priority TBR','Comfort rereads','Best of 2026','Annotated','Smut o\u2019clock'];
+    const inShelf=this.state.bookShelves||['Priority TBR'];
+
+    return h('div',{style:{paddingBottom:'30px'}},
+      // header / hero
+      h('div',{style:{position:'relative',padding:'6px 20px 0'}},
+        h('button',{className:'rv-foc',onClick:()=>self.go('library'),style:{position:'absolute',top:'8px',left:'14px',zIndex:3,width:'36px',height:'36px',borderRadius:'50%',border:'1px solid var(--line)',background:'var(--card)',color:'var(--ink)',cursor:'pointer',fontSize:'16px',backdropFilter:'blur(8px)'}},'‹'),
+        h('div',{style:{display:'flex',justifyContent:'center',marginTop:'14px'}},
+          h('div',{style:{width:'150px',position:'relative',aspectRatio:'2/3',borderRadius:'3px 9px 9px 3px',overflow:'hidden',boxShadow:'0 26px 60px -14px rgba(0,0,0,.7)'}},
+            this.coverFace(b),
+            h('button',{className:'rv-foc',onClick:()=>self.toggleFav(b.id),style:{position:'absolute',top:'8px',right:'8px',width:'32px',height:'32px',borderRadius:'50%',border:'none',cursor:'pointer',background:b.fave?'linear-gradient(135deg,var(--primary),var(--gold))':'rgba(0,0,0,.4)',color:'#fff',fontSize:'15px',backdropFilter:'blur(6px)'}},'♥')))
+      ),
+      h('div',{style:{textAlign:'center',padding:'16px 28px 0'}},
+        h('div',{style:this.fr({fontStyle:'italic',fontWeight:600,fontSize:'25px',color:'var(--ink)',lineHeight:1.1})},b.title),
+        h('div',{style:{fontSize:'13px',color:'var(--muted)',marginTop:'6px'}},b.author),
+        b.series!=='Standalone'?h('div',{style:{fontSize:'11.5px',color:'var(--gold)',marginTop:'4px',letterSpacing:'.3px'}},b.series+(b.pos?' #'+b.pos:'')+(total?' of '+total:'')):null,
+        h('div',{style:{display:'flex',alignItems:'center',justifyContent:'center',gap:'14px',marginTop:'12px'}},
+          h('div',{style:{display:'flex',alignItems:'center',gap:'3px'}}, this.starRating(b.rating)),
+          h('span',{style:{width:'1px',height:'14px',background:'var(--line)'}}),
+          this.spiceDots(b.spice,12))
+      ),
+      this.divider('18px 24px'),
+
+      // tropes
+      h('div',{style:Object.assign({},this.pad())},
+        h('div',{style:{display:'flex',gap:'7px',flexWrap:'wrap',justifyContent:'center'}},
+          b.tropes.map(t=>h('span',{key:t,style:{fontSize:'11.5px',color:'var(--ink)',background:'var(--chip)',border:'1px solid var(--line)',padding:'5px 11px',borderRadius:'16px'}},t)))),
+
+      // status + progress
+      h('div',{style:Object.assign({marginTop:'18px'},this.pad())},
+        this.card([h('div',{style:{padding:'15px'}},
+          h('div',{style:{fontSize:'10.5px',letterSpacing:'1px',textTransform:'uppercase',color:'var(--muted)',fontWeight:700,marginBottom:'10px'}},'Reading status'),
+          this.segmented(statusOpts.map(([v,l])=>({v,l})),b.status,v=>{b.status=v;if(v==='read')b.progress=100;if(v==='tbr')b.progress=0;self.forceUpdate();}),
+          b.status==='reading'?h('div',{style:{marginTop:'15px'}},
+            h('div',{style:{display:'flex',justifyContent:'space-between',fontSize:'12px',marginBottom:'7px'}},
+              h('span',{style:{color:'var(--muted)'}},'Progress'),h('span',{style:{color:'var(--gold)',fontWeight:700}},b.progress+'%')),
+            h('input',{type:'range',min:0,max:100,value:b.progress,onChange:e=>{b.progress=+e.target.value;self.forceUpdate();},
+              style:{width:'100%',accentColor:'var(--primary)'}})
+          ):null
+        )])),
+
+      // add to shelf chips
+      h('div',{style:Object.assign({marginTop:'18px'},this.pad())},
+        h('div',{style:{fontSize:'10.5px',letterSpacing:'1px',textTransform:'uppercase',color:'var(--muted)',fontWeight:700,marginBottom:'10px'}},'Add to shelf'),
+        h('div',{style:{display:'flex',gap:'8px',flexWrap:'wrap'}},
+          shelves.map(s=>{const on=inShelf.includes(s);return this.chip((on?'✓ ':'＋ ')+s,on,()=>{self.setState({bookShelves:on?inShelf.filter(x=>x!==s):[...inShelf,s]});});}))),
+
+      // reread log
+      h('div',{style:Object.assign({marginTop:'20px'},this.pad())},
+        h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'10px'}},
+          h('div',{style:this.fr({fontStyle:'italic',fontWeight:600,fontSize:'17px',color:'var(--ink)'})},'Reread log'),
+          h('span',{style:{fontSize:'11px',color:'var(--muted)'}},rereads.length+'\u00d7 read')),
+        h('div',{style:{display:'flex',flexDirection:'column',gap:'9px'}},
+          rereads.map((r,i)=>this.card([h('div',{style:{display:'flex',gap:'12px',padding:'12px 14px',alignItems:'flex-start'}},
+            h('div',{style:{width:'40px',flex:'none',textAlign:'center'}},
+              h('div',{style:this.fr({fontWeight:600,fontSize:'18px',color:'var(--gold)',lineHeight:1})},r.day),
+              h('div',{style:{fontSize:'9px',color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.5px'}},r.mon)),
+            h('div',{style:{width:'1px',alignSelf:'stretch',background:'var(--line)'}}),
+            h('div',{style:{flex:1}},
+              h('div',{style:{display:'flex',alignItems:'center',gap:'8px',marginBottom:'3px'}},
+                h('span',{style:{fontSize:'10px',fontWeight:700,color:'var(--ink)',background:'var(--chip)',padding:'2px 8px',borderRadius:'10px'}},r.format),
+                h('span',{style:{display:'flex',gap:'1px'}},this.starRating(r.rating,11))),
+              h('div',{style:{fontSize:'12px',color:'var(--muted)',lineHeight:1.45,fontStyle:'italic'}},'\u201c'+r.note+'\u201d'))
+          )],{borderRadius:'14px'})),
+          h('button',{className:'rv-foc',style:{height:'42px',borderRadius:'14px',border:'1.5px dashed var(--line)',background:'transparent',color:'var(--gold)',cursor:'pointer',fontFamily:"'Hanken Grotesk',sans-serif",fontSize:'13px',fontWeight:600}},'＋ Log another read'))),
+
+      // merge/edit
+      h('div',{style:Object.assign({marginTop:'22px',display:'flex',gap:'10px'},this.pad())},
+        this.ghostBtn('⤳ Merge duplicate',()=>self.setState({toast:'Pick a book to merge into this one'}),{grow:true,h:44}),
+        this.ghostBtn('✎ Edit',()=>self.go('add'),{grow:true,h:44}))
+    );
+  }
+
+  starRating(r,sz){
+    const h=React.createElement; sz=sz||13; const a=[]; r=r||0;
+    for(let i=1;i<=5;i++){const full=r>=i; const half=!full&&r>=i-0.5;
+      a.push(h('span',{key:i,style:{fontSize:sz+'px',color:'var(--gold)',opacity:full||half?1:0.22}},full?'★':half?'⯪':'★'));}
+    return h('span',{style:{display:'inline-flex',gap:'1px',alignItems:'center'}},a,
+      h('span',{style:{fontSize:(sz-2)+'px',color:'var(--muted)',marginLeft:'4px'}},r?r.toFixed(1):'—'));
+  }
+
+  rereadLog(b){
+    if(b.status==='tbr') return [];
+    const base=[{day:'14',mon:'Mar',format:b.format,rating:b.rating,note:'Reread before the new release. Still obsessed with the third act.'}];
+    if(b.fave) base.push({day:'02',mon:'Jan',format:'audio',rating:(b.rating||4),note:'Audiobook on the night drives. The narrator owns this couple.'});
+    if(b.rating&&b.rating>=4.5) base.push({day:'19',mon:'Aug',format:'paperback',rating:b.rating,note:'First read. Annotated to death \u2014 every tab is a feeling.'});
+    return base;
+  }
+
+  screenTitle(title,sub){
+    const h=React.createElement;
+    return h('div',{style:{padding:'10px 20px 4px'}},
+      h('div',{style:this.fr({fontStyle:'italic',fontWeight:600,fontSize:'28px',color:'var(--ink)',lineHeight:1.05})},title),
+      sub?h('div',{style:{fontSize:'12.5px',color:'var(--muted)',marginTop:'4px'}},sub):null);
+  }
+
+  // ===================== SHELVES =====================
+  shelvesUI(){
+    const h=React.createElement; const self=this;
+    const tbr=this.BOOKS.filter(b=>b.status==='tbr');
+    const fav=this.BOOKS.filter(b=>b.fave);
+    const spicy=this.BOOKS.filter(b=>b.spice>=4);
+    const romantasy=this.BOOKS.filter(b=>b.sub==='Romantasy');
+    const dark=this.BOOKS.filter(b=>b.sub==='Dark Romance');
+    const shelf=(name,books,opts)=>h('div',{key:name,style:{marginTop:opts&&opts.first?'4px':'10px'}},
+      h('div',{style:this.pad()},
+        h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'2px'}},
+          h('div',{style:{display:'flex',alignItems:'center',gap:'8px'}},
+            opts&&opts.star?h('span',{style:{color:'var(--gold)',fontSize:'15px'}},'★'):null,
+            h('div',{style:this.fr({fontStyle:'italic',fontWeight:600,fontSize:'18px',color:'var(--ink)'})},name)),
+          h('span',{style:{fontSize:'11px',color:'var(--muted)'}},books.length+' books')),
+        opts&&opts.sub?h('div',{style:{fontSize:'11px',color:opts.star?'var(--gold)':'var(--muted)',marginBottom:'2px'}},opts.sub):null),
+      this.spineShelf(books,{height:172,active:Math.min(2,books.length-1)}));
+
+    return h('div',{style:{paddingBottom:'34px'}},
+      this.screenTitle('Shelves','Curated stacks, pulled from the night'),
+      h('div',{style:Object.assign({margin:'8px 0 2px'},this.pad())},
+        h('div',{style:{fontSize:'10.5px',letterSpacing:'1.5px',textTransform:'uppercase',color:'var(--gold)',fontWeight:700}},'To-be-read')),
+      shelf('Priority TBR',tbr,{first:true,star:true,sub:'Your starred shelf \u2014 read these next'}),
+      shelf('Spicy for later',spicy.filter(b=>b.status!=='read').slice(0,8)),
+      this.divider('22px 20px'),
+      h('div',{style:Object.assign({margin:'2px 0'},this.pad())},
+        h('div',{style:{fontSize:'10.5px',letterSpacing:'1.5px',textTransform:'uppercase',color:'var(--gold)',fontWeight:700}},'Collections')),
+      shelf('Best of all time',fav),
+      shelf('Romantasy obsessions',romantasy.slice(0,9)),
+      shelf('Dark & feral',dark),
+      h('div',{style:Object.assign({marginTop:'20px'},this.pad())},
+        this.ghostBtn('＋ New shelf',()=>self.setState({toast:'Name your shelf'}),{grow:true,h:46})));
+  }
+
+  // ===================== PLANNER =====================
+  plannerUI(){
+    const h=React.createElement; const self=this; const st=this.state;
+    const view=st.plannerView||'calendar';
+    const body = view==='calendar' ? this.calendarView() : this.releasesView();
+    return h('div',{style:{paddingBottom:'34px'}},
+      this.screenTitle('Planner','Where your reading life is going'),
+      h('div',{style:Object.assign({margin:'8px 0 6px'},this.pad())},
+        this.segmented([{v:'calendar',l:'Calendar'},{v:'releases',l:'Releases'}],view,v=>self.setState({plannerView:v}))),
+      body);
+  }
+
+  calendarView(){
+    const h=React.createElement; const self=this;
+    // June 2026 starts on Monday. logged reads + planned dots
+    const reads={3:1,7:2,9:1,12:1,15:1,18:1,21:1,23:1,28:1};
+    const planned={5:1,14:1,20:1,26:1,30:1};
+    const rereads={7:1,23:1};
+    const days=30; const startDow=1; // Mon
+    const cells=[];
+    const dow=['M','T','W','T','F','S','S'];
+    dow.forEach(d=>cells.push(h('div',{key:'h'+Math.random(),style:{textAlign:'center',fontSize:'10px',color:'var(--muted)',fontWeight:700,padding:'4px 0'}},d)));
+    for(let i=0;i<startDow;i++) cells.push(h('div',{key:'e'+i}));
+    for(let d=1;d<=days;d++){
+      const isToday=d===23; const r=reads[d]; const p=planned[d]; const rr=rereads[d];
+      cells.push(h('div',{key:d,style:{aspectRatio:'1',borderRadius:'11px',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'3px',position:'relative',
+        background:isToday?'linear-gradient(135deg,var(--primary),var(--gold))':(r?'var(--chip)':'transparent'),
+        border:'1px solid '+(isToday?'transparent':(r?'var(--line)':'transparent')),cursor:'pointer'}},
+        h('span',{style:{fontSize:'12px',fontWeight:isToday?800:600,color:isToday?'#fff':'var(--ink)'}},d),
+        h('div',{style:{display:'flex',gap:'2px',height:'5px'}},
+          r?h('span',{style:{width:'5px',height:'5px',borderRadius:'50%',background:isToday?'#fff':'var(--primary)'}}):null,
+          rr?h('span',{style:{width:'5px',height:'5px',borderRadius:'50%',background:isToday?'#fff':'var(--gold)'}}):null,
+          p?h('span',{style:{width:'5px',height:'5px',borderRadius:'50%',border:'1.5px solid '+(isToday?'#fff':'var(--violet)'),boxSizing:'border-box'}}):null)));
+    }
+    const totalReads=Object.values(reads).reduce((a,b)=>a+b,0);
+    const rrCount=Object.values(rereads).reduce((a,b)=>a+b,0);
+    return h('div',{style:this.pad()},
+      h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',margin:'6px 0 12px'}},
+        h('button',{className:'rv-foc',style:{width:'32px',height:'32px',borderRadius:'50%',border:'1px solid var(--line)',background:'var(--card)',color:'var(--ink)',cursor:'pointer'}},'‹'),
+        h('div',{style:this.fr({fontStyle:'italic',fontWeight:600,fontSize:'19px',color:'var(--ink)'})},'June 2026'),
+        h('button',{className:'rv-foc',style:{width:'32px',height:'32px',borderRadius:'50%',border:'1px solid var(--line)',background:'var(--card)',color:'var(--ink)',cursor:'pointer'}},'›')),
+      this.card([h('div',{style:{padding:'12px 12px 14px'}},
+        h('div',{style:{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:'3px'}},cells))]),
+      h('div',{style:{display:'flex',gap:'16px',justifyContent:'center',margin:'14px 0',fontSize:'11px',color:'var(--muted)',flexWrap:'wrap'}},
+        h('span',{style:{display:'flex',alignItems:'center',gap:'5px'}},h('span',{style:{width:'7px',height:'7px',borderRadius:'50%',background:'var(--primary)'}}),'Read'),
+        h('span',{style:{display:'flex',alignItems:'center',gap:'5px'}},h('span',{style:{width:'7px',height:'7px',borderRadius:'50%',background:'var(--gold)'}}),'Reread'),
+        h('span',{style:{display:'flex',alignItems:'center',gap:'5px'}},h('span',{style:{width:'7px',height:'7px',borderRadius:'50%',border:'1.5px solid var(--violet)',boxSizing:'border-box'}}),'Planned')),
+      h('div',{style:{display:'flex',gap:'11px'}},
+        this.card([h('div',{style:{padding:'14px',textAlign:'center'}},
+          h('div',{style:this.fr({fontWeight:600,fontSize:'26px',color:'var(--ink)'})},totalReads),
+          h('div',{style:{fontSize:'10.5px',color:'var(--muted)',marginTop:'2px'}},'read in June'))],{flex:1}),
+        this.card([h('div',{style:{padding:'14px',textAlign:'center'}},
+          h('div',{style:this.fr({fontWeight:600,fontSize:'26px',color:'var(--gold)'})},totalReads-rrCount),
+          h('div',{style:{fontSize:'10.5px',color:'var(--muted)',marginTop:'2px'}},'new, excl. rereads'))],{flex:1})),
+      h('div',{style:{marginTop:'14px'}},
+        h('div',{style:{fontSize:'10.5px',letterSpacing:'1px',textTransform:'uppercase',color:'var(--muted)',fontWeight:700,marginBottom:'10px'}},'Need to read this month'),
+        h('div',{style:{display:'flex',flexDirection:'column',gap:'10px'}},
+          this.BOOKS.filter(b=>b.status==='tbr').slice(0,3).map(b=>h('div',{key:b.id,style:{display:'flex',alignItems:'center',gap:'12px'}},
+            h('div',{style:{flex:1}},this.miniRow(b)),
+            h('span',{style:{fontSize:'10px',fontWeight:700,color:'var(--violet)',border:'1px solid var(--line)',padding:'3px 9px',borderRadius:'12px',flex:'none'}},['Jun 26','Jun 30','Jul 2'][b.id%3]))))));
+  }
+
+  releasesView(){
+    const h=React.createElement; const self=this;
+    const rel=[
+      {b:this.BOOKS.find(x=>x.title==='House of Flame and Shadow'),date:'Just released',prec:'full',tag:'now'},
+      {b:this.BOOKS.find(x=>x.title==='Onyx Storm'),date:'Jan 21, 2026',prec:'full',tag:'out'},
+      {b:this.BOOKS.find(x=>x.title==='Rewind It Back'),date:'Jul 2026',prec:'month',tag:'soon'},
+      {b:this.BOOKS.find(x=>x.title==='Glow of the Everflame'),date:'Aug 2026',prec:'month',tag:'soon'},
+      {b:this.BOOKS.find(x=>x.title==='Final Offer'),date:'Sep 17, 2026',prec:'full',tag:'soon'},
+      {b:this.BOOKS.find(x=>x.title==='King of Greed'),date:'2026',prec:'year',tag:'soon'},
+      {b:this.BOOKS.find(x=>x.title==='Wretched'),date:'2027',prec:'year',tag:'tba'}
+    ].filter(x=>x.b);
+    const badge=(tag)=>{const m={now:['Just released','var(--gold)','#23140a'],out:['Out now','var(--violet)','#fff'],soon:['Coming soon','var(--primary)','#fff'],tba:['TBA','var(--chip)','var(--muted)']};const[txt,bg,fg]=m[tag]||m.tba;return h('span',{style:{fontSize:'9.5px',fontWeight:800,letterSpacing:'.3px',padding:'3px 9px',borderRadius:'12px',background:bg,color:fg,flex:'none'}},txt);};
+    const precIcon={full:'',month:' ·  month',year:' ·  year only'};
+    return h('div',{style:this.pad()},
+      h('div',{style:{fontSize:'11px',color:'var(--muted)',margin:'8px 0 12px'}},'Publication dates with whatever precision you know \u2014 a year, a month, or the full date.'),
+      h('div',{style:{display:'flex',flexDirection:'column',gap:'10px'}},
+        rel.map((r,i)=>this.card([h('div',{className:'rv-foc',tabIndex:0,role:'button',onClick:()=>self.selectBook(r.b.id),style:{display:'flex',gap:'13px',padding:'12px',alignItems:'center',cursor:'pointer'}},
+          h('div',{style:{width:'46px',flex:'none',position:'relative',aspectRatio:'2/3',borderRadius:'2px 4px 4px 2px',overflow:'hidden'}},this.coverFace(r.b)),
+          h('div',{style:{flex:1,minWidth:0}},
+            h('div',{style:this.fr({fontStyle:'italic',fontWeight:600,fontSize:'15px',color:'var(--ink)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'})},r.b.title),
+            h('div',{style:{fontSize:'11px',color:'var(--muted)',marginTop:'2px'}},r.b.author),
+            h('div',{style:{display:'flex',alignItems:'center',gap:'7px',marginTop:'7px'}},
+              h('span',{style:{fontSize:'12px',fontWeight:700,color:'var(--ink)'}},r.date),
+              r.prec!=='full'?h('span',{style:{fontSize:'9.5px',color:'var(--muted)',border:'1px solid var(--line)',padding:'1px 6px',borderRadius:'8px'}},r.prec==='month'?'month':'year only'):null)),
+          badge(r.tag)
+        )]))));
+  }
+
+  // ===================== ADD A BOOK =====================
+  addUI(){
+    const h=React.createElement; const self=this; const st=this.state;
+    const mode=st.addMode||'scan';
+    let body;
+    if(mode==='scan'){
+      body=h('div',{style:this.pad()},
+        h('div',{style:{position:'relative',aspectRatio:'1/1',borderRadius:'24px',overflow:'hidden',background:'radial-gradient(120% 120% at 50% 30%, rgba(232,58,120,.18), rgba(11,6,18,.6))',border:'1px solid var(--line)',display:'flex',alignItems:'center',justifyContent:'center'}},
+          h('div',{style:{position:'absolute',width:'74%',height:'46%',border:'2px solid var(--gold)',borderRadius:'16px',boxShadow:'0 0 0 2000px rgba(5,3,10,.35)'}}),
+          h('div',{className:'rv-anim',style:{position:'absolute',width:'74%',height:'2px',background:'linear-gradient(90deg,transparent,var(--primary),transparent)',animation:'rvFog 2.4s ease-in-out infinite alternate',top:'50%'}}),
+          h('div',{style:{position:'absolute',width:'140px',height:'56px',borderRadius:'6px',background:'repeating-linear-gradient(90deg,#0a0610 0 3px,#f6e9f1 3px 5px,#0a0610 5px 7px,#f6e9f1 7px 12px)',opacity:.85}}),
+          h('div',{style:{position:'absolute',bottom:'16px',fontSize:'12px',color:'var(--muted)'}},'Line up the barcode')),
+        h('div',{style:{textAlign:'center',margin:'16px 0 4px',fontSize:'13px',color:'var(--muted)',lineHeight:1.5}},'Point your camera at the back cover. We\u2019ll pull the cover, blurb, and series for you.'),
+        this.primaryBtn('Enter ISBN instead',()=>self.setState({addMode:'search'}),{grow:true,icon:'⌨'}));
+    } else if(mode==='search'){
+      const q=st.addQuery||'';
+      const res=q?this.BOOKS.filter(b=>b.title.toLowerCase().includes(q.toLowerCase())||b.author.toLowerCase().includes(q.toLowerCase())).slice(0,6)
+        :this.BOOKS.filter(b=>b.fave).slice(0,5);
+      body=h('div',{style:this.pad()},
+        this.searchBar(q,v=>self.setState({addQuery:v}),'ISBN, title, or author\u2026'),
+        h('div',{style:{fontSize:'10.5px',letterSpacing:'1px',textTransform:'uppercase',color:'var(--muted)',fontWeight:700,margin:'16px 0 10px'}},q?'Results':'Popular right now'),
+        h('div',{style:{display:'flex',flexDirection:'column',gap:'12px'}},
+          res.map(b=>h('div',{key:b.id,style:{display:'flex',alignItems:'center',gap:'12px'}},
+            h('div',{style:{flex:1}},this.miniRow(b)),
+            h('button',{className:'rv-foc',onClick:()=>self.setState({toast:'Added'}),style:{flex:'none',width:'34px',height:'34px',borderRadius:'50%',border:'none',cursor:'pointer',background:'linear-gradient(135deg,var(--primary),var(--gold))',color:'#fff',fontSize:'18px',fontWeight:700}},'＋'))),
+          res.length===0?h('div',{style:{textAlign:'center',padding:'30px',color:'var(--muted)',fontSize:'13px'}},'No matches. Try manual entry below.'):null),
+        h('div',{style:{marginTop:'16px'}},this.ghostBtn('Add it manually',()=>self.setState({addMode:'manual'}),{grow:true,icon:'✎'})));
+    } else {
+      const field=(label,ph,wide)=>h('div',{style:{marginBottom:'13px'}},
+        h('div',{style:{fontSize:'11px',color:'var(--muted)',fontWeight:600,marginBottom:'6px'}},label),
+        h('input',{placeholder:ph,style:{width:'100%',height:'44px',borderRadius:'12px',border:'1px solid var(--line)',background:'var(--field)',color:'var(--ink)',padding:'0 14px',fontFamily:"'Hanken Grotesk',sans-serif",fontSize:'14px',outline:'none'}}));
+      body=h('div',{style:this.pad()},
+        field('Title','e.g. A Court of Silver Flames'),
+        field('Author','e.g. Sarah J. Maas'),
+        h('div',{style:{display:'flex',gap:'10px'}},h('div',{style:{flex:2}},field('Series','None set')),h('div',{style:{flex:1}},field('Book #','\u2014'))),
+        h('div',{style:{marginBottom:'13px'}},
+          h('div',{style:{fontSize:'11px',color:'var(--muted)',fontWeight:600,marginBottom:'8px'}},'Subgenre'),
+          h('div',{style:{display:'flex',gap:'8px',flexWrap:'wrap'}},['Romantasy','Romance','Dark Romance'].map(s=>this.chip(s,st.manSub===s,()=>self.setState({manSub:s}))))),
+        h('div',{style:{marginBottom:'13px'}},
+          h('div',{style:{fontSize:'11px',color:'var(--muted)',fontWeight:600,marginBottom:'8px'}},'Spice level'),
+          h('div',{style:{display:'flex',gap:'6px'}},[1,2,3,4,5].map(n=>h('button',{key:n,onClick:()=>self.setState({manSpice:n}),style:{fontSize:'20px',background:'none',border:'none',cursor:'pointer',opacity:(st.manSpice||0)>=n?1:.25}},'🌶️')))),
+        h('div',{style:{marginTop:'8px'}},this.primaryBtn('Save to library',()=>self.setState({toast:'Saved'}),{grow:true,icon:'✦'})));
+    }
+    return h('div',{style:{paddingBottom:'34px'}},
+      this.screenTitle('Add a book','Three ways into the stacks'),
+      h('div',{style:Object.assign({margin:'8px 0 16px'},this.pad())},
+        this.segmented([{v:'scan',l:'Scan'},{v:'search',l:'Search'},{v:'manual',l:'Manual'}],mode,v=>self.setState({addMode:v}))),
+      body);
+  }
+
+  // ===================== SETTINGS =====================
+  settingsUI(){
+    const h=React.createElement; const self=this; const st=this.state;
+    const row=(title,sub,control)=>h('div',{style:{display:'flex',alignItems:'center',gap:'12px',padding:'15px 16px'}},
+      h('div',{style:{flex:1,minWidth:0}},
+        h('div',{style:{fontSize:'14px',fontWeight:600,color:'var(--ink)'}},title),
+        sub?h('div',{style:{fontSize:'11.5px',color:'var(--muted)',marginTop:'2px',lineHeight:1.4}},sub):null),
+      h('div',{style:{flex:'none'}},control));
+    const sep=h('div',{style:{height:'1px',background:'var(--line)',margin:'0 16px'}});
+    const group=(label,rows)=>h('div',{style:{marginBottom:'18px'}},
+      h('div',{style:{fontSize:'10.5px',letterSpacing:'1.5px',textTransform:'uppercase',color:'var(--gold)',fontWeight:700,margin:'0 4px 9px'}},label),
+      this.card([rows]));
+
+    return h('div',{style:{paddingBottom:'34px'}},
+      this.screenTitle('Settings'),
+      h('div',{style:Object.assign({marginTop:'10px'},this.pad())},
+        group('Profile',[
+          row('Display name',null,h('input',{value:st.name,onChange:e=>self.setState({name:e.target.value}),style:{width:'130px',height:'38px',borderRadius:'10px',border:'1px solid var(--line)',background:'var(--field)',color:'var(--ink)',padding:'0 12px',fontFamily:"'Hanken Grotesk',sans-serif",fontSize:'14px',textAlign:'right',outline:'none'}})),
+          sep,
+          row('Yearly reading goal','Books to finish in 2026',h('div',{style:{display:'flex',alignItems:'center',gap:'10px'}},
+            h('button',{className:'rv-foc',onClick:()=>self.setState(s=>({goal:Math.max(1,s.goal-6)})),style:{width:'32px',height:'32px',borderRadius:'50%',border:'1px solid var(--line)',background:'var(--card)',color:'var(--ink)',cursor:'pointer',fontSize:'16px'}},'\u2212'),
+            h('span',{style:this.fr({fontWeight:600,fontSize:'19px',color:'var(--ink)',minWidth:'34px',textAlign:'center'})},st.goal),
+            h('button',{className:'rv-foc',onClick:()=>self.setState(s=>({goal:s.goal+6})),style:{width:'32px',height:'32px',borderRadius:'50%',border:'none',background:'linear-gradient(135deg,var(--primary),var(--gold))',color:'#fff',cursor:'pointer',fontSize:'16px'}},'＋')))
+        ]),
+        group('Appearance',[
+          h('div',{style:{padding:'15px 16px'}},
+            h('div',{style:{fontSize:'14px',fontWeight:600,color:'var(--ink)',marginBottom:'3px'}},'Theme'),
+            h('div',{style:{fontSize:'11.5px',color:'var(--muted)',marginBottom:'12px'}},'Two moods, one library'),
+            h('div',{style:{display:'flex',gap:'10px'}},
+              this.themeCard('nocturne','Nocturne','Gaslit midnight',['#15091f','#e83a78','#7b3fa0','#f0b14e']),
+              this.themeCard('dawn','Magnolia Dawn','Parchment morning',['#f5e0e4','#d4396f','#7b3fa0','#c9842f'])))
+        ]),
+        group('Library data',[
+          row('Back up to JSON','Your whole library, one file',this.smallBtn('Export',()=>self.setState({toast:'reverie-backup.json'}))),sep,
+          row('Restore from backup','Replace everything from a JSON file',this.smallBtn('Import',()=>self.setState({toast:'Choose a file'}))),sep,
+          row('Import from CSV','Goodreads or StoryGraph export',this.smallBtn('Upload',()=>self.setState({toast:'Map your columns'}))),sep,
+          row('Merge duplicates','We found 2 likely matches',this.smallBtn('Review',()=>self.setState({toast:'2 to review'}),true))
+        ]),
+        h('div',{style:{textAlign:'center',fontSize:'11px',color:'var(--muted)',marginTop:'4px'}},'Reverie \u00b7 v2.0 \u00b7 ',this.BOOKS.length,' books, ',Object.keys(this.SERIES).length-1,' series'))
+    );
+  }
+  smallBtn(label,on,accent){
+    const h=React.createElement;
+    return h('button',{className:'rv-foc',onClick:on,style:{height:'34px',padding:'0 16px',borderRadius:'18px',cursor:'pointer',fontFamily:"'Hanken Grotesk',sans-serif",fontSize:'12.5px',fontWeight:700,
+      border:accent?'none':'1px solid var(--line)',background:accent?'linear-gradient(135deg,var(--primary),var(--violet))':'var(--card)',color:accent?'#fff':'var(--ink)'}},label);
+  }
+  themeCard(val,name,sub,sw){
+    const h=React.createElement; const self=this; const on=this.state.theme===val;
+    return h('button',{className:'rv-foc',onClick:()=>self.setState({theme:val}),style:{flex:1,textAlign:'left',padding:'13px',borderRadius:'16px',cursor:'pointer',
+      border:'2px solid '+(on?'var(--gold)':'var(--line)'),background:'var(--field)'}},
+      h('div',{style:{display:'flex',gap:'4px',marginBottom:'10px'}},sw.map((c,i)=>h('span',{key:i,style:{width:'20px',height:'20px',borderRadius:'50%',background:c,boxShadow:'inset 0 0 0 1px rgba(255,255,255,.15)'}}))),
+      h('div',{style:this.fr({fontStyle:'italic',fontWeight:600,fontSize:'15px',color:'var(--ink)'})},name),
+      h('div',{style:{fontSize:'10.5px',color:'var(--muted)',marginTop:'1px'}},sub),
+      h('div',{style:{marginTop:'8px',fontSize:'11px',fontWeight:700,color:on?'var(--gold)':'var(--muted)'}},on?'✓ Active':'Tap to use'));
+  }
+
+  // ===================== STATS =====================
+  statsUI(){
+    const h=React.createElement; const self=this;
+    const months=['J','F','M','A','M','J','J','A','S','O','N','D'];
+    const perMonth=[6,5,8,4,7,9,0,0,0,0,0,0];
+    const maxM=Math.max(...perMonth);
+    const subCount={}; const fmtCount={}; const spiceCount=[0,0,0,0,0]; const authorCount={}; const tropeCount={};
+    this.BOOKS.forEach(b=>{subCount[b.sub]=(subCount[b.sub]||0)+1;fmtCount[b.format]=(fmtCount[b.format]||0)+1;if(b.spice)spiceCount[b.spice-1]++;authorCount[b.author]=(authorCount[b.author]||0)+1;b.tropes.forEach(t=>tropeCount[t]=(tropeCount[t]||0)+1);});
+    const topAuthors=Object.entries(authorCount).sort((a,b)=>b[1]-a[1]).slice(0,5);
+    const topTropes=Object.entries(tropeCount).sort((a,b)=>b[1]-a[1]).slice(0,6);
+    const subColors={'Romantasy':'var(--primary)','Romance':'var(--violet)','Dark Romance':'var(--blue)'};
+    const total=this.BOOKS.length;
+
+    const bar=(label,val,max,color)=>h('div',{key:label,style:{marginBottom:'9px'}},
+      h('div',{style:{display:'flex',justifyContent:'space-between',fontSize:'12px',marginBottom:'4px'}},
+        h('span',{style:{color:'var(--ink)',fontWeight:500}},label),h('span',{style:{color:'var(--muted)'}},val)),
+      h('div',{style:{height:'8px',borderRadius:'5px',background:'var(--chipB)',overflow:'hidden'}},
+        h('div',{style:{width:(val/max*100)+'%',height:'100%',borderRadius:'5px',background:color||'linear-gradient(90deg,var(--primary),var(--gold))'}})));
+
+    return h('div',{style:{paddingBottom:'34px'}},
+      h('div',{style:{padding:'12px 20px 4px'}},
+        h('div',{style:{fontSize:'11px',letterSpacing:'2px',textTransform:'uppercase',color:'var(--gold)',fontWeight:700}},'Your reading, wrapped'),
+        h('div',{style:this.fr({fontStyle:'italic',fontWeight:600,fontSize:'30px',color:'var(--ink)',lineHeight:1.04,marginTop:'4px'})},'2026 in stories')),
+      this.divider('14px 20px'),
+      // hero numbers
+      h('div',{style:Object.assign({display:'flex',gap:'11px'},this.pad())},
+        [['64','books read'],['18','series touched'],['3.1','avg spice']].map(([n,l],i)=>this.card([h('div',{key:i,style:{padding:'15px 12px',textAlign:'center'}},
+          h('div',{style:this.fr({fontWeight:600,fontSize:'27px',color:i===2?'var(--gold)':'var(--ink)',lineHeight:1})},n),
+          h('div',{style:{fontSize:'10px',color:'var(--muted)',marginTop:'4px',lineHeight:1.2}},l))],{flex:1}))),
+      // per month
+      h('div',{style:Object.assign({marginTop:'20px'},this.pad())},
+        this.sectionHead('Books per month','2026 so far'),
+        this.card([h('div',{style:{padding:'16px 14px 12px'}},
+          h('div',{style:{display:'flex',alignItems:'flex-end',justifyContent:'space-between',gap:'4px',height:'110px'}},
+            perMonth.map((v,i)=>h('div',{key:i,style:{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:'5px',height:'100%',justifyContent:'flex-end'}},
+              v>0?h('div',{style:{fontSize:'9px',color:'var(--muted)',fontWeight:700}},v):null,
+              h('div',{style:{width:'100%',maxWidth:'16px',height:(v/maxM*78+2)+'px',borderRadius:'4px',background:i===5?'linear-gradient(180deg,var(--primary),var(--gold))':'var(--chipB)'}}),
+              h('div',{style:{fontSize:'9px',color:'var(--muted)'}},months[i])))))])),
+      // subgenre + format
+      h('div',{style:Object.assign({marginTop:'20px'},this.pad())},
+        this.sectionHead('How you read'),
+        this.card([h('div',{style:{padding:'16px'}},
+          h('div',{style:{fontSize:'10.5px',letterSpacing:'1px',textTransform:'uppercase',color:'var(--muted)',fontWeight:700,marginBottom:'10px'}},'Subgenre'),
+          Object.entries(subCount).sort((a,b)=>b[1]-a[1]).map(([k,v])=>bar(k,v,total,subColors[k])),
+          h('div',{style:{fontSize:'10.5px',letterSpacing:'1px',textTransform:'uppercase',color:'var(--muted)',fontWeight:700,margin:'16px 0 10px'}},'Format'),
+          Object.entries(fmtCount).sort((a,b)=>b[1]-a[1]).map(([k,v])=>bar(k.charAt(0).toUpperCase()+k.slice(1),v,total,'linear-gradient(90deg,var(--violet),var(--primary))'))
+        )])),
+      // spice distribution
+      h('div',{style:Object.assign({marginTop:'20px'},this.pad())},
+        this.sectionHead('Spice meter','Where your shelves run hot'),
+        this.card([h('div',{style:{padding:'16px 14px'}},
+          h('div',{style:{display:'flex',alignItems:'flex-end',justifyContent:'space-around',gap:'8px',height:'90px'}},
+            spiceCount.map((v,i)=>h('div',{key:i,style:{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:'5px',height:'100%',justifyContent:'flex-end'}},
+              h('div',{style:{fontSize:'10px',color:'var(--muted)',fontWeight:700}},v),
+              h('div',{style:{width:'100%',maxWidth:'30px',height:(v/Math.max(...spiceCount)*60+3)+'px',borderRadius:'5px',background:'linear-gradient(180deg,var(--gold),var(--primary))'}}),
+              h('div',{style:{fontSize:'11px'}},'🌶️'.repeat(i+1).slice(0,i+1)),
+              h('div',{style:{fontSize:'9px',color:'var(--muted)'}},i+1)))))])),
+      // top tropes
+      h('div',{style:Object.assign({marginTop:'20px'},this.pad())},
+        this.sectionHead('Top tropes','What you keep coming back to'),
+        h('div',{style:{display:'flex',gap:'8px',flexWrap:'wrap'}},
+          topTropes.map(([t,c],i)=>h('span',{key:t,style:{display:'inline-flex',alignItems:'center',gap:'6px',fontSize:'12.5px',fontWeight:i===0?700:500,
+            color:i===0?'#23140a':'var(--ink)',background:i===0?'var(--gold)':'var(--chip)',border:'1px solid var(--line)',padding:'6px 12px',borderRadius:'18px'}},
+            t,h('span',{style:{opacity:.7,fontSize:'11px'}},c))))),
+      // top authors
+      h('div',{style:Object.assign({marginTop:'20px'},this.pad())},
+        this.sectionHead('Most-read authors'),
+        this.card([h('div',{style:{padding:'14px 16px'}},
+          topAuthors.map(([a,c],i)=>h('div',{key:a,style:{display:'flex',alignItems:'center',gap:'12px',padding:'7px 0',borderTop:i?'1px solid var(--line)':'none'}},
+            h('span',{style:this.fr({fontWeight:600,fontSize:'15px',color:'var(--gold)',width:'20px'})},i+1),
+            h('span',{style:{flex:1,fontSize:'13.5px',color:'var(--ink)',fontWeight:500}},a),
+            h('span',{style:{fontSize:'12px',color:'var(--muted)'}},c+' books'))))])),
+      // fun facts
+      h('div',{style:Object.assign({marginTop:'20px'},this.pad())},
+        this.sectionHead('Fun facts'),
+        h('div',{style:{display:'flex',flexDirection:'column',gap:'10px'}},
+          [['🕯️','Your witching hour','Most pages turned between 10pm and 1am'],
+           ['📚','Longest binge','You read the entire Off-Campus series in 9 days'],
+           ['🌶️','Spiciest month','June ran the hottest \u2014 avg 3.8 peppers'],
+           ['♥','Comfort author','Sarah J. Maas, read 15 times across your shelves']].map((f,i)=>this.card([
+            h('div',{key:i,style:{display:'flex',gap:'13px',padding:'13px 15px',alignItems:'center'}},
+              h('span',{style:{fontSize:'22px',flex:'none'}},f[0]),
+              h('div',{},h('div',{style:{fontSize:'13.5px',fontWeight:600,color:'var(--ink)'}},f[1]),
+                h('div',{style:{fontSize:'11.5px',color:'var(--muted)',marginTop:'2px',lineHeight:1.4}},f[2])))],{borderRadius:'14px'})))));
+  }
+
+  // ===================== MATCH =====================
+  matchUI(){
+    const h=React.createElement; const self=this; const st=this.state;
+    const m=st.match||{step:0,answers:[]};
+    const questions=[
+      {q:'What are you craving tonight?',opts:['Slow-burn yearning','Feral, no-survivors','Cozy & comforting','Epic world-ending stakes']},
+      {q:'Pick your poison',opts:['Fae courts & magic','Mafia & morally gray','Small-town second chance','Enemies across a war']},
+      {q:'How much spice?',opts:['Keep it sweet','A little heat','Bring the fire','Off the charts']},
+      {q:'Your ideal ending?',opts:['Earned HEA','Bittersweet ache','Shocking cliffhanger','Found family forever']}
+    ];
+
+    if(!m.done){
+      const cur=questions[m.step];
+      return h('div',{style:{padding:'14px 20px 30px',minHeight:'100%',display:'flex',flexDirection:'column'}},
+        h('div',{style:{display:'flex',gap:'6px',marginBottom:'24px'}},
+          questions.map((_,i)=>h('div',{key:i,style:{flex:1,height:'4px',borderRadius:'3px',background:i<=m.step?'linear-gradient(90deg,var(--primary),var(--gold))':'var(--chipB)'}}))),
+        h('div',{style:{fontSize:'11px',letterSpacing:'2px',textTransform:'uppercase',color:'var(--gold)',fontWeight:700,marginBottom:'10px'}},'Question '+(m.step+1)+' of '+questions.length),
+        h('div',{style:this.fr({fontStyle:'italic',fontWeight:600,fontSize:'29px',color:'var(--ink)',lineHeight:1.1,marginBottom:'26px'})},cur.q),
+        h('div',{style:{display:'flex',flexDirection:'column',gap:'12px',flex:1}},
+          cur.opts.map((o,i)=>h('button',{key:i,className:'rv-foc',onClick:()=>{
+              const answers=[...m.answers];answers[m.step]=i;
+              if(m.step<questions.length-1) self.setState({match:{step:m.step+1,answers}});
+              else self.setState({match:{step:m.step,answers,done:true}});
+            },style:{textAlign:'left',padding:'17px 18px',borderRadius:'16px',cursor:'pointer',border:'1px solid var(--line)',background:'var(--card)',color:'var(--ink)',
+              fontFamily:"'Hanken Grotesk',sans-serif",fontSize:'15px',fontWeight:600,backdropFilter:'blur(10px)',display:'flex',alignItems:'center',gap:'13px',transition:'transform .15s'},
+            onMouseEnter:e=>e.currentTarget.style.transform='translateX(4px)',onMouseLeave:e=>e.currentTarget.style.transform='none'},
+            h('span',{style:{width:'26px',height:'26px',borderRadius:'50%',border:'1.5px solid var(--gold)',color:'var(--gold)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'12px',fontWeight:700,flex:'none'}},String.fromCharCode(65+i)),
+            o))),
+        m.step>0?h('button',{onClick:()=>self.setState({match:{step:m.step-1,answers:m.answers}}),style:{marginTop:'18px',border:'none',background:'none',color:'var(--muted)',cursor:'pointer',fontFamily:'inherit',fontSize:'13px'}},'‹ Back'):null);
+    }
+
+    // reveal
+    const picks=this.BOOKS.filter(b=>b.status==='tbr').slice(0,3);
+    return h('div',{style:{padding:'16px 20px 34px'}},
+      h('div',{style:{textAlign:'center'}},
+        h('div',{style:{fontSize:'11px',letterSpacing:'2px',textTransform:'uppercase',color:'var(--gold)',fontWeight:700}},'Your reading mood'),
+        h('div',{style:this.fr({fontStyle:'italic',fontWeight:600,fontSize:'31px',color:'var(--ink)',lineHeight:1.08,margin:'8px 0'})},'The Feral Romantic'),
+        h('div',{style:{fontSize:'13px',color:'var(--muted)',lineHeight:1.5,padding:'0 6px'}},'You want the yearning and the bloodshed. Morally gray men, fae politics, and a slow burn that finally detonates.')),
+      this.divider('20px 0'),
+      h('div',{style:{display:'flex',gap:'8px',justifyContent:'center',flexWrap:'wrap',marginBottom:'22px'}},
+        ['Slow burn','Morally gray','Fae courts','High spice','Bittersweet'].map(t=>h('span',{key:t,style:{fontSize:'12px',fontWeight:600,color:'#23140a',background:'var(--gold)',padding:'6px 12px',borderRadius:'16px'}},t))),
+      h('div',{style:{fontSize:'10.5px',letterSpacing:'1px',textTransform:'uppercase',color:'var(--muted)',fontWeight:700,marginBottom:'12px'}},'Top unread picks for you'),
+      h('div',{style:{display:'flex',flexDirection:'column',gap:'12px'}},
+        picks.map((b,i)=>this.card([h('div',{style:{display:'flex',gap:'13px',padding:'12px',alignItems:'center'}},
+          h('div',{className:'rv-foc',tabIndex:0,role:'button',onClick:()=>self.selectBook(b.id),style:{width:'52px',flex:'none',position:'relative',aspectRatio:'2/3',borderRadius:'2px 5px 5px 2px',overflow:'hidden',cursor:'pointer'}},this.coverFace(b)),
+          h('div',{style:{flex:1,minWidth:0}},
+            h('div',{style:{fontSize:'10px',color:'var(--gold)',fontWeight:700,marginBottom:'2px'}},(96-i*4)+'% match'),
+            h('div',{style:this.fr({fontStyle:'italic',fontWeight:600,fontSize:'15px',color:'var(--ink)',lineHeight:1.1})},b.title),
+            h('div',{style:{fontSize:'11px',color:'var(--muted)',marginTop:'2px'}},b.author)),
+          h('button',{className:'rv-foc',onClick:()=>self.setState({toast:'Added to Priority TBR'}),style:{flex:'none',padding:'0 13px',height:'36px',borderRadius:'18px',border:'none',cursor:'pointer',background:'linear-gradient(135deg,var(--primary),var(--gold))',color:'#fff',fontSize:'11.5px',fontWeight:700,fontFamily:"'Hanken Grotesk',sans-serif"}},'＋ Priority')
+        )]))),
+      h('div',{style:{marginTop:'20px'}},this.ghostBtn('Retake the quiz',()=>self.setState({match:{step:0,answers:[]}}),{grow:true,icon:'↺'})));
+  }
+
+  // ===================== CLUBS =====================
+  clubsUI(){
+    const h=React.createElement; const self=this; const st=this.state;
+    if(st.clubsEmpty){
+      return h('div',{style:{paddingBottom:'34px'}},
+        this.screenTitle('Clubs & sharing'),
+        h('div',{style:{padding:'40px 30px',textAlign:'center'}},
+          h('div',{style:{fontSize:'40px',marginBottom:'14px'}},'🕯️'),
+          h('div',{style:this.fr({fontStyle:'italic',fontWeight:600,fontSize:'23px',color:'var(--ink)',lineHeight:1.1})},'Reading is better with coven'),
+          h('div',{style:{fontSize:'13px',color:'var(--muted)',marginTop:'10px',lineHeight:1.55}},'Start a shared list or a read-along, and invite your people. Comments stay spoiler-locked until everyone catches up.'),
+          h('div',{style:{marginTop:'22px',display:'flex',flexDirection:'column',gap:'11px'}},
+            this.primaryBtn('Start a book club',()=>self.setState({clubsEmpty:false}),{grow:true,icon:'✦'}),
+            this.ghostBtn('Join by code',()=>self.setState({clubsEmpty:false}),{grow:true,icon:'⌨'})),
+          h('button',{onClick:()=>self.setState({clubsEmpty:false}),style:{marginTop:'18px',border:'none',background:'none',color:'var(--gold)',cursor:'pointer',fontFamily:'inherit',fontSize:'12px',fontWeight:600}},'See an example club ›')));
+    }
+    const ra=this.BOOKS.find(x=>x.title==='Iron Flame');
+    const members=[['Genevieve',12,'var(--primary)'],['Mara',12,'var(--gold)'],['Soph',8,'var(--violet)'],['Bex',5,'var(--blue)']];
+    const tbrBooks=this.BOOKS.filter(b=>b.status==='tbr').slice(0,5);
+
+    return h('div',{style:{paddingBottom:'34px'}},
+      h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 20px 4px'}},
+        h('div',{style:this.fr({fontStyle:'italic',fontWeight:600,fontSize:'28px',color:'var(--ink)'})},'Clubs & sharing'),
+        h('button',{onClick:()=>self.setState({clubsEmpty:true}),style:{border:'1px solid var(--line)',background:'var(--card)',color:'var(--muted)',borderRadius:'14px',padding:'5px 10px',fontSize:'10.5px',cursor:'pointer',fontFamily:'inherit'}},'Empty state')),
+
+      // read-along with spoiler lock
+      h('div',{style:Object.assign({marginTop:'14px'},this.pad())},
+        h('div',{style:{fontSize:'10.5px',letterSpacing:'1.5px',textTransform:'uppercase',color:'var(--gold)',fontWeight:700,marginBottom:'10px'}},'Read-along'),
+        this.card([h('div',{style:{padding:'16px'}},
+          h('div',{style:{display:'flex',gap:'13px'}},
+            h('div',{style:{width:'56px',flex:'none',position:'relative',aspectRatio:'2/3',borderRadius:'2px 5px 5px 2px',overflow:'hidden'}},this.coverFace(ra)),
+            h('div',{style:{flex:1,minWidth:0}},
+              h('div',{style:this.fr({fontStyle:'italic',fontWeight:600,fontSize:'17px',color:'var(--ink)',lineHeight:1.1})},'Iron Flame'),
+              h('div',{style:{fontSize:'11.5px',color:'var(--muted)',marginTop:'2px'}},'Midnight Magnolias \u00b7 4 readers'),
+              h('div',{style:{display:'flex',marginTop:'10px'}},members.map((m,i)=>h('span',{key:i,style:{width:'26px',height:'26px',borderRadius:'50%',background:m[2],color:'#fff',fontSize:'10px',fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',marginLeft:i?'-7px':0,border:'2px solid var(--cardSolid)'}},m[0][0]))))),
+          h('div',{style:{marginTop:'15px'}},
+            h('div',{style:{fontSize:'10.5px',color:'var(--muted)',fontWeight:700,marginBottom:'8px'}},'EVERYONE\u2019S CHAPTER'),
+            members.map((m,i)=>h('div',{key:i,style:{display:'flex',alignItems:'center',gap:'10px',marginBottom:'8px'}},
+              h('span',{style:{fontSize:'12px',color:'var(--ink)',fontWeight:600,width:'70px',flex:'none'}},m[0]),
+              h('div',{style:{flex:1,height:'7px',borderRadius:'4px',background:'var(--chipB)',overflow:'hidden'}},
+                h('div',{style:{width:(m[1]/20*100)+'%',height:'100%',borderRadius:'4px',background:m[2]}})),
+              h('span',{style:{fontSize:'11px',color:'var(--muted)',width:'46px',flex:'none',textAlign:'right'}},'Ch '+m[1])))),
+          // spoiler lock
+          h('div',{style:{marginTop:'8px',padding:'13px',borderRadius:'14px',background:'var(--field)',border:'1px solid var(--line)'}},
+            h('div',{style:{display:'flex',alignItems:'center',gap:'9px'}},
+              h('span',{style:{fontSize:'16px'}},'🔒'),
+              h('div',{style:{flex:1}},
+                h('div',{style:{fontSize:'12.5px',fontWeight:600,color:'var(--ink)'}},'9 comments unlock at Chapter 16'),
+                h('div',{style:{fontSize:'11px',color:'var(--muted)',marginTop:'1px'}},'You\u2019re on Chapter 12 \u2014 keep reading')),
+              h('span',{style:{fontSize:'11px',fontWeight:700,color:'var(--gold)'}},'4 ahead'))),
+          h('div',{style:{marginTop:'10px',display:'flex',gap:'9px'}},
+            h('div',{style:{display:'flex',gap:'9px',alignItems:'flex-start',padding:'2px 0',flex:1}},
+              h('span',{style:{width:'28px',height:'28px',borderRadius:'50%',background:'var(--gold)',color:'#fff',fontSize:'11px',fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',flex:'none'}},'M'),
+              h('div',{},h('div',{style:{fontSize:'12px',color:'var(--ink)',lineHeight:1.45}},h('b',{},'Mara'),' \u00b7 Ch 11 \u2014 ',h('span',{style:{fontStyle:'italic',color:'var(--muted)'}},'\u201cthat reveal broke me, talk when you get here \ud83d\ude2d\u201d')))))
+        )])),
+
+      // book-club TBR (editable)
+      h('div',{style:Object.assign({marginTop:'20px'},this.pad())},
+        h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'10px'}},
+          h('div',{style:{fontSize:'10.5px',letterSpacing:'1.5px',textTransform:'uppercase',color:'var(--gold)',fontWeight:700}},'Book-club TBR'),
+          h('span',{style:{fontSize:'10.5px',color:'var(--muted)'}},'Everyone can edit')),
+        this.card([h('div',{style:{padding:'8px 6px'}},
+          tbrBooks.map((b,i)=>h('div',{key:b.id,style:{display:'flex',alignItems:'center',gap:'11px',padding:'8px 10px',borderTop:i?'1px solid var(--line)':'none'}},
+            h('span',{style:{color:'var(--muted)',fontSize:'13px',cursor:'grab',flex:'none'}},'⠿'),
+            h('div',{style:{flex:1,minWidth:0}},this.miniRow(b)),
+            h('span',{style:{fontSize:'10px',color:'var(--muted)',flex:'none'}},['Mara','Soph','You','Bex','Mara'][i]+' added'))),
+          h('button',{className:'rv-foc',style:{width:'calc(100% - 20px)',margin:'6px 10px 8px',height:'40px',borderRadius:'12px',border:'1.5px dashed var(--line)',background:'transparent',color:'var(--gold)',cursor:'pointer',fontFamily:"'Hanken Grotesk',sans-serif",fontSize:'13px',fontWeight:600}},'＋ Add a pick'))])),
+
+      // join by code
+      h('div',{style:Object.assign({marginTop:'20px'},this.pad())},
+        this.card([h('div',{style:{padding:'16px',textAlign:'center'}},
+          h('div',{style:this.fr({fontStyle:'italic',fontWeight:600,fontSize:'17px',color:'var(--ink)'})},'Join a club'),
+          h('div',{style:{fontSize:'11.5px',color:'var(--muted)',margin:'4px 0 13px'}},'Got an invite code from a friend?'),
+          h('div',{style:{display:'flex',gap:'8px',justifyContent:'center'}},
+            ['','','','',''].map((_,i)=>h('input',{key:i,maxLength:1,placeholder:'·',style:{width:'40px',height:'48px',textAlign:'center',borderRadius:'12px',border:'1px solid var(--line)',background:'var(--field)',color:'var(--ink)',fontSize:'20px',fontFamily:"'Fraunces',serif",fontWeight:600,outline:'none'}}))),
+          h('div',{style:{marginTop:'14px'}},this.primaryBtn('Join club',()=>self.setState({toast:'Joined'}),{grow:true})))]) )
+    );
+  }
+}
+</script>
+</body>
+</html>
