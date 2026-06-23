@@ -1,0 +1,12 @@
+node_modules
+dist
+coverage
+playwright-report
+test-results
+pnpm-lock.yaml
+prototype
+data
+backend
+design/from-claude-design
+design/Reverie_Theme_Studio.html
+*.html

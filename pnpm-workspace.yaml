@@ -1,0 +1,8 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+allowBuilds:
+  esbuild: true
+
+overrides:
+  vite: ^6.0.7
