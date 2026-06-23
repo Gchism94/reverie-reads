@@ -1,0 +1,8753 @@
+[
+ {
+  "title": "House of Night",
+  "first": "Celia",
+  "last": "Aaron",
+  "series": "Fall of Dawn",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Mindfuck Series Books 1-5",
+  "first": "S.T.",
+  "last": "Abby",
+  "series": "Mindfuck",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Dark Romance",
+   "Romance"
+  ],
+  "subgenre": "Dark Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Caught Up",
+  "first": "Navessa",
+  "last": "Allen",
+  "series": "Into Darkness",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Dark Romance",
+   "Romance"
+  ],
+  "subgenre": "Dark Romance",
+  "tropes": [
+   "Obsessive",
+   "Protective MMC",
+   "Spicy",
+   "Found Family"
+  ],
+  "spice": 5,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Lights Out",
+  "first": "Navessa",
+  "last": "Allen",
+  "series": "Into Darkness",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Dark Romance",
+   "Romance"
+  ],
+  "subgenre": "Dark Romance",
+  "tropes": [
+   "Masked MMC",
+   "Stalker",
+   "Online Romance",
+   "Obsessive"
+  ],
+  "spice": 5,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Game On",
+  "first": "Navessa",
+  "last": "Allen",
+  "series": "Into Darkness",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Your Blood, My Bones",
+  "first": "Kelly",
+  "last": "Andrew",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Horror",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Ever King",
+  "first": "LJ",
+  "last": "Andrews",
+  "series": "Ever Seas Series",
+  "position": "1",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [
+   "Fated Mates",
+   "Pirates",
+   "Enemies to Lovers",
+   "Sea Fae"
+  ],
+  "spice": 4,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Ever Queen",
+  "first": "LJ",
+  "last": "Andrews",
+  "series": "The Ever Seas",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Mist Thief",
+  "first": "LJ",
+  "last": "Andrews",
+  "series": "The Ever Seas",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Witch of the Wolves",
+  "first": "Kaylee",
+  "last": "Archer",
+  "series": "Witch of the Wolves",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "A Fire in the Flesh",
+  "first": "Jennifer L.",
+  "last": "Armentrout",
+  "series": "Flesh and Fire",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "A Kingdom of Flesh and Fire",
+  "first": "Jennifer L.",
+  "last": "Armentrout",
+  "series": "Blood and Ash",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": true,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "A Light in the Flame",
+  "first": "Jennifer L.",
+  "last": "Armentrout",
+  "series": "Flesh and Fire",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "A Shadow in the Ember",
+  "first": "Jennifer L.",
+  "last": "Armentrout",
+  "series": "Flesh and Fire",
+  "position": "1",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [
+   "Chosen One",
+   "Enemies to Lovers",
+   "Slow Burn",
+   "Gods"
+  ],
+  "spice": 4,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "A Soul of Ash and Blood",
+  "first": "Jennifer L.",
+  "last": "Armentrout",
+  "series": "Blood and Ash",
+  "position": "5",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [
+   "Guardian/Ward",
+   "Slow Burn",
+   "Forbidden Love"
+  ],
+  "spice": 4,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "Born of Blood and Ash",
+  "first": "Jennifer L.",
+  "last": "Armentrout",
+  "series": "Blood and Ash",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "From Blood and Ash",
+  "first": "Jennifer L.",
+  "last": "Armentrout",
+  "series": "Blood and Ash",
+  "position": "1",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [
+   "Forbidden Love",
+   "Guardian/Ward",
+   "Chosen One",
+   "Slow Burn"
+  ],
+  "spice": 4,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "Story and Fury",
+  "first": "Jennifer L.",
+  "last": "Armentrout",
+  "series": "The Harbinger",
+  "position": "",
+  "status": "complete",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Ya"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "The Crown of Guilded Bones",
+  "first": "Jennifer L.",
+  "last": "Armentrout",
+  "series": "Blood and Ash",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "The Primal of Blood and Bone",
+  "first": "Jennifer L",
+  "last": "Armentrout",
+  "series": "Blood and Ash",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The War of Two Queens",
+  "first": "Jennifer L.",
+  "last": "Armentrout",
+  "series": "Blood and Ash",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "My Funny Demon Valentine",
+  "first": "Aurora",
+  "last": "Ascher",
+  "series": "Hell Bent",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Demon With Benefits",
+  "first": "Aurora",
+  "last": "Ascher",
+  "series": "Hell Bent",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "My Demon Hunter",
+  "first": "Aurora",
+  "last": "Ascher",
+  "series": "Hell Bent",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Final Offer",
+  "first": "Lauren",
+  "last": "Asher",
+  "series": "Dreamland Billionaires",
+  "position": "3",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [
+   "Second Chance",
+   "Billionaire",
+   "Single Parent",
+   "Slow Burn"
+  ],
+  "spice": 4,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Terms and Conditions",
+  "first": "Lauren",
+  "last": "Asher",
+  "series": "Dreamland Billionaires",
+  "position": "2",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [
+   "Marriage of Convenience",
+   "Fake Relationship",
+   "Workplace",
+   "Billionaire"
+  ],
+  "spice": 4,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Fine Print",
+  "first": "Lauren",
+  "last": "Asher",
+  "series": "Dreamland Billionaires",
+  "position": "1",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [
+   "Billionaire",
+   "Grumpy/Sunshine",
+   "Fake Relationship",
+   "Slow Burn"
+  ],
+  "spice": 4,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "This Will Be Fun",
+  "first": "E. B.",
+  "last": "Asher",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "Starside",
+  "first": "Alex",
+  "last": "Aster",
+  "series": "Starside",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Red Queen",
+  "first": "Victoria",
+  "last": "Aveyard",
+  "series": "Red Queen",
+  "position": "1",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [
+   "Hidden Powers",
+   "Love Triangle",
+   "Court Intrigue",
+   "Rebellion"
+  ],
+  "spice": 2,
+  "tags": [
+   "Ya"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Glass Sword",
+  "first": "Victoria",
+  "last": "Aveyard",
+  "series": "Red Queen",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Ya"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Hook Line and Sinker",
+  "first": "Tessa",
+  "last": "Bailey",
+  "series": "Bellinger Series",
+  "position": "2",
+  "status": "series",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [
+   "Friends to Lovers",
+   "Pining",
+   "Small Town",
+   "He Falls First"
+  ],
+  "spice": 4,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "It Happened One Summer",
+  "first": "Tessa",
+  "last": "Bailey",
+  "series": "Bellinger Series",
+  "position": "1",
+  "status": "series",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [
+   "Fish Out of Water",
+   "Grumpy/Sunshine",
+   "Small Town",
+   "Opposites Attract"
+  ],
+  "spice": 4,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Cruel prince",
+  "first": "Holly",
+  "last": "Black",
+  "series": "The Folk of the Air",
+  "position": "1",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [
+   "Fae",
+   "Enemies to Lovers",
+   "Court Intrigue",
+   "Forbidden Love"
+  ],
+  "spice": 2,
+  "tags": [
+   "Ya"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Queen of Nothing",
+  "first": "Holly",
+  "last": "Black",
+  "series": "The Folk of the Air",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Ya"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Wicked",
+  "first": "Holly",
+  "last": "Black",
+  "series": "The Folk of the Air",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Ya"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Court of Lies and Deceit",
+  "first": "Marion",
+  "last": "Blackwood",
+  "series": "Flame and Throns",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Empire of Flames and Thorns",
+  "first": "Marion",
+  "last": "Blackwood",
+  "series": "Flame and Throns",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Realm of Wind and Vines",
+  "first": "Marion",
+  "last": "Blackwood",
+  "series": "Flame and Throns",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Thorn of Ice and Blood",
+  "first": "Marion",
+  "last": "Blackwood",
+  "series": "Flame and Throns",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "War of Fire and Fury",
+  "first": "Marion",
+  "last": "Blackwood",
+  "series": "Flame and Thorns",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "A Broken Blade",
+  "first": "Medissa",
+  "last": "Blair",
+  "series": "The Halfling Sage",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "One Pucked up Pack",
+  "first": "Sarah",
+  "last": "Blue",
+  "series": "Pucked Up Omegaverse",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Sport"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "On Wings of Blood",
+  "first": "Briar",
+  "last": "Boleyn",
+  "series": "Bloodwing Academy",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Bond That Burns",
+  "first": "Briar",
+  "last": "Boleyn",
+  "series": "Bloodwing Academy",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Wings That Bind",
+  "first": "Briar",
+  "last": "Boleyn",
+  "series": "Bloodwing Academy",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "First Time Caller",
+  "first": "B.K.",
+  "last": "Borison",
+  "series": "Heartstrings",
+  "position": "1",
+  "status": "series",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [
+   "Single Parent",
+   "Slow Burn",
+   "Radio",
+   "He Falls First"
+  ],
+  "spice": 3,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "And Now Back To You",
+  "first": "B.K.",
+  "last": "Borison",
+  "series": "Heartstrings",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Long Live Evil",
+  "first": "Sarah Rees",
+  "last": "Brennan",
+  "series": "Time of Iron",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Ya"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "Once You're Mine",
+  "first": "Morgan",
+  "last": "Bridges",
+  "series": "Possessing Her",
+  "position": "1",
+  "status": "series",
+  "genres": [
+   "Dark Romance",
+   "Romance"
+  ],
+  "subgenre": "Dark Romance",
+  "tropes": [
+   "Stalker",
+   "Obsessive",
+   "Captive/Captor",
+   "Morally Black MMC"
+  ],
+  "spice": 5,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Daughter of No World",
+  "first": "Carissa",
+  "last": "Broadbent",
+  "series": "The War of Lost Hearts",
+  "position": "",
+  "status": "complete",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Six Scorched Roses",
+  "first": "Carissa",
+  "last": "Broadbent",
+  "series": "Crowns of Nyaxia",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Slaying the Vampire Conqueror",
+  "first": "Carissa",
+  "last": "Broadbent",
+  "series": "Crowns of Nyaxia",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Ashes & Thee Star-Cursed King",
+  "first": "Carissa",
+  "last": "Broadbent",
+  "series": "Crowns of Nyaxia",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "The Fallen and the Kiss of Dusk",
+  "first": "Carissa",
+  "last": "Broadbent",
+  "series": "Crowns of Nyaxia",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Serpent & The Wings of Night",
+  "first": "Carissa",
+  "last": "Broadbent",
+  "series": "Crowns of Nyaxia",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "The Songbird & The Heart of Stone",
+  "first": "Carissa",
+  "last": "Broadbent",
+  "series": "Crowns of Nyaxia",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Children of Fallen Gods",
+  "first": "Carissa",
+  "last": "Broadbent",
+  "series": "The War of Lost Hearts",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Mother of Death and Dawn",
+  "first": "Carissa",
+  "last": "Broadbent",
+  "series": "The War of Lost Hearts",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Wurthering Heights",
+  "first": "Emily",
+  "last": "Bronte",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Classic"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "I Accidentally Summoned a Demon Boyfriend",
+  "first": "Jessica",
+  "last": "Cage",
+  "series": "Accidents Happen",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Throne in the Dark",
+  "first": "A.K.",
+  "last": "Caggiano",
+  "series": "Villains and Virtues",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Haunting Adeline",
+  "first": "H.D.",
+  "last": "Carlton",
+  "series": "Cat and Mouse",
+  "position": "1",
+  "status": "complete",
+  "genres": [
+   "Dark Romance",
+   "Romance"
+  ],
+  "subgenre": "Dark Romance",
+  "tropes": [
+   "Stalker",
+   "Morally Black MMC",
+   "Obsessive",
+   "Mystery"
+  ],
+  "spice": 5,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "Hunting Adeline",
+  "first": "H.D.",
+  "last": "Carlton",
+  "series": "Cat and Mouse",
+  "position": "2",
+  "status": "complete",
+  "genres": [
+   "Dark Romance",
+   "Romance"
+  ],
+  "subgenre": "Dark Romance",
+  "tropes": [
+   "Stalker",
+   "Captive/Captor",
+   "Obsessive",
+   "Revenge"
+  ],
+  "spice": 5,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "Shallow River",
+  "first": "H.D.",
+  "last": "Carlton",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Dark Romance",
+   "Romance"
+  ],
+  "subgenre": "Dark Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Where's Molly",
+  "first": "H.D.",
+  "last": "Carlton",
+  "series": "Cat and Mouse",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Dark Romance",
+   "Romance"
+  ],
+  "subgenre": "Dark Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Phantom",
+  "first": "H.D.",
+  "last": "Carlton",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Satan's Affair",
+  "first": "H.D.",
+  "last": "Carlton",
+  "series": "Cat & Mouse",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Empress",
+  "first": "Kristin",
+  "last": "Cast",
+  "series": "Towerfall",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Keep Me",
+  "first": "Sara",
+  "last": "Cate",
+  "series": "Sinful Manor",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Dark Romance",
+   "Romance"
+  ],
+  "subgenre": "Dark Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Promise Me",
+  "first": "Sarah",
+  "last": "Cate",
+  "series": "Sinful Manor",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Heartless Hunter",
+  "first": "Kristen",
+  "last": "Ciccarelli",
+  "series": "Crimson Moth",
+  "position": "",
+  "status": "complete",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Ya"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "Rebel Witch",
+  "first": "Kristen",
+  "last": "Ciccarelli",
+  "series": "Crimson Moth",
+  "position": "",
+  "status": "complete",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Ya"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "The Deer and The Dragon",
+  "first": "Piper",
+  "last": "CJ",
+  "series": "No Other Gods",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Fox and the Falcon",
+  "first": "Piper",
+  "last": "CJ",
+  "series": "No Other Gods",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Serpent and the Siren",
+  "first": "Piper",
+  "last": "CJ",
+  "series": "No Other Gods",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Spark of the Everflame",
+  "first": "Penn",
+  "last": "Cole",
+  "series": "The Kindred's Curse Saga",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Glow of the Everflame",
+  "first": "Penn",
+  "last": "Cole",
+  "series": "The Kindred's Curse",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Heat of the Everflame",
+  "first": "Penn",
+  "last": "Cole",
+  "series": "The Kindred's Curse",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Ruinous Creatures",
+  "first": "Jessie",
+  "last": "Cole Jackson",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Five Broken Blades",
+  "first": "Mai",
+  "last": "Corland",
+  "series": "The Broken Blades",
+  "position": "",
+  "status": "complete",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "Four Ruined Realms",
+  "first": "Mai",
+  "last": "Corland",
+  "series": "The Broken Blades",
+  "position": "",
+  "status": "complete",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Secret Haven",
+  "first": "Catherine",
+  "last": "Cowles",
+  "series": "Sparrow Falls",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "\\"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Delicate Escape",
+  "first": "Catherine",
+  "last": "Cowles",
+  "series": "Sparrow Falls",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Beautiful Exile",
+  "first": "Catherine",
+  "last": "Cowles",
+  "series": "Sparrow Falls",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Broken Harbor",
+  "first": "Catherine",
+  "last": "Cowles",
+  "series": "Sparrow Falls",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Chasing Shelter",
+  "first": "Catherine",
+  "last": "Cowles",
+  "series": "Sparrow Falls",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Fragile Sanctuary",
+  "first": "Catherine",
+  "last": "Cowles",
+  "series": "Sparrow Falls",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Firebird",
+  "first": "Juliette",
+  "last": "Cross",
+  "series": "The Firebird that Binds",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Wolf Gone Wild",
+  "first": "Juliette",
+  "last": "Cross",
+  "series": "Stay a Spell",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "Bloodsinger",
+  "first": "Juliette",
+  "last": "Cross",
+  "series": "The Fire That Burns",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Dark One",
+  "first": "Nikki St",
+  "last": "Crowe",
+  "series": "Vicious Lost Boys",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Fae Princes",
+  "first": "Nikki St",
+  "last": "Crowe",
+  "series": "Vicious Lost Boys",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Their Vicious Darling",
+  "first": "Nikki St",
+  "last": "Crowe",
+  "series": "Vicious Lost Boys",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "At the Mercy of Midnight",
+  "first": "Chloe",
+  "last": "Cullen",
+  "series": "Midnight Relm Duology",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dramione"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Zom Romcom",
+  "first": "Olivia",
+  "last": "Dade",
+  "series": "Supernatural Entanglements",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Bloom",
+  "first": "Delilah S.",
+  "last": "Dawson",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Horror",
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Birthday Girl",
+  "first": "Penelope",
+  "last": "Douglas",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Credence",
+  "first": "Penelope",
+  "last": "Douglas",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Dark Romance",
+   "Romance"
+  ],
+  "subgenre": "Dark Romance",
+  "tropes": [
+   "Why Choose",
+   "Forced Proximity",
+   "Forbidden Love",
+   "Slow Burn"
+  ],
+  "spice": 5,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Spellshop",
+  "first": "Sarah Beth",
+  "last": "Durst",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "An Ancient Witch's Guide to Modern Dating",
+  "first": "Cecilia",
+  "last": "Edward",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Cursebound",
+  "first": "Saara",
+  "last": "El-Arifi",
+  "series": "Faebound",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Faebound",
+  "first": "Saara",
+  "last": "El-Arifi",
+  "series": "Faebound",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "First Lie Wins",
+  "first": "Ashley",
+  "last": "Elston",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Mystery",
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "To Cage a Wild Bird",
+  "first": "Brooke",
+  "last": "Fast",
+  "series": "Divided Fates",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Emily Wilde's Encyclopaedia of Faries",
+  "first": "Heather",
+  "last": "Fawcett",
+  "series": "Emily Wilde",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Emily Wilder's Compendium of Lost Tales",
+  "first": "Heather",
+  "last": "Fawcett",
+  "series": "Emily Wild",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Emily Wilde's Map of the Otherlands",
+  "first": "Heather",
+  "last": "Fawlett",
+  "series": "Emily Wilde",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Amid Clouds and Bones",
+  "first": "Ella",
+  "last": "Fields",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Great Gatsby",
+  "first": "F. Scott",
+  "last": "Fitzgerald",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Classic"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": true,
+   "TC": false
+  }
+ },
+ {
+  "title": "This Side of Paradise",
+  "first": "F. Scott",
+  "last": "Fitzgerald",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Classic"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "A Curse of Beasts and Magic",
+  "first": "Jeaniene",
+  "last": "Frost",
+  "series": "Beautiful and Beastly",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Blackthorn",
+  "first": "J.T.",
+  "last": "Geissinger",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Savage Blooms",
+  "first": "S.T.",
+  "last": "Gibson",
+  "series": "Unearthly Delights",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Gothic"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Kight and The Moth",
+  "first": "Rachel",
+  "last": "Gillig",
+  "series": "The Stonewater Kingdom",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Gothic"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "One Dark Window",
+  "first": "Rachel",
+  "last": "Gillig",
+  "series": "The Sheperd King",
+  "position": "",
+  "status": "complete",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Ya",
+   "Gothic"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "Two Twisted Crowns",
+  "first": "Rachel",
+  "last": "Gillig",
+  "series": "The Sheperd King",
+  "position": "",
+  "status": "complete",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Ya",
+   "Gothic"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "Icebreakers",
+  "first": "Hannah",
+  "last": "Grace",
+  "series": "Maple Hills",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Sport"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Ascended",
+  "first": "",
+  "last": "Grenwich & Lennox",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Deathless One",
+  "first": "Emma",
+  "last": "Hamm",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Bloody Black",
+  "first": "Rhiannon",
+  "last": "Hargadon",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Pirates"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Haunting the Hunter",
+  "first": "Hanna",
+  "last": "Harp",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Dark Romance",
+   "Romance"
+  ],
+  "subgenre": "Dark Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Quicksilver",
+  "first": "Callie",
+  "last": "Hart",
+  "series": "Fae & Alchemy",
+  "position": "1",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [
+   "Fae",
+   "Enemies to Lovers",
+   "Touch Her and Die",
+   "Slow Burn"
+  ],
+  "spice": 4,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "Brimstone",
+  "first": "Callie",
+  "last": "Hart",
+  "series": "Fae & Alchemy",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Blood and Roses",
+  "first": "Callie",
+  "last": "Hart",
+  "series": "Blood and Roses",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Older",
+  "first": "Jennifer",
+  "last": "Hartmann",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Dark Romance",
+   "Romance"
+  ],
+  "subgenre": "Dark Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Bride",
+  "first": "Ali",
+  "last": "Hazelwood",
+  "series": "Bride",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Mate",
+  "first": "Ali",
+  "last": "Hazelwood",
+  "series": "Bride",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Deep End (Whet)",
+  "first": "Ali",
+  "last": "Hazelwood",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "Love, Theoretically",
+  "first": "Ali",
+  "last": "Hazelwood",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Not In Love",
+  "first": "Ali",
+  "last": "Hazelwood",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "He Sees You When You're Sleeping",
+  "first": "Alta",
+  "last": "Hensley",
+  "series": "Naughty or Nice",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "King of Pride",
+  "first": "Anna",
+  "last": "Huang",
+  "series": "Kings of Sin",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Dark Romance",
+   "Romance"
+  ],
+  "subgenre": "Dark Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "King of Sloth",
+  "first": "Ana",
+  "last": "Huang",
+  "series": "Kings of Sin",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "King of Wrath",
+  "first": "Anna",
+  "last": "Huang",
+  "series": "Kings of Sin",
+  "position": "1",
+  "status": "standalone",
+  "genres": [
+   "Dark Romance",
+   "Romance"
+  ],
+  "subgenre": "Dark Romance",
+  "tropes": [
+   "Marriage of Convenience",
+   "Enemies to Lovers",
+   "Billionaire",
+   "Slow Burn"
+  ],
+  "spice": 4,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "The Striker",
+  "first": "Anna",
+  "last": "Huang",
+  "series": "Gods of the Game",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Sport"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Defender",
+  "first": "Ana",
+  "last": "Huang",
+  "series": "Gods of the Dame",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Sport"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Twisted Love",
+  "first": "Ana",
+  "last": "Huang",
+  "series": "Twisted",
+  "position": "1",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [
+   "Brother's Best Friend",
+   "Grumpy/Sunshine",
+   "Forbidden Love",
+   "Possessive"
+  ],
+  "spice": 4,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "King of Envy",
+  "first": "Ana",
+  "last": "Huang",
+  "series": "Kings of Sin",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Twisted Games",
+  "first": "Ana",
+  "last": "Huang",
+  "series": "Twisted",
+  "position": "2",
+  "status": "series",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [
+   "Bodyguard",
+   "Forbidden Love",
+   "Royalty",
+   "Forced Proximity"
+  ],
+  "spice": 4,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Twisted Hate",
+  "first": "Ana",
+  "last": "Huang",
+  "series": "Twisted",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Twisted Lies",
+  "first": "Ana",
+  "last": "Huang",
+  "series": "Twisted",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "King of Gluttony",
+  "first": "Ana",
+  "last": "Huang",
+  "series": "Kings of Sin",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Graceless Heart",
+  "first": "Isabel",
+  "last": "Ibanez",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Cruel Beauty",
+  "first": "Dana",
+  "last": "Isaly",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Dark Romance",
+   "Romance"
+  ],
+  "subgenre": "Dark Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "Fifty Shades Freed",
+  "first": "E L",
+  "last": "James",
+  "series": "Fifty Shades",
+  "position": "",
+  "status": "complete",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Fifty Shades of Grey",
+  "first": "E L",
+  "last": "James",
+  "series": "Fifty Shades",
+  "position": "",
+  "status": "complete",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Grey",
+  "first": "EL",
+  "last": "James",
+  "series": "Fifty Shades",
+  "position": "",
+  "status": "complete",
+  "genres": [
+   "Dark Romance",
+   "Romance"
+  ],
+  "subgenre": "Dark Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Fifty Shades Darker",
+  "first": "EL",
+  "last": "James",
+  "series": "Fifty Shades of Grey",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Hundred Thousand Kingdoms",
+  "first": "N.K.",
+  "last": "Jemisin",
+  "series": "Inheritance Trilogy",
+  "position": "",
+  "status": "complete",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "A Curse Carved In Bone",
+  "first": "Danielle L.",
+  "last": "Jensen",
+  "series": "Sage of the Unfated",
+  "position": "",
+  "status": "complete",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "A Fate Inked In Blood",
+  "first": "Danielle L.",
+  "last": "Jensen",
+  "series": "Sage of the Unfated",
+  "position": "1",
+  "status": "complete",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [
+   "Fated Mates",
+   "Norse Mythology",
+   "Marriage of Convenience",
+   "Forced Proximity"
+  ],
+  "spice": 4,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "The Bridge Kingdom",
+  "first": "Danielle L.",
+  "last": "Jensen",
+  "series": "The Bridge Kingdom",
+  "position": "1",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [
+   "Marriage of Convenience",
+   "Enemies to Lovers",
+   "Spy Heroine",
+   "Slow Burn"
+  ],
+  "spice": 3,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Traitor Queen",
+  "first": "Danielle L.",
+  "last": "Jensen",
+  "series": "The Bridge Kingdom",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Books and Bewitchment",
+  "first": "Isla",
+  "last": "Jewell",
+  "series": "Arcadia Falls",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Just for the Summer",
+  "first": "Abby",
+  "last": "Jimenez",
+  "series": "Part of Your World",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Say You'll Remember Me",
+  "first": "Abby",
+  "last": "Jimenez",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "Gild",
+  "first": "Raven",
+  "last": "Kennedy",
+  "series": "The Plated Prisoner",
+  "position": "",
+  "status": "complete",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Glint",
+  "first": "Raven",
+  "last": "Kennedy",
+  "series": "The Plated Prisoner",
+  "position": "",
+  "status": "complete",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Gold",
+  "first": "Raven",
+  "last": "Kennedy",
+  "series": "The Plated Prisoner",
+  "position": "",
+  "status": "complete",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Goldfinch",
+  "first": "Raven",
+  "last": "Kennedy",
+  "series": "The Plated Prisoner",
+  "position": "",
+  "status": "complete",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Deal",
+  "first": "Elle",
+  "last": "Kennedy",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Mistake",
+  "first": "Elle",
+  "last": "Kennedy",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Beautiful Villain",
+  "first": "Rebecca",
+  "last": "Kenney",
+  "series": "Gilded Monsters",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Swordheart",
+  "first": "T.",
+  "last": "Kingfisher",
+  "series": "Swordheard",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Wolfsong",
+  "first": "TJ",
+  "last": "Klune",
+  "series": "Green Creek",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "Ravensong",
+  "first": "TJ",
+  "last": "Klune",
+  "series": "Green Creek",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Den of Vipers",
+  "first": "KA",
+  "last": "Knight",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Dark Romance",
+   "Romance"
+  ],
+  "subgenre": "Dark Romance",
+  "tropes": [
+   "Why Choose",
+   "Captive/Captor",
+   "Mafia",
+   "Touch-Starved"
+  ],
+  "spice": 5,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Irresistible Urge to Fall for Your Enemy",
+  "first": "Brigitte",
+  "last": "Knightley",
+  "series": "Dearly Beloathes",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dramione"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Arcana Academy",
+  "first": "Elise",
+  "last": "Kova",
+  "series": "Arcana Academy",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "A Deal with the Elf King",
+  "first": "Elise",
+  "last": "Kova",
+  "series": "A Married to Magic Novel",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Sun and the Void",
+  "first": "Gabriella Romero",
+  "last": "Lacruz",
+  "series": "The Warring Gods",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Once and Future Queen",
+  "first": "Paula",
+  "last": "Lafferty",
+  "series": "The Lives of Quinevere",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Dragonfall",
+  "first": "L. R.",
+  "last": "Lam",
+  "series": "Dragon Scales",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Emberclaw",
+  "first": "L.R.",
+  "last": "Lam",
+  "series": "Dragon Scales",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Fairydale",
+  "first": "Veronica",
+  "last": "Lancet",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Grimstone",
+  "first": "Sophie",
+  "last": "Lark",
+  "series": "Grimstone Series",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Dark Romance",
+   "Romance"
+  ],
+  "subgenre": "Dark Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Monarch",
+  "first": "Sophie",
+  "last": "Lark",
+  "series": "Grimstone Series",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Dark Romance",
+   "Romance"
+  ],
+  "subgenre": "Dark Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Her Soul for Revenge",
+  "first": "Harley",
+  "last": "Laroux",
+  "series": "Souls Trilogy",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Her Soul To Take",
+  "first": "Harley",
+  "last": "Laroux",
+  "series": "Souls Trilogy",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Dark Romance",
+   "Romance"
+  ],
+  "subgenre": "Dark Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "Soul of a Witch",
+  "first": "Harley",
+  "last": "Laroux",
+  "series": "Souls Trilogy",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Pounded in the Patch",
+  "first": "Dana",
+  "last": "Leeann",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Dark Romance",
+   "Horror",
+   "Romance"
+  ],
+  "subgenre": "Dark Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Red City",
+  "first": "Marie",
+  "last": "Lu",
+  "series": "The New Alchemists",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "For Whom the Belle Tolls",
+  "first": "Jaysea",
+  "last": "Lynn",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Immortal",
+  "first": "Sue",
+  "last": "Lynn Tan",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "A Court of Thorns and Roses",
+  "first": "Sarah J.",
+  "last": "Maas",
+  "series": "ACOTAR",
+  "position": "1",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [
+   "Fae",
+   "Enemies to Lovers",
+   "Slow Burn",
+   "Beauty and the Beast",
+   "Forbidden Love"
+  ],
+  "spice": 4,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "A Court of Mist and Fury",
+  "first": "Sarah J.",
+  "last": "Maas",
+  "series": "ACOTAR",
+  "position": "2",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [
+   "Fated Mates",
+   "Slow Burn",
+   "Found Family",
+   "Morally Gray MMC",
+   "Touch Her and Die"
+  ],
+  "spice": 4,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "A Court of Wings and Ruin",
+  "first": "Sarah J.",
+  "last": "Maas",
+  "series": "ACOTAR",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "A Court of Frost and Starlight",
+  "first": "Sarah J.",
+  "last": "Maas",
+  "series": "ACOTAR",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "A Court of Silver Flames",
+  "first": "Sarah J.",
+  "last": "Maas",
+  "series": "ACOTAR",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Crown of Midnight",
+  "first": "Sarah J.",
+  "last": "Maas",
+  "series": "Throne of Glass",
+  "position": "",
+  "status": "complete",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Ya"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "Empire of Storms",
+  "first": "Sarah J.",
+  "last": "Maas",
+  "series": "Throne of Glass",
+  "position": "",
+  "status": "complete",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Ya"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "Heir of Fire",
+  "first": "Sarah J.",
+  "last": "Maas",
+  "series": "Throne of Glass",
+  "position": "",
+  "status": "complete",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Ya"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "House of Earth and Blood",
+  "first": "Sarah J",
+  "last": "Maas",
+  "series": "Crescent City",
+  "position": "1",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [
+   "Slow Burn",
+   "Found Family",
+   "Partners to Lovers",
+   "Chosen One"
+  ],
+  "spice": 4,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "House of Flame and Shadow",
+  "first": "Sarah J",
+  "last": "Maas",
+  "series": "Crescent City",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "House of Sky and Breath",
+  "first": "Sarah J",
+  "last": "Maas",
+  "series": "Crescent City",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Kingdom of Ash",
+  "first": "Sarah J.",
+  "last": "Maas",
+  "series": "Throne of Glass",
+  "position": "",
+  "status": "complete",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Ya"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "Queen of Shadows",
+  "first": "Sarah J.",
+  "last": "Maas",
+  "series": "Throne of Glass",
+  "position": "",
+  "status": "complete",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Ya"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "The Assassin's Blade",
+  "first": "Sarah J.",
+  "last": "Maas",
+  "series": "Throne of Glass",
+  "position": "",
+  "status": "complete",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Ya"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "Throne of Glass",
+  "first": "Sarah J.",
+  "last": "Maas",
+  "series": "Throne of Glass",
+  "position": "1",
+  "status": "complete",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [
+   "Assassin Heroine",
+   "Love Triangle",
+   "Chosen One",
+   "Court Intrigue"
+  ],
+  "spice": 3,
+  "tags": [
+   "Ya"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "Tower of Dawn",
+  "first": "Sarah J.",
+  "last": "Maas",
+  "series": "Throne of Glass",
+  "position": "",
+  "status": "complete",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Ya"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "Consider Me",
+  "first": "Becka",
+  "last": "Mack",
+  "series": "Playing For Keeps",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Sport"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Play With Me",
+  "first": "Becka",
+  "last": "Mack",
+  "series": "Playing For Keeps",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Sport"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Unravel Me",
+  "first": "Becka",
+  "last": "Mack",
+  "series": "Playing For Keeps",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Sport"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Fall With Me",
+  "first": "Becka",
+  "last": "Mack",
+  "series": "Playing For Keeps",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Accomplice to The Villain",
+  "first": "Hannah Nicole",
+  "last": "Maehrer",
+  "series": "Assistant to The Villain",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "Apprentice to The Villain",
+  "first": "Hannah Nicole",
+  "last": "Maehrer",
+  "series": "Assistant to The Villain",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "Assistant to The Villain",
+  "first": "Hannah Nicole",
+  "last": "Maehrer",
+  "series": "Assistant to The Villain",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "The Shadow Bride",
+  "first": "Shelby",
+  "last": "Mahurin",
+  "series": "The Scarlet Veil",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Ya"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Throne of The Fallen",
+  "first": "Kerri",
+  "last": "Maniscalco",
+  "series": "Prince of Sin",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Court of Blood and Bindings",
+  "first": "Lisettw",
+  "last": "Marshall",
+  "series": "Fae Isles",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Blood of Hercules",
+  "first": "Jasmine",
+  "last": "Mas",
+  "series": "Villians of Lore",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Bonds of Hercules",
+  "first": "Jasmine",
+  "last": "Mas",
+  "series": "Villians of Lore",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Psycho Shifters",
+  "first": "Jasmine",
+  "last": "Mas",
+  "series": "Cruel Shifterverse",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Distance",
+  "first": "Luna",
+  "last": "Mason",
+  "series": "Beneath the Mask",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Dark Romance",
+   "Romance"
+  ],
+  "subgenre": "Dark Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark",
+   "Sport",
+   "Mafia"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Wolf and the Crown of Blood",
+  "first": "Elizabeth",
+  "last": "May",
+  "series": "The Broken Accords",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Beneath the Stars",
+  "first": "Emily",
+  "last": "McIntire",
+  "series": "Sugerlake",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "Burning Daylight",
+  "first": "Emily",
+  "last": "McIntire",
+  "series": "Defying the Stars",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Dark Romance",
+   "Romance"
+  ],
+  "subgenre": "Dark Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Hooked",
+  "first": "Emily",
+  "last": "Mcintire",
+  "series": "Never After",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Dark Romance",
+   "Romance"
+  ],
+  "subgenre": "Dark Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "Scared",
+  "first": "Emily",
+  "last": "Mcintire",
+  "series": "Never After",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Dark Romance",
+   "Romance"
+  ],
+  "subgenre": "Dark Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "Wretched",
+  "first": "Emily",
+  "last": "McIntire",
+  "series": "Never After Series",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Twisted",
+  "first": "Emily",
+  "last": "McIntire",
+  "series": "Never After",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Dragon's Mark",
+  "first": "Rosa",
+  "last": "Meronek",
+  "series": "The Faerie Crown",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Griffin's Burn",
+  "first": "Rosa",
+  "last": "Meronek",
+  "series": "The Faerie Crown",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Promises & Pomegranates",
+  "first": "Sav R.",
+  "last": "Miller",
+  "series": "Monsters & Muses",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Night Circus",
+  "first": "Erin",
+  "last": "Morgenstern",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Leave Me Behind",
+  "first": "K. M.",
+  "last": "Moronova",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Dark Romance",
+   "Romance"
+  ],
+  "subgenre": "Dark Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "Your Knife My Heart",
+  "first": "KM",
+  "last": "Moronova",
+  "series": "Dark Forces",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Dark Romance",
+   "Romance"
+  ],
+  "subgenre": "Dark Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Military",
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "My Blade Your Back",
+  "first": "K.M.",
+  "last": "Moronova",
+  "series": "Dark Forces",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Dark Romance",
+   "Romance"
+  ],
+  "subgenre": "Dark Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Once Upon a Deamon Heart",
+  "first": "K.M.",
+  "last": "Moronova",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Bulletproof",
+  "first": "K.M.",
+  "last": "Moronova",
+  "series": "Dark Forces",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Two Lost Kings",
+  "first": "Ashley",
+  "last": "Munoz",
+  "series": "Rake Forge Royals Duet",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "A Broken Queen",
+  "first": "Ashley",
+  "last": "Munoz",
+  "series": "Rake Forge Royals Duet",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Book of Azrael",
+  "first": "Amber V",
+  "last": "Nicole",
+  "series": "Gods & Monsters",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Throne of Broken Gods",
+  "first": "Amber V",
+  "last": "Nicole",
+  "series": "Gods & Monsters",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "How Does It Feel?",
+  "first": "Jeneane",
+  "last": "O'Riley",
+  "series": "Infatuated Fae",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "What Did You Do?",
+  "first": "Jeneane",
+  "last": "O'Riley",
+  "series": "Infatuated Fae Series",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Where Did You Go?",
+  "first": "Jeneane",
+  "last": "O'Riley",
+  "series": "Infatuated Fae Series",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Can You Take It?",
+  "first": "Jeneane",
+  "last": "O'Riley",
+  "series": "Infatuated Fae",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Willing Prey",
+  "first": "Allie",
+  "last": "Oleander",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Final Rose",
+  "first": "Amy",
+  "last": "Oliveira",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "The Games Gods Play",
+  "first": "Abigail",
+  "last": "Owen",
+  "series": "The Crucible",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Wolf King",
+  "first": "Lauren",
+  "last": "Palphreyman",
+  "series": "Wolf King",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Night Prince",
+  "first": "Lauren",
+  "last": "Palphreyman",
+  "series": "The Wolf King",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "When The Moon Hatched",
+  "first": "Sarah A.",
+  "last": "Parker",
+  "series": "Moonfall",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "To Bleed A Crystal Bloom",
+  "first": "Sarah A.",
+  "last": "Parker",
+  "series": "Crystal Bloom",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "To Snap a Silver Stem",
+  "first": "Sarah A",
+  "last": "Parker",
+  "series": "A Crystal Bloom",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Ballad of Falling Dragons",
+  "first": "Sarah A",
+  "last": "Parker",
+  "series": "Moonfall",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Never Keep",
+  "first": "Caroline & Susanne",
+  "last": "Peckham & Valenti",
+  "series": "Sins of the Zodiac",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Hollow",
+  "first": "Caroline & Susanne",
+  "last": "Peckham & Valenti",
+  "series": "Crown of Hearts and Chaos",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Shield of Sparrows",
+  "first": "Devney",
+  "last": "Perry",
+  "series": "Shield of Sparrows",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Rites of the Starling",
+  "first": "Devney",
+  "last": "Perry",
+  "series": "Shield of Sparrows",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Cash",
+  "first": "Jessica",
+  "last": "Peterson",
+  "series": "Lucky River Ranch",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Western"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Wyatt",
+  "first": "Jessica",
+  "last": "Peterson",
+  "series": "Lucky River Ranch",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Sawyer",
+  "first": "Jessica",
+  "last": "Peterson",
+  "series": "Lucky River Ranch",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Ryder",
+  "first": "Jessica",
+  "last": "Peterson",
+  "series": "Lucky River Ranch",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Duke",
+  "first": "Jessica",
+  "last": "Peterson",
+  "series": "Lucky River Ranch",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Smoke and Scar",
+  "first": "Gretchen",
+  "last": "Powell Fox",
+  "series": "Shattered Crown",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Splintered Kingdom",
+  "first": "Gretchen",
+  "last": "Powell Fox",
+  "series": "Shattered Crown",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Just for the Cameras",
+  "first": "Meghan",
+  "last": "Quinn",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "North is the Night",
+  "first": "Emily",
+  "last": "Rath",
+  "series": "The Tuonela Duology",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Game Changer",
+  "first": "Rachel",
+  "last": "Reid",
+  "series": "Game Changers",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Sport",
+   "Lgbtq"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Innamorata",
+  "first": "Ava",
+  "last": "Reid",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "A Soul to Keep",
+  "first": "Opal",
+  "last": "Reyne",
+  "series": "Duskwalker Brides",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Beauty's Kingdom",
+  "first": "Anne",
+  "last": "Rice (A.N. Roquelaure)",
+  "series": "Sleeping Beauty",
+  "position": "",
+  "status": "complete",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Erotica"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Beauty's Punishment",
+  "first": "Anne",
+  "last": "Rice (AN Roquelaure)",
+  "series": "Sleeping Beauty Series",
+  "position": "",
+  "status": "complete",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Beauty's Release",
+  "first": "Anne",
+  "last": "Rice (AN Roquelaure)",
+  "series": "Sleeping Beauty Series",
+  "position": "",
+  "status": "complete",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Claiming of Sleeping Beauty",
+  "first": "Anne",
+  "last": "Rice (AN Roquelaure)",
+  "series": "Sleeping Beauty Series",
+  "position": "",
+  "status": "complete",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Insatiable",
+  "first": "Leigh",
+  "last": "Rivers",
+  "series": "The Edge of Darkness Trilogy",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Dark Romance",
+   "Romance"
+  ],
+  "subgenre": "Dark Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Voracious",
+  "first": "Leigh",
+  "last": "Rivers",
+  "series": "The Edge of Darkness Trilogy",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Dark Romance",
+   "Romance"
+  ],
+  "subgenre": "Dark Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Restitution",
+  "first": "Leigh",
+  "last": "Rivers",
+  "series": "The Edge of Darkness Trilogy",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Dark Romance",
+   "Romance"
+  ],
+  "subgenre": "Dark Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Court of the Vampire Queen",
+  "first": "Katee",
+  "last": "Robert",
+  "series": "Bloodline Vampires",
+  "position": "",
+  "status": "complete",
+  "genres": [
+   "Dark Romance",
+   "Romance"
+  ],
+  "subgenre": "Dark Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "Hunt on Dark Waters",
+  "first": "Katee",
+  "last": "Robert",
+  "series": "Crimson Sales",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Neon Gods",
+  "first": "Katee",
+  "last": "Robert",
+  "series": "Dark Olympus",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Midnight Ruin",
+  "first": "Katee",
+  "last": "Robert",
+  "series": "Dark Olympus",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Rain of Shadows and Endings",
+  "first": "Melissa K.",
+  "last": "Roehrich",
+  "series": "Legacy",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Lady of Darkness",
+  "first": "Melissa K.",
+  "last": "Roehrich",
+  "series": "Lady of Darkness",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Divine Rivals",
+  "first": "Rebecca",
+  "last": "Ross",
+  "series": "Letters of Enchantment",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Ya"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Ruthless Vows",
+  "first": "Rebecca",
+  "last": "Ross",
+  "series": "Letters of Enchantment",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Ya"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Wild Reverence",
+  "first": "Rebecca",
+  "last": "Ross",
+  "series": "Letters of Enchantment",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Ya"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Enigma",
+  "first": "",
+  "last": "Runyx",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Dark Romance",
+   "Romance"
+  ],
+  "subgenre": "Dark Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark",
+   "Academia"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "Gothikana",
+  "first": "",
+  "last": "RuNyx",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark",
+   "Academia"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Kingmaker",
+  "first": "Kennedy",
+  "last": "Ryan",
+  "series": "All the King's Men",
+  "position": "",
+  "status": "complete",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Rebel King",
+  "first": "Kennedy",
+  "last": "Ryan",
+  "series": "All the King's Men",
+  "position": "",
+  "status": "complete",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Done and Dusted",
+  "first": "Lyla",
+  "last": "Sage",
+  "series": "Rebel Blue Ranch",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Western"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Swift and Saddled",
+  "first": "Lyla",
+  "last": "Sage",
+  "series": "Rebel Blue Ranch",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Lost and Lassoed",
+  "first": "Lyla",
+  "last": "Sage",
+  "series": "Rebel Blue Ranch",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Wild and Wrangles",
+  "first": "Lyla",
+  "last": "Sage",
+  "series": "Rebel Blue Ranch",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Soul Searching",
+  "first": "Lyla",
+  "last": "Sage",
+  "series": "Sweetwater Peak",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Blood & Steel",
+  "first": "Helen",
+  "last": "Scheuerer",
+  "series": "Legends of Thezmarr",
+  "position": "",
+  "status": "complete",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "Fate & Furies",
+  "first": "Helen",
+  "last": "Scheuerer",
+  "series": "Legends of Thezmarr",
+  "position": "",
+  "status": "complete",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "Iron & Embers",
+  "first": "Helen",
+  "last": "Scheuerer",
+  "series": "Ashes of Thezmarr",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Shadow & Storms",
+  "first": "Helen",
+  "last": "Scheuerer",
+  "series": "Legends of Thezmarr",
+  "position": "",
+  "status": "complete",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "Vows & Ruins",
+  "first": "Helen",
+  "last": "Scheuerer",
+  "series": "Legends of Thezmarr",
+  "position": "",
+  "status": "complete",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "Metal Slinger",
+  "first": "Rachel",
+  "last": "Schneider",
+  "series": "Fire & Metal",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Invisible Life of Addie LaRue",
+  "first": "V.E.",
+  "last": "Schwab",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Things We Hide From the Light",
+  "first": "Lucy",
+  "last": "Score",
+  "series": "Knockemout",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Things we Left Behund",
+  "first": "Lucy",
+  "last": "Score",
+  "series": "Knockemout",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Things We Never Got Over",
+  "first": "Lucy",
+  "last": "Score",
+  "series": "Knockemout",
+  "position": "1",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [
+   "Grumpy/Sunshine",
+   "Single Parent",
+   "Small Town",
+   "Forced Proximity"
+  ],
+  "spice": 4,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Ruthless Rival",
+  "first": "L.J.",
+  "last": "Shen",
+  "series": "Cruel Castaways",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Dark Romance",
+   "Romance"
+  ],
+  "subgenre": "Dark Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Flawless",
+  "first": "Elsie",
+  "last": "Silver",
+  "series": "Chestnut Springs",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Western"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Heartless",
+  "first": "Elsie",
+  "last": "Silver",
+  "series": "Chestnut Springs",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Western"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Hopeless",
+  "first": "Elsie",
+  "last": "Silver",
+  "series": "Chestnut Springs",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Western"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Powerless",
+  "first": "Elsie",
+  "last": "Silver",
+  "series": "Chestnut Springs",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Western"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Reckless",
+  "first": "Elsie",
+  "last": "Silver",
+  "series": "Chestnut Springs",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Western"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Wild Card",
+  "first": "Elise",
+  "last": "Silver",
+  "series": "Rose Hill",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Western"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Wild Eyes",
+  "first": "Elise",
+  "last": "Silver",
+  "series": "Rose Hill",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Western"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Wild Love",
+  "first": "Elise",
+  "last": "Silver",
+  "series": "Rose Hill",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Western"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Wild Side",
+  "first": "Elise",
+  "last": "Silver",
+  "series": "Rose Hill",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Western"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Off to the Races",
+  "first": "Elsie",
+  "last": "Silver",
+  "series": "Gold Rush Ranch",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Fever Dream",
+  "first": "Elsie",
+  "last": "Silver",
+  "series": "Emerald Lake",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Salt Kiss",
+  "first": "Sierra",
+  "last": "Simone",
+  "series": "Lyonesse",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Dark Romance",
+   "Romance"
+  ],
+  "subgenre": "Dark Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "Honey Cut",
+  "first": "Sierra",
+  "last": "Simone",
+  "series": "Lyonesse",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Dark Romance",
+   "Romance"
+  ],
+  "subgenre": "Dark Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "Priest",
+  "first": "Sierra",
+  "last": "Simone",
+  "series": "Priest",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Dark Romance",
+   "Romance"
+  ],
+  "subgenre": "Dark Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "Enchantra",
+  "first": "Kaylie",
+  "last": "Smith",
+  "series": "Wicked Games",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "Phantasma",
+  "first": "Kaylie",
+  "last": "Smith",
+  "series": "Wicked Games",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "The Rose Bargain",
+  "first": "Sasha Peyton",
+  "last": "Smith",
+  "series": "The Rose Bargain",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Thorn Queen",
+  "first": "Sasha Peyton",
+  "last": "Smith",
+  "series": "The Rose Bargain",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Dire Bound",
+  "first": "Sable",
+  "last": "Sorensen",
+  "series": "The Wolves of Ruin",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Fury Gound",
+  "first": "Sable",
+  "last": "Sorensen",
+  "series": "Wolves of Ruin",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Rose in Chains",
+  "first": "Julie",
+  "last": "Soto",
+  "series": "The Evermore Trillogy",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dramione"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Water Moon",
+  "first": "Samantha",
+  "last": "Sotto Yambao",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Remain",
+  "first": "Nicholas & M. Night",
+  "last": "Sparks & Shyamalan",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "A Touch of Chaos",
+  "first": "Scarlett",
+  "last": "St. Clair",
+  "series": "Hades x Persephone Sage",
+  "position": "",
+  "status": "complete",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "A Touch of Darkness",
+  "first": "Scarlett",
+  "last": "St. Clair",
+  "series": "Hades x Persephone Sage",
+  "position": "",
+  "status": "complete",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "A Touch of Malice",
+  "first": "Scarlett",
+  "last": "St. Clair",
+  "series": "Hades x Persephone Sage",
+  "position": "",
+  "status": "complete",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "A Touch of Ruin",
+  "first": "Scarlett",
+  "last": "St. Clair",
+  "series": "Hades x Persephone Sage",
+  "position": "",
+  "status": "complete",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "Terror at the Gates",
+  "first": "Scarlett",
+  "last": "St. Clair",
+  "series": "Blood of Lilith",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Queen of Myth and Monsters",
+  "first": "Scarlett",
+  "last": "St. Clair",
+  "series": "Adrian x Isolde",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Never King",
+  "first": "Nikki",
+  "last": "St. Crowe",
+  "series": "Vicious Lost Boys",
+  "position": "",
+  "status": "complete",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "West of Wicked",
+  "first": "Nikki",
+  "last": "St. Crowe",
+  "series": "The Great and Terrible Land",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Of Ink and Alchemy",
+  "first": "Sloane",
+  "last": "St. James",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Sex and Violence",
+  "first": "George",
+  "last": "Stade",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Classic"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "A Court this Cruel and Lovely",
+  "first": "Stacia",
+  "last": "Stark",
+  "series": "Kingdome of Lies",
+  "position": "",
+  "status": "complete",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Flock",
+  "first": "Kate",
+  "last": "Stewart",
+  "series": "The Ravenhood Series",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Between Two Kings",
+  "first": "Lindsay",
+  "last": "Straube",
+  "series": "Spit or Swallow",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Kiss of the Basilisk",
+  "first": "Lindsay",
+  "last": "Straube",
+  "series": "Spit or Swallow",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "Exodus",
+  "first": "Kate",
+  "last": "Stweart",
+  "series": "The Ravenhood",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Finish Line",
+  "first": "Kate",
+  "last": "Stweart",
+  "series": "The Ravenhood",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Book of Blood and Roses",
+  "first": "Annie",
+  "last": "Summerlee",
+  "series": "The Castillo Chronicles",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The City of Stardust",
+  "first": "Georgia",
+  "last": "Summers",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "How to Lose a Goblinn in Ten Days",
+  "first": "Jessie",
+  "last": "Sylva",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Poet Empress",
+  "first": "Shen",
+  "last": "Tao",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Sabotage",
+  "first": "Shantel",
+  "last": "Tessier",
+  "series": "LORDS",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Ritual",
+  "first": "Shantel",
+  "last": "Tessier",
+  "series": "LORDS",
+  "position": "1",
+  "status": "series",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [
+   "Secret Society",
+   "Bully Romance",
+   "Forced Proximity",
+   "Anti-Hero"
+  ],
+  "spice": 5,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Sinner",
+  "first": "Shantel",
+  "last": "Tessier",
+  "series": "LORDS",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Sacrifice",
+  "first": "Shantel",
+  "last": "Tessier",
+  "series": "LORDS",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "A Strange Hymn",
+  "first": "Laura",
+  "last": "Thalassa",
+  "series": "The Bargainer",
+  "position": "",
+  "status": "complete",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Bespelled",
+  "first": "Laura",
+  "last": "Thalassa",
+  "series": "Bewitched",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Bewitched",
+  "first": "Laura",
+  "last": "Thalassa",
+  "series": "Bweitched",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Pestilence",
+  "first": "Laura",
+  "last": "Thalassa",
+  "series": "The Fout Horsemen",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Rhapsodic",
+  "first": "Laura",
+  "last": "Thalassa",
+  "series": "The Bargainer",
+  "position": "",
+  "status": "complete",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Emperor of Evening Stars",
+  "first": "Laura",
+  "last": "Thalassa",
+  "series": "The Bargainer",
+  "position": "",
+  "status": "complete",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Mopuntain Boss",
+  "first": "S.J.",
+  "last": "Tilly",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Play Along",
+  "first": "Liz",
+  "last": "Tomforde",
+  "series": "Windy City",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Sport"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "In Her Own Leaague",
+  "first": "Liz",
+  "last": "Tomforde",
+  "series": "Windy City",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Light Between Us",
+  "first": "Jolene",
+  "last": "Tyler",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Fallen Gods",
+  "first": "Rachel",
+  "last": "Van Dyken",
+  "series": "Fallen Gods",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Binding 13",
+  "first": "Chloe",
+  "last": "Walsh",
+  "series": "Boys of Tommen",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Sport",
+   "Young Characters"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "Keeping 13",
+  "first": "Chloe",
+  "last": "Walsh",
+  "series": "Boys of Tommen",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Sport",
+   "Young Characters"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "Redeeming 6",
+  "first": "Chloe",
+  "last": "Walsh",
+  "series": "Boys of Tommen",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Sport",
+   "Ya"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Saving 6",
+  "first": "Chloe",
+  "last": "Walsh",
+  "series": "Boys of Tommen",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Sport",
+   "Ya"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Taming 7",
+  "first": "Chloe",
+  "last": "Walsh",
+  "series": "Boys of Tommen",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Sport",
+   "Ya"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Promised in Fire",
+  "first": "Jasmine",
+  "last": "Walt",
+  "series": "Of Dragons and Fae",
+  "position": "",
+  "status": "complete",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Crimson Crow",
+  "first": "Heather",
+  "last": "Walter",
+  "series": "The Crimson Crow Duology",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Butcher & Blackbird",
+  "first": "Brynne",
+  "last": "Weaver",
+  "series": "Ruinous Love Trilogy",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Dark Romance",
+   "Romance"
+  ],
+  "subgenre": "Dark Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "Leather & Lark",
+  "first": "Brynne",
+  "last": "Weaver",
+  "series": "Ruinous Love Trilogy",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Dark Romance",
+   "Romance"
+  ],
+  "subgenre": "Dark Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "Scyth & Sparrow",
+  "first": "Brynne",
+  "last": "Weaver",
+  "series": "Ruinous Love Trilogy",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Dark Romance",
+   "Romance"
+  ],
+  "subgenre": "Dark Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "Tourist Season",
+  "first": "Brynne",
+  "last": "Weaver",
+  "series": "The Seasons of Carnage",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Dark Romance",
+   "Romance"
+  ],
+  "subgenre": "Dark Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Foxglove King",
+  "first": "Hannah",
+  "last": "Whitten",
+  "series": "The Nightshade Crown",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Hemlock Queen",
+  "first": "Hannah",
+  "last": "Whitten",
+  "series": "The Nightshade Crown",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "House of Beating Wings",
+  "first": "Olivia",
+  "last": "Wildenstein",
+  "series": "The Kingdom of Crows",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "House of Pounding Hearts",
+  "first": "Olivia",
+  "last": "Wildenstein",
+  "series": "The Kingdom of Crows",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "House of Striking Oaths",
+  "first": "Olivia",
+  "last": "Wildenstein",
+  "series": "The Kingdom of Crows",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "A Tribute of Fire",
+  "first": "Sariah",
+  "last": "Wilson",
+  "series": "The Eye of the Goddess",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "All He'll Ever Be",
+  "first": "W",
+  "last": "Winters",
+  "series": "Merciless",
+  "position": "",
+  "status": "complete",
+  "genres": [
+   "Dark Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "Between Wrath and Mercy",
+  "first": "Jess",
+  "last": "Wisecup",
+  "series": "The Divine Between",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Coven",
+  "first": "Harper L.",
+  "last": "Woods",
+  "series": "Coven of Bones",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Cursed",
+  "first": "Harper L.",
+  "last": "Woods",
+  "series": "Coven of Bones",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Upon a Starlit Tide",
+  "first": "Kell",
+  "last": "Woods",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Female",
+  "first": "Invi",
+  "last": "Wright",
+  "series": "The Female",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Dark"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Her Males",
+  "first": "Invi",
+  "last": "Wright",
+  "series": "The Female",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Their War",
+  "first": "Invi",
+  "last": "Wright",
+  "series": "The Female",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Romance",
+   "Fantasy"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Fourth Wing",
+  "first": "Rebecca",
+  "last": "Yarros",
+  "series": "The Empyrean",
+  "position": "1",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [
+   "Dragon Riders",
+   "Enemies to Lovers",
+   "Magic Academy",
+   "Morally Gray MMC",
+   "Touch Her and Die"
+  ],
+  "spice": 4,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "Iron Flame",
+  "first": "Rebecca",
+  "last": "Yarros",
+  "series": "The Empyrean",
+  "position": "2",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [
+   "Dragon Riders",
+   "Magic Academy",
+   "Second Guessing",
+   "Rebellion"
+  ],
+  "spice": 4,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "Onyx Storm",
+  "first": "Rebecca",
+  "last": "Yarros",
+  "series": "The Empyrean",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": true
+  }
+ },
+ {
+  "title": "The Things we Leave Unfinished",
+  "first": "Rebecca",
+  "last": "Yarros",
+  "series": "",
+  "position": "",
+  "status": "standalone",
+  "genres": [
+   "Romance"
+  ],
+  "subgenre": "Romance",
+  "tropes": [],
+  "spice": 0,
+  "tags": [],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "Fallen City",
+  "first": "Adrienne",
+  "last": "Young",
+  "series": "Fallen City Duology",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Ya"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ },
+ {
+  "title": "The Scorpion and the Night Blossom",
+  "first": "Amelie Wen",
+  "last": "Zhao",
+  "series": "The Three Realms Duology",
+  "position": "",
+  "status": "series",
+  "genres": [
+   "Romantasy",
+   "Fantasy",
+   "Romance"
+  ],
+  "subgenre": "Romantasy",
+  "tropes": [],
+  "spice": 0,
+  "tags": [
+   "Ya"
+  ],
+  "duplicate": false,
+  "readBy": {
+   "GC": false,
+   "TC": false
+  }
+ }
+]
