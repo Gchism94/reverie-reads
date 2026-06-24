@@ -83,3 +83,12 @@ export function toReadEntry(row: ReadRow): ReadEntry {
     notes: row.notes ?? '',
   }
 }
+
+/** A read-log entry plus its row id (needed to delete a specific entry). */
+export interface ReadRecord extends ReadEntry {
+  id: string
+}
+
+export function toReadRecord(row: ReadRow): ReadRecord {
+  return { id: row.id, ...toReadEntry(row) }
+}
