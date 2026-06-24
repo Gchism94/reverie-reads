@@ -95,14 +95,31 @@ function SettingsScreen() {
     const primary = [...group].sort((a, b) => richness(b) - richness(a))[0]
     if (!primary) return
     if (!window.confirm(`Merge ${group.length} copies of “${primary.title}” into one entry?`)) return
-    await mergeOneGroup(group)
-    setStatus('Merged')
+    try {
+      await mergeOneGroup(group)
+      setStatus('Merged')
+    } catch (e) {
+      setStatus(`Merge failed — nothing was lost (the merge is atomic). ${(e as Error).message}`)
+    }
   }
 
+  // Each pair-merge is an atomic RPC, so a failure leaves earlier groups merged and the rest
+  // untouched — re-running "Merge all" simply continues from the still-duplicated groups.
   async function mergeAllGroups() {
     if (!window.confirm(`Review and merge all ${dupes.length} duplicate groups into one entry each?`)) return
-    for (const g of dupes) await mergeOneGroup(g)
-    setStatus(`Merged ${dupes.length} duplicate groups`)
+    let merged = 0
+    for (const g of dupes) {
+      try {
+        await mergeOneGroup(g)
+        merged++
+      } catch (e) {
+        setStatus(
+          `Merged ${merged} of ${dupes.length}; stopped at a failure (${(e as Error).message}). Nothing was lost — re-run “Merge all” to continue.`,
+        )
+        return
+      }
+    }
+    setStatus(`Merged ${merged} duplicate groups`)
   }
 
   return (
