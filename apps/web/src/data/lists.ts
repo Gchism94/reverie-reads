@@ -60,3 +60,66 @@ export function useCreateList() {
     onSuccess: () => qc.invalidateQueries({ queryKey: listsKey }),
   })
 }
+
+export function useUpdateList() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      id,
+      name,
+      isPriority,
+    }: {
+      id: string
+      name?: string
+      isPriority?: boolean
+    }): Promise<void> => {
+      // Only one TBR can be priority — clear the others first.
+      if (isPriority === true) {
+        const { data: auth } = await supabase.auth.getUser()
+        const uid = auth.user?.id
+        if (uid) await supabase.from('lists').update({ is_priority: false }).eq('owner_id', uid)
+      }
+      const row: Record<string, unknown> = {}
+      if (name !== undefined) row.name = name
+      if (isPriority !== undefined) row.is_priority = isPriority
+      const { error } = await supabase.from('lists').update(row).eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: listsKey }),
+  })
+}
+
+export function useDeleteList() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string): Promise<void> => {
+      const { error } = await supabase.from('lists').delete().eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: listsKey })
+      void qc.invalidateQueries({ queryKey: ['list-items', 'all'] })
+    },
+  })
+}
+
+/** Persist a new order by writing each book's position within the list. */
+export function useReorderList() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      listId,
+      orderedBookIds,
+    }: {
+      listId: string
+      orderedBookIds: string[]
+    }): Promise<void> => {
+      await Promise.all(
+        orderedBookIds.map((bookId, i) =>
+          supabase.from('list_items').update({ position: i }).eq('list_id', listId).eq('book_id', bookId),
+        ),
+      )
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['list-items', 'all'] }),
+  })
+}

@@ -3,6 +3,25 @@ import { supabase } from '../lib/supabase'
 import { listsKey } from './lists'
 
 export const bookListsKey = (bookId: string) => ['book-lists', bookId] as const
+export const allListItemsKey = ['list-items', 'all'] as const
+
+export interface ListItemRow {
+  list_id: string
+  book_id: string
+  position: number | null
+}
+
+/** All list memberships — used to render Shelves and the Home priority shelf. */
+export function useAllListItems() {
+  return useQuery({
+    queryKey: allListItemsKey,
+    queryFn: async (): Promise<ListItemRow[]> => {
+      const { data, error } = await supabase.from('list_items').select('list_id, book_id, position')
+      if (error) throw error
+      return data as ListItemRow[]
+    },
+  })
+}
 
 /** The set of list ids that currently contain this book. */
 export function useBookListIds(bookId: string) {
@@ -17,6 +36,49 @@ export function useBookListIds(bookId: string) {
       return (data as { list_id: string }[]).map((r) => r.list_id)
     },
     enabled: !!bookId,
+  })
+}
+
+/** Add several books to a list at once (used by Match's "add top 3 to Priority TBR"). */
+export function useAddBooksToList() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ listId, bookIds }: { listId: string; bookIds: string[] }): Promise<void> => {
+      const { data: auth } = await supabase.auth.getUser()
+      const ownerId = auth.user?.id
+      if (!ownerId || !bookIds.length) return
+      const { error } = await supabase
+        .from('list_items')
+        .upsert(
+          bookIds.map((book_id) => ({ list_id: listId, book_id, owner_id: ownerId })),
+          { onConflict: 'list_id,book_id', ignoreDuplicates: true },
+        )
+      if (error) throw error
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: allListItemsKey })
+      void qc.invalidateQueries({ queryKey: listsKey })
+    },
+  })
+}
+
+/** Remove a specific book from a specific list (used by the Shelves list editor). */
+export function useRemoveListItem() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ listId, bookId }: { listId: string; bookId: string }): Promise<void> => {
+      const { error } = await supabase
+        .from('list_items')
+        .delete()
+        .eq('list_id', listId)
+        .eq('book_id', bookId)
+      if (error) throw error
+    },
+    onSuccess: (_data, { bookId }) => {
+      void qc.invalidateQueries({ queryKey: allListItemsKey })
+      void qc.invalidateQueries({ queryKey: listsKey })
+      void qc.invalidateQueries({ queryKey: bookListsKey(bookId) })
+    },
   })
 }
 
@@ -57,6 +119,7 @@ export function useToggleListItem(bookId: string) {
     onSettled: () => {
       void qc.invalidateQueries({ queryKey: key })
       void qc.invalidateQueries({ queryKey: listsKey })
+      void qc.invalidateQueries({ queryKey: allListItemsKey })
     },
   })
 }

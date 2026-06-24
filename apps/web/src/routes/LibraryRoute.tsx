@@ -98,6 +98,6 @@ function LibraryScreen() {
 
 export const libraryRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/',
+  path: 'library',
   component: LibraryScreen,
 })
