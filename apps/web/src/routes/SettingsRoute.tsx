@@ -7,6 +7,7 @@ import { useBooks } from '../data/books'
 import { useProfile, useUpdateProfile } from '../data/profile'
 import { usePerformMerge } from '../data/mergeBooks'
 import { buildBackup, importCsvToBackend, restoreBackup } from '../data/importExport'
+import { bulkComplete, isIncomplete, type BulkProgress } from '../data/enrichLibrary'
 import { DuplicateReview } from '../components/DuplicateReview'
 import type { ReviewCandidate } from '../data/intake'
 import { useTheme, type Theme } from '../theme/useTheme'
@@ -42,10 +43,14 @@ function SettingsScreen() {
   const [status, setStatus] = useState<string | null>(null)
   const [showDupes, setShowDupes] = useState(false)
   const [review, setReview] = useState<ReviewCandidate[]>([])
+  const [completing, setCompleting] = useState(false)
+  const [progress, setProgress] = useState<BulkProgress | null>(null)
+  const stopRef = useRef(false)
   const restoreRef = useRef<HTMLInputElement>(null)
   const csvRef = useRef<HTMLInputElement>(null)
 
   const autoMerge = profile?.autoMergeDuplicates ?? true
+  const incompleteCount = (books ?? []).filter(isIncomplete).length
 
   // Prime the form fields once the profile loads.
   if (profile && !primed) {
@@ -127,6 +132,23 @@ function SettingsScreen() {
     setStatus(`Merged ${merged} duplicate groups`)
   }
 
+  async function runComplete() {
+    stopRef.current = false
+    setCompleting(true)
+    setProgress({ scanned: 0, total: 0, filled: 0 })
+    try {
+      const r = await bulkComplete(all, setProgress, () => stopRef.current)
+      setStatus(
+        `${r.stopped ? 'Stopped — ' : ''}checked ${r.scanned} of ${r.total} · filled ${r.filled} · ${r.nothing} had nothing new.`,
+      )
+      await qc.invalidateQueries({ queryKey: ['books'] })
+    } catch (e) {
+      setStatus(`Couldn’t finish completing details: ${(e as Error).message}`)
+    }
+    setCompleting(false)
+    setProgress(null)
+  }
+
   return (
     <section className="mx-auto max-w-2xl px-4 py-6 sm:px-6">
       <h1 className="mb-4 text-[22px] italic text-ink" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
@@ -187,14 +209,42 @@ function SettingsScreen() {
         </Section>
 
         <Section title="Library tools">
-          <button
-            type="button"
-            onClick={() => setShowDupes((v) => !v)}
-            className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink"
-            style={{ background: 'var(--field)' }}
-          >
-            🔗 Merge duplicates{dupes.length ? ` (${dupes.length})` : ''}
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setShowDupes((v) => !v)}
+              className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink"
+              style={{ background: 'var(--field)' }}
+            >
+              🔗 Merge duplicates{dupes.length ? ` (${dupes.length})` : ''}
+            </button>
+            {completing ? (
+              <button
+                type="button"
+                onClick={() => (stopRef.current = true)}
+                className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink"
+                style={{ background: 'var(--field)' }}
+              >
+                ⏹ Stop{progress ? ` (${progress.scanned}/${progress.total})` : ''}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => void runComplete()}
+                disabled={!incompleteCount}
+                className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink disabled:opacity-50"
+                style={{ background: 'var(--field)' }}
+              >
+                ✨ Complete missing covers &amp; info{incompleteCount ? ` (${incompleteCount})` : ''}
+              </button>
+            )}
+          </div>
+          {completing && progress && (
+            <p className="mt-2 text-[12.5px] text-muted">
+              Completing details… {progress.scanned}/{progress.total} · filled {progress.filled}. Sources are
+              throttled, so this takes a moment; you can keep using the app.
+            </p>
+          )}
           {showDupes && (
             <div className="mt-3 flex flex-col gap-2">
               {dupes.length > 1 && (
