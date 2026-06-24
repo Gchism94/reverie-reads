@@ -1,0 +1,3 @@
+-- Seed data is loaded as a real signed-in user's library in Step 4 (it needs an auth
+-- user to own the rows, and goes through the data layer so optimistic writes are exercised).
+-- Intentionally empty here so `supabase db reset` stays fast and auth-agnostic.
