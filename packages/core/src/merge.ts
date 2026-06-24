@@ -79,6 +79,20 @@ export function mergeBooks(
   p.cover = p.cover || all.map((b) => b.cover).find(Boolean) || ''
   p.isbn = p.isbn || all.map((b) => b.isbn).find(Boolean) || ''
 
+  // Union ownership across copies (hardcover beats paperback beats generic).
+  let physical: Book['owned']['physical'] = false
+  for (const b of all) {
+    const v = b.owned.physical
+    if (v === 'hardcover') physical = 'hardcover'
+    else if (v === 'paperback' && physical !== 'hardcover') physical = 'paperback'
+    else if (v === true && physical === false) physical = true
+  }
+  p.owned = {
+    physical,
+    ebook: all.some((b) => b.owned.ebook),
+    audiobook: all.some((b) => b.owned.audiobook),
+  }
+
   // First non-empty value wins for these descriptive fields.
   if (!p.series) p.series = all.map((b) => b.series).find(Boolean) ?? p.series
   if (!p.position) p.position = all.map((b) => b.position).find(Boolean) ?? p.position

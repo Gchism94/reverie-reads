@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { createRoute, useNavigate } from '@tanstack/react-router'
-import { deriveBoyfriend, type Book } from '@reverie/core'
+import { deriveBoyfriend, type Book, type Owned } from '@reverie/core'
 import { rootRoute } from './RootRoute'
 import { useAddBook } from '../data/books'
 import { enrichBook } from '../lib/enrich'
@@ -87,6 +87,14 @@ function AddForm({ hit, onAdded }: { hit: Partial<SearchHit>; onAdded: () => voi
 
   function save() {
     if (!form.title.trim()) return
+    const f = form.format.toLowerCase()
+    const isEbook = f.includes('ebook') || f.includes('kindle')
+    const isAudio = f.includes('audio')
+    const owned: Owned = {
+      physical: f.includes('hardcover') ? 'hardcover' : isEbook || isAudio ? false : 'paperback',
+      ebook: isEbook,
+      audiobook: isAudio,
+    }
     const book: Partial<Book> & { title: string } = {
       title: form.title.trim(),
       first: form.first.trim(),
@@ -99,6 +107,7 @@ function AddForm({ hit, onAdded }: { hit: Partial<SearchHit>; onAdded: () => voi
       genres: [form.subgenre],
       tropes,
       spice,
+      owned,
       cover,
       isbn: hit.isbn ?? '',
       format: form.format,
@@ -187,6 +196,80 @@ function AddForm({ hit, onAdded }: { hit: Partial<SearchHit>; onAdded: () => voi
         Add to my library
       </button>
     </div>
+  )
+}
+
+function BulkAdd() {
+  const addBook = useAddBook()
+  const [text, setText] = useState('')
+  const [status, setStatus] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  async function run() {
+    const lines = text
+      .split('\n')
+      .map((s) => s.trim())
+      .filter(Boolean)
+    if (!lines.length) return
+    setBusy(true)
+    let added = 0
+    for (const [i, line] of lines.entries()) {
+      setStatus(`Looking up ${i + 1}/${lines.length}…`)
+      try {
+        const hit = (await searchGoogleBooks(line))[0]
+        if (!hit) continue
+        const np = (hit.authors[0] ?? '').trim().split(/\s+/)
+        await addBook.mutateAsync({
+          title: hit.title,
+          first: np.length > 1 ? (np[0] ?? '') : '',
+          last: np.length > 1 ? np.slice(1).join(' ') : (np[0] ?? ''),
+          status: 'Standalone',
+          subgenre: 'Romantasy',
+          genres: ['Romantasy'],
+          tropes: [],
+          spice: 0,
+          owned: { physical: 'paperback', ebook: false, audiobook: false },
+          cover: hit.cover,
+          isbn: hit.isbn,
+          readStatus: 'Unread',
+          source: 'Owned',
+          pub: parsePub(hit.pub),
+        })
+        added++
+      } catch {
+        /* skip lines that fail */
+      }
+    }
+    setBusy(false)
+    setStatus(`Added ${added} of ${lines.length}.`)
+    setText('')
+  }
+
+  return (
+    <details className="mt-4 rounded-2xl border border-line p-4" style={{ background: 'var(--card)' }}>
+      <summary className="cursor-pointer text-[14px] font-semibold text-ink">Bulk add — paste a list</summary>
+      <p className="mb-2 mt-2 text-[12.5px] text-muted">One title or ISBN per line. Each is looked up and added.</p>
+      <textarea
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        rows={5}
+        placeholder={'Iron Flame\n9781649374172\nThe Love Hypothesis'}
+        className="w-full rounded-xl border border-line p-3 text-[13px] text-ink outline-none"
+        style={{ background: 'var(--field)' }}
+      />
+      <div className="mt-2 flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => void run()}
+          disabled={busy || !text.trim()}
+          className="rounded-full px-4 py-2 text-[13px] font-semibold disabled:opacity-50"
+          style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))', color: 'var(--on-primary)' }}
+        >
+          Add all
+        </button>
+        {status && <span className="text-[12.5px] text-muted">{status}</span>}
+      </div>
+    </details>
   )
 }
 
@@ -340,6 +423,8 @@ function AddScreen() {
       )}
 
       {picked && <AddForm hit={picked} onAdded={() => void navigate({ to: '/library' })} />}
+
+      {!picked && <BulkAdd />}
     </section>
   )
 }

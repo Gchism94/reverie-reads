@@ -10,23 +10,27 @@ async function currentUserId(): Promise<string> {
   return id
 }
 
-/** Serialize the whole library (books + reads + lists + memberships) to a JSON backup. */
+/** Serialize the whole library (books incl. ownership, reads, lists, memberships, and the
+ * user's own reviews) to a JSON backup. */
 export async function buildBackup(): Promise<string> {
-  const [books, reads, lists, items] = await Promise.all([
+  const ownerId = await currentUserId()
+  const [books, reads, lists, items, reviews] = await Promise.all([
     supabase.from('books').select('*'),
     supabase.from('reads').select('*'),
     supabase.from('lists').select('*'),
     supabase.from('list_items').select('*'),
+    supabase.from('reviews').select('work_key, reviewer_name, rating, body, created_at').eq('reviewer_id', ownerId),
   ])
-  for (const r of [books, reads, lists, items]) if (r.error) throw r.error
+  for (const r of [books, reads, lists, items, reviews]) if (r.error) throw r.error
   return JSON.stringify({
-    v: 2,
+    v: 3,
     app: 'reverie',
     exportedAt: new Date().toISOString(),
     books: books.data,
     reads: reads.data,
     lists: lists.data,
     list_items: items.data,
+    reviews: reviews.data,
   })
 }
 
@@ -35,6 +39,7 @@ interface BackupShape {
   reads?: { book_id: string; read_on: string | null; format: string | null; rating: number | null; notes: string | null }[]
   lists?: { id: string; name: string; kind: string; is_priority: boolean }[]
   list_items?: { list_id: string; book_id: string; position: number | null }[]
+  reviews?: { work_key: string; reviewer_name: string | null; rating: number | null; body: string }[]
 }
 
 /** Restore a backup as new rows owned by the current user (ids are remapped, not reused). */
@@ -95,6 +100,21 @@ export async function restoreBackup(
     .filter((it): it is NonNullable<typeof it> => it !== null)
   if (items.length) {
     const { error } = await supabase.from('list_items').insert(items)
+    if (error) throw error
+  }
+
+  // The user's own reviews, re-owned to the current account (work_key is stable).
+  const reviews = (data.reviews ?? []).map((rv) => ({
+    work_key: rv.work_key,
+    reviewer_id: ownerId,
+    reviewer_name: rv.reviewer_name,
+    rating: rv.rating,
+    body: rv.body ?? '',
+  }))
+  if (reviews.length) {
+    const { error } = await supabase
+      .from('reviews')
+      .upsert(reviews, { onConflict: 'work_key,reviewer_id' })
     if (error) throw error
   }
 

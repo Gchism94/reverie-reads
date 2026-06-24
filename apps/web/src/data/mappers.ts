@@ -24,6 +24,16 @@ export function toBook(row: BookRow): Book {
     cover: row.cover_url ?? '',
     isbn: row.isbn ?? '',
     fave: row.fave,
+    owned: {
+      physical:
+        row.owned_physical === 'paperback' || row.owned_physical === 'hardcover'
+          ? row.owned_physical
+          : row.owned_physical === 'yes'
+            ? true
+            : false,
+      ebook: row.owned_ebook,
+      audiobook: row.owned_audiobook,
+    },
     format: row.format ?? '',
     rating: row.rating ?? 0,
     readStatus: READ_STATUS.includes(row.read_status as ReadStatus)
@@ -56,6 +66,12 @@ export function toBookRow(patch: Partial<Book>): Partial<BookRow> {
   if (patch.cover !== undefined) row.cover_url = patch.cover || null
   if (patch.isbn !== undefined) row.isbn = patch.isbn || null
   if (patch.fave !== undefined) row.fave = patch.fave
+  if (patch.owned !== undefined) {
+    row.owned_physical =
+      patch.owned.physical === false ? null : patch.owned.physical === true ? 'yes' : patch.owned.physical
+    row.owned_ebook = patch.owned.ebook
+    row.owned_audiobook = patch.owned.audiobook
+  }
   if (patch.format !== undefined) row.format = patch.format || null
   if (patch.rating !== undefined) row.rating = patch.rating
   if (patch.readStatus !== undefined) row.read_status = patch.readStatus

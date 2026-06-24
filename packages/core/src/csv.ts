@@ -161,6 +161,7 @@ export function importCsv(existing: readonly Book[], text: string): CsvImportRes
         cover: '',
         isbn: '',
         fave: false,
+        owned: { physical: false, ebook: false, audiobook: false },
         format: 'Paperback',
         rating,
         readStatus: rs,

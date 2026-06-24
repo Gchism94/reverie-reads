@@ -35,9 +35,13 @@ function ClubScreen() {
   const leaveClub = useLeaveClub()
   const [draft, setDraft] = useState('')
 
+  // Subscribe to the club row's activity bump (content-free) in addition to members/comments.
+  // A behind-progress reader never receives the gated club_comments INSERT (RLS filters it),
+  // so the clubs-row signal is what makes their "🔒 N hidden" count refresh live.
   useRealtimeRefetch(
     `club-${clubId}`,
     [
+      { table: 'clubs', filter: `id=eq.${clubId}` },
       { table: 'club_members', filter: `club_id=eq.${clubId}` },
       { table: 'club_comments', filter: `club_id=eq.${clubId}` },
     ],

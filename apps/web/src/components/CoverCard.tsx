@@ -1,5 +1,7 @@
-import type { Book } from '@reverie/core'
+import { ownedFormats, type Book } from '@reverie/core'
 import { subgenreGradient } from '../library/constants'
+
+const FORMAT_ICON = { physical: '📖', ebook: '📱', audiobook: '🎧' } as const
 
 /** A library cover card with small spice (🌶️) and favorite (♥) marks — design signature. */
 export function CoverCard({
@@ -72,6 +74,18 @@ export function CoverCard({
             title={`Spice ${book.spice}/5`}
           >
             {'🌶️'.repeat(book.spice)}
+          </div>
+        )}
+
+        {ownedFormats(book.owned).length > 0 && (
+          <div
+            className="absolute bottom-1.5 right-1.5 flex gap-0.5 rounded-full px-1 py-0.5 text-[9px] backdrop-blur"
+            style={{ background: 'rgba(0,0,0,0.4)' }}
+            title={`Owned: ${ownedFormats(book.owned).join(', ')}`}
+          >
+            {ownedFormats(book.owned).map((f) => (
+              <span key={f}>{FORMAT_ICON[f]}</span>
+            ))}
           </div>
         )}
       </div>

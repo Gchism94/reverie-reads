@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { Link, createRoute, useNavigate } from '@tanstack/react-router'
-import { authorOf, deriveBoyfriend, type Book } from '@reverie/core'
+import { authorOf, deriveBoyfriend, type Book, type Owned } from '@reverie/core'
 import { rootRoute } from '../routes/RootRoute'
 import { useBooks, useDeleteBook, useUpdateBook } from '../data/books'
 import { useDeleteRead, useReads } from '../data/reads'
@@ -10,6 +10,10 @@ import { Stars } from '../components/Stars'
 import { Chip } from '../components/Chip'
 import { ARCH, MONTHS, READ_STATUSES, subgenreGradient } from '../library/constants'
 import { EditDetails, LogReadForm, MergeDialog, TropePicker } from './dialogs'
+import { OwnedCopies } from './OwnedCopies'
+import { ReviewsPanel } from './ReviewsPanel'
+import { workKeyFor } from '../data/reviews'
+import { useProfile } from '../data/profile'
 
 function fmtPub(p: Book['pub']): string {
   if (p.y && p.m && p.d) return `${MONTHS[p.m - 1] ?? ''} ${p.d}, ${p.y}`
@@ -83,6 +87,7 @@ function BookDetailScreen() {
   const { data: reads } = useReads(bookId)
   const { data: listIds } = useBookListIds(bookId)
   const { data: lists } = useLists()
+  const { data: profile } = useProfile()
   const updateBook = useUpdateBook()
   const deleteBook = useDeleteBook()
   const deleteRead = useDeleteRead(bookId)
@@ -105,6 +110,9 @@ function BookDetailScreen() {
 
   const [g0, g1] = subgenreGradient(book.subgenre)
   const bf = ARCH[book.boyfriend ?? ''] ?? ARCH.cinnamon
+  const workKey = workKeyFor(book)
+  const reviewerName = profile?.displayName || 'Reader'
+  const setOwned = (owned: Owned) => updateBook.mutate({ id: book.id, patch: { owned } })
   const memberIds = new Set(listIds ?? [])
   const tbrs = (lists ?? []).filter((l) => l.kind === 'tbr')
   const collections = (lists ?? []).filter((l) => l.kind === 'collection')
@@ -186,6 +194,11 @@ function BookDetailScreen() {
         </div>
       </div>
 
+      {/* your copies (per-format ownership) */}
+      <div className="mt-6">
+        <OwnedCopies owned={book.owned} onChange={setOwned} />
+      </div>
+
       {/* reading status */}
       <Label>Reading status</Label>
       <div className="flex flex-wrap gap-1.5">
@@ -213,6 +226,12 @@ function BookDetailScreen() {
         Your rating
       </Label>
       <Stars value={book.rating} onChange={(v) => updateBook.mutate({ id: book.id, patch: { rating: v } })} />
+      <p className="mt-1 text-[11.5px] text-muted">Your rating only — Reverie never shows an averaged score.</p>
+
+      {/* reviews (opt-in, individual voices) */}
+      <div className="mt-4">
+        <ReviewsPanel workKey={workKey} reviewerName={reviewerName} />
+      </div>
 
       {/* tropes */}
       <Label

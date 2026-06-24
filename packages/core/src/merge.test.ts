@@ -10,6 +10,7 @@ const alpha = makeBook({
   reads: [{ date: '2025-01-01', format: 'ebook', rating: 4, notes: '' }],
   cover: 'a.jpg',
   rating: 4,
+  owned: { physical: 'paperback', ebook: false, audiobook: false },
 })
 const beta = makeBook({
   id: 'b',
@@ -22,6 +23,7 @@ const beta = makeBook({
   ],
   fave: true,
   spice: 5,
+  owned: { physical: false, ebook: true, audiobook: false },
 })
 
 const initial: LibraryState = {
@@ -43,6 +45,7 @@ describe('mergeBooks', () => {
     expect(new Set(m.tropes)).toEqual(new Set(['Dragon Riders', 'Enemies to Lovers']))
     expect(m.fave).toBe(true)
     expect(m.spice).toBe(5)
+    expect(m.owned).toEqual({ physical: 'paperback', ebook: true, audiobook: false }) // union
     expect(m.readStatus).toBe('Read') // reads present => Read
 
     // list memberships remapped onto the primary and deduped

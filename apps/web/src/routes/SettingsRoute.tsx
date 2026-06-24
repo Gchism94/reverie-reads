@@ -82,15 +82,27 @@ function SettingsScreen() {
     input.value = ''
   }
 
-  async function mergeGroup(group: Book[]) {
+  async function mergeOneGroup(group: Book[]) {
     const sorted = [...group].sort((a, b) => richness(b) - richness(a))
     const primary = sorted[0]
     if (!primary) return
-    if (!window.confirm(`Merge ${group.length} copies of “${primary.title}” into one entry?`)) return
     for (const loser of sorted.slice(1)) {
       await performMerge.mutateAsync({ primary, loser })
     }
+  }
+
+  async function mergeGroup(group: Book[]) {
+    const primary = [...group].sort((a, b) => richness(b) - richness(a))[0]
+    if (!primary) return
+    if (!window.confirm(`Merge ${group.length} copies of “${primary.title}” into one entry?`)) return
+    await mergeOneGroup(group)
     setStatus('Merged')
+  }
+
+  async function mergeAllGroups() {
+    if (!window.confirm(`Review and merge all ${dupes.length} duplicate groups into one entry each?`)) return
+    for (const g of dupes) await mergeOneGroup(g)
+    setStatus(`Merged ${dupes.length} duplicate groups`)
   }
 
   return (
@@ -163,6 +175,17 @@ function SettingsScreen() {
           </button>
           {showDupes && (
             <div className="mt-3 flex flex-col gap-2">
+              {dupes.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => void mergeAllGroups()}
+                  disabled={performMerge.isPending}
+                  className="self-start rounded-full px-4 py-2 text-[13px] font-semibold disabled:opacity-50"
+                  style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))', color: 'var(--on-primary)' }}
+                >
+                  Merge all {dupes.length} groups
+                </button>
+              )}
               {dupes.length ? (
                 dupes.map((g, i) => (
                   <div key={i} className="flex items-center justify-between gap-3 rounded-xl border border-line p-3" style={{ background: 'var(--field)' }}>
@@ -218,7 +241,10 @@ function SettingsScreen() {
               onChange={(e) =>
                 readFile(e.currentTarget, async (text) => {
                   const r = await importCsvToBackend(all, text)
-                  setStatus(`Imported ${r.added} new · updated ${r.updated}`)
+                  setShowDupes(true)
+                  setStatus(
+                    `Imported ${r.added} new · updated ${r.updated}. If duplicates appear below, use “Merge all”.`,
+                  )
                 })
               }
             />
