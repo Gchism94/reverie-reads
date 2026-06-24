@@ -1,7 +1,7 @@
-import { importCsv as importCsvCore, type Book } from '@reverie/core'
+import { parseCsvIncoming, type Book } from '@reverie/core'
 import { supabase } from '../lib/supabase'
-import { toBookRow } from './mappers'
 import type { BookRow } from './types'
+import { applyIncoming, type ReviewCandidate } from './intake'
 
 async function currentUserId(): Promise<string> {
   const { data } = await supabase.auth.getUser()
@@ -122,84 +122,45 @@ export async function restoreBackup(
 }
 
 /**
- * Import a Goodreads/StoryGraph CSV. Runs @reverie/core's importCsv to merge by title+author,
- * then persists: new books (with their read dates) are inserted; matched existing books get
- * their rating/status/pub updated and any new read dates appended (existing dates are skipped).
+ * Import a Goodreads/StoryGraph CSV. Each row is matched against the library (ISBN 10↔13 →
+ * title+author → title+series+position → fuzzy). Strong matches fold into the EXISTING record
+ * (its id, list/club memberships, reads, and calendar attribution survive; user-authored fields
+ * win); fuzzy near-matches are returned for review (never auto-merged); the rest are inserted.
+ * Real reads are loaded up front so re-importing the same file is a no-op.
  */
 export async function importCsvToBackend(
   currentBooks: Book[],
   text: string,
-): Promise<{ added: number; updated: number }> {
+): Promise<{ added: number; merged: number; review: ReviewCandidate[] }> {
   const ownerId = await currentUserId()
-  const originalById = new Map(currentBooks.map((b) => [b.id, b]))
-  const { books: result } = importCsvCore(currentBooks, text)
+  const incomings = parseCsvIncoming(text)
+
+  const { data: readRows, error: re } = await supabase
+    .from('reads')
+    .select('book_id, read_on, format, rating, notes')
+  if (re) throw re
+  const readsByBook = new Map<string, Book['reads']>()
+  for (const r of (readRows as {
+    book_id: string
+    read_on: string | null
+    format: string | null
+    rating: number | null
+    notes: string | null
+  }[]) ?? []) {
+    const arr = readsByBook.get(r.book_id) ?? []
+    arr.push({ date: r.read_on ?? '', format: r.format ?? '', rating: r.rating ?? 0, notes: r.notes ?? '' })
+    readsByBook.set(r.book_id, arr)
+  }
+  const library = currentBooks.map((b) => ({ ...b, reads: readsByBook.get(b.id) ?? [] }))
 
   let added = 0
-  let updated = 0
-
-  for (const b of result) {
-    const original = originalById.get(b.id)
-    if (!original) {
-      // New book: insert the row, then its reads.
-      const { data: created, error } = await supabase
-        .from('books')
-        .insert({ ...toBookRow(b), owner_id: ownerId, title: b.title })
-        .select('id')
-        .single()
-      if (error) throw error
-      const newId = (created as { id: string }).id
-      if (b.reads.length) {
-        const { error: re } = await supabase.from('reads').insert(
-          b.reads.map((r) => ({
-            book_id: newId,
-            owner_id: ownerId,
-            read_on: r.date || null,
-            format: r.format || null,
-            rating: r.rating || null,
-            notes: r.notes || null,
-          })),
-        )
-        if (re) throw re
-      }
-      added++
-      continue
-    }
-
-    // Existing book: did the CSV change rating / status / pub?
-    const fieldChanged =
-      b.rating !== original.rating ||
-      b.readStatus !== original.readStatus ||
-      JSON.stringify(b.pub) !== JSON.stringify(original.pub)
-    if (fieldChanged) {
-      const { error } = await supabase
-        .from('books')
-        .update(toBookRow({ rating: b.rating, readStatus: b.readStatus, pub: b.pub }))
-        .eq('id', b.id)
-      if (error) throw error
-    }
-
-    // Append read dates the book doesn't already have.
-    if (b.reads.length) {
-      const { data: existing } = await supabase.from('reads').select('read_on').eq('book_id', b.id)
-      const have = new Set((existing as { read_on: string | null }[] | null)?.map((r) => r.read_on) ?? [])
-      const fresh = b.reads.filter((r) => r.date && !have.has(r.date))
-      if (fresh.length) {
-        const { error } = await supabase.from('reads').insert(
-          fresh.map((r) => ({
-            book_id: b.id,
-            owner_id: ownerId,
-            read_on: r.date,
-            format: r.format || null,
-            rating: r.rating || null,
-            notes: r.notes || null,
-          })),
-        )
-        if (error) throw error
-      }
-    }
-
-    if (fieldChanged || b.reads.length) updated++
+  let merged = 0
+  const review: ReviewCandidate[] = []
+  for (const inc of incomings) {
+    const res = await applyIncoming(inc, library, ownerId, 'review')
+    if (res.outcome === 'added') added++
+    else if (res.outcome === 'merged') merged++
+    else if (res.outcome === 'review' && res.review) review.push(res.review)
   }
-
-  return { added, updated }
+  return { added, merged, review }
 }

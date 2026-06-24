@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { createRoute, useNavigate } from '@tanstack/react-router'
 import { deriveBoyfriend, type Book, type Owned } from '@reverie/core'
 import { rootRoute } from './RootRoute'
-import { useAddBook } from '../data/books'
+import { useIntake } from '../data/intake'
 import { enrichBook } from '../lib/enrich'
 import { Chip } from '../components/Chip'
 import { ALL_TROPES, FORMATS, READ_STATUSES, SUBGENRES, subgenreGradient } from '../library/constants'
@@ -53,7 +53,7 @@ function parsePub(s: string): Book['pub'] {
 }
 
 function AddForm({ hit, onAdded }: { hit: Partial<SearchHit>; onAdded: () => void }) {
-  const addBook = useAddBook()
+  const intake = useIntake()
   const nameParts = (hit.authors?.[0] ?? '').trim().split(/\s+/)
   const [form, setForm] = useState({
     title: hit.title ?? '',
@@ -92,7 +92,7 @@ function AddForm({ hit, onAdded }: { hit: Partial<SearchHit>; onAdded: () => voi
   const inputClass = 'h-10 w-full rounded-xl border border-line px-3 text-[14px] text-ink outline-none'
   const inputStyle = { background: 'var(--field)' } as const
 
-  function save() {
+  async function save() {
     if (!form.title.trim()) return
     const f = form.format.toLowerCase()
     const isEbook = f.includes('ebook') || f.includes('kindle')
@@ -123,7 +123,9 @@ function AddForm({ hit, onAdded }: { hit: Partial<SearchHit>; onAdded: () => voi
       pub: parsePub(hit.pub ?? ''),
     }
     book.boyfriend = deriveBoyfriend({ tropes, subgenre: form.subgenre })
-    addBook.mutate(book, { onSuccess: onAdded })
+    // Dedup on intake: a strong match folds into the existing record instead of duplicating.
+    await intake(book, 'add')
+    onAdded()
   }
 
   return (
@@ -194,7 +196,7 @@ function AddForm({ hit, onAdded }: { hit: Partial<SearchHit>; onAdded: () => voi
 
       <button
         type="button"
-        onClick={save}
+        onClick={() => void save()}
         className="mt-4 h-11 w-full rounded-xl text-[14px] font-semibold"
         style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))', color: 'var(--on-primary)' }}
       >
@@ -205,7 +207,7 @@ function AddForm({ hit, onAdded }: { hit: Partial<SearchHit>; onAdded: () => voi
 }
 
 function BulkAdd() {
-  const addBook = useAddBook()
+  const intake = useIntake()
   const [text, setText] = useState('')
   const [status, setStatus] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -218,13 +220,14 @@ function BulkAdd() {
     if (!lines.length) return
     setBusy(true)
     let added = 0
+    let merged = 0
     for (const [i, line] of lines.entries()) {
       setStatus(`Looking up ${i + 1}/${lines.length}…`)
       try {
         const hit = (await searchGoogleBooks(line))[0]
         if (!hit) continue
         const np = (hit.authors[0] ?? '').trim().split(/\s+/)
-        await addBook.mutateAsync({
+        const res = await intake({
           title: hit.title,
           first: np.length > 1 ? (np[0] ?? '') : '',
           last: np.length > 1 ? np.slice(1).join(' ') : (np[0] ?? ''),
@@ -239,14 +242,15 @@ function BulkAdd() {
           readStatus: 'Unread',
           source: 'Owned',
           pub: parsePub(hit.pub),
-        })
-        added++
+        }, 'add')
+        if (res.outcome === 'merged') merged++
+        else added++
       } catch {
         /* skip lines that fail */
       }
     }
     setBusy(false)
-    setStatus(`Added ${added} of ${lines.length}.`)
+    setStatus(`Added ${added}${merged ? ` · merged ${merged} into existing` : ''} of ${lines.length}.`)
     setText('')
   }
 
