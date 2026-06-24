@@ -260,7 +260,9 @@ function SettingsScreen() {
                   const r = await importCsvToBackend(all, text)
                   setShowDupes(true)
                   setStatus(
-                    `Imported ${r.added} new · updated ${r.updated}. If duplicates appear below, use “Merge all”.`,
+                    `Imported ${r.added} new · merged ${r.merged} into existing${
+                      r.review.length ? ` · ${r.review.length} possible duplicate(s) to review` : ''
+                    }.`,
                   )
                 })
               }

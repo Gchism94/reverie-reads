@@ -2,6 +2,8 @@ import type { Book, ReadStatus } from './types'
 import { norm } from './normalize'
 import { uid } from './id'
 import { deriveBoyfriend } from './boyfriend'
+import { cleanIsbn, type Incoming } from './match'
+import { emptyOwned } from './ownership'
 
 /** Quote-aware CSV parser (escaped quotes, CRLF, blank-line skipping). Ported verbatim. */
 export function parseCSV(text: string): string[][] {
@@ -40,6 +42,76 @@ export function parseCSV(text: string): string[][] {
   row.push(cur)
   if (row.length > 1 || row[0]?.trim() !== '') rows.push(row)
   return rows
+}
+
+/**
+ * Parse a Goodreads/StoryGraph CSV into incoming book records (no matching/merging here —
+ * the caller matches them against the library via match.ts). Reads ISBN-10/13 columns so
+ * ISBN-based strong matching can fire.
+ */
+export function parseCsvIncoming(text: string): Incoming[] {
+  const rows = parseCSV(text)
+  if (rows.length < 2) return []
+  const head = (rows[0] ?? []).map((h) => h.trim().toLowerCase())
+  const col = (...names: string[]): number => {
+    for (const n of names) {
+      const i = head.indexOf(n)
+      if (i >= 0) return i
+    }
+    return -1
+  }
+  const cT = col('title')
+  const cA = col('author', 'authors')
+  const cR = col('my rating', 'star rating', 'rating')
+  const cD = col('date read', 'last date read', 'dates read', 'read dates')
+  const cS = col('exclusive shelf', 'read status', 'bookshelves', 'shelves')
+  const cY = col('original publication year', 'year published', 'publication year')
+  const cI13 = col('isbn13', 'isbn-13')
+  const cI10 = col('isbn', 'isbn-10')
+  if (cT < 0) return []
+
+  const cell = (r: string[], i: number): string => (i >= 0 ? (r[i] ?? '') : '')
+  const out: Incoming[] = []
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i] ?? []
+    const title = cell(r, cT).trim()
+    if (!title) continue
+    const authorRaw = cA >= 0 ? (cell(r, cA).split(/[,;]/)[0]?.trim() ?? '') : ''
+    const parts = authorRaw.split(/\s+/)
+    const last = parts.length > 1 ? parts.slice(1).join(' ') : authorRaw
+    const first = parts.length > 1 ? (parts[0] ?? '') : ''
+    const rating = cR >= 0 ? Math.round(parseFloat(cell(r, cR)) || 0) : 0
+    const shelf = cS >= 0 ? cell(r, cS).toLowerCase() : ''
+    let readStatus: ReadStatus = 'Read'
+    if (/to-read|to read/.test(shelf)) readStatus = 'Unread'
+    else if (/currently/.test(shelf)) readStatus = 'Reading'
+    else if (/dnf|did.not/.test(shelf)) readStatus = 'DNF'
+    const dates =
+      cD >= 0
+        ? [...cell(r, cD).matchAll(/(\d{4})[/-](\d{1,2})[/-](\d{1,2})/g)].map((m) => {
+            const y = m[1] ?? ''
+            const mo = (m[2] ?? '').padStart(2, '0')
+            const da = (m[3] ?? '').padStart(2, '0')
+            return `${y}-${mo}-${da}`
+          })
+        : []
+    const py = cY >= 0 ? parseInt(cell(r, cY)) || null : null
+    const isbn = cleanIsbn(cell(r, cI13)) || cleanIsbn(cell(r, cI10))
+    out.push({
+      title,
+      first,
+      last,
+      isbn,
+      rating,
+      readStatus,
+      reads: dates.map((d) => ({ date: d, format: 'Paperback', rating: 0, notes: '' })),
+      pub: { y: py, m: null, d: null },
+      genres: ['Imported'],
+      source: 'Imported',
+      owned: emptyOwned(),
+    })
+  }
+  return out
 }
 
 export interface CsvImportResult {
