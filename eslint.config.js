@@ -53,7 +53,7 @@ export default tseslint.config(
   {
     // TanStack Router (code-based) route modules legitimately export route objects
     // alongside their screen component; Fast Refresh isn't a concern for them.
-    files: ['**/routes/**/*.tsx', '**/router.tsx', '**/AuthProvider.tsx'],
+    files: ['**/routes/**/*.tsx', '**/*Route.tsx', '**/router.tsx', '**/AuthProvider.tsx'],
     rules: {
       'react-refresh/only-export-components': 'off',
     },

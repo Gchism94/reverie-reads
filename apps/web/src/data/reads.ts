@@ -1,29 +1,29 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { ReadEntry } from '@reverie/core'
 import { supabase } from '../lib/supabase'
-import { toReadEntry } from './mappers'
+import { toReadRecord, type ReadRecord } from './mappers'
 import type { ReadRow } from './types'
 
 export const readsKey = (bookId: string) => ['reads', bookId] as const
 
-/** The reread log for one book. */
+/** The reread log for one book (newest first). */
 export function useReads(bookId: string) {
   return useQuery({
     queryKey: readsKey(bookId),
-    queryFn: async (): Promise<ReadEntry[]> => {
+    queryFn: async (): Promise<ReadRecord[]> => {
       const { data, error } = await supabase
         .from('reads')
         .select('*')
         .eq('book_id', bookId)
-        .order('read_on', { ascending: true })
+        .order('read_on', { ascending: false })
       if (error) throw error
-      return (data as ReadRow[]).map(toReadEntry)
+      return (data as ReadRow[]).map(toReadRecord)
     },
     enabled: !!bookId,
   })
 }
 
-/** Optimistically append a reread-log entry for a book. */
+/** Optimistically append a reread-log entry. */
 export function useAddRead(bookId: string) {
   const qc = useQueryClient()
   const key = readsKey(bookId)
@@ -44,11 +44,33 @@ export function useAddRead(bookId: string) {
     },
     onMutate: async (entry) => {
       await qc.cancelQueries({ queryKey: key })
-      const previous = qc.getQueryData<ReadEntry[]>(key)
-      qc.setQueryData<ReadEntry[]>(key, (old) => [...(old ?? []), entry])
+      const previous = qc.getQueryData<ReadRecord[]>(key)
+      qc.setQueryData<ReadRecord[]>(key, (old) => [{ id: `temp-${entry.date}`, ...entry }, ...(old ?? [])])
       return { previous }
     },
     onError: (_err, _entry, ctx) => {
+      if (ctx?.previous) qc.setQueryData(key, ctx.previous)
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: key }),
+  })
+}
+
+/** Optimistically remove a reread-log entry by id. */
+export function useDeleteRead(bookId: string) {
+  const qc = useQueryClient()
+  const key = readsKey(bookId)
+  return useMutation({
+    mutationFn: async (readId: string): Promise<void> => {
+      const { error } = await supabase.from('reads').delete().eq('id', readId)
+      if (error) throw error
+    },
+    onMutate: async (readId) => {
+      await qc.cancelQueries({ queryKey: key })
+      const previous = qc.getQueryData<ReadRecord[]>(key)
+      qc.setQueryData<ReadRecord[]>(key, (old) => old?.filter((r) => r.id !== readId))
+      return { previous }
+    },
+    onError: (_err, _id, ctx) => {
       if (ctx?.previous) qc.setQueryData(key, ctx.previous)
     },
     onSettled: () => qc.invalidateQueries({ queryKey: key }),
