@@ -19,6 +19,24 @@ export interface ReadEntry {
   notes: string
 }
 
+/** Which formats the reader OWNS (independent of the format read). `false` physical = not
+ * owned physically; a string narrows the physical copy. Any truthy flag = owned. */
+export interface Owned {
+  physical: false | 'paperback' | 'hardcover' | true
+  ebook: boolean
+  audiobook: boolean
+}
+
+/** An individual review from another reader — shown as a distinct voice, never averaged. */
+export interface Review {
+  id?: string
+  by: string
+  byName: string
+  rating: number
+  text: string
+  date: string
+}
+
 export interface Book {
   id: string
   title: string
@@ -35,8 +53,9 @@ export interface Book {
   cover: string
   isbn: string
   fave: boolean
-  format: string
-  rating: number // 0..5
+  owned: Owned // per-format ownership; all-false = wishlist
+  format: string // the format most often read (reread default); ownership lives in `owned`
+  rating: number // 0..5 — the READER'S own rating (myRating). No aggregate exists anywhere.
   readStatus: ReadStatus
   source: string
   pub: PubDate

@@ -24,6 +24,42 @@ interface EnrichResult {
 
 const tidy = (url: string) => url.replace('http:', 'https:').replace('&edge=curl', '')
 
+const norm = (s: string) => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+
+function cacheKeyFor(input: EnrichInput): string {
+  const isbn = (input.isbn ?? '').replace(/[^0-9Xx]/g, '')
+  return isbn.length >= 10 ? `isbn:${isbn}` : `${norm(input.title ?? '')}|${norm(input.author ?? '')}`
+}
+
+// Cache reads/writes go straight to PostgREST with the service role — no extra deps.
+const DB_URL = Deno.env.get('SUPABASE_URL') ?? ''
+const SERVICE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+const dbHeaders = { apikey: SERVICE, Authorization: `Bearer ${SERVICE}`, 'Content-Type': 'application/json' }
+
+async function readCache(key: string): Promise<EnrichResult | null> {
+  if (!DB_URL) return null
+  try {
+    const r = await fetch(`${DB_URL}/rest/v1/cover_cache?key=eq.${encodeURIComponent(key)}&select=data`, { headers: dbHeaders })
+    const rows = await r.json()
+    return rows?.[0]?.data ?? null
+  } catch {
+    return null
+  }
+}
+
+async function writeCache(key: string, data: EnrichResult): Promise<void> {
+  if (!DB_URL) return
+  try {
+    await fetch(`${DB_URL}/rest/v1/cover_cache`, {
+      method: 'POST',
+      headers: { ...dbHeaders, Prefer: 'resolution=merge-duplicates' },
+      body: JSON.stringify({ key, cover: data.cover, data }),
+    })
+  } catch {
+    /* caching is best-effort */
+  }
+}
+
 async function fromGoogle(input: EnrichInput): Promise<Partial<EnrichResult> | null> {
   const q = input.isbn
     ? `isbn:${input.isbn.replace(/[^0-9Xx]/g, '')}`
@@ -85,6 +121,13 @@ Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   try {
     const input = (await req.json()) as EnrichInput
+    const key = cacheKeyFor(input)
+    const cached = await readCache(key)
+    if (cached?.cover) {
+      return new Response(JSON.stringify({ ...cached, source: 'cache' }), {
+        headers: { ...cors, 'Content-Type': 'application/json' },
+      })
+    }
     const base: EnrichResult = {
       title: input.title ?? '',
       author: input.author ?? '',
@@ -105,6 +148,7 @@ Deno.serve(async (req: Request) => {
         // try the next source
       }
     }
+    if (base.cover) await writeCache(key, base)
     return new Response(JSON.stringify(base), { headers: { ...cors, 'Content-Type': 'application/json' } })
   } catch (e) {
     return new Response(JSON.stringify({ error: String(e) }), {

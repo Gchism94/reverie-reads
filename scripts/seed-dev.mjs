@@ -30,9 +30,29 @@ const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
 
 const num = (v) => (v === '' || v == null ? null : Number(v))
 
+// Derive per-format ownership from the seed's single format + source ("Owned" vs "Borrowed").
+function ownedFrom(b) {
+  const f = (b.format || '').toLowerCase()
+  const owned = b.source === 'Owned'
+  return {
+    owned_physical: owned
+      ? f.includes('hardcover')
+        ? 'hardcover'
+        : f.includes('paperback') || f.includes('special')
+          ? 'paperback'
+          : !/(ebook|kindle|audio)/.test(f)
+            ? 'paperback'
+            : null
+      : null,
+    owned_ebook: owned && (f.includes('ebook') || f.includes('kindle')),
+    owned_audiobook: owned && f.includes('audio'),
+  }
+}
+
 function toRow(b, ownerId) {
   return {
     owner_id: ownerId,
+    ...ownedFrom(b),
     title: b.title,
     author_first: b.first || null,
     author_last: b.last || null,

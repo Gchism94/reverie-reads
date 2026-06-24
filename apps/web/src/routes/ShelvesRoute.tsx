@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { createRoute, useNavigate } from '@tanstack/react-router'
-import { authorOf, type Book } from '@reverie/core'
+import { authorOf, ownedFormats, type Book, type OwnedFormat } from '@reverie/core'
 import { rootRoute } from './RootRoute'
 import { useBooks } from '../data/books'
 import {
@@ -130,6 +130,41 @@ function ListModal({
   )
 }
 
+const OWNED_SHELVES: { fmt: OwnedFormat; label: string; icon: string }[] = [
+  { fmt: 'physical', label: 'Physical', icon: '📖' },
+  { fmt: 'ebook', label: 'Ebook', icon: '📱' },
+  { fmt: 'audiobook', label: 'Audiobook', icon: '🎧' },
+]
+
+/** Smart shelves derived from per-format ownership — auto-updating, not hand-edited. */
+function OwnedShelves({ books, onOpen }: { books: Book[]; onOpen: (id: string) => void }) {
+  return (
+    <div className="mb-8">
+      <h2 className="text-[16px] font-semibold text-ink">Owned</h2>
+      <p className="mb-3 text-[12px] text-muted">Updates as you mark the copies you own — no add or remove.</p>
+      <div className="flex flex-col gap-5">
+        {OWNED_SHELVES.map(({ fmt, label, icon }) => {
+          const shelf = books.filter((b) => ownedFormats(b.owned).includes(fmt))
+          return (
+            <div key={fmt}>
+              <div className="mb-1 text-[14px] font-semibold text-ink">
+                {icon} {label} <span className="text-[12px] font-normal text-muted">· {shelf.length}</span>
+              </div>
+              {shelf.length ? (
+                <SpineShelf books={shelf} onOpen={onOpen} />
+              ) : (
+                <p className="rounded-xl border border-line p-3 text-[13px] text-muted">
+                  Flip a copy switch on a book and it lands here.
+                </p>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 function ShelvesScreen() {
   const navigate = useNavigate()
   const { data: books } = useBooks()
@@ -158,10 +193,14 @@ function ShelvesScreen() {
 
   return (
     <section className="px-4 py-6 sm:px-6">
-      <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-[22px] italic text-ink" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
-          Shelves
-        </h1>
+      <h1 className="mb-4 text-[22px] italic text-ink" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+        Shelves
+      </h1>
+
+      <OwnedShelves books={all} onOpen={openBook} />
+
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-[16px] font-semibold text-ink">Your lists</h2>
         <div className="flex items-center gap-2">
           <div className="flex rounded-full border border-line p-1" style={{ background: 'var(--card)' }}>
             {(['tbr', 'collection'] as const).map((t) => (
@@ -189,7 +228,7 @@ function ShelvesScreen() {
             ＋ New {tab === 'tbr' ? 'TBR' : 'collection'}
           </button>
         </div>
-      </header>
+      </div>
 
       {shown.length ? (
         <div className="flex flex-col gap-8">

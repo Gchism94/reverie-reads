@@ -18,6 +18,9 @@ export interface BookRow {
   cover_url: string | null
   isbn: string | null
   fave: boolean
+  owned_physical: string | null
+  owned_ebook: boolean
+  owned_audiobook: boolean
   format: string | null
   rating: number | null
   read_status: string

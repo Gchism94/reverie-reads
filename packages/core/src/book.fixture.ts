@@ -16,6 +16,7 @@ export function makeBook(partial: Partial<Book> & { id: string; title: string })
     cover: '',
     isbn: '',
     fave: false,
+    owned: { physical: false, ebook: false, audiobook: false },
     format: 'Paperback',
     rating: 0,
     readStatus: 'Unread',
