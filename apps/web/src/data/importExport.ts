@@ -2,6 +2,7 @@ import { parseCsvIncoming, type Book } from '@reverie/core'
 import { supabase } from '../lib/supabase'
 import type { BookRow } from './types'
 import { applyIncoming, type ReviewCandidate } from './intake'
+import { loadVerdicts } from './duplicates'
 
 async function currentUserId(): Promise<string> {
   const { data } = await supabase.auth.getUser()
@@ -131,9 +132,11 @@ export async function restoreBackup(
 export async function importCsvToBackend(
   currentBooks: Book[],
   text: string,
+  opts: { autoMerge: boolean },
 ): Promise<{ added: number; merged: number; review: ReviewCandidate[] }> {
   const ownerId = await currentUserId()
   const incomings = parseCsvIncoming(text)
+  const verdicts = await loadVerdicts()
 
   const { data: readRows, error: re } = await supabase
     .from('reads')
@@ -157,7 +160,11 @@ export async function importCsvToBackend(
   let merged = 0
   const review: ReviewCandidate[] = []
   for (const inc of incomings) {
-    const res = await applyIncoming(inc, library, ownerId, 'review')
+    const res = await applyIncoming(inc, library, ownerId, {
+      fuzzy: 'review',
+      autoMergeStrong: opts.autoMerge,
+      verdicts,
+    })
     if (res.outcome === 'added') added++
     else if (res.outcome === 'merged') merged++
     else if (res.outcome === 'review' && res.review) review.push(res.review)

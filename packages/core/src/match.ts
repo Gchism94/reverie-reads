@@ -83,6 +83,37 @@ export function matchBook(incoming: Incoming, library: readonly Book[]): BookMat
   return { book: undefined as unknown as Book, strength: 'none' }
 }
 
+/**
+ * Stable identity of an incoming record, used to remember a per-pair verdict across imports:
+ * the canonical ISBN-13 if present, else normalized title + author. Re-importing the same row
+ * yields the same key, so a remembered "keep separate" / "always merge" decision still applies.
+ */
+export function importKey(inc: Incoming): string {
+  const isbn = normalizeIsbn(inc.isbn ?? '')
+  return isbn ? `isbn:${isbn}` : authorAuthorKey({ title: inc.title, last: inc.last })
+}
+
+export type DuplicateVerdict = 'keep_separate' | 'always_merge'
+export type IntakeDecision = 'merge' | 'add' | 'review' | 'skip'
+
+/**
+ * Decide what to do with a matched incoming record. Pure so the matrix is unit-tested:
+ * - no match → add it;
+ * - a remembered verdict wins (always_merge → fold in; keep_separate → skip, don't re-flag);
+ * - a strong match folds in only when auto-merge is on, otherwise it goes to review;
+ * - a fuzzy match adds (single-add paths) or reviews (import) — never auto-merges.
+ */
+export function decideIntake(
+  strength: MatchStrength,
+  opts: { autoMergeStrong: boolean; verdict?: DuplicateVerdict | null; fuzzyMode: 'review' | 'add' },
+): IntakeDecision {
+  if (strength === 'none') return 'add'
+  if (opts.verdict === 'always_merge') return 'merge'
+  if (opts.verdict === 'keep_separate') return 'skip'
+  if (isStrong(strength)) return opts.autoMergeStrong ? 'merge' : 'review'
+  return opts.fuzzyMode === 'add' ? 'add' : 'review'
+}
+
 // ── Import merge: fold the incoming record INTO the existing one (existing row survives) ──
 
 export interface ImportMergeResult {
