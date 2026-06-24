@@ -8,6 +8,7 @@ import { useProfile, useUpdateProfile } from '../data/profile'
 import { usePerformMerge } from '../data/mergeBooks'
 import { buildBackup, importCsvToBackend, restoreBackup } from '../data/importExport'
 import { useTheme, type Theme } from '../theme/useTheme'
+import { useAuth } from '../auth/AuthProvider'
 
 const YEAR = new Date().getFullYear()
 
@@ -31,6 +32,7 @@ function SettingsScreen() {
   const performMerge = usePerformMerge()
   const theme = useTheme((s) => s.theme)
   const setTheme = useTheme((s) => s.setTheme)
+  const { session } = useAuth()
 
   const [name, setName] = useState('')
   const [goal, setGoal] = useState('')
@@ -98,6 +100,13 @@ function SettingsScreen() {
       </h1>
 
       <div className="flex flex-col gap-4">
+        <Section title="Account">
+          <p className="text-[13px] text-muted">
+            Signed in as <span className="text-ink">{session?.user.email}</span>. Your library is stored
+            in your account and follows you across devices — sign in anywhere to see the same shelves.
+          </p>
+        </Section>
+
         <Section title="Profile & goal">
           <label className="mb-3 block">
             <span className="mb-1 block text-[11px] uppercase tracking-[0.15em] text-muted">Display name</span>
