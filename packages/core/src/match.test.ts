@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isbn10to13, matchBook, mergeImport, normalizeIsbn } from './match'
+import { decideIntake, importKey, isbn10to13, matchBook, mergeImport, normalizeIsbn } from './match'
 import { makeBook } from './book.fixture'
 
 describe('ISBN normalization', () => {
@@ -37,6 +37,37 @@ describe('matchBook', () => {
 
   it('returns none when nothing shares a real key', () => {
     expect(matchBook({ title: 'Unrelated', last: 'Nobody' }, library).strength).toBe('none')
+  })
+})
+
+describe('importKey', () => {
+  it('keys by canonical ISBN-13 when present (10 and 13 forms collapse)', () => {
+    expect(importKey({ title: 'Fourth Wing', last: 'Yarros', isbn: '0306406152' })).toBe('isbn:9780306406157')
+    expect(importKey({ title: 'x', last: 'y', isbn: '9780306406157' })).toBe('isbn:9780306406157')
+  })
+  it('falls back to normalized title+author without an ISBN', () => {
+    expect(importKey({ title: 'Iron  Flame', last: 'YARROS' })).toBe(importKey({ title: 'iron flame', last: 'yarros' }))
+  })
+})
+
+describe('decideIntake', () => {
+  const o = (over: Partial<Parameters<typeof decideIntake>[1]> = {}) => ({ autoMergeStrong: true, fuzzyMode: 'review' as const, ...over })
+  it('adds when nothing matched', () => {
+    expect(decideIntake('none', o())).toBe('add')
+  })
+  it('strong match folds in when auto-merge is on, reviews when off', () => {
+    expect(decideIntake('isbn', o({ autoMergeStrong: true }))).toBe('merge')
+    expect(decideIntake('title-author', o({ autoMergeStrong: false }))).toBe('review')
+  })
+  it('fuzzy reviews on import but adds on single-add', () => {
+    expect(decideIntake('fuzzy', o({ fuzzyMode: 'review' }))).toBe('review')
+    expect(decideIntake('fuzzy', o({ fuzzyMode: 'add' }))).toBe('add')
+  })
+  it('a remembered verdict overrides everything (even with auto-merge off)', () => {
+    expect(decideIntake('fuzzy', o({ verdict: 'always_merge' }))).toBe('merge')
+    expect(decideIntake('isbn', o({ autoMergeStrong: false, verdict: 'always_merge' }))).toBe('merge')
+    expect(decideIntake('fuzzy', o({ verdict: 'keep_separate' }))).toBe('skip')
+    expect(decideIntake('title-author', o({ verdict: 'keep_separate' }))).toBe('skip')
   })
 })
 

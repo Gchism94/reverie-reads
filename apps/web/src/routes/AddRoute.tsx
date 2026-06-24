@@ -1,8 +1,11 @@
 import { useRef, useState } from 'react'
 import { createRoute, useNavigate } from '@tanstack/react-router'
 import { deriveBoyfriend, type Book, type Owned } from '@reverie/core'
+import { useQueryClient } from '@tanstack/react-query'
 import { rootRoute } from './RootRoute'
-import { useIntake } from '../data/intake'
+import { useIntake, type ReviewCandidate } from '../data/intake'
+import { useBooks } from '../data/books'
+import { resolveCandidate, type ReviewAction } from '../data/duplicates'
 import { enrichBook } from '../lib/enrich'
 import { Chip } from '../components/Chip'
 import { ALL_TROPES, FORMATS, READ_STATUSES, SUBGENRES, subgenreGradient } from '../library/constants'
@@ -54,6 +57,9 @@ function parsePub(s: string): Book['pub'] {
 
 function AddForm({ hit, onAdded }: { hit: Partial<SearchHit>; onAdded: () => void }) {
   const intake = useIntake()
+  const qc = useQueryClient()
+  const { data: books } = useBooks()
+  const [dup, setDup] = useState<ReviewCandidate | null>(null)
   const nameParts = (hit.authors?.[0] ?? '').trim().split(/\s+/)
   const [form, setForm] = useState({
     title: hit.title ?? '',
@@ -124,7 +130,22 @@ function AddForm({ hit, onAdded }: { hit: Partial<SearchHit>; onAdded: () => voi
     }
     book.boyfriend = deriveBoyfriend({ tropes, subgenre: form.subgenre })
     // Dedup on intake: a strong match folds into the existing record instead of duplicating.
-    await intake(book, 'add')
+    // With auto-merge off, a match comes back for an inline decision instead.
+    const res = await intake(book, 'add')
+    if (res.outcome === 'review' && res.review) {
+      setDup(res.review)
+      return
+    }
+    onAdded()
+  }
+
+  async function resolveDup(action: ReviewAction) {
+    if (!dup) return
+    const existing = (books ?? []).find((b) => b.id === dup.existingId)
+    if (existing) await resolveCandidate(dup, existing, action)
+    await qc.invalidateQueries({ queryKey: ['books'] })
+    await qc.invalidateQueries({ queryKey: ['reads', 'all'] })
+    setDup(null)
     onAdded()
   }
 
@@ -193,6 +214,26 @@ function AddForm({ hit, onAdded }: { hit: Partial<SearchHit>; onAdded: () => voi
           </button>
         ))}
       </div>
+
+      {dup && (
+        <div className="mt-4 rounded-xl border border-line p-3 text-[13px]" style={{ background: 'var(--field)' }}>
+          <p className="text-ink">
+            You may already have <span className="font-semibold">{dup.existingTitle}</span>
+            {dup.existingAuthor ? ` · ${dup.existingAuthor}` : ''}.
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button type="button" onClick={() => void resolveDup('merge')} className="rounded-full px-3 py-1.5 text-[12.5px] font-semibold text-on-primary" style={{ background: 'var(--accent-fill)' }}>
+              Merge into it
+            </button>
+            <button type="button" onClick={() => void resolveDup('keep_both')} className="rounded-full border border-line px-3 py-1.5 text-[12.5px] font-semibold text-ink" style={{ background: 'var(--card)' }}>
+              Keep both
+            </button>
+            <button type="button" onClick={() => setDup(null)} className="rounded-full px-3 py-1.5 text-[12.5px] font-semibold text-muted">
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       <button
         type="button"

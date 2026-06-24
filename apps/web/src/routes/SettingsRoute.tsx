@@ -7,6 +7,8 @@ import { useBooks } from '../data/books'
 import { useProfile, useUpdateProfile } from '../data/profile'
 import { usePerformMerge } from '../data/mergeBooks'
 import { buildBackup, importCsvToBackend, restoreBackup } from '../data/importExport'
+import { DuplicateReview } from '../components/DuplicateReview'
+import type { ReviewCandidate } from '../data/intake'
 import { useTheme, type Theme } from '../theme/useTheme'
 import { useAuth } from '../auth/AuthProvider'
 
@@ -39,8 +41,11 @@ function SettingsScreen() {
   const [primed, setPrimed] = useState(false)
   const [status, setStatus] = useState<string | null>(null)
   const [showDupes, setShowDupes] = useState(false)
+  const [review, setReview] = useState<ReviewCandidate[]>([])
   const restoreRef = useRef<HTMLInputElement>(null)
   const csvRef = useRef<HTMLInputElement>(null)
+
+  const autoMerge = profile?.autoMergeDuplicates ?? true
 
   // Prime the form fields once the profile loads.
   if (profile && !primed) {
@@ -257,20 +262,47 @@ function SettingsScreen() {
               hidden
               onChange={(e) =>
                 readFile(e.currentTarget, async (text) => {
-                  const r = await importCsvToBackend(all, text)
-                  setShowDupes(true)
+                  const r = await importCsvToBackend(all, text, { autoMerge })
+                  setReview(r.review)
                   setStatus(
-                    `Imported ${r.added} new · merged ${r.merged} into existing${
-                      r.review.length ? ` · ${r.review.length} possible duplicate(s) to review` : ''
+                    `Merged ${r.merged} · added ${r.added} new${
+                      r.review.length ? ` · ${r.review.length} to review below` : ''
                     }.`,
                   )
                 })
               }
             />
           </div>
+
+          <label className="mt-3 flex items-start gap-2.5 text-[13px] text-ink">
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={autoMerge}
+              onChange={(e) => updateProfile.mutate({ autoMergeDuplicates: e.target.checked })}
+            />
+            <span>
+              Auto-merge exact duplicates on import
+              <span className="block text-[12px] text-muted">
+                Folds ISBN / title + author matches in silently. Off sends every match to the review queue.
+                Similar-but-not-exact matches always go to review.
+              </span>
+            </span>
+          </label>
+
           <p className="mt-3 text-[12.5px] text-muted">
             CSV import merges by title + author, bringing ratings, shelves, and <b>real read dates</b>.
           </p>
+
+          {review.length > 0 && (
+            <div className="mt-4 border-t border-line pt-4">
+              <h3 className="mb-2 text-[14px] font-semibold text-ink">Review possible duplicates ({review.length})</h3>
+              <p className="mb-3 text-[12.5px] text-muted">
+                Your entry is always the one that’s kept — merging only folds in any new details.
+              </p>
+              <DuplicateReview candidates={review} onDone={() => setReview([])} />
+            </div>
+          )}
         </Section>
 
         {status && <p className="text-center text-[13px] text-primary">{status}</p>}
