@@ -29,17 +29,32 @@ DB = {
   status: "Standalone"|"Series"|"Complete",
   subgenre, genres:[], tropes:[], spice: 0..5,
   cover, isbn,
-  fave: bool, format, rating: 0..5,
+  fave: bool,
+  owned: {                           // PER-FORMAT ownership (replaces single format/source)
+    physical: false | "paperback" | "hardcover" | true,
+    ebook:     bool,
+    audiobook: bool
+  },                                 // "owned" === any flag truthy; all-false = wishlist
+  myRating: 0..5,                    // the READER'S own rating. NO aggregate/average anywhere.
+  reviews: [ { by, byName, rating, text, date } ],  // OTHERS' individual reviews, opt-in view;
+                                                    // shown as a list, never averaged
   readStatus: "Unread"|"Reading"|"Read"|"DNF",
-  source,                            // Owned/Borrowed/Imported/…
   pub: { y, m, d },                  // any part may be null (flexible precision)
-  reads: [ { date, format, rating, notes } ],   // reread log
+  reads: [ { date, format, rating, notes } ],   // reread log; format read may differ from owned
   plan: "YYYY-MM-DD" | null,         // planned "need to read" date
   progress: 0..100,                  // % while Reading
-  boyfriend,                         // derived mood/archetype tag
   addedTs
 }
 ```
+
+> **Ownership vs. format-read are separate.** `owned` is which copies you have; a
+> `reads[].format` is what you read that time (you can read a borrowed/library copy you
+> don't own). The **Owned · Physical / Ebook / Audiobook** shelves are *smart shelves*
+> derived from `owned`, not manual lists.
+>
+> **Ratings:** keep `myRating` (and per-read ratings). Do **not** compute or show an
+> aggregate/average. `reviews` are individual entries from others, surfaced only when the
+> reader opts to look — never reduced to a single headline number.
 
 ### List (TBR or collection)
 ```jsonc
@@ -71,13 +86,19 @@ profiles            (id pk = auth user, display_name, created_at)
 
 books               (id pk, owner_id fk→profiles, title, author_first, author_last,
                      series, position, series_count, status, subgenre,
-                     spice smallint, cover_url, isbn, fave bool, format,
-                     rating smallint, read_status, source,
+                     spice smallint, cover_url, isbn, fave bool,
+                     owned_physical text,        -- null|'paperback'|'hardcover'|'yes'
+                     owned_ebook bool, owned_audiobook bool,
+                     my_rating smallint, read_status, source,
                      pub_y, pub_m, pub_d,            -- flexible precision
                      plan_date, progress smallint, added_at, updated_at)
+                     -- NOTE: no aggregate_rating column. Ratings stay personal.
 book_genres         (book_id fk, genre)             -- or text[] on books
 book_tropes         (book_id fk, trope)             -- or text[] on books
 reads               (id pk, book_id fk, date, format, rating, notes)   -- reread log
+reviews             (id pk, book_id fk, reviewer_id fk, rating, body, created_at)
+                     -- OTHERS' individual reviews; queried on demand, never averaged
+-- Owned·Physical / ·Ebook / ·Audiobook shelves are VIEWS over books.owned_* (smart shelves)
 
 lists               (id pk, owner_id fk, name, kind 'tbr'|'collection',
                      is_priority bool, created_at)
