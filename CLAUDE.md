@@ -59,6 +59,17 @@ prototype/ data/ design/ docs/ backend/   ← reference material, not shipped
   Goodreads/StoryGraph CSV importer, and the spoiler-gating rule (`comment.unit <=
   myProgress`). Move them into `packages/core` with tests.
 - Copy stays sentence case, plain verbs, no filler; empty states invite action.
+- **Per-format ownership.** A book carries `owned: {physical, ebook, audiobook}` (toggles
+  on book detail; physical may split paperback/hardcover). The **Owned · Physical /
+  Ebook / Audiobook** shelves are *smart shelves* derived from those flags — separate
+  shelves per format, not manual lists. Ownership is independent of the format read in
+  the reread log.
+- **No aggregate rating.** Never compute or display an averaged star rating anywhere.
+  Keep the reader's own rating (`myRating` + per-read). Others' opinions appear only as
+  an opt-in list of **individual** reviews on the book screen — never a single number.
+- **Mass import + mass merge.** Bulk-add (CSV today; bulk ISBN/title) and a bulk
+  de-dupe flow that resolves all detected duplicate groups at once (run on import).
+  Reuse the ported merge engine.
 
 ## Commands (create these scripts during scaffold)
 ```

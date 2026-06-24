@@ -43,10 +43,21 @@ top to bottom; commit at each checkpoint. Full context is in `CLAUDE.md` and `do
 ## Step 5 — First vertical slice: Library + Book detail
 - Library: cover grid, search, filter panel (tropes, subgenre, series status, series
   length incl. **"None set"**, reading status, format, faves, sort), Grid ⇄ Series view
-  (owned-of-total, gap badges, set length).
-- Book detail: tropes/spice/rating, reading status + progress, **reread log**
-  (date/format/rating/notes), add-to-shelf chips, Merge…, edit/remove.
-- **Check:** behavior matches the prototype; both themes; mobile + desktop; a11y pass.
+  (owned-of-total, gap badges, set length). Show small owned-format icons on cards.
+- Book detail: tropes/spice, the reader's own rating (no aggregate), reading status +
+  progress, **per-format ownership toggles** (physical/ebook/audiobook), **reread log**
+  (date/format/rating/notes), an opt-in **Reviews** list (others' individual reviews,
+  never averaged), add-to-shelf chips, Merge…, edit/remove.
+- **Check:** behavior matches the prototype + the ⭐ items in `docs/REQUIREMENTS.md`;
+  both themes; mobile + desktop; a11y pass.
+
+## Step 5b — Owned smart-shelves + mass tools
+- Shelves: auto **Owned · Physical / Ebook / Audiobook** shelves derived from `owned`
+  (separate shelves, pinned above manual TBRs/collections), with live counts.
+- **Mass import** (CSV + bulk ISBN/title) and **mass merge** (resolve all detected
+  duplicate groups in one flow; run de-dupe after import).
+- **Check:** toggling ownership moves a book into the right owned shelf instantly; a CSV
+  import lands many books and auto-dedupes.
 
 ## Step 6 — Remaining screens to parity
 Home (greeting, goal ring, reading-now progress, priority shelf, coming-soon) · Shelves
