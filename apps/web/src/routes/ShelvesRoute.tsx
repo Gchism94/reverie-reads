@@ -210,7 +210,7 @@ function ShelvesScreen() {
                 onClick={() => setTab(t)}
                 aria-pressed={tab === t}
                 className="rounded-full px-3 py-1.5 text-[12.5px] font-semibold"
-                style={tab === t ? { background: 'var(--primary)', color: 'var(--on-primary)' } : { color: 'var(--muted)' }}
+                style={tab === t ? { background: 'var(--accent-fill)', color: 'var(--on-primary)' } : { color: 'var(--muted)' }}
               >
                 {t === 'tbr' ? 'TBRs' : 'Collections'}
               </button>

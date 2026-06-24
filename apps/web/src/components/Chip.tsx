@@ -21,7 +21,7 @@ export function Chip({
       className="rounded-full border px-3 py-1.5 text-[12.5px] font-medium transition-colors"
       style={
         active
-          ? { background: 'var(--primary)', color: 'var(--on-primary)', borderColor: 'transparent' }
+          ? { background: 'var(--accent-fill)', color: 'var(--on-primary)', borderColor: 'transparent' }
           : { background: 'var(--chip)', color: 'var(--ink)', borderColor: 'var(--chip-border)' }
       }
     >

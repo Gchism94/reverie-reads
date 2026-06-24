@@ -33,7 +33,7 @@ export function OwnedCopies({ owned, onChange }: { owned: Owned; onChange: (next
                 className="rounded-full border px-2.5 py-1 text-[11.5px] font-semibold capitalize"
                 style={
                   physicalKind === k
-                    ? { background: 'var(--primary)', color: 'var(--on-primary)', borderColor: 'transparent' }
+                    ? { background: 'var(--accent-fill)', color: 'var(--on-primary)', borderColor: 'transparent' }
                     : { background: 'var(--field)', color: 'var(--muted)', borderColor: 'var(--line)' }
                 }
               >

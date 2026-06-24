@@ -31,7 +31,10 @@
 
   body {
     margin: 0;
-    background: radial-gradient(140% 120% at 50% -10%, var(--bg1), var(--bg0));
+    /* Solid base under the gradient so contrast tooling (and any non-gradient fallback)
+       resolves text against a real background color, not an assumed white. */
+    background-color: var(--bg0);
+    background-image: radial-gradient(140% 120% at 50% -10%, var(--bg1), var(--bg0));
     background-attachment: fixed;
     color: var(--ink);
     font-family: var(--font-sans);

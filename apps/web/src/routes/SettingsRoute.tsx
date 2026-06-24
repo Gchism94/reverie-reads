@@ -154,7 +154,7 @@ function SettingsScreen() {
                 className="flex-1 rounded-xl border px-4 py-2.5 text-[13px] font-semibold"
                 style={
                   theme === value
-                    ? { background: 'var(--primary)', color: 'var(--on-primary)', borderColor: 'transparent' }
+                    ? { background: 'var(--accent-fill)', color: 'var(--on-primary)', borderColor: 'transparent' }
                     : { background: 'var(--field)', color: 'var(--ink)', borderColor: 'var(--line)' }
                 }
               >
@@ -197,7 +197,7 @@ function SettingsScreen() {
                       onClick={() => void mergeGroup(g)}
                       disabled={performMerge.isPending}
                       className="rounded-full px-3 py-1.5 text-[12.5px] font-semibold disabled:opacity-50"
-                      style={{ background: 'var(--primary)', color: 'var(--on-primary)' }}
+                      style={{ background: 'var(--accent-fill)', color: 'var(--on-primary)' }}
                     >
                       Merge these {g.length}
                     </button>

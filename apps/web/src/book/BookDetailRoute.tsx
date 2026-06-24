@@ -251,7 +251,7 @@ function BookDetailScreen() {
               type="button"
               onClick={() => removeTrope(t)}
               className="rounded-full border px-3 py-1.5 text-[12.5px] font-medium"
-              style={{ background: 'var(--primary)', color: 'var(--on-primary)', borderColor: 'transparent' }}
+              style={{ background: 'var(--accent-fill)', color: 'var(--on-primary)', borderColor: 'transparent' }}
               aria-label={`Remove trope ${t}`}
             >
               {t} ✕
@@ -358,6 +358,7 @@ function BookDetailScreen() {
       <Label>Plan a read date</Label>
       <input
         type="date"
+        aria-label="Planned read date"
         value={book.plan ?? ''}
         onChange={(e) =>
           updateBook.mutate({ id: book.id, patch: { plan: e.target.value || null } })
