@@ -31,6 +31,7 @@ export interface BookRow {
   plan_date: string | null
   progress: number | null
   boyfriend: string | null
+  enriched_at: string | null
   added_at: string
   updated_at: string
 }
