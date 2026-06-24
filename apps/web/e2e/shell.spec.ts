@@ -1,15 +1,9 @@
 import { expect, test } from '@playwright/test'
 
-test('renders the themed shell and toggles light/dark', async ({ page }) => {
+test('serves a themed sign-in screen when signed out', async ({ page }) => {
   await page.goto('/')
-
-  const html = page.locator('html')
-  await expect(html).toHaveAttribute('data-theme', /nocturne|dawn/)
-  await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
-
-  const toggle = page.getByRole('button', { name: /switch theme/i })
-  const before = await html.getAttribute('data-theme')
-  await toggle.click()
-  const after = await html.getAttribute('data-theme')
-  expect(after).not.toBe(before)
+  await expect(page.locator('html')).toHaveAttribute('data-theme', /nocturne|dawn/)
+  // Signed out, the app shows the magic-link sign-in.
+  await expect(page.getByRole('button', { name: /magic link/i })).toBeVisible()
+  await expect(page.getByLabel('Email')).toBeVisible()
 })

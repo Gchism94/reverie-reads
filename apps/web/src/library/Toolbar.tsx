@@ -64,7 +64,7 @@ export function Toolbar() {
             onClick={() => setMode(m)}
             aria-pressed={mode === m}
             className="h-full rounded-full px-3 text-[12.5px] font-semibold capitalize transition-colors"
-            style={mode === m ? { background: 'var(--primary)', color: 'var(--on-primary)' } : { color: 'var(--muted)' }}
+            style={mode === m ? { background: 'var(--accent-fill)', color: 'var(--on-primary)' } : { color: 'var(--muted)' }}
           >
             {m}
           </button>

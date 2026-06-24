@@ -40,7 +40,7 @@ function CreateClubModal({ displayName, onClose, onCreated }: { displayName: str
                 type="button"
                 onClick={() => setUnitType(u)}
                 className="flex-1 rounded-full px-3 py-1.5 text-[12.5px] font-semibold capitalize"
-                style={unitType === u ? { background: 'var(--primary)', color: 'var(--on-primary)' } : { color: 'var(--muted)' }}
+                style={unitType === u ? { background: 'var(--accent-fill)', color: 'var(--on-primary)' } : { color: 'var(--muted)' }}
               >
                 {u === 'chapter' ? 'Chapters' : u === 'page' ? 'Pages' : 'Percent'}
               </button>
@@ -104,7 +104,7 @@ function CreateSharedModal({ onClose, onCreated }: { onClose: () => void; onCrea
               type="button"
               onClick={() => setKind(k)}
               className="flex-1 rounded-full px-3 py-1.5 text-[12.5px] font-semibold"
-              style={kind === k ? { background: 'var(--primary)', color: 'var(--on-primary)' } : { color: 'var(--muted)' }}
+              style={kind === k ? { background: 'var(--accent-fill)', color: 'var(--on-primary)' } : { color: 'var(--muted)' }}
             >
               {label}
             </button>

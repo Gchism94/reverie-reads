@@ -9,6 +9,7 @@
   --ink: #f6e9f1;
   --muted: #b08fae;
   --primary: #e83a78;
+  --accent-fill: #cf2f66; /* darker magenta for solid fills behind white text (AA: white 4.9:1) */
   --violet: #7b3fa0;
   --blue: #16266a;
   --gold: #f0b14e;
@@ -37,7 +38,8 @@
   --bg1: #f5e0e4;
   --ink: #2a1320;
   --muted: #86566f; /* darkened from #9a6b86 to clear 4.5:1 AA on bg0/bg1/cards */
-  --primary: #d4396f;
+  --primary: #c52e5f; /* darkened from #d4396f so primary text on the parchment bg clears 4.5:1 */
+  --accent-fill: var(--primary); /* dawn primary already clears white-on-fill at AA */
   --violet: #7b3fa0;
   --blue: #2e3a73;
   --gold: #c9842f;

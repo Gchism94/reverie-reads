@@ -136,7 +136,7 @@ function SeriesModal({
             >
               <span
                 className="flex h-5 w-5 flex-none items-center justify-center rounded-full border border-line text-[11px]"
-                style={isRead(b) ? { background: 'var(--primary)', color: 'var(--on-primary)' } : undefined}
+                style={isRead(b) ? { background: 'var(--accent-fill)', color: 'var(--on-primary)' } : undefined}
               >
                 {isRead(b) ? '✓' : ''}
               </span>

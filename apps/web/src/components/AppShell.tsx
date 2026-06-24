@@ -30,7 +30,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <a
         href="#main"
         className="sr-only rounded-full px-4 py-2 text-[13px] font-semibold focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-50"
-        style={{ background: 'var(--primary)', color: 'var(--on-primary)' }}
+        style={{ background: 'var(--accent-fill)', color: 'var(--on-primary)' }}
       >
         Skip to content
       </a>
