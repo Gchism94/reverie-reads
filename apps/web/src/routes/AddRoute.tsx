@@ -3,6 +3,7 @@ import { createRoute, useNavigate } from '@tanstack/react-router'
 import { deriveBoyfriend, type Book } from '@reverie/core'
 import { rootRoute } from './RootRoute'
 import { useAddBook } from '../data/books'
+import { enrichBook } from '../lib/enrich'
 import { Chip } from '../components/Chip'
 import { ALL_TROPES, FORMATS, READ_STATUSES, SUBGENRES, subgenreGradient } from '../library/constants'
 
@@ -66,8 +67,21 @@ function AddForm({ hit, onAdded }: { hit: Partial<SearchHit>; onAdded: () => voi
   })
   const [tropes, setTropes] = useState<string[]>([])
   const [spice, setSpice] = useState(0)
+  const [cover, setCover] = useState(hit.cover ?? '')
+  const [enriching, setEnriching] = useState(false)
   const set = (k: keyof typeof form, v: string) => setForm((p) => ({ ...p, [k]: v }))
   const [g0, g1] = subgenreGradient(form.subgenre)
+
+  async function findCover() {
+    setEnriching(true)
+    const res = await enrichBook({
+      title: form.title,
+      author: `${form.first} ${form.last}`.trim(),
+      isbn: hit.isbn,
+    })
+    setEnriching(false)
+    if (res?.cover) setCover(res.cover)
+  }
   const inputClass = 'h-10 w-full rounded-xl border border-line px-3 text-[14px] text-ink outline-none'
   const inputStyle = { background: 'var(--field)' } as const
 
@@ -85,7 +99,7 @@ function AddForm({ hit, onAdded }: { hit: Partial<SearchHit>; onAdded: () => voi
       genres: [form.subgenre],
       tropes,
       spice,
-      cover: hit.cover ?? '',
+      cover,
       isbn: hit.isbn ?? '',
       format: form.format,
       readStatus: form.readStatus,
@@ -99,8 +113,21 @@ function AddForm({ hit, onAdded }: { hit: Partial<SearchHit>; onAdded: () => voi
   return (
     <div className="mt-4 rounded-2xl border border-line p-4" style={{ background: 'var(--card)' }}>
       <div className="flex gap-4">
-        <div className="aspect-[2/3] w-20 flex-none overflow-hidden rounded-lg border border-line" style={{ background: `linear-gradient(150deg, ${g0}, ${g1})` }}>
-          {hit.cover && <img src={hit.cover} alt="" className="h-full w-full object-cover" />}
+        <div className="flex-none">
+          <div className="aspect-[2/3] w-20 overflow-hidden rounded-lg border border-line" style={{ background: `linear-gradient(150deg, ${g0}, ${g1})` }}>
+            {cover && <img src={cover} alt="" className="h-full w-full object-cover" />}
+          </div>
+          {!cover && (
+            <button
+              type="button"
+              onClick={() => void findCover()}
+              disabled={enriching}
+              className="mt-1.5 w-20 rounded-full border border-line px-2 py-1 text-[10px] font-semibold text-ink disabled:opacity-50"
+              style={{ background: 'var(--field)' }}
+            >
+              {enriching ? '…' : '🔎 Find cover'}
+            </button>
+          )}
         </div>
         <div className="flex-1 space-y-2">
           <input value={form.title} onChange={(e) => set('title', e.target.value)} placeholder="Title" className={inputClass} style={inputStyle} />

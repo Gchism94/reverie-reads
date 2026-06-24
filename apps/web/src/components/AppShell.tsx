@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react'
-import { Link } from '@tanstack/react-router'
+import { useEffect, useRef, type ReactNode } from 'react'
+import { Link, useRouterState } from '@tanstack/react-router'
 import { APP_NAME } from '@reverie/core'
 import { useAuth } from '../auth/AuthProvider'
 import { FiligreeDivider } from './FiligreeDivider'
@@ -17,8 +17,23 @@ const NAV = [
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { signOut } = useAuth()
+  const mainRef = useRef<HTMLElement>(null)
+  const pathname = useRouterState({ select: (s) => s.location.pathname })
+
+  // Move focus to the main content on navigation so keyboard/screen-reader users land there.
+  useEffect(() => {
+    mainRef.current?.focus()
+  }, [pathname])
+
   return (
     <div className="relative flex min-h-dvh flex-col">
+      <a
+        href="#main"
+        className="sr-only rounded-full px-4 py-2 text-[13px] font-semibold focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-50"
+        style={{ background: 'var(--primary)', color: 'var(--on-primary)' }}
+      >
+        Skip to content
+      </a>
       <header className="relative z-10 flex items-center gap-4 px-5 py-3.5">
         <Link to="/" className="min-w-[140px]">
           <div
@@ -75,7 +90,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <main className="relative z-[1] flex flex-1 flex-col">{children}</main>
+      <main ref={mainRef} id="main" tabIndex={-1} className="relative z-[1] flex flex-1 flex-col outline-none">
+        {children}
+      </main>
     </div>
   )
 }

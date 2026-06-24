@@ -17,7 +17,9 @@
     "@reverie/core": "workspace:*",
     "@supabase/supabase-js": "^2.47.10",
     "@tanstack/react-query": "^5.62.7",
+    "@tanstack/react-query-persist-client": "^5.62.7",
     "@tanstack/react-router": "^1.87.0",
+    "dexie": "^4.0.10",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "zustand": "^5.0.2"
@@ -31,6 +33,7 @@
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
     "@vitejs/plugin-react": "^4.3.4",
+    "fake-indexeddb": "^6.0.0",
     "jsdom": "^25.0.1",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.7.2",
