@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { Link, createRoute, useNavigate } from '@tanstack/react-router'
-import { authorOf, deriveBoyfriend, type Book, type Owned } from '@reverie/core'
+import { authorOf, buildBuyLinks, buyDisclosure, deriveBoyfriend, type Book, type Owned } from '@reverie/core'
+import { buyConfig } from '../lib/buyConfig'
 import { rootRoute } from '../routes/RootRoute'
 import { useBooks, useDeleteBook, useUpdateBook } from '../data/books'
 import { useDeleteRead, useReads } from '../data/reads'
@@ -198,6 +199,9 @@ function BookDetailScreen() {
       <div className="mt-6">
         <OwnedCopies owned={book.owned} onChange={setOwned} />
       </div>
+
+      {/* buy at an indie (discover + support — not live inventory) */}
+      <BuyAtIndie book={book} />
 
       {/* reading status */}
       <Label>Reading status</Label>
@@ -397,6 +401,48 @@ function BookDetailScreen() {
         <MergeDialog book={book} allBooks={books ?? []} onClose={() => setDialog(null)} />
       )}
     </section>
+  )
+}
+
+/** Format-aware indie buy links — Bookshop.org (print/ebook) + Libro.fm (audio), routed to the
+ *  reader's chosen local store. Discover + support, never a claim of in-store stock. */
+function BuyAtIndie({ book }: { book: Book }) {
+  const { data: profile } = useProfile()
+  const config = buyConfig(profile?.defaultStore)
+  const links = buildBuyLinks(book, config)
+  return (
+    <details className="mt-4 rounded-2xl border border-line p-4" style={{ background: 'var(--card)' }}>
+      <summary className="cursor-pointer text-[14px] font-semibold text-ink">
+        Buy at an indie{profile?.defaultStore ? ` · ${profile.defaultStore.name}` : ''}
+      </summary>
+      <div className="mt-2 flex flex-col gap-2">
+        {links.map((l) => (
+          <a
+            key={l.provider}
+            href={l.url}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center justify-between rounded-xl border border-line px-3 py-2 text-[13px] font-semibold text-ink"
+            style={{ background: 'var(--field)' }}
+          >
+            <span>{l.label}</span>
+            <span className="text-primary">↗</span>
+          </a>
+        ))}
+      </div>
+      <p className="mt-2 text-[12px] text-muted">
+        {buyDisclosure(config)} These open the store’s online shop — not a live in-stock check.
+        {!profile?.defaultStore && (
+          <>
+            {' '}
+            <Link to="/indie" className="text-primary">
+              Pick your local store
+            </Link>
+            .
+          </>
+        )}
+      </p>
+    </details>
   )
 }
 
