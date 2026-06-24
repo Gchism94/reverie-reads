@@ -1,9 +1,18 @@
 import { createRoute } from '@tanstack/react-router'
+import type { ReactNode } from 'react'
 import { rootRoute } from './RootRoute'
+import { useBooks, useUpdateBook } from '../data/books'
+import { CoverCard } from '../components/CoverCard'
 
-// First vertical slice lands here in Step 5 (cover grid, filters, Grid ⇄ Series).
-// For the scaffold this is the library's empty state — inviting, in the app's voice.
-function LibraryScreen() {
+function Centered({ children }: { children: ReactNode }) {
+  return (
+    <section className="flex flex-1 flex-col items-center justify-center px-6 py-16 text-center text-muted">
+      {children}
+    </section>
+  )
+}
+
+function EmptyState() {
   return (
     <section className="flex flex-1 flex-col items-center justify-center px-6 py-16 text-center">
       <p className="text-[13px] uppercase tracking-[0.3em] text-muted">Your library</p>
@@ -17,17 +26,39 @@ function LibraryScreen() {
         Mark a book “Reading” and your home comes alive — spice, tropes, series gaps and
         rereads, all in one place.
       </p>
-      <button
-        type="button"
-        className="mt-8 rounded-full px-6 py-3 text-[14px] font-semibold"
-        style={{
-          background: 'linear-gradient(135deg, var(--primary), var(--gold))',
-          color: 'var(--on-primary)',
-          boxShadow: 'var(--shadow)',
-        }}
-      >
-        Add your first book
-      </button>
+    </section>
+  )
+}
+
+function LibraryScreen() {
+  const { data: books, isLoading, isError, error } = useBooks()
+  const updateBook = useUpdateBook()
+
+  if (isLoading) return <Centered>Gathering your library…</Centered>
+  if (isError) return <Centered>Couldn’t load your library — {(error as Error).message}</Centered>
+  if (!books || books.length === 0) return <EmptyState />
+
+  return (
+    <section className="px-4 py-6 sm:px-6">
+      <header className="mb-4 flex items-baseline justify-between">
+        <h1
+          className="text-[22px] italic text-ink"
+          style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+        >
+          Library
+        </h1>
+        <span className="text-[12.5px] text-muted">{books.length} books</span>
+      </header>
+
+      <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
+        {books.map((b) => (
+          <CoverCard
+            key={b.id}
+            book={b}
+            onToggleFave={() => updateBook.mutate({ id: b.id, patch: { fave: !b.fave } })}
+          />
+        ))}
+      </div>
     </section>
   )
 }

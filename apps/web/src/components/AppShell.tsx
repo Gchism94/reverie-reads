@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { APP_NAME } from '@reverie/core'
+import { useAuth } from '../auth/AuthProvider'
 import { FiligreeDivider } from './FiligreeDivider'
 import { ThemeToggle } from './ThemeToggle'
 
@@ -8,6 +9,7 @@ const NAV = ['Home', 'Library', 'Shelves', 'Planner', 'Stats', 'Clubs'] as const
 const ACTIVE = 'Library'
 
 export function AppShell({ children }: { children: ReactNode }) {
+  const { signOut } = useAuth()
   return (
     <div className="relative flex min-h-dvh flex-col">
       <header className="relative z-10 flex items-center gap-4 px-5 py-3.5">
@@ -42,6 +44,14 @@ export function AppShell({ children }: { children: ReactNode }) {
 
         <div className="flex flex-none items-center gap-2.5">
           <ThemeToggle />
+          <button
+            type="button"
+            onClick={() => void signOut()}
+            className="hidden h-[38px] items-center rounded-full border border-line px-3.5 text-[12.5px] font-semibold text-muted hover:text-ink sm:flex"
+            style={{ background: 'var(--card)' }}
+          >
+            Sign out
+          </button>
         </div>
       </header>
 

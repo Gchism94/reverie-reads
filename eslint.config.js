@@ -43,9 +43,17 @@ export default tseslint.config(
     },
   },
   {
+    // Node scripts (seed, tooling) run outside the browser.
+    files: ['**/*.{js,mjs,cjs}'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      globals: { ...globals.node },
+    },
+  },
+  {
     // TanStack Router (code-based) route modules legitimately export route objects
     // alongside their screen component; Fast Refresh isn't a concern for them.
-    files: ['**/routes/**/*.tsx', '**/router.tsx'],
+    files: ['**/routes/**/*.tsx', '**/router.tsx', '**/AuthProvider.tsx'],
     rules: {
       'react-refresh/only-export-components': 'off',
     },
