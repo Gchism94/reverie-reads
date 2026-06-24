@@ -46,6 +46,21 @@ function StoreMap({ loc, stores }: { loc: ResolvedLocation; stores: Store[] }) {
   )
 }
 
+/** Never dead-end: when there's no nearby data (no results, non-US gap, or an Overpass hiccup),
+ *  point to the indies' online storefronts. Consistent with the no-live-inventory banner. */
+function ShopOnlineFallback() {
+  return (
+    <div className="mt-3 flex flex-wrap gap-2">
+      <a href="https://bookshop.org" target="_blank" rel="noreferrer" className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink" style={{ background: 'var(--field)' }}>
+        Print &amp; ebooks · Bookshop.org ↗
+      </a>
+      <a href="https://libro.fm" target="_blank" rel="noreferrer" className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink" style={{ background: 'var(--field)' }}>
+        Audiobooks · Libro.fm ↗
+      </a>
+    </div>
+  )
+}
+
 function StoreList({
   stores,
   defaultId,
@@ -193,9 +208,12 @@ export default function IndieScreen() {
       {error && <p className="mt-3 text-[13px] text-primary">{error}</p>}
 
       {!loc ? (
-        <p className="mt-6 rounded-2xl border border-line p-6 text-center text-[14px] text-muted">
-          Set a location to find nearby independent bookstores.
-        </p>
+        <div className="mt-6 rounded-2xl border border-line p-6 text-center">
+          <p className="text-[14px] text-muted">Set a location to find nearby independent bookstores — or shop indies online:</p>
+          <div className="flex justify-center">
+            <ShopOnlineFallback />
+          </div>
+        </div>
       ) : (
         <div className="mt-4">
           <p className="mb-2 text-[13.5px] text-ink">
@@ -214,9 +232,12 @@ export default function IndieScreen() {
 
           {stores.isLoading && <p className="py-8 text-center text-[14px] text-muted">Finding nearby bookshops…</p>}
           {stores.isError && (
-            <p className="py-8 text-center text-[14px] text-muted">
-              Couldn’t reach the bookstore directory just now. Try again in a moment.
-            </p>
+            <div className="rounded-2xl border border-line p-6 text-center">
+              <p className="text-[14px] text-muted">Couldn’t reach the bookstore directory just now — but you can still support indies online:</p>
+              <div className="flex justify-center">
+                <ShopOnlineFallback />
+              </div>
+            </div>
           )}
           {stores.data && stores.data.length > 0 && (
             <>
@@ -229,10 +250,15 @@ export default function IndieScreen() {
             </>
           )}
           {stores.data && stores.data.length === 0 && (
-            <p className="mt-4 rounded-2xl border border-line p-6 text-center text-[14px] text-muted">
-              No independent bookstores found nearby. (Coverage is uneven outside the US, and some
-              shops aren’t on the map yet.)
-            </p>
+            <div className="mt-4 rounded-2xl border border-line p-6 text-center">
+              <p className="text-[14px] text-muted">
+                No independent bookstores found nearby — map coverage is uneven outside the US and some
+                shops aren’t listed yet. You can still buy from indies online:
+              </p>
+              <div className="flex justify-center">
+                <ShopOnlineFallback />
+              </div>
+            </div>
           )}
         </div>
       )}
