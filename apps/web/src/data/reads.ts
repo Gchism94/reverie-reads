@@ -5,6 +5,30 @@ import { toReadRecord, type ReadRecord } from './mappers'
 import type { ReadRow } from './types'
 
 export const readsKey = (bookId: string) => ['reads', bookId] as const
+export const allReadsKey = ['reads', 'all'] as const
+
+export interface AllReadRow {
+  id: string
+  book_id: string
+  read_on: string | null
+  format: string | null
+  rating: number | null
+  notes: string | null
+}
+
+/** Every read across the user's library — for the calendar and stats. */
+export function useAllReads() {
+  return useQuery({
+    queryKey: allReadsKey,
+    queryFn: async (): Promise<AllReadRow[]> => {
+      const { data, error } = await supabase
+        .from('reads')
+        .select('id, book_id, read_on, format, rating, notes')
+      if (error) throw error
+      return data as AllReadRow[]
+    },
+  })
+}
 
 /** The reread log for one book (newest first). */
 export function useReads(bookId: string) {

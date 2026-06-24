@@ -50,6 +50,8 @@ export const TROPE_GROUPS: Record<string, string[]> = {
   ],
 }
 
+export const ALL_TROPES: string[] = Object.values(TROPE_GROUPS).flat()
+
 export interface Archetype {
   name: string
   tag: string
