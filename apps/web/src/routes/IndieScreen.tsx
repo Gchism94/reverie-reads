@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { CircleMarker, MapContainer, Popup, TileLayer } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import { useTheme } from '../theme/useTheme'
+import { useProfile, useUpdateProfile } from '../data/profile'
 import {
   geocodePlace,
   loadLocation,
@@ -45,31 +46,53 @@ function StoreMap({ loc, stores }: { loc: ResolvedLocation; stores: Store[] }) {
   )
 }
 
-function StoreList({ stores }: { stores: Store[] }) {
+function StoreList({
+  stores,
+  defaultId,
+  onSetDefault,
+}: {
+  stores: Store[]
+  defaultId: string | null
+  onSetDefault: (s: Store | null) => void
+}) {
   return (
     <ul className="mt-4 flex flex-col gap-2">
-      {stores.map((s) => (
-        <li key={s.id} className="rounded-2xl border border-line p-3" style={{ background: 'var(--card)' }}>
-          <div className="flex items-baseline justify-between gap-2">
-            <span className="text-[15px] font-semibold text-ink">{s.name}</span>
-            <span className="flex-none text-[12px] text-muted">{miles(s.distanceKm)}</span>
-          </div>
-          {s.address && <div className="mt-0.5 text-[13px] text-muted">{s.address}</div>}
-          <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-[12.5px]">
-            {s.hours && <span className="text-muted">🕑 {s.hours}</span>}
-            {s.phone && (
-              <a href={`tel:${s.phone}`} className="text-primary">
-                {s.phone}
-              </a>
-            )}
-            {s.website && (
-              <a href={s.website} target="_blank" rel="noreferrer" className="text-primary">
-                Website ↗
-              </a>
-            )}
-          </div>
-        </li>
-      ))}
+      {stores.map((s) => {
+        const isDefault = s.id === defaultId
+        return (
+          <li key={s.id} className="rounded-2xl border border-line p-3" style={{ background: 'var(--card)' }}>
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="text-[15px] font-semibold text-ink">
+                {isDefault && <span title="Your store">★ </span>}
+                {s.name}
+              </span>
+              <span className="flex-none text-[12px] text-muted">{miles(s.distanceKm)}</span>
+            </div>
+            {s.address && <div className="mt-0.5 text-[13px] text-muted">{s.address}</div>}
+            <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px]">
+              {s.hours && <span className="text-muted">🕑 {s.hours}</span>}
+              {s.phone && (
+                <a href={`tel:${s.phone}`} className="text-primary">
+                  {s.phone}
+                </a>
+              )}
+              {s.website && (
+                <a href={s.website} target="_blank" rel="noreferrer" className="text-primary">
+                  Website ↗
+                </a>
+              )}
+              <button
+                type="button"
+                onClick={() => onSetDefault(isDefault ? null : s)}
+                className="ml-auto rounded-full border border-line px-2.5 py-1 text-[12px] font-semibold text-ink"
+                style={{ background: 'var(--field)' }}
+              >
+                {isDefault ? 'Remove as my store' : 'Set as my store'}
+              </button>
+            </div>
+          </li>
+        )
+      })}
     </ul>
   )
 }
@@ -79,6 +102,12 @@ export default function IndieScreen() {
   const [query, setQuery] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const { data: profile } = useProfile()
+  const updateProfile = useUpdateProfile()
+  const defaultStore = profile?.defaultStore ?? null
+
+  const setDefault = (s: Store | null) =>
+    updateProfile.mutate({ defaultStore: s ? { id: s.id, name: s.name, website: s.website } : null })
 
   const stores = useQuery({
     queryKey: ['bookstores', loc?.lat, loc?.lng],
@@ -192,8 +221,11 @@ export default function IndieScreen() {
           {stores.data && stores.data.length > 0 && (
             <>
               <StoreMap loc={loc} stores={stores.data} />
-              <p className="mt-3 text-[12.5px] text-muted">{stores.data.length} independent shop(s) nearby · chains excluded</p>
-              <StoreList stores={stores.data} />
+              <p className="mt-3 text-[12.5px] text-muted">
+                {stores.data.length} independent shop(s) nearby · chains excluded
+                {defaultStore ? ` · your store: ${defaultStore.name}` : ''}
+              </p>
+              <StoreList stores={stores.data} defaultId={defaultStore?.id ?? null} onSetDefault={setDefault} />
             </>
           )}
           {stores.data && stores.data.length === 0 && (
