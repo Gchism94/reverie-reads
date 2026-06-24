@@ -11,6 +11,7 @@ import { settingsRoute } from './routes/SettingsRoute'
 import { clubsRoute } from './routes/ClubsRoute'
 import { clubRoute } from './routes/ClubRoute'
 import { sharedListRoute } from './routes/SharedListRoute'
+import { indieRoute } from './routes/IndieRoute'
 import { bookRoute } from './book/BookDetailRoute'
 
 const routeTree = rootRoute.addChildren([
@@ -25,6 +26,7 @@ const routeTree = rootRoute.addChildren([
   clubsRoute,
   clubRoute,
   sharedListRoute,
+  indieRoute,
   bookRoute,
 ])
 
