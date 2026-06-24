@@ -13,6 +13,7 @@ const NAV = [
   { label: 'Stats', to: '/stats' },
   { label: 'Match', to: '/match' },
   { label: 'Clubs', to: '/clubs' },
+  { label: 'Indies', to: '/indie' },
 ] as const
 
 export function AppShell({ children }: { children: ReactNode }) {

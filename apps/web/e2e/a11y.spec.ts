@@ -87,6 +87,7 @@ test('every route passes axe (no serious/critical) in both themes', async ({ pag
     ['Clubs', '/clubs'],
     ['Club', `/club/${clubId}`],
     ['SharedList', `/list/${listCode}`],
+    ['Indie', '/indie'],
   ]
 
   const failures: string[] = []
