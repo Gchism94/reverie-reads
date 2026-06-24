@@ -72,7 +72,7 @@ function AddForm({ hit, onAdded }: { hit: Partial<SearchHit>; onAdded: () => voi
   const set = (k: keyof typeof form, v: string) => setForm((p) => ({ ...p, [k]: v }))
   const [g0, g1] = subgenreGradient(form.subgenre)
 
-  async function findCover() {
+  async function fetchDetails() {
     setEnriching(true)
     const res = await enrichBook({
       title: form.title,
@@ -80,7 +80,14 @@ function AddForm({ hit, onAdded }: { hit: Partial<SearchHit>; onAdded: () => voi
       isbn: hit.isbn,
     })
     setEnriching(false)
-    if (res?.cover) setCover(res.cover)
+    if (!res) return
+    if (res.cover && !cover) setCover(res.cover)
+    // Fill only blanks — never overwrite what the user typed.
+    setForm((p) => ({
+      ...p,
+      series: p.series || res.series,
+      position: p.position || (res.seriesPosition != null ? String(res.seriesPosition) : ''),
+    }))
   }
   const inputClass = 'h-10 w-full rounded-xl border border-line px-3 text-[14px] text-ink outline-none'
   const inputStyle = { background: 'var(--field)' } as const
@@ -126,17 +133,15 @@ function AddForm({ hit, onAdded }: { hit: Partial<SearchHit>; onAdded: () => voi
           <div className="aspect-[2/3] w-20 overflow-hidden rounded-lg border border-line" style={{ background: `linear-gradient(150deg, ${g0}, ${g1})` }}>
             {cover && <img src={cover} alt="" className="h-full w-full object-cover" />}
           </div>
-          {!cover && (
-            <button
-              type="button"
-              onClick={() => void findCover()}
-              disabled={enriching}
-              className="mt-1.5 w-20 rounded-full border border-line px-2 py-1 text-[10px] font-semibold text-ink disabled:opacity-50"
-              style={{ background: 'var(--field)' }}
-            >
-              {enriching ? '…' : '🔎 Find cover'}
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => void fetchDetails()}
+            disabled={enriching}
+            className="mt-1.5 w-20 rounded-full border border-line px-2 py-1 text-[10px] font-semibold text-ink disabled:opacity-50"
+            style={{ background: 'var(--field)' }}
+          >
+            {enriching ? '…' : '🔎 Fetch details'}
+          </button>
         </div>
         <div className="flex-1 space-y-2">
           <input value={form.title} onChange={(e) => set('title', e.target.value)} placeholder="Title" className={inputClass} style={inputStyle} />

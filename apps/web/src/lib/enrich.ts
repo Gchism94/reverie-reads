@@ -1,17 +1,31 @@
 import { supabase } from './supabase'
 
+/** Full normalized record returned by the enrichment Edge Function. */
 export interface EnrichResult {
   title: string
+  authors: string[]
   author: string
-  cover: string
+  series: string
+  seriesPosition: number | null
+  publisher: string
+  pubY: number | null
+  pubM: number | null
+  pubD: number | null
+  pageCount: number | null
+  isbn10: string
+  isbn13: string
   isbn: string
-  pubYear: number | null
+  language: string
+  genres: string[]
+  description: string
+  cover: string
   source: string | null
 }
 
 /**
- * Ask the enrichment Edge Function for a cover + metadata (Google Books → Open Library →
- * Hardcover). Returns null on any failure so callers degrade gracefully.
+ * Ask the enrichment Edge Function for a full record (Google Books → Open Library →
+ * Hardcover, cached). Returns null on any failure so callers degrade gracefully — an
+ * ASIN-only/no-cover title still returns a (sparse) record rather than throwing.
  */
 export async function enrichBook(input: {
   title?: string
