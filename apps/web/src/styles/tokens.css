@@ -36,7 +36,7 @@
   --bg0: #fbeee9;
   --bg1: #f5e0e4;
   --ink: #2a1320;
-  --muted: #9a6b86;
+  --muted: #86566f; /* darkened from #9a6b86 to clear 4.5:1 AA on bg0/bg1/cards */
   --primary: #d4396f;
   --violet: #7b3fa0;
   --blue: #2e3a73;
