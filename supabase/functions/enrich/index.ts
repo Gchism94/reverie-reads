@@ -199,10 +199,12 @@ Deno.serve(async (req: Request) => {
     }
 
     const result = emptyResult(input)
+    let rateLimited = false
     for (const lookup of [fromGoogle, fromOpenLibrary, fromHardcover]) {
       try {
         fillMissing(result, await lookup(input))
-      } catch {
+      } catch (e) {
+        if (String(e).includes('429')) rateLimited = true
         // try the next source
       }
     }
@@ -211,7 +213,10 @@ Deno.serve(async (req: Request) => {
 
     // Cache any record we actually resolved (cover may legitimately be '' — don't fail).
     if (result.source) await writeCache(key, result)
-    return new Response(JSON.stringify(result), { headers: { ...cors, 'Content-Type': 'application/json' } })
+    // Only flag rate-limited when nothing resolved, so the bulk action can pause + resume later
+    // instead of stamping the book as checked. A partial success is still a usable result.
+    const body = rateLimited && !result.source ? { ...result, rateLimited: true } : result
+    return new Response(JSON.stringify(body), { headers: { ...cors, 'Content-Type': 'application/json' } })
   } catch (e) {
     return new Response(JSON.stringify({ error: String(e) }), {
       status: 400,
