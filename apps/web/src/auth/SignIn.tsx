@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { APP_NAME } from '@reverie/core'
 import { supabase } from '../lib/supabase'
-import { FiligreeDivider } from '../components/FiligreeDivider'
+import { SkinDivider } from '../components/SkinDivider'
 
 export function SignIn() {
   const [email, setEmail] = useState('')
@@ -34,7 +34,7 @@ export function SignIn() {
         >
           {APP_NAME}
         </h1>
-        <FiligreeDivider className="mt-3" />
+        <SkinDivider className="mt-3" />
 
         {sent ? (
           <p className="mt-6 text-center text-[14px] leading-relaxed text-muted">
