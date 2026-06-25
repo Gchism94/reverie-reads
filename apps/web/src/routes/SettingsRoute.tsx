@@ -10,7 +10,9 @@ import { buildBackup, importCsvToBackend, restoreBackup } from '../data/importEx
 import { bulkComplete, isIncomplete, type BulkProgress } from '../data/enrichLibrary'
 import { DuplicateReview } from '../components/DuplicateReview'
 import type { ReviewCandidate } from '../data/intake'
-import { useTheme, type Theme } from '../theme/useTheme'
+import { SKIN_LIST, type Mode } from '@reverie/core'
+import { useSkin } from '../skin/useSkin'
+import { useSkinControls } from '../skin/controls'
 import { useAuth } from '../auth/AuthProvider'
 
 const YEAR = new Date().getFullYear()
@@ -33,8 +35,9 @@ function SettingsScreen() {
   const { data: books } = useBooks()
   const updateProfile = useUpdateProfile()
   const performMerge = usePerformMerge()
-  const theme = useTheme((s) => s.theme)
-  const setTheme = useTheme((s) => s.setTheme)
+  const activeSkin = useSkin((s) => s.skin)
+  const activeMode = useSkin((s) => s.mode)
+  const { setSkin, setMode } = useSkinControls()
   const { session } = useAuth()
 
   const [name, setName] = useState('')
@@ -188,22 +191,24 @@ function SettingsScreen() {
           </button>
         </Section>
 
-        <Section title="Theme">
+        <Section title="Appearance">
+          <div className="mb-1.5 text-[11px] uppercase tracking-[0.15em] text-muted">Mode</div>
           <div className="flex gap-2">
             {(
               [
-                ['nocturne', '☾ Nocturne'],
-                ['dawn', '☀ Magnolia Dawn'],
-              ] as [Theme, string][]
+                ['light', '☀ Light'],
+                ['dark', '☾ Dark'],
+                ['system', '◐ System'],
+              ] as [Mode, string][]
             ).map(([value, label]) => (
               <button
                 key={value}
                 type="button"
-                onClick={() => setTheme(value)}
-                aria-pressed={theme === value}
-                className="flex-1 rounded-xl border px-4 py-2.5 text-[13px] font-semibold"
+                onClick={() => setMode(value)}
+                aria-pressed={activeMode === value}
+                className="flex-1 rounded-xl border px-3 py-2.5 text-[13px] font-semibold"
                 style={
-                  theme === value
+                  activeMode === value
                     ? { background: 'var(--accent-fill)', color: 'var(--on-primary)', borderColor: 'transparent' }
                     : { background: 'var(--field)', color: 'var(--ink)', borderColor: 'var(--line)' }
                 }
@@ -212,6 +217,36 @@ function SettingsScreen() {
               </button>
             ))}
           </div>
+
+          <div className="mb-1.5 mt-4 text-[11px] uppercase tracking-[0.15em] text-muted">Skin</div>
+          <p className="mb-2 text-[12.5px] text-muted">
+            A skin restyles the whole app — palette, type, and ambiance. Light/dark is separate.
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            {SKIN_LIST.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => setSkin(s.id)}
+                aria-pressed={activeSkin === s.id}
+                className="rounded-xl border p-3 text-left"
+                style={
+                  activeSkin === s.id
+                    ? { background: 'var(--field)', borderColor: 'var(--primary)' }
+                    : { background: 'var(--field)', borderColor: 'var(--line)' }
+                }
+              >
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="text-[14px] font-semibold text-ink" style={{ fontFamily: s.displayFont }}>
+                    {s.label}
+                  </span>
+                  {activeSkin === s.id && <span className="text-[11px] font-semibold text-primary">active</span>}
+                </div>
+                <div className="text-[11.5px] text-muted">{s.genre}</div>
+              </button>
+            ))}
+          </div>
+          <p className="mt-2 text-[12px] text-muted">Browse them in the Skin Gallery.</p>
         </Section>
 
         <Section title="Library tools">

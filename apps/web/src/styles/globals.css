@@ -3,7 +3,7 @@
 /* Map the runtime CSS variables into Tailwind's theme so utilities like `bg-bg0`,
    `text-ink`, `text-primary`, and `border-line` resolve to the live, theme-switched
    custom properties. `inline` keeps the var() reference in the generated utility, so
-   flipping [data-theme] re-themes everything with no rebuild. Token values live in
+   flipping [data-skin]/[data-mode] re-skins everything with no rebuild. Token values live in
    tokens.css (imported first in main.tsx). */
 @theme inline {
   --color-bg0: var(--bg0);
@@ -17,10 +17,10 @@
   --color-card: var(--card);
   --color-line: var(--line);
   --color-on-primary: var(--on-primary);
-
-  --font-display: 'Fraunces', ui-serif, Georgia, serif;
-  --font-sans: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
 }
+
+/* Fonts are skin tokens (--font-display / --font-sans / --font-mono set per skin in tokens.css),
+   so switching skin re-typesets the app. Components read var(--font-display) directly. */
 
 @layer base {
   html,

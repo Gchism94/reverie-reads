@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { CircleMarker, MapContainer, Popup, TileLayer } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
-import { useTheme } from '../theme/useTheme'
+import { useSkin } from '../skin/useSkin'
 import { useProfile, useUpdateProfile } from '../data/profile'
 import {
   geocodePlace,
@@ -19,17 +19,17 @@ const miles = (km: number) => `${(km * 0.621371).toFixed(1)} mi`
 // CARTO basemaps — dark for Nocturne, light for Magnolia Dawn (free for light use; a tile key
 // is an owner-action for production volume).
 const TILES = {
-  nocturne: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-  dawn: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+  dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+  light: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
 }
 const TILE_ATTR = '&copy; OpenStreetMap contributors &copy; CARTO'
 
 function StoreMap({ loc, stores }: { loc: ResolvedLocation; stores: Store[] }) {
-  const theme = useTheme((s) => s.theme)
+  const mode = useSkin((s) => s.resolvedMode)
   return (
     <div role="region" aria-label="Map of nearby independent bookstores" className="h-80 overflow-hidden rounded-2xl border border-line">
       <MapContainer key={`${loc.lat},${loc.lng}`} center={[loc.lat, loc.lng]} zoom={12} scrollWheelZoom={false} style={{ height: '100%', width: '100%' }}>
-        <TileLayer key={theme} url={TILES[theme]} attribution={TILE_ATTR} />
+        <TileLayer key={mode} url={TILES[mode]} attribution={TILE_ATTR} />
         <CircleMarker center={[loc.lat, loc.lng]} radius={7} pathOptions={{ color: '#f0b14e', fillColor: '#f0b14e', fillOpacity: 0.9 }}>
           <Popup>You are here</Popup>
         </CircleMarker>

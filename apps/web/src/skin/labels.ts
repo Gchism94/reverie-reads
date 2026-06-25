@@ -1,11 +1,12 @@
-import { REVERIE_LABELS, type FieldLabels } from '@reverie/core'
+import { SKINS, type FieldLabels } from '@reverie/core'
+import { useSkin } from './useSkin'
 
 /**
- * Field labels for the active skin. The data model is generic (tags / intensity / genre); the
- * UI reads its labels from here so the Reverie skin still shows "Tropes" / "Spice" while other
- * skins can show "Tags" / "Intensity". C2 wires this to the skin registry's active skin; until
- * then it resolves to the Reverie labels (the only shipped skin).
+ * Field labels for the active skin. The data model is generic (tags / intensity / genre); each
+ * skin chooses how to label those — the Reverie (romance) skin shows "Tropes" / "Spice", the
+ * others show "Tags" / "Intensity". UI reads labels from here, never hardcoded.
  */
 export function useLabels(): FieldLabels {
-  return REVERIE_LABELS
+  const skin = useSkin((s) => s.skin)
+  return SKINS[skin].labels
 }

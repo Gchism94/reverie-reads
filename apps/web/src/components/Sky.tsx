@@ -1,4 +1,6 @@
 import { useMemo, type CSSProperties } from 'react'
+import { SKINS } from '@reverie/core'
+import { useSkin } from '../skin/useSkin'
 
 type Star = { top: string; left: string; size: number; delay: string; duration: string }
 
@@ -45,7 +47,8 @@ function glow(color: string, size: string, pos: CSSProperties, anim: string): CS
  * `prefers-reduced-motion` disables (see tokens.css).
  */
 export function Sky() {
-  const stars = useMemo(() => makeStars(60), [])
+  const skin = useSkin((s) => s.skin)
+  const stars = useMemo(() => makeStars(SKINS[skin].starDensity), [skin])
 
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
