@@ -11,10 +11,11 @@ export interface BookRow {
   position: number | null
   series_count: number | null
   status: string | null
+  genre: string | null
   subgenre: string | null
   genres: string[]
-  tropes: string[]
-  spice: number | null
+  tags: string[]
+  intensity: number | null
   cover_url: string | null
   isbn: string | null
   fave: boolean

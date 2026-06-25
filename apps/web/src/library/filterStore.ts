@@ -12,7 +12,7 @@ interface FilterState {
   mode: LibraryMode
   panelOpen: boolean
   setQuery: (q: string) => void
-  toggleTrope: (t: string) => void
+  toggleTag: (t: string) => void
   setSub: (s: string) => void
   setStatus: (s: LibraryFilters['status']) => void
   setLen: (s: SeriesLenBucket) => void
@@ -30,13 +30,13 @@ export const useFilters = create<FilterState>((set) => ({
   mode: 'grid',
   panelOpen: false,
   setQuery: (q) => set((s) => ({ filters: { ...s.filters, q } })),
-  toggleTrope: (t) =>
+  toggleTag: (t) =>
     set((s) => ({
       filters: {
         ...s.filters,
-        tropes: s.filters.tropes.includes(t)
-          ? s.filters.tropes.filter((x) => x !== t)
-          : [...s.filters.tropes, t],
+        tags: s.filters.tags.includes(t)
+          ? s.filters.tags.filter((x) => x !== t)
+          : [...s.filters.tags, t],
       },
     })),
   setSub: (sub) => set((s) => ({ filters: { ...s.filters, sub } })),

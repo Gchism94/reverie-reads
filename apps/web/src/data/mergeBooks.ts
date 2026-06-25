@@ -6,8 +6,8 @@ import { booksKey } from './books'
 import { listsKey } from './lists'
 
 /**
- * Merge `loser` into `primary`. @reverie/core computes the field-level union (tropes, owned,
- * best cover/rating/spice/series info); the merge_books RPC then applies it ATOMICALLY in one
+ * Merge `loser` into `primary`. @reverie/core computes the field-level union (tags, owned,
+ * best cover/rating/intensity/series info); the merge_books RPC then applies it ATOMICALLY in one
  * transaction — carrying the loser's reads + list memberships onto the primary and deleting
  * the loser. A mid-flight failure rolls everything back, so a bulk "merge all" can never orphan
  * a list/club reference or lose reads/reviews/ratings, and is safe to re-run.

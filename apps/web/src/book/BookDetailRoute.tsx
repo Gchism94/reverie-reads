@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { Link, createRoute, useNavigate } from '@tanstack/react-router'
 import { authorOf, buildBuyLinks, buyDisclosure, deriveBoyfriend, type Book, type Owned } from '@reverie/core'
 import { buyConfig } from '../lib/buyConfig'
+import { useLabels } from '../skin/labels'
 import { rootRoute } from '../routes/RootRoute'
 import { useBooks, useDeleteBook, useUpdateBook } from '../data/books'
 import { useDeleteRead, useReads } from '../data/reads'
@@ -89,6 +90,7 @@ function BookDetailScreen() {
   const { data: listIds } = useBookListIds(bookId)
   const { data: lists } = useLists()
   const { data: profile } = useProfile()
+  const labels = useLabels()
   const updateBook = useUpdateBook()
   const deleteBook = useDeleteBook()
   const deleteRead = useDeleteRead(bookId)
@@ -118,11 +120,11 @@ function BookDetailScreen() {
   const tbrs = (lists ?? []).filter((l) => l.kind === 'tbr')
   const collections = (lists ?? []).filter((l) => l.kind === 'collection')
 
-  const removeTrope = (t: string) => {
-    const tropes = book.tropes.filter((x) => x !== t)
+  const removeTag = (t: string) => {
+    const tags = book.tags.filter((x) => x !== t)
     updateBook.mutate({
       id: book.id,
-      patch: { tropes, boyfriend: deriveBoyfriend({ tropes, subgenre: book.subgenre }) },
+      patch: { tags, boyfriend: deriveBoyfriend({ tags, subgenre: book.subgenre }) },
     })
   }
 
@@ -186,7 +188,7 @@ function BookDetailScreen() {
           <div className="mt-3 flex flex-wrap gap-1.5">
             <Pill>{book.subgenre}</Pill>
             <Pill>{seriesBadge}</Pill>
-            {book.spice > 0 && <Pill>{'🌶️'.repeat(book.spice)}</Pill>}
+            {(book.intensity ?? 0) > 0 && <Pill>{labels.intensityGlyph.repeat(book.intensity ?? 0)}</Pill>}
             {fmtPub(book.pub) && <Pill>📅 {fmtPub(book.pub)}</Pill>}
             <Pill muted>
               {bf?.emoji} {bf?.name.replace(/^The /, '')} vibe
@@ -237,7 +239,7 @@ function BookDetailScreen() {
         <ReviewsPanel workKey={workKey} reviewerName={reviewerName} />
       </div>
 
-      {/* tropes */}
+      {/* tags (Reverie skin: "Tropes") */}
       <Label
         action={
           <button type="button" onClick={() => setDialog('trope')} className="text-[12px] text-primary">
@@ -245,24 +247,24 @@ function BookDetailScreen() {
           </button>
         }
       >
-        Tropes
+        {labels.tags}
       </Label>
       <div className="flex flex-wrap gap-1.5">
-        {book.tropes.length ? (
-          book.tropes.map((t) => (
+        {book.tags.length ? (
+          book.tags.map((t) => (
             <button
               key={t}
               type="button"
-              onClick={() => removeTrope(t)}
+              onClick={() => removeTag(t)}
               className="rounded-full border px-3 py-1.5 text-[12.5px] font-medium"
               style={{ background: 'var(--accent-fill)', color: 'var(--on-primary)', borderColor: 'transparent' }}
-              aria-label={`Remove trope ${t}`}
+              aria-label={`Remove ${labels.tag} ${t}`}
             >
               {t} ✕
             </button>
           ))
         ) : (
-          <span className="text-[13px] text-muted">No tropes yet</span>
+          <span className="text-[13px] text-muted">No {labels.tags.toLowerCase()} yet</span>
         )}
       </div>
 

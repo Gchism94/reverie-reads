@@ -46,10 +46,11 @@ export interface Book {
   position: number | '' // fractional positions exist (e.g. 3.5); '' means unset
   seriesCount: number | null // null => length not set ("None set" filter)
   status: SeriesStatus
+  genre: string // primary genre signal (drives skin + adaptive logic); 'romance' is the default
   subgenre: string
   genres: string[]
-  tropes: string[]
-  spice: number // 0..5
+  tags: string[] // generic content tags (the Reverie skin labels these "Tropes")
+  intensity: number | null // 0..5, null = unset (the Reverie skin labels this "Spice")
   cover: string
   isbn: string
   fave: boolean

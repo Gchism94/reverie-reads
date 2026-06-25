@@ -5,6 +5,7 @@ import { rootRoute } from './RootRoute'
 import { useBooks } from '../data/books'
 import { useAllReads } from '../data/reads'
 import { MONTHS } from '../library/constants'
+import { useLabels } from '../skin/labels'
 
 const THIS_YEAR = new Date().getFullYear()
 
@@ -48,6 +49,7 @@ function tally<T>(items: T[], key: (x: T) => string | undefined): [string, numbe
 
 function StatsScreen() {
   const { data: books } = useBooks()
+  const labels = useLabels()
   const reads = useAllReads().data ?? []
   const all = books ?? []
 
@@ -78,8 +80,8 @@ function StatsScreen() {
 
   const subg = tally(readBooks, (b) => b.subgenre)
   const fmts = tally(all, (b) => b.format)
-  const spdist: [string, number][] = [1, 2, 3, 4, 5].map((i) => ['🌶️'.repeat(i), readBooks.filter((b) => b.spice === i).length])
-  const tropes = tally(readBooks.flatMap((b) => b.tropes), (t) => t).slice(0, 8)
+  const spdist: [string, number][] = [1, 2, 3, 4, 5].map((i) => [labels.intensityGlyph.repeat(i), readBooks.filter((b) => b.intensity === i).length])
+  const topTags = tally(readBooks.flatMap((b) => b.tags), (t) => t).slice(0, 8)
   const auths = tally(all, (b) => authorOf(b)).slice(0, 8)
 
   const readsPerBook = new Map<string, number>()
@@ -156,12 +158,12 @@ function StatsScreen() {
         <Card title="Your shelves by format">
           <Bars entries={fmts} />
         </Card>
-        <Card title="Spice profile 🌶️">
+        <Card title={`${labels.intensity} profile ${labels.intensityGlyph}`}>
           <Bars entries={spdist} />
         </Card>
-        {tropes.length > 0 && (
-          <Card title="Your top tropes">
-            <Bars entries={tropes} />
+        {topTags.length > 0 && (
+          <Card title={`Your top ${labels.tags.toLowerCase()}`}>
+            <Bars entries={topTags} />
           </Card>
         )}
         <Card title="Most-shelved authors">
@@ -174,7 +176,7 @@ function StatsScreen() {
             )}
             {busiest && <div>🔥 Busiest month of {year}: <b>{busiest}</b></div>}
             <div>♥ {all.filter((b) => b.fave).length} all-time faves</div>
-            <div>🌶️ {readBooks.filter((b) => b.spice >= 4).length} scorching reads conquered</div>
+            <div>{labels.intensityGlyph} {readBooks.filter((b) => (b.intensity ?? 0) >= 4).length} scorching reads conquered</div>
             <div>📚 {seriesCount} series on your shelves</div>
           </div>
         </Card>

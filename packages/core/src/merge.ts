@@ -19,7 +19,7 @@ export function richness(b: Book): number {
     (b.cover ? 2 : 0) +
     (b.rating ? 1 : 0) +
     (b.fave ? 1 : 0) +
-    (b.tropes?.length ?? 0) * 0.2
+    (b.tags?.length ?? 0) * 0.2
   )
 }
 
@@ -36,8 +36,8 @@ export function findDuplicateGroups(books: readonly Book[]): Book[][] {
 }
 
 /**
- * Merge `otherIds` into `primaryId`: union reads (dedup by date), tropes, and genres; keep
- * the best cover/rating/spice/series info; remap list memberships onto the primary; drop the
+ * Merge `otherIds` into `primaryId`: union reads (dedup by date), tags, and genres; keep
+ * the best cover/rating/intensity/series info; remap list memberships onto the primary; drop the
  * losers. Pure port of the prototype's mergeBooks — returns a new LibraryState, mutates nothing.
  */
 export function mergeBooks(
@@ -70,10 +70,11 @@ export function mergeBooks(
 
   const p: Book = { ...source }
   p.reads = reads
-  p.tropes = [...new Set(all.flatMap((b) => b.tropes ?? []))]
+  p.tags = [...new Set(all.flatMap((b) => b.tags ?? []))]
   p.genres = [...new Set(all.flatMap((b) => b.genres ?? []))]
   p.fave = all.some((b) => b.fave)
-  p.spice = Math.max(...all.map((b) => b.spice || 0))
+  const intensities = all.map((b) => b.intensity).filter((x): x is number => x != null)
+  p.intensity = intensities.length ? Math.max(...intensities) : null
   p.rating = p.rating || Math.max(...all.map((b) => b.rating || 0))
   p.progress = Math.max(...all.map((b) => b.progress || 0))
   p.cover = p.cover || all.map((b) => b.cover).find(Boolean) || ''
@@ -96,6 +97,7 @@ export function mergeBooks(
   // First non-empty value wins for these descriptive fields.
   if (!p.series) p.series = all.map((b) => b.series).find(Boolean) ?? p.series
   if (!p.position) p.position = all.map((b) => b.position).find(Boolean) ?? p.position
+  if (!p.genre) p.genre = all.map((b) => b.genre).find(Boolean) ?? p.genre
   if (!p.subgenre) p.subgenre = all.map((b) => b.subgenre).find(Boolean) ?? p.subgenre
   if (!p.format) p.format = all.map((b) => b.format).find(Boolean) ?? p.format
 

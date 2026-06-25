@@ -142,7 +142,7 @@ function mergeOwned(existing: Owned, incoming?: Owned): Owned {
 export function mergeImport(existing: Book, incoming: Incoming): ImportMergeResult {
   const patch: Partial<Book> = {}
 
-  const fill = <K extends 'first' | 'last' | 'series' | 'subgenre' | 'status' | 'cover' | 'isbn' | 'format' | 'source'>(
+  const fill = <K extends 'first' | 'last' | 'series' | 'genre' | 'subgenre' | 'status' | 'cover' | 'isbn' | 'format' | 'source'>(
     k: K,
   ) => {
     if (!existing[k] && incoming[k]) patch[k] = incoming[k]
@@ -150,6 +150,7 @@ export function mergeImport(existing: Book, incoming: Incoming): ImportMergeResu
   fill('first')
   fill('last')
   fill('series')
+  fill('genre')
   fill('subgenre')
   fill('status')
   fill('cover')
@@ -160,12 +161,12 @@ export function mergeImport(existing: Book, incoming: Incoming): ImportMergeResu
   if (existing.position === '' && incoming.position != null && incoming.position !== '') patch.position = incoming.position
   if (existing.seriesCount == null && incoming.seriesCount != null) patch.seriesCount = incoming.seriesCount
   if ((!existing.pub || !existing.pub.y) && incoming.pub?.y) patch.pub = incoming.pub
-  if (!existing.spice && incoming.spice) patch.spice = incoming.spice
+  if (existing.intensity == null && incoming.intensity != null) patch.intensity = incoming.intensity // fill a blank only
   if (!existing.rating && incoming.rating) patch.rating = incoming.rating // fill a blank rating only
 
   // Multi-value: union (additive).
-  const tropes = [...new Set([...existing.tropes, ...(incoming.tropes ?? [])])]
-  if (tropes.length !== existing.tropes.length) patch.tropes = tropes
+  const tags = [...new Set([...existing.tags, ...(incoming.tags ?? [])])]
+  if (tags.length !== existing.tags.length) patch.tags = tags
   const genres = [...new Set([...existing.genres, ...(incoming.genres ?? [])])]
   if (genres.length !== existing.genres.length) patch.genres = genres
 
@@ -177,9 +178,9 @@ export function mergeImport(existing: Book, incoming: Incoming): ImportMergeResu
     patch.readStatus = 'Read'
   }
 
-  if (patch.tropes || patch.subgenre) {
+  if (patch.tags || patch.subgenre) {
     patch.boyfriend = deriveBoyfriend({
-      tropes: patch.tropes ?? existing.tropes,
+      tags: patch.tags ?? existing.tags,
       subgenre: patch.subgenre ?? existing.subgenre,
     })
   }

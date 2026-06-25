@@ -7,6 +7,7 @@ import { useIntake, type ReviewCandidate } from '../data/intake'
 import { useBooks } from '../data/books'
 import { resolveCandidate, type ReviewAction } from '../data/duplicates'
 import { enrichBook } from '../lib/enrich'
+import { useLabels } from '../skin/labels'
 import { Chip } from '../components/Chip'
 import { ALL_TROPES, FORMATS, READ_STATUSES, SUBGENRES, subgenreGradient } from '../library/constants'
 
@@ -71,8 +72,9 @@ function AddForm({ hit, onAdded }: { hit: Partial<SearchHit>; onAdded: () => voi
     format: 'Paperback' as string,
     readStatus: 'Unread' as Book['readStatus'],
   })
-  const [tropes, setTropes] = useState<string[]>([])
-  const [spice, setSpice] = useState(0)
+  const [tags, setTags] = useState<string[]>([])
+  const [intensity, setIntensity] = useState(0)
+  const labels = useLabels()
   const [cover, setCover] = useState(hit.cover ?? '')
   const [enriching, setEnriching] = useState(false)
   const set = (k: keyof typeof form, v: string) => setForm((p) => ({ ...p, [k]: v }))
@@ -116,10 +118,11 @@ function AddForm({ hit, onAdded }: { hit: Partial<SearchHit>; onAdded: () => voi
       position: form.position.trim() === '' ? '' : Number(form.position) || '',
       seriesCount: null,
       status: form.series.trim() ? 'Series' : 'Standalone',
+      genre: 'romance',
       subgenre: form.subgenre,
       genres: [form.subgenre],
-      tropes,
-      spice,
+      tags,
+      intensity,
       owned,
       cover,
       isbn: hit.isbn ?? '',
@@ -128,7 +131,7 @@ function AddForm({ hit, onAdded }: { hit: Partial<SearchHit>; onAdded: () => voi
       source: 'Owned',
       pub: parsePub(hit.pub ?? ''),
     }
-    book.boyfriend = deriveBoyfriend({ tropes, subgenre: form.subgenre })
+    book.boyfriend = deriveBoyfriend({ tags, subgenre: form.subgenre })
     // Dedup on intake: a strong match folds into the existing record instead of duplicating.
     // With auto-merge off, a match comes back for an inline decision instead.
     const res = await intake(book, 'add')
@@ -196,10 +199,10 @@ function AddForm({ hit, onAdded }: { hit: Partial<SearchHit>; onAdded: () => voi
       </div>
 
       <div className="mt-3">
-        <div className="mb-1.5 text-[11px] uppercase tracking-[0.15em] text-muted">Tropes</div>
+        <div className="mb-1.5 text-[11px] uppercase tracking-[0.15em] text-muted">{labels.tags}</div>
         <div className="flex max-h-32 flex-wrap gap-1.5 overflow-y-auto">
           {ALL_TROPES.slice(0, 22).map((t) => (
-            <Chip key={t} active={tropes.includes(t)} onClick={() => setTropes((p) => (p.includes(t) ? p.filter((x) => x !== t) : [...p, t]))}>
+            <Chip key={t} active={tags.includes(t)} onClick={() => setTags((p) => (p.includes(t) ? p.filter((x) => x !== t) : [...p, t]))}>
               {t}
             </Chip>
           ))}
@@ -207,10 +210,10 @@ function AddForm({ hit, onAdded }: { hit: Partial<SearchHit>; onAdded: () => voi
       </div>
 
       <div className="mt-3 flex items-center gap-2">
-        <span className="text-[11px] uppercase tracking-[0.15em] text-muted">Spice</span>
+        <span className="text-[11px] uppercase tracking-[0.15em] text-muted">{labels.intensity}</span>
         {[1, 2, 3, 4, 5].map((i) => (
-          <button key={i} type="button" onClick={() => setSpice(spice === i ? 0 : i)} aria-label={`Spice ${i}`} aria-pressed={i <= spice} style={{ opacity: i <= spice ? 1 : 0.3 }}>
-            🌶️
+          <button key={i} type="button" onClick={() => setIntensity(intensity === i ? 0 : i)} aria-label={`${labels.intensity} ${i}`} aria-pressed={i <= intensity} style={{ opacity: i <= intensity ? 1 : 0.3 }}>
+            {labels.intensityGlyph}
           </button>
         ))}
       </div>
@@ -273,10 +276,11 @@ function BulkAdd() {
           first: np.length > 1 ? (np[0] ?? '') : '',
           last: np.length > 1 ? np.slice(1).join(' ') : (np[0] ?? ''),
           status: 'Standalone',
+          genre: 'romance',
           subgenre: 'Romantasy',
           genres: ['Romantasy'],
-          tropes: [],
-          spice: 0,
+          tags: [],
+          intensity: null,
           owned: { physical: 'paperback', ebook: false, audiobook: false },
           cover: hit.cover,
           isbn: hit.isbn,

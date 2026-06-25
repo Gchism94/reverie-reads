@@ -6,7 +6,7 @@ const alpha = makeBook({
   id: 'a',
   title: 'Iron Flame',
   last: 'Yarros',
-  tropes: ['Dragon Riders'],
+  tags: ['Dragon Riders'],
   reads: [{ date: '2025-01-01', format: 'ebook', rating: 4, notes: '' }],
   cover: 'a.jpg',
   rating: 4,
@@ -16,13 +16,13 @@ const beta = makeBook({
   id: 'b',
   title: 'Iron Flame',
   last: 'Yarros',
-  tropes: ['Enemies to Lovers'],
+  tags: ['Enemies to Lovers'],
   reads: [
     { date: '2025-01-01', format: 'paperback', rating: 0, notes: '' }, // duplicate date
     { date: '2025-06-01', format: 'paperback', rating: 5, notes: '' },
   ],
   fave: true,
-  spice: 5,
+  intensity: 5,
   owned: { physical: false, ebook: true, audiobook: false },
 })
 
@@ -33,7 +33,7 @@ const initial: LibraryState = {
 }
 
 describe('mergeBooks', () => {
-  it('unions reads (dedup by date), tropes; ORs fave; maxes spice; remaps lists; drops loser', () => {
+  it('unions reads (dedup by date), tags; ORs fave; maxes intensity; remaps lists; drops loser', () => {
     const next = mergeBooks(initial, 'a', ['b'])
 
     expect(next.books).toHaveLength(1)
@@ -42,9 +42,9 @@ describe('mergeBooks', () => {
 
     expect(m.id).toBe('a')
     expect(m.reads.map((r) => r.date).sort()).toEqual(['2025-01-01', '2025-06-01'])
-    expect(new Set(m.tropes)).toEqual(new Set(['Dragon Riders', 'Enemies to Lovers']))
+    expect(new Set(m.tags)).toEqual(new Set(['Dragon Riders', 'Enemies to Lovers']))
     expect(m.fave).toBe(true)
-    expect(m.spice).toBe(5)
+    expect(m.intensity).toBe(5)
     expect(m.owned).toEqual({ physical: 'paperback', ebook: true, audiobook: false }) // union
     expect(m.readStatus).toBe('Read') // reads present => Read
 
