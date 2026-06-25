@@ -3,7 +3,7 @@ import { Link, useRouterState } from '@tanstack/react-router'
 import { APP_NAME } from '@reverie/core'
 import { useAuth } from '../auth/AuthProvider'
 import { useSkinSync } from '../skin/controls'
-import { FiligreeDivider } from './FiligreeDivider'
+import { SkinDivider } from './SkinDivider'
 import { ThemeToggle } from './ThemeToggle'
 
 const NAV = [
@@ -45,7 +45,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           >
             {APP_NAME}
           </div>
-          <FiligreeDivider className="mt-1.5" />
+          <SkinDivider className="mt-1.5" />
         </Link>
 
         <nav className="flex flex-1 items-center gap-1 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>

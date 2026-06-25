@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { createRoute } from '@tanstack/react-router'
+import { createRoute, Link } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { findDuplicateGroups, richness, type Book } from '@reverie/core'
 import { rootRoute } from './RootRoute'
@@ -246,7 +246,13 @@ function SettingsScreen() {
               </button>
             ))}
           </div>
-          <p className="mt-2 text-[12px] text-muted">Browse them in the Skin Gallery.</p>
+          <p className="mt-2 text-[12px] text-muted">
+            Browse and preview them in the{' '}
+            <Link to="/skins" className="text-primary underline">
+              Skin Gallery
+            </Link>
+            .
+          </p>
         </Section>
 
         <Section title="Library tools">
