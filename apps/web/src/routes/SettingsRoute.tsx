@@ -138,9 +138,15 @@ function SettingsScreen() {
     setProgress({ scanned: 0, total: 0, filled: 0 })
     try {
       const r = await bulkComplete(all, setProgress, () => stopRef.current)
-      setStatus(
-        `${r.stopped ? 'Stopped — ' : ''}checked ${r.scanned} of ${r.total} · filled ${r.filled} · ${r.nothing} had nothing new.`,
-      )
+      const prefix =
+        r.stopReason === 'rate_limited'
+          ? 'Paused — the book data sources are busy; it’ll resume where it left off next time. '
+          : r.stopReason === 'limit'
+            ? 'Paused at the per-run limit — run again to continue. '
+            : r.stopReason === 'user'
+              ? 'Stopped — '
+              : ''
+      setStatus(`${prefix}checked ${r.scanned} of ${r.total} · filled ${r.filled} · ${r.nothing} had nothing new.`)
       await qc.invalidateQueries({ queryKey: ['books'] })
     } catch (e) {
       setStatus(`Couldn’t finish completing details: ${(e as Error).message}`)

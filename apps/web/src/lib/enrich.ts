@@ -22,6 +22,34 @@ export interface EnrichResult {
   source: string | null
 }
 
+export type EnrichOutcome =
+  | { status: 'ok'; data: EnrichResult }
+  | { status: 'empty' }
+  | { status: 'rate_limited' }
+
+/**
+ * Ask the enrichment Edge Function for a record, surfacing whether the upstream sources were
+ * rate-limited (so a bulk run can pause and resume rather than burning the book's retry window).
+ */
+export async function enrichBookOutcome(input: {
+  title?: string
+  author?: string
+  isbn?: string
+}): Promise<EnrichOutcome> {
+  try {
+    const { data, error } = await supabase.functions.invoke('enrich', { body: input })
+    if (error) {
+      const status = (error as { context?: { status?: number } }).context?.status
+      return status === 429 ? { status: 'rate_limited' } : { status: 'empty' }
+    }
+    if (!data) return { status: 'empty' }
+    if ((data as { rateLimited?: boolean }).rateLimited) return { status: 'rate_limited' }
+    return { status: 'ok', data: data as EnrichResult }
+  } catch {
+    return { status: 'empty' }
+  }
+}
+
 /**
  * Ask the enrichment Edge Function for a full record (Google Books → Open Library →
  * Hardcover, cached). Returns null on any failure so callers degrade gracefully — an
@@ -32,11 +60,6 @@ export async function enrichBook(input: {
   author?: string
   isbn?: string
 }): Promise<EnrichResult | null> {
-  try {
-    const { data, error } = await supabase.functions.invoke('enrich', { body: input })
-    if (error || !data) return null
-    return data as EnrichResult
-  } catch {
-    return null
-  }
+  const outcome = await enrichBookOutcome(input)
+  return outcome.status === 'ok' ? outcome.data : null
 }
