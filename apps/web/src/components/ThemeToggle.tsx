@@ -1,19 +1,21 @@
-import { useTheme } from '../theme/useTheme'
+import { useSkin } from '../skin/useSkin'
+import { useSkinControls } from '../skin/controls'
 
+/** Quick light/dark toggle in the top bar. Skin selection lives in Settings (a separate axis). */
 export function ThemeToggle() {
-  const theme = useTheme((s) => s.theme)
-  const toggleTheme = useTheme((s) => s.toggleTheme)
+  const resolved = useSkin((s) => s.resolvedMode)
+  const { setMode } = useSkinControls()
 
-  const isNight = theme === 'nocturne'
-  const label = isNight ? 'Nocturne' : 'Magnolia Dawn'
-  const icon = isNight ? '☾' : '☀'
+  const isDark = resolved === 'dark'
+  const label = isDark ? 'Dark' : 'Light'
+  const icon = isDark ? '☾' : '☀'
 
   return (
     <button
       type="button"
-      onClick={toggleTheme}
-      title="Toggle theme"
-      aria-label={`Switch theme (currently ${label})`}
+      onClick={() => setMode(isDark ? 'light' : 'dark')}
+      title="Toggle light / dark"
+      aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode (currently ${label.toLowerCase()})`}
       className="flex h-[38px] items-center gap-2 rounded-full border border-line bg-card pl-3.5 pr-1.5 text-[12.5px] font-semibold text-ink backdrop-blur"
     >
       <span>{label}</span>

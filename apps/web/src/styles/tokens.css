@@ -1,15 +1,39 @@
-/* Reverie design tokens — ported from design/from-claude-design (Reverie.dc.html),
-   the production-grade superset of design/DESIGN_SYSTEM.md.
-   Exactly two themes: Nocturne (dark, default) and Magnolia Dawn (light). */
+/* Skin token bundles. A SKIN is a complete light+dark identity; light/dark MODE is an
+   independent axis. Applied via `data-skin` + `data-mode` on <html> (set by the skin store).
+   Nothing in the app hardcodes a color — every component reads these vars, so switching skin or
+   mode is a no-rebuild attribute flip. The production token names below are the canonical
+   contract (a superset of the demo's); the demo contract names (--bg/--primary-solid/--secondary
+   /--tertiary/--font-body) are exposed as aliases in the base rule for the gallery + adaptive
+   blend. Seeded skins: Reverie (Romance, finalized + AA-corrected), Grimoire (Fantasy),
+   Aphelion (Sci-Fi), Marrow (Horror). Adding a genre = one block here + a registry entry. */
 
+/* Derived/aliased tokens that adapt from each skin's core palette (a skin may override any). */
 :root,
-[data-theme='nocturne'] {
+[data-skin] {
+  --card-solid: var(--card);
+  --field: color-mix(in srgb, var(--ink) 5%, transparent);
+  --chip: color-mix(in srgb, var(--ink) 6%, transparent);
+  --chip-border: color-mix(in srgb, var(--ink) 14%, transparent);
+  --hair: color-mix(in srgb, var(--gold) 55%, transparent);
+
+  /* demo-contract aliases (read-only) */
+  --bg: var(--bg0);
+  --bg2: var(--bg1);
+  --primary-solid: var(--accent-fill);
+  --secondary: var(--violet);
+  --tertiary: var(--gold);
+  --font-body: var(--font-sans);
+}
+
+/* ── REVERIE · Romance · gothic New Orleans (finalized, AA-corrected) ── */
+:root,
+[data-skin='reverie'][data-mode='dark'] {
   --bg0: #0b0612;
   --bg1: #15091f;
   --ink: #f6e9f1;
   --muted: #b08fae;
   --primary: #e83a78;
-  --accent-fill: #cf2f66; /* darker magenta for solid fills behind white text (AA: white 4.9:1) */
+  --accent-fill: #cf2f66; /* solid fill behind white text (AA: white 4.9:1) */
   --violet: #7b3fa0;
   --blue: #16266a;
   --gold: #f0b14e;
@@ -31,15 +55,18 @@
   --on-primary: #ffffff;
   --vignette: rgba(5, 2, 10, 0.72);
   --grain-opacity: 0.06;
+  --font-display: 'Fraunces', ui-serif, Georgia, serif;
+  --font-sans: 'Hanken Grotesk', system-ui, sans-serif;
+  --font-mono: 'Hanken Grotesk', system-ui, sans-serif;
 }
 
-[data-theme='dawn'] {
+[data-skin='reverie'][data-mode='light'] {
   --bg0: #fbeee9;
   --bg1: #f5e0e4;
   --ink: #2a1320;
-  --muted: #86566f; /* darkened from #9a6b86 to clear 4.5:1 AA on bg0/bg1/cards */
-  --primary: #c52e5f; /* darkened from #d4396f so primary text on the parchment bg clears 4.5:1 */
-  --accent-fill: var(--primary); /* dawn primary already clears white-on-fill at AA */
+  --muted: #86566f;
+  --primary: #c52e5f;
+  --accent-fill: #c52e5f;
   --violet: #7b3fa0;
   --blue: #2e3a73;
   --gold: #c9842f;
@@ -63,7 +90,178 @@
   --grain-opacity: 0.04;
 }
 
-/* The living night sky — soft glows that drift/breathe, faint twinkle, slow fog. */
+/* ── GRIMOIRE · Fantasy · vellum, oak-gall ink, gold leaf, arcane emerald ── */
+[data-skin='grimoire'][data-mode='dark'] {
+  --bg0: #0c0f0b;
+  --bg1: #12160f;
+  --ink: #ece7d6;
+  --muted: #9aa384;
+  --primary: #3aa97e;
+  --accent-fill: #2f9e74;
+  --violet: #b08828;
+  --blue: #1f7d57;
+  --gold: #d4af37;
+  --card: #161b12;
+  --card-2: #1d2417;
+  --line: rgba(212, 175, 55, 0.18);
+  --shadow: 0 22px 60px rgba(0, 0, 0, 0.55);
+  --glow-a: #2f9e74;
+  --glow-b: #d4af37;
+  --glow-c: #1f7d57;
+  --glow-d: #b08828;
+  --star: #d4af37;
+  --fog: rgba(40, 80, 50, 0.16);
+  --on-primary: #08110b;
+  --vignette: rgba(5, 8, 4, 0.55);
+  --grain-opacity: 0.05;
+  --font-display: 'Cormorant Garamond', Georgia, serif;
+  --font-sans: 'Spectral', Georgia, serif;
+  --font-mono: 'Spectral', Georgia, serif;
+}
+
+[data-skin='grimoire'][data-mode='light'] {
+  --bg0: #f1e7cf;
+  --bg1: #e9ddc0;
+  --ink: #2a2418;
+  --muted: #665e49; /* darkened from demo #7c745c to clear 4.5:1 on the vellum cards */
+  --primary: #1a6e4c; /* darkened from #1f7d57 so green link text clears AA on cream */
+  --accent-fill: #1a6e4c;
+  --violet: #8a6a2f;
+  --blue: #1f7d57;
+  --gold: #b08828;
+  --card: #f7efd9;
+  --card-2: #efe4c8;
+  --line: rgba(176, 136, 40, 0.32);
+  --shadow: 0 22px 50px rgba(60, 50, 20, 0.18);
+  --glow-a: #1f7d57;
+  --glow-b: #b08828;
+  --glow-c: #8a6a2f;
+  --glow-d: #b08828;
+  --star: #b08828;
+  --fog: rgba(120, 100, 40, 0.12);
+  --on-primary: #ffffff;
+  --vignette: rgba(90, 75, 40, 0.1);
+  --grain-opacity: 0.04;
+  --font-display: 'Cormorant Garamond', Georgia, serif;
+  --font-sans: 'Spectral', Georgia, serif;
+  --font-mono: 'Spectral', Georgia, serif;
+}
+
+/* ── APHELION · Sci-Fi · deep space, ice, instrument cyan ── */
+[data-skin='aphelion'][data-mode='dark'] {
+  --bg0: #05070d;
+  --bg1: #0a0f1c;
+  --ink: #e6edf7;
+  --muted: #7d8aa6;
+  --primary: #4fd1e0;
+  --accent-fill: #1f8fa3;
+  --violet: #6b8cff;
+  --blue: #3a52c4;
+  --gold: #b9c7e0;
+  --card: #0d1320;
+  --card-2: #121a2b;
+  --line: rgba(79, 209, 224, 0.18);
+  --shadow: 0 22px 60px rgba(0, 0, 0, 0.6);
+  --glow-a: #4fd1e0;
+  --glow-b: #6b8cff;
+  --glow-c: #1f8fa3;
+  --glow-d: #b9c7e0;
+  --star: #cfe0ff;
+  --fog: rgba(20, 40, 80, 0.18);
+  --on-primary: #02080a;
+  --vignette: rgba(2, 4, 10, 0.6);
+  --grain-opacity: 0.04;
+  --font-display: 'Space Grotesk', system-ui, sans-serif;
+  --font-sans: 'Space Grotesk', system-ui, sans-serif;
+  --font-mono: 'Space Mono', ui-monospace, monospace;
+}
+
+[data-skin='aphelion'][data-mode='light'] {
+  --bg0: #eef3fb;
+  --bg1: #e2ebf7;
+  --ink: #0e1626;
+  --muted: #51607a; /* darkened from #5a6b86 for AA headroom on the pale cards */
+  --primary: #0a6e80; /* darkened from #0e8fa6 so cyan link text + white-on-fill clear AA */
+  --accent-fill: #0a6e80;
+  --violet: #3a52c4;
+  --blue: #3a52c4;
+  --gold: #5a6b86;
+  --card: #f7fafe;
+  --card-2: #eaf1fb;
+  --line: rgba(14, 143, 166, 0.26);
+  --shadow: 0 22px 50px rgba(20, 40, 80, 0.14);
+  --glow-a: #0e8fa6;
+  --glow-b: #3a52c4;
+  --glow-c: #0e8fa6;
+  --glow-d: #5a6b86;
+  --star: #6aa0c0;
+  --fog: rgba(120, 160, 220, 0.12);
+  --on-primary: #ffffff;
+  --vignette: rgba(40, 70, 120, 0.08);
+  --grain-opacity: 0.03;
+  --font-display: 'Space Grotesk', system-ui, sans-serif;
+  --font-sans: 'Space Grotesk', system-ui, sans-serif;
+  --font-mono: 'Space Mono', ui-monospace, monospace;
+}
+
+/* ── MARROW · Horror · bone, ash, oxblood, creeping fog ── */
+[data-skin='marrow'][data-mode='dark'] {
+  --bg0: #0a0a0b;
+  --bg1: #121012;
+  --ink: #e8e3da;
+  --muted: #98907f; /* lightened from #8a8278 for AA headroom on the near-black cards */
+  --primary: #d06a6a; /* brightened from #b04646 so oxblood link text clears AA on dark */
+  --accent-fill: #8f3535;
+  --violet: #6f7d86;
+  --blue: #56616b;
+  --gold: #8c9a3c;
+  --card: #161315;
+  --card-2: #1d181a;
+  --line: rgba(158, 59, 59, 0.2);
+  --shadow: 0 22px 60px rgba(0, 0, 0, 0.6);
+  --glow-a: #8f3535;
+  --glow-b: #6f7d86;
+  --glow-c: #9e3b3b;
+  --glow-d: #8c9a3c;
+  --star: rgba(232, 227, 218, 0.5);
+  --fog: rgba(120, 120, 125, 0.16);
+  --on-primary: #ffffff;
+  --vignette: rgba(3, 3, 4, 0.64);
+  --grain-opacity: 0.06;
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'Inter', system-ui, sans-serif;
+}
+
+[data-skin='marrow'][data-mode='light'] {
+  --bg0: #ece8e0;
+  --bg1: #e0dad0;
+  --ink: #1b1815;
+  --muted: #6a6358; /* darkened from #756e64 to clear 4.5:1 on the bone cards */
+  --primary: #8a3232;
+  --accent-fill: #8a3232;
+  --violet: #56616b;
+  --blue: #56616b;
+  --gold: #6f7a2e;
+  --card: #f4f0e8;
+  --card-2: #e9e3d9;
+  --line: rgba(138, 50, 50, 0.26);
+  --shadow: 0 22px 50px rgba(40, 35, 30, 0.16);
+  --glow-a: #8a3232;
+  --glow-b: #56616b;
+  --glow-c: #8a3232;
+  --glow-d: #6f7a2e;
+  --star: rgba(27, 24, 21, 0.25);
+  --fog: rgba(120, 115, 110, 0.12);
+  --on-primary: #ffffff;
+  --vignette: rgba(80, 75, 70, 0.1);
+  --grain-opacity: 0.04;
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'Inter', system-ui, sans-serif;
+}
+
+/* The living sky — soft glows that drift/breathe, faint twinkle, slow fog. */
 @keyframes rv-drift-a {
   0% { transform: translate(0, 0) scale(1); }
   50% { transform: translate(7%, -5%) scale(1.18); }

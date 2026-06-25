@@ -7,7 +7,8 @@ const ANON =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0'
 const MAILPIT = 'http://127.0.0.1:55324'
 const DEV_EMAIL = 'dev@reverie.local'
-const THEMES = ['nocturne', 'dawn'] as const
+const SKINS = ['reverie', 'grimoire', 'aphelion', 'marrow'] as const
+const MODES = ['dark', 'light'] as const
 
 interface MailpitMessage {
   ID: string
@@ -67,14 +68,26 @@ async function cleanup(clubId: string, listCode: string) {
   await sb.from('clubs').delete().eq('id', clubId)
   await sb.from('shared_docs').delete().eq('key', listCode)
   await sb.from('shared_refs').delete().eq('code', listCode)
+  await setProfileSkinMode('reverie', 'system') // restore the dev profile
 }
 
-test('every route passes axe (no serious/critical) in both themes', async ({ page }) => {
-  test.setTimeout(240_000)
+/** Set the dev profile's skin + mode so the app's skin-sync applies them on the next load
+ * (avoids racing the client-side sync — this also exercises the real persistence path). */
+async function setProfileSkinMode(skin: string, mode: string) {
+  const sb = createClient(SUPABASE_URL, ANON)
+  await sb.auth.signInWithPassword({ email: DEV_EMAIL, password: 'reverie-dev-password' })
+  const uid = (await sb.auth.getUser()).data.user!.id
+  await sb.from('profiles').update({ skin, mode }).eq('id', uid)
+}
+
+test('every route passes axe (no serious/critical) across all skins x both modes', async ({ page }) => {
+  test.setTimeout(600_000)
   const { bookId, clubId, listCode } = await setupFixtures()
   await signIn(page)
 
-  const routes: [string, string][] = [
+  // Reverie (the default skin) gets full route coverage; the alternate skins sweep a core set
+  // that exercises the whole token surface (palette, cards, fills, links, muted text).
+  const allRoutes: [string, string][] = [
     ['Home', '/'],
     ['Library', '/library'],
     ['Book detail', `/book/${bookId}`],
@@ -89,32 +102,41 @@ test('every route passes axe (no serious/critical) in both themes', async ({ pag
     ['SharedList', `/list/${listCode}`],
     ['Indie', '/indie'],
   ]
+  const coreRoutes = allRoutes.filter(([name]) =>
+    ['Home', 'Library', 'Book detail', 'Stats', 'Settings', 'Clubs', 'Indie'].includes(name),
+  )
 
   const failures: string[] = []
   try {
-    for (const theme of THEMES) {
-      await page.evaluate((t) => localStorage.setItem('reverie.theme', t), theme)
-      for (const [name, path] of routes) {
-        await page.goto(path)
-        await page.waitForLoadState('networkidle')
-        await expect(page.locator('html')).toHaveAttribute('data-theme', theme)
-        await page.locator('main').waitFor({ state: 'visible' })
+    for (const skin of SKINS) {
+      const routes = skin === 'reverie' ? allRoutes : coreRoutes
+      for (const mode of MODES) {
+        await setProfileSkinMode(skin, mode) // skin-sync picks this up on each fresh load
+        // Drop the persisted query cache so the fresh profile (not a stale persisted one) loads.
+        await page.evaluate(() => indexedDB.deleteDatabase('reverie-offline'))
+        for (const [name, path] of routes) {
+          await page.goto(path)
+          await page.waitForLoadState('networkidle')
+          await page.locator('main').waitFor({ state: 'visible' })
+          await expect(page.locator('html')).toHaveAttribute('data-skin', skin)
+          await expect(page.locator('html')).toHaveAttribute('data-mode', mode)
 
-        const results = await new AxeBuilder({ page })
-          .withTags(['wcag2a', 'wcag2aa'])
-          .analyze()
-        const serious = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical')
-        for (const v of serious) {
-          const detail = v.nodes
-            .slice(0, 2)
-            .map((n) => {
-              const d = n.any?.[0]?.data as { fgColor?: string; bgColor?: string; contrastRatio?: number } | undefined
-              return d?.contrastRatio != null
-                ? `${String(n.target)} fg=${d.fgColor} bg=${d.bgColor} ratio=${d.contrastRatio}`
-                : String(n.target)
-            })
-            .join(' || ')
-          failures.push(`[${theme}] ${name} (${path}): ${v.id} (${v.nodes.length}) — ${detail}`)
+          const results = await new AxeBuilder({ page })
+            .withTags(['wcag2a', 'wcag2aa'])
+            .analyze()
+          const serious = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical')
+          for (const v of serious) {
+            const detail = v.nodes
+              .slice(0, 2)
+              .map((n) => {
+                const d = n.any?.[0]?.data as { fgColor?: string; bgColor?: string; contrastRatio?: number } | undefined
+                return d?.contrastRatio != null
+                  ? `${String(n.target)} fg=${d.fgColor} bg=${d.bgColor} ratio=${d.contrastRatio}`
+                  : String(n.target)
+              })
+              .join(' || ')
+            failures.push(`[${skin}/${mode}] ${name} (${path}): ${v.id} (${v.nodes.length}) — ${detail}`)
+          }
         }
       }
     }

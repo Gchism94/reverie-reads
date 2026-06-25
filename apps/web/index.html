@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-theme="nocturne">
+<html lang="en" data-skin="reverie" data-mode="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -11,20 +11,31 @@
       href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,500;1,9..144,600&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
+    <!-- Tier-1 skin fonts: Grimoire (Cormorant/Spectral), Aphelion (Space Grotesk/Mono), Marrow (Playfair/Inter) -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Spectral:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
     <script>
-      // Set the theme before first paint to avoid a flash of the wrong palette.
+      // Set skin + light/dark mode before first paint to avoid a flash of the wrong identity.
       ;(function () {
         try {
-          var stored = localStorage.getItem('reverie.theme')
-          var theme =
-            stored === 'nocturne' || stored === 'dawn'
-              ? stored
-              : window.matchMedia('(prefers-color-scheme: light)').matches
-                ? 'dawn'
-                : 'nocturne'
-          document.documentElement.dataset.theme = theme
+          var valid = { reverie: 1, grimoire: 1, aphelion: 1, marrow: 1 }
+          var skin = localStorage.getItem('reverie.skin')
+          if (!valid[skin]) skin = 'reverie'
+          var mode = localStorage.getItem('reverie.mode')
+          if (mode !== 'light' && mode !== 'dark' && mode !== 'system') mode = 'system'
+          var resolved =
+            mode === 'system'
+              ? window.matchMedia('(prefers-color-scheme: light)').matches
+                ? 'light'
+                : 'dark'
+              : mode
+          document.documentElement.dataset.skin = skin
+          document.documentElement.dataset.mode = resolved
         } catch (e) {
-          document.documentElement.dataset.theme = 'nocturne'
+          document.documentElement.dataset.skin = 'reverie'
+          document.documentElement.dataset.mode = 'dark'
         }
       })()
     </script>

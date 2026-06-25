@@ -2,6 +2,7 @@ import { useEffect, useRef, type ReactNode } from 'react'
 import { Link, useRouterState } from '@tanstack/react-router'
 import { APP_NAME } from '@reverie/core'
 import { useAuth } from '../auth/AuthProvider'
+import { useSkinSync } from '../skin/controls'
 import { FiligreeDivider } from './FiligreeDivider'
 import { ThemeToggle } from './ThemeToggle'
 
@@ -18,6 +19,7 @@ const NAV = [
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { signOut } = useAuth()
+  useSkinSync() // reconcile skin/mode from the signed-in profile (cross-device)
   const mainRef = useRef<HTMLElement>(null)
   const pathname = useRouterState({ select: (s) => s.location.pathname })
 
