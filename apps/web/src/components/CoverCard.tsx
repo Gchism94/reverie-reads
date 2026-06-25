@@ -1,5 +1,6 @@
 import { ownedFormats, type Book } from '@reverie/core'
 import { subgenreGradient } from '../library/constants'
+import { useLabels } from '../skin/labels'
 
 const FORMAT_ICON = { physical: '📖', ebook: '📱', audiobook: '🎧' } as const
 
@@ -16,6 +17,8 @@ export function CoverCard({
   const author = [book.first, book.last].filter(Boolean).join(' ')
   const [g0, g1] = subgenreGradient(book.subgenre)
   const isRead = book.readStatus === 'Read' || book.reads.length > 0
+  const labels = useLabels()
+  const intensity = book.intensity ?? 0
 
   return (
     <div className="group">
@@ -67,13 +70,13 @@ export function CoverCard({
           </span>
         )}
 
-        {book.spice > 0 && (
+        {intensity > 0 && (
           <div
             className="absolute bottom-1.5 left-1.5 rounded-full px-1.5 py-0.5 text-[9px] backdrop-blur"
             style={{ background: 'rgba(0,0,0,0.4)' }}
-            title={`Spice ${book.spice}/5`}
+            title={`${labels.intensity} ${intensity}/5`}
           >
-            {'🌶️'.repeat(book.spice)}
+            {labels.intensityGlyph.repeat(intensity)}
           </div>
         )}
 

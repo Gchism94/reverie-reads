@@ -16,16 +16,16 @@ describe('matchesFilters', () => {
     last: 'Yarros',
     series: 'The Empyrean',
     subgenre: 'Romantasy',
-    tropes: ['Dragon Riders', 'Enemies to Lovers'],
+    tags: ['Dragon Riders', 'Enemies to Lovers'],
     status: 'Series',
     readStatus: 'Read',
     fave: true,
   })
 
   it('requires ALL selected tropes to be present', () => {
-    expect(matchesFilters(book, { ...defaultFilters(), tropes: ['Dragon Riders'] })).toBe(true)
+    expect(matchesFilters(book, { ...defaultFilters(), tags: ['Dragon Riders'] })).toBe(true)
     expect(
-      matchesFilters(book, { ...defaultFilters(), tropes: ['Dragon Riders', 'Mafia'] }),
+      matchesFilters(book, { ...defaultFilters(), tags: ['Dragon Riders', 'Mafia'] }),
     ).toBe(false)
   })
 
@@ -88,7 +88,7 @@ describe('activeFilterCount', () => {
   it('counts each active facet (search excluded)', () => {
     expect(activeFilterCount(defaultFilters())).toBe(0)
     expect(
-      activeFilterCount({ ...defaultFilters(), sub: 'Romantasy', tropes: ['Fae'], fave: true, q: 'x' }),
+      activeFilterCount({ ...defaultFilters(), sub: 'Romantasy', tags: ['Fae'], fave: true, q: 'x' }),
     ).toBe(3)
   })
 })

@@ -10,11 +10,12 @@ export type Boyfriend =
   | 'tortured'
 
 /**
- * Derive the book-boyfriend archetype from tropes + subgenre. Pure port of the
- * prototype's deriveBoyfriend — the order of checks is significant (first match wins).
+ * Derive the book-boyfriend archetype from tags + subgenre. Pure port of the prototype's
+ * deriveBoyfriend — the order of checks is significant (first match wins). This is Reverie-skin
+ * (romance) signature logic; non-romance tags simply fall through to the default.
  */
-export function deriveBoyfriend(b: { tropes?: string[]; subgenre?: string }): Boyfriend {
-  const t = new Set((b.tropes ?? []).map((x) => x.toLowerCase()))
+export function deriveBoyfriend(b: { tags?: string[]; subgenre?: string }): Boyfriend {
+  const t = new Set((b.tags ?? []).map((x) => x.toLowerCase()))
   const dark = b.subgenre === 'Dark Romance'
   const has = (...k: string[]) => k.some((x) => t.has(x.toLowerCase()))
 

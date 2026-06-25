@@ -60,10 +60,11 @@ function toRow(b, ownerId) {
     position: num(b.position),
     series_count: b.seriesCount ?? null,
     status: b.status || null,
+    genre: b.genre ?? 'romance',
     subgenre: b.subgenre || null,
     genres: b.genres ?? [],
-    tropes: b.tropes ?? [],
-    spice: b.spice ?? 0,
+    tags: b.tropes ?? b.tags ?? [], // seed JSON still uses the romance "tropes" key
+    intensity: b.spice ?? b.intensity ?? 0,
     cover_url: b.cover || null,
     isbn: b.isbn || null,
     fave: !!b.fave,

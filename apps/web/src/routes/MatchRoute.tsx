@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { createRoute, useNavigate } from '@tanstack/react-router'
-import { deriveBoyfriend, type Book } from '@reverie/core'
+import { deriveBoyfriend, scoreMatch, type Book, type MatchProfile } from '@reverie/core'
 import { rootRoute } from './RootRoute'
 import { useBooks } from '../data/books'
 import { useCreateList, useLists } from '../data/lists'
@@ -18,18 +18,16 @@ function score(books: Book[], a: QuizAnswers): { picks: Pick[]; headline: string
   const topSub = Object.entries(a.subs).sort((x, y) => y[1] - x[1])[0]?.[0] ?? 'Romance'
   const cravings = [...new Set(a.tropes)]
 
+  // Build a genre-neutral profile from the (romance-flavored) quiz, then score with the core
+  // vibe matcher. The book-boyfriend archetype is passed as the Reverie skin's signature signal.
+  const subWeights = { ...a.subs }
+  if (a.dark) subWeights['Dark Romance'] = (subWeights['Dark Romance'] ?? 0) + 1
+  const profile: MatchProfile = { subWeights, wantTags: cravings, targetIntensity: target, archetypeWeights: a.arts }
+
   const scored: Pick[] = books
     .map((b) => {
-      let s = (a.subs[b.subgenre] ?? 0) * 6
-      const shared = cravings.filter((t) => b.tropes.includes(t)).length
-      s += shared * 14
-      const bsp = b.spice || (b.subgenre === 'Dark Romance' ? 5 : b.subgenre === 'Romantasy' ? 4 : 3)
-      s -= Math.abs(bsp - target) * 4
-      if (a.dark && b.subgenre === 'Dark Romance') s += 6
-      s += (a.arts[deriveBoyfriend(b)] ?? 0) * 2
-      s += b.rating * 2
+      const s = scoreMatch(b, profile, { archetype: deriveBoyfriend })
       const isRead = b.readStatus === 'Read' || b.reads.length > 0
-      s += isRead ? -4 : 20
       return { b, s, isRead }
     })
     .sort((x, y) => y.s - x.s)

@@ -17,10 +17,11 @@ export function toBook(row: BookRow): Book {
     status: SERIES_STATUS.includes(row.status as SeriesStatus)
       ? (row.status as SeriesStatus)
       : 'Standalone',
+    genre: row.genre ?? 'romance',
     subgenre: row.subgenre ?? '',
     genres: row.genres ?? [],
-    tropes: row.tropes ?? [],
-    spice: row.spice ?? 0,
+    tags: row.tags ?? [],
+    intensity: row.intensity ?? null,
     cover: row.cover_url ?? '',
     isbn: row.isbn ?? '',
     fave: row.fave,
@@ -59,10 +60,11 @@ export function toBookRow(patch: Partial<Book>): Partial<BookRow> {
   if (patch.position !== undefined) row.position = patch.position === '' ? null : patch.position
   if (patch.seriesCount !== undefined) row.series_count = patch.seriesCount
   if (patch.status !== undefined) row.status = patch.status
+  if (patch.genre !== undefined) row.genre = patch.genre || 'romance'
   if (patch.subgenre !== undefined) row.subgenre = patch.subgenre || null
   if (patch.genres !== undefined) row.genres = patch.genres
-  if (patch.tropes !== undefined) row.tropes = patch.tropes
-  if (patch.spice !== undefined) row.spice = patch.spice
+  if (patch.tags !== undefined) row.tags = patch.tags
+  if (patch.intensity !== undefined) row.intensity = patch.intensity
   if (patch.cover !== undefined) row.cover_url = patch.cover || null
   if (patch.isbn !== undefined) row.isbn = patch.isbn || null
   if (patch.fave !== undefined) row.fave = patch.fave

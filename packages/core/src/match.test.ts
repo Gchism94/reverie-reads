@@ -78,7 +78,7 @@ describe('mergeImport', () => {
     last: 'Yarros',
     rating: 5,
     readStatus: 'Read', // already read (it has a logged read below)
-    tropes: ['Dragon Riders'],
+    tags: ['Dragon Riders'],
     owned: { physical: 'paperback', ebook: false, audiobook: false },
     series: '',
     cover: '',
@@ -89,7 +89,7 @@ describe('mergeImport', () => {
     const { patch, newReads, changed } = mergeImport(existing, {
       title: 'Fourth Wing',
       rating: 3, // must NOT overwrite the user's 5
-      tropes: ['Enemies to Lovers'], // unions, never removes
+      tags: ['Enemies to Lovers'], // unions, never removes
       owned: { physical: 'hardcover', ebook: true, audiobook: false }, // adds ebook, keeps paperback
       series: 'The Empyrean', // fills a blank
       cover: 'http://c/x.jpg', // fills a blank
@@ -97,7 +97,7 @@ describe('mergeImport', () => {
     })
     expect(changed).toBe(true)
     expect(patch.rating).toBeUndefined() // user rating untouched
-    expect(new Set(patch.tropes)).toEqual(new Set(['Dragon Riders', 'Enemies to Lovers']))
+    expect(new Set(patch.tags)).toEqual(new Set(['Dragon Riders', 'Enemies to Lovers']))
     expect(patch.owned).toEqual({ physical: 'paperback', ebook: true, audiobook: false })
     expect(patch.series).toBe('The Empyrean')
     expect(patch.cover).toBe('http://c/x.jpg')
@@ -107,7 +107,7 @@ describe('mergeImport', () => {
   it('is idempotent — re-merging identical data is a no-op', () => {
     const res = mergeImport(existing, {
       title: 'Fourth Wing',
-      tropes: ['Dragon Riders'],
+      tags: ['Dragon Riders'],
       owned: { physical: 'paperback', ebook: false, audiobook: false },
       reads: [{ date: '2025-01-01', format: 'paperback', rating: 5, notes: 'my notes' }],
     })

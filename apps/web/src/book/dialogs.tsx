@@ -7,6 +7,7 @@ import { FORMATS, SERIES_STATUSES, SUBGENRES, TROPE_GROUPS } from '../library/co
 import { useUpdateBook } from '../data/books'
 import { useAddRead } from '../data/reads'
 import { usePerformMerge } from '../data/mergeBooks'
+import { useLabels } from '../skin/labels'
 
 const fieldClass =
   'h-10 w-full rounded-xl border border-line px-3 text-[14px] text-ink outline-none'
@@ -23,23 +24,22 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 
 export function TropePicker({ book, onClose }: { book: Book; onClose: () => void }) {
   const updateBook = useUpdateBook()
+  const labels = useLabels()
   const toggle = (t: string) => {
-    const tropes = book.tropes.includes(t)
-      ? book.tropes.filter((x) => x !== t)
-      : [...book.tropes, t]
+    const tags = book.tags.includes(t) ? book.tags.filter((x) => x !== t) : [...book.tags, t]
     updateBook.mutate({
       id: book.id,
-      patch: { tropes, boyfriend: deriveBoyfriend({ tropes, subgenre: book.subgenre }) },
+      patch: { tags, boyfriend: deriveBoyfriend({ tags, subgenre: book.subgenre }) },
     })
   }
   return (
-    <Modal title="Tag tropes" onClose={onClose} wide>
+    <Modal title={`Tag ${labels.tags.toLowerCase()}`} onClose={onClose} wide>
       {Object.entries(TROPE_GROUPS).map(([group, list]) => (
         <div key={group} className="mb-4">
           <div className="mb-1.5 text-[11px] uppercase tracking-[0.2em] text-muted">{group}</div>
           <div className="flex flex-wrap gap-1.5">
             {list.map((t) => (
-              <Chip key={t} active={book.tropes.includes(t)} onClick={() => toggle(t)}>
+              <Chip key={t} active={book.tags.includes(t)} onClick={() => toggle(t)}>
                 {t}
               </Chip>
             ))}

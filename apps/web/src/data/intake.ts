@@ -37,7 +37,7 @@ export const verdictLookupKey = (bookId: string, inc: Incoming): string => `${bo
 
 /** Build a full Book from an incoming partial (defaults for anything the source didn't give). */
 export function incomingToBook(inc: Incoming): Book {
-  const tropes = inc.tropes ?? []
+  const tags = inc.tags ?? []
   const subgenre = inc.subgenre ?? 'Romance'
   return {
     id: '',
@@ -48,10 +48,11 @@ export function incomingToBook(inc: Incoming): Book {
     position: inc.position ?? '',
     seriesCount: inc.seriesCount ?? null,
     status: inc.status ?? 'Standalone',
+    genre: inc.genre ?? 'romance',
     subgenre,
     genres: inc.genres ?? [],
-    tropes,
-    spice: inc.spice ?? 0,
+    tags,
+    intensity: inc.intensity ?? null,
     cover: inc.cover ?? '',
     isbn: inc.isbn ?? '',
     fave: inc.fave ?? false,
@@ -64,7 +65,7 @@ export function incomingToBook(inc: Incoming): Book {
     reads: [],
     plan: inc.plan ?? null,
     progress: inc.progress ?? 0,
-    boyfriend: deriveBoyfriend({ tropes, subgenre }),
+    boyfriend: deriveBoyfriend({ tags, subgenre }),
     addedTs: Date.now(),
   }
 }

@@ -1,14 +1,14 @@
 import type { Book, ReadStatus, SeriesStatus } from './types'
 import { authorOf } from './normalize'
 
-export type LibrarySort = 'az' | 'author' | 'rating' | 'spice' | 'recent' | 'series'
+export type LibrarySort = 'az' | 'author' | 'rating' | 'intensity' | 'recent' | 'series'
 export type SeriesLenBucket = 'Any' | '1' | '2' | '3' | '4' | '5+' | 'Unknown'
 export type LibraryMode = 'grid' | 'series'
 
 export interface LibraryFilters {
   q: string
   sub: 'All' | string
-  tropes: string[]
+  tags: string[]
   status: 'All' | SeriesStatus
   len: SeriesLenBucket
   read: 'All' | ReadStatus
@@ -20,7 +20,7 @@ export interface LibraryFilters {
 export const defaultFilters = (): LibraryFilters => ({
   q: '',
   sub: 'All',
-  tropes: [],
+  tags: [],
   status: 'All',
   len: 'Any',
   read: 'All',
@@ -46,7 +46,7 @@ export function seriesLenBucket(b: Book): SeriesLenBucket {
 /** The prototype's library predicate, ported verbatim. */
 export function matchesFilters(b: Book, f: LibraryFilters): boolean {
   if (f.sub !== 'All' && b.subgenre !== f.sub) return false
-  if (f.tropes.length && !f.tropes.every((t) => b.tropes.includes(t))) return false
+  if (f.tags.length && !f.tags.every((t) => b.tags.includes(t))) return false
   if (f.status !== 'All' && b.status !== f.status) return false
   if (f.len !== 'Any' && seriesLenBucket(b) !== f.len) return false
   if (f.read !== 'All') {
@@ -60,7 +60,7 @@ export function matchesFilters(b: Book, f: LibraryFilters): boolean {
   if (f.format !== 'All' && b.format !== f.format) return false
   if (f.fave && !b.fave) return false
   if (f.q) {
-    const hay = [b.title, authorOf(b), b.series, ...b.tropes, ...b.genres].join(' ').toLowerCase()
+    const hay = [b.title, authorOf(b), b.series, ...b.tags, ...b.genres].join(' ').toLowerCase()
     if (!hay.includes(f.q.toLowerCase())) return false
   }
   return true
@@ -82,8 +82,8 @@ export function sortBooks(books: readonly Book[], sort: LibrarySort): Book[] {
     case 'rating':
       c.sort((a, b) => b.rating - a.rating)
       break
-    case 'spice':
-      c.sort((a, b) => b.spice - a.spice)
+    case 'intensity':
+      c.sort((a, b) => (b.intensity ?? -1) - (a.intensity ?? -1))
       break
     case 'recent':
       c.sort((a, b) => (b.addedTs || 0) - (a.addedTs || 0))
@@ -101,7 +101,7 @@ export function sortBooks(books: readonly Book[], sort: LibrarySort): Book[] {
 export function activeFilterCount(f: LibraryFilters): number {
   let n = 0
   if (f.sub !== 'All') n++
-  n += f.tropes.length
+  n += f.tags.length
   if (f.status !== 'All') n++
   if (f.len !== 'Any') n++
   if (f.read !== 'All') n++
