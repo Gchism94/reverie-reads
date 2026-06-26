@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { isMode, isSkinId, type Mode, type SkinId } from '@reverie/core'
+import { isActiveSkin, isMode, type ActiveSkin, type AdaptiveBundle, type Mode } from '@reverie/core'
 import { supabase } from '../lib/supabase'
 
 export interface DefaultStore {
@@ -15,8 +15,10 @@ export interface Profile {
   goalTarget: number | null
   autoMergeDuplicates: boolean
   defaultStore: DefaultStore | null
-  skin: SkinId
+  skin: ActiveSkin
   mode: Mode
+  adaptiveSkin: AdaptiveBundle | null
+  adaptiveLocked: boolean
 }
 
 interface ProfileRow {
@@ -30,6 +32,8 @@ interface ProfileRow {
   default_store_website: string | null
   skin: string | null
   mode: string | null
+  adaptive_skin: AdaptiveBundle | null
+  adaptive_locked: boolean | null
 }
 
 export const profileKey = ['profile'] as const
@@ -43,8 +47,10 @@ const toProfile = (row: ProfileRow): Profile => ({
   defaultStore: row.default_store_id
     ? { id: row.default_store_id, name: row.default_store_name ?? '', website: row.default_store_website ?? '' }
     : null,
-  skin: isSkinId(row.skin) ? row.skin : 'reverie',
+  skin: isActiveSkin(row.skin) ? row.skin : 'reverie',
   mode: isMode(row.mode) ? row.mode : 'system',
+  adaptiveSkin: row.adaptive_skin ?? null,
+  adaptiveLocked: row.adaptive_locked ?? false,
 })
 
 /** The signed-in user's own profile (RLS returns only their row). */
@@ -54,7 +60,7 @@ export function useProfile() {
     queryFn: async (): Promise<Profile | null> => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, display_name, goal_year, goal_target, auto_merge_duplicates, default_store_id, default_store_name, default_store_website, skin, mode')
+        .select('id, display_name, goal_year, goal_target, auto_merge_duplicates, default_store_id, default_store_name, default_store_website, skin, mode, adaptive_skin, adaptive_locked')
         .limit(1)
         .maybeSingle()
       if (error) throw error
@@ -72,8 +78,10 @@ export function useUpdateProfile() {
       goalTarget?: number | null
       autoMergeDuplicates?: boolean
       defaultStore?: DefaultStore | null
-      skin?: SkinId
+      skin?: ActiveSkin
       mode?: Mode
+      adaptiveSkin?: AdaptiveBundle | null
+      adaptiveLocked?: boolean
     }): Promise<void> => {
       const { data: auth } = await supabase.auth.getUser()
       const id = auth.user?.id
@@ -85,6 +93,8 @@ export function useUpdateProfile() {
       if (patch.autoMergeDuplicates !== undefined) row.auto_merge_duplicates = patch.autoMergeDuplicates
       if (patch.skin !== undefined) row.skin = patch.skin
       if (patch.mode !== undefined) row.mode = patch.mode
+      if (patch.adaptiveSkin !== undefined) row.adaptive_skin = patch.adaptiveSkin
+      if (patch.adaptiveLocked !== undefined) row.adaptive_locked = patch.adaptiveLocked
       if (patch.defaultStore !== undefined) {
         row.default_store_id = patch.defaultStore?.id ?? null
         row.default_store_name = patch.defaultStore?.name ?? null
