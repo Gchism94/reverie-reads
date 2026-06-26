@@ -6,9 +6,11 @@ import {
   contrastRatio,
   dominantSkin,
   formatColor,
+  isMaterialShift,
   nudgeForAA,
   parseColor,
   tasteInsight,
+  weightDistance,
   type Palette,
 } from './adaptive'
 import { makeBook } from './book.fixture'
@@ -89,5 +91,21 @@ describe('computeSkinWeights', () => {
   it('weights are normalized and sum to 1', () => {
     const w = computeSkinWeights([makeBook({ id: '1', title: 'A' })])
     expect(w.reverie + w.grimoire + w.aphelion + w.marrow).toBeCloseTo(1, 5)
+  })
+})
+
+describe('isMaterialShift (cron gate)', () => {
+  const w = (reverie: number, grimoire: number, aphelion: number, marrow: number) => ({ reverie, grimoire, aphelion, marrow })
+
+  it('is false for an unchanged / barely-nudged profile (idempotent + noise-proof)', () => {
+    expect(isMaterialShift(w(0.6, 0.2, 0.1, 0.1), w(0.6, 0.2, 0.1, 0.1))).toBe(false)
+    expect(isMaterialShift(w(0.6, 0.2, 0.1, 0.1), w(0.58, 0.22, 0.1, 0.1))).toBe(false)
+  })
+  it('is true when the dominant skin flips', () => {
+    expect(isMaterialShift(w(0.5, 0.3, 0.1, 0.1), w(0.3, 0.5, 0.1, 0.1))).toBe(true)
+  })
+  it('is true when the weight vector moves past the threshold', () => {
+    expect(weightDistance(w(0.6, 0.2, 0.1, 0.1), w(0.4, 0.2, 0.1, 0.3))).toBeCloseTo(0.4, 5)
+    expect(isMaterialShift(w(0.6, 0.2, 0.1, 0.1), w(0.45, 0.2, 0.1, 0.25))).toBe(true)
   })
 })

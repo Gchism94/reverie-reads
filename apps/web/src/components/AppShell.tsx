@@ -4,6 +4,7 @@ import { APP_NAME } from '@reverie/core'
 import { useAuth } from '../auth/AuthProvider'
 import { useSkinSync } from '../skin/controls'
 import { SkinDivider } from './SkinDivider'
+import { SkinEvolveReveal } from './SkinEvolveReveal'
 import { ThemeToggle } from './ThemeToggle'
 
 const NAV = [
@@ -92,6 +93,10 @@ export function AppShell({ children }: { children: ReactNode }) {
           </button>
         </div>
       </header>
+
+      <div className="relative z-[1] px-5">
+        <SkinEvolveReveal />
+      </div>
 
       <main ref={mainRef} id="main" tabIndex={-1} className="relative z-[1] flex flex-1 flex-col outline-none">
         {children}

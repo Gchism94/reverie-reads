@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { isActiveSkin, isMode, type ActiveSkin, type AdaptiveBundle, type Mode } from '@reverie/core'
+import { isActiveSkin, isMode, type ActiveSkin, type AdaptiveBundle, type AdaptivePending, type Mode } from '@reverie/core'
 import { supabase } from '../lib/supabase'
 
 export interface DefaultStore {
@@ -19,6 +19,7 @@ export interface Profile {
   mode: Mode
   adaptiveSkin: AdaptiveBundle | null
   adaptiveLocked: boolean
+  adaptivePending: AdaptivePending | null
 }
 
 interface ProfileRow {
@@ -34,6 +35,7 @@ interface ProfileRow {
   mode: string | null
   adaptive_skin: AdaptiveBundle | null
   adaptive_locked: boolean | null
+  adaptive_pending: AdaptivePending | null
 }
 
 export const profileKey = ['profile'] as const
@@ -51,6 +53,7 @@ const toProfile = (row: ProfileRow): Profile => ({
   mode: isMode(row.mode) ? row.mode : 'system',
   adaptiveSkin: row.adaptive_skin ?? null,
   adaptiveLocked: row.adaptive_locked ?? false,
+  adaptivePending: row.adaptive_pending ?? null,
 })
 
 /** The signed-in user's own profile (RLS returns only their row). */
@@ -60,7 +63,7 @@ export function useProfile() {
     queryFn: async (): Promise<Profile | null> => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, display_name, goal_year, goal_target, auto_merge_duplicates, default_store_id, default_store_name, default_store_website, skin, mode, adaptive_skin, adaptive_locked')
+        .select('id, display_name, goal_year, goal_target, auto_merge_duplicates, default_store_id, default_store_name, default_store_website, skin, mode, adaptive_skin, adaptive_locked, adaptive_pending')
         .limit(1)
         .maybeSingle()
       if (error) throw error
@@ -82,6 +85,7 @@ export function useUpdateProfile() {
       mode?: Mode
       adaptiveSkin?: AdaptiveBundle | null
       adaptiveLocked?: boolean
+      adaptivePending?: AdaptivePending | null
     }): Promise<void> => {
       const { data: auth } = await supabase.auth.getUser()
       const id = auth.user?.id
@@ -95,6 +99,7 @@ export function useUpdateProfile() {
       if (patch.mode !== undefined) row.mode = patch.mode
       if (patch.adaptiveSkin !== undefined) row.adaptive_skin = patch.adaptiveSkin
       if (patch.adaptiveLocked !== undefined) row.adaptive_locked = patch.adaptiveLocked
+      if (patch.adaptivePending !== undefined) row.adaptive_pending = patch.adaptivePending
       if (patch.defaultStore !== undefined) {
         row.default_store_id = patch.defaultStore?.id ?? null
         row.default_store_name = patch.defaultStore?.name ?? null
