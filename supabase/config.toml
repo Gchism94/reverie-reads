@@ -414,3 +414,6 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 
 [functions.enrich]
 verify_jwt = false
+
+[functions.evolve-skins]
+verify_jwt = false

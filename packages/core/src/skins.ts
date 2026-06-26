@@ -86,3 +86,13 @@ export interface AdaptiveBundle {
   weights: Record<SkinId, number>
   insight: string
 }
+
+/** A pending evolution the monthly cron detected: just the taste signal — the client materializes
+ *  the palette from the live tokens when the reader opens the reveal. */
+export interface AdaptivePending {
+  weights: Record<SkinId, number>
+  dominant: SkinId
+  insight: string
+  /** ISO timestamp the cron computed it (set server-side). */
+  at: string
+}

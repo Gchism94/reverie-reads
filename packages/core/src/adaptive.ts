@@ -227,6 +227,25 @@ export function dominantSkin(weights: Record<SkinId, number>): SkinId {
   return SKIN_ORDER.reduce((best, id) => (weights[id] > weights[best] ? id : best), 'reverie')
 }
 
+/** L1 distance between two weight vectors (0 = identical … 2 = opposite). */
+export function weightDistance(a: Record<SkinId, number>, b: Record<SkinId, number>): number {
+  return SKIN_ORDER.reduce((s, id) => s + Math.abs((a[id] ?? 0) - (b[id] ?? 0)), 0)
+}
+
+/**
+ * Has the reader's taste shifted enough to be worth surfacing? True when the dominant skin
+ * changed or the weight vector moved past `threshold`. Used by the monthly cron so it only fires
+ * the reveal on a material change (and never on noise).
+ */
+export function isMaterialShift(
+  current: Record<SkinId, number>,
+  next: Record<SkinId, number>,
+  threshold = 0.25,
+): boolean {
+  if (dominantSkin(current) !== dominantSkin(next)) return true
+  return weightDistance(current, next) >= threshold
+}
+
 /** A short human insight about the taste mix, e.g. "leaning fantasy, with a dark edge". */
 export function tasteInsight(weights: Record<SkinId, number>): string {
   const flavour: Record<SkinId, string> = { reverie: 'romance', grimoire: 'fantasy', aphelion: 'sci-fi', marrow: 'dark & eerie' }

@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react'
-import type { ActiveSkin, Mode } from '@reverie/core'
+import type { ActiveSkin, AdaptivePending, Mode } from '@reverie/core'
 import { useProfile, useUpdateProfile } from '../data/profile'
 import { useBooks } from '../data/books'
 import { useSkin } from './useSkin'
-import { generateAdaptiveBundle } from './adaptive'
+import { generateAdaptiveBundle, materializeAdaptive } from './adaptive'
 
 /**
  * Setters that apply a skin/mode change locally (instant) AND persist it to the profile
@@ -55,6 +55,18 @@ export function useAdaptiveControls() {
       update.mutate({ skin: to })
     },
     setLocked: (locked: boolean) => update.mutate({ adaptiveLocked: locked }),
+
+    /** Reveal "keep": adopt the cron's suggestion (materialize its palette) and clear the pending. */
+    acceptPending: (pending: AdaptivePending) => {
+      const bundle = materializeAdaptive(pending)
+      setBundle(bundle)
+      setSkinLocal('adaptive')
+      update.mutate({ adaptiveSkin: bundle, skin: 'adaptive', adaptivePending: null })
+    },
+    /** Reveal "not now": keep the current skin, clear the pending (it may resurface next month). */
+    dismissPending: () => update.mutate({ adaptivePending: null }),
+    /** Reveal "lock": freeze the current skin and clear the pending. */
+    lockPending: () => update.mutate({ adaptiveLocked: true, adaptivePending: null }),
   }
 }
 
