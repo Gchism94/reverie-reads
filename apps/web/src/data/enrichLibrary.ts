@@ -39,7 +39,9 @@ function shouldCheck(b: Book, enrichedAt: string | null): boolean {
   return Date.parse(enrichedAt) < Date.now() - window * DAY
 }
 
-/** Map an enrichment record to an Incoming so mergeImport fills only the existing book's blanks. */
+/** Map an enrichment record to an Incoming so mergeImport fills only the existing book's blanks.
+ *  genre is the mapped primary genre (the C1 fill); mergeImport fills it only when blank, so the
+ *  romance seed (genre='romance') is never overwritten. */
 function toIncoming(e: EnrichResult, b: Book): Incoming {
   return {
     title: b.title,
@@ -47,6 +49,7 @@ function toIncoming(e: EnrichResult, b: Book): Incoming {
     position: e.seriesPosition ?? '',
     isbn: e.isbn13 || e.isbn || e.isbn10 || '',
     cover: e.cover,
+    genre: e.genre || undefined,
     genres: e.genres,
     pub: { y: e.pubY, m: e.pubM, d: e.pubD },
   }

@@ -1,0 +1,220 @@
+import { describe, expect, it } from 'vitest'
+import {
+  mapGenre,
+  mergeRecords,
+  normalizeGoogle,
+  normalizeHardcover,
+  normalizeIsbndb,
+  normalizeOpenLibrary,
+  type StampedSource,
+} from './enrich'
+
+const at = (n: number) => new Date(Date.UTC(2026, 0, n)).toISOString()
+const src = (source: StampedSource['source'], record: StampedSource['record'], day = 1): StampedSource => ({
+  source,
+  at: at(day),
+  record,
+})
+
+describe('mergeRecords — field precedence', () => {
+  it('picks the highest-precedence source per field, not first-wins-wholesale', () => {
+    // ISBNdb wins pageCount/publisher; OpenLibrary/Hardcover win title/series; Google supplies cover.
+    const merged = mergeRecords([
+      src('google', { title: 'G title', cover: 'g.jpg', pageCount: 100, publisher: 'G Pub' }),
+      src('openlibrary', { title: 'OL title', series: 'OL Series' }),
+      src('isbndb', { pageCount: 352, publisher: 'Real Publisher', binding: 'Hardcover' }),
+      src('hardcover', { series: 'HC Series', seriesPosition: 2 }),
+    ])
+    expect(merged.title).toBe('OL title') // openlibrary precedes google for title
+    expect(merged.series).toBe('HC Series') // hardcover precedes openlibrary for series
+    expect(merged.seriesPosition).toBe(2)
+    expect(merged.pageCount).toBe(352) // isbndb precedes google
+    expect(merged.publisher).toBe('Real Publisher')
+    expect(merged.binding).toBe('Hardcover')
+    expect(merged.cover).toBe('g.jpg') // only google had a cover
+    expect(merged.provenance.pageCount).toEqual({ source: 'isbndb', at: at(1) })
+    expect(merged.provenance.series).toEqual({ source: 'hardcover', at: at(1) })
+  })
+
+  it('falls through precedence when the preferred source lacks the field', () => {
+    const merged = mergeRecords([src('google', { pageCount: 222 })])
+    expect(merged.pageCount).toBe(222) // isbndb/openlibrary absent → google supplies it
+    expect(merged.provenance.pageCount?.source).toBe('google')
+  })
+})
+
+describe('mergeRecords — union + longest description', () => {
+  it('unions categories and ISBNs (deduped) and keeps the longest description', () => {
+    const merged = mergeRecords([
+      src('google', { categories: ['Romance', 'Fiction'], description: 'Short.', isbn13: '9781111111111' }),
+      src('openlibrary', { categories: ['Romance', 'Contemporary'], isbns: ['1111111111'] }),
+      src('isbndb', { description: 'A much longer and more complete synopsis of the book.' }),
+    ])
+    expect(merged.categories.sort()).toEqual(['Contemporary', 'Fiction', 'Romance'])
+    expect(merged.description).toBe('A much longer and more complete synopsis of the book.')
+    expect(merged.provenance.description?.source).toBe('isbndb')
+    expect(merged.isbns).toContain('9781111111111')
+    expect(merged.isbns).toContain('1111111111')
+  })
+
+  it('unions authors preserving first-seen order, case-insensitively deduped', () => {
+    const merged = mergeRecords([
+      src('openlibrary', { authors: ['Ana Huang', 'Some Translator'] }),
+      src('google', { authors: ['ana huang', 'Second Author'] }),
+    ])
+    expect(merged.authors).toEqual(['Ana Huang', 'Some Translator', 'Second Author'])
+    expect(merged.author).toBe('Ana Huang, Some Translator, Second Author')
+  })
+})
+
+describe('mergeRecords — ISBN normalization + identity', () => {
+  it('derives canonical isbn13 from a 10 and resolves work/edition ids', () => {
+    const merged = mergeRecords([
+      src('openlibrary', { isbn10: '0306406152', ids: { work: 'OL1W', edition: 'OL2M' } }),
+      src('hardcover', { ids: { work: '4242' } }),
+    ])
+    expect(merged.isbn13).toBe('9780306406157') // computed from the 10
+    expect(merged.isbn).toBe('9780306406157')
+    expect(merged.workId).toBe('openlibrary:OL1W')
+    expect(merged.editionId).toBe('openlibrary:OL2M')
+    expect(merged.ids.hardcover).toBe('work:4242')
+  })
+})
+
+describe('mergeRecords — user-authored fields always win', () => {
+  it('never overwrites a user value, and fills only where the user left blanks', () => {
+    const merged = mergeRecords(
+      [src('isbndb', { title: 'API Title', publisher: 'API Pub', pageCount: 300 })],
+      { title: 'My Edited Title', at: at(9) },
+    )
+    expect(merged.title).toBe('My Edited Title')
+    expect(merged.provenance.title).toEqual({ source: 'manual', at: at(9) })
+    expect(merged.publisher).toBe('API Pub') // user left blank → API fills
+    expect(merged.pageCount).toBe(300)
+  })
+
+  it('an empty user value does not clobber a real source value', () => {
+    const merged = mergeRecords([src('google', { title: 'Good Title' })], { title: '   ' })
+    expect(merged.title).toBe('Good Title')
+  })
+})
+
+describe('mapGenre', () => {
+  it('maps categories to a primary genre + recognized labels, romance taking priority', () => {
+    expect(mapGenre(['Fiction', 'Romance', 'Fantasy'])).toEqual({
+      genre: 'romance',
+      genres: ['Romance', 'Fantasy'],
+    })
+    expect(mapGenre(['Space Opera', 'Dystopian']).genre).toBe('science-fiction')
+    expect(mapGenre(['Cooking', 'Reference'])).toEqual({ genre: '', genres: [] })
+  })
+})
+
+describe('source normalizers (captured fixtures)', () => {
+  it('normalizeGoogle parses a volume', () => {
+    const r = normalizeGoogle({
+      id: 'vol123',
+      volumeInfo: {
+        title: 'Twisted Love',
+        authors: ['Ana Huang'],
+        publisher: 'Bloom Books',
+        publishedDate: '2021-06-08',
+        pageCount: 348,
+        categories: ['Fiction / Romance / Contemporary'],
+        description: '<p>An <b>enemies</b> to lovers story.</p>',
+        imageLinks: { thumbnail: 'http://books.google.com/cover.jpg&edge=curl' },
+        industryIdentifiers: [
+          { type: 'ISBN_13', identifier: '9781735056258' },
+          { type: 'ISBN_10', identifier: '1735056251' },
+        ],
+        language: 'en',
+      },
+    })
+    expect(r.title).toBe('Twisted Love')
+    expect(r.authors).toEqual(['Ana Huang'])
+    expect(r.pubY).toBe(2021)
+    expect(r.pubM).toBe(6)
+    expect(r.isbn13).toBe('9781735056258')
+    expect(r.categories).toEqual(['Romance', 'Contemporary']) // split on '/', drops bare "Fiction"
+    expect(r.description).toBe('An enemies to lovers story.') // html stripped
+    expect(r.cover).toBe('https://books.google.com/cover.jpg') // https + edge=curl stripped
+    expect(r.ids).toEqual({ volume: 'vol123' })
+  })
+
+  it('normalizeOpenLibrary parses a search doc + extracts a coded series subject', () => {
+    const r = normalizeOpenLibrary({
+      key: '/works/OL123W',
+      edition_key: ['OL456M'],
+      title: 'A Court of Thorns and Roses',
+      author_name: ['Sarah J. Maas'],
+      first_publish_year: 2015,
+      number_of_pages_median: 419,
+      isbn: ['9781619634442', '1619634449'],
+      subject: ['Fantasy', 'series:a_court_of_thorns_and_roses', 'nyt:trade_fiction=1'],
+      language: ['eng'],
+      cover_i: 8231856,
+    })
+    expect(r.title).toBe('A Court of Thorns and Roses')
+    expect(r.series).toBe('a court of thorns and roses') // coded subject decoded
+    expect(r.categories).toEqual(['Fantasy']) // coded subjects dropped
+    expect(r.isbn13).toBe('9781619634442')
+    expect(r.cover).toBe('https://covers.openlibrary.org/b/id/8231856-M.jpg')
+    expect(r.ids).toEqual({ work: 'OL123W', edition: 'OL456M' })
+  })
+
+  it('normalizeHardcover parses a book with series + community tags', () => {
+    const r = normalizeHardcover({
+      id: 9988,
+      title: 'Fourth Wing',
+      pages: 517,
+      release_date: '2023-05-02',
+      description: 'War college. Dragons.',
+      image: { url: 'https://hc.app/fw.jpg' },
+      book_series: [{ position: 1, series: { name: 'The Empyrean' } }],
+      taggings: [{ tag: { tag: 'Dragon Riders' } }, { tag: { tag: 'Enemies to Lovers' } }],
+    })
+    expect(r.series).toBe('The Empyrean')
+    expect(r.seriesPosition).toBe(1)
+    expect(r.categories).toEqual(['Dragon Riders', 'Enemies to Lovers'])
+    expect(r.ids).toEqual({ work: '9988' })
+  })
+
+  it('normalizeIsbndb parses a {book} payload', () => {
+    const r = normalizeIsbndb({
+      book: {
+        title: 'Haunting Adeline',
+        authors: ['H. D. Carlton'],
+        publisher: 'Self',
+        date_published: '2021-08-12',
+        pages: 532,
+        binding: 'Paperback',
+        language: 'en',
+        isbn13: '9781957635019',
+        isbn10: '1957635010',
+        subjects: ['Dark Romance', 'Thriller'],
+        synopsis: '<i>A cat and mouse</i> game.',
+        image: 'https://isbndb/ha.jpg',
+      },
+    })
+    expect(r.title).toBe('Haunting Adeline')
+    expect(r.binding).toBe('Paperback')
+    expect(r.pageCount).toBe(532)
+    expect(r.categories).toEqual(['Dark Romance', 'Thriller'])
+    expect(r.description).toBe('A cat and mouse game.')
+    expect(r.isbn13).toBe('9781957635019')
+  })
+
+  it('an end-to-end merge of all four normalized sources fills across them by precedence', () => {
+    const merged = mergeRecords([
+      src('google', { ...normalizeGoogle({ volumeInfo: { title: 'T', categories: ['Fiction / Romance'], imageLinks: { thumbnail: 'http://c/g.jpg' }, description: 'short' } }) }),
+      src('openlibrary', { ...normalizeOpenLibrary({ title: 'T', subject: ['Romance'], first_publish_year: 2020 }) }),
+      src('isbndb', { ...normalizeIsbndb({ book: { pages: 400, binding: 'Hardcover', synopsis: 'a longer synopsis from isbndb' } }) }),
+    ])
+    expect(merged.genre).toBe('romance')
+    expect(merged.cover).toBe('https://c/g.jpg')
+    expect(merged.pageCount).toBe(400)
+    expect(merged.binding).toBe('Hardcover')
+    expect(merged.description).toBe('a longer synopsis from isbndb')
+    expect(merged.pubY).toBe(2020)
+  })
+})

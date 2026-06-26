@@ -1,0 +1,55 @@
+import { describe, expect, it } from 'vitest'
+import {
+  mapGenre as coreMapGenre,
+  mergeRecords as coreMerge,
+  normalizeGoogle as coreNG,
+  normalizeHardcover as coreNH,
+  normalizeIsbndb as coreNI,
+  normalizeOpenLibrary as coreNOL,
+  type StampedSource,
+} from './enrich'
+// Same file the Deno enrich function imports (it uses './merge.ts'; Vitest/tsc resolve the
+// extensionless path). If the hand-mirrored copy drifts from core, this test fails.
+import {
+  mapGenre as fnMapGenre,
+  mergeRecords as fnMerge,
+  normalizeGoogle as fnNG,
+  normalizeHardcover as fnNH,
+  normalizeIsbndb as fnNI,
+  normalizeOpenLibrary as fnNOL,
+} from '../../../supabase/functions/enrich/merge'
+
+// Captured raw fixtures spanning all four sources + edge cases (coded subjects, html, isbn-10).
+const GOOGLE = { id: 'v1', volumeInfo: { title: 'Twisted Love', authors: ['Ana Huang'], publisher: 'Bloom', publishedDate: '2021-06-08', pageCount: 348, categories: ['Fiction / Romance / Contemporary'], description: '<p>Enemies <b>to</b> lovers.</p>', imageLinks: { thumbnail: 'http://g/c.jpg&edge=curl' }, industryIdentifiers: [{ type: 'ISBN_13', identifier: '9781735056258' }, { type: 'ISBN_10', identifier: '1735056251' }], language: 'en' } }
+const OL = { key: '/works/OL1W', edition_key: ['OL2M'], title: 'A Court of Thorns and Roses', author_name: ['Sarah J. Maas'], first_publish_year: 2015, number_of_pages_median: 419, isbn: ['9781619634442', '1619634449'], subject: ['Fantasy', 'series:a_court', 'nyt:x=1'], language: ['eng'], cover_i: 8231856 }
+const HC = { id: 9988, title: 'Fourth Wing', pages: 517, release_date: '2023-05-02', description: 'Dragons.', image: { url: 'https://hc/fw.jpg' }, book_series: [{ position: 1, series: { name: 'The Empyrean' } }], taggings: [{ tag: { tag: 'Dragon Riders' } }] }
+const ISBNDB = { book: { title: 'Haunting Adeline', authors: ['H. D. Carlton'], publisher: 'Self', date_published: '2021-08-12', pages: 532, binding: 'Paperback', language: 'en', isbn13: '9781957635019', isbn10: '1957635010', subjects: ['Dark Romance', 'Thriller'], synopsis: '<i>Cat</i> and mouse.', image: 'https://i/ha.jpg' } }
+
+describe('enrich mirror ↔ core parity (golden fixtures)', () => {
+  it('normalizers produce identical SourceRecords', () => {
+    expect(fnNG(GOOGLE)).toEqual(coreNG(GOOGLE))
+    expect(fnNOL(OL)).toEqual(coreNOL(OL))
+    expect(fnNH(HC)).toEqual(coreNH(HC))
+    expect(fnNI(ISBNDB)).toEqual(coreNI(ISBNDB))
+  })
+
+  it('mapGenre is identical', () => {
+    for (const cats of [['Romance', 'Fantasy'], ['Space Opera'], ['Cooking'], ['Dark Romance', 'Horror']]) {
+      expect(fnMapGenre(cats)).toEqual(coreMapGenre(cats))
+    }
+  })
+
+  it('full multi-source merge is identical (precedence + union + provenance)', () => {
+    const at = '2026-01-01T00:00:00.000Z'
+    const stamped: StampedSource[] = [
+      { source: 'google', at, record: coreNG(GOOGLE) },
+      { source: 'openlibrary', at, record: coreNOL(OL) },
+      { source: 'hardcover', at, record: coreNH(HC) },
+      { source: 'isbndb', at, record: coreNI(ISBNDB) },
+    ]
+    expect(fnMerge(stamped)).toEqual(coreMerge(stamped))
+    // with a user override too
+    const user = { title: 'My Title', at }
+    expect(fnMerge(stamped, user)).toEqual(coreMerge(stamped, user))
+  })
+})

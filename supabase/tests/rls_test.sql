@@ -3,7 +3,7 @@
 -- (2) club comments are spoiler-gated server-side by the reader's progress.
 
 begin;
-select plan(11);
+select plan(13);
 
 -- Two users. The on_auth_user_created trigger should create a profile for each.
 insert into auth.users (id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
@@ -84,6 +84,20 @@ select is(
   (select count(*)::int from public.club_comments
    where club_id = '33333333-3333-3333-3333-333333333333'),
   1, 'at progress 5, Bob sees the chapter-3 comment but not chapter 10');
+
+-- ---- enrichment_cache is service-role only (reference data, never client-reachable) ----
+-- It is granted ONLY to service_role (no grants to authenticated/anon), so a client can't even
+-- SELECT it — the Edge Function reaches it via the service role, never the browser.
+set local role authenticated;
+select set_config('request.jwt.claims',
+  '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}', true);
+
+select throws_ok(
+  $$select count(*) from public.enrichment_cache$$,
+  '42501', null, 'authenticated client cannot read the enrichment cache (service-role only)');
+select throws_ok(
+  $$insert into public.enrichment_cache (key, record) values ('ta:hack', '{}'::jsonb)$$,
+  '42501', null, 'authenticated client cannot write the enrichment cache');
 
 select * from finish();
 rollback;
