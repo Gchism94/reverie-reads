@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-skin="reverie" data-mode="dark">
+<html lang="en" data-skin="tryst" data-mode="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -20,9 +20,9 @@
       // Set skin + light/dark mode before first paint to avoid a flash of the wrong identity.
       ;(function () {
         try {
-          var valid = { reverie: 1, grimoire: 1, aphelion: 1, marrow: 1 }
+          var valid = { tryst: 1, grimoire: 1, aphelion: 1, marrow: 1 }
           var skin = localStorage.getItem('reverie.skin')
-          if (!valid[skin]) skin = 'reverie'
+          if (!valid[skin]) skin = 'tryst'
           var mode = localStorage.getItem('reverie.mode')
           if (mode !== 'light' && mode !== 'dark' && mode !== 'system') mode = 'system'
           var resolved =
@@ -34,7 +34,7 @@
           document.documentElement.dataset.skin = skin
           document.documentElement.dataset.mode = resolved
         } catch (e) {
-          document.documentElement.dataset.skin = 'reverie'
+          document.documentElement.dataset.skin = 'tryst'
           document.documentElement.dataset.mode = 'dark'
         }
       })()

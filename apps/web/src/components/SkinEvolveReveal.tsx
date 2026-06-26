@@ -39,7 +39,7 @@ export function SkinEvolveReveal() {
         </Link>
         <button
           type="button"
-          onClick={() => dismissPending()}
+          onClick={() => dismissPending(pending)}
           className="rounded-full border border-line px-4 py-1.5 text-[12.5px] font-semibold text-muted"
           style={{ background: 'var(--field)' }}
         >

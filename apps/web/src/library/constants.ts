@@ -77,7 +77,7 @@ export const SORTS: { value: LibrarySort; label: string }[] = [
   { value: 'author', label: 'Author' },
   { value: 'series', label: 'Series order' },
   { value: 'rating', label: 'Top rated' },
-  { value: 'intensity', label: 'Spiciest' }, // Reverie-skin label; the field is generic `intensity`
+  { value: 'intensity', label: 'Spiciest' }, // Tryst-skin label; the field is generic `intensity`
   { value: 'recent', label: 'Recently added' },
 ]
 

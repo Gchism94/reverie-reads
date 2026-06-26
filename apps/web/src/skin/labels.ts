@@ -5,12 +5,12 @@ import { useSkin } from './useSkin'
 export function useEffectiveSkin(): SkinId {
   const skin = useSkin((s) => s.skin)
   const dominant = useSkin((s) => s.adaptiveBundle?.dominant)
-  return skin === 'adaptive' ? (dominant ?? 'reverie') : skin
+  return skin === 'adaptive' ? (dominant ?? 'tryst') : skin
 }
 
 /**
  * Field labels for the active skin. The data model is generic (tags / intensity / genre); each
- * skin chooses how to label those — the Reverie (romance) skin shows "Tropes" / "Spice", the
+ * skin chooses how to label those — the Tryst (romance) skin shows "Tropes" / "Spice", the
  * others show "Tags" / "Intensity". UI reads labels from here, never hardcoded.
  */
 export function useLabels(): FieldLabels {

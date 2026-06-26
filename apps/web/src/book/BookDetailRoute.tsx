@@ -239,7 +239,7 @@ function BookDetailScreen() {
         <ReviewsPanel workKey={workKey} reviewerName={reviewerName} />
       </div>
 
-      {/* tags (Reverie skin: "Tropes") */}
+      {/* tags (Tryst skin: "Tropes") */}
       <Label
         action={
           <button type="button" onClick={() => setDialog('trope')} className="text-[12px] text-primary">

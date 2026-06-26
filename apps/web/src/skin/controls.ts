@@ -56,17 +56,21 @@ export function useAdaptiveControls() {
     },
     setLocked: (locked: boolean) => update.mutate({ adaptiveLocked: locked }),
 
-    /** Reveal "keep": adopt the cron's suggestion (materialize its palette) and clear the pending. */
+    /** Reveal "keep": adopt the cron's suggestion (materialize its palette), clear the pending, and
+     *  drop any stale dismissal — the adopted taste is the new baseline. */
     acceptPending: (pending: AdaptivePending) => {
       const bundle = materializeAdaptive(pending)
       setBundle(bundle)
       setSkinLocal('adaptive')
-      update.mutate({ adaptiveSkin: bundle, skin: 'adaptive', adaptivePending: null })
+      update.mutate({ adaptiveSkin: bundle, skin: 'adaptive', adaptivePending: null, adaptiveDismissed: null })
     },
-    /** Reveal "not now": keep the current skin, clear the pending (it may resurface next month). */
-    dismissPending: () => update.mutate({ adaptivePending: null }),
-    /** Reveal "lock": freeze the current skin and clear the pending. */
-    lockPending: () => update.mutate({ adaptiveLocked: true, adaptivePending: null }),
+    /** Reveal "not now": keep the current skin, clear the pending, and REMEMBER the dismissed signal
+     *  so the cron won't re-nag the same shift — it resurfaces only if taste drifts materially past
+     *  it (the merge-verdicts "remember the no" pattern). */
+    dismissPending: (pending: AdaptivePending) =>
+      update.mutate({ adaptivePending: null, adaptiveDismissed: pending }),
+    /** Reveal "lock": freeze the current skin; clear pending + dismissal (lock means never ask). */
+    lockPending: () => update.mutate({ adaptiveLocked: true, adaptivePending: null, adaptiveDismissed: null }),
   }
 }
 

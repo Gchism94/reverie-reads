@@ -2,7 +2,7 @@ import type { Book } from './types'
 
 // Genre-agnostic "vibe matcher" scoring. Drives off generic signals — subgenre/genre weights,
 // wanted tags, target intensity, the reader's own rating, and read state — NOT romance-coded
-// tropes. A skin may add its own signature signal (Reverie passes the book-boyfriend archetype)
+// tropes. A skin may add its own signature signal (Tryst passes the book-boyfriend archetype)
 // via the optional archetype hook, but the core scoring is neutral and works for any genre.
 
 export interface MatchProfile {
