@@ -1,6 +1,12 @@
 import { supabase } from './supabase'
 
-/** Full normalized record returned by the enrichment Edge Function. */
+/** Per-field provenance from the aggregator (which source supplied each field, and when). */
+export interface FieldProvenance {
+  source: 'openlibrary' | 'google' | 'hardcover' | 'isbndb' | 'manual'
+  at: string
+}
+
+/** Full normalized record returned by the enrichment aggregator (docs/ENRICHMENT_STRATEGY.md). */
 export interface EnrichResult {
   title: string
   authors: string[]
@@ -12,13 +18,21 @@ export interface EnrichResult {
   pubM: number | null
   pubD: number | null
   pageCount: number | null
+  binding?: string
   isbn10: string
   isbn13: string
   isbn: string
+  /** every edition ISBN the sources knew (union) */
+  isbns?: string[]
   language: string
+  /** primary genre mapped from categories (the C1 genre-fill) */
+  genre?: string
   genres: string[]
   description: string
   cover: string
+  workId?: string
+  editionId?: string
+  provenance?: Record<string, FieldProvenance>
   source: string | null
 }
 
@@ -35,6 +49,8 @@ export async function enrichBookOutcome(input: {
   title?: string
   author?: string
   isbn?: string
+  /** 'fast' = one source by ISBN for an instant record; 'full' (default) = the multi-source merge. */
+  mode?: 'fast' | 'full'
 }): Promise<EnrichOutcome> {
   try {
     const { data, error } = await supabase.functions.invoke('enrich', { body: input })
@@ -59,6 +75,7 @@ export async function enrichBook(input: {
   title?: string
   author?: string
   isbn?: string
+  mode?: 'fast' | 'full'
 }): Promise<EnrichResult | null> {
   const outcome = await enrichBookOutcome(input)
   return outcome.status === 'ok' ? outcome.data : null

@@ -68,12 +68,15 @@ function AddForm({ hit, onAdded }: { hit: Partial<SearchHit>; onAdded: () => voi
     last: nameParts.length > 1 ? nameParts.slice(1).join(' ') : (nameParts[0] ?? ''),
     series: '',
     position: '',
+    genre: 'romance',
     subgenre: 'Romantasy' as string,
     format: 'Paperback' as string,
     readStatus: 'Unread' as Book['readStatus'],
   })
   const [tags, setTags] = useState<string[]>([])
   const [intensity, setIntensity] = useState(0)
+  // Track whether the user edited genre, so enrichment fills it but never overrides their choice.
+  const genreEdited = useRef(false)
   const labels = useLabels()
   const [cover, setCover] = useState(hit.cover ?? '')
   const [enriching, setEnriching] = useState(false)
@@ -90,11 +93,13 @@ function AddForm({ hit, onAdded }: { hit: Partial<SearchHit>; onAdded: () => voi
     setEnriching(false)
     if (!res) return
     if (res.cover && !cover) setCover(res.cover)
-    // Fill only blanks — never overwrite what the user typed.
+    // Fill only blanks — never overwrite what the user typed. genre is the mapped primary genre
+    // (C1 fill); only applied if the user hasn't edited the genre field themselves.
     setForm((p) => ({
       ...p,
       series: p.series || res.series,
       position: p.position || (res.seriesPosition != null ? String(res.seriesPosition) : ''),
+      genre: genreEdited.current ? p.genre : res.genre || p.genre,
     }))
   }
   const inputClass = 'h-10 w-full rounded-xl border border-line px-3 text-[14px] text-ink outline-none'
@@ -118,7 +123,7 @@ function AddForm({ hit, onAdded }: { hit: Partial<SearchHit>; onAdded: () => voi
       position: form.position.trim() === '' ? '' : Number(form.position) || '',
       seriesCount: null,
       status: form.series.trim() ? 'Series' : 'Standalone',
-      genre: 'romance',
+      genre: form.genre.trim() || 'romance',
       subgenre: form.subgenre,
       genres: [form.subgenre],
       tags,
@@ -181,6 +186,17 @@ function AddForm({ hit, onAdded }: { hit: Partial<SearchHit>; onAdded: () => voi
       <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
         <input value={form.series} onChange={(e) => set('series', e.target.value)} placeholder="Series" className={inputClass} style={inputStyle} />
         <input value={form.position} onChange={(e) => set('position', e.target.value)} placeholder="Book #" className={inputClass} style={inputStyle} />
+        <input
+          value={form.genre}
+          onChange={(e) => {
+            genreEdited.current = true
+            set('genre', e.target.value)
+          }}
+          placeholder={labels.genre}
+          aria-label={labels.genre}
+          className={inputClass}
+          style={inputStyle}
+        />
         <select value={form.subgenre} onChange={(e) => set('subgenre', e.target.value)} className={inputClass} style={inputStyle}>
           {SUBGENRES.map((s) => (
             <option key={s}>{s}</option>
