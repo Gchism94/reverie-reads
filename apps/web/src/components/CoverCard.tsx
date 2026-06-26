@@ -1,4 +1,4 @@
-import { ownedFormats, type Book } from '@reverie/core'
+import { formatAuthors, ownedFormats, type Book } from '@reverie/core'
 import { subgenreGradient } from '../library/constants'
 import { useLabels } from '../skin/labels'
 
@@ -14,7 +14,7 @@ export function CoverCard({
   onOpen: () => void
   onToggleFave: () => void
 }) {
-  const author = [book.first, book.last].filter(Boolean).join(' ')
+  const author = formatAuthors(book.contributors) || [book.first, book.last].filter(Boolean).join(' ')
   const [g0, g1] = subgenreGradient(book.subgenre)
   const isRead = book.readStatus === 'Read' || book.reads.length > 0
   const labels = useLabels()

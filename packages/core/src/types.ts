@@ -27,6 +27,20 @@ export interface Owned {
   audiobook: boolean
 }
 
+/** A contributor's role on a book. Ordered, multi-contributor (docs/DATA_MODEL.md). `narrator` is
+ * really audiobook-edition-scoped — kept as a role for now (edition-scoping is a later refinement). */
+export type ContributorRole = 'author' | 'co_author' | 'translator' | 'illustrator' | 'narrator' | 'editor'
+
+/** One ordered contributor on a book (normalized: an `authors` row + a `book_authors` link). */
+export interface Contributor {
+  /** authors.id once persisted (absent for a not-yet-saved contributor) */
+  id?: string
+  name: string
+  role: ContributorRole
+  /** 0-based order within the book */
+  position: number
+}
+
 /** An individual review from another reader — shown as a distinct voice, never averaged. */
 export interface Review {
   id?: string
@@ -40,8 +54,13 @@ export interface Review {
 export interface Book {
   id: string
   title: string
+  /** Primary author's given/family name — kept as the back-compat denormalized primary (it equals
+   *  contributors[0] with an author role). All ordered contributors live in `contributors`. */
   first: string
   last: string
+  /** Ordered contributors (authors, co-authors, translators, …). Empty until the join is loaded;
+   *  the primary author mirrors first/last. */
+  contributors: Contributor[]
   series: string
   position: number | '' // fractional positions exist (e.g. 3.5); '' means unset
   seriesCount: number | null // null => length not set ("None set" filter)

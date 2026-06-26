@@ -1,13 +1,23 @@
 import { useState, type ReactNode } from 'react'
-import { authorOf, deriveBoyfriend, type Book, type SeriesStatus } from '@reverie/core'
+import { authorOf, deriveBoyfriend, fromFirstLast, type Book, type Contributor, type SeriesStatus } from '@reverie/core'
 import { Modal } from '../components/Modal'
 import { Chip } from '../components/Chip'
 import { Stars } from '../components/Stars'
 import { FORMATS, SERIES_STATUSES, SUBGENRES, TROPE_GROUPS } from '../library/constants'
-import { useUpdateBook } from '../data/books'
+import { useBooks, useUpdateBook } from '../data/books'
+import { useSetContributors } from '../data/contributors'
 import { useAddRead } from '../data/reads'
 import { usePerformMerge } from '../data/mergeBooks'
 import { useLabels } from '../skin/labels'
+import { ContributorEditor } from './ContributorEditor'
+
+/** Distinct contributor names across the library, for autocomplete. */
+function useAuthorSuggestions(): string[] {
+  const { data: books } = useBooks()
+  const names = new Set<string>()
+  for (const b of books ?? []) for (const c of b.contributors) if (c.name) names.add(c.name)
+  return [...names].sort((a, b) => a.localeCompare(b))
+}
 
 const fieldClass =
   'h-10 w-full rounded-xl border border-line px-3 text-[14px] text-ink outline-none'
@@ -110,9 +120,12 @@ export function LogReadForm({ book, onClose }: { book: Book; onClose: () => void
 
 export function EditDetails({ book, onClose }: { book: Book; onClose: () => void }) {
   const updateBook = useUpdateBook()
+  const setContributors = useSetContributors()
+  const suggestions = useAuthorSuggestions()
+  const [contribs, setContribs] = useState<Contributor[]>(
+    book.contributors.length ? book.contributors : fromFirstLast(book.first, book.last),
+  )
   const [f, setF] = useState({
-    first: book.first,
-    last: book.last,
     series: book.series,
     position: book.position === '' ? '' : String(book.position),
     seriesCount: book.seriesCount == null ? '' : String(book.seriesCount),
@@ -130,8 +143,6 @@ export function EditDetails({ book, onClose }: { book: Book; onClose: () => void
     updateBook.mutate({
       id: book.id,
       patch: {
-        first: f.first,
-        last: f.last,
         series: f.series,
         position: f.position.trim() === '' ? '' : Number(f.position) || '',
         seriesCount: numOrNull(f.seriesCount),
@@ -141,18 +152,18 @@ export function EditDetails({ book, onClose }: { book: Book; onClose: () => void
         pub: { y: numOrNull(f.pubY), m: numOrNull(f.pubM), d: numOrNull(f.pubD) },
       },
     })
+    // Contributors persist through the RPC (it also refreshes the primary first/last + byline).
+    setContributors.mutate({ bookId: book.id, contributors: contribs })
     onClose()
   }
 
   return (
     <Modal title="Edit details" onClose={onClose} wide>
+      <div className="mb-3">
+        <span className="mb-1 block text-[11px] uppercase tracking-[0.15em] text-muted">Contributors</span>
+        <ContributorEditor value={contribs} onChange={setContribs} suggestions={suggestions} />
+      </div>
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Author first">
-          <input value={f.first} onChange={(e) => set('first', e.target.value)} className={fieldClass} style={fieldStyle} />
-        </Field>
-        <Field label="Author last">
-          <input value={f.last} onChange={(e) => set('last', e.target.value)} className={fieldClass} style={fieldStyle} />
-        </Field>
         <Field label="Series">
           <input value={f.series} onChange={(e) => set('series', e.target.value)} className={fieldClass} style={fieldStyle} />
         </Field>

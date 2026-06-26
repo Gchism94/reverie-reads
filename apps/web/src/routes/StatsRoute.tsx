@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { createRoute } from '@tanstack/react-router'
-import { authorOf } from '@reverie/core'
+import { authorOf, isAuthorRole } from '@reverie/core'
 import { rootRoute } from './RootRoute'
 import { useBooks } from '../data/books'
 import { useAllReads } from '../data/reads'
@@ -82,7 +82,13 @@ function StatsScreen() {
   const fmts = tally(all, (b) => b.format)
   const spdist: [string, number][] = [1, 2, 3, 4, 5].map((i) => [labels.intensityGlyph.repeat(i), readBooks.filter((b) => b.intensity === i).length])
   const topTags = tally(readBooks.flatMap((b) => b.tags), (t) => t).slice(0, 8)
-  const auths = tally(all, (b) => authorOf(b)).slice(0, 8)
+  // Count each authoring contributor (co-authors included), not just the primary author.
+  const auths = tally(
+    all.flatMap((b) =>
+      b.contributors.length ? b.contributors.filter((c) => isAuthorRole(c.role)).map((c) => c.name) : [authorOf(b)].filter(Boolean),
+    ),
+    (n) => n,
+  ).slice(0, 8)
 
   const readsPerBook = new Map<string, number>()
   for (const r of dated) readsPerBook.set(r.book_id, (readsPerBook.get(r.book_id) ?? 0) + 1)

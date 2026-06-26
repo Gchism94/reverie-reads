@@ -4,6 +4,7 @@ import { uid } from './id'
 import { deriveBoyfriend } from './boyfriend'
 import { cleanIsbn, type Incoming } from './match'
 import { emptyOwned } from './ownership'
+import { fromFirstLast } from './contributors'
 
 /** Quote-aware CSV parser (escaped quotes, CRLF, blank-line skipping). Ported verbatim. */
 export function parseCSV(text: string): string[][] {
@@ -222,6 +223,7 @@ export function importCsv(existing: readonly Book[], text: string): CsvImportRes
         title,
         first,
         last,
+        contributors: fromFirstLast(first, last),
         series: '',
         position: '',
         seriesCount: null,

@@ -5,6 +5,7 @@ export function makeBook(partial: Partial<Book> & { id: string; title: string })
   return {
     first: '',
     last: '',
+    contributors: [],
     series: '',
     position: '',
     seriesCount: null,

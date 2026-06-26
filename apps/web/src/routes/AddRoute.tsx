@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { createRoute, useNavigate } from '@tanstack/react-router'
-import { deriveBoyfriend, type Book, type Owned } from '@reverie/core'
+import { contributorsFromAuthors, deriveBoyfriend, formatAuthors, toFirstLast, type Book, type Contributor, type Owned } from '@reverie/core'
 import { useQueryClient } from '@tanstack/react-query'
 import { rootRoute } from './RootRoute'
 import { useIntake, type ReviewCandidate } from '../data/intake'
@@ -9,6 +9,7 @@ import { resolveCandidate, type ReviewAction } from '../data/duplicates'
 import { enrichBook } from '../lib/enrich'
 import { useLabels } from '../skin/labels'
 import { Chip } from '../components/Chip'
+import { ContributorEditor } from '../book/ContributorEditor'
 import { ALL_TROPES, FORMATS, READ_STATUSES, SUBGENRES, subgenreGradient } from '../library/constants'
 
 interface BarcodeDetectorLike {
@@ -61,11 +62,9 @@ function AddForm({ hit, onAdded }: { hit: Partial<SearchHit>; onAdded: () => voi
   const qc = useQueryClient()
   const { data: books } = useBooks()
   const [dup, setDup] = useState<ReviewCandidate | null>(null)
-  const nameParts = (hit.authors?.[0] ?? '').trim().split(/\s+/)
+  const [contribs, setContribs] = useState<Contributor[]>(contributorsFromAuthors(hit.authors ?? []))
   const [form, setForm] = useState({
     title: hit.title ?? '',
-    first: nameParts.length > 1 ? (nameParts[0] ?? '') : '',
-    last: nameParts.length > 1 ? nameParts.slice(1).join(' ') : (nameParts[0] ?? ''),
     series: '',
     position: '',
     genre: 'romance',
@@ -77,6 +76,8 @@ function AddForm({ hit, onAdded }: { hit: Partial<SearchHit>; onAdded: () => voi
   const [intensity, setIntensity] = useState(0)
   // Track whether the user edited genre, so enrichment fills it but never overrides their choice.
   const genreEdited = useRef(false)
+  // Distinct contributor names across the library, for the editor's autocomplete.
+  const authorSuggestions = [...new Set((books ?? []).flatMap((b) => b.contributors.map((c) => c.name)).filter(Boolean))].sort()
   const labels = useLabels()
   const [cover, setCover] = useState(hit.cover ?? '')
   const [enriching, setEnriching] = useState(false)
@@ -87,12 +88,14 @@ function AddForm({ hit, onAdded }: { hit: Partial<SearchHit>; onAdded: () => voi
     setEnriching(true)
     const res = await enrichBook({
       title: form.title,
-      author: `${form.first} ${form.last}`.trim(),
+      author: formatAuthors(contribs),
       isbn: hit.isbn,
     })
     setEnriching(false)
     if (!res) return
     if (res.cover && !cover) setCover(res.cover)
+    // Seed contributors from enrichment only if the user hasn't entered any names yet.
+    if (res.authors?.length && !contribs.some((c) => c.name.trim())) setContribs(contributorsFromAuthors(res.authors))
     // Fill only blanks — never overwrite what the user typed. genre is the mapped primary genre
     // (C1 fill); only applied if the user hasn't edited the genre field themselves.
     setForm((p) => ({
@@ -115,10 +118,12 @@ function AddForm({ hit, onAdded }: { hit: Partial<SearchHit>; onAdded: () => voi
       ebook: isEbook,
       audiobook: isAudio,
     }
+    const { first, last } = toFirstLast(contribs)
     const book: Partial<Book> & { title: string } = {
       title: form.title.trim(),
-      first: form.first.trim(),
-      last: form.last.trim(),
+      first,
+      last,
+      contributors: contribs.filter((c) => c.name.trim()),
       series: form.series.trim(),
       position: form.position.trim() === '' ? '' : Number(form.position) || '',
       seriesCount: null,
@@ -176,10 +181,7 @@ function AddForm({ hit, onAdded }: { hit: Partial<SearchHit>; onAdded: () => voi
         </div>
         <div className="flex-1 space-y-2">
           <input value={form.title} onChange={(e) => set('title', e.target.value)} placeholder="Title" className={inputClass} style={inputStyle} />
-          <div className="grid grid-cols-2 gap-2">
-            <input value={form.first} onChange={(e) => set('first', e.target.value)} placeholder="Author first" className={inputClass} style={inputStyle} />
-            <input value={form.last} onChange={(e) => set('last', e.target.value)} placeholder="Author last" className={inputClass} style={inputStyle} />
-          </div>
+          <ContributorEditor value={contribs} onChange={setContribs} suggestions={authorSuggestions} />
         </div>
       </div>
 

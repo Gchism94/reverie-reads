@@ -32,9 +32,19 @@ export interface BookRow {
   plan_date: string | null
   progress: number | null
   boyfriend: string | null
+  authors_display: string | null
   enriched_at: string | null
   added_at: string
   updated_at: string
+  /** ordered contributor join (present when the books query selects it) */
+  book_authors?: BookAuthorRow[]
+}
+
+/** A row of the book_authors join with its author embedded (PostgREST nested select). */
+export interface BookAuthorRow {
+  position: number
+  role: string
+  authors: { id: string; name: string } | null
 }
 
 export interface ListRow {

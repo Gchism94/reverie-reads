@@ -1,4 +1,4 @@
-import { mergeImport, type Book, type Incoming } from '@reverie/core'
+import { contributorsFromAuthors, mergeImport, type Book, type Incoming } from '@reverie/core'
 import { supabase } from '../lib/supabase'
 import { toBookRow } from './mappers'
 import { enrichBookOutcome, type EnrichResult } from '../lib/enrich'
@@ -51,6 +51,9 @@ function toIncoming(e: EnrichResult, b: Book): Incoming {
     cover: e.cover,
     genre: e.genre || undefined,
     genres: e.genres,
+    // Multi-author enrichment → contributor list (first author, rest co-authors); mergeImport
+    // unions these into the existing book additively.
+    contributors: e.authors?.length ? contributorsFromAuthors(e.authors) : undefined,
     pub: { y: e.pubY, m: e.pubM, d: e.pubD },
   }
 }
