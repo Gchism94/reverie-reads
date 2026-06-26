@@ -1,5 +1,5 @@
 import { type SkinId } from '@reverie/core'
-import { useSkin } from '../skin/useSkin'
+import { useEffectiveSkin } from '../skin/labels'
 
 // Skin-aware divider: each skin has its own ornament drawn in the skin's tertiary (gold) tone —
 // filigree (Reverie), alchemical sun (Grimoire), orbital (Aphelion), thorn (Marrow). Pass `skin`
@@ -39,7 +39,7 @@ const MOTIFS: Record<SkinId, React.ReactNode> = {
 }
 
 export function SkinDivider({ skin, className = '' }: { skin?: SkinId; className?: string }) {
-  const active = useSkin((s) => s.skin)
+  const active = useEffectiveSkin()
   const id = skin ?? active
   return (
     <div className={`flex justify-center ${className}`} aria-hidden>

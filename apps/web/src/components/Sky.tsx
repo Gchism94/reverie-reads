@@ -1,6 +1,6 @@
 import { useMemo, type CSSProperties } from 'react'
 import { SKINS } from '@reverie/core'
-import { useSkin } from '../skin/useSkin'
+import { useEffectiveSkin } from '../skin/labels'
 
 type Star = { top: string; left: string; size: number; delay: string; duration: string }
 
@@ -47,7 +47,7 @@ function glow(color: string, size: string, pos: CSSProperties, anim: string): CS
  * `prefers-reduced-motion` disables (see tokens.css).
  */
 export function Sky() {
-  const skin = useSkin((s) => s.skin)
+  const skin = useEffectiveSkin()
   const stars = useMemo(() => makeStars(SKINS[skin].starDensity), [skin])
 
   return (

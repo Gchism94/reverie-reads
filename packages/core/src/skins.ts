@@ -6,6 +6,8 @@ import { NEUTRAL_LABELS, REVERIE_LABELS, type FieldLabels } from './labels'
 // are INDEPENDENT axes. Adding a genre later = one entry here + a token block in tokens.css.
 
 export type SkinId = 'reverie' | 'grimoire' | 'aphelion' | 'marrow'
+/** The active-skin value the user can select: a Tier-1 skin or their generated adaptive skin. */
+export type ActiveSkin = SkinId | 'adaptive'
 /** User mode preference; 'system' follows prefers-color-scheme. */
 export type Mode = 'light' | 'dark' | 'system'
 export type ResolvedMode = 'light' | 'dark'
@@ -71,5 +73,16 @@ export const SKINS: Record<SkinId, Skin> = {
 export const DEFAULT_SKIN: SkinId = 'reverie'
 export const SKIN_LIST: Skin[] = Object.values(SKINS)
 export const isSkinId = (s: string | null | undefined): s is SkinId => !!s && s in SKINS
+export const isActiveSkin = (s: string | null | undefined): s is ActiveSkin =>
+  s === 'adaptive' || isSkinId(s)
 export const isMode = (s: string | null | undefined): s is Mode =>
   s === 'light' || s === 'dark' || s === 'system'
+
+/** Adaptive falls back to its dominant Tier-1 skin for labels/ambiance/divider. */
+export interface AdaptiveBundle {
+  light: Record<string, string>
+  dark: Record<string, string>
+  dominant: SkinId
+  weights: Record<SkinId, number>
+  insight: string
+}

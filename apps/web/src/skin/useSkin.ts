@@ -1,11 +1,24 @@
 import { create } from 'zustand'
-import { DEFAULT_SKIN, isMode, isSkinId, type Mode, type ResolvedMode, type SkinId } from '@reverie/core'
+import {
+  ADAPTIVE_CARRY_KEYS,
+  ADAPTIVE_COLOR_KEYS,
+  DEFAULT_SKIN,
+  isActiveSkin,
+  isMode,
+  type ActiveSkin,
+  type AdaptiveBundle,
+  type Mode,
+  type ResolvedMode,
+} from '@reverie/core'
+import { adaptiveVars } from './adaptive'
 
 // Skin and light/dark MODE are independent axes, both persisted. localStorage gives an instant,
 // flash-free apply (the index.html boot script reads the same keys pre-paint); the profile is the
-// cross-device source of truth and is reconciled on sign-in via hydrate().
+// cross-device source of truth and is reconciled on sign-in via hydrate(). The adaptive skin is a
+// generated palette applied as inline custom properties on <html> (no stylesheet block exists).
 const SKIN_KEY = 'reverie.skin'
 const MODE_KEY = 'reverie.mode'
+const ADAPTIVE_VAR_KEYS = [...ADAPTIVE_COLOR_KEYS, ...ADAPTIVE_CARRY_KEYS]
 
 function safeStorage(): Storage | null {
   try {
@@ -28,62 +41,80 @@ export function resolveMode(mode: Mode): ResolvedMode {
   return mode === 'system' ? systemMode() : mode
 }
 
-function readInitialSkin(): SkinId {
+function readInitialSkin(): ActiveSkin {
   const s = safeStorage()?.getItem(SKIN_KEY)
-  return isSkinId(s) ? s : DEFAULT_SKIN
+  return isActiveSkin(s) ? s : DEFAULT_SKIN
 }
 function readInitialMode(): Mode {
   const m = safeStorage()?.getItem(MODE_KEY)
   return isMode(m) ? m : 'system'
 }
 
-/** Reflect the active skin + resolved mode onto <html>. */
-function apply(skin: SkinId, mode: Mode): void {
-  if (typeof document !== 'undefined') {
-    document.documentElement.dataset.skin = skin
-    document.documentElement.dataset.mode = resolveMode(mode)
+/** Reflect the active skin + resolved mode onto <html>; for adaptive, paint the generated palette. */
+function apply(skin: ActiveSkin, mode: Mode, bundle: AdaptiveBundle | null): void {
+  if (typeof document === 'undefined') return
+  const root = document.documentElement
+  const resolved = resolveMode(mode)
+  root.dataset.skin = skin
+  root.dataset.mode = resolved
+  if (skin === 'adaptive' && bundle) {
+    const vars = adaptiveVars(bundle, resolved)
+    for (const k of ADAPTIVE_VAR_KEYS) {
+      const v = vars[k]
+      if (v) root.style.setProperty(k, v)
+    }
+  } else {
+    for (const k of ADAPTIVE_VAR_KEYS) root.style.removeProperty(k)
   }
 }
 
 interface SkinState {
-  skin: SkinId
+  skin: ActiveSkin
   mode: Mode
   resolvedMode: ResolvedMode
-  setSkin: (skin: SkinId) => void
+  /** the generated adaptive palette (loaded from the profile), needed to paint the adaptive skin */
+  adaptiveBundle: AdaptiveBundle | null
+  setSkin: (skin: ActiveSkin) => void
   setMode: (mode: Mode) => void
+  setAdaptiveBundle: (bundle: AdaptiveBundle | null) => void
   /** Apply a profile-sourced choice (sign-in reconciliation); persists to localStorage too. */
-  hydrate: (skin: SkinId, mode: Mode) => void
+  hydrate: (skin: ActiveSkin, mode: Mode, bundle: AdaptiveBundle | null) => void
 }
 
 export const useSkin = create<SkinState>((set, get) => ({
   skin: readInitialSkin(),
   mode: readInitialMode(),
   resolvedMode: resolveMode(readInitialMode()),
+  adaptiveBundle: null,
   setSkin: (skin) => {
-    apply(skin, get().mode)
+    apply(skin, get().mode, get().adaptiveBundle)
     safeStorage()?.setItem(SKIN_KEY, skin)
     set({ skin })
   },
   setMode: (mode) => {
-    apply(get().skin, mode)
+    apply(get().skin, mode, get().adaptiveBundle)
     safeStorage()?.setItem(MODE_KEY, mode)
     set({ mode, resolvedMode: resolveMode(mode) })
   },
-  hydrate: (skin, mode) => {
-    apply(skin, mode)
+  setAdaptiveBundle: (bundle) => {
+    apply(get().skin, get().mode, bundle)
+    set({ adaptiveBundle: bundle })
+  },
+  hydrate: (skin, mode, bundle) => {
+    apply(skin, mode, bundle)
     safeStorage()?.setItem(SKIN_KEY, skin)
     safeStorage()?.setItem(MODE_KEY, mode)
-    set({ skin, mode, resolvedMode: resolveMode(mode) })
+    set({ skin, mode, resolvedMode: resolveMode(mode), adaptiveBundle: bundle })
   },
 }))
 
 // Apply once on load (mirrors the pre-paint boot script), and keep 'system' mode live.
-apply(useSkin.getState().skin, useSkin.getState().mode)
+apply(useSkin.getState().skin, useSkin.getState().mode, useSkin.getState().adaptiveBundle)
 if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
   window.matchMedia('(prefers-color-scheme: light)').addEventListener?.('change', () => {
-    const { mode, skin } = useSkin.getState()
+    const { mode, skin, adaptiveBundle } = useSkin.getState()
     if (mode === 'system') {
-      apply(skin, 'system')
+      apply(skin, 'system', adaptiveBundle)
       useSkin.setState({ resolvedMode: systemMode() })
     }
   })
