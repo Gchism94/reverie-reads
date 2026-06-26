@@ -18,6 +18,7 @@ interface FilterState {
   setLen: (s: SeriesLenBucket) => void
   setRead: (s: LibraryFilters['read']) => void
   setFormat: (s: string) => void
+  setAuthor: (a: string) => void
   toggleFave: () => void
   setSort: (s: LibrarySort) => void
   setMode: (m: LibraryMode) => void
@@ -44,6 +45,7 @@ export const useFilters = create<FilterState>((set) => ({
   setLen: (len) => set((s) => ({ filters: { ...s.filters, len } })),
   setRead: (read) => set((s) => ({ filters: { ...s.filters, read } })),
   setFormat: (format) => set((s) => ({ filters: { ...s.filters, format } })),
+  setAuthor: (author) => set((s) => ({ filters: { ...s.filters, author } })),
   toggleFave: () => set((s) => ({ filters: { ...s.filters, fave: !s.filters.fave } })),
   setSort: (sort) => set((s) => ({ filters: { ...s.filters, sort } })),
   setMode: (mode) => set({ mode }),

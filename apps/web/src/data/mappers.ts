@@ -1,16 +1,42 @@
-import type { Book, List, ReadEntry, SeriesStatus, ReadStatus } from '@reverie/core'
+import {
+  isContributorRole,
+  toFirstLast,
+  type Book,
+  type Contributor,
+  type List,
+  type ReadEntry,
+  type SeriesStatus,
+  type ReadStatus,
+} from '@reverie/core'
 import type { BookRow, ListRow, ReadRow } from './types'
 
 const SERIES_STATUS: readonly SeriesStatus[] = ['Standalone', 'Series', 'Complete']
 const READ_STATUS: readonly ReadStatus[] = ['Unread', 'Reading', 'Read', 'DNF']
 
+/** Map the book_authors join into an ordered, role-typed contributor list. */
+function toContributors(row: BookRow): Contributor[] {
+  return (row.book_authors ?? [])
+    .filter((ba) => ba.authors?.name)
+    .map((ba) => ({
+      id: ba.authors!.id,
+      name: ba.authors!.name,
+      role: isContributorRole(ba.role) ? ba.role : 'author',
+      position: ba.position ?? 0,
+    }))
+    .sort((a, b) => a.position - b.position)
+}
+
 /** Relational book row -> domain Book. `reads` are loaded separately (see data/reads.ts). */
 export function toBook(row: BookRow): Book {
+  const contributors = toContributors(row)
+  // Prefer the normalized primary author; fall back to the back-compat first/last columns.
+  const primary = contributors.length ? toFirstLast(contributors) : { first: row.author_first ?? '', last: row.author_last ?? '' }
   return {
     id: row.id,
     title: row.title,
-    first: row.author_first ?? '',
-    last: row.author_last ?? '',
+    first: primary.first,
+    last: primary.last,
+    contributors,
     series: row.series ?? '',
     position: row.position ?? '',
     seriesCount: row.series_count,

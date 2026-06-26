@@ -2,10 +2,12 @@ import { useQueryClient } from '@tanstack/react-query'
 import {
   decideIntake,
   deriveBoyfriend,
+  fromFirstLast,
   importKey,
   matchBook,
   mergeImport,
   type Book,
+  type Contributor,
   type DuplicateVerdict,
   type ImportMergeResult,
   type Incoming,
@@ -14,6 +16,7 @@ import {
 import { supabase } from '../lib/supabase'
 import { toBookRow } from './mappers'
 import { booksKey } from './books'
+import { persistContributors } from './contributors'
 import { profileKey, type Profile } from './profile'
 
 export interface ReviewCandidate {
@@ -44,6 +47,7 @@ export function incomingToBook(inc: Incoming): Book {
     title: inc.title,
     first: inc.first ?? '',
     last: inc.last ?? '',
+    contributors: inc.contributors ?? fromFirstLast(inc.first ?? '', inc.last ?? ''),
     series: inc.series ?? '',
     position: inc.position ?? '',
     seriesCount: inc.seriesCount ?? null,
@@ -96,6 +100,9 @@ export async function insertNewBook(inc: Incoming, ownerId: string): Promise<{ i
   if (error) throw error
   const id = (data as { id: string }).id
   await insertReads(id, ownerId, inc.reads ?? [])
+  // Create the normalized contributor rows (at least the primary author) so the join-based load
+  // shows authorship. The RPC also (re)writes author_first/last + the byline cache.
+  if (book.contributors.length) await persistContributors(id, book.contributors)
   return { id, book: { ...book, id, reads: inc.reads ?? [] } }
 }
 
@@ -105,6 +112,11 @@ export async function foldIn(existing: Book, inc: Incoming, ownerId: string): Pr
   if (Object.keys(result.patch).length) {
     const { error } = await supabase.from('books').update(toBookRow(result.patch)).eq('id', existing.id)
     if (error) throw error
+  }
+  // A reconciled contributor list (not a books column) persists through the RPC.
+  if (result.patch.contributors) {
+    const merged: Contributor[] = result.patch.contributors
+    await persistContributors(existing.id, merged)
   }
   await insertReads(existing.id, ownerId, result.newReads)
   return result

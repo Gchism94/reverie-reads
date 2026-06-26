@@ -95,6 +95,49 @@ async function ensureDevUser() {
   return created.data.user.id
 }
 
+const nameKey = (s) => (s || '').trim().toLowerCase().replace(/\s+/g, ' ')
+
+/**
+ * Populate the normalized authors + book_authors from each book's first/last (the same backfill the
+ * D2 migration runs, but for a fresh dev seed — migrations run before the seed loads). The service
+ * role bypasses RLS; set_book_contributors is owner-scoped and can't be called as the service role.
+ */
+async function seedContributors(ownerId) {
+  const { data: books, error } = await admin
+    .from('books')
+    .select('id, author_first, author_last')
+    .eq('owner_id', ownerId)
+  if (error) throw error
+
+  const fullName = (b) => [b.author_first, b.author_last].filter(Boolean).join(' ').trim()
+
+  // Distinct authors (deduped by normalized name) → authors rows.
+  const byKey = new Map()
+  for (const b of books) {
+    const name = fullName(b)
+    if (name && !byKey.has(nameKey(name))) byKey.set(nameKey(name), name)
+  }
+  await admin.from('book_authors').delete().eq('owner_id', ownerId)
+  await admin.from('authors').delete().eq('owner_id', ownerId)
+  const authorRows = [...byKey].map(([name_key, name]) => ({ owner_id: ownerId, name, name_key }))
+  const { data: authors, error: ae } = await admin.from('authors').insert(authorRows).select('id, name_key')
+  if (ae) throw ae
+  const idByKey = new Map(authors.map((a) => [a.name_key, a.id]))
+
+  // One book_authors link per book at position 0, role author + the denormalized byline cache.
+  const links = []
+  for (const b of books) {
+    const name = fullName(b)
+    if (!name) continue
+    links.push({ book_id: b.id, author_id: idByKey.get(nameKey(name)), owner_id: ownerId, position: 0, role: 'author' })
+  }
+  if (links.length) {
+    const { error: le } = await admin.from('book_authors').insert(links)
+    if (le) throw le
+  }
+  return authors.length
+}
+
 async function main() {
   const ownerId = await ensureDevUser()
   const seed = JSON.parse(readFileSync(resolve(root, 'data/personal_seed.json'), 'utf8'))
@@ -106,12 +149,14 @@ async function main() {
   const ins = await admin.from('books').insert(rows)
   if (ins.error) throw ins.error
 
+  const authorCount = await seedContributors(ownerId)
+
   const { count } = await admin
     .from('books')
     .select('*', { count: 'exact', head: true })
     .eq('owner_id', ownerId)
 
-  console.log(`Seeded ${rows.length} books for ${DEV_EMAIL} (owner ${ownerId}); table now holds ${count}.`)
+  console.log(`Seeded ${rows.length} books (${authorCount} distinct authors) for ${DEV_EMAIL} (owner ${ownerId}); table now holds ${count}.`)
 }
 
 main().catch((e) => {

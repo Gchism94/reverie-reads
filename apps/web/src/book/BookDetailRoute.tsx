@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { Link, createRoute, useNavigate } from '@tanstack/react-router'
-import { authorOf, buildBuyLinks, buyDisclosure, deriveBoyfriend, type Book, type Owned } from '@reverie/core'
+import { authorOf, buildBuyLinks, buyDisclosure, deriveBoyfriend, isAuthorRole, ROLE_LABELS, type Book, type Owned } from '@reverie/core'
+import { useFilters } from '../library/filterStore'
 import { buyConfig } from '../lib/buyConfig'
 import { useLabels } from '../skin/labels'
 import { rootRoute } from '../routes/RootRoute'
@@ -96,7 +97,13 @@ function BookDetailScreen() {
   const deleteRead = useDeleteRead(bookId)
   const toggleListItem = useToggleListItem(bookId)
   const createList = useCreateList()
+  const setAuthor = useFilters((s) => s.setAuthor)
   const [dialog, setDialog] = useState<Dialog>(null)
+
+  const filterByAuthor = (name: string) => {
+    setAuthor(name)
+    void navigate({ to: '/library' })
+  }
 
   const book = books?.find((b) => b.id === bookId)
 
@@ -178,7 +185,30 @@ function BookDetailScreen() {
               {book.fave ? '♥' : '♡'}
             </button>
           </div>
-          <div className="mt-0.5 text-[15px] text-muted">{authorOf(book) || 'Unknown author'}</div>
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[15px] text-muted">
+            {book.contributors.length ? (
+              book.contributors.map((c, i) => (
+                <span key={`${c.name}-${i}`} className="inline-flex items-center">
+                  {isAuthorRole(c.role) ? (
+                    <button
+                      type="button"
+                      onClick={() => filterByAuthor(c.name)}
+                      className="text-ink underline-offset-2 hover:underline"
+                    >
+                      {c.name}
+                    </button>
+                  ) : (
+                    <span>
+                      {c.name} <span className="text-[12px] lowercase">· {ROLE_LABELS[c.role].toLowerCase()}</span>
+                    </span>
+                  )}
+                  {i < book.contributors.length - 1 ? <span aria-hidden>,</span> : null}
+                </span>
+              ))
+            ) : (
+              <span>{authorOf(book) || 'Unknown author'}</span>
+            )}
+          </div>
           {book.series && (
             <div className="mt-0.5 text-[14px] italic text-muted" style={{ fontFamily: 'var(--font-display)' }}>
               {book.series}

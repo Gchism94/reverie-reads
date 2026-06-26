@@ -10,10 +10,12 @@ export function Toolbar() {
   const setMode = useFilters((s) => s.setMode)
   const togglePanel = useFilters((s) => s.togglePanel)
   const panelOpen = useFilters((s) => s.panelOpen)
+  const setAuthor = useFilters((s) => s.setAuthor)
   const count = activeFilterCount(filters)
 
   return (
-    <div className="mb-3 flex flex-wrap items-center gap-2">
+    <div className="mb-3 flex flex-col gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       <input
         type="search"
         value={filters.q}
@@ -70,6 +72,20 @@ export function Toolbar() {
           </button>
         ))}
       </div>
+    </div>
+    {filters.author && (
+      <div className="flex flex-wrap items-center gap-2">
+        <span
+          className="inline-flex items-center gap-1.5 rounded-full border border-line px-3 py-1 text-[12.5px] font-semibold text-ink"
+          style={{ background: 'var(--chip)' }}
+        >
+          Author: {filters.author}
+          <button type="button" onClick={() => setAuthor('')} aria-label={`Clear author filter ${filters.author}`} className="text-muted hover:text-ink">
+            ✕
+          </button>
+        </span>
+      </div>
+    )}
     </div>
   )
 }

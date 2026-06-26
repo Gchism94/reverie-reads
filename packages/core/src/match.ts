@@ -1,6 +1,7 @@
 import type { Book, Owned, ReadEntry } from './types'
 import { norm } from './normalize'
 import { deriveBoyfriend } from './boyfriend'
+import { contributorsChanged, reconcileContributors } from './contributors'
 
 // ── ISBN normalization (match the same book whether it stored ISBN-10 or ISBN-13) ──
 
@@ -169,6 +170,12 @@ export function mergeImport(existing: Book, incoming: Incoming): ImportMergeResu
   if (tags.length !== existing.tags.length) patch.tags = tags
   const genres = [...new Set([...existing.genres, ...(incoming.genres ?? [])])]
   if (genres.length !== existing.genres.length) patch.genres = genres
+
+  // Contributors: union the lists (additive; existing order + curation preserved, user edits win).
+  if (incoming.contributors?.length) {
+    const reconciled = reconcileContributors(existing.contributors ?? [], incoming.contributors)
+    if (contributorsChanged(existing.contributors ?? [], reconciled)) patch.contributors = reconciled
+  }
 
   const owned = mergeOwned(existing.owned, incoming.owned)
   if (JSON.stringify(owned) !== JSON.stringify(existing.owned)) patch.owned = owned

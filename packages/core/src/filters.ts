@@ -1,5 +1,6 @@
 import type { Book, ReadStatus, SeriesStatus } from './types'
 import { authorOf } from './normalize'
+import { normalizeName } from './contributors'
 
 export type LibrarySort = 'az' | 'author' | 'rating' | 'intensity' | 'recent' | 'series'
 export type SeriesLenBucket = 'Any' | '1' | '2' | '3' | '4' | '5+' | 'Unknown'
@@ -14,6 +15,8 @@ export interface LibraryFilters {
   read: 'All' | ReadStatus
   format: 'All' | string
   fave: boolean
+  /** filter to books where any contributor matches this name ('' = off) */
+  author: string
   sort: LibrarySort
 }
 
@@ -26,8 +29,17 @@ export const defaultFilters = (): LibraryFilters => ({
   read: 'All',
   format: 'All',
   fave: false,
+  author: '',
   sort: 'az',
 })
+
+/** Does any of the book's contributors match the given name (case/space-insensitive)? */
+export function bookHasAuthor(b: Book, name: string): boolean {
+  const key = normalizeName(name)
+  if (!key) return true
+  if (b.contributors.length) return b.contributors.some((c) => normalizeName(c.name) === key)
+  return normalizeName(authorOf(b)) === key // back-compat for not-yet-joined books
+}
 
 /** A book counts as "read" if marked Read or it has any logged reads. */
 export const isBookRead = (b: Book): boolean => b.readStatus === 'Read' || b.reads.length > 0
@@ -59,6 +71,7 @@ export function matchesFilters(b: Book, f: LibraryFilters): boolean {
   }
   if (f.format !== 'All' && b.format !== f.format) return false
   if (f.fave && !b.fave) return false
+  if (f.author && !bookHasAuthor(b, f.author)) return false
   if (f.q) {
     const hay = [b.title, authorOf(b), b.series, ...b.tags, ...b.genres].join(' ').toLowerCase()
     if (!hay.includes(f.q.toLowerCase())) return false
@@ -107,6 +120,7 @@ export function activeFilterCount(f: LibraryFilters): number {
   if (f.read !== 'All') n++
   if (f.format !== 'All') n++
   if (f.fave) n++
+  if (f.author) n++
   return n
 }
 
