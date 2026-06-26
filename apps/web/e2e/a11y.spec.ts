@@ -7,7 +7,7 @@ const ANON =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0'
 const MAILPIT = 'http://127.0.0.1:55324'
 const DEV_EMAIL = 'dev@reverie.local'
-const SKINS = ['reverie', 'grimoire', 'aphelion', 'marrow'] as const
+const SKINS = ['tryst', 'grimoire', 'aphelion', 'marrow'] as const
 const MODES = ['dark', 'light'] as const
 
 interface MailpitMessage {
@@ -68,7 +68,7 @@ async function cleanup(clubId: string, listCode: string) {
   await sb.from('clubs').delete().eq('id', clubId)
   await sb.from('shared_docs').delete().eq('key', listCode)
   await sb.from('shared_refs').delete().eq('code', listCode)
-  await setProfileSkinMode('reverie', 'system') // restore the dev profile
+  await setProfileSkinMode('tryst', 'system') // restore the dev profile
 }
 
 /** Set the dev profile's skin + mode so the app's skin-sync applies them on the next load
@@ -85,7 +85,7 @@ test('every route passes axe (no serious/critical) across all skins x both modes
   const { bookId, clubId, listCode } = await setupFixtures()
   await signIn(page)
 
-  // Reverie (the default skin) gets full route coverage; the alternate skins sweep a core set
+  // Tryst (the default skin) gets full route coverage; the alternate skins sweep a core set
   // that exercises the whole token surface (palette, cards, fills, links, muted text).
   const allRoutes: [string, string][] = [
     ['Home', '/'],
@@ -110,7 +110,7 @@ test('every route passes axe (no serious/critical) across all skins x both modes
   const failures: string[] = []
   try {
     for (const skin of SKINS) {
-      const routes = skin === 'reverie' ? allRoutes : coreRoutes
+      const routes = skin === 'tryst' ? allRoutes : coreRoutes
       for (const mode of MODES) {
         await setProfileSkinMode(skin, mode) // skin-sync picks this up on each fresh load
         // Drop the persisted query cache so the fresh profile (not a stale persisted one) loads.

@@ -20,7 +20,7 @@ export const ADAPTIVE_CARRY_KEYS = [
   '--shadow', '--grain-opacity', '--font-display', '--font-sans', '--font-mono',
 ] as const
 
-const SKIN_ORDER: SkinId[] = ['reverie', 'grimoire', 'aphelion', 'marrow']
+const SKIN_ORDER: SkinId[] = ['tryst', 'grimoire', 'aphelion', 'marrow']
 
 // ── colour parsing / contrast ──
 
@@ -163,7 +163,7 @@ export function nudgeForAA(palette: Palette, target = 4.5): Palette {
 
 // Which skin a subgenre / tag pulls toward. Tags/subgenres not listed contribute to no skin.
 const SKIN_AFFINITY: Record<SkinId, { subgenres: string[]; tags: string[] }> = {
-  reverie: {
+  tryst: {
     subgenres: ['Romance', 'Contemporary', 'Sports', 'Cowboy Romance'],
     tags: ['Slow Burn', 'Friends to Lovers', 'Grumpy/Sunshine', 'Small Town', 'Second Chance', 'He Falls First', 'Fake Dating', 'Found Family'],
   },
@@ -195,10 +195,10 @@ function engagement(b: Book): number {
 
 /**
  * Normalized Tier-1 skin weights from the reader's library — subgenre + tags scored per book and
- * scaled by engagement. A small floor keeps the blend stable (and Reverie-anchored) for thin data.
+ * scaled by engagement. A small floor keeps the blend stable (and Tryst-anchored) for thin data.
  */
 export function computeSkinWeights(books: readonly Book[]): Record<SkinId, number> {
-  const raw: Record<SkinId, number> = { reverie: 0, grimoire: 0, aphelion: 0, marrow: 0 }
+  const raw: Record<SkinId, number> = { tryst: 0, grimoire: 0, aphelion: 0, marrow: 0 }
   for (const b of books) {
     const w = engagement(b)
     const tags = new Set(b.tags)
@@ -210,12 +210,12 @@ export function computeSkinWeights(books: readonly Book[]): Record<SkinId, numbe
       raw[id] += score * w
     }
   }
-  // Floor: a base weight per skin (Reverie a touch higher as the default anchor).
-  const floor: Record<SkinId, number> = { reverie: 1.2, grimoire: 0.4, aphelion: 0.4, marrow: 0.4 }
+  // Floor: a base weight per skin (Tryst a touch higher as the default anchor).
+  const floor: Record<SkinId, number> = { tryst: 1.2, grimoire: 0.4, aphelion: 0.4, marrow: 0.4 }
   const withFloor = SKIN_ORDER.map((id) => raw[id] + floor[id])
   const total = withFloor.reduce((s, v) => s + v, 0) || 1
   return {
-    reverie: withFloor[0]! / total,
+    tryst: withFloor[0]! / total,
     grimoire: withFloor[1]! / total,
     aphelion: withFloor[2]! / total,
     marrow: withFloor[3]! / total,
@@ -224,7 +224,7 @@ export function computeSkinWeights(books: readonly Book[]): Record<SkinId, numbe
 
 /** The skin a reader leans toward most. */
 export function dominantSkin(weights: Record<SkinId, number>): SkinId {
-  return SKIN_ORDER.reduce((best, id) => (weights[id] > weights[best] ? id : best), 'reverie')
+  return SKIN_ORDER.reduce((best, id) => (weights[id] > weights[best] ? id : best), 'tryst')
 }
 
 /** L1 distance between two weight vectors (0 = identical … 2 = opposite). */
@@ -248,9 +248,9 @@ export function isMaterialShift(
 
 /** A short human insight about the taste mix, e.g. "leaning fantasy, with a dark edge". */
 export function tasteInsight(weights: Record<SkinId, number>): string {
-  const flavour: Record<SkinId, string> = { reverie: 'romance', grimoire: 'fantasy', aphelion: 'sci-fi', marrow: 'dark & eerie' }
+  const flavour: Record<SkinId, string> = { tryst: 'romance', grimoire: 'fantasy', aphelion: 'sci-fi', marrow: 'dark & eerie' }
   const ranked = SKIN_ORDER.filter((id) => weights[id] > 0.05).sort((a, b) => weights[b] - weights[a])
-  const top = ranked[0] ?? 'reverie'
+  const top = ranked[0] ?? 'tryst'
   const second = ranked[1]
   if (second && weights[second] > weights[top] * 0.6) {
     return `leaning ${flavour[top]}, with a ${flavour[second]} streak`

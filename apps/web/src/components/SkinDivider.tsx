@@ -2,10 +2,10 @@ import { type SkinId } from '@reverie/core'
 import { useEffectiveSkin } from '../skin/labels'
 
 // Skin-aware divider: each skin has its own ornament drawn in the skin's tertiary (gold) tone —
-// filigree (Reverie), alchemical sun (Grimoire), orbital (Aphelion), thorn (Marrow). Pass `skin`
+// filigree (Tryst), alchemical sun (Grimoire), orbital (Aphelion), thorn (Marrow). Pass `skin`
 // to force a motif (gallery previews); otherwise it follows the active skin.
 const MOTIFS: Record<SkinId, React.ReactNode> = {
-  reverie: (
+  tryst: (
     <>
       <path d="M10 13h70" strokeOpacity=".5" />
       <path d="M210 13h-70" strokeOpacity=".5" />

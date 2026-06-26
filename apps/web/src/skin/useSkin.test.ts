@@ -4,7 +4,7 @@ import { resolveMode, useSkin } from './useSkin'
 describe('useSkin store', () => {
   beforeEach(() => {
     localStorage.clear()
-    useSkin.getState().hydrate('reverie', 'dark', null)
+    useSkin.getState().hydrate('tryst', 'dark', null)
   })
 
   it('applies skin and resolved mode onto <html> (independent axes)', () => {

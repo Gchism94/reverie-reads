@@ -90,12 +90,12 @@ describe('computeSkinWeights', () => {
   })
   it('weights are normalized and sum to 1', () => {
     const w = computeSkinWeights([makeBook({ id: '1', title: 'A' })])
-    expect(w.reverie + w.grimoire + w.aphelion + w.marrow).toBeCloseTo(1, 5)
+    expect(w.tryst + w.grimoire + w.aphelion + w.marrow).toBeCloseTo(1, 5)
   })
 })
 
 describe('isMaterialShift (cron gate)', () => {
-  const w = (reverie: number, grimoire: number, aphelion: number, marrow: number) => ({ reverie, grimoire, aphelion, marrow })
+  const w = (tryst: number, grimoire: number, aphelion: number, marrow: number) => ({ tryst, grimoire, aphelion, marrow })
 
   it('is false for an unchanged / barely-nudged profile (idempotent + noise-proof)', () => {
     expect(isMaterialShift(w(0.6, 0.2, 0.1, 0.1), w(0.6, 0.2, 0.1, 0.1))).toBe(false)

@@ -11,7 +11,7 @@ export type Boyfriend =
 
 /**
  * Derive the book-boyfriend archetype from tags + subgenre. Pure port of the prototype's
- * deriveBoyfriend — the order of checks is significant (first match wins). This is Reverie-skin
+ * deriveBoyfriend — the order of checks is significant (first match wins). This is Tryst-skin
  * (romance) signature logic; non-romance tags simply fall through to the default.
  */
 export function deriveBoyfriend(b: { tags?: string[]; subgenre?: string }): Boyfriend {

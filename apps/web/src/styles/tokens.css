@@ -4,7 +4,7 @@
    mode is a no-rebuild attribute flip. The production token names below are the canonical
    contract (a superset of the demo's); the demo contract names (--bg/--primary-solid/--secondary
    /--tertiary/--font-body) are exposed as aliases in the base rule for the gallery + adaptive
-   blend. Seeded skins: Reverie (Romance, finalized + AA-corrected), Grimoire (Fantasy),
+   blend. Seeded skins: Tryst (Romance, finalized + AA-corrected), Grimoire (Fantasy),
    Aphelion (Sci-Fi), Marrow (Horror). Adding a genre = one block here + a registry entry. */
 
 /* Derived/aliased tokens that adapt from each skin's core palette (a skin may override any). */
@@ -25,9 +25,9 @@
   --font-body: var(--font-sans);
 }
 
-/* ── REVERIE · Romance · gothic New Orleans (finalized, AA-corrected) ── */
+/* ── TRYST · Romance · gothic New Orleans (finalized, AA-corrected) ── */
 :root,
-[data-skin='reverie'][data-mode='dark'] {
+[data-skin='tryst'][data-mode='dark'] {
   --bg0: #0b0612;
   --bg1: #15091f;
   --ink: #f6e9f1;
@@ -60,7 +60,7 @@
   --font-mono: 'Hanken Grotesk', system-ui, sans-serif;
 }
 
-[data-skin='reverie'][data-mode='light'] {
+[data-skin='tryst'][data-mode='light'] {
   --bg0: #fbeee9;
   --bg1: #f5e0e4;
   --ink: #2a1320;

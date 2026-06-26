@@ -1,5 +1,5 @@
 // The data model is generic (tags / intensity / genre); each skin chooses how to LABEL those
-// fields in the UI. The Reverie (romance) skin still says "Tropes" and "Spice"; a neutral skin
+// fields in the UI. The Tryst (romance) skin still says "Tropes" and "Spice"; a neutral skin
 // says "Tags" and "Intensity". UI reads labels from here (via the active skin), never hardcoded.
 
 export interface FieldLabels {
@@ -9,7 +9,7 @@ export interface FieldLabels {
   tag: string
   /** label for the generic `intensity` field */
   intensity: string
-  /** emoji/glyph used to render an intensity level (Reverie: 🌶️) */
+  /** emoji/glyph used to render an intensity level (Tryst: 🌶️) */
   intensityGlyph: string
   /** label for the primary `genre` field */
   genre: string
@@ -17,7 +17,7 @@ export interface FieldLabels {
   subgenre: string
 }
 
-export const REVERIE_LABELS: FieldLabels = {
+export const TRYST_LABELS: FieldLabels = {
   tags: 'Tropes',
   tag: 'trope',
   intensity: 'Spice',

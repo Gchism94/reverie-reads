@@ -20,6 +20,9 @@ export interface Profile {
   adaptiveSkin: AdaptiveBundle | null
   adaptiveLocked: boolean
   adaptivePending: AdaptivePending | null
+  /** Last evolving-skin suggestion the reader dismissed ("Not now"); the cron won't re-surface the
+   *  same shift until taste moves materially past it. */
+  adaptiveDismissed: AdaptivePending | null
 }
 
 interface ProfileRow {
@@ -36,6 +39,7 @@ interface ProfileRow {
   adaptive_skin: AdaptiveBundle | null
   adaptive_locked: boolean | null
   adaptive_pending: AdaptivePending | null
+  adaptive_dismissed: AdaptivePending | null
 }
 
 export const profileKey = ['profile'] as const
@@ -49,11 +53,12 @@ const toProfile = (row: ProfileRow): Profile => ({
   defaultStore: row.default_store_id
     ? { id: row.default_store_id, name: row.default_store_name ?? '', website: row.default_store_website ?? '' }
     : null,
-  skin: isActiveSkin(row.skin) ? row.skin : 'reverie',
+  skin: isActiveSkin(row.skin) ? row.skin : 'tryst',
   mode: isMode(row.mode) ? row.mode : 'system',
   adaptiveSkin: row.adaptive_skin ?? null,
   adaptiveLocked: row.adaptive_locked ?? false,
   adaptivePending: row.adaptive_pending ?? null,
+  adaptiveDismissed: row.adaptive_dismissed ?? null,
 })
 
 /** The signed-in user's own profile (RLS returns only their row). */
@@ -63,7 +68,7 @@ export function useProfile() {
     queryFn: async (): Promise<Profile | null> => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, display_name, goal_year, goal_target, auto_merge_duplicates, default_store_id, default_store_name, default_store_website, skin, mode, adaptive_skin, adaptive_locked, adaptive_pending')
+        .select('id, display_name, goal_year, goal_target, auto_merge_duplicates, default_store_id, default_store_name, default_store_website, skin, mode, adaptive_skin, adaptive_locked, adaptive_pending, adaptive_dismissed')
         .limit(1)
         .maybeSingle()
       if (error) throw error
@@ -86,6 +91,7 @@ export function useUpdateProfile() {
       adaptiveSkin?: AdaptiveBundle | null
       adaptiveLocked?: boolean
       adaptivePending?: AdaptivePending | null
+      adaptiveDismissed?: AdaptivePending | null
     }): Promise<void> => {
       const { data: auth } = await supabase.auth.getUser()
       const id = auth.user?.id
@@ -100,6 +106,7 @@ export function useUpdateProfile() {
       if (patch.adaptiveSkin !== undefined) row.adaptive_skin = patch.adaptiveSkin
       if (patch.adaptiveLocked !== undefined) row.adaptive_locked = patch.adaptiveLocked
       if (patch.adaptivePending !== undefined) row.adaptive_pending = patch.adaptivePending
+      if (patch.adaptiveDismissed !== undefined) row.adaptive_dismissed = patch.adaptiveDismissed
       if (patch.defaultStore !== undefined) {
         row.default_store_id = patch.defaultStore?.id ?? null
         row.default_store_name = patch.defaultStore?.name ?? null

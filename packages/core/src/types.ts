@@ -49,8 +49,8 @@ export interface Book {
   genre: string // primary genre signal (drives skin + adaptive logic); 'romance' is the default
   subgenre: string
   genres: string[]
-  tags: string[] // generic content tags (the Reverie skin labels these "Tropes")
-  intensity: number | null // 0..5, null = unset (the Reverie skin labels this "Spice")
+  tags: string[] // generic content tags (the Tryst skin labels these "Tropes")
+  intensity: number | null // 0..5, null = unset (the Tryst skin labels this "Spice")
   cover: string
   isbn: string
   fave: boolean

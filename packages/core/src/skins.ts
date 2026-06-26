@@ -1,11 +1,13 @@
-import { NEUTRAL_LABELS, REVERIE_LABELS, type FieldLabels } from './labels'
+import { NEUTRAL_LABELS, TRYST_LABELS, type FieldLabels } from './labels'
 
 // The skin registry. A skin is a complete swappable identity: a token bundle (light + dark,
 // authored in CSS so switching is a no-rebuild attribute flip), a display/body font, an ambient
 // signature (star density + divider motif), and the field labels it features. Skin and light/dark
 // are INDEPENDENT axes. Adding a genre later = one entry here + a token block in tokens.css.
 
-export type SkinId = 'reverie' | 'grimoire' | 'aphelion' | 'marrow'
+// Note: 'tryst' is the romance skin's id. "Reverie" is the umbrella app name (APP_NAME); the
+// romance skin took the other cleared finalist, Tryst. Same gothic-NOLA palettes/fonts/divider.
+export type SkinId = 'tryst' | 'grimoire' | 'aphelion' | 'marrow'
 /** The active-skin value the user can select: a Tier-1 skin or their generated adaptive skin. */
 export type ActiveSkin = SkinId | 'adaptive'
 /** User mode preference; 'system' follows prefers-color-scheme. */
@@ -21,21 +23,21 @@ export interface Skin {
   starDensity: number
   /** divider motif key (matches a `.d-<id>` SVG) */
   divider: SkinId
-  /** which field labels this skin features (Reverie → Tropes/Spice; others → Tags/Intensity) */
+  /** which field labels this skin features (Tryst → Tropes/Spice; others → Tags/Intensity) */
   labels: FieldLabels
   /** display font family, for preview chrome (the live value comes from the CSS token) */
   displayFont: string
 }
 
 export const SKINS: Record<SkinId, Skin> = {
-  reverie: {
-    id: 'reverie',
-    label: 'Reverie',
+  tryst: {
+    id: 'tryst',
+    label: 'Tryst',
     genre: 'Romance',
     tagline: 'A gothic hush over the night shelf.',
     starDensity: 60,
-    divider: 'reverie',
-    labels: REVERIE_LABELS,
+    divider: 'tryst',
+    labels: TRYST_LABELS,
     displayFont: "'Fraunces', Georgia, serif",
   },
   grimoire: {
@@ -70,7 +72,7 @@ export const SKINS: Record<SkinId, Skin> = {
   },
 }
 
-export const DEFAULT_SKIN: SkinId = 'reverie'
+export const DEFAULT_SKIN: SkinId = 'tryst'
 export const SKIN_LIST: Skin[] = Object.values(SKINS)
 export const isSkinId = (s: string | null | undefined): s is SkinId => !!s && s in SKINS
 export const isActiveSkin = (s: string | null | undefined): s is ActiveSkin =>

@@ -19,7 +19,7 @@ function score(books: Book[], a: QuizAnswers): { picks: Pick[]; headline: string
   const cravings = [...new Set(a.tropes)]
 
   // Build a genre-neutral profile from the (romance-flavored) quiz, then score with the core
-  // vibe matcher. The book-boyfriend archetype is passed as the Reverie skin's signature signal.
+  // vibe matcher. The book-boyfriend archetype is passed as the Tryst skin's signature signal.
   const subWeights = { ...a.subs }
   if (a.dark) subWeights['Dark Romance'] = (subWeights['Dark Romance'] ?? 0) + 1
   const profile: MatchProfile = { subWeights, wantTags: cravings, targetIntensity: target, archetypeWeights: a.arts }
