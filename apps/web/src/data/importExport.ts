@@ -1,8 +1,9 @@
-import { parseCsvIncoming, type Book } from '@reverie/core'
+import { isContributorRole, parseCsvIncoming, type Book, type Contributor } from '@reverie/core'
 import { supabase } from '../lib/supabase'
 import type { BookRow } from './types'
 import { applyIncoming, type ReviewCandidate } from './intake'
 import { loadVerdicts } from './duplicates'
+import { persistContributors } from './contributors'
 
 async function currentUserId(): Promise<string> {
   const { data } = await supabase.auth.getUser()
@@ -11,36 +12,74 @@ async function currentUserId(): Promise<string> {
   return id
 }
 
-/** Serialize the whole library (books incl. ownership, reads, lists, memberships, and the
- * user's own reviews) to a JSON backup. */
+type EmbeddedAuthor = { name: string } | { name: string }[] | null
+interface ContribJoinRow {
+  id: string
+  book_authors: { position: number; role: string; authors: EmbeddedAuthor }[]
+}
+const authorName = (a: EmbeddedAuthor): string => (Array.isArray(a) ? (a[0]?.name ?? '') : (a?.name ?? ''))
+
+/**
+ * Serialize the WHOLE account to a JSON backup (v4): books (incl. genre/tags/intensity/owned
+ * formats), per-book contributors, reads, lists + memberships, the user's reviews, reading orders +
+ * items, merge verdicts, and the profile (skin/mode + adaptive taste state + goal). Symmetric with
+ * deletion — everything the account holds round-trips.
+ */
 export async function buildBackup(): Promise<string> {
   const ownerId = await currentUserId()
-  const [books, reads, lists, items, reviews] = await Promise.all([
+  const [books, contribs, reads, lists, items, reviews, orders, verdicts, profile] = await Promise.all([
     supabase.from('books').select('*'),
+    supabase.from('books').select('id, book_authors(position, role, authors(name))'),
     supabase.from('reads').select('*'),
     supabase.from('lists').select('*'),
     supabase.from('list_items').select('*'),
     supabase.from('reviews').select('work_key, reviewer_name, rating, body, created_at').eq('reviewer_id', ownerId),
+    supabase.from('reading_orders').select('id, name, description, reading_order_items(position, book_id, series, note)'),
+    supabase.from('merge_verdicts').select('book_id, incoming_key, verdict'),
+    supabase
+      .from('profiles')
+      .select('display_name, goal_year, goal_target, auto_merge_duplicates, default_store_id, default_store_name, default_store_website, skin, mode, adaptive_skin, adaptive_locked')
+      .eq('id', ownerId)
+      .maybeSingle(),
   ])
-  for (const r of [books, reads, lists, items, reviews]) if (r.error) throw r.error
+  for (const r of [books, contribs, reads, lists, items, reviews, orders, verdicts]) if (r.error) throw r.error
+
+  // Per-book contributors, keyed by (old) book id.
+  const contributorsByBook: Record<string, { name: string; role: string; position: number }[]> = {}
+  for (const row of (contribs.data as unknown as ContribJoinRow[]) ?? []) {
+    const list = (row.book_authors ?? [])
+      .map((ba) => ({ name: authorName(ba.authors), role: ba.role, position: ba.position }))
+      .filter((c) => c.name)
+      .sort((a, b) => a.position - b.position)
+    if (list.length) contributorsByBook[row.id] = list
+  }
+
   return JSON.stringify({
-    v: 3,
+    v: 4,
     app: 'reverie',
     exportedAt: new Date().toISOString(),
     books: books.data,
+    contributors: contributorsByBook,
     reads: reads.data,
     lists: lists.data,
     list_items: items.data,
     reviews: reviews.data,
+    reading_orders: orders.data,
+    merge_verdicts: verdicts.data,
+    profile: profile.data ?? null,
   })
 }
 
 interface BackupShape {
   books?: BookRow[]
+  contributors?: Record<string, { name: string; role: string; position: number }[]>
   reads?: { book_id: string; read_on: string | null; format: string | null; rating: number | null; notes: string | null }[]
   lists?: { id: string; name: string; kind: string; is_priority: boolean }[]
   list_items?: { list_id: string; book_id: string; position: number | null }[]
   reviews?: { work_key: string; reviewer_name: string | null; rating: number | null; body: string }[]
+  reading_orders?: { name: string; description: string | null; reading_order_items: { position: number; book_id: string | null; series: string | null; note: string | null }[] }[]
+  merge_verdicts?: { book_id: string; incoming_key: string; verdict: string }[]
+  profile?: Record<string, unknown> | null
 }
 
 /** Restore a backup as new rows owned by the current user (ids are remapped, not reused). */
@@ -73,7 +112,18 @@ export async function restoreBackup(
       .select('id')
       .single()
     if (error) throw error
-    bookIdMap.set(b.id, (created as { id: string }).id)
+    const newId = (created as { id: string }).id
+    bookIdMap.set(b.id, newId)
+    // Restore the book's full contributor list (v4) via the owner-scoped RPC.
+    const contribs = data.contributors?.[b.id]
+    if (contribs?.length) {
+      const list: Contributor[] = contribs.map((c, i) => ({
+        name: c.name,
+        role: isContributorRole(c.role) ? c.role : 'author',
+        position: c.position ?? i,
+      }))
+      await persistContributors(newId, list)
+    }
   }
 
   // Reads + memberships, remapped onto the new ids.
@@ -116,6 +166,46 @@ export async function restoreBackup(
     const { error } = await supabase
       .from('reviews')
       .upsert(reviews, { onConflict: 'work_key,reviewer_id' })
+    if (error) throw error
+  }
+
+  // Reading orders (v4): recreate each order + its items, remapping book ids (series stay by name).
+  for (const o of data.reading_orders ?? []) {
+    const { data: created, error } = await supabase
+      .from('reading_orders')
+      .insert({ owner_id: ownerId, name: o.name, description: o.description })
+      .select('id')
+      .single()
+    if (error) throw error
+    const orderId = (created as { id: string }).id
+    const orderItems = (o.reading_order_items ?? [])
+      .map((it) => {
+        const bookId = it.book_id ? bookIdMap.get(it.book_id) : null
+        if (it.book_id && !bookId) return null // a book that didn't come across
+        return { reading_order_id: orderId, owner_id: ownerId, position: it.position, book_id: bookId ?? null, series: it.series, note: it.note }
+      })
+      .filter((it): it is NonNullable<typeof it> => it !== null)
+    if (orderItems.length) {
+      const { error: ie } = await supabase.from('reading_order_items').insert(orderItems)
+      if (ie) throw ie
+    }
+  }
+
+  // Merge verdicts (v4), remapped onto the new book ids.
+  const verdicts = (data.merge_verdicts ?? [])
+    .map((v) => {
+      const bookId = bookIdMap.get(v.book_id)
+      return bookId ? { owner_id: ownerId, book_id: bookId, incoming_key: v.incoming_key, verdict: v.verdict } : null
+    })
+    .filter((v): v is NonNullable<typeof v> => v !== null)
+  if (verdicts.length) {
+    const { error } = await supabase.from('merge_verdicts').upsert(verdicts, { onConflict: 'owner_id,book_id,incoming_key' })
+    if (error) throw error
+  }
+
+  // Profile: restore appearance + adaptive taste state + goal onto the current account.
+  if (data.profile) {
+    const { error } = await supabase.from('profiles').update(data.profile).eq('id', ownerId)
     if (error) throw error
   }
 

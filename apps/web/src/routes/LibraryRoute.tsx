@@ -1,4 +1,4 @@
-import { createRoute, useNavigate } from '@tanstack/react-router'
+import { createRoute, Link, useNavigate } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 import { groupSeries, matchesFilters, sortBooks } from '@reverie/core'
 import { rootRoute } from './RootRoute'
@@ -28,9 +28,26 @@ function EmptyState() {
         Everything you’ve read, after dark
       </h1>
       <p className="mt-4 max-w-[42ch] text-[15px] leading-relaxed text-muted">
-        Mark a book “Reading” and your home comes alive — spice, tropes, series gaps and
-        rereads, all in one place.
+        Your shelves are empty. Add your first book — scan a barcode, search by title, or import a
+        Goodreads / StoryGraph export — and your home comes alive with spice, tropes, series gaps
+        and rereads.
       </p>
+      <div className="mt-6 flex flex-wrap items-center justify-center gap-2.5">
+        <Link
+          to="/add"
+          className="flex h-11 items-center rounded-full px-6 text-[14px] font-semibold"
+          style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))', color: 'var(--on-primary)' }}
+        >
+          ＋ Add your first book
+        </Link>
+        <Link
+          to="/settings"
+          className="flex h-11 items-center rounded-full border border-line px-5 text-[14px] font-semibold text-ink"
+          style={{ background: 'var(--field)' }}
+        >
+          Import a CSV
+        </Link>
+      </div>
     </section>
   )
 }
