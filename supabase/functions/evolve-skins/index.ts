@@ -23,6 +23,7 @@ import {
   isMaterialShift,
   tasteInsight,
 } from './taste.ts'
+import { captureEdgeError, logEvent } from '../_shared/observe.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -81,8 +82,10 @@ Deno.serve(async (req: Request) => {
       updated++
     }
 
+    logEvent('info', 'evolve-skins', 'run_complete', { scanned, updated })
     return new Response(JSON.stringify({ scanned, updated }), { headers: { ...cors, 'Content-Type': 'application/json' } })
   } catch (e) {
+    captureEdgeError('evolve-skins', e, { scanned, updated })
     return new Response(JSON.stringify({ error: String(e), scanned, updated }), { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } })
   }
 })

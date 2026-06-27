@@ -6,6 +6,7 @@
 // indie.ts) and degrades gracefully on failure. Deno Edge Function.
 
 import { envInt, rateLimit, tooMany } from '../_shared/ratelimit.ts'
+import { captureEdgeError } from '../_shared/observe.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -119,6 +120,7 @@ Deno.serve(async (req: Request) => {
     return json({ payload: payload ?? null, source: 'live' })
   } catch (e) {
     // Surface a clean failure; the client falls back to its degraded state (B4).
+    captureEdgeError('geo', e)
     return json({ error: String(e), payload: null }, 502)
   }
 })

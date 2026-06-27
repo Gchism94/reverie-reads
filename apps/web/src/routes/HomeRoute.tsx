@@ -163,7 +163,7 @@ function HomeScreen() {
                   style={{ background: 'var(--field)' }}
                   aria-label={`Open ${b.title}`}
                 >
-                  {b.cover && <img src={b.cover} alt="" className="h-full w-full object-cover" />}
+                  {b.cover && <img src={b.cover} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />}
                 </button>
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-[14px] font-semibold text-ink">{b.title}</div>
@@ -225,7 +225,7 @@ function HomeScreen() {
                 aria-label={`Open ${b.title}`}
               >
                 <div className="aspect-[2/3] overflow-hidden rounded-lg border border-line" style={{ background: 'var(--field)' }}>
-                  {b.cover && <img src={b.cover} alt="" className="h-full w-full object-cover" />}
+                  {b.cover && <img src={b.cover} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />}
                 </div>
                 <div className="mt-1 truncate text-[11.5px] font-semibold text-ink">{b.title}</div>
                 <div className="text-[10.5px] text-primary">

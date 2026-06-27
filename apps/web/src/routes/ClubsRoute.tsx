@@ -182,7 +182,7 @@ function ClubsScreen() {
           {clubs.map((c) => (
             <button key={c.id} type="button" onClick={() => openClub(c.id)} className="flex items-center gap-3 rounded-2xl border border-line p-3 text-left" style={{ background: 'var(--card)' }}>
               <div className="h-14 w-10 flex-none overflow-hidden rounded border border-line" style={{ background: 'var(--field)' }}>
-                {c.cover && <img src={c.cover} alt="" className="h-full w-full object-cover" />}
+                {c.cover && <img src={c.cover} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />}
               </div>
               <div className="min-w-0 flex-1">
                 <div className="truncate text-[14px] font-semibold text-ink">{c.title}</div>

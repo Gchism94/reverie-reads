@@ -4,18 +4,16 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="dark light" />
+    <!-- Installable/PWA basics. App icons are an owner asset (drop into public/ + add to the manifest). -->
+    <meta name="theme-color" content="#0b0612" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="manifest" href="/manifest.webmanifest" />
     <title>Reverie</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,500;1,9..144,600&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap"
-      rel="stylesheet"
-    />
-    <!-- Tier-1 skin fonts: Grimoire (Cormorant/Spectral), Aphelion (Space Grotesk/Mono), Marrow (Playfair/Inter) -->
-    <link
-      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Spectral:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
+    <!-- Only the ACTIVE skin's font pairing is loaded (below, pre-paint), not all nine families.
+         The Skin Gallery loads the rest on demand. Keep this map in sync with src/skin/fonts.ts. -->
     <script>
       // Set skin + light/dark mode before first paint to avoid a flash of the wrong identity.
       ;(function () {
@@ -23,6 +21,18 @@
           var valid = { tryst: 1, grimoire: 1, aphelion: 1, marrow: 1 }
           var skin = localStorage.getItem('reverie.skin')
           if (!valid[skin]) skin = 'tryst'
+          // Load ONLY the active skin's font pairing, pre-paint (display=swap → no FOIT).
+          var FONT = {
+            tryst: 'https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,500;1,9..144,600&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap',
+            grimoire: 'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Spectral:wght@400;500;600;700&display=swap',
+            aphelion: 'https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap',
+            marrow: 'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap',
+          }
+          var fl = document.createElement('link')
+          fl.rel = 'stylesheet'
+          fl.href = FONT[skin]
+          fl.setAttribute('data-skin-font', '')
+          document.head.appendChild(fl)
           var mode = localStorage.getItem('reverie.mode')
           if (mode !== 'light' && mode !== 'dark' && mode !== 'system') mode = 'system'
           var resolved =

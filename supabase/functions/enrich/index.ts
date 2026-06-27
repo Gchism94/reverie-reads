@@ -23,6 +23,7 @@ import {
   type StampedSource,
 } from './merge.ts'
 import { envInt, rateLimit, tooMany } from '../_shared/ratelimit.ts'
+import { captureEdgeError } from '../_shared/observe.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -193,6 +194,7 @@ Deno.serve(async (req: Request) => {
     const body = { ...toResponse(merged), source: sourceList }
     return json(rateLimited && !sourceList ? { ...body, rateLimited: true } : body)
   } catch (e) {
+    captureEdgeError('enrich', e)
     return new Response(JSON.stringify({ error: String(e) }), { status: 400, headers: { ...cors, 'Content-Type': 'application/json' } })
   }
 })

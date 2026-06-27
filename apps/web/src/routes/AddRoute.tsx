@@ -167,7 +167,7 @@ function AddForm({ hit, onAdded }: { hit: Partial<SearchHit>; onAdded: () => voi
       <div className="flex gap-4">
         <div className="flex-none">
           <div className="aspect-[2/3] w-20 overflow-hidden rounded-lg border border-line" style={{ background: `linear-gradient(150deg, ${g0}, ${g1})` }}>
-            {cover && <img src={cover} alt="" className="h-full w-full object-cover" />}
+            {cover && <img src={cover} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />}
           </div>
           <button
             type="button"
@@ -471,7 +471,7 @@ function AddScreen() {
                 style={{ background: 'var(--field)' }}
               >
                 <div className="h-16 w-11 flex-none overflow-hidden rounded border border-line" style={{ background: 'var(--chip)' }}>
-                  {it.cover && <img src={it.cover} alt="" className="h-full w-full object-cover" />}
+                  {it.cover && <img src={it.cover} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />}
                 </div>
                 <div className="min-w-0">
                   <div className="truncate text-[14px] font-semibold text-ink">{it.title}</div>

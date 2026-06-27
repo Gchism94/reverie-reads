@@ -5,12 +5,15 @@ import { QueryClient } from '@tanstack/react-query'
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client'
 import { APP_NAME } from '@reverie/core'
 import { AuthProvider } from './auth/AuthProvider'
+import { ErrorBoundary } from './components/ErrorBoundary'
+import { initObservability } from './lib/observability'
 import { createDexiePersister } from './lib/offlineCache'
 import { router } from './router'
 import './styles/tokens.css'
 import './styles/globals.css'
 
 document.title = APP_NAME
+initObservability()
 
 const WEEK = 1000 * 60 * 60 * 24 * 7
 
@@ -28,17 +31,19 @@ if (!rootEl) throw new Error('Root element #root not found')
 
 createRoot(rootEl).render(
   <StrictMode>
-    <PersistQueryClientProvider
-      client={queryClient}
-      persistOptions={{ persister, maxAge: WEEK, buster: 'v1' }}
-      onSuccess={() => {
-        // Flush any writes that were queued while offline.
-        void queryClient.resumePausedMutations()
-      }}
-    >
-      <AuthProvider>
-        <RouterProvider router={router} />
-      </AuthProvider>
-    </PersistQueryClientProvider>
+    <ErrorBoundary>
+      <PersistQueryClientProvider
+        client={queryClient}
+        persistOptions={{ persister, maxAge: WEEK, buster: 'v1' }}
+        onSuccess={() => {
+          // Flush any writes that were queued while offline.
+          void queryClient.resumePausedMutations()
+        }}
+      >
+        <AuthProvider>
+          <RouterProvider router={router} />
+        </AuthProvider>
+      </PersistQueryClientProvider>
+    </ErrorBoundary>
   </StrictMode>,
 )

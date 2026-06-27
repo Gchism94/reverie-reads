@@ -11,6 +11,8 @@ import {
   type ResolvedMode,
 } from '@reverie/core'
 import { adaptiveVars } from './adaptive'
+import { loadSkinFont } from './fonts'
+import type { SkinId } from '@reverie/core'
 
 // Skin and light/dark MODE are independent axes, both persisted. localStorage gives an instant,
 // flash-free apply (the index.html boot script reads the same keys pre-paint); the profile is the
@@ -57,6 +59,8 @@ function apply(skin: ActiveSkin, mode: Mode, bundle: AdaptiveBundle | null): voi
   const resolved = resolveMode(mode)
   root.dataset.skin = skin
   root.dataset.mode = resolved
+  // Load only this skin's font pairing (adaptive borrows its dominant Tier-1 skin's type).
+  loadSkinFont(skin === 'adaptive' ? ((bundle?.dominant as SkinId) ?? DEFAULT_SKIN) : (skin as SkinId))
   if (skin === 'adaptive' && bundle) {
     const vars = adaptiveVars(bundle, resolved)
     for (const k of ADAPTIVE_VAR_KEYS) {

@@ -7,6 +7,8 @@
 // The user is identified ONLY from their own access token (never a body-supplied id), so a caller
 // can delete only themselves. The service role performs the actual deletion. Deno Edge Function.
 
+import { captureEdgeError } from '../_shared/observe.ts'
+
 const cors = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -53,6 +55,7 @@ Deno.serve(async (req: Request) => {
     }
     return json({ deleted: true })
   } catch (e) {
+    captureEdgeError('delete-account', e, { uid })
     return json({ error: String(e) }, 500)
   }
 })
