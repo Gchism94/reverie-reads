@@ -1,10 +1,11 @@
-import { useMemo, type CSSProperties } from 'react'
+import { useEffect, useMemo, type CSSProperties } from 'react'
 import { createRoute } from '@tanstack/react-router'
 import { SKINS, SKIN_LIST, type AdaptiveBundle, type Mode, type ResolvedMode, type Skin } from '@reverie/core'
 import { rootRoute } from './RootRoute'
 import { useBooks } from '../data/books'
 import { useProfile } from '../data/profile'
 import { useSkin } from '../skin/useSkin'
+import { loadAllSkinFonts } from '../skin/fonts'
 import { useSkinControls, useAdaptiveControls } from '../skin/controls'
 import { adaptiveVars, generateAdaptiveBundle } from '../skin/adaptive'
 import { SkinDivider } from '../components/SkinDivider'
@@ -194,6 +195,8 @@ function SkinGalleryScreen() {
   const activeMode = useSkin((s) => s.mode)
   const resolvedMode = useSkin((s) => s.resolvedMode)
   const { setSkin, setMode } = useSkinControls()
+  // The gallery previews every skin in its true type, so load all pairings here (only here).
+  useEffect(() => loadAllSkinFonts(), [])
 
   return (
     <section className="mx-auto max-w-4xl px-4 py-6 sm:px-6">

@@ -1,0 +1,12 @@
+{
+  "name": "Reverie",
+  "short_name": "Reverie",
+  "description": "A personal library for everything you read — shelves, series, rereads, and reading orders.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b0612",
+  "theme_color": "#0b0612",
+  "categories": ["books", "lifestyle", "productivity"]
+}
