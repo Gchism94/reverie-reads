@@ -3,7 +3,7 @@
 -- (2) club comments are spoiler-gated server-side by the reader's progress.
 
 begin;
-select plan(13);
+select plan(15);
 
 -- Two users. The on_auth_user_created trigger should create a profile for each.
 insert into auth.users (id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
@@ -98,6 +98,14 @@ select throws_ok(
 select throws_ok(
   $$insert into public.enrichment_cache (key, record) values ('ta:hack', '{}'::jsonb)$$,
   '42501', null, 'authenticated client cannot write the enrichment cache');
+
+-- geo_cache is likewise service-role only (granted to no client role).
+select throws_ok(
+  $$select count(*) from public.geo_cache$$,
+  '42501', null, 'authenticated client cannot read the geo cache (service-role only)');
+select throws_ok(
+  $$insert into public.geo_cache (key, payload) values ('stores:0,0:1', '{}'::jsonb)$$,
+  '42501', null, 'authenticated client cannot write the geo cache');
 
 select * from finish();
 rollback;
