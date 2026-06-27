@@ -7,6 +7,7 @@ import { useBooks } from '../data/books'
 import { useProfile, useUpdateProfile } from '../data/profile'
 import { usePerformMerge } from '../data/mergeBooks'
 import { buildBackup, importCsvToBackend, restoreBackup } from '../data/importExport'
+import { deleteAccount } from '../data/account'
 import { bulkComplete, isIncomplete, type BulkProgress } from '../data/enrichLibrary'
 import { DuplicateReview } from '../components/DuplicateReview'
 import type { ReviewCandidate } from '../data/intake'
@@ -38,7 +39,9 @@ function SettingsScreen() {
   const activeSkin = useSkin((s) => s.skin)
   const activeMode = useSkin((s) => s.mode)
   const { setSkin, setMode } = useSkinControls()
-  const { session } = useAuth()
+  const { session, signOut } = useAuth()
+  const [deleteText, setDeleteText] = useState('')
+  const [deleting, setDeleting] = useState(false)
 
   const [name, setName] = useState('')
   const [goal, setGoal] = useState('')
@@ -77,6 +80,20 @@ function SettingsScreen() {
     a.href = `data:application/json;charset=utf-8,${encodeURIComponent(json)}`
     a.download = `reverie-backup-${new Date().toISOString().slice(0, 10)}.json`
     a.click()
+  }
+
+  const confirmText = 'delete my account'
+  async function runDelete() {
+    if (deleteText.trim().toLowerCase() !== confirmText) return
+    setDeleting(true)
+    try {
+      await deleteAccount()
+      // The account is gone; end the session and return to the signed-out state.
+      await signOut()
+    } catch (e) {
+      setStatus(`Couldn’t delete the account: ${(e as Error).message}`)
+      setDeleting(false)
+    }
   }
 
   const readFile = (input: HTMLInputElement, handler: (text: string) => Promise<void>) => {
@@ -400,6 +417,62 @@ function SettingsScreen() {
               <DuplicateReview candidates={review} onDone={() => setReview([])} />
             </div>
           )}
+          <p className="mt-3 text-[12px] text-muted">
+            The JSON export is a complete copy — books, contributors, reads, shelves, reviews, reading
+            orders, merge decisions, and your appearance + taste profile.
+          </p>
+        </Section>
+
+        <Section title="Your data & privacy">
+          <p className="mb-2 text-[13px] text-muted">What this app stores in your account:</p>
+          <ul className="flex flex-col gap-1.5 text-[12.5px] text-muted">
+            {[
+              ['Your library', 'books and the details you add — series, tropes/tags, intensity, genre, owned formats, covers, ISBNs.'],
+              ['Reading activity', 'ratings, read status, reread log with dates, and reading goals.'],
+              ['Authorship', 'contributors (authors, co-authors, translators…) you record on a book.'],
+              ['Shelves & orders', 'your TBR/collections and custom reading orders.'],
+              ['Reviews & clubs', 'reviews you write and club memberships, progress, and comments (only where you opt in).'],
+              ['Taste profile', 'an adaptive-skin signal derived from your library to theme the app — kept in your profile, never shared.'],
+              ['Account', 'your email (for sign-in) and display name. No third-party trackers run in the app.'],
+            ].map(([k, v]) => (
+              <li key={k}>
+                <span className="font-semibold text-ink">{k}:</span> {v}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 text-[12px] text-muted">
+            Book metadata is fetched from public sources (Open Library, Google Books) through our
+            server and cached globally by work — never tied to you. Export or delete everything below.
+          </p>
+        </Section>
+
+        <Section title="Delete account">
+          <p className="text-[13px] text-muted">
+            Permanently delete your account and <b>all</b> of your data — library, reads, shelves,
+            reviews, reading orders, and profile. This cannot be undone. Consider exporting a backup first.
+          </p>
+          <label className="mt-3 block">
+            <span className="mb-1 block text-[12px] text-muted">
+              Type <span className="font-semibold text-ink">{confirmText}</span> to confirm
+            </span>
+            <input
+              value={deleteText}
+              onChange={(e) => setDeleteText(e.target.value)}
+              placeholder={confirmText}
+              aria-label={`Type "${confirmText}" to confirm account deletion`}
+              className={fieldClass}
+              style={fieldStyle}
+            />
+          </label>
+          <button
+            type="button"
+            onClick={() => void runDelete()}
+            disabled={deleting || deleteText.trim().toLowerCase() !== confirmText}
+            className="mt-3 h-10 rounded-xl border px-5 text-[14px] font-semibold disabled:opacity-40"
+            style={{ background: 'var(--field)', borderColor: 'var(--primary)', color: 'var(--primary)' }}
+          >
+            {deleting ? 'Deleting…' : 'Delete my account permanently'}
+          </button>
         </Section>
 
         {status && <p className="text-center text-[13px] text-primary">{status}</p>}
