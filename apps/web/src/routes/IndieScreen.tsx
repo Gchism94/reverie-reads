@@ -16,8 +16,10 @@ import { findBookstores, type Store } from '../lib/overpass'
 
 const miles = (km: number) => `${(km * 0.621371).toFixed(1)} mi`
 
-// CARTO basemaps — dark for Nocturne, light for Magnolia Dawn (free for light use; a tile key
-// is an owner-action for production volume).
+// Map tiles are served from CARTO's CDN (dark for Nocturne, light for Magnolia Dawn) — the
+// policy-respecting path for tiles (a CDN, not our origin). The throttled API calls (Overpass +
+// Nominatim) are proxied + cached through the `geo` Edge Function; tiles stay on the CDN. Owner
+// action at production volume: a tile plan / self-hosted tiles (free CARTO basemaps are light-use).
 const TILES = {
   dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
   light: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',

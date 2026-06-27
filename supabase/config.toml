@@ -421,3 +421,7 @@ verify_jwt = false
 # Account deletion requires a valid signed-in JWT (the caller can only delete themselves).
 [functions.delete-account]
 verify_jwt = true
+
+# Geo proxy (Overpass + Nominatim) — authenticated-only to limit abuse of the upstream quota.
+[functions.geo]
+verify_jwt = true
