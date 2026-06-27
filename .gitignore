@@ -26,3 +26,10 @@ supabase/.temp/
 .DS_Store
 *.local
 Thumbs.db
+.ds-sync/
+ds-bundle/
+.design-sync/.cache/
+.design-sync/learnings/
+.design-sync/node_modules
+data/raw/Library_App_list.xlsx
+data/raw/library_connected_series.csv

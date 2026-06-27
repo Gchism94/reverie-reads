@@ -1,0 +1,9 @@
+{
+  "projectId": "42ee8089-0dae-4f59-a0b0-7f743a85bece",
+  "shape": "package",
+  "pkg": "@reverie/web",
+  "globalName": "ReverieDS",
+  "tokensGlob": "src/styles/tokens.css",
+  "cssEntry": "src/styles/ds-fonts.css",
+  "readmeHeader": ".design-sync/conventions.md"
+}
