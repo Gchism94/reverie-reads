@@ -1,7 +1,8 @@
 import { useState, type ReactNode } from 'react'
 import { Link, createRoute, useNavigate } from '@tanstack/react-router'
-import { authorOf, buildBuyLinks, buyDisclosure, deriveBoyfriend, isAuthorRole, ROLE_LABELS, type Book, type Owned } from '@reverie/core'
+import { authorOf, buildBuyLinks, buyDisclosure, deriveBoyfriend, isAuthorRole, ordersForBook, ROLE_LABELS, type Book, type Owned } from '@reverie/core'
 import { useFilters } from '../library/filterStore'
+import { useReadingOrders } from '../data/readingOrders'
 import { buyConfig } from '../lib/buyConfig'
 import { useLabels } from '../skin/labels'
 import { rootRoute } from '../routes/RootRoute'
@@ -97,6 +98,7 @@ function BookDetailScreen() {
   const deleteRead = useDeleteRead(bookId)
   const toggleListItem = useToggleListItem(bookId)
   const createList = useCreateList()
+  const { data: readingOrders } = useReadingOrders()
   const setAuthor = useFilters((s) => s.setAuthor)
   const [dialog, setDialog] = useState<Dialog>(null)
 
@@ -119,6 +121,7 @@ function BookDetailScreen() {
     )
 
   const [g0, g1] = subgenreGradient(book.subgenre)
+  const bookOrders = ordersForBook(book, readingOrders ?? [])
   const bf = ARCH[book.boyfriend ?? ''] ?? ARCH.cinnamon
   const workKey = workKeyFor(book)
   const reviewerName = profile?.displayName || 'Reader'
@@ -209,6 +212,19 @@ function BookDetailScreen() {
               <span>{authorOf(book) || 'Unknown author'}</span>
             )}
           </div>
+          {bookOrders.length > 0 && (
+            <div className="mt-1 text-[12.5px] text-muted">
+              Part of reading order:{' '}
+              {bookOrders.map((o, i) => (
+                <span key={o.id}>
+                  {i > 0 ? ', ' : ''}
+                  <Link to="/orders" className="font-semibold text-primary underline-offset-2 hover:underline">
+                    {o.name}
+                  </Link>
+                </span>
+              ))}
+            </div>
+          )}
           {book.series && (
             <div className="mt-0.5 text-[14px] italic text-muted" style={{ fontFamily: 'var(--font-display)' }}>
               {book.series}

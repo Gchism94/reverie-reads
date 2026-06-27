@@ -102,6 +102,7 @@ test('every route passes axe (no serious/critical) across all skins x both modes
     ['SharedList', `/list/${listCode}`],
     ['Indie', '/indie'],
     ['Skins', '/skins'],
+    ['Orders', '/orders'],
   ]
   const coreRoutes = allRoutes.filter(([name]) =>
     ['Home', 'Library', 'Book detail', 'Stats', 'Settings', 'Skins', 'Clubs', 'Indie'].includes(name),
