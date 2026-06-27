@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en" data-skin="reverie" data-mode="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Skin System — one library, many identities</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Hanken+Grotesk:wght@400;500;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Spectral:wght@400;500&family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&family=Playfair+Display:ital,wght@0,500;0,700;1,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   SKIN TOKEN CONTRACT
+   Every component reads only from these variables. A "skin" is a
+   complete identity (its own palettes + fonts + ambiance) set on
+   :root[data-skin][data-mode]. Light/dark is an independent axis.
+   This is the same contract the production app's tokens use, so a
+   skin is just a token bundle the registry can add to.
+   ------------------------------------------------------------ */
+:root{
+  --bg:#0b0612; --bg2:#15091f; --card:#190d24; --card-2:#21102f;
+  --ink:#f6e9f1; --muted:#b08fae; --line:rgba(240,177,78,.16);
+  --primary:#e83a78; --primary-solid:#cf2f66; --on-primary:#ffffff;
+  --secondary:#7b3fa0; --tertiary:#f0b14e; --shadow:rgba(0,0,0,.5);
+  --font-display:'Fraunces',Georgia,serif;
+  --font-body:'Hanken Grotesk',system-ui,sans-serif;
+  --font-mono:'Hanken Grotesk',system-ui,sans-serif;
+  --glow-1:rgba(232,58,120,.18); --glow-2:rgba(123,63,160,.16);
+  --star:#f0b14e; --fog:rgba(123,63,160,.06);
+  --grain:.045; --vignette:rgba(5,2,9,.55); --radius:14px;
+}
+
+/* ---- REVERIE · Romance · gothic New Orleans (finalized) ---- */
+:root[data-skin="reverie"][data-mode="light"]{
+  --bg:#fbeee9; --bg2:#f5e0e4; --card:#fffaf6; --card-2:#fdf2ee;
+  --ink:#2a1320; --muted:#86566f; --line:rgba(201,132,47,.22);
+  --primary:#c52e5f; --primary-solid:#c52e5f; --on-primary:#fff;
+  --secondary:#7b3fa0; --tertiary:#c9842f; --shadow:rgba(60,20,40,.12);
+  --glow-1:rgba(212,57,111,.10); --glow-2:rgba(123,63,160,.07);
+  --star:#c9842f; --fog:rgba(123,63,160,.04); --grain:.03; --vignette:rgba(120,60,80,.10);
+}
+
+/* ---- GRIMOIRE · Fantasy · vellum, oak-gall ink, gold leaf, arcane emerald ---- */
+:root[data-skin="grimoire"][data-mode="dark"]{
+  --bg:#0c0f0b; --bg2:#12160f; --card:#161b12; --card-2:#1d2417;
+  --ink:#ece7d6; --muted:#9aa384; --line:rgba(212,175,55,.18);
+  --primary:#3aa97e; --primary-solid:#2f9e74; --on-primary:#08110b;
+  --secondary:#b08828; --tertiary:#d4af37; --shadow:rgba(0,0,0,.55);
+  --font-display:'Cormorant Garamond',Georgia,serif;
+  --font-body:'Spectral',Georgia,serif; --font-mono:'Spectral',serif;
+  --glow-1:rgba(47,158,116,.16); --glow-2:rgba(212,175,55,.12);
+  --star:#d4af37; --fog:rgba(40,80,50,.05); --grain:.05; --vignette:rgba(5,8,4,.55);
+}
+:root[data-skin="grimoire"][data-mode="light"]{
+  --bg:#f1e7cf; --bg2:#e9ddc0; --card:#f7efd9; --card-2:#efe4c8;
+  --ink:#2a2418; --muted:#7c745c; --line:rgba(176,136,40,.28);
+  --primary:#1f7d57; --primary-solid:#1f7d57; --on-primary:#fff;
+  --secondary:#8a6a2f; --tertiary:#b08828; --shadow:rgba(60,50,20,.12);
+  --font-display:'Cormorant Garamond',Georgia,serif;
+  --font-body:'Spectral',Georgia,serif; --font-mono:'Spectral',serif;
+  --glow-1:rgba(31,125,87,.10); --glow-2:rgba(176,136,40,.10);
+  --star:#b08828; --fog:rgba(120,100,40,.05); --grain:.04; --vignette:rgba(90,75,40,.10);
+}
+
+/* ---- APHELION · Sci-Fi · deep space, ice, instrument cyan ---- */
+:root[data-skin="aphelion"][data-mode="dark"]{
+  --bg:#05070d; --bg2:#0a0f1c; --card:#0d1320; --card-2:#121a2b;
+  --ink:#e6edf7; --muted:#7d8aa6; --line:rgba(79,209,224,.16);
+  --primary:#4fd1e0; --primary-solid:#1f8fa3; --on-primary:#02080a;
+  --secondary:#6b8cff; --tertiary:#b9c7e0; --shadow:rgba(0,0,0,.6);
+  --font-display:'Space Grotesk',system-ui,sans-serif;
+  --font-body:'Space Grotesk',system-ui,sans-serif; --font-mono:'Space Mono',monospace;
+  --glow-1:rgba(79,209,224,.14); --glow-2:rgba(107,140,255,.12);
+  --star:#cfe0ff; --fog:rgba(20,40,80,.05); --grain:.04; --vignette:rgba(2,4,10,.6);
+}
+:root[data-skin="aphelion"][data-mode="light"]{
+  --bg:#eef3fb; --bg2:#e2ebf7; --card:#f7fafe; --card-2:#eaf1fb;
+  --ink:#0e1626; --muted:#5a6b86; --line:rgba(14,143,166,.22);
+  --primary:#0e8fa6; --primary-solid:#0e8fa6; --on-primary:#fff;
+  --secondary:#3a52c4; --tertiary:#5a6b86; --shadow:rgba(20,40,80,.10);
+  --font-display:'Space Grotesk',system-ui,sans-serif;
+  --font-body:'Space Grotesk',system-ui,sans-serif; --font-mono:'Space Mono',monospace;
+  --glow-1:rgba(14,143,166,.10); --glow-2:rgba(58,82,196,.08);
+  --star:#6aa0c0; --fog:rgba(120,160,220,.05); --grain:.03; --vignette:rgba(40,70,120,.08);
+}
+
+/* ---- MARROW · Horror · bone, ash, oxblood, creeping fog ---- */
+:root[data-skin="marrow"][data-mode="dark"]{
+  --bg:#0a0a0b; --bg2:#121012; --card:#161315; --card-2:#1d181a;
+  --ink:#e8e3da; --muted:#8a8278; --line:rgba(158,59,59,.18);
+  --primary:#b04646; --primary-solid:#8f3535; --on-primary:#fff;
+  --secondary:#6f7d86; --tertiary:#8c9a3c; --shadow:rgba(0,0,0,.6);
+  --font-display:'Playfair Display',Georgia,serif;
+  --font-body:'Inter',system-ui,sans-serif; --font-mono:'Inter',sans-serif;
+  --glow-1:rgba(158,59,59,.12); --glow-2:rgba(111,125,134,.10);
+  --star:rgba(232,227,218,.5); --fog:rgba(120,120,125,.11); --grain:.06; --vignette:rgba(3,3,4,.64);
+}
+:root[data-skin="marrow"][data-mode="light"]{
+  --bg:#ece8e0; --bg2:#e0dad0; --card:#f4f0e8; --card-2:#e9e3d9;
+  --ink:#1b1815; --muted:#756e64; --line:rgba(138,50,50,.24);
+  --primary:#8a3232; --primary-solid:#8a3232; --on-primary:#fff;
+  --secondary:#56616b; --tertiary:#6f7a2e; --shadow:rgba(40,35,30,.12);
+  --font-display:'Playfair Display',Georgia,serif;
+  --font-body:'Inter',system-ui,sans-serif; --font-mono:'Inter',sans-serif;
+  --glow-1:rgba(138,50,50,.08); --glow-2:rgba(86,97,107,.08);
+  --star:rgba(27,24,21,.25); --fog:rgba(120,115,110,.09); --grain:.04; --vignette:rgba(80,75,70,.10);
+}
+
+/* ============================================================ BASE */
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:var(--font-body); line-height:1.55;
+  -webkit-font-smoothing:antialiased; overflow-x:hidden;
+  transition:background-color .6s ease,color .45s ease;
+}
+::selection{background:var(--primary-solid);color:var(--on-primary)}
+
+/* ---- ambient atmosphere (the "signature", skin-aware) ---- */
+.ambient{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;background:
+  radial-gradient(120% 100% at 50% -10%,var(--bg2),var(--bg) 60%)}
+.glow{position:absolute;border-radius:50%;filter:blur(60px);will-change:transform;transition:background .6s ease}
+.glow.g1{width:48vw;height:48vw;left:-8vw;top:-6vw;background:radial-gradient(circle,var(--glow-1),transparent 70%);animation:drift1 26s ease-in-out infinite}
+.glow.g2{width:40vw;height:40vw;right:-6vw;top:18vh;background:radial-gradient(circle,var(--glow-2),transparent 70%);animation:drift2 32s ease-in-out infinite}
+.glow.g3{width:38vw;height:38vw;left:24vw;bottom:-12vw;background:radial-gradient(circle,var(--glow-1),transparent 72%);opacity:.7;animation:drift3 38s ease-in-out infinite}
+@keyframes drift1{50%{transform:translate(6vw,4vh) scale(1.12)}}
+@keyframes drift2{50%{transform:translate(-5vw,6vh) scale(1.08)}}
+@keyframes drift3{50%{transform:translate(4vw,-5vh) scale(1.15)}}
+.stars{position:absolute;inset:0}
+.stars i{position:absolute;width:2px;height:2px;border-radius:50%;background:var(--star);opacity:.0;animation:tw 5s ease-in-out infinite}
+@keyframes tw{0%,100%{opacity:.05;transform:scale(.7)}50%{opacity:.85;transform:scale(1.1)}}
+.fog{position:absolute;inset:-20% -20% auto -20%;height:90%;background:
+  radial-gradient(60% 70% at 30% 40%,var(--fog),transparent 70%),
+  radial-gradient(50% 60% at 75% 60%,var(--fog),transparent 70%);
+  animation:fogdrift 44s ease-in-out infinite}
+@keyframes fogdrift{50%{transform:translate(4%,3%)}}
+.grid{position:absolute;inset:0;opacity:0;background-image:
+  linear-gradient(var(--line) 1px,transparent 1px),
+  linear-gradient(90deg,var(--line) 1px,transparent 1px);
+  background-size:64px 64px;mask-image:radial-gradient(120% 80% at 50% 0%,#000,transparent 70%);transition:opacity .6s}
+:root[data-skin="aphelion"] .grid{opacity:.5}
+.grain{position:absolute;inset:0;opacity:var(--grain);mix-blend-mode:soft-light;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>")}
+.vignette{position:absolute;inset:0;background:radial-gradient(120% 90% at 50% 35%,transparent 55%,var(--vignette));transition:background .6s}
+
+/* ============================================================ CHROME */
+.wrap{position:relative;z-index:1;max-width:1080px;margin:0 auto;padding:0 22px}
+.topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:18px;
+  padding:14px 22px;backdrop-filter:blur(12px);
+  background:color-mix(in srgb,var(--bg) 72%,transparent);
+  border-bottom:1px solid var(--line);transition:background .6s,border-color .6s}
+.brand{display:flex;align-items:center;gap:10px;margin-right:auto}
+.mono{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;
+  background:linear-gradient(135deg,var(--primary-solid),var(--secondary));
+  color:var(--on-primary);font-family:var(--font-display);font-weight:600;font-size:17px;
+  box-shadow:0 4px 14px var(--shadow)}
+.brand b{font-family:var(--font-body);font-weight:700;letter-spacing:.01em;font-size:15px}
+.brand b span{color:var(--muted);font-weight:500}
+
+.switch{display:flex;gap:6px;background:color-mix(in srgb,var(--card) 70%,transparent);
+  padding:4px;border-radius:999px;border:1px solid var(--line)}
+.pill{appearance:none;border:0;cursor:pointer;font-family:var(--font-body);font-weight:600;
+  font-size:12.5px;letter-spacing:.02em;color:var(--muted);background:transparent;
+  padding:7px 13px;border-radius:999px;transition:all .25s ease;white-space:nowrap}
+.pill:hover{color:var(--ink)}
+.pill[aria-pressed="true"]{background:var(--primary-solid);color:var(--on-primary);
+  box-shadow:0 3px 10px var(--shadow)}
+.pill:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+
+.mode{appearance:none;border:1px solid var(--line);cursor:pointer;background:transparent;
+  color:var(--ink);width:38px;height:34px;border-radius:10px;font-size:15px;display:grid;
+  place-items:center;transition:all .25s}
+.mode:hover{border-color:var(--primary)}
+.mode:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+
+/* ============================================================ HERO */
+.hero{padding:74px 0 30px;text-align:center}
+.eyebrow{font-family:var(--font-mono);font-size:11.5px;letter-spacing:.32em;text-transform:uppercase;
+  color:var(--tertiary);margin-bottom:18px}
+.hero h1{font-family:var(--font-display);font-weight:600;line-height:1;
+  font-size:clamp(56px,12vw,118px);letter-spacing:-.01em}
+.hero .tag{font-family:var(--font-display);font-style:italic;font-weight:500;
+  color:var(--muted);font-size:clamp(18px,3.4vw,26px);margin-top:14px}
+.hero .note{max-width:430px;margin:20px auto 0;color:var(--muted);font-size:13.5px}
+.hero .note b{color:var(--ink);font-weight:600}
+
+/* skin-aware divider */
+.divider{display:flex;justify-content:center;align-items:center;margin:36px 0 6px;color:var(--tertiary)}
+.divider svg{display:none;height:26px;width:auto}
+:root[data-skin="reverie"] .d-reverie,
+:root[data-skin="grimoire"] .d-grimoire,
+:root[data-skin="aphelion"] .d-aphelion,
+:root[data-skin="marrow"] .d-marrow{display:block}
+
+/* ============================================================ SHELVES */
+.section{padding:34px 0 6px}
+.section-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:18px}
+.section-head h2{font-family:var(--font-display);font-weight:600;font-size:23px}
+.section-head a{font-family:var(--font-body);font-size:12.5px;color:var(--primary);text-decoration:none;font-weight:600}
+.section-head a:hover{text-decoration:underline}
+
+.shelf{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(132px,1fr);gap:16px;
+  overflow-x:auto;padding-bottom:14px;scroll-snap-type:x proximity;scrollbar-width:thin}
+.shelf::-webkit-scrollbar{height:8px}
+.shelf::-webkit-scrollbar-thumb{background:var(--line);border-radius:8px}
+.book{scroll-snap-align:start;cursor:pointer}
+.cover{aspect-ratio:2/3;border-radius:10px;position:relative;overflow:hidden;
+  box-shadow:0 10px 24px var(--shadow);border:1px solid color-mix(in srgb,var(--ink) 12%,transparent);
+  transition:transform .3s ease,box-shadow .3s ease;display:flex;align-items:flex-end;padding:12px}
+.book:hover .cover{transform:translateY(-6px);box-shadow:0 18px 34px var(--shadow)}
+.cover::after{content:"";position:absolute;inset:0;background:
+  radial-gradient(120% 60% at 80% 0%,rgba(255,255,255,.18),transparent 60%)}
+.cover .spine{position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--tertiary);opacity:.85}
+.cover .ct{position:relative;z-index:1;font-family:var(--font-display);font-weight:600;
+  color:#f4eee6;font-size:14px;line-height:1.15;text-shadow:0 1px 6px rgba(0,0,0,.5)}
+.book .meta{margin-top:9px}
+.book .meta .t{font-family:var(--font-body);font-weight:600;font-size:13px;line-height:1.25}
+.book .meta .a{font-size:11.5px;color:var(--muted);margin-top:2px}
+.book .meta .chip{display:inline-block;margin-top:6px;font-family:var(--font-mono);font-size:10px;
+  letter-spacing:.06em;text-transform:uppercase;color:var(--tertiary);
+  border:1px solid var(--line);border-radius:6px;padding:2px 6px}
+
+/* ============================================================ DETAIL PANEL */
+.detail{margin:30px 0 14px;display:grid;grid-template-columns:128px 1fr;gap:22px;
+  background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  padding:20px;box-shadow:0 12px 30px var(--shadow);transition:background .6s,border-color .6s}
+.detail .cover{aspect-ratio:2/3;box-shadow:0 8px 20px var(--shadow)}
+.detail h3{font-family:var(--font-display);font-weight:600;font-size:25px;line-height:1.1}
+.detail .by{color:var(--muted);font-size:13px;margin:3px 0 12px}
+.detail p{font-size:13.5px;color:var(--ink);opacity:.86;max-width:48ch}
+.tags{display:flex;flex-wrap:wrap;gap:7px;margin:14px 0}
+.tag-c{font-family:var(--font-mono);font-size:11px;letter-spacing:.04em;padding:4px 9px;border-radius:999px;
+  background:color-mix(in srgb,var(--secondary) 16%,transparent);color:var(--secondary);
+  border:1px solid color-mix(in srgb,var(--secondary) 30%,transparent)}
+.intensity{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin-top:2px}
+.intensity .dots{display:flex;gap:4px}
+.intensity .dots b{width:9px;height:9px;border-radius:50%;background:var(--line)}
+.intensity .dots b.on{background:var(--primary)}
+.actions{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+.btn{appearance:none;border:0;cursor:pointer;font-family:var(--font-body);font-weight:600;font-size:13px;
+  padding:9px 16px;border-radius:10px;transition:transform .15s,filter .2s}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--primary-solid);color:var(--on-primary)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn.ghost:hover{border-color:var(--primary)}
+.btn:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+
+/* ============================================================ FOOTER */
+.foot{position:relative;z-index:1;max-width:1080px;margin:30px auto 60px;padding:0 22px;
+  color:var(--muted);font-size:12px;text-align:center;line-height:1.7}
+.foot b{color:var(--ink)}
+.legend{display:inline-flex;flex-wrap:wrap;gap:5px;justify-content:center;margin-top:10px}
+.legend span{font-family:var(--font-mono);font-size:10.5px;border:1px solid var(--line);
+  border-radius:6px;padding:3px 8px;color:var(--ink)}
+
+@media (max-width:560px){
+  .topbar{flex-wrap:wrap;gap:10px}
+  .brand{margin-right:0;width:100%}
+  .detail{grid-template-columns:1fr}
+  .detail .cover{max-width:128px}
+}
+@media (prefers-reduced-motion:reduce){
+  .glow,.fog,.stars i{animation:none!important}
+}
+</style>
+</head>
+<body>
+<div class="ambient" aria-hidden="true">
+  <div class="fog"></div>
+  <div class="glow g1"></div><div class="glow g2"></div><div class="glow g3"></div>
+  <div class="grid"></div>
+  <div class="stars" id="stars"></div>
+  <div class="grain"></div>
+  <div class="vignette"></div>
+</div>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="mono">◆</div>
+    <b>your library <span>· skin preview</span></b>
+  </div>
+  <div class="switch" role="group" aria-label="Choose a skin" id="switch"></div>
+  <button class="mode" id="mode" aria-label="Toggle light or dark">☾</button>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <div class="eyebrow" id="eyebrow">Romance skin</div>
+    <h1 id="skinName">Reverie</h1>
+    <div class="tag" id="tag">A gothic hush over the night shelf.</div>
+    <p class="note">Same library, same books. The <b>skin</b> changes its whole identity — palette, type, and atmosphere — independent of <b>light/dark</b>. Try both controls above.</p>
+    <div class="divider" aria-hidden="true">
+      <svg class="d-reverie" viewBox="0 0 220 26" fill="none" stroke="currentColor" stroke-width="1.4">
+        <path d="M10 13h70" stroke-opacity=".5"/><path d="M210 13h-70" stroke-opacity=".5"/>
+        <path d="M80 13c8 0 8-8 16-8s8 8 0 8c-8 0-8-8 0-8M140 13c-8 0-8-8-16-8s-8 8 0 8c8 0 8-8 0-8"/>
+        <path d="M110 5l5 8-5 8-5-8z" fill="currentColor" stroke="none"/>
+      </svg>
+      <svg class="d-grimoire" viewBox="0 0 220 26" fill="none" stroke="currentColor" stroke-width="1.4">
+        <path d="M14 13h78" stroke-opacity=".5"/><path d="M206 13h-78" stroke-opacity=".5"/>
+        <circle cx="110" cy="13" r="6"/><path d="M110 3v4M110 19v4M100 13h-4M124 13h-4M103 6l3 3M117 20l-3-3M117 6l-3 3M103 20l3-3"/>
+      </svg>
+      <svg class="d-aphelion" viewBox="0 0 220 26" fill="none" stroke="currentColor" stroke-width="1.3">
+        <path d="M8 13h94M212 13h-94"/><circle cx="110" cy="13" r="5"/><circle cx="110" cy="13" r="1.6" fill="currentColor" stroke="none"/>
+        <path d="M84 9v8M136 9v8" stroke-opacity=".7"/>
+      </svg>
+      <svg class="d-marrow" viewBox="0 0 220 26" fill="none" stroke="currentColor" stroke-width="1.3">
+        <path d="M12 13h88M208 13h-88" stroke-opacity=".55"/>
+        <path d="M100 13l-7-5M100 13l-7 5M120 13l7-5M120 13l7 5"/>
+        <circle cx="110" cy="13" r="2.4" fill="currentColor" stroke="none"/>
+      </svg>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head"><h2>Continue reading</h2><a href="#">All in progress →</a></div>
+    <div class="shelf" id="shelfA"></div>
+  </section>
+
+  <section class="section">
+    <div class="section-head"><h2>On your shelf</h2><a href="#">Browse library →</a></div>
+    <div class="shelf" id="shelfB"></div>
+  </section>
+
+  <section class="detail" id="detail">
+    <div class="cover" data-cover="0"><span class="spine"></span><span class="ct">The Salt Door</span></div>
+    <div>
+      <h3>The Salt Door</h3>
+      <div class="by">Imogen Vale · Book 2 of the Tidewater cycle</div>
+      <p>A keeper of a drowned lighthouse strikes a bargain with the thing that lives beneath the waterline. The book detail re-skins like everything else — accent, type, and the metadata below all come from the active skin's tokens.</p>
+      <div class="tags">
+        <span class="tag-c">slow burn</span><span class="tag-c">found family</span>
+        <span class="tag-c">enemies to lovers</span><span class="tag-c">seaside</span>
+      </div>
+      <div class="intensity">Intensity
+        <span class="dots"><b class="on"></b><b class="on"></b><b class="on"></b><b></b><b></b></span>
+        <span>3 / 5</span>
+      </div>
+      <div class="actions">
+        <button class="btn primary">Start reading</button>
+        <button class="btn ghost">Add to a list</button>
+        <button class="btn ghost">Mark owned</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <b>Tier-1 preset skins</b> — one per genre, from an extensible registry. Adaptive skins (blended from your reading taste) come later in Phase 6.
+  <div class="legend">
+    <span>token contract → production parity</span><span>skin ≠ mode</span><span>names cleared in trademark pull</span>
+  </div>
+</footer>
+
+<script>
+/* SKIN REGISTRY — the production app drives its switcher from a list like this.
+   Adding a genre = adding an entry + a token block. Nothing else changes. */
+const SKINS = {
+  reverie:  {label:'Reverie',  genre:'Romance skin', tag:'A gothic hush over the night shelf.',        density:60},
+  grimoire: {label:'Grimoire', genre:'Fantasy skin', tag:'Vellum, oak-gall ink, a little gold leaf.',   density:46},
+  aphelion: {label:'Aphelion', genre:'Sci-Fi skin',  tag:'The cold far point of the orbit.',            density:95},
+  marrow:   {label:'Marrow',   genre:'Horror skin',  tag:'Bone, ash, and a creeping fog.',              density:18},
+};
+
+const BOOKS = [
+  {t:'The Salt Door', a:'Imogen Vale', c:0, chip:'Bk 2'},
+  {t:'Hollow Tide', a:'N. R. Ashcombe', c:1, chip:'Std'},
+  {t:'Brass & Ember', a:'Lucia Marchetti', c:2, chip:'Bk 1'},
+  {t:'The Quiet Hours', a:'Dorian West', c:3, chip:'New'},
+  {t:'Northwater', a:'Sefa Okonkwo', c:4, chip:'Bk 3'},
+  {t:'Paper Saints', a:'M. Halloran', c:5, chip:'Std'},
+  {t:'The Long Field', a:'Bridget Nye', c:6, chip:'Bk 1'},
+  {t:'Vesper Lane', a:'Cole Arden', c:7, chip:'New'},
+];
+/* fixed cover artwork — constant across skins, so it's clearly the same library */
+const COVERS = [
+  'linear-gradient(150deg,#3a2a4d,#1c2440)','linear-gradient(150deg,#143b34,#0c241c)',
+  'linear-gradient(150deg,#5a3320,#2a1810)','linear-gradient(150deg,#2a3550,#141b2e)',
+  'linear-gradient(150deg,#4a2030,#241018)','linear-gradient(150deg,#3d4022,#1f2110)',
+  'linear-gradient(150deg,#1f3a4a,#102029)','linear-gradient(150deg,#45304a,#221726)',
+];
+
+const root = document.documentElement;
+const $ = s => document.querySelector(s);
+
+function coverHTML(b){
+  return `<div class="cover" style="background:${COVERS[b.c]}">
+            <span class="spine"></span><span class="ct">${b.t}</span></div>
+          <div class="meta"><div class="t">${b.t}</div><div class="a">${b.a}</div>
+          <span class="chip">${b.chip}</span></div>`;
+}
+function fillShelf(id, list){
+  $(id).innerHTML = list.map(b => `<div class="book">${coverHTML(b)}</div>`).join('');
+}
+fillShelf('#shelfA', BOOKS.slice(0,5));
+fillShelf('#shelfB', BOOKS.slice(2,8).concat(BOOKS.slice(0,2)));
+$('#detail .cover').style.background = COVERS[0];
+
+/* build skin switcher */
+const sw = $('#switch');
+Object.entries(SKINS).forEach(([id,s])=>{
+  const b=document.createElement('button');
+  b.className='pill'; b.textContent=s.label; b.dataset.skin=id;
+  b.setAttribute('aria-pressed', id==='reverie');
+  b.addEventListener('click',()=>setSkin(id));
+  sw.appendChild(b);
+});
+
+function stars(n){
+  const box=$('#stars'); box.innerHTML='';
+  const reduce = matchMedia('(prefers-reduced-motion:reduce)').matches;
+  for(let i=0;i<n;i++){
+    const s=document.createElement('i');
+    s.style.left=Math.random()*100+'%';
+    s.style.top=Math.random()*100+'%';
+    s.style.animationDelay=(Math.random()*5).toFixed(2)+'s';
+    s.style.transform='scale('+(0.6+Math.random()*0.9)+')';
+    if(reduce) s.style.opacity='0.5';
+    box.appendChild(s);
+  }
+}
+
+function setSkin(id){
+  const s=SKINS[id]; if(!s) return;
+  root.dataset.skin=id;
+  $('#skinName').textContent=s.label;
+  $('#eyebrow').textContent=s.genre;
+  $('#tag').textContent=s.tag;
+  document.querySelectorAll('.pill').forEach(p=>p.setAttribute('aria-pressed', p.dataset.skin===id));
+  stars(s.density);
+}
+
+$('#mode').addEventListener('click',()=>{
+  const next = root.dataset.mode==='dark' ? 'light' : 'dark';
+  root.dataset.mode=next;
+  $('#mode').textContent = next==='dark' ? '☾' : '☀';
+});
+
+stars(SKINS.reverie.density);
+</script>
+</body>
+</html>
