@@ -1,5 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
-import { captureError } from '../lib/observability'
+import { captureError } from '@reverie/core'
 
 interface Props {
   children: ReactNode
