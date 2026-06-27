@@ -1,0 +1,5 @@
+/* Design-system font families for the Reverie skins (one @import for all skin pairings). The app
+ * itself loads only the active skin's pairing at runtime (src/skin/fonts.ts); this static import is
+ * the design-system source so generated designs render in the real Reverie type. Keep in sync with
+ * src/skin/fonts.ts. */
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,500;1,9..144,600&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Cormorant+Garamond:wght@400;500;600;700&family=Spectral:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
