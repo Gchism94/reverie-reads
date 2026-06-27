@@ -6,14 +6,14 @@ import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client
 import { APP_NAME } from '@reverie/core'
 import { AuthProvider } from './auth/AuthProvider'
 import { ErrorBoundary } from './components/ErrorBoundary'
-import { initObservability } from './lib/observability'
+import { initErrorMonitoring } from './lib/sentry'
 import { createDexiePersister } from './lib/offlineCache'
 import { router } from './router'
 import './styles/tokens.css'
 import './styles/globals.css'
 
 document.title = APP_NAME
-initObservability()
+initErrorMonitoring()
 
 const WEEK = 1000 * 60 * 60 * 24 * 7
 
