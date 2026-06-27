@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Stars } from '../components/Stars'
-import { useReviews, useUpsertReview } from '../data/reviews'
+import { useReviews, useSetReviewHidden, useUpsertReview } from '../data/reviews'
+import { useReportContent } from '../data/moderation'
+import { useAuth } from '../auth/AuthProvider'
 
 function initials(name: string): string {
   return name
@@ -19,6 +21,11 @@ export function ReviewsPanel({ workKey, reviewerName }: { workKey: string; revie
   const [open, setOpen] = useState(false)
   const { data: reviews } = useReviews(workKey, open)
   const upsert = useUpsertReview(workKey)
+  const setHidden = useSetReviewHidden(workKey)
+  const report = useReportContent()
+  const { session } = useAuth()
+  const uid = session?.user.id
+  const [reported, setReported] = useState<Record<string, boolean>>({})
   const [rating, setRating] = useState(0)
   const [body, setBody] = useState('')
 
@@ -60,6 +67,24 @@ export function ReviewsPanel({ workKey, reviewerName }: { workKey: string; revie
                 <span className="ml-auto text-[11px] text-muted">{r.date.slice(0, 10)}</span>
               </div>
               {r.body && <div className="mt-1.5 text-[13.5px] text-ink">{r.body}</div>}
+              <div className="mt-2 flex items-center gap-3 text-[11.5px]">
+                {r.hidden && <span className="rounded-full px-2 py-0.5 text-[10.5px] font-semibold" style={{ background: 'var(--chip)', color: 'var(--muted)' }}>Hidden — only you can see this</span>}
+                {uid === r.reviewerId ? (
+                  <button type="button" onClick={() => setHidden.mutate({ id: r.id, hidden: !r.hidden })} className="text-muted hover:text-ink">
+                    {r.hidden ? 'Unhide' : 'Hide'}
+                  </button>
+                ) : reported[r.id] ? (
+                  <span className="text-muted">Reported — thanks</span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => report.mutate({ targetType: 'review', targetId: r.id }, { onSuccess: () => setReported((p) => ({ ...p, [r.id]: true })) })}
+                    className="text-muted hover:text-ink"
+                  >
+                    Report
+                  </button>
+                )}
+              </div>
             </div>
           ))
         ) : (

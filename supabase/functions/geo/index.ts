@@ -5,6 +5,8 @@
 // services directly at scale. Raw upstream JSON is returned; the client parses it (packages/core
 // indie.ts) and degrades gracefully on failure. Deno Edge Function.
 
+import { envInt, rateLimit, tooMany } from '../_shared/ratelimit.ts'
+
 const cors = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -101,6 +103,9 @@ async function fetchLive(input: GeoInput): Promise<unknown> {
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
+  // Per-user/IP rate limit (interactive geocode/nearby — abusive bursts burn the OSM quota).
+  const rl = await rateLimit(req, 'geo', envInt('GEO_RATE_MAX', 60), 60)
+  if (!rl.allowed) return tooMany(rl.retryAfter, cors)
   try {
     const input = (await req.json()) as GeoInput
     if (!['stores', 'geocode', 'reverse'].includes(input.op)) return json({ error: 'bad op' }, 400)

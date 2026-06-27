@@ -15,6 +15,7 @@ export interface ReviewRecord {
   rating: number
   body: string
   date: string
+  hidden: boolean
 }
 
 export const reviewsKey = (workKey: string) => ['reviews', workKey] as const
@@ -26,12 +27,12 @@ export function useReviews(workKey: string, enabled: boolean) {
     queryFn: async (): Promise<ReviewRecord[]> => {
       const { data, error } = await supabase
         .from('reviews')
-        .select('id, reviewer_id, reviewer_name, rating, body, created_at')
+        .select('id, reviewer_id, reviewer_name, rating, body, created_at, hidden')
         .eq('work_key', workKey)
         .order('created_at', { ascending: false })
       if (error) throw error
       return (
-        data as { id: string; reviewer_id: string; reviewer_name: string | null; rating: number | null; body: string; created_at: string }[]
+        data as { id: string; reviewer_id: string; reviewer_name: string | null; rating: number | null; body: string; created_at: string; hidden: boolean | null }[]
       ).map((r) => ({
         id: r.id,
         reviewerId: r.reviewer_id,
@@ -39,6 +40,7 @@ export function useReviews(workKey: string, enabled: boolean) {
         rating: r.rating ?? 0,
         body: r.body,
         date: r.created_at,
+        hidden: r.hidden ?? false,
       }))
     },
     enabled: enabled && !!workKey,
@@ -59,6 +61,18 @@ export function useUpsertReview(workKey: string) {
           { work_key: workKey, reviewer_id: uid, reviewer_name: reviewerName, rating, body },
           { onConflict: 'work_key,reviewer_id' },
         )
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: reviewsKey(workKey) }),
+  })
+}
+
+/** Author self-takedown: hide/unhide your own review (others stop seeing a hidden one). */
+export function useSetReviewHidden(workKey: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, hidden }: { id: string; hidden: boolean }) => {
+      const { error } = await supabase.from('reviews').update({ hidden }).eq('id', id)
       if (error) throw error
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: reviewsKey(workKey) }),

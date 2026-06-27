@@ -13,8 +13,10 @@ import {
   useClubMembers,
   useLeaveClub,
   usePostComment,
+  useSetCommentHidden,
   useSetProgress,
 } from '../data/clubs'
+import { useReportContent } from '../data/moderation'
 import { useRealtimeRefetch } from '../hooks/useRealtimeRefetch'
 
 function unitWord(type: ClubUnitType, label: string, n: number): string {
@@ -32,6 +34,9 @@ function ClubScreen() {
   const { data: locked } = useClubLockedInfo(clubId)
   const setProgress = useSetProgress(clubId)
   const postComment = usePostComment(clubId)
+  const setCommentHidden = useSetCommentHidden(clubId)
+  const report = useReportContent()
+  const [reported, setReported] = useState<Record<string, boolean>>({})
   const leaveClub = useLeaveClub()
   const [draft, setDraft] = useState('')
 
@@ -145,6 +150,24 @@ function ClubScreen() {
                 </span>
               </div>
               <div className="text-[14px] text-ink">{c.body}</div>
+              <div className="mt-1.5 flex items-center gap-3 text-[11.5px]">
+                {c.hidden && <span className="rounded-full px-2 py-0.5 text-[10.5px] font-semibold" style={{ background: 'var(--chip)', color: 'var(--muted)' }}>Hidden — only you can see this</span>}
+                {myId === c.userId ? (
+                  <button type="button" onClick={() => setCommentHidden.mutate({ commentId: c.id, hidden: !c.hidden })} className="text-muted hover:text-ink">
+                    {c.hidden ? 'Unhide' : 'Hide'}
+                  </button>
+                ) : reported[c.id] ? (
+                  <span className="text-muted">Reported — thanks</span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => report.mutate({ targetType: 'club_comment', targetId: c.id }, { onSuccess: () => setReported((p) => ({ ...p, [c.id]: true })) })}
+                    className="text-muted hover:text-ink"
+                  >
+                    Report
+                  </button>
+                )}
+              </div>
             </div>
           ))}
           {locked && locked.hidden > 0 && (

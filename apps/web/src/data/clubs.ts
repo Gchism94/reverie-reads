@@ -26,6 +26,7 @@ export interface ClubComment {
   unit: number
   body: string
   createdAt: string
+  hidden: boolean
 }
 
 interface ClubRow {
@@ -110,17 +111,18 @@ export function useClubComments(id: string) {
     queryFn: async (): Promise<ClubComment[]> => {
       const { data, error } = await supabase
         .from('club_comments')
-        .select('id, user_id, unit, body, created_at')
+        .select('id, user_id, unit, body, created_at, hidden')
         .eq('club_id', id)
         .order('unit', { ascending: true })
         .order('created_at', { ascending: true })
       if (error) throw error
-      return (data as { id: string; user_id: string; unit: number; body: string; created_at: string }[]).map((c) => ({
+      return (data as { id: string; user_id: string; unit: number; body: string; created_at: string; hidden: boolean | null }[]).map((c) => ({
         id: c.id,
         userId: c.user_id,
         unit: c.unit,
         body: c.body,
         createdAt: c.created_at,
+        hidden: c.hidden ?? false,
       }))
     },
     enabled: !!id,
@@ -223,6 +225,18 @@ export function usePostComment(id: string) {
       const uid = auth.user?.id
       if (!uid) throw new Error('Not signed in')
       const { error } = await supabase.from('club_comments').insert({ club_id: id, user_id: uid, unit, body })
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: clubCommentsKey(id) }),
+  })
+}
+
+/** Author self-takedown: hide/unhide your own club comment (others stop seeing a hidden one). */
+export function useSetCommentHidden(id: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ commentId, hidden }: { commentId: string; hidden: boolean }): Promise<void> => {
+      const { error } = await supabase.from('club_comments').update({ hidden }).eq('id', commentId)
       if (error) throw error
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: clubCommentsKey(id) }),

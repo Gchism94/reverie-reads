@@ -22,6 +22,7 @@ import {
   type SourceRecord,
   type StampedSource,
 } from './merge.ts'
+import { envInt, rateLimit, tooMany } from '../_shared/ratelimit.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -129,6 +130,10 @@ const isComplete = (r: EnrichedRecord): boolean => !!r.cover && !!r.isbn13
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
+  // Per-user/IP rate limit. Generous by default (the bulk "complete missing" job legitimately runs
+  // a few per second); the limit catches abusive bursts. Tune via ENRICH_RATE_MAX.
+  const rl = await rateLimit(req, 'enrich', envInt('ENRICH_RATE_MAX', 600), 60)
+  if (!rl.allowed) return tooMany(rl.retryAfter, cors)
   try {
     const input = (await req.json()) as EnrichInput
     const mode = input.mode ?? 'full'
