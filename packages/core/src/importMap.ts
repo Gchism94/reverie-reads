@@ -248,3 +248,85 @@ export function parseImport(text: string, profileOverride?: ColumnProfile): Pars
 }
 
 export { BUILTIN as IMPORT_PROFILES }
+
+// ── Connected-universe detection (Import I3) ──
+// Some exports record a "global order": the human-curated sequence to read several interconnected
+// series + standalones (e.g. read a duet, then an epilogue novella, then the next series). That's a
+// reading ORDER (overlay), distinct from each book's own series + position. We group connected rows
+// into universes and lay them out in the EXACT global order — never recomputed from series position.
+
+export interface UniverseInput {
+  /** stable reference to the book (an id post-ingest, or a key in tests) */
+  ref: string
+  /** grouping key — the author owns the interconnected world */
+  author: string
+  series: string
+  globalOrder: number | null
+  seriesType: string | null
+  seriesNumber: number | null
+}
+
+export interface UniverseOrderItem {
+  ref: string
+  /** the exact global-order position (used verbatim as the reading_order_item position) */
+  position: number
+  series: string
+  seriesNumber: number | null
+}
+
+export interface UniverseOrder {
+  /** the reading_order name, e.g. "Royal Elite — reading order" */
+  name: string
+  items: UniverseOrderItem[]
+}
+
+/** Build a UniverseInput from an imported row + the book reference it resolved to. */
+export function universeInputFromRow(row: ImportedRow, ref: string): UniverseInput {
+  const inc = row.incoming
+  return {
+    ref,
+    author: [inc.first, inc.last].filter(Boolean).join(' ').trim().toLowerCase(),
+    series: inc.series ?? '',
+    globalOrder: row.globalOrder,
+    seriesType: row.seriesType,
+    seriesNumber: row.seriesNumber,
+  }
+}
+
+const isConnected = (r: UniverseInput): boolean =>
+  r.globalOrder != null || /interconnect/i.test(r.seriesType ?? '')
+
+/**
+ * Group connected rows into reading orders. A universe = an author's books that carry a global
+ * order (the curated cross-series sequence); only rows WITH a global order can be sequenced, and a
+ * universe needs at least two of them. Items are sorted by the exact global order (epilogues/
+ * novellas land exactly where the human placed them); the name comes from the entry-point series
+ * (the lowest global order). Each book keeps its own series + position — this is an overlay.
+ */
+export function detectUniverses(rows: readonly UniverseInput[]): UniverseOrder[] {
+  const byAuthor = new Map<string, UniverseInput[]>()
+  for (const r of rows) {
+    if (!r.author || !isConnected(r) || r.globalOrder == null) continue
+    const g = byAuthor.get(r.author) ?? []
+    g.push(r)
+    byAuthor.set(r.author, g)
+  }
+
+  const orders: UniverseOrder[] = []
+  for (const group of byAuthor.values()) {
+    if (group.length < 2) continue // a single ordered book isn't a universe
+    const sorted = [...group].sort((a, b) => (a.globalOrder ?? 0) - (b.globalOrder ?? 0))
+    const entrySeries = sorted.find((r) => r.series)?.series ?? ''
+    const name = `${entrySeries || 'Reading'} — reading order`
+    orders.push({
+      name,
+      items: sorted.map((r) => ({
+        ref: r.ref,
+        position: r.globalOrder as number,
+        series: r.series,
+        seriesNumber: r.seriesNumber,
+      })),
+    })
+  }
+  return orders
+}

@@ -381,8 +381,8 @@ function SettingsScreen() {
                   setReview(r.review)
                   setStatus(
                     `Imported (${r.profile}) · merged ${r.merged} · added ${r.added} new${
-                      r.review.length ? ` · ${r.review.length} to review below` : ''
-                    }.`,
+                      r.readingOrders ? ` · ${r.readingOrders} reading order${r.readingOrders > 1 ? 's' : ''}` : ''
+                    }${r.review.length ? ` · ${r.review.length} to review below` : ''}.`,
                   )
                 })
               }
