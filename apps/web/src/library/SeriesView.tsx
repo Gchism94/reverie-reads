@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { useNavigate } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import { authorOf, type Book, type SeriesGroup } from '@reverie/core'
 import { subgenreGradient } from './constants'
 import { Modal } from '../components/Modal'
 import { useUpdateBook } from '../data/books'
+import { useReadingOrders } from '../data/readingOrders'
 
 const posNum = (b: Book) => (typeof b.position === 'number' ? b.position : Number(b.position) || 0)
 const isRead = (b: Book) => b.readStatus === 'Read' || b.reads.length > 0
@@ -93,8 +94,14 @@ function SeriesModal({
 }) {
   const navigate = useNavigate()
   const updateBook = useUpdateBook()
+  const { data: orders } = useReadingOrders()
   const books = allBooks.filter((b) => b.series === name).sort((a, b) => posNum(a) - posNum(b))
   const total = books.find((b) => b.seriesCount != null)?.seriesCount ?? null
+  // Reading orders that pull in this series (as a series item or by including one of its books).
+  const bookIds = new Set(books.map((b) => b.id))
+  const inOrders = (orders ?? []).filter((o) =>
+    o.items.some((it) => (it.kind === 'series' ? it.series === name : !!it.bookId && bookIds.has(it.bookId))),
+  )
 
   function setLength() {
     const input = window.prompt('How many books are in this series?', total ? String(total) : '')
@@ -113,6 +120,19 @@ function SeriesModal({
       <p className="-mt-2 mb-3 text-[13px] text-muted">
         {books.length} owned{total ? ` of ${total}` : ' · series length not set'}
       </p>
+      {inOrders.length > 0 && (
+        <p className="-mt-1 mb-3 text-[12.5px] text-muted">
+          Part of reading order:{' '}
+          {inOrders.map((o, i) => (
+            <span key={o.id}>
+              {i > 0 ? ', ' : ''}
+              <Link to="/orders" onClick={onClose} className="font-semibold text-primary underline-offset-2 hover:underline">
+                {o.name}
+              </Link>
+            </span>
+          ))}
+        </p>
+      )}
       <button
         type="button"
         onClick={setLength}
