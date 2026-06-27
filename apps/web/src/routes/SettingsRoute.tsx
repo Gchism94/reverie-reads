@@ -6,7 +6,8 @@ import { rootRoute } from './RootRoute'
 import { useBooks } from '../data/books'
 import { useProfile, useUpdateProfile } from '../data/profile'
 import { usePerformMerge } from '../data/mergeBooks'
-import { buildBackup, importCsvToBackend, restoreBackup } from '../data/importExport'
+import { buildBackup, restoreBackup } from '../data/importExport'
+import { importDetectedExport } from '../data/importLibrary'
 import { deleteAccount } from '../data/account'
 import { bulkComplete, isIncomplete, type BulkProgress } from '../data/enrichLibrary'
 import { DuplicateReview } from '../components/DuplicateReview'
@@ -355,7 +356,7 @@ function SettingsScreen() {
               ⬆ Restore backup
             </button>
             <button type="button" onClick={() => csvRef.current?.click()} className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink" style={{ background: 'var(--field)' }}>
-              📚 Import Goodreads / StoryGraph CSV
+              📚 Import a library export (CSV)
             </button>
             <input
               ref={restoreRef}
@@ -376,10 +377,10 @@ function SettingsScreen() {
               hidden
               onChange={(e) =>
                 readFile(e.currentTarget, async (text) => {
-                  const r = await importCsvToBackend(all, text, { autoMerge })
+                  const r = await importDetectedExport(all, text, { autoMerge })
                   setReview(r.review)
                   setStatus(
-                    `Merged ${r.merged} · added ${r.added} new${
+                    `Imported (${r.profile}) · merged ${r.merged} · added ${r.added} new${
                       r.review.length ? ` · ${r.review.length} to review below` : ''
                     }.`,
                   )
@@ -405,7 +406,9 @@ function SettingsScreen() {
           </label>
 
           <p className="mt-3 text-[12.5px] text-muted">
-            CSV import merges by title + author, bringing ratings, shelves, and <b>real read dates</b>.
+            Import a CSV export — Goodreads / StoryGraph, or a full library export (genres, tags,
+            series, contributors, read status). The shape is detected automatically; matches fold
+            into existing books, so re-importing is safe.
           </p>
 
           {review.length > 0 && (
