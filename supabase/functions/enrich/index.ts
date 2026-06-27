@@ -178,6 +178,10 @@ Deno.serve(async (req: Request) => {
     const merged = mergeRecords(stamped)
     const sourceList = stamped.map((s) => s.source).join('+') || null
 
+    // Cache the cover image in Storage (shared, keyed by work/edition) and swap in the CDN URL, so
+    // we stop hotlinking the source. On any failure the source URL is kept (→ client placeholder).
+    if (merged.cover) merged.cover = await cacheCover(merged.cover, coverKeyFor(merged))
+
     if (sourceList) await writeCache(key, merged)
     // Flag rate-limited only when nothing resolved, so a bulk run pauses/resumes instead of
     // stamping the book checked. A partial record is still useful → not flagged.
@@ -231,6 +235,46 @@ function toResponse(r: EnrichedRecord) {
 function cacheKeyFor(input: EnrichInput): string {
   const isbn = cleanIsbn(input.isbn ?? '')
   return isbn.length >= 10 ? `isbn:${isbn}` : `ta:${norm(input.title ?? '')}|${norm(input.author ?? '')}`
+}
+
+// ── cover image caching (Storage bucket 'covers', global + CDN-served) ──
+// Keyed by work/edition like enrichment_cache, so the Nth scanner reuses one stored image.
+function coverKeyFor(r: EnrichedRecord): string {
+  const raw = r.isbn13 || r.isbn10 || r.workId || r.editionId || ''
+  return raw.replace(/[^a-z0-9]/gi, '_').slice(0, 80)
+}
+
+/**
+ * Ensure the cover is stored in the 'covers' bucket and return its public CDN URL. Idempotent: if
+ * the object already exists it's reused (no re-fetch). On a missing key or any fetch/upload error,
+ * the original source URL is returned unchanged (the client then falls back to a placeholder).
+ */
+async function cacheCover(sourceUrl: string, key: string): Promise<string> {
+  if (!DB_URL || !key || sourceUrl.includes('/storage/v1/object/public/covers/')) return sourceUrl
+  const path = `${key}.jpg`
+  // The browser-facing base. In production SUPABASE_URL is the public project URL; COVER_PUBLIC_URL
+  // can point at a CDN/custom domain instead.
+  const publicBase = Deno.env.get('COVER_PUBLIC_URL') ?? DB_URL
+  const publicUrl = `${publicBase}/storage/v1/object/public/covers/${path}`
+  try {
+    // Already cached? Reuse it.
+    const head = await fetch(publicUrl, { method: 'HEAD' })
+    if (head.ok) return publicUrl
+
+    const img = await fetch(sourceUrl)
+    if (!img.ok) return sourceUrl
+    const bytes = new Uint8Array(await img.arrayBuffer())
+    if (!bytes.length) return sourceUrl
+    const contentType = img.headers.get('content-type') ?? 'image/jpeg'
+    const up = await fetch(`${DB_URL}/storage/v1/object/covers/${path}`, {
+      method: 'POST',
+      headers: { apikey: SERVICE, Authorization: `Bearer ${SERVICE}`, 'Content-Type': contentType, 'x-upsert': 'true' },
+      body: bytes,
+    })
+    return up.ok ? publicUrl : sourceUrl
+  } catch {
+    return sourceUrl
+  }
 }
 
 const DAY = 86_400_000

@@ -1,5 +1,8 @@
-// Location resolution for the indie-bookstore finder. Treated as EPHEMERAL: kept in session
-// storage only, never sent to or stored on the server.
+// Location resolution for the indie-bookstore finder. The chosen point is EPHEMERAL: kept in
+// session storage only, never stored on the server. Geocoding goes through the `geo` Edge Function
+// proxy (contact User-Agent + shared cache, per Nominatim usage policy) — not the browser directly.
+
+import { supabase } from './supabase'
 
 export interface ResolvedLocation {
   lat: number
@@ -39,33 +42,30 @@ export function requestGeolocation(): Promise<{ lat: number; lng: number } | nul
   })
 }
 
-// Free geocoding via OpenStreetMap Nominatim. Note: production should proxy this through an
-// Edge Function with a contact User-Agent + caching (Nominatim asks ~1 req/s); fine for now.
-const NOMINATIM = 'https://nominatim.openstreetmap.org'
-
+/** Geocode a place name → a point, via the `geo` proxy. Returns null on no match / failure. */
 export async function geocodePlace(query: string): Promise<ResolvedLocation | null> {
   const q = query.trim()
   if (!q) return null
   try {
-    const res = await fetch(`${NOMINATIM}/search?format=jsonv2&limit=1&q=${encodeURIComponent(q)}`, {
-      headers: { Accept: 'application/json' },
-    })
-    const rows = (await res.json()) as { lat: string; lon: string; display_name: string }[]
-    const r = rows[0]
+    const { data, error } = await supabase.functions.invoke('geo', { body: { op: 'geocode', q } })
+    if (error) return null
+    const rows = (data as { payload?: { lat: string; lon: string; display_name: string }[] } | null)?.payload
+    const r = rows?.[0]
     return r ? { lat: Number(r.lat), lng: Number(r.lon), label: r.display_name } : null
   } catch {
     return null
   }
 }
 
+/** Reverse-geocode a point → a label, via the `geo` proxy. Falls back to the raw coordinates. */
 export async function reverseGeocode(lat: number, lng: number): Promise<string> {
+  const fallback = `${lat.toFixed(3)}, ${lng.toFixed(3)}`
   try {
-    const res = await fetch(`${NOMINATIM}/reverse?format=jsonv2&lat=${lat}&lon=${lng}`, {
-      headers: { Accept: 'application/json' },
-    })
-    const j = (await res.json()) as { display_name?: string }
-    return j.display_name ?? `${lat.toFixed(3)}, ${lng.toFixed(3)}`
+    const { data, error } = await supabase.functions.invoke('geo', { body: { op: 'reverse', lat, lng } })
+    if (error) return fallback
+    const j = (data as { payload?: { display_name?: string } } | null)?.payload
+    return j?.display_name ?? fallback
   } catch {
-    return `${lat.toFixed(3)}, ${lng.toFixed(3)}`
+    return fallback
   }
 }
