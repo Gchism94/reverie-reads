@@ -4,6 +4,7 @@ import {
   mergeRecords as coreMerge,
   normalizeGoogle as coreNG,
   normalizeHardcover as coreNH,
+  normalizeHardcoverSearch as coreNHS,
   normalizeIsbndb as coreNI,
   normalizeOpenLibrary as coreNOL,
   type StampedSource,
@@ -15,6 +16,7 @@ import {
   mergeRecords as fnMerge,
   normalizeGoogle as fnNG,
   normalizeHardcover as fnNH,
+  normalizeHardcoverSearch as fnNHS,
   normalizeIsbndb as fnNI,
   normalizeOpenLibrary as fnNOL,
 } from '../../../supabase/functions/enrich/merge'
@@ -44,6 +46,8 @@ describe('enrich mirror ↔ core parity (golden fixtures)', () => {
     expect(fnNOL(OL)).toEqual(coreNOL(OL))
     expect(fnNH(HC)).toEqual(coreNH(HC))
     expect(fnNI(ISBNDB)).toEqual(coreNI(ISBNDB))
+    const HCS = { id: 714600, title: 'Fourth Wing', author_names: ['Rebecca Yarros'], image: { url: 'https://assets.hardcover.app/x.jpeg' }, isbns: ['1637991029', '9781637991022'], release_date: '2023-05-02', series_names: ['The Empyrean'], featured_series_position: 1, genres: ['Fantasy', 'Romance'], moods: ['adventurous'], pages: 517, description: '<p>Dragons.</p>' }
+    expect(fnNHS(HCS)).toEqual(coreNHS(HCS))
   })
 
   it('mapGenre is identical', () => {

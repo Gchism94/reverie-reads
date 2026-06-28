@@ -4,6 +4,7 @@ import {
   mergeRecords,
   normalizeGoogle,
   normalizeHardcover,
+  normalizeHardcoverSearch,
   normalizeIsbndb,
   normalizeOpenLibrary,
   type StampedSource,
@@ -177,6 +178,35 @@ describe('source normalizers (captured fixtures)', () => {
     expect(r.seriesPosition).toBe(1)
     expect(r.categories).toEqual(['Dragon Riders', 'Enemies to Lovers'])
     expect(r.ids).toEqual({ work: '9988' })
+  })
+
+  it('normalizeHardcoverSearch parses the search-result (Typesense) doc shape', () => {
+    const r = normalizeHardcoverSearch({
+      id: 714600,
+      title: 'Fourth Wing',
+      author_names: ['Rebecca Yarros'],
+      image: { url: 'https://assets.hardcover.app/x.jpeg' },
+      isbns: ['1637991029', '9781637991022', 'bad'],
+      release_date: '2023-05-02',
+      series_names: ['The Empyrean'],
+      featured_series_position: 1,
+      genres: ['Fantasy', 'Romance'],
+      moods: ['adventurous'],
+      pages: 517,
+      description: '<p>Dragons.</p>',
+    })
+    expect(r.title).toBe('Fourth Wing')
+    expect(r.authors).toEqual(['Rebecca Yarros'])
+    expect(r.cover).toBe('https://assets.hardcover.app/x.jpeg') // image.url → the romance/indie cover
+    expect(r.series).toBe('The Empyrean')
+    expect(r.seriesPosition).toBe(1)
+    expect(r.isbn13).toBe('9781637991022')
+    expect(r.isbn10).toBe('1637991029')
+    expect(r.categories).toEqual(['Fantasy', 'Romance', 'adventurous']) // genres+moods+tags union
+    expect(r.pageCount).toBe(517)
+    expect({ y: r.pubY, m: r.pubM, d: r.pubD }).toEqual({ y: 2023, m: 5, d: 2 })
+    expect(r.description).toBe('Dragons.')
+    expect(r.ids).toEqual({ work: '714600' })
   })
 
   it('normalizeIsbndb parses a {book} payload', () => {
