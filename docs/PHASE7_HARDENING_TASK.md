@@ -51,15 +51,18 @@ Order: H1 first (it gates a safe public signup), then H2 -> H3 -> H4.
 - UGC MODERATION: opt-in reviews + spoiler-gated club comments are public UGC — add a report/flag
   affordance, a flagged/hidden state + column, a takedown (hide) path, and a content-policy hook.
   Hidden content isn't served to others; authorship RLS unchanged.
-  OWNER DECISION: alternatively, defer public UGC for v1 (keep reviews/clubs private or disabled) to
-  sidestep moderation entirely — if chosen, H3 reduces to gating rather than a moderation path.
-  DEFAULT: build the lean report+hide path. Acceptance (default): any user can report; reported
-  content can be hidden; hidden content not served; tested.
+  DECISION (owner, 2026-06-25): ship the LEAN report+hide path for v1 — anyone can post/review,
+  any item can be reported and then hidden; NO moderation queue. Acceptance: any user can report;
+  reported content can be hidden; hidden content is not served to others; tested.
 
 ## H4 — Observability & performance
-- ERROR MONITORING + LOGS: integrate an error tracker (e.g. Sentry) on web + Edge Functions;
-  structured Edge logs; an uptime check. [Code hooks; Owner supplies the DSN.] Acceptance: client +
-  server errors report; Edge logs structured.
+- ERROR MONITORING + LOGS: integrate SENTRY (owner-provisioned; free Developer tier) on web + Edge
+  Functions; structured Edge logs; an uptime check. Route ALL capture through a thin provider-agnostic
+  captureError()/captureMessage() in @reverie/core — nothing else imports the Sentry SDK directly — so
+  a later swap (GlitchTip self-host or another backend) is a one-file change, not a rewrite. Protect
+  the 5K/mo free quota: web tracesSampleRate = 0 + inbound filters (extensions/bots/localhost).
+  [Code hooks; Owner supplies VITE_SENTRY_DSN + Edge SENTRY_DSN.] Acceptance: client + server errors
+  report to Sentry; Edge logs structured; NO direct Sentry SDK imports outside the core wrapper.
 - FONT-LOADING: load only the ACTIVE skin's font pairing in normal use (+ the gallery loads all),
   self-host/subset where feasible, font-display: swap, preload the active pairing. Closes the C3
   gallery-fonts flag; keeps perf sane at 9 skins. Acceptance: a normal session loads ~one pairing,
@@ -76,3 +79,32 @@ Tokens-only + AA; RLS on every new table with a test; deletion transactional + o
 NO third-party secrets in the browser (all keys server-side); proxies send a proper UA + respect
 upstream usage policies; global caches keyed by work; migrate + backfill never dropping data; gate
 green (typecheck/lint/build/tests/axe); stage source only; docs/design untouched.
+
+---
+
+## PHASE 7 COMPLETE — 2026-06-27
+Commits: H1 784ad0d · H2 e11e6b2 · H3 db920f0 · H4 font/perf f32b065 · H4 error-layer rework c0b96eb.
+Gate green (core 125 unit, web typecheck/lint/unit, build, axe). Staged source only; docs/design untouched.
+- H4 ERROR MONITORING (reworked to spec): provider-agnostic captureError/captureMessage +
+  setErrorReporter over an ErrorReporter interface in @reverie/core; default structured console
+  reporter; capture never throws; pure + 3 unit tests. Sentry SDK imported in ONE file only
+  (apps/web/src/lib/sentry.ts, grep-verified) -> registered as the reporter when VITE_SENTRY_DSN is
+  set, else console-routed handlers; swap (GlitchTip/self-host) = one file. tracesSampleRate=0 +
+  inbound filters (beforeSend/denyUrls/ignoreErrors) protect the 5K/mo free tier. Edge reports via
+  Sentry's HTTP envelope endpoint (DSN parsed from SENTRY_DSN, no SDK on Deno); Edge logs structured
+  single-line JSON. SDK dynamic-imported -> zero main-bundle impact (~150KB gzip unchanged). Old
+  observability.ts removed; ErrorBoundary + main.tsx route through the wrapper. @sentry/react@10.62 added.
+- H1 data safety (784ad0d), H2 external-call resilience (e11e6b2), H3 auth & abuse incl. lean
+  report/hide (db920f0), H4 font-loading + perf (f32b065): reported done + gate-green (not individually
+  reviewed here; taken on gate + acceptance).
+
+FLAGS:
+- .env.example carries the REAL publishable Supabase URL/key. Safe IF it's the publishable/anon key
+  (public, RLS-protected) -- CONFIRM it is NOT the secret/service_role key. (.env.example conventionally
+  stays placeholders, but the anon key is public so committing it is harmless.)
+- H1 is data-safety/legal-critical -- self-check that account deletion is transactional + ownership-
+  tested across ALL tables (incl. Phase-6: authors/book_authors, reading_orders/items, adaptive state)
+  and that fresh signups start truly empty (no seed leak).
+
+OWNER ACTION: provision the Sentry project; set VITE_SENTRY_DSN (build) + SENTRY_DSN (function secret).
+Until then errors route to the structured console reporter (nothing lost, just not centralized).
