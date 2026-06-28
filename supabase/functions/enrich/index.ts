@@ -312,11 +312,15 @@ Deno.serve(async (req: Request) => {
     const merged = mergeRecords(stamped)
     const sourceList = stamped.map((s) => s.source).join('+') || null
 
-    // Cache the cover image in Storage (shared, keyed by work/edition) and swap in the CDN URL, so
-    // we stop hotlinking the source. On any failure the source URL is kept (→ client placeholder).
-    if (merged.cover) merged.cover = await cacheCover(merged.cover, coverKeyFor(merged))
+    // No confident match → don't attach a cover from the unconfirmed title search (wrong-cover risk).
+    // The book lands in the import-review "missing cover" bucket instead of showing a possibly-wrong one.
+    if (confidence === 'none') merged.cover = ''
 
     if (sourceList) await writeCache(key, merged, { confidence, query: matchQuery, alternates })
+    // Non-blocking cover caching: respond with the source URL immediately (no wait on the image
+    // download/upload), and cache the image to Storage + upgrade the cached row to the CDN URL in the
+    // background, so later readers serve from the CDN. Bounds per-book enrichment latency.
+    scheduleCoverCache(key, merged)
     // Flag rate-limited only when nothing resolved, so a bulk run pauses/resumes instead of
     // stamping the book checked. A partial record is still useful → not flagged.
     const body = { ...toResponse(merged), source: sourceList, confidence, query: matchQuery || undefined, alternates }
@@ -410,6 +414,33 @@ async function cacheCover(sourceUrl: string, key: string): Promise<string> {
   } catch {
     return sourceUrl
   }
+}
+
+/**
+ * Cache the cover image to Storage WITHOUT blocking the response. The response already carries the
+ * source URL (works immediately); here we upload the image in the background and, once it's on the
+ * CDN, upgrade the cached row's cover to the CDN URL so later readers stop hotlinking. Runs after the
+ * response via EdgeRuntime.waitUntil; a no-op when there's nothing to cache or no DB. Best-effort.
+ */
+function scheduleCoverCache(cacheKey: string, merged: EnrichedRecord): void {
+  const src = merged.cover
+  if (!DB_URL || !src || src.includes('/storage/v1/object/public/covers/')) return
+  const task = (async () => {
+    try {
+      const cdn = await cacheCover(src, coverKeyFor(merged))
+      if (cdn && cdn !== src) {
+        await fetch(`${DB_URL}/rest/v1/enrichment_cache?key=eq.${encodeURIComponent(cacheKey)}`, {
+          method: 'PATCH',
+          headers: { ...dbHeaders, Prefer: 'return=minimal' },
+          body: JSON.stringify({ record: { ...merged, cover: cdn } }),
+        })
+      }
+    } catch {
+      /* best-effort */
+    }
+  })()
+  const rt = (globalThis as { EdgeRuntime?: { waitUntil(p: Promise<unknown>): void } }).EdgeRuntime
+  if (rt?.waitUntil) rt.waitUntil(task)
 }
 
 const DAY = 86_400_000
