@@ -186,7 +186,7 @@ export interface ImportItemOutcome {
 export function buildReviewModelFromImport(
   outcomes: readonly ImportItemOutcome[],
   books: readonly Book[],
-  opts: { readingOrdersBuilt?: number } = {},
+  opts: { readingOrdersBuilt?: number; brokenRefs?: ReadonlySet<string> } = {},
 ): ReviewModel {
   const byId = new Map(books.map((b) => [b.id, b]))
   const items: ReviewItemInput[] = []
@@ -202,6 +202,7 @@ export function buildReviewModelFromImport(
       inSeries: b.status !== 'Standalone' || !!b.series,
       cover,
       coverConfidence: b.coverConfidence ?? (cover ? 'high' : 'none'),
+      coverBroken: opts.brokenRefs?.has(b.id) ?? false, // runtime onerror signal (cover link is dead)
       coverAlternates: [], // re-fetched on demand by the Cover Studio (cached in enrichment_cache)
       genre: b.genre || null,
       unmappedGenre: o.disposition === 'added' ? (o.unmappedGenre ?? null) : null,
