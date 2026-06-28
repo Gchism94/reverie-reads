@@ -32,6 +32,8 @@ export interface ReviewItemInput {
   cover?: string | null
   /** confidence of the cover/match (E1); 'none' when nothing resolved */
   coverConfidence: Confidence
+  /** the saved cover exists but its link is dead (client onerror at runtime) — distinct from missing */
+  coverBroken?: boolean
   /** edition choices for this book (E1 alternates) — drives the cover picker */
   coverAlternates?: CoverAlternate[]
   /** the mapped primary genre, or null when unresolved */
@@ -56,7 +58,7 @@ export interface ReviewSummary {
   genres: Record<string, number>
 }
 
-export type NeedsLookReason = 'missing_cover' | 'low_confidence_cover' | 'odd_genre' | 'likely_duplicate'
+export type NeedsLookReason = 'missing_cover' | 'low_confidence_cover' | 'broken_cover' | 'odd_genre' | 'likely_duplicate'
 
 export interface NeedsLookItem {
   ref: string
@@ -73,10 +75,12 @@ export interface ReviewModel {
   needsLook: {
     missingCover: NeedsLookItem[]
     lowConfidenceCover: NeedsLookItem[]
+    /** had a cover, but the link is dead (runtime onerror) — distinct from never-resolved */
+    brokenCover: NeedsLookItem[]
     oddGenre: NeedsLookItem[]
     likelyDuplicate: NeedsLookItem[]
   }
-  /** the Cover Studio triage queue = missing covers first, then low-confidence ones */
+  /** the Cover Studio "needs attention" queue: missing, then low-confidence, then broken covers */
   coverTriage: NeedsLookItem[]
 }
 
@@ -91,13 +95,14 @@ const item = (i: ReviewItemInput, reason: NeedsLookReason, detail: string): Need
   author: i.author,
   reason,
   detail,
-  alternates: reason === 'missing_cover' || reason === 'low_confidence_cover' ? (i.coverAlternates ?? []) : [],
+  alternates: reason === 'missing_cover' || reason === 'low_confidence_cover' || reason === 'broken_cover' ? (i.coverAlternates ?? []) : [],
 })
 
 /**
- * Build the review payload from per-book outcomes. Buckets are independent VIEWS — one book can appear
- * in several (e.g. a missing cover that's also an odd genre). The Cover Studio triage queue is the
- * missing + low-confidence cover buckets, each item already carrying its alternate edition choices.
+ * Build the review payload from per-book outcomes. The three COVER states (broken / missing / low-
+ * confidence) are mutually exclusive so the triage queue never double-lists a book; the other buckets
+ * (odd genre, likely duplicate) are independent views a book can also appear in. The Cover Studio
+ * "needs attention" queue is missing + low-confidence + broken, each carrying its alternate editions.
  */
 export function buildReviewModel(
   items: readonly ReviewItemInput[],
@@ -114,6 +119,7 @@ export function buildReviewModel(
   }
   const missingCover: NeedsLookItem[] = []
   const lowConfidenceCover: NeedsLookItem[] = []
+  const brokenCover: NeedsLookItem[] = []
   const oddGenre: NeedsLookItem[] = []
   const likelyDuplicate: NeedsLookItem[] = []
 
@@ -126,7 +132,11 @@ export function buildReviewModel(
     const g = i.genre && i.genre.trim() ? i.genre : '∅'
     summary.genres[g] = (summary.genres[g] ?? 0) + 1
 
-    if (!hasCover(i)) {
+    // Cover state is one-of (mutually exclusive so the triage queue never double-lists a book):
+    // broken (had one, link is dead) → missing (never resolved) → low-confidence (resolved but risky).
+    if (i.coverBroken) {
+      brokenCover.push(item(i, 'broken_cover', 'the saved cover link is broken — replace it in the Cover Studio'))
+    } else if (!hasCover(i)) {
       missingCover.push(item(i, 'missing_cover', 'no cover found — add one in the Cover Studio'))
     } else if (isLowConfidenceCover(i)) {
       lowConfidenceCover.push(
@@ -146,8 +156,8 @@ export function buildReviewModel(
 
   return {
     summary,
-    needsLook: { missingCover, lowConfidenceCover, oddGenre, likelyDuplicate },
-    coverTriage: [...missingCover, ...lowConfidenceCover],
+    needsLook: { missingCover, lowConfidenceCover, brokenCover, oddGenre, likelyDuplicate },
+    coverTriage: [...missingCover, ...lowConfidenceCover, ...brokenCover],
   }
 }
 

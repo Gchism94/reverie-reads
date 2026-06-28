@@ -53,3 +53,35 @@ WHERE IT LIVES:
 - ONBOARDING/IMPORT review acceptance: include the missing/low-confidence covers batch -> Studio.
 - DESIGN backlog: Cover Studio is a new user-facing surface -> its own Claude Design prompt (book-detail
   cover editor + batch triage + themed-placeholder preview across skins).
+
+---
+
+## Cover durability + dead-link handling (added 2026-06-27)
+Context: in the current tool, covers are external image LINKS (and the export drops them). External links rot.
+
+PRINCIPLE: Reverie stores covers as OWNED, cached images in Storage/CDN (extends H2) -- NEVER as bare
+external links. Every entry path materializes to Storage: API enrichment (already), URL paste, upload,
+phone photo, AND any imported cover links. A cover then cannot break because of someone else's server.
+
+- IMPORT of existing cover links (IF the source can export the link column): fetch each -> cache to
+  Storage -> done. Highest fidelity (preserves the exact covers currently shown), skips title+author
+  matching for those books, and is immune to rot. Dead-at-ingest links -> missing-cover triage.
+  ACTION: check whether the current tool can export the cover-link column; if yes, it's the PRIMARY
+  cover source (coverage jumps immediately) and APIs+Studio only fill genuine gaps.
+- DEAD/BROKEN detection (safety net, lean): client-side image onerror marks a cover broken -> adds it to
+  the Cover Studio "needs attention" queue. No cron needed for v1 (caching makes bare links rare; a
+  periodic server HEAD-sweep is optional/later).
+- NOTIFICATION (decision 2026-06-27): use SENTRY for now -- broken-cover detection (client onerror)
+  calls the existing captureMessage wrapper (H4) -> Sentry. This is OWNER/dev telemetry (you see it),
+  NOT user-facing; fine as a stopgap while Greg is the primary user. Add the user-facing in-app "needs
+  attention" badge LATER when other users manage their own covers.
+  CAVEATS: (1) needs the Sentry DSN provisioned (parked owner action promoted to near-term) or events
+  route to console only; (2) QUOTA -- do NOT log one event per broken cover (the import cover-tail can be
+  hundreds -> would burn the 5K/mo free tier and drown real errors); AGGREGATE to a summary count
+  ("import finished, N covers unresolved/broken") or rate-limit/sample broken-cover events.
+- COVER-LINK EXPORT: NO -- the current tool can't export the cover-link column. So APIs + manual (Cover
+  Studio) is the path; the hit-rate run's job stays "find covers" and the resulting tail size matters.
+
+READ-MODEL (E3): add needsLook.brokenCover (distinct signal: had a cover, now dead -- vs missingCover =
+never resolved). coverTriage = missingCover + lowConfidenceCover + brokenCover; the Studio "needs
+attention" surfaces all three.

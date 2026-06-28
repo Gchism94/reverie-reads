@@ -83,12 +83,27 @@ describe('buildReviewModel — needs-a-look buckets', () => {
     expect(m.coverTriage).toHaveLength(1)
   })
 
-  it('triage queue is missing covers THEN low-confidence covers', () => {
+  it('buckets a broken cover distinctly from missing (had one, link is dead)', () => {
+    const m = buildReviewModel([mk({ ref: '1', cover: 'dead.jpg', coverConfidence: 'high', coverBroken: true, coverAlternates: [ALT] })])
+    expect(m.needsLook.brokenCover).toHaveLength(1)
+    expect(m.needsLook.missingCover).toHaveLength(0) // it HAS a cover (just dead) → not "missing"
+    expect(m.needsLook.lowConfidenceCover).toHaveLength(0) // broken wins even over a low confidence
+    expect(m.needsLook.brokenCover[0]?.alternates).toEqual([ALT])
+  })
+
+  it('cover states are mutually exclusive — a broken+low book lists once, in broken', () => {
+    const m = buildReviewModel([mk({ ref: '1', cover: 'dead.jpg', coverConfidence: 'low', coverBroken: true })])
+    expect(m.coverTriage).toHaveLength(1)
+    expect(m.coverTriage[0]?.reason).toBe('broken_cover')
+  })
+
+  it('triage queue is missing, THEN low-confidence, THEN broken', () => {
     const m = buildReviewModel([
+      mk({ ref: 'broken', cover: 'd.jpg', coverConfidence: 'high', coverBroken: true }),
       mk({ ref: 'low', cover: 'm.jpg', coverConfidence: 'low' }),
       mk({ ref: 'missing', cover: '', coverConfidence: 'none' }),
     ])
-    expect(m.coverTriage.map((i) => i.reason)).toEqual(['missing_cover', 'low_confidence_cover'])
+    expect(m.coverTriage.map((i) => i.reason)).toEqual(['missing_cover', 'low_confidence_cover', 'broken_cover'])
   })
 })
 
