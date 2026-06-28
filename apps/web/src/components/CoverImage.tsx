@@ -5,14 +5,14 @@ import { CoverPlaceholder } from './CoverPlaceholder'
 /**
  * A book cover that degrades gracefully: shows the image, and on a missing OR dead link falls back to
  * the skin-themed placeholder. A failed load is recorded (markCoverBroken) so the cover joins the
- * Cover Studio "needs attention" queue and the aggregated owner telemetry. Reusable anywhere a cover
- * renders (the main grid can adopt it with a one-line swap).
+ * Cover Studio "needs attention" queue + the aggregated owner telemetry. FILLS its parent (the caller
+ * provides the sized/bordered box), so it's a drop-in for the app's `{cover && <img …/>}` cover idiom.
  */
 export function CoverImage({
   book,
-  className,
+  className = 'h-full w-full object-cover',
 }: {
-  book: { id: string; title?: string; first?: string; last?: string; cover?: string | null }
+  book: { id?: string; title?: string; first?: string; last?: string; cover?: string | null }
   className?: string
 }) {
   const [failed, setFailed] = useState(false)
@@ -20,13 +20,13 @@ export function CoverImage({
   return (
     <img
       src={book.cover}
-      alt={`${book.title ?? 'Book'} cover`}
-      className={className}
+      alt=""
       loading="lazy"
-      style={{ aspectRatio: '2 / 3', objectFit: 'cover', borderRadius: 10, border: '1px solid var(--line)', display: 'block', width: '100%' }}
+      decoding="async"
+      className={className}
       onError={() => {
         setFailed(true)
-        markCoverBroken(book)
+        if (book.id) markCoverBroken({ id: book.id, title: book.title, first: book.first, last: book.last })
       }}
     />
   )

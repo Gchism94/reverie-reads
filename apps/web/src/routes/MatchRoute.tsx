@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { createRoute, useNavigate } from '@tanstack/react-router'
 import { deriveBoyfriend, scoreMatch, type Book, type MatchProfile } from '@reverie/core'
 import { rootRoute } from './RootRoute'
+import { CoverImage } from '../components/CoverImage'
 import { useBooks } from '../data/books'
 import { useCreateList, useLists } from '../data/lists'
 import { useAddBooksToList } from '../data/listItems'
@@ -164,7 +165,7 @@ function MatchScreen() {
         {result.picks.map(({ b, s, isRead }) => (
           <button key={b.id} type="button" onClick={() => openBook(b.id)} className="text-left" aria-label={`Open ${b.title}`}>
             <div className="aspect-[2/3] overflow-hidden rounded-lg border border-line" style={{ background: 'var(--field)' }}>
-              {b.cover && <img src={b.cover} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />}
+              <CoverImage book={b} />
             </div>
             <div className="mt-1 truncate text-[11.5px] font-semibold text-ink">{b.title}</div>
             <div className="text-[10.5px] font-bold text-primary">

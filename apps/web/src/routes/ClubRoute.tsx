@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, createRoute, useNavigate } from '@tanstack/react-router'
 import type { ClubUnitType } from '@reverie/core'
 import { rootRoute } from '../routes/RootRoute'
+import { CoverImage } from '../components/CoverImage'
 import { useAuth } from '../auth/AuthProvider'
 import {
   clubCommentsKey,
@@ -80,7 +81,7 @@ function ClubScreen() {
 
       <div className="mt-3 flex gap-4">
         <div className="aspect-[2/3] w-20 flex-none overflow-hidden rounded-lg border border-line" style={{ background: 'var(--field)' }}>
-          {club.cover && <img src={club.cover} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />}
+          <CoverImage book={{ id: club.id, title: club.title, cover: club.cover }} />
         </div>
         <div className="min-w-0 flex-1">
           <h1 className="text-[24px] italic leading-tight text-ink" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
