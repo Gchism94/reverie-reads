@@ -14,7 +14,7 @@
 import {
   mergeRecords,
   normalizeGoogle,
-  normalizeHardcover,
+  normalizeHardcoverSearch,
   normalizeIsbndb,
   normalizeOpenLibrary,
   type EnrichedRecord,
@@ -52,6 +52,20 @@ const cleanIsbn = (s: string) => (s || '').replace(/[^0-9Xx]/g, '').toUpperCase(
 const norm = (s: string) => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '')
 const UA = 'Reverie/1.0 (personal book library; enrichment aggregator)'
 
+// Google Books API key — keyless calls share a low per-IP quota and 429 quickly; the key lifts it to
+// ~1,000/day. Appended to every Google query when configured.
+const GOOGLE_KEY = Deno.env.get('GOOGLE_BOOKS_KEY') ?? ''
+const googleKey = () => (GOOGLE_KEY ? `&key=${encodeURIComponent(GOOGLE_KEY)}` : '')
+
+// Hardcover bearer header — tolerate a token pasted WITH a leading "Bearer " (the common gotcha that
+// otherwise yields "Bearer Bearer …" → 401). Returns null when no token is set.
+const hardcoverAuth = (): string | null => {
+  const raw = (Deno.env.get('HARDCOVER_TOKEN') ?? '').trim()
+  if (!raw) return null
+  const t = raw.replace(/^Bearer\s+/i, '').trim()
+  return t ? `Bearer ${t}` : null
+}
+
 // One retry with backoff so a transient 429/5xx doesn't fail the whole source. Throws 'status 429'
 // on rate-limit so the caller can mark the run rate-limited (pause + resume, never burn the window).
 async function fetchJson(url: string, init?: RequestInit): Promise<unknown> {
@@ -75,7 +89,7 @@ async function adapterGoogle(input: EnrichInput): Promise<SourceRecord | null> {
   const q = input.isbn
     ? `isbn:${cleanIsbn(input.isbn)}`
     : `intitle:${encodeURIComponent(`"${input.title}"`)}${input.author ? `+inauthor:${encodeURIComponent(`"${input.author}"`)}` : ''}`
-  const j = (await fetchJson(`https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=1`)) as { items?: unknown[] }
+  const j = (await fetchJson(`https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=1${googleKey()}`)) as { items?: unknown[] }
   const item = j?.items?.[0]
   return item ? normalizeGoogle(item) : null
 }
@@ -90,20 +104,28 @@ async function adapterOpenLibrary(input: EnrichInput): Promise<SourceRecord | nu
   return doc ? normalizeOpenLibrary(doc) : null
 }
 
-async function adapterHardcover(input: EnrichInput): Promise<SourceRecord | null> {
-  const token = Deno.env.get('HARDCOVER_TOKEN')
-  if (!token || !input.title) return null
+// Hardcover text search. Their API BLOCKS `_ilike` filters ("not permitted on this server"), so a
+// title search must go through the `search` query (Typesense-backed); each hit's `document` is the
+// search-doc shape → normalizeHardcoverSearch. Shared by the single-fetch adapter + the multi-candidate
+// search adapter. Best romance/indie cover coverage in this catalog.
+async function hardcoverSearchRecords(title: string | undefined, limit: number): Promise<SourceRecord[]> {
+  const auth = hardcoverAuth()
+  if (!auth || !title) return []
   const j = (await fetchJson('https://api.hardcover.app/v1/graphql', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    headers: { 'Content-Type': 'application/json', Authorization: auth },
     body: JSON.stringify({
-      query:
-        'query($t:String!){ books(where:{title:{_ilike:$t}}, limit:1){ id title pages release_date description image{url} book_series{ position series{ name } } taggings{ tag{ tag } } } }',
-      variables: { t: `%${input.title}%` },
+      query: 'query($q:String!,$n:Int!){ search(query:$q, query_type:"Book", per_page:$n){ results } }',
+      variables: { q: title, n: limit },
     }),
-  })) as { data?: { books?: unknown[] } }
-  const book = j?.data?.books?.[0]
-  return book ? normalizeHardcover(book) : null
+  })) as { data?: { search?: { results?: { hits?: { document?: unknown }[] } } } }
+  const hits = j?.data?.search?.results?.hits ?? []
+  return hits.map((h) => normalizeHardcoverSearch(h?.document)).filter((r) => r.title)
+}
+
+async function adapterHardcover(input: EnrichInput): Promise<SourceRecord | null> {
+  const [first] = await hardcoverSearchRecords(input.title, 1)
+  return first ?? null
 }
 
 async function adapterIsbndb(input: EnrichInput): Promise<SourceRecord | null> {
@@ -132,7 +154,7 @@ const SEARCH_LIMIT = 5
 async function searchGoogle(input: EnrichInput): Promise<ResolveCandidate[]> {
   if (!input.title) return []
   const q = `intitle:${encodeURIComponent(`"${input.title}"`)}${input.author ? `+inauthor:${encodeURIComponent(`"${input.author}"`)}` : ''}`
-  const j = (await fetchJson(`https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=${SEARCH_LIMIT}`)) as { items?: unknown[] }
+  const j = (await fetchJson(`https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=${SEARCH_LIMIT}${googleKey()}`)) as { items?: unknown[] }
   return (j?.items ?? [])
     .map((it): ResolveCandidate => ({ source: 'google', record: normalizeGoogle(it) }))
     .filter((c) => c.record.title)
@@ -149,21 +171,8 @@ async function searchOpenLibrary(input: EnrichInput): Promise<ResolveCandidate[]
 }
 
 async function searchHardcover(input: EnrichInput): Promise<ResolveCandidate[]> {
-  const token = Deno.env.get('HARDCOVER_TOKEN')
-  if (!token || !input.title) return []
-  // contributions{author{name}} so the candidate carries authors → the match can be CONFIRMED.
-  const j = (await fetchJson('https://api.hardcover.app/v1/graphql', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify({
-      query:
-        'query($t:String!,$n:Int!){ books(where:{title:{_ilike:$t}}, limit:$n){ id title pages release_date description image{url} contributions{ author{ name } } book_series{ position series{ name } } taggings{ tag{ tag } } } }',
-      variables: { t: `%${input.title}%`, n: SEARCH_LIMIT },
-    }),
-  })) as { data?: { books?: unknown[] } }
-  return (j?.data?.books ?? [])
-    .map((b): ResolveCandidate => ({ source: 'hardcover', record: normalizeHardcover(b) }))
-    .filter((c) => c.record.title)
+  const records = await hardcoverSearchRecords(input.title, SEARCH_LIMIT)
+  return records.map((record): ResolveCandidate => ({ source: 'hardcover', record }))
 }
 
 const SEARCHERS: Partial<Record<EnrichSource, (i: EnrichInput) => Promise<ResolveCandidate[]>>> = {

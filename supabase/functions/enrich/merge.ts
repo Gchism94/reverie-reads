@@ -98,7 +98,7 @@ const PRECEDENCE: Record<string, EnrichSource[]> = {
   title: ['openlibrary', 'hardcover', 'google', 'isbndb'],
   series: ['hardcover', 'openlibrary', 'google'],
   seriesPosition: ['hardcover', 'openlibrary'],
-  cover: ['google', 'openlibrary', 'isbndb'],
+  cover: ['hardcover', 'google', 'openlibrary', 'isbndb'],
   pageCount: ['isbndb', 'openlibrary', 'google'],
   publisher: ['isbndb', 'openlibrary', 'google'],
   pubY: ['isbndb', 'openlibrary', 'google', 'hardcover'],
@@ -266,6 +266,36 @@ export function normalizeHardcover(book: any): SourceRecord {
     categories: tags,
     cover: book.image?.url ?? '',
     ids: book.id ? { work: String(book.id) } : {},
+  }
+}
+
+/**
+ * Normalize a Hardcover SEARCH-result document (the Typesense doc shape returned by the `search`
+ * query) — distinct from normalizeHardcover's `books`-row shape. Hardcover blocks `_ilike` filters,
+ * so a title search MUST go through `search`, whose doc carries author_names, image.url (the cover —
+ * best for romance/indie), the full isbns list, series_names, genres/moods/tags, pages, release_date.
+ */
+export function normalizeHardcoverSearch(doc: any): SourceRecord {
+  if (!doc) return {}
+  const isbns = [...new Set((doc.isbns ?? []).map((x: string) => cleanIsbn(String(x))).filter(Boolean))].slice(0, 25) as string[]
+  const tags: string[] = [...(doc.genres ?? []), ...(doc.moods ?? []), ...(doc.tags ?? [])]
+    .map((t: any) => (typeof t === 'string' ? t : (t?.tag ?? t?.name ?? '')))
+    .filter(Boolean)
+  const releaseDate = String(doc.release_date ?? (doc.release_year ? `${doc.release_year}-01-01` : ''))
+  return {
+    title: doc.title ?? '',
+    authors: doc.author_names ?? [],
+    series: (doc.series_names ?? [])[0] ?? '',
+    seriesPosition: typeof doc.featured_series_position === 'number' ? doc.featured_series_position : null,
+    description: stripHtml(doc.description ?? ''),
+    categories: [...new Set(tags)].slice(0, 12),
+    cover: doc.image?.url ?? '',
+    pageCount: typeof doc.pages === 'number' ? doc.pages : null,
+    ...parsePubDate(releaseDate),
+    isbn13: isbns.find((i) => i.length === 13) ?? '',
+    isbn10: isbns.find((i) => i.length === 10) ?? '',
+    isbns,
+    ids: doc.id ? { work: String(doc.id) } : {},
   }
 }
 
