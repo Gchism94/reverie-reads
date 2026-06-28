@@ -8,6 +8,7 @@ import { useProfile, useUpdateProfile } from '../data/profile'
 import { usePerformMerge } from '../data/mergeBooks'
 import { buildBackup, restoreBackup } from '../data/importExport'
 import { importDetectedExport } from '../data/importLibrary'
+import { importSessionKey } from '../data/importReview'
 import { deleteAccount } from '../data/account'
 import { bulkComplete, isIncomplete, type BulkProgress } from '../data/enrichLibrary'
 import { DuplicateReview } from '../components/DuplicateReview'
@@ -50,6 +51,7 @@ function SettingsScreen() {
   const [status, setStatus] = useState<string | null>(null)
   const [showDupes, setShowDupes] = useState(false)
   const [review, setReview] = useState<ReviewCandidate[]>([])
+  const [imported, setImported] = useState(false)
   const [completing, setCompleting] = useState(false)
   const [progress, setProgress] = useState<BulkProgress | null>(null)
   const stopRef = useRef(false)
@@ -379,6 +381,9 @@ function SettingsScreen() {
                 readFile(e.currentTarget, async (text) => {
                   const r = await importDetectedExport(all, text, { autoMerge })
                   setReview(r.review)
+                  // Stash the per-book outcomes so the Import review screen can build its read-model.
+                  qc.setQueryData(importSessionKey, { outcomes: r.outcomes, readingOrders: r.readingOrders })
+                  setImported(true)
                   setStatus(
                     `Imported (${r.profile}) · merged ${r.merged} · added ${r.added} new${
                       r.readingOrders ? ` · ${r.readingOrders} reading order${r.readingOrders > 1 ? 's' : ''}` : ''
@@ -410,6 +415,16 @@ function SettingsScreen() {
             series, contributors, read status). The shape is detected automatically; matches fold
             into existing books, so re-importing is safe.
           </p>
+
+          {imported && (
+            <Link
+              to="/review"
+              className="mt-3 inline-flex min-h-[40px] items-center gap-1.5 rounded-full px-4 text-[14px] font-semibold"
+              style={{ background: 'var(--accent-fill)', color: 'var(--on-primary)' }}
+            >
+              Review import →
+            </Link>
+          )}
 
           {review.length > 0 && (
             <div className="mt-4 border-t border-line pt-4">
