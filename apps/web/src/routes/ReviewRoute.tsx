@@ -1,10 +1,11 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { createRoute, Link } from '@tanstack/react-router'
 import type { Book, NeedsLookItem, NeedsLookReason } from '@reverie/core'
 import { rootRoute } from './RootRoute'
-import { useBooks } from '../data/books'
+import { useBooks, useUpdateBook } from '../data/books'
 import { useImportReviewModel } from '../data/importReview'
 import { CoverImage } from '../components/CoverImage'
+import { CoverPicker } from '../components/CoverPicker'
 
 const REASON_LABEL: Record<NeedsLookReason, string> = {
   missing_cover: 'No cover',
@@ -25,10 +26,12 @@ function Stat({ label, value }: { label: string; value: number }) {
   )
 }
 
-/** A triage tile: shows the book's cover (low-confidence) or the skin placeholder (missing); a dead
- *  link falls back to the placeholder and is reported (CoverImage). */
-function TriageTile({ item, book }: { item: NeedsLookItem; book?: Book }) {
+/** A triage tile: shows the book's cover (low-confidence) or the skin placeholder (missing/broken; a
+ *  dead link falls back + is reported via CoverImage). Actions: pick a found edition (CoverPicker),
+ *  confirm a low-confidence match, or skip (dismiss for this session — the placeholder stands). */
+function TriageTile({ item, book, onDismiss }: { item: NeedsLookItem; book?: Book; onDismiss: () => void }) {
   const coverBook = book ?? { id: item.ref, title: item.title, last: item.author, cover: '' }
+  const update = useUpdateBook()
   return (
     <li className="w-[132px] flex-none">
       <div className="aspect-[2/3] overflow-hidden rounded-[10px] border border-line" style={{ background: 'var(--field)' }}>
@@ -39,6 +42,21 @@ function TriageTile({ item, book }: { item: NeedsLookItem; book?: Book }) {
       <div className="mt-1 inline-block rounded-full border border-line px-2 py-0.5 text-[10px] text-muted" style={{ background: 'var(--chip)' }}>
         {REASON_LABEL[item.reason]}
       </div>
+      <CoverPicker book={coverBook} />
+      {item.reason === 'low_confidence_cover' ? (
+        <button
+          type="button"
+          onClick={() => update.mutate({ id: item.ref, patch: { coverConfidence: 'high' } })}
+          className="mt-1 w-full rounded-full px-2 py-1 text-[11px] font-semibold"
+          style={{ background: 'var(--accent-fill)', color: 'var(--on-primary)' }}
+        >
+          Looks right
+        </button>
+      ) : (
+        <button type="button" onClick={onDismiss} className="mt-1 w-full text-[11px] text-muted underline">
+          Use placeholder
+        </button>
+      )}
     </li>
   )
 }
@@ -69,6 +87,8 @@ function ReviewScreen() {
   const model = useImportReviewModel()
   const { data: books } = useBooks()
   const byId = useMemo(() => new Map((books ?? []).map((b) => [b.id, b])), [books])
+  const [dismissed, setDismissed] = useState<ReadonlySet<string>>(new Set())
+  const dismiss = (ref: string) => setDismissed((prev) => new Set(prev).add(ref))
 
   if (!model) {
     return (
@@ -85,6 +105,7 @@ function ReviewScreen() {
   }
 
   const { summary, needsLook, coverTriage } = model
+  const shownTriage = coverTriage.filter((i) => !dismissed.has(i.ref))
   const genreChips = Object.entries(summary.genres).sort((a, b) => b[1] - a[1])
 
   return (
@@ -115,15 +136,15 @@ function ReviewScreen() {
       )}
 
       {/* cover triage */}
-      {coverTriage.length > 0 && (
+      {shownTriage.length > 0 && (
         <section className="mt-6">
           <h2 className="text-[15px] font-semibold text-ink" style={{ fontFamily: 'var(--font-display)' }}>
-            Covers to sort <span className="text-muted">· {coverTriage.length}</span>
+            Covers to sort <span className="text-muted">· {shownTriage.length}</span>
           </h2>
-          <p className="mb-2 text-[12px] text-muted">Missing, low-confidence, or broken. The Cover Studio (next) adds pick / upload / photo / themed placeholder here.</p>
+          <p className="mb-2 text-[12px] text-muted">Missing, low-confidence, or broken. Pick a found edition, confirm a match, or keep the skin placeholder. Upload / photo come with the Studio design.</p>
           <ul className="flex flex-wrap gap-3">
-            {coverTriage.map((i) => (
-              <TriageTile key={i.ref} item={i} book={byId.get(i.ref)} />
+            {shownTriage.map((i) => (
+              <TriageTile key={i.ref} item={i} book={byId.get(i.ref)} onDismiss={() => dismiss(i.ref)} />
             ))}
           </ul>
         </section>
@@ -132,7 +153,7 @@ function ReviewScreen() {
       <ListBucket title="Unmapped genres" items={needsLook.oddGenre} />
       <ListBucket title="Likely duplicates" items={needsLook.likelyDuplicate} />
 
-      {coverTriage.length === 0 && !needsLook.oddGenre.length && !needsLook.likelyDuplicate.length && (
+      {shownTriage.length === 0 && !needsLook.oddGenre.length && !needsLook.likelyDuplicate.length && (
         <p className="mt-6 rounded-xl border border-line px-3 py-3 text-center text-[13px] text-muted" style={{ background: 'var(--card)' }}>
           Nothing needs a look — every book came in clean. ✦
         </p>
