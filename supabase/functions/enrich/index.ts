@@ -46,6 +46,12 @@ interface EnrichInput {
   isbn?: string
   mode?: 'fast' | 'full'
   refresh?: boolean
+  /** 'cacheCover' → materialize a single cover URL to Storage (a manual Cover Studio pick), no search */
+  action?: 'cacheCover'
+  /** the source cover URL to cache (with action 'cacheCover') */
+  cover?: string
+  /** the edition ISBN-13 the cover belongs to (cache key, for dedup) */
+  isbn13?: string
 }
 
 const cleanIsbn = (s: string) => (s || '').replace(/[^0-9Xx]/g, '').toUpperCase()
@@ -236,6 +242,13 @@ Deno.serve(async (req: Request) => {
   if (!rl.allowed) return tooMany(rl.retryAfter, cors)
   try {
     const input = (await req.json()) as EnrichInput
+
+    // Manual Cover Studio pick: materialize ONE chosen cover URL to Storage/CDN (owned, not a hotlink),
+    // keyed by its edition ISBN so repeats dedup. Falls back to the source URL on any failure.
+    if (input.action === 'cacheCover' && input.cover) {
+      const key = (cleanIsbn(input.isbn13 ?? '') || input.cover).replace(/[^a-z0-9]/gi, '_').slice(0, 80)
+      return json({ cover: await cacheCover(input.cover, key) })
+    }
     const mode = input.mode ?? 'full'
     const key = cacheKeyFor(input)
 
