@@ -261,9 +261,14 @@ export interface UniverseInput {
   /** grouping key — the author owns the interconnected world */
   author: string
   series: string
+  /** book title — the final, deterministic tie-break when global order repeats (E2 / Flag 2) */
+  title: string
   globalOrder: number | null
   seriesType: string | null
+  /** "Series #" — which series within the universe; the first tie-break after global order */
   seriesNumber: number | null
+  /** intrinsic position within its own series; the second tie-break (read book 1 before book 2) */
+  seriesOrder: number | null
 }
 
 export interface UniverseOrderItem {
@@ -287,10 +292,19 @@ export function universeInputFromRow(row: ImportedRow, ref: string): UniverseInp
     ref,
     author: [inc.first, inc.last].filter(Boolean).join(' ').trim().toLowerCase(),
     series: inc.series ?? '',
+    title: inc.title,
     globalOrder: row.globalOrder,
     seriesType: row.seriesType,
     seriesNumber: row.seriesNumber,
+    seriesOrder: typeof inc.position === 'number' ? inc.position : null,
   }
+}
+
+/** Numeric compare that sorts null/undefined last (used for the tie-break ladder). */
+const byNum = (a: number | null | undefined, b: number | null | undefined): number => {
+  const x = a ?? Number.MAX_SAFE_INTEGER
+  const y = b ?? Number.MAX_SAFE_INTEGER
+  return x === y ? 0 : x < y ? -1 : 1
 }
 
 const isConnected = (r: UniverseInput): boolean =>
@@ -302,6 +316,12 @@ const isConnected = (r: UniverseInput): boolean =>
  * universe needs at least two of them. Items are sorted by the exact global order (epilogues/
  * novellas land exactly where the human placed them); the name comes from the entry-point series
  * (the lowest global order). Each book keeps its own series + position — this is an overlay.
+ *
+ * Tie semantics (E2 / Flag 2): real exports give SEVERAL books the SAME global order (Rina Kent has
+ * 3-way ties at positions 1–9 — a whole series shares one universe slot). Tied books are ALL kept as
+ * a concurrent tier at that repeated position — never collided / last-write-wins / dropped. Within a
+ * tie the order is fully deterministic: series number (which series), then series order (read book 1
+ * before book 2), then title. So the same export always materializes the identical sequence.
  */
 export function detectUniverses(rows: readonly UniverseInput[]): UniverseOrder[] {
   const byAuthor = new Map<string, UniverseInput[]>()
@@ -315,7 +335,13 @@ export function detectUniverses(rows: readonly UniverseInput[]): UniverseOrder[]
   const orders: UniverseOrder[] = []
   for (const group of byAuthor.values()) {
     if (group.length < 2) continue // a single ordered book isn't a universe
-    const sorted = [...group].sort((a, b) => (a.globalOrder ?? 0) - (b.globalOrder ?? 0))
+    const sorted = [...group].sort(
+      (a, b) =>
+        byNum(a.globalOrder, b.globalOrder) || // exact curated slot
+        byNum(a.seriesNumber, b.seriesNumber) || // ties: which series in the universe
+        byNum(a.seriesOrder, b.seriesOrder) || // then intrinsic series position
+        a.title.localeCompare(b.title), // then title — stable, deterministic
+    )
     const entrySeries = sorted.find((r) => r.series)?.series ?? ''
     const name = `${entrySeries || 'Reading'} — reading order`
     orders.push({

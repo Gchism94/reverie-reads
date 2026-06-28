@@ -242,8 +242,13 @@ export function normalizeHardcover(book: any): SourceRecord {
   const tags: string[] = (book.taggings ?? [])
     .map((t: any) => t?.tag?.tag ?? t?.tag?.name ?? '')
     .filter(Boolean)
+  // contributions[].author.name → authors (needed so a title+author search can CONFIRM the match).
+  const authors: string[] = (book.contributions ?? [])
+    .map((c: any) => c?.author?.name ?? '')
+    .filter(Boolean)
   return {
     title: book.title ?? '',
+    authors,
     pageCount: book.pages ?? null,
     ...parsePubDate(book.release_date ?? ''),
     description: stripHtml(book.description ?? ''),
