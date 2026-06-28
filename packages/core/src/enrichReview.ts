@@ -1,0 +1,150 @@
+// E3 — import/enrichment review read-model (docs/COVER_SOURCING_AND_STUDIO.md; docs/IMPORT_REAL_VALIDATION.md).
+// After an import + background enrichment run, the onboarding/import REVIEW screen and the Cover Studio
+// need a structured "what happened / what needs a look" payload. This builds it PURELY from per-book
+// outcomes the caller assembled during the run — a summary plus the bucketed "needs a look" items, each
+// carrying enough to act on (and, for covers, the E1 alternate candidates the picker offers). The Cover
+// Studio's triage queue is exactly the missing + low-confidence cover buckets. Pure shape, unit-tested;
+// the UI (review screen + Cover Studio) is built later and consumes this.
+
+import { confidenceRank, type Confidence } from './enrichResolve'
+import type { EnrichSource } from './enrich'
+
+/** A cover edition choice for the picker (distilled from an E1 alternate candidate). */
+export interface CoverAlternate {
+  source: EnrichSource
+  cover: string
+  isbn13: string
+  title: string
+  author: string
+}
+
+/** One book's outcome after import + enrichment, as the caller observed it. */
+export interface ReviewItemInput {
+  ref: string
+  title: string
+  author: string
+  /** import disposition: a fresh add, or deduped (merged) into an existing book */
+  disposition: 'added' | 'merged'
+  inSeries: boolean
+  /** the resolved cover URL, or null/'' when none was found */
+  cover?: string | null
+  /** confidence of the cover/match (E1); 'none' when nothing resolved */
+  coverConfidence: Confidence
+  /** edition choices for this book (E1 alternates) — drives the cover picker */
+  coverAlternates?: CoverAlternate[]
+  /** the mapped primary genre, or null when unresolved */
+  genre?: string | null
+  /** the raw genre token when it did NOT map to a known genre (I1: a leaked "standalone", odd label) */
+  unmappedGenre?: string | null
+  /** the source export flagged this row as a known duplicate */
+  duplicateFlagged?: boolean
+  /** the matcher detected this as a likely duplicate of an existing book */
+  duplicateDetected?: boolean
+}
+
+export interface ReviewSummary {
+  total: number
+  added: number
+  /** deduped into an existing book */
+  merged: number
+  inSeries: number
+  standalones: number
+  readingOrdersBuilt: number
+  /** primary-genre breakdown; unresolved genres tallied under '∅' */
+  genres: Record<string, number>
+}
+
+export type NeedsLookReason = 'missing_cover' | 'low_confidence_cover' | 'odd_genre' | 'likely_duplicate'
+
+export interface NeedsLookItem {
+  ref: string
+  title: string
+  author: string
+  reason: NeedsLookReason
+  detail: string
+  /** cover edition choices — populated for the cover buckets, empty otherwise */
+  alternates: CoverAlternate[]
+}
+
+export interface ReviewModel {
+  summary: ReviewSummary
+  needsLook: {
+    missingCover: NeedsLookItem[]
+    lowConfidenceCover: NeedsLookItem[]
+    oddGenre: NeedsLookItem[]
+    likelyDuplicate: NeedsLookItem[]
+  }
+  /** the Cover Studio triage queue = missing covers first, then low-confidence ones */
+  coverTriage: NeedsLookItem[]
+}
+
+const hasCover = (i: ReviewItemInput): boolean => !!(i.cover && i.cover.trim())
+// A resolved cover whose match wasn't safe (low/none) — wrong-cover risk, surface for a look.
+const isLowConfidenceCover = (i: ReviewItemInput): boolean =>
+  hasCover(i) && confidenceRank(i.coverConfidence) <= confidenceRank('low')
+
+const item = (i: ReviewItemInput, reason: NeedsLookReason, detail: string): NeedsLookItem => ({
+  ref: i.ref,
+  title: i.title,
+  author: i.author,
+  reason,
+  detail,
+  alternates: reason === 'missing_cover' || reason === 'low_confidence_cover' ? (i.coverAlternates ?? []) : [],
+})
+
+/**
+ * Build the review payload from per-book outcomes. Buckets are independent VIEWS — one book can appear
+ * in several (e.g. a missing cover that's also an odd genre). The Cover Studio triage queue is the
+ * missing + low-confidence cover buckets, each item already carrying its alternate edition choices.
+ */
+export function buildReviewModel(
+  items: readonly ReviewItemInput[],
+  opts: { readingOrdersBuilt?: number } = {},
+): ReviewModel {
+  const summary: ReviewSummary = {
+    total: items.length,
+    added: 0,
+    merged: 0,
+    inSeries: 0,
+    standalones: 0,
+    readingOrdersBuilt: opts.readingOrdersBuilt ?? 0,
+    genres: {},
+  }
+  const missingCover: NeedsLookItem[] = []
+  const lowConfidenceCover: NeedsLookItem[] = []
+  const oddGenre: NeedsLookItem[] = []
+  const likelyDuplicate: NeedsLookItem[] = []
+
+  for (const i of items) {
+    if (i.disposition === 'merged') summary.merged++
+    else summary.added++
+    if (i.inSeries) summary.inSeries++
+    else summary.standalones++
+
+    const g = i.genre && i.genre.trim() ? i.genre : '∅'
+    summary.genres[g] = (summary.genres[g] ?? 0) + 1
+
+    if (!hasCover(i)) {
+      missingCover.push(item(i, 'missing_cover', 'no cover found — add one in the Cover Studio'))
+    } else if (isLowConfidenceCover(i)) {
+      lowConfidenceCover.push(
+        item(i, 'low_confidence_cover', `cover match is ${i.coverConfidence} confidence — confirm or pick another edition`),
+      )
+    }
+
+    if (i.unmappedGenre && i.unmappedGenre.trim()) {
+      oddGenre.push(item(i, 'odd_genre', `unmapped genre "${i.unmappedGenre}" — set a genre`))
+    }
+
+    if (i.duplicateFlagged || i.duplicateDetected) {
+      const why = i.duplicateFlagged && i.duplicateDetected ? 'flagged in the export and detected' : i.duplicateFlagged ? 'flagged in the export' : 'detected as a likely duplicate'
+      likelyDuplicate.push(item(i, 'likely_duplicate', why))
+    }
+  }
+
+  return {
+    summary,
+    needsLook: { missingCover, lowConfidenceCover, oddGenre, likelyDuplicate },
+    coverTriage: [...missingCover, ...lowConfidenceCover],
+  }
+}

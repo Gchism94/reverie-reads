@@ -70,4 +70,23 @@ describe('Flag 2 — tied (non-unique) global-order (I3) survives as concurrent 
     const positions = rina.items.map((i) => i.position)
     expect(positions).toEqual([...positions].sort((a, b) => a - b)) // still in global order
   })
+  it('orders a tied tier deterministically: series #, then series order, then title (E2)', () => {
+    // refs are titles in this fixture (universeInputFromRow(r, r.incoming.title)).
+    const rina = universes.find((u) => u.name.startsWith('Royal Elite'))!
+    const at = (p: number) => rina.items.filter((i) => i.position === p).map((i) => i.ref)
+    // go1: all Royal Elite (series #1) → intrinsic series order 1,2,3.
+    expect(at(1)).toEqual(['Deviant King', 'Steel Princess', 'Twisted Kingdom'])
+    // go2: Royal Elite #4 (series #1) sorts before the Epilogues (series #2), which then read 1→2.
+    expect(at(2)).toEqual(['Black Knight', 'Vicious Prince', 'Cruel King'])
+  })
+  it('is order-independent — shuffling the input rows yields the identical sequence (E2)', () => {
+    const shuffled = [...rows].reverse()
+    const u = detectUniverses(shuffled.map((r) => universeInputFromRow(r, r.incoming.title)))
+    const rina = u.find((x) => x.name.startsWith('Royal Elite'))!
+    expect(rina.items.filter((i) => i.position === 1).map((i) => i.ref)).toEqual([
+      'Deviant King',
+      'Steel Princess',
+      'Twisted Kingdom',
+    ])
+  })
 })

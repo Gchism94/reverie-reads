@@ -18,6 +18,19 @@ import {
   normalizeIsbndb as fnNI,
   normalizeOpenLibrary as fnNOL,
 } from '../../../supabase/functions/enrich/merge'
+import {
+  matchKey as coreMatchKey,
+  scoreCandidate as coreScore,
+  selectBestMatch as coreSelect,
+  selfIsbn13 as coreSelfIsbn,
+  type ResolveCandidate,
+} from './enrichResolve'
+import {
+  matchKey as fnMatchKey,
+  scoreCandidate as fnScore,
+  selectBestMatch as fnSelect,
+  selfIsbn13 as fnSelfIsbn,
+} from '../../../supabase/functions/enrich/resolve'
 
 // Captured raw fixtures spanning all four sources + edge cases (coded subjects, html, isbn-10).
 const GOOGLE = { id: 'v1', volumeInfo: { title: 'Twisted Love', authors: ['Ana Huang'], publisher: 'Bloom', publishedDate: '2021-06-08', pageCount: 348, categories: ['Fiction / Romance / Contemporary'], description: '<p>Enemies <b>to</b> lovers.</p>', imageLinks: { thumbnail: 'http://g/c.jpg&edge=curl' }, industryIdentifiers: [{ type: 'ISBN_13', identifier: '9781735056258' }, { type: 'ISBN_10', identifier: '1735056251' }], language: 'en' } }
@@ -51,5 +64,33 @@ describe('enrich mirror ↔ core parity (golden fixtures)', () => {
     // with a user override too
     const user = { title: 'My Title', at }
     expect(fnMerge(stamped, user)).toEqual(coreMerge(stamped, user))
+  })
+})
+
+describe('resolve mirror ↔ core parity (E1)', () => {
+  it('matchKey + selfIsbn13 are identical', () => {
+    for (const s of ['Céline', 'King of Wrath: A Novel', '  Twisted  Love ', 'A Court of Thorns & Roses']) {
+      expect(fnMatchKey(s)).toBe(coreMatchKey(s))
+    }
+    for (const r of [{ isbn10: '1735056251' }, { isbn13: '978-1-7350-5625-8' }, { isbns: ['1735056251'] }, {}]) {
+      expect(fnSelfIsbn(r)).toBe(coreSelfIsbn(r))
+    }
+  })
+
+  it('scoreCandidate + selectBestMatch are identical', () => {
+    const q = { title: 'King of Wrath', author: 'Ana Huang' }
+    const cands: ResolveCandidate[] = [
+      { source: 'hardcover', record: { title: 'King of Wrath', authors: ['Ana Huang'], isbn13: '9780000000001', cover: 'a.jpg' } },
+      { source: 'google', record: { title: 'King of Wrath: A Novel', authors: ['Ana Huang'], isbn13: '9780000000002', cover: 'b.jpg' } },
+      { source: 'openlibrary', record: { title: 'King of Wrath', authors: ['Someone Else'], isbn13: '9780000000003' } },
+    ]
+    for (const c of cands) expect(fnScore(q, c)).toEqual(coreScore(q, c))
+    expect(fnSelect(q, cands)).toEqual(coreSelect(q, cands))
+    // ambiguous (no author) path too
+    const amb: ResolveCandidate[] = [
+      { source: 'google', record: { title: 'Twisted', authors: ['Ana Huang'], isbn13: '9780000000001' } },
+      { source: 'openlibrary', record: { title: 'Twisted', authors: ['Lisa Jackson'], isbn13: '9780000000002' } },
+    ]
+    expect(fnSelect({ title: 'Twisted' }, amb)).toEqual(coreSelect({ title: 'Twisted' }, amb))
   })
 })

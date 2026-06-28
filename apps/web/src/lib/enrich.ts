@@ -6,6 +6,18 @@ export interface FieldProvenance {
   at: string
 }
 
+/** How sure the title+author resolution is (E1); an exact-ISBN scan is always 'high'. */
+export type EnrichConfidence = 'high' | 'medium' | 'low' | 'none'
+
+/** An alternate edition candidate for the Cover Studio picker (E1 alternates). */
+export interface CoverAlternate {
+  source: 'openlibrary' | 'google' | 'hardcover' | 'isbndb' | 'manual'
+  cover: string
+  isbn13: string
+  title: string
+  author: string
+}
+
 /** Full normalized record returned by the enrichment aggregator (docs/ENRICHMENT_STRATEGY.md). */
 export interface EnrichResult {
   title: string
@@ -34,6 +46,12 @@ export interface EnrichResult {
   editionId?: string
   provenance?: Record<string, FieldProvenance>
   source: string | null
+  /** E1: confidence of the title+author match (drives the import-review "needs a look" buckets) */
+  confidence?: EnrichConfidence
+  /** E1: the normalized title+author query the search used */
+  query?: string
+  /** E1: alternate edition candidates for the Cover Studio picker */
+  alternates?: CoverAlternate[]
 }
 
 export type EnrichOutcome =
