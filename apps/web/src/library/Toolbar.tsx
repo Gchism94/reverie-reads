@@ -2,7 +2,7 @@ import { activeFilterCount, type LibrarySort } from '@reverie/core'
 import { useFilters } from './filterStore'
 import { SORTS } from './constants'
 
-export function Toolbar() {
+export function Toolbar({ filterToggleClass = '' }: { filterToggleClass?: string }) {
   const filters = useFilters((s) => s.filters)
   const mode = useFilters((s) => s.mode)
   const setQuery = useFilters((s) => s.setQuery)
@@ -30,7 +30,7 @@ export function Toolbar() {
         type="button"
         onClick={togglePanel}
         aria-expanded={panelOpen}
-        className="flex h-10 items-center gap-1.5 rounded-full border border-line px-4 text-[13px] font-semibold text-ink"
+        className={`flex h-10 items-center gap-1.5 rounded-full border border-line px-4 text-[13px] font-semibold text-ink ${filterToggleClass}`}
         style={{ background: 'var(--card)' }}
       >
         Filters{count > 0 && <span className="text-gold">({count})</span>}
