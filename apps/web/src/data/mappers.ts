@@ -12,6 +12,7 @@ import type { BookRow, ListRow, ReadRow } from './types'
 
 const SERIES_STATUS: readonly SeriesStatus[] = ['Standalone', 'Series', 'Complete']
 const READ_STATUS: readonly ReadStatus[] = ['Unread', 'Reading', 'Read', 'DNF']
+const COVER_CONFIDENCE = ['high', 'medium', 'low', 'none'] as const
 
 /** Map the book_authors join into an ordered, role-typed contributor list. */
 function toContributors(row: BookRow): Contributor[] {
@@ -49,6 +50,9 @@ export function toBook(row: BookRow): Book {
     tags: row.tags ?? [],
     intensity: row.intensity ?? null,
     cover: row.cover_url ?? '',
+    coverConfidence: COVER_CONFIDENCE.includes(row.cover_confidence as (typeof COVER_CONFIDENCE)[number])
+      ? (row.cover_confidence as Book['coverConfidence'])
+      : undefined,
     isbn: row.isbn ?? '',
     fave: row.fave,
     owned: {
@@ -92,6 +96,7 @@ export function toBookRow(patch: Partial<Book>): Partial<BookRow> {
   if (patch.tags !== undefined) row.tags = patch.tags
   if (patch.intensity !== undefined) row.intensity = patch.intensity
   if (patch.cover !== undefined) row.cover_url = patch.cover || null
+  if (patch.coverConfidence !== undefined) row.cover_confidence = patch.coverConfidence || null
   if (patch.isbn !== undefined) row.isbn = patch.isbn || null
   if (patch.fave !== undefined) row.fave = patch.fave
   if (patch.owned !== undefined) {

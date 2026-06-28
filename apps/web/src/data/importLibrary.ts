@@ -1,4 +1,11 @@
-import { detectUniverses, parseImport, universeInputFromRow, type ImportedRow, type UniverseOrder } from '@reverie/core'
+import {
+  detectUniverses,
+  parseImport,
+  universeInputFromRow,
+  type ImportedRow,
+  type ImportItemOutcome,
+  type UniverseOrder,
+} from '@reverie/core'
 import { supabase } from '../lib/supabase'
 import { applyIncoming, type ReviewCandidate } from './intake'
 import { loadVerdicts } from './duplicates'
@@ -27,6 +34,9 @@ export interface ImportExportResult {
   ingested: IngestedRow[]
   /** connected-universe reading orders created/refreshed from the import */
   readingOrders: number
+  /** per-resolved-book signals for the import-review read-model (E3); join with the post-enrichment
+   *  books via buildReviewModelFromImport(outcomes, books, { readingOrdersBuilt: readingOrders }) */
+  outcomes: ImportItemOutcome[]
 }
 
 /**
@@ -90,7 +100,7 @@ export async function importDetectedExport(
   // Generic shape → the existing Goodreads/StoryGraph path (no connected-universe metadata).
   if (profile.name === 'generic') {
     const r = await importCsvToBackend(currentBooks, text, { autoMerge: opts.autoMerge })
-    return { profile: profile.name, added: r.added, merged: r.merged, review: r.review, ingested: [], readingOrders: 0 }
+    return { profile: profile.name, added: r.added, merged: r.merged, review: r.review, ingested: [], readingOrders: 0, outcomes: [] }
   }
 
   const ownerId = await currentUserId()
@@ -102,6 +112,7 @@ export async function importDetectedExport(
   let merged = 0
   const review: ReviewCandidate[] = []
   const ingested: IngestedRow[] = []
+  const outcomes: ImportItemOutcome[] = []
 
   for (const row of rows) {
     const res = await applyIncoming(row.incoming, library, ownerId, {
@@ -113,11 +124,20 @@ export async function importDetectedExport(
     else if (res.outcome === 'merged') merged++
     if (res.review) review.push(res.review)
     if (res.bookId) ingested.push({ row, bookId: res.bookId })
+    // Capture the per-book review signals for the books that materialized (added or deduped).
+    if (res.bookId && (res.outcome === 'added' || res.outcome === 'merged')) {
+      outcomes.push({
+        bookId: res.bookId,
+        disposition: res.outcome,
+        duplicateFlagged: row.duplicate,
+        unmappedGenre: row.unmappedGenre,
+      })
+    }
   }
 
   // I3: connected-series universes (global order) → reading orders, overlaid on the ingested books.
   const universes = detectUniverses(ingested.map(({ row, bookId }) => universeInputFromRow(row, bookId)))
   const readingOrders = await persistUniverseOrders(universes, ownerId)
 
-  return { profile: profile.name, added, merged, review, ingested, readingOrders }
+  return { profile: profile.name, added, merged, review, ingested, readingOrders, outcomes }
 }

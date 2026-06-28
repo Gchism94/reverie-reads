@@ -87,6 +87,8 @@ export interface ImportedRow {
   seriesNumber: number | null
   /** raw series-type marker, e.g. "interconnected standalone" */
   seriesType: string | null
+  /** the raw genre cell when it didn't map to a core genre (E3 import-review "odd genre" signal) */
+  unmappedGenre: string | null
 }
 
 const normHeader = (h: string) => h.trim().toLowerCase()
@@ -190,7 +192,7 @@ export function rowToImported(row: string[], idx: Record<string, number>): Impor
   if (!title) return null
 
   const { first, last, contributors } = contributorsFor(cell)
-  const { genre, genres, tags, intensity } = normalizeImportGenres(cell('genre'), cell('tags'))
+  const { genre, genres, tags, intensity, unmappedGenre } = normalizeImportGenres(cell('genre'), cell('tags'))
 
   const seriesName = cell('series').trim()
   const orderRaw = cell('seriesOrder').trim()
@@ -224,6 +226,7 @@ export function rowToImported(row: string[], idx: Record<string, number>): Impor
     globalOrder: num(cell('globalOrder')),
     seriesNumber: num(cell('seriesNumber')),
     seriesType: cell('seriesType').trim() || null,
+    unmappedGenre,
   }
 }
 

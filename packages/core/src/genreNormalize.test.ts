@@ -41,12 +41,19 @@ describe('normalizeImportGenres — primary genre + cores', () => {
     expect(g('Historical Fiction')).toMatchObject({ genre: 'Literary', tags: ['historical fiction'] })
   })
   it('blank genre stays null with empty arrays', () => {
-    expect(g('')).toEqual({ genre: null, genres: [], tags: [], intensity: null })
-    expect(g('   ')).toEqual({ genre: null, genres: [], tags: [], intensity: null })
+    expect(g('')).toEqual({ genre: null, genres: [], tags: [], intensity: null, unmappedGenre: null })
+    expect(g('   ')).toEqual({ genre: null, genres: [], tags: [], intensity: null, unmappedGenre: null })
   })
   it('drops non-genre markers like "standalone"', () => {
     expect(g('Romance; standalone').genres).toEqual(['Romance'])
     expect(g('standalone').genre).toBeNull()
+  })
+  it('reports the raw genre cell as unmappedGenre when it yields no core genre (E3 odd-genre signal)', () => {
+    expect(g('standalone').unmappedGenre).toBe('standalone') // the real file's leaked series-type
+    expect(g('  Dark Fae ').unmappedGenre).toBe('Dark Fae') // unrecognized label, trimmed
+    expect(g('Romance; standalone').unmappedGenre).toBeNull() // a core genre WAS found → not flagged
+    expect(g('Romance').unmappedGenre).toBeNull()
+    expect(g('').unmappedGenre).toBeNull() // blank is not "unmapped"
   })
 })
 

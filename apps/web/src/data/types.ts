@@ -17,6 +17,7 @@ export interface BookRow {
   tags: string[]
   intensity: number | null
   cover_url: string | null
+  cover_confidence: string | null
   isbn: string | null
   fave: boolean
   owned_physical: string | null
