@@ -6,6 +6,7 @@ import { useReadingOrders } from '../data/readingOrders'
 import { buyConfig } from '../lib/buyConfig'
 import { useLabels } from '../skin/labels'
 import { rootRoute } from '../routes/RootRoute'
+import { CoverImage } from '../components/CoverImage'
 import { useBooks, useDeleteBook, useUpdateBook } from '../data/books'
 import { useDeleteRead, useReads } from '../data/reads'
 import { useBookListIds, useToggleListItem } from '../data/listItems'
@@ -157,16 +158,7 @@ function BookDetailScreen() {
           className="aspect-[2/3] w-32 flex-none overflow-hidden rounded-xl border border-line sm:w-40"
           style={{ background: `linear-gradient(150deg, ${g0}, ${g1})` }}
         >
-          {book.cover && (
-            <img
-              src={book.cover}
-              alt=""
-              className="h-full w-full object-cover"
-              onError={(e) => {
-                e.currentTarget.style.visibility = 'hidden'
-              }}
-            />
-          )}
+          <CoverImage book={book} />
         </div>
 
         <div className="min-w-0 flex-1">

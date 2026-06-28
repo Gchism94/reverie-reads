@@ -31,7 +31,9 @@ function TriageTile({ item, book }: { item: NeedsLookItem; book?: Book }) {
   const coverBook = book ?? { id: item.ref, title: item.title, last: item.author, cover: '' }
   return (
     <li className="w-[132px] flex-none">
-      <CoverImage book={coverBook} />
+      <div className="aspect-[2/3] overflow-hidden rounded-[10px] border border-line" style={{ background: 'var(--field)' }}>
+        <CoverImage book={coverBook} />
+      </div>
       <div className="mt-1.5 truncate text-[12.5px] font-semibold text-ink">{item.title}</div>
       {item.author && <div className="truncate text-[11px] text-muted">{item.author}</div>}
       <div className="mt-1 inline-block rounded-full border border-line px-2 py-0.5 text-[10px] text-muted" style={{ background: 'var(--chip)' }}>
