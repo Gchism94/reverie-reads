@@ -186,4 +186,15 @@ describe('buildReviewModelFromImport — joins import outcomes with post-enrichm
     const m = buildReviewModelFromImport([{ bookId: 'gone', disposition: 'added' }], [book({ id: '1' })])
     expect(m.summary.total).toBe(0)
   })
+
+  it('routes a book in brokenRefs to the brokenCover bucket (runtime onerror signal)', () => {
+    const m = buildReviewModelFromImport(
+      [{ bookId: '1', disposition: 'added' }],
+      [book({ id: '1', cover: 'dead.jpg', coverConfidence: 'high' })],
+      { brokenRefs: new Set(['1']) },
+    )
+    expect(m.needsLook.brokenCover.map((i) => i.ref)).toEqual(['1'])
+    expect(m.needsLook.missingCover).toHaveLength(0) // it has a cover (just dead)
+    expect(m.coverTriage[0]?.reason).toBe('broken_cover')
+  })
 })

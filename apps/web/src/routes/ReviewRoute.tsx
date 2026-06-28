@@ -4,7 +4,7 @@ import type { Book, NeedsLookItem, NeedsLookReason } from '@reverie/core'
 import { rootRoute } from './RootRoute'
 import { useBooks } from '../data/books'
 import { useImportReviewModel } from '../data/importReview'
-import { CoverPlaceholder } from '../components/CoverPlaceholder'
+import { CoverImage } from '../components/CoverImage'
 
 const REASON_LABEL: Record<NeedsLookReason, string> = {
   missing_cover: 'No cover',
@@ -25,21 +25,13 @@ function Stat({ label, value }: { label: string; value: number }) {
   )
 }
 
-/** A triage tile: the book's real cover for a low-confidence match, else the skin placeholder. */
+/** A triage tile: shows the book's cover (low-confidence) or the skin placeholder (missing); a dead
+ *  link falls back to the placeholder and is reported (CoverImage). */
 function TriageTile({ item, book }: { item: NeedsLookItem; book?: Book }) {
-  const showRealCover = item.reason === 'low_confidence_cover' && !!book?.cover
+  const coverBook = book ?? { id: item.ref, title: item.title, last: item.author, cover: '' }
   return (
     <li className="w-[132px] flex-none">
-      {showRealCover ? (
-        <img
-          src={book?.cover}
-          alt={`${item.title} cover`}
-          className="w-full rounded-[10px] border border-line object-cover"
-          style={{ aspectRatio: '2 / 3' }}
-        />
-      ) : (
-        <CoverPlaceholder book={{ title: item.title, last: item.author }} />
-      )}
+      <CoverImage book={coverBook} />
       <div className="mt-1.5 truncate text-[12.5px] font-semibold text-ink">{item.title}</div>
       {item.author && <div className="truncate text-[11px] text-muted">{item.author}</div>}
       <div className="mt-1 inline-block rounded-full border border-line px-2 py-0.5 text-[10px] text-muted" style={{ background: 'var(--chip)' }}>
