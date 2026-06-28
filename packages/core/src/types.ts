@@ -71,6 +71,9 @@ export interface Book {
   tags: string[] // generic content tags (the Tryst skin labels these "Tropes")
   intensity: number | null // 0..5, null = unset (the Tryst skin labels this "Spice")
   cover: string
+  /** confidence of the enrichment-resolved cover/match (E1); unset for user/seed covers (trusted).
+   *  Drives the import-review "low-confidence cover" bucket. Union mirrors enrichResolve's Confidence. */
+  coverConfidence?: 'high' | 'medium' | 'low' | 'none'
   isbn: string
   fave: boolean
   owned: Owned // per-format ownership; all-false = wishlist

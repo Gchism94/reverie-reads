@@ -123,6 +123,9 @@ export async function bulkComplete(
     let didFill = false
     if (outcome.status === 'ok') {
       const { patch } = mergeImport(b, toIncoming(outcome.data, b))
+      // Record confidence only when THIS run actually filled the cover — so a trusted user/seed cover
+      // (which merge keeps) is never mislabeled by the enrichment match's confidence (E3 review signal).
+      if (patch.cover && outcome.data.confidence) patch.coverConfidence = outcome.data.confidence
       const { error: ue } = await supabase
         .from('books')
         .update({ ...toBookRow(patch), enriched_at: checkedAt })

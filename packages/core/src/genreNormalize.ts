@@ -67,6 +67,9 @@ export interface NormalizedGenres {
   tags: string[]
   /** intensity from a spice token, else null */
   intensity: number | null
+  /** the raw genre field when it was non-empty but mapped to NO core genre (e.g. a leaked "standalone"
+   *  or an unrecognized label) — the import-review "odd/unmapped genre" signal (E3). null otherwise. */
+  unmappedGenre: string | null
 }
 
 /** Split a messy field on ; / , and the stray ":" separator; trim; drop empties. */
@@ -124,10 +127,14 @@ export function normalizeImportGenres(genreField: string, tagsField = ''): Norma
   }
 
   const uniqueTags = [...new Set(tags)]
+  // A non-empty genre column that yielded no core genre is worth a look in the import review (the
+  // canonical case is the real file's leaked "standalone"; also catches genuinely unrecognized labels).
+  const unmappedGenre = genreField.trim() !== '' && cores.length === 0 ? genreField.trim() : null
   return {
     genre: cores[0] ?? null,
     genres: cores,
     tags: uniqueTags,
     intensity,
+    unmappedGenre,
   }
 }

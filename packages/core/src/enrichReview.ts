@@ -8,6 +8,8 @@
 
 import { confidenceRank, type Confidence } from './enrichResolve'
 import type { EnrichSource } from './enrich'
+import type { Book } from './types'
+import { authorOf } from './normalize'
 
 /** A cover edition choice for the picker (distilled from an E1 alternate candidate). */
 export interface CoverAlternate {
@@ -147,4 +149,55 @@ export function buildReviewModel(
     needsLook: { missingCover, lowConfidenceCover, oddGenre, likelyDuplicate },
     coverTriage: [...missingCover, ...lowConfidenceCover],
   }
+}
+
+// ── Import integration: join the import pass + the (post-enrichment) books → the review model ──
+
+/** Per-imported-book signals captured during the import pass — the bits NOT carried on the Book row. */
+export interface ImportItemOutcome {
+  bookId: string
+  /** a fresh add, or deduped (folded) into an existing book */
+  disposition: 'added' | 'merged'
+  /** the export's Duplicate column flagged this row */
+  duplicateFlagged?: boolean
+  /** the raw genre cell when it didn't map to a core genre (ImportedRow.unmappedGenre) */
+  unmappedGenre?: string | null
+}
+
+/**
+ * Build the review model by joining the import pass's per-book outcomes with the current (post-
+ * enrichment) book records. The Book is authoritative for title/author/genre/series/cover/
+ * coverConfidence; the outcome supplies import-only signals (disposition, the export Duplicate flag,
+ * the unmapped genre). A "detected duplicate" = a row that folded into an existing book (merged).
+ * A cover with no recorded confidence is a trusted user/seed cover (treated as high, never flagged).
+ * The odd-genre signal applies to fresh adds only — a merged row keeps the existing book's genre.
+ * Outcomes whose book is absent from `books` are skipped.
+ */
+export function buildReviewModelFromImport(
+  outcomes: readonly ImportItemOutcome[],
+  books: readonly Book[],
+  opts: { readingOrdersBuilt?: number } = {},
+): ReviewModel {
+  const byId = new Map(books.map((b) => [b.id, b]))
+  const items: ReviewItemInput[] = []
+  for (const o of outcomes) {
+    const b = byId.get(o.bookId)
+    if (!b) continue
+    const cover = b.cover || null
+    items.push({
+      ref: b.id,
+      title: b.title,
+      author: authorOf(b),
+      disposition: o.disposition,
+      inSeries: b.status !== 'Standalone' || !!b.series,
+      cover,
+      coverConfidence: b.coverConfidence ?? (cover ? 'high' : 'none'),
+      coverAlternates: [], // re-fetched on demand by the Cover Studio (cached in enrichment_cache)
+      genre: b.genre || null,
+      unmappedGenre: o.disposition === 'added' ? (o.unmappedGenre ?? null) : null,
+      duplicateFlagged: !!o.duplicateFlagged,
+      duplicateDetected: o.disposition === 'merged',
+    })
+  }
+  return buildReviewModel(items, opts)
 }
