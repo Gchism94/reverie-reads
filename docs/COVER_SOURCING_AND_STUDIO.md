@@ -54,6 +54,23 @@ WHERE IT LIVES:
 - DESIGN backlog: Cover Studio is a new user-facing surface -> its own design tool prompt (book-detail
   cover editor + batch triage + themed-placeholder preview across skins).
 
+## Build status (updated 2026-06-28)
+- DONE — API auto-fetch (Part 1): title+author search -> ISBN self-resolution -> cover, across
+  Hardcover -> Google -> Open Library, deployed live; covers cached to Storage/CDN (non-blocking, async)
+  and globally cached. Measured ~87% cover / 87% ISBN on a 30-title real-Library sample (Hardcover
+  dominant). Confidence tiers stored; a no-confident-match attaches NO cover (-> missing-cover triage).
+- DONE — confidence persisted (books.cover_confidence) + the E3 import-review read-model
+  (summary + buckets: missing / low-confidence / broken / odd-genre / likely-duplicate) + the /review
+  screen rendering it (summary, genre breakdown, cover triage, lists).
+- DONE — Cover Studio pillar #3 (skin-themed typographic placeholder) as a reusable fill-parent
+  component, adopted across cover-render sites via <CoverImage> (cover -> placeholder fallback +
+  dead-link detection). Remaining adoption: CoverCard + BookDetailRail (deferred until the in-flight
+  desktop-align effort lands).
+- DONE — broken-cover detection (client onerror -> brokenCover bucket + AGGREGATED Sentry summary).
+- IN PROGRESS — Cover Studio actions: pick a found edition (E1 alternates) / use the themed placeholder.
+  The full Studio surface (batch triage UX, upload, phone photo) remains DESIGN-gated + needs a per-user
+  RLS Storage bucket for uploads/photos.
+
 ---
 
 ## Cover durability + dead-link handling (added 2026-06-27)

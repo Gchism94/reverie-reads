@@ -43,6 +43,11 @@ export function markCoverBroken(book: { id: string; title?: string; first?: stri
   scheduleFlush()
 }
 
+/** Clear a book's broken flag (e.g. after the user picks a working cover). */
+export function clearCoverBroken(id: string): void {
+  if (broken.delete(id)) emit()
+}
+
 /** Reactive set of book ids with a broken cover (drives the review brokenCover bucket). */
 export function useBrokenCoverIds(): ReadonlySet<string> {
   return useSyncExternalStore(
