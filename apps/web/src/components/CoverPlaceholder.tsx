@@ -1,4 +1,4 @@
-import { placeholderSpec } from '@reverie/core'
+import { placeholderColorVars, placeholderSpec } from '@reverie/core'
 
 /**
  * Cover Studio pillar #3: a skin-themed typographic placeholder for a cover-less book. FILLS its
@@ -16,6 +16,9 @@ export function CoverPlaceholder({
   className?: string
 }) {
   const { title, author, initials, accentVar } = placeholderSpec(book)
+  // Contrast-safe by construction (≥ AA at every skin × mode): flavour in the accent-tinted opaque
+  // surface, glyph anchored to --ink. Recipe + guardrail test live in @reverie/core.
+  const colors = placeholderColorVars(accentVar)
   return (
     <div
       role="img"
@@ -26,12 +29,12 @@ export function CoverPlaceholder({
         height: '100%',
         display: 'grid',
         placeItems: 'center',
-        background: `color-mix(in srgb, var(${accentVar}) 18%, var(--card))`,
+        background: colors.background,
       }}
     >
       <span
         aria-hidden
-        style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontWeight: 600, fontSize: '1.6rem', color: `var(${accentVar})` }}
+        style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontWeight: 600, fontSize: '1.6rem', color: colors.color }}
       >
         {initials}
       </span>
