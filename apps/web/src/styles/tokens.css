@@ -102,6 +102,7 @@
   --blue: #1f7d57;
   --gold: #d4af37;
   --card: #161b12;
+  --card-solid: #161b12;
   --card-2: #1d2417;
   --line: rgba(212, 175, 55, 0.18);
   --shadow: 0 22px 60px rgba(0, 0, 0, 0.55);
@@ -130,6 +131,7 @@
   --blue: #1f7d57;
   --gold: #b08828;
   --card: #f7efd9;
+  --card-solid: #f7efd9;
   --card-2: #efe4c8;
   --line: rgba(176, 136, 40, 0.32);
   --shadow: 0 22px 50px rgba(60, 50, 20, 0.18);
@@ -159,6 +161,7 @@
   --blue: #3a52c4;
   --gold: #b9c7e0;
   --card: #0d1320;
+  --card-solid: #0d1320;
   --card-2: #121a2b;
   --line: rgba(79, 209, 224, 0.18);
   --shadow: 0 22px 60px rgba(0, 0, 0, 0.6);
@@ -187,6 +190,7 @@
   --blue: #3a52c4;
   --gold: #5a6b86;
   --card: #f7fafe;
+  --card-solid: #f7fafe;
   --card-2: #eaf1fb;
   --line: rgba(14, 143, 166, 0.26);
   --shadow: 0 22px 50px rgba(20, 40, 80, 0.14);
@@ -216,6 +220,7 @@
   --blue: #56616b;
   --gold: #8c9a3c;
   --card: #161315;
+  --card-solid: #161315;
   --card-2: #1d181a;
   --line: rgba(158, 59, 59, 0.2);
   --shadow: 0 22px 60px rgba(0, 0, 0, 0.6);
@@ -244,6 +249,7 @@
   --blue: #56616b;
   --gold: #6f7a2e;
   --card: #f4f0e8;
+  --card-solid: #f4f0e8;
   --card-2: #e9e3d9;
   --line: rgba(138, 50, 50, 0.26);
   --shadow: 0 22px 50px rgba(40, 35, 30, 0.16);

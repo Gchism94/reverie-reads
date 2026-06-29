@@ -5,44 +5,31 @@ import { createClient } from '@supabase/supabase-js'
 const SUPABASE_URL = 'http://127.0.0.1:55321'
 const ANON =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0'
-const MAILPIT = 'http://127.0.0.1:55324'
 const DEV_EMAIL = 'dev@reverie.local'
+const DEV_PASSWORD = 'reverie-dev-password'
 const SKINS = ['tryst', 'grimoire', 'aphelion', 'marrow'] as const
 const MODES = ['dark', 'light'] as const
 
-interface MailpitMessage {
-  ID: string
-  To?: { Address: string }[]
-}
-
-async function latestMagicLink(email: string): Promise<string> {
-  for (let i = 0; i < 30; i++) {
-    const list = (await (await fetch(`${MAILPIT}/api/v1/messages?limit=20`)).json()) as { messages?: MailpitMessage[] }
-    const msg = list.messages?.find((m) => m.To?.some((t) => t.Address === email))
-    if (msg) {
-      const full = (await (await fetch(`${MAILPIT}/api/v1/message/${msg.ID}`)).json()) as { HTML?: string; Text?: string }
-      const body = `${full.HTML ?? ''}${full.Text ?? ''}`
-      const match = body.match(/http:\/\/127\.0\.0\.1:55321\/auth\/v1\/verify\?[^"'\s<>]+/)
-      if (match) return match[0].replace(/&amp;/g, '&')
-    }
-    await new Promise((r) => setTimeout(r, 500))
-  }
-  throw new Error('No magic-link email arrived in Mailpit')
-}
-
+/** Establish a session directly: sign in with the seeded dev password via the JS client, then hand
+ *  the tokens to the app through the URL hash. The app's supabase client has detectSessionInUrl:true,
+ *  so it adopts them on load and persists the session — the same landing the magic-link verify would
+ *  produce, minus the email. This avoids Mailpit, the auth redirect allow-list, and the email rate
+ *  limits, so it's immune to the dev server's port. TanStack Router is path-based, leaving the hash
+ *  free for supabase-js to consume. */
 async function signIn(page: Page) {
-  await fetch(`${MAILPIT}/api/v1/messages`, { method: 'DELETE' }) // clear stale links
-  await page.goto('/')
-  await page.getByLabel('Email').fill(DEV_EMAIL)
-  await page.getByRole('button', { name: /magic link/i }).click()
-  const link = await latestMagicLink(DEV_EMAIL)
-  await page.goto(link) // /auth/v1/verify → redirects to the app with a session
+  const sb = createClient(SUPABASE_URL, ANON)
+  const { data, error } = await sb.auth.signInWithPassword({ email: DEV_EMAIL, password: DEV_PASSWORD })
+  if (error || !data.session) throw new Error(`seed sign-in failed: ${error?.message ?? 'no session'}`)
+  const { access_token, refresh_token } = data.session
+  await page.goto(
+    `/#access_token=${access_token}&refresh_token=${refresh_token}&expires_in=3600&token_type=bearer&type=magiclink`,
+  )
   await expect(page.getByRole('navigation')).toBeVisible({ timeout: 20_000 })
 }
 
 async function setupFixtures(): Promise<{ bookId: string; clubId: string; listCode: string }> {
   const sb = createClient(SUPABASE_URL, ANON)
-  await sb.auth.signInWithPassword({ email: DEV_EMAIL, password: 'reverie-dev-password' })
+  await sb.auth.signInWithPassword({ email: DEV_EMAIL, password: DEV_PASSWORD })
   const uid = (await sb.auth.getUser()).data.user!.id
   const bookId = (await sb.from('books').select('id').order('added_at').limit(1).single()).data!.id
 
@@ -64,7 +51,7 @@ async function setupFixtures(): Promise<{ bookId: string; clubId: string; listCo
 
 async function cleanup(clubId: string, listCode: string) {
   const sb = createClient(SUPABASE_URL, ANON)
-  await sb.auth.signInWithPassword({ email: DEV_EMAIL, password: 'reverie-dev-password' })
+  await sb.auth.signInWithPassword({ email: DEV_EMAIL, password: DEV_PASSWORD })
   await sb.from('clubs').delete().eq('id', clubId)
   await sb.from('shared_docs').delete().eq('key', listCode)
   await sb.from('shared_refs').delete().eq('code', listCode)
@@ -75,7 +62,7 @@ async function cleanup(clubId: string, listCode: string) {
  * (avoids racing the client-side sync — this also exercises the real persistence path). */
 async function setProfileSkinMode(skin: string, mode: string) {
   const sb = createClient(SUPABASE_URL, ANON)
-  await sb.auth.signInWithPassword({ email: DEV_EMAIL, password: 'reverie-dev-password' })
+  await sb.auth.signInWithPassword({ email: DEV_EMAIL, password: DEV_PASSWORD })
   const uid = (await sb.auth.getUser()).data.user!.id
   await sb.from('profiles').update({ skin, mode }).eq('id', uid)
 }
