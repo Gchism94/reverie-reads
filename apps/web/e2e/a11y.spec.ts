@@ -136,3 +136,31 @@ test('every route passes axe (no serious/critical) across all skins x both modes
   if (failures.length) console.log('axe serious/critical violations:\n' + failures.join('\n'))
   expect(failures, failures.join('\n')).toHaveLength(0)
 })
+
+// The unauthenticated front door (gold master brand) — no sign-in seed needed, so it's a simpler,
+// faster pass. The gold CTA's dark text and the brand's muted/faint copy must clear AA here too.
+test('unauthenticated landing + auth pass axe', async ({ page }) => {
+  const routes: [string, string][] = [
+    ['Landing', '/'],
+    ['Auth · sign in', '/auth?mode=signin'],
+    ['Auth · sign up', '/auth?mode=signup'],
+  ]
+  const failures: string[] = []
+  for (const [name, path] of routes) {
+    await page.goto(path)
+    await page.locator('main').first().waitFor({ state: 'visible' })
+    const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze()
+    for (const v of results.violations.filter((x) => x.impact === 'serious' || x.impact === 'critical')) {
+      const detail = v.nodes
+        .slice(0, 2)
+        .map((n) => {
+          const d = n.any?.[0]?.data as { fgColor?: string; bgColor?: string; contrastRatio?: number } | undefined
+          return d?.contrastRatio != null ? `${String(n.target)} fg=${d.fgColor} bg=${d.bgColor} ratio=${d.contrastRatio}` : String(n.target)
+        })
+        .join(' || ')
+      failures.push(`[${name}] (${path}): ${v.id} (${v.nodes.length}) — ${detail}`)
+    }
+  }
+  if (failures.length) console.log('axe (unauth) violations:\n' + failures.join('\n'))
+  expect(failures, failures.join('\n')).toHaveLength(0)
+})
