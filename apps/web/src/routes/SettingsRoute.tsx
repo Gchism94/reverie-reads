@@ -450,7 +450,7 @@ function SettingsScreen() {
               ['Authorship', 'contributors (authors, co-authors, translators…) you record on a book.'],
               ['Shelves & orders', 'your TBR/collections and custom reading orders.'],
               ['Reviews & clubs', 'reviews you write and club memberships, progress, and comments (only where you opt in).'],
-              ['Taste profile', 'an adaptive-skin signal derived from your library to theme the app — kept in your profile, never shared.'],
+              ['Taste profile', 'an adaptive-skin signal derived from your library to theme the app — kept private in your profile.'],
               ['Account', 'your email (for sign-in) and display name. No third-party trackers run in the app.'],
             ].map(([k, v]) => (
               <li key={k}>

@@ -297,7 +297,7 @@ function Shell({ children }: { children: ReactNode }) {
             Everything you’ve read, everything you mean to — gathered under one quiet night sky.
           </p>
           <p className="mt-6 flex items-center gap-1.5 text-[13px] text-muted">
-            <span aria-hidden>🔒</span> Your library stays private — always.
+            <span aria-hidden>🔒</span> Your library is private by default.
           </p>
         </aside>
 
