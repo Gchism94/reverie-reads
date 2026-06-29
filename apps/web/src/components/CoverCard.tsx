@@ -48,7 +48,7 @@ export function CoverCard({
           aria-pressed={book.fave}
           aria-label={book.fave ? `Remove ${book.title} from favorites` : `Add ${book.title} to favorites`}
           className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full text-[14px] opacity-0 backdrop-blur transition-opacity focus-visible:opacity-100 group-hover:opacity-100 aria-pressed:opacity-100"
-          style={{ background: 'rgba(0,0,0,0.4)', color: book.fave ? 'var(--gold)' : '#fff' }}
+          style={{ background: 'rgba(0,0,0,0.62)', color: '#fff' }}
         >
           {book.fave ? '♥' : '♡'}
         </button>
@@ -56,7 +56,7 @@ export function CoverCard({
         {isRead && (
           <span
             className="absolute left-1.5 top-1.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide"
-            style={{ background: 'rgba(0,0,0,0.45)', color: 'var(--gold)' }}
+            style={{ background: 'rgba(0,0,0,0.62)', color: '#fff' }}
           >
             Read
           </span>
@@ -65,7 +65,7 @@ export function CoverCard({
         {intensity > 0 && (
           <div
             className="absolute bottom-1.5 left-1.5 rounded-full px-1.5 py-0.5 text-[9px] backdrop-blur"
-            style={{ background: 'rgba(0,0,0,0.4)' }}
+            style={{ background: 'rgba(0,0,0,0.62)', color: '#fff' }}
             title={`${labels.intensity} ${intensity}/5`}
           >
             {labels.intensityGlyph.repeat(intensity)}
@@ -75,7 +75,7 @@ export function CoverCard({
         {ownedFormats(book.owned).length > 0 && (
           <div
             className="absolute bottom-1.5 right-1.5 flex gap-0.5 rounded-full px-1 py-0.5 text-[9px] backdrop-blur"
-            style={{ background: 'rgba(0,0,0,0.4)' }}
+            style={{ background: 'rgba(0,0,0,0.62)', color: '#fff' }}
             title={`Owned: ${ownedFormats(book.owned).join(', ')}`}
           >
             {ownedFormats(book.owned).map((f) => (
