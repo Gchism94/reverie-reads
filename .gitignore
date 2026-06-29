@@ -33,3 +33,9 @@ ds-bundle/
 .design-sync/node_modules
 data/raw/Library_App_list.xlsx
 data/raw/library_connected_series.csv
+
+# design tool exports — large (multi-MB) and regenerable from design tool; kept local for
+# reference, never tracked. Ignore every export shape consistently (.html and .dc.html alike).
+# The README and any handoff/review .md stay tracked.
+design/from-design-tool/**/*.html
+design/from-design-tool/**/*.dc.html
