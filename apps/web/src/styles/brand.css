@@ -1,0 +1,52 @@
+/* Genre-neutral GOLD master brand — the unauthenticated front door (landing + auth). This is the
+   pre-skin master identity, NOT one of the four genre skins: a fixed gold-on-night palette so the
+   front door reads the same for everyone before they pick (or are given) a skin. Scope it with the
+   `.gold-brand` class; the subtree then reads these token values through the normal utilities.
+
+   The one rule that matters: gold CTAs use DARK text (--on-primary: #1a0f14) — white-on-gold fails
+   AA (the same lesson as the cover marks). Values mirror the handed-off auth design's :root. */
+.gold-brand {
+  --bg0: #0b0612;
+  --bg1: #15091f;
+  --ink: #f6e9f1;
+  --muted: #b3a6c6;
+  --faint: #8a7d9e;
+  --primary: #f0b14e;
+  --gold: #f0b14e;
+  --on-primary: #1a0f14; /* dark text on the luminous gold CTA (~8.9:1 AA) */
+  --card: #17112a;
+  --card-2: #1f1636;
+  --card-solid: #17112a;
+  --line: rgba(240, 177, 78, 0.18);
+  --field: rgba(246, 233, 241, 0.06);
+  --chip: rgba(246, 233, 241, 0.06);
+  --ok: #7ecb9a;
+  --violet: #7b3fa0;
+  --danger: #e8866b;
+  --star: #f0b14e;
+  --shadow: 0 22px 60px rgba(0, 0, 0, 0.5);
+  --font-display: 'Fraunces', ui-serif, Georgia, serif;
+  --font-sans: 'Hanken Grotesk', system-ui, sans-serif;
+
+  /* The front door paints its OWN night sky so it's gold-on-night for everyone, independent of any
+     skin a returning visitor may have persisted on <html>. Static stars — no animation, so it's
+     reduced-motion-safe by construction (no twinkle to suppress). */
+  min-height: 100dvh;
+  color: var(--ink);
+  background-color: #0b0612;
+  background-image:
+    radial-gradient(1.5px 1.5px at 18% 22%, rgba(240, 177, 78, 0.7), transparent),
+    radial-gradient(1.5px 1.5px at 73% 16%, rgba(240, 177, 78, 0.5), transparent),
+    radial-gradient(1.5px 1.5px at 36% 68%, rgba(240, 177, 78, 0.6), transparent),
+    radial-gradient(2px 2px at 82% 60%, rgba(240, 177, 78, 0.6), transparent),
+    radial-gradient(1.5px 1.5px at 55% 38%, rgba(246, 233, 241, 0.5), transparent),
+    radial-gradient(1.5px 1.5px at 9% 78%, rgba(246, 233, 241, 0.4), transparent),
+    radial-gradient(140% 120% at 50% -10%, #15091f, #0b0612);
+  background-attachment: fixed;
+}
+
+/* Explicit placeholder colour so it clears AA on the dark field (browser defaults can be too faint). */
+.gold-brand input::placeholder {
+  color: var(--faint);
+  opacity: 1;
+}

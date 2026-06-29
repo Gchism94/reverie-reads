@@ -11,6 +11,7 @@ import { createDexiePersister } from './lib/offlineCache'
 import { router } from './router'
 import './styles/tokens.css'
 import './styles/globals.css'
+import './styles/brand.css'
 
 document.title = APP_NAME
 initErrorMonitoring()

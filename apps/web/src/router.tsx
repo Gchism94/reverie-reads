@@ -15,6 +15,8 @@ import { indieRoute } from './routes/IndieRoute'
 import { skinsRoute } from './routes/SkinGalleryRoute'
 import { ordersRoute } from './routes/OrdersRoute'
 import { reviewRoute } from './routes/ReviewRoute'
+import { authRoute } from './routes/AuthRoute'
+import { onboardingRoute } from './routes/OnboardingRoute'
 import { bookRoute } from './book/BookDetailRoute'
 
 const routeTree = rootRoute.addChildren([
@@ -33,6 +35,8 @@ const routeTree = rootRoute.addChildren([
   skinsRoute,
   ordersRoute,
   reviewRoute,
+  authRoute,
+  onboardingRoute,
   bookRoute,
 ])
 
