@@ -33,3 +33,9 @@ ds-bundle/
 .design-sync/node_modules
 data/raw/Library_App_list.xlsx
 data/raw/library_connected_series.csv
+
+# Claude Design exports — large (multi-MB) and regenerable from Claude Design; kept local for
+# reference, never tracked. Ignore every export shape consistently (.html and .dc.html alike).
+# The README and any handoff/review .md stay tracked.
+design/from-claude-design/**/*.html
+design/from-claude-design/**/*.dc.html
