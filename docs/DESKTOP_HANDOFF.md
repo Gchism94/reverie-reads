@@ -93,3 +93,45 @@ MERGE GATE (owner-run; needs local Supabase stack + Chromium, not runnable in Co
   DENSE breakpoint actually densifies as designed (report didn't explicitly confirm).
 NEXT: open the PR + summary (review surface, not a merge); run the sweep + visual in the PR; merge when
 green (Code fixes any axe flags).
+
+## MERGE-GATE FINDING — 2026-06-28: signed-out theme regression (FIX before merge)
+pnpm e2e surfaced a real regression on desktop-align (not env -- page loads, html resolves):
+shell.spec.ts "serves a themed sign-in screen when signed out" fails -- <html> has NO data-theme on the
+signed-out screen (expected nocturne|dawn, got null). The axe sweep (test 2) never ran (run died on
+test 1).
+CAUSE (likely): the AppShell rework scoped theme application inside the authenticated shell, so the
+signed-out route renders unthemed (or the signed-out DEFAULT skin/mode stopped applying).
+FIX (Code): apply the theme attribute at ROOT, above the auth split -- signed-out gets a default
+skin/mode, signed-in gets the user's. Confirm via: run shell.spec.ts on main (passes) vs desktop-align
+(fails) to prove the branch introduced it. Then re-run full pnpm e2e so the axe sweep reports. DO NOT
+MERGE until both tests green.
+ASIDE (later, not blocking): shell.spec expects a MAGIC-LINK sign-in; the Auth design is password +
+Google/Apple -- reconcile test vs screen when the auth screens are built.
+
+## CORRECTION — 2026-06-28: shell.spec failure is PRE-EXISTING, not a desktop-align regression
+On-main run: shell.spec.ts fails IDENTICALLY on main (data-theme null on signed-out). So desktop-align did
+NOT introduce it -- the prior "regression" finding is RETRACTED. Almost certainly the FIRST real e2e
+execution (Code could never run e2e: no local Supabase+Chromium in its sandbox; "gate green" was always
+typecheck/lint/unit/build, never this suite) -> a dormant red surfacing now.
+RESOLVE stale-test-vs-bug via the DOM (don't assume): open
+apps/web/test-results/.../error-context.md (or inspect signed-out <html>):
+- data-skin/data-mode present -> STALE TEST (project convention is data-skin/data-mode; test asserts the
+  old data-theme; the "magic link" assertion is also stale vs the password+social auth design) -> update test.
+- no theme attrs at all -> real signed-out default-theme gap -> fix app.
+DESKTOP-ALIGN AA verdict (the real merge gate): run e2e/a11y.spec.ts DIRECTLY -- it's blocked only because
+shell.spec dies first. `pnpm --filter @reverie/web exec playwright test e2e/a11y.spec.ts`.
+SUITE: the e2e has been dormant (never gated) -> needs a reconciliation pass vs the current app + should
+run in CI (with a Supabase service) going forward.
+
+## ROOT CAUSE — 2026-06-28: e2e was hitting the WRONG APP (port collision)
+The DOM snapshot for the failing test shows "Welcome to Redmond Compass" -- a DIFFERENT app (local-spots
+discovery), not Reverie. So the e2e never hit Reverie at all -> explains the null data-theme, no magic-link,
+and identical failure on main + desktop-align (the Reverie checkout is irrelevant when the test loads a
+foreign server). RETIRES all prior theories (desktop regression / stale test / signed-out theming bug).
+CAUSE: Playwright webServer.reuseExistingServer adopted a stray dev server (Redmond Compass) already on the
+shared Vite port (5173) instead of starting Reverie's.
+FIX (playwright.config webServer): pin a dedicated unusual port + --strictPort + reuseExistingServer:false +
+matching baseURL/url, so nothing can hijack the run. Verify: lsof -i :5173 / run Reverie dev directly.
+CONSEQUENCES: any a11y result so far tested the wrong app (meaningless) -> fix server, THEN run a11y.spec
+for a real Reverie AA verdict. The data-theme/magic-link assertions may still need updating once the test
+finally hits Reverie's real signed-out screen -- diagnose then, not before.
