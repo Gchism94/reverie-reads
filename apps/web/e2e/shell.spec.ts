@@ -7,7 +7,7 @@ import { expect, test } from '@playwright/test'
 test('signed-out landing shows the gold front door', async ({ page }) => {
   await page.goto('/')
   await expect(page.getByRole('heading', { name: /beautifully kept/i })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Start your library' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Get started' }).first()).toBeVisible()
 })
 
 test('auth screen offers password + social, and toggles sign-in / sign-up', async ({ page }) => {

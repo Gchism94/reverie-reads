@@ -50,3 +50,41 @@
   color: var(--faint);
   opacity: 1;
 }
+
+/* Eyebrow/label accent — gold on the dark brand, a deep amber on light bands (both clear AA as
+   small text on their surface). Components read var(--eyebrow). */
+.gold-brand {
+  --eyebrow: #f0b14e;
+}
+
+/* Light marketing band (Features / For every reader) — the landing alternates dark and cream
+   sections for rhythm. Cream surface with dark ink + a deep-amber accent so small text stays AA;
+   gold CTAs keep their dark text and clear AA on either surface. Scope a section with `.band-light`. */
+.gold-brand .band-light {
+  --bg0: #f7f1e6;
+  --bg1: #efe6d4;
+  --ink: #241a12;
+  --muted: #6a5c46;
+  --faint: #8a7a60;
+  --eyebrow: #7a4f12;
+  --card: #fffaf1;
+  --card-2: #f3ead9;
+  --card-solid: #fffaf1;
+  --line: rgba(122, 79, 18, 0.2);
+  --field: rgba(36, 26, 18, 0.05);
+  --chip: rgba(36, 26, 18, 0.05);
+  /* gold CTAs + their dark text are unchanged (AA on gold regardless of band) */
+  background: var(--bg0);
+  color: var(--ink);
+}
+
+/* Drifting nebula glows for the living night sky — motion via the project's .rv-anim convention,
+   which prefers-reduced-motion already disables (tokens.css). Decorative, aria-hidden. */
+.gold-brand .nebula {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(70px);
+  opacity: 0.18;
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
