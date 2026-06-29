@@ -71,6 +71,19 @@ export function contrastRatio(a: Rgba, b: Rgba): number {
   return (hi + 0.05) / (lo + 0.05)
 }
 
+/**
+ * Mix two colours the way CSS `color-mix(in srgb, a <weightA>, b)` does: a per-channel average in
+ * gamma-encoded sRGB, weighted by `weightA` (0–1). Lets a component's `color-mix` and a unit test
+ * compute the identical result (e.g. the cover-placeholder contrast guardrail). Throws on bad input.
+ */
+export function mixSrgb(a: string, b: string, weightA: number): string {
+  const ca = parseColor(a), cb = parseColor(b)
+  if (!ca || !cb) throw new Error(`mixSrgb: bad colour ${!ca ? a : b}`)
+  const w = Math.max(0, Math.min(1, weightA))
+  const ch = (i: number) => ca[i]! * w + cb[i]! * (1 - w)
+  return formatColor([ch(0), ch(1), ch(2), ch(3)])
+}
+
 // ── blend ──
 
 /**
