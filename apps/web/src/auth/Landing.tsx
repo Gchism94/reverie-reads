@@ -76,7 +76,7 @@ export function Landing() {
 
         <p className="mt-5 flex items-center gap-1.5 text-[13px] text-muted">
           <span aria-hidden>🔒</span>
-          Private by default — your shelves and your Wrapped are never shared or made public.
+          Private by default — your reading stats and your Wrapped are never shared or made public.
         </p>
       </section>
 
