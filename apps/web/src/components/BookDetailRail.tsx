@@ -1,0 +1,145 @@
+import { Link } from '@tanstack/react-router'
+import { formatAuthors, ownedFormats, type Book } from '@reverie/core'
+import { subgenreGradient } from '../library/constants'
+import { useLabels } from '../skin/labels'
+import { Chip } from './Chip'
+import { CoverImage } from './CoverImage'
+
+const FORMAT_ICON = { physical: '📖', ebook: '📱', audiobook: '🎧' } as const
+const FORMAT_LABEL = { physical: 'Physical', ebook: 'Ebook', audiobook: 'Audiobook' } as const
+
+function seriesBadge(book: Book): string {
+  if (book.status === 'Complete') return 'Series complete'
+  if (book.status === 'Series')
+    return `Series${book.seriesCount ? ` of ${book.seriesCount}` : ' · length not set'}`
+  return 'Standalone'
+}
+
+/** The master-detail right rail: a read-only summary of the selected book with a link into the
+ *  full book page for editing. Renders an invitation when nothing is selected. */
+export function BookDetailRail({
+  book,
+  onToggleFave,
+}: {
+  book: Book | null
+  onToggleFave?: (id: string) => void
+}) {
+  const labels = useLabels()
+
+  if (!book) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center px-6 text-center text-muted">
+        <span aria-hidden className="text-[28px] opacity-50">
+          ✶
+        </span>
+        <p className="mt-3 text-[13px]">Select a book to see its details.</p>
+      </div>
+    )
+  }
+
+  const author = formatAuthors(book.contributors) || [book.first, book.last].filter(Boolean).join(' ')
+  const [g0, g1] = subgenreGradient(book.subgenre)
+  const isRead = book.readStatus === 'Read' || book.reads.length > 0
+  const intensity = book.intensity ?? 0
+  const owned = ownedFormats(book.owned)
+
+  return (
+    <div className="flex h-full flex-col overflow-y-auto px-4 py-5">
+      <div
+        className="mx-auto aspect-[2/3] w-36 overflow-hidden rounded-xl border border-line"
+        style={{ background: `linear-gradient(150deg, ${g0}, ${g1})` }}
+      >
+        <CoverImage book={book} />
+      </div>
+
+      <h2
+        className="mt-4 text-balance text-center text-[20px] italic leading-tight text-ink"
+        style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+      >
+        {book.title}
+      </h2>
+      {author && <p className="mt-1 text-center text-[13px] text-muted">{author}</p>}
+      {book.series && (
+        <p className="mt-0.5 text-center text-[12px] text-muted">
+          {book.series}
+          {book.position !== '' ? ` #${book.position}` : ''}
+        </p>
+      )}
+
+      <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5">
+        <span
+          className="rounded-full px-2.5 py-1 text-[11px] font-semibold"
+          style={{ background: 'var(--chip)', color: 'var(--muted)' }}
+        >
+          {seriesBadge(book)}
+        </span>
+        {isRead && (
+          <span
+            className="rounded-full px-2.5 py-1 text-[11px] font-semibold"
+            style={{ background: 'color-mix(in srgb, var(--gold) 18%, transparent)', color: 'var(--ink)' }}
+          >
+            Read
+          </span>
+        )}
+        {intensity > 0 && (
+          <span
+            className="rounded-full px-2.5 py-1 text-[11px] font-semibold"
+            style={{ background: 'color-mix(in srgb, var(--primary) 14%, transparent)', color: 'var(--ink)' }}
+            title={`${labels.intensity} ${intensity}/5`}
+          >
+            {labels.intensityGlyph.repeat(intensity)}
+          </span>
+        )}
+        {onToggleFave && (
+          <button
+            type="button"
+            onClick={() => onToggleFave(book.id)}
+            aria-pressed={book.fave}
+            aria-label={book.fave ? 'Remove from favorites' : 'Add to favorites'}
+            className="rounded-full border border-line px-2.5 py-1 text-[12px]"
+            style={{ background: 'var(--chip)', color: book.fave ? 'var(--gold)' : 'var(--muted)' }}
+          >
+            {book.fave ? '♥' : '♡'}
+          </button>
+        )}
+      </div>
+
+      {book.tags.length > 0 && (
+        <div className="mt-4">
+          <div className="mb-1.5 text-[11px] uppercase tracking-[0.2em] text-muted">{labels.tags}</div>
+          <div className="flex flex-wrap gap-1.5">
+            {book.tags.slice(0, 10).map((t) => (
+              <Chip key={t}>{t}</Chip>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {owned.length > 0 && (
+        <div className="mt-4">
+          <div className="mb-1.5 text-[11px] uppercase tracking-[0.2em] text-muted">Owned</div>
+          <div className="flex flex-wrap gap-1.5">
+            {owned.map((f) => (
+              <span
+                key={f}
+                className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[12px] font-semibold text-ink"
+                style={{ background: 'var(--chip)' }}
+              >
+                <span aria-hidden>{FORMAT_ICON[f]}</span> {FORMAT_LABEL[f]}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <Link
+        to="/book/$bookId"
+        params={{ bookId: book.id }}
+        className="mt-auto flex h-11 items-center justify-center rounded-full text-[13.5px] font-semibold"
+        style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))', color: 'var(--on-primary)' }}
+      >
+        Open full page
+      </Link>
+    </div>
+  )
+}

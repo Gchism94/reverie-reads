@@ -1,6 +1,7 @@
 import { formatAuthors, ownedFormats, type Book } from '@reverie/core'
 import { subgenreGradient } from '../library/constants'
 import { useLabels } from '../skin/labels'
+import { CoverImage } from './CoverImage'
 
 const FORMAT_ICON = { physical: '📖', ebook: '📱', audiobook: '🎧' } as const
 
@@ -9,10 +10,13 @@ export function CoverCard({
   book,
   onOpen,
   onToggleFave,
+  selected = false,
 }: {
   book: Book
   onOpen: () => void
   onToggleFave: () => void
+  /** Master-detail selection (desktop): draws the accent ring + marks aria-current. */
+  selected?: boolean
 }) {
   const author = formatAuthors(book.contributors) || [book.first, book.last].filter(Boolean).join(' ')
   const [g0, g1] = subgenreGradient(book.subgenre)
@@ -22,32 +26,20 @@ export function CoverCard({
 
   return (
     <div className="group">
-      <div className="relative aspect-[2/3] overflow-hidden rounded-xl border border-line">
+      <div
+        className="relative aspect-[2/3] overflow-hidden rounded-xl border border-line transition-shadow motion-reduce:transition-none"
+        style={selected ? { boxShadow: '0 0 0 2.5px var(--primary), var(--shadow)' } : undefined}
+      >
         <button
           type="button"
           onClick={onOpen}
           aria-label={`Open ${book.title}`}
+          aria-current={selected ? 'true' : undefined}
           className="block h-full w-full"
           style={{ background: `linear-gradient(150deg, ${g0}, ${g1})` }}
         >
-          {book.cover ? (
-            <img
-              src={book.cover}
-              alt=""
-              loading="lazy"
-              className="h-full w-full object-cover"
-              onError={(e) => {
-                e.currentTarget.style.visibility = 'hidden'
-              }}
-            />
-          ) : (
-            <span
-              className="flex h-full w-full items-center justify-center p-3 text-center text-[13px] font-semibold leading-tight text-on-primary"
-              style={{ fontFamily: 'var(--font-display)' }}
-            >
-              {book.title}
-            </span>
-          )}
+          {/* cover → skin placeholder fallback + dead-link detection (Cover Studio) */}
+          <CoverImage book={book} />
         </button>
 
         <button

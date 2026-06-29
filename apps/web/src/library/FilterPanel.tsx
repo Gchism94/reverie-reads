@@ -16,7 +16,7 @@ function Group({ label, children }: { label: string; children: ReactNode }) {
   )
 }
 
-export function FilterPanel({ books }: { books: Book[] }) {
+export function FilterPanel({ books, bare = false }: { books: Book[]; bare?: boolean }) {
   const s = useFilters()
   const { filters } = s
   const labels = useLabels()
@@ -35,8 +35,8 @@ export function FilterPanel({ books }: { books: Book[] }) {
 
   return (
     <div
-      className="mb-4 rounded-2xl border border-line p-4 backdrop-blur"
-      style={{ background: 'var(--card)' }}
+      className={bare ? '' : 'mb-4 rounded-2xl border border-line p-4 backdrop-blur'}
+      style={bare ? undefined : { background: 'var(--card)' }}
     >
       <Group label="Subgenre">
         {subs.map((sub) => (
