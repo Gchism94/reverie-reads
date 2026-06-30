@@ -12,6 +12,7 @@ import { router } from './router'
 import './styles/tokens.css'
 import './styles/globals.css'
 import './styles/brand.css'
+import './styles/skin-kit.css'
 
 document.title = APP_NAME
 initErrorMonitoring()

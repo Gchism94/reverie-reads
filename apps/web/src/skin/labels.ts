@@ -1,4 +1,4 @@
-import { SKINS, type FieldLabels, type SkinId } from '@reverie/core'
+import { SKINS, SKIN_VOICE, type FieldLabels, type SkinId, type SkinVoice } from '@reverie/core'
 import { useSkin } from './useSkin'
 
 /** The active Tier-1 skin id, resolving the adaptive skin to its dominant Tier-1 skin. */
@@ -15,4 +15,10 @@ export function useEffectiveSkin(): SkinId {
  */
 export function useLabels(): FieldLabels {
   return SKINS[useEffectiveSkin()].labels
+}
+
+/** The active skin's VOICE — empty-state copy, loading line, and signature ornament glyph, each in the
+ *  skin's genre register (the Skin Character System's voice lever). */
+export function useVoice(): SkinVoice {
+  return SKIN_VOICE[useEffectiveSkin()]
 }
