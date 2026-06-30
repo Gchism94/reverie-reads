@@ -20,7 +20,7 @@ export const ADAPTIVE_CARRY_KEYS = [
   '--shadow', '--grain-opacity', '--font-display', '--font-sans', '--font-mono',
 ] as const
 
-const SKIN_ORDER: SkinId[] = ['tryst', 'grimoire', 'aphelion', 'marrow']
+const SKIN_ORDER: SkinId[] = ['tryst', 'grimoire', 'aphelion', 'marrow', 'umbra', 'folio', 'hearth', 'almanac', 'bloom']
 
 // ── colour parsing / contrast ──
 
@@ -192,6 +192,26 @@ const SKIN_AFFINITY: Record<SkinId, { subgenres: string[]; tags: string[] }> = {
     subgenres: ['Dark Romance', 'Horror', 'Thriller'],
     tags: ['Mafia', 'Stalker', 'Villain Romance', 'Serial Killers', 'Captive/Captor', 'Morally Black MMC', 'Obsessive', 'Anti-Hero', 'Bully Romance', 'Possessive', 'Revenge'],
   },
+  umbra: {
+    subgenres: ['Mystery', 'Thriller', 'Crime', 'Detective', 'Suspense'],
+    tags: ['Whodunit', 'Noir', 'Heist', 'Spy', 'Cozy Mystery', 'Locked Room', 'Cold Case', 'Conspiracy'],
+  },
+  folio: {
+    subgenres: ['Literary', 'Literary Fiction', 'Classics', 'Fiction', 'Poetry'],
+    tags: ['Coming of Age', 'Family Saga', 'Translation', 'Award Winner', 'Essays', 'Modernist'],
+  },
+  hearth: {
+    subgenres: ['Cozy', 'Cottagecore', 'Slice of Life', 'Womens Fiction'],
+    tags: ['Comfort Read', 'Small Town', 'Baking', 'Found Family', 'Low Stakes', 'Feel Good'],
+  },
+  almanac: {
+    subgenres: ['Nonfiction', 'Memoir', 'History', 'Science', 'Biography', 'Self Help'],
+    tags: ['Reference', 'Essay', 'Field Guide', 'How To', 'Investigative', 'Popular Science'],
+  },
+  bloom: {
+    subgenres: ['YA', 'Young Adult', 'New Adult', 'Contemporary'],
+    tags: ['Coming of Age', 'First Love', 'Enemies to Lovers', 'Road Trip', 'Summer', 'High School', 'Friendship'],
+  },
 }
 
 /** Per-book engagement weight: faves + loved + finished count more; DNF + unread count less. */
@@ -211,7 +231,7 @@ function engagement(b: Book): number {
  * scaled by engagement. A small floor keeps the blend stable (and Tryst-anchored) for thin data.
  */
 export function computeSkinWeights(books: readonly Book[]): Record<SkinId, number> {
-  const raw: Record<SkinId, number> = { tryst: 0, grimoire: 0, aphelion: 0, marrow: 0 }
+  const raw = Object.fromEntries(SKIN_ORDER.map((id) => [id, 0])) as Record<SkinId, number>
   for (const b of books) {
     const w = engagement(b)
     const tags = new Set(b.tags)
@@ -223,16 +243,14 @@ export function computeSkinWeights(books: readonly Book[]): Record<SkinId, numbe
       raw[id] += score * w
     }
   }
-  // Floor: a base weight per skin (Tryst a touch higher as the default anchor).
-  const floor: Record<SkinId, number> = { tryst: 1.2, grimoire: 0.4, aphelion: 0.4, marrow: 0.4 }
-  const withFloor = SKIN_ORDER.map((id) => raw[id] + floor[id])
-  const total = withFloor.reduce((s, v) => s + v, 0) || 1
-  return {
-    tryst: withFloor[0]! / total,
-    grimoire: withFloor[1]! / total,
-    aphelion: withFloor[2]! / total,
-    marrow: withFloor[3]! / total,
-  }
+  // Floor: a small base weight per skin (Tryst a touch higher as the default anchor).
+  const total = SKIN_ORDER.reduce((s, id) => s + raw[id] + skinFloor(id), 0) || 1
+  return Object.fromEntries(SKIN_ORDER.map((id) => [id, (raw[id] + skinFloor(id)) / total])) as Record<SkinId, number>
+}
+
+/** Base weight that keeps the blend stable for thin data — Tryst anchors as the default skin. */
+function skinFloor(id: SkinId): number {
+  return id === 'tryst' ? 1.2 : 0.4
 }
 
 /** The skin a reader leans toward most. */
@@ -261,7 +279,17 @@ export function isMaterialShift(
 
 /** A short human insight about the taste mix, e.g. "leaning fantasy, with a dark edge". */
 export function tasteInsight(weights: Record<SkinId, number>): string {
-  const flavour: Record<SkinId, string> = { tryst: 'romance', grimoire: 'fantasy', aphelion: 'sci-fi', marrow: 'dark & eerie' }
+  const flavour: Record<SkinId, string> = {
+    tryst: 'romance',
+    grimoire: 'fantasy',
+    aphelion: 'sci-fi',
+    marrow: 'dark & eerie',
+    umbra: 'mystery',
+    folio: 'literary',
+    hearth: 'cozy',
+    almanac: 'nonfiction',
+    bloom: 'YA & contemporary',
+  }
   const ranked = SKIN_ORDER.filter((id) => weights[id] > 0.05).sort((a, b) => weights[b] - weights[a])
   const top = ranked[0] ?? 'tryst'
   const second = ranked[1]

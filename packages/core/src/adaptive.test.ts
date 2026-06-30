@@ -90,7 +90,7 @@ describe('computeSkinWeights', () => {
   })
   it('weights are normalized and sum to 1', () => {
     const w = computeSkinWeights([makeBook({ id: '1', title: 'A' })])
-    expect(w.tryst + w.grimoire + w.aphelion + w.marrow).toBeCloseTo(1, 5)
+    expect(Object.values(w).reduce((a, b) => a + b, 0)).toBeCloseTo(1, 5)
   })
 })
 
