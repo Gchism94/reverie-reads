@@ -132,8 +132,8 @@ function StatsScreen() {
       <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
         {stats.map(([n, label]) => (
           <div key={label} className="rounded-2xl border border-line p-3 text-center" style={{ background: 'var(--card)' }}>
-            <div className="text-[22px] font-bold text-ink">{n}</div>
-            <div className="text-[11px] text-muted">{label}</div>
+            <div className="skin-numeral text-[22px] font-bold text-ink">{n}</div>
+            <div className="skin-label text-[11px] text-muted">{label}</div>
           </div>
         ))}
       </div>

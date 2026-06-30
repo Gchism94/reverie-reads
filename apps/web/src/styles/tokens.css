@@ -23,6 +23,64 @@
   --secondary: var(--violet);
   --tertiary: var(--gold);
   --font-body: var(--font-sans);
+
+  /* ── Character dimensions (Skin Character System — docs/SKIN_CHARACTER_CONTRACT.md) ──
+     Neutral, accessible defaults; each skin overrides these in a mode-independent
+     [data-skin='…'] block to become a PLACE, not a palette. Components CONSUME these, never
+     hardcode. Tryst + Aphelion are the two designed skins (Stage 1); the rest inherit defaults
+     until their stage. */
+  --accent: var(--gold); /* the skin's signature accent for marks + ornament */
+  --radius-control: 999px; /* buttons / chips / inputs silhouette */
+  --radius-card: 12px;
+  --radius-panel: 14px; /* nameplate / stat block / toast panels */
+  --border-width: 1px;
+  --ctl-clip: none; /* corner-notch silhouette via clip-path (sci-fi bevel) */
+  --label-font: var(--font-sans); /* generic UI label / control text font */
+  --label-transform: none; /* small generic labels (eyebrows / section / shelf) */
+  --control-transform: none; /* button / chip text */
+  --label-tracking: 0.04em;
+  --label-weight: 600;
+  --numeral-font: var(--font-sans); /* stat-block numerals */
+  --numeral-feature: normal; /* font-feature-settings: oldstyle vs tabular */
+  --motion-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --motion-duration: 200ms;
+}
+
+/* ── Skin character · TRYST (Romance · gaslit New Orleans) — warm, ornate, gilded.
+   Mode-independent (applies in both dark + light); palette stays per-mode above. ── */
+[data-skin='tryst'] {
+  --accent: var(--gold);
+  --radius-control: 999px; /* full gilt pill */
+  --radius-card: 10px;
+  --radius-panel: 14px;
+  --ctl-clip: none;
+  --label-font: var(--font-display); /* Fraunces on controls — the warm-serif signal */
+  --label-transform: uppercase;
+  --control-transform: none; /* buttons stay title-case Fraunces */
+  --label-tracking: 0.14em;
+  --label-weight: 600;
+  --numeral-font: var(--font-display); /* Fraunces numerals */
+  --numeral-feature: 'onum' 1; /* old-style figures */
+  --motion-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --motion-duration: 180ms;
+}
+
+/* ── Skin character · APHELION (Sci-Fi · orbit's cold far point) — cold, precise, machined. ── */
+[data-skin='aphelion'] {
+  --accent: var(--primary); /* cyan == primary */
+  --radius-control: 2px;
+  --radius-card: 2px;
+  --radius-panel: 2px;
+  --ctl-clip: polygon(0 0, calc(100% - 9px) 0, 100% 9px, 100% 100%, 0 100%); /* notched bevel */
+  --label-font: var(--font-mono); /* Space Mono — terminal */
+  --label-transform: uppercase;
+  --control-transform: uppercase; /* machined uppercase controls */
+  --label-tracking: 0.18em;
+  --label-weight: 700;
+  --numeral-font: var(--font-mono);
+  --numeral-feature: 'tnum' 1; /* tabular lining */
+  --motion-ease: cubic-bezier(0.2, 0, 0, 1); /* snappy */
+  --motion-duration: 160ms;
 }
 
 /* ── TRYST · Romance · gothic New Orleans (finalized, AA-corrected) ── */
@@ -297,7 +355,26 @@
   100% { transform: translateX(12%); }
 }
 
-/* Respect reduced motion: hold the sky perfectly still. */
+/* ── Per-skin character motion (Skin Character System). All carry `.rv-anim`, so the reduced-motion
+   rule below calms them exactly like the night sky. Tryst = warm gaslit flicker + page-turn shimmer;
+   Aphelion = precise scan sweep + instrument twinkle. ── */
+@keyframes flick { /* Tryst: gas-lamp glow */
+  0%, 100% { opacity: 0.92; } 43% { opacity: 0.66; } 46% { opacity: 0.96; } 59% { opacity: 0.74; } 72% { opacity: 0.9; }
+}
+@keyframes shim { /* Tryst: loading shimmer */
+  0% { transform: translateX(-130%); } 100% { transform: translateX(320%); }
+}
+@keyframes scan { /* Aphelion: loading scan sweep */
+  0% { transform: translateY(-120%); } 100% { transform: translateY(2000%); }
+}
+@keyframes aphtw { /* Aphelion: instrument twinkle */
+  0%, 100% { opacity: 0.18; } 50% { opacity: 0.95; }
+}
+@keyframes sig-blink { /* Aphelion: status dot */
+  0%, 100% { opacity: 1; } 50% { opacity: 0.2; }
+}
+
+/* Respect reduced motion: hold the sky AND all per-skin character motion perfectly still. */
 @media (prefers-reduced-motion: reduce) {
   .rv-anim {
     animation: none !important;

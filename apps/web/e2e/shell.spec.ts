@@ -10,6 +10,17 @@ test('signed-out landing shows the gold front door', async ({ page }) => {
   await expect(page.getByRole('link', { name: 'Start your library' })).toBeVisible()
 })
 
+// Fraunces is Tryst's #1 character lever and the landing's display face — guard that it actually
+// LOADS (no silent fall back to system serif). The gold brand requests it via Google Fonts.
+test('Fraunces (display face) actually loads — no silent serif fallback', async ({ page }) => {
+  await page.goto('/')
+  await page.evaluate(() => (document as Document & { fonts: FontFaceSet }).fonts.ready)
+  const loaded = await page.evaluate(() =>
+    (document as Document & { fonts: FontFaceSet }).fonts.check('600 24px "Fraunces"'),
+  )
+  expect(loaded, 'Fraunces did not load — Tryst would silently fall back to system serif').toBe(true)
+})
+
 test('auth screen offers password + social, and toggles sign-in / sign-up', async ({ page }) => {
   await page.goto('/auth')
   // Log in (default) — password is the functional path.

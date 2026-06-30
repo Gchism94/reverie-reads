@@ -10,6 +10,7 @@ import { SeriesView } from '../library/SeriesView'
 import { CoverCard } from '../components/CoverCard'
 import { BookDetailRail } from '../components/BookDetailRail'
 import { useIsDesktop, useIsWide } from '../hooks/useMediaQuery'
+import { useVoice } from '../skin/labels'
 
 function Centered({ children }: { children: ReactNode }) {
   return (
@@ -117,13 +118,14 @@ function LibraryScreen() {
   const isDesktop = useIsDesktop() // ≥ lg: select in place (rail), else navigate to the book route
   const isWide = useIsWide() // ≥ xl: rail is a docked column, else an overlay drawer on selection
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const voice = useVoice()
 
   const visible = useMemo(
     () => (books ? sortBooks(books.filter((b) => matchesFilters(b, filters)), filters.sort) : []),
     [books, filters],
   )
 
-  if (isLoading) return <Centered>Gathering your library…</Centered>
+  if (isLoading) return <Centered>{voice.loading}</Centered>
   if (isError) return <Centered>Couldn’t load your library — {(error as Error).message}</Centered>
   if (!books || books.length === 0) return <EmptyState />
 

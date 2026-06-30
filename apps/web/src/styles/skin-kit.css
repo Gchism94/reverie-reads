@@ -1,0 +1,31 @@
+/* Skin Character core kit — token-consuming utility classes. Components add these instead of
+   hardcoding shape / type / motion, so each skin's character flows through automatically. The
+   per-skin token VALUES live in tokens.css; the contract is docs/SKIN_CHARACTER_CONTRACT.md. */
+
+/* Control silhouette + feel (buttons, chips, selects). */
+.skin-control {
+  border-radius: var(--radius-control);
+  clip-path: var(--ctl-clip);
+  font-family: var(--label-font);
+  font-weight: var(--label-weight);
+  text-transform: var(--control-transform);
+  transition-timing-function: var(--motion-ease);
+  transition-duration: var(--motion-duration);
+}
+
+.skin-card { border-radius: var(--radius-card); }
+.skin-panel { border-radius: var(--radius-panel); }
+
+/* Small generic labels — eyebrows, section + shelf headers, field labels. */
+.skin-label {
+  font-family: var(--label-font);
+  text-transform: var(--label-transform);
+  letter-spacing: var(--label-tracking);
+  font-weight: var(--label-weight);
+}
+
+/* Stat-block numerals — old-style serif vs tabular mono. */
+.skin-numeral {
+  font-family: var(--numeral-font);
+  font-feature-settings: var(--numeral-feature);
+}
