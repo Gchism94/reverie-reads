@@ -161,6 +161,14 @@ function OnboardingFlow() {
           <Stat n={r.merged} l="Merged" />
           <Stat n={r.readingOrders} l="Orders" />
         </div>
+        {/* Non-blocking notice (only when some ISBNs look truncated): the count in skin numerals,
+            the framing in the skin's voice. Detect-and-inform — the books imported fine. */}
+        {r.truncatedIsbns > 0 && (
+          <p className="mt-4 text-[13px] leading-relaxed text-muted">
+            <StatNumber className="font-bold text-ink">{r.truncatedIsbns}</StatNumber>{' '}
+            {r.truncatedIsbns === 1 ? 'ISBN' : 'ISBNs'} {voice.isbnNotice}
+          </p>
+        )}
         {r.review.length > 0 ? (
           <div className="mt-5">
             <span className="skin-label mb-1.5 block text-[10px]" style={{ color: 'var(--accent-ink)' }}>
