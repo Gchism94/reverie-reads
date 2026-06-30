@@ -388,7 +388,11 @@ function SettingsScreen() {
                   setStatus(
                     `Imported (${r.profile}) · merged ${r.merged} · added ${r.added} new${
                       r.readingOrders ? ` · ${r.readingOrders} reading order${r.readingOrders > 1 ? 's' : ''}` : ''
-                    }${r.review.length ? ` · ${r.review.length} to review below` : ''}.`,
+                    }${r.review.length ? ` · ${r.review.length} to review below` : ''}.${
+                      r.truncatedIsbns
+                        ? ` Note: ${r.truncatedIsbns} ISBN${r.truncatedIsbns > 1 ? 's' : ''} may be missing a leading digit and might not match — re-export with ISBNs as text to fix.`
+                        : ''
+                    }`,
                   )
                 })
               }
