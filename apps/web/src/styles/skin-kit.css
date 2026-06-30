@@ -29,3 +29,39 @@
   font-family: var(--numeral-font);
   font-feature-settings: var(--numeral-feature);
 }
+
+/* ── Material layer (Skin Character 1b) ──────────────────────────────────────────────────────
+   Ambient texture: the skin's material (Tryst gilt-paper grain / Aphelion instrument mesh), drawn
+   BEHIND all content so no text ever sits on it. Token-driven, so neutral skins render nothing
+   (--ambient-texture: none, opacity 0). Static (no animation) — GPU-cheap, no external images. */
+.rv-skin-texture {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: var(--ambient-texture);
+  background-size: var(--ambient-texture-size);
+  background-position: center;
+  mix-blend-mode: var(--ambient-texture-blend);
+  opacity: var(--ambient-texture-opacity);
+  -webkit-mask-image: var(--ambient-texture-mask);
+  mask-image: var(--ambient-texture-mask);
+}
+
+/* Plate: nameplate / stat / toast panel material. Text sits on the OPAQUE --panel-fill (the AA
+   floor); the gilt/instrument character comes from the border + the inset --ornament-frame, never
+   a translucent wash behind the text. The ::before draws the inset hairline frame (Tryst gilt
+   double-rule; Aphelion edge rule). Corner brackets / fleuron are added structurally by Nameplate. */
+.skin-plate {
+  position: relative;
+  border-radius: var(--radius-panel);
+  background: var(--panel-fill);
+  border: var(--border-width) solid var(--line);
+}
+.skin-plate::before {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border: 1px solid var(--ornament-frame);
+  border-radius: calc(var(--radius-panel) - 5px);
+  pointer-events: none;
+}
