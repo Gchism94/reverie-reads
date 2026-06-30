@@ -44,6 +44,22 @@
   --numeral-feature: normal; /* font-feature-settings: oldstyle vs tabular */
   --motion-ease: cubic-bezier(0.4, 0, 0.2, 1);
   --motion-duration: 200ms;
+
+  /* ── Material / ornament dimensions (Skin Character 1b — texture, nameplate, marks).
+     Neutral defaults render CLEAN (no texture, plain plate, accent mark). Tryst + Aphelion
+     set these mode-independently below; the other skins fill them at their stage.
+     AA INVARIANT: text never sits on raw texture — the ambient texture lives BEHIND content
+     (cards/panels are opaque) and panel text always sits on the opaque --panel-fill. ── */
+  --ambient-texture: none; /* app-bg material drawn behind ALL content (grain / mesh) — no text on it */
+  --ambient-texture-size: auto;
+  --ambient-texture-blend: normal; /* mix-blend-mode for the texture over the bg */
+  --ambient-texture-opacity: 0; /* off by default; skins reuse --grain-opacity */
+  --ambient-texture-mask: none; /* optional radial fade so a mesh doesn't tile to the edges */
+  --panel-fill: var(--card-solid); /* OPAQUE nameplate / stat-panel base — the AA floor for text-on-panel */
+  --accent-ink: var(--ink); /* accent-tinted TEXT colour that clears AA on the plate (eyebrows); per-mode below */
+  --ornament-frame: transparent; /* inset hairline frame colour on plates (Tryst gilt double-rule) */
+  --mark-accent: var(--accent); /* card-mark glyph accent (skin signature; AA-resolved per surface in JS) */
+  --mark-radius: var(--radius-control); /* card-mark chip silhouette (pill vs notched square) */
 }
 
 /* ── Skin character · TRYST (Romance · gaslit New Orleans) — warm, ornate, gilded.
@@ -63,6 +79,15 @@
   --numeral-feature: 'onum' 1; /* old-style figures */
   --motion-ease: cubic-bezier(0.4, 0, 0.2, 1);
   --motion-duration: 180ms;
+
+  /* 1b material — gilt-paper grain (soft-light feTurbulence, the export's recipe), opaque warm
+     plate, gilt inset double-rule frame, round gold marks. Opacity rides the per-mode --grain-opacity. */
+  --ambient-texture: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --ambient-texture-size: 180px 180px;
+  --ambient-texture-blend: soft-light;
+  --ambient-texture-opacity: var(--grain-opacity);
+  --ornament-frame: color-mix(in srgb, var(--gold) 30%, transparent);
+  --mark-radius: 999px;
 }
 
 /* ── Skin character · APHELION (Sci-Fi · orbit's cold far point) — cold, precise, machined. ── */
@@ -81,6 +106,17 @@
   --numeral-feature: 'tnum' 1; /* tabular lining */
   --motion-ease: cubic-bezier(0.2, 0, 0, 1); /* snappy */
   --motion-duration: 160ms;
+
+  /* 1b material — instrument grid mesh (the export's 46px lattice in primary, masked to fade out),
+     opaque plate, corner-bracket frame (drawn structurally on plates/cards), squared cyan marks. */
+  --ambient-texture: linear-gradient(color-mix(in srgb, var(--primary) 6%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--primary) 6%, transparent) 1px, transparent 1px);
+  --ambient-texture-size: 46px 46px;
+  --ambient-texture-blend: normal;
+  --ambient-texture-opacity: 0.75;
+  --ambient-texture-mask: radial-gradient(120% 100% at 50% 0%, #000 35%, transparent 78%);
+  --ornament-frame: color-mix(in srgb, var(--primary) 55%, transparent);
+  --mark-radius: 2px;
 }
 
 /* ── TRYST · Romance · gothic New Orleans (finalized, AA-corrected) ── */
@@ -92,6 +128,7 @@
   --muted: #b08fae;
   --primary: #e83a78;
   --accent-fill: #cf2f66; /* solid fill behind white text (AA: white 4.9:1) */
+  --accent-ink: #f0b14e; /* gilt eyebrow text (gold clears AA on the dark plate) */
   --violet: #7b3fa0;
   --blue: #16266a;
   --gold: #f0b14e;
@@ -125,6 +162,7 @@
   --muted: #86566f;
   --primary: #c52e5f;
   --accent-fill: #c52e5f;
+  --accent-ink: #8a5a1f; /* deep gilt — gold darkened so the eyebrow clears AA on the cream plate */
   --violet: #7b3fa0;
   --blue: #2e3a73;
   --gold: #c9842f;
@@ -215,6 +253,7 @@
   --muted: #7d8aa6;
   --primary: #4fd1e0;
   --accent-fill: #1f8fa3;
+  --accent-ink: #4fd1e0; /* instrument-cyan eyebrow (clears AA on the dark plate) */
   --violet: #6b8cff;
   --blue: #3a52c4;
   --gold: #b9c7e0;
@@ -244,6 +283,7 @@
   --muted: #51607a; /* darkened from #5a6b86 for AA headroom on the pale cards */
   --primary: #0a6e80; /* darkened from #0e8fa6 so cyan link text + white-on-fill clear AA */
   --accent-fill: #0a6e80;
+  --accent-ink: #0a6e80; /* darkened cyan eyebrow (clears AA on the pale plate) */
   --violet: #3a52c4;
   --blue: #3a52c4;
   --gold: #5a6b86;

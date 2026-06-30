@@ -4,6 +4,7 @@ import { subgenreGradient } from '../library/constants'
 import { useLabels } from '../skin/labels'
 import { Chip } from './Chip'
 import { CoverImage } from './CoverImage'
+import { Nameplate } from './Nameplate'
 
 const FORMAT_ICON = { physical: '📖', ebook: '📱', audiobook: '🎧' } as const
 const FORMAT_LABEL = { physical: 'Physical', ebook: 'Ebook', audiobook: 'Audiobook' } as const
@@ -52,19 +53,14 @@ export function BookDetailRail({
         <CoverImage book={book} />
       </div>
 
-      <h2
-        className="mt-4 text-balance text-center text-[20px] italic leading-tight text-ink"
-        style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
-      >
-        {book.title}
-      </h2>
-      {author && <p className="mt-1 text-center text-[13px] text-muted">{author}</p>}
-      {book.series && (
-        <p className="mt-0.5 text-center text-[12px] text-muted">
-          {book.series}
-          {book.position !== '' ? ` #${book.position}` : ''}
-        </p>
-      )}
+      <Nameplate
+        className="mt-4"
+        eyebrow={
+          book.series ? `${book.series}${book.position !== '' ? ` · #${book.position}` : ''}` : undefined
+        }
+        title={book.title}
+        subtitle={author || undefined}
+      />
 
       <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5">
         <span
