@@ -37,7 +37,11 @@ const p2 = (n: number) => String(n).padStart(2, '0')
  * xlsx from csv, each handled:
  *  - dates: Excel stores them as serial numbers — convert via SSF on the SERIAL (pure arithmetic, so
  *    TZ-proof; a JS `Date` round-trips off-by-one) to `YYYY-MM-DD`, the format the CSV date parser eats.
- *  - numbers: the raw value as a string (ratings / pages / years), never the formatted `.w` (no commas).
+ *  - numbers: the raw value as a string (ratings / pages / years), never the formatted `.w` (no commas,
+ *    no `9.78E+12` for a 13-digit ISBN). EXCEPTION: a zero-padded format whose display is the same
+ *    integer with leading zeros (e.g. an ISBN-10 column formatted `0000000000`) — keep `.w` so the
+ *    leading zero survives. (An ISBN typed as a plain number already lost its leading zero in the
+ *    file itself — unrecoverable here; well-formed exports store ISBNs as text, which round-trips.)
  *  - formula cells: the cached/computed value (`.v`), never the formula text (`.f`).
  *  - whitespace / empties: trimmed; empty → "".
  */
@@ -49,6 +53,10 @@ function cellToString(XLSX: XLSXModule, cell: XLSXNS.CellObject | undefined): st
       const d = ssf.parse_date_code(cell.v as number)
       if (d && d.y) return `${d.y}-${p2(d.m)}-${p2(d.d)}`
     }
+    // Keep a leading-zero display ONLY when it's pure digits AND the same number (never rounds a
+    // fractional value, never lets a thousands/scientific format through).
+    const w = cell.w
+    if (typeof w === 'string' && /^\d+$/.test(w) && Number(w) === cell.v) return w
     return String(cell.v)
   }
   if (cell.t === 'b') return cell.v ? 'TRUE' : 'FALSE'
