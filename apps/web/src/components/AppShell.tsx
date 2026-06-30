@@ -66,7 +66,7 @@ function NavLinks({ collapsed }: { collapsed: boolean }) {
           <span className="grid w-5 shrink-0 place-items-center text-[14px]" aria-hidden>
             {item.icon}
           </span>
-          {!collapsed && <span className="truncate">{item.label}</span>}
+          {!collapsed && <span className="skin-label truncate">{item.label}</span>}
         </Link>
       ))}
     </nav>
@@ -132,7 +132,7 @@ function Sidebar() {
         to="/add"
         title={collapsed ? 'Add a book' : undefined}
         aria-label="Add a book"
-        className={`mb-3 flex h-10 items-center justify-center gap-1.5 rounded-[10px] text-[13px] font-semibold ${
+        className={`skin-control mb-3 flex h-10 items-center justify-center gap-1.5 text-[13px] ${
           collapsed ? 'px-0' : 'px-4'
         }`}
         style={{
@@ -153,7 +153,7 @@ function Sidebar() {
             to="/skins"
             title="Choose skin"
             aria-label="Choose skin"
-            className={`flex h-9 items-center justify-center gap-2 rounded-[10px] border border-line text-[12px] font-semibold text-ink ${
+            className={`flex h-9 items-center justify-center gap-2 skin-control border border-line text-[12px] text-ink ${
               collapsed ? 'w-9' : 'flex-1'
             }`}
             style={{ background: 'color-mix(in srgb, var(--card) 70%, transparent)' }}
@@ -173,7 +173,7 @@ function Sidebar() {
             to="/settings"
             title="Settings"
             aria-label="Settings"
-            className={`flex h-9 items-center justify-center gap-2 rounded-[10px] border border-line text-[12px] font-semibold text-ink ${
+            className={`flex h-9 items-center justify-center gap-2 skin-control border border-line text-[12px] text-ink ${
               collapsed ? 'w-9' : 'flex-1'
             }`}
             style={{ background: 'color-mix(in srgb, var(--card) 70%, transparent)' }}
@@ -186,7 +186,7 @@ function Sidebar() {
             onClick={() => void signOut()}
             title="Sign out"
             aria-label="Sign out"
-            className={`flex h-9 items-center justify-center rounded-[10px] border border-line text-[12px] font-semibold text-muted hover:text-ink ${
+            className={`flex h-9 items-center justify-center skin-control border border-line text-[12px] text-muted hover:text-ink ${
               collapsed ? 'w-9' : 'px-3'
             }`}
             style={{ background: 'color-mix(in srgb, var(--card) 70%, transparent)' }}
@@ -235,7 +235,7 @@ function MobileBar() {
             key={item.to}
             to={item.to}
             activeOptions={{ exact: item.to === '/' }}
-            className="whitespace-nowrap rounded-full px-3 py-1.5 text-[13px] font-semibold transition-colors"
+            className="skin-label whitespace-nowrap rounded-full px-3 py-1.5 text-[13px] transition-colors"
             style={{ color: 'var(--muted)' }}
             activeProps={{
               style: { color: 'var(--ink)', background: 'var(--card)', border: '1px solid var(--line)' },
@@ -249,7 +249,7 @@ function MobileBar() {
       <div className="flex shrink-0 items-center gap-2">
         <Link
           to="/add"
-          className="flex h-[36px] items-center rounded-full px-3.5 text-[12.5px] font-semibold"
+          className="skin-control flex h-[36px] items-center px-3.5 text-[12.5px]"
           style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))', color: 'var(--on-primary)' }}
         >
           ＋ Add
@@ -258,7 +258,7 @@ function MobileBar() {
           to="/settings"
           aria-label="Settings"
           title="Settings"
-          className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] border border-line text-[14px] text-ink"
+          className="skin-control grid h-9 w-9 shrink-0 place-items-center border border-line text-[14px] text-ink"
           style={{ background: 'color-mix(in srgb, var(--card) 70%, transparent)' }}
         >
           <span aria-hidden>⚙</span>
