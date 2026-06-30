@@ -32,12 +32,12 @@ type Tok = {
 const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
   'tryst/dark': { bg0: '#0b0612', cardSolid: '#1c0d28', ink: '#f6e9f1', muted: '#b08fae', accentFill: '#cf2f66', onPrimary: '#ffffff', accentInk: '#f0b14e', markAccent: '#f0b14e' },
   'tryst/light': { bg0: '#fbeee9', cardSolid: '#fff8f5', ink: '#2a1320', muted: '#86566f', accentFill: '#c52e5f', onPrimary: '#ffffff', accentInk: '#8a5a1f', markAccent: '#c9842f' },
-  'grimoire/dark': { bg0: '#0c0f0b', cardSolid: '#161b12', ink: '#ece7d6', muted: '#9aa384', accentFill: '#2f9e74', onPrimary: '#08110b', accentInk: '#ece7d6', markAccent: '#d4af37' },
-  'grimoire/light': { bg0: '#f1e7cf', cardSolid: '#f7efd9', ink: '#2a2418', muted: '#665e49', accentFill: '#1a6e4c', onPrimary: '#ffffff', accentInk: '#2a2418', markAccent: '#b08828' },
+  'grimoire/dark': { bg0: '#0c0f0b', cardSolid: '#161b12', ink: '#ece7d6', muted: '#9aa384', accentFill: '#2f9e74', onPrimary: '#08110b', accentInk: '#d4af37', markAccent: '#d4af37' },
+  'grimoire/light': { bg0: '#f1e7cf', cardSolid: '#f7efd9', ink: '#2a2418', muted: '#665e49', accentFill: '#1a6e4c', onPrimary: '#ffffff', accentInk: '#6e5518', markAccent: '#b08828' },
   'aphelion/dark': { bg0: '#05070d', cardSolid: '#0d1320', ink: '#e6edf7', muted: '#7d8aa6', accentFill: '#1f8fa3', onPrimary: '#02080a', accentInk: '#4fd1e0', markAccent: '#4fd1e0' },
   'aphelion/light': { bg0: '#eef3fb', cardSolid: '#f7fafe', ink: '#0e1626', muted: '#51607a', accentFill: '#0a6e80', onPrimary: '#ffffff', accentInk: '#0a6e80', markAccent: '#0a6e80' },
-  'marrow/dark': { bg0: '#0a0a0b', cardSolid: '#161315', ink: '#e8e3da', muted: '#98907f', accentFill: '#8f3535', onPrimary: '#ffffff', accentInk: '#e8e3da', markAccent: '#8c9a3c' },
-  'marrow/light': { bg0: '#ece8e0', cardSolid: '#f4f0e8', ink: '#1b1815', muted: '#6a6358', accentFill: '#8a3232', onPrimary: '#ffffff', accentInk: '#1b1815', markAccent: '#6f7a2e' },
+  'marrow/dark': { bg0: '#0a0a0b', cardSolid: '#161315', ink: '#e8e3da', muted: '#98907f', accentFill: '#8f3535', onPrimary: '#ffffff', accentInk: '#d06a6a', markAccent: '#d06a6a' },
+  'marrow/light': { bg0: '#ece8e0', cardSolid: '#f4f0e8', ink: '#1b1815', muted: '#6a6358', accentFill: '#8a3232', onPrimary: '#ffffff', accentInk: '#8a3232', markAccent: '#8a3232' },
 }
 
 const MODES = ['dark', 'light'] as const

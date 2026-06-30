@@ -119,6 +119,60 @@
   --mark-radius: 2px;
 }
 
+/* ── Skin character · GRIMOIRE (Fantasy · illuminated manuscript) — vellum, oak-gall ink, gold leaf.
+   Code-first (Stage 2): no design export — derived from the genre + palette, eyeball-gated. ── */
+[data-skin='grimoire'] {
+  --accent: var(--gold); /* gold leaf */
+  --radius-control: 6px; /* bound-tome corners — squared, not a pill */
+  --radius-card: 4px;
+  --radius-panel: 7px;
+  --ctl-clip: none;
+  --label-font: var(--font-display); /* Cormorant Garamond — classical serif */
+  --label-transform: uppercase; /* manuscript small-caps */
+  --control-transform: none; /* title-case Cormorant on buttons */
+  --label-tracking: 0.16em;
+  --label-weight: 600;
+  --numeral-font: var(--font-display);
+  --numeral-feature: 'onum' 1; /* old-style manuscript figures */
+  --motion-ease: cubic-bezier(0.33, 0, 0.2, 1);
+  --motion-duration: 220ms; /* unhurried, like turning a heavy page */
+
+  /* material — aged-vellum grain (finer fractalNoise), gilt inset frame, gold-leaf marks. */
+  --ambient-texture: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --ambient-texture-size: 200px 200px;
+  --ambient-texture-blend: soft-light;
+  --ambient-texture-opacity: var(--grain-opacity);
+  --ornament-frame: color-mix(in srgb, var(--gold) 32%, transparent);
+  --mark-radius: 5px;
+}
+
+/* ── Skin character · MARROW (Horror · bone, ash, oxblood, creeping fog) — gaunt, gothic, brittle.
+   Code-first (Stage 2): derived from the genre + palette, eyeball-gated. ── */
+[data-skin='marrow'] {
+  --accent: var(--primary); /* oxblood */
+  --radius-control: 3px; /* hard, brittle edges */
+  --radius-card: 3px;
+  --radius-panel: 4px;
+  --ctl-clip: none;
+  --label-font: var(--font-display); /* Playfair Display — high-contrast gothic serif */
+  --label-transform: uppercase;
+  --control-transform: none;
+  --label-tracking: 0.12em;
+  --label-weight: 600;
+  --numeral-font: var(--font-display);
+  --numeral-feature: 'lnum' 1; /* stark lining figures */
+  --motion-ease: cubic-bezier(0.5, 0, 0.75, 0); /* creeping — slow to start, late rush */
+  --motion-duration: 240ms;
+
+  /* material — coarse ash grain over the heavy vignette; oxblood inset frame + marks. */
+  --ambient-texture: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.6' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --ambient-texture-size: 220px 220px;
+  --ambient-texture-blend: soft-light;
+  --ambient-texture-opacity: var(--grain-opacity);
+  --ornament-frame: color-mix(in srgb, var(--primary) 38%, transparent);
+  --mark-radius: 3px;
+}
+
 /* ── TRYST · Romance · gothic New Orleans (finalized, AA-corrected) ── */
 :root,
 [data-skin='tryst'][data-mode='dark'] {
@@ -194,6 +248,7 @@
   --muted: #9aa384;
   --primary: #3aa97e;
   --accent-fill: #2f9e74;
+  --accent-ink: #d4af37; /* gold-leaf eyebrow (clears AA on the dark vellum plate) */
   --violet: #b08828;
   --blue: #1f7d57;
   --gold: #d4af37;
@@ -223,6 +278,7 @@
   --muted: #665e49; /* darkened from demo #7c745c to clear 4.5:1 on the vellum cards */
   --primary: #1a6e4c; /* darkened from #1f7d57 so green link text clears AA on cream */
   --accent-fill: #1a6e4c;
+  --accent-ink: #6e5518; /* deep gold-leaf — darkened so the eyebrow clears AA on the cream plate */
   --violet: #8a6a2f;
   --blue: #1f7d57;
   --gold: #b08828;
@@ -314,6 +370,7 @@
   --muted: #98907f; /* lightened from #8a8278 for AA headroom on the near-black cards */
   --primary: #d06a6a; /* brightened from #b04646 so oxblood link text clears AA on dark */
   --accent-fill: #8f3535;
+  --accent-ink: #d06a6a; /* oxblood eyebrow (clears AA on the dark bone plate) */
   --violet: #6f7d86;
   --blue: #56616b;
   --gold: #8c9a3c;
@@ -343,6 +400,7 @@
   --muted: #6a6358; /* darkened from #756e64 to clear 4.5:1 on the bone cards */
   --primary: #8a3232;
   --accent-fill: #8a3232;
+  --accent-ink: #8a3232; /* oxblood eyebrow (clears AA on the bone plate) */
   --violet: #56616b;
   --blue: #56616b;
   --gold: #6f7a2e;
