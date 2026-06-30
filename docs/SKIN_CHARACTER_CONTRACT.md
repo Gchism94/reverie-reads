@@ -6,8 +6,12 @@ small set of *character* tokens (mode-independent) in a `[data-skin='<id>']` blo
 type, or motion. Adding a skin's character = fill in this table; the contrast test (below) guarantees
 AA automatically.
 
-Defined for all skins as neutral defaults in the base `:root, [data-skin]` rule; **Tryst** and
-**Aphelion** are the two designed skins (Stage 1). The rest inherit defaults until their stage.
+Defined for all skins as neutral defaults in the base `:root, [data-skin]` rule. **Tryst** +
+**Aphelion** are the two design-export skins (Stage 1/1b); **Grimoire** (Fantasy · illuminated
+manuscript — gold-leaf, Cormorant, vellum grain, ☉ plate, archaic voice) + **Marrow** (Horror ·
+gothic dread — oxblood, Playfair, ash grain, † plate, dread voice) are filled **code-first** in
+Stage 2 (no export; derived from genre + palette, eyeball-gated). The five unbuilt skins inherit
+defaults until Stage 3.
 
 ## The tokens
 
