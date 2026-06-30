@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createRoute, useNavigate } from '@tanstack/react-router'
 import { authorOf, type Book } from '@reverie/core'
 import { rootRoute } from './RootRoute'
@@ -12,6 +12,7 @@ import { SpineShelf } from '../components/SpineShelf'
 import { LogReadForm } from '../book/dialogs'
 import { MONTHS } from '../library/constants'
 import { useEffectiveSkin } from '../skin/labels'
+import { hasOnboarded } from './OnboardingRoute'
 
 const YEAR = new Date().getFullYear()
 
@@ -74,6 +75,15 @@ function HomeScreen() {
 
   const all = books ?? []
   const openBook = (id: string) => void navigate({ to: '/book/$bookId', params: { bookId: id } })
+
+  // First-run: a brand-new reader (no books, hasn't been through onboarding) is sent to the
+  // character-vocabulary first-run flow once. Existing libraries and anyone who finished/skipped
+  // are left alone (honor-based flag in OnboardingRoute).
+  useEffect(() => {
+    if (books && books.length === 0 && !hasOnboarded()) {
+      void navigate({ to: '/onboarding', replace: true })
+    }
+  }, [books, navigate])
 
   const yearReads = (reads ?? []).filter((r) => r.read_on?.slice(0, 4) === String(YEAR))
   const uniqueThisYear = new Set(yearReads.map((r) => r.book_id)).size
