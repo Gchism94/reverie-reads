@@ -36,6 +36,39 @@ const MOTIFS: Record<SkinId, React.ReactNode> = {
       <circle cx="110" cy="13" r="2.4" fill="currentColor" stroke="none" />
     </>
   ),
+  // Stage 3 motifs: umbra single noir diamond · folio editorial dot-leader · hearth leaf · almanac
+  // index ticks · bloom sparkle.
+  umbra: (
+    <>
+      <path d="M10 13h90M210 13h-90" strokeOpacity=".5" />
+      <path d="M110 7l5 6-5 6-5-6z" fill="currentColor" stroke="none" />
+    </>
+  ),
+  folio: (
+    <>
+      <path d="M14 13h82M206 13h-82" strokeOpacity=".5" />
+      <circle cx="110" cy="13" r="2.2" fill="currentColor" stroke="none" />
+      <path d="M99 13h-3M124 13h-3" strokeOpacity=".7" />
+    </>
+  ),
+  hearth: (
+    <>
+      <path d="M14 13h84M206 13h-84" strokeOpacity=".5" />
+      <path d="M110 6c-4 3-4 11 0 14 4-3 4-11 0-14z" strokeOpacity=".9" />
+    </>
+  ),
+  almanac: (
+    <>
+      <path d="M10 13h92M210 13h-92" />
+      <path d="M104 8v10M116 8v10M110 9v8" strokeOpacity=".8" />
+    </>
+  ),
+  bloom: (
+    <>
+      <path d="M14 13h82M206 13h-82" strokeOpacity=".5" />
+      <path d="M110 6v14M103 13h14M105.5 8.5l9 9M114.5 8.5l-9 9" strokeOpacity=".9" />
+    </>
+  ),
 }
 
 export function SkinDivider({ skin, className = '' }: { skin?: SkinId; className?: string }) {

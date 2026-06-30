@@ -19,6 +19,19 @@ type PlateOrnament = {
   subtitleStyle: CSSProperties
 }
 
+/** A single signature glyph hung over the top rule of the plate, in the skin's accent. */
+function topGlyph(ch: string): ReactNode {
+  return (
+    <span
+      aria-hidden
+      className="pointer-events-none absolute left-1/2 top-[-3px] -translate-x-1/2 text-[13px] leading-none"
+      style={{ color: 'var(--accent)' }}
+    >
+      {ch}
+    </span>
+  )
+}
+
 const PLATE: Partial<Record<SkinId, PlateOrnament>> = {
   tryst: {
     eyebrowColor: 'var(--accent-ink)',
@@ -85,6 +98,12 @@ const PLATE: Partial<Record<SkinId, PlateOrnament>> = {
       </span>
     ),
   },
+  // Stage 3 — a single signature glyph over the top rule, in the skin's accent.
+  umbra: { eyebrowColor: 'var(--accent-ink)', subtitleStyle: { fontFamily: 'var(--font-display)', fontStyle: 'italic' }, ornament: topGlyph('◆') },
+  folio: { eyebrowColor: 'var(--accent-ink)', subtitleStyle: { fontFamily: 'var(--font-display)', fontStyle: 'italic' }, ornament: topGlyph('❡') },
+  hearth: { eyebrowColor: 'var(--accent-ink)', subtitleStyle: { fontFamily: 'var(--font-sans)' }, ornament: topGlyph('❀') },
+  almanac: { eyebrowColor: 'var(--accent-ink)', subtitleStyle: { fontFamily: 'var(--font-mono)', letterSpacing: '0.04em' }, ornament: topGlyph('‡') },
+  bloom: { eyebrowColor: 'var(--accent-ink)', subtitleStyle: { fontFamily: 'var(--font-sans)' }, ornament: topGlyph('✺') },
 }
 
 export function Nameplate({

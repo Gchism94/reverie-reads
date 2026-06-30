@@ -5,8 +5,17 @@
 // identical output, so CI fails the moment the two drift. Keep this free of Deno globals so it
 // stays importable from Node.
 
-export type SkinId = 'tryst' | 'grimoire' | 'aphelion' | 'marrow'
-export const SKIN_ORDER: SkinId[] = ['tryst', 'grimoire', 'aphelion', 'marrow']
+export type SkinId =
+  | 'tryst'
+  | 'grimoire'
+  | 'aphelion'
+  | 'marrow'
+  | 'umbra'
+  | 'folio'
+  | 'hearth'
+  | 'almanac'
+  | 'bloom'
+export const SKIN_ORDER: SkinId[] = ['tryst', 'grimoire', 'aphelion', 'marrow', 'umbra', 'folio', 'hearth', 'almanac', 'bloom']
 export type Weights = Record<SkinId, number>
 
 // Mirrors SKIN_AFFINITY in packages/core/src/adaptive.ts.
@@ -26,6 +35,26 @@ export const AFFINITY: Record<SkinId, { subgenres: string[]; tags: string[] }> =
   marrow: {
     subgenres: ['Dark Romance', 'Horror', 'Thriller'],
     tags: ['Mafia', 'Stalker', 'Villain Romance', 'Serial Killers', 'Captive/Captor', 'Morally Black MMC', 'Obsessive', 'Anti-Hero', 'Bully Romance', 'Possessive', 'Revenge'],
+  },
+  umbra: {
+    subgenres: ['Mystery', 'Thriller', 'Crime', 'Detective', 'Suspense'],
+    tags: ['Whodunit', 'Noir', 'Heist', 'Spy', 'Cozy Mystery', 'Locked Room', 'Cold Case', 'Conspiracy'],
+  },
+  folio: {
+    subgenres: ['Literary', 'Literary Fiction', 'Classics', 'Fiction', 'Poetry'],
+    tags: ['Coming of Age', 'Family Saga', 'Translation', 'Award Winner', 'Essays', 'Modernist'],
+  },
+  hearth: {
+    subgenres: ['Cozy', 'Cottagecore', 'Slice of Life', 'Womens Fiction'],
+    tags: ['Comfort Read', 'Small Town', 'Baking', 'Found Family', 'Low Stakes', 'Feel Good'],
+  },
+  almanac: {
+    subgenres: ['Nonfiction', 'Memoir', 'History', 'Science', 'Biography', 'Self Help'],
+    tags: ['Reference', 'Essay', 'Field Guide', 'How To', 'Investigative', 'Popular Science'],
+  },
+  bloom: {
+    subgenres: ['YA', 'Young Adult', 'New Adult', 'Contemporary'],
+    tags: ['Coming of Age', 'First Love', 'Enemies to Lovers', 'Road Trip', 'Summer', 'High School', 'Friendship'],
   },
 }
 
@@ -50,8 +79,10 @@ export function engagement(b: BookRow): number {
   return w
 }
 
+const skinFloor = (id: SkinId): number => (id === 'tryst' ? 1.2 : 0.4)
+
 export function computeWeights(books: BookRow[]): Weights {
-  const raw: Weights = { tryst: 0, grimoire: 0, aphelion: 0, marrow: 0 }
+  const raw = Object.fromEntries(SKIN_ORDER.map((id) => [id, 0])) as Weights
   for (const b of books) {
     const w = engagement(b)
     const tags = new Set(b.tags ?? [])
@@ -63,15 +94,8 @@ export function computeWeights(books: BookRow[]): Weights {
       raw[id] += score * w
     }
   }
-  const floor: Weights = { tryst: 1.2, grimoire: 0.4, aphelion: 0.4, marrow: 0.4 }
-  const withFloor = SKIN_ORDER.map((id) => raw[id] + floor[id])
-  const total = withFloor.reduce((s, v) => s + v, 0) || 1
-  return {
-    tryst: withFloor[0]! / total,
-    grimoire: withFloor[1]! / total,
-    aphelion: withFloor[2]! / total,
-    marrow: withFloor[3]! / total,
-  }
+  const total = SKIN_ORDER.reduce((s, id) => s + raw[id] + skinFloor(id), 0) || 1
+  return Object.fromEntries(SKIN_ORDER.map((id) => [id, (raw[id] + skinFloor(id)) / total])) as Weights
 }
 
 export const dominantSkin = (w: Weights): SkinId =>
@@ -86,7 +110,17 @@ export function isMaterialShift(current: Weights, next: Weights, threshold = 0.2
 }
 
 export function tasteInsight(w: Weights): string {
-  const flavour: Record<SkinId, string> = { tryst: 'romance', grimoire: 'fantasy', aphelion: 'sci-fi', marrow: 'dark & eerie' }
+  const flavour: Record<SkinId, string> = {
+    tryst: 'romance',
+    grimoire: 'fantasy',
+    aphelion: 'sci-fi',
+    marrow: 'dark & eerie',
+    umbra: 'mystery',
+    folio: 'literary',
+    hearth: 'cozy',
+    almanac: 'nonfiction',
+    bloom: 'YA & contemporary',
+  }
   const ranked = SKIN_ORDER.filter((id) => w[id] > 0.05).sort((a, b) => w[b] - w[a])
   const top = ranked[0] ?? 'tryst'
   const second = ranked[1]

@@ -38,6 +38,16 @@ const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
   'aphelion/light': { bg0: '#eef3fb', cardSolid: '#f7fafe', ink: '#0e1626', muted: '#51607a', accentFill: '#0a6e80', onPrimary: '#ffffff', accentInk: '#0a6e80', markAccent: '#0a6e80' },
   'marrow/dark': { bg0: '#0a0a0b', cardSolid: '#161315', ink: '#e8e3da', muted: '#98907f', accentFill: '#8f3535', onPrimary: '#ffffff', accentInk: '#d06a6a', markAccent: '#d06a6a' },
   'marrow/light': { bg0: '#ece8e0', cardSolid: '#f4f0e8', ink: '#1b1815', muted: '#6a6358', accentFill: '#8a3232', onPrimary: '#ffffff', accentInk: '#8a3232', markAccent: '#8a3232' },
+  'umbra/dark': { bg0: '#0c0d10', cardSolid: '#15171c', ink: '#e9eaed', muted: '#9398a3', accentFill: '#7e5a16', onPrimary: '#ffffff', accentInk: '#e0a84a', markAccent: '#e0a84a' },
+  'umbra/light': { bg0: '#eceef1', cardSolid: '#f8f9fb', ink: '#14161a', muted: '#565c66', accentFill: '#7e5a16', onPrimary: '#ffffff', accentInk: '#7e5a16', markAccent: '#8a6412' },
+  'folio/dark': { bg0: '#1a1916', cardSolid: '#211f1a', ink: '#ece7dc', muted: '#989182', accentFill: '#34435a', onPrimary: '#ffffff', accentInk: '#8aa0c0', markAccent: '#8aa0c0' },
+  'folio/light': { bg0: '#f4f1ea', cardSolid: '#faf8f2', ink: '#1f1d1a', muted: '#645f56', accentFill: '#34435a', onPrimary: '#ffffff', accentInk: '#34435a', markAccent: '#3a4a63' },
+  'hearth/dark': { bg0: '#1d1812', cardSolid: '#251f16', ink: '#efe6d6', muted: '#b3a488', accentFill: '#a85f33', onPrimary: '#ffffff', accentInk: '#d8945e', markAccent: '#d8945e' },
+  'hearth/light': { bg0: '#f6efe2', cardSolid: '#fbf6ec', ink: '#3a2f25', muted: '#70624e', accentFill: '#97532a', onPrimary: '#ffffff', accentInk: '#8a4d28', markAccent: '#97532a' },
+  'almanac/dark': { bg0: '#101316', cardSolid: '#161a1e', ink: '#e6e8ea', muted: '#878e98', accentFill: '#235456', onPrimary: '#ffffff', accentInk: '#4fa0a3', markAccent: '#4fa0a3' },
+  'almanac/light': { bg0: '#f2f1ec', cardSolid: '#faf9f5', ink: '#22252a', muted: '#616771', accentFill: '#235456', onPrimary: '#ffffff', accentInk: '#235456', markAccent: '#2c6b6e' },
+  'bloom/dark': { bg0: '#16111f', cardSolid: '#1e1730', ink: '#f1ecfb', muted: '#a99fc4', accentFill: '#6a3fd0', onPrimary: '#ffffff', accentInk: '#b794ff', markAccent: '#b794ff' },
+  'bloom/light': { bg0: '#fbf4fd', cardSolid: '#fefbff', ink: '#221b2e', muted: '#635c85', accentFill: '#6a2fd0', onPrimary: '#ffffff', accentInk: '#6a2fd0', markAccent: '#7c3aed' },
 }
 
 const MODES = ['dark', 'light'] as const
