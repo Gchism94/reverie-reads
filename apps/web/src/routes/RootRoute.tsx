@@ -1,4 +1,4 @@
-import { Outlet, createRootRoute } from '@tanstack/react-router'
+import { Outlet, createRootRoute, useRouterState } from '@tanstack/react-router'
 import { Sky } from '../components/Sky'
 import { AppShell } from '../components/AppShell'
 import { useAuth } from '../auth/AuthProvider'
@@ -7,6 +7,14 @@ import { VerifyEmail } from '../auth/VerifyEmail'
 
 function RootLayout() {
   const { session, loading } = useAuth()
+  const pathname = useRouterState({ select: (s) => s.location.pathname })
+
+  // The skin-character lab (/lab/skins) renders OUTSIDE the auth gate so the Tryst-vs-Aphelion
+  // side-by-side can be opened — and screenshotted headlessly — without a session. Synthetic content
+  // only; each cell scopes its own data-skin/data-mode, so no global Sky is needed.
+  if (pathname.startsWith('/lab/')) {
+    return <Outlet />
+  }
   // A session whose email isn't confirmed is gated out of the app (H3, defense in depth). Password
   // sign-up with confirmation on creates NO session until the link is opened, so that flow stays on
   // the unauthenticated shell (the auth screen shows "check your inbox"); this gate catches the
