@@ -57,6 +57,34 @@ const PLATE: Partial<Record<SkinId, PlateOrnament>> = {
       </>
     ),
   },
+  grimoire: {
+    eyebrowColor: 'var(--accent-ink)',
+    subtitleStyle: { fontFamily: 'var(--font-display)', fontStyle: 'italic' },
+    ornament: (
+      // illuminated alchemical sun, gold leaf, over the top rule
+      <span
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-[-2px] -translate-x-1/2 text-[14px] leading-none"
+        style={{ color: 'var(--accent)' }}
+      >
+        ☉
+      </span>
+    ),
+  },
+  marrow: {
+    eyebrowColor: 'var(--accent-ink)',
+    subtitleStyle: { fontFamily: 'var(--font-display)', fontStyle: 'italic' },
+    ornament: (
+      // a single oxblood dagger marks the plate
+      <span
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-[-3px] -translate-x-1/2 text-[13px] leading-none"
+        style={{ color: 'var(--accent)' }}
+      >
+        †
+      </span>
+    ),
+  },
 }
 
 export function Nameplate({

@@ -19,6 +19,10 @@ const CELLS: { skin: SkinId; mode: 'dark' | 'light'; label: string }[] = [
   { skin: 'tryst', mode: 'light', label: 'Tryst · light' },
   { skin: 'aphelion', mode: 'dark', label: 'Aphelion · dark' },
   { skin: 'aphelion', mode: 'light', label: 'Aphelion · light' },
+  { skin: 'grimoire', mode: 'dark', label: 'Grimoire · dark' },
+  { skin: 'grimoire', mode: 'light', label: 'Grimoire · light' },
+  { skin: 'marrow', mode: 'dark', label: 'Marrow · dark' },
+  { skin: 'marrow', mode: 'light', label: 'Marrow · light' },
 ]
 
 const SCRIM = 'rgba(0,0,0,0.45)'
@@ -141,7 +145,7 @@ function Cell({ skin, mode, label }: { skin: SkinId; mode: 'dark' | 'light'; lab
             <Nameplate
               skin={skin}
               align="start"
-              eyebrow="The Vieux Carré · Book II"
+              eyebrow="Series · Book II"
               title="Crimson Letters"
               subtitle="Delphine Marchand"
             />
@@ -162,11 +166,11 @@ function SkinLab() {
   return (
     <div className="mx-auto min-h-dvh max-w-[1120px] px-6 py-10" style={{ background: 'var(--bg0)' }}>
       <h1 className="text-[24px] font-bold text-ink" style={{ fontFamily: 'var(--font-display)' }}>
-        Skin character — two worlds
+        Skin character — four worlds
       </h1>
       <p className="mt-1 text-[13px] text-muted">
-        Tryst vs Aphelion · dark + light. Texture · card marks · nameplate · stat panel · controls
-        (button · search · select · toggle · goal ring) — all from the token contract.
+        Tryst · Aphelion · Grimoire · Marrow, dark + light. Texture · card marks · nameplate · stat
+        panel · controls (button · search · select · toggle · goal ring) — all from the token contract.
       </p>
       <div className="mt-7 grid gap-6 lg:grid-cols-2">
         {CELLS.map((c) => (
