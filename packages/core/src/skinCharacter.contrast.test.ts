@@ -86,6 +86,26 @@ describe('skin character kit contrast (text on the kit surfaces ≥ AA, every sk
         })
       }
 
+      // Spine slot — Tryst (leather) + Aphelion (brushed) have a textured binding, but the title +
+      // author/callsign sit CENTRED, over the opaque --card-solid base (the gradient's dark shifts live
+      // at the spine edges, away from the type). So the spine text holds AA on card-solid, at the min
+      // sizes (13px title / 9px author — normal text, the 4.5 floor applies). Plain-binding skins reuse
+      // the card pairs above.
+      if (skin === 'tryst' || skin === 'aphelion') {
+        const base = t.cardSolid
+        const spinePairs: [string, string, string][] = [
+          ['spine title on binding', skin === 'aphelion' ? t.ink : t.accentInk, base],
+          ['spine author (muted) on binding', t.muted, base],
+          ['spine callsign / label (accent-ink) on binding', t.accentInk, base],
+        ]
+        for (const [name, fg, bg] of spinePairs) {
+          it(`${skin}/${mode} · ${name} clears ${AA}:1`, () => {
+            const r = ratio(fg, bg)
+            expect(r, `${skin}/${mode} ${name}: ${fg} on ${bg} = ${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(AA)
+          })
+        }
+      }
+
       // Card marks composite over a dark scrim regardless of mode. The skin accent is painted only
       // where it clears AA — over a real cover (image, not measured) and over a DARK-mode placeholder;
       // over a LIGHT-mode placeholder it falls back to WHITE. Model each mode's real path:
