@@ -58,6 +58,42 @@ describe('xlsx adapter — rows identical to the CSV equivalent', () => {
   })
 })
 
+describe('xlsx adapter — ISBN round-trip (leading zeros + X check digit)', () => {
+  it('preserves a text ISBN-10 with a leading zero, an X check digit, and a numeric ISBN-13', async () => {
+    const ws = XLSX.utils.aoa_to_sheet([
+      ['Title', 'ISBN', 'ISBN13'],
+      ['Harry Potter', '', 0],
+      ['Slaughterhouse-Five', '', 0],
+    ])
+    ws['B2'] = { t: 's', v: '0439708180' } // ISBN-10 as text — leading zero must survive
+    ws['C2'] = { t: 'n', v: 9781649374172 } // ISBN-13 as a number — full digits, not "9.78E+12"
+    ws['B3'] = { t: 's', v: '080442957X' } // ISBN-10 ending in X (text)
+    ws['C3'] = { t: 's', v: '9780440180296' }
+
+    const rows = parseCSV(await xlsxToCsv(bytesOf(ws)))
+    expect(rows[1]).toEqual(['Harry Potter', '0439708180', '9781649374172'])
+    expect(rows[2]![1]).toBe('080442957X')
+  })
+
+  it('recovers a leading zero from a zero-padded number format (ISBN-10 stored as a number)', async () => {
+    const ws = XLSX.utils.aoa_to_sheet([
+      ['Title', 'ISBN'],
+      ['Holes', 0],
+    ])
+    ws['B2'] = { t: 'n', v: 439708180, z: '0000000000' } // displays as 0439708180
+    const rows = parseCSV(await xlsxToCsv(bytesOf(ws)))
+    expect(rows[1]![1]).toBe('0439708180')
+  })
+
+  it('does not let thousands/decimal formats corrupt numbers', async () => {
+    const ws = XLSX.utils.aoa_to_sheet([['Pages', 'Rating'], [0, 0]])
+    ws['A2'] = { t: 'n', v: 1234, z: '#,##0' } // displayed "1,234"
+    ws['B2'] = { t: 'n', v: 4.5, z: '0' } // displayed "5" (rounded) — must keep the real value
+    const rows = parseCSV(await xlsxToCsv(bytesOf(ws)))
+    expect(rows[1]).toEqual(['1234', '4.5'])
+  })
+})
+
 describe('xlsx adapter — fallback on unreadable / non-tabular input', () => {
   it('throws XlsxReadError when no sheet has a header + data across ≥2 columns', () => {
     const ws = XLSX.utils.aoa_to_sheet([['Just one column'], ['a value']])
