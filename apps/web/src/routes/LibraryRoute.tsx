@@ -21,31 +21,32 @@ function Centered({ children }: { children: ReactNode }) {
 }
 
 function EmptyState() {
+  // The empty state speaks in the active skin's VOICE (Tryst sultry-warm · Aphelion spacefarer-spare),
+  // led by the skin's signature motif — the Skin Character voice lever, never hardcoded.
+  const voice = useVoice()
   return (
     <section className="flex flex-1 flex-col items-center justify-center px-6 py-16 text-center">
-      <p className="text-[13px] uppercase tracking-[0.3em] text-muted">Your library</p>
+      <div aria-hidden className="text-[28px]" style={{ color: 'var(--accent)' }}>
+        {voice.motif}
+      </div>
       <h1
-        className="mt-3 max-w-[16ch] text-balance text-[40px] italic leading-[1.05] text-ink"
+        className="mt-3 max-w-[18ch] text-balance text-[40px] italic leading-[1.05] text-ink"
         style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
       >
-        Everything you’ve read, after dark
+        {voice.empty.heading}
       </h1>
-      <p className="mt-4 max-w-[42ch] text-[15px] leading-relaxed text-muted">
-        Your shelves are empty. Add your first book — scan a barcode, search by title, or import a
-        Goodreads / StoryGraph export — and your home comes alive with spice, tropes, series gaps
-        and rereads.
-      </p>
+      <p className="mt-4 max-w-[42ch] text-[15px] leading-relaxed text-muted">{voice.empty.body}</p>
       <div className="mt-6 flex flex-wrap items-center justify-center gap-2.5">
         <Link
           to="/add"
-          className="flex h-11 items-center rounded-full px-6 text-[14px] font-semibold"
+          className="skin-control flex h-11 items-center px-6 text-[14px]"
           style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))', color: 'var(--on-primary)' }}
         >
-          ＋ Add your first book
+          ＋ {voice.empty.cta}
         </Link>
         <Link
           to="/settings"
-          className="flex h-11 items-center rounded-full border border-line px-5 text-[14px] font-semibold text-ink"
+          className="skin-control flex h-11 items-center border border-line px-5 text-[14px] text-ink"
           style={{ background: 'var(--field)' }}
         >
           Import a CSV

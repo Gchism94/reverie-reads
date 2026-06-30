@@ -115,7 +115,7 @@ function StatsScreen() {
           value={year}
           onChange={(e) => setStatsY(+e.target.value)}
           aria-label="Stats year"
-          className="h-9 rounded-full border border-line px-3 text-[13px] font-semibold text-ink"
+          className="skin-control h-9 border border-line px-3 text-[13px] text-ink"
           style={{ background: 'var(--card)' }}
         >
           {years.map((y) => (
