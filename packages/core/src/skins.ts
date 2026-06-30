@@ -7,7 +7,16 @@ import { NEUTRAL_LABELS, TRYST_LABELS, type FieldLabels } from './labels'
 
 // Note: 'tryst' is the romance skin's id. "Reverie" is the umbrella app name (APP_NAME); the
 // romance skin took the other cleared finalist, Tryst. Same gothic-NOLA palettes/fonts/divider.
-export type SkinId = 'tryst' | 'grimoire' | 'aphelion' | 'marrow'
+export type SkinId =
+  | 'tryst'
+  | 'grimoire'
+  | 'aphelion'
+  | 'marrow'
+  | 'umbra'
+  | 'folio'
+  | 'hearth'
+  | 'almanac'
+  | 'bloom'
 /** The active-skin value the user can select: a Tier-1 skin or their generated adaptive skin. */
 export type ActiveSkin = SkinId | 'adaptive'
 /** User mode preference; 'system' follows prefers-color-scheme. */
@@ -69,6 +78,58 @@ export const SKINS: Record<SkinId, Skin> = {
     divider: 'marrow',
     labels: NEUTRAL_LABELS,
     displayFont: "'Playfair Display', Georgia, serif",
+  },
+  // Stage 3 — the five remaining genres, code-first (palette + font + character derived from the
+  // genre direction in docs/SKINS.md, eyeball-gated).
+  umbra: {
+    id: 'umbra',
+    label: 'Umbra',
+    genre: 'Mystery',
+    tagline: 'Fog, shadow, and one amber lamp.',
+    starDensity: 24,
+    divider: 'umbra',
+    labels: NEUTRAL_LABELS,
+    displayFont: "'Bodoni Moda', Georgia, serif",
+  },
+  folio: {
+    id: 'folio',
+    label: 'Folio',
+    genre: 'Literary',
+    tagline: 'Cream paper, set in a quiet hand.',
+    starDensity: 30,
+    divider: 'folio',
+    labels: NEUTRAL_LABELS,
+    displayFont: "'Libre Baskerville', Georgia, serif",
+  },
+  hearth: {
+    id: 'hearth',
+    label: 'Hearth',
+    genre: 'Cozy',
+    tagline: 'Wool, tea, and soft afternoon light.',
+    starDensity: 20,
+    divider: 'hearth',
+    labels: NEUTRAL_LABELS,
+    displayFont: "'Bitter', Georgia, serif",
+  },
+  almanac: {
+    id: 'almanac',
+    label: 'Almanac',
+    genre: 'Nonfiction',
+    tagline: 'Paper, structured and calmly indexed.',
+    starDensity: 26,
+    divider: 'almanac',
+    labels: NEUTRAL_LABELS,
+    displayFont: "'IBM Plex Serif', Georgia, serif",
+  },
+  bloom: {
+    id: 'bloom',
+    label: 'Bloom',
+    genre: 'Young adult',
+    tagline: 'Bright, saturated, wide awake.',
+    starDensity: 70,
+    divider: 'bloom',
+    labels: NEUTRAL_LABELS,
+    displayFont: "'Poppins', system-ui, sans-serif",
   },
 }
 

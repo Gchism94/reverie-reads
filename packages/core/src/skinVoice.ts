@@ -61,9 +61,45 @@ export const MARROW_VOICE: SkinVoice = {
   motif: '†',
 }
 
+// Stage 3 — the five remaining genres, code-first voices.
+export const UMBRA_VOICE: SkinVoice = {
+  empty: { heading: 'The case is cold.', body: 'Shelve the first file to open the investigation.', cta: 'File a book' },
+  loading: 'Following the trail…',
+  motif: '◆',
+}
+
+export const FOLIO_VOICE: SkinVoice = {
+  empty: { heading: 'The page is blank.', body: 'Add the first work to begin the collection.', cta: 'Add a work' },
+  loading: 'Setting the type…',
+  motif: '❡',
+}
+
+export const HEARTH_VOICE: SkinVoice = {
+  empty: { heading: 'The reading nook is empty.', body: 'Add a book, put the kettle on, and settle in.', cta: 'Add a book' },
+  loading: 'Steeping…',
+  motif: '❀',
+}
+
+export const ALMANAC_VOICE: SkinVoice = {
+  empty: { heading: 'The index is empty.', body: 'Add the first entry to begin the catalogue.', cta: 'Add an entry' },
+  loading: 'Cataloguing…',
+  motif: '‡',
+}
+
+export const BLOOM_VOICE: SkinVoice = {
+  empty: { heading: 'Your shelf is waiting!', body: "Add your first book and let's build your stack.", cta: 'Add a book' },
+  loading: 'Loading the good stuff…',
+  motif: '✺',
+}
+
 export const SKIN_VOICE: Record<SkinId, SkinVoice> = {
   tryst: TRYST_VOICE,
   grimoire: GRIMOIRE_VOICE,
   aphelion: APHELION_VOICE,
   marrow: MARROW_VOICE,
+  umbra: UMBRA_VOICE,
+  folio: FOLIO_VOICE,
+  hearth: HEARTH_VOICE,
+  almanac: ALMANAC_VOICE,
+  bloom: BLOOM_VOICE,
 }

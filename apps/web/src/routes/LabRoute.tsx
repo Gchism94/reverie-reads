@@ -1,7 +1,9 @@
+import { useEffect } from 'react'
 import { createRoute } from '@tanstack/react-router'
 import { type SkinId } from '@reverie/core'
 import { rootRoute } from './RootRoute'
 import { Nameplate } from '../components/Nameplate'
+import { loadAllSkinFonts } from '../skin/fonts'
 
 /**
  * Skin-character eyeball (Stage 1b). Renders Tryst vs Aphelion side by side, in both modes, on a
@@ -23,6 +25,16 @@ const CELLS: { skin: SkinId; mode: 'dark' | 'light'; label: string }[] = [
   { skin: 'grimoire', mode: 'light', label: 'Grimoire · light' },
   { skin: 'marrow', mode: 'dark', label: 'Marrow · dark' },
   { skin: 'marrow', mode: 'light', label: 'Marrow · light' },
+  { skin: 'umbra', mode: 'dark', label: 'Umbra · dark' },
+  { skin: 'umbra', mode: 'light', label: 'Umbra · light' },
+  { skin: 'folio', mode: 'dark', label: 'Folio · dark' },
+  { skin: 'folio', mode: 'light', label: 'Folio · light' },
+  { skin: 'hearth', mode: 'dark', label: 'Hearth · dark' },
+  { skin: 'hearth', mode: 'light', label: 'Hearth · light' },
+  { skin: 'almanac', mode: 'dark', label: 'Almanac · dark' },
+  { skin: 'almanac', mode: 'light', label: 'Almanac · light' },
+  { skin: 'bloom', mode: 'dark', label: 'Bloom · dark' },
+  { skin: 'bloom', mode: 'light', label: 'Bloom · light' },
 ]
 
 const SCRIM = 'rgba(0,0,0,0.45)'
@@ -163,14 +175,16 @@ function Cell({ skin, mode, label }: { skin: SkinId; mode: 'dark' | 'light'; lab
 }
 
 function SkinLab() {
+  // Each cell forces a skin via data-skin; load every pairing so they render in their true type.
+  useEffect(() => loadAllSkinFonts(), [])
   return (
     <div className="mx-auto min-h-dvh max-w-[1120px] px-6 py-10" style={{ background: 'var(--bg0)' }}>
       <h1 className="text-[24px] font-bold text-ink" style={{ fontFamily: 'var(--font-display)' }}>
-        Skin character — four worlds
+        Skin character — nine worlds
       </h1>
       <p className="mt-1 text-[13px] text-muted">
-        Tryst · Aphelion · Grimoire · Marrow, dark + light. Texture · card marks · nameplate · stat
-        panel · controls (button · search · select · toggle · goal ring) — all from the token contract.
+        All nine skins, dark + light. Texture · card marks · nameplate · stat panel · controls
+        (button · search · select · toggle · goal ring) — all from the token contract.
       </p>
       <div className="mt-7 grid gap-6 lg:grid-cols-2">
         {CELLS.map((c) => (

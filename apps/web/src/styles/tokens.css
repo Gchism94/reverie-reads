@@ -173,6 +173,129 @@
   --mark-radius: 3px;
 }
 
+/* ── Skin character · UMBRA (Mystery · noir) — fog, shadow, one amber lamp; hard ink edges. ── */
+[data-skin='umbra'] {
+  --accent: var(--gold); /* amber lamplight */
+  --radius-control: 1px;
+  --radius-card: 1px;
+  --radius-panel: 2px;
+  --ctl-clip: none;
+  --label-font: var(--font-display); /* Bodoni Moda — noir poster */
+  --label-transform: uppercase;
+  --control-transform: uppercase;
+  --label-tracking: 0.16em;
+  --label-weight: 600;
+  --numeral-font: var(--font-display);
+  --numeral-feature: 'lnum' 1;
+  --motion-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --motion-duration: 200ms;
+  --ambient-texture: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --ambient-texture-size: 200px 200px;
+  --ambient-texture-blend: soft-light;
+  --ambient-texture-opacity: var(--grain-opacity);
+  --ornament-frame: color-mix(in srgb, var(--gold) 28%, transparent);
+  --mark-radius: 1px;
+}
+
+/* ── Skin character · FOLIO (Literary · editorial) — cream paper, restrained, archival serif. ── */
+[data-skin='folio'] {
+  --accent: var(--primary); /* ink-navy */
+  --radius-control: 2px;
+  --radius-card: 2px;
+  --radius-panel: 3px;
+  --ctl-clip: none;
+  --label-font: var(--font-display); /* Libre Baskerville */
+  --label-transform: uppercase;
+  --control-transform: none;
+  --label-tracking: 0.18em;
+  --label-weight: 600;
+  --numeral-font: var(--font-display);
+  --numeral-feature: 'onum' 1;
+  --motion-ease: cubic-bezier(0.33, 0, 0.2, 1);
+  --motion-duration: 220ms;
+  --ambient-texture: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.95' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --ambient-texture-size: 180px 180px;
+  --ambient-texture-blend: soft-light;
+  --ambient-texture-opacity: var(--grain-opacity);
+  --ornament-frame: color-mix(in srgb, var(--primary) 22%, transparent);
+  --mark-radius: 2px;
+}
+
+/* ── Skin character · HEARTH (Cozy · cottagecore) — warm wool/tea, soft light, rounded. ── */
+[data-skin='hearth'] {
+  --accent: var(--primary); /* terracotta */
+  --radius-control: 16px;
+  --radius-card: 14px;
+  --radius-panel: 16px;
+  --ctl-clip: none;
+  --label-font: var(--font-sans); /* Nunito Sans — friendly */
+  --label-transform: none;
+  --control-transform: none;
+  --label-tracking: 0.02em;
+  --label-weight: 600;
+  --numeral-font: var(--font-display); /* Bitter slab numerals */
+  --numeral-feature: 'onum' 1;
+  --motion-ease: cubic-bezier(0.34, 1.3, 0.64, 1); /* gentle overshoot */
+  --motion-duration: 220ms;
+  --ambient-texture: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --ambient-texture-size: 200px 200px;
+  --ambient-texture-blend: soft-light;
+  --ambient-texture-opacity: var(--grain-opacity);
+  --ornament-frame: color-mix(in srgb, var(--primary) 26%, transparent);
+  --mark-radius: 12px;
+}
+
+/* ── Skin character · ALMANAC (Nonfiction · reference) — paper, structured, calmly indexed. ── */
+[data-skin='almanac'] {
+  --accent: var(--primary); /* teal */
+  --radius-control: 4px;
+  --radius-card: 3px;
+  --radius-panel: 4px;
+  --ctl-clip: none;
+  --label-font: var(--font-sans); /* IBM Plex Sans */
+  --label-transform: uppercase;
+  --control-transform: uppercase;
+  --label-tracking: 0.16em;
+  --label-weight: 600;
+  --numeral-font: var(--font-mono); /* IBM Plex Mono — indexed tabular */
+  --numeral-feature: 'tnum' 1;
+  --motion-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --motion-duration: 200ms;
+  /* ruled-ledger horizontal lines (structured/indexed), behind opaque cards */
+  --ambient-texture: repeating-linear-gradient(0deg, color-mix(in srgb, var(--primary) 6%, transparent) 0 1px, transparent 1px 27px);
+  --ambient-texture-size: auto;
+  --ambient-texture-blend: normal;
+  --ambient-texture-opacity: 0.7;
+  --ornament-frame: color-mix(in srgb, var(--primary) 22%, transparent);
+  --mark-radius: 3px;
+}
+
+/* ── Skin character · BLOOM (YA · contemporary) — bright, saturated, playful, modern. ── */
+[data-skin='bloom'] {
+  --accent: var(--primary); /* vivid violet */
+  --radius-control: 12px;
+  --radius-card: 10px;
+  --radius-panel: 12px;
+  --ctl-clip: none;
+  --label-font: var(--font-sans); /* Poppins */
+  --label-transform: uppercase;
+  --control-transform: none;
+  --label-tracking: 0.08em;
+  --label-weight: 600;
+  --numeral-font: var(--font-sans);
+  --numeral-feature: 'lnum' 1;
+  --motion-ease: cubic-bezier(0.34, 1.4, 0.64, 1); /* bouncy */
+  --motion-duration: 200ms;
+  /* playful dot grid */
+  --ambient-texture: radial-gradient(color-mix(in srgb, var(--primary) 11%, transparent) 1.5px, transparent 1.6px);
+  --ambient-texture-size: 22px 22px;
+  --ambient-texture-blend: normal;
+  --ambient-texture-opacity: 0.6;
+  --ambient-texture-mask: radial-gradient(120% 100% at 50% 0%, #000 30%, transparent 80%);
+  --ornament-frame: color-mix(in srgb, var(--primary) 26%, transparent);
+  --mark-radius: 999px;
+}
+
 /* ── TRYST · Romance · gothic New Orleans (finalized, AA-corrected) ── */
 :root,
 [data-skin='tryst'][data-mode='dark'] {
@@ -421,6 +544,311 @@
   --font-display: 'Playfair Display', Georgia, serif;
   --font-sans: 'Inter', system-ui, sans-serif;
   --font-mono: 'Inter', system-ui, sans-serif;
+}
+
+/* ── UMBRA · Mystery · noir (fog + shadow, one amber lamp) ── */
+[data-skin='umbra'][data-mode='dark'] {
+  --bg0: #0c0d10;
+  --bg1: #14161b;
+  --ink: #e9eaed;
+  --muted: #9398a3;
+  --primary: #e0a84a;
+  --accent-fill: #7e5a16; /* dark amber behind white text */
+  --accent-ink: #e0a84a; /* amber eyebrow on the dark plate */
+  --violet: #6b7785;
+  --blue: #3f4a5a;
+  --gold: #e0a84a;
+  --card: #15171c;
+  --card-solid: #15171c;
+  --card-2: #1d2026;
+  --line: rgba(224, 168, 74, 0.18);
+  --shadow: 0 22px 60px rgba(0, 0, 0, 0.6);
+  --glow-a: #e0a84a;
+  --glow-b: #3f4a5a;
+  --glow-c: #6b7785;
+  --glow-d: #e0a84a;
+  --star: #cfd3da;
+  --fog: rgba(60, 70, 85, 0.18);
+  --on-primary: #ffffff;
+  --vignette: rgba(2, 3, 5, 0.66);
+  --grain-opacity: 0.05;
+  --font-display: 'Bodoni Moda', Georgia, serif;
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'Inter', system-ui, sans-serif;
+}
+
+[data-skin='umbra'][data-mode='light'] {
+  --bg0: #eceef1;
+  --bg1: #e2e5ea;
+  --ink: #14161a;
+  --muted: #565c66;
+  --primary: #8a6412; /* dark amber so lamp-accent text clears AA on fog grey */
+  --accent-fill: #7e5a16;
+  --accent-ink: #7e5a16;
+  --violet: #5a6470;
+  --blue: #3f4a5a;
+  --gold: #8a6412;
+  --card: #f8f9fb;
+  --card-solid: #f8f9fb;
+  --card-2: #e9ebef;
+  --line: rgba(126, 90, 22, 0.26);
+  --shadow: 0 22px 50px rgba(40, 45, 55, 0.16);
+  --glow-a: #d8c08a;
+  --glow-b: #b8c0cc;
+  --glow-c: #cfd3da;
+  --glow-d: #d8c08a;
+  --star: #8a94a4;
+  --fog: rgba(120, 130, 145, 0.1);
+  --on-primary: #ffffff;
+  --vignette: rgba(70, 80, 95, 0.08);
+  --grain-opacity: 0.03;
+  --font-display: 'Bodoni Moda', Georgia, serif;
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'Inter', system-ui, sans-serif;
+}
+
+/* ── FOLIO · Literary · editorial (cream paper, ink-navy, archival serif) ── */
+[data-skin='folio'][data-mode='light'] {
+  --bg0: #f4f1ea;
+  --bg1: #ece8dd;
+  --ink: #1f1d1a;
+  --muted: #645f56;
+  --primary: #3a4a63;
+  --accent-fill: #34435a;
+  --accent-ink: #34435a;
+  --violet: #6a5a48;
+  --blue: #3a4a63;
+  --gold: #8a7a52;
+  --card: #faf8f2;
+  --card-solid: #faf8f2;
+  --card-2: #efeae0;
+  --line: rgba(58, 74, 99, 0.22);
+  --shadow: 0 22px 50px rgba(60, 55, 45, 0.14);
+  --glow-a: #c9c2b2;
+  --glow-b: #a8b0c0;
+  --glow-c: #d8d0c0;
+  --glow-d: #c9c2b2;
+  --star: #8a7a52;
+  --fog: rgba(120, 110, 90, 0.08);
+  --on-primary: #ffffff;
+  --vignette: rgba(90, 80, 60, 0.07);
+  --grain-opacity: 0.03;
+  --font-display: 'Libre Baskerville', Georgia, serif;
+  --font-sans: 'EB Garamond', Georgia, serif;
+  --font-mono: 'EB Garamond', Georgia, serif;
+}
+
+[data-skin='folio'][data-mode='dark'] {
+  --bg0: #1a1916;
+  --bg1: #211f1a;
+  --ink: #ece7dc;
+  --muted: #989182;
+  --primary: #8aa0c0; /* lightened navy for AA on the dark slate */
+  --accent-fill: #34435a;
+  --accent-ink: #8aa0c0;
+  --violet: #b0a890;
+  --blue: #8aa0c0;
+  --gold: #c9b896;
+  --card: #211f1a;
+  --card-solid: #211f1a;
+  --card-2: #29261f;
+  --line: rgba(138, 160, 192, 0.2);
+  --shadow: 0 22px 60px rgba(0, 0, 0, 0.55);
+  --glow-a: #34435a;
+  --glow-b: #6a5a48;
+  --glow-c: #8aa0c0;
+  --glow-d: #c9b896;
+  --star: #d8d0c0;
+  --fog: rgba(80, 75, 60, 0.14);
+  --on-primary: #ffffff;
+  --vignette: rgba(8, 7, 5, 0.6);
+  --grain-opacity: 0.04;
+  --font-display: 'Libre Baskerville', Georgia, serif;
+  --font-sans: 'EB Garamond', Georgia, serif;
+  --font-mono: 'EB Garamond', Georgia, serif;
+}
+
+/* ── HEARTH · Cozy · cottagecore (warm wool/tea, terracotta + sage, rounded) ── */
+[data-skin='hearth'][data-mode='light'] {
+  --bg0: #f6efe2;
+  --bg1: #efe5d2;
+  --ink: #3a2f25;
+  --muted: #70624e; /* darkened from #7e6f59 to clear 4.5:1 on the oat bg */
+  --primary: #97532a; /* terracotta, darkened so primary-as-text clears AA on the oat bg */
+  --accent-fill: #97532a;
+  --accent-ink: #8a4d28;
+  --violet: #6f7d4e;
+  --blue: #5c7d6a;
+  --gold: #c0913f;
+  --card: #fbf6ec;
+  --card-solid: #fbf6ec;
+  --card-2: #f1e8d6;
+  --line: rgba(151, 83, 42, 0.24);
+  --shadow: 0 22px 50px rgba(120, 90, 50, 0.14);
+  --glow-a: #e0b08a;
+  --glow-b: #b8c098;
+  --glow-c: #e8d0a8;
+  --glow-d: #e0b08a;
+  --star: #c0913f;
+  --fog: rgba(150, 120, 80, 0.1);
+  --on-primary: #ffffff;
+  --vignette: rgba(120, 90, 50, 0.07);
+  --grain-opacity: 0.04;
+  --font-display: 'Bitter', Georgia, serif;
+  --font-sans: 'Nunito Sans', system-ui, sans-serif;
+  --font-mono: 'Nunito Sans', system-ui, sans-serif;
+}
+
+[data-skin='hearth'][data-mode='dark'] {
+  --bg0: #1d1812;
+  --bg1: #251f16;
+  --ink: #efe6d6;
+  --muted: #b3a488;
+  --primary: #d8945e;
+  --accent-fill: #a85f33;
+  --accent-ink: #d8945e;
+  --violet: #9aa878;
+  --blue: #8a9968;
+  --gold: #e0b060;
+  --card: #251f16;
+  --card-solid: #251f16;
+  --card-2: #2d261b;
+  --line: rgba(216, 148, 94, 0.2);
+  --shadow: 0 22px 60px rgba(0, 0, 0, 0.55);
+  --glow-a: #a85f33;
+  --glow-b: #6f7d4e;
+  --glow-c: #d8945e;
+  --glow-d: #e0b060;
+  --star: #e8d0a8;
+  --fog: rgba(120, 90, 50, 0.14);
+  --on-primary: #ffffff;
+  --vignette: rgba(10, 7, 4, 0.6);
+  --grain-opacity: 0.05;
+  --font-display: 'Bitter', Georgia, serif;
+  --font-sans: 'Nunito Sans', system-ui, sans-serif;
+  --font-mono: 'Nunito Sans', system-ui, sans-serif;
+}
+
+/* ── ALMANAC · Nonfiction · reference (paper, teal + ochre, structured/indexed) ── */
+[data-skin='almanac'][data-mode='light'] {
+  --bg0: #f2f1ec;
+  --bg1: #e9e8e1;
+  --ink: #22252a;
+  --muted: #616771;
+  --primary: #2c6b6e;
+  --accent-fill: #235456;
+  --accent-ink: #235456;
+  --violet: #a8722f;
+  --blue: #2c6b6e;
+  --gold: #a8722f;
+  --card: #faf9f5;
+  --card-solid: #faf9f5;
+  --card-2: #edece5;
+  --line: rgba(44, 107, 110, 0.22);
+  --shadow: 0 22px 50px rgba(40, 50, 55, 0.12);
+  --glow-a: #a8cfd0;
+  --glow-b: #d8c0a0;
+  --glow-c: #c0d8d8;
+  --glow-d: #a8cfd0;
+  --star: #2c6b6e;
+  --fog: rgba(80, 120, 120, 0.08);
+  --on-primary: #ffffff;
+  --vignette: rgba(40, 60, 65, 0.06);
+  --grain-opacity: 0.03;
+  --font-display: 'IBM Plex Serif', Georgia, serif;
+  --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+}
+
+[data-skin='almanac'][data-mode='dark'] {
+  --bg0: #101316;
+  --bg1: #161a1e;
+  --ink: #e6e8ea;
+  --muted: #878e98;
+  --primary: #4fa0a3;
+  --accent-fill: #235456;
+  --accent-ink: #4fa0a3;
+  --violet: #c79350;
+  --blue: #4fa0a3;
+  --gold: #c79350;
+  --card: #161a1e;
+  --card-solid: #161a1e;
+  --card-2: #1d2227;
+  --line: rgba(79, 160, 163, 0.2);
+  --shadow: 0 22px 60px rgba(0, 0, 0, 0.6);
+  --glow-a: #235456;
+  --glow-b: #6a5a48;
+  --glow-c: #4fa0a3;
+  --glow-d: #c79350;
+  --star: #a8cfd0;
+  --fog: rgba(40, 80, 80, 0.14);
+  --on-primary: #ffffff;
+  --vignette: rgba(4, 6, 8, 0.6);
+  --grain-opacity: 0.04;
+  --font-display: 'IBM Plex Serif', Georgia, serif;
+  --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+}
+
+/* ── BLOOM · YA / Contemporary · bright, saturated, playful ── */
+[data-skin='bloom'][data-mode='light'] {
+  --bg0: #fbf4fd;
+  --bg1: #f3e9fb;
+  --ink: #221b2e;
+  --muted: #635c85; /* darkened violet-grey for AA on the bright cards */
+  --primary: #7c3aed;
+  --accent-fill: #6a2fd0;
+  --accent-ink: #6a2fd0;
+  --violet: #e84a8a;
+  --blue: #5a32c8;
+  --gold: #d98a1f;
+  --card: #fefbff;
+  --card-solid: #fefbff;
+  --card-2: #f6eefb;
+  --line: rgba(124, 58, 237, 0.22);
+  --shadow: 0 22px 50px rgba(124, 58, 237, 0.14);
+  --glow-a: #c9a8ff;
+  --glow-b: #ffb0d0;
+  --glow-c: #ffe0a0;
+  --glow-d: #c9a8ff;
+  --star: #7c3aed;
+  --fog: rgba(180, 140, 240, 0.1);
+  --on-primary: #ffffff;
+  --vignette: rgba(124, 58, 237, 0.05);
+  --grain-opacity: 0.02;
+  --font-display: 'Poppins', system-ui, sans-serif;
+  --font-sans: 'Poppins', system-ui, sans-serif;
+  --font-mono: 'Poppins', system-ui, sans-serif;
+}
+
+[data-skin='bloom'][data-mode='dark'] {
+  --bg0: #16111f;
+  --bg1: #1e1730;
+  --ink: #f1ecfb;
+  --muted: #a99fc4;
+  --primary: #b794ff;
+  --accent-fill: #6a3fd0;
+  --accent-ink: #b794ff;
+  --violet: #ff7ab0;
+  --blue: #8a6aff;
+  --gold: #ffcf5a;
+  --card: #1e1730;
+  --card-solid: #1e1730;
+  --card-2: #261d3a;
+  --line: rgba(183, 148, 255, 0.22);
+  --shadow: 0 22px 60px rgba(0, 0, 0, 0.55);
+  --glow-a: #6a3fd0;
+  --glow-b: #ff7ab0;
+  --glow-c: #b794ff;
+  --glow-d: #ffcf5a;
+  --star: #d8c0ff;
+  --fog: rgba(120, 80, 200, 0.16);
+  --on-primary: #ffffff;
+  --vignette: rgba(8, 5, 14, 0.58);
+  --grain-opacity: 0.03;
+  --font-display: 'Poppins', system-ui, sans-serif;
+  --font-sans: 'Poppins', system-ui, sans-serif;
+  --font-mono: 'Poppins', system-ui, sans-serif;
 }
 
 /* The living sky — soft glows that drift/breathe, faint twinkle, slow fog. */
