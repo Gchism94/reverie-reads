@@ -11,6 +11,7 @@ import { CoverCard } from '../components/CoverCard'
 import { BookDetailRail } from '../components/BookDetailRail'
 import { useIsDesktop, useIsWide } from '../hooks/useMediaQuery'
 import { useVoice } from '../skin/labels'
+import { SectionHeader, SignatureEmblem } from '../components/Structure'
 
 function Centered({ children }: { children: ReactNode }) {
   return (
@@ -26,9 +27,7 @@ function EmptyState() {
   const voice = useVoice()
   return (
     <section className="flex flex-1 flex-col items-center justify-center px-6 py-16 text-center">
-      <div aria-hidden className="text-[28px]" style={{ color: 'var(--accent)' }}>
-        {voice.motif}
-      </div>
+      <SignatureEmblem fallback={voice.motif} size={40} />
       <h1
         className="mt-3 max-w-[18ch] text-balance text-[40px] italic leading-[1.05] text-ink"
         style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
@@ -161,13 +160,15 @@ function LibraryScreen() {
       {/* Mobile filters are toggled inline; on desktop they live in the persistent left column. */}
       <div className="lg:hidden">{panelOpen && <FilterPanel books={books} />}</div>
 
-      <p className="mb-3 text-[12.5px] text-muted">
-        {mode === 'series'
-          ? `${groupSeries(visible).length} series among ${visible.length} filtered books`
-          : `${visible.length} ${visible.length === 1 ? 'book' : 'books'}${
-              visible.length !== books.length ? ` of ${books.length}` : ''
-            }`}
-      </p>
+      <SectionHeader
+        className="mb-3"
+        label={mode === 'series' ? 'Series' : 'Your library'}
+        readout={
+          mode === 'series'
+            ? groupSeries(visible).length
+            : `${visible.length}${visible.length !== books.length ? ` / ${books.length}` : ''}`
+        }
+      />
 
       {mode === 'series' ? (
         <SeriesView groups={groupSeries(visible)} allBooks={books} />
