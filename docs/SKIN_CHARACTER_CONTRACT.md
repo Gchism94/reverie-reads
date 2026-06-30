@@ -105,6 +105,29 @@ the tokens; they get character for free.
    text — the placeholder lesson).
 4. Eyeball the two-worlds + warmth test; a flat/mechanical skin gets a targeted design round.
 
+## Structural layer (bones, not paint)
+Tokens carry VALUES; they can't express COMPOSITION (which parts a region has, how it's labeled, what
+emblem appears) — which is why every skin rendered the same boxes in the same places. The structural
+layer adds that. A small per-skin **structural config** (`SKIN_STRUCTURE` in `@reverie/core`, keyed off
+`SKINS` like the token registry) is read by generic **slot components** that render a different bone:
+
+| Slot (`SkinStructure`) | Tryst | Aphelion | Neutral |
+|---|---|---|---|
+| `sectionRule` | `fleuron` (gilt hairline + ❦) | `tick-rule` | `hairline` |
+| `frame` | `gilt-plate` (inset frame + ❦) | `corner-bracket` | `none` |
+| `tag` | `round` (gold pill) | `squared-bracket` (`[✓]RD`) | `round` |
+| `progress` | `dots` | `segmented` | `bar` |
+| `motif` | `fleuron` (❦ ring + emblem) | `radar` (cycle-ring + blip) | `none` |
+
+**Hybrid**: the common slots are declarative parameters above; the one genuinely-bespoke emblem per skin
+(Aphelion's radar cycle-ring, Tryst's fleuron) lives in the registered `SignatureRing` / `SignatureEmblem`
+components. Slot components (`apps/web/src/components/Structure.tsx`: `SectionHeader`, `Frame`, `StatusTag`,
+`ProgressMeter`, `SignatureRing`, `SignatureEmblem`) read `useStructure()` and take an optional `skin`
+override. Neutral defaults render plain — adding a skin's bones = filling the `SKIN_STRUCTURE` table (+ a
+signature component if its emblem is bespoke). Composed onto the real Home hero, a Library section header,
+and the empty state; preview at `/lab/structure`. AA: section labels / readouts / tag text clear AA on the
+page bg (registry-keyed contrast test); the radar sweep rides `.rv-anim`.
+
 ## Guardrail (non-negotiable)
 Distinctive surface, **conventional interaction**. AA contrast is never traded for texture (opaque
 scrims where needed). Motion always calms under reduced-motion. Character is additive to a usable,
