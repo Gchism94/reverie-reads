@@ -28,6 +28,38 @@ Defined for all skins as neutral defaults in the base `:root, [data-skin]` rule;
 | `--motion-ease` | per-skin transition easing | `cubic-bezier(.4,0,.2,1)` | `cubic-bezier(.4,0,.2,1)` | `cubic-bezier(.2,0,0,1)` (snappy) |
 | `--motion-duration` | per-skin transition duration | `200ms` | `180ms` | `160ms` |
 
+## Material / ornament tokens (Stage 1b — texture · nameplate · marks)
+The levers that make a skin a *place*, not a recolour. Same discipline: neutral defaults render
+clean; **Tryst** + **Aphelion** set their values; the rest fill the table at their stage.
+
+| Token | Meaning | Default | Tryst | Aphelion |
+|---|---|---|---|---|
+| `--ambient-texture` | app-bg material (drawn behind ALL content) | `none` | gilt-paper grain (soft-light feTurbulence) | instrument grid mesh (46px) |
+| `--ambient-texture-size` | texture tile | `auto` | `180px 180px` | `46px 46px` |
+| `--ambient-texture-blend` | blend over bg | `normal` | `soft-light` | `normal` |
+| `--ambient-texture-opacity` | texture strength | `0` | `var(--grain-opacity)` | `0.75` |
+| `--ambient-texture-mask` | radial fade (mesh) | `none` | `none` | top-anchored radial |
+| `--panel-fill` | **opaque** nameplate/panel base (AA floor) | `var(--card-solid)` | inherits | inherits |
+| `--ornament-frame` | inset hairline-frame / bracket colour | `transparent` | gold @30% | cyan @55% |
+| `--mark-accent` | card-mark glyph accent | `var(--accent)` | gold | cyan |
+| `--mark-radius` | card-mark silhouette | `var(--radius-control)` | `999px` (pill) | `2px` (squared tag) |
+
+**AA INVARIANT (the 1b headline):** texture never buries text. The ambient texture lives *behind*
+content (cards/panels are opaque); panel text always sits on the opaque `--panel-fill`. The
+gilt/instrument character comes from the **border + inset `--ornament-frame` + structural ornament**
+(Tryst top fleuron, Aphelion corner-brackets + status dot), never a translucent wash behind text.
+The card-mark accent is used only where it clears AA (real covers, dark-mode placeholders) — it falls
+back to white over a light-mode placeholder, the one solid surface where a bright accent can't reach
+4.5:1. `skinCharacter.contrast.test.ts` guards all of it across skin × mode.
+
+### Kit pieces that consume it
+- `.rv-skin-texture` (in `Sky`) — the ambient material layer, static, token-driven.
+- `.skin-plate` — nameplate/panel material (opaque fill + border + inset `--ornament-frame` via `::before`).
+- `Nameplate` — the flagship plate; per-skin structural ornament (fleuron / corner-brackets + blink dot),
+  type from the contract tokens. Pass `skin` to force a skin's ornament (gallery / eyeball).
+- `CoverCard` marks — `--mark-accent` + `--mark-radius`, skin- **and** mode-aware.
+- `skin-card` radius on the cover — sharp Aphelion vs soft Tryst.
+
 ## Motion keyframes (in `tokens.css`)
 Per-skin ambient/feedback motion. Every animated element also carries the `.rv-anim` class, so the
 existing `prefers-reduced-motion` rule calms ALL of it (the night-sky/landing pattern):

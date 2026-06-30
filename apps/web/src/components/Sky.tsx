@@ -107,6 +107,10 @@ export function Sky() {
       />
 
       <div className="absolute inset-0" style={{ boxShadow: 'inset 0 0 28vmax var(--vignette)' }} />
+
+      {/* Per-skin material (Skin Character 1b): Tryst gilt-paper grain, Aphelion instrument mesh.
+          Token-driven and static (no motion) — neutral skins render nothing. */}
+      <div className="rv-skin-texture" />
     </div>
   )
 }
