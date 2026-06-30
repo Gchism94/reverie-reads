@@ -213,11 +213,13 @@
   --numeral-feature: 'onum' 1;
   --motion-ease: cubic-bezier(0.33, 0, 0.2, 1);
   --motion-duration: 220ms;
-  --ambient-texture: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.95' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  --ambient-texture-size: 180px 180px;
-  --ambient-texture-blend: soft-light;
-  --ambient-texture-opacity: var(--grain-opacity);
-  --ornament-frame: color-mix(in srgb, var(--primary) 22%, transparent);
+  /* polish: laid-paper texture (fine horizontal lines — a printed page, not a flat fill) + a GILT
+     inset frame, so the plate reads as a title page rather than a plain document. */
+  --ambient-texture: repeating-linear-gradient(0deg, color-mix(in srgb, var(--ink) 5%, transparent) 0 1px, transparent 1px 4px);
+  --ambient-texture-size: auto;
+  --ambient-texture-blend: normal;
+  --ambient-texture-opacity: 0.85;
+  --ornament-frame: color-mix(in srgb, var(--gold) 46%, transparent);
   --mark-radius: 2px;
 }
 
@@ -563,15 +565,15 @@
   --card-2: #1d2026;
   --line: rgba(224, 168, 74, 0.18);
   --shadow: 0 22px 60px rgba(0, 0, 0, 0.6);
-  --glow-a: #e0a84a;
-  --glow-b: #3f4a5a;
+  --glow-a: #f0b860; /* the single warm lamp — brighter against the cold grey */
+  --glow-b: #2c3540;
   --glow-c: #6b7785;
-  --glow-d: #e0a84a;
+  --glow-d: #f0b860;
   --star: #cfd3da;
-  --fog: rgba(60, 70, 85, 0.18);
+  --fog: rgba(70, 80, 98, 0.26); /* more present noir fog */
   --on-primary: #ffffff;
-  --vignette: rgba(2, 3, 5, 0.66);
-  --grain-opacity: 0.05;
+  --vignette: rgba(2, 3, 5, 0.8); /* deeper shadow closing in */
+  --grain-opacity: 0.08; /* film grain */
   --font-display: 'Bodoni Moda', Georgia, serif;
   --font-sans: 'Inter', system-ui, sans-serif;
   --font-mono: 'Inter', system-ui, sans-serif;
@@ -598,10 +600,10 @@
   --glow-c: #cfd3da;
   --glow-d: #d8c08a;
   --star: #8a94a4;
-  --fog: rgba(120, 130, 145, 0.1);
+  --fog: rgba(110, 120, 138, 0.16); /* more present noir fog */
   --on-primary: #ffffff;
-  --vignette: rgba(70, 80, 95, 0.08);
-  --grain-opacity: 0.03;
+  --vignette: rgba(40, 48, 60, 0.16); /* deeper shadow at the edges */
+  --grain-opacity: 0.05;
   --font-display: 'Bodoni Moda', Georgia, serif;
   --font-sans: 'Inter', system-ui, sans-serif;
   --font-mono: 'Inter', system-ui, sans-serif;
@@ -622,7 +624,7 @@
   --card: #faf8f2;
   --card-solid: #faf8f2;
   --card-2: #efeae0;
-  --line: rgba(58, 74, 99, 0.22);
+  --line: rgba(138, 122, 82, 0.3); /* gilt hairline (gilt-edition feel) */
   --shadow: 0 22px 50px rgba(60, 55, 45, 0.14);
   --glow-a: #c9c2b2;
   --glow-b: #a8b0c0;
@@ -652,7 +654,7 @@
   --card: #211f1a;
   --card-solid: #211f1a;
   --card-2: #29261f;
-  --line: rgba(138, 160, 192, 0.2);
+  --line: rgba(201, 184, 150, 0.22); /* gilt hairline (gilt-edition feel) */
   --shadow: 0 22px 60px rgba(0, 0, 0, 0.55);
   --glow-a: #34435a;
   --glow-b: #6a5a48;
