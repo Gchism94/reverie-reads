@@ -8,6 +8,7 @@ import { useEffectiveSkin, useVoice } from '../skin/labels'
 import { useSkin } from '../skin/useSkin'
 import { useBooks } from '../data/books'
 import { importDetectedExport, type ImportExportResult } from '../data/importLibrary'
+import { fileToCsvText } from '../data/xlsxAdapter'
 import { Button } from '../components/Button'
 import { Label, StatNumber } from '../components/Label'
 import { SkinDivider } from '../components/SkinDivider'
@@ -89,18 +90,18 @@ function OnboardingFlow() {
   const skinTagline = SKINS[activeSkin].tagline
 
   // In-flow import — same engine as Settings (importDetectedExport auto-detects the column shape +
-  // folds duplicates in), then the shared DuplicateReview handles anything fuzzy. CSV only (matches
-  // the existing importer; XLSX is a follow-up).
-  const onCsv = (input: HTMLInputElement) => {
+  // folds duplicates in), then the shared DuplicateReview handles anything fuzzy. fileToCsvText turns
+  // a CSV or .xlsx into the same rows, so both file kinds run the one path.
+  const onFile = (input: HTMLInputElement) => {
     const file = input.files?.[0]
     input.value = ''
     if (!file) return
     setImpErr(null)
     setImp({ phase: 'importing' })
-    const reader = new FileReader()
-    reader.onload = async () => {
+    void (async () => {
       try {
-        const r = await importDetectedExport(existing, String(reader.result), { autoMerge: true })
+        const text = await fileToCsvText(file)
+        const r = await importDetectedExport(existing, text, { autoMerge: true })
         await qc.invalidateQueries()
         markOnboarded() // they've brought a library in — don't re-onboard
         setImp({ phase: 'done', r })
@@ -108,8 +109,7 @@ function OnboardingFlow() {
         setImpErr((e as Error).message)
         setImp(null)
       }
-    }
-    reader.readAsText(file)
+    })()
   }
 
   const leave = (to: '/library' | '/add' | '/settings') => {
@@ -291,7 +291,7 @@ function OnboardingFlow() {
   // ── step 2 · bring your library in ──
   if (step === 2) {
     const options: { title: string; body: string; cta: string; onClick: () => void }[] = [
-      { title: 'Upload a file', body: 'Move a Goodreads or StoryGraph CSV over — we detect the columns and map it for you.', cta: 'Choose a file →', onClick: () => csvRef.current?.click() },
+      { title: 'Upload a file', body: 'Move a Goodreads or StoryGraph export — or any spreadsheet (CSV or Excel) — and we map the columns for you.', cta: 'Choose a file →', onClick: () => csvRef.current?.click() },
       { title: 'Scan books', body: 'Point your camera at a barcode and add titles one by one.', cta: 'Open scanner →', onClick: () => leave('/add') },
       { title: 'Start fresh', body: 'Add titles by hand as you go. Your shelves grow with you.', cta: 'Continue →', onClick: () => setStep(3) },
     ]
@@ -329,10 +329,10 @@ function OnboardingFlow() {
 
         {impErr && (
           <p className="mt-3 text-[12.5px]" style={{ color: 'var(--primary)' }}>
-            That file didn’t import — {impErr}. A Goodreads or StoryGraph CSV works best.
+            That file didn’t import — {impErr}. A Goodreads or StoryGraph export (CSV or Excel) works best.
           </p>
         )}
-        <input ref={csvRef} type="file" accept=".csv,text/csv" hidden onChange={(e) => onCsv(e.currentTarget)} />
+        <input ref={csvRef} type="file" accept=".csv,.xlsx,text/csv" hidden onChange={(e) => onFile(e.currentTarget)} />
 
         <div className="mt-6">
           <Button variant="ghost" onClick={() => setStep(1)}>

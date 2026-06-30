@@ -12,6 +12,7 @@ import { importSessionKey } from '../data/importReview'
 import { deleteAccount } from '../data/account'
 import { bulkComplete, isIncomplete, type BulkProgress } from '../data/enrichLibrary'
 import { DuplicateReview } from '../components/DuplicateReview'
+import { fileToCsvText } from '../data/xlsxAdapter'
 import type { ReviewCandidate } from '../data/intake'
 import { SKIN_LIST, type Mode } from '@reverie/core'
 import { useSkin } from '../skin/useSkin'
@@ -99,20 +100,20 @@ function SettingsScreen() {
     }
   }
 
+  // fileToCsvText reads JSON/CSV as text and converts an .xlsx to CSV-identical rows, so the CSV
+  // import picker accepts spreadsheets too while the JSON restore picker is unaffected.
   const readFile = (input: HTMLInputElement, handler: (text: string) => Promise<void>) => {
     const file = input.files?.[0]
+    input.value = ''
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = async () => {
+    void (async () => {
       try {
-        await handler(String(reader.result))
+        await handler(await fileToCsvText(file))
         void qc.invalidateQueries()
       } catch (e) {
         setStatus(`Failed: ${(e as Error).message}`)
       }
-    }
-    reader.readAsText(file)
-    input.value = ''
+    })()
   }
 
   async function mergeOneGroup(group: Book[]) {
@@ -358,7 +359,7 @@ function SettingsScreen() {
               ⬆ Restore backup
             </button>
             <button type="button" onClick={() => csvRef.current?.click()} className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink" style={{ background: 'var(--field)' }}>
-              📚 Import a library export (CSV)
+              📚 Import a library export (CSV or Excel)
             </button>
             <input
               ref={restoreRef}
@@ -375,7 +376,7 @@ function SettingsScreen() {
             <input
               ref={csvRef}
               type="file"
-              accept=".csv,text/csv"
+              accept=".csv,.xlsx,text/csv"
               hidden
               onChange={(e) =>
                 readFile(e.currentTarget, async (text) => {
