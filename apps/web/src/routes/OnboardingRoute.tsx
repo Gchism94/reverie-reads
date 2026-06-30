@@ -335,6 +335,19 @@ function OnboardingFlow() {
           ))}
         </div>
 
+        <p className="mt-3 text-[12.5px] leading-snug text-muted">
+          No export to hand?{' '}
+          <a
+            href="/Reverie_Import_Template.xlsx"
+            download
+            className="font-semibold underline decoration-dotted underline-offset-2"
+            style={{ color: 'var(--accent-ink)' }}
+          >
+            Download the Excel template
+          </a>
+          , fill it in, and upload it here.
+        </p>
+
         {impErr && (
           <p className="mt-3 text-[12.5px]" style={{ color: 'var(--primary)' }}>
             That file didn’t import — {impErr}. A Goodreads or StoryGraph export (CSV or Excel) works best.

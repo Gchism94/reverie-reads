@@ -416,9 +416,18 @@ function SettingsScreen() {
           </label>
 
           <p className="mt-3 text-[12.5px] text-muted">
-            Import a CSV export — Goodreads / StoryGraph, or a full library export (genres, tags,
-            series, contributors, read status). The shape is detected automatically; matches fold
-            into existing books, so re-importing is safe.
+            Import a CSV or Excel export — Goodreads / StoryGraph, or a full library export (genres,
+            tags, series, contributors, read status). The shape is detected automatically; matches
+            fold into existing books, so re-importing is safe. Starting from scratch?{' '}
+            <a
+              href="/Reverie_Import_Template.xlsx"
+              download
+              className="font-semibold underline decoration-dotted underline-offset-2"
+              style={{ color: 'var(--accent-ink)' }}
+            >
+              Download the Excel template
+            </a>{' '}
+            and fill it in.
           </p>
 
           {imported && (
