@@ -11,6 +11,7 @@ import { useProfile, useUpdateProfile } from '../data/profile'
 import { SpineShelf } from '../components/SpineShelf'
 import { LogReadForm } from '../book/dialogs'
 import { MONTHS } from '../library/constants'
+import { useEffectiveSkin } from '../skin/labels'
 
 const YEAR = new Date().getFullYear()
 
@@ -25,10 +26,21 @@ function greeting(): string {
 function GoalRing({ done, target }: { done: number; target: number }) {
   const C = 2 * Math.PI * 42
   const off = C * (1 - (target ? Math.min(1, done / target) : 0))
+  // Skin character: Aphelion reads as a segmented instrument gauge (ticked track + square cap +
+  // tabular numerals); the warm skins keep a smooth round ring with old-style figures.
+  const aph = useEffectiveSkin() === 'aphelion'
   return (
     <div className="relative h-24 w-24 flex-none">
       <svg width="96" height="96" className="-rotate-90">
-        <circle cx="48" cy="48" r="42" fill="none" stroke="var(--chip-border)" strokeWidth="9" />
+        <circle
+          cx="48"
+          cy="48"
+          r="42"
+          fill="none"
+          stroke="var(--chip-border)"
+          strokeWidth="9"
+          strokeDasharray={aph ? '1.6 7' : undefined}
+        />
         <circle
           cx="48"
           cy="48"
@@ -36,14 +48,14 @@ function GoalRing({ done, target }: { done: number; target: number }) {
           fill="none"
           stroke="var(--primary)"
           strokeWidth="9"
-          strokeLinecap="round"
+          strokeLinecap={aph ? 'butt' : 'round'}
           strokeDasharray={C}
           strokeDashoffset={off}
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-[22px] font-bold text-ink">{done}</span>
-        <span className="text-[10px] text-muted">{target ? `of ${target}` : 'set goal'}</span>
+        <span className="skin-numeral text-[22px] font-bold text-ink">{done}</span>
+        <span className="skin-label text-[10px] text-muted">{target ? `of ${target}` : 'set goal'}</span>
       </div>
     </div>
   )
@@ -129,7 +141,7 @@ function HomeScreen() {
           <button
             type="button"
             onClick={() => void navigate({ to: '/match' })}
-            className="rounded-full px-4 py-2 text-[13px] font-semibold"
+            className="skin-control px-4 py-2 text-[13px]"
             style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))', color: 'var(--on-primary)' }}
           >
             💘 Find my next read
@@ -141,7 +153,7 @@ function HomeScreen() {
               const pick = unread[Math.floor(Math.random() * unread.length)]
               if (pick) openBook(pick.id)
             }}
-            className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink"
+            className="skin-control border border-line px-4 py-2 text-[13px] text-ink"
           >
             🎲 Surprise me
           </button>

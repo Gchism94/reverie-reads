@@ -64,6 +64,8 @@ describe('skin character kit contrast (text on the kit surfaces ≥ AA, every sk
         ['muted on bg', t.muted, t.bg0],
         ['button/active-chip text on accent fill', t.onPrimary, t.accentFill],
         ['nameplate eyebrow (accent-ink) on plate', t.accentInk, t.cardSolid],
+        // 1c — typed text in a search / input field. --field = a 5% ink wash over the bg; model it.
+        ['input/search text on field', t.ink, mixSrgb(t.ink, t.bg0, 0.05)],
       ]
       for (const [name, fg, bg] of pairs) {
         it(`${skin}/${mode} · ${name} clears ${AA}:1`, () => {

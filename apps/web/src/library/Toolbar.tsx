@@ -22,7 +22,7 @@ export function Toolbar({ filterToggleClass = '' }: { filterToggleClass?: string
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Search title, author, series, trope…"
         aria-label="Search your library"
-        className="h-10 min-w-[200px] flex-1 rounded-full border border-line px-4 text-[14px] text-ink outline-none"
+        className="skin-field h-10 min-w-[200px] flex-1 border border-line px-4 text-[14px] text-ink outline-none"
         style={{ background: 'var(--field)' }}
       />
 
@@ -30,7 +30,7 @@ export function Toolbar({ filterToggleClass = '' }: { filterToggleClass?: string
         type="button"
         onClick={togglePanel}
         aria-expanded={panelOpen}
-        className={`flex h-10 items-center gap-1.5 rounded-full border border-line px-4 text-[13px] font-semibold text-ink ${filterToggleClass}`}
+        className={`skin-control flex h-10 items-center gap-1.5 border border-line px-4 text-[13px] text-ink ${filterToggleClass}`}
         style={{ background: 'var(--card)' }}
       >
         Filters{count > 0 && <span className="text-gold">({count})</span>}
@@ -43,7 +43,7 @@ export function Toolbar({ filterToggleClass = '' }: { filterToggleClass?: string
         id="lib-sort"
         value={filters.sort}
         onChange={(e) => setSort(e.target.value as LibrarySort)}
-        className="h-10 rounded-full border border-line px-3 text-[13px] font-semibold text-ink outline-none"
+        className="skin-control h-10 border border-line px-3 text-[13px] text-ink outline-none"
         style={{ background: 'var(--card)' }}
       >
         {SORTS.map((s) => (
@@ -56,7 +56,7 @@ export function Toolbar({ filterToggleClass = '' }: { filterToggleClass?: string
       <div
         role="group"
         aria-label="View mode"
-        className="flex h-10 items-center rounded-full border border-line p-1"
+        className="skin-control flex h-10 items-center border border-line p-1"
         style={{ background: 'var(--card)' }}
       >
         {(['grid', 'series'] as const).map((m) => (
@@ -65,8 +65,12 @@ export function Toolbar({ filterToggleClass = '' }: { filterToggleClass?: string
             type="button"
             onClick={() => setMode(m)}
             aria-pressed={mode === m}
-            className="h-full rounded-full px-3 text-[12.5px] font-semibold capitalize transition-colors"
-            style={mode === m ? { background: 'var(--accent-fill)', color: 'var(--on-primary)' } : { color: 'var(--muted)' }}
+            className="h-full px-3 text-[12.5px] font-semibold capitalize transition-colors"
+            style={
+              mode === m
+                ? { borderRadius: 'var(--radius-control)', background: 'var(--accent-fill)', color: 'var(--on-primary)' }
+                : { borderRadius: 'var(--radius-control)', color: 'var(--muted)' }
+            }
           >
             {m}
           </button>
@@ -76,7 +80,7 @@ export function Toolbar({ filterToggleClass = '' }: { filterToggleClass?: string
     {filters.author && (
       <div className="flex flex-wrap items-center gap-2">
         <span
-          className="inline-flex items-center gap-1.5 rounded-full border border-line px-3 py-1 text-[12.5px] font-semibold text-ink"
+          className="skin-control inline-flex items-center gap-1.5 border border-line px-3 py-1 text-[12.5px] text-ink"
           style={{ background: 'var(--chip)' }}
         >
           Author: {filters.author}

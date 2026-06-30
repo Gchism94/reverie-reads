@@ -15,14 +15,15 @@ export function Switch({
       aria-checked={checked}
       aria-label={label}
       onClick={() => onChange(!checked)}
-      className="relative h-6 w-11 flex-none rounded-full border border-line transition-colors"
+      className="relative h-6 w-11 flex-none border border-line transition-colors motion-reduce:transition-none"
       style={{
+        borderRadius: 'var(--radius-control)',
         background: checked ? 'linear-gradient(135deg, var(--primary), var(--gold))' : 'var(--field)',
       }}
     >
       <span
-        className="absolute top-[2px] h-[18px] w-[18px] rounded-full bg-white shadow transition-all"
-        style={{ left: checked ? 'calc(100% - 20px)' : '2px' }}
+        className="absolute top-[2px] h-[18px] w-[18px] bg-white shadow transition-all motion-reduce:transition-none"
+        style={{ left: checked ? 'calc(100% - 20px)' : '2px', borderRadius: 'var(--radius-control)' }}
       />
     </button>
   )

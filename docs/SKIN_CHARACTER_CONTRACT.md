@@ -60,6 +60,21 @@ back to white over a light-mode placeholder, the one solid surface where a brigh
 - `CoverCard` marks — `--mark-accent` + `--mark-radius`, skin- **and** mode-aware.
 - `skin-card` radius on the cover — sharp Aphelion vs soft Tryst.
 
+### Stage 1c — control fan-out (closes the Stage 1 arc for Tryst + Aphelion)
+The remaining components, all consuming the existing contract (no new character invented):
+- `.skin-control` — labelled controls (buttons, selects, toggles, chips, nav actions): silhouette +
+  label font/transform/weight + motion.
+- `.skin-field` — free-text inputs (search): silhouette **only** (no forced uppercase / display serif —
+  typed text stays as typed).
+- **Focus ring** — `.skin-control` / `.skin-field` get a `:focus-visible` outline in `--accent`
+  (affordance: a notched/squared control still reads + behaves as a control).
+- **Goal ring** (`HomeRoute`) — number uses `--numeral-font` / `--numeral-feature` (matches `StatNumber`);
+  Aphelion reads as a segmented instrument gauge (ticked track + square cap).
+- **Nav** (`AppShell`) — labels via `.skin-label`; action buttons via `.skin-control`.
+- **Empty states** — copy from the `useVoice` pack (`empty.heading/body/cta` + `motif`), never generic.
+- **Toast** — ⚠️ *no toast component exists in the app yet.* When one is built it should use `.skin-plate`
+  / `--radius-panel` + `--panel-fill`, `--accent` for status, and ride `.rv-anim`. Flagged, not invented.
+
 ## Motion keyframes (in `tokens.css`)
 Per-skin ambient/feedback motion. Every animated element also carries the `.rv-anim` class, so the
 existing `prefers-reduced-motion` rule calms ALL of it (the night-sky/landing pattern):

@@ -16,6 +16,23 @@
 .skin-card { border-radius: var(--radius-card); }
 .skin-panel { border-radius: var(--radius-panel); }
 
+/* Free-text field silhouette (search / text inputs): the skin's control SHAPE, but NOT its label
+   font or text-transform — typed text must stay as the user typed it (no forced uppercase, no
+   display serif). Labelled controls (buttons, selects, chips) use .skin-control instead. */
+.skin-field {
+  border-radius: var(--radius-control);
+  clip-path: var(--ctl-clip);
+}
+
+/* Affordance — the 1c headline. A skinned control (notched, squared, textured) must still obviously
+   read AND behave as a control, so every one gets a clear keyboard focus ring in the skin's accent.
+   outline (not box-shadow) so it survives the controls that set their own shadows. */
+.skin-control:focus-visible,
+.skin-field:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 /* Small generic labels — eyebrows, section + shelf headers, field labels. */
 .skin-label {
   font-family: var(--label-font);

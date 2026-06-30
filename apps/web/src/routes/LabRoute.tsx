@@ -71,6 +71,59 @@ function Stat({ n, l }: { n: string; l: string }) {
   )
 }
 
+/** Mini goal ring matching HomeRoute's GoalRing — Aphelion reads as a segmented instrument gauge. */
+function LabRing({ aph }: { aph: boolean }) {
+  const C = 2 * Math.PI * 20
+  return (
+    <div className="relative h-14 w-14 flex-none">
+      <svg width="56" height="56" className="-rotate-90">
+        <circle cx="28" cy="28" r="20" fill="none" stroke="var(--chip-border)" strokeWidth="6" strokeDasharray={aph ? '1 4' : undefined} />
+        <circle
+          cx="28"
+          cy="28"
+          r="20"
+          fill="none"
+          stroke="var(--primary)"
+          strokeWidth="6"
+          strokeLinecap={aph ? 'butt' : 'round'}
+          strokeDasharray={C}
+          strokeDashoffset={C * 0.3}
+        />
+      </svg>
+      <div className="absolute inset-0 grid place-items-center">
+        <span className="skin-numeral text-[13px] font-bold text-ink">42</span>
+      </div>
+    </div>
+  )
+}
+
+/** The 1c control silhouette fan-out: button · search field · select · toggle · goal ring. */
+function LabControls({ skin }: { skin: SkinId }) {
+  return (
+    <div className="flex flex-wrap items-center gap-2.5">
+      <button type="button" className="skin-control px-3.5 py-2 text-[12px]" style={{ background: 'var(--accent-fill)', color: 'var(--on-primary)' }}>
+        Begin
+      </button>
+      <input
+        readOnly
+        placeholder="Search…"
+        className="skin-field h-9 w-32 border border-line px-3 text-[12px] text-ink outline-none"
+        style={{ background: 'var(--field)' }}
+      />
+      <span className="skin-control inline-flex items-center border border-line px-3 py-2 text-[12px] text-ink" style={{ background: 'var(--card)' }}>
+        Sort ▾
+      </span>
+      <span
+        className="relative inline-block h-6 w-11 border border-line"
+        style={{ borderRadius: 'var(--radius-control)', background: 'linear-gradient(135deg, var(--primary), var(--gold))' }}
+      >
+        <span className="absolute top-[2px] h-[18px] w-[18px] bg-white" style={{ left: 'calc(100% - 20px)', borderRadius: 'var(--radius-control)' }} />
+      </span>
+      <LabRing aph={skin === 'aphelion'} />
+    </div>
+  )
+}
+
 function Cell({ skin, mode, label }: { skin: SkinId; mode: 'dark' | 'light'; label: string }) {
   return (
     <div
@@ -99,6 +152,7 @@ function Cell({ skin, mode, label }: { skin: SkinId; mode: 'dark' | 'light'; lab
             </div>
           </div>
         </div>
+        <LabControls skin={skin} />
       </div>
     </div>
   )
@@ -111,8 +165,8 @@ function SkinLab() {
         Skin character — two worlds
       </h1>
       <p className="mt-1 text-[13px] text-muted">
-        Tryst vs Aphelion · dark + light. Texture · card marks · nameplate · stat panel — all from the
-        token contract.
+        Tryst vs Aphelion · dark + light. Texture · card marks · nameplate · stat panel · controls
+        (button · search · select · toggle · goal ring) — all from the token contract.
       </p>
       <div className="mt-7 grid gap-6 lg:grid-cols-2">
         {CELLS.map((c) => (
