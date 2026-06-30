@@ -2,6 +2,19 @@ import { createRoute } from '@tanstack/react-router'
 import { type SkinId } from '@reverie/core'
 import { rootRoute } from './RootRoute'
 import { Frame, ProgressMeter, SectionHeader, SignatureEmblem, SignatureRing, StatusTag } from '../components/Structure'
+import { Spine } from '../components/Spine'
+
+// Spine shelf — real-style titles of varying length so the variable-length handling + size variation
+// show, NOT the specimen's tidy samples: a one-word, a medium, a long, and a monster (title+subtitle).
+const SHELF: { id: string; title: string; first: string; last: string }[] = [
+  { id: 'sp-a', title: 'Vacuum', first: 'K', last: 'Voss' },
+  { id: 'sp-b', title: 'Crimson Letters', first: 'D', last: 'Marchand' },
+  { id: 'sp-c', title: 'Apogee', first: 'I', last: 'Mar' },
+  { id: 'sp-d', title: 'The Lamplighter’s Unspoken Promise', first: 'D', last: 'Marchand' },
+  { id: 'sp-e', title: 'Signal Lost', first: 'T', last: 'Reyes' },
+  { id: 'sp-f', title: 'The Exhaustively Complete Chronicle of Everything: A Subtitle', first: 'L', last: 'Stern' },
+  { id: 'sp-g', title: 'Lure', first: 'J', last: 'Okafor' },
+]
 
 /**
  * Structural-character preview (STEP 3 eyeball aid). Renders the SAME composed surfaces the real
@@ -63,6 +76,14 @@ function Cell({ skin, mode, label }: { skin: SkinId; mode: 'dark' | 'light'; lab
           <div className="text-[13px] text-muted">Currently reading · 62%</div>
           <ProgressMeter skin={skin} value={62} max={100} className="mt-2" />
         </div>
+      </div>
+
+      {/* spine shelf — varying title lengths on real-style data */}
+      <SectionHeader skin={skin} className="mt-5" label="On the shelf" readout={SHELF.length} />
+      <div className="mt-3 flex items-end gap-1.5 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+        {SHELF.map((b, i) => (
+          <Spine key={b.id} book={b} skin={skin} active={i === 1} />
+        ))}
       </div>
 
       {/* empty-state emblem */}
