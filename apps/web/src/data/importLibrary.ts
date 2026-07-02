@@ -1,5 +1,7 @@
 import {
+  countTruncatedIsbns,
   detectUniverses,
+  parseCSV,
   parseImport,
   universeInputFromRow,
   type ImportedRow,
@@ -37,6 +39,9 @@ export interface ImportExportResult {
   /** per-resolved-book signals for the import-review read-model (E3); join with the post-enrichment
    *  books via buildReviewModelFromImport(outcomes, books, { readingOrdersBuilt: readingOrders }) */
   outcomes: ImportItemOutcome[]
+  /** read-only notice signal: ISBNs that look like they lost a leading digit (a zero destroyed on
+   *  data entry, before the file existed). Books still imported; these just may not match. */
+  truncatedIsbns: number
 }
 
 /**
@@ -96,11 +101,14 @@ export async function importDetectedExport(
   opts: { autoMerge: boolean },
 ): Promise<ImportExportResult> {
   const { profile, rows } = parseImport(text)
+  // Read-only, shared by both importers: count likely-truncated ISBNs off the raw header+values, so
+  // the "found" summary can warn without touching any value or the merge.
+  const truncatedIsbns = countTruncatedIsbns(parseCSV(text))
 
   // Generic shape → the existing Goodreads/StoryGraph path (no connected-universe metadata).
   if (profile.name === 'generic') {
     const r = await importCsvToBackend(currentBooks, text, { autoMerge: opts.autoMerge })
-    return { profile: profile.name, added: r.added, merged: r.merged, review: r.review, ingested: [], readingOrders: 0, outcomes: [] }
+    return { profile: profile.name, added: r.added, merged: r.merged, review: r.review, ingested: [], readingOrders: 0, outcomes: [], truncatedIsbns }
   }
 
   const ownerId = await currentUserId()
@@ -139,5 +147,5 @@ export async function importDetectedExport(
   const universes = detectUniverses(ingested.map(({ row, bookId }) => universeInputFromRow(row, bookId)))
   const readingOrders = await persistUniverseOrders(universes, ownerId)
 
-  return { profile: profile.name, added, merged, review, ingested, readingOrders, outcomes }
+  return { profile: profile.name, added, merged, review, ingested, readingOrders, outcomes, truncatedIsbns }
 }
