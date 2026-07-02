@@ -11,7 +11,7 @@ import { useProfile, useUpdateProfile } from '../data/profile'
 import { SpineShelf } from '../components/SpineShelf'
 import { LogReadForm } from '../book/dialogs'
 import { MONTHS } from '../library/constants'
-import { useEffectiveSkin } from '../skin/labels'
+import { Frame, ProgressMeter, SectionHeader, SignatureRing, StatusTag } from '../components/Structure'
 import { hasOnboarded } from './OnboardingRoute'
 
 const YEAR = new Date().getFullYear()
@@ -22,44 +22,6 @@ function greeting(): string {
   if (h < 12) return 'Good morning'
   if (h < 18) return 'Good afternoon'
   return 'Good evening'
-}
-
-function GoalRing({ done, target }: { done: number; target: number }) {
-  const C = 2 * Math.PI * 42
-  const off = C * (1 - (target ? Math.min(1, done / target) : 0))
-  // Skin character: Aphelion reads as a segmented instrument gauge (ticked track + square cap +
-  // tabular numerals); the warm skins keep a smooth round ring with old-style figures.
-  const aph = useEffectiveSkin() === 'aphelion'
-  return (
-    <div className="relative h-24 w-24 flex-none">
-      <svg width="96" height="96" className="-rotate-90">
-        <circle
-          cx="48"
-          cy="48"
-          r="42"
-          fill="none"
-          stroke="var(--chip-border)"
-          strokeWidth="9"
-          strokeDasharray={aph ? '1.6 7' : undefined}
-        />
-        <circle
-          cx="48"
-          cy="48"
-          r="42"
-          fill="none"
-          stroke="var(--primary)"
-          strokeWidth="9"
-          strokeLinecap={aph ? 'butt' : 'round'}
-          strokeDasharray={C}
-          strokeDashoffset={off}
-        />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="skin-numeral text-[22px] font-bold text-ink">{done}</span>
-        <span className="skin-label text-[10px] text-muted">{target ? `of ${target}` : 'set goal'}</span>
-      </div>
-    </div>
-  )
 }
 
 function HomeScreen() {
@@ -123,13 +85,11 @@ function HomeScreen() {
 
   return (
     <section className="px-4 py-6 sm:px-6">
-      {/* hero */}
-      <div
-        className="flex flex-wrap items-center gap-5 rounded-3xl border border-line p-5 backdrop-blur"
-        style={{ background: 'var(--card)', boxShadow: 'var(--shadow)' }}
-      >
+      {/* hero — framed per skin (Aphelion corner-bracket callsign plate · Tryst gilt plate), with the
+          signature goal-ring (radar cycle-ring vs gilt fleuron ring) and structural status tags. */}
+      <Frame className="flex flex-wrap items-center gap-5 p-5 backdrop-blur" style={{ boxShadow: 'var(--shadow)' }}>
         <button type="button" onClick={setGoal} aria-label={`Set your ${YEAR} reading goal`}>
-          <GoalRing done={uniqueThisYear} target={goalTarget} />
+          <SignatureRing value={uniqueThisYear} max={goalTarget} />
         </button>
         <div className="min-w-[230px] flex-1">
           <div className="text-[22px] italic text-ink" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
@@ -141,10 +101,10 @@ function HomeScreen() {
             {yearReads.length !== uniqueThisYear ? ` (${uniqueThisYear} books)` : ''} · {unread.length} unread
             waiting
           </div>
-          <div className="mt-2 flex flex-wrap gap-2 text-[12px] text-muted">
-            <span>{all.length} books</span>
-            <span>♥ {all.filter((b) => b.fave).length} faves</span>
-            {priority && <span>★ {priorityBooks.length} on priority</span>}
+          <div className="mt-2.5 flex flex-wrap gap-1.5">
+            <StatusTag tone="muted">{all.length} books</StatusTag>
+            <StatusTag glyph="♥">{all.filter((b) => b.fave).length} faves</StatusTag>
+            {priority && <StatusTag glyph="★">{priorityBooks.length} priority</StatusTag>}
           </div>
         </div>
         <div className="flex flex-col gap-2">
@@ -168,14 +128,12 @@ function HomeScreen() {
             🎲 Surprise me
           </button>
         </div>
-      </div>
+      </Frame>
 
       {/* reading now */}
       {reading.length > 0 && (
         <div className="mt-8">
-          <h2 className="text-[18px] italic text-ink" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
-            Reading now
-          </h2>
+          <SectionHeader label="Reading now" readout={reading.length} />
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             {reading.map((b) => (
               <div key={b.id} className="flex gap-3 rounded-2xl border border-line p-3" style={{ background: 'var(--card)' }}>
@@ -191,9 +149,7 @@ function HomeScreen() {
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-[14px] font-semibold text-ink">{b.title}</div>
                   <div className="truncate text-[12px] text-muted">{authorOf(b)}</div>
-                  <div className="mt-2 h-1.5 overflow-hidden rounded-full" style={{ background: 'var(--chip)' }}>
-                    <div className="h-full rounded-full" style={{ width: `${b.progress}%`, background: 'var(--primary)' }} />
-                  </div>
+                  <ProgressMeter value={b.progress} max={100} className="mt-2" />
                   <div className="mt-1.5 flex items-center gap-2">
                     <span className="text-[12px] font-semibold text-muted">{b.progress}%</span>
                     <div className="ml-auto flex gap-1.5">
