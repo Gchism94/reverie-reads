@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Book } from '@reverie/core'
-import { subgenreGradient } from '../library/constants'
+import { Spine } from './Spine'
 
 /**
- * A horizontal shelf of book spines. The spine nearest the shelf's center flips open to its
- * cover as you scroll — the design's signature spine-shelf interaction.
+ * A horizontal shelf of book spines — each a real per-skin Spine (gilt-bound Tryst · brushed-metal
+ * Aphelion), sized book-to-book. The spine nearest the shelf's centre widens, and flips open to its
+ * cover when it has one — the design's signature spine-shelf interaction.
  */
 export function SpineShelf({ books, onOpen }: { books: Book[]; onOpen: (id: string) => void }) {
   const ref = useRef<HTMLDivElement>(null)
@@ -49,7 +50,6 @@ export function SpineShelf({ books, onOpen }: { books: Book[]; onOpen: (id: stri
     >
       {books.map((b) => {
         const active = b.id === activeId
-        const [g0, g1] = subgenreGradient(b.subgenre)
         return (
           <button
             key={b.id}
@@ -57,26 +57,15 @@ export function SpineShelf({ books, onOpen }: { books: Book[]; onOpen: (id: stri
             onClick={() => onOpen(b.id)}
             title={b.title}
             aria-label={`Open ${b.title}`}
-            className="relative h-44 flex-none snap-center overflow-hidden rounded-md border border-line transition-[width] duration-300"
-            style={{
-              width: active ? 120 : 30,
-              background: b.cover
-                ? `center/cover no-repeat url(${b.cover})`
-                : `linear-gradient(160deg, ${g0}, ${g1})`,
-            }}
+            className="flex-none snap-center self-end"
           >
-            {(!active || !b.cover) && (
-              <span
-                className="absolute inset-0 flex items-center justify-center p-1 text-center font-semibold text-on-primary"
-                style={{
-                  writingMode: active ? 'horizontal-tb' : 'vertical-rl',
-                  fontFamily: 'var(--font-display)',
-                  fontSize: active ? 12 : 10,
-                  background: b.cover ? 'rgba(0,0,0,0.35)' : 'transparent',
-                }}
-              >
-                {b.title}
-              </span>
+            {active && b.cover ? (
+              <div
+                className="h-44 w-[120px] overflow-hidden rounded-md border border-line"
+                style={{ background: `center/cover no-repeat url(${b.cover})` }}
+              />
+            ) : (
+              <Spine book={b} active={active} />
             )}
           </button>
         )
