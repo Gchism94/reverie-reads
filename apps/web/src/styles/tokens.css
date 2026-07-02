@@ -36,6 +36,7 @@
   --border-width: 1px;
   --ctl-clip: none; /* corner-notch silhouette via clip-path (sci-fi bevel) */
   --label-font: var(--font-sans); /* generic UI label / control text font */
+  --control-font: var(--label-font); /* button/control text — may split from labels (Tryst: Hanken labels, Fraunces controls) */
   --label-transform: none; /* small generic labels (eyebrows / section / shelf) */
   --control-transform: none; /* button / chip text */
   --label-tracking: 0.04em;
