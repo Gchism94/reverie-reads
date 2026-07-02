@@ -6,7 +6,7 @@
 .skin-control {
   border-radius: var(--radius-control);
   clip-path: var(--ctl-clip);
-  font-family: var(--label-font);
+  font-family: var(--control-font);
   font-weight: var(--label-weight);
   text-transform: var(--control-transform);
   transition-timing-function: var(--motion-ease);

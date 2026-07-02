@@ -137,6 +137,20 @@ signature component if its emblem is bespoke). Composed onto the real Home hero,
 and the empty state; preview at `/lab/structure`. AA: section labels / readouts / tag text clear AA on the
 page bg (registry-keyed contrast test); the radar sweep rides `.rv-anim`.
 
+## Fable 5 incorporation — contract extensions (Stage I, 2026-07-02)
+The design pass's slot table (`sectionHeader · panelFrame · statusTag · progressMeter · divider ·
+nameplate · signatureMotif · spine · placeholderCover · voicePack` + the controls layer) matches the
+shipped contract slot-for-slot. Three additive extensions, all neutral-defaulted (no skin regresses):
+- **`SkinStructure.placeholder`** — placeholderCover becomes a per-skin slot (`'plain' |
+  'cloth-boards' | 'specimen-plate'`, union extended per designed skin), the same registered-component
+  pattern as `motif`. `CoverPlaceholder` selects the plate treatment; `'plain'` is the previous
+  neutral title/author plate.
+- **`SkinVoice.miss` + `SkinVoice.milestone`** — the voice pack gains the search-miss line (the
+  "nothing matches" surface) and the reading-goal milestone line, completing the specimen's
+  EMPTY · MISS · LOADING · MILESTONE quartet.
+- **`--control-font`** — control text may split from label text (Tryst: Hanken caps labels,
+  Fraunces controls). Defaults to `var(--label-font)`; `.skin-control` now reads it.
+
 ## Guardrail (non-negotiable)
 Distinctive surface, **conventional interaction**. AA contrast is never traded for texture (opaque
 scrims where needed). Motion always calms under reduced-motion. Character is additive to a usable,
