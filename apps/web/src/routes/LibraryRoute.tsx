@@ -48,7 +48,7 @@ function EmptyState() {
           className="skin-control flex h-11 items-center border border-line px-5 text-[14px] text-ink"
           style={{ background: 'var(--field)' }}
         >
-          Import a CSV
+          Import books
         </Link>
       </div>
     </section>
