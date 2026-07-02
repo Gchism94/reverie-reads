@@ -33,11 +33,17 @@ function RootLayout() {
     return <UnauthShell />
   }
 
+  // First-run onboarding renders full-screen (skin Sky behind, no app chrome) — it's its own
+  // front door into the library, themed live in the skin the reader picks.
+  const onboarding = pathname === '/onboarding'
+
   return (
     <>
       <Sky />
       {!verified ? (
         <VerifyEmail email={session.user.email} />
+      ) : onboarding ? (
+        <Outlet />
       ) : (
         <AppShell>
           <Outlet />
