@@ -899,6 +899,9 @@
 @keyframes sig-blink { /* Aphelion: status dot */
   0%, 100% { opacity: 1; } 50% { opacity: 0.2; }
 }
+@keyframes radar-sweep { /* Aphelion: cycle-ring radar sweep (rides .rv-anim) */
+  to { transform: rotate(360deg); }
+}
 
 /* Respect reduced motion: hold the sky AND all per-skin character motion perfectly still. */
 @media (prefers-reduced-motion: reduce) {
