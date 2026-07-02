@@ -7,7 +7,7 @@
 
 import type { PubDate, ReadStatus } from './types'
 import { parseCSV } from './csv'
-import type { Incoming } from './match'
+import { cleanIsbn, type Incoming } from './match'
 import { emptyOwned } from './ownership'
 import { contributorsFromAuthors, fromFirstLast } from './contributors'
 import { normalizeImportGenres } from './genreNormalize'
@@ -27,9 +27,37 @@ export interface ColumnProfile {
   genre?: string[]
   tags?: string[]
   releaseDate?: string[]
+  readDate?: string[] // when the reader finished it → a read entry (distinct from releaseDate)
+  isbn?: string[] // ISBN-10/13 identifier column
+  rating?: string[] // the reader's own 0–5 rating
   readStatus?: string[] // generic read-status column
   gcRead?: string[] // Chism: "X" = read, "IP" = reading
   duplicate?: string[] // Chism: "X" flags a known duplicate
+}
+
+/** The canonical Reverie import template — the column order the generator emits and the detector keys
+ *  to. One source of truth: the .xlsx generator builds these headers, REVERIE_PROFILE maps them back,
+ *  and detectProfile recognizes the shape. Keep in sync with apps/web/src/data/importTemplate.ts. */
+export const REVERIE_TEMPLATE_COLUMNS = [
+  'Title',
+  'Author',
+  'ISBN',
+  'Status',
+  'Rating',
+  'Date Read',
+  'Tags',
+] as const
+
+export const REVERIE_PROFILE: ColumnProfile = {
+  name: 'reverie',
+  title: ['title'],
+  author: ['author', 'authors'],
+  isbn: ['isbn', 'isbn13', 'isbn-13', 'isbn10', 'isbn-10'],
+  readStatus: ['status', 'read status'],
+  rating: ['rating', 'my rating'],
+  readDate: ['date read', 'last date read'],
+  tags: ['tags', 'tag'],
+  genre: ['genre', 'genres'],
 }
 
 export const LIBRARY_PROFILE: ColumnProfile = {
@@ -74,7 +102,7 @@ export const GENERIC_PROFILE: ColumnProfile = {
   readStatus: ['read status', 'exclusive shelf', 'status'],
 }
 
-const BUILTIN = [LIBRARY_PROFILE, CHISM_PROFILE, GENERIC_PROFILE]
+const BUILTIN = [REVERIE_PROFILE, LIBRARY_PROFILE, CHISM_PROFILE, GENERIC_PROFILE]
 
 /** An imported row: the Incoming for matching/merging + import-only metadata for dedupe + I3. */
 export interface ImportedRow {
@@ -115,6 +143,9 @@ export function buildColumnIndex(headers: string[], profile: ColumnProfile): Rec
 export function detectProfile(headers: string[]): ColumnProfile {
   const h = new Set(headers.map(normHeader))
   const has = (s: string) => h.has(s)
+  // Reverie's own template: the clean Title/Author/ISBN/Status/Rating/Date Read/Tags shape. Its plain
+  // "rating" + "status" headers distinguish it from a Goodreads export ("my rating"/"exclusive shelf").
+  if (has('status') && has('rating') && has('date read') && (has('isbn') || has('tags'))) return REVERIE_PROFILE
   if (has('gc read') || has('duplicate') || has('completed / standalones')) return CHISM_PROFILE
   if (has('global order') || has('series type') || has('series #')) return LIBRARY_PROFILE
   return GENERIC_PROFILE
@@ -123,6 +154,13 @@ export function detectProfile(headers: string[]): ColumnProfile {
 const num = (s: string): number | null => {
   const v = Number(String(s).trim())
   return Number.isFinite(v) ? v : null
+}
+
+/** First YYYY-M-D / YYYY/M/D in a cell → a normalized YYYY-MM-DD read date (mirrors csv.ts). */
+function parseReadDate(raw: string): string | null {
+  const m = (raw ?? '').match(/(\d{4})[/-](\d{1,2})[/-](\d{1,2})/)
+  if (!m) return null
+  return `${m[1]}-${(m[2] ?? '').padStart(2, '0')}-${(m[3] ?? '').padStart(2, '0')}`
 }
 
 /** Parse a release-date cell: 4-digit year, ISO/US date, or an Excel serial → PubDate. */
@@ -151,12 +189,13 @@ function gcReadStatus(cell: string): ReadStatus {
   return 'Unread'
 }
 
-/** Generic read-status cell (Goodreads/StoryGraph shelves). */
+/** Generic read-status cell (Goodreads/StoryGraph shelves + the Reverie template's Status). */
 function genericReadStatus(cell: string): ReadStatus {
   const v = cell.toLowerCase()
-  if (/to-read|to read|wishlist|tbr/.test(v)) return 'Unread'
-  if (/currently|reading/.test(v)) return 'Reading'
+  // "unread" before the read branch — it contains the substring "read".
+  if (/unread|to-read|to read|wishlist|tbr/.test(v)) return 'Unread'
   if (/dnf|did.not/.test(v)) return 'DNF'
+  if (/currently|reading/.test(v)) return 'Reading'
   if (/read|finished/.test(v)) return 'Read'
   return 'Unread'
 }
@@ -198,9 +237,18 @@ export function rowToImported(row: string[], idx: Record<string, number>): Impor
   const orderRaw = cell('seriesOrder').trim()
   const position = orderRaw === '' ? '' : (num(orderRaw) ?? '')
 
+  // Reader's own metadata (Reverie template + any export that carries it): identifier, rating, read date.
+  const isbn = cleanIsbn(cell('isbn'))
+  const ratingRaw = num(cell('rating'))
+  const rating = ratingRaw == null ? 0 : Math.max(0, Math.min(5, Math.round(ratingRaw)))
+  const readDate = parseReadDate(cell('readDate'))
+  const reads = readDate ? [{ date: readDate, format: 'Paperback', rating: 0, notes: '' }] : []
+
   let readStatus: ReadStatus = 'Unread'
   if ((idx.gcRead ?? -1) >= 0) readStatus = gcReadStatus(cell('gcRead'))
   else if ((idx.readStatus ?? -1) >= 0) readStatus = genericReadStatus(cell('readStatus'))
+  // A recorded read date with no explicit status still means the book was read.
+  if (readStatus === 'Unread' && reads.length) readStatus = 'Read'
 
   const incoming: Incoming = {
     title,
@@ -218,6 +266,9 @@ export function rowToImported(row: string[], idx: Record<string, number>): Impor
     pub: parseReleaseDate(cell('releaseDate')),
     source: 'Imported',
     owned: emptyOwned(),
+    ...(isbn ? { isbn } : {}),
+    ...(rating ? { rating } : {}),
+    ...(reads.length ? { reads } : {}),
   }
 
   return {
