@@ -62,38 +62,45 @@ export const APHELION_VOICE: SkinVoice = {
 
 // Stage 2 — Grimoire (fantasy · illuminated manuscript) + Marrow (horror · gothic dread), code-first.
 export const GRIMOIRE_VOICE: SkinVoice = {
+  // Fable 5 chunk 2 — the book speaks like a patient tutor; italic Cormorant is the speaking voice.
   empty: {
-    heading: 'The codex lies unwritten.',
-    body: 'Inscribe your first volume to wake these pages.',
-    cta: 'Inscribe a volume',
+    heading: 'The book lies open at its first blank leaf.',
+    body: 'Set down the story you carry.',
+    cta: 'Add a story',
   },
-  loading: 'Turning the vellum…',
-  miss: 'No such volume is inscribed here.',
-  milestone: 'The codex is complete — every page accounted for.',
-  motif: '☉',
+  loading: 'Grinding the ink…',
+  miss: 'No such title is inscribed in this volume. Try its truer name.',
+  milestone: 'The leaves are gilded — the quire is bound.',
+  motif: '❖',
   isbnNotice: ISBN_NOTICE,
 }
 
 export const MARROW_VOICE: SkinVoice = {
+  // Fable 5 chunk 2 — the house speaks: flat, close, faintly proprietary; it never apologizes.
   empty: {
-    heading: 'Nothing stirs on the shelf.',
-    body: 'Add the first book before the dark settles in.',
-    cta: 'Add a book',
+    heading: 'The shelf is bare.',
+    body: 'The house prefers it occupied. Bring it a book.',
+    cta: 'Add a specimen',
   },
-  loading: 'Something listens…',
-  miss: 'Nothing answers to that name.',
-  milestone: 'The last page turned. The house is satisfied.',
+  loading: 'The floorboards settle…',
+  miss: 'Nothing here answers to that name.',
+  milestone: 'Every specimen catalogued. The house is pleased.',
   motif: '†',
   isbnNotice: ISBN_NOTICE,
 }
 
 // Stage 3 — the five remaining genres, code-first voices.
 export const UMBRA_VOICE: SkinVoice = {
-  empty: { heading: 'The case is cold.', body: 'Shelve the first file to open the investigation.', cta: 'File a book' },
-  loading: 'Following the trail…',
-  miss: 'No file matches that description.',
-  milestone: 'Case closed — every lead followed.',
-  motif: '◆',
+  // Fable 5 chunk 2 — "Gaslight": typed case notes, clipped and dry; states reported like evidence.
+  empty: {
+    heading: 'Nothing on file.',
+    body: 'Open the first case — bring me a book worth suspecting.',
+    cta: 'Open a case',
+  },
+  loading: 'Developing the photographs…',
+  miss: 'NO RECORD UNDER THAT NAME. Try the alias.',
+  milestone: 'CASE CLOSED. The window stays lit anyway.',
+  motif: '▣',
   isbnNotice: ISBN_NOTICE,
 }
 
