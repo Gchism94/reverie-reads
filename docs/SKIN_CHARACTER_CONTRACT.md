@@ -118,6 +118,15 @@ layer adds that. A small per-skin **structural config** (`SKIN_STRUCTURE` in `@r
 | `tag` | `round` (gold pill) | `squared-bracket` (`[✓]RD`) | `round` |
 | `progress` | `dots` | `segmented` | `bar` |
 | `motif` | `fleuron` (❦ ring + emblem) | `radar` (cycle-ring + blip) | `none` |
+| `spine` | leather / gilt bands / ❦ colophon / gilt title panel | brushed metal / tick bands / callsign / status-LED foot, mono | plain legible spine |
+
+**Spine** (`SpineStyle`) is the first *signature component*: a book spine composed for its own narrow,
+edge-on read (vertical-rl title, head+tail bands, head label, tail colophon) — NOT a rotated cover.
+`Spine` (`components/Spine.tsx`) + the retrofitted `SpineShelf` render it; CSS/SVG only. Data reality:
+the Book model has **no page count or trim**, so width (thickness) + height (trim) come from a stable
+per-book hash (`spineDims`) — deterministic, varied, never uniform; wire `thickness` to a real page
+field if one is added. Titles use `fitSpineTitle`: scale-to-fit → 13px floor → truncate (the colophon
+stays anchored), so a title + subtitle monster degrades instead of breaking the spine.
 
 **Hybrid**: the common slots are declarative parameters above; the one genuinely-bespoke emblem per skin
 (Aphelion's radar cycle-ring, Tryst's fleuron) lives in the registered `SignatureRing` / `SignatureEmblem`

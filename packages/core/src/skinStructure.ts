@@ -11,6 +11,22 @@ import type { SkinId } from './skins'
 // radar cycle-ring, Tryst's fleuron) is a registered component (apps/web SignatureMotif), selected by
 // `motif`. Neutral defaults render plain, so unset skins don't regress.
 
+/** The spine slot — a spine is its own object (a kit of slots every skin fills), NOT a rotated cover.
+ *  Anatomy: a binding surface, head + tail bands, a vertical title, an author, an optional head label,
+ *  and a tail colophon. Declarative params here; the per-skin specifics are in the Spine component. */
+export interface SpineStyle {
+  /** binding surface texture (CSS/SVG only — leather sheen vs brushed metal) */
+  binding: 'plain' | 'leather' | 'brushed'
+  /** head + tail decorative bands */
+  band: 'plain' | 'gilt' | 'tick'
+  /** tail mark — Tryst fleuron, Aphelion status LED (pulses on .rv-anim) */
+  colophon: 'none' | 'fleuron' | 'led'
+  /** optional head label — Tryst folds it into a gilt title panel; Aphelion shows a callsign code */
+  label: 'none' | 'panel' | 'callsign'
+  /** Aphelion sets the title in mono uppercase */
+  titleUpper: boolean
+}
+
 export interface SkinStructure {
   /** the rule drawn across a section header, between the label and the readout */
   sectionRule: 'hairline' | 'fleuron' | 'tick-rule'
@@ -22,6 +38,8 @@ export interface SkinStructure {
   progress: 'bar' | 'dots' | 'segmented'
   /** the big signature emblem (and the goal-ring treatment) — see SignatureMotif */
   motif: 'none' | 'fleuron' | 'radar'
+  /** the book-spine treatment (Structural Character signature component) */
+  spine: SpineStyle
 }
 
 /** Plain bones — what every not-yet-structured skin renders, so nothing regresses. */
@@ -31,13 +49,28 @@ export const NEUTRAL_STRUCTURE: SkinStructure = {
   tag: 'round',
   progress: 'bar',
   motif: 'none',
+  spine: { binding: 'plain', band: 'plain', colophon: 'none', label: 'none', titleUpper: false },
 }
 
 // Tryst + Aphelion: structures extracted from the /lab/skins specimen + decoded export. The other
 // seven inherit NEUTRAL_STRUCTURE until their stage (fill this table to give a skin bones).
 export const SKIN_STRUCTURE: Record<SkinId, SkinStructure> = {
-  tryst: { sectionRule: 'fleuron', frame: 'gilt-plate', tag: 'round', progress: 'dots', motif: 'fleuron' },
-  aphelion: { sectionRule: 'tick-rule', frame: 'corner-bracket', tag: 'squared-bracket', progress: 'segmented', motif: 'radar' },
+  tryst: {
+    sectionRule: 'fleuron',
+    frame: 'gilt-plate',
+    tag: 'round',
+    progress: 'dots',
+    motif: 'fleuron',
+    spine: { binding: 'leather', band: 'gilt', colophon: 'fleuron', label: 'panel', titleUpper: false },
+  },
+  aphelion: {
+    sectionRule: 'tick-rule',
+    frame: 'corner-bracket',
+    tag: 'squared-bracket',
+    progress: 'segmented',
+    motif: 'radar',
+    spine: { binding: 'brushed', band: 'tick', colophon: 'led', label: 'callsign', titleUpper: true },
+  },
   grimoire: NEUTRAL_STRUCTURE,
   marrow: NEUTRAL_STRUCTURE,
   umbra: NEUTRAL_STRUCTURE,
