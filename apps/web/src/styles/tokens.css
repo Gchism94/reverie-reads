@@ -143,11 +143,12 @@
    Code-first (Stage 2): no design export — derived from the genre + palette, eyeball-gated. ── */
 [data-skin='grimoire'] {
   --accent: var(--gold); /* gold leaf */
-  --radius-control: 6px; /* bound-tome corners — squared, not a pill */
-  --radius-card: 4px;
-  --radius-panel: 7px;
+  --radius-control: 2px; /* cut-vellum chips — no pills anywhere */
+  --radius-card: 8px; /* leaves + plates */
+  --radius-panel: 8px;
   --ctl-clip: none;
-  --label-font: var(--font-display); /* Cormorant Garamond — classical serif */
+  --label-font: var(--font-sans); /* Fable 5: Spectral caps labels… */
+  --control-font: var(--font-display); /* …controls speak Cormorant */
   --label-transform: uppercase; /* manuscript small-caps */
   --control-transform: none; /* title-case Cormorant on buttons */
   --label-tracking: 0.16em;
@@ -170,14 +171,14 @@
    Code-first (Stage 2): derived from the genre + palette, eyeball-gated. ── */
 [data-skin='marrow'] {
   --accent: var(--primary); /* oxblood */
-  --radius-control: 3px; /* hard, brittle edges */
-  --radius-card: 3px;
-  --radius-panel: 4px;
-  --ctl-clip: none;
-  --label-font: var(--font-display); /* Playfair Display — high-contrast gothic serif */
+  --radius-control: 0px; /* chamfered, never rounded — the cut lives in --ctl-clip */
+  --radius-card: 2px;
+  --radius-panel: 0px; /* trays are chamfer-cut (clip on the frame) */
+  --ctl-clip: polygon(6px 0, calc(100% - 6px) 0, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0 calc(100% - 6px), 0 6px); /* cut bone, 45° */
+  --label-font: var(--font-sans); /* Fable 5: Libre Franklin, the specimen-label grotesque */
   --label-transform: uppercase;
   --control-transform: none;
-  --label-tracking: 0.12em;
+  --label-tracking: 0.14em; /* Franklin caps ls .12–.18em */
   --label-weight: 600;
   --numeral-font: var(--font-display);
   --numeral-feature: 'lnum' 1; /* stark lining figures */
@@ -195,17 +196,17 @@
 
 /* ── Skin character · UMBRA (Mystery · noir) — fog, shadow, one amber lamp; hard ink edges. ── */
 [data-skin='umbra'] {
-  --accent: var(--gold); /* amber lamplight */
-  --radius-control: 1px;
-  --radius-card: 1px;
-  --radius-panel: 2px;
+  --accent: var(--gold); /* brass — marks what matters */
+  --radius-control: 2px; /* plates 2px */
+  --radius-card: 6px; /* case folders */
+  --radius-panel: 6px;
   --ctl-clip: none;
-  --label-font: var(--font-display); /* Bodoni Moda — noir poster */
+  --label-font: var(--font-mono); /* Fable 5 Gaslight: everything typed is Courier Prime */
   --label-transform: uppercase;
   --control-transform: uppercase;
-  --label-tracking: 0.16em;
+  --label-tracking: 0.12em; /* typed caps ls .1–.18em */
   --label-weight: 600;
-  --numeral-font: var(--font-display);
+  --numeral-font: var(--font-mono); /* counts are typed (No. 018) */
   --numeral-feature: 'lnum' 1;
   --motion-ease: cubic-bezier(0.4, 0, 0.2, 1);
   --motion-duration: 200ms;
@@ -440,9 +441,9 @@
   --bg0: #0c0f0b;
   --bg1: #12160f;
   --ink: #ece7d6;
-  --muted: #9aa384;
+  --muted: #a8b08c;
   --primary: #3aa97e;
-  --accent-fill: #2f9e74;
+  --accent-fill: #3aa97e /* verdigris — alive and pressable */;
   --accent-ink: #d4af37; /* gold-leaf eyebrow (clears AA on the dark vellum plate) */
   --violet: #b08828;
   --blue: #1f7d57;
@@ -464,19 +465,38 @@
   --font-display: 'Cormorant Garamond', Georgia, serif;
   --font-sans: 'Spectral', Georgia, serif;
   --font-mono: 'Spectral', Georgia, serif;
+  /* Fable 5 material (chunk 2) — gilt cartouche, tooled tome, vellum boards, vermilion rubric */
+  --rubric: #c8502e;
+  --cta-hi: #e7c95c;
+  --cta-lo: #c9a22e;
+  --cta-ink: #241f10;
+  --cta-border: rgba(138, 106, 47, 0.7);
+  --cta-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), inset 0 -8px 14px rgba(120, 90, 20, 0.2), 0 10px 24px rgba(0, 0, 0, 0.45);
+  --gold-deep: #8a6a2f;
+  --spine-hi: #292416;
+  --spine-lo: #3a3320;
+  --spine-title: #d4af37;
+  --spine-muted: #b3ab8a;
+  --spine-sheen: linear-gradient(90deg, rgba(0, 0, 0, 0.5) 0%, rgba(255, 255, 255, 0.06) 16%, rgba(255, 255, 255, 0.13) 50%, rgba(255, 255, 255, 0.03) 72%, rgba(0, 0, 0, 0.54) 100%);
+  --spine-emboss: 0 1px 1px rgba(0, 0, 0, 0.65), 0 -1px 0 rgba(255, 240, 190, 0.22);
+  --ph-a: #2e2a18;
+  --ph-b: #3d3520;
+  --ph-c: #241f10;
+  --ph-ink: #f0ead6;
+  --ph-muted: rgba(230, 220, 190, 0.75);
 }
 
 [data-skin='grimoire'][data-mode='light'] {
   --bg0: #f1e7cf;
   --bg1: #e9ddc0;
   --ink: #2a2418;
-  --muted: #665e49; /* darkened from demo #7c745c to clear 4.5:1 on the vellum cards */
+  --muted: #6b644e; /* AA: specimen #7c745c = 4.1:1 on the daylight leaf; darkened in-family */ /* darkened from demo #7c745c to clear 4.5:1 on the vellum cards */
   --primary: #1a6e4c; /* darkened from #1f7d57 so green link text clears AA on cream */
-  --accent-fill: #1a6e4c;
+  --accent-fill: #1f7d57;
   --accent-ink: #6e5518; /* deep gold-leaf — darkened so the eyebrow clears AA on the cream plate */
   --violet: #8a6a2f;
   --blue: #1f7d57;
-  --gold: #b08828;
+  --gold: #8a6a2f /* bronze-ink in daylight */;
   --card: #f7efd9;
   --card-solid: #f7efd9;
   --card-2: #efe4c8;
@@ -494,6 +514,24 @@
   --font-display: 'Cormorant Garamond', Georgia, serif;
   --font-sans: 'Spectral', Georgia, serif;
   --font-mono: 'Spectral', Georgia, serif;
+  --rubric: #a03322;
+  --cta-hi: #8a6a2f; /* AA: specimen bronze read 3.6:1 under the cream ink; deepened */
+  --cta-lo: #6e5420;
+  --cta-ink: #f6ecd2;
+  --cta-border: rgba(94, 70, 16, 0.6);
+  --cta-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 10px 24px rgba(110, 90, 40, 0.35);
+  --gold-deep: #5e4610;
+  --spine-hi: #f0e3c4;
+  --spine-lo: #e6d7b2;
+  --spine-title: #7a5c14;
+  --spine-muted: #5e5742; /* AA: specimen #7c745c = 3.4:1 on the light ground; darkened in-family */
+  --spine-sheen: linear-gradient(90deg, rgba(0, 0, 0, 0.15) 0%, rgba(255, 255, 255, 0.35) 18%, rgba(255, 255, 255, 0.55) 50%, rgba(255, 255, 255, 0.28) 72%, rgba(0, 0, 0, 0.16) 100%);
+  --spine-emboss: 0 1px 0 rgba(255, 255, 255, 0.5), 0 -1px 0 rgba(60, 44, 10, 0.25);
+  --ph-a: #f3e8ca;
+  --ph-b: #e9dab4;
+  --ph-c: #efe2c0;
+  --ph-ink: #3a3018;
+  --ph-muted: #5e5742; /* AA-corrected as above */
 }
 
 /* ── APHELION · Sci-Fi · deep space, ice, instrument cyan ── */
@@ -591,18 +629,18 @@
 
 /* ── MARROW · Horror · bone, ash, oxblood, creeping fog ── */
 [data-skin='marrow'][data-mode='dark'] {
-  --bg0: #0a0a0b;
+  --bg0: #17181c /* lifted to ash (Fable 5) */;
   --bg1: #121012;
-  --ink: #e8e3da;
-  --muted: #98907f; /* lightened from #8a8278 for AA headroom on the near-black cards */
+  --ink: #e9e4db /* bone draws the rules */;
+  --muted: #a8a39a; /* lightened from #8a8278 for AA headroom on the near-black cards */
   --primary: #d06a6a; /* brightened from #b04646 so oxblood link text clears AA on dark */
-  --accent-fill: #8f3535;
-  --accent-ink: #d06a6a; /* oxblood eyebrow (clears AA on the dark bone plate) */
+  --accent-fill: #a84545 /* oxblood = evidence */;
+  --accent-ink: #d67878 /* AA: 4.46:1 on the lifted ash card; lightened */; /* oxblood eyebrow (clears AA on the dark bone plate) */
   --violet: #6f7d86;
   --blue: #56616b;
   --gold: #8c9a3c;
   --card: #161315;
-  --card-solid: #161315;
+  --card-solid: #212328;
   --card-2: #1d181a;
   --line: rgba(158, 59, 59, 0.2);
   --shadow: 0 22px 60px rgba(0, 0, 0, 0.6);
@@ -616,8 +654,27 @@
   --vignette: rgba(3, 3, 4, 0.64);
   --grain-opacity: 0.06;
   --font-display: 'Playfair Display', Georgia, serif;
-  --font-sans: 'Inter', system-ui, sans-serif;
-  --font-mono: 'Inter', system-ui, sans-serif;
+  --font-sans: 'Libre Franklin', system-ui, sans-serif; /* the specimen-label grotesque */
+  --font-mono: 'Libre Franklin', system-ui, sans-serif;
+  /* Fable 5 material (chunk 2) — bone plaque, ash-cloth box, pasted № labels, oxblood dips */
+  --slate: #8a97a0;
+  --paper: #ded6c6;
+  --paper-ink: #2a2620;
+  --cta-hi: #f2ead9;
+  --cta-lo: #d8cfba;
+  --cta-ink: #241d18;
+  --cta-border: transparent;
+  --cta-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), inset 0 -6px 12px rgba(90, 75, 55, 0.22), 0 12px 28px rgba(0, 0, 0, 0.55);
+  --spine-hi: #1b1d21;
+  --spine-lo: #26282e;
+  --spine-title: #e9e4db;
+  --spine-muted: #a8a39a;
+  --spine-sheen: linear-gradient(90deg, rgba(0, 0, 0, 0.48) 0%, rgba(255, 255, 255, 0.05) 18%, rgba(255, 255, 255, 0.1) 50%, rgba(255, 255, 255, 0.03) 74%, rgba(0, 0, 0, 0.5) 100%);
+  --ph-a: #24262c;
+  --ph-b: #1b1d21;
+  --ph-c: #212328;
+  --ph-ink: #e9e4db;
+  --ph-muted: #a8a39a;
 }
 
 [data-skin='marrow'][data-mode='light'] {
@@ -646,24 +703,42 @@
   --vignette: rgba(80, 75, 70, 0.1);
   --grain-opacity: 0.04;
   --font-display: 'Playfair Display', Georgia, serif;
-  --font-sans: 'Inter', system-ui, sans-serif;
-  --font-mono: 'Inter', system-ui, sans-serif;
+  --font-sans: 'Libre Franklin', system-ui, sans-serif; /* the specimen-label grotesque */
+  --font-mono: 'Libre Franklin', system-ui, sans-serif;
+  --slate: #56616b;
+  --paper: #f4efe3;
+  --paper-ink: #2a2620;
+  --cta-hi: #3a3d44; /* the daylight plaque is granite */
+  --cta-lo: #26282e;
+  --cta-ink: #f4f0e8;
+  --cta-border: transparent;
+  --cta-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 10px 24px rgba(40, 35, 30, 0.35);
+  --spine-hi: #d5cfc0;
+  --spine-lo: #c6bfae;
+  --spine-title: #2a251e;
+  --spine-muted: #52483e; /* AA: specimen #5d574c = 4.3:1 on the light cloth; darkened in-family */
+  --spine-sheen: linear-gradient(90deg, rgba(0, 0, 0, 0.16) 0%, rgba(255, 255, 255, 0.32) 18%, rgba(255, 255, 255, 0.5) 50%, rgba(255, 255, 255, 0.26) 74%, rgba(0, 0, 0, 0.17) 100%);
+  --ph-a: #d8d2c4;
+  --ph-b: #c9c2b2;
+  --ph-c: #d2cbbc;
+  --ph-ink: #2a251e;
+  --ph-muted: #52483e;
 }
 
 /* ── UMBRA · Mystery · noir (fog + shadow, one amber lamp) ── */
 [data-skin='umbra'][data-mode='dark'] {
-  --bg0: #0c0d10;
-  --bg1: #14161b;
-  --ink: #e9eaed;
-  --muted: #9398a3;
-  --primary: #e0a84a;
-  --accent-fill: #7e5a16; /* dark amber behind white text */
-  --accent-ink: #e0a84a; /* amber eyebrow on the dark plate */
+  --bg0: #101216;
+  --bg1: #14171d;
+  --ink: #e8e4da;
+  --muted: #99a3ad;
+  --primary: #d9a441; /* brass */
+  --accent-fill: #d9a441; /* dark amber behind white text */
+  --accent-ink: #d9a441; /* amber eyebrow on the dark plate */
   --violet: #6b7785;
   --blue: #3f4a5a;
-  --gold: #e0a84a;
+  --gold: #d9a441 /* brass — marks what matters */;
   --card: #15171c;
-  --card-solid: #15171c;
+  --card-solid: #191c22;
   --card-2: #1d2026;
   --line: rgba(224, 168, 74, 0.18);
   --shadow: 0 22px 60px rgba(0, 0, 0, 0.6);
@@ -673,27 +748,47 @@
   --glow-d: #e0a84a;
   --star: #cfd3da;
   --fog: rgba(60, 70, 85, 0.18);
-  --on-primary: #ffffff;
+  --on-primary: #23201a /* engraved — dark ink on brass */;
   --vignette: rgba(2, 3, 5, 0.66);
   --grain-opacity: 0.05;
-  --font-display: 'Bodoni Moda', Georgia, serif;
-  --font-sans: 'Inter', system-ui, sans-serif;
-  --font-mono: 'Inter', system-ui, sans-serif;
+  --font-display: 'Libre Caslon Text', Georgia, serif; /* case subjects only */
+  --font-sans: 'Courier Prime', ui-monospace, monospace; /* everything typed */
+  --font-mono: 'Courier Prime', ui-monospace, monospace;
+  /* Fable 5 material (chunk 2) — brass door plate, fog-cloth ledger, typed paper strips, red thread */
+  --slate: #7e8ea0;
+  --thread: #c94f3d;
+  --paper: #e2d9c2;
+  --paper-ink: #2a251c;
+  --cta-hi: #e8bc5a;
+  --cta-lo: #c1902f;
+  --cta-ink: #2a2214;
+  --cta-border: rgba(90, 66, 14, 0.7);
+  --cta-shadow: inset 0 1px 0 rgba(255, 240, 200, 0.6), inset 0 -6px 12px rgba(70, 50, 10, 0.3), 0 10px 24px rgba(0, 0, 0, 0.5);
+  --spine-hi: #181c22;
+  --spine-lo: #272c35;
+  --spine-title: #2a251c; /* typed on the pasted strip (--paper) */
+  --spine-muted: #5d574a;
+  --spine-sheen: linear-gradient(90deg, rgba(0, 0, 0, 0.48) 0%, rgba(255, 255, 255, 0.05) 18%, rgba(255, 255, 255, 0.1) 50%, rgba(255, 255, 255, 0.03) 74%, rgba(0, 0, 0, 0.5) 100%);
+  --ph-a: #2a2f38;
+  --ph-b: #1c2028;
+  --ph-c: #242932;
+  --ph-ink: #e8e4da;
+  --ph-muted: #99a3ad;
 }
 
 [data-skin='umbra'][data-mode='light'] {
-  --bg0: #eceef1;
-  --bg1: #e2e5ea;
-  --ink: #14161a;
-  --muted: #565c66;
-  --primary: #8a6412; /* dark amber so lamp-accent text clears AA on fog grey */
-  --accent-fill: #7e5a16;
-  --accent-ink: #7e5a16;
+  --bg0: #edeae2;
+  --bg1: #e4e0d4;
+  --ink: #23201a;
+  --muted: #5b656f; /* AA: specimen #626c76 = 4.45:1 on the fog page; darkened */
+  --primary: #7a5d1b; /* ledger bronze — AA for accent text on the fog page */
+  --accent-fill: #8a6a1f;
+  --accent-ink: #7a5d1b; /* AA: ledger bronze = 4.2:1 on the page; darkened for text */
   --violet: #5a6470;
   --blue: #3f4a5a;
-  --gold: #8a6412;
+  --gold: #8a6a1f /* ledger bronze in daylight */;
   --card: #f8f9fb;
-  --card-solid: #f8f9fb;
+  --card-solid: #f6f4ee;
   --card-2: #e9ebef;
   --line: rgba(126, 90, 22, 0.26);
   --shadow: 0 22px 50px rgba(40, 45, 55, 0.16);
@@ -703,12 +798,31 @@
   --glow-d: #d8c08a;
   --star: #8a94a4;
   --fog: rgba(120, 130, 145, 0.1);
-  --on-primary: #ffffff;
+  --on-primary: #fbf6e8;
   --vignette: rgba(70, 80, 95, 0.08);
   --grain-opacity: 0.03;
-  --font-display: 'Bodoni Moda', Georgia, serif;
-  --font-sans: 'Inter', system-ui, sans-serif;
-  --font-mono: 'Inter', system-ui, sans-serif;
+  --font-display: 'Libre Caslon Text', Georgia, serif; /* case subjects only */
+  --font-sans: 'Courier Prime', ui-monospace, monospace; /* everything typed */
+  --font-mono: 'Courier Prime', ui-monospace, monospace;
+  --slate: #55636f;
+  --thread: #a43c2c;
+  --paper: #f8f2e2;
+  --paper-ink: #2a251c;
+  --cta-hi: #8a6a1f; /* AA: specimen bronze read 3.8:1 under the cream ink; deepened */
+  --cta-lo: #6e5518;
+  --cta-ink: #f6f0dc;
+  --cta-border: rgba(70, 52, 10, 0.6);
+  --cta-shadow: inset 0 1px 0 rgba(255, 244, 205, 0.35), 0 8px 22px rgba(110, 90, 40, 0.25);
+  --spine-hi: #c8c2b2;
+  --spine-lo: #b7b1a0;
+  --spine-title: #2a251c;
+  --spine-muted: #55636f;
+  --spine-sheen: linear-gradient(90deg, rgba(0, 0, 0, 0.15) 0%, rgba(255, 255, 255, 0.32) 18%, rgba(255, 255, 255, 0.5) 50%, rgba(255, 255, 255, 0.26) 74%, rgba(0, 0, 0, 0.16) 100%);
+  --ph-a: #d6d0c0;
+  --ph-b: #c5bfae;
+  --ph-c: #cfc9b9;
+  --ph-ink: #23201a;
+  --ph-muted: #3e474f; /* AA: specimen #55636f = 4.0:1 on the fog board; darkened */
 }
 
 /* ── FOLIO · Literary · editorial (cream paper, ink-navy, archival serif) ── */
@@ -1002,6 +1116,18 @@
 }
 @keyframes sig-blink { /* Aphelion: status dot */
   0%, 100% { opacity: 1; } 50% { opacity: 0.2; }
+}
+@keyframes gleam { /* Grimoire: gold leaf catches the candle (reduced motion: held warm) */
+  0%, 78%, 100% { filter: brightness(1); }
+  86% { filter: brightness(1.35) drop-shadow(0 0 6px color-mix(in srgb, var(--gold) 60%, transparent)); }
+}
+@keyframes crackdraw { /* Marrow: the house settles — drawn once, then still */
+  from { stroke-dashoffset: 100; }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes fogdrift { /* Gaslight: fog crosses the lit window */
+  from { transform: translateX(-40%); }
+  to { transform: translateX(40%); }
 }
 @keyframes radar-sweep { /* Aphelion: cycle-ring radar sweep (rides .rv-anim) */
   to { transform: rotate(360deg); }

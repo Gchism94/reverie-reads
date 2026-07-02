@@ -85,11 +85,11 @@ export const SKINS: Record<SkinId, Skin> = {
     id: 'umbra',
     label: 'Umbra',
     genre: 'Mystery',
-    tagline: 'Fog, shadow, and one amber lamp.',
+    tagline: 'The unsolved case at the yellow window.',
     starDensity: 24,
     divider: 'umbra',
     labels: NEUTRAL_LABELS,
-    displayFont: "'Bodoni Moda', Georgia, serif",
+    displayFont: "'Libre Caslon Text', Georgia, serif", // Fable 5 "Gaslight" identity (id stays umbra)
   },
   folio: {
     id: 'folio',

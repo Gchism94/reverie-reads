@@ -71,35 +71,40 @@ const PLATE: Partial<Record<SkinId, PlateOrnament>> = {
     ),
   },
   grimoire: {
-    eyebrowColor: 'var(--accent-ink)',
+    // Fable 5: the incipit — manuscripts open in red; the ❖ sigil crowns the plate
+    eyebrowColor: 'var(--rubric)',
     subtitleStyle: { fontFamily: 'var(--font-display)', fontStyle: 'italic' },
     ornament: (
-      // illuminated alchemical sun, gold leaf, over the top rule
       <span
         aria-hidden
         className="pointer-events-none absolute left-1/2 top-[-2px] -translate-x-1/2 text-[14px] leading-none"
         style={{ color: 'var(--accent)' }}
       >
-        ☉
+        ❖
       </span>
     ),
   },
   marrow: {
+    // Fable 5: the specimen card — the № pasted at its head does the identifying
     eyebrowColor: 'var(--accent-ink)',
-    subtitleStyle: { fontFamily: 'var(--font-display)', fontStyle: 'italic' },
+    subtitleStyle: { fontFamily: 'var(--font-sans)', letterSpacing: '0.1em', textTransform: 'uppercase', fontSize: '11px' },
     ornament: (
-      // a single oxblood dagger marks the plate
       <span
         aria-hidden
-        className="pointer-events-none absolute left-1/2 top-[-3px] -translate-x-1/2 text-[13px] leading-none"
-        style={{ color: 'var(--accent)' }}
+        className="pointer-events-none absolute left-1/2 top-[-9px] -translate-x-1/2 px-1.5 py-0.5 text-[9px] font-bold leading-none"
+        style={{ background: 'var(--paper)', color: 'var(--paper-ink)', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.35)', fontFamily: 'var(--font-sans)', letterSpacing: '0.08em' }}
       >
-        †
+        №
       </span>
     ),
   },
   // Stage 3 — a single signature glyph over the top rule, in the skin's accent.
-  umbra: { eyebrowColor: 'var(--accent-ink)', subtitleStyle: { fontFamily: 'var(--font-display)', fontStyle: 'italic' }, ornament: topGlyph('◆') },
+  // Fable 5 Gaslight: the docket — the case number typed on the tab; REPORTED BY beneath
+  umbra: {
+    eyebrowColor: 'var(--accent-ink)',
+    subtitleStyle: { fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', textTransform: 'uppercase', fontSize: '10.5px' },
+    ornament: topGlyph('▣'),
+  },
   folio: { eyebrowColor: 'var(--accent-ink)', subtitleStyle: { fontFamily: 'var(--font-display)', fontStyle: 'italic' }, ornament: topGlyph('❡') },
   hearth: { eyebrowColor: 'var(--accent-ink)', subtitleStyle: { fontFamily: 'var(--font-sans)' }, ornament: topGlyph('❀') },
   almanac: { eyebrowColor: 'var(--accent-ink)', subtitleStyle: { fontFamily: 'var(--font-mono)', letterSpacing: '0.04em' }, ornament: topGlyph('‡') },
