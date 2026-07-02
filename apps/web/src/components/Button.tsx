@@ -6,11 +6,13 @@ import type { ButtonHTMLAttributes, CSSProperties, ReactNode } from 'react'
  *  obviously a button (distinctive surface, conventional interaction). */
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'icon'
 
+// Material lives in the .skin-btn-* classes (skin-kit.css) so each skin can recast the object —
+// Tryst's ivory calling card / ticket rule / wax seal, Aphelion's machined key — without touching JSX.
 const VARIANT: Record<ButtonVariant, { cls: string; style: CSSProperties }> = {
-  primary: { cls: 'h-10 px-5 text-[14px]', style: { background: 'var(--accent-fill)', color: 'var(--on-primary)' } },
-  secondary: { cls: 'h-10 px-5 text-[14px] text-ink', style: { background: 'transparent', border: 'var(--border-width) solid var(--line)' } },
+  primary: { cls: 'skin-btn-primary h-10 px-5 text-[14px]', style: {} },
+  secondary: { cls: 'skin-btn-secondary h-10 px-5 text-[14px]', style: {} },
   ghost: { cls: 'h-10 px-3 text-[14px] text-muted hover:text-ink', style: { background: 'transparent' } },
-  icon: { cls: 'grid h-10 w-10 place-items-center text-[16px] text-ink', style: { background: 'var(--field)', border: 'var(--border-width) solid var(--line)' } },
+  icon: { cls: 'skin-btn-icon grid h-10 w-10 place-items-center text-[16px]', style: {} },
 }
 
 export function Button({

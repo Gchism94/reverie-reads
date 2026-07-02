@@ -30,11 +30,11 @@ type Tok = {
 }
 
 const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
-  'tryst/dark': { bg0: '#0b0612', cardSolid: '#1c0d28', ink: '#f6e9f1', muted: '#b08fae', accentFill: '#cf2f66', onPrimary: '#ffffff', accentInk: '#f0b14e', markAccent: '#f0b14e' },
-  'tryst/light': { bg0: '#fbeee9', cardSolid: '#fff8f5', ink: '#2a1320', muted: '#86566f', accentFill: '#c52e5f', onPrimary: '#ffffff', accentInk: '#8a5a1f', markAccent: '#c9842f' },
+  'tryst/dark': { bg0: '#0b0612', cardSolid: '#1d0e29', ink: '#f5e9f0', muted: '#c2a3bd', accentFill: '#a3244a', onPrimary: '#ffffff', accentInk: '#f0b14e', markAccent: '#f0b14e' },
+  'tryst/light': { bg0: '#f8eee4', cardSolid: '#fdf8f1', ink: '#351523', muted: '#7d556b', accentFill: '#9c2246', onPrimary: '#ffffff', accentInk: '#8a5717', markAccent: '#8a5717' },
   'grimoire/dark': { bg0: '#0c0f0b', cardSolid: '#161b12', ink: '#ece7d6', muted: '#9aa384', accentFill: '#2f9e74', onPrimary: '#08110b', accentInk: '#d4af37', markAccent: '#d4af37' },
   'grimoire/light': { bg0: '#f1e7cf', cardSolid: '#f7efd9', ink: '#2a2418', muted: '#665e49', accentFill: '#1a6e4c', onPrimary: '#ffffff', accentInk: '#6e5518', markAccent: '#b08828' },
-  'aphelion/dark': { bg0: '#05070d', cardSolid: '#0d1320', ink: '#e6edf7', muted: '#7d8aa6', accentFill: '#1f8fa3', onPrimary: '#02080a', accentInk: '#4fd1e0', markAccent: '#4fd1e0' },
+  'aphelion/dark': { bg0: '#05070d', cardSolid: '#0c1220', ink: '#e6edf7', muted: '#8595b4', accentFill: '#1f8fa3', onPrimary: '#02080a', accentInk: '#4fd1e0', markAccent: '#4fd1e0' },
   'aphelion/light': { bg0: '#eef3fb', cardSolid: '#f7fafe', ink: '#0e1626', muted: '#51607a', accentFill: '#0a6e80', onPrimary: '#ffffff', accentInk: '#0a6e80', markAccent: '#0a6e80' },
   'marrow/dark': { bg0: '#0a0a0b', cardSolid: '#161315', ink: '#e8e3da', muted: '#98907f', accentFill: '#8f3535', onPrimary: '#ffffff', accentInk: '#d06a6a', markAccent: '#d06a6a' },
   'marrow/light': { bg0: '#ece8e0', cardSolid: '#f4f0e8', ink: '#1b1815', muted: '#6a6358', accentFill: '#8a3232', onPrimary: '#ffffff', accentInk: '#8a3232', markAccent: '#8a3232' },
@@ -48,6 +48,45 @@ const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
   'almanac/light': { bg0: '#f2f1ec', cardSolid: '#faf9f5', ink: '#22252a', muted: '#616771', accentFill: '#235456', onPrimary: '#ffffff', accentInk: '#235456', markAccent: '#2c6b6e' },
   'bloom/dark': { bg0: '#16111f', cardSolid: '#1e1730', ink: '#f1ecfb', muted: '#a99fc4', accentFill: '#6a3fd0', onPrimary: '#ffffff', accentInk: '#b794ff', markAccent: '#b794ff' },
   'bloom/light': { bg0: '#fbf4fd', cardSolid: '#fefbff', ink: '#221b2e', muted: '#635c85', accentFill: '#6a2fd0', onPrimary: '#ffffff', accentInk: '#6a2fd0', markAccent: '#7c3aed' },
+}
+
+/** Fable 5 material surfaces (chunk 1): CTA text on its card, spine type on the binding (title sits
+ *  centred, so it's tested on the gradient's mid), placeholder type on each board stop (it floats
+ *  across the whole plate). Alpha inks are composited over the surface before measuring. */
+type Fable5 = {
+  ctaInk: string
+  ctaHi: string
+  ctaLo: string
+  spineTitle: string
+  spineMuted: string
+  spineLo: string
+  spineHi: string
+  phInk: string
+  phMutedInk: string
+  phMutedAlpha: number
+  phStops: [string, string, string]
+}
+const FABLE5: Partial<Record<`${SkinId}/${'dark' | 'light'}`, Fable5>> = {
+  'tryst/dark': {
+    ctaInk: '#5a1f38', ctaHi: '#f7eede', ctaLo: '#e9d7bc',
+    spineTitle: '#f0b14e', spineMuted: '#caa9c4', spineLo: '#1f0a18', spineHi: '#3c1428',
+    phInk: '#ffeede', phMutedInk: '#ffdec8', phMutedAlpha: 0.78, phStops: ['#2a1030', '#4a163a', '#200c1e'],
+  },
+  'tryst/light': {
+    ctaInk: '#fff4ea', ctaHi: '#ae2b52', ctaLo: '#8e1f42',
+    spineTitle: '#6c4313', spineMuted: '#60394b', spineLo: '#d8a6b4', spineHi: '#ecccd4',
+    phInk: '#3a1626', phMutedInk: '#6b4459', phMutedAlpha: 1, phStops: ['#f3e2d8', '#e8cbc9', '#eed7cc'],
+  },
+  'aphelion/dark': {
+    ctaInk: '#02080a', ctaHi: '#6fdfec', ctaLo: '#3ec2d2',
+    spineTitle: '#e6edf7', spineMuted: '#8595b4', spineLo: '#0a1220', spineHi: '#1a2a42',
+    phInk: '#dff4fb', phMutedInk: '#bdf3fa', phMutedAlpha: 0.72, phStops: ['#0a1530', '#142a52', '#08111f'],
+  },
+  'aphelion/light': {
+    ctaInk: '#f2fbfd', ctaHi: '#0d8093', ctaLo: '#0a6e80',
+    spineTitle: '#0e1626', spineMuted: '#4d5d73', spineLo: '#c8d6e6', spineHi: '#e9f0f8',
+    phInk: '#0e1626', phMutedInk: '#51607a', phMutedAlpha: 1, phStops: ['#e8f0f9', '#cfdded', '#dfe9f4'],
+  },
 }
 
 const MODES = ['dark', 'light'] as const
@@ -99,6 +138,28 @@ describe('skin character kit contrast (text on the kit surfaces ≥ AA, every sk
           ['spine callsign / label (accent-ink) on binding', t.accentInk, base],
         ]
         for (const [name, fg, bg] of spinePairs) {
+          it(`${skin}/${mode} · ${name} clears ${AA}:1`, () => {
+            const r = ratio(fg, bg)
+            expect(r, `${skin}/${mode} ${name}: ${fg} on ${bg} = ${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(AA)
+          })
+        }
+      }
+
+      // Fable 5 designed surfaces (only present for the refined/designed skins)
+      const f5 = FABLE5[`${skin}/${mode}`]
+      if (f5) {
+        const f5pairs: [string, string, string][] = [
+          ['CTA text on the CTA card', f5.ctaInk, mixSrgb(f5.ctaHi, f5.ctaLo, 0.5)],
+          ['spine title on the binding (mid)', f5.spineTitle, mixSrgb(f5.spineLo, f5.spineHi, 0.5)],
+          ['spine author on the binding (mid)', f5.spineMuted, mixSrgb(f5.spineLo, f5.spineHi, 0.5)],
+          ...f5.phStops.map((stop, i): [string, string, string] => [
+            `placeholder title on board stop ${i}`, f5.phInk, stop,
+          ]),
+          ...f5.phStops.map((stop, i): [string, string, string] => [
+            `placeholder author on board stop ${i}`, mixSrgb(f5.phMutedInk, stop, f5.phMutedAlpha), stop,
+          ]),
+        ]
+        for (const [name, fg, bg] of f5pairs) {
           it(`${skin}/${mode} · ${name} clears ${AA}:1`, () => {
             const r = ratio(fg, bg)
             expect(r, `${skin}/${mode} ${name}: ${fg} on ${bg} = ${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(AA)

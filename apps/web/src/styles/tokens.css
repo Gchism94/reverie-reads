@@ -61,20 +61,39 @@
   --ornament-frame: transparent; /* inset hairline frame colour on plates (Tryst gilt double-rule) */
   --mark-accent: var(--accent); /* card-mark glyph accent (skin signature; AA-resolved per surface in JS) */
   --mark-radius: var(--radius-control); /* card-mark chip silhouette (pill vs notched square) */
+
+  /* ── Fable 5 material values (chunk 1) — neutral defaults; designed skins override per mode.
+     CTA = the primary button's material (ivory calling card / machined key); plate = small instrument
+     surfaces (chips, spine labels); spine-* = the bound-spine material; ph-* = the placeholder plate. ── */
+  --cta-hi: var(--accent-fill);
+  --cta-lo: var(--accent-fill);
+  --cta-ink: var(--on-primary);
+  --cta-border: transparent;
+  --cta-shadow: none;
+  --plate: var(--card-solid);
+  --gold-deep: color-mix(in srgb, var(--gold) 62%, #201505);
+  --spine-lo: var(--card-solid);
+  --spine-hi: var(--card-solid);
+  --spine-title: var(--ink); /* bound-spine title ink (gilt in Tryst dark; bronze in daylight for AA) */
+  --spine-muted: var(--muted);
+  --spine-sheen: none;
+  --spine-emboss: none;
+  --ph-glow: none;
 }
 
 /* ── Skin character · TRYST (Romance · gaslit New Orleans) — warm, ornate, gilded.
    Mode-independent (applies in both dark + light); palette stays per-mode above. ── */
 [data-skin='tryst'] {
   --accent: var(--gold);
-  --radius-control: 999px; /* full gilt pill */
-  --radius-card: 10px;
+  --radius-control: 999px; /* pills for chips + toggle; the CTA is a 4px invitation card (see .skin-btn-primary) */
+  --radius-card: 12px; /* Fable 5: plates 12 */
   --radius-panel: 14px;
   --ctl-clip: none;
-  --label-font: var(--font-display); /* Fraunces on controls — the warm-serif signal */
+  --label-font: var(--font-sans); /* Fable 5 split: labels are Hanken caps… */
+  --control-font: var(--font-display); /* …controls speak Fraunces */
   --label-transform: uppercase;
   --control-transform: none; /* buttons stay title-case Fraunces */
-  --label-tracking: 0.14em;
+  --label-tracking: 0.16em; /* Fable 5: ls .16–.25em */
   --label-weight: 600;
   --numeral-font: var(--font-display); /* Fraunces numerals */
   --numeral-feature: 'onum' 1; /* old-style figures */
@@ -302,17 +321,17 @@
 [data-skin='tryst'][data-mode='dark'] {
   --bg0: #0b0612;
   --bg1: #15091f;
-  --ink: #f6e9f1;
-  --muted: #b08fae;
-  --primary: #e83a78;
-  --accent-fill: #cf2f66; /* solid fill behind white text (AA: white 4.9:1) */
+  --ink: #f5e9f0;
+  --muted: #c2a3bd;
+  --primary: #e0517d; /* carmine — glyph scale only (beads, hearts) */
+  --accent-fill: #a3244a; /* garnet — the de-pinked fill (white clears AA) */
   --accent-ink: #f0b14e; /* gilt eyebrow text (gold clears AA on the dark plate) */
   --violet: #7b3fa0;
   --blue: #16266a;
   --gold: #f0b14e;
   --card: rgba(42, 21, 58, 0.55);
   --card-2: rgba(28, 13, 40, 0.72);
-  --card-solid: #1c0d28;
+  --card-solid: #1d0e29;
   --line: rgba(240, 177, 78, 0.26);
   --hair: rgba(240, 177, 78, 0.55);
   --chip: rgba(255, 255, 255, 0.055);
@@ -333,22 +352,51 @@
   --font-mono: 'Hanken Grotesk', system-ui, sans-serif;
 }
 
+/* Tryst material values are skin-scoped (NOT part of the :root default-palette fallback above,
+   which other skins inherit for palette tokens they don't set). */
+[data-skin='tryst'][data-mode='dark'] {
+  /* Fable 5 material values (chunk 1) — the ivory calling-card CTA, wax seal, bound spine, cloth-boards plate */
+  --cta-hi: #f7eede;
+  --cta-lo: #e9d7bc;
+  --cta-ink: #5a1f38;
+  --cta-border: rgba(240, 177, 78, 0.55);
+  --cta-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65), inset 0 -8px 16px rgba(154, 106, 36, 0.16), 0 12px 28px rgba(0, 0, 0, 0.5), 0 2px 5px rgba(0, 0, 0, 0.4);
+  --seal-hi: #c23a60;
+  --seal-mid: #8e2443;
+  --seal-lo: #651830;
+  --seal-ink: #ffdce6;
+  --gold-deep: #9c6a24;
+  --spine-lo: #1f0a18;
+  --spine-hi: #3c1428;
+  --spine-title: #f0b14e; /* gilt-stamped */
+  --spine-muted: #caa9c4;
+  --spine-sheen: linear-gradient(90deg, rgba(0, 0, 0, 0.52) 0%, rgba(255, 255, 255, 0.05) 16%, rgba(255, 255, 255, 0.13) 50%, rgba(255, 255, 255, 0.03) 72%, rgba(0, 0, 0, 0.56) 100%);
+  --spine-emboss: 0 1px 1px rgba(0, 0, 0, 0.7), 0 -1px 0 rgba(255, 238, 200, 0.22);
+  --ph-a: #2a1030;
+  --ph-b: #4a163a;
+  --ph-c: #200c1e;
+  --ph-ink: #ffeede;
+  --ph-muted: rgba(255, 222, 200, 0.78);
+  --ph-glow: radial-gradient(120% 60% at 80% 0%, rgba(240, 177, 78, 0.16), transparent 55%);
+}
+
+
 [data-skin='tryst'][data-mode='light'] {
-  --bg0: #fbeee9;
-  --bg1: #f5e0e4;
-  --ink: #2a1320;
-  --muted: #86566f;
-  --primary: #c52e5f;
-  --accent-fill: #c52e5f;
-  --accent-ink: #8a5a1f; /* deep gilt — gold darkened so the eyebrow clears AA on the cream plate */
+  --bg0: #f8eee4;
+  --bg1: #f3ddd2;
+  --ink: #351523;
+  --muted: #7d556b;
+  --primary: #b83b64; /* carmine (light) — glyph scale only */
+  --accent-fill: #9c2246; /* garnet (light) */
+  --accent-ink: #8a5717; /* bronze — light-mode brass per the Fable 5 strip */
   --violet: #7b3fa0;
   --blue: #2e3a73;
-  --gold: #c9842f;
+  --gold: #8a5717; /* brass goes bronze in daylight */
   --card: rgba(255, 252, 250, 0.72);
   --card-2: rgba(255, 247, 245, 0.88);
-  --card-solid: #fff8f5;
-  --line: rgba(201, 132, 47, 0.32);
-  --hair: rgba(201, 132, 47, 0.6);
+  --card-solid: #fdf8f1;
+  --line: rgba(138, 87, 23, 0.3);
+  --hair: rgba(138, 87, 23, 0.55);
   --chip: rgba(42, 19, 32, 0.05);
   --chip-border: rgba(42, 19, 32, 0.14);
   --field: rgba(42, 19, 32, 0.04);
@@ -362,6 +410,29 @@
   --on-primary: #ffffff;
   --vignette: rgba(244, 214, 205, 0.55);
   --grain-opacity: 0.04;
+  /* Fable 5 material values — in daylight the CTA card flips to garnet (letterpress needs the dark fill) */
+  --cta-hi: #ae2b52;
+  --cta-lo: #8e1f42;
+  --cta-ink: #fff4ea;
+  --cta-border: rgba(108, 67, 19, 0.5);
+  --cta-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), inset 0 -8px 16px rgba(0, 0, 0, 0.18), 0 10px 24px rgba(150, 60, 90, 0.35);
+  --seal-hi: #b53257;
+  --seal-mid: #8e1f42;
+  --seal-lo: #6b1730;
+  --seal-ink: #ffe9f0;
+  --gold-deep: #6c4313;
+  --spine-lo: #d8a6b4;
+  --spine-hi: #ecccd4;
+  --spine-title: #6c4313; /* AA: specimen gold #8a5717 = 3.5:1 on the light leather; deep bronze clears */
+  --spine-muted: #60394b; /* AA: specimen #8a5d72 = 3.1:1; plum-muted mix clears */
+  --spine-sheen: linear-gradient(90deg, rgba(0, 0, 0, 0.16) 0%, rgba(255, 255, 255, 0.34) 18%, rgba(255, 255, 255, 0.55) 50%, rgba(255, 255, 255, 0.28) 72%, rgba(0, 0, 0, 0.17) 100%);
+  --spine-emboss: 0 1px 0 rgba(255, 255, 255, 0.55), 0 -1px 0 rgba(70, 42, 12, 0.28);
+  --ph-a: #f3e2d8;
+  --ph-b: #e8cbc9;
+  --ph-c: #eed7cc;
+  --ph-ink: #3a1626;
+  --ph-muted: #6b4459; /* AA: specimen #7d556b = 4.1:1 on the mid board; darkened in-family */
+  --ambient-texture-blend: multiply; /* pressed linen (Fable 5 light recipe) */
 }
 
 /* ── GRIMOIRE · Fantasy · vellum, oak-gall ink, gold leaf, arcane emerald ── */
@@ -430,15 +501,15 @@
   --bg0: #05070d;
   --bg1: #0a0f1c;
   --ink: #e6edf7;
-  --muted: #7d8aa6;
+  --muted: #8595b4;
   --primary: #4fd1e0;
   --accent-fill: #1f8fa3;
   --accent-ink: #4fd1e0; /* instrument-cyan eyebrow (clears AA on the dark plate) */
   --violet: #6b8cff;
   --blue: #3a52c4;
   --gold: #b9c7e0;
-  --card: #0d1320;
-  --card-solid: #0d1320;
+  --card: #0c1220;
+  --card-solid: #0c1220;
   --card-2: #121a2b;
   --line: rgba(79, 209, 224, 0.18);
   --shadow: 0 22px 60px rgba(0, 0, 0, 0.6);
@@ -454,6 +525,22 @@
   --font-display: 'Space Grotesk', system-ui, sans-serif;
   --font-sans: 'Space Grotesk', system-ui, sans-serif;
   --font-mono: 'Space Mono', ui-monospace, monospace;
+  /* Fable 5 material values — machined key CTA, instrument plate, racked-specimen spine */
+  --plate: #080e1a;
+  --cta-hi: #6fdfec;
+  --cta-lo: #3ec2d2;
+  --cta-ink: #02080a;
+  --cta-border: rgba(79, 209, 224, 0.8);
+  --cta-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), inset 0 -5px 10px rgba(2, 8, 10, 0.18), 0 0 0 1px rgba(79, 209, 224, 0.25), 0 8px 22px rgba(79, 209, 224, 0.3);
+  --spine-lo: #0a1220;
+  --spine-hi: #1a2a42;
+  --spine-muted: #8595b4;
+  --spine-sheen: linear-gradient(90deg, rgba(0, 0, 0, 0.42) 0%, rgba(255, 255, 255, 0.04) 22%, rgba(255, 255, 255, 0.1) 50%, rgba(255, 255, 255, 0.03) 76%, rgba(0, 0, 0, 0.46) 100%);
+  --ph-a: #0a1530;
+  --ph-b: #142a52;
+  --ph-c: #08111f;
+  --ph-ink: #dff4fb;
+  --ph-muted: rgba(189, 243, 250, 0.72);
 }
 
 [data-skin='aphelion'][data-mode='light'] {
@@ -484,6 +571,22 @@
   --font-display: 'Space Grotesk', system-ui, sans-serif;
   --font-sans: 'Space Grotesk', system-ui, sans-serif;
   --font-mono: 'Space Mono', ui-monospace, monospace;
+  /* Fable 5 material values — ice plate, teal key */
+  --plate: #f3f8fd;
+  --cta-hi: #0d8093;
+  --cta-lo: #0a6e80;
+  --cta-ink: #f2fbfd;
+  --cta-border: rgba(8, 86, 100, 0.7);
+  --cta-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -5px 10px rgba(2, 8, 10, 0.15), 0 8px 20px rgba(10, 110, 128, 0.25);
+  --spine-lo: #c8d6e6;
+  --spine-hi: #e9f0f8;
+  --spine-muted: #4d5d73; /* AA: specimen #566880 = 4.4:1 on the pale metal; darkened */
+  --spine-sheen: linear-gradient(90deg, rgba(0, 0, 0, 0.14) 0%, rgba(255, 255, 255, 0.32) 22%, rgba(255, 255, 255, 0.55) 50%, rgba(255, 255, 255, 0.28) 76%, rgba(0, 0, 0, 0.15) 100%);
+  --ph-a: #e8f0f9;
+  --ph-b: #cfdded;
+  --ph-c: #dfe9f4;
+  --ph-ink: #0e1626;
+  --ph-muted: #51607a;
 }
 
 /* ── MARROW · Horror · bone, ash, oxblood, creeping fog ── */

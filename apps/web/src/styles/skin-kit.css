@@ -5,7 +5,6 @@
 /* Control silhouette + feel (buttons, chips, selects). */
 .skin-control {
   border-radius: var(--radius-control);
-  clip-path: var(--ctl-clip);
   font-family: var(--control-font);
   font-weight: var(--label-weight);
   text-transform: var(--control-transform);
@@ -81,4 +80,75 @@
   border: 1px solid var(--ornament-frame);
   border-radius: calc(var(--radius-panel) - 5px);
   pointer-events: none;
+}
+
+/* ── Fable 5 controls layer — objects, not widgets (chunk 1). The Button variants read these
+   material classes; every value is a token, so each skin casts its own object: Tryst an ivory
+   calling card / ticket rule / wax seal, Aphelion a machined key / unpowered cut / instrument plate.
+   The corner notch (--ctl-clip) belongs to the buttons alone — never chips, selects, or tags. ── */
+.skin-btn-primary {
+  clip-path: var(--ctl-clip);
+  background: linear-gradient(180deg, var(--cta-hi), var(--cta-lo));
+  color: var(--cta-ink);
+  border: var(--border-width) solid var(--cta-border);
+  box-shadow: var(--cta-shadow);
+}
+.skin-btn-secondary {
+  clip-path: var(--ctl-clip);
+  background: transparent;
+  color: var(--ink);
+  border: var(--border-width) solid var(--line);
+}
+.skin-btn-icon {
+  background: var(--field);
+  color: var(--ink);
+  border: var(--border-width) solid var(--line);
+}
+
+/* Tryst · the standing invitation — CTA is a letterpressed calling card (4px, gilt edge), the
+   secondary a ticket rule (hairlines top + bottom, open sides), the icon action a wax seal. */
+[data-skin='tryst'] .skin-btn-primary {
+  border-radius: 4px;
+}
+[data-skin='tryst'] .skin-btn-secondary {
+  border-radius: 0;
+  border: 0;
+  border-top: 1px solid var(--hair);
+  border-bottom: 1px solid var(--hair);
+}
+[data-skin='tryst'] .skin-btn-secondary:hover {
+  background: color-mix(in srgb, var(--gold) 8%, transparent);
+}
+[data-skin='tryst'] .skin-btn-icon {
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.3);
+  background: radial-gradient(circle at 35% 28%, var(--seal-hi), var(--seal-mid) 58%, var(--seal-lo));
+  color: var(--seal-ink);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.16), inset 0 -4px 9px rgba(0, 0, 0, 0.45), 0 8px 18px color-mix(in srgb, var(--seal-mid) 40%, transparent);
+}
+/* the guest-book line: an underline, not a box; typed text stays as typed but the field speaks italic serif */
+[data-skin='tryst'] .skin-field {
+  border-radius: 0;
+  border: 0;
+  border-bottom: 1px solid var(--hair);
+  background: transparent;
+  font-family: var(--font-display);
+  font-style: italic;
+}
+
+/* Aphelion · the cold archive — primary is the machined key (the ONE notched cut, engraved mono);
+   secondary is the same cut unpowered; the icon action is a plain instrument plate (2px, no notch). */
+[data-skin='aphelion'] .skin-btn-primary {
+  letter-spacing: 0.18em;
+}
+[data-skin='aphelion'] .skin-btn-secondary {
+  background: color-mix(in srgb, var(--plate) 60%, transparent);
+  color: var(--primary);
+  border: 1px solid color-mix(in srgb, var(--primary) 55%, transparent);
+}
+[data-skin='aphelion'] .skin-btn-icon {
+  border-radius: 2px;
+  background: var(--plate);
+  color: var(--primary);
+  border: 1px solid color-mix(in srgb, var(--primary) 55%, transparent);
 }

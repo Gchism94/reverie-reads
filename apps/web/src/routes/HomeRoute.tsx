@@ -13,6 +13,7 @@ import { LogReadForm } from '../book/dialogs'
 import { MONTHS } from '../library/constants'
 import { Frame, ProgressMeter, SectionHeader, SignatureRing, StatusTag } from '../components/Structure'
 import { hasOnboarded } from './OnboardingRoute'
+import { useVoice } from '../skin/labels'
 
 const YEAR = new Date().getFullYear()
 
@@ -33,6 +34,7 @@ function HomeScreen() {
   const { data: profile } = useProfile()
   const updateBook = useUpdateBook()
   const updateProfile = useUpdateProfile()
+  const voice = useVoice()
   const [finishing, setFinishing] = useState<Book | null>(null)
 
   const all = books ?? []
@@ -101,6 +103,12 @@ function HomeScreen() {
             {yearReads.length !== uniqueThisYear ? ` (${uniqueThisYear} books)` : ''} · {unread.length} unread
             waiting
           </div>
+          {goalTarget > 0 && uniqueThisYear >= goalTarget && (
+            /* the milestone line, spoken in the skin's voice (Fable 5 voice-pack quartet) */
+            <div className="mt-1 text-[13px] italic" style={{ color: 'var(--accent-ink)', fontFamily: 'var(--font-display)' }}>
+              {voice.milestone}
+            </div>
+          )}
           <div className="mt-2.5 flex flex-wrap gap-1.5">
             <StatusTag tone="muted">{all.length} books</StatusTag>
             <StatusTag glyph="♥">{all.filter((b) => b.fave).length} faves</StatusTag>
@@ -111,8 +119,7 @@ function HomeScreen() {
           <button
             type="button"
             onClick={() => void navigate({ to: '/match' })}
-            className="skin-control px-4 py-2 text-[13px]"
-            style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))', color: 'var(--on-primary)' }}
+            className="skin-control skin-btn-primary px-4 py-2 text-[13px]"
           >
             💘 Find my next read
           </button>
@@ -123,7 +130,7 @@ function HomeScreen() {
               const pick = unread[Math.floor(Math.random() * unread.length)]
               if (pick) openBook(pick.id)
             }}
-            className="skin-control border border-line px-4 py-2 text-[13px] text-ink"
+            className="skin-control skin-btn-secondary px-4 py-2 text-[13px]"
           >
             🎲 Surprise me
           </button>
