@@ -1,13 +1,18 @@
-import { useState, type ReactNode } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import { createRoute, useNavigate } from '@tanstack/react-router'
+import { useQueryClient } from '@tanstack/react-query'
 import { APP_NAME, SKIN_LIST, SKINS, type SkinId } from '@reverie/core'
 import { rootRoute } from './RootRoute'
 import { useSkinControls } from '../skin/controls'
-import { useEffectiveSkin } from '../skin/labels'
+import { useEffectiveSkin, useVoice } from '../skin/labels'
 import { useSkin } from '../skin/useSkin'
+import { useBooks } from '../data/books'
+import { importDetectedExport, type ImportExportResult } from '../data/importLibrary'
+import { fileToCsvText } from '../data/xlsxAdapter'
 import { Button } from '../components/Button'
-import { Label } from '../components/Label'
+import { Label, StatNumber } from '../components/Label'
 import { SkinDivider } from '../components/SkinDivider'
+import { DuplicateReview } from '../components/DuplicateReview'
 
 // First-run flag — honor-based / client-side (the project's v1 default), so a finished or skipped
 // onboarding never reappears. The trigger that sends a brand-new reader here lives in HomeRoute.
@@ -40,6 +45,16 @@ function Stage({ children }: { children: ReactNode }) {
   )
 }
 
+/** A small stat for the import summary — numeral in the skin's figure style. */
+function Stat({ n, l }: { n: number; l: string }) {
+  return (
+    <div className="border border-line px-3 py-2.5 text-center" style={{ background: 'var(--card-solid)', borderRadius: 'var(--radius-panel)' }}>
+      <StatNumber className="block text-[22px] font-bold text-ink">{n}</StatNumber>
+      <span className="skin-label mt-0.5 block text-[9.5px] text-muted">{l}</span>
+    </div>
+  )
+}
+
 /** Step dots — current step in the accent, the rest hairline. */
 function Progress({ step, total }: { step: number; total: number }) {
   return (
@@ -55,16 +70,47 @@ function Progress({ step, total }: { step: number; total: number }) {
   )
 }
 
+type ImportState = null | { phase: 'importing' } | { phase: 'done'; r: ImportExportResult }
+
 function OnboardingFlow() {
   const navigate = useNavigate()
   const { setSkin } = useSkinControls()
   const activeSkin = useEffectiveSkin()
+  const voice = useVoice()
   const isAdaptive = useSkin((s) => s.skin) === 'adaptive'
+  const qc = useQueryClient()
+  const existing = useBooks().data ?? []
+  const csvRef = useRef<HTMLInputElement>(null)
   const [step, setStep] = useState(0)
   const [picked, setPicked] = useState<SkinId | null>(null)
+  const [imp, setImp] = useState<ImportState>(null)
+  const [impErr, setImpErr] = useState<string | null>(null)
 
   const skinLabel = isAdaptive ? 'Adaptive' : SKINS[activeSkin].label
   const skinTagline = SKINS[activeSkin].tagline
+
+  // In-flow import — same engine as Settings (importDetectedExport auto-detects the column shape +
+  // folds duplicates in), then the shared DuplicateReview handles anything fuzzy. fileToCsvText turns
+  // a CSV or .xlsx into the same rows, so both file kinds run the one path.
+  const onFile = (input: HTMLInputElement) => {
+    const file = input.files?.[0]
+    input.value = ''
+    if (!file) return
+    setImpErr(null)
+    setImp({ phase: 'importing' })
+    void (async () => {
+      try {
+        const text = await fileToCsvText(file)
+        const r = await importDetectedExport(existing, text, { autoMerge: true })
+        await qc.invalidateQueries()
+        markOnboarded() // they've brought a library in — don't re-onboard
+        setImp({ phase: 'done', r })
+      } catch (e) {
+        setImpErr((e as Error).message)
+        setImp(null)
+      }
+    })()
+  }
 
   const leave = (to: '/library' | '/add' | '/settings') => {
     markOnboarded()
@@ -74,6 +120,74 @@ function OnboardingFlow() {
   const pickGenre = (id: SkinId) => {
     setPicked(id)
     setSkin(id) // dress the app live
+  }
+
+  // ── in-flow import (overrides the step view while a file is being brought in) ──
+  if (imp?.phase === 'importing') {
+    return (
+      <Stage>
+        <div className="text-center">
+          <Label className="block text-[11px] text-muted">Bringing it in</Label>
+          <h2 className="mt-3 text-[28px] leading-tight text-ink" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+            Building your library…
+          </h2>
+          <p className="mt-2 text-[14px] italic text-muted" style={{ fontFamily: 'var(--font-display)' }}>
+            {voice.loading}
+          </p>
+          <div className="mx-auto mt-6 h-1.5 w-[min(320px,80%)] overflow-hidden rounded-full" style={{ background: 'var(--chip)' }}>
+            <div
+              className="rv-anim h-full w-2/5 rounded-full"
+              style={{ background: 'linear-gradient(90deg, transparent, var(--accent), transparent)', animation: 'shim 1.4s ease-in-out infinite' }}
+            />
+          </div>
+        </div>
+      </Stage>
+    )
+  }
+  if (imp?.phase === 'done') {
+    const { r } = imp
+    return (
+      <Stage>
+        <Label className="block text-[11px] text-muted">Here’s what we found</Label>
+        <h2 className="mt-2 text-[28px] leading-tight text-ink" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+          Your library, mapped.
+        </h2>
+        <p className="mt-2 text-[14px] leading-relaxed text-muted">
+          Detected your {r.profile} export — brought in {r.added} new, folded {r.merged} into what you
+          had{r.readingOrders ? `, and stitched ${r.readingOrders} reading order${r.readingOrders > 1 ? 's' : ''}` : ''}.
+        </p>
+        <div className="mt-4 grid grid-cols-3 gap-2">
+          <Stat n={r.added} l="Added" />
+          <Stat n={r.merged} l="Merged" />
+          <Stat n={r.readingOrders} l="Orders" />
+        </div>
+        {r.review.length > 0 ? (
+          <div className="mt-5">
+            <span className="skin-label mb-1.5 block text-[10px]" style={{ color: 'var(--accent-ink)' }}>
+              Needs a look · {r.review.length}
+            </span>
+            <DuplicateReview
+              candidates={r.review}
+              onDone={() => {
+                setImp(null)
+                setStep(3)
+              }}
+            />
+          </div>
+        ) : (
+          <div className="mt-6 flex justify-end">
+            <Button
+              onClick={() => {
+                setImp(null)
+                setStep(3)
+              }}
+            >
+              Continue →
+            </Button>
+          </div>
+        )}
+      </Stage>
+    )
   }
 
   // ── step 0 · welcome (skin-dressed front door) ──
@@ -177,7 +291,7 @@ function OnboardingFlow() {
   // ── step 2 · bring your library in ──
   if (step === 2) {
     const options: { title: string; body: string; cta: string; onClick: () => void }[] = [
-      { title: 'Upload a file', body: 'Move a Goodreads or StoryGraph export over — CSV or XLSX, mapped for you.', cta: 'Choose a file →', onClick: () => leave('/settings') },
+      { title: 'Upload a file', body: 'Move a Goodreads or StoryGraph export — or any spreadsheet (CSV or Excel) — and we map the columns for you.', cta: 'Choose a file →', onClick: () => csvRef.current?.click() },
       { title: 'Scan books', body: 'Point your camera at a barcode and add titles one by one.', cta: 'Open scanner →', onClick: () => leave('/add') },
       { title: 'Start fresh', body: 'Add titles by hand as you go. Your shelves grow with you.', cta: 'Continue →', onClick: () => setStep(3) },
     ]
@@ -212,6 +326,13 @@ function OnboardingFlow() {
             </button>
           ))}
         </div>
+
+        {impErr && (
+          <p className="mt-3 text-[12.5px]" style={{ color: 'var(--primary)' }}>
+            That file didn’t import — {impErr}. A Goodreads or StoryGraph export (CSV or Excel) works best.
+          </p>
+        )}
+        <input ref={csvRef} type="file" accept=".csv,.xlsx,text/csv" hidden onChange={(e) => onFile(e.currentTarget)} />
 
         <div className="mt-6">
           <Button variant="ghost" onClick={() => setStep(1)}>
