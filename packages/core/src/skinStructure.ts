@@ -67,7 +67,7 @@ export const SKIN_STRUCTURE: Record<SkinId, SkinStructure> = {
     progress: 'dots',
     motif: 'fleuron',
     spine: { binding: 'leather', band: 'gilt', colophon: 'fleuron', label: 'panel', titleUpper: false },
-    placeholder: 'plain',
+    placeholder: 'cloth-boards',
   },
   aphelion: {
     sectionRule: 'tick-rule',
@@ -76,7 +76,7 @@ export const SKIN_STRUCTURE: Record<SkinId, SkinStructure> = {
     progress: 'segmented',
     motif: 'radar',
     spine: { binding: 'brushed', band: 'tick', colophon: 'led', label: 'callsign', titleUpper: true },
-    placeholder: 'plain',
+    placeholder: 'specimen-plate',
   },
   grimoire: NEUTRAL_STRUCTURE,
   marrow: NEUTRAL_STRUCTURE,
