@@ -12,6 +12,7 @@ import { importSessionKey } from '../data/importReview'
 import { deleteAccount } from '../data/account'
 import { bulkComplete, isIncomplete, type BulkProgress } from '../data/enrichLibrary'
 import { DuplicateReview } from '../components/DuplicateReview'
+import { fileToCsvText } from '../data/xlsxAdapter'
 import type { ReviewCandidate } from '../data/intake'
 import { SKIN_LIST, type Mode } from '@reverie/core'
 import { useSkin } from '../skin/useSkin'
@@ -99,20 +100,20 @@ function SettingsScreen() {
     }
   }
 
+  // fileToCsvText reads JSON/CSV as text and converts an .xlsx to CSV-identical rows, so the CSV
+  // import picker accepts spreadsheets too while the JSON restore picker is unaffected.
   const readFile = (input: HTMLInputElement, handler: (text: string) => Promise<void>) => {
     const file = input.files?.[0]
+    input.value = ''
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = async () => {
+    void (async () => {
       try {
-        await handler(String(reader.result))
+        await handler(await fileToCsvText(file))
         void qc.invalidateQueries()
       } catch (e) {
         setStatus(`Failed: ${(e as Error).message}`)
       }
-    }
-    reader.readAsText(file)
-    input.value = ''
+    })()
   }
 
   async function mergeOneGroup(group: Book[]) {
@@ -358,7 +359,7 @@ function SettingsScreen() {
               ⬆ Restore backup
             </button>
             <button type="button" onClick={() => csvRef.current?.click()} className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink" style={{ background: 'var(--field)' }}>
-              📚 Import a library export (CSV)
+              📚 Import a library export (CSV or Excel)
             </button>
             <input
               ref={restoreRef}
@@ -375,7 +376,7 @@ function SettingsScreen() {
             <input
               ref={csvRef}
               type="file"
-              accept=".csv,text/csv"
+              accept=".csv,.xlsx,text/csv"
               hidden
               onChange={(e) =>
                 readFile(e.currentTarget, async (text) => {
@@ -387,7 +388,11 @@ function SettingsScreen() {
                   setStatus(
                     `Imported (${r.profile}) · merged ${r.merged} · added ${r.added} new${
                       r.readingOrders ? ` · ${r.readingOrders} reading order${r.readingOrders > 1 ? 's' : ''}` : ''
-                    }${r.review.length ? ` · ${r.review.length} to review below` : ''}.`,
+                    }${r.review.length ? ` · ${r.review.length} to review below` : ''}.${
+                      r.truncatedIsbns
+                        ? ` Note: ${r.truncatedIsbns} ISBN${r.truncatedIsbns > 1 ? 's' : ''} may be missing a leading digit and might not match — re-export with ISBNs as text to fix.`
+                        : ''
+                    }`,
                   )
                 })
               }
@@ -411,9 +416,18 @@ function SettingsScreen() {
           </label>
 
           <p className="mt-3 text-[12.5px] text-muted">
-            Import a CSV export — Goodreads / StoryGraph, or a full library export (genres, tags,
-            series, contributors, read status). The shape is detected automatically; matches fold
-            into existing books, so re-importing is safe.
+            Import a CSV or Excel export — Goodreads / StoryGraph, or a full library export (genres,
+            tags, series, contributors, read status). The shape is detected automatically; matches
+            fold into existing books, so re-importing is safe. Starting from scratch?{' '}
+            <a
+              href="/Reverie_Import_Template.xlsx"
+              download
+              className="font-semibold underline decoration-dotted underline-offset-2"
+              style={{ color: 'var(--accent-ink)' }}
+            >
+              Download the Excel template
+            </a>{' '}
+            and fill it in.
           </p>
 
           {imported && (
