@@ -43,10 +43,12 @@ const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
   // Fable 5 chunk 3 — Marginalia ("folio"): the page never inverts, so BOTH modes are ink-on-bond;
   // dark mode dims the page and darkens the desk (the vignette). Marks over a placeholder paint
   // WHITE in both modes (--mark-on-ph override) — the scrim over bond is mid-tone, not dark.
-  'folio/dark': { bg0: '#ccc5b2', cardSolid: '#d9d2be', ink: '#2b2820', muted: '#524e44', accentFill: '#b1362b', onPrimary: '#fbf1ea', accentInk: '#8f2a21', markAccent: '#8f2a21' },
-  'folio/light': { bg0: '#e8e2d0', cardSolid: '#f8f4e8', ink: '#2b2820', muted: '#5d5950', accentFill: '#b1362b', onPrimary: '#fbf1ea', accentInk: '#9c2f25', markAccent: '#9c2f25' },
-  'hearth/dark': { bg0: '#1a130b', cardSolid: '#57482e', ink: '#f0e8d6', muted: '#c9b998', accentFill: '#b13a4e', onPrimary: '#fdf3ea', accentInk: '#f0a8b4', markAccent: '#f0a8b4' },
-  'hearth/light': { bg0: '#ecdfc6', cardSolid: '#e0d3b4', ink: '#3d3226', muted: '#5c5240', accentFill: '#b13a4e', onPrimary: '#fdf3ea', accentInk: '#9c3243', markAccent: '#9c3243' },
+  // MVP polish 1a/1b: Marginalia cooled toward bond (+ the desk pushed into the vignette ring);
+  // Hearth toasted deeper — the verdict's Hearth×Folio distance, re-AA'd.
+  'folio/dark': { bg0: '#c2beb1', cardSolid: '#d3cfc3', ink: '#2b2820', muted: '#4c483f', accentFill: '#b1362b', onPrimary: '#fbf1ea', accentInk: '#86271f', markAccent: '#86271f' },
+  'folio/light': { bg0: '#e7e4da', cardSolid: '#f7f5ee', ink: '#2b2820', muted: '#5d5950', accentFill: '#b1362b', onPrimary: '#fbf1ea', accentInk: '#9c2f25', markAccent: '#9c2f25' },
+  'hearth/dark': { bg0: '#1d1309', cardSolid: '#5c4829', ink: '#f0e8d6', muted: '#c9b998', accentFill: '#b13a4e', onPrimary: '#fdf3ea', accentInk: '#f0a8b4', markAccent: '#f0a8b4' },
+  'hearth/light': { bg0: '#e9d7b4', cardSolid: '#dccca2', ink: '#3d3226', muted: '#5c5240', accentFill: '#b13a4e', onPrimary: '#fdf3ea', accentInk: '#96303f', markAccent: '#96303f' },
   // Almanac: light-lead buff; dark is the tent at night — ink-block surfaces with band-ink type.
   // Its buff placeholder also stays light at night → white marks (--mark-on-ph override).
   'almanac/dark': { bg0: '#13120c', cardSolid: '#241f14', ink: '#e6ddc2', muted: '#b3a67e', accentFill: '#241f14', onPrimary: '#d9cda6', accentInk: '#e08a3c', markAccent: '#e08a3c' },
@@ -130,24 +132,24 @@ const FABLE5: Partial<Record<`${SkinId}/${'dark' | 'light'}`, Fable5>> = {
   // Chunk 3. Marginalia: type on the proof-paper galley + bond boards — the page in both modes.
   'folio/dark': {
     ctaInk: '#fbf1ea', ctaHi: '#d0463a', ctaLo: '#b1362b',
-    spineTitle: '#2b2820', spineMuted: '#4e4a42', spineLo: '#b5ae9c', spineHi: '#cfc8b6',
-    phInk: '#2b2820', phMutedInk: '#3a372f', phMutedAlpha: 1, phStops: ['#c4bdab', '#aaa390', '#b8b19e'],
+    spineTitle: '#2b2820', spineMuted: '#46433b', spineLo: '#adaa9e', spineHi: '#c6c3b8',
+    phInk: '#2b2820', phMutedInk: '#3a372f', phMutedAlpha: 1, phStops: ['#bcb8ac', '#a3a094', '#b1ada1'],
   },
   'folio/light': {
     ctaInk: '#fbf1ea', ctaHi: '#d0463a', ctaLo: '#b1362b',
-    spineTitle: '#2b2820', spineMuted: '#6b675e', spineLo: '#e8e2d0', spineHi: '#f6f2e4',
-    phInk: '#2b2820', phMutedInk: '#5d5950', phMutedAlpha: 1, phStops: ['#f6f2e4', '#e6e0ce', '#efe9d8'],
+    spineTitle: '#2b2820', spineMuted: '#6b675e', spineLo: '#e5e2d8', spineHi: '#f4f2ea',
+    phInk: '#2b2820', phMutedInk: '#5d5950', phMutedAlpha: 1, phStops: ['#f4f2ea', '#e4e1d6', '#edeae0'],
   },
   // Hearth: type on the oat linen — spine cloth + the linen board (the paper label is brighter still).
   'hearth/dark': {
     ctaInk: '#fdf3ea', ctaHi: '#c74e60', ctaLo: '#a03344',
-    spineTitle: '#f0e8d6', spineMuted: '#d4c6a8', spineLo: '#57482e', spineHi: '#6b5a3c',
-    phInk: '#f0e8d6', phMutedInk: '#e6dcc4', phMutedAlpha: 1, phStops: ['#6b5a3c', '#57482e', '#635234'],
+    spineTitle: '#f0e8d6', spineMuted: '#d9ccb0', spineLo: '#5c4829', spineHi: '#705a37',
+    phInk: '#f0e8d6', phMutedInk: '#e6dcc4', phMutedAlpha: 1, phStops: ['#705a37', '#5c4829', '#665231'],
   },
   'hearth/light': {
     ctaInk: '#fdf3ea', ctaHi: '#c04a5e', ctaLo: '#9c3243',
-    spineTitle: '#3d3226', spineMuted: '#5c5240', spineLo: '#e0d3b4', spineHi: '#ede2ca',
-    phInk: '#3d3226', phMutedInk: '#5c5240', phMutedAlpha: 1, phStops: ['#ede2ca', '#ddd0ae', '#e6dabc'],
+    spineTitle: '#3d3226', spineMuted: '#5c5240', spineLo: '#dccca2', spineHi: '#e8dab4',
+    phInk: '#3d3226', phMutedInk: '#5c5240', phMutedAlpha: 1, phStops: ['#e8dab4', '#d8c698', '#e1d2a6'],
   },
   // Almanac: spine type on the buff manual; placeholder type lives ON THE INK BAND (the band block
   // carries title + author — the boards carry no type), so the ph stops are the band's, like the
