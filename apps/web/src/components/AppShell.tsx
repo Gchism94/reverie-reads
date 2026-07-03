@@ -77,6 +77,8 @@ function NavLinks({ collapsed }: { collapsed: boolean }) {
 function Sidebar() {
   const { signOut } = useAuth()
   const skinLabel = useSkinLabel()
+  const effective = useEffectiveSkin()
+  const chromeLine = SKINS[effective].chromeLine
   const [collapsed, setCollapsed] = useState(readCollapsed)
 
   useEffect(() => {
@@ -97,7 +99,10 @@ function Sidebar() {
       }}
     >
       {/* Brand */}
-      <Link to="/" className="flex items-center gap-2.5 px-1 py-1" aria-label={`${APP_NAME} home`}>
+      {/* The CHROME (chunk-4 composed screens): the brand block names the ROOM, not the widget —
+          "Reverie · The standing invitation / The night office / Up too late…" — and wears the
+          skin's chrome material as a rail beneath (`.rv-chrome`, per-skin rules in skin-kit.css). */}
+      <Link to="/" className="rv-chrome flex items-center gap-2.5 px-1 py-1 pb-2.5" aria-label={`${APP_NAME} home`}>
         <span
           className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-[9px] text-[18px] italic"
           style={{
@@ -118,9 +123,7 @@ function Sidebar() {
             >
               {APP_NAME}
             </span>
-            <span className="mt-1 block truncate text-[10.5px] uppercase tracking-[0.08em] text-muted">
-              {skinLabel} skin
-            </span>
+            <span className="skin-label mt-1 block truncate text-[10px] text-muted">{chromeLine}</span>
           </span>
         )}
       </Link>

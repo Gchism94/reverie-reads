@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { formatAuthors, ownedFormats, type Book } from '@reverie/core'
 import { subgenreGradient } from '../library/constants'
-import { useLabels } from '../skin/labels'
+import { useLabels, useVoice } from '../skin/labels'
 import { Chip } from './Chip'
 import { CoverImage } from './CoverImage'
 import { Nameplate } from './Nameplate'
@@ -26,6 +26,7 @@ export function BookDetailRail({
   onToggleFave?: (id: string) => void
 }) {
   const labels = useLabels()
+  const voice = useVoice()
 
   if (!book) {
     return (
@@ -128,10 +129,18 @@ export function BookDetailRail({
         </div>
       )}
 
+      {/* The RESUME line — every composed rail speaks one when a book is mid-read (chunk 4,
+          verdict-approved): "You left off — the lamps are still lit." / "THE TRAIL IS STILL WARM." */}
+      {book.readStatus === 'Reading' && (
+        <p className="mt-auto pt-4 text-[13px] italic text-muted" style={{ fontFamily: 'var(--font-display)' }}>
+          {voice.resume}
+        </p>
+      )}
+
       <Link
         to="/book/$bookId"
         params={{ bookId: book.id }}
-        className="mt-auto flex h-11 items-center justify-center rounded-full text-[13.5px] font-semibold"
+        className={`${book.readStatus === 'Reading' ? 'mt-2' : 'mt-auto'} flex h-11 items-center justify-center rounded-full text-[13.5px] font-semibold`}
         style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))', color: 'var(--on-primary)' }}
       >
         Open full page
