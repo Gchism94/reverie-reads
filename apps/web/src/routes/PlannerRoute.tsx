@@ -19,7 +19,7 @@ function fmtPub(p: Book['pub']): string {
 
 function Stat({ n, label }: { n: number; label: string }) {
   return (
-    <div className="rounded-2xl border border-line p-3 text-center" style={{ background: 'var(--card)' }}>
+    <div className="skin-panel border border-line p-3 text-center" style={{ background: 'var(--card)' }}>
       <div className="text-[22px] font-bold text-ink">{n}</div>
       <div className="text-[11px] text-muted">{label}</div>
     </div>
@@ -138,7 +138,7 @@ function Calendar({ books, openBook }: { books: Book[]; openBook: (id: string) =
                 key={b.id}
                 type="button"
                 onClick={() => openBook(b.id)}
-                className="flex items-center justify-between rounded-xl border border-line px-3 py-2 text-left"
+                className="flex items-center justify-between skin-card border border-line px-3 py-2 text-left"
                 style={{ background: 'var(--field)' }}
               >
                 <span className="text-[14px] font-semibold text-ink">{b.title}</span>
@@ -213,7 +213,7 @@ function Releases({ books, openBook }: { books: Book[]; openBook: (id: string) =
 
   return (
     <div>
-      <div className="mb-4 rounded-xl border border-line p-3 text-[13px] text-muted" style={{ background: 'var(--card)' }}>
+      <div className="mb-4 skin-card border border-line p-3 text-[13px] text-muted" style={{ background: 'var(--card)' }}>
         🗓️ Add a pub date to any book from its detail page — year only, month, or a full date. Books
         with dates appear here.
       </div>

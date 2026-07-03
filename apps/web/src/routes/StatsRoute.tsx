@@ -5,12 +5,14 @@ import { rootRoute } from './RootRoute'
 import { useBooks } from '../data/books'
 import { useAllReads } from '../data/reads'
 import { MONTHS } from '../library/constants'
-import { useLabels } from '../skin/labels'
+import { useLabels, useVoice } from '../skin/labels'
+import { SectionHeader } from '../components/Structure'
 
 const THIS_YEAR = new Date().getFullYear()
 
 function Bars({ entries }: { entries: [string, number][] }) {
-  if (!entries.length) return <p className="text-[13px] text-muted">Nothing here yet.</p>
+  const voice = useVoice()
+  if (!entries.length) return <p className="text-[13px] text-muted">{voice.empty.heading}</p>
   const max = Math.max(1, ...entries.map((e) => e[1]))
   return (
     <div className="flex flex-col gap-1.5">
@@ -31,8 +33,8 @@ function Bars({ entries }: { entries: [string, number][] }) {
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-line p-4" style={{ background: 'var(--card)' }}>
-      <h4 className="mb-3 text-[14px] font-semibold text-ink">{title}</h4>
+    <div className="skin-panel border border-line p-4" style={{ background: 'var(--card)' }}>
+      <SectionHeader label={title} className="mb-3" />
       {children}
     </div>
   )
@@ -131,7 +133,7 @@ function StatsScreen() {
 
       <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
         {stats.map(([n, label]) => (
-          <div key={label} className="rounded-2xl border border-line p-3 text-center" style={{ background: 'var(--card)' }}>
+          <div key={label} className="skin-panel border border-line p-3 text-center" style={{ background: 'var(--card)' }}>
             <div className="skin-numeral text-[22px] font-bold text-ink">{n}</div>
             <div className="skin-label text-[11px] text-muted">{label}</div>
           </div>
