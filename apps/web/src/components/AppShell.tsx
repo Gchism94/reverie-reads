@@ -132,13 +132,9 @@ function Sidebar() {
         to="/add"
         title={collapsed ? 'Add a book' : undefined}
         aria-label="Add a book"
-        className={`skin-control mb-3 flex h-10 items-center justify-center gap-1.5 text-[13px] ${
+        className={`skin-control skin-btn-primary mb-3 flex h-10 items-center justify-center gap-1.5 text-[13px] ${
           collapsed ? 'px-0' : 'px-4'
         }`}
-        style={{
-          background: 'linear-gradient(135deg, var(--primary), var(--gold))',
-          color: 'var(--on-primary)',
-        }}
       >
         <span aria-hidden>＋</span>
         {!collapsed && <span>Add a book</span>}

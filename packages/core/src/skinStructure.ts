@@ -40,6 +40,10 @@ export interface SkinStructure {
   motif: 'none' | 'fleuron' | 'radar'
   /** the book-spine treatment (Structural Character signature component) */
   spine: SpineStyle
+  /** the designed coverless plate (Fable 5 slot 9, placeholderCover): each skin gets a bespoke plate
+   *  treatment in CoverPlaceholder, selected here — the same registered-component pattern as `motif`.
+   *  'plain' renders the neutral title/author plate, so unset skins don't regress. */
+  placeholder: 'plain' | 'cloth-boards' | 'specimen-plate'
 }
 
 /** Plain bones — what every not-yet-structured skin renders, so nothing regresses. */
@@ -50,6 +54,7 @@ export const NEUTRAL_STRUCTURE: SkinStructure = {
   progress: 'bar',
   motif: 'none',
   spine: { binding: 'plain', band: 'plain', colophon: 'none', label: 'none', titleUpper: false },
+  placeholder: 'plain',
 }
 
 // Tryst + Aphelion: structures extracted from the /lab/skins specimen + decoded export. The other
@@ -62,6 +67,7 @@ export const SKIN_STRUCTURE: Record<SkinId, SkinStructure> = {
     progress: 'dots',
     motif: 'fleuron',
     spine: { binding: 'leather', band: 'gilt', colophon: 'fleuron', label: 'panel', titleUpper: false },
+    placeholder: 'cloth-boards',
   },
   aphelion: {
     sectionRule: 'tick-rule',
@@ -70,6 +76,7 @@ export const SKIN_STRUCTURE: Record<SkinId, SkinStructure> = {
     progress: 'segmented',
     motif: 'radar',
     spine: { binding: 'brushed', band: 'tick', colophon: 'led', label: 'callsign', titleUpper: true },
+    placeholder: 'specimen-plate',
   },
   grimoire: NEUTRAL_STRUCTURE,
   marrow: NEUTRAL_STRUCTURE,
