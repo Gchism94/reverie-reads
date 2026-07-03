@@ -28,14 +28,16 @@ const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, SkinTokens> = {
   'marrow/light': { ink: '#1b1815', cardSolid: '#f4f0e8', '--accent-fill': '#8a3232', '--violet': '#56616b', '--blue': '#56616b', '--gold': '#6f7a2e' },
   'umbra/dark': { ink: '#e8e4da', cardSolid: '#191c22', '--accent-fill': '#d9a441', '--violet': '#6b7785', '--blue': '#3f4a5a', '--gold': '#e0a84a' },
   'umbra/light': { ink: '#23201a', cardSolid: '#f6f4ee', '--accent-fill': '#8a6a1f', '--violet': '#5a6470', '--blue': '#3f4a5a', '--gold': '#8a6a1f' },
-  'folio/dark': { ink: '#ece7dc', cardSolid: '#211f1a', '--accent-fill': '#34435a', '--violet': '#b0a890', '--blue': '#8aa0c0', '--gold': '#c9b896' },
-  'folio/light': { ink: '#1f1d1a', cardSolid: '#faf8f2', '--accent-fill': '#34435a', '--violet': '#6a5a48', '--blue': '#3a4a63', '--gold': '#8a7a52' },
-  'hearth/dark': { ink: '#efe6d6', cardSolid: '#251f16', '--accent-fill': '#a85f33', '--violet': '#9aa878', '--blue': '#8a9968', '--gold': '#e0b060' },
-  'hearth/light': { ink: '#3a2f25', cardSolid: '#fbf6ec', '--accent-fill': '#97532a', '--violet': '#6f7d4e', '--blue': '#5c7d6a', '--gold': '#c0913f' },
-  'almanac/dark': { ink: '#e6e8ea', cardSolid: '#161a1e', '--accent-fill': '#235456', '--violet': '#c79350', '--blue': '#4fa0a3', '--gold': '#c79350' },
-  'almanac/light': { ink: '#22252a', cardSolid: '#faf9f5', '--accent-fill': '#235456', '--violet': '#a8722f', '--blue': '#2c6b6e', '--gold': '#a8722f' },
-  'bloom/dark': { ink: '#f1ecfb', cardSolid: '#1e1730', '--accent-fill': '#6a3fd0', '--violet': '#ff7ab0', '--blue': '#8a6aff', '--gold': '#ffcf5a' },
-  'bloom/light': { ink: '#221b2e', cardSolid: '#fefbff', '--accent-fill': '#6a2fd0', '--violet': '#e84a8a', '--blue': '#5a32c8', '--gold': '#d98a1f' },
+  // Fable 5 chunk 3 palettes — Marginalia (the page never inverts), Hearth (kitchen linen),
+  // Almanac (buff + ink block), Firstlight (sky + sticker).
+  'folio/dark': { ink: '#2b2820', cardSolid: '#d9d2be', '--accent-fill': '#b1362b', '--violet': '#3f5a8a', '--blue': '#3f5a8a', '--gold': '#6b675e' },
+  'folio/light': { ink: '#2b2820', cardSolid: '#f8f4e8', '--accent-fill': '#b1362b', '--violet': '#3f5a8a', '--blue': '#3f5a8a', '--gold': '#78736a' },
+  'hearth/dark': { ink: '#f0e8d6', cardSolid: '#57482e', '--accent-fill': '#b13a4e', '--violet': '#9aa878', '--blue': '#8a9968', '--gold': '#c9a86a' },
+  'hearth/light': { ink: '#3d3226', cardSolid: '#e0d3b4', '--accent-fill': '#b13a4e', '--violet': '#6f7d4e', '--blue': '#5c7d6a', '--gold': '#8a6a3c' },
+  'almanac/dark': { ink: '#e6ddc2', cardSolid: '#241f14', '--accent-fill': '#241f14', '--violet': '#cf6b26', '--blue': '#8a9968', '--gold': '#b3a67e' },
+  'almanac/light': { ink: '#2b2820', cardSolid: '#eadfbe', '--accent-fill': '#2b2820', '--violet': '#c05e1e', '--blue': '#5c7d6a', '--gold': '#6f6552' },
+  'bloom/dark': { ink: '#eef0fa', cardSolid: '#1f2240', '--accent-fill': '#6a55c9', '--violet': '#c06a5c', '--blue': '#262a4d', '--gold': '#f5b85a' },
+  'bloom/light': { ink: '#2b2a3a', cardSolid: '#ffffff', '--accent-fill': '#6a55c9', '--violet': '#b86a5c', '--blue': '#6a55c9', '--gold': '#c9862e' },
 }
 
 const MODES = ['dark', 'light'] as const

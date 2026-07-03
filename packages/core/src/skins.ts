@@ -95,17 +95,17 @@ export const SKINS: Record<SkinId, Skin> = {
     id: 'folio',
     label: 'Folio',
     genre: 'Literary',
-    tagline: 'Cream paper, set in a quiet hand.',
-    starDensity: 30,
+    tagline: 'A manuscript passed between editors, still in proof.',
+    starDensity: 12, // the desk lamp, not a sky — the page never inverts
     divider: 'folio',
     labels: NEUTRAL_LABELS,
-    displayFont: "'Libre Baskerville', Georgia, serif",
+    displayFont: "'EB Garamond', Georgia, serif", // Fable 5 "Marginalia" identity (id stays folio)
   },
   hearth: {
     id: 'hearth',
     label: 'Hearth',
     genre: 'Cozy',
-    tagline: 'Wool, tea, and soft afternoon light.',
+    tagline: 'The library that lives in the kitchen.',
     starDensity: 20,
     divider: 'hearth',
     labels: NEUTRAL_LABELS,
@@ -115,21 +115,21 @@ export const SKINS: Record<SkinId, Skin> = {
     id: 'almanac',
     label: 'Almanac',
     genre: 'Nonfiction',
-    tagline: 'Paper, structured and calmly indexed.',
-    starDensity: 26,
+    tagline: 'A reference that works for a living.',
+    starDensity: 14, // the survey tent at night keeps its lamps low
     divider: 'almanac',
     labels: NEUTRAL_LABELS,
-    displayFont: "'IBM Plex Serif', Georgia, serif",
+    displayFont: "'Source Serif 4', Georgia, serif",
   },
   bloom: {
     id: 'bloom',
     label: 'Bloom',
     genre: 'Young adult',
-    tagline: 'Bright, saturated, wide awake.',
-    starDensity: 70,
+    tagline: 'The all-nighter that ends at dawn.',
+    starDensity: 70, // stars come out in dark mode only — the sky carries them
     divider: 'bloom',
     labels: NEUTRAL_LABELS,
-    displayFont: "'Poppins', system-ui, sans-serif",
+    displayFont: "'Baloo 2', system-ui, sans-serif", // Fable 5 "Firstlight" identity (id stays bloom)
   },
 }
 

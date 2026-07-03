@@ -65,6 +65,26 @@ export function SectionHeader({
           ¶
         </span>
       )}
+      {s.sectionRule === 'caret-rule' && (
+        <span aria-hidden className="text-[15px] font-bold leading-none" style={{ color: 'var(--accent-fill)', fontFamily: 'var(--font-display)' }}>
+          ‸
+        </span>
+      )}
+      {s.sectionRule === 'stitched' && (
+        <span
+          aria-hidden
+          className="h-3 w-3 flex-none self-center rounded-full"
+          style={{ background: 'radial-gradient(circle at 35% 30%, var(--gold), var(--gold-deep))', boxShadow: '0 1px 2px rgba(0, 0, 0, 0.4)' }}
+        />
+      )}
+      {s.sectionRule === 'index-rule' && (
+        <span aria-hidden className="w-1 flex-none self-center" style={{ height: 15, background: 'var(--accent)' }} />
+      )}
+      {s.sectionRule === 'dotted' && (
+        <span aria-hidden className="text-[14px] leading-none" style={{ color: 'var(--accent-ink)' }}>
+          ✦
+        </span>
+      )}
       <span className="skin-label whitespace-nowrap text-[14px] text-ink">{label}</span>
       {s.sectionRule === 'tick-rule' ? (
         <span
@@ -90,6 +110,26 @@ export function SectionHeader({
         </span>
       ) : s.sectionRule === 'docket' ? (
         <span aria-hidden className="h-px flex-1 self-center" style={{ background: 'color-mix(in srgb, var(--slate) 55%, transparent)' }} />
+      ) : s.sectionRule === 'caret-rule' ? (
+        <span aria-hidden className="h-px flex-1 self-center" style={{ background: 'color-mix(in srgb, var(--gold) 55%, transparent)' }} />
+      ) : s.sectionRule === 'stitched' ? (
+        <span
+          aria-hidden
+          className="flex-1 self-center"
+          style={{ height: 2, backgroundImage: 'repeating-linear-gradient(90deg, var(--thread) 0 6px, transparent 6px 11px)', opacity: 0.55, borderRadius: 2 }}
+        />
+      ) : s.sectionRule === 'index-rule' ? (
+        <span
+          aria-hidden
+          className="flex-1 self-center"
+          style={{ height: 4, borderTop: '1px solid color-mix(in srgb, var(--ink) 60%, transparent)', borderBottom: '1px solid color-mix(in srgb, var(--ink) 60%, transparent)' }}
+        />
+      ) : s.sectionRule === 'dotted' ? (
+        <span
+          aria-hidden
+          className="flex-1 self-center"
+          style={{ height: 2, backgroundImage: 'repeating-linear-gradient(90deg, color-mix(in srgb, var(--muted) 80%, transparent) 0 2px, transparent 2px 8px)', opacity: 0.9 }}
+        />
       ) : (
         <span aria-hidden className="h-px flex-1 self-center" style={{ background: 'var(--line)' }} />
       )}
@@ -103,6 +143,15 @@ export function SectionHeader({
       ) : readout != null && s.sectionRule === 'fractured' ? (
         <span className="skin-numeral whitespace-nowrap text-[14px] font-semibold" style={{ color: 'var(--accent-ink)' }}>
           № {readout}
+        </span>
+      ) : readout != null && (s.sectionRule === 'caret-rule' || s.sectionRule === 'stitched') ? (
+        // pencil / thread counts read quiet, not accented (the sheet sets them in pencil + Varela)
+        <span className="skin-numeral whitespace-nowrap text-[14px] font-semibold" style={{ color: 'var(--muted)' }}>
+          {readout}
+        </span>
+      ) : readout != null && s.sectionRule === 'index-rule' ? (
+        <span className="skin-numeral whitespace-nowrap text-[13px] font-bold" style={{ color: 'var(--ink)' }}>
+          {readout}
         </span>
       ) : readout != null ? (
         <span className="skin-numeral whitespace-nowrap text-[14px] font-semibold" style={{ color: 'var(--accent-ink)' }}>
@@ -202,6 +251,71 @@ export function Frame({
       </div>
     )
   }
+  if (s.frame === 'margin-rule') {
+    // the manuscript leaf: opaque bond, no border (the desk shows at the edges), the red margin
+    // rule down the left, a blue-pencil query at trace scale in the corner
+    return (
+      <div className={`relative overflow-hidden ${className}`} style={{ borderRadius: 'var(--radius-panel)', background: 'var(--paper)', boxShadow: 'var(--shadow)', ...style }}>
+        <span aria-hidden className="pointer-events-none absolute bottom-0 top-0" style={{ left: 14, width: 1, background: 'color-mix(in srgb, var(--accent-fill) 50%, transparent)' }} />
+        <span
+          aria-hidden
+          className="pointer-events-none absolute right-3 top-2 text-[12px] leading-none"
+          style={{ fontFamily: 'var(--font-hand)', color: 'var(--violet)', transform: 'rotate(-4deg)', opacity: 0.85 }}
+        >
+          clarify?
+        </span>
+        {children}
+      </div>
+    )
+  }
+  if (s.frame === 'stitched-inset') {
+    // the placemat: an opaque linen card, the thread frame stitched just inside the edge
+    return (
+      <div className={`relative ${className}`} style={{ borderRadius: 'var(--radius-panel)', background: 'var(--panel-fill)', boxShadow: 'var(--shadow)', ...style }}>
+        <span
+          aria-hidden
+          className="pointer-events-none absolute"
+          style={{ inset: 8, borderRadius: 'calc(var(--radius-panel) - 5px)', border: '2px dashed color-mix(in srgb, var(--thread) 60%, transparent)' }}
+        />
+        {children}
+      </div>
+    )
+  }
+  if (s.frame === 'record-card') {
+    // the record card: opaque buff stock, a double rule at the foot, the tab off the right edge
+    return (
+      <div className={`relative ${className}`} style={{ borderRadius: 'var(--radius-panel)', background: 'var(--panel-fill)', boxShadow: 'var(--shadow)', ...style }}>
+        <span
+          aria-hidden
+          className="pointer-events-none absolute"
+          style={{ right: -6, top: '24%', width: 6, height: 30, background: 'var(--accent)', borderRadius: '0 3px 3px 0', boxShadow: '1px 1px 3px rgba(0, 0, 0, 0.3)' }}
+        />
+        <span
+          aria-hidden
+          className="pointer-events-none absolute bottom-2 left-4 right-4"
+          style={{ height: 4, borderTop: '1px solid var(--ornament-frame)', borderBottom: '1px solid var(--ornament-frame)' }}
+        />
+        {children}
+      </div>
+    )
+  }
+  if (s.frame === 'sticker-ring') {
+    // the sticker card: opaque white in BOTH modes, the 3px ring is the border — nothing else
+    // outlines it. The sticker re-scopes the ink vars so children keep AA on white at 2 a.m.
+    const stickerVars = {
+      '--ink': 'var(--paper-ink)',
+      '--muted': 'var(--ph-muted)',
+      '--accent-ink': 'var(--accent-fill)',
+    } as CSSProperties
+    return (
+      <div
+        className={`relative ${className}`}
+        style={{ ...stickerVars, borderRadius: 'var(--radius-panel)', background: 'var(--paper)', color: 'var(--paper-ink)', boxShadow: '0 0 0 3px var(--ornament-frame), var(--shadow)', ...style }}
+      >
+        {children}
+      </div>
+    )
+  }
   if (s.frame === 'gilt-plate') {
     return (
       <div className={`skin-plate relative ${className}`} style={style}>
@@ -265,6 +379,55 @@ export function StatusTag({
         style={{ borderRadius: '999px', border: `1.5px solid ${border}`, color, letterSpacing: '0.1em', fontFamily: 'var(--font-mono)', transform: 'rotate(-2deg)' }}
       >
         {glyph != null && <span style={{ color: 'var(--accent-ink)' }}>{glyph}</span>}
+        {children}
+      </span>
+    )
+  }
+  if (s.tag === 'drawn-mark') {
+    // proof marks in the margin — drawn, never boxed: the glyph in the margin hand, the label
+    // italic Garamond over its own red underline (set a degree off true)
+    return (
+      <span className="relative inline-flex items-baseline gap-1.5 px-0.5 text-[12.5px]" style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontWeight: 600, color: tone === 'accent' ? 'var(--ink)' : 'var(--muted)' }}>
+        {glyph != null && <span style={{ fontFamily: 'var(--font-hand)', fontStyle: 'normal', color: 'var(--accent-fill)' }}>{glyph}</span>}
+        {children}
+        {tone === 'accent' && (
+          <span aria-hidden className="absolute bottom-[-1px] left-0 right-0" style={{ height: 1.5, background: 'var(--accent-fill)', transform: 'rotate(-1deg)' }} />
+        )}
+      </span>
+    )
+  }
+  if (s.tag === 'jar-label') {
+    // sewn and stuck, never printed — a jar label with dashed-thread stitching
+    return (
+      <span
+        className="inline-flex items-center gap-1 px-3 py-1 text-[10.5px] font-bold"
+        style={{ borderRadius: 8, background: 'color-mix(in srgb, var(--ink) 8%, transparent)', border: '1.5px dashed color-mix(in srgb, var(--thread) 55%, transparent)', color, letterSpacing: '0.08em', fontFamily: 'var(--font-sans)' }}
+      >
+        {glyph != null && <span style={{ color: 'var(--accent-ink)' }}>{glyph}</span>}
+        {children}
+      </span>
+    )
+  }
+  if (s.tag === 'index-tab') {
+    // an index tab racked off the edge — squared, 3px outer radius, boxed (the one skin allowed)
+    return (
+      <span
+        className="inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold uppercase"
+        style={{ borderRadius: '2px 6px 6px 2px', border: `1.5px solid ${border}`, color, letterSpacing: '0.12em', fontFamily: 'var(--font-sans)' }}
+      >
+        {glyph != null && <span style={{ color: 'var(--accent-ink)' }}>{glyph}</span>}
+        {children}
+      </span>
+    )
+  }
+  if (s.tag === 'puffy-sticker') {
+    // a puffy sticker — white, gel-ringed, fully round
+    return (
+      <span
+        className="inline-flex items-center gap-1 px-3 py-1 text-[11.5px] font-bold"
+        style={{ borderRadius: 999, background: 'var(--paper)', color: 'var(--paper-ink)', boxShadow: `0 0 0 2px color-mix(in srgb, var(--accent-fill) ${tone === 'accent' ? '45%' : '25%'}, transparent), 0 2px 6px rgba(40, 40, 80, 0.18)`, fontFamily: 'var(--font-sans)' }}
+      >
+        {glyph != null && <span style={{ color: 'var(--accent-fill)' }}>{glyph}</span>}
         {children}
       </span>
     )
@@ -383,6 +546,99 @@ export function ProgressMeter({
       </div>
     )
   }
+  if (s.progress === 'page-lines') {
+    // lines of a page filling in — the rule takes graphite as it's read; the full page earns the
+    // red caret. (The sheet's 12-line leaf, set at meter scale: one written line per twelfth.)
+    const total = 12
+    const filled = Math.round(pct * total)
+    return (
+      <div className={`flex items-center gap-[4px] ${className}`} aria-hidden>
+        {Array.from({ length: total }, (_, i) => (
+          <span
+            key={i}
+            style={{
+              width: 10,
+              height: i < filled ? 3 : 0,
+              borderRadius: 2,
+              background: i < filled ? 'var(--ink)' : 'transparent',
+              borderBottom: i < filled ? undefined : '1px solid color-mix(in srgb, var(--gold) 75%, transparent)',
+            }}
+          />
+        ))}
+        {pct >= 1 && (
+          <span className="text-[13px] font-bold leading-none" style={{ color: 'var(--accent-fill)', fontFamily: 'var(--font-display)' }}>
+            ‸
+          </span>
+        )}
+      </div>
+    )
+  }
+  if (s.progress === 'cross-stitch') {
+    // a hem filling with cross-stitches — jam thread on linen; the finished hem gets its button
+    const total = 12
+    const filled = Math.round(pct * total)
+    return (
+      <div className={`flex items-center gap-[5px] ${className}`} aria-hidden>
+        {Array.from({ length: total }, (_, i) =>
+          i < filled ? (
+            <span key={i} className="text-[11px] font-bold leading-none" style={{ color: 'var(--accent-ink)', fontFamily: 'var(--font-sans)', transform: i % 2 ? 'rotate(6deg)' : 'rotate(-5deg)' }}>
+              ✕
+            </span>
+          ) : (
+            <span key={i} className="rounded-full" style={{ width: 4, height: 4, background: 'var(--thread)', opacity: 0.5 }} />
+          ),
+        )}
+        {pct >= 1 && (
+          <span
+            className="rounded-full"
+            style={{ width: 11, height: 11, marginLeft: 2, background: 'radial-gradient(circle at 35% 30%, var(--gold), var(--gold-deep))', boxShadow: '0 1px 2px rgba(0, 0, 0, 0.4)' }}
+          />
+        )}
+      </div>
+    )
+  }
+  if (s.progress === 'rule-ticks') {
+    // the measuring rule — ink advances along a tick scale, the orange pointer marks where you are
+    return (
+      <div className={`relative flex flex-col gap-[3px] ${className}`} style={{ width: 132 }} aria-hidden>
+        <div className="flex items-end justify-between">
+          {Array.from({ length: 13 }, (_, i) => (
+            <span key={i} style={{ width: 1, height: i % 3 === 0 ? 8 : 5, background: 'var(--ink)', opacity: i % 3 === 0 ? 0.75 : 0.4 }} />
+          ))}
+        </div>
+        <div className="relative" style={{ height: 6, borderRadius: 1, background: 'color-mix(in srgb, var(--ink) 16%, transparent)' }}>
+          {pct > 0 && <span className="absolute bottom-0 left-0 top-0" style={{ width: `${Math.round(pct * 100)}%`, borderRadius: 1, background: 'var(--ink)' }} />}
+          <span
+            className="absolute"
+            style={{ left: `calc(${Math.round(pct * 100)}% - 5px)`, top: -5, width: 10, height: 8, background: 'var(--accent)', clipPath: 'polygon(50% 100%, 0 0, 100% 0)' }}
+          />
+        </div>
+      </div>
+    )
+  }
+  if (s.progress === 'sun-rise') {
+    // the sun climbs the card — below the horizon at zero, cresting at half, risen at done. The
+    // horizon line never moves. (The sheet's altitude meter, set inline.)
+    const rise = Math.round(pct * 14) // px of climb
+    return (
+      <div className={`relative overflow-hidden ${className}`} style={{ width: 118, height: 22 }} aria-hidden>
+        <span className="absolute left-0 right-0" style={{ bottom: 7, height: 1.5, background: 'color-mix(in srgb, var(--muted) 70%, transparent)' }} />
+        <span
+          className="absolute rounded-full"
+          style={{
+            left: '50%',
+            transform: 'translateX(-50%)',
+            bottom: rise - 7,
+            width: 13,
+            height: 13,
+            background: 'radial-gradient(circle at 40% 35%, #ffe2a0, var(--gold))',
+            boxShadow: `0 0 ${pct >= 1 ? 12 : 8}px var(--gold)`,
+            opacity: pct <= 0 ? 0.45 : 1,
+          }}
+        />
+      </div>
+    )
+  }
   if (s.progress === 'segmented' || s.progress === 'dots') {
     const total = 12
     const filled = Math.round(pct * total)
@@ -450,6 +706,68 @@ export function SignatureRing({
           style={{ background: 'conic-gradient(transparent 0deg 318deg, color-mix(in srgb, var(--accent) 55%, transparent) 352deg, transparent 360deg)', animation: 'radar-sweep 4.5s linear infinite' }}
         />
         {center}
+      </div>
+    )
+  }
+  if (s.motif === 'caret') {
+    // the editor's count — a graphite ring, proof-red to the mark, the caret at the head
+    return (
+      <div className="relative flex-none" style={{ width: size, height: size }}>
+        <div
+          className="absolute inset-0 rounded-full"
+          style={{ background: `conic-gradient(var(--accent-fill) 0deg ${deg}deg, color-mix(in srgb, var(--gold) 45%, transparent) ${deg}deg)` }}
+        />
+        {center}
+        <span aria-hidden className="absolute left-1/2 top-[-6px] -translate-x-1/2 text-[15px] font-bold leading-none" style={{ color: 'var(--accent-fill)', fontFamily: 'var(--font-display)' }}>
+          ‸
+        </span>
+      </div>
+    )
+  }
+  if (s.motif === 'button') {
+    // the hem comes around — jam thread fills the ring; the sewn button crowns it
+    return (
+      <div className="relative flex-none" style={{ width: size, height: size }}>
+        <div
+          className="absolute inset-0 rounded-full"
+          style={{ background: `conic-gradient(var(--accent-fill) 0deg ${deg}deg, color-mix(in srgb, var(--thread) 40%, transparent) ${deg}deg)` }}
+        />
+        {center}
+        <span
+          aria-hidden
+          className="absolute left-1/2 top-[-5px] -translate-x-1/2 rounded-full"
+          style={{ width: 12, height: 12, background: 'radial-gradient(circle at 35% 30%, var(--gold), var(--gold-deep))', boxShadow: '0 1px 2px rgba(0, 0, 0, 0.4)' }}
+        />
+      </div>
+    )
+  }
+  if (s.motif === 'tab') {
+    // the survey fills in ink; the orange tab marks the head — filed flush, never floating
+    return (
+      <div className="relative flex-none" style={{ width: size, height: size }}>
+        <div
+          className="absolute inset-0 rounded-full"
+          style={{ background: `conic-gradient(var(--ink) 0deg ${deg}deg, color-mix(in srgb, var(--ink) 16%, transparent) ${deg}deg)` }}
+        />
+        {center}
+        <span aria-hidden className="absolute left-1/2 top-[-4px] -translate-x-1/2" style={{ width: 16, height: 8, background: 'var(--accent)', borderRadius: 2, boxShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }} />
+      </div>
+    )
+  }
+  if (s.motif === 'sun') {
+    // the sun climbs the ring — gel to gold; the small sun crowns it and bobs while live
+    return (
+      <div className="relative flex-none" style={{ width: size, height: size }}>
+        <div
+          className="absolute inset-0 rounded-full"
+          style={{ background: `conic-gradient(var(--accent-fill) 0deg, var(--gold) ${deg}deg, color-mix(in srgb, var(--muted) 30%, transparent) ${deg}deg)`, boxShadow: '0 0 22px color-mix(in srgb, var(--gold) 30%, transparent)' }}
+        />
+        {center}
+        <span
+          aria-hidden
+          className="rv-anim absolute left-1/2 top-[-6px] -translate-x-1/2 rounded-full"
+          style={{ width: 13, height: 13, background: 'radial-gradient(circle at 40% 35%, #ffe2a0, var(--gold))', boxShadow: '0 0 9px var(--gold)', animation: 'dawn 3.2s ease-in-out infinite' }}
+        />
       </div>
     )
   }
@@ -562,6 +880,78 @@ export function SignatureEmblem({ fallback, size = 34, skin }: { fallback: strin
         <span
           className="rv-anim absolute inset-0"
           style={{ background: 'linear-gradient(100deg, transparent 20%, color-mix(in srgb, var(--bg0) 55%, transparent) 45%, transparent 70%)', filter: 'blur(3px)', animation: 'fogdrift 11s ease-in-out infinite alternate' }}
+        />
+      </span>
+    )
+  }
+  if (s.motif === 'caret') {
+    // the caret writes itself in — two strokes drawn over four seconds; reduced motion: ink dry
+    return (
+      <svg width={size} height={size * 0.94} viewBox="0 0 70 66" fill="none" aria-hidden style={{ color: 'var(--accent-fill)' }}>
+        <path
+          d="M10 52 L35 12 L60 52 M35 12 L35 3"
+          stroke="currentColor"
+          strokeWidth="3"
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          className="rv-anim"
+          style={{ strokeDasharray: 200, strokeDashoffset: 0, animation: 'dashdraw 4.5s ease-out infinite' }}
+        />
+      </svg>
+    )
+  }
+  if (s.motif === 'button') {
+    // a just-sewn button still swings on its thread; reduced motion sews it flat
+    return (
+      <span className="inline-grid place-items-center overflow-hidden" style={{ width: size, height: size }} aria-hidden>
+        <span className="rv-anim flex flex-col items-center" style={{ animation: 'sway 2.6s ease-in-out infinite', transformOrigin: 'top center' }}>
+          <span style={{ width: 2, height: size * 0.26, background: 'var(--thread)', opacity: 0.8 }} />
+          <span
+            className="relative rounded-full"
+            style={{
+              width: size * 0.36,
+              height: size * 0.36,
+              background:
+                'radial-gradient(circle at 36% 36%, rgba(40, 28, 12, 0.75) 1.5px, transparent 2px), radial-gradient(circle at 64% 36%, rgba(40, 28, 12, 0.75) 1.5px, transparent 2px), radial-gradient(circle at 36% 64%, rgba(40, 28, 12, 0.75) 1.5px, transparent 2px), radial-gradient(circle at 64% 64%, rgba(40, 28, 12, 0.75) 1.5px, transparent 2px), radial-gradient(circle at 35% 30%, var(--gold), var(--gold-deep))',
+              boxShadow: '0 3px 6px rgba(0, 0, 0, 0.4)',
+            }}
+          />
+        </span>
+      </span>
+    )
+  }
+  if (s.motif === 'tab') {
+    // the tab flags you down — it wags once, settles, wags again; reduced motion files it still
+    return (
+      <span className="relative inline-grid place-items-center" style={{ width: size, height: size }} aria-hidden>
+        <span className="relative" style={{ width: size * 0.5, height: size * 0.68, borderRadius: 2, background: 'var(--paper)', boxShadow: '0 3px 8px rgba(0, 0, 0, 0.3)' }}>
+          <span className="absolute left-0 top-[14%]" style={{ right: '22%', height: '12%', background: 'var(--accent-fill)' }} />
+          <span
+            className="rv-anim absolute"
+            style={{
+              right: -size * 0.17,
+              top: '32%',
+              width: size * 0.19,
+              height: size * 0.3,
+              background: 'var(--accent)',
+              borderRadius: '0 3px 3px 0',
+              boxShadow: '1px 1px 3px rgba(0, 0, 0, 0.35)',
+              transformOrigin: 'left center',
+              animation: 'wag 2.8s ease-in-out infinite',
+            }}
+          />
+        </span>
+      </span>
+    )
+  }
+  if (s.motif === 'sun') {
+    // the sun climbs while something is happening; reduced motion rests it on the line
+    return (
+      <span className="relative inline-grid place-items-center" style={{ width: size, height: size }} aria-hidden>
+        <span className="absolute" style={{ left: '7%', right: '7%', bottom: '28%', height: 1.5, background: 'color-mix(in srgb, var(--muted) 60%, transparent)' }} />
+        <span
+          className="rv-anim rounded-full"
+          style={{ width: size * 0.3, height: size * 0.3, background: 'radial-gradient(circle at 40% 35%, #ffe2a0, var(--gold))', boxShadow: '0 0 16px color-mix(in srgb, var(--gold) 80%, transparent)', animation: 'dawn 3.2s ease-in-out infinite' }}
         />
       </span>
     )
