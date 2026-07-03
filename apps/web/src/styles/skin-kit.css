@@ -265,3 +265,134 @@
   background: transparent;
   font-family: var(--font-mono);
 }
+
+/* Folio ("Marginalia") · an editor's marks, not widgets — primary is a grease-pencil stamp in
+   proof-red; secondary a pencilled correction (italic text on its own red rule); the icon action
+   a paper clip; the field a manuscript line with the caret cursor. */
+[data-skin='folio'] .skin-btn-primary {
+  border-radius: 3px;
+}
+[data-skin='folio'] .skin-btn-secondary {
+  border-radius: 0;
+  border: 0;
+  border-bottom: 1.5px solid var(--accent-fill);
+  font-style: italic;
+}
+[data-skin='folio'] .skin-btn-secondary:hover {
+  background: color-mix(in srgb, var(--accent-fill) 7%, transparent);
+}
+[data-skin='folio'] .skin-btn-icon {
+  border-radius: 999px;
+  border: 2px solid color-mix(in srgb, var(--ink) 45%, transparent);
+  background: transparent;
+  color: var(--ink);
+}
+/* the manuscript line — a pencil rule, the editor's italic hand for placeholder text */
+[data-skin='folio'] .skin-field {
+  border-radius: 0;
+  border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--gold) 70%, transparent);
+  background: transparent;
+  font-family: var(--font-display);
+  font-style: italic;
+}
+
+/* Hearth · things off the table, not widgets — primary is a jam-lid button ringed like a preserve
+   label; secondary a stitched underline; the icon action a sewn wooden button (four thread holes
+   drawn as background dots); the field a paper recipe line. */
+[data-skin='hearth'] .skin-btn-secondary {
+  border-radius: 0;
+  border: 0;
+  border-bottom: 2px dashed color-mix(in srgb, var(--thread) 70%, transparent);
+}
+[data-skin='hearth'] .skin-btn-secondary:hover {
+  background: color-mix(in srgb, var(--thread) 10%, transparent);
+}
+[data-skin='hearth'] .skin-btn-icon {
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.35);
+  background:
+    radial-gradient(circle at 38% 38%, rgba(40, 28, 12, 0.7) 1px, transparent 1.6px),
+    radial-gradient(circle at 62% 38%, rgba(40, 28, 12, 0.7) 1px, transparent 1.6px),
+    radial-gradient(circle at 38% 62%, rgba(40, 28, 12, 0.7) 1px, transparent 1.6px),
+    radial-gradient(circle at 62% 62%, rgba(40, 28, 12, 0.7) 1px, transparent 1.6px),
+    radial-gradient(circle at 35% 30%, var(--gold), var(--gold-deep));
+  color: #fdf3ea;
+  box-shadow: inset 0 1px 0 rgba(255, 244, 205, 0.4), 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+/* the recipe line on paper */
+[data-skin='hearth'] .skin-field {
+  border-radius: 0;
+  border: 0;
+  border-bottom: 1.5px dashed color-mix(in srgb, var(--thread) 75%, transparent);
+  background: transparent;
+}
+
+/* Almanac · the field kit, not widgets — primary is an ink stamp block wearing the view's orange
+   notch; secondary a double-ruled action; the icon action a brass grommet; the field a labelled
+   form line with a block cursor. */
+[data-skin='almanac'] .skin-btn-primary {
+  position: relative;
+  border-radius: 2px;
+  letter-spacing: 0.12em;
+}
+[data-skin='almanac'] .skin-btn-primary::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 9px;
+  background: var(--accent); /* the one orange tab per view rides the primary action */
+  flex: none;
+}
+[data-skin='almanac'] .skin-btn-secondary {
+  border-radius: 0;
+  border: 0;
+  border-bottom: 3px double color-mix(in srgb, var(--ink) 65%, transparent);
+}
+[data-skin='almanac'] .skin-btn-secondary:hover {
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+}
+[data-skin='almanac'] .skin-btn-icon {
+  border-radius: 50%;
+  border: 3px solid color-mix(in srgb, var(--ink) 70%, transparent);
+  background: transparent;
+  color: var(--ink);
+}
+/* the labelled form line */
+[data-skin='almanac'] .skin-field {
+  border-radius: 0;
+  border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--ink) 55%, transparent);
+  background: transparent;
+}
+
+/* Bloom ("Firstlight") · a desk at 2 a.m., not widgets — primary is a gel pill; secondary a gel
+   underline; the icon action a star sticker (white, gel ring); the field a gel-pen line. */
+[data-skin='bloom'] .skin-btn-secondary {
+  border-radius: 0 0 2px 2px;
+  border: 0;
+  border-bottom: 2.5px solid var(--accent-fill);
+}
+[data-skin='bloom'] .skin-btn-secondary:hover {
+  background: color-mix(in srgb, var(--accent-fill) 8%, transparent);
+}
+[data-skin='bloom'] .skin-btn-icon {
+  border-radius: 999px;
+  border: 0;
+  background: var(--paper);
+  color: var(--accent-fill);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-fill) 30%, transparent), 0 2px 6px rgba(40, 40, 80, 0.2);
+}
+/* the gel-pen line */
+[data-skin='bloom'] .skin-field {
+  border-radius: 0;
+  border: 0;
+  border-bottom: 2px solid color-mix(in srgb, var(--accent-fill) 55%, transparent);
+  background: transparent;
+}
+
+/* Firstlight's stars come out in dark mode only — the light sky has none. */
+[data-skin='bloom'][data-mode='light'] .rv-sky-star {
+  display: none;
+}

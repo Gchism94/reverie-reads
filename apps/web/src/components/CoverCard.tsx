@@ -1,7 +1,6 @@
 import { formatAuthors, ownedFormats, type Book } from '@reverie/core'
 import { subgenreGradient } from '../library/constants'
 import { useLabels } from '../skin/labels'
-import { useSkin } from '../skin/useSkin'
 import { useBrokenCoverIds } from '../data/brokenCovers'
 import { CoverImage } from './CoverImage'
 
@@ -28,14 +27,14 @@ export function CoverCard({
 
   // The skin-accent marks (--mark-accent: Tryst gold, Aphelion cyan) keep their flavour everywhere
   // axe can't measure them or where they still clear AA: over a real cover (contrast skipped over the
-  // image) and over a placeholder in DARK mode (a bright accent on the dark scrim clears 4.5:1). They
-  // fall back to white ONLY over a LIGHT-mode placeholder, the one solid surface where the accent
-  // can't reach AA. Scrim deepens over placeholders to hold the white. The mark silhouette follows
-  // --mark-radius (Tryst round pills · Aphelion squared instrument tags) — the two-worlds signal.
-  const resolvedMode = useSkin((s) => s.resolvedMode)
+  // image), always in the accent. Over a PLACEHOLDER the colour comes from --mark-on-ph — by default
+  // the accent in dark mode and white in light, but the non-inverting skins (Marginalia's bond page,
+  // Almanac's buff manual) keep light placeholders at night and override it to white in tokens.css.
+  // Scrim deepens over placeholders to hold the text. The mark silhouette follows --mark-radius
+  // (Tryst round pills · Aphelion squared instrument tags) — the two-worlds signal.
   const brokenIds = useBrokenCoverIds()
   const showsPlaceholder = !book.cover || brokenIds.has(book.id)
-  const accentOk = !showsPlaceholder || resolvedMode === 'dark'
+  const markInk = showsPlaceholder ? 'var(--mark-on-ph)' : 'var(--mark-accent)'
   const markBg = showsPlaceholder ? 'rgba(0,0,0,0.62)' : 'rgba(0,0,0,0.45)'
 
   return (
@@ -62,7 +61,7 @@ export function CoverCard({
           aria-pressed={book.fave}
           aria-label={book.fave ? `Remove ${book.title} from favorites` : `Add ${book.title} to favorites`}
           className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center text-[14px] opacity-0 backdrop-blur transition-opacity focus-visible:opacity-100 group-hover:opacity-100 aria-pressed:opacity-100"
-          style={{ background: markBg, color: book.fave && accentOk ? 'var(--mark-accent)' : '#fff', borderRadius: 'var(--mark-radius)' }}
+          style={{ background: markBg, color: book.fave ? markInk : '#fff', borderRadius: 'var(--mark-radius)' }}
         >
           {book.fave ? '♥' : '♡'}
         </button>
@@ -70,7 +69,7 @@ export function CoverCard({
         {isRead && (
           <span
             className="absolute left-1.5 top-1.5 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide"
-            style={{ background: markBg, color: accentOk ? 'var(--mark-accent)' : '#fff', borderRadius: 'var(--mark-radius)' }}
+            style={{ background: markBg, color: markInk, borderRadius: 'var(--mark-radius)' }}
           >
             Read
           </span>

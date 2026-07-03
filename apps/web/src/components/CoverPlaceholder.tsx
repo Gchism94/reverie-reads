@@ -419,6 +419,273 @@ export function CoverPlaceholder({
     )
   }
 
+  if (variant === 'proof-sheet') {
+    // Marginalia: the uncorrected proof — plain bond, a taped cover slug, hand-set title, the red
+    // caret and a Caveat note where the jacket will go. The page never inverts; only the desk does.
+    return (
+      <div
+        role="img"
+        aria-label={label}
+        className={className}
+        style={{
+          position: 'relative',
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'hidden',
+          padding: '13% 10%',
+          background: 'linear-gradient(165deg, var(--ph-a), var(--ph-b) 55%, var(--ph-c))',
+          containerType: 'inline-size',
+        }}
+      >
+        {/* the masking-tape tab, pressed on a little crooked */}
+        <span
+          aria-hidden
+          style={{ position: 'absolute', left: '50%', top: '-4%', transform: 'translateX(-50%) rotate(3deg)', width: '24%', height: '9%', border: '2px solid var(--ph-muted)', borderBottom: 0, borderRadius: '7px 7px 3px 3px', opacity: 0.75 }}
+        />
+        <span aria-hidden className="uppercase" style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 'clamp(8px, 6cqw, 9.5px)', letterSpacing: '0.26em', color: 'var(--ph-muted)', marginBottom: '9%' }}>
+          A novel
+        </span>
+        <span
+          aria-hidden
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontWeight: 600,
+            fontStyle: oneWord ? 'italic' : 'normal',
+            fontSize: oneWord ? 'clamp(16px, 17cqw, 25px)' : 'clamp(11px, 9.5cqw, 14px)',
+            lineHeight: 1.25,
+            fontFeatureSettings: "'onum' 1",
+            color: 'var(--ph-ink)',
+            textAlign: 'center',
+            display: '-webkit-box',
+            WebkitLineClamp: 3,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          }}
+        >
+          {title || 'Untitled'}
+        </span>
+        <span aria-hidden style={{ width: '20%', height: 1, background: 'var(--ph-muted)', margin: '8% 0' }} />
+        {author && (
+          <span aria-hidden style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontWeight: 500, fontSize: 'clamp(9px, 7cqw, 10.5px)', color: 'var(--ph-ink)' }}>
+            {author}
+          </span>
+        )}
+        <span
+          aria-hidden
+          style={{ position: 'absolute', right: '7%', bottom: '7%', fontFamily: 'var(--font-hand)', fontSize: 'clamp(11px, 10cqw, 15px)', color: 'var(--accent-fill)', transform: 'rotate(-6deg)' }}
+        >
+          no jacket yet
+        </span>
+        <span aria-hidden style={{ position: 'absolute', left: '8%', bottom: '6%', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 'clamp(11px, 10cqw, 15px)', color: 'var(--accent-fill)' }}>
+          ‸
+        </span>
+      </div>
+    )
+  }
+
+  if (variant === 'linen-board') {
+    // Hearth: the linen board — oat cloth, a dashed thread frame, a paper recipe label where the
+    // jacket will go, the wooden button sewn beneath.
+    return (
+      <div
+        role="img"
+        aria-label={label}
+        className={className}
+        style={{
+          position: 'relative',
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'hidden',
+          padding: '12% 9%',
+          background:
+            'repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.05) 0 1px, transparent 1px 3px), repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.045) 0 1px, transparent 1px 3px), linear-gradient(165deg, var(--ph-a), var(--ph-b) 55%, var(--ph-c))',
+          containerType: 'inline-size',
+        }}
+      >
+        <span aria-hidden className="pointer-events-none absolute" style={{ inset: '6%', borderRadius: 4, border: '2px dashed color-mix(in srgb, var(--thread) 75%, transparent)' }} />
+        {/* the pasted recipe card */}
+        <span aria-hidden style={{ position: 'relative', width: '76%', background: 'var(--paper)', borderRadius: 8, padding: '9% 7%', textAlign: 'center', boxShadow: '0 3px 8px rgba(40, 28, 12, 0.3)' }}>
+          <span
+            className="block"
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontWeight: 600,
+              fontSize: oneWord ? 'clamp(15px, 16cqw, 23px)' : 'clamp(11px, 9.5cqw, 14px)',
+              lineHeight: 1.25,
+              color: 'var(--paper-ink)',
+              display: '-webkit-box',
+              WebkitLineClamp: 3,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+            }}
+          >
+            {title || 'Untitled'}
+          </span>
+          <span aria-hidden className="mx-auto block" style={{ width: '22%', height: 2, backgroundImage: 'repeating-linear-gradient(90deg, var(--accent-fill) 0 4px, transparent 4px 7px)', margin: '7% auto' }} />
+          {author && (
+            <span className="block uppercase" style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 'clamp(8px, 6.5cqw, 9px)', letterSpacing: '0.14em', color: 'color-mix(in srgb, var(--paper-ink) 78%, var(--paper))' }}>
+              {author}
+            </span>
+          )}
+        </span>
+        {/* the button, sewn beneath */}
+        <span
+          aria-hidden
+          className="rounded-full"
+          style={{
+            position: 'relative',
+            marginTop: '8%',
+            width: 'clamp(10px, 9cqw, 14px)',
+            aspectRatio: '1',
+            background:
+              'radial-gradient(circle at 36% 36%, rgba(40, 28, 12, 0.7) 1px, transparent 1.5px), radial-gradient(circle at 64% 36%, rgba(40, 28, 12, 0.7) 1px, transparent 1.5px), radial-gradient(circle at 36% 64%, rgba(40, 28, 12, 0.7) 1px, transparent 1.5px), radial-gradient(circle at 64% 64%, rgba(40, 28, 12, 0.7) 1px, transparent 1.5px), radial-gradient(circle at 35% 30%, var(--gold), var(--gold-deep))',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.4)',
+          }}
+        />
+      </div>
+    )
+  }
+
+  if (variant === 'buff-manual') {
+    // Almanac: the buff manual — the band block carries title + REF, the tab off the edge, the
+    // double rule and grommet at the foot.
+    const call = callsign(book.id ?? title ?? 'reference', 'REF')
+    return (
+      <div
+        role="img"
+        aria-label={label}
+        className={className}
+        style={{
+          position: 'relative',
+          width: '100%',
+          height: '100%',
+          overflow: 'hidden',
+          background: 'linear-gradient(165deg, var(--ph-a), var(--ph-b) 55%, var(--ph-c))',
+          containerType: 'inline-size',
+        }}
+      >
+        {/* the band block */}
+        <span aria-hidden style={{ position: 'absolute', left: 0, right: 0, top: '22%', background: 'var(--cta-lo)', padding: '8% 8% 9%' }}>
+          <span className="block uppercase" style={{ fontFamily: 'var(--font-sans)', fontWeight: 700, fontSize: 'clamp(7.5px, 5.5cqw, 8.5px)', letterSpacing: '0.22em', color: 'color-mix(in srgb, var(--cta-ink) 78%, var(--cta-lo))', marginBottom: '4%' }}>
+            Field reference
+          </span>
+          <span
+            className="block uppercase"
+            style={{
+              fontFamily: 'var(--font-sans)',
+              fontWeight: 700,
+              fontSize: oneWord ? 'clamp(14px, 14cqw, 21px)' : 'clamp(10.5px, 9cqw, 13.5px)',
+              lineHeight: 1.2,
+              letterSpacing: oneWord ? '0.06em' : '0.02em',
+              color: 'var(--cta-ink)',
+              display: '-webkit-box',
+              WebkitLineClamp: 3,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+            }}
+          >
+            {title || 'Untitled'}
+          </span>
+          {author && (
+            <span className="block uppercase" style={{ marginTop: '4%', fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 'clamp(8px, 6.5cqw, 9px)', letterSpacing: '0.14em', color: 'color-mix(in srgb, var(--cta-ink) 78%, var(--cta-lo))' }}>
+              {author} · REF {call.id.slice(1)}
+            </span>
+          )}
+        </span>
+        {/* the orange tab, off the edge */}
+        <span aria-hidden style={{ position: 'absolute', right: 0, top: '8%', width: '5.5%', height: '17%', background: 'var(--accent)', borderRadius: '2px 0 0 2px', boxShadow: '-1px 1px 3px rgba(0, 0, 0, 0.3)' }} />
+        {/* the double rule + grommet at the foot */}
+        <span aria-hidden style={{ position: 'absolute', left: '8%', right: '8%', bottom: '8%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ width: '54%', height: 4, borderTop: '1px solid var(--ph-ink)', borderBottom: '1px solid var(--ph-ink)', opacity: 0.6 }} />
+          <span className="rounded-full" style={{ width: 'clamp(7px, 6cqw, 9px)', aspectRatio: '1', border: '2px solid var(--ph-ink)', opacity: 0.7 }} />
+        </span>
+      </div>
+    )
+  }
+
+  if (variant === 'sky-mockup') {
+    // Firstlight: the sky mock-up — a white sticker label on the dawn, the star at the corner,
+    // the small sun at the foot. Stars come out in dark mode only (.rv-sky-star).
+    return (
+      <div
+        role="img"
+        aria-label={label}
+        className={className}
+        style={{
+          position: 'relative',
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'hidden',
+          padding: '12% 10%',
+          background: 'var(--sky)',
+          containerType: 'inline-size',
+        }}
+      >
+        <span aria-hidden className="rv-sky-star absolute rounded-full" style={{ left: '22%', top: '12%', width: 2.5, height: 2.5, background: 'rgba(238, 240, 250, 0.9)' }} />
+        <span aria-hidden className="rv-sky-star absolute rounded-full" style={{ left: '72%', top: '8%', width: 2, height: 2, background: 'rgba(238, 240, 250, 0.6)' }} />
+        <span aria-hidden className="rv-sky-star absolute rounded-full" style={{ left: '56%', top: '20%', width: 1.5, height: 1.5, background: 'rgba(238, 240, 250, 0.5)' }} />
+        {/* the sticker */}
+        <span
+          aria-hidden
+          style={{ position: 'relative', width: '78%', background: 'var(--paper)', borderRadius: 11, padding: '9% 7%', textAlign: 'center', boxShadow: '0 0 0 3px rgba(255, 255, 255, 0.35), 0 5px 12px rgba(10, 10, 30, 0.35)' }}
+        >
+          <span
+            className="block"
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontWeight: 700,
+              fontSize: oneWord ? 'clamp(15px, 16cqw, 24px)' : 'clamp(11px, 9.5cqw, 14px)',
+              lineHeight: 1.2,
+              color: 'var(--paper-ink)',
+              display: '-webkit-box',
+              WebkitLineClamp: 3,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+            }}
+          >
+            {title || 'Untitled'}
+          </span>
+          {author && (
+            <span className="mt-[5%] block uppercase" style={{ fontFamily: 'var(--font-sans)', fontWeight: 700, fontSize: 'clamp(8px, 6.5cqw, 9px)', letterSpacing: '0.14em', color: 'var(--ph-muted)' }}>
+              {author}
+            </span>
+          )}
+        </span>
+        {/* the star sticker + the small sun */}
+        <span
+          aria-hidden
+          style={{
+            position: 'absolute',
+            right: '9%',
+            top: '7%',
+            width: 'clamp(12px, 11cqw, 17px)',
+            aspectRatio: '1',
+            background: 'var(--gold)',
+            clipPath: 'polygon(50% 0, 63% 34%, 98% 38%, 72% 60%, 81% 95%, 50% 74%, 19% 95%, 28% 60%, 2% 38%, 37% 34%)',
+            boxShadow: '0 0 0 2.5px rgba(255, 255, 255, 0.7)',
+          }}
+        />
+        <span
+          aria-hidden
+          className="rounded-full"
+          style={{ position: 'absolute', left: '50%', bottom: '4%', transform: 'translateX(-50%)', width: 'clamp(9px, 8.5cqw, 13px)', aspectRatio: '1', background: 'radial-gradient(circle at 40% 35%, #ffe2a0, var(--gold))', boxShadow: '0 0 10px var(--gold)' }}
+        />
+      </div>
+    )
+  }
+
   // 'plain' — the neutral accent-mixed title/author plate (AA by construction; see @reverie/core)
   const colors = placeholderColorVars(accentVar)
   return (
