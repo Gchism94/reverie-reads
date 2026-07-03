@@ -105,10 +105,66 @@ const PLATE: Partial<Record<SkinId, PlateOrnament>> = {
     subtitleStyle: { fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', textTransform: 'uppercase', fontSize: '10.5px' },
     ornament: topGlyph('▣'),
   },
-  folio: { eyebrowColor: 'var(--accent-ink)', subtitleStyle: { fontFamily: 'var(--font-display)', fontStyle: 'italic' }, ornament: topGlyph('❡') },
-  hearth: { eyebrowColor: 'var(--accent-ink)', subtitleStyle: { fontFamily: 'var(--font-sans)' }, ornament: topGlyph('❀') },
-  almanac: { eyebrowColor: 'var(--accent-ink)', subtitleStyle: { fontFamily: 'var(--font-mono)', letterSpacing: '0.04em' }, ornament: topGlyph('‡') },
-  bloom: { eyebrowColor: 'var(--accent-ink)', subtitleStyle: { fontFamily: 'var(--font-sans)' }, ornament: topGlyph('✺') },
+  // Fable 5 Marginalia: the galley slug — the red margin rule down the left, the caret in the margin
+  folio: {
+    eyebrowColor: 'var(--accent-ink)',
+    subtitleStyle: { fontFamily: 'var(--font-display)', fontStyle: 'italic' },
+    ornament: (
+      <>
+        <span aria-hidden className="pointer-events-none absolute bottom-0 top-0" style={{ left: 10, width: 1, background: 'color-mix(in srgb, var(--accent-fill) 45%, transparent)' }} />
+        <span aria-hidden className="pointer-events-none absolute bottom-1 left-[5px] text-[12px] font-bold leading-none" style={{ color: 'var(--accent-fill)', fontFamily: 'var(--font-display)' }}>
+          ‸
+        </span>
+      </>
+    ),
+  },
+  // Fable 5 Hearth: the pantry label — the sewn button hung over the top rule
+  hearth: {
+    eyebrowColor: 'var(--accent-ink)',
+    subtitleStyle: { fontFamily: 'var(--font-sans)', letterSpacing: '0.16em', textTransform: 'uppercase', fontSize: '10px' },
+    ornament: (
+      <span
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-[-6px] -translate-x-1/2 rounded-full"
+        style={{
+          width: 12,
+          height: 12,
+          background:
+            'radial-gradient(circle at 36% 36%, rgba(40, 28, 12, 0.7) 1px, transparent 1.4px), radial-gradient(circle at 64% 36%, rgba(40, 28, 12, 0.7) 1px, transparent 1.4px), radial-gradient(circle at 36% 64%, rgba(40, 28, 12, 0.7) 1px, transparent 1.4px), radial-gradient(circle at 64% 64%, rgba(40, 28, 12, 0.7) 1px, transparent 1.4px), radial-gradient(circle at 35% 30%, var(--gold), var(--gold-deep))',
+          boxShadow: '0 1px 2px rgba(0, 0, 0, 0.4)',
+        }}
+      />
+    ),
+  },
+  // Fable 5 Almanac: the band block — double rule + grommet filed at the foot
+  almanac: {
+    eyebrowColor: 'var(--accent-ink)',
+    subtitleStyle: { fontFamily: 'var(--font-sans)', letterSpacing: '0.14em', textTransform: 'uppercase', fontSize: '10.5px' },
+    ornament: (
+      <span aria-hidden className="pointer-events-none absolute bottom-2 left-5 right-5 flex items-center justify-between">
+        <span style={{ width: '54%', height: 4, borderTop: '1px solid var(--ornament-frame)', borderBottom: '1px solid var(--ornament-frame)' }} />
+        <span className="rounded-full" style={{ width: 9, height: 9, border: '2.5px solid var(--ornament-frame)' }} />
+      </span>
+    ),
+  },
+  // Fable 5 Firstlight: the sticker plate — the gold star stuck at the corner
+  bloom: {
+    eyebrowColor: 'var(--accent-ink)',
+    subtitleStyle: { fontFamily: 'var(--font-sans)', letterSpacing: '0.18em', textTransform: 'uppercase', fontSize: '10px' },
+    ornament: (
+      <span
+        aria-hidden
+        className="pointer-events-none absolute right-3 top-3"
+        style={{
+          width: 15,
+          height: 15,
+          background: 'var(--gold)',
+          clipPath: 'polygon(50% 0, 63% 34%, 98% 38%, 72% 60%, 81% 95%, 50% 74%, 19% 95%, 28% 60%, 2% 38%, 37% 34%)',
+          boxShadow: '0 0 0 2px rgba(255, 255, 255, 0.7)',
+        }}
+      />
+    ),
+  },
 }
 
 export function Nameplate({

@@ -61,10 +61,15 @@ export function placeholderSpec(book: { title?: string; first?: string; last?: s
 // gradient sits behind the cover box. `coverPlaceholder.contrast.test.ts` proves ≥ 4.5:1 across the
 // full token matrix; these fractions are the single source the component's CSS and that test share.
 
-/** Accent fraction in the background tint (rest is `--card-solid`). Keeps the skin's flavour. */
-export const PLACEHOLDER_BG_MIX = 0.18
+/** Accent fraction in the background tint (rest is `--card-solid`). Keeps the skin's flavour.
+ *  Lowered from .18 for the Fable 5 chunk-3 palettes: mid-luminance cards (Hearth's lamplit linen,
+ *  Almanac's ink-block) have far less ink↔card headroom than the first skins, and the old pull
+ *  landed accents near the midpoint (as low as 3.3:1). Both fractions shrinking only ever RAISES
+ *  contrast, so every existing skin stays safe. (The plain plate is fallback-only now — all nine
+ *  skins ship designed placeholder plates.) */
+export const PLACEHOLDER_BG_MIX = 0.1
 /** Accent fraction in the glyph colour (rest is `--ink`). Accent character, ink-anchored for contrast. */
-export const PLACEHOLDER_FG_MIX = 0.5
+export const PLACEHOLDER_FG_MIX = 0.3
 
 /** The placeholder's CSS colours for a chosen accent var — `color-mix` over live skin tokens, so it
  *  re-themes for free. The component spreads this onto the surface (bg) and glyph (color). */

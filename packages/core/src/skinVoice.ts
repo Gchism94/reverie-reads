@@ -104,39 +104,48 @@ export const UMBRA_VOICE: SkinVoice = {
   isbnNotice: ISBN_NOTICE,
 }
 
+// Fable 5 chunk 3 — an editor's marginalia: dry, exact, quietly fond. Italic Garamond speaks.
+// ("Marginalia" in the registry; the live id stays `folio`.) Milestone trimmed of its baked-in
+// count ("Sixty books read, all noted…"), same rule as chunk 2.
 export const FOLIO_VOICE: SkinVoice = {
-  empty: { heading: 'The page is blank.', body: 'Add the first work to begin the collection.', cta: 'Add a work' },
-  loading: 'Setting the type…',
-  miss: 'Nothing in the collection under that name.',
-  milestone: 'The edition is complete.',
-  motif: '❡',
+  empty: { heading: 'A clean page.', body: 'Nothing marked yet — bring the first book and I’ll begin the notes.', cta: 'Add a book' },
+  loading: 'Reading it over once more…',
+  miss: 'No entry under that name. Check the spelling, or the pseudonym.',
+  milestone: 'All noted. A good and careful year.',
+  motif: '‸',
   isbnNotice: ISBN_NOTICE,
 }
 
+// Fable 5 chunk 3 — the kitchen voice: someone who saves you the last slice. Warm, plain, a little
+// teasing. Milestone trimmed of "Sixty books this year."
 export const HEARTH_VOICE: SkinVoice = {
-  empty: { heading: 'The reading nook is empty.', body: 'Add a book, put the kettle on, and settle in.', cta: 'Add a book' },
+  empty: { heading: 'The table’s wiped clean.', body: 'Bring the first book and I’ll put the kettle on.', cta: 'Add a book' },
   loading: 'Steeping…',
-  miss: 'Nothing on the shelf by that name.',
-  milestone: 'Every last one read. Put the kettle on.',
-  motif: '❀',
+  miss: 'Nothing by that name in the pantry. Try another spelling?',
+  milestone: 'That calls for the good jam.',
+  motif: '✕',
   isbnNotice: ISBN_NOTICE,
 }
 
+// Fable 5 chunk 3 — the surveyor's log: terse, exact, quietly proud of a full record. Milestone
+// trimmed of "Sixty titles logged, sixty shelved."
 export const ALMANAC_VOICE: SkinVoice = {
-  empty: { heading: 'The index is empty.', body: 'Add the first entry to begin the catalogue.', cta: 'Add an entry' },
-  loading: 'Cataloguing…',
-  miss: 'No entry under that heading.',
-  milestone: 'Index complete — all entries logged.',
-  motif: '‡',
+  empty: { heading: 'The index is empty.', body: 'No entries logged. Enter the first title and the record begins.', cta: 'Log a book' },
+  loading: 'Taking measurements…',
+  miss: 'No match in the index. Check the reference number.',
+  milestone: 'A full survey — logged and shelved.',
+  motif: '✱',
   isbnNotice: ISBN_NOTICE,
 }
 
+// Fable 5 chunk 3 — a note passed at 2 a.m.: hushed, a little giddy, always on your side.
+// ("Firstlight" in the registry; the live id stays `bloom`.) Milestone trimmed of "Sixty books."
 export const BLOOM_VOICE: SkinVoice = {
-  empty: { heading: 'Your shelf is waiting!', body: "Add your first book and let's build your stack.", cta: 'Add a book' },
-  loading: 'Loading the good stuff…',
-  miss: 'Nothing by that name — yet!',
-  milestone: 'Goal smashed! Every single one read.',
-  motif: '✺',
+  empty: { heading: 'Nothing on your sky yet.', body: 'Add the first book and we’ll stay up late.', cta: 'Add your first book' },
+  loading: 'Almost light…',
+  miss: 'Can’t find that one — double-check the title?',
+  milestone: 'You watched the sunrises this year.',
+  motif: '✦',
   isbnNotice: ISBN_NOTICE,
 }
 

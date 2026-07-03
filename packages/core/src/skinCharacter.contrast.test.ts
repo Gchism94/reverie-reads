@@ -40,15 +40,25 @@ const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
   'marrow/light': { bg0: '#ece8e0', cardSolid: '#f4f0e8', ink: '#1b1815', muted: '#6a6358', accentFill: '#8a3232', onPrimary: '#ffffff', accentInk: '#8a3232', markAccent: '#8a3232' },
   'umbra/dark': { bg0: '#101216', cardSolid: '#191c22', ink: '#e8e4da', muted: '#99a3ad', accentFill: '#d9a441', onPrimary: '#23201a', accentInk: '#d9a441', markAccent: '#d9a441' },
   'umbra/light': { bg0: '#edeae2', cardSolid: '#f6f4ee', ink: '#23201a', muted: '#5b656f', accentFill: '#8a6a1f', onPrimary: '#fbf6e8', accentInk: '#7a5d1b', markAccent: '#8a6a1f' },
-  'folio/dark': { bg0: '#1a1916', cardSolid: '#211f1a', ink: '#ece7dc', muted: '#989182', accentFill: '#34435a', onPrimary: '#ffffff', accentInk: '#8aa0c0', markAccent: '#8aa0c0' },
-  'folio/light': { bg0: '#f4f1ea', cardSolid: '#faf8f2', ink: '#1f1d1a', muted: '#645f56', accentFill: '#34435a', onPrimary: '#ffffff', accentInk: '#34435a', markAccent: '#3a4a63' },
-  'hearth/dark': { bg0: '#1d1812', cardSolid: '#251f16', ink: '#efe6d6', muted: '#b3a488', accentFill: '#a85f33', onPrimary: '#ffffff', accentInk: '#d8945e', markAccent: '#d8945e' },
-  'hearth/light': { bg0: '#f6efe2', cardSolid: '#fbf6ec', ink: '#3a2f25', muted: '#70624e', accentFill: '#97532a', onPrimary: '#ffffff', accentInk: '#8a4d28', markAccent: '#97532a' },
-  'almanac/dark': { bg0: '#101316', cardSolid: '#161a1e', ink: '#e6e8ea', muted: '#878e98', accentFill: '#235456', onPrimary: '#ffffff', accentInk: '#4fa0a3', markAccent: '#4fa0a3' },
-  'almanac/light': { bg0: '#f2f1ec', cardSolid: '#faf9f5', ink: '#22252a', muted: '#616771', accentFill: '#235456', onPrimary: '#ffffff', accentInk: '#235456', markAccent: '#2c6b6e' },
-  'bloom/dark': { bg0: '#16111f', cardSolid: '#1e1730', ink: '#f1ecfb', muted: '#a99fc4', accentFill: '#6a3fd0', onPrimary: '#ffffff', accentInk: '#b794ff', markAccent: '#b794ff' },
-  'bloom/light': { bg0: '#fbf4fd', cardSolid: '#fefbff', ink: '#221b2e', muted: '#635c85', accentFill: '#6a2fd0', onPrimary: '#ffffff', accentInk: '#6a2fd0', markAccent: '#7c3aed' },
+  // Fable 5 chunk 3 — Marginalia ("folio"): the page never inverts, so BOTH modes are ink-on-bond;
+  // dark mode dims the page and darkens the desk (the vignette). Marks over a placeholder paint
+  // WHITE in both modes (--mark-on-ph override) — the scrim over bond is mid-tone, not dark.
+  'folio/dark': { bg0: '#ccc5b2', cardSolid: '#d9d2be', ink: '#2b2820', muted: '#524e44', accentFill: '#b1362b', onPrimary: '#fbf1ea', accentInk: '#8f2a21', markAccent: '#8f2a21' },
+  'folio/light': { bg0: '#e8e2d0', cardSolid: '#f8f4e8', ink: '#2b2820', muted: '#5d5950', accentFill: '#b1362b', onPrimary: '#fbf1ea', accentInk: '#9c2f25', markAccent: '#9c2f25' },
+  'hearth/dark': { bg0: '#1a130b', cardSolid: '#57482e', ink: '#f0e8d6', muted: '#c9b998', accentFill: '#b13a4e', onPrimary: '#fdf3ea', accentInk: '#f0a8b4', markAccent: '#f0a8b4' },
+  'hearth/light': { bg0: '#ecdfc6', cardSolid: '#e0d3b4', ink: '#3d3226', muted: '#5c5240', accentFill: '#b13a4e', onPrimary: '#fdf3ea', accentInk: '#9c3243', markAccent: '#9c3243' },
+  // Almanac: light-lead buff; dark is the tent at night — ink-block surfaces with band-ink type.
+  // Its buff placeholder also stays light at night → white marks (--mark-on-ph override).
+  'almanac/dark': { bg0: '#13120c', cardSolid: '#241f14', ink: '#e6ddc2', muted: '#b3a67e', accentFill: '#241f14', onPrimary: '#d9cda6', accentInk: '#e08a3c', markAccent: '#e08a3c' },
+  'almanac/light': { bg0: '#e4dcc2', cardSolid: '#eadfbe', ink: '#2b2820', muted: '#5f5947', accentFill: '#2b2820', onPrimary: '#eadfbe', accentInk: '#8a4413', markAccent: '#8a4413' },
+  // Firstlight ("bloom"): the sky is the screen; generic panels are deep-sky, stickers live on --paper.
+  'bloom/dark': { bg0: '#14162a', cardSolid: '#1f2240', ink: '#eef0fa', muted: '#b8bcd8', accentFill: '#6a55c9', onPrimary: '#ffffff', accentInk: '#9f8cf0', markAccent: '#f5b85a' },
+  'bloom/light': { bg0: '#d5d4ea', cardSolid: '#ffffff', ink: '#2b2a3a', muted: '#5a5878', accentFill: '#6a55c9', onPrimary: '#ffffff', accentInk: '#5a46b4', markAccent: '#5a46b4' },
 }
+
+/** Skins whose placeholders stay LIGHT in dark mode (the page/manual never inverts): the app paints
+ *  the placeholder marks white there (--mark-on-ph), so the dark-branch mark test models white. */
+const WHITE_MARK_IN_DARK = new Set<SkinId>(['folio', 'almanac'])
 
 /** Fable 5 material surfaces (chunk 1): CTA text on its card, spine type on the binding (title sits
  *  centred, so it's tested on the gradient's mid), placeholder type on each board stop (it floats
@@ -116,6 +126,53 @@ const FABLE5: Partial<Record<`${SkinId}/${'dark' | 'light'}`, Fable5>> = {
     ctaInk: '#f6f0dc', ctaHi: '#8a6a1f', ctaLo: '#6e5518',
     spineTitle: '#2a251c', spineMuted: '#5d574a', spineLo: '#f8f2e2', spineHi: '#f8f2e2',
     phInk: '#23201a', phMutedInk: '#3e474f', phMutedAlpha: 1, phStops: ['#d6d0c0', '#c5bfae', '#cfc9b9'],
+  },
+  // Chunk 3. Marginalia: type on the proof-paper galley + bond boards — the page in both modes.
+  'folio/dark': {
+    ctaInk: '#fbf1ea', ctaHi: '#d0463a', ctaLo: '#b1362b',
+    spineTitle: '#2b2820', spineMuted: '#4e4a42', spineLo: '#b5ae9c', spineHi: '#cfc8b6',
+    phInk: '#2b2820', phMutedInk: '#3a372f', phMutedAlpha: 1, phStops: ['#c4bdab', '#aaa390', '#b8b19e'],
+  },
+  'folio/light': {
+    ctaInk: '#fbf1ea', ctaHi: '#d0463a', ctaLo: '#b1362b',
+    spineTitle: '#2b2820', spineMuted: '#6b675e', spineLo: '#e8e2d0', spineHi: '#f6f2e4',
+    phInk: '#2b2820', phMutedInk: '#5d5950', phMutedAlpha: 1, phStops: ['#f6f2e4', '#e6e0ce', '#efe9d8'],
+  },
+  // Hearth: type on the oat linen — spine cloth + the linen board (the paper label is brighter still).
+  'hearth/dark': {
+    ctaInk: '#fdf3ea', ctaHi: '#c74e60', ctaLo: '#a03344',
+    spineTitle: '#f0e8d6', spineMuted: '#d4c6a8', spineLo: '#57482e', spineHi: '#6b5a3c',
+    phInk: '#f0e8d6', phMutedInk: '#e6dcc4', phMutedAlpha: 1, phStops: ['#6b5a3c', '#57482e', '#635234'],
+  },
+  'hearth/light': {
+    ctaInk: '#fdf3ea', ctaHi: '#c04a5e', ctaLo: '#9c3243',
+    spineTitle: '#3d3226', spineMuted: '#5c5240', spineLo: '#e0d3b4', spineHi: '#ede2ca',
+    phInk: '#3d3226', phMutedInk: '#5c5240', phMutedAlpha: 1, phStops: ['#ede2ca', '#ddd0ae', '#e6dabc'],
+  },
+  // Almanac: spine type on the buff manual; placeholder type lives ON THE INK BAND (the band block
+  // carries title + author — the boards carry no type), so the ph stops are the band's, like the
+  // Gaslight paper strip. The author mixes cta-ink 78% into the band.
+  'almanac/dark': {
+    ctaInk: '#d9cda6', ctaHi: '#332c1c', ctaLo: '#241f14',
+    spineTitle: '#241f14', spineMuted: '#3a3426', spineLo: '#a3946c', spineHi: '#b3a67e',
+    phInk: '#d9cda6', phMutedInk: '#d9cda6', phMutedAlpha: 0.78, phStops: ['#332c1c', '#241f14', '#2b2618'],
+  },
+  'almanac/light': {
+    ctaInk: '#eadfbe', ctaHi: '#3a3322', ctaLo: '#241f14',
+    spineTitle: '#2b2820', spineMuted: '#5f5947', spineLo: '#ddd0a8', spineHi: '#eadfbe',
+    phInk: '#eadfbe', phMutedInk: '#eadfbe', phMutedAlpha: 0.78, phStops: ['#3a3322', '#241f14', '#2f291b'],
+  },
+  // Firstlight: spine type on the night stops of the sky; placeholder type lives ON THE STICKER
+  // (opaque white in both modes) — the sky carries no type.
+  'bloom/dark': {
+    ctaInk: '#ffffff', ctaHi: '#8a73e0', ctaLo: '#6a55c9',
+    spineTitle: '#eef0fa', spineMuted: '#b8bcd8', spineLo: '#20223a', spineHi: '#262a4d',
+    phInk: '#2b2a3a', phMutedInk: '#5a5878', phMutedAlpha: 1, phStops: ['#fbfbff', '#fbfbff', '#fbfbff'],
+  },
+  'bloom/light': {
+    ctaInk: '#ffffff', ctaHi: '#8a73e0', ctaLo: '#6a55c9',
+    spineTitle: '#2b2a3a', spineMuted: '#4a4866', spineLo: '#c9cee8', spineHi: '#d5d4ea',
+    phInk: '#2b2a3a', phMutedInk: '#5a5878', phMutedAlpha: 1, phStops: ['#ffffff', '#ffffff', '#ffffff'],
   },
 }
 
@@ -201,11 +258,13 @@ describe('skin character kit contrast (text on the kit surfaces ≥ AA, every sk
       // where it clears AA — over a real cover (image, not measured) and over a DARK-mode placeholder;
       // over a LIGHT-mode placeholder it falls back to WHITE. Model each mode's real path:
       if (mode === 'dark') {
-        it(`${skin}/dark · mark accent on the placeholder scrim clears ${AA}:1`, () => {
-          // deepest scrim (placeholder) over the dark surface: rgba(0,0,0,.62) over card-solid
+        it(`${skin}/dark · mark ink on the placeholder scrim clears ${AA}:1`, () => {
+          // deepest scrim (placeholder) over the dark surface: rgba(0,0,0,.62) over card-solid.
+          // Non-inverting skins keep light placeholders at night → the app paints white there.
           const bg = scrim(t.cardSolid, 0.62)
-          const r = ratio(t.markAccent, bg)
-          expect(r, `mark accent ${t.markAccent} on ${bg} = ${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(AA)
+          const ink = WHITE_MARK_IN_DARK.has(skin) ? '#ffffff' : t.markAccent
+          const r = ratio(ink, bg)
+          expect(r, `mark ink ${ink} on ${bg} = ${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(AA)
         })
       } else {
         it(`${skin}/light · white mark on the placeholder scrim clears ${AA}:1`, () => {

@@ -79,6 +79,24 @@
   --spine-sheen: none;
   --spine-emboss: none;
   --ph-glow: none;
+
+  /* ── Fable 5 chunk 3 additions (neutral-defaulted) — the margin hand (Marginalia's Caveat; never
+     body copy), the one full-bleed sky gradient (Firstlight's spine + placeholder + ambient), and
+     the card-mark colour over a PLACEHOLDER scrim. The old rule ("accent in dark mode, white in
+     light") assumed dark mode = dark surfaces; the non-inverting skins (Marginalia's bond page,
+     Almanac's buff manual) keep light placeholders at night, where the accent can't reach AA on the
+     mid scrim — those skins override this to white below. ── */
+  --font-hand: var(--font-display);
+  --sky: linear-gradient(180deg, var(--card-solid), var(--card-solid));
+  --mark-on-ph: #fff;
+}
+[data-mode='dark'] {
+  --mark-on-ph: var(--mark-accent);
+}
+/* the page/manual never inverts — their placeholder scrims stay mid-tone at night */
+[data-skin='folio'][data-mode='dark'],
+[data-skin='almanac'][data-mode='dark'] {
+  --mark-on-ph: #fff;
 }
 
 /* ── Skin character · TRYST (Romance · gaslit New Orleans) — warm, ornate, gilded.
@@ -218,103 +236,124 @@
   --mark-radius: 1px;
 }
 
-/* ── Skin character · FOLIO (Literary · editorial) — cream paper, restrained, archival serif. ── */
+/* ── Skin character · FOLIO — Fable 5 "Marginalia" (Literary · the working proof). A manuscript
+   passed between editors: bond stock, graphite, proof-red corrections, an editor's blue pencil at
+   trace scale. Everything you can press is a mark an editor would make. EB Garamond sets everything
+   ('onum' 1); Caveat is the margin hand only, never body copy. The proofreader's caret ‸ is the one
+   emblem. THE PAGE NEVER INVERTS — dark mode darkens the desk (the vignette), never the page. ── */
 [data-skin='folio'] {
-  --accent: var(--primary); /* ink-navy */
-  --radius-control: 2px;
-  --radius-card: 2px;
+  --accent: var(--primary); /* proof-red — corrects only: carets, checks, the CTA */
+  --radius-control: 3px; /* the grease-pencil stamp */
+  --radius-card: 3px; /* bond leaves, radius 3 — no borders; the desk shows at the edges */
   --radius-panel: 3px;
   --ctl-clip: none;
-  --label-font: var(--font-display); /* Libre Baskerville */
+  --label-font: var(--font-sans); /* EB Garamond caps, ls .22em */
+  --control-font: var(--font-display); /* controls speak Garamond, title case */
   --label-transform: uppercase;
   --control-transform: none;
-  --label-tracking: 0.18em;
+  --label-tracking: 0.22em;
   --label-weight: 600;
   --numeral-font: var(--font-display);
-  --numeral-feature: 'onum' 1;
-  --motion-ease: cubic-bezier(0.33, 0, 0.2, 1);
+  --numeral-feature: 'onum' 1; /* oldstyle figures — the count in the slug */
+  --motion-ease: cubic-bezier(0.33, 0, 0.2, 1); /* marks appear as if drawn, not faded */
   --motion-duration: 220ms;
+  --font-hand: 'Caveat', cursive; /* the margin hand — annotations, never body */
   --ambient-texture: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.95' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   --ambient-texture-size: 180px 180px;
   --ambient-texture-blend: soft-light;
-  --ambient-texture-opacity: var(--grain-opacity);
-  --ornament-frame: color-mix(in srgb, var(--primary) 22%, transparent);
-  --mark-radius: 2px;
+  --ambient-texture-opacity: var(--grain-opacity); /* grain .05 on paper */
+  --ornament-frame: color-mix(in srgb, var(--accent) 30%, transparent); /* the red margin rule */
+  --mark-radius: 2px; /* filing cards, 2px */
 }
 
-/* ── Skin character · HEARTH (Cozy · cottagecore) — warm wool/tea, soft light, rounded. ── */
+/* ── Skin character · HEARTH — Fable 5 (Cozy · the kitchen-table library). Warm wood, oat linen,
+   paper labels tied with thread — everything you can press is something you could pick up off the
+   table: a sewn button, a stitched hem, a jam-jar label. Text sits on linen or paper, never bare
+   wood. Jam sweetens once per view (the primary action + the loved mark). Bitter sets the text;
+   Varela Round speaks only in short labels. No hand font — thread is the handwriting. ── */
 [data-skin='hearth'] {
-  --accent: var(--primary); /* terracotta */
-  --radius-control: 16px;
-  --radius-card: 14px;
-  --radius-panel: 16px;
+  --accent: var(--primary); /* jam — once per view */
+  --radius-control: 999px; /* jam-lid buttons, fully round */
+  --radius-card: 12px; /* cloth cards 10–12 on wood */
+  --radius-panel: 12px;
   --ctl-clip: none;
-  --label-font: var(--font-sans); /* Nunito Sans — friendly */
+  --label-font: var(--font-sans); /* Varela Round — short words only, never a sentence */
+  --control-font: var(--font-display); /* buttons speak Bitter */
   --label-transform: none;
   --control-transform: none;
   --label-tracking: 0.02em;
   --label-weight: 600;
-  --numeral-font: var(--font-display); /* Bitter slab numerals */
-  --numeral-feature: 'onum' 1;
-  --motion-ease: cubic-bezier(0.34, 1.3, 0.64, 1); /* gentle overshoot */
+  --numeral-font: var(--font-sans); /* Varela counts ("18 books") */
+  --numeral-feature: 'lnum' 1;
+  --motion-ease: cubic-bezier(0.34, 1.3, 0.64, 1); /* presses settle */
   --motion-duration: 220ms;
+  /* linen weave ≈4% over the wood grain — two crosshatch runs over the turbulence */
+  --ambient-texture: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.045) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.04) 0 1px, transparent 1px 3px),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --ambient-texture-size: auto, auto, 200px 200px;
+  --ambient-texture-blend: soft-light;
+  --ambient-texture-opacity: var(--grain-opacity); /* grain .06 */
+  --ornament-frame: color-mix(in srgb, var(--thread) 50%, transparent); /* the stitched frame */
+  --mark-radius: 8px; /* jar labels */
+}
+
+/* ── Skin character · ALMANAC — Fable 5 (Nonfiction · the field reference). Buff card stock, ink
+   band blocks, and a safety-orange tab that means "find this fast." Controls are the field kit —
+   stamps, grommets, ruled forms, index tabs. Archivo wayfinds in caps; Source Serif 4 reads.
+   Numbers are data: tabular, unit-labelled. Orange is spent on exactly one tab per view. The one
+   skin allowed to box its marks. Everything racks flush; nothing floats. ── */
+[data-skin='almanac'] {
+  --accent: var(--violet); /* the BRIGHT safety orange — tab fills only; --primary is the text-scale orange */
+  --radius-control: 2px; /* stamp blocks */
+  --radius-card: 2px; /* record cards; tabs get a 3px outer radius */
+  --radius-panel: 2px;
+  --ctl-clip: none;
+  --label-font: var(--font-sans); /* Archivo caps, ls .06–.14em */
+  --control-font: var(--font-sans);
+  --label-transform: uppercase;
+  --control-transform: uppercase;
+  --label-tracking: 0.12em;
+  --label-weight: 700;
+  --numeral-font: var(--font-sans); /* Archivo tabular figures, unit-labelled */
+  --numeral-feature: 'tnum' 1;
+  --motion-ease: cubic-bezier(0.4, 0, 0.2, 1); /* reference books don't animate — wag is the tab's alone */
+  --motion-duration: 140ms;
+  --ambient-texture: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --ambient-texture-size: 180px 180px;
+  --ambient-texture-blend: soft-light;
+  --ambient-texture-opacity: var(--grain-opacity); /* grain .05 on buff */
+  --ornament-frame: color-mix(in srgb, var(--ink) 30%, transparent); /* double rules structure */
+  --mark-radius: 2px;
+}
+
+/* ── Skin character · BLOOM — Fable 5 "Firstlight" (YA · dawn on the last page). The all-nighter
+   that ends at dawn: a sky that runs midnight-to-sunrise (the skin's ONLY gradient, always vertical,
+   night at the top), white sticker cards with a 3px ring, gel-pen purple, one small sun. Everything
+   you can press is something from a teenager's desk. Baloo 2 displays, never small; Karla keeps the
+   notes; caps live on stickers only. Stars come out in dark mode only. Night is blue, never black. ── */
+[data-skin='bloom'] {
+  --accent: var(--primary); /* gel — acts; sun gold is spent on done + milestones + the sun */
+  --radius-control: 999px; /* gel pills */
+  --radius-card: 14px; /* sticker cards, radius 14 */
+  --radius-panel: 14px;
+  --ctl-clip: none;
+  --label-font: var(--font-sans); /* Karla reads and labels */
+  --control-font: var(--font-display); /* the gel pill speaks Baloo */
+  --label-transform: none; /* caps live on stickers only */
+  --control-transform: none;
+  --label-tracking: 0.04em;
+  --label-weight: 700;
+  --numeral-font: var(--font-sans);
+  --numeral-feature: 'lnum' 1;
+  --motion-ease: cubic-bezier(0.34, 1.4, 0.64, 1); /* press = scale .97; the sky holds still */
+  --motion-duration: 200ms;
   --ambient-texture: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   --ambient-texture-size: 200px 200px;
   --ambient-texture-blend: soft-light;
-  --ambient-texture-opacity: var(--grain-opacity);
-  --ornament-frame: color-mix(in srgb, var(--primary) 26%, transparent);
-  --mark-radius: 12px;
-}
-
-/* ── Skin character · ALMANAC (Nonfiction · reference) — paper, structured, calmly indexed. ── */
-[data-skin='almanac'] {
-  --accent: var(--primary); /* teal */
-  --radius-control: 4px;
-  --radius-card: 3px;
-  --radius-panel: 4px;
-  --ctl-clip: none;
-  --label-font: var(--font-sans); /* IBM Plex Sans */
-  --label-transform: uppercase;
-  --control-transform: uppercase;
-  --label-tracking: 0.16em;
-  --label-weight: 600;
-  --numeral-font: var(--font-mono); /* IBM Plex Mono — indexed tabular */
-  --numeral-feature: 'tnum' 1;
-  --motion-ease: cubic-bezier(0.4, 0, 0.2, 1);
-  --motion-duration: 200ms;
-  /* ruled-ledger horizontal lines (structured/indexed), behind opaque cards */
-  --ambient-texture: repeating-linear-gradient(0deg, color-mix(in srgb, var(--primary) 6%, transparent) 0 1px, transparent 1px 27px);
-  --ambient-texture-size: auto;
-  --ambient-texture-blend: normal;
-  --ambient-texture-opacity: 0.7;
-  --ornament-frame: color-mix(in srgb, var(--primary) 22%, transparent);
-  --mark-radius: 3px;
-}
-
-/* ── Skin character · BLOOM (YA · contemporary) — bright, saturated, playful, modern. ── */
-[data-skin='bloom'] {
-  --accent: var(--primary); /* vivid violet */
-  --radius-control: 12px;
-  --radius-card: 10px;
-  --radius-panel: 12px;
-  --ctl-clip: none;
-  --label-font: var(--font-sans); /* Poppins */
-  --label-transform: uppercase;
-  --control-transform: none;
-  --label-tracking: 0.08em;
-  --label-weight: 600;
-  --numeral-font: var(--font-sans);
-  --numeral-feature: 'lnum' 1;
-  --motion-ease: cubic-bezier(0.34, 1.4, 0.64, 1); /* bouncy */
-  --motion-duration: 200ms;
-  /* playful dot grid */
-  --ambient-texture: radial-gradient(color-mix(in srgb, var(--primary) 11%, transparent) 1.5px, transparent 1.6px);
-  --ambient-texture-size: 22px 22px;
-  --ambient-texture-blend: normal;
-  --ambient-texture-opacity: 0.6;
-  --ambient-texture-mask: radial-gradient(120% 100% at 50% 0%, #000 30%, transparent 80%);
-  --ornament-frame: color-mix(in srgb, var(--primary) 26%, transparent);
-  --mark-radius: 999px;
+  --ambient-texture-opacity: var(--grain-opacity); /* grain .04 on sky */
+  --ornament-frame: rgba(255, 255, 255, 0.35); /* the sticker ring is the border; nothing else outlines */
+  --mark-radius: 999px; /* puffy stickers */
 }
 
 /* ── TRYST · Romance · gothic New Orleans (finalized, AA-corrected) ── */
@@ -825,248 +864,448 @@
   --ph-muted: #3e474f; /* AA: specimen #55636f = 4.0:1 on the fog board; darkened */
 }
 
-/* ── FOLIO · Literary · editorial (cream paper, ink-navy, archival serif) ── */
+/* ── FOLIO · Fable 5 "Marginalia" · Literary · the working proof. THE PAGE NEVER INVERTS: both
+   modes are the same bond page — only the DESK behind it changes (the vignette + shadows). Dark
+   mode is the page on a dark desk under a lamp; light is the same page on a pale desk at morning.
+   Graphite writes the text; proof-red #c23b2e corrects only; the editor's blue pencil #3f5a8a
+   queries at trace scale. (Chunk-4 composed screen: "the whole screen is one bond manuscript on a
+   dark desk… Dark mode darkened the desk; the page never moved.") ── */
 [data-skin='folio'][data-mode='light'] {
-  --bg0: #f4f1ea;
-  --bg1: #ece8dd;
-  --ink: #1f1d1a;
-  --muted: #645f56;
-  --primary: #3a4a63;
-  --accent-fill: #34435a;
-  --accent-ink: #34435a;
-  --violet: #6a5a48;
-  --blue: #3a4a63;
-  --gold: #8a7a52;
-  --card: #faf8f2;
-  --card-solid: #faf8f2;
-  --card-2: #efeae0;
-  --line: rgba(58, 74, 99, 0.22);
-  --shadow: 0 22px 50px rgba(60, 55, 45, 0.14);
-  --glow-a: #c9c2b2;
-  --glow-b: #a8b0c0;
-  --glow-c: #d8d0c0;
-  --glow-d: #c9c2b2;
-  --star: #8a7a52;
+  --bg0: #e8e2d0; /* the page ground (morning) */
+  --bg1: #efe9d9;
+  --ink: #2b2820; /* graphite-black — the same ink in both modes */
+  --muted: #5d5950; /* pencil, darkened from the sheet's #78736a for AA on the page */
+  --primary: #b1362b; /* proof-red (deep press) — marks + large type only */
+  --accent-fill: #b1362b;
+  --accent-ink: #9c2f25; /* red eyebrows on the leaf, darkened to clear AA */
+  --violet: #3f5a8a; /* the editor's blue pencil */
+  --blue: #3f5a8a;
+  --gold: #78736a; /* pencil — hairlines are graphite here, never gilt */
+  --card: #f8f4e8; /* the bond leaf */
+  --card-solid: #f8f4e8;
+  --card-2: #fffdf5;
+  --line: rgba(120, 115, 106, 0.38);
+  --shadow: 0 14px 30px rgba(120, 110, 90, 0.22);
+  --glow-a: #f6f2e4;
+  --glow-b: #e6e0ce;
+  --glow-c: #fffdf5;
+  --glow-d: #f0ebdb;
+  --star: #a8a296; /* graphite specks, not stars */
   --fog: rgba(120, 110, 90, 0.08);
-  --on-primary: #ffffff;
-  --vignette: rgba(90, 80, 60, 0.07);
-  --grain-opacity: 0.03;
-  --font-display: 'Libre Baskerville', Georgia, serif;
+  --on-primary: #fbf1ea;
+  --vignette: rgba(120, 110, 90, 0.18); /* the pale desk at the edges */
+  --grain-opacity: 0.04;
+  --font-display: 'EB Garamond', Georgia, serif;
   --font-sans: 'EB Garamond', Georgia, serif;
   --font-mono: 'EB Garamond', Georgia, serif;
 }
 
 [data-skin='folio'][data-mode='dark'] {
-  --bg0: #1a1916;
-  --bg1: #211f1a;
-  --ink: #ece7dc;
-  --muted: #989182;
-  --primary: #8aa0c0; /* lightened navy for AA on the dark slate */
-  --accent-fill: #34435a;
-  --accent-ink: #8aa0c0;
-  --violet: #b0a890;
-  --blue: #8aa0c0;
-  --gold: #c9b896;
-  --card: #211f1a;
-  --card-solid: #211f1a;
-  --card-2: #29261f;
-  --line: rgba(138, 160, 192, 0.2);
-  --shadow: 0 22px 60px rgba(0, 0, 0, 0.55);
-  --glow-a: #34435a;
-  --glow-b: #6a5a48;
-  --glow-c: #8aa0c0;
-  --glow-d: #c9b896;
-  --star: #d8d0c0;
-  --fog: rgba(80, 75, 60, 0.14);
-  --on-primary: #ffffff;
-  --vignette: rgba(8, 7, 5, 0.6);
-  --grain-opacity: 0.04;
-  --font-display: 'Libre Baskerville', Georgia, serif;
+  --bg0: #ccc5b2; /* the SAME page, dimmed to lamplight — never a dark surface */
+  --bg1: #d4cdba;
+  --ink: #2b2820;
+  --muted: #524e44; /* pencil reads darker under the lamp */
+  --primary: #8f2a21; /* AA: #b1362b = 3.55:1 as text on the lamplit page; deep-pressed */
+  --accent-fill: #b1362b;
+  --accent-ink: #8f2a21; /* AA: #9c2f25 = 4.28:1 on the lamplit page; darkened */
+  --violet: #3f5a8a;
+  --blue: #3f5a8a;
+  --gold: #6b675e;
+  --card: #d9d2be; /* the leaf under lamplight */
+  --card-solid: #d9d2be;
+  --card-2: #e6dfcb;
+  --line: rgba(107, 103, 94, 0.42);
+  --shadow: 0 16px 34px rgba(23, 21, 15, 0.4);
+  --glow-a: #c9c2ae;
+  --glow-b: #b5ae9c;
+  --glow-c: #d9d2be;
+  --glow-d: #c2bba8;
+  --star: #8a8578;
+  --fog: rgba(23, 21, 15, 0.16);
+  --on-primary: #fbf1ea;
+  --vignette: rgba(23, 21, 15, 0.55); /* THE DARK DESK — the mode lives here, not in the page */
+  --grain-opacity: 0.05;
+  --font-display: 'EB Garamond', Georgia, serif;
   --font-sans: 'EB Garamond', Georgia, serif;
   --font-mono: 'EB Garamond', Georgia, serif;
 }
 
-/* ── HEARTH · Cozy · cottagecore (warm wool/tea, terracotta + sage, rounded) ── */
+/* Folio material values (chunk 3) — the grease-pencil stamp CTA, proof-paper spines, the
+   uncorrected-proof placeholder. Red corrects in BOTH modes (the stamp never inverts either). */
+[data-skin='folio'][data-mode='light'] {
+  --cta-hi: #d0463a;
+  --cta-lo: #b1362b;
+  --cta-ink: #fbf1ea;
+  --cta-border: transparent;
+  --cta-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.24), 0 6px 16px rgba(150, 40, 30, 0.4);
+  --plate: #fffdf5;
+  --gold-deep: #57534a;
+  --spine-lo: #e8e2d0;
+  --spine-hi: #f6f2e4;
+  --spine-title: #2b2820;
+  --spine-muted: #6b675e; /* AA: the sheet's pencil #78736a = 4.0:1 on the galley; darkened */
+  --spine-sheen: linear-gradient(90deg, rgba(0, 0, 0, 0.12) 0%, rgba(255, 255, 255, 0.3) 18%, rgba(255, 255, 255, 0.5) 50%, rgba(255, 255, 255, 0.24) 74%, rgba(0, 0, 0, 0.13) 100%);
+  --ph-a: #f6f2e4;
+  --ph-b: #e6e0ce;
+  --ph-c: #efe9d8;
+  --ph-ink: #2b2820;
+  --ph-muted: #5d5950; /* AA: pencil #6b675e = 4.2:1 on the mid board; darkened */
+  --paper: #f8f4e8;
+  --paper-ink: #2b2820;
+}
+[data-skin='folio'][data-mode='dark'] {
+  --cta-hi: #d0463a;
+  --cta-lo: #b1362b;
+  --cta-ink: #fbf1ea;
+  --cta-border: transparent;
+  --cta-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.24), 0 6px 16px rgba(150, 40, 30, 0.4);
+  --plate: #e6dfcb;
+  --gold-deep: #4e4a42;
+  --spine-lo: #b5ae9c;
+  --spine-hi: #cfc8b6;
+  --spine-title: #2b2820;
+  --spine-muted: #4e4a42; /* AA: pencil #6b675e = 2.9:1 on the lamplit galley; darkened */
+  --spine-sheen: linear-gradient(90deg, rgba(0, 0, 0, 0.28) 0%, rgba(255, 255, 255, 0.18) 18%, rgba(255, 255, 255, 0.35) 50%, rgba(255, 255, 255, 0.14) 74%, rgba(0, 0, 0, 0.3) 100%);
+  --ph-a: #c4bdab;
+  --ph-b: #aaa390;
+  --ph-c: #b8b19e;
+  --ph-ink: #2b2820;
+  --ph-muted: #3a372f; /* AA: pencil = 3.9:1 on the mid board; darkened */
+  --paper: #d9d2be;
+  --paper-ink: #2b2820;
+}
+
+/* ── HEARTH · Fable 5 · Cozy · the kitchen-table library. Warm wood (the desk only — text never
+   sits on it), oat linen carries the text, cream thread does the stitching, jam #c94f63 sweetens
+   once per view. LIGHT LEAD by design: the day screen is a morning kitchen, not a whitened app;
+   dark is the same kitchen after supper, lamplight on the wood. ── */
 [data-skin='hearth'][data-mode='light'] {
-  --bg0: #f6efe2;
-  --bg1: #efe5d2;
-  --ink: #3a2f25;
-  --muted: #70624e; /* darkened from #7e6f59 to clear 4.5:1 on the oat bg */
-  --primary: #97532a; /* terracotta, darkened so primary-as-text clears AA on the oat bg */
-  --accent-fill: #97532a;
-  --accent-ink: #8a4d28;
-  --violet: #6f7d4e;
+  --bg0: #ecdfc6; /* morning wood */
+  --bg1: #f2e8d4;
+  --ink: #3d3226;
+  --muted: #5c5240; /* AA: the sheet's #8a7d66 = 2.7:1 on the linen; darkened in-family */
+  --primary: #9c3243; /* jam as text, darkened from #b13a4e to clear AA on the wood */
+  --accent-fill: #b13a4e; /* jam — spent once per view (the primary action + the loved mark) */
+  --accent-ink: #9c3243;
+  --violet: #6f7d4e; /* sage — garden greens stay for glows */
   --blue: #5c7d6a;
-  --gold: #c0913f;
-  --card: #fbf6ec;
-  --card-solid: #fbf6ec;
-  --card-2: #f1e8d6;
-  --line: rgba(151, 83, 42, 0.24);
-  --shadow: 0 22px 50px rgba(120, 90, 50, 0.14);
-  --glow-a: #e0b08a;
-  --glow-b: #b8c098;
-  --glow-c: #e8d0a8;
-  --glow-d: #e0b08a;
-  --star: #c0913f;
+  --gold: #8a6a3c; /* the brass of the sewn button */
+  --card: #e0d3b4; /* oat linen */
+  --card-solid: #e0d3b4;
+  --card-2: #ede2ca;
+  --line: rgba(138, 116, 85, 0.45);
+  --thread: #8a7455; /* cream thread reads tea-dyed in daylight */
+  --shadow: 0 18px 40px rgba(110, 90, 60, 0.22);
+  --glow-a: #e8d0a8;
+  --glow-b: #d8bc90;
+  --glow-c: #f2e8d4;
+  --glow-d: #e0c9a0;
+  --star: #b08c54;
   --fog: rgba(150, 120, 80, 0.1);
-  --on-primary: #ffffff;
-  --vignette: rgba(120, 90, 50, 0.07);
+  --on-primary: #fdf3ea;
+  --vignette: rgba(120, 90, 50, 0.12);
   --grain-opacity: 0.04;
   --font-display: 'Bitter', Georgia, serif;
-  --font-sans: 'Nunito Sans', system-ui, sans-serif;
-  --font-mono: 'Nunito Sans', system-ui, sans-serif;
+  --font-sans: 'Varela Round', system-ui, sans-serif;
+  --font-mono: 'Varela Round', system-ui, sans-serif;
 }
 
 [data-skin='hearth'][data-mode='dark'] {
-  --bg0: #1d1812;
-  --bg1: #251f16;
-  --ink: #efe6d6;
-  --muted: #b3a488;
-  --primary: #d8945e;
-  --accent-fill: #a85f33;
-  --accent-ink: #d8945e;
+  --bg0: #1a130b; /* the table after supper */
+  --bg1: #241c12;
+  --ink: #f0e8d6;
+  --muted: #c9b998;
+  --primary: #d4586c; /* jam by lamplight — text-scale */
+  --accent-fill: #b13a4e; /* deepened so the cream ink clears AA on the fill */
+  --accent-ink: #f0a8b4; /* jam-cream eyebrows on the linen */
   --violet: #9aa878;
   --blue: #8a9968;
-  --gold: #e0b060;
-  --card: #251f16;
-  --card-solid: #251f16;
-  --card-2: #2d261b;
-  --line: rgba(216, 148, 94, 0.2);
+  --gold: #c9a86a;
+  --card: #57482e; /* the same linen, lamplit */
+  --card-solid: #57482e;
+  --card-2: #6b5a3c;
+  --line: rgba(232, 220, 192, 0.3);
+  --thread: #e8dcc0;
   --shadow: 0 22px 60px rgba(0, 0, 0, 0.55);
-  --glow-a: #a85f33;
-  --glow-b: #6f7d4e;
-  --glow-c: #d8945e;
-  --glow-d: #e0b060;
-  --star: #e8d0a8;
+  --glow-a: #6b5a3c;
+  --glow-b: #8a6a3c;
+  --glow-c: #c9a86a;
+  --glow-d: #57482e;
+  --star: #e8dcc0;
   --fog: rgba(120, 90, 50, 0.14);
-  --on-primary: #ffffff;
+  --on-primary: #fdf3ea;
   --vignette: rgba(10, 7, 4, 0.6);
-  --grain-opacity: 0.05;
+  --grain-opacity: 0.06;
   --font-display: 'Bitter', Georgia, serif;
-  --font-sans: 'Nunito Sans', system-ui, sans-serif;
-  --font-mono: 'Nunito Sans', system-ui, sans-serif;
+  --font-sans: 'Varela Round', system-ui, sans-serif;
+  --font-mono: 'Varela Round', system-ui, sans-serif;
 }
 
-/* ── ALMANAC · Nonfiction · reference (paper, teal + ochre, structured/indexed) ── */
+/* Hearth material values (chunk 3) — the jam-lid CTA (ringed like a preserve label), oat-linen
+   spines with stitched bands, the linen-board placeholder with its paper label. */
+[data-skin='hearth'][data-mode='light'] {
+  --cta-hi: #c04a5e; /* AA: the sheet's #d4586c/#b13a4e mid = 4.3:1 under cream; deepened */
+  --cta-lo: #9c3243;
+  --cta-ink: #fdf3ea;
+  --cta-border: transparent;
+  --cta-shadow: inset 0 0 0 2px rgba(253, 243, 234, 0.55), 0 6px 16px rgba(160, 50, 70, 0.35);
+  --plate: #ede2ca;
+  --gold-deep: #6a4f2c;
+  --spine-lo: #e0d3b4;
+  --spine-hi: #ede2ca;
+  --spine-title: #3d3226;
+  --spine-muted: #5c5240; /* AA: sheet #8a7d66 = 2.9:1 on the linen; darkened */
+  --spine-sheen: linear-gradient(90deg, rgba(0, 0, 0, 0.13) 0%, rgba(255, 255, 255, 0.3) 18%, rgba(255, 255, 255, 0.5) 50%, rgba(255, 255, 255, 0.24) 74%, rgba(0, 0, 0, 0.14) 100%);
+  --ph-a: #ede2ca;
+  --ph-b: #ddd0ae;
+  --ph-c: #e6dabc;
+  --ph-ink: #3d3226;
+  --ph-muted: #5c5240;
+  --paper: #faf5ea;
+  --paper-ink: #3d3226;
+}
+[data-skin='hearth'][data-mode='dark'] {
+  --cta-hi: #c74e60; /* AA: sheet mid = 4.0:1 under cream; deepened in-family */
+  --cta-lo: #a03344;
+  --cta-ink: #fdf3ea;
+  --cta-border: transparent;
+  --cta-shadow: inset 0 0 0 2px rgba(253, 243, 234, 0.45), 0 6px 16px rgba(160, 50, 70, 0.4);
+  --plate: #6b5a3c;
+  --gold-deep: #8a6a3c;
+  --spine-lo: #57482e;
+  --spine-hi: #6b5a3c;
+  --spine-title: #f0e8d6;
+  --spine-muted: #d4c6a8; /* AA: sheet #c9b998 = 4.3:1 on the cloth; lifted */
+  --spine-sheen: linear-gradient(90deg, rgba(0, 0, 0, 0.42) 0%, rgba(255, 255, 255, 0.07) 18%, rgba(255, 255, 255, 0.14) 50%, rgba(255, 255, 255, 0.05) 74%, rgba(0, 0, 0, 0.44) 100%);
+  --ph-a: #6b5a3c;
+  --ph-b: #57482e;
+  --ph-c: #635234;
+  --ph-ink: #f0e8d6;
+  --ph-muted: #e6dcc4; /* AA: #d4c6a8 = 3.9:1 on the bright cloth stop; lifted */
+  --paper: #efe4cc;
+  --paper-ink: #3d3226;
+}
+
+/* ── ALMANAC · Fable 5 · Nonfiction · the field reference. Buff card stock, ink band blocks, and
+   safety orange spent on exactly one tab per view. LIGHT LEAD: the bench at noon. Dark is the same
+   kit in the survey tent at night — the ink bands take over (light-on-ink is native here: "ink
+   bands carry titles"), and the buff lives on the paper surfaces (record cards, manuals, spines). ── */
 [data-skin='almanac'][data-mode='light'] {
-  --bg0: #f2f1ec;
-  --bg1: #e9e8e1;
-  --ink: #22252a;
-  --muted: #616771;
-  --primary: #2c6b6e;
-  --accent-fill: #235456;
-  --accent-ink: #235456;
-  --violet: #a8722f;
-  --blue: #2c6b6e;
-  --gold: #a8722f;
-  --card: #faf9f5;
-  --card-solid: #faf9f5;
-  --card-2: #edece5;
-  --line: rgba(44, 107, 110, 0.22);
-  --shadow: 0 22px 50px rgba(40, 50, 55, 0.12);
-  --glow-a: #a8cfd0;
-  --glow-b: #d8c0a0;
-  --glow-c: #c0d8d8;
-  --glow-d: #a8cfd0;
-  --star: #2c6b6e;
-  --fog: rgba(80, 120, 120, 0.08);
-  --on-primary: #ffffff;
-  --vignette: rgba(40, 60, 65, 0.06);
-  --grain-opacity: 0.03;
-  --font-display: 'IBM Plex Serif', Georgia, serif;
-  --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
-  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --bg0: #e4dcc2; /* the bench at noon */
+  --bg1: #ece5cd;
+  --ink: #2b2820;
+  --muted: #5f5947; /* the sheet's rgba(43,40,32,.65) flattened + darkened for AA on buff */
+  --primary: #8f400f; /* AA: #9d4c16 = 4.4:1 as text on the bench; darkened again */
+  --accent-fill: #2b2820; /* fills are INK BLOCKS — orange is a tab, never a text-bearing fill */
+  --accent-ink: #8a4413;
+  --violet: #c05e1e; /* the tab itself, glyph/fill scale */
+  --blue: #5c7d6a;
+  --gold: #6f6552; /* buff-ink hairlines — no gilt in the field kit */
+  --card: #eadfbe; /* buff stock */
+  --card-solid: #eadfbe;
+  --card-2: #f2ead0;
+  --line: rgba(43, 40, 32, 0.35);
+  --shadow: 0 16px 36px rgba(90, 80, 50, 0.24);
+  --glow-a: #eadfbe;
+  --glow-b: #d8cba2;
+  --glow-c: #f2ead0;
+  --glow-d: #e2d6b2;
+  --star: #6f6552;
+  --fog: rgba(90, 80, 50, 0.08);
+  --on-primary: #eadfbe; /* buff type on the ink block */
+  --vignette: rgba(90, 80, 50, 0.14);
+  --grain-opacity: 0.04;
+  --font-display: 'Source Serif 4', Georgia, serif;
+  --font-sans: 'Archivo', system-ui, sans-serif;
+  --font-mono: 'Archivo', system-ui, sans-serif;
 }
 
 [data-skin='almanac'][data-mode='dark'] {
-  --bg0: #101316;
-  --bg1: #161a1e;
-  --ink: #e6e8ea;
-  --muted: #878e98;
-  --primary: #4fa0a3;
-  --accent-fill: #235456;
-  --accent-ink: #4fa0a3;
-  --violet: #c79350;
-  --blue: #4fa0a3;
-  --gold: #c79350;
-  --card: #161a1e;
-  --card-solid: #161a1e;
-  --card-2: #1d2227;
-  --line: rgba(79, 160, 163, 0.2);
+  --bg0: #13120c; /* the tent at night */
+  --bg1: #1b1a14;
+  --ink: #e6ddc2; /* band-ink — buff type carries the dark mode */
+  --muted: #b3a67e;
+  --primary: #cf6b26; /* safety orange */
+  --accent-fill: #241f14; /* the ink block */
+  --accent-ink: #e08a3c;
+  --violet: #cf6b26;
+  --blue: #8a9968;
+  --gold: #b3a67e;
+  --card: #241f14; /* ink-block stock */
+  --card-solid: #241f14;
+  --card-2: #2b2619;
+  --line: rgba(179, 166, 126, 0.3);
   --shadow: 0 22px 60px rgba(0, 0, 0, 0.6);
-  --glow-a: #235456;
-  --glow-b: #6a5a48;
-  --glow-c: #4fa0a3;
-  --glow-d: #c79350;
-  --star: #a8cfd0;
-  --fog: rgba(40, 80, 80, 0.14);
-  --on-primary: #ffffff;
-  --vignette: rgba(4, 6, 8, 0.6);
-  --grain-opacity: 0.04;
-  --font-display: 'IBM Plex Serif', Georgia, serif;
-  --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
-  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --glow-a: #b3a67e;
+  --glow-b: #cf6b26;
+  --glow-c: #a3946c;
+  --glow-d: #8a7a52;
+  --star: #d9cda6;
+  --fog: rgba(40, 35, 20, 0.14);
+  --on-primary: #d9cda6;
+  --vignette: rgba(4, 4, 2, 0.6);
+  --grain-opacity: 0.05;
+  --font-display: 'Source Serif 4', Georgia, serif;
+  --font-sans: 'Archivo', system-ui, sans-serif;
+  --font-mono: 'Archivo', system-ui, sans-serif;
 }
 
-/* ── BLOOM · YA / Contemporary · bright, saturated, playful ── */
+/* Almanac material values (chunk 3) — the ink-stamp CTA (with its orange notch, drawn in
+   skin-kit), buff manual spines with band blocks, the buff-manual placeholder. */
+[data-skin='almanac'][data-mode='light'] {
+  --cta-hi: #3a3322;
+  --cta-lo: #241f14;
+  --cta-ink: #eadfbe;
+  --cta-border: transparent;
+  --cta-shadow: 0 5px 14px rgba(90, 80, 50, 0.35);
+  --plate: #f2ead0;
+  --gold-deep: #57503c;
+  --spine-lo: #ddd0a8;
+  --spine-hi: #eadfbe;
+  --spine-title: #2b2820;
+  --spine-muted: #5f5947; /* AA: the sheet's translucent ink = 3.9:1 flattened; darkened */
+  --spine-sheen: linear-gradient(90deg, rgba(0, 0, 0, 0.12) 0%, rgba(255, 255, 255, 0.3) 18%, rgba(255, 255, 255, 0.5) 50%, rgba(255, 255, 255, 0.22) 74%, rgba(0, 0, 0, 0.13) 100%);
+  --ph-a: #eadfbe;
+  --ph-b: #d8cba2;
+  --ph-c: #e2d6b2;
+  --ph-ink: #2b2820;
+  --ph-muted: #5f5947;
+  --paper: #fbf6e8;
+  --paper-ink: #2b2820;
+}
+[data-skin='almanac'][data-mode='dark'] {
+  --cta-hi: #332c1c;
+  --cta-lo: #241f14;
+  --cta-ink: #d9cda6;
+  --cta-border: rgba(217, 205, 166, 0.22);
+  --cta-shadow: 0 5px 14px rgba(0, 0, 0, 0.4);
+  --plate: #2b2619;
+  --gold-deep: #8a7a52;
+  --spine-lo: #a3946c;
+  --spine-hi: #b3a67e;
+  --spine-title: #241f14; /* the buff manual keeps its ink in the tent — paper never inverts */
+  --spine-muted: #3a3426; /* AA: sheet rgba(36,31,20,.72) = 3.4:1 flattened on buff; darkened */
+  --spine-sheen: linear-gradient(90deg, rgba(0, 0, 0, 0.3) 0%, rgba(255, 255, 255, 0.12) 18%, rgba(255, 255, 255, 0.26) 50%, rgba(255, 255, 255, 0.1) 74%, rgba(0, 0, 0, 0.32) 100%);
+  --ph-a: #b3a67e;
+  --ph-b: #9a8c64;
+  --ph-c: #a89a72;
+  --ph-ink: #241f14;
+  --ph-muted: #3a3426;
+  --paper: #efe6cc;
+  --paper-ink: #241f14;
+}
+
+/* ── BLOOM · Fable 5 "Firstlight" · YA · dawn on the last page. The screen is the sky — the only
+   gradient in the skin, vertical, night at the top. Dark mode is 2 a.m.; light is the morning
+   after. Cards are opaque white stickers (3px ring) in BOTH modes; gel #6a55c9 acts; sun gold is
+   spent on done, milestones, and the sun itself. Stars come out in dark mode only. No black —
+   night is deep blue. ── */
 [data-skin='bloom'][data-mode='light'] {
-  --bg0: #fbf4fd;
-  --bg1: #f3e9fb;
-  --ink: #221b2e;
-  --muted: #635c85; /* darkened violet-grey for AA on the bright cards */
-  --primary: #7c3aed;
-  --accent-fill: #6a2fd0;
-  --accent-ink: #6a2fd0;
-  --violet: #e84a8a;
-  --blue: #5a32c8;
-  --gold: #d98a1f;
-  --card: #fefbff;
-  --card-solid: #fefbff;
-  --card-2: #f6eefb;
-  --line: rgba(124, 58, 237, 0.22);
-  --shadow: 0 22px 50px rgba(124, 58, 237, 0.14);
-  --glow-a: #c9a8ff;
-  --glow-b: #ffb0d0;
-  --glow-c: #ffe0a0;
-  --glow-d: #c9a8ff;
-  --star: #7c3aed;
-  --fog: rgba(180, 140, 240, 0.1);
+  --bg0: #d5d4ea; /* the morning sky */
+  --bg1: #dfdff0;
+  --ink: #2b2a3a;
+  --muted: #5a5878;
+  --primary: #5a46b4; /* gel as text, darkened from #6a55c9 to clear AA on the sky */
+  --accent-fill: #6a55c9; /* the gel pill */
+  --accent-ink: #5a46b4;
+  --violet: #b86a5c; /* the dawn band */
+  --blue: #6a55c9;
+  --gold: #c9862e; /* the sun, morning-deep */
+  --card: #ffffff; /* the sticker */
+  --card-solid: #ffffff;
+  --card-2: #f5f4fb;
+  --line: rgba(106, 85, 201, 0.25);
+  --shadow: 0 14px 30px rgba(90, 90, 120, 0.28);
+  --glow-a: #e6c8d2;
+  --glow-b: #f2c39a;
+  --glow-c: #f7d488;
+  --glow-d: #c9cee8;
+  --star: #d5d4ea; /* the stars have gone in — dark mode only */
+  --fog: rgba(180, 170, 220, 0.12);
   --on-primary: #ffffff;
-  --vignette: rgba(124, 58, 237, 0.05);
-  --grain-opacity: 0.02;
-  --font-display: 'Poppins', system-ui, sans-serif;
-  --font-sans: 'Poppins', system-ui, sans-serif;
-  --font-mono: 'Poppins', system-ui, sans-serif;
+  --vignette: rgba(90, 90, 140, 0.12);
+  --grain-opacity: 0.03;
+  --font-display: 'Baloo 2', system-ui, sans-serif;
+  --font-sans: 'Karla', system-ui, sans-serif;
+  --font-mono: 'Karla', system-ui, sans-serif;
 }
 
 [data-skin='bloom'][data-mode='dark'] {
-  --bg0: #16111f;
-  --bg1: #1e1730;
-  --ink: #f1ecfb;
-  --muted: #a99fc4;
-  --primary: #b794ff;
-  --accent-fill: #6a3fd0;
-  --accent-ink: #b794ff;
-  --violet: #ff7ab0;
-  --blue: #8a6aff;
-  --gold: #ffcf5a;
-  --card: #1e1730;
-  --card-solid: #1e1730;
-  --card-2: #261d3a;
-  --line: rgba(183, 148, 255, 0.22);
-  --shadow: 0 22px 60px rgba(0, 0, 0, 0.55);
-  --glow-a: #6a3fd0;
-  --glow-b: #ff7ab0;
-  --glow-c: #b794ff;
-  --glow-d: #ffcf5a;
-  --star: #d8c0ff;
-  --fog: rgba(120, 80, 200, 0.16);
+  --bg0: #14162a; /* 2 a.m. — deep blue, never black */
+  --bg1: #1d2038;
+  --ink: #eef0fa;
+  --muted: #b8bcd8;
+  --primary: #9f8cf0; /* gel by night */
+  --accent-fill: #6a55c9;
+  --accent-ink: #9f8cf0;
+  --violet: #c06a5c; /* the dawn at the foot */
+  --blue: #262a4d;
+  --gold: #f5b85a; /* the small sun */
+  --card: #1f2240; /* deep-sky panel for generic surfaces; the STICKER lives on --paper */
+  --card-solid: #1f2240;
+  --card-2: #262a4d;
+  --line: rgba(184, 188, 216, 0.24);
+  --shadow: 0 22px 60px rgba(5, 5, 20, 0.6);
+  --glow-a: #5c4a86;
+  --glow-b: #c06a5c;
+  --glow-c: #9f8cf0;
+  --glow-d: #f0b45c;
+  --star: #eef0fa;
+  --fog: rgba(92, 74, 134, 0.16);
   --on-primary: #ffffff;
-  --vignette: rgba(8, 5, 14, 0.58);
-  --grain-opacity: 0.03;
-  --font-display: 'Poppins', system-ui, sans-serif;
-  --font-sans: 'Poppins', system-ui, sans-serif;
-  --font-mono: 'Poppins', system-ui, sans-serif;
+  --vignette: rgba(8, 8, 20, 0.55);
+  --grain-opacity: 0.04;
+  --font-display: 'Baloo 2', system-ui, sans-serif;
+  --font-sans: 'Karla', system-ui, sans-serif;
+  --font-mono: 'Karla', system-ui, sans-serif;
+}
+
+/* Bloom material values (chunk 3) — the gel-pill CTA, the sky spine (dawn at the tail), the
+   sky-mockup placeholder (a white sticker on the dawn). --sky is the skin's ONE gradient. */
+[data-skin='bloom'][data-mode='light'] {
+  --cta-hi: #8a73e0;
+  --cta-lo: #6a55c9;
+  --cta-ink: #ffffff;
+  --cta-border: transparent;
+  --cta-shadow: 0 8px 20px rgba(106, 85, 201, 0.35);
+  --plate: #f5f4fb;
+  --gold-deep: #a06a20;
+  --sky: linear-gradient(180deg, #c9cee8 0%, #d5d4ea 50%, #e6c8d2 74%, #f2c39a 89%, #f7d488 100%);
+  --spine-lo: #c9cee8; /* the sky's head stops — contrast floor for spine type */
+  --spine-hi: #d5d4ea;
+  --spine-title: #2b2a3a;
+  --spine-muted: #4a4866;
+  --spine-sheen: linear-gradient(90deg, rgba(0, 0, 0, 0.12) 0%, rgba(255, 255, 255, 0.3) 18%, rgba(255, 255, 255, 0.5) 50%, rgba(255, 255, 255, 0.22) 74%, rgba(0, 0, 0, 0.13) 100%);
+  --ph-a: #c9cee8;
+  --ph-b: #e6c8d2;
+  --ph-c: #f7d488;
+  --ph-ink: #2b2a3a; /* sticker ink — placeholder type sits on the white sticker, never the sky */
+  --ph-muted: #5a5878;
+  --paper: #ffffff;
+  --paper-ink: #2b2a3a;
+}
+[data-skin='bloom'][data-mode='dark'] {
+  --cta-hi: #8a73e0;
+  --cta-lo: #6a55c9;
+  --cta-ink: #ffffff;
+  --cta-border: transparent;
+  --cta-shadow: 0 8px 20px rgba(106, 85, 201, 0.4);
+  --plate: #262a4d;
+  --gold-deep: #b8863c;
+  --sky: linear-gradient(180deg, #20223a 0%, #262a4d 52%, #5c4a86 76%, #c06a5c 89%, #f0b45c 100%);
+  --spine-lo: #20223a;
+  --spine-hi: #262a4d;
+  --spine-title: #eef0fa;
+  --spine-muted: #b8bcd8;
+  --spine-emboss: 0 1px 2px rgba(10, 10, 26, 0.5); /* the night holds the type up off the sky */
+  --spine-sheen: linear-gradient(90deg, rgba(0, 0, 0, 0.4) 0%, rgba(255, 255, 255, 0.07) 18%, rgba(255, 255, 255, 0.14) 50%, rgba(255, 255, 255, 0.05) 74%, rgba(0, 0, 0, 0.42) 100%);
+  --ph-a: #20223a;
+  --ph-b: #5c4a86;
+  --ph-c: #f0b45c;
+  --ph-ink: #2b2a3a; /* sticker ink (the sticker is white in both modes) */
+  --ph-muted: #5a5878;
+  --paper: #fbfbff;
+  --paper-ink: #2b2a3a;
 }
 
 /* The living sky — soft glows that drift/breathe, faint twinkle, slow fog. */
@@ -1131,6 +1370,24 @@
 }
 @keyframes radar-sweep { /* Aphelion: cycle-ring radar sweep (rides .rv-anim) */
   to { transform: rotate(360deg); }
+}
+@keyframes dashdraw { /* Marginalia: the caret writes itself in (reduced motion: ink dry) */
+  0% { stroke-dashoffset: 200; }
+  35%, 100% { stroke-dashoffset: 0; }
+}
+@keyframes sway { /* Hearth: a just-sewn button still swings on its thread */
+  0%, 100% { transform: rotate(-7deg); }
+  50% { transform: rotate(6deg); }
+}
+@keyframes wag { /* Almanac: the tab flags you down — wags once, settles, wags again */
+  0%, 48%, 100% { transform: rotate(0deg); }
+  12% { transform: rotate(-10deg); }
+  24% { transform: rotate(6deg); }
+  36% { transform: rotate(-3deg); }
+}
+@keyframes dawn { /* Firstlight: the sun bobs above the horizon while something is happening */
+  0%, 100% { transform: translateY(3px); }
+  50% { transform: translateY(0); }
 }
 
 /* Respect reduced motion: hold the sky AND all per-skin character motion perfectly still. */
