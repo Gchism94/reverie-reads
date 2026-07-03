@@ -47,6 +47,16 @@ describe('matchesFilters', () => {
     expect(matchesFilters(unreadButLogged, { ...defaultFilters(), read: 'Read' })).toBe(true)
     expect(matchesFilters(unreadButLogged, { ...defaultFilters(), read: 'Unread' })).toBe(false)
   })
+
+  it('filters by intensity/spice level (empty = any, set = membership)', () => {
+    const spicy = makeBook({ id: 's', title: 'Spicy', intensity: 4 })
+    const sweet = makeBook({ id: 'w', title: 'Sweet', intensity: 1 })
+    expect(matchesFilters(spicy, { ...defaultFilters(), intensity: [] })).toBe(true) // any
+    expect(matchesFilters(spicy, { ...defaultFilters(), intensity: [4, 5] })).toBe(true)
+    expect(matchesFilters(sweet, { ...defaultFilters(), intensity: [4, 5] })).toBe(false)
+    // an unrated book (intensity 0/undefined) never matches a positive-level filter
+    expect(matchesFilters(makeBook({ id: 'z', title: 'Z', intensity: 0 }), { ...defaultFilters(), intensity: [3] })).toBe(false)
+  })
 })
 
 describe('seriesLenBucket', () => {
@@ -90,5 +100,7 @@ describe('activeFilterCount', () => {
     expect(
       activeFilterCount({ ...defaultFilters(), sub: 'Romantasy', tags: ['Fae'], fave: true, q: 'x' }),
     ).toBe(3)
+    // intensity counts as one facet however many levels are picked
+    expect(activeFilterCount({ ...defaultFilters(), intensity: [3, 4, 5] })).toBe(1)
   })
 })
