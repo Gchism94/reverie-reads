@@ -152,3 +152,116 @@
   color: var(--primary);
   border: 1px solid color-mix(in srgb, var(--primary) 55%, transparent);
 }
+
+/* Grimoire · the working spellbook — primary is a gilt cartouche (3px, Cormorant, illuminated edge);
+   secondary a ruled incantation (written on the line, no box); the icon action a bronze clasp. */
+[data-skin='grimoire'] .skin-btn-primary {
+  border-radius: 3px;
+}
+[data-skin='grimoire'] .skin-btn-secondary {
+  border-radius: 0;
+  border: 0;
+  border-bottom: 1px solid var(--hair);
+}
+[data-skin='grimoire'] .skin-btn-secondary:hover {
+  background: color-mix(in srgb, var(--gold) 7%, transparent);
+}
+[data-skin='grimoire'] .skin-btn-icon {
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.45);
+  background: linear-gradient(160deg, #a8843c, #6e5420 60%, #8a6a2f);
+  color: #f6ecd2;
+  box-shadow: inset 0 2px 0 rgba(255, 235, 180, 0.3), inset 0 -4px 8px rgba(0, 0, 0, 0.4);
+}
+/* the ruled manuscript line under a pilcrow */
+[data-skin='grimoire'] .skin-field {
+  border-radius: 0;
+  border: 0;
+  border-bottom: 1px solid var(--hair);
+  background: transparent;
+  font-family: var(--font-display);
+  font-style: italic;
+}
+
+/* Marrow · the specimen archive — primary is a bone plaque (chamfer-cut); secondary is carved into
+   the granite (engraved, no border); the icon action is a specimen pin. Everything cut, never round. */
+[data-skin='marrow'] .skin-btn-primary {
+  border-radius: 0;
+  border: 0;
+}
+[data-skin='marrow'] .skin-btn-secondary {
+  clip-path: var(--ctl-clip);
+  border: 0;
+  background: color-mix(in srgb, var(--card-solid) 88%, var(--ink));
+  color: var(--muted);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+[data-skin='marrow'] .skin-btn-secondary:hover {
+  color: var(--ink);
+}
+[data-skin='marrow'] .skin-btn-icon {
+  clip-path: none;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.5);
+  background: radial-gradient(circle at 34% 28%, var(--slate), color-mix(in srgb, var(--slate) 62%, #000) 62%, color-mix(in srgb, var(--slate) 45%, #000));
+  color: var(--paper);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.3), inset 0 -4px 8px rgba(0, 0, 0, 0.4);
+}
+/* the ledger line */
+[data-skin='marrow'] .skin-field {
+  border-radius: 0;
+  clip-path: none;
+  border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--ink) 35%, transparent);
+  background: transparent;
+}
+
+/* Gaslight (umbra) · the unsolved case — primary is a brass door plate (beveled, engraved, screwed at
+   both ends); secondary a typed order on its own underline; the icon action a brass tack. */
+[data-skin='umbra'] .skin-btn-primary {
+  position: relative;
+  border-radius: 2px;
+  letter-spacing: 0.18em;
+}
+[data-skin='umbra'] .skin-btn-primary::before,
+[data-skin='umbra'] .skin-btn-primary::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  transform: translateY(-50%);
+  background: color-mix(in srgb, var(--cta-ink) 55%, var(--cta-lo));
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.5);
+}
+[data-skin='umbra'] .skin-btn-primary::before {
+  left: 7px;
+}
+[data-skin='umbra'] .skin-btn-primary::after {
+  right: 7px;
+}
+[data-skin='umbra'] .skin-btn-secondary {
+  border-radius: 0;
+  border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--slate) 60%, transparent);
+  color: var(--ink);
+}
+[data-skin='umbra'] .skin-btn-secondary:hover {
+  background: color-mix(in srgb, var(--slate) 10%, transparent);
+}
+[data-skin='umbra'] .skin-btn-icon {
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.5);
+  background: radial-gradient(circle at 34% 28%, var(--cta-hi), var(--cta-lo) 58%, color-mix(in srgb, var(--cta-lo) 70%, #000));
+  color: var(--cta-ink);
+  box-shadow: inset 0 2px 0 rgba(255, 244, 205, 0.5), inset 0 -4px 8px rgba(70, 50, 10, 0.4);
+}
+/* the typewriter SUBJECT line */
+[data-skin='umbra'] .skin-field {
+  border-radius: 0;
+  border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--slate) 60%, transparent);
+  background: transparent;
+  font-family: var(--font-mono);
+}

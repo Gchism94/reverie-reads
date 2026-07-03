@@ -32,14 +32,14 @@ type Tok = {
 const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
   'tryst/dark': { bg0: '#0b0612', cardSolid: '#1d0e29', ink: '#f5e9f0', muted: '#c2a3bd', accentFill: '#a3244a', onPrimary: '#ffffff', accentInk: '#f0b14e', markAccent: '#f0b14e' },
   'tryst/light': { bg0: '#f8eee4', cardSolid: '#fdf8f1', ink: '#351523', muted: '#7d556b', accentFill: '#9c2246', onPrimary: '#ffffff', accentInk: '#8a5717', markAccent: '#8a5717' },
-  'grimoire/dark': { bg0: '#0c0f0b', cardSolid: '#161b12', ink: '#ece7d6', muted: '#9aa384', accentFill: '#2f9e74', onPrimary: '#08110b', accentInk: '#d4af37', markAccent: '#d4af37' },
-  'grimoire/light': { bg0: '#f1e7cf', cardSolid: '#f7efd9', ink: '#2a2418', muted: '#665e49', accentFill: '#1a6e4c', onPrimary: '#ffffff', accentInk: '#6e5518', markAccent: '#b08828' },
+  'grimoire/dark': { bg0: '#0c0f0b', cardSolid: '#161b12', ink: '#ece7d6', muted: '#a8b08c', accentFill: '#3aa97e', onPrimary: '#08110b', accentInk: '#d4af37', markAccent: '#d4af37' },
+  'grimoire/light': { bg0: '#f1e7cf', cardSolid: '#f7efd9', ink: '#2a2418', muted: '#6b644e', accentFill: '#1f7d57', onPrimary: '#ffffff', accentInk: '#6e5518', markAccent: '#8a6a2f' },
   'aphelion/dark': { bg0: '#05070d', cardSolid: '#0c1220', ink: '#e6edf7', muted: '#8595b4', accentFill: '#1f8fa3', onPrimary: '#02080a', accentInk: '#4fd1e0', markAccent: '#4fd1e0' },
   'aphelion/light': { bg0: '#eef3fb', cardSolid: '#f7fafe', ink: '#0e1626', muted: '#51607a', accentFill: '#0a6e80', onPrimary: '#ffffff', accentInk: '#0a6e80', markAccent: '#0a6e80' },
-  'marrow/dark': { bg0: '#0a0a0b', cardSolid: '#161315', ink: '#e8e3da', muted: '#98907f', accentFill: '#8f3535', onPrimary: '#ffffff', accentInk: '#d06a6a', markAccent: '#d06a6a' },
+  'marrow/dark': { bg0: '#17181c', cardSolid: '#212328', ink: '#e9e4db', muted: '#a8a39a', accentFill: '#a84545', onPrimary: '#ffffff', accentInk: '#d67878', markAccent: '#d67878' },
   'marrow/light': { bg0: '#ece8e0', cardSolid: '#f4f0e8', ink: '#1b1815', muted: '#6a6358', accentFill: '#8a3232', onPrimary: '#ffffff', accentInk: '#8a3232', markAccent: '#8a3232' },
-  'umbra/dark': { bg0: '#0c0d10', cardSolid: '#15171c', ink: '#e9eaed', muted: '#9398a3', accentFill: '#7e5a16', onPrimary: '#ffffff', accentInk: '#e0a84a', markAccent: '#e0a84a' },
-  'umbra/light': { bg0: '#eceef1', cardSolid: '#f8f9fb', ink: '#14161a', muted: '#565c66', accentFill: '#7e5a16', onPrimary: '#ffffff', accentInk: '#7e5a16', markAccent: '#8a6412' },
+  'umbra/dark': { bg0: '#101216', cardSolid: '#191c22', ink: '#e8e4da', muted: '#99a3ad', accentFill: '#d9a441', onPrimary: '#23201a', accentInk: '#d9a441', markAccent: '#d9a441' },
+  'umbra/light': { bg0: '#edeae2', cardSolid: '#f6f4ee', ink: '#23201a', muted: '#5b656f', accentFill: '#8a6a1f', onPrimary: '#fbf6e8', accentInk: '#7a5d1b', markAccent: '#8a6a1f' },
   'folio/dark': { bg0: '#1a1916', cardSolid: '#211f1a', ink: '#ece7dc', muted: '#989182', accentFill: '#34435a', onPrimary: '#ffffff', accentInk: '#8aa0c0', markAccent: '#8aa0c0' },
   'folio/light': { bg0: '#f4f1ea', cardSolid: '#faf8f2', ink: '#1f1d1a', muted: '#645f56', accentFill: '#34435a', onPrimary: '#ffffff', accentInk: '#34435a', markAccent: '#3a4a63' },
   'hearth/dark': { bg0: '#1d1812', cardSolid: '#251f16', ink: '#efe6d6', muted: '#b3a488', accentFill: '#a85f33', onPrimary: '#ffffff', accentInk: '#d8945e', markAccent: '#d8945e' },
@@ -86,6 +86,36 @@ const FABLE5: Partial<Record<`${SkinId}/${'dark' | 'light'}`, Fable5>> = {
     ctaInk: '#f2fbfd', ctaHi: '#0d8093', ctaLo: '#0a6e80',
     spineTitle: '#0e1626', spineMuted: '#4d5d73', spineLo: '#c8d6e6', spineHi: '#e9f0f8',
     phInk: '#0e1626', phMutedInk: '#51607a', phMutedAlpha: 1, phStops: ['#e8f0f9', '#cfdded', '#dfe9f4'],
+  },
+  'grimoire/dark': {
+    ctaInk: '#241f10', ctaHi: '#e7c95c', ctaLo: '#c9a22e',
+    spineTitle: '#d4af37', spineMuted: '#b3ab8a', spineLo: '#3a3320', spineHi: '#292416',
+    phInk: '#f0ead6', phMutedInk: '#e6dcbe', phMutedAlpha: 0.75, phStops: ['#2e2a18', '#3d3520', '#241f10'],
+  },
+  'grimoire/light': {
+    ctaInk: '#f6ecd2', ctaHi: '#8a6a2f', ctaLo: '#6e5420',
+    spineTitle: '#7a5c14', spineMuted: '#5e5742', spineLo: '#e6d7b2', spineHi: '#f0e3c4',
+    phInk: '#3a3018', phMutedInk: '#5e5742', phMutedAlpha: 1, phStops: ['#f3e8ca', '#e9dab4', '#efe2c0'],
+  },
+  'marrow/dark': {
+    ctaInk: '#241d18', ctaHi: '#f2ead9', ctaLo: '#d8cfba',
+    spineTitle: '#e9e4db', spineMuted: '#a8a39a', spineLo: '#26282e', spineHi: '#1b1d21',
+    phInk: '#e9e4db', phMutedInk: '#a8a39a', phMutedAlpha: 1, phStops: ['#24262c', '#1b1d21', '#212328'],
+  },
+  'marrow/light': {
+    ctaInk: '#f4f0e8', ctaHi: '#3a3d44', ctaLo: '#26282e',
+    spineTitle: '#2a251e', spineMuted: '#52483e', spineLo: '#c6bfae', spineHi: '#d5cfc0',
+    phInk: '#2a251e', phMutedInk: '#52483e', phMutedAlpha: 1, phStops: ['#d8d2c4', '#c9c2b2', '#d2cbbc'],
+  },
+  'umbra/dark': {
+    ctaInk: '#2a2214', ctaHi: '#e8bc5a', ctaLo: '#c1902f',
+    spineTitle: '#2a251c', spineMuted: '#5d574a', spineLo: '#e2d9c2', spineHi: '#e2d9c2',
+    phInk: '#e8e4da', phMutedInk: '#99a3ad', phMutedAlpha: 1, phStops: ['#2a2f38', '#1c2028', '#242932'],
+  },
+  'umbra/light': {
+    ctaInk: '#f6f0dc', ctaHi: '#8a6a1f', ctaLo: '#6e5518',
+    spineTitle: '#2a251c', spineMuted: '#5d574a', spineLo: '#f8f2e2', spineHi: '#f8f2e2',
+    phInk: '#23201a', phMutedInk: '#3e474f', phMutedAlpha: 1, phStops: ['#d6d0c0', '#c5bfae', '#cfc9b9'],
   },
 }
 

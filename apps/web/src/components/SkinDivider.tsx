@@ -14,11 +14,12 @@ const MOTIFS: Record<SkinId, React.ReactNode> = {
     </>
   ),
   grimoire: (
+    // Fable 5: the chapter rule — thick-thin gilt pair meeting at the quatrefoil lozenge
     <>
-      <path d="M14 13h78" strokeOpacity=".5" />
-      <path d="M206 13h-78" strokeOpacity=".5" />
-      <circle cx="110" cy="13" r="6" />
-      <path d="M110 3v4M110 19v4M100 13h-4M124 13h-4M103 6l3 3M117 20l-3-3M117 6l-3 3M103 20l3-3" />
+      <path d="M14 11h80M14 15h80" strokeOpacity=".55" />
+      <path d="M206 11h-80M206 15h-80" strokeOpacity=".55" />
+      <path d="M110 5l8 8-8 8-8-8z" />
+      <path d="M110 9l4 4-4 4-4-4z" strokeOpacity=".6" />
     </>
   ),
   aphelion: (
@@ -30,18 +31,21 @@ const MOTIFS: Record<SkinId, React.ReactNode> = {
     </>
   ),
   marrow: (
+    // Fable 5: the settled rule — a hairline that fractures at center, its halves out of true
     <>
-      <path d="M12 13h88M208 13h-88" strokeOpacity=".55" />
-      <path d="M100 13l-7-5M100 13l-7 5M120 13l7-5M120 13l7 5" />
-      <circle cx="110" cy="13" r="2.4" fill="currentColor" stroke="none" />
+      <path d="M12 12h94M208 14h-90" strokeOpacity=".6" />
+      <path d="M106 12l4 3" strokeOpacity=".8" />
     </>
   ),
   // Stage 3 motifs: umbra single noir diamond · folio editorial dot-leader · hearth leaf · almanac
   // index ticks · bloom sparkle.
   umbra: (
+    // Fable 5 Gaslight: a length of thread left slack between two tacks
     <>
-      <path d="M10 13h90M210 13h-90" strokeOpacity=".5" />
-      <path d="M110 7l5 6-5 6-5-6z" fill="currentColor" stroke="none" />
+      <path d="M10 13h84M210 13h-84" strokeOpacity=".4" />
+      <circle cx="96" cy="13" r="2.4" fill="currentColor" stroke="none" />
+      <circle cx="124" cy="13" r="2.4" fill="currentColor" stroke="none" />
+      <path d="M96 13q14 7 28 0" strokeOpacity=".9" />
     </>
   ),
   folio: (
