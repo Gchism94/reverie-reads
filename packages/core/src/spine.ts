@@ -48,3 +48,12 @@ export function fitSpineTitle(
   if (title.length <= maxChars) return { text: title, fontPx, truncated: false }
   return { text: `${title.slice(0, Math.max(1, maxChars - 1)).trimEnd()}…`, fontPx, truncated: true }
 }
+
+/** Deterministic catalog callsign for archive-style spines / plates (Aphelion's `APH·07 / 0318`).
+ *  Stable per book id; prefix is the skin's 3-letter call (derived from the skin id by the caller). */
+export function callsign(seed: string, prefix: string): { code: string; id: string } {
+  const h = hash32(seed || 'callsign')
+  const code = `${prefix}·${String((h % 12) + 1).padStart(2, '0')}`
+  const id = String(((h >>> 8) % 9000) + 1000)
+  return { code, id }
+}

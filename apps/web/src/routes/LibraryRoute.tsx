@@ -185,7 +185,7 @@ function LibraryScreen() {
           ))}
         </div>
       ) : (
-        <p className="px-2 py-10 text-center text-[14px] text-muted">No books match these filters.</p>
+        <p className="px-2 py-10 text-center text-[14px] text-muted">{voice.miss}</p>
       )}
     </div>
   )
