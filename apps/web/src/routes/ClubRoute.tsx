@@ -19,6 +19,7 @@ import {
 } from '../data/clubs'
 import { useReportContent } from '../data/moderation'
 import { useRealtimeRefetch } from '../hooks/useRealtimeRefetch'
+import { useVoice } from '../skin/labels'
 
 function unitWord(type: ClubUnitType, label: string, n: number): string {
   return type === 'percent' ? `${n}%` : `${label} ${n}`
@@ -54,7 +55,8 @@ function ClubScreen() {
     [clubMembersKey(clubId), clubCommentsKey(clubId), clubLockedKey(clubId)],
   )
 
-  if (isLoading) return <p className="px-6 py-16 text-center text-muted">Loading…</p>
+  const voice = useVoice()
+  if (isLoading) return <p className="px-6 py-16 text-center text-muted">{voice.loading}</p>
   if (!club)
     return (
       <div className="px-6 py-16 text-center text-muted">

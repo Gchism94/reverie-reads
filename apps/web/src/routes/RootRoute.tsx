@@ -4,10 +4,12 @@ import { AppShell } from '../components/AppShell'
 import { useAuth } from '../auth/AuthProvider'
 import { UnauthShell } from '../auth/UnauthShell'
 import { VerifyEmail } from '../auth/VerifyEmail'
+import { useVoice } from '../skin/labels'
 
 function RootLayout() {
   const { session, loading } = useAuth()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
+  const voice = useVoice()
 
   // The skin-character lab (/lab/skins) renders OUTSIDE the auth gate so the Tryst-vs-Aphelion
   // side-by-side can be opened — and screenshotted headlessly — without a session. Synthetic content
@@ -23,7 +25,7 @@ function RootLayout() {
 
   if (loading) {
     return (
-      <div className="relative z-[1] flex min-h-dvh items-center justify-center text-muted">Loading…</div>
+      <div className="relative z-[1] flex min-h-dvh items-center justify-center text-muted">{voice.loading}</div>
     )
   }
 

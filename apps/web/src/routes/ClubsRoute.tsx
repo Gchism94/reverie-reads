@@ -13,7 +13,7 @@ import {
 import { useProfile } from '../data/profile'
 import { Modal } from '../components/Modal'
 
-const fieldClass = 'h-10 w-full rounded-xl border border-line px-3 text-[14px] text-ink outline-none'
+const fieldClass = 'h-10 w-full skin-card border border-line px-3 text-[14px] text-ink outline-none'
 const fieldStyle = { background: 'var(--field)' } as const
 
 function CreateClubModal({ displayName, onClose, onCreated }: { displayName: string; onClose: () => void; onCreated: (id: string) => void }) {
@@ -181,7 +181,7 @@ function ClubsScreen() {
       {clubs && clubs.length ? (
         <div className="grid gap-2 sm:grid-cols-2">
           {clubs.map((c) => (
-            <button key={c.id} type="button" onClick={() => openClub(c.id)} className="flex items-center gap-3 rounded-2xl border border-line p-3 text-left" style={{ background: 'var(--card)' }}>
+            <button key={c.id} type="button" onClick={() => openClub(c.id)} className="flex items-center gap-3 skin-panel border border-line p-3 text-left" style={{ background: 'var(--card)' }}>
               <div className="h-14 w-10 flex-none overflow-hidden rounded border border-line" style={{ background: 'var(--field)' }}>
                 <CoverImage book={{ id: c.id, title: c.title, cover: c.cover }} />
               </div>
@@ -194,7 +194,7 @@ function ClubsScreen() {
           ))}
         </div>
       ) : (
-        <p className="rounded-2xl border border-line p-4 text-[13px] text-muted">
+        <p className="skin-panel border border-line p-4 text-[13px] text-muted">
           No read-alongs yet. Start one for a book your group is reading — everyone tracks their chapter and comments unlock as you reach them.
         </p>
       )}
@@ -214,7 +214,7 @@ function ClubsScreen() {
       {shared && shared.length ? (
         <div className="grid gap-2 sm:grid-cols-2">
           {shared.map((l) => (
-            <button key={l.code} type="button" onClick={() => openList(l.code)} className="flex items-center gap-3 rounded-2xl border border-line p-3 text-left" style={{ background: 'var(--card)' }}>
+            <button key={l.code} type="button" onClick={() => openList(l.code)} className="flex items-center gap-3 skin-panel border border-line p-3 text-left" style={{ background: 'var(--card)' }}>
               <div className="min-w-0 flex-1">
                 <div className="truncate text-[14px] font-semibold text-ink">{l.name}</div>
                 <div className="truncate text-[12px] text-muted">
@@ -226,7 +226,7 @@ function ClubsScreen() {
           ))}
         </div>
       ) : (
-        <p className="rounded-2xl border border-line p-4 text-[13px] text-muted">
+        <p className="skin-panel border border-line p-4 text-[13px] text-muted">
           No shared lists yet. Create one — a household TBR or a book-club TBR everyone can add to.
         </p>
       )}

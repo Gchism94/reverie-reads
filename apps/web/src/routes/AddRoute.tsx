@@ -7,7 +7,7 @@ import { useIntake, type ReviewCandidate } from '../data/intake'
 import { useBooks } from '../data/books'
 import { resolveCandidate, type ReviewAction } from '../data/duplicates'
 import { enrichBook } from '../lib/enrich'
-import { useLabels } from '../skin/labels'
+import { useLabels, useVoice } from '../skin/labels'
 import { Chip } from '../components/Chip'
 import { ContributorEditor } from '../book/ContributorEditor'
 import { ALL_TROPES, FORMATS, READ_STATUSES, SUBGENRES, subgenreGradient } from '../library/constants'
@@ -105,7 +105,7 @@ function AddForm({ hit, onAdded }: { hit: Partial<SearchHit>; onAdded: () => voi
       genre: genreEdited.current ? p.genre : res.genre || p.genre,
     }))
   }
-  const inputClass = 'h-10 w-full rounded-xl border border-line px-3 text-[14px] text-ink outline-none'
+  const inputClass = 'h-10 w-full skin-card border border-line px-3 text-[14px] text-ink outline-none'
   const inputStyle = { background: 'var(--field)' } as const
 
   async function save() {
@@ -163,7 +163,7 @@ function AddForm({ hit, onAdded }: { hit: Partial<SearchHit>; onAdded: () => voi
   }
 
   return (
-    <div className="mt-4 rounded-2xl border border-line p-4" style={{ background: 'var(--card)' }}>
+    <div className="mt-4 skin-panel border border-line p-4" style={{ background: 'var(--card)' }}>
       <div className="flex gap-4">
         <div className="flex-none">
           <div className="aspect-[2/3] w-20 overflow-hidden rounded-lg border border-line" style={{ background: `linear-gradient(150deg, ${g0}, ${g1})` }}>
@@ -237,7 +237,7 @@ function AddForm({ hit, onAdded }: { hit: Partial<SearchHit>; onAdded: () => voi
       </div>
 
       {dup && (
-        <div className="mt-4 rounded-xl border border-line p-3 text-[13px]" style={{ background: 'var(--field)' }}>
+        <div className="mt-4 skin-card border border-line p-3 text-[13px]" style={{ background: 'var(--field)' }}>
           <p className="text-ink">
             You may already have <span className="font-semibold">{dup.existingTitle}</span>
             {dup.existingAuthor ? ` · ${dup.existingAuthor}` : ''}.
@@ -318,7 +318,7 @@ function BulkAdd() {
   }
 
   return (
-    <details className="mt-4 rounded-2xl border border-line p-4" style={{ background: 'var(--card)' }}>
+    <details className="mt-4 skin-panel border border-line p-4" style={{ background: 'var(--card)' }}>
       <summary className="cursor-pointer text-[14px] font-semibold text-ink">Bulk add — paste a list</summary>
       <p className="mb-2 mt-2 text-[12.5px] text-muted">One title or ISBN per line. Each is looked up and added.</p>
       <textarea
@@ -326,7 +326,7 @@ function BulkAdd() {
         onChange={(e) => setText(e.target.value)}
         rows={5}
         placeholder={'Iron Flame\n9781649374172\nThe Love Hypothesis'}
-        className="w-full rounded-xl border border-line p-3 text-[13px] text-ink outline-none"
+        className="w-full skin-card border border-line p-3 text-[13px] text-ink outline-none"
         style={{ background: 'var(--field)' }}
       />
       <div className="mt-2 flex items-center gap-3">
@@ -346,6 +346,7 @@ function BulkAdd() {
 }
 
 function AddScreen() {
+  const voice = useVoice()
   const navigate = useNavigate()
   const [q, setQ] = useState('')
   const [results, setResults] = useState<SearchHit[] | null>(null)
@@ -451,7 +452,7 @@ function AddScreen() {
       </div>
 
       {scanStatus && (
-        <div className="mt-3 rounded-xl border border-line p-3 text-[13px] text-muted" style={{ background: 'var(--card)' }}>
+        <div className="mt-3 skin-card border border-line p-3 text-[13px] text-muted" style={{ background: 'var(--card)' }}>
           {scanStatus}
         </div>
       )}
@@ -467,7 +468,7 @@ function AddScreen() {
                 key={i}
                 type="button"
                 onClick={() => setPicked(it)}
-                className="flex items-center gap-3 rounded-xl border border-line p-2 text-left"
+                className="flex items-center gap-3 skin-card border border-line p-2 text-left"
                 style={{ background: 'var(--field)' }}
               >
                 <div className="h-16 w-11 flex-none overflow-hidden rounded border border-line" style={{ background: 'var(--chip)' }}>
@@ -484,9 +485,9 @@ function AddScreen() {
             ))
           ) : (
             <p className="text-[13px] text-muted">
-              No results —{' '}
+              {voice.miss}{' '}
               <button type="button" onClick={() => setPicked({ title: q })} className="font-semibold text-primary">
-                add manually
+                Add it manually
               </button>
               .
             </p>
