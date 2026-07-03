@@ -22,6 +22,14 @@ const FAMILIES: [string, string][] = [
   ['Libre Franklin', 'marrow labels'],
   ['Libre Caslon Text', 'gaslight (umbra) display'],
   ['Courier Prime', 'gaslight (umbra) typed'],
+  ['EB Garamond', 'marginalia (folio) text'],
+  ['Caveat', 'marginalia (folio) margin hand'],
+  ['Bitter', 'hearth display'],
+  ['Varela Round', 'hearth labels'],
+  ['Source Serif 4', 'almanac text'],
+  ['Archivo', 'almanac labels'],
+  ['Baloo 2', 'firstlight (bloom) display'],
+  ['Karla', 'firstlight (bloom) labels'],
 ]
 
 test('every designed skin typeface actually loads (no silent fallback)', async ({ page }) => {

@@ -151,6 +151,33 @@ shipped contract slot-for-slot. Three additive extensions, all neutral-defaulted
 - **`--control-font`** — control text may split from label text (Tryst: Hanken caps labels,
   Fraunces controls). Defaults to `var(--label-font)`; `.skin-control` now reads it.
 
+## Fable 5 incorporation — contract extensions (Stage III, 2026-07-02)
+Chunks 3–4 fill the SAME slot table (audited slot-for-slot; no drift). Additive extensions, all
+neutral-defaulted:
+- **`--font-hand`** — Marginalia's margin hand (Caveat): annotations only, never body copy.
+  Defaults to `var(--font-display)`.
+- **`--sky`** — Firstlight's one gradient (vertical, night at the top), consumed by its spine,
+  placeholder, and ambient glows. Defaults to a flat card-solid gradient.
+- **`--mark-on-ph`** — the card-mark colour over a PLACEHOLDER scrim. The old mode-keyed rule
+  ("accent in dark, white in light") assumed dark mode = dark surfaces; the **non-inverting skins**
+  (Marginalia's bond page, Almanac's buff manual) keep light placeholders at night, where the accent
+  can't reach AA on the mid scrim. The default preserves the old behaviour; those two skins override
+  to white in dark. `CoverCard` reads the token instead of branching on mode.
+- **Union growth on existing slots** (not new slots): `sectionRule` +`caret-rule | stitched |
+  index-rule | dotted`, `frame` +`margin-rule | stitched-inset | record-card | sticker-ring`, `tag`
+  +`drawn-mark | jar-label | index-tab | puffy-sticker`, `progress` +`page-lines | cross-stitch |
+  rule-ticks | sun-rise`, `motif` +`caret | button | tab | sun`, spine `binding` +`galley | linen |
+  manual | sky`, `band` +`pencil | stitched | ink-block | gel`, `colophon` +`caret | button | rule |
+  sun`, `label` +`ref-no`, `placeholder` +`proof-sheet | linen-board | buff-manual | sky-mockup`.
+- **The non-inverting palette pattern** — Marginalia's dark mode keeps the PAGE light (`--bg0` stays
+  bond; the dark desk lives in `--vignette` + shadows), per the chunk-4 composed screen ("dark mode
+  darkened the desk; the page never moved"). Almanac dark leads with its ink-block surfaces while
+  the buff lives on the paper slots (spines, manuals, record cards). The `sticker-ring` frame
+  re-scopes `--ink`/`--muted`/`--accent-ink` locally so white stickers hold AA at 2 a.m.
+- **`PLACEHOLDER_BG_MIX` / `FG_MIX`** lowered (.18→.10, .5→.30): the plain fallback plate's accent
+  pull met its first mid-luminance cards (lamplit linen, ink-block); shrinking the pull only ever
+  raises contrast, so every existing skin stays safe.
+
 ## Guardrail (non-negotiable)
 Distinctive surface, **conventional interaction**. AA contrast is never traded for texture (opaque
 scrims where needed). Motion always calms under reduced-motion. Character is additive to a usable,
