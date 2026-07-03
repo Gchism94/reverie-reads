@@ -1,13 +1,13 @@
 import { useRef, useState } from 'react'
 import { createRoute, useNavigate } from '@tanstack/react-router'
-import { contributorsFromAuthors, deriveBoyfriend, formatAuthors, toFirstLast, type Book, type Contributor, type Owned } from '@reverie/core'
+import { contributorsFromAuthors, deriveBoyfriend, formatAuthors, SKINS, toFirstLast, type Book, type Contributor, type Owned } from '@reverie/core'
 import { useQueryClient } from '@tanstack/react-query'
 import { rootRoute } from './RootRoute'
 import { useIntake, type ReviewCandidate } from '../data/intake'
 import { useBooks } from '../data/books'
 import { resolveCandidate, type ReviewAction } from '../data/duplicates'
 import { enrichBook } from '../lib/enrich'
-import { useLabels, useVoice } from '../skin/labels'
+import { useEffectiveSkin, useLabels, useVoice } from '../skin/labels'
 import { Chip } from '../components/Chip'
 import { ContributorEditor } from '../book/ContributorEditor'
 import { ALL_TROPES, FORMATS, READ_STATUSES, SUBGENRES, subgenreGradient } from '../library/constants'
@@ -61,13 +61,16 @@ function AddForm({ hit, onAdded }: { hit: Partial<SearchHit>; onAdded: () => voi
   const intake = useIntake()
   const qc = useQueryClient()
   const { data: books } = useBooks()
+  // genre is a required metadata field, not a romance-only tag — default it to the ROOM the reader
+  // is in (add in Grimoire → fantasy, in Marrow → horror), never a hardcoded 'romance'.
+  const skinGenre = SKINS[useEffectiveSkin()].genre.toLowerCase()
   const [dup, setDup] = useState<ReviewCandidate | null>(null)
   const [contribs, setContribs] = useState<Contributor[]>(contributorsFromAuthors(hit.authors ?? []))
   const [form, setForm] = useState({
     title: hit.title ?? '',
     series: '',
     position: '',
-    genre: 'romance',
+    genre: skinGenre,
     subgenre: 'Romantasy' as string,
     format: 'Paperback' as string,
     readStatus: 'Unread' as Book['readStatus'],
@@ -128,7 +131,7 @@ function AddForm({ hit, onAdded }: { hit: Partial<SearchHit>; onAdded: () => voi
       position: form.position.trim() === '' ? '' : Number(form.position) || '',
       seriesCount: null,
       status: form.series.trim() ? 'Series' : 'Standalone',
-      genre: form.genre.trim() || 'romance',
+      genre: form.genre.trim() || skinGenre,
       subgenre: form.subgenre,
       genres: [form.subgenre],
       tags,
@@ -270,6 +273,7 @@ function AddForm({ hit, onAdded }: { hit: Partial<SearchHit>; onAdded: () => voi
 
 function BulkAdd() {
   const intake = useIntake()
+  const skinGenre = SKINS[useEffectiveSkin()].genre.toLowerCase()
   const [text, setText] = useState('')
   const [status, setStatus] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -294,7 +298,7 @@ function BulkAdd() {
           first: np.length > 1 ? (np[0] ?? '') : '',
           last: np.length > 1 ? np.slice(1).join(' ') : (np[0] ?? ''),
           status: 'Standalone',
-          genre: 'romance',
+          genre: skinGenre,
           subgenre: 'Romantasy',
           genres: ['Romantasy'],
           tags: [],

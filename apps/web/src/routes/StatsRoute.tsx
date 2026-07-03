@@ -184,7 +184,7 @@ function StatsScreen() {
             )}
             {busiest && <div>🔥 Busiest month of {year}: <b>{busiest}</b></div>}
             <div>♥ {all.filter((b) => b.fave).length} all-time faves</div>
-            <div>{labels.intensityGlyph} {readBooks.filter((b) => (b.intensity ?? 0) >= 4).length} scorching reads conquered</div>
+            <div>{labels.intensityGlyph} {readBooks.filter((b) => (b.intensity ?? 0) >= 4).length} high-{labels.intensity.toLowerCase()} reads</div>
             <div>📚 {seriesCount} series on your shelves</div>
           </div>
         </Card>
