@@ -14,6 +14,10 @@ export interface SkinVoice {
   miss: string
   /** reading-goal milestone line (shown when the yearly goal completes) */
   milestone: string
+  /** the rail's resume line (a book in progress) — chunk-4 composed screens, trimmed data-agnostic */
+  resume: string
+  /** the season strip's tail (mid-progress, after the live count) — same trim rule */
+  season: string
   /** signature ornament glyph (section breaks, accents, empty-state icon) */
   motif: string
   /** truncated-ISBN notice — the predicate after the count + noun ("3 ISBNs {isbnNotice}"). Honest +
@@ -30,6 +34,8 @@ export const NEUTRAL_VOICE: SkinVoice = {
   loading: 'Loading…',
   miss: 'No books match.',
   milestone: 'Goal complete — every book accounted for.',
+  resume: 'Pick up where you left off.',
+  season: 'The year is under way.',
   motif: '✦',
   isbnNotice: ISBN_NOTICE,
 }
@@ -43,6 +49,8 @@ export const TRYST_VOICE: SkinVoice = {
   loading: 'Turning the page…',
   miss: 'No affair by that name in the register. Perhaps it goes by another?',
   milestone: 'The season’s promise — kept.',
+  resume: 'You left off — the lamps are still lit.',
+  season: 'The house notices such devotion.',
   motif: '❦',
   isbnNotice: ISBN_NOTICE,
 }
@@ -56,6 +64,8 @@ export const APHELION_VOICE: SkinVoice = {
   loading: 'Scanning…',
   miss: 'QUERY RETURNED 0 OBJECTS. Adjust parameters and rescan.',
   milestone: 'CYCLE COMPLETE · ALL VOLUMES ACCOUNTED FOR.',
+  resume: 'DRIFT NOMINAL. NO NEW SIGNALS.',
+  season: 'CYCLE IN PROGRESS. HOLDING COURSE.',
   motif: '◇',
   isbnNotice: ISBN_NOTICE,
 }
@@ -71,6 +81,8 @@ export const GRIMOIRE_VOICE: SkinVoice = {
   loading: 'Grinding the ink…',
   miss: 'No such title is inscribed in this volume. Try its truer name.',
   milestone: 'The leaves are gilded — the quire is bound.',
+  resume: 'Thus far hast thou copied — the leaf is marked.',
+  season: 'The quire grows, leaf by leaf.',
   motif: '❖',
   isbnNotice: ISBN_NOTICE,
 }
@@ -85,6 +97,8 @@ export const MARROW_VOICE: SkinVoice = {
   loading: 'The floorboards settle…',
   miss: 'Nothing here answers to that name.',
   milestone: 'Every specimen catalogued. The house is pleased.',
+  resume: 'The house has kept your page. It always does.',
+  season: 'The house keeps count.',
   motif: '†',
   isbnNotice: ISBN_NOTICE,
 }
@@ -100,6 +114,8 @@ export const UMBRA_VOICE: SkinVoice = {
   loading: 'Developing the photographs…',
   miss: 'NO RECORD UNDER THAT NAME. Try the alias.',
   milestone: 'CASE CLOSED. The window stays lit anyway.',
+  resume: 'THE TRAIL IS STILL WARM.',
+  season: 'THE FILE THICKENS.',
   motif: '▣',
   isbnNotice: ISBN_NOTICE,
 }
@@ -112,6 +128,8 @@ export const FOLIO_VOICE: SkinVoice = {
   loading: 'Reading it over once more…',
   miss: 'No entry under that name. Check the spelling, or the pseudonym.',
   milestone: 'All noted. A good and careful year.',
+  resume: 'The notes are waiting.',
+  season: 'A good and careful pace.',
   motif: '‸',
   isbnNotice: ISBN_NOTICE,
 }
@@ -123,6 +141,8 @@ export const HEARTH_VOICE: SkinVoice = {
   loading: 'Steeping…',
   miss: 'Nothing by that name in the pantry. Try another spelling?',
   milestone: 'That calls for the good jam.',
+  resume: 'You left off — it’ll keep.',
+  season: 'The kettle’s been busy.',
   motif: '✕',
   isbnNotice: ISBN_NOTICE,
 }
@@ -134,6 +154,8 @@ export const ALMANAC_VOICE: SkinVoice = {
   loading: 'Taking measurements…',
   miss: 'No match in the index. Check the reference number.',
   milestone: 'A full survey — logged and shelved.',
+  resume: 'The record holds.',
+  season: 'A tidy ledger.',
   motif: '✱',
   isbnNotice: ISBN_NOTICE,
 }
@@ -145,6 +167,8 @@ export const BLOOM_VOICE: SkinVoice = {
   loading: 'Almost light…',
   miss: 'Can’t find that one — double-check the title?',
   milestone: 'You watched the sunrises this year.',
+  resume: 'Keep going — the sky is almost light.',
+  season: 'A sunrise for every book.',
   motif: '✦',
   isbnNotice: ISBN_NOTICE,
 }

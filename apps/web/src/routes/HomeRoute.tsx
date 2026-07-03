@@ -110,6 +110,14 @@ function HomeScreen() {
               {voice.milestone}
             </div>
           )}
+          {goalTarget > 0 && uniqueThisYear > 0 && uniqueThisYear < goalTarget && (
+            /* the SEASON strip (chunk-4, verdict-approved, minimal scope): the live count + the
+               skin's mid-progress tail — "Thirty-five books this year. A tidy ledger." */
+            <div className="mt-1 text-[13px] italic" style={{ color: 'var(--accent-ink)', fontFamily: 'var(--font-display)' }}>
+              <span className="skin-numeral not-italic">{uniqueThisYear}</span> of{' '}
+              <span className="skin-numeral not-italic">{goalTarget}</span> this year · {voice.season}
+            </div>
+          )}
           <div className="mt-2.5 flex flex-wrap gap-1.5">
             <StatusTag tone="muted">{all.length} books</StatusTag>
             <StatusTag glyph="♥">{all.filter((b) => b.fave).length} faves</StatusTag>
