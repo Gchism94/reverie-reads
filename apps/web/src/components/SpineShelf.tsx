@@ -45,7 +45,7 @@ export function SpineShelf({ books, onOpen }: { books: Book[]; onOpen: (id: stri
   return (
     <div
       ref={ref}
-      className="flex items-end gap-1.5 overflow-x-auto pb-2 pt-1"
+      className="flex items-end gap-1.5 overflow-x-auto pb-4 pt-4"
       style={{ scrollbarWidth: 'none' }}
     >
       {books.map((b) => {
@@ -59,14 +59,28 @@ export function SpineShelf({ books, onOpen }: { books: Book[]; onOpen: (id: stri
             aria-label={`Open ${b.title}`}
             className="flex-none snap-center self-end"
           >
-            {active && b.cover ? (
-              <div
-                className="h-44 w-[120px] overflow-hidden rounded-md border border-line"
-                style={{ background: `center/cover no-repeat url(${b.cover})` }}
-              />
-            ) : (
-              <Spine book={b} active={active} />
-            )}
+            {/* the featured volume lifts off the shelf, the skin's accent pointing beneath it —
+                the chunk-4 composed screens' shared shelf gesture (all nine skins agree) */}
+            <span
+              className="relative block transition-transform duration-300 motion-reduce:transition-none"
+              style={active ? { transform: 'translateY(-8px)', filter: 'drop-shadow(0 12px 14px rgba(0, 0, 0, 0.38))', zIndex: 2 } : undefined}
+            >
+              {active && b.cover ? (
+                <div
+                  className="h-44 w-[120px] overflow-hidden rounded-md border border-line"
+                  style={{ background: `center/cover no-repeat url(${b.cover})` }}
+                />
+              ) : (
+                <Spine book={b} active={active} />
+              )}
+              {active && (
+                <span
+                  aria-hidden
+                  className="absolute left-1/2 bottom-[-9px]"
+                  style={{ width: 7, height: 7, transform: 'translateX(-50%) rotate(45deg)', background: 'var(--accent)', boxShadow: '0 0 8px color-mix(in srgb, var(--accent) 55%, transparent)' }}
+                />
+              )}
+            </span>
           </button>
         )
       })}
