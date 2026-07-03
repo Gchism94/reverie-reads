@@ -3,6 +3,7 @@ import { type SkinId } from '@reverie/core'
 import { rootRoute } from './RootRoute'
 import { Frame, ProgressMeter, SectionHeader, SignatureEmblem, SignatureRing, StatusTag } from '../components/Structure'
 import { Spine } from '../components/Spine'
+import { BookmarkGlyph } from '../components/BookmarkGlyph'
 
 // Spine shelf — real-style titles of varying length so the variable-length handling + size variation
 // show, NOT the specimen's tidy samples: a one-word, a medium, a long, and a monster (title+subtitle).
@@ -63,7 +64,7 @@ function Cell({ skin, mode, label }: { skin: SkinId; mode: 'dark' | 'light'; lab
           <div className="mt-2 flex flex-wrap gap-1.5">
             <StatusTag skin={skin} tone="muted">248 books</StatusTag>
             <StatusTag skin={skin} glyph="♥">17 faves</StatusTag>
-            <StatusTag skin={skin} glyph="★">3 priority</StatusTag>
+            <StatusTag skin={skin} glyph={<BookmarkGlyph />}>3 priority</StatusTag>
           </div>
         </div>
       </Frame>
