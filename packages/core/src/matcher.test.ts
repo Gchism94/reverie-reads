@@ -107,15 +107,50 @@ describe('scoreMatch (Tier 0 vibe matcher)', () => {
   it('applies the optional skin signature (archetype) via context, neutral without it', () => {
     const b = makeBook({ id: 'a', title: 'A', tags: ['Mafia'] })
     const p = { ...profile, archetypeWeights: { mafia: 5 } }
-    const withSig = scoreMatch(b, p, { tagRarity: {}, series: {}, archetype: () => 'mafia' })
+    const withSig = scoreMatch(b, p, { tagRarity: {}, series: {}, now: 0, archetype: () => 'mafia' })
     const without = scoreMatch(b, p)
     expect(withSig.score).toBeGreaterThan(without.score)
+  })
+
+  it('LEARNED taste lifts a book wearing the reader\'s loved tags — with no quiz at all', () => {
+    const now = Date.parse('2026-01-01')
+    const library = [
+      makeBook({ id: '1', title: 'Loved 1', tags: ['Locked Room'], readStatus: 'Read', rating: 5 }),
+      makeBook({ id: '2', title: 'Loved 2', tags: ['Locked Room'], readStatus: 'Read', rating: 5 }),
+      makeBook({ id: '3', title: 'Hated 1', tags: ['Billionaire'], readStatus: 'Read', rating: 1 }),
+      makeBook({ id: '4', title: 'Hated 2', tags: ['Billionaire'], readStatus: 'DNF' }),
+    ]
+    const ctx = buildMatchContext(library, { now })
+    const noQuiz: MatchProfile = { subWeights: {}, wantTags: [], targetIntensity: null }
+    const loved = scoreMatch(makeBook({ id: 'l', title: 'L', tags: ['Locked Room'] }), noQuiz, ctx)
+    const hated = scoreMatch(makeBook({ id: 'h', title: 'H', tags: ['Billionaire'] }), noQuiz, ctx)
+    const blank = scoreMatch(makeBook({ id: 'b', title: 'B', tags: [] }), noQuiz, ctx)
+    expect(loved.score).toBeGreaterThan(blank.score)
+    expect(blank.score).toBeGreaterThan(hated.score)
+    expect(loved.reasons.find((r) => r.key === 'tasteTags')?.lovedTags).toEqual(['Locked Room'])
+  })
+
+  it('"not tonight" feedback floors novelty and decays back over 60 days', () => {
+    const now = Date.parse('2026-01-01')
+    const p: MatchProfile = { subWeights: {}, wantTags: [], targetIntensity: null }
+    const b = makeBook({ id: 'x', title: 'X', readStatus: 'Unread' })
+    const fresh = buildMatchContext([], { now, dismissedAt: { x: now - 86_400_000 } })
+    const fading = buildMatchContext([], { now, dismissedAt: { x: now - 45 * 86_400_000 } })
+    const expired = buildMatchContext([], { now, dismissedAt: { x: now - 90 * 86_400_000 } })
+    const none = buildMatchContext([], { now })
+    const sFresh = scoreMatch(b, p, fresh).score
+    const sFading = scoreMatch(b, p, fading).score
+    const sExpired = scoreMatch(b, p, expired).score
+    const sNone = scoreMatch(b, p, none).score
+    expect(sFresh).toBeLessThan(sFading)
+    expect(sFading).toBeLessThan(sExpired)
+    expect(sExpired).toBe(sNone)
   })
 
   it('returns reasons sorted by contribution with every component present', () => {
     const b = makeBook({ id: 'a', title: 'A', subgenre: 'Romantasy', tags: ['Fae'], intensity: 4 })
     const { reasons } = scoreMatch(b, profile)
-    expect(reasons).toHaveLength(7)
+    expect(reasons).toHaveLength(9)
     for (let i = 1; i < reasons.length; i++) {
       expect(reasons[i - 1]!.contribution).toBeGreaterThanOrEqual(reasons[i]!.contribution)
     }
