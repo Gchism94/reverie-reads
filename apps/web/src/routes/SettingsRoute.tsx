@@ -23,14 +23,14 @@ const YEAR = new Date().getFullYear()
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-line p-5" style={{ background: 'var(--card)' }}>
+    <div className="skin-panel border border-line p-5" style={{ background: 'var(--card)' }}>
       <h2 className="mb-3 text-[15px] font-semibold text-ink">{title}</h2>
       {children}
     </div>
   )
 }
 
-const fieldClass = 'h-10 w-full rounded-xl border border-line px-3 text-[14px] text-ink outline-none'
+const fieldClass = 'h-10 w-full skin-card border border-line px-3 text-[14px] text-ink outline-none'
 const fieldStyle = { background: 'var(--field)' } as const
 
 function SettingsScreen() {
@@ -328,7 +328,7 @@ function SettingsScreen() {
               )}
               {dupes.length ? (
                 dupes.map((g, i) => (
-                  <div key={i} className="flex items-center justify-between gap-3 rounded-xl border border-line p-3" style={{ background: 'var(--field)' }}>
+                  <div key={i} className="flex items-center justify-between gap-3 skin-card border border-line p-3" style={{ background: 'var(--field)' }}>
                     <span className="text-[14px] font-semibold text-ink">
                       {g[0]?.title} <span className="text-[12px] font-normal text-muted">· {g.length} copies</span>
                     </span>

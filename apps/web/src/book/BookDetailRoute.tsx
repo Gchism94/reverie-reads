@@ -4,7 +4,7 @@ import { authorOf, buildBuyLinks, buyDisclosure, deriveBoyfriend, isAuthorRole, 
 import { useFilters } from '../library/filterStore'
 import { useReadingOrders } from '../data/readingOrders'
 import { buyConfig } from '../lib/buyConfig'
-import { useLabels } from '../skin/labels'
+import { useLabels, useVoice } from '../skin/labels'
 import { rootRoute } from '../routes/RootRoute'
 import { CoverImage } from '../components/CoverImage'
 import { useBooks, useDeleteBook, useUpdateBook } from '../data/books'
@@ -111,7 +111,8 @@ function BookDetailScreen() {
 
   const book = books?.find((b) => b.id === bookId)
 
-  if (isLoading) return <p className="px-6 py-16 text-center text-muted">Loading…</p>
+  const voice = useVoice()
+  if (isLoading) return <p className="px-6 py-16 text-center text-muted">{voice.loading}</p>
   if (!book)
     return (
       <div className="px-6 py-16 text-center text-muted">

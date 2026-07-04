@@ -23,7 +23,7 @@ import {
   useUpdateOrder,
 } from '../data/readingOrders'
 
-const inputClass = 'h-10 w-full rounded-xl border border-line px-3 text-[14px] text-ink outline-none'
+const inputClass = 'h-10 w-full skin-card border border-line px-3 text-[14px] text-ink outline-none'
 const inputStyle = { background: 'var(--field)' } as const
 
 /** Label for an item: a book's title or a series name (+ its book count). */
@@ -52,7 +52,7 @@ function AddItem({ order, books }: { order: ReadingOrder; books: Book[] }) {
   }, [q, books])
 
   return (
-    <div className="mt-3 rounded-xl border border-line p-3" style={{ background: 'var(--field)' }}>
+    <div className="mt-3 skin-card border border-line p-3" style={{ background: 'var(--field)' }}>
       <div className="grid gap-2 sm:grid-cols-2">
         <div>
           <label className="mb-1 block text-[11px] uppercase tracking-[0.15em] text-muted">Add a book</label>
@@ -118,7 +118,7 @@ function OrderEditor({ order, books, onOpenBook }: { order: ReadingOrder; books:
   return (
     <div>
       {/* progress + next-to-read */}
-      <div className="rounded-2xl border border-line p-4" style={{ background: 'var(--card)' }}>
+      <div className="skin-panel border border-line p-4" style={{ background: 'var(--card)' }}>
         <div className="flex items-center justify-between text-[13px] text-muted">
           <span>
             {read} of {total} read
@@ -132,7 +132,7 @@ function OrderEditor({ order, books, onOpenBook }: { order: ReadingOrder; books:
           <button
             type="button"
             onClick={() => onOpenBook(next.book.id)}
-            className="mt-3 flex w-full items-center gap-2 rounded-xl border border-line px-3 py-2 text-left"
+            className="mt-3 flex w-full items-center gap-2 skin-card border border-line px-3 py-2 text-left"
             style={{ background: 'var(--field)' }}
           >
             <span className="text-[12px] font-semibold uppercase tracking-[0.12em] text-primary">Next</span>
@@ -149,7 +149,7 @@ function OrderEditor({ order, books, onOpenBook }: { order: ReadingOrder; books:
         {items.map((item, i) => {
           const { title, sub } = itemLabel(item, books)
           return (
-            <li key={item.id} className="rounded-xl border border-line p-2.5" style={{ background: 'var(--card)' }}>
+            <li key={item.id} className="skin-card border border-line p-2.5" style={{ background: 'var(--card)' }}>
               <div className="flex items-center gap-2">
                 <span className="flex-none text-[12px] font-semibold text-muted">{i + 1}</span>
                 <div className="min-w-0 flex-1">
