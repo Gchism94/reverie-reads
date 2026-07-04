@@ -15,6 +15,8 @@ export interface LibraryFilters {
   read: 'All' | ReadStatus
   format: 'All' | string
   fave: boolean
+  /** selected intensity/spice levels (1–5); empty = any. A book matches if its level is in the set. */
+  intensity: number[]
   /** filter to books where any contributor matches this name ('' = off) */
   author: string
   sort: LibrarySort
@@ -29,6 +31,7 @@ export const defaultFilters = (): LibraryFilters => ({
   read: 'All',
   format: 'All',
   fave: false,
+  intensity: [],
   author: '',
   sort: 'az',
 })
@@ -71,6 +74,7 @@ export function matchesFilters(b: Book, f: LibraryFilters): boolean {
   }
   if (f.format !== 'All' && b.format !== f.format) return false
   if (f.fave && !b.fave) return false
+  if (f.intensity.length && !f.intensity.includes(b.intensity ?? 0)) return false
   if (f.author && !bookHasAuthor(b, f.author)) return false
   if (f.q) {
     const hay = [b.title, authorOf(b), b.series, ...b.tags, ...b.genres].join(' ').toLowerCase()
@@ -120,6 +124,7 @@ export function activeFilterCount(f: LibraryFilters): number {
   if (f.read !== 'All') n++
   if (f.format !== 'All') n++
   if (f.fave) n++
+  if (f.intensity.length) n++
   if (f.author) n++
   return n
 }

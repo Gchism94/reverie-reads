@@ -10,7 +10,7 @@ import { enrichBook } from '../lib/enrich'
 import { useEffectiveSkin, useLabels, useVoice } from '../skin/labels'
 import { Chip } from '../components/Chip'
 import { ContributorEditor } from '../book/ContributorEditor'
-import { ALL_TROPES, FORMATS, READ_STATUSES, SUBGENRES, subgenreGradient } from '../library/constants'
+import { ALL_TROPES, FORMATS, READ_STATUSES, subgenreGradient, subgenresForGenre } from '../library/constants'
 
 interface BarcodeDetectorLike {
   detect(source: CanvasImageSource): Promise<{ rawValue: string }[]>
@@ -71,7 +71,7 @@ function AddForm({ hit, onAdded }: { hit: Partial<SearchHit>; onAdded: () => voi
     series: '',
     position: '',
     genre: skinGenre,
-    subgenre: 'Romantasy' as string,
+    subgenre: subgenresForGenre(skinGenre)[0] as string,
     format: 'Paperback' as string,
     readStatus: 'Unread' as Book['readStatus'],
   })
@@ -203,7 +203,7 @@ function AddForm({ hit, onAdded }: { hit: Partial<SearchHit>; onAdded: () => voi
           style={inputStyle}
         />
         <select value={form.subgenre} onChange={(e) => set('subgenre', e.target.value)} className={inputClass} style={inputStyle}>
-          {SUBGENRES.map((s) => (
+          {subgenresForGenre(skinGenre, form.subgenre).map((s) => (
             <option key={s}>{s}</option>
           ))}
         </select>
@@ -274,6 +274,7 @@ function AddForm({ hit, onAdded }: { hit: Partial<SearchHit>; onAdded: () => voi
 function BulkAdd() {
   const intake = useIntake()
   const skinGenre = SKINS[useEffectiveSkin()].genre.toLowerCase()
+  const bulkSub = subgenresForGenre(skinGenre)[0] ?? 'Other' // genre's primary subgenre (always defined)
   const [text, setText] = useState('')
   const [status, setStatus] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -299,8 +300,8 @@ function BulkAdd() {
           last: np.length > 1 ? np.slice(1).join(' ') : (np[0] ?? ''),
           status: 'Standalone',
           genre: skinGenre,
-          subgenre: 'Romantasy',
-          genres: ['Romantasy'],
+          subgenre: bulkSub,
+          genres: [bulkSub],
           tags: [],
           intensity: null,
           owned: { physical: 'paperback', ebook: false, audiobook: false },

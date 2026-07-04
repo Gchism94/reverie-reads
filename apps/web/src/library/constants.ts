@@ -20,6 +20,35 @@ export const SUBGENRES = [
   'Cowboy Romance',
 ] as const
 
+/** The neutral catch-all subgenre — offered in every genre, so a non-romance library never has to
+ *  file a book under a romance subgenre. */
+export const NEUTRAL_SUBGENRE = 'Other'
+
+/** Genre → its subgenres, keyed by the lowercased genre (matching how `book.genre` is stored). The
+ *  add flow reads the ACTIVE skin's genre here, so a reader files books under their OWN genre's
+ *  shelves instead of a hardcoded romance subgenre — the "genre → subgenre" layer the matcher can
+ *  lean on. Romance keeps the original set; the other eight genres get a modest, real taxonomy.
+ *  `subgenresForGenre()` appends NEUTRAL_SUBGENRE to every genre. */
+export const GENRE_SUBGENRES: Record<string, readonly string[]> = {
+  romance: ['Romantasy', 'Dark Romance', 'Romance', 'Contemporary', 'Sports', 'Cowboy Romance'],
+  fantasy: ['Epic Fantasy', 'Romantasy', 'Dark Fantasy', 'Cozy Fantasy', 'Portal Fantasy', 'Sword & Sorcery'],
+  'science fiction': ['Space Opera', 'Cyberpunk', 'Dystopian', 'Hard SF', 'Time Travel', 'First Contact'],
+  horror: ['Gothic', 'Supernatural', 'Slasher', 'Cosmic Horror', 'Psychological', 'Haunted House'],
+  mystery: ['Cozy Mystery', 'Noir', 'Thriller', 'Detective', 'Whodunit', 'Locked Room'],
+  literary: ['Literary Fiction', 'Historical', 'Magical Realism', 'Contemporary', 'Short Stories'],
+  cozy: ['Cozy Mystery', 'Cozy Fantasy', 'Small Town', 'Slice of Life', 'Culinary'],
+  nonfiction: ['Memoir', 'History', 'Science', 'Essays', 'Biography', 'Self-Help'],
+  'young adult': ['YA Fantasy', 'YA Romance', 'YA Dystopian', 'Coming of Age', 'YA Contemporary'],
+}
+
+/** Subgenres to offer for a genre (case-insensitive), always with the neutral catch-all last.
+ *  `keep` forces an existing value into the list (editing a book whose subgenre predates this map),
+ *  so a picker never drops the book's own current subgenre. */
+export function subgenresForGenre(genre: string, keep?: string): string[] {
+  const list = [...(GENRE_SUBGENRES[genre.trim().toLowerCase()] ?? []), NEUTRAL_SUBGENRE]
+  return keep && !list.includes(keep) ? [keep, ...list] : list
+}
+
 export const READ_STATUSES = ['Read', 'Reading', 'Unread', 'DNF'] as const
 export const SERIES_STATUSES = ['Standalone', 'Series', 'Complete'] as const
 

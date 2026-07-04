@@ -20,6 +20,7 @@ interface FilterState {
   setFormat: (s: string) => void
   setAuthor: (a: string) => void
   toggleFave: () => void
+  toggleIntensity: (level: number) => void
   setSort: (s: LibrarySort) => void
   setMode: (m: LibraryMode) => void
   togglePanel: () => void
@@ -47,6 +48,15 @@ export const useFilters = create<FilterState>((set) => ({
   setFormat: (format) => set((s) => ({ filters: { ...s.filters, format } })),
   setAuthor: (author) => set((s) => ({ filters: { ...s.filters, author } })),
   toggleFave: () => set((s) => ({ filters: { ...s.filters, fave: !s.filters.fave } })),
+  toggleIntensity: (level) =>
+    set((s) => ({
+      filters: {
+        ...s.filters,
+        intensity: s.filters.intensity.includes(level)
+          ? s.filters.intensity.filter((x) => x !== level)
+          : [...s.filters.intensity, level],
+      },
+    })),
   setSort: (sort) => set((s) => ({ filters: { ...s.filters, sort } })),
   setMode: (mode) => set({ mode }),
   togglePanel: () => set((s) => ({ panelOpen: !s.panelOpen })),
