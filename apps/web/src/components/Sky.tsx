@@ -108,6 +108,11 @@ export function Sky() {
 
       <div className="absolute inset-0" style={{ boxShadow: 'inset 0 0 28vmax var(--vignette)' }} />
 
+      {/* The DESK EDGE (Marginalia): a tighter, harder ring so the surface behind the page reads as
+          a real desk, not a dimmer page — "dark mode darkens the desk, never the page." Neutral
+          default is transparent, so only skins that set --desk-edge draw anything. */}
+      <div className="absolute inset-0" style={{ boxShadow: 'inset 0 0 9vmax var(--desk-edge)' }} />
+
       {/* Per-skin material (Skin Character 1b): Tryst gilt-paper grain, Aphelion instrument mesh.
           Token-driven and static (no motion) — neutral skins render nothing. */}
       <div className="rv-skin-texture" />

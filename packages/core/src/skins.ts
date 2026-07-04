@@ -82,24 +82,24 @@ export const SKINS: Record<SkinId, Skin> = {
   // Stage 3 — the five remaining genres, code-first (palette + font + character derived from the
   // genre direction in docs/SKINS.md, eyeball-gated).
   umbra: {
-    id: 'umbra',
-    label: 'Umbra',
+    id: 'umbra', // stored profile key — stable; the DISPLAY name is the verdict-approved rename
+    label: 'Gaslight',
     genre: 'Mystery',
     tagline: 'The unsolved case at the yellow window.',
     starDensity: 24,
     divider: 'umbra',
     labels: NEUTRAL_LABELS,
-    displayFont: "'Libre Caslon Text', Georgia, serif", // Fable 5 "Gaslight" identity (id stays umbra)
+    displayFont: "'Libre Caslon Text', Georgia, serif",
   },
   folio: {
-    id: 'folio',
-    label: 'Folio',
+    id: 'folio', // stored profile key — stable
+    label: 'Marginalia',
     genre: 'Literary',
     tagline: 'A manuscript passed between editors, still in proof.',
     starDensity: 12, // the desk lamp, not a sky — the page never inverts
     divider: 'folio',
     labels: NEUTRAL_LABELS,
-    displayFont: "'EB Garamond', Georgia, serif", // Fable 5 "Marginalia" identity (id stays folio)
+    displayFont: "'EB Garamond', Georgia, serif",
   },
   hearth: {
     id: 'hearth',
@@ -122,14 +122,14 @@ export const SKINS: Record<SkinId, Skin> = {
     displayFont: "'Source Serif 4', Georgia, serif",
   },
   bloom: {
-    id: 'bloom',
-    label: 'Bloom',
+    id: 'bloom', // stored profile key — stable
+    label: 'Firstlight',
     genre: 'Young adult',
     tagline: 'The all-nighter that ends at dawn.',
     starDensity: 70, // stars come out in dark mode only — the sky carries them
     divider: 'bloom',
     labels: NEUTRAL_LABELS,
-    displayFont: "'Baloo 2', system-ui, sans-serif", // Fable 5 "Firstlight" identity (id stays bloom)
+    displayFont: "'Baloo 2', system-ui, sans-serif",
   },
 }
 

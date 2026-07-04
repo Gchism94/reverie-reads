@@ -178,6 +178,20 @@ neutral-defaulted:
   pull met its first mid-luminance cards (lamplit linen, ink-block); shrinking the pull only ever
   raises contrast, so every existing skin stays safe.
 
+## Marks semantics (MVP polish, verdict rule — non-negotiable)
+One glyph, one meaning, every skin: **★ star = rating** (and only rating) · **bookmark ribbon =
+priority read** (Priority TBR — `BookmarkGlyph`, filled = is-priority, outline = make-priority) ·
+**♥ heart = favorite**. Each skin styles the glyphs in its own language (colour, tag silhouette,
+material), but the MEANING never varies by skin. Audited across all nine × both modes at adoption:
+priority marks were stars (Home chips, shelf headers, Shelves modal/list, detail-rail list rows,
+the structure lab) — all now the ribbon; the Indie "your store" star became a ✓; favorites were
+already hearts everywhere. Known future hazard, flagged: the Firstlight sheet assigns a gold star
+to its READ mark — if that ever lands it must restyle (star is reserved for rating).
+
+## Display renames (verdict-approved)
+`folio` → **Marginalia**, `bloom` → **Firstlight**, `umbra` → **Gaslight** — display names only
+(`SKINS[id].label`); the ids are stored profile keys and stay stable everywhere.
+
 ## Guardrail (non-negotiable)
 Distinctive surface, **conventional interaction**. AA contrast is never traded for texture (opaque
 scrims where needed). Motion always calms under reduced-motion. Character is additive to a usable,

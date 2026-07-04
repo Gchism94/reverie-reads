@@ -14,6 +14,7 @@ import {
 import { useAllListItems, useRemoveListItem } from '../data/listItems'
 import { SpineShelf } from '../components/SpineShelf'
 import { Modal } from '../components/Modal'
+import { BookmarkGlyph } from '../components/BookmarkGlyph'
 
 type Tab = 'tbr' | 'collection'
 
@@ -49,7 +50,7 @@ function ListModal({
   }
 
   return (
-    <Modal title={`${list.priority ? '★ ' : ''}${list.name}`} onClose={onClose}>
+    <Modal title={list.name} onClose={onClose}>
       <div className="-mt-2 mb-4 flex flex-wrap gap-2">
         {list.kind === 'tbr' && (
           <button
@@ -58,7 +59,7 @@ function ListModal({
             className="rounded-full border border-line px-3 py-1.5 text-[12.5px] font-semibold text-ink"
             style={{ background: 'var(--card)' }}
           >
-            {list.priority ? '★ Priority list' : '☆ Make priority'}
+            <BookmarkGlyph filled={list.priority} /> {list.priority ? 'Priority list' : 'Make priority'}
           </button>
         )}
         <button
@@ -239,7 +240,11 @@ function ShelvesScreen() {
                 <div className="mb-1 flex items-center justify-between gap-3">
                   <div>
                     <h2 className="text-[18px] italic text-ink" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
-                      {l.priority ? '★ ' : ''}
+                      {l.priority && (
+                        <span style={{ color: 'var(--accent-ink)' }}>
+                          <BookmarkGlyph size={12} />{' '}
+                        </span>
+                      )}
                       {l.name}
                     </h2>
                     <p className="text-[12px] text-muted">

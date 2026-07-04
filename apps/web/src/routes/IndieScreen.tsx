@@ -80,7 +80,7 @@ function StoreList({
           <li key={s.id} className="rounded-2xl border border-line p-3" style={{ background: 'var(--card)' }}>
             <div className="flex items-baseline justify-between gap-2">
               <span className="text-[15px] font-semibold text-ink">
-                {isDefault && <span title="Your store">★ </span>}
+                {isDefault && <span title="Your store">✓ </span>}
                 {s.name}
               </span>
               <span className="flex-none text-[12px] text-muted">{miles(s.distanceKm)}</span>

@@ -19,6 +19,7 @@ import { OwnedCopies } from './OwnedCopies'
 import { ReviewsPanel } from './ReviewsPanel'
 import { workKeyFor } from '../data/reviews'
 import { useProfile } from '../data/profile'
+import { BookmarkGlyph } from '../components/BookmarkGlyph'
 
 function fmtPub(p: Book['pub']): string {
   if (p.y && p.m && p.d) return `${MONTHS[p.m - 1] ?? ''} ${p.d}, ${p.y}`
@@ -373,7 +374,11 @@ function BookDetailScreen() {
               active={memberIds.has(l.id)}
               onClick={() => toggleListItem.mutate({ listId: l.id, member: memberIds.has(l.id) })}
             >
-              {l.priority ? '★ ' : ''}
+              {l.priority && (
+                <>
+                  <BookmarkGlyph />{' '}
+                </>
+              )}
               {l.name} {memberIds.has(l.id) ? '✓' : '+'}
             </Chip>
           ))

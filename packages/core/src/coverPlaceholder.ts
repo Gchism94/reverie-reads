@@ -69,7 +69,7 @@ export function placeholderSpec(book: { title?: string; first?: string; last?: s
  *  skins ship designed placeholder plates.) */
 export const PLACEHOLDER_BG_MIX = 0.1
 /** Accent fraction in the glyph colour (rest is `--ink`). Accent character, ink-anchored for contrast. */
-export const PLACEHOLDER_FG_MIX = 0.3
+export const PLACEHOLDER_FG_MIX = 0.28 // 0.3 grazed 4.496:1 on Hearth's toasted linen (verdict 1b)
 
 /** The placeholder's CSS colours for a chosen accent var — `color-mix` over live skin tokens, so it
  *  re-themes for free. The component spreads this onto the surface (bg) and glyph (color). */
