@@ -36,6 +36,8 @@ export interface Skin {
   labels: FieldLabels
   /** display font family, for preview chrome (the live value comes from the CSS token) */
   displayFont: string
+  /** the room's name in the app chrome, under the brand (chunk-4 composed screens) */
+  chromeLine: string
 }
 
 export const SKINS: Record<SkinId, Skin> = {
@@ -48,6 +50,7 @@ export const SKINS: Record<SkinId, Skin> = {
     divider: 'tryst',
     labels: TRYST_LABELS,
     displayFont: "'Fraunces', Georgia, serif",
+    chromeLine: 'The standing invitation',
   },
   grimoire: {
     id: 'grimoire',
@@ -58,6 +61,7 @@ export const SKINS: Record<SkinId, Skin> = {
     divider: 'grimoire',
     labels: NEUTRAL_LABELS,
     displayFont: "'Cormorant Garamond', Georgia, serif",
+    chromeLine: 'Liber bibliothecae',
   },
   aphelion: {
     id: 'aphelion',
@@ -68,6 +72,7 @@ export const SKINS: Record<SkinId, Skin> = {
     divider: 'aphelion',
     labels: NEUTRAL_LABELS,
     displayFont: "'Space Grotesk', system-ui, sans-serif",
+    chromeLine: '// Archive',
   },
   marrow: {
     id: 'marrow',
@@ -78,6 +83,7 @@ export const SKINS: Record<SkinId, Skin> = {
     divider: 'marrow',
     labels: NEUTRAL_LABELS,
     displayFont: "'Playfair Display', Georgia, serif",
+    chromeLine: 'The specimen archive',
   },
   // Stage 3 — the five remaining genres, code-first (palette + font + character derived from the
   // genre direction in docs/SKINS.md, eyeball-gated).
@@ -90,6 +96,7 @@ export const SKINS: Record<SkinId, Skin> = {
     divider: 'umbra',
     labels: NEUTRAL_LABELS,
     displayFont: "'Libre Caslon Text', Georgia, serif",
+    chromeLine: 'The night office',
   },
   folio: {
     id: 'folio', // stored profile key — stable
@@ -100,6 +107,7 @@ export const SKINS: Record<SkinId, Skin> = {
     divider: 'folio',
     labels: NEUTRAL_LABELS,
     displayFont: "'EB Garamond', Georgia, serif",
+    chromeLine: 'Uncorrected proof',
   },
   hearth: {
     id: 'hearth',
@@ -110,6 +118,7 @@ export const SKINS: Record<SkinId, Skin> = {
     divider: 'hearth',
     labels: NEUTRAL_LABELS,
     displayFont: "'Bitter', Georgia, serif",
+    chromeLine: 'The kitchen table',
   },
   almanac: {
     id: 'almanac',
@@ -120,6 +129,7 @@ export const SKINS: Record<SkinId, Skin> = {
     divider: 'almanac',
     labels: NEUTRAL_LABELS,
     displayFont: "'Source Serif 4', Georgia, serif",
+    chromeLine: 'Field library · Ref index',
   },
   bloom: {
     id: 'bloom', // stored profile key — stable
@@ -130,6 +140,7 @@ export const SKINS: Record<SkinId, Skin> = {
     divider: 'bloom',
     labels: NEUTRAL_LABELS,
     displayFont: "'Baloo 2', system-ui, sans-serif",
+    chromeLine: 'Up too late',
   },
 }
 
