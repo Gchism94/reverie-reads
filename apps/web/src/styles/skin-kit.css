@@ -396,3 +396,168 @@
 [data-skin='bloom'][data-mode='light'] .rv-sky-star {
   display: none;
 }
+
+/* ── The CHROME layer (chunk-4 composed screens, MVP polish part 2) ──────────────────────────
+   The brand block wears the skin's chrome material as a rail beneath it — brass rail · engraved
+   plate · incipit band · carved lintel · office wall · cover slug · table runner · ink band ·
+   sticker. Composition, not a new slot: each rule is drawn from the skin's existing material
+   tokens. Neutral default: a plain hairline. */
+.rv-chrome {
+  position: relative;
+  border-bottom: 1px solid var(--line);
+}
+
+/* Tryst · the brass rail — striped gilt, ringed */
+[data-skin='tryst'] .rv-chrome {
+  border-bottom: 0;
+  padding-bottom: 12px;
+}
+[data-skin='tryst'] .rv-chrome::after {
+  content: '';
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  bottom: 0;
+  height: 4px;
+  background: repeating-linear-gradient(180deg, var(--gold) 0 1.5px, var(--gold-deep) 1.5px 3px);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35);
+  border-radius: 1px;
+}
+
+/* Aphelion · the engraved plate — a ticked instrument edge */
+[data-skin='aphelion'] .rv-chrome {
+  border-bottom: 0;
+  padding-bottom: 12px;
+}
+[data-skin='aphelion'] .rv-chrome::after {
+  content: '';
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  bottom: 0;
+  height: 5px;
+  background-image: repeating-linear-gradient(90deg, color-mix(in srgb, var(--accent) 60%, transparent) 0 1px, transparent 1px 6px);
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+/* Grimoire · the incipit band — a rubricated thick-thin pair */
+[data-skin='grimoire'] .rv-chrome {
+  border-bottom: 0;
+  padding-bottom: 12px;
+}
+[data-skin='grimoire'] .rv-chrome::after {
+  content: '';
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  bottom: 0;
+  height: 5px;
+  border-top: 2px solid color-mix(in srgb, var(--rubric) 70%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--gold) 45%, transparent);
+}
+
+/* Marrow · the carved lintel — a chamfered slate slab */
+[data-skin='marrow'] .rv-chrome {
+  border-bottom: 0;
+  padding-bottom: 13px;
+}
+[data-skin='marrow'] .rv-chrome::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 6px;
+  background: linear-gradient(180deg, var(--slate), color-mix(in srgb, var(--slate) 62%, #000));
+  clip-path: polygon(4px 0, calc(100% - 4px) 0, 100% 100%, 0 100%);
+}
+
+/* Gaslight · the office wall — a slate rule under fog, one brass pin */
+[data-skin='umbra'] .rv-chrome {
+  border-bottom: 0;
+  padding-bottom: 12px;
+}
+[data-skin='umbra'] .rv-chrome::after {
+  content: '';
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  bottom: 2px;
+  height: 2px;
+  background: color-mix(in srgb, var(--slate) 60%, transparent);
+}
+[data-skin='umbra'] .rv-chrome::before {
+  content: '';
+  position: absolute;
+  right: 4px;
+  bottom: 0;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: inset 0 -1px 1px rgba(0, 0, 0, 0.4), 0 1px 1px rgba(0, 0, 0, 0.3);
+  z-index: 1;
+}
+
+/* Marginalia · the cover slug — the red margin rule + a pencil hairline */
+[data-skin='folio'] .rv-chrome {
+  border-bottom: 0;
+  padding-bottom: 12px;
+}
+[data-skin='folio'] .rv-chrome::after {
+  content: '';
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  bottom: 0;
+  height: 5px;
+  border-top: 1.5px solid color-mix(in srgb, var(--accent-fill) 55%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--gold) 60%, transparent);
+}
+
+/* Hearth · the table runner — a stitched hem */
+[data-skin='hearth'] .rv-chrome {
+  border-bottom: 0;
+  padding-bottom: 12px;
+}
+[data-skin='hearth'] .rv-chrome::after {
+  content: '';
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  bottom: 1px;
+  height: 2px;
+  background-image: repeating-linear-gradient(90deg, var(--thread) 0 6px, transparent 6px 11px);
+  border-radius: 2px;
+  opacity: 0.75;
+}
+
+/* Almanac · the ink band — a solid band block */
+[data-skin='almanac'] .rv-chrome {
+  border-bottom: 0;
+  padding-bottom: 13px;
+}
+[data-skin='almanac'] .rv-chrome::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 6px;
+  background: var(--cta-lo);
+}
+
+/* Firstlight · the sticker edge — the white ring under a gel dot run */
+[data-skin='bloom'] .rv-chrome {
+  border-bottom: 0;
+  padding-bottom: 12px;
+}
+[data-skin='bloom'] .rv-chrome::after {
+  content: '';
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  bottom: 1px;
+  height: 2px;
+  background-image: repeating-linear-gradient(90deg, color-mix(in srgb, var(--accent-fill) 70%, transparent) 0 2px, transparent 2px 8px);
+}
