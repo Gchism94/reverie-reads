@@ -10,7 +10,7 @@ import { enrichBook } from '../lib/enrich'
 import { useEffectiveSkin, useLabels, useVoice } from '../skin/labels'
 import { Chip } from '../components/Chip'
 import { ContributorEditor } from '../book/ContributorEditor'
-import { ALL_TROPES, FORMATS, READ_STATUSES, subgenreGradient, subgenresForGenre } from '../library/constants'
+import { FORMATS, READ_STATUSES, subgenreGradient, subgenresForGenre, tropeGroupsForGenre } from '../library/constants'
 
 interface BarcodeDetectorLike {
   detect(source: CanvasImageSource): Promise<{ rawValue: string }[]>
@@ -222,7 +222,7 @@ function AddForm({ hit, onAdded }: { hit: Partial<SearchHit>; onAdded: () => voi
       <div className="mt-3">
         <div className="mb-1.5 text-[11px] uppercase tracking-[0.15em] text-muted">{labels.tags}</div>
         <div className="flex max-h-32 flex-wrap gap-1.5 overflow-y-auto">
-          {ALL_TROPES.slice(0, 22).map((t) => (
+          {Object.values(tropeGroupsForGenre(skinGenre)).flat().slice(0, 22).map((t) => (
             <Chip key={t} active={tags.includes(t)} onClick={() => setTags((p) => (p.includes(t) ? p.filter((x) => x !== t) : [...p, t]))}>
               {t}
             </Chip>
