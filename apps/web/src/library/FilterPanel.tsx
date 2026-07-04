@@ -2,10 +2,11 @@ import { useMemo, useState, type ReactNode } from 'react'
 import type { Book, SeriesLenBucket } from '@reverie/core'
 import { useFilters } from './filterStore'
 import { Chip } from '../components/Chip'
-import { FORMATS, READ_STATUSES, SERIES_STATUSES, SUBGENRES } from './constants'
+import { FORMATS, READ_STATUSES, SERIES_STATUSES } from './constants'
 import { useLabels } from '../skin/labels'
 
 const LEN_BUCKETS: SeriesLenBucket[] = ['Any', '1', '2', '3', '4', '5+', 'Unknown']
+const SPICE_LEVELS = [1, 2, 3, 4, 5]
 
 function Group({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -22,8 +23,10 @@ export function FilterPanel({ books, bare = false }: { books: Book[]; bare?: boo
   const labels = useLabels()
   const [showAllTags, setShowAllTags] = useState(false)
 
+  // Derive the subgenre facets from the LIBRARY's own books (not a fixed romance list), so any
+  // genre's subgenres — Epic Fantasy, Noir, Memoir — show up once a book uses them.
   const subs = useMemo(
-    () => ['All', ...SUBGENRES.filter((sub) => books.some((b) => b.subgenre === sub))],
+    () => ['All', ...[...new Set(books.map((b) => b.subgenre).filter(Boolean))].sort()],
     [books],
   )
   const tags = useMemo(() => {
@@ -87,6 +90,14 @@ export function FilterPanel({ books, bare = false }: { books: Book[]; bare?: boo
         {(['All', ...FORMATS] as const).map((v) => (
           <Chip key={v} active={filters.format === v} onClick={() => s.setFormat(v)}>
             {v}
+          </Chip>
+        ))}
+      </Group>
+
+      <Group label={labels.intensity}>
+        {SPICE_LEVELS.map((lvl) => (
+          <Chip key={lvl} active={filters.intensity.includes(lvl)} onClick={() => s.toggleIntensity(lvl)}>
+            <span aria-label={`${labels.intensity} ${lvl}`}>{labels.intensityGlyph.repeat(lvl)}</span>
           </Chip>
         ))}
       </Group>

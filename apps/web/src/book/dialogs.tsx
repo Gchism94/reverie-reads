@@ -3,7 +3,7 @@ import { authorOf, deriveBoyfriend, fromFirstLast, type Book, type Contributor, 
 import { Modal } from '../components/Modal'
 import { Chip } from '../components/Chip'
 import { Stars } from '../components/Stars'
-import { FORMATS, SERIES_STATUSES, SUBGENRES, TROPE_GROUPS } from '../library/constants'
+import { FORMATS, SERIES_STATUSES, subgenresForGenre, TROPE_GROUPS } from '../library/constants'
 import { useBooks, useUpdateBook } from '../data/books'
 import { useSetContributors } from '../data/contributors'
 import { useAddRead } from '../data/reads'
@@ -182,7 +182,8 @@ export function EditDetails({ book, onClose }: { book: Book; onClose: () => void
         </Field>
         <Field label="Subgenre">
           <select value={f.subgenre} onChange={(e) => set('subgenre', e.target.value)} className={fieldClass} style={fieldStyle}>
-            {SUBGENRES.map((s) => (
+            {/* the book's OWN genre's subgenres (its current value kept selectable) */}
+            {subgenresForGenre(book.genre, f.subgenre).map((s) => (
               <option key={s}>{s}</option>
             ))}
           </select>
