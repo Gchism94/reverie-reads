@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { createRoute, useNavigate } from '@tanstack/react-router'
-import { deriveBoyfriend, scoreMatch, type Book, type MatchProfile } from '@reverie/core'
+import { buildMatchContext, deriveBoyfriend, scoreMatch, type Book, type MatchProfile, type MatchReason } from '@reverie/core'
 import { rootRoute } from './RootRoute'
 import { CoverImage } from '../components/CoverImage'
 import { useBooks } from '../data/books'
@@ -12,6 +12,22 @@ interface Pick {
   b: Book
   s: number
   isRead: boolean
+  /** the pick's top reason, already worded (Tier 0: every score is explainable) */
+  why: string
+}
+
+/** One human line from the structured reasons — series momentum first (the strongest story),
+ *  then matched cravings, then world/heat fit. */
+function whyLine(reasons: MatchReason[]): string {
+  const series = reasons.find((r) => r.key === 'series')
+  if (series?.series?.lovedEarlier) return `Next in ${series.series.name} — a series you love`
+  const tags = reasons.find((r) => r.key === 'tags')
+  if (tags?.matchedTags?.length) return `Matches ${tags.matchedTags.slice(0, 2).join(' · ')}`
+  const sub = reasons.find((r) => r.key === 'subgenre')
+  if (sub && sub.value >= 0.9) return 'Squarely your world'
+  const heat = reasons.find((r) => r.key === 'intensity')
+  if (heat && heat.value >= 0.9) return 'Heat right on target'
+  return 'A fresh pick from your shelves'
 }
 
 function score(books: Book[], a: QuizAnswers): { picks: Pick[]; headline: string; sub: string; tags: string[] } {
@@ -20,16 +36,18 @@ function score(books: Book[], a: QuizAnswers): { picks: Pick[]; headline: string
   const cravings = [...new Set(a.tropes)]
 
   // Build a genre-neutral profile from the (romance-flavored) quiz, then score with the core
-  // vibe matcher. The book-boyfriend archetype is passed as the Tryst skin's signature signal.
+  // vibe matcher over the library-derived context (tag rarity + series momentum). The
+  // book-boyfriend archetype rides along as the Tryst skin's signature signal.
   const subWeights = { ...a.subs }
   if (a.dark) subWeights['Dark Romance'] = (subWeights['Dark Romance'] ?? 0) + 1
   const profile: MatchProfile = { subWeights, wantTags: cravings, targetIntensity: target, archetypeWeights: a.arts }
+  const ctx = buildMatchContext(books, { archetype: deriveBoyfriend })
 
   const scored: Pick[] = books
     .map((b) => {
-      const s = scoreMatch(b, profile, { archetype: deriveBoyfriend })
+      const { score: s, reasons } = scoreMatch(b, profile, ctx)
       const isRead = b.readStatus === 'Read' || b.reads.length > 0
-      return { b, s, isRead }
+      return { b, s, isRead, why: whyLine(reasons) }
     })
     .sort((x, y) => y.s - x.s)
 
@@ -42,7 +60,7 @@ function score(books: Book[], a: QuizAnswers): { picks: Pick[]; headline: string
   const tags = [`${'🌶️'.repeat(target)} ${heatWord}`, worldWord, ...(paceLabel ? [paceLabel] : []), ...cravings.slice(0, 3)]
 
   return {
-    picks: scored.filter((x) => x.s > 0).slice(0, 12),
+    picks: scored.filter((x) => x.s >= 45).slice(0, 12), // 0..100 now — keep genuinely-decent fits
     headline: `${heatWord} ${worldWord}`,
     sub: subBits.join(' — ') || 'Picked for your mood tonight',
     tags,
@@ -119,7 +137,6 @@ function MatchScreen() {
   }
 
   // --- reveal ---
-  const max = result.picks[0]?.s || 1
   return (
     <section className="px-4 py-8 sm:px-6">
       <div
@@ -162,15 +179,17 @@ function MatchScreen() {
         <p className="text-[12.5px] text-muted">Unread picks first — your next read awaits</p>
       </div>
       <div className="mx-auto mt-4 grid max-w-4xl grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
-        {result.picks.map(({ b, s, isRead }) => (
+        {result.picks.map(({ b, s, isRead, why }) => (
           <button key={b.id} type="button" onClick={() => openBook(b.id)} className="text-left" aria-label={`Open ${b.title}`}>
             <div className="aspect-[2/3] overflow-hidden rounded-lg border border-line" style={{ background: 'var(--field)' }}>
               <CoverImage book={b} />
             </div>
             <div className="mt-1 truncate text-[11.5px] font-semibold text-ink">{b.title}</div>
             <div className="text-[10.5px] font-bold text-primary">
-              {Math.max(62, Math.min(99, Math.round((s / max) * 100)))}% match{isRead ? ' · reread' : ''}
+              {s}% match{isRead ? ' · reread' : ''}
             </div>
+            {/* the honest why — every pick can say what earned it (Tier 0) */}
+            <div className="truncate text-[10px] text-muted">{why}</div>
           </button>
         ))}
       </div>
