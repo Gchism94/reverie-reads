@@ -1,14 +1,29 @@
 import type { Book } from './types'
+import { isBookRead } from './filters'
 
-// Genre-agnostic "vibe matcher" scoring. Drives off generic signals — subgenre/genre weights,
-// wanted tags, target intensity, the reader's own rating, and read state — NOT romance-coded
-// tropes. A skin may add its own signature signal (Tryst passes the book-boyfriend archetype)
-// via the optional archetype hook, but the core scoring is neutral and works for any genre.
+// Genre-agnostic "vibe matcher" — Tier 0 rewrite (2026-07, owner-approved).
+//
+// The old scorer was a hand-tuned linear formula (tags×14 + subgenre×6 + rating×2 + unread+20 …):
+// magic numbers, exact-string tags where a rare tag counted the same as a ubiquitous one, no series
+// awareness, rereads punished as "already read", DNFs accidentally REWARDED (no logged reads → the
+// unread bonus), and a bare number out — nothing to explain a pick with.
+//
+// This version keeps the same inputs (a quiz/mood profile + the reader's own library) but:
+//  · every component is NORMALIZED to 0..1 and blended through named WEIGHTS → the score is 0..100
+//    and each pick carries structured REASONS (the UI renders copy; core returns data);
+//  · shared tags are RARITY-WEIGHTED against the reader's own library (a shared rare tag says far
+//    more than a shared ubiquitous one — TF-IDF in spirit, df from the library);
+//  · SERIES MOMENTUM: the next unread book of a series the reader is loving gets a strong boost;
+//    book N of a series they haven't started is suppressed instead of ranked like book 1;
+//  · NOVELTY and QUALITY are separated: unread still leads, but a much-reread book is a love
+//    signal, not "seen it" — and DNF is finally a real negative on both axes.
+// Absent optional signals (no target intensity, no archetype hook, empty cravings) sit at a 0.5
+// NEUTRAL so a missing signal never advantages or tanks a book. Pure + deterministic throughout.
 
 export interface MatchProfile {
   /** weight per subgenre/genre name the reader leaned toward in the quiz */
   subWeights: Record<string, number>
-  /** tags the reader is craving (matched against book.tags) */
+  /** tags the reader is craving (matched against book.tags, case-insensitive) */
   wantTags: string[]
   /** desired intensity 0..5, or null for no preference */
   targetIntensity: number | null
@@ -16,30 +31,154 @@ export interface MatchProfile {
   archetypeWeights?: Record<string, number>
 }
 
-export interface MatchOptions {
+export type MatchReasonKey = 'tags' | 'subgenre' | 'intensity' | 'quality' | 'novelty' | 'series' | 'archetype'
+
+export interface MatchReason {
+  key: MatchReasonKey
+  /** the normalized component value, 0..1 (0.5 = neutral/no signal) */
+  value: number
+  /** this component's share of the final score (weight × value, in score points) */
+  contribution: number
+  /** which craved tags this book actually carries (key === 'tags') */
+  matchedTags?: string[]
+  /** series detail (key === 'series') */
+  series?: { name: string; position: number | null; lovedEarlier: boolean; unstartedEarlier: boolean }
+}
+
+export interface MatchScore {
+  /** 0..100 — a real percentage of the weighted blend, not a vanity clamp */
+  score: number
+  /** every component, sorted by contribution (desc) — the UI's "why this pick" source */
+  reasons: MatchReason[]
+}
+
+interface SeriesState {
+  readPositions: number[]
+  /** mean of the reader's OWN ratings across the series' read books (rated ones), else null */
+  avgReadRating: number | null
+}
+
+export interface MatchContext {
+  /** lowercased tag → rarity weight 0..1 (1 = rarest in this library) */
+  tagRarity: Record<string, number>
+  /** series name → the reader's progress in it */
+  series: Record<string, SeriesState>
   /** optional skin signature: maps a book to an archetype key scored via archetypeWeights */
   archetype?: (b: Book) => string
 }
 
-/** Score one book against a reader profile. Higher = better match. Pure + deterministic. */
-export function scoreMatch(b: Book, p: MatchProfile, opts: MatchOptions = {}): number {
-  let s = (p.subWeights[b.subgenre] ?? p.subWeights[b.genre] ?? 0) * 6
+/** Named weights — Σ = 1, so the blended score reads as a percentage. Tuned, not sacred: they live
+ *  in ONE place precisely so they can be argued with (and later learned from feedback). */
+export const MATCH_WEIGHTS: Record<MatchReasonKey, number> = {
+  tags: 0.3,
+  subgenre: 0.15,
+  intensity: 0.15,
+  quality: 0.1,
+  novelty: 0.15,
+  series: 0.1,
+  archetype: 0.05,
+}
 
-  const shared = p.wantTags.filter((t) => b.tags.includes(t)).length
-  s += shared * 14
+const NEUTRAL = 0.5
 
-  if (p.targetIntensity != null) {
-    // Unknown intensity is treated as neutral (no penalty) rather than guessed from genre.
-    const bi = b.intensity ?? p.targetIntensity
-    s -= Math.abs(bi - p.targetIntensity) * 4
+const positionOf = (b: Book): number | null =>
+  typeof b.position === 'number' ? b.position : Number(b.position) || null
+
+/** Precompute the library-derived signals (tag rarity + series progress) once per match run. */
+export function buildMatchContext(
+  books: readonly Book[],
+  opts: { archetype?: (b: Book) => string } = {},
+): MatchContext {
+  const df = new Map<string, number>()
+  for (const b of books) {
+    for (const t of new Set(b.tags.map((x) => x.toLowerCase()))) df.set(t, (df.get(t) ?? 0) + 1)
+  }
+  const n = Math.max(1, books.length)
+  const tagRarity: Record<string, number> = {}
+  // idf, normalized so a tag on exactly one book = 1.0 and a tag on every book stays small-but-nonzero
+  const denom = Math.log(1 + n)
+  for (const [t, d] of df) tagRarity[t] = Math.log(1 + n / d) / denom
+
+  const series: Record<string, SeriesState> = {}
+  for (const b of books) {
+    if (!b.series || !isBookRead(b)) continue
+    const st = (series[b.series] ??= { readPositions: [], avgReadRating: null })
+    const pos = positionOf(b)
+    if (pos != null) st.readPositions.push(pos)
+    if (b.rating > 0) st.avgReadRating = st.avgReadRating == null ? b.rating : (st.avgReadRating + b.rating) / 2
+  }
+  return { tagRarity, series, archetype: opts.archetype }
+}
+
+/** Score one book against a reader profile + library context. Pure + deterministic. */
+export function scoreMatch(b: Book, p: MatchProfile, ctx?: MatchContext): MatchScore {
+  const reasons: MatchReason[] = []
+  const add = (key: MatchReasonKey, value: number, extra?: Partial<MatchReason>) => {
+    const v = Math.max(0, Math.min(1, value))
+    reasons.push({ key, value: v, contribution: Math.round(MATCH_WEIGHTS[key] * v * 1000) / 10, ...extra })
   }
 
-  if (opts.archetype && p.archetypeWeights) {
-    s += (p.archetypeWeights[opts.archetype(b)] ?? 0) * 2
+  // tags — rarity-weighted overlap of the cravings with the book's own tags
+  if (p.wantTags.length) {
+    const bookTags = new Set(b.tags.map((t) => t.toLowerCase()))
+    const rarity = (t: string) => ctx?.tagRarity[t.toLowerCase()] ?? NEUTRAL
+    const matched = p.wantTags.filter((t) => bookTags.has(t.toLowerCase()))
+    const wantedWeight = p.wantTags.reduce((s, t) => s + rarity(t), 0)
+    const matchedWeight = matched.reduce((s, t) => s + rarity(t), 0)
+    add('tags', wantedWeight > 0 ? matchedWeight / wantedWeight : 0, { matchedTags: matched })
+  } else {
+    add('tags', NEUTRAL)
   }
 
-  s += b.rating * 2
-  const isRead = b.readStatus === 'Read' || b.reads.length > 0
-  s += isRead ? -4 : 20
-  return s
+  // subgenre/genre — the profile's lean, normalized to its own strongest lean
+  const subValues = Object.values(p.subWeights)
+  if (subValues.length) {
+    const maxW = Math.max(...subValues, 1)
+    add('subgenre', (p.subWeights[b.subgenre] ?? p.subWeights[b.genre] ?? 0) / maxW)
+  } else {
+    add('subgenre', NEUTRAL)
+  }
+
+  // intensity — distance to target. UNKNOWN sits at 0.75: mildly neutral, a deliberate change from
+  // the old "no penalty" (which let a no-data book tie a perfect fit).
+  if (p.targetIntensity == null) add('intensity', NEUTRAL)
+  else if (b.intensity == null) add('intensity', 0.75)
+  else add('intensity', 1 - Math.abs(b.intensity - p.targetIntensity) / 5)
+
+  // quality — the reader's OWN verdicts: rating, rereads as a love signal, DNF as a real negative
+  const dnf = b.readStatus === 'DNF'
+  let quality = b.rating > 0 ? b.rating / 5 : 0.55
+  if (b.reads.length >= 2) quality = Math.min(1, quality + 0.15)
+  if (dnf) quality = 0.15
+  add('quality', quality)
+
+  // novelty — unread leads; reads may resurface as rereads; DNF is not "fresh", it's rejected
+  const read = isBookRead(b)
+  add('novelty', dnf ? 0.05 : read ? 0.3 : b.readStatus === 'Reading' ? 0.55 : 1)
+
+  // series momentum — the single highest-value library signal
+  const pos = positionOf(b)
+  const st = b.series ? ctx?.series[b.series] : undefined
+  if (b.series && !read && !dnf) {
+    const earlierRead = !!st && st.readPositions.length > 0 && (pos == null || st.readPositions.some((rp) => rp < pos))
+    const lovedEarlier = earlierRead && (st?.avgReadRating ?? 0) >= 4
+    const unstartedEarlier = pos != null && pos > 1 && !st?.readPositions.length
+    const value = lovedEarlier ? 1 : earlierRead ? 0.7 : unstartedEarlier ? 0.15 : NEUTRAL
+    add('series', value, { series: { name: b.series, position: pos, lovedEarlier, unstartedEarlier } })
+  } else {
+    add('series', NEUTRAL)
+  }
+
+  // archetype — the optional skin signature (Tryst's book boyfriend), neutral when absent
+  const arch = ctx?.archetype
+  if (arch && p.archetypeWeights && Object.keys(p.archetypeWeights).length) {
+    const maxA = Math.max(...Object.values(p.archetypeWeights), 1)
+    add('archetype', (p.archetypeWeights[arch(b)] ?? 0) / maxA)
+  } else {
+    add('archetype', NEUTRAL)
+  }
+
+  const score = Math.round(reasons.reduce((s, r) => s + MATCH_WEIGHTS[r.key] * r.value, 0) * 100)
+  reasons.sort((a, z) => z.contribution - a.contribution)
+  return { score, reasons }
 }
