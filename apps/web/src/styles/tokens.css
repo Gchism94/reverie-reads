@@ -89,6 +89,7 @@
   --font-hand: var(--font-display);
   --sky: linear-gradient(180deg, var(--card-solid), var(--card-solid));
   --mark-on-ph: #fff;
+  --desk-edge: transparent; /* Marginalia's desk ring (Sky) — off unless a skin sets it */
 }
 [data-mode='dark'] {
   --mark-on-ph: var(--mark-accent);
@@ -871,8 +872,8 @@
    queries at trace scale. (Chunk-4 composed screen: "the whole screen is one bond manuscript on a
    dark desk… Dark mode darkened the desk; the page never moved.") ── */
 [data-skin='folio'][data-mode='light'] {
-  --bg0: #e8e2d0; /* the page ground (morning) */
-  --bg1: #efe9d9;
+  --bg0: #e7e4da; /* the page ground (morning) — cooled toward bond (verdict 1b) */
+  --bg1: #eeece4;
   --ink: #2b2820; /* graphite-black — the same ink in both modes */
   --muted: #5d5950; /* pencil, darkened from the sheet's #78736a for AA on the page */
   --primary: #b1362b; /* proof-red (deep press) — marks + large type only */
@@ -881,9 +882,9 @@
   --violet: #3f5a8a; /* the editor's blue pencil */
   --blue: #3f5a8a;
   --gold: #78736a; /* pencil — hairlines are graphite here, never gilt */
-  --card: #f8f4e8; /* the bond leaf */
-  --card-solid: #f8f4e8;
-  --card-2: #fffdf5;
+  --card: #f7f5ee; /* the bond leaf, cooler stock */
+  --card-solid: #f7f5ee;
+  --card-2: #fdfcf8;
   --line: rgba(120, 115, 106, 0.38);
   --shadow: 0 14px 30px rgba(120, 110, 90, 0.22);
   --glow-a: #f6f2e4;
@@ -893,7 +894,8 @@
   --star: #a8a296; /* graphite specks, not stars */
   --fog: rgba(120, 110, 90, 0.08);
   --on-primary: #fbf1ea;
-  --vignette: rgba(120, 110, 90, 0.18); /* the pale desk at the edges */
+  --vignette: rgba(96, 88, 74, 0.28); /* the pale desk, present at the edges */
+  --desk-edge: rgba(96, 88, 74, 0.22); /* verdict 1a: the desk is a room, not a brightness */
   --grain-opacity: 0.04;
   --font-display: 'EB Garamond', Georgia, serif;
   --font-sans: 'EB Garamond', Georgia, serif;
@@ -901,19 +903,19 @@
 }
 
 [data-skin='folio'][data-mode='dark'] {
-  --bg0: #ccc5b2; /* the SAME page, dimmed to lamplight — never a dark surface */
-  --bg1: #d4cdba;
+  --bg0: #c2beb1; /* the SAME page, dimmed + cooled to lamplight — never a dark surface */
+  --bg1: #cac6ba;
   --ink: #2b2820;
-  --muted: #524e44; /* pencil reads darker under the lamp */
-  --primary: #8f2a21; /* AA: #b1362b = 3.55:1 as text on the lamplit page; deep-pressed */
+  --muted: #4c483f; /* pencil reads darker under the lamp (re-AA'd for the cooled page) */
+  --primary: #86271f; /* AA: deep-pressed again for the cooled page (4.96:1) */
   --accent-fill: #b1362b;
-  --accent-ink: #8f2a21; /* AA: #9c2f25 = 4.28:1 on the lamplit page; darkened */
+  --accent-ink: #86271f; /* AA: darkened again for the cooled page */
   --violet: #3f5a8a;
   --blue: #3f5a8a;
   --gold: #6b675e;
-  --card: #d9d2be; /* the leaf under lamplight */
-  --card-solid: #d9d2be;
-  --card-2: #e6dfcb;
+  --card: #d3cfc3; /* the leaf under lamplight, cooler stock */
+  --card-solid: #d3cfc3;
+  --card-2: #dedbd1;
   --line: rgba(107, 103, 94, 0.42);
   --shadow: 0 16px 34px rgba(23, 21, 15, 0.4);
   --glow-a: #c9c2ae;
@@ -923,7 +925,8 @@
   --star: #8a8578;
   --fog: rgba(23, 21, 15, 0.16);
   --on-primary: #fbf1ea;
-  --vignette: rgba(23, 21, 15, 0.55); /* THE DARK DESK — the mode lives here, not in the page */
+  --vignette: rgba(20, 18, 13, 0.78); /* THE DARK DESK — the mode lives here, not in the page */
+  --desk-edge: rgba(16, 14, 10, 0.6); /* verdict 1a: the desk closes in — two rooms, not two brightnesses */
   --grain-opacity: 0.05;
   --font-display: 'EB Garamond', Georgia, serif;
   --font-sans: 'EB Garamond', Georgia, serif;
@@ -938,19 +941,19 @@
   --cta-ink: #fbf1ea;
   --cta-border: transparent;
   --cta-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.24), 0 6px 16px rgba(150, 40, 30, 0.4);
-  --plate: #fffdf5;
+  --plate: #fdfcf8;
   --gold-deep: #57534a;
-  --spine-lo: #e8e2d0;
-  --spine-hi: #f6f2e4;
+  --spine-lo: #e5e2d8;
+  --spine-hi: #f4f2ea;
   --spine-title: #2b2820;
   --spine-muted: #6b675e; /* AA: the sheet's pencil #78736a = 4.0:1 on the galley; darkened */
   --spine-sheen: linear-gradient(90deg, rgba(0, 0, 0, 0.12) 0%, rgba(255, 255, 255, 0.3) 18%, rgba(255, 255, 255, 0.5) 50%, rgba(255, 255, 255, 0.24) 74%, rgba(0, 0, 0, 0.13) 100%);
-  --ph-a: #f6f2e4;
-  --ph-b: #e6e0ce;
-  --ph-c: #efe9d8;
+  --ph-a: #f4f2ea;
+  --ph-b: #e4e1d6;
+  --ph-c: #edeae0;
   --ph-ink: #2b2820;
   --ph-muted: #5d5950; /* AA: pencil #6b675e = 4.2:1 on the mid board; darkened */
-  --paper: #f8f4e8;
+  --paper: #f7f5ee;
   --paper-ink: #2b2820;
 }
 [data-skin='folio'][data-mode='dark'] {
@@ -959,19 +962,19 @@
   --cta-ink: #fbf1ea;
   --cta-border: transparent;
   --cta-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.24), 0 6px 16px rgba(150, 40, 30, 0.4);
-  --plate: #e6dfcb;
+  --plate: #dedbd1;
   --gold-deep: #4e4a42;
-  --spine-lo: #b5ae9c;
-  --spine-hi: #cfc8b6;
+  --spine-lo: #adaa9e;
+  --spine-hi: #c6c3b8;
   --spine-title: #2b2820;
-  --spine-muted: #4e4a42; /* AA: pencil #6b675e = 2.9:1 on the lamplit galley; darkened */
+  --spine-muted: #46433b; /* AA: re-deepened for the cooled galley (4.85:1) */
   --spine-sheen: linear-gradient(90deg, rgba(0, 0, 0, 0.28) 0%, rgba(255, 255, 255, 0.18) 18%, rgba(255, 255, 255, 0.35) 50%, rgba(255, 255, 255, 0.14) 74%, rgba(0, 0, 0, 0.3) 100%);
-  --ph-a: #c4bdab;
-  --ph-b: #aaa390;
-  --ph-c: #b8b19e;
+  --ph-a: #bcb8ac;
+  --ph-b: #a3a094;
+  --ph-c: #b1ada1;
   --ph-ink: #2b2820;
   --ph-muted: #3a372f; /* AA: pencil = 3.9:1 on the mid board; darkened */
-  --paper: #d9d2be;
+  --paper: #d3cfc3;
   --paper-ink: #2b2820;
 }
 
@@ -980,19 +983,19 @@
    once per view. LIGHT LEAD by design: the day screen is a morning kitchen, not a whitened app;
    dark is the same kitchen after supper, lamplight on the wood. ── */
 [data-skin='hearth'][data-mode='light'] {
-  --bg0: #ecdfc6; /* morning wood */
-  --bg1: #f2e8d4;
+  --bg0: #e9d7b4; /* morning wood, toasted deeper (verdict 1b: distance from the bond page) */
+  --bg1: #efe0c2;
   --ink: #3d3226;
   --muted: #5c5240; /* AA: the sheet's #8a7d66 = 2.7:1 on the linen; darkened in-family */
   --primary: #9c3243; /* jam as text, darkened from #b13a4e to clear AA on the wood */
   --accent-fill: #b13a4e; /* jam — spent once per view (the primary action + the loved mark) */
-  --accent-ink: #9c3243;
+  --accent-ink: #96303f; /* AA: re-deepened for the toasted linen (4.72:1) */
   --violet: #6f7d4e; /* sage — garden greens stay for glows */
   --blue: #5c7d6a;
   --gold: #8a6a3c; /* the brass of the sewn button */
-  --card: #e0d3b4; /* oat linen */
-  --card-solid: #e0d3b4;
-  --card-2: #ede2ca;
+  --card: #dccca2; /* oat linen, toastier weave */
+  --card-solid: #dccca2;
+  --card-2: #e8dab4;
   --line: rgba(138, 116, 85, 0.45);
   --thread: #8a7455; /* cream thread reads tea-dyed in daylight */
   --shadow: 0 18px 40px rgba(110, 90, 60, 0.22);
@@ -1011,8 +1014,8 @@
 }
 
 [data-skin='hearth'][data-mode='dark'] {
-  --bg0: #1a130b; /* the table after supper */
-  --bg1: #241c12;
+  --bg0: #1d1309; /* the table after supper — warmer, deeper wood */
+  --bg1: #281d10;
   --ink: #f0e8d6;
   --muted: #c9b998;
   --primary: #d4586c; /* jam by lamplight — text-scale */
@@ -1021,9 +1024,9 @@
   --violet: #9aa878;
   --blue: #8a9968;
   --gold: #c9a86a;
-  --card: #57482e; /* the same linen, lamplit */
-  --card-solid: #57482e;
-  --card-2: #6b5a3c;
+  --card: #5c4829; /* the same linen, lamplit — toasted */
+  --card-solid: #5c4829;
+  --card-2: #705a37;
   --line: rgba(232, 220, 192, 0.3);
   --thread: #e8dcc0;
   --shadow: 0 22px 60px rgba(0, 0, 0, 0.55);
@@ -1049,16 +1052,16 @@
   --cta-ink: #fdf3ea;
   --cta-border: transparent;
   --cta-shadow: inset 0 0 0 2px rgba(253, 243, 234, 0.55), 0 6px 16px rgba(160, 50, 70, 0.35);
-  --plate: #ede2ca;
+  --plate: #e8dab4;
   --gold-deep: #6a4f2c;
-  --spine-lo: #e0d3b4;
-  --spine-hi: #ede2ca;
+  --spine-lo: #dccca2;
+  --spine-hi: #e8dab4;
   --spine-title: #3d3226;
   --spine-muted: #5c5240; /* AA: sheet #8a7d66 = 2.9:1 on the linen; darkened */
   --spine-sheen: linear-gradient(90deg, rgba(0, 0, 0, 0.13) 0%, rgba(255, 255, 255, 0.3) 18%, rgba(255, 255, 255, 0.5) 50%, rgba(255, 255, 255, 0.24) 74%, rgba(0, 0, 0, 0.14) 100%);
-  --ph-a: #ede2ca;
-  --ph-b: #ddd0ae;
-  --ph-c: #e6dabc;
+  --ph-a: #e8dab4;
+  --ph-b: #d8c698;
+  --ph-c: #e1d2a6;
   --ph-ink: #3d3226;
   --ph-muted: #5c5240;
   --paper: #faf5ea;
@@ -1070,16 +1073,16 @@
   --cta-ink: #fdf3ea;
   --cta-border: transparent;
   --cta-shadow: inset 0 0 0 2px rgba(253, 243, 234, 0.45), 0 6px 16px rgba(160, 50, 70, 0.4);
-  --plate: #6b5a3c;
+  --plate: #705a37;
   --gold-deep: #8a6a3c;
-  --spine-lo: #57482e;
-  --spine-hi: #6b5a3c;
+  --spine-lo: #5c4829;
+  --spine-hi: #705a37;
   --spine-title: #f0e8d6;
-  --spine-muted: #d4c6a8; /* AA: sheet #c9b998 = 4.3:1 on the cloth; lifted */
+  --spine-muted: #d9ccb0; /* AA: re-lifted for the toasted cloth (4.74:1) */
   --spine-sheen: linear-gradient(90deg, rgba(0, 0, 0, 0.42) 0%, rgba(255, 255, 255, 0.07) 18%, rgba(255, 255, 255, 0.14) 50%, rgba(255, 255, 255, 0.05) 74%, rgba(0, 0, 0, 0.44) 100%);
-  --ph-a: #6b5a3c;
-  --ph-b: #57482e;
-  --ph-c: #635234;
+  --ph-a: #705a37;
+  --ph-b: #5c4829;
+  --ph-c: #665231;
   --ph-ink: #f0e8d6;
   --ph-muted: #e6dcc4; /* AA: #d4c6a8 = 3.9:1 on the bright cloth stop; lifted */
   --paper: #efe4cc;

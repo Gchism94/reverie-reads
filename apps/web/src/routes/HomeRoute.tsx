@@ -14,6 +14,7 @@ import { MONTHS } from '../library/constants'
 import { Frame, ProgressMeter, SectionHeader, SignatureRing, StatusTag } from '../components/Structure'
 import { hasOnboarded } from './OnboardingRoute'
 import { useVoice } from '../skin/labels'
+import { BookmarkGlyph } from '../components/BookmarkGlyph'
 
 const YEAR = new Date().getFullYear()
 
@@ -112,7 +113,7 @@ function HomeScreen() {
           <div className="mt-2.5 flex flex-wrap gap-1.5">
             <StatusTag tone="muted">{all.length} books</StatusTag>
             <StatusTag glyph="♥">{all.filter((b) => b.fave).length} faves</StatusTag>
-            {priority && <StatusTag glyph="★">{priorityBooks.length} priority</StatusTag>}
+            {priority && <StatusTag glyph={<BookmarkGlyph />}>{priorityBooks.length} priority</StatusTag>}
           </div>
         </div>
         <div className="flex flex-col gap-2">
@@ -187,7 +188,10 @@ function HomeScreen() {
       {priority && priorityBooks.length > 0 && (
         <div className="mt-8">
           <h2 className="text-[18px] italic text-ink" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
-            ★ {priority.name}
+            <span style={{ color: 'var(--accent-ink)' }}>
+              <BookmarkGlyph size={13} />
+            </span>{' '}
+            {priority.name}
           </h2>
           <p className="mb-1 text-[12.5px] text-muted">Scroll the shelf — covers flip as you go</p>
           <SpineShelf books={priorityBooks} onOpen={openBook} />
