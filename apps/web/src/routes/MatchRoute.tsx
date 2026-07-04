@@ -23,6 +23,8 @@ function whyLine(reasons: MatchReason[]): string {
   if (series?.series?.lovedEarlier) return `Next in ${series.series.name} — a series you love`
   const tags = reasons.find((r) => r.key === 'tags')
   if (tags?.matchedTags?.length) return `Matches ${tags.matchedTags.slice(0, 2).join(' · ')}`
+  const taste = reasons.find((r) => r.key === 'tasteTags')
+  if (taste?.lovedTags?.length) return `Close to your loves: ${taste.lovedTags.slice(0, 2).join(' · ')}`
   const sub = reasons.find((r) => r.key === 'subgenre')
   if (sub && sub.value >= 0.9) return 'Squarely your world'
   const heat = reasons.find((r) => r.key === 'intensity')
@@ -30,18 +32,27 @@ function whyLine(reasons: MatchReason[]): string {
   return 'A fresh pick from your shelves'
 }
 
-function score(books: Book[], a: QuizAnswers): { picks: Pick[]; headline: string; sub: string; tags: string[] } {
+function score(
+  books: Book[],
+  a: QuizAnswers,
+  opts: { tasteOnly?: boolean; dismissedAt?: Record<string, number> } = {},
+): { picks: Pick[]; headline: string; sub: string; tags: string[] } {
   const target = a.spices.length ? Math.round(a.spices.reduce((x, y) => x + y, 0) / a.spices.length) : 3
   const topSub = Object.entries(a.subs).sort((x, y) => y[1] - x[1])[0]?.[0] ?? 'Romance'
   const cravings = [...new Set(a.tropes)]
 
   // Build a genre-neutral profile from the (romance-flavored) quiz, then score with the core
-  // vibe matcher over the library-derived context (tag rarity + series momentum). The
-  // book-boyfriend archetype rides along as the Tryst skin's signature signal.
-  const subWeights = { ...a.subs }
-  if (a.dark) subWeights['Dark Romance'] = (subWeights['Dark Romance'] ?? 0) + 1
-  const profile: MatchProfile = { subWeights, wantTags: cravings, targetIntensity: target, archetypeWeights: a.arts }
-  const ctx = buildMatchContext(books, { archetype: deriveBoyfriend })
+  // vibe matcher over the library-derived context (tag rarity + series momentum + the LEARNED
+  // taste). Taste-only mode (Tier 1) skips the quiz entirely: a mood-neutral profile over the
+  // standing taste. The book-boyfriend archetype rides along as the Tryst skin's signature signal.
+  const profile: MatchProfile = opts.tasteOnly
+    ? { subWeights: {}, wantTags: [], targetIntensity: null }
+    : (() => {
+        const subWeights = { ...a.subs }
+        if (a.dark) subWeights['Dark Romance'] = (subWeights['Dark Romance'] ?? 0) + 1
+        return { subWeights, wantTags: cravings, targetIntensity: target, archetypeWeights: a.arts }
+      })()
+  const ctx = buildMatchContext(books, { archetype: deriveBoyfriend, dismissedAt: opts.dismissedAt })
 
   const scored: Pick[] = books
     .map((b) => {
@@ -50,6 +61,21 @@ function score(books: Book[], a: QuizAnswers): { picks: Pick[]; headline: string
       return { b, s, isRead, why: whyLine(reasons) }
     })
     .sort((x, y) => y.s - x.s)
+
+  if (opts.tasteOnly) {
+    // headline chips = the standing loves the profile actually learned
+    const loves = Object.entries(ctx.taste?.tagAffinity ?? {})
+      .filter(([, a2]) => a2 >= 0.3)
+      .sort((x, y) => y[1] - x[1])
+      .slice(0, 3)
+      .map(([t]) => t.replace(/\b\w/g, (c) => c.toUpperCase()))
+    return {
+      picks: scored.filter((x) => x.s >= 45).slice(0, 12),
+      headline: 'Your standing taste',
+      sub: 'Learned from how you rate, reread, and shelve',
+      tags: loves,
+    }
+  }
 
   const heatWord = HEAT[target] || 'Steamy'
   const worldWord = WORLD[topSub] ?? 'romance'
@@ -67,6 +93,24 @@ function score(books: Book[], a: QuizAnswers): { picks: Pick[]; headline: string
   }
 }
 
+// "Not tonight" feedback — the matcher's first captured signal. Local-first (per device);
+// the scorer floors a dismissed book's novelty and lets it recover over 60 days.
+const DISMISS_KEY = 'reverie.match.dismissed.v1'
+function readDismissed(): Record<string, number> {
+  try {
+    return JSON.parse(window.localStorage?.getItem(DISMISS_KEY) ?? '{}') as Record<string, number>
+  } catch {
+    return {}
+  }
+}
+function writeDismissed(map: Record<string, number>): void {
+  try {
+    window.localStorage?.setItem(DISMISS_KEY, JSON.stringify(map))
+  } catch {
+    /* private mode */
+  }
+}
+
 function MatchScreen() {
   const navigate = useNavigate()
   const { data: books } = useBooks()
@@ -76,22 +120,35 @@ function MatchScreen() {
   const [answers, setAnswers] = useState<QuizAnswers>(emptyAnswers)
   const [step, setStep] = useState(0)
   const [added, setAdded] = useState<string | null>(null)
+  const [tasteOnly, setTasteOnly] = useState(false)
+  const [dismissed, setDismissed] = useState<Record<string, number>>(readDismissed)
+  const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set())
 
   const openBook = (id: string) => void navigate({ to: '/book/$bookId', params: { bookId: id } })
   const result = useMemo(
-    () => (step >= QUIZ.length ? score(books ?? [], answers) : null),
-    [step, books, answers],
+    () => (step >= QUIZ.length ? score(books ?? [], answers, { tasteOnly, dismissedAt: dismissed }) : null),
+    [step, books, answers, tasteOnly, dismissed],
   )
+  const visiblePicks = result ? result.picks.filter((p) => !hidden.has(p.b.id)) : []
+
+  const dismiss = (id: string) => {
+    const next = { ...dismissed, [id]: Date.now() }
+    setDismissed(next)
+    writeDismissed(next)
+    setHidden((h) => new Set([...h, id]))
+  }
 
   const reset = () => {
     setAnswers(emptyAnswers())
     setStep(0)
     setAdded(null)
+    setTasteOnly(false)
+    setHidden(new Set())
   }
 
   async function addTop3() {
     if (!result) return
-    const top3 = result.picks.filter((p) => !p.isRead).slice(0, 3).map((p) => p.b.id)
+    const top3 = visiblePicks.filter((p) => !p.isRead).slice(0, 3).map((p) => p.b.id)
     if (!top3.length) return
     let priority = (lists ?? []).find((l) => l.kind === 'tbr' && l.priority)
     if (!priority) priority = await createList.mutateAsync({ name: 'Priority TBR', kind: 'tbr', isPriority: true })
@@ -131,6 +188,19 @@ function MatchScreen() {
               </button>
             ))}
           </div>
+          {step === 0 && (
+            /* Tier 1: the quiz is a mood override — the learned baseline can carry Match alone */
+            <button
+              type="button"
+              onClick={() => {
+                setTasteOnly(true)
+                setStep(QUIZ.length)
+              }}
+              className="mt-4 w-full text-center text-[13px] font-semibold text-primary"
+            >
+              Skip the quiz — match my standing taste →
+            </button>
+          )}
         </div>
       </section>
     )
@@ -179,18 +249,31 @@ function MatchScreen() {
         <p className="text-[12.5px] text-muted">Unread picks first — your next read awaits</p>
       </div>
       <div className="mx-auto mt-4 grid max-w-4xl grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
-        {result.picks.map(({ b, s, isRead, why }) => (
-          <button key={b.id} type="button" onClick={() => openBook(b.id)} className="text-left" aria-label={`Open ${b.title}`}>
-            <div className="aspect-[2/3] overflow-hidden rounded-lg border border-line" style={{ background: 'var(--field)' }}>
-              <CoverImage book={b} />
-            </div>
-            <div className="mt-1 truncate text-[11.5px] font-semibold text-ink">{b.title}</div>
-            <div className="text-[10.5px] font-bold text-primary">
-              {s}% match{isRead ? ' · reread' : ''}
-            </div>
-            {/* the honest why — every pick can say what earned it (Tier 0) */}
-            <div className="truncate text-[10px] text-muted">{why}</div>
-          </button>
+        {visiblePicks.map(({ b, s, isRead, why }) => (
+          <div key={b.id} className="group relative">
+            <button type="button" onClick={() => openBook(b.id)} className="w-full text-left" aria-label={`Open ${b.title}`}>
+              <div className="aspect-[2/3] overflow-hidden rounded-lg border border-line" style={{ background: 'var(--field)' }}>
+                <CoverImage book={b} />
+              </div>
+              <div className="mt-1 truncate text-[11.5px] font-semibold text-ink">{b.title}</div>
+              <div className="text-[10.5px] font-bold text-primary">
+                {s}% match{isRead ? ' · reread' : ''}
+              </div>
+              {/* the honest why — every pick can say what earned it (Tier 0) */}
+              <div className="truncate text-[10px] text-muted">{why}</div>
+            </button>
+            {/* feedback capture: "not tonight" floors this book for ~60 days (Tier 1) */}
+            <button
+              type="button"
+              onClick={() => dismiss(b.id)}
+              aria-label={`Not tonight — hide ${b.title}`}
+              title="Not tonight"
+              className="absolute right-1 top-1 h-6 w-6 rounded-full text-[11px] font-bold opacity-0 backdrop-blur transition-opacity focus-visible:opacity-100 group-hover:opacity-100"
+              style={{ background: 'rgba(0,0,0,0.55)', color: '#fff' }}
+            >
+              ✕
+            </button>
+          </div>
         ))}
       </div>
     </section>

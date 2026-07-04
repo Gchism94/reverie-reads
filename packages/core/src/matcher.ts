@@ -1,5 +1,6 @@
 import type { Book } from './types'
 import { isBookRead } from './filters'
+import { buildTasteProfile, tasteFit, type TasteProfile } from './tasteProfile'
 
 // Genre-agnostic "vibe matcher" — Tier 0 rewrite (2026-07, owner-approved).
 //
@@ -31,7 +32,16 @@ export interface MatchProfile {
   archetypeWeights?: Record<string, number>
 }
 
-export type MatchReasonKey = 'tags' | 'subgenre' | 'intensity' | 'quality' | 'novelty' | 'series' | 'archetype'
+export type MatchReasonKey =
+  | 'tags'
+  | 'tasteTags'
+  | 'subgenre'
+  | 'tasteWorld'
+  | 'intensity'
+  | 'quality'
+  | 'novelty'
+  | 'series'
+  | 'archetype'
 
 export interface MatchReason {
   key: MatchReasonKey
@@ -41,6 +51,8 @@ export interface MatchReason {
   contribution: number
   /** which craved tags this book actually carries (key === 'tags') */
   matchedTags?: string[]
+  /** the book's tags the reader demonstrably loves (key === 'tasteTags') */
+  lovedTags?: string[]
   /** series detail (key === 'series') */
   series?: { name: string; position: number | null; lovedEarlier: boolean; unstartedEarlier: boolean }
 }
@@ -63,6 +75,12 @@ export interface MatchContext {
   tagRarity: Record<string, number>
   /** series name → the reader's progress in it */
   series: Record<string, SeriesState>
+  /** the LEARNED standing taste (Tier 1) — ratings/rereads/faves/DNFs distilled per tag + world */
+  taste?: TasteProfile
+  /** feedback capture: bookId → epoch-ms the reader said "not tonight" (decays over 60 days) */
+  dismissedAt?: Record<string, number>
+  /** the clock the context was built with (injected for determinism) */
+  now: number
   /** optional skin signature: maps a book to an archetype key scored via archetypeWeights */
   archetype?: (b: Book) => string
 }
@@ -70,10 +88,12 @@ export interface MatchContext {
 /** Named weights — Σ = 1, so the blended score reads as a percentage. Tuned, not sacred: they live
  *  in ONE place precisely so they can be argued with (and later learned from feedback). */
 export const MATCH_WEIGHTS: Record<MatchReasonKey, number> = {
-  tags: 0.3,
-  subgenre: 0.15,
-  intensity: 0.15,
-  quality: 0.1,
+  tags: 0.2, // the quiz's cravings — still the loudest single voice…
+  tasteTags: 0.13, // …but the LEARNED tag taste now speaks alongside it
+  subgenre: 0.1,
+  tasteWorld: 0.07,
+  intensity: 0.12,
+  quality: 0.08,
   novelty: 0.15,
   series: 0.1,
   archetype: 0.05,
@@ -87,8 +107,9 @@ const positionOf = (b: Book): number | null =>
 /** Precompute the library-derived signals (tag rarity + series progress) once per match run. */
 export function buildMatchContext(
   books: readonly Book[],
-  opts: { archetype?: (b: Book) => string } = {},
+  opts: { archetype?: (b: Book) => string; dismissedAt?: Record<string, number>; now?: number } = {},
 ): MatchContext {
+  const now = opts.now ?? Date.now()
   const df = new Map<string, number>()
   for (const b of books) {
     for (const t of new Set(b.tags.map((x) => x.toLowerCase()))) df.set(t, (df.get(t) ?? 0) + 1)
@@ -107,7 +128,14 @@ export function buildMatchContext(
     if (pos != null) st.readPositions.push(pos)
     if (b.rating > 0) st.avgReadRating = st.avgReadRating == null ? b.rating : (st.avgReadRating + b.rating) / 2
   }
-  return { tagRarity, series, archetype: opts.archetype }
+  return {
+    tagRarity,
+    series,
+    taste: buildTasteProfile(books, { now }),
+    dismissedAt: opts.dismissedAt,
+    now,
+    archetype: opts.archetype,
+  }
 }
 
 /** Score one book against a reader profile + library context. Pure + deterministic. */
@@ -139,6 +167,17 @@ export function scoreMatch(b: Book, p: MatchProfile, ctx?: MatchContext): MatchS
     add('subgenre', NEUTRAL)
   }
 
+  // learned taste (Tier 1) — the standing baseline under the quiz's mood: how this book's tags
+  // and world sit with what the reader actually rates, rereads, faves — and DNFs
+  const fit = ctx?.taste?.signalCount ? tasteFit(b, ctx.taste) : null
+  if (fit) {
+    add('tasteTags', fit.tagFit, fit.lovedTags.length ? { lovedTags: fit.lovedTags } : undefined)
+    add('tasteWorld', fit.worldFit)
+  } else {
+    add('tasteTags', NEUTRAL)
+    add('tasteWorld', NEUTRAL)
+  }
+
   // intensity — distance to target. UNKNOWN sits at 0.75: mildly neutral, a deliberate change from
   // the old "no penalty" (which let a no-data book tie a perfect fit).
   if (p.targetIntensity == null) add('intensity', NEUTRAL)
@@ -152,9 +191,16 @@ export function scoreMatch(b: Book, p: MatchProfile, ctx?: MatchContext): MatchS
   if (dnf) quality = 0.15
   add('quality', quality)
 
-  // novelty — unread leads; reads may resurface as rereads; DNF is not "fresh", it's rejected
+  // novelty — unread leads; reads may resurface as rereads; DNF is not "fresh", it's rejected.
+  // "Not tonight" feedback folds in here: a fresh dismissal floors novelty and recovers over 60 days.
   const read = isBookRead(b)
-  add('novelty', dnf ? 0.05 : read ? 0.3 : b.readStatus === 'Reading' ? 0.55 : 1)
+  let novelty = dnf ? 0.05 : read ? 0.3 : b.readStatus === 'Reading' ? 0.55 : 1
+  const dismissedTs = ctx?.dismissedAt?.[b.id]
+  if (dismissedTs != null && ctx) {
+    const days = Math.max(0, (ctx.now - dismissedTs) / 86_400_000)
+    if (days < 60) novelty = Math.min(novelty, 0.1 + 0.4 * (days / 60))
+  }
+  add('novelty', novelty)
 
   // series momentum — the single highest-value library signal
   const pos = positionOf(b)
