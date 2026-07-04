@@ -93,7 +93,7 @@ function ListModal({
             const b = byId.get(id)
             if (!b) return null
             return (
-              <li key={id} className="flex items-center gap-2 rounded-xl border border-line px-3 py-2" style={{ background: 'var(--field)' }}>
+              <li key={id} className="flex items-center gap-2 skin-card border border-line px-3 py-2" style={{ background: 'var(--field)' }}>
                 <span className="flex flex-col">
                   <button type="button" onClick={() => move(i, -1)} aria-label="Move up" className="text-[10px] text-muted">
                     ▲
@@ -154,7 +154,7 @@ function OwnedShelves({ books, onOpen }: { books: Book[]; onOpen: (id: string) =
               {shelf.length ? (
                 <SpineShelf books={shelf} onOpen={onOpen} />
               ) : (
-                <p className="rounded-xl border border-line p-3 text-[13px] text-muted">
+                <p className="skin-card border border-line p-3 text-[13px] text-muted">
                   Flip a copy switch on a book and it lands here.
                 </p>
               )}
@@ -264,7 +264,7 @@ function ShelvesScreen() {
                 {shelfBooks.length ? (
                   <SpineShelf books={shelfBooks} onOpen={openBook} />
                 ) : (
-                  <p className="rounded-2xl border border-line p-4 text-[13px] text-muted">
+                  <p className="skin-panel border border-line p-4 text-[13px] text-muted">
                     No books yet — open any book and use <b>Lists &amp; shelves</b> to add it here.
                   </p>
                 )}
@@ -273,7 +273,7 @@ function ShelvesScreen() {
           })}
         </div>
       ) : (
-        <p className="rounded-2xl border border-line p-6 text-center text-[14px] text-muted">
+        <p className="skin-panel border border-line p-6 text-center text-[14px] text-muted">
           No {tab === 'tbr' ? 'TBRs' : 'collections'} yet — hit ＋ New.
         </p>
       )}

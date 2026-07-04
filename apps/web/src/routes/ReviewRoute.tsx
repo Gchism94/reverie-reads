@@ -6,6 +6,7 @@ import { useBooks, useUpdateBook } from '../data/books'
 import { useImportReviewModel } from '../data/importReview'
 import { CoverImage } from '../components/CoverImage'
 import { CoverPicker } from '../components/CoverPicker'
+import { useVoice } from '../skin/labels'
 
 const REASON_LABEL: Record<NeedsLookReason, string> = {
   missing_cover: 'No cover',
@@ -84,6 +85,7 @@ function ListBucket({ title, items }: { title: string; items: NeedsLookItem[] })
 }
 
 function ReviewScreen() {
+  const voice = useVoice()
   const model = useImportReviewModel()
   const { data: books } = useBooks()
   const byId = useMemo(() => new Map((books ?? []).map((b) => [b.id, b])), [books])
@@ -155,7 +157,7 @@ function ReviewScreen() {
 
       {shownTriage.length === 0 && !needsLook.oddGenre.length && !needsLook.likelyDuplicate.length && (
         <p className="mt-6 rounded-xl border border-line px-3 py-3 text-center text-[13px] text-muted" style={{ background: 'var(--card)' }}>
-          Nothing needs a look — every book came in clean. ✦
+          Nothing needs a look — every book came in clean. {voice.motif}
         </p>
       )}
     </section>

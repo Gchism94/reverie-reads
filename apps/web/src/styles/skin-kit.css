@@ -561,3 +561,13 @@
   height: 2px;
   background-image: repeating-linear-gradient(90deg, color-mix(in srgb, var(--accent-fill) 70%, transparent) 0 2px, transparent 2px 8px);
 }
+
+/* Modal silhouette — a bottom sheet on mobile, the skin's panel radius from sm: up. */
+.rv-modal {
+  border-radius: 24px 24px 0 0;
+}
+@media (min-width: 640px) {
+  .rv-modal {
+    border-radius: var(--radius-panel);
+  }
+}

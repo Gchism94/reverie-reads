@@ -106,7 +106,7 @@ function MatchScreen() {
                   setAnswers((a) => applyAnswer(a, o))
                   setStep((s) => s + 1)
                 }}
-                className="rounded-2xl border border-line px-4 py-3 text-left text-[15px] font-semibold text-ink transition-colors hover:border-[color:var(--primary)]"
+                className="skin-panel border border-line px-4 py-3 text-left text-[15px] font-semibold text-ink transition-colors hover:border-[color:var(--primary)]"
                 style={{ background: 'var(--field)' }}
               >
                 {o.t}

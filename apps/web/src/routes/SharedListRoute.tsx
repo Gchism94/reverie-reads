@@ -13,6 +13,7 @@ import {
 } from '../data/sharedLists'
 import { useRealtimeRefetch } from '../hooks/useRealtimeRefetch'
 import { Modal } from '../components/Modal'
+import { useVoice } from '../skin/labels'
 
 function LibraryPicker({ books, onPick, onClose }: { books: Book[]; onPick: (b: Book) => void; onClose: () => void }) {
   const [q, setQ] = useState('')
@@ -67,7 +68,8 @@ function SharedListScreen() {
   const removeItem = (id: string) =>
     mutateDoc.mutate((d: SharedListDoc) => ({ ...d, items: d.items.filter((i) => i.id !== id) }))
 
-  if (isLoading) return <p className="px-6 py-16 text-center text-muted">Loading…</p>
+  const voice = useVoice()
+  if (isLoading) return <p className="px-6 py-16 text-center text-muted">{voice.loading}</p>
   if (!doc)
     return (
       <div className="px-6 py-16 text-center text-muted">

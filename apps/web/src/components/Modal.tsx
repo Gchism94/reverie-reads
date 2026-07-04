@@ -37,7 +37,7 @@ export function Modal({
         aria-modal="true"
         aria-label={title}
         tabIndex={-1}
-        className={`max-h-[92dvh] w-full overflow-y-auto rounded-t-3xl border border-line p-6 outline-none sm:rounded-3xl ${
+        className={`max-h-[92dvh] w-full rv-modal overflow-y-auto border border-line p-6 outline-none ${
           wide ? 'sm:max-w-2xl' : 'sm:max-w-md'
         }`}
         style={{ background: 'var(--card-solid)', boxShadow: 'var(--shadow)' }}

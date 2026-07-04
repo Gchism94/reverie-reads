@@ -1,6 +1,11 @@
 // The data model is generic (tags / intensity / genre); each skin chooses how to LABEL those
-// fields in the UI. The Tryst (romance) skin still says "Tropes" and "Spice"; a neutral skin
-// says "Tags" and "Intensity". UI reads labels from here (via the active skin), never hardcoded.
+// fields in the UI. UI reads labels from here (via the active skin), never hardcoded.
+//
+// SPICE IS UNIVERSAL (owner decision, 2026-07): the intensity field is "Spice" 🌶️ in EVERY skin —
+// it's a named core feature of the product (a romance/romantasy spice tracker), so the reader keeps
+// their spice level whatever costume the app wears. Only the softer vocabulary still varies: Tryst
+// keeps its romance-native "Tropes / Romance / Subgenre"; the neutral skins say "Tags / Genre /
+// Category". No skin is missing any FEATURE — this is wording, not capability.
 
 export interface FieldLabels {
   /** label for the generic `tags` field */
@@ -29,8 +34,8 @@ export const TRYST_LABELS: FieldLabels = {
 export const NEUTRAL_LABELS: FieldLabels = {
   tags: 'Tags',
   tag: 'tag',
-  intensity: 'Intensity',
-  intensityGlyph: '●',
+  intensity: 'Spice', // spice is universal (see header) — every skin tracks it, glyph included
+  intensityGlyph: '🌶️',
   genre: 'Genre',
   subgenre: 'Category',
 }
