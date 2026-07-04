@@ -79,6 +79,73 @@ export const TROPE_GROUPS: Record<string, string[]> = {
   ],
 }
 
+/** Genuinely cross-genre tropes — offered in EVERY genre, deduped against the genre's own groups.
+ *  Kept small on purpose: a trope earns "universal" by meaning the same thing in a mystery as in a
+ *  romantasy, not by being popular. */
+export const UNIVERSAL_TROPES: string[] = [
+  'Found Family', 'Slow Burn', 'Enemies to Lovers', 'Morally Gray', 'Anti-Hero',
+  'Redemption Arc', 'Banter', 'Strong Female Lead', 'Unreliable Narrator', 'Small Town',
+]
+
+/** Genre → trope groups (the tag-side twin of GENRE_SUBGENRES, same lowercased-genre keys).
+ *  Romance keeps the original four groups VERBATIM — `deriveBoyfriend` keys off those exact names.
+ *  Each other genre gets a curated 3-group baseline (~15–25 tropes), seeded from established
+ *  reader-taxonomy vocabulary (StoryGraph-style content tags), rich enough to feel native without
+ *  drowning the picker. Users extend freely — these are the baseline, not the ceiling. */
+export const TROPE_GROUPS_BY_GENRE: Record<string, Record<string, string[]>> = {
+  romance: TROPE_GROUPS,
+  fantasy: {
+    'Magic & Worlds': ['High Magic', 'Magic Academy', 'Fae', 'Dragons', 'Portal Fantasy', 'Prophecy', 'Gods & Pantheons', 'Elemental Magic'],
+    'Quest & Structure': ['Chosen One', 'Quest', 'Heist', 'Political Intrigue', 'War Campaign', 'Tournament Arc', 'Rebellion'],
+    Dynamics: ['Mentor & Student', 'Rivals', 'Reluctant Hero', 'Band of Misfits', 'Court Intrigue'],
+  },
+  'science fiction': {
+    'Worlds & Tech': ['Space Opera', 'First Contact', 'AI & Androids', 'Time Travel', 'Generation Ship', 'Cyberpunk', 'Terraforming'],
+    Stakes: ['Dystopia', 'Post-Apocalyptic', 'Rebellion', 'Corporate Overlords', 'Survival', 'Pandemic'],
+    Dynamics: ['Found Crew', 'Sentient Ship', 'Enemies to Allies', 'Reluctant Hero'],
+  },
+  horror: {
+    'The Threat': ['Haunted House', 'Possession', 'Cosmic Horror', 'Slasher', 'Body Horror', 'Folk Horror', 'Vampires', 'Ghosts'],
+    'Dread & Structure': ['Isolation', 'Descent into Madness', 'Final Girl', 'Cursed Object', 'Small Town Secrets', 'Ritual'],
+    Setting: ['Gothic', 'Deep Woods', 'At Sea', 'Asylum'],
+  },
+  mystery: {
+    Investigation: ['Amateur Sleuth', 'Hardboiled Detective', 'Police Procedural', 'Cold Case', 'Locked Room', 'Heist'],
+    'The Culprit': ['Serial Killers', 'Twist Ending', "Everyone's a Suspect", 'Cat and Mouse'],
+    'Setting & Tone': ['Cozy Mystery', 'Noir', 'Small Town Secrets', 'Courtroom', 'Historical Mystery'],
+  },
+  literary: {
+    'Form & Voice': ['Multiple Timelines', 'Epistolary', 'Vignettes', 'Stream of Consciousness', 'Metafiction'],
+    Themes: ['Coming of Age', 'Family Saga', 'Grief & Memory', 'Immigrant Story', 'Class & Money', 'Marriage in Trouble'],
+    Setting: ['Historical', 'Campus Novel', 'City Portrait'],
+  },
+  cozy: {
+    Comforts: ['Culinary', 'Bookshop & Library', 'Seaside', 'Holiday', 'Garden & Farm', 'Tea & Coffee'],
+    'Gentle Stakes': ['Low Stakes', 'Slice of Life', 'Community Project', 'Fresh Start', 'Second Act'],
+    Charm: ['Talking Animals', 'Magical Realism', 'Grumpy/Sunshine', 'Matchmaking'],
+  },
+  nonfiction: {
+    Approach: ['Memoir', 'Narrative Nonfiction', 'Investigative', 'Essays', 'Biography'],
+    Subjects: ['Science', 'History', 'True Crime', 'Nature', 'Psychology', 'Food'],
+    Tone: ['Funny', 'Moving', 'Practical'],
+  },
+  'young adult': {
+    'Coming of Age': ['First Love', 'Friendship', 'Identity', 'Family Secrets', 'School Story'],
+    Adventure: ['Chosen One', 'Magic Academy', 'Dystopian Rebellion', 'Tournament Arc', 'Road Trip'],
+    Dynamics: ['Love Triangle', 'Rivals', 'Secret Identity'],
+  },
+}
+
+/** The trope groups to offer for a genre: the genre's own groups + the Universal group (deduped
+ *  against them), falling back to the romance set for an unknown genre (the app's founding
+ *  vocabulary). The UI appends the reader's own free tags as a "Your tags" group. */
+export function tropeGroupsForGenre(genre: string): Record<string, string[]> {
+  const own = TROPE_GROUPS_BY_GENRE[genre.trim().toLowerCase()] ?? TROPE_GROUPS
+  const inOwn = new Set(Object.values(own).flat().map((t) => t.toLowerCase()))
+  const universal = UNIVERSAL_TROPES.filter((t) => !inOwn.has(t.toLowerCase()))
+  return universal.length ? { ...own, Universal: universal } : { ...own }
+}
+
 export const ALL_TROPES: string[] = Object.values(TROPE_GROUPS).flat()
 
 export interface Archetype {
