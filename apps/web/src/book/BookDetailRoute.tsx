@@ -17,6 +17,7 @@ import { ARCH, MONTHS, READ_STATUSES, subgenreGradient } from '../library/consta
 import { EditDetails, LogReadForm, MergeDialog, TropePicker } from './dialogs'
 import { OwnedCopies } from './OwnedCopies'
 import { ReviewsPanel } from './ReviewsPanel'
+import { MoreLikeThis } from './MoreLikeThis'
 import { workKeyFor } from '../data/reviews'
 import { useProfile } from '../data/profile'
 import { BookmarkGlyph } from '../components/BookmarkGlyph'
@@ -278,6 +279,9 @@ function BookDetailScreen() {
       <div className="mt-4">
         <ReviewsPanel workKey={workKey} reviewerName={reviewerName} />
       </div>
+
+      {/* Tier 2: semantic neighbours from your own shelves (silent until embeddings exist) */}
+      <MoreLikeThis bookId={book.id} />
 
       {/* tags (Tryst skin: "Tropes") */}
       <Label
