@@ -6,6 +6,8 @@ import {
   GENRE_DISCOVER_QUERY,
   isOwned,
   ownedKeys,
+  sortByTaste,
+  tastePercent,
   volumeToHit,
   type DiscoverHit,
 } from './discover'
@@ -93,5 +95,32 @@ describe('discover — ownership', () => {
 
   it('does not claim strangers', () => {
     expect(isOwned(hit({ title: 'King of Pride', authors: ['Ana Huang'], isbn: '9781728289731' }), owned)).toBe(false)
+  })
+})
+
+describe('discover — taste ordering (Tier 2b)', () => {
+  const a = hit({ title: 'A', authors: ['X'], isbn: '1111111111' })
+  const b = hit({ title: 'B', authors: ['X'], isbn: '2222222222' })
+  const c = hit({ title: 'C', authors: ['X'], isbn: '3333333333' })
+
+  it('scored hits sort closest-first; unscored keep catalog order behind them', () => {
+    const out = sortByTaste([a, b, c], { [`1111111111`]: 0.71, [`3333333333`]: 0.9 })
+    expect(out.map((x) => x.hit.title)).toEqual(['C', 'A', 'B'])
+    expect(out[0]?.taste).toBeCloseTo(0.9)
+    expect(out[2]?.taste).toBeUndefined()
+  })
+
+  it('no scores at all → pure catalog order, no annotations', () => {
+    const out = sortByTaste([a, b, c], {})
+    expect(out.map((x) => x.hit.title)).toEqual(['A', 'B', 'C'])
+    expect(out.every((x) => x.taste == null)).toBe(true)
+  })
+
+  it('tastePercent spreads the practical cosine band, stays monotonic, clamps', () => {
+    expect(tastePercent(0.92)).toBe(74)
+    expect(tastePercent(0.88)).toBe(53)
+    expect(tastePercent(0.92)).toBeGreaterThan(tastePercent(0.9))
+    expect(tastePercent(0.5)).toBe(1)
+    expect(tastePercent(0.99)).toBe(99)
   })
 })

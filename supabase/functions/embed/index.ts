@@ -5,6 +5,8 @@
 //                                     per call) → { embedded, remaining }
 //   { mode: 'vibe', query, count? }   embed the reader's words, rank their library against it
 //                                     via the vibe_books RPC → { hits: [{ book_id, similarity }] }
+//   { mode: 'rank', items }           score EXTERNAL candidates ([{ key, text }]) against the
+//                                     reader's taste centroid → { hasTaste, scores: [{key,score}] }
 //
 // The caller is identified ONLY from their own access token (delete-account pattern), and every
 // REST call runs WITH that token — RLS scopes reads and writes to their rows; no service role.
@@ -81,7 +83,7 @@ Deno.serve(async (req: Request) => {
   if (!uid) return json({ error: 'not authenticated' }, 401)
   const usr = { apikey: ANON, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
 
-  let body: { mode?: string; query?: string; count?: number }
+  let body: { mode?: string; query?: string; count?: number; items?: unknown[] }
   try {
     body = await req.json()
   } catch {
@@ -136,6 +138,36 @@ Deno.serve(async (req: Request) => {
       })
       if (!rpc.ok) return json({ error: `rank failed: ${rpc.status}` }, 500)
       return json({ hits: await rpc.json() })
+    }
+
+    if (body.mode === 'rank') {
+      const items = (Array.isArray(body.items) ? body.items : [])
+        .flatMap((x) => {
+          const it = x as { key?: unknown; text?: unknown } | null
+          return it && typeof it.key === 'string' && typeof it.text === 'string' && it.text.trim()
+            ? [{ key: it.key, text: it.text }]
+            : []
+        })
+        .slice(0, 16)
+      if (!items.length) return json({ hasTaste: false, scores: [] })
+
+      const cres = await fetch(`${DB_URL}/rest/v1/rpc/taste_centroid`, { method: 'POST', headers: usr, body: '{}' })
+      if (!cres.ok) return json({ error: `centroid failed: ${cres.status}` }, 500)
+      const raw = (await cres.json()) as string | null
+      if (!raw) return json({ hasTaste: false, scores: [] }) // cold start — caller passes through
+      const centroid = JSON.parse(raw) as number[]
+      // avg() of unit vectors isn't unit-length — normalize so dot = cosine
+      const cnorm = Math.sqrt(centroid.reduce((s, v) => s + v * v, 0)) || 1
+
+      const t0 = Date.now()
+      const scores: { key: string; score: number }[] = []
+      for (const it of items) {
+        if (scores.length > 0 && Date.now() - t0 > SWEEP_WALL_MS) break // same CPU-budget rule as sweep
+        const vec = await embed(it.text.slice(0, 300))
+        const dot = vec.reduce((s, v, i) => s + v * (centroid[i] ?? 0), 0) / cnorm
+        scores.push({ key: it.key, score: dot })
+      }
+      return json({ hasTaste: true, scores })
     }
 
     return json({ error: 'unknown mode' }, 400)
