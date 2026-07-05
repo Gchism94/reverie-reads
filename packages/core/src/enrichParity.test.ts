@@ -51,7 +51,11 @@ describe('enrich mirror ↔ core parity (golden fixtures)', () => {
   })
 
   it('mapGenre is identical', () => {
-    for (const cats of [['Romance', 'Fantasy'], ['Space Opera'], ['Cooking'], ['Dark Romance', 'Horror']]) {
+    const batteries = [
+      ['Romance', 'Fantasy'], ['Space Opera'], ['Cooking'], ['Dark Romance', 'Horror'],
+      ['Cozy Mysteries'], ['Thriller', 'Suspense'], ['Historical'], ['Juvenile Fiction'],
+    ]
+    for (const cats of batteries) {
       expect(fnMapGenre(cats)).toEqual(coreMapGenre(cats))
     }
   })

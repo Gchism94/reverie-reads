@@ -9,6 +9,7 @@ import {
   normalizeOpenLibrary,
   type StampedSource,
 } from './enrich'
+import { CORE_GENRES } from './genreNormalize'
 
 const at = (n: number) => new Date(Date.UTC(2026, 0, n)).toISOString()
 const src = (source: StampedSource['source'], record: StampedSource['record'], day = 1): StampedSource => ({
@@ -106,8 +107,35 @@ describe('mapGenre', () => {
       genre: 'romance',
       genres: ['Romance', 'Fantasy'],
     })
-    expect(mapGenre(['Space Opera', 'Dystopian']).genre).toBe('science-fiction')
+    expect(mapGenre(['Space Opera', 'Dystopian']).genre).toBe('science fiction')
     expect(mapGenre(['Cooking', 'Reference'])).toEqual({ genre: '', genres: [] })
+  })
+
+  it('genres without a room of their own file under their core genre, keeping their label', () => {
+    expect(mapGenre(['Thriller'])).toEqual({ genre: 'mystery', genres: ['Thriller'] })
+    expect(mapGenre(['Thrillers & Suspense', 'Mystery & Detective'])).toEqual({
+      genre: 'mystery',
+      genres: ['Thriller', 'Mystery'],
+    })
+    expect(mapGenre(['Historical'])).toEqual({ genre: 'literary', genres: ['Historical'] })
+  })
+
+  it('cozy is recognized ahead of its host genre (Cozy Mysteries → the cozy room)', () => {
+    expect(mapGenre(['Cozy Mysteries'])).toEqual({ genre: 'cozy', genres: ['Cozy', 'Mystery'] })
+    expect(mapGenre(['Cosy Fantasy']).genre).toBe('cozy')
+  })
+
+  it('every primary token is a canonical app genre (lowercased CORE_GENRES key)', () => {
+    const keys = new Set<string>(CORE_GENRES.map((g) => g.toLowerCase()))
+    const samples = [
+      ['Romance'], ['Cozy Mysteries'], ['Fantasy'], ['Sci-Fi'], ['Horror'], ['Thriller'],
+      ['Mysteries & Detective Stories'], ['Historical'], ['Juvenile Fiction'], ['Literary'],
+      ['Memoir'], ['Space Opera'], ['Young Adult Fiction'],
+    ]
+    for (const cats of samples) {
+      const { genre } = mapGenre(cats)
+      expect(keys.has(genre), `${cats.join('/')} → '${genre}'`).toBe(true)
+    }
   })
 })
 
