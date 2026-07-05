@@ -108,7 +108,7 @@ function MatchScreen() {
   // "Not tonight" feedback — the matcher's first captured signal, now server-side (it survives
   // the device); the scorer floors a dismissed book's novelty and lets it recover over 60 days.
   const dismissedQ = useDismissed()
-  const dismissed = dismissedQ.data ?? {}
+  const dismissed = useMemo(() => dismissedQ.data ?? {}, [dismissedQ.data])
   const dismissBook = useDismissBook()
   const libraryIds = useMemo(() => (books ? new Set(books.map((b) => b.id)) : null), [books])
   useLegacyDismissalSync(libraryIds)
