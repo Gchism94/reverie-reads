@@ -97,6 +97,12 @@ test('every route passes axe (no serious/critical) across all skins x both modes
     }),
   )
 
+  // The embed fn (Tier 2) is a background enhancement — stub it so the sweep can't stall
+  // networkidle waits, and the run needs no local functions server.
+  await page.route('**/functions/v1/embed**', (route) =>
+    route.fulfill({ json: { embedded: 0, remaining: 0, hits: [] } }),
+  )
+
   // Tryst (the default skin) gets full route coverage; the alternate skins sweep a core set
   // that exercises the whole token surface (palette, cards, fills, links, muted text).
   const allRoutes: [string, string][] = [
