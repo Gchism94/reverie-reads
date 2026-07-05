@@ -4,7 +4,7 @@ From single-file prototype → front-end + back-end product. Phased so there's a
 app at the end of each step.
 
 ## Phase 0 — Decide (now)
-- [ ] Lock the name (see `docs/TRADEMARK.md`) or consciously keep "Reverie" for now.
+- [x] Lock the name — **Reverie** (owner decision, 2026-07).
 - [ ] Confirm the stack in `docs/ARCHITECTURE.md` (React+TS+Supabase is the default).
 - [ ] Resolve the open decisions: local-first vs. REST; household model; spoiler gating
       honor-based vs. server-enforced; keep capability-code sharing alongside accounts?
