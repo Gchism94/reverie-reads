@@ -1,4 +1,4 @@
-import { callsign, placeholderColorVars, placeholderSpec } from '@reverie/core'
+import { callsign, placeholderColorVars, placeholderSpec, type SkinId } from '@reverie/core'
 import { useEffectiveSkin } from '../skin/labels'
 import { useStructure } from '../skin/structure'
 
@@ -25,12 +25,18 @@ import { useStructure } from '../skin/structure'
 export function CoverPlaceholder({
   book,
   className,
+  skin,
 }: {
   book: { id?: string; title?: string; first?: string; last?: string }
   className?: string
+  /** Force a skin's plate (landing showcase / previews) — the caller must also provide that skin's
+   *  token scope via `data-skin`, since the plate's colours come from CSS vars. Defaults to the
+   *  active skin, exactly like `useStructure`. */
+  skin?: SkinId
 }) {
-  const variant = useStructure().placeholder
-  const skinId = useEffectiveSkin()
+  const active = useEffectiveSkin()
+  const variant = useStructure(skin).placeholder
+  const skinId = skin ?? active
   const { title, author, accentVar } = placeholderSpec(book)
   const label = `${title || 'Untitled'}${author ? ` by ${author}` : ''} — placeholder cover`
   const oneWord = !!title && !title.includes(' ')

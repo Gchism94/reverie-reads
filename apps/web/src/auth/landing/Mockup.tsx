@@ -1,37 +1,125 @@
+import type { SkinId } from '@reverie/core'
+import { CoverPlaceholder } from '../../components/CoverPlaceholder'
+
 /** A lightweight, token-only app mockup for the landing — a browser-chrome frame around a tiny
  *  Reverie preview. It reads CSS vars exclusively (no hardcoded colours, no external images), so
  *  wrapping it in a `data-skin` / `data-mode` scope RE-THEMES it live — that's how the skin showcase
- *  shows the real skins. Cover tiles are var-based gradients so they re-theme too. Decorative. */
+ *  shows the real skins.
+ *
+ *  The shelves hold REAL titles from the founding corpus (data/personal_seed.json), not colored
+ *  rectangles. Books split the way a real library renders: some wear a stylized token-tinted
+ *  JACKET (the "has a cover" state — we never ship actual cover art on the marketing page), the
+ *  rest render the skin's REAL placeholder plate — the same CoverPlaceholder component the app
+ *  ships — so each room's cover identity is on display. `skin` opts into the plates (the showcase,
+ *  which provides that skin's token scope); without it (the gold-brand hero, which has no --ph-*
+ *  tokens) every book wears a jacket. */
 const NAV = ['Home', 'Library', 'Shelves', 'Planner', 'Stats'] as const
 
-function Tile() {
+interface LandingBook {
+  id: string
+  title: string
+  first: string
+  last: string
+  /** wears a stylized jacket (true) or renders the skin's placeholder plate (false) */
+  jacket: boolean
+}
+
+const READING: LandingBook[] = [
+  { id: 'acotar', title: 'A Court of Thorns and Roses', first: 'Sarah J.', last: 'Maas', jacket: false },
+  { id: 'king-of-wrath', title: 'King of Wrath', first: 'Ana', last: 'Huang', jacket: true },
+  { id: 'everflame', title: 'Spark of the Everflame', first: 'Penn', last: 'Cole', jacket: true },
+  { id: 'never-king', title: 'The Never King', first: 'Nikki', last: 'St. Crowe', jacket: false },
+]
+
+// Plates carry multi-word titles only: the plate's one-word big-type floor (fine at app thumb
+// sizes) clips mid-word inside these very small landing tiles. One-word titles ride as jackets.
+const SHELF: LandingBook[] = [
+  { id: 'throne-of-glass', title: 'Throne of Glass', first: 'Sarah J.', last: 'Maas', jacket: true },
+  { id: 'feathers-so-vicious', title: 'Feathers So Vicious', first: 'Liv', last: 'Zander', jacket: false },
+  { id: 'mile-high', title: 'Mile High', first: 'Liz', last: 'Tomforde', jacket: true },
+  { id: 'love-and-other-killers', title: 'Love and Other Killers', first: 'Brynne', last: 'Weaver', jacket: false },
+  { id: 'consider-me', title: 'Consider Me', first: 'Becka', last: 'Mack', jacket: true },
+  { id: 'carnage', title: 'Carnage', first: 'Shantel', last: 'Tessier', jacket: true },
+]
+
+/** The "has a cover" tile: a stylized jacket in the scope's own tokens — title type over a
+ *  primary/violet/gold wash, rotating recipes so a shelf reads varied. Ink tracks the mode because
+ *  the wash is mixed with --card. Decorative (the Mockup root carries the aria-label). */
+function Jacket({ book, i }: { book: LandingBook; i: number }) {
+  const washes = [
+    'linear-gradient(150deg, color-mix(in srgb, var(--primary) 68%, var(--card)), color-mix(in srgb, var(--violet, var(--primary)) 56%, var(--card)))',
+    'linear-gradient(160deg, color-mix(in srgb, var(--violet, var(--primary)) 62%, var(--card)), color-mix(in srgb, var(--primary) 30%, var(--card)))',
+    'linear-gradient(145deg, color-mix(in srgb, var(--gold, var(--primary)) 46%, var(--card)), color-mix(in srgb, var(--primary) 42%, var(--card)))',
+  ]
   return (
     <div
-      className="aspect-[2/3] flex-1 rounded-[5px] border"
-      style={{
-        borderColor: 'var(--line)',
-        background: 'linear-gradient(150deg, color-mix(in srgb, var(--primary) 70%, var(--card)), color-mix(in srgb, var(--violet, var(--primary)) 60%, var(--card)))',
-      }}
-    />
+      aria-hidden
+      className="flex h-full w-full flex-col justify-end overflow-hidden p-[8%]"
+      style={{ background: washes[i % washes.length], containerType: 'inline-size' }}
+    >
+      <span
+        style={{
+          fontFamily: 'var(--font-display)',
+          fontWeight: 600,
+          fontStyle: 'italic',
+          fontSize: 'clamp(8px, 12cqw, 14px)',
+          lineHeight: 1.16,
+          color: 'var(--ink)',
+          display: '-webkit-box',
+          WebkitLineClamp: 3,
+          WebkitBoxOrient: 'vertical',
+          overflow: 'hidden',
+        }}
+      >
+        {book.title}
+      </span>
+      <span
+        className="mt-[5%] uppercase"
+        style={{
+          fontFamily: 'var(--font-sans)',
+          fontWeight: 600,
+          fontSize: 'clamp(6px, 6.5cqw, 8px)',
+          letterSpacing: '0.14em',
+          color: 'color-mix(in srgb, var(--ink) 76%, transparent)',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+        }}
+      >
+        {book.first} {book.last}
+      </span>
+    </div>
   )
 }
 
-function Shelf({ label, n }: { label: string; n: number }) {
+function Tile({ book, i, skin, className = '' }: { book: LandingBook; i: number; skin?: SkinId; className?: string }) {
+  return (
+    <div
+      className={`aspect-[2/3] min-w-0 flex-1 overflow-hidden rounded-[5px] border ${className}`}
+      style={{ borderColor: 'var(--line)' }}
+    >
+      {skin && !book.jacket ? <CoverPlaceholder book={book} skin={skin} /> : <Jacket book={book} i={i} />}
+    </div>
+  )
+}
+
+function Shelf({ label, books, skin }: { label: string; books: LandingBook[]; skin?: SkinId }) {
   return (
     <div>
       <div className="mb-1.5 text-[8px] font-semibold uppercase tracking-[0.14em]" style={{ color: 'var(--muted)' }}>
         {label}
       </div>
       <div className="flex gap-1.5">
-        {Array.from({ length: n }, (_, i) => (
-          <Tile key={i} />
+        {books.map((b, i) => (
+          /* a row of 6 drops to ~47px tiles on phones — too small for the plates' type; show 4 */
+          <Tile key={b.id} book={b} i={i} skin={skin} className={i >= 4 ? 'hidden sm:block' : ''} />
         ))}
       </div>
     </div>
   )
 }
 
-export function Mockup({ ariaLabel }: { ariaLabel?: string }) {
+export function Mockup({ ariaLabel, skin }: { ariaLabel?: string; skin?: SkinId }) {
   return (
     <div
       role="img"
@@ -81,8 +169,8 @@ export function Mockup({ ariaLabel }: { ariaLabel?: string }) {
             You’re 34 books into your year of 60.
           </div>
           <div className="mt-3 flex flex-col gap-3">
-            <Shelf label="Currently reading" n={4} />
-            <Shelf label="On your shelf" n={6} />
+            <Shelf label="Currently reading" books={READING} skin={skin} />
+            <Shelf label="On your shelf" books={SHELF} skin={skin} />
           </div>
         </div>
       </div>

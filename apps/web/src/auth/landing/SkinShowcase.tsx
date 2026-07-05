@@ -68,7 +68,7 @@ export function SkinShowcase() {
           </span>
         </div>
         <div data-skin={active} data-mode="dark" className="transition-colors motion-reduce:transition-none">
-          <Mockup ariaLabel={`Reverie in the ${skin.label} skin`} />
+          <Mockup ariaLabel={`Reverie in the ${skin.label} skin`} skin={active} />
         </div>
       </div>
 
