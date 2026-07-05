@@ -141,16 +141,20 @@ function resolveScalar(
 
 // ── Genre mapping (categories → primary genre + genre labels) ──
 // Keyword → canonical genre token. Order matters: more specific genres are checked before the
-// broad "fiction". Genre tokens are lowercase to match the seed's Book.genre convention.
+// broad "fiction". Primary tokens are the nine core app genres (the skin genres, lowercased) —
+// the exact keys the genre-scoped subgenre/trope taxonomies look up — so an enriched book lands
+// in its genre's vocabulary instead of silently missing it. Thriller/historical have no room of
+// their own: they keep their labels but file under mystery/literary (the importer's collapse).
 const GENRE_RULES: { genre: string; label: string; patterns: RegExp[] }[] = [
   { genre: 'romance', label: 'Romance', patterns: [/romance/i] },
+  { genre: 'cozy', label: 'Cozy', patterns: [/co[sz]y/i] },
   { genre: 'fantasy', label: 'Fantasy', patterns: [/fantasy/i, /romantasy/i, /fae\b/i, /sword.*sorcery/i] },
-  { genre: 'science-fiction', label: 'Science fiction', patterns: [/science[\s-]*fiction/i, /sci[\s-]*fi/i, /dystopian?/i, /space opera/i, /cyberpunk/i] },
+  { genre: 'science fiction', label: 'Science fiction', patterns: [/science[\s-]*fiction/i, /sci[\s-]*fi/i, /dystopian?/i, /space opera/i, /cyberpunk/i] },
   { genre: 'horror', label: 'Horror', patterns: [/horror/i] },
-  { genre: 'thriller', label: 'Thriller', patterns: [/thriller/i, /suspense/i] },
-  { genre: 'mystery', label: 'Mystery', patterns: [/mystery/i, /detective/i, /crime/i, /noir/i] },
-  { genre: 'historical', label: 'Historical', patterns: [/historical/i] },
-  { genre: 'young-adult', label: 'Young adult', patterns: [/young adult\b/i, /\bya\b/i, /juvenile/i] },
+  { genre: 'mystery', label: 'Thriller', patterns: [/thriller/i, /suspense/i] },
+  { genre: 'mystery', label: 'Mystery', patterns: [/myster(y|ies)/i, /detective/i, /crime/i, /noir/i] },
+  { genre: 'literary', label: 'Historical', patterns: [/historical/i] },
+  { genre: 'young adult', label: 'Young adult', patterns: [/young adult\b/i, /\bya\b/i, /juvenile/i] },
   { genre: 'literary', label: 'Literary', patterns: [/literary/i] },
   { genre: 'nonfiction', label: 'Nonfiction', patterns: [/non[\s-]*fiction/i, /memoir/i, /biography/i, /self[\s-]*help/i, /history/i] },
 ]
