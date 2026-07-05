@@ -6,6 +6,7 @@ import { CoverImage } from '../components/CoverImage'
 import { useBooks } from '../data/books'
 import { useCreateList, useLists } from '../data/lists'
 import { useAddBooksToList } from '../data/listItems'
+import { useDismissed, useDismissBook, useLegacyDismissalSync } from '../data/matchFeedback'
 import { applyAnswer, emptyAnswers, HEAT, QUIZ, WORLD, type QuizAnswers } from '../library/quiz'
 
 interface Pick {
@@ -93,24 +94,6 @@ function score(
   }
 }
 
-// "Not tonight" feedback — the matcher's first captured signal. Local-first (per device);
-// the scorer floors a dismissed book's novelty and lets it recover over 60 days.
-const DISMISS_KEY = 'reverie.match.dismissed.v1'
-function readDismissed(): Record<string, number> {
-  try {
-    return JSON.parse(window.localStorage?.getItem(DISMISS_KEY) ?? '{}') as Record<string, number>
-  } catch {
-    return {}
-  }
-}
-function writeDismissed(map: Record<string, number>): void {
-  try {
-    window.localStorage?.setItem(DISMISS_KEY, JSON.stringify(map))
-  } catch {
-    /* private mode */
-  }
-}
-
 function MatchScreen() {
   const navigate = useNavigate()
   const { data: books } = useBooks()
@@ -121,7 +104,13 @@ function MatchScreen() {
   const [step, setStep] = useState(0)
   const [added, setAdded] = useState<string | null>(null)
   const [tasteOnly, setTasteOnly] = useState(false)
-  const [dismissed, setDismissed] = useState<Record<string, number>>(readDismissed)
+  // "Not tonight" feedback — the matcher's first captured signal, now server-side (it survives
+  // the device); the scorer floors a dismissed book's novelty and lets it recover over 60 days.
+  const dismissedQ = useDismissed()
+  const dismissed = dismissedQ.data ?? {}
+  const dismissBook = useDismissBook()
+  const libraryIds = useMemo(() => (books ? new Set(books.map((b) => b.id)) : null), [books])
+  useLegacyDismissalSync(libraryIds)
   const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set())
 
   const openBook = (id: string) => void navigate({ to: '/book/$bookId', params: { bookId: id } })
@@ -132,9 +121,7 @@ function MatchScreen() {
   const visiblePicks = result ? result.picks.filter((p) => !hidden.has(p.b.id)) : []
 
   const dismiss = (id: string) => {
-    const next = { ...dismissed, [id]: Date.now() }
-    setDismissed(next)
-    writeDismissed(next)
+    dismissBook.mutate(id) // optimistic — the cache map updates immediately
     setHidden((h) => new Set([...h, id]))
   }
 
