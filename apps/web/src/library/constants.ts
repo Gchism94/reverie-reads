@@ -1,4 +1,4 @@
-import type { LibrarySort } from '@reverie/core'
+import { genreKey, type LibrarySort } from '@reverie/core'
 
 // Vocabularies from the prototype (kept identical so behavior matches).
 export const FORMATS = [
@@ -41,11 +41,12 @@ export const GENRE_SUBGENRES: Record<string, readonly string[]> = {
   'young adult': ['YA Fantasy', 'YA Romance', 'YA Dystopian', 'Coming of Age', 'YA Contemporary'],
 }
 
-/** Subgenres to offer for a genre (case-insensitive), always with the neutral catch-all last.
- *  `keep` forces an existing value into the list (editing a book whose subgenre predates this map),
- *  so a picker never drops the book's own current subgenre. */
+/** Subgenres to offer for a genre — any spelling a book may carry resolves via `genreKey`
+ *  ('Sci-Fi', 'science-fiction' and 'Science fiction' all reach the same shelf) — always with the
+ *  neutral catch-all last. `keep` forces an existing value into the list (editing a book whose
+ *  subgenre predates this map), so a picker never drops the book's own current subgenre. */
 export function subgenresForGenre(genre: string, keep?: string): string[] {
-  const list = [...(GENRE_SUBGENRES[genre.trim().toLowerCase()] ?? []), NEUTRAL_SUBGENRE]
+  const list = [...(GENRE_SUBGENRES[genreKey(genre)] ?? []), NEUTRAL_SUBGENRE]
   return keep && !list.includes(keep) ? [keep, ...list] : list
 }
 
@@ -137,10 +138,13 @@ export const TROPE_GROUPS_BY_GENRE: Record<string, Record<string, string[]>> = {
 }
 
 /** The trope groups to offer for a genre: the genre's own groups + the Universal group (deduped
- *  against them), falling back to the romance set for an unknown genre (the app's founding
- *  vocabulary). The UI appends the reader's own free tags as a "Your tags" group. */
+ *  against them). Genre spellings resolve via `genreKey`, so legacy/aliased values still land in
+ *  their genre's vocabulary; a genuinely unknown genre gets the Universal group ALONE — a book
+ *  outside the nine rooms shouldn't be handed romance vocabulary by default. The UI appends the
+ *  reader's own free tags as a "Your tags" group. */
 export function tropeGroupsForGenre(genre: string): Record<string, string[]> {
-  const own = TROPE_GROUPS_BY_GENRE[genre.trim().toLowerCase()] ?? TROPE_GROUPS
+  const own = TROPE_GROUPS_BY_GENRE[genreKey(genre)]
+  if (!own) return { Universal: [...UNIVERSAL_TROPES] }
   const inOwn = new Set(Object.values(own).flat().map((t) => t.toLowerCase()))
   const universal = UNIVERSAL_TROPES.filter((t) => !inOwn.has(t.toLowerCase()))
   return universal.length ? { ...own, Universal: universal } : { ...own }

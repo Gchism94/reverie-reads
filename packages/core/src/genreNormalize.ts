@@ -3,17 +3,20 @@
 // them to the canonical CORE genre set (= the 9 skins) for the primary genre + genres[] signal, and
 // routes everything else to tags. Pure + unit-tested against the real export vocab.
 
-// The canonical genres — one per skin. The primary `genre` drives the skin/adaptive signal.
+// The canonical genres — one per skin, spelled exactly as skins.ts spells them (keep in sync).
+// Lowercased, these are the keys the genre-scoped subgenre/trope taxonomies look up, so every
+// pipe that writes a genre (import here, enrichment's mapGenre, the add flow's skin genre) must
+// land on this vocabulary or the book misses its genre's shelves.
 export const CORE_GENRES = [
   'Romance',
   'Fantasy',
-  'Sci-Fi',
+  'Science fiction',
   'Horror',
   'Mystery',
   'Literary',
   'Cozy',
   'Nonfiction',
-  'YA',
+  'Young adult',
 ] as const
 export type CoreGenre = (typeof CORE_GENRES)[number]
 
@@ -24,21 +27,23 @@ const GENRE_ALIASES: Record<string, CoreGenre> = {
   fantasy: 'Fantasy',
   fantays: 'Fantasy', // typo
   fantast: 'Fantasy', // typo
-  'sci-fi': 'Sci-Fi',
-  scifi: 'Sci-Fi',
-  'sci fi': 'Sci-Fi',
-  'science fiction': 'Sci-Fi',
-  'science-fiction': 'Sci-Fi',
+  'sci-fi': 'Science fiction',
+  scifi: 'Science fiction',
+  'sci fi': 'Science fiction',
+  'science fiction': 'Science fiction',
+  'science-fiction': 'Science fiction',
   horror: 'Horror',
   mystery: 'Mystery',
   thriller: 'Mystery', // collapsed into Mystery (no Thriller skin)
   crime: 'Mystery',
   cozy: 'Cozy',
+  cosy: 'Cozy',
   nonfiction: 'Nonfiction',
   'non-fiction': 'Nonfiction',
   'non fiction': 'Nonfiction',
-  ya: 'YA',
-  'young adult': 'YA',
+  ya: 'Young adult',
+  'young adult': 'Young adult',
+  'young-adult': 'Young adult',
   literary: 'Literary',
 }
 
@@ -46,6 +51,7 @@ const GENRE_ALIASES: Record<string, CoreGenre> = {
 const LITERARY_DESCRIPTIVE: Record<string, string> = {
   fiction: 'fiction',
   poetry: 'poetry',
+  historical: 'historical',
   'historical fiction': 'historical fiction',
   'short stories': 'short stories',
 }
@@ -137,4 +143,16 @@ export function normalizeImportGenres(genreField: string, tagsField = ''): Norma
     intensity,
     unmappedGenre,
   }
+}
+
+/**
+ * Resolve any genre spelling a stored book may carry — import canon ('Sci-Fi', 'YA' from older
+ * imports), legacy enrichment tokens ('science-fiction', 'thriller'), skin genres ('Science
+ * fiction'), hand-typed variants — onto the canonical lowercased key the genre-scoped taxonomies
+ * use. Unrecognized input just lowercases, so a reader's own genre vocabulary passes through.
+ */
+export function genreKey(raw: string): string {
+  const t = (raw ?? '').trim().toLowerCase()
+  const core = GENRE_ALIASES[t] ?? (LITERARY_DESCRIPTIVE[t] != null ? 'Literary' : undefined)
+  return core ? core.toLowerCase() : t
 }
