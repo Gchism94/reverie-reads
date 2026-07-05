@@ -39,7 +39,10 @@ export function SkinShowcase() {
               style={
                 on
                   ? { background: 'var(--accent-fill)', color: 'var(--on-primary)', boxShadow: '0 8px 22px color-mix(in srgb, var(--accent-fill) 40%, transparent)' }
-                  : { color: 'var(--ink)', border: '1px solid var(--line)' }
+                  : // the pill carries its own skin's SURFACE, not just its ink — Marginalia's dark
+                    // mode keeps bond paper (dark ink), which ghosts on the landing's night bg
+                    // without it. Every pill honestly previews its skin: paper + ink + primary dot.
+                    { background: 'var(--bg0)', color: 'var(--ink)', border: '1px solid var(--line)' }
               }
             >
               <span aria-hidden className="h-2.5 w-2.5 rounded-full" style={{ background: 'var(--primary)' }} />
@@ -52,17 +55,21 @@ export function SkinShowcase() {
         })}
       </div>
 
-      {/* live mockup, re-themed in place */}
-      <div data-skin={active} data-mode="dark" className="mx-auto mt-8 max-w-[680px] text-left transition-colors motion-reduce:transition-none">
+      {/* live mockup, re-themed in place. The caption is landing chrome, so it stays on the
+          landing's own tokens — inside the skin scope, a non-inverting skin's dark ink (Marginalia)
+          would ghost against the landing's night background. */}
+      <div className="mx-auto mt-8 max-w-[680px] text-left">
         <div className="mb-3 flex items-baseline justify-between gap-3">
-          <span className="text-[15px]" style={{ ...display, color: 'var(--ink)' }}>
-            {skin.label} <span className="text-[12px] font-normal uppercase tracking-[0.14em]" style={{ color: 'var(--muted)' }}>· {skin.genre}</span>
+          <span className="text-[15px] text-ink" style={display}>
+            {skin.label} <span className="text-[12px] font-normal uppercase tracking-[0.14em] text-muted">· {skin.genre}</span>
           </span>
-          <span className="text-[12.5px]" style={{ color: 'var(--muted)' }}>
+          <span className="text-[12.5px] text-muted">
             {skin.tagline}
           </span>
         </div>
-        <Mockup ariaLabel={`Reverie in the ${skin.label} skin`} />
+        <div data-skin={active} data-mode="dark" className="transition-colors motion-reduce:transition-none">
+          <Mockup ariaLabel={`Reverie in the ${skin.label} skin`} />
+        </div>
       </div>
 
       {/* adaptive */}
