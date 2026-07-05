@@ -7,7 +7,7 @@ import { expect, test } from '@playwright/test'
 test('signed-out landing shows the gold front door', async ({ page }) => {
   await page.goto('/')
   await expect(page.getByRole('heading', { name: /beautifully kept/i })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Start your library' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Get started' }).first()).toBeVisible()
 })
 
 // Fraunces is Tryst's #1 character lever and the landing's display face — guard that it actually

@@ -149,6 +149,7 @@ test('unauthenticated landing + auth pass axe', async ({ page }) => {
   for (const [name, path] of routes) {
     await page.goto(path)
     await page.locator('main').first().waitFor({ state: 'visible' })
+    await page.waitForLoadState('networkidle') // let the landing's lazy below-fold chunk render before scanning
     const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze()
     for (const v of results.violations.filter((x) => x.impact === 'serious' || x.impact === 'critical')) {
       const detail = v.nodes

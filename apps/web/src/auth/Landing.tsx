@@ -1,106 +1,144 @@
+import { Suspense, lazy, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { APP_NAME } from '@reverie/core'
 import { Wordmark } from './Wordmark'
+import { Mockup } from './landing/Mockup'
 
-/** Genre-neutral feature notes — kept skin-agnostic (no spice/tropes language) since this is the
- *  pre-skin front door. Each reader's skin colours the app once they're in. */
-const NOTES = [
-  {
-    title: 'Every shelf, one place',
-    body: 'Books you’ve read and the ones you mean to — with series gaps and rereads kept straight.',
-  },
-  {
-    title: 'Kept the way you read',
-    body: 'Tags, intensity, the formats you own, your own rating — the details you actually track.',
-  },
-  {
-    title: 'Your private Wrapped',
-    body: 'A year in reading, just for you — never shared, never public.',
-  },
-]
+// Below-the-fold sections are a separate chunk so the hero paints first for new visitors.
+const LandingBelowFold = lazy(() => import('./landing/below-fold'))
 
-/** The public landing — the unauthenticated front door. Wrapped by the gold master brand (UnauthShell),
- *  so its CTAs read luminous gold with dark text. One privacy line only (folded into the copy below the
- *  CTAs); no pricing claim. */
-export function Landing() {
+const display = { fontFamily: 'var(--font-display)', fontWeight: 600 } as const
+const NAV = [
+  ['The skins', '#skins'],
+  ['Features', '#features'],
+  ['For every reader', '#readers'],
+  ['Privacy', '#privacy'],
+] as const
+
+/** Drifting nebula glows over the brand's static starfield — the living night sky. Motion via the
+ *  project's `.rv-anim` convention, which prefers-reduced-motion disables. Decorative. */
+function NightSky() {
   return (
-    <main className="relative z-[1] mx-auto flex min-h-dvh max-w-[1080px] flex-col px-6 py-8">
-      <header className="flex items-center justify-between">
-        <Wordmark />
-        <Link
-          to="/auth"
-          search={{ mode: 'signin' }}
-          className="rounded-full px-4 py-2 text-[13.5px] font-semibold text-ink"
-          style={{ border: '1px solid var(--line)' }}
-        >
-          Log in
+    <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+      <div className="nebula rv-anim" style={{ width: '52vmax', height: '52vmax', top: '-14%', left: '-8%', background: 'var(--gold)', animationName: 'rv-drift-a', animationDuration: '40s', animationTimingFunction: 'ease-in-out', animationIterationCount: 'infinite' }} />
+      <div className="nebula rv-anim" style={{ width: '46vmax', height: '46vmax', top: '10%', right: '-12%', background: 'var(--violet)', animationName: 'rv-drift-b', animationDuration: '47s', animationTimingFunction: 'ease-in-out', animationIterationCount: 'infinite' }} />
+    </div>
+  )
+}
+
+function Nav() {
+  const [open, setOpen] = useState(false)
+  return (
+    <nav className="sticky top-0 z-20 backdrop-blur-lg" style={{ background: 'color-mix(in srgb, var(--bg0) 72%, transparent)', borderBottom: '1px solid var(--line)' }}>
+      <div className="mx-auto flex max-w-[1180px] items-center justify-between px-6 py-3.5">
+        <Link to="/" aria-label={`${APP_NAME} home`}>
+          <Wordmark />
         </Link>
-      </header>
 
-      <section className="flex flex-1 flex-col items-center justify-center py-16 text-center">
-        <h1
-          className="max-w-[18ch] text-balance text-[clamp(38px,7vw,68px)] leading-[1.02] text-ink"
-          style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
-        >
-          A reading life,{' '}
-          <span className="italic" style={{ color: 'var(--gold)' }}>
-            beautifully kept.
-          </span>
-        </h1>
-        <p className="mt-5 max-w-[46ch] text-[16px] leading-relaxed text-muted">
-          Everything you’ve read, everything you mean to — gathered under one quiet night sky.
-        </p>
+        <div className="hidden items-center gap-7 md:flex">
+          {NAV.map(([label, href]) => (
+            <a key={href} href={href} className="text-[13.5px] font-medium text-muted hover:text-ink">
+              {label}
+            </a>
+          ))}
+        </div>
 
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-          <Link
-            to="/auth"
-            search={{ mode: 'signup' }}
-            className="flex h-12 items-center rounded-full px-7 text-[15px] font-semibold"
-            style={{
-              background: 'var(--gold)',
-              color: 'var(--on-primary)',
-              boxShadow: '0 10px 26px color-mix(in srgb, var(--gold) 36%, transparent)',
-            }}
-          >
-            Start your library
-          </Link>
-          <Link
-            to="/auth"
-            search={{ mode: 'signin' }}
-            className="flex h-12 items-center rounded-full px-6 text-[15px] font-semibold text-ink"
-            style={{ border: '1px solid var(--line)' }}
-          >
+        <div className="hidden items-center gap-3 md:flex">
+          <Link to="/auth" search={{ mode: 'signin' }} className="text-[13.5px] font-semibold text-ink">
             Log in
+          </Link>
+          <Link to="/auth" search={{ mode: 'signup' }} className="flex h-9 items-center rounded-full px-4 text-[13.5px] font-semibold" style={{ background: 'var(--gold)', color: 'var(--on-primary)' }}>
+            Get started
           </Link>
         </div>
 
-        <p className="mt-5 flex items-center gap-1.5 text-[13px] text-muted">
-          <span aria-hidden>🔒</span>
-          Private by default — your reading stats and your Wrapped are never shared or made public.
-        </p>
-      </section>
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-label="Menu"
+          aria-expanded={open}
+          className="grid h-10 w-10 place-items-center rounded-lg border border-line text-[18px] text-ink md:hidden"
+        >
+          <span aria-hidden>{open ? '✕' : '≡'}</span>
+        </button>
+      </div>
 
-      <section className="grid gap-4 pb-12 sm:grid-cols-3">
-        {NOTES.map((n) => (
-          <div
-            key={n.title}
-            className="rounded-2xl p-5"
-            style={{ background: 'var(--card)', border: '1px solid var(--line)' }}
-          >
-            <h2
-              className="text-[16px] text-ink"
-              style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
-            >
-              {n.title}
-            </h2>
-            <p className="mt-1.5 text-[13.5px] leading-relaxed text-muted">{n.body}</p>
+      {open && (
+        <div className="border-t px-6 py-3 md:hidden" style={{ borderColor: 'var(--line)', background: 'var(--bg0)' }}>
+          <div className="flex flex-col gap-1">
+            {NAV.map(([label, href]) => (
+              <a key={href} href={href} onClick={() => setOpen(false)} className="rounded-lg px-2 py-2 text-[14px] font-medium text-muted hover:text-ink">
+                {label}
+              </a>
+            ))}
+            <Link to="/auth" search={{ mode: 'signin' }} className="rounded-lg px-2 py-2 text-[14px] font-semibold text-ink">
+              Log in
+            </Link>
+            <Link to="/auth" search={{ mode: 'signup' }} className="mt-1 flex h-11 items-center justify-center rounded-full text-[14px] font-semibold" style={{ background: 'var(--gold)', color: 'var(--on-primary)' }}>
+              Get started
+            </Link>
           </div>
-        ))}
-      </section>
+        </div>
+      )}
+    </nav>
+  )
+}
 
-      <footer className="border-t pt-5 text-center text-[12.5px] text-muted" style={{ borderColor: 'var(--line)' }}>
-        {APP_NAME} — a quiet place for your reading life.
-      </footer>
+function Hero() {
+  return (
+    <header id="top" className="relative mx-auto max-w-[1180px] px-6 py-16 sm:py-24">
+      <div className="grid items-center gap-12 lg:grid-cols-[1.04fr_0.96fr]">
+        <div className="text-center lg:text-left">
+          <p className="text-[12px] font-semibold uppercase tracking-[0.22em]" style={{ color: 'var(--eyebrow)' }}>
+            {APP_NAME} · your reading life
+          </p>
+          <h1 className="mx-auto mt-4 max-w-[15ch] text-balance text-[clamp(40px,7vw,62px)] leading-[1.02] text-ink lg:mx-0" style={display}>
+            A reading life,{' '}
+            <span className="italic" style={{ color: 'var(--gold)' }}>
+              beautifully kept.
+            </span>
+          </h1>
+          <p className="mx-auto mt-5 max-w-[46ch] text-[16px] leading-relaxed text-muted lg:mx-0">
+            Reverie organizes everything you’ve read, everything you mean to, and dresses your whole
+            collection in a look that fits what you love.
+          </p>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3 lg:justify-start">
+            <Link
+              to="/auth"
+              search={{ mode: 'signup' }}
+              className="flex h-12 items-center rounded-full px-7 text-[15px] font-semibold"
+              style={{ background: 'var(--gold)', color: 'var(--on-primary)', boxShadow: '0 10px 26px color-mix(in srgb, var(--gold) 36%, transparent)' }}
+            >
+              Get started
+            </Link>
+            <a href="#skins" className="flex h-12 items-center rounded-full px-6 text-[15px] font-semibold text-ink" style={{ border: '1px solid var(--line)' }}>
+              See how it works
+            </a>
+          </div>
+          <p className="mt-5 text-[13px]" style={{ color: 'var(--faint)' }}>
+            Runs in your browser · installs as an app · your data stays yours
+          </p>
+        </div>
+
+        <div className="mx-auto w-full max-w-[520px] lg:rotate-[0.6deg]">
+          <Mockup ariaLabel="Reverie app preview" />
+        </div>
+      </div>
+    </header>
+  )
+}
+
+/** The public marketing landing — matched to the Reverie Landing design, on the gold master brand
+ *  (UnauthShell wraps it in `.gold-brand`). Net-new pre-login entry point for logged-out visitors. */
+export function Landing() {
+  return (
+    <main className="relative z-[1]">
+      <NightSky />
+      <Nav />
+      <Hero />
+      <Suspense fallback={<div className="py-24 text-center text-[13px] text-muted">Loading…</div>}>
+        <LandingBelowFold />
+      </Suspense>
     </main>
   )
 }
