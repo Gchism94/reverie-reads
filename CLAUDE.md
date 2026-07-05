@@ -86,9 +86,9 @@ Works against the data model; both themes; responsive; a11y pass; logic covered 
 tests; matches the prototype's behavior and the design tokens.
 
 ## Decisions still needing the owner (use these defaults until told otherwise)
-1. **App name** — "Reverie" is a placeholder; "Gloaming" is the cleanest trademark
-   option (`docs/TRADEMARK.md`). Default: keep Reverie, keep the name out of hardcoded
-   strings so it's easy to change.
+1. **App name — DECIDED (owner, 2026-07): Reverie is the name.** No longer a
+   placeholder. Keep reading it from `APP_NAME` in `@reverie/core` (never hardcode);
+   `docs/TRADEMARK.md` stays as history.
 2. **Household model** — v1 default: one personal library per account; sharing happens
    via shared lists + clubs (defer a true shared household library).
 3. **Spoiler gating** — v1 default: honor-based (client-side). Server-enforced via RLS
