@@ -18,6 +18,7 @@ const NAV = [
   { label: 'Planner', to: '/planner', icon: '◷' },
   { label: 'Stats', to: '/stats', icon: '◔' },
   { label: 'Match', to: '/match', icon: '✦' },
+  { label: 'Discover', to: '/discover', icon: '✧' },
   { label: 'Clubs', to: '/clubs', icon: '❀' },
   { label: 'Indies', to: '/indie', icon: '☞' },
 ] as const

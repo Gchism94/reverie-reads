@@ -6,6 +6,7 @@ import { shelvesRoute } from './routes/ShelvesRoute'
 import { plannerRoute } from './routes/PlannerRoute'
 import { statsRoute } from './routes/StatsRoute'
 import { matchRoute } from './routes/MatchRoute'
+import { discoverRoute } from './routes/DiscoverRoute'
 import { addRoute } from './routes/AddRoute'
 import { settingsRoute } from './routes/SettingsRoute'
 import { clubsRoute } from './routes/ClubsRoute'
@@ -28,6 +29,7 @@ const routeTree = rootRoute.addChildren([
   plannerRoute,
   statsRoute,
   matchRoute,
+  discoverRoute,
   addRoute,
   settingsRoute,
   clubsRoute,
