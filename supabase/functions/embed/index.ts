@@ -1,0 +1,143 @@
+// Tier 2 embeddings (owner-approved): gte-small runs IN the edge runtime (Supabase.ai) — no
+// external API, no key, the reader's library never leaves the stack. Two modes:
+//
+//   { mode: 'sweep' }                 embed the caller's missing/stale books (sig-gated, capped
+//                                     per call) → { embedded, remaining }
+//   { mode: 'vibe', query, count? }   embed the reader's words, rank their library against it
+//                                     via the vibe_books RPC → { hits: [{ book_id, similarity }] }
+//
+// The caller is identified ONLY from their own access token (delete-account pattern), and every
+// REST call runs WITH that token — RLS scopes reads and writes to their rows; no service role.
+
+import { captureEdgeError } from '../_shared/observe.ts'
+import { embeddingSig, embeddingText, type EmbedSource } from './signature.ts'
+
+declare const Supabase: {
+  ai: { Session: new (model: string) => { run(input: string, opts?: Record<string, unknown>): Promise<number[]> } }
+}
+
+const cors = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+}
+
+const DB_URL = Deno.env.get('SUPABASE_URL') ?? ''
+const ANON = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+
+/** Books embedded per sweep call. Small on purpose: edge requests live under a ~2s CPU budget
+ *  (the local supervisor enforces it hard), and gte-small costs tens of ms per book. A first
+ *  backfill is many small calls, each safely inside the limit. */
+const SWEEP_CAP = 12
+
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
+
+const session = new Supabase.ai.Session('gte-small')
+
+async function embed(text: string): Promise<number[]> {
+  const out = await session.run(text, { mean_pool: true, normalize: true })
+  return Array.from(out as unknown as ArrayLike<number>)
+}
+
+interface BookRow {
+  id: string
+  title: string
+  author_first: string | null
+  author_last: string | null
+  series: string | null
+  subgenre: string | null
+  genre: string | null
+  genres: string[] | null
+  tags: string[] | null
+  intensity: number | null
+  boyfriend: string | null
+}
+
+const toSource = (b: BookRow): EmbedSource => ({
+  title: b.title,
+  author: [b.author_first, b.author_last].filter(Boolean).join(' '),
+  series: b.series ?? undefined,
+  genre: b.genre ?? b.genres?.[0] ?? undefined,
+  subgenre: b.subgenre ?? undefined,
+  tags: b.tags ?? [],
+  spice: b.intensity,
+  archetype: b.boyfriend ?? undefined,
+})
+
+Deno.serve(async (req: Request) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
+  if (req.method !== 'POST') return json({ error: 'method not allowed' }, 405)
+  if (!DB_URL || !ANON) return json({ error: 'missing service env' }, 500)
+
+  // the caller, from their own token only; all REST below runs AS them (RLS applies)
+  const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '')
+  if (!token) return json({ error: 'not authenticated' }, 401)
+  const ures = await fetch(`${DB_URL}/auth/v1/user`, { headers: { apikey: ANON, Authorization: `Bearer ${token}` } })
+  if (!ures.ok) return json({ error: 'not authenticated' }, 401)
+  const uid = ((await ures.json()) as { id?: string })?.id
+  if (!uid) return json({ error: 'not authenticated' }, 401)
+  const usr = { apikey: ANON, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+
+  let body: { mode?: string; query?: string; count?: number }
+  try {
+    body = await req.json()
+  } catch {
+    return json({ error: 'bad json' }, 400)
+  }
+
+  try {
+    if (body.mode === 'sweep') {
+      const cols = 'id,title,author_first,author_last,series,subgenre,genre,genres,tags,intensity,boyfriend'
+      const [booksRes, embRes] = await Promise.all([
+        fetch(`${DB_URL}/rest/v1/books?select=${cols}`, { headers: usr }),
+        fetch(`${DB_URL}/rest/v1/book_embeddings?select=book_id,sig`, { headers: usr }),
+      ])
+      if (!booksRes.ok || !embRes.ok) {
+        return json({ error: 'read failed', books: booksRes.status, embeddings: embRes.status, detail: (!booksRes.ok ? await booksRes.text() : await embRes.text()).slice(0, 300) }, 500)
+      }
+      const books = (await booksRes.json()) as BookRow[]
+      const have = new Map(((await embRes.json()) as { book_id: string; sig: string }[]).map((e) => [e.book_id, e.sig]))
+
+      const stale = books
+        .map((b) => ({ b, src: toSource(b) }))
+        .map((x) => ({ ...x, sig: embeddingSig(x.src) }))
+        .filter((x) => have.get(x.b.id) !== x.sig)
+      const batch = stale.slice(0, SWEEP_CAP)
+
+      const rows = []
+      for (const { b, src, sig } of batch) {
+        const vec = await embed(embeddingText(src))
+        rows.push({ book_id: b.id, owner_id: uid, sig, embedding: `[${vec.join(',')}]` })
+      }
+      if (rows.length) {
+        const up = await fetch(`${DB_URL}/rest/v1/book_embeddings?on_conflict=book_id`, {
+          method: 'POST',
+          headers: { ...usr, Prefer: 'resolution=merge-duplicates' },
+          body: JSON.stringify(rows),
+        })
+        if (!up.ok) return json({ error: `write failed: ${up.status} ${await up.text()}` }, 500)
+      }
+      return json({ embedded: rows.length, remaining: stale.length - rows.length })
+    }
+
+    if (body.mode === 'vibe') {
+      const query = (body.query ?? '').trim()
+      if (!query) return json({ error: 'empty query' }, 400)
+      const vec = await embed(query.slice(0, 300))
+      const count = Math.min(Math.max(body.count ?? 12, 1), 24)
+      const rpc = await fetch(`${DB_URL}/rest/v1/rpc/vibe_books`, {
+        method: 'POST',
+        headers: usr,
+        body: JSON.stringify({ p_query: `[${vec.join(',')}]`, p_count: count }),
+      })
+      if (!rpc.ok) return json({ error: `rank failed: ${rpc.status}` }, 500)
+      return json({ hits: await rpc.json() })
+    }
+
+    return json({ error: 'unknown mode' }, 400)
+  } catch (e) {
+    captureEdgeError('embed', e)
+    return json({ error: 'embed failed' }, 500)
+  }
+})

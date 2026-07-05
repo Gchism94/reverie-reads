@@ -7,6 +7,7 @@ import { useBooks } from '../data/books'
 import { useCreateList, useLists } from '../data/lists'
 import { useAddBooksToList } from '../data/listItems'
 import { useDismissed, useDismissBook, useLegacyDismissalSync } from '../data/matchFeedback'
+import { useEnsureEmbeddings, useVibeSearch, type SimilarHit } from '../data/similar'
 import { applyAnswer, emptyAnswers, HEAT, QUIZ, WORLD, type QuizAnswers } from '../library/quiz'
 
 interface Pick {
@@ -111,6 +112,11 @@ function MatchScreen() {
   const dismissBook = useDismissBook()
   const libraryIds = useMemo(() => (books ? new Set(books.map((b) => b.id)) : null), [books])
   useLegacyDismissalSync(libraryIds)
+  // Tier 2: keep the vectors warm (sig-gated sweep, once per session) + the vibe path state
+  useEnsureEmbeddings()
+  const vibeSearch = useVibeSearch()
+  const [vibeQ, setVibeQ] = useState('')
+  const [vibe, setVibe] = useState<{ query: string; hits: SimilarHit[] } | null>(null)
   const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set())
 
   const openBook = (id: string) => void navigate({ to: '/book/$bookId', params: { bookId: id } })
@@ -118,7 +124,26 @@ function MatchScreen() {
     () => (step >= QUIZ.length ? score(books ?? [], answers, { tasteOnly, dismissedAt: dismissed }) : null),
     [step, books, answers, tasteOnly, dismissed],
   )
-  const visiblePicks = result ? result.picks.filter((p) => !hidden.has(p.b.id)) : []
+  // Tier 2 vibe path: the reader's words, embedded server-side and ranked over their shelves,
+  // flow through the SAME reveal pipeline as quiz/taste picks (add-top-3, not-tonight, why-lines).
+  const vibePicks: Pick[] = useMemo(() => {
+    if (!vibe || !books) return []
+    const byId = new Map(books.map((b) => [b.id, b]))
+    return vibe.hits.flatMap((h) => {
+      const b = byId.get(h.book_id)
+      if (!b) return []
+      const isRead = b.readStatus === 'Read' || b.reads.length > 0
+      return [{ b, s: Math.round(h.similarity * 100), isRead, why: 'Close to tonight’s vibe' }]
+    })
+  }, [vibe, books])
+
+  const banner = vibe
+    ? { headline: vibe.query, sub: 'Ranked by closeness to your words', tags: [] as string[] }
+    : result
+      ? { headline: result.headline, sub: result.sub, tags: result.tags }
+      : null
+  const picks = vibe ? vibePicks : (result?.picks ?? [])
+  const visiblePicks = picks.filter((p) => !hidden.has(p.b.id))
 
   const dismiss = (id: string) => {
     dismissBook.mutate(id) // optimistic — the cache map updates immediately
@@ -130,11 +155,13 @@ function MatchScreen() {
     setStep(0)
     setAdded(null)
     setTasteOnly(false)
+    setVibe(null)
+    setVibeQ('')
     setHidden(new Set())
   }
 
   async function addTop3() {
-    if (!result) return
+    if (!banner) return
     const top3 = visiblePicks.filter((p) => !p.isRead).slice(0, 3).map((p) => p.b.id)
     if (!top3.length) return
     let priority = (lists ?? []).find((l) => l.kind === 'tbr' && l.priority)
@@ -144,7 +171,7 @@ function MatchScreen() {
   }
 
   // --- quiz ---
-  if (!result) {
+  if (!banner) {
     const q = QUIZ[step]
     if (!q) return null
     return (
@@ -176,17 +203,56 @@ function MatchScreen() {
             ))}
           </div>
           {step === 0 && (
-            /* Tier 1: the quiz is a mood override — the learned baseline can carry Match alone */
-            <button
-              type="button"
-              onClick={() => {
-                setTasteOnly(true)
-                setStep(QUIZ.length)
-              }}
-              className="mt-4 w-full text-center text-[13px] font-semibold text-primary"
-            >
-              Skip the quiz — match my standing taste →
-            </button>
+            <>
+              {/* Tier 1: the quiz is a mood override — the learned baseline can carry Match alone */}
+              <button
+                type="button"
+                onClick={() => {
+                  setTasteOnly(true)
+                  setStep(QUIZ.length)
+                }}
+                className="mt-4 w-full text-center text-[13px] font-semibold text-primary"
+              >
+                Skip the quiz — match my standing taste →
+              </button>
+              {/* Tier 2: or say it in your own words — embedded server-side, ranked over your shelves */}
+              <form
+                className="mt-5 flex gap-2 border-t border-line pt-4"
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  const query = vibeQ.trim()
+                  if (!query || vibeSearch.isPending) return
+                  vibeSearch.mutate(query, {
+                    onSuccess: (hits) => {
+                      if (hits.length) setVibe({ query, hits })
+                    },
+                  })
+                }}
+              >
+                <input
+                  value={vibeQ}
+                  onChange={(e) => setVibeQ(e.target.value)}
+                  placeholder="Or describe tonight’s vibe — “cozy small-town rivals, low heat”"
+                  aria-label="Describe tonight’s vibe"
+                  className="h-10 min-w-0 flex-1 skin-card border border-line px-3 text-[13.5px] text-ink outline-none"
+                  style={{ background: 'var(--field)' }}
+                />
+                <button
+                  type="submit"
+                  disabled={vibeSearch.isPending || !vibeQ.trim()}
+                  className="skin-control shrink-0 border border-line px-4 text-[13px] font-semibold text-ink disabled:opacity-50"
+                  style={{ background: 'var(--chip)' }}
+                >
+                  {vibeSearch.isPending ? 'Reading…' : 'Match it'}
+                </button>
+              </form>
+              {vibeSearch.isError && (
+                <p className="mt-2 text-[12px] text-muted">The vibe engine isn’t reachable right now — the quiz still works.</p>
+              )}
+              {vibeSearch.isSuccess && !vibeSearch.data?.length && (
+                <p className="mt-2 text-[12px] text-muted">Still embedding your shelves — give it a minute and try again.</p>
+              )}
+            </>
           )}
         </div>
       </section>
@@ -202,11 +268,11 @@ function MatchScreen() {
       >
         <div className="text-[12px] uppercase tracking-[0.16em] opacity-85">What you’re in the mood for</div>
         <h1 className="mt-1 text-[30px] italic capitalize leading-tight" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
-          {result.headline}
+          {banner.headline}
         </h1>
-        <div className="mt-1 opacity-90">{result.sub}</div>
+        <div className="mt-1 opacity-90">{banner.sub}</div>
         <div className="mt-3 flex flex-wrap justify-center gap-1.5">
-          {result.tags.map((t) => (
+          {banner.tags.map((t) => (
             <span key={t} className="rounded-full bg-white/20 px-2.5 py-1 text-[12px] font-semibold">
               {t}
             </span>
