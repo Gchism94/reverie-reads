@@ -25,10 +25,12 @@ const cors = {
 const DB_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const ANON = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
 
-/** Books embedded per sweep call. Small on purpose: edge requests live under a ~2s CPU budget
- *  (the local supervisor enforces it hard), and gte-small costs tens of ms per book. A first
- *  backfill is many small calls, each safely inside the limit. */
-const SWEEP_CAP = 12
+/** Sweep batching is TIME-budgeted, not count-budgeted: edge requests live under a ~2s CPU cap
+ *  (the supervisor kills the isolate hard), and per-inference cost varies wildly between hosted
+ *  (preloaded, ~tens of ms) and local runtimes (hundreds of ms). Embedding until the wall budget
+ *  is spent gives hosted a full batch and slow runtimes a small one — nobody gets killed. */
+const SWEEP_MAX = 12
+const SWEEP_WALL_MS = 1200
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
@@ -103,10 +105,11 @@ Deno.serve(async (req: Request) => {
         .map((b) => ({ b, src: toSource(b) }))
         .map((x) => ({ ...x, sig: embeddingSig(x.src) }))
         .filter((x) => have.get(x.b.id) !== x.sig)
-      const batch = stale.slice(0, SWEEP_CAP)
 
+      const t0 = Date.now()
       const rows = []
-      for (const { b, src, sig } of batch) {
+      for (const { b, src, sig } of stale) {
+        if (rows.length >= SWEEP_MAX || (rows.length > 0 && Date.now() - t0 > SWEEP_WALL_MS)) break
         const vec = await embed(embeddingText(src))
         rows.push({ book_id: b.id, owner_id: uid, sig, embedding: `[${vec.join(',')}]` })
       }
