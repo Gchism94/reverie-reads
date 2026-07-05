@@ -7,7 +7,7 @@ import { useBooks } from '../data/books'
 import { useEffectiveSkin, useVoice } from '../skin/labels'
 import { Chip } from '../components/Chip'
 import { CoverPlaceholder } from '../components/CoverPlaceholder'
-import { fetchDiscover, isOwned, ownedKeys, type DiscoverHit } from '../lib/discover'
+import { fetchDiscover, hitKey, isOwned, ownedKeys, rankHitsByTaste, sortByTaste, tastePercent, type DiscoverHit } from '../lib/discover'
 
 // Discover (owner-approved): browse the wider catalog by world — defaulting to the room the
 // reader is standing in — with every find one tap from Add. The nine genre chips are the same
@@ -18,7 +18,7 @@ const GENRES: { key: string; label: string }[] = SKIN_ORDER.map((id) => ({
   label: SKINS[id].genre,
 }))
 
-function Card({ hit, owned }: { hit: DiscoverHit; owned: boolean }) {
+function Card({ hit, owned, taste }: { hit: DiscoverHit; owned: boolean; taste?: number }) {
   const navigate = useNavigate()
   const [coverFailed, setCoverFailed] = useState(false)
   const author = hit.authors[0] ?? ''
@@ -49,6 +49,10 @@ function Card({ hit, owned }: { hit: DiscoverHit; owned: boolean }) {
           {author}
           {year ? <span style={{ color: 'var(--faint, var(--muted))' }}> · {year}</span> : null}
         </div>
+        {taste != null && (
+          /* Tier 2b: closeness to the reader's own taste centroid — personal, never an average */
+          <div className="text-[10.5px] font-bold text-primary">{tastePercent(taste)}% you</div>
+        )}
       </div>
       <div className="mt-1.5">
         {owned ? (
@@ -96,6 +100,23 @@ function DiscoverScreen() {
     staleTime: 1000 * 60 * 60 * 6, // a browse shelf, not a feed — a handful of calls per session
     retry: 1,
   })
+
+  // Tier 2b: score the shelf against the reader's taste centroid. Unavailability (cold start /
+  // fn down / budget cut) is thrown, NOT returned — returned null would be cached as data for
+  // hours and keep hiding taste after the fn recovers. Errors stay silent (catalog order) and
+  // retry on the next visit; taste is an enhancement, never a gate.
+  const rank = useQuery({
+    queryKey: ['discover-rank', genreKey(genre), (q.data ?? []).map(hitKey).join('|')],
+    queryFn: async () => {
+      const scores = await rankHitsByTaste(q.data ?? [], genre)
+      if (!scores) throw new Error('taste unavailable')
+      return scores
+    },
+    enabled: !!q.data?.length,
+    staleTime: 1000 * 60 * 60 * 6,
+    retry: 0,
+  })
+  const ordered = q.data ? (rank.data ? sortByTaste(q.data, rank.data) : q.data.map((hit) => ({ hit }) as { hit: DiscoverHit; taste?: number })) : []
 
   return (
     <section className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
@@ -151,11 +172,16 @@ function DiscoverScreen() {
       )}
 
       {q.isSuccess && q.data.length > 0 && (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {q.data.map((h) => (
-            <Card key={`${h.isbn}|${h.title}`} hit={h} owned={isOwned(h, owned)} />
-          ))}
-        </div>
+        <>
+          {rank.data && (
+            <p className="mb-3 text-[12px] text-muted">Closest to your taste first — learned from the books you love.</p>
+          )}
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            {ordered.map(({ hit: h, taste }) => (
+              <Card key={`${h.isbn}|${h.title}`} hit={h} owned={isOwned(h, owned)} taste={taste} />
+            ))}
+          </div>
+        </>
       )}
 
       <p className="mt-6 text-[12px]" style={{ color: 'var(--faint, var(--muted))' }}>

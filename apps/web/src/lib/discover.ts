@@ -1,4 +1,5 @@
-import { genreKey, type Book } from '@reverie/core'
+import { embeddingText, genreKey, type Book } from '@reverie/core'
+import { supabase } from './supabase'
 
 // Discover v1 (owner-approved): a genre-keyed browse of the wider catalog, one tap from Add.
 // Client-side Google Books, the same source and pattern as the Add screen's search — each reader
@@ -116,4 +117,56 @@ export async function fetchDiscover(genre: string, signal?: AbortSignal): Promis
     hits = [...hits, ...filler]
   }
   return dedupeHits(hits).slice(0, 12)
+}
+
+// ── Tier 2b: taste ranking (owner-approved) ──
+// External finds scored against the reader's taste centroid (mean vector of loved books) by the
+// embed fn's rank mode. Absence of taste (cold start, fn down, budget cut) is a fine answer —
+// callers pass through to catalog order.
+
+/** hitKey → cosine-to-centroid. The fn scores as many items as fit its per-request CPU budget
+ *  (all of them on hosted; a few per call on slower runtimes), so we accumulate across a handful
+ *  of calls until every hit is scored or a call stops making progress. */
+export async function rankHitsByTaste(hits: DiscoverHit[], genre: string): Promise<Record<string, number> | null> {
+  try {
+    let remaining = hits.slice(0, 16).map((h) => ({
+      key: hitKey(h),
+      // same composition the library vectors use (title + author + world) — one semantic space
+      text: embeddingText({ title: h.title, author: h.authors[0], genre }),
+    }))
+    const scores: Record<string, number> = {}
+    for (let call = 0; call < 6 && remaining.length; call++) {
+      const { data, error } = await supabase.functions.invoke('embed', { body: { mode: 'rank', items: remaining } })
+      if (error) break
+      const d = data as { hasTaste?: boolean; scores?: { key: string; score: number }[] }
+      if (!d?.hasTaste || !d.scores?.length) break
+      for (const s of d.scores) scores[s.key] = s.score
+      remaining = remaining.filter((it) => scores[it.key] == null)
+    }
+    return Object.keys(scores).length ? scores : null
+  } catch {
+    return null
+  }
+}
+
+/** Display calibration for raw centroid cosines: short-text embeddings against a genre-tight
+ *  centroid all land in a narrow band (~0.80–0.95 in practice — even a productivity manual clears
+ *  0.88 against a romantasy shelf), so raw ×100 reads as "everything is loved". The affine spread
+ *  keeps ORDER identical (sorting stays on raw cosine) but makes differences readable. */
+export function tastePercent(cos: number): number {
+  return Math.min(99, Math.max(1, Math.round(((cos - 0.78) / 0.19) * 100)))
+}
+
+/** Taste-scored hits first (closest first); unscored hits keep their catalog order behind them. */
+export function sortByTaste(
+  hits: readonly DiscoverHit[],
+  scores: Record<string, number>,
+): { hit: DiscoverHit; taste?: number }[] {
+  const annotated = hits.map((hit) => {
+    const taste = scores[hitKey(hit)]
+    return taste == null ? { hit } : { hit, taste }
+  })
+  const scored = annotated.filter((a) => a.taste != null).sort((a, b) => (b.taste ?? 0) - (a.taste ?? 0))
+  const unscored = annotated.filter((a) => a.taste == null)
+  return [...scored, ...unscored]
 }
