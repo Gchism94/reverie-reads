@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { normalizeImportGenres, SPICE_INTENSITY } from './genreNormalize'
+import { CORE_GENRES, genreKey, normalizeImportGenres, SPICE_INTENSITY } from './genreNormalize'
 
 // Real distinct genre strings from Chism_Books.xlsx (the "Library" sheet), as extracted.
 const CHISM_GENRE_VOCAB = [
@@ -24,21 +24,22 @@ describe('normalizeImportGenres — primary genre + cores', () => {
     expect(g('romace').genre).toBe('Romance') // Library typo
     expect(g('Fantays').genre).toBe('Fantasy') // Library typo
     expect(g('Fantast').genre).toBe('Fantasy') // Library typo
-    expect(g('SciFi').genre).toBe('Sci-Fi')
-    expect(g('Scifi').genre).toBe('Sci-Fi')
-    expect(g('scifi').genre).toBe('Sci-Fi')
+    expect(g('SciFi').genre).toBe('Science fiction')
+    expect(g('Scifi').genre).toBe('Science fiction')
+    expect(g('scifi').genre).toBe('Science fiction')
     expect(g('Thriller').genre).toBe('Mystery') // collapsed
   })
   it('keeps the human-stated priority order for multi-genre cells', () => {
     expect(g('Fantasy; Romance').genres).toEqual(['Fantasy', 'Romance'])
     expect(g('Fantasy; Romance').genre).toBe('Fantasy')
     expect(g('Romance; Fantasy').genre).toBe('Romance')
-    expect(g('SciFi; Horror').genres).toEqual(['Sci-Fi', 'Horror'])
+    expect(g('SciFi; Horror').genres).toEqual(['Science fiction', 'Horror'])
   })
-  it('maps Fiction/Poetry/Historical Fiction → Literary + a descriptive tag', () => {
+  it('maps Fiction/Poetry/Historical (Fiction) → Literary + a descriptive tag', () => {
     expect(g('Fiction')).toMatchObject({ genre: 'Literary', genres: ['Literary'], tags: ['fiction'] })
     expect(g('Poetry')).toMatchObject({ genre: 'Literary', tags: ['poetry'] })
     expect(g('Historical Fiction')).toMatchObject({ genre: 'Literary', tags: ['historical fiction'] })
+    expect(g('Historical')).toMatchObject({ genre: 'Literary', tags: ['historical'] })
   })
   it('blank genre stays null with empty arrays', () => {
     expect(g('')).toEqual({ genre: null, genres: [], tags: [], intensity: null, unmappedGenre: null })
@@ -61,10 +62,10 @@ describe('normalizeImportGenres — the confirmed Chism tally', () => {
   it('the genre column resolves to exactly the expected core set', () => {
     const cores = new Set<string>()
     for (const v of CHISM_GENRE_VOCAB) for (const c of normalizeImportGenres(v).genres) cores.add(c)
-    expect([...cores].sort()).toEqual(['Fantasy', 'Horror', 'Literary', 'Mystery', 'Nonfiction', 'Romance', 'Sci-Fi'])
+    expect([...cores].sort()).toEqual(['Fantasy', 'Horror', 'Literary', 'Mystery', 'Nonfiction', 'Romance', 'Science fiction'])
     // No Cozy or YA come from the Chism genre column (they live in tags, if at all).
     expect(cores.has('Cozy')).toBe(false)
-    expect(cores.has('YA')).toBe(false)
+    expect(cores.has('Young adult')).toBe(false)
   })
   it('every real genre string resolves to a primary core (none dropped to null)', () => {
     for (const v of CHISM_GENRE_VOCAB) expect(normalizeImportGenres(v).genre, v).not.toBeNull()
@@ -101,5 +102,29 @@ describe('normalizeImportGenres — Library shape vocab', () => {
     const sample = ['Romance', 'romance', 'romace', 'Romance; standalone', 'Fantasy', 'Fantays', 'Fantast']
     const primaries = new Set(sample.map((s) => normalizeImportGenres(s).genre))
     expect([...primaries].sort()).toEqual(['Fantasy', 'Romance'])
+  })
+})
+
+describe('genreKey — the one lookup key for every genre spelling', () => {
+  it('every spelling a stored book may carry lands on its canonical lowercased key', () => {
+    // import canon (old and new), legacy enrichment tokens, skin genres, shorthand
+    for (const raw of ['Sci-Fi', 'sci fi', 'science-fiction', 'Science fiction', 'SCIFI']) {
+      expect(genreKey(raw), raw).toBe('science fiction')
+    }
+    for (const raw of ['YA', 'young-adult', 'Young adult', 'young adult']) {
+      expect(genreKey(raw), raw).toBe('young adult')
+    }
+    expect(genreKey('Thriller')).toBe('mystery')
+    expect(genreKey('crime')).toBe('mystery')
+    expect(genreKey('historical')).toBe('literary')
+    expect(genreKey('Historical Fiction')).toBe('literary')
+    expect(genreKey('cosy')).toBe('cozy')
+  })
+
+  it('canonical genres are fixed points; unknown genres just lowercase (never coerced)', () => {
+    for (const g of CORE_GENRES) expect(genreKey(g)).toBe(g.toLowerCase())
+    expect(genreKey('Gardening')).toBe('gardening')
+    expect(genreKey('  Weird  ')).toBe('weird')
+    expect(genreKey('')).toBe('')
   })
 })
