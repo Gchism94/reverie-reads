@@ -99,7 +99,7 @@ export default function LandingBelowFold() {
             </h2>
             <p className="mx-auto mt-4 max-w-[56ch] text-[15px] leading-relaxed text-muted">
               Romance or hard sci-fi, cozy mysteries or dense nonfiction — Reverie is built genre-first.
-              Four skins today, from gothic romance to creeping horror, plus an adaptive one that learns yours.
+              Nine skins today, from gothic romance to creeping horror, plus an adaptive one that learns yours.
             </p>
           </div>
           <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
