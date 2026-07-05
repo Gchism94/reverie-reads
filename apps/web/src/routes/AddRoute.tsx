@@ -353,10 +353,23 @@ function BulkAdd() {
 function AddScreen() {
   const voice = useVoice()
   const navigate = useNavigate()
+  // Deep-link prefill (?title=…&author=…): Discover — and anything else that finds a book
+  // elsewhere in the app — lands here with the form already filled, one tap from saved.
+  const prefill = addRoute.useSearch()
   const [q, setQ] = useState('')
   const [results, setResults] = useState<SearchHit[] | null>(null)
   const [busy, setBusy] = useState(false)
-  const [picked, setPicked] = useState<Partial<SearchHit> | null>(null)
+  const [picked, setPicked] = useState<Partial<SearchHit> | null>(() =>
+    prefill.title
+      ? {
+          title: prefill.title,
+          authors: prefill.author ? [prefill.author] : [],
+          cover: prefill.cover ?? '',
+          isbn: prefill.isbn ?? '',
+          pub: prefill.pub ?? '',
+        }
+      : null,
+  )
   const [scanStatus, setScanStatus] = useState<string | null>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
@@ -507,8 +520,29 @@ function AddScreen() {
   )
 }
 
+const str = (v: unknown): string | undefined => (typeof v === 'string' && v.trim() ? v : undefined)
+
+/** All-optional prefill params — the explicit optional-key type keeps plain `to="/add"` links
+ *  valid everywhere (no required `search` prop). */
+interface AddPrefill {
+  title?: string
+  author?: string
+  isbn?: string
+  cover?: string
+  pub?: string
+}
+
 export const addRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'add',
   component: AddScreen,
+  validateSearch: (s: Record<string, unknown>): AddPrefill => {
+    const out: AddPrefill = {}
+    if (str(s.title)) out.title = str(s.title)
+    if (str(s.author)) out.author = str(s.author)
+    if (str(s.isbn)) out.isbn = str(s.isbn)
+    if (str(s.cover)) out.cover = str(s.cover)
+    if (str(s.pub)) out.pub = str(s.pub)
+    return out
+  },
 })

@@ -72,6 +72,31 @@ test('every route passes axe (no serious/critical) across all skins x both modes
   const { bookId, clubId, listCode } = await setupFixtures()
   await signIn(page)
 
+  // Discover browses an external catalog — stub it so the sweep is deterministic and offline-safe.
+  // Covers point at the self-hosted landing thumbs, so the populated grid renders with zero
+  // third-party requests; one hit matches the seeded library shape only by accident (never).
+  const vol = (title: string, author: string, cover: string, isbn: string) => ({
+    volumeInfo: {
+      title,
+      authors: [author],
+      publishedDate: '2026-01-01',
+      imageLinks: { thumbnail: cover },
+      industryIdentifiers: [{ type: 'ISBN_13', identifier: isbn }],
+    },
+  })
+  await page.route('**/books/v1/volumes**', (route) =>
+    route.fulfill({
+      json: {
+        items: [
+          vol('Fourth Wing', 'Rebecca Yarros', '/landing-covers/everflame.jpg', '9781649374042'),
+          vol('Iron Flame', 'Rebecca Yarros', '/landing-covers/king-of-wrath.jpg', '9781649374172'),
+          vol('The Serpent and the Wings of Night', 'Carissa Broadbent', '/landing-covers/never-king.jpg', '9781250343178'),
+          vol('Divine Rivals', 'Rebecca Ross', '/landing-covers/mile-high.jpg', '9781250857439'),
+        ],
+      },
+    }),
+  )
+
   // Tryst (the default skin) gets full route coverage; the alternate skins sweep a core set
   // that exercises the whole token surface (palette, cards, fills, links, muted text).
   const allRoutes: [string, string][] = [
@@ -82,6 +107,7 @@ test('every route passes axe (no serious/critical) across all skins x both modes
     ['Planner', '/planner'],
     ['Stats', '/stats'],
     ['Match', '/match'],
+    ['Discover', '/discover'],
     ['Add', '/add'],
     ['Settings', '/settings'],
     ['Clubs', '/clubs'],
