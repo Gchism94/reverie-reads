@@ -132,12 +132,16 @@ export function useAuthorReleases(names: readonly string[]) {
   const namesKey = names.join('|')
   const running = useRef<string | null>(null)
 
+  // Keyed on namesKey ONLY: `names` is a fresh array identity every render, and depending on it
+  // makes any re-render mid-loop run the cleanup (cancelling the run) while the running guard
+  // blocks a restart — the shelves silently never fill. The key carries the same information.
   useEffect(() => {
-    if (!names.length || running.current === namesKey) return
+    const keyNames = namesKey ? namesKey.split('|') : []
+    if (!keyNames.length || running.current === namesKey) return
     running.current = namesKey
     let cancelled = false
     void (async () => {
-      let remaining = [...names]
+      let remaining = keyNames
       let misses = 0
       for (let call = 0; call < 10 && remaining.length && !cancelled; call++) {
         try {
@@ -156,9 +160,12 @@ export function useAuthorReleases(names: readonly string[]) {
       }
     })()
     return () => {
+      // reset the guard too: a cancelled run must not tombstone its key, or a remount with the
+      // same names (StrictMode's double-mount, tab away/back) can never start a fresh loop
       cancelled = true
+      running.current = null
     }
-  }, [namesKey, names])
+  }, [namesKey])
 
   return useMemo(() => shelves, [shelves])
 }
