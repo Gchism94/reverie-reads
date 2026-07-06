@@ -105,10 +105,21 @@ async function fetchPage(query: string, orderBy: 'newest' | 'relevance', signal?
   return (json.items ?? []).map(volumeToHit).filter((h) => h.title && h.cover && h.authors.length)
 }
 
-/** The Discover shelf for a genre: newest first, topped up with relevance picks when the new
- *  releases run thin (newest-by-subject is patchy for smaller genres). */
+/** The Discover shelf for a genre. Primary path: the releases fn's shared per-genre daily cache
+ *  (one upstream lookup serves every reader, recency-gated server-side — no 1927 reprints on a
+ *  "new & notable" shelf). Fallback: the original direct client fetch, so Discover still works
+ *  with the fn undeployed or down. */
 export async function fetchDiscover(genre: string, signal?: AbortSignal): Promise<DiscoverHit[]> {
   const query = discoverQuery(genre)
+  try {
+    const { data, error } = await supabase.functions.invoke('releases', { body: { mode: 'discover', genre: genreKey(genre), query } })
+    if (!error) {
+      const hits = ((data as { hits?: DiscoverHit[] })?.hits ?? []).filter((h) => h?.title && h.cover && h.authors?.length)
+      if (hits.length) return hits
+    }
+  } catch {
+    /* fall through to the direct path */
+  }
   const newest = await fetchPage(query, 'newest', signal)
   let hits = newest
   if (hits.length < 9) {
