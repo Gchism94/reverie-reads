@@ -1,4 +1,5 @@
 import { embeddingText, genreKey, type Book } from '@reverie/core'
+import { volumesUrl } from './googleBooks'
 import { supabase } from './supabase'
 
 // Discover v1 (owner-approved): a genre-keyed browse of the wider catalog, one tap from Add.
@@ -95,10 +96,8 @@ export function isOwned(h: DiscoverHit, owned: Set<string>): boolean {
   return owned.has(`${norm(h.title)}|${norm(h.authors[0] ?? '')}`)
 }
 
-const API = 'https://www.googleapis.com/books/v1/volumes'
-
 async function fetchPage(query: string, orderBy: 'newest' | 'relevance', signal?: AbortSignal): Promise<DiscoverHit[]> {
-  const url = `${API}?q=${encodeURIComponent(query)}&orderBy=${orderBy}&printType=books&langRestrict=en&maxResults=20`
+  const url = volumesUrl(`q=${encodeURIComponent(query)}&orderBy=${orderBy}&printType=books&langRestrict=en&maxResults=20`)
   const res = await fetch(url, { signal })
   if (!res.ok) throw new Error(`discover ${res.status}`)
   const json = (await res.json()) as { items?: unknown[] }

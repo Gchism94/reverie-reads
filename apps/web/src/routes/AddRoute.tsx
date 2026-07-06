@@ -7,6 +7,7 @@ import { useIntake, type ReviewCandidate } from '../data/intake'
 import { useBooks } from '../data/books'
 import { resolveCandidate, type ReviewAction } from '../data/duplicates'
 import { enrichBook } from '../lib/enrich'
+import { volumesUrl } from '../lib/googleBooks'
 import { useEffectiveSkin, useLabels, useVoice } from '../skin/labels'
 import { Chip } from '../components/Chip'
 import { ContributorEditor } from '../book/ContributorEditor'
@@ -32,7 +33,7 @@ interface SearchHit {
 async function searchGoogleBooks(q: string): Promise<SearchHit[]> {
   const isISBN = /^[0-9Xx\- ]{10,17}$/.test(q) && q.replace(/[^0-9Xx]/g, '').length >= 10
   const query = isISBN ? `isbn:${q.replace(/[^0-9Xx]/g, '')}` : encodeURIComponent(q)
-  const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=8`)
+  const res = await fetch(volumesUrl(`q=${query}&maxResults=8`))
   const json = (await res.json()) as {
     items?: { volumeInfo?: { title?: string; authors?: string[]; imageLinks?: { thumbnail?: string }; publishedDate?: string; industryIdentifiers?: { type: string; identifier: string }[] } }[]
   }
