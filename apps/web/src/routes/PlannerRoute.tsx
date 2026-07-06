@@ -3,6 +3,7 @@ import { createRoute, useNavigate } from '@tanstack/react-router'
 import { authorOf, type Book } from '@reverie/core'
 import { rootRoute } from './RootRoute'
 import { CoverImage } from '../components/CoverImage'
+import { FromYourAuthors } from '../planner/FromYourAuthors'
 import { useBooks } from '../data/books'
 import { useAllReads } from '../data/reads'
 import { Modal } from '../components/Modal'
@@ -213,6 +214,8 @@ function Releases({ books, openBook }: { books: Book[]; openBook: (id: string) =
 
   return (
     <div>
+      {/* the external half: releases you DON'T own yet, from the authors your library loves */}
+      <FromYourAuthors />
       <div className="mb-4 skin-card border border-line p-3 text-[13px] text-muted" style={{ background: 'var(--card)' }}>
         🗓️ Add a pub date to any book from its detail page — year only, month, or a full date. Books
         with dates appear here.

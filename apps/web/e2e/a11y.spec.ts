@@ -102,6 +102,9 @@ test('every route passes axe (no serious/critical) across all skins x both modes
   await page.route('**/functions/v1/embed**', (route) =>
     route.fulfill({ json: { embedded: 0, remaining: 0, hits: [] } }),
   )
+  await page.route('**/functions/v1/releases**', (route) =>
+    route.fulfill({ json: { authors: {}, pending: [], hits: [] } }),
+  )
 
   // Tryst (the default skin) gets full route coverage; the alternate skins sweep a core set
   // that exercises the whole token surface (palette, cards, fills, links, muted text).
