@@ -51,7 +51,7 @@ function Card({ hit, owned, taste }: { hit: DiscoverHit; owned: boolean; taste?:
         </div>
         {taste != null && (
           /* Tier 2b: closeness to the reader's own taste centroid — personal, never an average */
-          <div className="text-[10.5px] font-bold text-primary">{tastePercent(taste)}% you</div>
+          <div className="text-[11px] font-bold text-primary">{tastePercent(taste)}% you</div>
         )}
       </div>
       <div className="mt-1.5">
