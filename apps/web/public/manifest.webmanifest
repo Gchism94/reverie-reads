@@ -1,12 +1,36 @@
 {
   "name": "Reverie",
   "short_name": "Reverie",
-  "description": "A personal library for everything you read — shelves, series, rereads, and reading orders.",
+  "description": "A personal library for everything you read \u2014 shelves, series, rereads, and reading orders.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0b0612",
   "theme_color": "#0b0612",
-  "categories": ["books", "lifestyle", "productivity"]
+  "categories": [
+    "books",
+    "lifestyle",
+    "productivity"
+  ],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
 }

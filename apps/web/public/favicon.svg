@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- The Reverie mark: the Wordmark's gold crescent on the brand night (gold #f0b14e over #0b0612),
+       drawn oversized-safe for maskable use. -->
+  <rect width="64" height="64" rx="14" fill="#0b0612"/>
+  <circle cx="32" cy="32" r="17" fill="#f0b14e"/>
+  <circle cx="41" cy="28" r="14.5" fill="#0b0612"/>
+  <circle cx="32" cy="32" r="17" fill="none" stroke="#f0b14e" stroke-opacity="0.25" stroke-width="1"/>
+</svg>
