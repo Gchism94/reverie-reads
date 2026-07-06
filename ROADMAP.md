@@ -35,7 +35,7 @@ app at the end of each step.
 - [ ] Releases/author-following ("coming soon from your authors").
 - [ ] Accessibility pass (focus, contrast in both themes, reduced motion).
 - [ ] Performance + offline edge cases; backup/export.
-- [ ] App-store / domain / name finalization.
+- [x] Name (**Reverie**, 2026-07) + domain (**reveriereads.app**, 2026-07-06) — see docs/DEPLOY.md. App-store packaging still open.
 
 ## Backlog (from prototype roadmap)
 Author-following feed; bulk trope-tagging; whole-library household sync; richer Wrapped.
