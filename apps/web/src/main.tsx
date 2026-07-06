@@ -17,6 +17,14 @@ import './styles/skin-kit.css'
 document.title = APP_NAME
 initErrorMonitoring()
 
+// Offline app shell + installability (public/sw.js). Prod only — a SW in dev serves stale
+// modules and fights Vite's HMR. Registration failing is fine; the app works without it.
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    void navigator.serviceWorker.register('/sw.js').catch(() => {})
+  })
+}
+
 const WEEK = 1000 * 60 * 60 * 24 * 7
 
 // gcTime must outlast maxAge so cached queries survive to be persisted/restored offline.

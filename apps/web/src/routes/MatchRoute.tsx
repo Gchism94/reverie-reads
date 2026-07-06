@@ -217,7 +217,7 @@ function MatchScreen() {
               </button>
               {/* Tier 2: or say it in your own words — embedded server-side, ranked over your shelves */}
               <form
-                className="mt-5 flex gap-2 border-t border-line pt-4"
+                className="mt-5 flex flex-col gap-2 border-t border-line pt-4 sm:flex-row"
                 onSubmit={(e) => {
                   e.preventDefault()
                   const query = vibeQ.trim()
@@ -240,7 +240,7 @@ function MatchScreen() {
                 <button
                   type="submit"
                   disabled={vibeSearch.isPending || !vibeQ.trim()}
-                  className="skin-control shrink-0 border border-line px-4 text-[13px] font-semibold text-ink disabled:opacity-50"
+                  className="skin-control h-10 border border-line px-4 text-[13px] font-semibold text-ink disabled:opacity-50 sm:shrink-0"
                   style={{ background: 'var(--chip)' }}
                 >
                   {vibeSearch.isPending ? 'Reading…' : 'Match it'}

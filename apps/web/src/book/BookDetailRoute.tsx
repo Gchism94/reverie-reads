@@ -156,9 +156,10 @@ function BookDetailScreen() {
       </Link>
 
       {/* header */}
-      <div className="mt-3 flex flex-col gap-5 sm:flex-row">
+      {/* cover + title share the row even on phones — a stacked w-32 cover left dead space beside it */}
+      <div className="mt-3 flex gap-4 sm:gap-5">
         <div
-          className="aspect-[2/3] w-32 flex-none overflow-hidden rounded-xl border border-line sm:w-40"
+          className="aspect-[2/3] w-28 flex-none overflow-hidden rounded-xl border border-line sm:w-40"
           style={{ background: `linear-gradient(150deg, ${g0}, ${g1})` }}
         >
           <CoverImage book={book} />
@@ -167,7 +168,7 @@ function BookDetailScreen() {
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-3">
             <h1
-              className="text-[28px] italic leading-tight text-ink"
+              className="text-[23px] italic leading-tight text-ink sm:text-[28px]"
               style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
             >
               {book.title}

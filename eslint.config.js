@@ -54,6 +54,13 @@ export default tseslint.config(
     },
   },
   {
+    // The service worker runs in a worker scope (self/caches, no window).
+    files: ['**/public/sw.js'],
+    languageOptions: {
+      globals: { ...globals.serviceworker },
+    },
+  },
+  {
     // TanStack Router (code-based) route modules legitimately export route objects
     // alongside their screen component; Fast Refresh isn't a concern for them.
     files: ['**/routes/**/*.tsx', '**/*Route.tsx', '**/router.tsx', '**/AuthProvider.tsx'],
