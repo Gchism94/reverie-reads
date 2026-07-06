@@ -34,9 +34,9 @@ function ReleaseCard({ r }: { r: AuthorRelease }) {
           <CoverPlaceholder book={{ title: r.title, first, last }} />
         )}
       </div>
-      <div className="mt-1 truncate text-[11.5px] font-semibold text-ink">{r.title}</div>
-      <div className="truncate text-[10.5px] text-muted">{r.author}</div>
-      <div className="text-[10.5px] text-primary">📅 {r.pub}</div>
+      <div className="mt-1 truncate text-[12px] font-semibold text-ink">{r.title}</div>
+      <div className="truncate text-[11px] text-muted">{r.author}</div>
+      <div className="text-[11px] text-primary">📅 {r.pub}</div>
     </button>
   )
 }

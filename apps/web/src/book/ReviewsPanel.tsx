@@ -68,7 +68,7 @@ export function ReviewsPanel({ workKey, reviewerName }: { workKey: string; revie
               </div>
               {r.body && <div className="mt-1.5 text-[13.5px] text-ink">{r.body}</div>}
               <div className="mt-2 flex items-center gap-3 text-[11.5px]">
-                {r.hidden && <span className="rounded-full px-2 py-0.5 text-[10.5px] font-semibold" style={{ background: 'var(--chip)', color: 'var(--muted)' }}>Hidden — only you can see this</span>}
+                {r.hidden && <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: 'var(--chip)', color: 'var(--muted)' }}>Hidden — only you can see this</span>}
                 {uid === r.reviewerId ? (
                   <button type="button" onClick={() => setHidden.mutate({ id: r.id, hidden: !r.hidden })} className="text-muted hover:text-ink">
                     {r.hidden ? 'Unhide' : 'Hide'}

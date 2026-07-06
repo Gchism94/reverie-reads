@@ -241,7 +241,7 @@ const MORE_NAV = [
 ] as const
 
 const tabLink =
-  'flex flex-col items-center justify-center gap-1 pb-1.5 pt-2 text-[10px] font-semibold uppercase tracking-[0.08em] transition-colors'
+  'flex flex-col items-center justify-center gap-1 pb-1.5 pt-2 text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors'
 
 function TabLink({ item }: { item: { label: string; to: string; icon: string } }) {
   return (
@@ -309,7 +309,7 @@ function MobileTabBar() {
               <Link
                 key={item.to}
                 to={item.to}
-                className="flex flex-col items-center gap-1.5 rounded-xl px-2 py-3 text-[12px] font-medium"
+                className="flex flex-col items-center gap-1.5 rounded-xl px-2 py-3 text-[13px] font-medium"
                 style={{ color: 'var(--muted)' }}
                 activeProps={{
                   style: { color: 'var(--ink)', background: 'color-mix(in srgb, var(--primary) 14%, transparent)' },
@@ -326,7 +326,7 @@ function MobileTabBar() {
             <button
               type="button"
               onClick={() => void signOut()}
-              className="flex w-full items-center justify-center gap-2 rounded-xl px-2 py-2.5 text-[12.5px] font-semibold text-muted"
+              className="flex w-full items-center justify-center gap-2 rounded-xl px-2 py-2.5 text-[13px] font-semibold text-muted"
             >
               <span aria-hidden>⏻</span> Sign out
             </button>

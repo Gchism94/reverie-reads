@@ -308,12 +308,12 @@ function MatchScreen() {
               <div className="aspect-[2/3] overflow-hidden rounded-lg border border-line" style={{ background: 'var(--field)' }}>
                 <CoverImage book={b} />
               </div>
-              <div className="mt-1 truncate text-[11.5px] font-semibold text-ink">{b.title}</div>
-              <div className="text-[10.5px] font-bold text-primary">
+              <div className="mt-1 truncate text-[12px] font-semibold text-ink">{b.title}</div>
+              <div className="text-[11px] font-bold text-primary">
                 {s}% match{isRead ? ' · reread' : ''}
               </div>
               {/* the honest why — every pick can say what earned it (Tier 0) */}
-              <div className="truncate text-[10px] text-muted">{why}</div>
+              <div className="truncate text-[11px] text-muted">{why}</div>
             </button>
             {/* feedback capture: "not tonight" floors this book for ~60 days (Tier 1) */}
             <button

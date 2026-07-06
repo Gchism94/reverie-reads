@@ -40,7 +40,7 @@ function TriageTile({ item, book, onDismiss }: { item: NeedsLookItem; book?: Boo
       </div>
       <div className="mt-1.5 truncate text-[12.5px] font-semibold text-ink">{item.title}</div>
       {item.author && <div className="truncate text-[11px] text-muted">{item.author}</div>}
-      <div className="mt-1 inline-block rounded-full border border-line px-2 py-0.5 text-[10px] text-muted" style={{ background: 'var(--chip)' }}>
+      <div className="mt-1 inline-block rounded-full border border-line px-2 py-0.5 text-[11px] text-muted" style={{ background: 'var(--chip)' }}>
         {REASON_LABEL[item.reason]}
       </div>
       <CoverPicker book={coverBook} />

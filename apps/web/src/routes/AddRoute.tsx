@@ -177,7 +177,7 @@ function AddForm({ hit, onAdded }: { hit: Partial<SearchHit>; onAdded: () => voi
             type="button"
             onClick={() => void fetchDetails()}
             disabled={enriching}
-            className="mt-1.5 w-20 rounded-full border border-line px-2 py-1 text-[10px] font-semibold text-ink disabled:opacity-50"
+            className="mt-1.5 rounded-full border border-line px-2.5 py-1 text-[11px] font-semibold text-ink disabled:opacity-50"
             style={{ background: 'var(--field)' }}
           >
             {enriching ? '…' : '🔎 Fetch details'}
