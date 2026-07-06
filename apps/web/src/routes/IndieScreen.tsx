@@ -185,26 +185,29 @@ export default function IndieScreen() {
           📍 Use my location
         </button>
         <span className="text-[12.5px] text-muted">or</span>
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') void findByQuery()
-          }}
-          placeholder="ZIP code or city"
-          aria-label="ZIP code or city"
-          className="h-11 min-w-[160px] flex-1 rounded-full border border-line px-4 text-[14px] text-ink outline-none"
-          style={{ background: 'var(--field)' }}
-        />
-        <button
-          type="button"
-          onClick={() => void findByQuery()}
-          disabled={busy || !query.trim()}
-          className="h-11 rounded-full border border-line px-5 text-[14px] font-semibold text-ink disabled:opacity-50"
-          style={{ background: 'var(--card)' }}
-        >
-          Find
-        </button>
+        {/* input + Find wrap as one unit — wrapping between them orphaned "Find" on its own line */}
+        <div className="flex min-w-[240px] flex-1 items-center gap-2">
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') void findByQuery()
+            }}
+            placeholder="ZIP code or city"
+            aria-label="ZIP code or city"
+            className="h-11 w-full min-w-0 flex-1 rounded-full border border-line px-4 text-[14px] text-ink outline-none"
+            style={{ background: 'var(--field)' }}
+          />
+          <button
+            type="button"
+            onClick={() => void findByQuery()}
+            disabled={busy || !query.trim()}
+            className="h-11 shrink-0 rounded-full border border-line px-5 text-[14px] font-semibold text-ink disabled:opacity-50"
+            style={{ background: 'var(--card)' }}
+          >
+            Find
+          </button>
+        </div>
       </div>
 
       {error && <p className="mt-3 text-[13px] text-primary">{error}</p>}

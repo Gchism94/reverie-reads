@@ -215,11 +215,10 @@ function Sidebar() {
   )
 }
 
-/** Compact top bar for narrow screens — keeps brand, scrollable nav, and the core actions. */
+/** Compact top bar for narrow screens — brand and theme only. Navigation lives in the tab bar. */
 function MobileBar() {
-  const { signOut } = useAuth()
   return (
-    <header className="flex items-center gap-3 px-4 py-3 lg:hidden">
+    <header className="flex items-center justify-between gap-3 px-4 py-3 lg:hidden">
       <Link to="/" className="shrink-0" aria-label={`${APP_NAME} home`}>
         <span
           className="text-[24px] italic leading-none text-ink"
@@ -228,53 +227,156 @@ function MobileBar() {
           {APP_NAME}
         </span>
       </Link>
+      <ThemeToggle compact />
+    </header>
+  )
+}
 
-      <nav className="flex flex-1 items-center gap-1 overflow-x-auto" style={{ scrollbarWidth: 'none' }} aria-label="Primary">
-        {NAV.map((item) => (
-          <Link
-            key={item.to}
-            to={item.to}
-            activeOptions={{ exact: item.to === '/' }}
-            className="skin-label whitespace-nowrap rounded-full px-3 py-1.5 text-[13px] transition-colors"
-            style={{ color: 'var(--muted)' }}
-            activeProps={{
-              style: { color: 'var(--ink)', background: 'var(--card)', border: '1px solid var(--line)' },
-            }}
-          >
-            {item.label}
-          </Link>
-        ))}
-      </nav>
+// The tab bar keeps the daily surfaces; everything else sits one tap away in the More sheet.
+const TAB_NAV = [NAV[0], NAV[1], NAV[4]] as const // Home, Library, Planner
+const MORE_NAV = [
+  ...NAV.filter((n) => !(TAB_NAV as readonly (typeof NAV)[number][]).includes(n)),
+  { label: 'Skins', to: '/skins', icon: '◐' },
+  { label: 'Settings', to: '/settings', icon: '⚙' },
+] as const
 
-      <div className="flex shrink-0 items-center gap-2">
-        <Link
-          to="/add"
-          className="skin-control flex h-[36px] items-center px-3.5 text-[12.5px]"
-          style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))', color: 'var(--on-primary)' }}
-        >
-          ＋ Add
-        </Link>
-        <Link
-          to="/settings"
-          aria-label="Settings"
-          title="Settings"
-          className="skin-control grid h-9 w-9 shrink-0 place-items-center border border-line text-[14px] text-ink"
-          style={{ background: 'color-mix(in srgb, var(--card) 70%, transparent)' }}
-        >
-          <span aria-hidden>⚙</span>
-        </Link>
-        <ThemeToggle compact />
+const tabLink =
+  'flex flex-col items-center justify-center gap-1 pb-1.5 pt-2 text-[10px] font-semibold uppercase tracking-[0.08em] transition-colors'
+
+function TabLink({ item }: { item: { label: string; to: string; icon: string } }) {
+  return (
+    <Link
+      to={item.to}
+      activeOptions={{ exact: item.to === '/' }}
+      className={tabLink}
+      style={{ color: 'var(--muted)' }}
+      activeProps={{ style: { color: 'var(--primary)' } }}
+    >
+      <span className="text-[17px] leading-none" aria-hidden>
+        {item.icon}
+      </span>
+      <span className="skin-label">{item.label}</span>
+    </Link>
+  )
+}
+
+/** Bottom tab bar for narrow screens — the app-like navigation a PWA install expects. The old
+ *  scrollable pill row clipped nine of ten destinations invisibly behind the Add button. */
+function MobileTabBar() {
+  const { signOut } = useAuth()
+  const [moreOpen, setMoreOpen] = useState(false)
+  const pathname = useRouterState({ select: (s) => s.location.pathname })
+
+  // navigating anywhere closes the sheet; Escape closes it too
+  useEffect(() => setMoreOpen(false), [pathname])
+  useEffect(() => {
+    if (!moreOpen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMoreOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [moreOpen])
+
+  const moreActive = MORE_NAV.some((m) => pathname === m.to || pathname.startsWith(`${m.to}/`))
+
+  return (
+    <>
+      {moreOpen && (
         <button
           type="button"
-          onClick={() => void signOut()}
-          aria-label="Sign out"
-          className="hidden h-[36px] items-center rounded-full border border-line px-3 text-[12.5px] font-semibold text-muted hover:text-ink sm:flex"
-          style={{ background: 'var(--card)' }}
+          aria-label="Close menu"
+          onClick={() => setMoreOpen(false)}
+          className="fixed inset-0 z-30 cursor-default lg:hidden"
+          style={{ background: 'color-mix(in srgb, var(--bg) 45%, transparent)' }}
+        />
+      )}
+
+      {moreOpen && (
+        <div
+          id="mobile-more-sheet"
+          className="fixed inset-x-3 z-50 rounded-2xl border border-line p-2 lg:hidden"
+          style={{
+            bottom: 'calc(76px + env(safe-area-inset-bottom))',
+            // --card can carry alpha; layering it over --bg keeps the sheet opaque so the page
+            // underneath never bleeds through the menu
+            background: 'linear-gradient(var(--card), var(--card)), var(--bg)',
+            boxShadow: 'var(--shadow)',
+          }}
         >
-          Sign out
-        </button>
-      </div>
-    </header>
+          <nav className="grid grid-cols-3 gap-1" aria-label="More destinations">
+            {MORE_NAV.map((item) => (
+              <Link
+                key={item.to}
+                to={item.to}
+                className="flex flex-col items-center gap-1.5 rounded-xl px-2 py-3 text-[12px] font-medium"
+                style={{ color: 'var(--muted)' }}
+                activeProps={{
+                  style: { color: 'var(--ink)', background: 'color-mix(in srgb, var(--primary) 14%, transparent)' },
+                }}
+              >
+                <span className="text-[18px] leading-none" aria-hidden>
+                  {item.icon}
+                </span>
+                <span className="skin-label">{item.label}</span>
+              </Link>
+            ))}
+          </nav>
+          <div className="mt-1 border-t pt-1" style={{ borderColor: 'var(--line)' }}>
+            <button
+              type="button"
+              onClick={() => void signOut()}
+              className="flex w-full items-center justify-center gap-2 rounded-xl px-2 py-2.5 text-[12.5px] font-semibold text-muted"
+            >
+              <span aria-hidden>⏻</span> Sign out
+            </button>
+          </div>
+        </div>
+      )}
+
+      <nav
+        aria-label="Primary"
+        className="fixed inset-x-0 bottom-0 z-40 border-t backdrop-blur-lg lg:hidden"
+        style={{
+          borderColor: 'var(--line)',
+          background: 'color-mix(in srgb, var(--bg) 84%, transparent)',
+          paddingBottom: 'env(safe-area-inset-bottom)',
+        }}
+      >
+        <div className="grid grid-cols-5">
+          <TabLink item={TAB_NAV[0]} />
+          <TabLink item={TAB_NAV[1]} />
+          <div className="flex items-start justify-center">
+            <Link
+              to="/add"
+              aria-label="Add a book"
+              className="grid h-11 w-11 -translate-y-3 place-items-center rounded-full text-[20px]"
+              style={{
+                background: 'linear-gradient(135deg, var(--primary), var(--gold))',
+                color: 'var(--on-primary)',
+                boxShadow: 'var(--shadow)',
+              }}
+            >
+              <span aria-hidden>＋</span>
+            </Link>
+          </div>
+          <TabLink item={TAB_NAV[2]} />
+          <button
+            type="button"
+            onClick={() => setMoreOpen((v) => !v)}
+            aria-expanded={moreOpen}
+            aria-controls="mobile-more-sheet"
+            className={tabLink}
+            style={{ color: moreOpen || moreActive ? 'var(--primary)' : 'var(--muted)' }}
+          >
+            <span className="text-[17px] leading-none" aria-hidden>
+              ⋯
+            </span>
+            <span className="skin-label">More</span>
+          </button>
+        </div>
+      </nav>
+    </>
   )
 }
 
@@ -305,10 +407,17 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="relative z-[1] px-4 lg:px-5">
           <SkinEvolveReveal />
         </div>
-        <main ref={mainRef} id="main" tabIndex={-1} className="relative z-[1] flex flex-1 flex-col outline-none">
+        <main
+          ref={mainRef}
+          id="main"
+          tabIndex={-1}
+          className="relative z-[1] flex flex-1 flex-col pb-[calc(72px+env(safe-area-inset-bottom))] outline-none lg:pb-0"
+        >
           {children}
         </main>
       </div>
+
+      <MobileTabBar />
     </div>
   )
 }
