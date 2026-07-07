@@ -67,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
-        options: { emailRedirectTo: window.location.origin },
+        options: { emailRedirectTo: `${window.location.origin}/welcome` },
       })
       if (error) return { error: error.message, needsVerification: false }
       // No session back => email confirmation is required before sign-in (H3).
