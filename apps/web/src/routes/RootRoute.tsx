@@ -1,21 +1,41 @@
-import { Outlet, createRootRoute, useRouterState } from '@tanstack/react-router'
+import { useEffect, useState } from 'react'
+import { Outlet, createRootRoute, useNavigate, useRouterState } from '@tanstack/react-router'
 import { Sky } from '../components/Sky'
 import { AppShell } from '../components/AppShell'
+import { UpdateToast } from '../components/UpdateToast'
 import { useAuth } from '../auth/AuthProvider'
 import { UnauthShell } from '../auth/UnauthShell'
 import { VerifyEmail } from '../auth/VerifyEmail'
+import { authCallback } from '../lib/authCallback'
 import { useVoice } from '../skin/labels'
 
 function RootLayout() {
   const { session, loading } = useAuth()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
+  const navigate = useNavigate()
   const voice = useVoice()
+
+  // A page load carrying an auth-callback hash (email confirmation / recovery / expired link)
+  // belongs on /welcome, wherever Supabase redirected it. One-shot state: only the arriving load
+  // redirects; once there, normal navigation resumes.
+  const [callbackPending, setCallbackPending] = useState(() => authCallback.present && pathname !== '/welcome')
+  useEffect(() => {
+    if (callbackPending) {
+      void navigate({ to: '/welcome', replace: true })
+      setCallbackPending(false)
+    }
+  }, [callbackPending, navigate])
 
   // The skin-character lab (/lab/skins) renders OUTSIDE the auth gate so the Tryst-vs-Aphelion
   // side-by-side can be opened — and screenshotted headlessly — without a session. Synthetic content
   // only; each cell scopes its own data-skin/data-mode, so no global Sky is needed.
   if (pathname.startsWith('/lab/')) {
     return <Outlet />
+  }
+  // /welcome renders outside the auth gate (the visitor may not have a session yet) in the gold
+  // master-brand scope, like the rest of the front door.
+  if (pathname === '/welcome' || callbackPending) {
+    return <div className="gold-brand">{callbackPending ? null : <Outlet />}</div>
   }
   // A session whose email isn't confirmed is gated out of the app (H3, defense in depth). Password
   // sign-up with confirmation on creates NO session until the link is opened, so that flow stays on
@@ -32,7 +52,12 @@ function RootLayout() {
   // Signed out → the gold master-brand front door (landing + auth). It paints its own night sky, so
   // no skin-themed Sky here; that keeps the door gold-on-night regardless of any persisted skin.
   if (!session) {
-    return <UnauthShell />
+    return (
+      <>
+        <UnauthShell />
+        <UpdateToast />
+      </>
+    )
   }
 
   // First-run onboarding renders full-screen (skin Sky behind, no app chrome) — it's its own
@@ -51,6 +76,7 @@ function RootLayout() {
           <Outlet />
         </AppShell>
       )}
+      <UpdateToast />
     </>
   )
 }

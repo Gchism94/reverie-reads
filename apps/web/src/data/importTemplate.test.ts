@@ -1,4 +1,3 @@
-// @ts-expect-error — Node builtin; the web tsconfig is browser-only (no @types/node), so `fs` is untyped.
 import { readFileSync, writeFileSync } from 'fs'
 import { describe, expect, it } from 'vitest'
 import * as XLSX from 'xlsx'
@@ -10,10 +9,6 @@ import {
   TEMPLATE_EXAMPLE_ROWS,
 } from './importTemplate'
 import { xlsxToCsv } from './xlsxAdapter'
-
-// The web tsconfig is browser-only (no @types/node); declare just the `process` bits this
-// generator/parity test reads, so the shared config stays browser-clean.
-declare const process: { env: Record<string, string | undefined>; cwd(): string }
 
 // The downloadable .xlsx template is GENERATED from the core column profile — it must never drift from
 // the detector that reads a filled-in copy. This locks the loop: the committed asset is byte-identical
