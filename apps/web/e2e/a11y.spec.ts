@@ -24,6 +24,8 @@ async function signIn(page: Page) {
   await page.goto(
     `/#access_token=${access_token}&refresh_token=${refresh_token}&expires_in=3600&token_type=bearer&type=magiclink`,
   )
+  // An auth-callback arrival lands on /welcome ("You're in"); the button confirms the session is set.
+  await page.getByRole('button', { name: /enter your library/i }).click({ timeout: 20_000 })
   await expect(page.getByRole('navigation')).toBeVisible({ timeout: 20_000 })
 }
 
@@ -179,6 +181,10 @@ test('unauthenticated landing + auth pass axe', async ({ page }) => {
     ['Landing', '/'],
     ['Auth · sign in', '/auth?mode=signin'],
     ['Auth · sign up', '/auth?mode=signup'],
+    // The email-link landing (/welcome): the expired-link view and the set-new-password form
+    // both render without a session, driven purely by the callback hash.
+    ['Welcome · expired link', '/welcome#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired'],
+    ['Welcome · set new password', '/welcome#type=recovery'],
   ]
   const failures: string[] = []
   for (const [name, path] of routes) {
