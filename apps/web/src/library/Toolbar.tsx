@@ -40,7 +40,7 @@ function SearchResultsPanel({ q, onPick }: { q: string; onPick: (b: Book) => voi
               style={{ borderRadius: 'calc(var(--radius-control) / 3)' }}
             >
               <span className="truncate text-[13.5px] font-semibold text-ink">{b.title}</span>
-              <span className="skin-label flex-none text-[10px] text-muted">
+              <span className="skin-label flex-none text-[11px] text-muted">
                 {formatAuthors(b.contributors) || [b.first, b.last].filter(Boolean).join(' ')}
               </span>
             </button>

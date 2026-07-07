@@ -171,7 +171,7 @@ function OnboardingFlow() {
         )}
         {r.review.length > 0 ? (
           <div className="mt-5">
-            <span className="skin-label mb-1.5 block text-[10px]" style={{ color: 'var(--accent-ink)' }}>
+            <span className="skin-label mb-1.5 block text-[11px]" style={{ color: 'var(--accent-ink)' }}>
               Needs a look · {r.review.length}
             </span>
             <DuplicateReview
@@ -266,7 +266,7 @@ function OnboardingFlow() {
         </div>
 
         <div className="mt-5 border border-line px-4 py-3" style={{ background: 'var(--card-solid)', borderRadius: 'var(--radius-panel)' }}>
-          <span className="skin-label block text-[10px]" style={{ color: 'var(--accent-ink)' }}>
+          <span className="skin-label block text-[11px]" style={{ color: 'var(--accent-ink)' }}>
             Your skin · {skinLabel}
           </span>
           <p className="mt-1 text-[13px] italic text-muted" style={{ fontFamily: 'var(--font-display)' }}>

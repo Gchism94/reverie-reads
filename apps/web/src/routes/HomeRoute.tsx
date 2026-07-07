@@ -225,8 +225,8 @@ function HomeScreen() {
                 <div className="aspect-[2/3] overflow-hidden rounded-lg border border-line" style={{ background: 'var(--field)' }}>
                   <CoverImage book={b} />
                 </div>
-                <div className="mt-1 truncate text-[11.5px] font-semibold text-ink">{b.title}</div>
-                <div className="text-[10.5px] text-primary">
+                <div className="mt-1 truncate text-[12px] font-semibold text-ink">{b.title}</div>
+                <div className="text-[11px] text-primary">
                   📅 {b.pub.m ? `${MONTHS[b.pub.m - 1]} ` : ''}
                   {b.pub.y}
                 </div>

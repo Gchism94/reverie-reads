@@ -204,8 +204,8 @@ function Releases({ books, openBook }: { books: Book[]; openBook: (id: string) =
               <div className="aspect-[2/3] overflow-hidden rounded-lg border border-line" style={{ background: 'var(--field)' }}>
                 <CoverImage book={b} />
               </div>
-              <div className="mt-1 truncate text-[11.5px] font-semibold text-ink">{b.title}</div>
-              <div className="text-[10.5px] text-primary">📅 {fmtPub(b.pub)}</div>
+              <div className="mt-1 truncate text-[12px] font-semibold text-ink">{b.title}</div>
+              <div className="text-[11px] text-primary">📅 {fmtPub(b.pub)}</div>
             </button>
           ))}
         </div>
