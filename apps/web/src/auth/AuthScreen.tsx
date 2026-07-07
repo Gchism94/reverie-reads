@@ -68,7 +68,7 @@ export function AuthScreen() {
       else if (needsVerification) setNotice('verify')
     } else {
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: window.location.origin,
+        redirectTo: `${window.location.origin}/welcome`,
       })
       if (error) setError(error.message)
       else setNotice('reset-sent')

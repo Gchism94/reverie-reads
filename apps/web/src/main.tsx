@@ -1,3 +1,6 @@
+// First import on purpose: captures the auth-callback hash (email confirm / recovery) before
+// supabase-js strips it from the URL.
+import './lib/authCallback'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { RouterProvider } from '@tanstack/react-router'
@@ -7,6 +10,7 @@ import { APP_NAME } from '@reverie/core'
 import { AuthProvider } from './auth/AuthProvider'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { initErrorMonitoring } from './lib/sentry'
+import { installPreloadErrorReload } from './lib/updates'
 import { createDexiePersister } from './lib/offlineCache'
 import { router } from './router'
 import './styles/tokens.css'
@@ -16,6 +20,7 @@ import './styles/skin-kit.css'
 
 document.title = APP_NAME
 initErrorMonitoring()
+installPreloadErrorReload()
 
 // Offline app shell + installability (public/sw.js). Prod only — a SW in dev serves stale
 // modules and fights Vite's HMR. Registration failing is fine; the app works without it.
