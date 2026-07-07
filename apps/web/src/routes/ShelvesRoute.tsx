@@ -95,10 +95,10 @@ function ListModal({
             return (
               <li key={id} className="flex items-center gap-2 skin-card border border-line px-3 py-2" style={{ background: 'var(--field)' }}>
                 <span className="flex flex-col">
-                  <button type="button" onClick={() => move(i, -1)} aria-label="Move up" className="text-[10px] text-muted">
+                  <button type="button" onClick={() => move(i, -1)} aria-label="Move up" className="px-1 py-0.5 text-[12px] leading-none text-muted">
                     ▲
                   </button>
-                  <button type="button" onClick={() => move(i, 1)} aria-label="Move down" className="text-[10px] text-muted">
+                  <button type="button" onClick={() => move(i, 1)} aria-label="Move down" className="px-1 py-0.5 text-[12px] leading-none text-muted">
                     ▼
                   </button>
                 </span>

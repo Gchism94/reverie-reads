@@ -148,13 +148,13 @@ function ClubScreen() {
             <div key={c.id} className="rounded-xl border border-line p-3" style={{ background: 'var(--field)' }}>
               <div className="mb-1 flex items-center gap-2 text-[12px]">
                 <b className="text-ink">{nameOf(c.userId)}</b>
-                <span className="rounded-full px-2 py-0.5 text-[10.5px]" style={{ background: 'var(--chip)', color: 'var(--muted)' }}>
+                <span className="rounded-full px-2 py-0.5 text-[11px]" style={{ background: 'var(--chip)', color: 'var(--muted)' }}>
                   {unitWord(club.unitType, club.unitLabel, c.unit)}
                 </span>
               </div>
               <div className="text-[14px] text-ink">{c.body}</div>
               <div className="mt-1.5 flex items-center gap-3 text-[11.5px]">
-                {c.hidden && <span className="rounded-full px-2 py-0.5 text-[10.5px] font-semibold" style={{ background: 'var(--chip)', color: 'var(--muted)' }}>Hidden — only you can see this</span>}
+                {c.hidden && <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: 'var(--chip)', color: 'var(--muted)' }}>Hidden — only you can see this</span>}
                 {myId === c.userId ? (
                   <button type="button" onClick={() => setCommentHidden.mutate({ commentId: c.id, hidden: !c.hidden })} className="text-muted hover:text-ink">
                     {c.hidden ? 'Unhide' : 'Hide'}

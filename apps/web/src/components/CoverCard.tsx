@@ -68,7 +68,7 @@ export function CoverCard({
 
         {isRead && (
           <span
-            className="absolute left-1.5 top-1.5 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide"
+            className="absolute left-1.5 top-1.5 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide"
             style={{ background: markBg, color: markInk, borderRadius: 'var(--mark-radius)' }}
           >
             Read
@@ -77,7 +77,7 @@ export function CoverCard({
 
         {intensity > 0 && (
           <div
-            className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 text-[9px] backdrop-blur"
+            className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 text-[10px] backdrop-blur"
             style={{ background: markBg, color: '#fff', borderRadius: 'var(--mark-radius)' }}
             title={`${labels.intensity} ${intensity}/5`}
           >
@@ -87,7 +87,7 @@ export function CoverCard({
 
         {ownedFormats(book.owned).length > 0 && (
           <div
-            className="absolute bottom-1.5 right-1.5 flex gap-0.5 px-1 py-0.5 text-[9px] backdrop-blur"
+            className="absolute bottom-1.5 right-1.5 flex gap-0.5 px-1 py-0.5 text-[10px] backdrop-blur"
             style={{ background: markBg, color: '#fff', borderRadius: 'var(--mark-radius)' }}
             title={`Owned: ${ownedFormats(book.owned).join(', ')}`}
           >

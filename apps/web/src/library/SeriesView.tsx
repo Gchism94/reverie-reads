@@ -68,7 +68,7 @@ function SeriesCard({ group, onOpen }: { group: SeriesGroup; onOpen: () => void 
           {group.name}
         </h3>
         <span
-          className="flex-none rounded-full px-2 py-0.5 text-[10.5px] font-semibold"
+          className="flex-none rounded-full px-2 py-0.5 text-[11px] font-semibold"
           style={{ background: badge.bg, color: badge.fg }}
         >
           {badge.text}
