@@ -6,6 +6,7 @@ import { useReadingOrders } from '../data/readingOrders'
 import { buyConfig } from '../lib/buyConfig'
 import { useLabels, useVoice } from '../skin/labels'
 import { rootRoute } from '../routes/RootRoute'
+import { BackLink } from '../components/BackLink'
 import { CoverImage } from '../components/CoverImage'
 import { useBooks, useDeleteBook, useUpdateBook } from '../data/books'
 import { useDeleteRead, useReads } from '../data/reads'
@@ -118,9 +119,9 @@ function BookDetailScreen() {
     return (
       <div className="px-6 py-16 text-center text-muted">
         <p>That book isn’t in your library.</p>
-        <Link to="/" className="mt-3 inline-block text-primary">
+        <BackLink fallback="/library" className="mt-3 inline-block text-primary">
           ← Back to library
-        </Link>
+        </BackLink>
       </div>
     )
 
@@ -151,9 +152,9 @@ function BookDetailScreen() {
 
   return (
     <section className="mx-auto max-w-3xl px-4 py-6 sm:px-6">
-      <Link to="/" className="text-[13px] text-muted hover:text-ink">
+      <BackLink fallback="/library" className="text-[13px] text-muted hover:text-ink">
         ← Library
-      </Link>
+      </BackLink>
 
       {/* header */}
       {/* cover + title share the row even on phones — a stacked w-32 cover left dead space beside it */}
