@@ -75,3 +75,21 @@ describe('findDuplicateGroups', () => {
     expect(findDuplicateGroups([alpha])).toHaveLength(0)
   })
 })
+
+describe('ownership on merge', () => {
+  const state = (a: Parameters<typeof makeBook>[0], b: Parameters<typeof makeBook>[0]): LibraryState => ({
+    books: [makeBook(a), makeBook(b)],
+    tbrs: [],
+    collections: [],
+  })
+
+  it('one owned copy makes the merged record owned', () => {
+    const next = mergeBooks(state({ id: 'a', title: 'T', ownership: 'unowned' }, { id: 'b', title: 'T', ownership: 'owned' }), 'a', ['b'])
+    expect(next.books.find((b) => b.id === 'a')!.ownership).toBe('owned')
+  })
+
+  it('two wishlist copies stay wishlist', () => {
+    const next = mergeBooks(state({ id: 'a', title: 'T', ownership: 'unowned' }, { id: 'b', title: 'T', ownership: 'unowned' }), 'a', ['b'])
+    expect(next.books.find((b) => b.id === 'a')!.ownership).toBe('unowned')
+  })
+})

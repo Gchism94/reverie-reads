@@ -11,7 +11,7 @@ describe('ownership', () => {
   it('lists owned formats and writes a live caption', () => {
     expect(ownedFormats({ physical: false, ebook: true, audiobook: true })).toEqual(['ebook', 'audiobook'])
     expect(ownedCaption({ physical: false, ebook: false, audiobook: false })).toBe(
-      'Not in your library yet.',
+      'No copies marked yet.',
     )
     expect(ownedCaption({ physical: false, ebook: true, audiobook: true })).toBe(
       'Owned in 2 formats — ebook & audiobook.',

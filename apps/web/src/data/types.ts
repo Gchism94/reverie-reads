@@ -20,6 +20,7 @@ export interface BookRow {
   cover_confidence: string | null
   isbn: string | null
   fave: boolean
+  ownership: string
   owned_physical: string | null
   owned_ebook: boolean
   owned_audiobook: boolean

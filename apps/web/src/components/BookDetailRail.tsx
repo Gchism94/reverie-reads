@@ -112,6 +112,18 @@ export function BookDetailRail({
         </div>
       )}
 
+      {/* Read-only here like the rest of the rail — the ownership TOGGLE lives on the full page. */}
+      {book.ownership === 'unowned' && (
+        <div className="mt-4">
+          <span
+            className="inline-flex items-center gap-1 rounded-full border border-dashed border-line px-2.5 py-1 text-[12px] font-semibold text-muted"
+            style={{ background: 'var(--chip)' }}
+          >
+            ⊹ Wishlist — not owned yet
+          </span>
+        </div>
+      )}
+
       {owned.length > 0 && (
         <div className="mt-4">
           <div className="mb-1.5 text-[11px] uppercase tracking-[0.2em] text-muted">Owned</div>

@@ -104,3 +104,24 @@ describe('activeFilterCount', () => {
     expect(activeFilterCount({ ...defaultFilters(), intensity: [3, 4, 5] })).toBe(1)
   })
 })
+
+describe('ownership scoping (wishlist chip)', () => {
+  const owned = makeBook({ id: 'o', title: 'Owned One' })
+  const wished = makeBook({ id: 'w', title: 'Wished One', ownership: 'unowned' })
+
+  it('default filters hide unowned books — the grid is what you own', () => {
+    const f = defaultFilters()
+    expect(matchesFilters(owned, f)).toBe(true)
+    expect(matchesFilters(wished, f)).toBe(false)
+  })
+
+  it('the wishlist flag lets unowned books in (includes, not replaces)', () => {
+    const f = { ...defaultFilters(), wishlist: true }
+    expect(matchesFilters(owned, f)).toBe(true)
+    expect(matchesFilters(wished, f)).toBe(true)
+  })
+
+  it('counts as an active filter', () => {
+    expect(activeFilterCount({ ...defaultFilters(), wishlist: true })).toBe(1)
+  })
+})

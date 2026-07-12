@@ -26,9 +26,10 @@ export const TEMPLATE_GUIDE_SHEET = 'How to use'
  * One per status so the examples double as a legend (Read / Reading / Unread).
  */
 export const TEMPLATE_EXAMPLE_ROWS: readonly (readonly string[])[] = [
-  ['A Court of Thorns and Roses', 'Sarah J. Maas', '9781619634442', 'Read', '5', '2025-03-04', 'fae, enemies-to-lovers'],
-  ['The Hacienda', 'Isabel Cañas', '0593436695', 'Reading', '4', '', 'gothic, slow-burn'],
-  ['Fourth Wing', 'Rebecca Yarros', '9781649374042', 'Unread', '', '', 'dragons, romantasy'],
+  // Owned column doubles as its own legend: Yes, blank (= Yes), and No (wishlist).
+  ['A Court of Thorns and Roses', 'Sarah J. Maas', '9781619634442', 'Read', '5', '2025-03-04', 'fae, enemies-to-lovers', 'Yes'],
+  ['The Hacienda', 'Isabel Cañas', '0593436695', 'Reading', '4', '', 'gothic, slow-burn', ''],
+  ['Fourth Wing', 'Rebecca Yarros', '9781649374042', 'Unread', '', '', 'dragons, romantasy', 'No'],
 ]
 
 const GUIDE_LINES: readonly string[] = [
@@ -45,6 +46,7 @@ const GUIDE_LINES: readonly string[] = [
   '• Rating — your own rating, 0–5. Leave blank if unrated.',
   '• Date Read — when you finished it (YYYY-MM-DD). Optional.',
   '• Tags — comma-separated tropes / spice / vibes. Optional.',
+  '• Owned — Yes or No. Blank counts as Yes; No marks a wishlist book (want it, don’t own it yet).',
   '',
   'The three rows in “My Library” are examples — delete them and add your own.',
   'Re-importing is safe: Reverie matches and merges, it never makes duplicates.',

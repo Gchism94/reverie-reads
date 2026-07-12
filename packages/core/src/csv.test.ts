@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CsvImportError, importCsv, parseCSV } from './csv'
+import { CsvImportError, importCsv, parseCSV, parseCsvIncoming } from './csv'
 import { makeBook } from './book.fixture'
 
 describe('parseCSV', () => {
@@ -68,5 +68,17 @@ describe('importCsv', () => {
   it('throws on empty or unrecognized CSV', () => {
     expect(() => importCsv([], '')).toThrow(CsvImportError)
     expect(() => importCsv([], 'Foo,Bar\n1,2')).toThrow(/Title column/)
+  })
+})
+
+describe('ownership from Goodreads shelves (legacy CSV path)', () => {
+  it('to-read → unowned; read/currently-reading → owned', () => {
+    const text = [
+      'Title,Author,Exclusive Shelf,My Rating',
+      'Done,Ana Huang,read,4',
+      'Someday,Ana Huang,to-read,0',
+    ].join('\n')
+    const rows = parseCsvIncoming(text)
+    expect(rows.map((r) => r.ownership)).toEqual(['owned', 'unowned'])
   })
 })
