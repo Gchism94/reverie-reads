@@ -258,7 +258,7 @@ function BookDetailScreen() {
           <Chip
             key={s}
             active={book.readStatus === s}
-            onClick={() => updateBook.mutate({ id: book.id, patch: { readStatus: s } })}
+            onClick={() => updateBook.mutate({ id: book.id, patch: { readStatus: s, ...(s === 'Reading' ? { readingNowHidden: false } : {}) } })}
           >
             {s}
           </Chip>

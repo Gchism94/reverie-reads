@@ -123,3 +123,28 @@ export function useToggleListItem(bookId: string) {
     },
   })
 }
+
+/** Add one book to a list, appended to the end of the manual order. Pass the list's current
+ *  max position (from the items cache); the item lands after it. */
+export function useAddListItem() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ listId, bookId, afterPosition }: { listId: string; bookId: string; afterPosition: number }): Promise<void> => {
+      const { data: auth } = await supabase.auth.getUser()
+      const ownerId = auth.user?.id
+      if (!ownerId) throw new Error('Not signed in')
+      const { error } = await supabase
+        .from('list_items')
+        .upsert(
+          [{ list_id: listId, book_id: bookId, owner_id: ownerId, position: afterPosition + 1000 }],
+          { onConflict: 'list_id,book_id', ignoreDuplicates: true },
+        )
+      if (error) throw error
+    },
+    onSuccess: (_d, { bookId }) => {
+      void qc.invalidateQueries({ queryKey: allListItemsKey })
+      void qc.invalidateQueries({ queryKey: listsKey })
+      void qc.invalidateQueries({ queryKey: bookListsKey(bookId) })
+    },
+  })
+}

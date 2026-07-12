@@ -92,6 +92,10 @@ export interface Book {
   reads: ReadEntry[]
   plan: string | null // planned "need to read" date, YYYY-MM-DD
   progress: number // 0..100 while Reading
+  /** manual Reading Now order (spaced numeric; null = unordered, sorts by recency) */
+  readingPosition?: number | null
+  /** hidden from the home Reading Now display without changing status/progress */
+  readingNowHidden?: boolean
   boyfriend?: string // derived mood/archetype tag
   addedTs: number
 }

@@ -7,7 +7,16 @@ export interface UiList {
   name: string
   kind: 'tbr' | 'collection'
   priority: boolean
+  sortOrder: number | null
+  description: string
 }
+
+/** Spaced-numeric step for manual ordering (shelves + books). Renumber-on-write keeps it simple. */
+export const ORDER_STEP = 1000
+
+/** The next append position after the given lists. */
+export const nextSortOrder = (lists: readonly UiList[]): number =>
+  Math.max(0, ...lists.map((l) => l.sortOrder ?? 0)) + ORDER_STEP
 
 export const listsKey = ['lists'] as const
 
@@ -16,6 +25,8 @@ const toUiList = (row: ListRow): UiList => ({
   name: row.name,
   kind: row.kind,
   priority: row.is_priority,
+  sortOrder: row.sort_order,
+  description: row.description ?? '',
 })
 
 /** The signed-in user's TBRs and collections. */
@@ -26,6 +37,7 @@ export function useLists() {
       const { data, error } = await supabase
         .from('lists')
         .select('*')
+        .order('sort_order', { ascending: true, nullsFirst: false })
         .order('created_at', { ascending: true })
       if (error) throw error
       return (data as ListRow[]).map(toUiList)
@@ -44,6 +56,13 @@ export function useCreateList() {
       const { data: auth } = await supabase.auth.getUser()
       const ownerId = auth.user?.id
       if (!ownerId) throw new Error('Not signed in')
+      // New shelves append to the end of the manual order.
+      const { data: last } = await supabase
+        .from('lists')
+        .select('sort_order')
+        .order('sort_order', { ascending: false, nullsFirst: false })
+        .limit(1)
+      const sortOrder = ((last?.[0]?.sort_order as number | null) ?? 0) + ORDER_STEP
       const { data, error } = await supabase
         .from('lists')
         .insert({
@@ -51,6 +70,7 @@ export function useCreateList() {
           name: input.name,
           kind: input.kind,
           is_priority: input.isPriority ?? false,
+          sort_order: sortOrder,
         })
         .select()
         .single()
@@ -68,20 +88,19 @@ export function useUpdateList() {
       id,
       name,
       isPriority,
+      description,
     }: {
       id: string
       name?: string
       isPriority?: boolean
+      description?: string
     }): Promise<void> => {
-      // Only one TBR can be priority — clear the others first.
-      if (isPriority === true) {
-        const { data: auth } = await supabase.auth.getUser()
-        const uid = auth.user?.id
-        if (uid) await supabase.from('lists').update({ is_priority: false }).eq('owner_id', uid)
-      }
+      // Any number of shelves/TBRs can be priority — the flag is the cap (shelf-system task);
+      // the old one-priority-TBR rule is retired.
       const row: Record<string, unknown> = {}
       if (name !== undefined) row.name = name
       if (isPriority !== undefined) row.is_priority = isPriority
+      if (description !== undefined) row.description = description || null
       const { error } = await supabase.from('lists').update(row).eq('id', id)
       if (error) throw error
     },
@@ -121,5 +140,20 @@ export function useReorderList() {
       )
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['list-items', 'all'] }),
+  })
+}
+
+/** Persist a new SHELF order (renumber-on-write, spaced by ORDER_STEP). */
+export function useReorderLists() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (orderedListIds: string[]): Promise<void> => {
+      await Promise.all(
+        orderedListIds.map((id, i) =>
+          supabase.from('lists').update({ sort_order: (i + 1) * ORDER_STEP }).eq('id', id),
+        ),
+      )
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: listsKey }),
   })
 }
