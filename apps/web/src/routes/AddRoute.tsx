@@ -58,8 +58,12 @@ function parsePub(s: string): Book['pub'] {
   return { y: +(m[1] ?? 0), m: m[2] ? +m[2] : null, d: m[3] ? +m[3] : null }
 }
 
-function AddForm({ hit, onAdded }: { hit: Partial<SearchHit>; onAdded: () => void }) {
+function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<SearchHit>; defaultUnowned?: boolean; onAdded: () => void }) {
   const intake = useIntake()
+  const voice = useVoice()
+  // Context-sensitive default: adding from the library assumes possession; arriving from a wanting
+  // context (Discover) assumes wishlist. Form-session state only — never persisted as a preference.
+  const [ownership, setOwnership] = useState<Book['ownership']>(defaultUnowned ? 'unowned' : 'owned')
   const qc = useQueryClient()
   const { data: books } = useBooks()
   // genre is a required metadata field, not a romance-only tag — default it to the ROOM the reader
@@ -117,11 +121,16 @@ function AddForm({ hit, onAdded }: { hit: Partial<SearchHit>; onAdded: () => voi
     const f = form.format.toLowerCase()
     const isEbook = f.includes('ebook') || f.includes('kindle')
     const isAudio = f.includes('audio')
-    const owned: Owned = {
-      physical: f.includes('hardcover') ? 'hardcover' : isEbook || isAudio ? false : 'paperback',
-      ebook: isEbook,
-      audiobook: isAudio,
-    }
+    // Format flags describe copies you HAVE — a wishlist add carries none (format stays as the
+    // edition you're eyeing; possession is what's absent).
+    const owned: Owned =
+      ownership === 'unowned'
+        ? { physical: false, ebook: false, audiobook: false }
+        : {
+            physical: f.includes('hardcover') ? 'hardcover' : isEbook || isAudio ? false : 'paperback',
+            ebook: isEbook,
+            audiobook: isAudio,
+          }
     const { first, last } = toFirstLast(contribs)
     const book: Partial<Book> & { title: string } = {
       title: form.title.trim(),
@@ -137,6 +146,7 @@ function AddForm({ hit, onAdded }: { hit: Partial<SearchHit>; onAdded: () => voi
       genres: [form.subgenre],
       tags,
       intensity,
+      ownership,
       owned,
       cover,
       isbn: hit.isbn ?? '',
@@ -218,6 +228,35 @@ function AddForm({ hit, onAdded }: { hit: Partial<SearchHit>; onAdded: () => voi
             <option key={s}>{s}</option>
           ))}
         </select>
+      </div>
+
+      {/* Ownership — a record no longer implies possession; most of a TBR is books you don't own. */}
+      <div className="mt-3">
+        <div className="mb-1.5 text-[11px] uppercase tracking-[0.15em] text-muted">Ownership</div>
+        <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Ownership">
+          {(
+            [
+              ['owned', voice.ownIt],
+              ['unowned', voice.wantIt],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              role="radio"
+              aria-checked={ownership === value}
+              onClick={() => setOwnership(value)}
+              className="skin-control border px-3 py-1.5 text-[12.5px] font-semibold"
+              style={
+                ownership === value
+                  ? { background: 'var(--accent-fill)', color: 'var(--on-primary)', borderColor: 'transparent' }
+                  : { background: 'var(--field)', color: 'var(--muted)', borderColor: 'var(--line)' }
+              }
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="mt-3">
@@ -514,7 +553,7 @@ function AddScreen() {
         </div>
       )}
 
-      {picked && <AddForm hit={picked} onAdded={() => void navigate({ to: '/library' })} />}
+      {picked && <AddForm hit={picked} defaultUnowned={!!prefill.want} onAdded={() => void navigate({ to: '/library' })} />}
 
       {!picked && <BulkAdd />}
     </section>
@@ -531,6 +570,9 @@ interface AddPrefill {
   isbn?: string
   cover?: string
   pub?: string
+  /** arrival from a wanting context (Discover, a shelf/TBR) — the ownership toggle defaults to
+   *  "I want to read this" instead of "I own this" */
+  want?: boolean
 }
 
 export const addRoute = createRoute({
@@ -544,6 +586,7 @@ export const addRoute = createRoute({
     if (str(s.isbn)) out.isbn = str(s.isbn)
     if (str(s.cover)) out.cover = str(s.cover)
     if (str(s.pub)) out.pub = str(s.pub)
+    if (s.want === true || s.want === 'true') out.want = true
     return out
   },
 })

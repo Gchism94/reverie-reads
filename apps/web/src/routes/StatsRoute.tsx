@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { createRoute } from '@tanstack/react-router'
-import { authorOf, isAuthorRole } from '@reverie/core'
+import { authorOf, isAuthorRole, isOwnedBook } from '@reverie/core'
 import { rootRoute } from './RootRoute'
 import { useBooks } from '../data/books'
 import { useAllReads } from '../data/reads'
@@ -63,6 +63,9 @@ function StatsScreen() {
   const yr = dated.filter((r) => +(r.read_on as string).slice(0, 4) === year)
   const uniq = new Set(yr.map((r) => r.book_id)).size
 
+  // Collection stats (formats you own, series on your shelves) speak about OWNED books;
+  // reading + taste stats (reads, ratings, faves, tags) count regardless of ownership.
+  const ownedAll = all.filter(isOwnedBook)
   const readIds = new Set([...dated.map((r) => r.book_id), ...all.filter((b) => b.readStatus === 'Read').map((b) => b.id)])
   const readBooks = all.filter((b) => readIds.has(b.id))
   const rated = all.filter((b) => b.rating > 0)
@@ -81,7 +84,7 @@ function StatsScreen() {
     .filter((e) => e[1] > 0)
 
   const subg = tally(readBooks, (b) => b.subgenre)
-  const fmts = tally(all, (b) => b.format)
+  const fmts = tally(ownedAll, (b) => b.format)
   const spdist: [string, number][] = [1, 2, 3, 4, 5].map((i) => [labels.intensityGlyph.repeat(i), readBooks.filter((b) => b.intensity === i).length])
   const topTags = tally(readBooks.flatMap((b) => b.tags), (t) => t).slice(0, 8)
   // Count each authoring contributor (co-authors included), not just the primary author.
@@ -97,7 +100,7 @@ function StatsScreen() {
   const mostReread = [...readsPerBook.entries()].sort((a, b) => b[1] - a[1])[0]
   const rereadBook = mostReread && mostReread[1] > 1 ? all.find((b) => b.id === mostReread[0]) : undefined
   const busiest = mo.some((x) => x) ? MONTHS[mo.indexOf(Math.max(...mo))] : null
-  const seriesCount = new Set(all.filter((b) => b.series).map((b) => b.series)).size
+  const seriesCount = new Set(ownedAll.filter((b) => b.series).map((b) => b.series)).size
 
   const stats: [string | number, string][] = [
     [uniq, `Books in ${year}`],

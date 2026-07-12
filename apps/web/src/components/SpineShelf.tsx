@@ -57,6 +57,9 @@ export function SpineShelf({ books, onOpen }: { books: Book[]; onOpen: (id: stri
     >
       {books.map((b) => {
         const shown = b.id === shownId
+        // Wishlist (unowned) spines sit ghosted on the shelf — a TBR shelf is mostly books you
+        // don't own yet. Artwork-only dim (--ghost-opacity); the title stays in the aria-label.
+        const unowned = b.ownership === 'unowned'
         return (
           <button
             key={b.id}
@@ -79,7 +82,10 @@ export function SpineShelf({ books, onOpen }: { books: Book[]; onOpen: (id: stri
                 the chunk-4 composed screens' shared shelf gesture (all nine skins agree) */}
             <span
               className="relative block transition-transform duration-300 motion-reduce:transition-none"
-              style={shown ? { transform: 'translateY(-8px)', filter: 'drop-shadow(0 12px 14px rgba(0, 0, 0, 0.38))', zIndex: 2 } : undefined}
+              style={{
+                ...(shown ? { transform: 'translateY(-8px)', filter: 'drop-shadow(0 12px 14px rgba(0, 0, 0, 0.38))', zIndex: 2 } : undefined),
+                ...(unowned ? { opacity: 'var(--ghost-opacity)' } : undefined),
+              }}
             >
               {shown && b.cover ? (
                 <div

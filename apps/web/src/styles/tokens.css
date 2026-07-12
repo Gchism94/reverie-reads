@@ -45,6 +45,10 @@
   --numeral-feature: normal; /* font-feature-settings: oldstyle vs tabular */
   --motion-ease: cubic-bezier(0.4, 0, 0.2, 1);
   --motion-duration: 200ms;
+  /* Unowned (wishlist) ghost — dims the COVER/SPINE artwork only, never text (captions and
+     badges keep full contrast, so the registry-keyed AA checks are untouched). Per-skin
+     overridable like any character dimension. */
+  --ghost-opacity: 0.55;
 
   /* ── Material / ornament dimensions (Skin Character 1b — texture, nameplate, marks).
      Neutral defaults render CLEAN (no texture, plain plate, accent mark). Tryst + Aphelion

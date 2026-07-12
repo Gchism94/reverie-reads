@@ -131,6 +131,16 @@ function BookDetailScreen() {
   const workKey = workKeyFor(book)
   const reviewerName = profile?.displayName || 'Reader'
   const setOwned = (owned: Owned) => updateBook.mutate({ id: book.id, patch: { owned } })
+  // One tap flips owned ⇄ wishlist. Going unowned clears the format flags (copies you don't have);
+  // coming home just flips the state — the reader then marks which formats arrived.
+  const toggleOwnership = () =>
+    updateBook.mutate({
+      id: book.id,
+      patch:
+        book.ownership === 'unowned'
+          ? { ownership: 'owned' }
+          : { ownership: 'unowned', owned: { physical: false, ebook: false, audiobook: false } },
+    })
   const memberIds = new Set(listIds ?? [])
   const tbrs = (lists ?? []).filter((l) => l.kind === 'tbr')
   const collections = (lists ?? []).filter((l) => l.kind === 'collection')
@@ -242,7 +252,7 @@ function BookDetailScreen() {
 
       {/* your copies (per-format ownership) */}
       <div className="mt-6">
-        <OwnedCopies owned={book.owned} onChange={setOwned} />
+        <OwnedCopies ownership={book.ownership} owned={book.owned} onChange={setOwned} onOwnershipToggle={toggleOwnership} />
       </div>
 
       {/* buy at an indie (discover + support — not live inventory) */}

@@ -109,6 +109,9 @@ export function parseCsvIncoming(text: string): Incoming[] {
       pub: { y: py, m: null, d: null },
       genres: ['Imported'],
       source: 'Imported',
+      // Goodreads shelf → ownership: `to-read` is a wishlist (unowned); read / currently-reading
+      // rows are books that passed through the reader's hands (owned).
+      ownership: /to-read|to read/.test(shelf) ? 'unowned' : 'owned',
       owned: emptyOwned(),
     })
   }
@@ -236,6 +239,8 @@ export function importCsv(existing: readonly Book[], text: string): CsvImportRes
         cover: '',
         isbn: '',
         fave: false,
+        // Goodreads shelf → ownership (same rule as parseCsvIncoming): to-read = wishlist.
+        ownership: /to-read|to read/.test(shelf) ? 'unowned' : 'owned',
         owned: { physical: false, ebook: false, audiobook: false },
         format: 'Paperback',
         rating,

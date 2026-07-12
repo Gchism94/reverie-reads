@@ -55,6 +55,7 @@ export function toBook(row: BookRow): Book {
       : undefined,
     isbn: row.isbn ?? '',
     fave: row.fave,
+    ownership: row.ownership === 'unowned' ? 'unowned' : 'owned',
     owned: {
       physical:
         row.owned_physical === 'paperback' || row.owned_physical === 'hardcover'
@@ -99,6 +100,7 @@ export function toBookRow(patch: Partial<Book>): Partial<BookRow> {
   if (patch.coverConfidence !== undefined) row.cover_confidence = patch.coverConfidence || null
   if (patch.isbn !== undefined) row.isbn = patch.isbn || null
   if (patch.fave !== undefined) row.fave = patch.fave
+  if (patch.ownership !== undefined) row.ownership = patch.ownership
   if (patch.owned !== undefined) {
     row.owned_physical =
       patch.owned.physical === false ? null : patch.owned.physical === true ? 'yes' : patch.owned.physical
