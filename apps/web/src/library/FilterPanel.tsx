@@ -1,8 +1,9 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import type { Book, SeriesLenBucket } from '@reverie/core'
+import { bookSubgenres, SERIES_STATUS_LABELS, SERIES_STATUS_VALUES } from '@reverie/core'
 import { useFilters } from './filterStore'
 import { Chip } from '../components/Chip'
-import { FORMATS, READ_STATUSES, SERIES_STATUSES } from './constants'
+import { FORMATS, READ_STATUSES } from './constants'
 import { useLabels } from '../skin/labels'
 
 const LEN_BUCKETS: SeriesLenBucket[] = ['Any', '1', '2', '3', '4', '5+', 'Unknown']
@@ -26,7 +27,7 @@ export function FilterPanel({ books, bare = false }: { books: Book[]; bare?: boo
   // Derive the subgenre facets from the LIBRARY's own books (not a fixed romance list), so any
   // genre's subgenres — Epic Fantasy, Noir, Memoir — show up once a book uses them.
   const subs = useMemo(
-    () => ['All', ...[...new Set(books.map((b) => b.subgenre).filter(Boolean))].sort()],
+    () => ['All', ...[...new Set(books.flatMap((b) => bookSubgenres(b)))].sort()],
     [books],
   )
   const tags = useMemo(() => {
@@ -63,9 +64,9 @@ export function FilterPanel({ books, bare = false }: { books: Book[]; bare?: boo
       </Group>
 
       <Group label="Series status (completed?)">
-        {(['All', ...SERIES_STATUSES] as const).map((v) => (
+        {(['All', ...SERIES_STATUS_VALUES] as const).map((v) => (
           <Chip key={v} active={filters.status === v} onClick={() => s.setStatus(v)}>
-            {v}
+            {v === 'All' ? 'All' : SERIES_STATUS_LABELS[v]}
           </Chip>
         ))}
       </Group>

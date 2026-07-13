@@ -12,6 +12,7 @@ import { useEffectiveSkin, useLabels, useVoice } from '../skin/labels'
 import { Chip } from '../components/Chip'
 import { ContributorEditor } from '../book/ContributorEditor'
 import { FORMATS, READ_STATUSES, subgenreGradient, subgenresForGenre, tropeGroupsForGenre } from '../library/constants'
+import { CORE_GENRES } from '@reverie/core'
 
 interface BarcodeDetectorLike {
   detect(source: CanvasImageSource): Promise<{ rawValue: string }[]>
@@ -76,10 +77,13 @@ function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<Search
     series: '',
     position: '',
     genre: skinGenre,
-    subgenre: subgenresForGenre(skinGenre)[0] as string,
     format: 'Paperback' as string,
     readStatus: 'Unread' as Book['readStatus'],
   })
+  // Subgenres are a multi-pick; the first selection leads (gradient + boyfriend derivation).
+  const [subs, setSubs] = useState<string[]>([subgenresForGenre(skinGenre)[0] as string])
+  const toggleSub = (s: string) =>
+    setSubs((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]))
   const [tags, setTags] = useState<string[]>([])
   const [intensity, setIntensity] = useState(0)
   // Track whether the user edited genre, so enrichment fills it but never overrides their choice.
@@ -90,7 +94,7 @@ function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<Search
   const [cover, setCover] = useState(hit.cover ?? '')
   const [enriching, setEnriching] = useState(false)
   const set = (k: keyof typeof form, v: string) => setForm((p) => ({ ...p, [k]: v }))
-  const [g0, g1] = subgenreGradient(form.subgenre)
+  const [g0, g1] = subgenreGradient(subs[0] ?? '')
 
   async function fetchDetails() {
     setEnriching(true)
@@ -138,10 +142,11 @@ function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<Search
       series: form.series.trim(),
       position: form.position.trim() === '' ? '' : Number(form.position) || '',
       seriesCount: null,
-      status: form.series.trim() ? 'Series' : 'Standalone',
+      status: form.series.trim() ? 'ongoing' : 'standalone',
       genre: form.genre.trim() || skinGenre,
-      subgenre: form.subgenre,
-      genres: [form.subgenre],
+      subgenre: subs[0] ?? '',
+      subgenres: subs,
+      genres: subs.slice(0, 1),
       tags,
       intensity,
       ownership,
@@ -153,7 +158,7 @@ function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<Search
       source: 'Owned',
       pub: parsePub(hit.pub ?? ''),
     }
-    book.boyfriend = deriveBoyfriend({ tags, subgenre: form.subgenre })
+    book.boyfriend = deriveBoyfriend({ tags, subgenre: subs[0] ?? '' })
     // Dedup on intake: a strong match folds into the existing record instead of duplicating.
     // With auto-merge off, a match comes back for an inline decision instead.
     const res = await intake(book, 'add')
@@ -200,20 +205,23 @@ function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<Search
       <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
         <input value={form.series} onChange={(e) => set('series', e.target.value)} placeholder="Series" className={inputClass} style={inputStyle} />
         <input value={form.position} onChange={(e) => set('position', e.target.value)} placeholder="Book #" className={inputClass} style={inputStyle} />
-        <input
+        <select
           value={form.genre}
           onChange={(e) => {
             genreEdited.current = true
             set('genre', e.target.value)
           }}
-          placeholder={labels.genre}
           aria-label={labels.genre}
           className={inputClass}
           style={inputStyle}
-        />
-        <select value={form.subgenre} onChange={(e) => set('subgenre', e.target.value)} className={inputClass} style={inputStyle}>
-          {subgenresForGenre(skinGenre, form.subgenre).map((s) => (
-            <option key={s}>{s}</option>
+        >
+          {form.genre && !CORE_GENRES.some((g) => g.toLowerCase() === form.genre) && (
+            <option value={form.genre}>{form.genre}</option>
+          )}
+          {CORE_GENRES.map((g) => (
+            <option key={g} value={g.toLowerCase()}>
+              {g}
+            </option>
           ))}
         </select>
         <select value={form.format} onChange={(e) => set('format', e.target.value)} className={inputClass} style={inputStyle}>
@@ -226,6 +234,18 @@ function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<Search
             <option key={s}>{s}</option>
           ))}
         </select>
+      </div>
+
+      {/* Subgenres — multi-pick from the CHOSEN genre's shelf (selections survive a genre switch). */}
+      <div className="mt-3">
+        <div className="mb-1.5 text-[11px] uppercase tracking-[0.15em] text-muted">Subgenres</div>
+        <div className="flex flex-wrap gap-1.5">
+          {[...subs.filter((s) => !subgenresForGenre(form.genre || skinGenre).includes(s)), ...subgenresForGenre(form.genre || skinGenre)].map((s) => (
+            <Chip key={s} active={subs.includes(s)} onClick={() => toggleSub(s)}>
+              {s}
+            </Chip>
+          ))}
+        </div>
       </div>
 
       {/* Ownership — a record no longer implies possession; most of a TBR is books you don't own. */}
@@ -336,9 +356,10 @@ function BulkAdd() {
           title: hit.title,
           first: np.length > 1 ? (np[0] ?? '') : '',
           last: np.length > 1 ? np.slice(1).join(' ') : (np[0] ?? ''),
-          status: 'Standalone',
+          status: 'standalone',
           genre: skinGenre,
           subgenre: bulkSub,
+          subgenres: [bulkSub],
           genres: [bulkSub],
           tags: [],
           intensity: null,

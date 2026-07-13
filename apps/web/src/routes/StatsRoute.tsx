@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { createRoute } from '@tanstack/react-router'
-import { authorOf, isAuthorRole, isOwnedBook } from '@reverie/core'
+import { authorOf, bookSubgenres, isAuthorRole, isOwnedBook } from '@reverie/core'
 import { rootRoute } from './RootRoute'
 import { useBooks } from '../data/books'
 import { useAllReads } from '../data/reads'
@@ -83,7 +83,8 @@ function StatsScreen() {
     .map((y) => [String(y), dated.filter((r) => +(r.read_on as string).slice(0, 4) === y).length] as [string, number])
     .filter((e) => e[1] > 0)
 
-  const subg = tally(readBooks, (b) => b.subgenre)
+  // A 3-subgenre book counts once in each of its buckets (buckets don't sum to the book count).
+  const subg = tally(readBooks.flatMap((b) => bookSubgenres(b)), (s) => s)
   const fmts = tally(ownedAll, (b) => b.format)
   const spdist: [string, number][] = [1, 2, 3, 4, 5].map((i) => [labels.intensityGlyph.repeat(i), readBooks.filter((b) => b.intensity === i).length])
   const topTags = tally(readBooks.flatMap((b) => b.tags), (t) => t).slice(0, 8)

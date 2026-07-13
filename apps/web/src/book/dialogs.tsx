@@ -1,9 +1,9 @@
 import { useState, type ReactNode } from 'react'
-import { authorOf, canonicalTag, deriveBoyfriend, fromFirstLast, type Book, type Contributor, type SeriesStatus } from '@reverie/core'
+import { authorOf, bookSubgenres, canonicalTag, CORE_GENRES, deriveBoyfriend, fromFirstLast, SERIES_STATUS_LABELS, SERIES_STATUS_VALUES, type Book, type Contributor, type SeriesStatus } from '@reverie/core'
 import { Modal } from '../components/Modal'
 import { Chip } from '../components/Chip'
 import { Stars } from '../components/Stars'
-import { FORMATS, SERIES_STATUSES, subgenresForGenre, tropeGroupsForGenre } from '../library/constants'
+import { FORMATS, subgenresForGenre, tropeGroupsForGenre } from '../library/constants'
 import { useBooks, useUpdateBook } from '../data/books'
 import { useSetContributors } from '../data/contributors'
 import { useAddRead } from '../data/reads'
@@ -185,16 +185,24 @@ export function EditDetails({ book, onClose }: { book: Book; onClose: () => void
     position: book.position === '' ? '' : String(book.position),
     seriesCount: book.seriesCount == null ? '' : String(book.seriesCount),
     status: book.status as string,
-    subgenre: book.subgenre,
+    genre: book.genre,
     format: book.format,
     pubY: book.pub.y == null ? '' : String(book.pub.y),
     pubM: book.pub.m == null ? '' : String(book.pub.m),
     pubD: book.pub.d == null ? '' : String(book.pub.d),
   })
+  // Subgenres are a multi-pick; the first selection leads (it colors the gradient). Picks made
+  // under one genre survive a genre switch — nothing is silently dropped.
+  const [subs, setSubs] = useState<string[]>(() => bookSubgenres(book))
+  const toggleSub = (s: string) =>
+    setSubs((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]))
+  const subVocab = subgenresForGenre(f.genre)
+  const subOptions = [...subs.filter((s) => !subVocab.includes(s)), ...subVocab]
   const set = (k: keyof typeof f, v: string) => setF((prev) => ({ ...prev, [k]: v }))
   const numOrNull = (v: string) => (v.trim() === '' ? null : Number(v) || null)
 
   function save() {
+    if (!f.genre) return
     updateBook.mutate({
       id: book.id,
       patch: {
@@ -202,7 +210,9 @@ export function EditDetails({ book, onClose }: { book: Book; onClose: () => void
         position: f.position.trim() === '' ? '' : Number(f.position) || '',
         seriesCount: numOrNull(f.seriesCount),
         status: f.status as SeriesStatus,
-        subgenre: f.subgenre,
+        genre: f.genre,
+        subgenres: subs,
+        subgenre: subs[0] ?? '',
         format: f.format,
         pub: { y: numOrNull(f.pubY), m: numOrNull(f.pubM), d: numOrNull(f.pubD) },
       },
@@ -229,17 +239,25 @@ export function EditDetails({ book, onClose }: { book: Book; onClose: () => void
           <input value={f.seriesCount} onChange={(e) => set('seriesCount', e.target.value)} placeholder="None set" className={fieldClass} style={fieldStyle} />
         </Field>
         <Field label="Series status">
+          {/* the SERIES' publication status — the reader's own progress lives in reads */}
           <select value={f.status} onChange={(e) => set('status', e.target.value)} className={fieldClass} style={fieldStyle}>
-            {SERIES_STATUSES.map((s) => (
-              <option key={s}>{s}</option>
+            {SERIES_STATUS_VALUES.map((s) => (
+              <option key={s} value={s}>
+                {SERIES_STATUS_LABELS[s]}
+              </option>
             ))}
           </select>
         </Field>
-        <Field label="Subgenre">
-          <select value={f.subgenre} onChange={(e) => set('subgenre', e.target.value)} className={fieldClass} style={fieldStyle}>
-            {/* the book's OWN genre's subgenres (its current value kept selectable) */}
-            {subgenresForGenre(book.genre, f.subgenre).map((s) => (
-              <option key={s}>{s}</option>
+        <Field label="Genre">
+          <select value={f.genre} onChange={(e) => set('genre', e.target.value)} className={fieldClass} style={fieldStyle}>
+            {!f.genre && <option value="">Choose a genre…</option>}
+            {f.genre && !CORE_GENRES.some((g) => g.toLowerCase() === f.genre) && (
+              <option value={f.genre}>{f.genre}</option>
+            )}
+            {CORE_GENRES.map((g) => (
+              <option key={g} value={g.toLowerCase()}>
+                {g}
+              </option>
             ))}
           </select>
         </Field>
@@ -250,6 +268,25 @@ export function EditDetails({ book, onClose }: { book: Book; onClose: () => void
             ))}
           </select>
         </Field>
+      </div>
+      <div className="mt-3">
+        <span className="mb-1 block text-[11px] uppercase tracking-[0.15em] text-muted">Subgenres</span>
+        {f.genre ? (
+          <div className="flex flex-wrap gap-1.5">
+            {subOptions.map((s) => (
+              <Chip key={s} active={subs.includes(s)} onClick={() => toggleSub(s)}>
+                {s}
+              </Chip>
+            ))}
+          </div>
+        ) : (
+          <p className="text-[13px] text-muted">
+            This book hasn’t chosen its genre yet — pick one above and its subgenre shelf appears.
+          </p>
+        )}
+        {subs.length > 1 && (
+          <p className="mt-1.5 text-[11px] text-muted">First pick leads — it sets the book’s gradient.</p>
+        )}
       </div>
       <div className="mt-3 grid grid-cols-3 gap-3">
         <Field label="Pub year">
@@ -265,10 +302,11 @@ export function EditDetails({ book, onClose }: { book: Book; onClose: () => void
       <button
         type="button"
         onClick={save}
-        className="mt-4 h-11 w-full rounded-xl text-[14px] font-semibold"
+        disabled={!f.genre}
+        className="mt-4 h-11 w-full rounded-xl text-[14px] font-semibold disabled:opacity-40"
         style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))', color: 'var(--on-primary)' }}
       >
-        Save details
+        {f.genre ? 'Save details' : 'Pick a genre to save'}
       </button>
     </Modal>
   )

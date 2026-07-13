@@ -51,7 +51,7 @@ export function subgenresForGenre(genre: string, keep?: string): string[] {
 }
 
 export const READ_STATUSES = ['Read', 'Reading', 'Unread', 'DNF'] as const
-export const SERIES_STATUSES = ['Standalone', 'Series', 'Complete'] as const
+// Series statuses live in core now: SERIES_STATUS_VALUES + SERIES_STATUS_LABELS (5-value enum).
 
 export const MONTHS = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
