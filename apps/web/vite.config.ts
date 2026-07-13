@@ -1,5 +1,6 @@
 import { execSync } from 'node:child_process'
 import { defineConfig, type Plugin } from 'vitest/config'
+import { loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
@@ -25,7 +26,23 @@ const emitVersion: Plugin = {
   },
 }
 
-export default defineConfig({
+export default defineConfig(({ command, mode }) => {
+  // Fail loudly at BUILD time, never fall back: a bundle without VITE_SUPABASE_URL can't reach the
+  // backend, and on a Vercel deploy a local Supabase URL means the wrong env is about to ship to
+  // reveriereads.app (the launch registration failure). Local prod builds legitimately bake the
+  // local stack URL from .env.local (e2e/preview), so the localhost check is deploy-only.
+  if (command === 'build') {
+    const env = { ...loadEnv(mode, __dirname, 'VITE_'), ...process.env }
+    const sbUrl = env.VITE_SUPABASE_URL
+    if (!sbUrl) {
+      throw new Error('VITE_SUPABASE_URL is missing — refusing to build. Set it in the environment (Vercel) or apps/web/.env.local (dev).')
+    }
+    if (process.env.VERCEL && /\b(localhost|127\.0\.0\.1)\b/.test(sbUrl)) {
+      throw new Error(`VITE_SUPABASE_URL points at a local Supabase (${sbUrl}) in a Vercel build — fix the Vercel env before deploying.`)
+    }
+  }
+
+  return {
   plugins: [react(), tailwindcss(), emitVersion],
   define: {
     'import.meta.env.VITE_BUILD_ID': JSON.stringify(buildId),
@@ -51,4 +68,5 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
   },
+  }
 })
