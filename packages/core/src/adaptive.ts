@@ -238,6 +238,8 @@ export function computeSkinWeights(books: readonly Book[]): Record<SkinId, numbe
     for (const id of SKIN_ORDER) {
       const aff = SKIN_AFFINITY[id]
       let score = 0
+      // Scored on the PRIMARY subgenre only (subgenres[0] mirror) — the evolve-skins cron and the
+      // embedding signature read the same single, and app/cron parity beats marginal signal.
       if (aff.subgenres.includes(b.subgenre)) score += 2
       for (const t of aff.tags) if (tags.has(t)) score += 1
       raw[id] += score * w

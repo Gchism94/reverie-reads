@@ -270,7 +270,7 @@ export function rowToImported(row: string[], idx: Record<string, number>): Impor
     contributors,
     series: seriesName,
     position,
-    status: seriesName ? 'Series' : 'Standalone',
+    status: seriesName ? 'ongoing' : 'standalone',
     genre: genre ?? undefined,
     genres,
     tags,

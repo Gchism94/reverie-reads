@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { formatAuthors, bookOwnedFormats, type Book } from '@reverie/core'
+import { formatAuthors, bookOwnedFormats, seriesStatusBadge, type Book } from '@reverie/core'
 import { subgenreGradient } from '../library/constants'
 import { useLabels, useVoice } from '../skin/labels'
 import { Chip } from './Chip'
@@ -9,12 +9,7 @@ import { Nameplate } from './Nameplate'
 const FORMAT_ICON = { physical: '📖', ebook: '📱', audiobook: '🎧' } as const
 const FORMAT_LABEL = { physical: 'Physical', ebook: 'Ebook', audiobook: 'Audiobook' } as const
 
-function seriesBadge(book: Book): string {
-  if (book.status === 'Complete') return 'Series complete'
-  if (book.status === 'Series')
-    return `Series${book.seriesCount ? ` of ${book.seriesCount}` : ' · length not set'}`
-  return 'Standalone'
-}
+
 
 /** The master-detail right rail: a read-only summary of the selected book with a link into the
  *  full book page for editing. Renders an invitation when nothing is selected. */
@@ -68,7 +63,7 @@ export function BookDetailRail({
           className="rounded-full px-2.5 py-1 text-[11px] font-semibold"
           style={{ background: 'var(--chip)', color: 'var(--muted)' }}
         >
-          {seriesBadge(book)}
+          {seriesStatusBadge(book)}
         </span>
         {isRead && (
           <span

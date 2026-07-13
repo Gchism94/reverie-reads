@@ -2,7 +2,9 @@
 // (docs/DATA_MODEL.md §1). Step 4 maps these to/from the relational rows in §2.
 
 export type ReadStatus = 'Unread' | 'Reading' | 'Read' | 'DNF'
-export type SeriesStatus = 'Standalone' | 'Series' | 'Complete'
+/** The SERIES' publication status (is the series still being written?) — never the reader's
+ *  position in it, which is derived from read states. */
+export type SeriesStatus = 'standalone' | 'ongoing' | 'completed' | 'on_hiatus' | 'cancelled'
 
 /** Flexible publish-date precision — any part may be null. */
 export interface PubDate {
@@ -71,8 +73,14 @@ export interface Book {
   position: number | '' // fractional positions exist (e.g. 3.5); '' means unset
   seriesCount: number | null // null => length not set ("None set" filter)
   status: SeriesStatus
-  genre: string // primary genre signal (drives skin + adaptive logic); 'romance' is the default
+  /** Primary genre (lowercased CORE_GENRES key; drives skin + adaptive logic and picks the
+   *  subgenre/trope vocabularies). '' = not chosen yet — the edit form prompts, never guesses. */
+  genre: string
+  /** Denormalized FIRST subgenre — kept equal to subgenres[0] (like first/last mirrors
+   *  contributors[0]) so single-value readers (gradient, boyfriend) stay cheap. */
   subgenre: string
+  /** All subgenres (multi-select). The single `subgenre` mirrors element 0. */
+  subgenres: string[]
   genres: string[]
   tags: string[] // generic content tags (the Tryst skin labels these "Tropes")
   intensity: number | null // 0..5, null = unset (the Tryst skin labels this "Spice")

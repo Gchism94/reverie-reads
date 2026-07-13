@@ -1,3 +1,5 @@
+import type { Book } from './types'
+
 // Genre/tag normalization for real library-export ingest (Import I1). Real exports use messy,
 // inconsistent vocab — mixed case, typos, ";"/","/":"-joined, non-genre tokens mixed in. This maps
 // them to the canonical CORE genre set (= the 9 skins) for the primary genre + genres[] signal, and
@@ -155,4 +157,68 @@ export function genreKey(raw: string): string {
   const t = (raw ?? '').trim().toLowerCase()
   const core = GENRE_ALIASES[t] ?? (LITERARY_DESCRIPTIVE[t] != null ? 'Literary' : undefined)
   return core ? core.toLowerCase() : t
+}
+
+// ── Primary-genre inference from a single subgenre ──
+// Derived from the GENRE_SUBGENRES taxonomy (apps/web library/constants.ts): a subgenre that
+// appears under exactly ONE genre names that genre. Anything shared across genres (Romantasy,
+// Contemporary, Cozy Mystery, Cozy Fantasy), the neutral 'Other', and the legacy romance-era
+// 'Fantasy' subgenre stay unmapped — the reader picks; we never guess wrong. Keys are lowercased
+// subgenre spellings; values are the lowercased genre keys `book.genre` stores. The book_editing
+// migration mirrors these pairs exactly — a web-side parity test keeps all three in sync.
+export const SUBGENRE_PRIMARY_GENRE: Record<string, string> = {
+  'dark romance': 'romance',
+  romance: 'romance',
+  sports: 'romance',
+  'cowboy romance': 'romance',
+  'epic fantasy': 'fantasy',
+  'dark fantasy': 'fantasy',
+  'portal fantasy': 'fantasy',
+  'sword & sorcery': 'fantasy',
+  'space opera': 'science fiction',
+  cyberpunk: 'science fiction',
+  dystopian: 'science fiction',
+  'hard sf': 'science fiction',
+  'time travel': 'science fiction',
+  'first contact': 'science fiction',
+  gothic: 'horror',
+  supernatural: 'horror',
+  slasher: 'horror',
+  'cosmic horror': 'horror',
+  psychological: 'horror',
+  'haunted house': 'horror',
+  noir: 'mystery',
+  thriller: 'mystery',
+  detective: 'mystery',
+  whodunit: 'mystery',
+  'locked room': 'mystery',
+  'literary fiction': 'literary',
+  historical: 'literary',
+  'magical realism': 'literary',
+  'short stories': 'literary',
+  'small town': 'cozy',
+  'slice of life': 'cozy',
+  culinary: 'cozy',
+  memoir: 'nonfiction',
+  history: 'nonfiction',
+  science: 'nonfiction',
+  essays: 'nonfiction',
+  biography: 'nonfiction',
+  'self-help': 'nonfiction',
+  'ya fantasy': 'young adult',
+  'ya romance': 'young adult',
+  'ya dystopian': 'young adult',
+  'coming of age': 'young adult',
+  'ya contemporary': 'young adult',
+}
+
+/** The genre a subgenre unambiguously implies, or null (shared/unknown — reader decides). */
+export function inferGenreFromSubgenre(subgenre: string): string | null {
+  return SUBGENRE_PRIMARY_GENRE[subgenre.trim().toLowerCase()] ?? null
+}
+
+/** Every subgenre a book carries. New records store subgenres[]; pre-migration singles ride in
+ *  `subgenre`. Read subgenres through this everywhere a book is filtered, tallied, or displayed. */
+export function bookSubgenres(b: Pick<Book, 'subgenre' | 'subgenres'>): string[] {
+  return b.subgenres.length ? b.subgenres : b.subgenre ? [b.subgenre] : []
 }

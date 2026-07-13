@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CORE_GENRES, genreKey, normalizeImportGenres, SPICE_INTENSITY } from './genreNormalize'
+import { CORE_GENRES, genreKey, normalizeImportGenres, SPICE_INTENSITY, bookSubgenres, inferGenreFromSubgenre } from './genreNormalize'
 
 // Real distinct genre strings from Chism_Books.xlsx (the "Library" sheet), as extracted.
 const CHISM_GENRE_VOCAB = [
@@ -126,5 +126,33 @@ describe('genreKey — the one lookup key for every genre spelling', () => {
     expect(genreKey('Gardening')).toBe('gardening')
     expect(genreKey('  Weird  ')).toBe('weird')
     expect(genreKey('')).toBe('')
+  })
+})
+
+describe('primary-genre inference from a single subgenre', () => {
+  it('maps unambiguous subgenres to their one genre (case/space-insensitive)', () => {
+    expect(inferGenreFromSubgenre('Dark Romance')).toBe('romance')
+    expect(inferGenreFromSubgenre('Epic Fantasy')).toBe('fantasy')
+    expect(inferGenreFromSubgenre('  space opera ')).toBe('science fiction')
+    expect(inferGenreFromSubgenre('Gothic')).toBe('horror')
+    expect(inferGenreFromSubgenre('Whodunit')).toBe('mystery')
+    expect(inferGenreFromSubgenre('Magical Realism')).toBe('literary')
+    expect(inferGenreFromSubgenre('Culinary')).toBe('cozy')
+    expect(inferGenreFromSubgenre('Memoir')).toBe('nonfiction')
+    expect(inferGenreFromSubgenre('Coming of Age')).toBe('young adult')
+  })
+
+  it('never guesses on shared or legacy subgenres — the reader decides', () => {
+    for (const shared of ['Romantasy', 'Contemporary', 'Cozy Mystery', 'Cozy Fantasy', 'Other', 'Fantasy', '']) {
+      expect(inferGenreFromSubgenre(shared)).toBeNull()
+    }
+  })
+})
+
+describe('bookSubgenres', () => {
+  it('prefers the array, falls back to the legacy single, tolerates neither', () => {
+    expect(bookSubgenres({ subgenre: 'Noir', subgenres: ['Noir', 'Thriller'] })).toEqual(['Noir', 'Thriller'])
+    expect(bookSubgenres({ subgenre: 'Noir', subgenres: [] })).toEqual(['Noir'])
+    expect(bookSubgenres({ subgenre: '', subgenres: [] })).toEqual([])
   })
 })

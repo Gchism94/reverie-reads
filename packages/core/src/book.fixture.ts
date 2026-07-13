@@ -9,9 +9,10 @@ export function makeBook(partial: Partial<Book> & { id: string; title: string })
     series: '',
     position: '',
     seriesCount: null,
-    status: 'Standalone',
+    status: 'standalone',
     genre: 'romance',
     subgenre: 'Romance',
+    subgenres: ['Romance'],
     genres: [],
     tags: [],
     intensity: 0,
@@ -30,5 +31,8 @@ export function makeBook(partial: Partial<Book> & { id: string; title: string })
     progress: 0,
     addedTs: 0,
     ...partial,
+    // Keep the mirror invariant: unless the test sets subgenres itself, the array follows the
+    // single (a partial overriding only `subgenre` must not keep the default array).
+    subgenres: partial.subgenres ?? ((partial.subgenre ?? 'Romance') ? [partial.subgenre ?? 'Romance'] : []),
   }
 }
