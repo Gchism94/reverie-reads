@@ -23,6 +23,10 @@ export interface SkinVoice {
   /** truncated-ISBN notice — the predicate after the count + noun ("3 ISBNs {isbnNotice}"). Honest +
    *  non-alarming: matching, not failure, with a way forward. Neutral default for all skins for now. */
   isbnNotice: string
+  /** add-form ownership options — semantically "I own this" / "I want to read this" (wishlist),
+   *  in the skin's register. Shown under a neutral Ownership label so the meaning never blurs. */
+  ownIt: string
+  wantIt: string
 }
 
 // Neutral, non-alarming default. Reads after "{count} ISBN(s)": e.g. "3 ISBNs may be missing…".
@@ -38,6 +42,8 @@ export const NEUTRAL_VOICE: SkinVoice = {
   season: 'The year is under way.',
   motif: '✦',
   isbnNotice: ISBN_NOTICE,
+  ownIt: 'I own this',
+  wantIt: 'I want to read this',
 }
 
 export const TRYST_VOICE: SkinVoice = {
@@ -53,6 +59,8 @@ export const TRYST_VOICE: SkinVoice = {
   season: 'The house notices such devotion.',
   motif: '❦',
   isbnNotice: ISBN_NOTICE,
+  ownIt: 'Mine already',
+  wantIt: 'On my wishlist',
 }
 
 export const APHELION_VOICE: SkinVoice = {
@@ -68,6 +76,8 @@ export const APHELION_VOICE: SkinVoice = {
   season: 'CYCLE IN PROGRESS. HOLDING COURSE.',
   motif: '◇',
   isbnNotice: ISBN_NOTICE,
+  ownIt: 'In the hold',
+  wantIt: 'Not yet aboard',
 }
 
 // Stage 2 — Grimoire (fantasy · illuminated manuscript) + Marrow (horror · gothic dread), code-first.
@@ -85,6 +95,8 @@ export const GRIMOIRE_VOICE: SkinVoice = {
   season: 'The quire grows, leaf by leaf.',
   motif: '❖',
   isbnNotice: ISBN_NOTICE,
+  ownIt: 'In my keeping',
+  wantIt: 'I seek it still',
 }
 
 export const MARROW_VOICE: SkinVoice = {
@@ -101,6 +113,8 @@ export const MARROW_VOICE: SkinVoice = {
   season: 'The house keeps count.',
   motif: '†',
   isbnNotice: ISBN_NOTICE,
+  ownIt: 'The house has it',
+  wantIt: 'The house wants it',
 }
 
 // Stage 3 — the five remaining genres, code-first voices.
@@ -118,6 +132,8 @@ export const UMBRA_VOICE: SkinVoice = {
   season: 'THE FILE THICKENS.',
   motif: '▣',
   isbnNotice: ISBN_NOTICE,
+  ownIt: 'In evidence',
+  wantIt: 'Still at large',
 }
 
 // Fable 5 chunk 3 — an editor's marginalia: dry, exact, quietly fond. Italic Garamond speaks.
@@ -132,6 +148,8 @@ export const FOLIO_VOICE: SkinVoice = {
   season: 'A good and careful pace.',
   motif: '‸',
   isbnNotice: ISBN_NOTICE,
+  ownIt: 'On my shelf',
+  wantIt: 'On the list',
 }
 
 // Fable 5 chunk 3 — the kitchen voice: someone who saves you the last slice. Warm, plain, a little
@@ -145,6 +163,8 @@ export const HEARTH_VOICE: SkinVoice = {
   season: 'The kettle’s been busy.',
   motif: '✕',
   isbnNotice: ISBN_NOTICE,
+  ownIt: 'In the pantry',
+  wantIt: 'On the shopping list',
 }
 
 // Fable 5 chunk 3 — the surveyor's log: terse, exact, quietly proud of a full record. Milestone
@@ -158,6 +178,8 @@ export const ALMANAC_VOICE: SkinVoice = {
   season: 'A tidy ledger.',
   motif: '✱',
   isbnNotice: ISBN_NOTICE,
+  ownIt: 'In the collection',
+  wantIt: 'On the want list',
 }
 
 // Fable 5 chunk 3 — a note passed at 2 a.m.: hushed, a little giddy, always on your side.
@@ -171,6 +193,8 @@ export const BLOOM_VOICE: SkinVoice = {
   season: 'A sunrise for every book.',
   motif: '✦',
   isbnNotice: ISBN_NOTICE,
+  ownIt: 'Got it already',
+  wantIt: 'Want it so badly',
 }
 
 export const SKIN_VOICE: Record<SkinId, SkinVoice> = {

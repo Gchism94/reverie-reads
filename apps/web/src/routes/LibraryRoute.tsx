@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { createRoute, Link, useNavigate } from '@tanstack/react-router'
-import { groupSeries, matchesFilters, sortBooks, type Book } from '@reverie/core'
+import { groupSeries, isOwnedBook, matchesFilters, sortBooks, type Book } from '@reverie/core'
 import { rootRoute } from './RootRoute'
 import { useBooks, useUpdateBook } from '../data/books'
 import { useFilters } from '../library/filterStore'
@@ -124,6 +124,8 @@ function LibraryScreen() {
     () => (books ? sortBooks(books.filter((b) => matchesFilters(b, filters)), filters.sort) : []),
     [books, filters],
   )
+  // Collection counts speak about what you OWN; wishlist records join in only via the filter chip.
+  const ownedBooks = useMemo(() => (books ?? []).filter(isOwnedBook), [books])
 
   if (isLoading) return <Centered>{voice.loading}</Centered>
   if (isError) return <Centered>Couldn’t load your library — {(error as Error).message}</Centered>
@@ -135,6 +137,10 @@ function LibraryScreen() {
     if (isDesktop) setSelectedId(id)
     else void navigate({ to: '/book/$bookId', params: { bookId: id } })
   }
+
+  // The "/ total" readout compares against the active scope: owned by default, everything when
+  // the wishlist chip is on.
+  const baseCount = filters.wishlist ? books.length : ownedBooks.length
 
   const selected = (selectedId && visible.find((b) => b.id === selectedId)) || null
   // Docked rail (xl) is never empty — falls back to the first visible book. The overlay drawer (lg→xl)
@@ -152,7 +158,7 @@ function LibraryScreen() {
           Library
         </h1>
         <span className="text-[12.5px] text-muted">
-          {books.length} books · {books.filter((b) => b.fave).length} faves
+          {ownedBooks.length} books · {ownedBooks.filter((b) => b.fave).length} faves
         </span>
       </header>
 
@@ -166,7 +172,7 @@ function LibraryScreen() {
         readout={
           mode === 'series'
             ? groupSeries(visible).length
-            : `${visible.length}${visible.length !== books.length ? ` / ${books.length}` : ''}`
+            : `${visible.length}${visible.length !== baseCount ? ` / ${baseCount}` : ''}`
         }
       />
 

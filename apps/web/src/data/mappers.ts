@@ -55,6 +55,7 @@ export function toBook(row: BookRow): Book {
       : undefined,
     isbn: row.isbn ?? '',
     fave: row.fave,
+    ownership: row.ownership === 'unowned' ? 'unowned' : 'owned',
     owned: {
       physical:
         row.owned_physical === 'paperback' || row.owned_physical === 'hardcover'
@@ -75,6 +76,8 @@ export function toBook(row: BookRow): Book {
     reads: [],
     plan: row.plan_date,
     progress: row.progress ?? 0,
+    readingPosition: row.reading_position,
+    readingNowHidden: row.reading_now_hidden ?? false,
     boyfriend: row.boyfriend ?? undefined,
     addedTs: Date.parse(row.added_at) || 0,
   }
@@ -99,6 +102,7 @@ export function toBookRow(patch: Partial<Book>): Partial<BookRow> {
   if (patch.coverConfidence !== undefined) row.cover_confidence = patch.coverConfidence || null
   if (patch.isbn !== undefined) row.isbn = patch.isbn || null
   if (patch.fave !== undefined) row.fave = patch.fave
+  if (patch.ownership !== undefined) row.ownership = patch.ownership
   if (patch.owned !== undefined) {
     row.owned_physical =
       patch.owned.physical === false ? null : patch.owned.physical === true ? 'yes' : patch.owned.physical
@@ -116,6 +120,8 @@ export function toBookRow(patch: Partial<Book>): Partial<BookRow> {
   }
   if (patch.plan !== undefined) row.plan_date = patch.plan
   if (patch.progress !== undefined) row.progress = patch.progress
+  if (patch.readingPosition !== undefined) row.reading_position = patch.readingPosition
+  if (patch.readingNowHidden !== undefined) row.reading_now_hidden = patch.readingNowHidden
   if (patch.boyfriend !== undefined) row.boyfriend = patch.boyfriend ?? null
   return row
 }
