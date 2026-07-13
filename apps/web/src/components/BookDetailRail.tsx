@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { formatAuthors, ownedFormats, type Book } from '@reverie/core'
+import { formatAuthors, bookOwnedFormats, type Book } from '@reverie/core'
 import { subgenreGradient } from '../library/constants'
 import { useLabels, useVoice } from '../skin/labels'
 import { Chip } from './Chip'
@@ -43,7 +43,7 @@ export function BookDetailRail({
   const [g0, g1] = subgenreGradient(book.subgenre)
   const isRead = book.readStatus === 'Read' || book.reads.length > 0
   const intensity = book.intensity ?? 0
-  const owned = ownedFormats(book.owned)
+  const owned = bookOwnedFormats(book)
 
   return (
     <div className="flex h-full flex-col overflow-y-auto px-4 py-5">

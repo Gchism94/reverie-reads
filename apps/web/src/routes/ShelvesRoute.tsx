@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { createRoute, useNavigate } from '@tanstack/react-router'
-import { authorOf, ownedFormats, type Book, type OwnedFormat } from '@reverie/core'
+import { authorOf, bookOwnedFormats, type Book, type OwnedFormat } from '@reverie/core'
 import { rootRoute } from './RootRoute'
 import { useBooks } from '../data/books'
 import {
@@ -145,7 +145,7 @@ function OwnedShelves({ books, onOpen }: { books: Book[]; onOpen: (id: string) =
       <p className="mb-3 text-[12px] text-muted">Updates as you mark the copies you own — no add or remove.</p>
       <div className="flex flex-col gap-5">
         {OWNED_SHELVES.map(({ fmt, label, icon }) => {
-          const shelf = books.filter((b) => ownedFormats(b.owned).includes(fmt))
+          const shelf = books.filter((b) => bookOwnedFormats(b).includes(fmt))
           return (
             <div key={fmt}>
               <div className="mb-1 text-[14px] font-semibold text-ink">

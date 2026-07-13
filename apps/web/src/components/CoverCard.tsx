@@ -1,4 +1,4 @@
-import { formatAuthors, ownedFormats, type Book } from '@reverie/core'
+import { formatAuthors, bookOwnedFormats, type Book } from '@reverie/core'
 import { subgenreGradient } from '../library/constants'
 import { useLabels } from '../skin/labels'
 import { useBrokenCoverIds } from '../data/brokenCovers'
@@ -100,13 +100,13 @@ export function CoverCard({
           </span>
         )}
 
-        {!unowned && ownedFormats(book.owned).length > 0 && (
+        {bookOwnedFormats(book).length > 0 && (
           <div
             className="absolute bottom-1.5 right-1.5 flex gap-0.5 px-1 py-0.5 text-[10px] backdrop-blur"
             style={{ background: markBg, color: '#fff', borderRadius: 'var(--mark-radius)' }}
-            title={`Owned: ${ownedFormats(book.owned).join(', ')}`}
+            title={`Owned: ${bookOwnedFormats(book).join(', ')}`}
           >
-            {ownedFormats(book.owned).map((f) => (
+            {bookOwnedFormats(book).map((f) => (
               <span key={f}>{FORMAT_ICON[f]}</span>
             ))}
           </div>
