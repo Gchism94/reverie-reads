@@ -71,6 +71,8 @@ function Card({ hit, owned, taste }: { hit: DiscoverHit; owned: boolean; taste?:
                   isbn: hit.isbn || undefined,
                   cover: hit.cover || undefined,
                   pub: hit.pub || undefined,
+                  // Discover is a wanting context — the add form defaults to the wishlist option.
+                  want: true,
                 },
               })
             }

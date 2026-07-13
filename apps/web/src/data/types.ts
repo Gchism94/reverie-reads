@@ -25,6 +25,7 @@ export interface BookRow {
   cover_color: string | null
   isbn: string | null
   fave: boolean
+  ownership: string
   owned_physical: string | null
   owned_ebook: boolean
   owned_audiobook: boolean
@@ -37,6 +38,8 @@ export interface BookRow {
   pub_d: number | null
   plan_date: string | null
   progress: number | null
+  reading_position: number | null
+  reading_now_hidden: boolean
   boyfriend: string | null
   authors_display: string | null
   enriched_at: string | null
@@ -59,6 +62,8 @@ export interface ListRow {
   name: string
   kind: 'tbr' | 'collection'
   is_priority: boolean
+  sort_order: number | null
+  description: string | null
   created_at: string
   updated_at: string
 }

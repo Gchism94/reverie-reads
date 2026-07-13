@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { createRoute, useNavigate } from '@tanstack/react-router'
-import { authorOf, ownedFormats, type Book, type OwnedFormat } from '@reverie/core'
+import { authorOf, bookOwnedFormats, type Book, type OwnedFormat } from '@reverie/core'
 import { rootRoute } from './RootRoute'
 import { useBooks } from '../data/books'
 import {
@@ -8,10 +8,12 @@ import {
   useDeleteList,
   useLists,
   useReorderList,
+  useReorderLists,
   useUpdateList,
   type UiList,
 } from '../data/lists'
-import { useAllListItems, useRemoveListItem } from '../data/listItems'
+import { useAddListItem, useAllListItems, useRemoveListItem } from '../data/listItems'
+import { LibraryPicker } from '../components/LibraryPicker'
 import { SpineShelf } from '../components/SpineShelf'
 import { Modal } from '../components/Modal'
 import { BookmarkGlyph } from '../components/BookmarkGlyph'
@@ -52,16 +54,15 @@ function ListModal({
   return (
     <Modal title={list.name} onClose={onClose}>
       <div className="-mt-2 mb-4 flex flex-wrap gap-2">
-        {list.kind === 'tbr' && (
-          <button
-            type="button"
-            onClick={() => updateList.mutate({ id: list.id, isPriority: !list.priority })}
-            className="rounded-full border border-line px-3 py-1.5 text-[12.5px] font-semibold text-ink"
-            style={{ background: 'var(--card)' }}
-          >
-            <BookmarkGlyph filled={list.priority} /> {list.priority ? 'Priority list' : 'Make priority'}
-          </button>
-        )}
+        {/* Priority is for every kind now — the flag is the cap, home renders all flagged shelves. */}
+        <button
+          type="button"
+          onClick={() => updateList.mutate({ id: list.id, isPriority: !list.priority })}
+          className="rounded-full border border-line px-3 py-1.5 text-[12.5px] font-semibold text-ink"
+          style={{ background: 'var(--card)' }}
+        >
+          <BookmarkGlyph filled={list.priority} /> {list.priority ? 'Priority list' : 'Make priority'}
+        </button>
         <button
           type="button"
           onClick={() => {
@@ -145,7 +146,7 @@ function OwnedShelves({ books, onOpen }: { books: Book[]; onOpen: (id: string) =
       <p className="mb-3 text-[12px] text-muted">Updates as you mark the copies you own — no add or remove.</p>
       <div className="flex flex-col gap-5">
         {OWNED_SHELVES.map(({ fmt, label, icon }) => {
-          const shelf = books.filter((b) => ownedFormats(b.owned).includes(fmt))
+          const shelf = books.filter((b) => bookOwnedFormats(b).includes(fmt))
           return (
             <div key={fmt}>
               <div className="mb-1 text-[14px] font-semibold text-ink">
@@ -172,8 +173,12 @@ function ShelvesScreen() {
   const { data: lists } = useLists()
   const { data: items } = useAllListItems()
   const createList = useCreateList()
+  const reorderLists = useReorderLists()
+  const addItem = useAddListItem()
   const [tab, setTab] = useState<Tab>('tbr')
   const [openListId, setOpenListId] = useState<string | null>(null)
+  const [pickerFor, setPickerFor] = useState<UiList | null>(null)
+  const [dragListIdx, setDragListIdx] = useState<number | null>(null)
 
   const all = books ?? []
   const byId = new Map(all.map((b) => [b.id, b]))
@@ -186,9 +191,35 @@ function ShelvesScreen() {
       .map((it) => byId.get(it.book_id))
       .filter((b): b is Book => !!b)
 
-  const shown = (lists ?? [])
-    .filter((l) => l.kind === tab)
-    .sort((a, b) => (b.priority ? 1 : 0) - (a.priority ? 1 : 0))
+  // Manual order (useLists sorts by sort_order) — priority no longer jumps the queue here.
+  const shown = (lists ?? []).filter((l) => l.kind === tab)
+
+  // Renumber the FULL list set (both kinds) with this tab's segment reordered in place — kinds
+  // interleave on Home by the same sort_order, so a tab-local renumber must not collide.
+  const applyTabOrder = (tabIds: string[]) => {
+    const queue = [...tabIds]
+    const full = (lists ?? []).map((l) => (l.kind === tab ? queue.shift()! : l.id))
+    reorderLists.mutate(full)
+  }
+
+  const moveList = (i: number, dir: -1 | 1) => {
+    const j = i + dir
+    if (j < 0 || j >= shown.length) return
+    const ids = shown.map((l) => l.id)
+    const a = ids[i]!
+    ids[i] = ids[j]!
+    ids[j] = a
+    applyTabOrder(ids)
+  }
+
+  const dropListOn = (target: number) => {
+    if (dragListIdx == null || dragListIdx === target) return
+    const ids = shown.map((l) => l.id)
+    const [moved] = ids.splice(dragListIdx, 1)
+    ids.splice(target, 0, moved!)
+    setDragListIdx(null)
+    applyTabOrder(ids)
+  }
 
   const openList = openListId ? (lists ?? []).find((l) => l.id === openListId) : null
 
@@ -233,39 +264,64 @@ function ShelvesScreen() {
 
       {shown.length ? (
         <div className="flex flex-col gap-8">
-          {shown.map((l) => {
+          {shown.map((l, i) => {
             const shelfBooks = booksFor(l.id)
             return (
-              <div key={l.id}>
+              <div
+                key={l.id}
+                draggable
+                onDragStart={() => setDragListIdx(i)}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={() => dropListOn(i)}
+                onDragEnd={() => setDragListIdx(null)}
+                style={dragListIdx === i ? { opacity: 0.4 } : undefined}
+              >
                 <div className="mb-1 flex items-center justify-between gap-3">
-                  <div>
-                    <h2 className="text-[18px] italic text-ink" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
-                      {l.priority && (
-                        <span style={{ color: 'var(--accent-ink)' }}>
-                          <BookmarkGlyph size={12} />{' '}
-                        </span>
-                      )}
-                      {l.name}
-                    </h2>
+                  <div className="min-w-0">
+                    {/* the shelf's name IS the door to its full page */}
+                    <button type="button" onClick={() => void navigate({ to: '/shelf/$listId', params: { listId: l.id } })} className="block text-left">
+                      <h2 className="text-[18px] italic text-ink underline-offset-4 hover:underline" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+                        {l.priority && (
+                          <span style={{ color: 'var(--accent-ink)' }}>
+                            <BookmarkGlyph size={12} />{' '}
+                          </span>
+                        )}
+                        {l.name} <span aria-hidden className="text-[13px] text-muted">›</span>
+                      </h2>
+                    </button>
                     <p className="text-[12px] text-muted">
                       {shelfBooks.length} book{shelfBooks.length !== 1 ? 's' : ''}
                       {shelfBooks.length > 1 ? ' · scroll the shelf to flip a cover' : ''}
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setOpenListId(l.id)}
-                    className="rounded-full border border-line px-3.5 py-1.5 text-[12.5px] font-semibold text-ink"
-                    style={{ background: 'var(--card)' }}
-                  >
-                    Edit
-                  </button>
+                  <div className="flex flex-none items-center gap-1.5">
+                    <span className="flex flex-col">
+                      <button type="button" onClick={() => moveList(i, -1)} aria-label={`Move ${l.name} up`} className="px-1 py-0.5 text-[12px] leading-none text-muted">
+                        ▲
+                      </button>
+                      <button type="button" onClick={() => moveList(i, 1)} aria-label={`Move ${l.name} down`} className="px-1 py-0.5 text-[12px] leading-none text-muted">
+                        ▼
+                      </button>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setOpenListId(l.id)}
+                      className="rounded-full border border-line px-3.5 py-1.5 text-[12.5px] font-semibold text-ink"
+                      style={{ background: 'var(--card)' }}
+                    >
+                      Edit
+                    </button>
+                  </div>
                 </div>
                 {shelfBooks.length ? (
-                  <SpineShelf books={shelfBooks} onOpen={openBook} />
+                  <SpineShelf books={shelfBooks} onOpen={openBook} onAdd={() => setPickerFor(l)} addLabel={`Add a book to ${l.name}`} />
                 ) : (
                   <p className="skin-panel border border-line p-4 text-[13px] text-muted">
-                    No books yet — open any book and use <b>Lists &amp; shelves</b> to add it here.
+                    No books yet —{' '}
+                    <button type="button" onClick={() => setPickerFor(l)} className="font-semibold text-primary underline-offset-2 hover:underline">
+                      add the first
+                    </button>
+                    .
                   </p>
                 )}
               </div>
@@ -287,6 +343,19 @@ function ShelvesScreen() {
             setOpenListId(null)
             openBook(id)
           }}
+        />
+      )}
+
+      {pickerFor && (
+        <LibraryPicker
+          title={`Add to ${pickerFor.name}`}
+          books={all}
+          excludeIds={new Set(booksFor(pickerFor.id).map((b) => b.id))}
+          onPick={(b) => {
+            const positions = (items ?? []).filter((it) => it.list_id === pickerFor.id).map((it) => it.position ?? 0)
+            addItem.mutate({ listId: pickerFor.id, bookId: b.id, afterPosition: Math.max(0, ...positions) })
+          }}
+          onClose={() => setPickerFor(null)}
         />
       )}
     </section>

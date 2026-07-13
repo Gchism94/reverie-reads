@@ -20,12 +20,18 @@ export interface ReadEntry {
 }
 
 /** Which formats the reader OWNS (independent of the format read). `false` physical = not
- * owned physically; a string narrows the physical copy. Any truthy flag = owned. */
+ * owned physically; a string narrows the physical copy. Meaningful only when the book's
+ * `ownership` is 'owned' — an unowned (wishlist) book carries all-false flags. */
 export interface Owned {
   physical: false | 'paperback' | 'hardcover' | true
   ebook: boolean
   audiobook: boolean
 }
+
+/** Does the reader possess this book at all? A record existing no longer implies ownership —
+ * 'unowned' is the wishlist/TBR state (most of a TBR is books you don't own yet). Two states
+ * only, by decision; richer states (borrowed, loaned, preordered) are a later widening. */
+export type BookOwnership = 'owned' | 'unowned'
 
 /** A contributor's role on a book. Ordered, multi-contributor (docs/DATA_MODEL.md). `narrator` is
  * really audiobook-edition-scoped — kept as a role for now (edition-scoping is a later refinement). */
@@ -86,8 +92,9 @@ export interface Book {
   coverColor?: string
   isbn: string
   fave: boolean
-  owned: Owned // per-format ownership; all-false = wishlist
-  format: string // the format most often read (reread default); ownership lives in `owned`
+  ownership: BookOwnership // owned vs wishlist — presence in the library no longer implies possession
+  owned: Owned // per-format detail for an owned book (which formats)
+  format: string // the format most often read (reread default)
   rating: number // 0..5 — the READER'S own rating (myRating). No aggregate exists anywhere.
   readStatus: ReadStatus
   source: string
@@ -95,6 +102,10 @@ export interface Book {
   reads: ReadEntry[]
   plan: string | null // planned "need to read" date, YYYY-MM-DD
   progress: number // 0..100 while Reading
+  /** manual Reading Now order (spaced numeric; null = unordered, sorts by recency) */
+  readingPosition?: number | null
+  /** hidden from the home Reading Now display without changing status/progress */
+  readingNowHidden?: boolean
   boyfriend?: string // derived mood/archetype tag
   addedTs: number
 }
