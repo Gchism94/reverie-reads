@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { Link, createRoute, useNavigate } from '@tanstack/react-router'
-import { authorOf, buildBuyLinks, buyDisclosure, deriveBoyfriend, isAuthorRole, ordersForBook, ROLE_LABELS, type Book, type Owned } from '@reverie/core'
+import { authorOf, buildBuyLinks, buyDisclosure, deriveBoyfriend, isAuthorRole, ordersForBook, ownershipTogglePatch, ROLE_LABELS, type Book, type Owned } from '@reverie/core'
 import { useFilters } from '../library/filterStore'
 import { useReadingOrders } from '../data/readingOrders'
 import { buyConfig } from '../lib/buyConfig'
@@ -131,6 +131,9 @@ function BookDetailScreen() {
   const workKey = workKeyFor(book)
   const reviewerName = profile?.displayName || 'Reader'
   const setOwned = (owned: Owned) => updateBook.mutate({ id: book.id, patch: { owned } })
+  // One tap flips owned ⇄ wishlist. Format flags are left alone in both directions — un-owning
+  // suppresses them (bookOwnedFormats gates every read), so coming home restores your copies.
+  const toggleOwnership = () => updateBook.mutate({ id: book.id, patch: ownershipTogglePatch(book) })
   const memberIds = new Set(listIds ?? [])
   const tbrs = (lists ?? []).filter((l) => l.kind === 'tbr')
   const collections = (lists ?? []).filter((l) => l.kind === 'collection')
@@ -242,7 +245,7 @@ function BookDetailScreen() {
 
       {/* your copies (per-format ownership) */}
       <div className="mt-6">
-        <OwnedCopies owned={book.owned} onChange={setOwned} />
+        <OwnedCopies ownership={book.ownership} owned={book.owned} onChange={setOwned} onOwnershipToggle={toggleOwnership} />
       </div>
 
       {/* buy at an indie (discover + support — not live inventory) */}
@@ -255,7 +258,7 @@ function BookDetailScreen() {
           <Chip
             key={s}
             active={book.readStatus === s}
-            onClick={() => updateBook.mutate({ id: book.id, patch: { readStatus: s } })}
+            onClick={() => updateBook.mutate({ id: book.id, patch: { readStatus: s, ...(s === 'Reading' ? { readingNowHidden: false } : {}) } })}
           >
             {s}
           </Chip>

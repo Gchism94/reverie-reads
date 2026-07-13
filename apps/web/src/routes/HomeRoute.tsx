@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import { createRoute, useNavigate } from '@tanstack/react-router'
-import { authorOf, type Book } from '@reverie/core'
+import { authorOf, isOwnedBook, type Book } from '@reverie/core'
 import { rootRoute } from './RootRoute'
 import { CoverImage } from '../components/CoverImage'
 import { useBooks, useUpdateBook } from '../data/books'
 import { useAllReads } from '../data/reads'
-import { useLists } from '../data/lists'
-import { useAllListItems } from '../data/listItems'
+import { useLists, type UiList } from '../data/lists'
+import { useAddListItem, useAllListItems } from '../data/listItems'
+import { LibraryPicker } from '../components/LibraryPicker'
+import { Modal } from '../components/Modal'
 import { useProfile, useUpdateProfile } from '../data/profile'
 import { SpineShelf } from '../components/SpineShelf'
 import { LogReadForm } from '../book/dialogs'
@@ -36,7 +38,11 @@ function HomeScreen() {
   const updateBook = useUpdateBook()
   const updateProfile = useUpdateProfile()
   const voice = useVoice()
+  const addItem = useAddListItem()
   const [finishing, setFinishing] = useState<Book | null>(null)
+  const [readingPickerOpen, setReadingPickerOpen] = useState(false)
+  const [removing, setRemoving] = useState<Book | null>(null)
+  const [railPickerFor, setRailPickerFor] = useState<UiList | null>(null)
 
   const all = books ?? []
   const openBook = (id: string) => void navigate({ to: '/book/$bookId', params: { bookId: id } })
@@ -54,15 +60,20 @@ function HomeScreen() {
   const uniqueThisYear = new Set(yearReads.map((r) => r.book_id)).size
   const goalTarget = profile?.goalYear === YEAR ? (profile?.goalTarget ?? 0) : 0
 
-  const reading = all.filter((b) => b.readStatus === 'Reading')
+  // Reading Now: mid-read books minus the display-only hidden ones, in the reader's manual order.
+  const reading = all
+    .filter((b) => b.readStatus === 'Reading' && !b.readingNowHidden)
+    .sort((a, b) => (a.readingPosition ?? 1e15) - (b.readingPosition ?? 1e15))
   const unread = all.filter((b) => b.readStatus === 'Unread')
-  const priority = (lists ?? []).find((l) => l.kind === 'tbr' && l.priority)
-  const priorityBooks = priority
-    ? (items ?? [])
-        .filter((it) => it.list_id === priority.id)
-        .map((it) => all.find((b) => b.id === it.book_id))
-        .filter((b): b is Book => !!b)
-    : []
+  // ALL priority-flagged shelves + TBRs, in the user's manual order (useLists sorts by sort_order).
+  const priorityLists = (lists ?? []).filter((l) => l.priority)
+  const booksFor = (listId: string): Book[] =>
+    (items ?? [])
+      .filter((it) => it.list_id === listId)
+      .sort((a, b) => (a.position ?? 1e15) - (b.position ?? 1e15))
+      .map((it) => all.find((b) => b.id === it.book_id))
+      .filter((b): b is Book => !!b)
+  const priorityTotal = priorityLists.reduce((n, l) => n + booksFor(l.id).length, 0)
 
   const today = new Date()
   const soon = all
@@ -83,6 +94,22 @@ function HomeScreen() {
 
   const nudge = (b: Book, delta: number) =>
     updateBook.mutate({ id: b.id, patch: { progress: Math.max(0, Math.min(100, b.progress + delta)) } })
+
+  const moveReading = (i: number, dir: -1 | 1) => {
+    const j = i + dir
+    if (j < 0 || j >= reading.length) return
+    const ids = reading.map((b) => b.id)
+    const a = ids[i]!
+    ids[i] = ids[j]!
+    ids[j] = a
+    // renumber-on-write, same spaced scheme as shelves
+    ids.forEach((id, k) => updateBook.mutate({ id, patch: { readingPosition: (k + 1) * 1000 } }))
+  }
+
+  const startReading = (b: Book) => {
+    const maxPos = Math.max(0, ...reading.map((x) => x.readingPosition ?? 0))
+    updateBook.mutate({ id: b.id, patch: { readStatus: 'Reading', readingNowHidden: false, readingPosition: maxPos + 1000 } })
+  }
 
   const firstName = profile?.displayName ? profile.displayName.split(' ')[0] : ''
 
@@ -119,9 +146,9 @@ function HomeScreen() {
             </div>
           )}
           <div className="mt-2.5 flex flex-wrap gap-1.5">
-            <StatusTag tone="muted">{all.length} books</StatusTag>
+            <StatusTag tone="muted">{all.filter(isOwnedBook).length} books</StatusTag>
             <StatusTag glyph="♥">{all.filter((b) => b.fave).length} faves</StatusTag>
-            {priority && <StatusTag glyph={<BookmarkGlyph />}>{priorityBooks.length} priority</StatusTag>}
+            {priorityLists.length > 0 && <StatusTag glyph={<BookmarkGlyph />}>{priorityTotal} priority</StatusTag>}
           </div>
         </div>
         <div className="flex flex-col gap-2">
@@ -146,12 +173,22 @@ function HomeScreen() {
         </div>
       </Frame>
 
-      {/* reading now */}
+      {/* reading now — editable in place: add a current read, set one aside, reorder */}
       {reading.length > 0 && (
         <div className="mt-8">
-          <SectionHeader label="Reading now" readout={reading.length} />
+          <div className="flex items-end justify-between gap-3">
+            <SectionHeader className="flex-1" label="Reading now" readout={reading.length} />
+            <button
+              type="button"
+              onClick={() => setReadingPickerOpen(true)}
+              className="mb-0.5 flex-none rounded-full border border-line px-3 py-1.5 text-[12.5px] font-semibold text-ink"
+              style={{ background: 'var(--card)' }}
+            >
+              ＋ Add
+            </button>
+          </div>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            {reading.map((b) => (
+            {reading.map((b, i) => (
               <div key={b.id} className="flex gap-3 rounded-2xl border border-line p-3" style={{ background: 'var(--card)' }}>
                 <button
                   type="button"
@@ -163,8 +200,27 @@ function HomeScreen() {
                   <CoverImage book={b} />
                 </button>
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-[14px] font-semibold text-ink">{b.title}</div>
-                  <div className="truncate text-[12px] text-muted">{authorOf(b)}</div>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="truncate text-[14px] font-semibold text-ink">{b.title}</div>
+                      <div className="truncate text-[12px] text-muted">{authorOf(b)}</div>
+                    </div>
+                    <span className="flex flex-none items-center gap-0.5">
+                      {reading.length > 1 && (
+                        <>
+                          <button type="button" onClick={() => moveReading(i, -1)} aria-label={`Move ${b.title} earlier`} className="px-1 text-[12px] leading-none text-muted">
+                            ▲
+                          </button>
+                          <button type="button" onClick={() => moveReading(i, 1)} aria-label={`Move ${b.title} later`} className="px-1 text-[12px] leading-none text-muted">
+                            ▼
+                          </button>
+                        </>
+                      )}
+                      <button type="button" onClick={() => setRemoving(b)} aria-label={`Remove ${b.title} from Reading now`} className="px-1 text-[13px] leading-none text-muted hover:text-primary">
+                        ✕
+                      </button>
+                    </span>
+                  </div>
                   <ProgressMeter value={b.progress} max={100} className="mt-2" />
                   <div className="mt-1.5 flex items-center gap-2">
                     <span className="text-[12px] font-semibold text-muted">{b.progress}%</span>
@@ -192,19 +248,24 @@ function HomeScreen() {
         </div>
       )}
 
-      {/* priority shelf */}
-      {priority && priorityBooks.length > 0 && (
-        <div className="mt-8">
-          <h2 className="text-[18px] italic text-ink" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
-            <span style={{ color: 'var(--accent-ink)' }}>
-              <BookmarkGlyph size={13} />
-            </span>{' '}
-            {priority.name}
-          </h2>
-          <p className="mb-1 text-[12.5px] text-muted">Scroll the shelf — covers flip as you go</p>
-          <SpineShelf books={priorityBooks} onOpen={openBook} />
-        </div>
-      )}
+      {/* priority shelves — every flagged shelf/TBR, in the reader's manual order */}
+      {priorityLists.map((l) => {
+        const shelfBooks = booksFor(l.id)
+        return (
+          <div key={l.id} className="mt-8">
+            <button type="button" onClick={() => void navigate({ to: '/shelf/$listId', params: { listId: l.id } })} className="block text-left">
+              <h2 className="text-[18px] italic text-ink underline-offset-4 hover:underline" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+                <span style={{ color: 'var(--accent-ink)' }}>
+                  <BookmarkGlyph size={13} />
+                </span>{' '}
+                {l.name} <span aria-hidden className="text-[13px] text-muted">›</span>
+              </h2>
+            </button>
+            {shelfBooks.length > 0 && <p className="mb-1 text-[12.5px] text-muted">Scroll the shelf — covers flip as you go</p>}
+            <SpineShelf books={shelfBooks} onOpen={openBook} onAdd={() => setRailPickerFor(l)} addLabel={`Add a book to ${l.name}`} />
+          </div>
+        )
+      })}
 
       {/* coming soon */}
       {soon.length > 0 && (
@@ -236,13 +297,72 @@ function HomeScreen() {
         </div>
       )}
 
-      {reading.length === 0 && priorityBooks.length === 0 && (
+      {reading.length === 0 && priorityTotal === 0 && (
         <p className="mt-10 rounded-2xl border border-line p-6 text-center text-[14px] text-muted">
           Mark a book “Reading” or star a Priority TBR and your home will come alive.
         </p>
       )}
 
       {finishing && <LogReadForm book={finishing} onClose={() => setFinishing(null)} />}
+
+      {readingPickerOpen && (
+        <LibraryPicker
+          title="Add to Reading now"
+          books={all}
+          excludeIds={new Set(all.filter((b) => b.readStatus === 'Reading' && !b.readingNowHidden).map((b) => b.id))}
+          onPick={startReading}
+          onClose={() => setReadingPickerOpen(false)}
+        />
+      )}
+
+      {railPickerFor && (
+        <LibraryPicker
+          title={`Add to ${railPickerFor.name}`}
+          books={all}
+          excludeIds={new Set(booksFor(railPickerFor.id).map((b) => b.id))}
+          onPick={(b) => {
+            const positions = (items ?? []).filter((it) => it.list_id === railPickerFor.id).map((it) => it.position ?? 0)
+            addItem.mutate({ listId: railPickerFor.id, bookId: b.id, afterPosition: Math.max(0, ...positions) })
+          }}
+          onClose={() => setRailPickerFor(null)}
+        />
+      )}
+
+      {/* Removing from Reading Now ≠ un-marking as reading. Two explicit outcomes, progress kept
+          either way: set it aside (status → Unread, resume anytime) or hide it here only. */}
+      {removing && (
+        <Modal title={`Remove “${removing.title}”?`} onClose={() => setRemoving(null)}>
+          <p className="text-[13.5px] text-muted">
+            Your {removing.progress}% progress is kept either way — this only changes where it shows.
+          </p>
+          <div className="mt-4 flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                updateBook.mutate({ id: removing.id, patch: { readStatus: 'Unread' } })
+                setRemoving(null)
+              }}
+              className="skin-control skin-btn-primary px-4 py-2.5 text-[13.5px]"
+            >
+              Set it aside — back to Unread, resume anytime
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                updateBook.mutate({ id: removing.id, patch: { readingNowHidden: true } })
+                setRemoving(null)
+              }}
+              className="skin-control border border-line px-4 py-2.5 text-[13.5px] text-ink"
+              style={{ background: 'var(--field)' }}
+            >
+              Keep reading — just hide it from Home
+            </button>
+            <button type="button" onClick={() => setRemoving(null)} className="px-4 py-1.5 text-[13px] text-muted">
+              Cancel
+            </button>
+          </div>
+        </Modal>
+      )}
     </section>
   )
 }

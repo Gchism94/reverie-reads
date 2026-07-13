@@ -5,7 +5,7 @@
 // dedupe + connected-series steps use). The caller routes Incomings through match.ts / the merge
 // path, so re-import is idempotent.
 
-import type { PubDate, ReadStatus } from './types'
+import type { Book, PubDate, ReadStatus } from './types'
 import { parseCSV } from './csv'
 import { cleanIsbn, type Incoming } from './match'
 import { emptyOwned } from './ownership'
@@ -31,6 +31,7 @@ export interface ColumnProfile {
   isbn?: string[] // ISBN-10/13 identifier column
   rating?: string[] // the reader's own 0–5 rating
   readStatus?: string[] // generic read-status column
+  owned?: string[] // ownership column (yes/no; blank = owned) — Reverie template's "Owned"
   gcRead?: string[] // Chism: "X" = read, "IP" = reading
   duplicate?: string[] // Chism: "X" flags a known duplicate
 }
@@ -46,6 +47,7 @@ export const REVERIE_TEMPLATE_COLUMNS = [
   'Rating',
   'Date Read',
   'Tags',
+  'Owned',
 ] as const
 
 export const REVERIE_PROFILE: ColumnProfile = {
@@ -58,6 +60,7 @@ export const REVERIE_PROFILE: ColumnProfile = {
   readDate: ['date read', 'last date read'],
   tags: ['tags', 'tag'],
   genre: ['genre', 'genres'],
+  owned: ['owned', 'own', 'ownership'],
 }
 
 export const LIBRARY_PROFILE: ColumnProfile = {
@@ -100,6 +103,7 @@ export const GENERIC_PROFILE: ColumnProfile = {
   tags: ['tags', 'tag'],
   releaseDate: ['release date', 'date published', 'original publication year', 'year published'],
   readStatus: ['read status', 'exclusive shelf', 'status'],
+  owned: ['owned', 'own', 'ownership'],
 }
 
 const BUILTIN = [REVERIE_PROFILE, LIBRARY_PROFILE, CHISM_PROFILE, GENERIC_PROFILE]
@@ -250,6 +254,15 @@ export function rowToImported(row: string[], idx: Record<string, number>): Impor
   // A recorded read date with no explicit status still means the book was read.
   if (readStatus === 'Unread' && reads.length) readStatus = 'Read'
 
+  // Ownership: an explicit Owned column wins (yes/blank = owned, no = unowned — the template's
+  // rule); otherwise a Goodreads-style wishlist shelf (`to-read`/`tbr`) marks the row unowned.
+  // Plain "Unread" is NOT a wishlist signal — unread books you own are normal.
+  let ownership: Book['ownership'] = 'owned'
+  const ownedCell = cell('owned').trim().toLowerCase()
+  if (ownedCell) ownership = /^(n|no|false|0|unowned|wish)/.test(ownedCell) ? 'unowned' : 'owned'
+  else if ((idx.readStatus ?? -1) >= 0 && /to-read|to read|wishlist|tbr/.test(cell('readStatus').toLowerCase()))
+    ownership = 'unowned'
+
   const incoming: Incoming = {
     title,
     first,
@@ -265,6 +278,7 @@ export function rowToImported(row: string[], idx: Record<string, number>): Impor
     readStatus,
     pub: parseReleaseDate(cell('releaseDate')),
     source: 'Imported',
+    ownership,
     owned: emptyOwned(),
     ...(isbn ? { isbn } : {}),
     ...(rating ? { rating } : {}),

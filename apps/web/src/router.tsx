@@ -3,6 +3,7 @@ import { rootRoute } from './routes/RootRoute'
 import { homeRoute } from './routes/HomeRoute'
 import { libraryRoute } from './routes/LibraryRoute'
 import { shelvesRoute } from './routes/ShelvesRoute'
+import { shelfRoute } from './routes/ShelfRoute'
 import { plannerRoute } from './routes/PlannerRoute'
 import { statsRoute } from './routes/StatsRoute'
 import { matchRoute } from './routes/MatchRoute'
@@ -27,6 +28,7 @@ const routeTree = rootRoute.addChildren([
   homeRoute,
   libraryRoute,
   shelvesRoute,
+  shelfRoute,
   plannerRoute,
   statsRoute,
   matchRoute,

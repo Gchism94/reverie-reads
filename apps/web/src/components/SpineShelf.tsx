@@ -7,7 +7,18 @@ import { Spine } from './Spine'
  * Aphelion), sized book-to-book. The spine nearest the shelf's centre widens, and flips open to its
  * cover when it has one — the design's signature spine-shelf interaction.
  */
-export function SpineShelf({ books, onOpen }: { books: Book[]; onOpen: (id: string) => void }) {
+export function SpineShelf({
+  books,
+  onOpen,
+  onAdd,
+  addLabel = 'Add a book',
+}: {
+  books: Book[]
+  onOpen: (id: string) => void
+  /** renders a "+" end-cap slot on the shelf — the add-book affordance in shelf form */
+  onAdd?: () => void
+  addLabel?: string
+}) {
   const ref = useRef<HTMLDivElement>(null)
   const [activeId, setActiveId] = useState<string | null>(books[0]?.id ?? null)
   // Pointer/keyboard reveal, layered over the scroll-driven pick: shelves too short to scroll
@@ -57,6 +68,9 @@ export function SpineShelf({ books, onOpen }: { books: Book[]; onOpen: (id: stri
     >
       {books.map((b) => {
         const shown = b.id === shownId
+        // Wishlist (unowned) spines sit ghosted on the shelf — a TBR shelf is mostly books you
+        // don't own yet. Artwork-only dim (--ghost-opacity); the title stays in the aria-label.
+        const unowned = b.ownership === 'unowned'
         return (
           <button
             key={b.id}
@@ -79,7 +93,10 @@ export function SpineShelf({ books, onOpen }: { books: Book[]; onOpen: (id: stri
                 the chunk-4 composed screens' shared shelf gesture (all nine skins agree) */}
             <span
               className="relative block transition-transform duration-300 motion-reduce:transition-none"
-              style={shown ? { transform: 'translateY(-8px)', filter: 'drop-shadow(0 12px 14px rgba(0, 0, 0, 0.38))', zIndex: 2 } : undefined}
+              style={{
+                ...(shown ? { transform: 'translateY(-8px)', filter: 'drop-shadow(0 12px 14px rgba(0, 0, 0, 0.38))', zIndex: 2 } : undefined),
+                ...(unowned ? { opacity: 'var(--ghost-opacity)' } : undefined),
+              }}
             >
               {shown && b.cover ? (
                 <div
@@ -100,6 +117,22 @@ export function SpineShelf({ books, onOpen }: { books: Book[]; onOpen: (id: stri
           </button>
         )
       })}
+      {onAdd && (
+        <button
+          type="button"
+          onClick={onAdd}
+          aria-label={addLabel}
+          title={addLabel}
+          className="flex-none self-end"
+        >
+          <span
+            className="flex h-36 w-9 items-center justify-center rounded-md border border-dashed border-line text-[18px]"
+            style={{ background: 'var(--chip)', color: 'var(--muted)' }}
+          >
+            ＋
+          </span>
+        </button>
+      )}
     </div>
   )
 }

@@ -11,7 +11,7 @@ export function BackLink({
   className,
   children,
 }: {
-  fallback: '/library' | '/clubs' | '/'
+  fallback: '/library' | '/clubs' | '/shelves' | '/'
   className?: string
   children: ReactNode
 }) {

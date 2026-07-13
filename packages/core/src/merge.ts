@@ -93,6 +93,8 @@ export function mergeBooks(
     ebook: all.some((b) => b.owned.ebook),
     audiobook: all.some((b) => b.owned.audiobook),
   }
+  // One owned copy makes the merged record owned — a wishlist duplicate never erases a real copy.
+  p.ownership = all.some((b) => b.ownership !== 'unowned') ? 'owned' : 'unowned'
 
   // First non-empty value wins for these descriptive fields.
   if (!p.series) p.series = all.map((b) => b.series).find(Boolean) ?? p.series
