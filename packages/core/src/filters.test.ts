@@ -125,3 +125,20 @@ describe('ownership scoping (wishlist chip)', () => {
     expect(activeFilterCount({ ...defaultFilters(), wishlist: true })).toBe(1)
   })
 })
+
+describe('subgenre filter over subgenres[]', () => {
+  const multi = makeBook({ id: 'm', title: 'Many Shelves', subgenre: 'Epic Fantasy', subgenres: ['Epic Fantasy', 'Romantasy', 'Dark Fantasy'] })
+  const legacy = makeBook({ id: 'l', title: 'Old Single', subgenre: 'Noir', subgenres: [] })
+
+  it('a book appears under EVERY subgenre it holds', () => {
+    for (const sub of ['Epic Fantasy', 'Romantasy', 'Dark Fantasy']) {
+      expect(matchesFilters(multi, { ...defaultFilters(), sub })).toBe(true)
+    }
+    expect(matchesFilters(multi, { ...defaultFilters(), sub: 'Noir' })).toBe(false)
+  })
+
+  it('pre-migration singles still match through the legacy field', () => {
+    expect(matchesFilters(legacy, { ...defaultFilters(), sub: 'Noir' })).toBe(true)
+    expect(matchesFilters(legacy, { ...defaultFilters(), sub: 'Gothic' })).toBe(false)
+  })
+})

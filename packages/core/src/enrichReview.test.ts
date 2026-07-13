@@ -116,7 +116,7 @@ const book = (over: Partial<Book>): Book => ({
   series: '',
   position: '',
   seriesCount: null,
-  status: 'Standalone',
+  status: 'standalone',
   genre: 'romance',
   subgenre: '',
   genres: [],
@@ -142,7 +142,7 @@ const book = (over: Partial<Book>): Book => ({
 describe('buildReviewModelFromImport — joins import outcomes with post-enrichment books', () => {
   it('pulls cover/confidence/series/genre from the book and import-only signals from the outcome', () => {
     const books: Book[] = [
-      book({ id: '1', title: 'High', cover: 'a.jpg', coverConfidence: 'high', series: 'S', status: 'Series' }),
+      book({ id: '1', title: 'High', cover: 'a.jpg', coverConfidence: 'high', series: 'S', status: 'ongoing' }),
       book({ id: '2', title: 'Low', cover: 'b.jpg', coverConfidence: 'low' }),
       book({ id: '3', title: 'NoCover', cover: '' }),
       book({ id: '4', title: 'Trusted', cover: 'seed.jpg' }), // no coverConfidence → trusted

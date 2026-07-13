@@ -1,16 +1,15 @@
 import {
   isContributorRole,
+  normalizeSeriesStatus,
   toFirstLast,
   type Book,
   type Contributor,
   type List,
   type ReadEntry,
-  type SeriesStatus,
   type ReadStatus,
 } from '@reverie/core'
 import type { BookRow, ListRow, ReadRow } from './types'
 
-const SERIES_STATUS: readonly SeriesStatus[] = ['Standalone', 'Series', 'Complete']
 const READ_STATUS: readonly ReadStatus[] = ['Unread', 'Reading', 'Read', 'DNF']
 const COVER_CONFIDENCE = ['high', 'medium', 'low', 'none'] as const
 
@@ -41,11 +40,12 @@ export function toBook(row: BookRow): Book {
     series: row.series ?? '',
     position: row.position ?? '',
     seriesCount: row.series_count,
-    status: SERIES_STATUS.includes(row.status as SeriesStatus)
-      ? (row.status as SeriesStatus)
-      : 'Standalone',
-    genre: row.genre ?? 'romance',
+    // Legacy spellings ('Standalone'/'Series'/'Complete') normalize until the migration lands.
+    status: normalizeSeriesStatus(row.status, !!row.series),
+    // '' = no primary chosen — the edit form prompts; nothing defaults to romance anymore.
+    genre: row.genre ?? '',
     subgenre: row.subgenre ?? '',
+    subgenres: row.subgenres?.length ? row.subgenres : row.subgenre ? [row.subgenre] : [],
     genres: row.genres ?? [],
     tags: row.tags ?? [],
     intensity: row.intensity ?? null,
@@ -98,8 +98,15 @@ export function toBookRow(patch: Partial<Book>): Partial<BookRow> {
   if (patch.position !== undefined) row.position = patch.position === '' ? null : patch.position
   if (patch.seriesCount !== undefined) row.series_count = patch.seriesCount
   if (patch.status !== undefined) row.status = patch.status
-  if (patch.genre !== undefined) row.genre = patch.genre || 'romance'
-  if (patch.subgenre !== undefined) row.subgenre = patch.subgenre || null
+  if (patch.genre !== undefined) row.genre = patch.genre // '' = no primary chosen (column is NOT NULL)
+  // subgenres[] and the denormalized-first `subgenre` stay in sync whichever one a writer sends.
+  if (patch.subgenres !== undefined) {
+    row.subgenres = patch.subgenres
+    row.subgenre = patch.subgenres[0] ?? null
+  } else if (patch.subgenre !== undefined) {
+    row.subgenre = patch.subgenre || null
+    row.subgenres = patch.subgenre ? [patch.subgenre] : []
+  }
   if (patch.genres !== undefined) row.genres = patch.genres
   if (patch.tags !== undefined) row.tags = patch.tags
   if (patch.intensity !== undefined) row.intensity = patch.intensity

@@ -110,7 +110,7 @@ function SeriesModal({
     for (const b of books) {
       updateBook.mutate({
         id: b.id,
-        patch: { seriesCount: v, status: v && b.status === 'Standalone' ? 'Series' : b.status },
+        patch: { seriesCount: v, status: v && b.status === 'standalone' ? 'ongoing' : b.status },
       })
     }
   }

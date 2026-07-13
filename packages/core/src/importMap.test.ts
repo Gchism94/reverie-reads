@@ -65,11 +65,11 @@ describe('parseImport — Chism shape', () => {
   })
   it('maps series + read status (X→Read, IP→Reading, blank→Unread)', () => {
     expect(rows[0]!.incoming.series).toBe('Twisted')
-    expect(rows[0]!.incoming.status).toBe('Series')
+    expect(rows[0]!.incoming.status).toBe('ongoing')
     expect(rows[0]!.incoming.readStatus).toBe('Read') // GC Read X
     expect(rows[1]!.incoming.readStatus).toBe('Reading') // IP
     expect(rows[2]!.incoming.readStatus).toBe('Unread') // blank
-    expect(rows[2]!.incoming.status).toBe('Standalone') // no series
+    expect(rows[2]!.incoming.status).toBe('standalone') // no series
   })
   it('captures the Duplicate flag and drops ignored columns', () => {
     expect(rows[0]!.duplicate).toBe(true) // Twisted Love Duplicate=X

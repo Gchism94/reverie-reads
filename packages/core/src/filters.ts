@@ -1,4 +1,5 @@
 import type { Book, ReadStatus, SeriesStatus } from './types'
+import { bookSubgenres } from './genreNormalize'
 import { authorOf } from './normalize'
 import { normalizeName } from './contributors'
 
@@ -65,7 +66,7 @@ export function seriesLenBucket(b: Book): SeriesLenBucket {
 export function matchesFilters(b: Book, f: LibraryFilters): boolean {
   // Collection scoping first: the grid is what you OWN unless the wishlist chip lets the rest in.
   if (!f.wishlist && b.ownership === 'unowned') return false
-  if (f.sub !== 'All' && b.subgenre !== f.sub) return false
+  if (f.sub !== 'All' && !bookSubgenres(b).includes(f.sub)) return false
   if (f.tags.length && !f.tags.every((t) => b.tags.includes(t))) return false
   if (f.status !== 'All' && b.status !== f.status) return false
   if (f.len !== 'Any' && seriesLenBucket(b) !== f.len) return false
