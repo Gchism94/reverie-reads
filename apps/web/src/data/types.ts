@@ -18,6 +18,11 @@ export interface BookRow {
   intensity: number | null
   cover_url: string | null
   cover_confidence: string | null
+  cover_thumb_url: string | null
+  cover_source: string | null
+  cover_source_url: string | null
+  cover_user_chosen: boolean
+  cover_color: string | null
   isbn: string | null
   fave: boolean
   ownership: string

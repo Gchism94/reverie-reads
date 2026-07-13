@@ -1,6 +1,10 @@
 import { useEffect, useRef, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 
-/** A simple accessible modal: labelled dialog, Escape + backdrop to close, focus moved in. */
+/** A simple accessible modal: labelled dialog, Escape + backdrop to close, focus moved in.
+ *  Portaled to <body>: routes render inside <main class="relative z-[1]">, whose stacking context
+ *  would otherwise trap the dialog's z-50 BELOW the z-40 mobile tab bar — on phones the bar then
+ *  swallows taps on any control in the sheet's bottom rows. At the root, 50 beats 40 for real. */
 export function Modal({
   title,
   onClose,
@@ -23,7 +27,7 @@ export function Modal({
     return () => document.removeEventListener('keydown', onKey)
   }, [onClose])
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4"
       style={{ background: 'rgba(0,0,0,0.5)' }}
@@ -60,6 +64,7 @@ export function Modal({
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

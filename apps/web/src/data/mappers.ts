@@ -53,6 +53,11 @@ export function toBook(row: BookRow): Book {
     coverConfidence: COVER_CONFIDENCE.includes(row.cover_confidence as (typeof COVER_CONFIDENCE)[number])
       ? (row.cover_confidence as Book['coverConfidence'])
       : undefined,
+    coverThumb: row.cover_thumb_url ?? undefined,
+    coverSource: row.cover_source ?? undefined,
+    coverSourceUrl: row.cover_source_url ?? undefined,
+    coverUserChosen: row.cover_user_chosen || undefined,
+    coverColor: row.cover_color ?? undefined,
     isbn: row.isbn ?? '',
     fave: row.fave,
     ownership: row.ownership === 'unowned' ? 'unowned' : 'owned',
@@ -99,7 +104,14 @@ export function toBookRow(patch: Partial<Book>): Partial<BookRow> {
   if (patch.tags !== undefined) row.tags = patch.tags
   if (patch.intensity !== undefined) row.intensity = patch.intensity
   if (patch.cover !== undefined) row.cover_url = patch.cover || null
-  if (patch.coverConfidence !== undefined) row.cover_confidence = patch.coverConfidence || null
+  // coverConfidence: an EXPLICIT undefined (key present) clears the column — null = trusted
+  // user-chosen cover, the cover-sheet paths' post-ingest state.
+  if ('coverConfidence' in patch) row.cover_confidence = patch.coverConfidence || null
+  if ('coverThumb' in patch) row.cover_thumb_url = patch.coverThumb || null
+  if ('coverSource' in patch) row.cover_source = patch.coverSource || null
+  if ('coverSourceUrl' in patch) row.cover_source_url = patch.coverSourceUrl || null
+  if (patch.coverUserChosen !== undefined) row.cover_user_chosen = patch.coverUserChosen
+  if ('coverColor' in patch) row.cover_color = patch.coverColor || null
   if (patch.isbn !== undefined) row.isbn = patch.isbn || null
   if (patch.fave !== undefined) row.fave = patch.fave
   if (patch.ownership !== undefined) row.ownership = patch.ownership
