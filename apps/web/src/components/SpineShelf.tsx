@@ -68,10 +68,10 @@ export function SpineShelf({ books, onOpen }: { books: Book[]; onOpen: (id: stri
               {active && b.cover ? (
                 <div
                   className="h-44 w-[120px] overflow-hidden rounded-md border border-line"
-                  style={{ background: `center/cover no-repeat url(${b.cover})` }}
+                  style={{ background: `center/cover no-repeat url(${b.coverThumb || b.cover})` }}
                 />
               ) : (
-                <Spine book={b} active={active} />
+                <Spine book={b} active={active} tint={b.coverColor} />
               )}
               {active && (
                 <span

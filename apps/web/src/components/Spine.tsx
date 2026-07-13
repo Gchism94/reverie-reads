@@ -1,6 +1,7 @@
 import { type CSSProperties } from 'react'
 import { callsign, fitSpineTitle, spineDims, type SkinId, type SpineStyle } from '@reverie/core'
 import { useEffectiveSkin } from '../skin/labels'
+import { useSpineTintStyle } from '../skin/spineTint'
 import { useStructure } from '../skin/structure'
 
 // The Spine slot — a spine composed for its own narrow, edge-on read (NOT a rotated cover). The
@@ -251,11 +252,16 @@ const RADIUS: Record<SpineStyle['binding'], string> = {
 }
 
 /** One book spine. `active` (the centre-of-shelf spine) widens it for legibility; sizes otherwise come
- *  from spineDims. Pass `skin` to force a skin (the shelf preview). */
-export function Spine({ book, active = false, skin }: { book: SpineBook; active?: boolean; skin?: SkinId }) {
+ *  from spineDims. Pass `skin` to force a skin (the shelf preview). `tint` is the book's stored
+ *  dominant cover colour — mixed into the gradient endpoints when it clears the AA clamp, so shelves
+ *  take on the palette of the reader's actual editions (skin default otherwise). */
+export function Spine({ book, active = false, skin, tint }: { book: SpineBook; active?: boolean; skin?: SkinId; tint?: string }) {
   const effective = useEffectiveSkin()
   const skinId = skin ?? effective
   const s = useStructure(skin).spine
+  // Gradient bindings consume the tint via their --spine-hi/--spine-lo endpoints; 'plain' has no
+  // gradient recipe and 'sky' (Firstlight's night-to-dawn) is the skin's signature — both skip it.
+  const tintStyle = useSpineTintStyle(s.binding === 'plain' || s.binding === 'sky' ? undefined : tint)
   const { thickness, trim } = spineDims(book.id)
   const width = active ? 120 : Math.round(WIDTH[0] + thickness * (WIDTH[1] - WIDTH[0]))
   const height = Math.round(HEIGHT[0] + trim * (HEIGHT[1] - HEIGHT[0]))
@@ -340,7 +346,7 @@ export function Spine({ book, active = false, skin }: { book: SpineBook; active?
   return (
     <div
       className="relative flex flex-col items-center overflow-hidden border border-line transition-[width] duration-300 motion-reduce:transition-none"
-      style={{ width, height, borderRadius: RADIUS[s.binding], ...bindingStyle(s.binding) }}
+      style={{ width, height, borderRadius: RADIUS[s.binding], ...tintStyle, ...bindingStyle(s.binding) }}
     >
       {/* blind-ruled gilt inset frame (the bound volume) / corner brackets (the archive container) */}
       {s.binding === 'leather' && (

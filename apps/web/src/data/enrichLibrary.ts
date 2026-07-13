@@ -1,4 +1,4 @@
-import { contributorsFromAuthors, mergeImport, type Book, type Incoming } from '@reverie/core'
+import { contributorsFromAuthors, enrichmentCoverFill, mergeImport, type Book, type Incoming } from '@reverie/core'
 import { supabase } from '../lib/supabase'
 import { toBookRow } from './mappers'
 import { enrichBookOutcome, type EnrichResult } from '../lib/enrich'
@@ -48,7 +48,9 @@ function toIncoming(e: EnrichResult, b: Book): Incoming {
     series: e.series,
     position: e.seriesPosition ?? '',
     isbn: e.isbn13 || e.isbn || e.isbn10 || '',
-    cover: e.cover,
+    // The non-overwrite rule: a user-chosen cover is never replaced (and never re-offered after the
+    // reader clears it); otherwise fill-only, same as every other field mergeImport touches.
+    cover: enrichmentCoverFill(b, e.cover),
     genre: e.genre || undefined,
     genres: e.genres,
     // Multi-author enrichment → contributor list (first author, rest co-authors); mergeImport

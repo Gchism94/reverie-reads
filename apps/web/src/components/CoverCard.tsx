@@ -11,11 +11,14 @@ export function CoverCard({
   book,
   onOpen,
   onToggleFave,
+  onAddCover,
   selected = false,
 }: {
   book: Book
   onOpen: () => void
   onToggleFave: () => void
+  /** When set, a no-cover placeholder carries a quiet "add a cover" affordance opening the sheet. */
+  onAddCover?: () => void
   /** Master-detail selection (desktop): draws the accent ring + marks aria-current. */
   selected?: boolean
 }) {
@@ -52,8 +55,22 @@ export function CoverCard({
           style={{ background: `linear-gradient(150deg, ${g0}, ${g1})` }}
         >
           {/* cover → skin placeholder fallback + dead-link detection (Cover Studio) */}
-          <CoverImage book={book} />
+          <CoverImage book={book} thumb />
         </button>
+
+        {/* the honest placeholder invites — a quiet affordance, not a restyle (import-quality owns
+            the placeholder's look). Sits above the intensity mark; opens the cover sheet. */}
+        {showsPlaceholder && onAddCover && (
+          <button
+            type="button"
+            onClick={onAddCover}
+            aria-label={`Add a cover for ${book.title}`}
+            className="absolute bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap px-2 py-0.5 text-[10px] font-semibold backdrop-blur"
+            style={{ background: markBg, color: markInk, borderRadius: 'var(--mark-radius)' }}
+          >
+            + add a cover
+          </button>
+        )}
 
         <button
           type="button"
