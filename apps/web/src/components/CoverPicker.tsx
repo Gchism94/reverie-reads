@@ -1,13 +1,12 @@
 import { useState } from 'react'
-import { useUpdateBook } from '../data/books'
 import { useCoverAlternates } from '../data/coverStudio'
-import { clearCoverBroken } from '../data/brokenCovers'
-import { cacheCoverUrl, type CoverAlternate } from '../lib/enrich'
+import { useSetCover } from '../data/coverSheet'
+import type { CoverAlternate } from '../lib/enrich'
 
 /**
- * Cover Studio — pick a found edition. Expands to the E1 alternate covers (fetched on demand) and sets
- * the chosen one as the book's cover at high (user-confirmed) confidence. The first slice of the
- * Studio's actions; upload / phone photo / themed-placeholder-as-cover come with the design pass.
+ * Cover Studio — pick a found edition (the import-review surface). Expands to the E1 alternate
+ * covers (fetched on demand); the pick flows through the SAME durable ingest pipeline as the cover
+ * sheet (covers Edge Function → user-scoped Storage, provenance + user-chosen flag persisted).
  */
 export function CoverPicker({
   book,
@@ -17,20 +16,22 @@ export function CoverPicker({
   onPicked?: () => void
 }) {
   const [open, setOpen] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const update = useUpdateBook()
+  const setCover = useSetCover()
+  const saving = setCover.isPending
   const { data: alternates, isLoading } = useCoverAlternates(book, open)
 
-  const pick = async (alt: CoverAlternate) => {
+  const pick = (alt: CoverAlternate) => {
     if (!alt.cover || saving) return
-    setSaving(true)
-    // Materialize the chosen cover to Storage (owned/CDN) before saving it — falls back to the source URL.
-    const cover = await cacheCoverUrl({ cover: alt.cover, isbn13: alt.isbn13 })
-    update.mutate({ id: book.id, patch: { cover, coverConfidence: 'high' } })
-    clearCoverBroken(book.id)
-    setSaving(false)
-    setOpen(false)
-    onPicked?.()
+    const source = alt.source === 'hardcover' || alt.source === 'openlibrary' ? alt.source : 'google'
+    setCover.mutate(
+      { book, source, url: alt.cover, sourceUrl: alt.cover },
+      {
+        onSettled: () => {
+          setOpen(false)
+          onPicked?.()
+        },
+      },
+    )
   }
 
   if (!open) {
@@ -58,7 +59,7 @@ export function CoverPicker({
             <li key={a.isbn13 || a.cover || i}>
               <button
                 type="button"
-                onClick={() => void pick(a)}
+                onClick={() => pick(a)}
                 disabled={saving}
                 aria-label={`Use the ${a.source} edition cover`}
                 className="block w-12 overflow-hidden rounded border border-line disabled:opacity-50"

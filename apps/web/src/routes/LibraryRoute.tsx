@@ -8,6 +8,7 @@ import { Toolbar } from '../library/Toolbar'
 import { FilterPanel } from '../library/FilterPanel'
 import { SeriesView } from '../library/SeriesView'
 import { CoverCard } from '../components/CoverCard'
+import { CoverSheet } from '../components/CoverSheet'
 import { BookDetailRail } from '../components/BookDetailRail'
 import { useIsDesktop, useIsWide } from '../hooks/useMediaQuery'
 import { useVoice } from '../skin/labels'
@@ -118,6 +119,7 @@ function LibraryScreen() {
   const isDesktop = useIsDesktop() // ≥ lg: select in place (rail), else navigate to the book route
   const isWide = useIsWide() // ≥ xl: rail is a docked column, else an overlay drawer on selection
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [coverSheetId, setCoverSheetId] = useState<string | null>(null) // placeholder "add a cover"
   const voice = useVoice()
 
   const visible = useMemo(
@@ -137,6 +139,7 @@ function LibraryScreen() {
   }
 
   const selected = (selectedId && visible.find((b) => b.id === selectedId)) || null
+  const coverSheetBook = (coverSheetId && books.find((b) => b.id === coverSheetId)) || null
   // Docked rail (xl) is never empty — falls back to the first visible book. The overlay drawer (lg→xl)
   // opens only on an explicit selection. The selection ring follows whichever is showing.
   const dockedBook = selected ?? visible[0] ?? null
@@ -181,6 +184,7 @@ function LibraryScreen() {
               selected={isDesktop && b.id === highlightId}
               onOpen={() => activate(b.id)}
               onToggleFave={() => toggleFave(b.id, b.fave)}
+              onAddCover={() => setCoverSheetId(b.id)}
             />
           ))}
         </div>
@@ -213,6 +217,9 @@ function LibraryScreen() {
       {isDesktop && !isWide && selected && (
         <DetailDrawer book={selected} onClose={() => setSelectedId(null)} onToggleFave={(id) => toggleFave(id, selected.fave)} />
       )}
+
+      {/* the placeholder's quiet "add a cover" affordance opens the same sheet as book detail */}
+      {coverSheetBook && <CoverSheet book={coverSheetBook} onClose={() => setCoverSheetId(null)} />}
     </>
   )
 }
