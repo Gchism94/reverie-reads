@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Link, createRoute, useNavigate } from '@tanstack/react-router'
+import { createRoute, useNavigate } from '@tanstack/react-router'
 import { authorOf, type Book } from '@reverie/core'
 import { rootRoute } from '../routes/RootRoute'
+import { BackLink } from '../components/BackLink'
 import { useBooks } from '../data/books'
 import { useProfile } from '../data/profile'
 import {
@@ -74,17 +75,17 @@ function SharedListScreen() {
     return (
       <div className="px-6 py-16 text-center text-muted">
         <p>No shared list found for that code.</p>
-        <Link to="/clubs" className="mt-3 inline-block text-primary">
+        <BackLink fallback="/clubs" className="mt-3 inline-block text-primary">
           ← Back to Clubs
-        </Link>
+        </BackLink>
       </div>
     )
 
   return (
     <section className="mx-auto max-w-2xl px-4 py-6 sm:px-6">
-      <Link to="/clubs" className="text-[13px] text-muted hover:text-ink">
+      <BackLink fallback="/clubs" className="text-[13px] text-muted hover:text-ink">
         ← Clubs
-      </Link>
+      </BackLink>
 
       <h1 className="mt-3 text-[24px] italic text-ink" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
         {doc.name}
