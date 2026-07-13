@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { Link, createRoute, useNavigate } from '@tanstack/react-router'
-import { authorOf, buildBuyLinks, buyDisclosure, deriveBoyfriend, isAuthorRole, ordersForBook, ownershipTogglePatch, ROLE_LABELS, type Book, type Owned } from '@reverie/core'
+import { authorOf, bookSubgenres, buildBuyLinks, buyDisclosure, deriveBoyfriend, isAuthorRole, ordersForBook, ownershipTogglePatch, seriesStatusBadge, ROLE_LABELS, type Book, type Owned } from '@reverie/core'
 import { useFilters } from '../library/filterStore'
 import { useReadingOrders } from '../data/readingOrders'
 import { buyConfig } from '../lib/buyConfig'
@@ -146,12 +146,7 @@ function BookDetailScreen() {
     })
   }
 
-  const seriesBadge =
-    book.status === 'Complete'
-      ? 'Series complete'
-      : book.status === 'Series'
-        ? `Series${book.seriesCount ? ` of ${book.seriesCount}` : ' · length not set'}`
-        : 'Standalone'
+  const seriesBadge = seriesStatusBadge(book)
 
   return (
     <section className="mx-auto max-w-3xl px-4 py-6 sm:px-6">
@@ -232,7 +227,9 @@ function BookDetailScreen() {
             </div>
           )}
           <div className="mt-3 flex flex-wrap gap-1.5">
-            <Pill>{book.subgenre}</Pill>
+            {bookSubgenres(book).map((s) => (
+              <Pill key={s}>{s}</Pill>
+            ))}
             <Pill>{seriesBadge}</Pill>
             {(book.intensity ?? 0) > 0 && <Pill>{labels.intensityGlyph.repeat(book.intensity ?? 0)}</Pill>}
             {fmtPub(book.pub) && <Pill>📅 {fmtPub(book.pub)}</Pill>}

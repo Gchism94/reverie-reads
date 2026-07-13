@@ -199,7 +199,7 @@ export function buildReviewModelFromImport(
       title: b.title,
       author: authorOf(b),
       disposition: o.disposition,
-      inSeries: b.status !== 'Standalone' || !!b.series,
+      inSeries: b.status !== 'standalone' || !!b.series,
       cover,
       coverConfidence: b.coverConfidence ?? (cover ? 'high' : 'none'),
       coverBroken: opts.brokenRefs?.has(b.id) ?? false, // runtime onerror signal (cover link is dead)

@@ -13,6 +13,7 @@ export interface BookRow {
   status: string | null
   genre: string | null
   subgenre: string | null
+  subgenres: string[] | null
   genres: string[]
   tags: string[]
   intensity: number | null

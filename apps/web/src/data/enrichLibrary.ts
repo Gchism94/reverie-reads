@@ -23,13 +23,13 @@ export function isIncomplete(b: Book): boolean {
   if (!b.isbn) return true
   if (!b.pub?.y) return true
   if (!b.genres.length) return true
-  if (b.status !== 'Standalone' && (!b.series || b.position === '')) return true
+  if (b.status !== 'standalone' && (!b.series || b.position === '')) return true
   return false
 }
 
 /** The high-value fields that decide the recheck window — cover, and (for a series) its position. */
 function hasHighValue(b: Book): boolean {
-  return !!b.cover && (b.status === 'Standalone' || (!!b.series && b.position !== ''))
+  return !!b.cover && (b.status === 'standalone' || (!!b.series && b.position !== ''))
 }
 
 /** Should we (re)check this book now? Unchecked → yes; otherwise depends on the completeness window. */

@@ -93,3 +93,14 @@ describe('ownership on merge', () => {
     expect(next.books.find((b) => b.id === 'a')!.ownership).toBe('unowned')
   })
 })
+
+describe('merge unions subgenres', () => {
+  it('keeps the primary book’s order first and mirrors the single field', () => {
+    const primary = makeBook({ id: 'p', title: 'Primary', subgenre: 'Epic Fantasy', subgenres: ['Epic Fantasy', 'Romantasy'] })
+    const loser = makeBook({ id: 'l', title: 'Dupe', subgenre: 'Dark Fantasy', subgenres: ['Dark Fantasy', 'Romantasy'] })
+    const state: LibraryState = { books: [primary, loser], tbrs: [], collections: [] }
+    const merged = mergeBooks(state, 'p', ['l']).books[0]!
+    expect(merged.subgenres).toEqual(['Epic Fantasy', 'Romantasy', 'Dark Fantasy'])
+    expect(merged.subgenre).toBe('Epic Fantasy')
+  })
+})
