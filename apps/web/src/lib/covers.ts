@@ -1,0 +1,87 @@
+import type { CoverSource } from '@reverie/core'
+import { supabase } from './supabase'
+
+// Client wrappers for the `covers` Edge Function — the cover sheet's editions chooser and the
+// single ingest pipeline every chosen cover flows through (edition pick / camera / upload / URL).
+
+/** One alternate edition, with context (never a bare image wall): cover + format + year + publisher. */
+export interface EditionOption {
+  source: 'hardcover' | 'google'
+  cover: string
+  isbn13?: string
+  isbn10?: string
+  format?: string
+  year?: number
+  publisher?: string
+  pages?: number
+  title?: string
+}
+
+export interface IngestResult {
+  cover: string
+  thumb: string
+  color: string | null
+  sourceUrl: string | null
+  /** normalization fell back to storing the original bytes (no thumb/colour) */
+  degraded?: boolean
+}
+
+export type IngestOutcome =
+  | { status: 'ok'; data: IngestResult }
+  | { status: 'error'; code: string }
+
+/** Fetch alternate editions for a book (Hardcover + Google, server-cached per book). */
+export async function fetchEditions(input: {
+  isbn?: string
+  title?: string
+  author?: string
+}): Promise<EditionOption[]> {
+  try {
+    const { data, error } = await supabase.functions.invoke('covers', {
+      body: { action: 'editions', ...input },
+    })
+    if (error) return []
+    return ((data as { editions?: EditionOption[] })?.editions ?? []).filter((e) => e.cover)
+  } catch {
+    return []
+  }
+}
+
+/**
+ * Ingest a chosen cover through the durable pipeline: pass `file` (camera/upload, post-crop) OR
+ * `url` (edition pick / pasted link — fetched server-side). Returns the stored asset URLs + the
+ * extracted dominant colour; the caller persists them via the normal RLS-checked book mutation.
+ */
+export async function ingestCover(input: {
+  bookId: string
+  source: CoverSource
+  file?: Blob
+  url?: string
+  sourceUrl?: string
+}): Promise<IngestOutcome> {
+  try {
+    let body: FormData | Record<string, unknown>
+    if (input.file) {
+      const form = new FormData()
+      form.set('file', input.file, 'cover')
+      form.set('bookId', input.bookId)
+      form.set('source', input.source)
+      if (input.sourceUrl) form.set('sourceUrl', input.sourceUrl)
+      body = form
+    } else {
+      body = { action: 'ingest', bookId: input.bookId, source: input.source, url: input.url, sourceUrl: input.sourceUrl }
+    }
+    const { data, error } = await supabase.functions.invoke('covers', { body })
+    if (error) {
+      // FunctionsHttpError carries the response; surface the server's error code for the sheet copy.
+      const ctx = (error as { context?: Response }).context
+      const code = ctx ? ((await ctx.json().catch(() => null)) as { error?: string } | null)?.error : undefined
+      return { status: 'error', code: code ?? 'failed' }
+    }
+    const d = data as IngestResult & { error?: string }
+    if (!d?.cover) return { status: 'error', code: d?.error ?? 'failed' }
+    return { status: 'ok', data: d }
+  } catch {
+    return { status: 'error', code: 'failed' }
+  }
+}

@@ -114,6 +114,9 @@ test('every route passes axe (no serious/critical) across all skins x both modes
   await page.route('**/functions/v1/releases**', (route) =>
     route.fulfill({ json: { authors: {}, pending: [], hits: [] } }),
   )
+  // Cover system: detail views lazily backfill external covers via the covers fn — stub it so the
+  // sweep never depends on a local functions server (and never mutates the seeded covers).
+  await page.route('**/functions/v1/covers**', (route) => route.fulfill({ status: 422, json: { error: 'fetch_failed' } }))
 
   // Tryst (the default skin) gets full route coverage; the alternate skins sweep a core set
   // that exercises the whole token surface (palette, cards, fills, links, muted text).

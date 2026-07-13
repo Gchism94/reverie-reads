@@ -101,10 +101,10 @@ export function SpineShelf({
               {shown && b.cover ? (
                 <div
                   className="h-44 w-[120px] overflow-hidden rounded-md border border-line"
-                  style={{ background: `center/cover no-repeat url(${b.cover})` }}
+                  style={{ background: `center/cover no-repeat url(${b.coverThumb || b.cover})` }}
                 />
               ) : (
-                <Spine book={b} active={shown} />
+                <Spine book={b} active={shown} tint={b.coverColor} />
               )}
               {shown && (
                 <span

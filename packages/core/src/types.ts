@@ -80,6 +80,16 @@ export interface Book {
   /** confidence of the enrichment-resolved cover/match (E1); unset for user/seed covers (trusted).
    *  Drives the import-review "low-confidence cover" bucket. Union mirrors enrichResolve's Confidence. */
   coverConfidence?: 'high' | 'medium' | 'low' | 'none'
+  /** ~300px stored thumbnail (grids/spines/shelves); unset until the cover has been ingested. */
+  coverThumb?: string
+  /** provenance of the current cover (hardcover | google | openlibrary | upload | camera | url) */
+  coverSource?: string
+  /** the external URL the stored cover was ingested from (re-fetch/provenance), where applicable */
+  coverSourceUrl?: string
+  /** the reader chose this cover (any sheet path) — enrichment NEVER overwrites it (non-overwrite rule) */
+  coverUserChosen?: boolean
+  /** dominant cover colour (hex), extracted at ingest — feeds the per-book spine tint */
+  coverColor?: string
   isbn: string
   fave: boolean
   ownership: BookOwnership // owned vs wishlist — presence in the library no longer implies possession

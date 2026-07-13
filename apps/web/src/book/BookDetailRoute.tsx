@@ -16,6 +16,8 @@ import { Stars } from '../components/Stars'
 import { Chip } from '../components/Chip'
 import { ARCH, MONTHS, READ_STATUSES, subgenreGradient } from '../library/constants'
 import { EditDetails, LogReadForm, MergeDialog, TropePicker } from './dialogs'
+import { CoverSheet } from '../components/CoverSheet'
+import { useCoverBackfill } from '../data/coverBackfill'
 import { OwnedCopies } from './OwnedCopies'
 import { ReviewsPanel } from './ReviewsPanel'
 import { MoreLikeThis } from './MoreLikeThis'
@@ -86,7 +88,7 @@ function ProgressSlider({ book }: { book: Book }) {
   )
 }
 
-type Dialog = 'trope' | 'log' | 'edit' | 'merge' | null
+type Dialog = 'trope' | 'log' | 'edit' | 'merge' | 'cover' | null
 
 function BookDetailScreen() {
   const { bookId } = bookRoute.useParams()
@@ -114,6 +116,8 @@ function BookDetailScreen() {
   const book = books?.find((b) => b.id === bookId)
 
   const voice = useVoice()
+  // Lazy backfill: an externally-hotlinked cover moves into owned Storage on first view (task §3).
+  useCoverBackfill(book)
   if (isLoading) return <p className="px-6 py-16 text-center text-muted">{voice.loading}</p>
   if (!book)
     return (
@@ -162,12 +166,25 @@ function BookDetailScreen() {
       {/* header */}
       {/* cover + title share the row even on phones — a stacked w-32 cover left dead space beside it */}
       <div className="mt-3 flex gap-4 sm:gap-5">
-        <div
-          className="aspect-[2/3] w-28 flex-none overflow-hidden rounded-xl border border-line sm:w-40"
+        {/* the cover is the door — tapping it opens the cover sheet (change/add a cover) */}
+        <button
+          type="button"
+          onClick={() => setDialog('cover')}
+          aria-label={book.cover ? 'Change cover' : 'Add a cover'}
+          className="relative aspect-[2/3] w-28 flex-none overflow-hidden rounded-xl border border-line sm:w-40"
           style={{ background: `linear-gradient(150deg, ${g0}, ${g1})` }}
         >
           <CoverImage book={book} />
-        </div>
+          {!book.cover && (
+            <span
+              aria-hidden
+              className="absolute bottom-2 left-1/2 -translate-x-1/2 whitespace-nowrap px-2 py-0.5 text-[10px] font-semibold backdrop-blur"
+              style={{ background: 'rgba(0,0,0,0.62)', color: 'var(--mark-on-ph)', borderRadius: 'var(--mark-radius)' }}
+            >
+              + add a cover
+            </span>
+          )}
+        </button>
 
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-3">
@@ -451,7 +468,10 @@ function BookDetailScreen() {
 
       {dialog === 'trope' && <TropePicker book={book} onClose={() => setDialog(null)} />}
       {dialog === 'log' && <LogReadForm book={book} onClose={() => setDialog(null)} />}
-      {dialog === 'edit' && <EditDetails book={book} onClose={() => setDialog(null)} />}
+      {dialog === 'edit' && (
+        <EditDetails book={book} onClose={() => setDialog(null)} onChangeCover={() => setDialog('cover')} />
+      )}
+      {dialog === 'cover' && <CoverSheet book={book} onClose={() => setDialog(null)} />}
       {dialog === 'merge' && (
         <MergeDialog book={book} allBooks={books ?? []} onClose={() => setDialog(null)} />
       )}

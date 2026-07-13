@@ -95,7 +95,10 @@ describe('computeSkinWeights', () => {
 })
 
 describe('isMaterialShift (cron gate)', () => {
-  const w = (tryst: number, grimoire: number, aphelion: number, marrow: number) => ({ tryst, grimoire, aphelion, marrow })
+  // Full registry-shaped weight vector (Record<SkinId, number>) — the four varied skins carry the
+  // scenario, the rest sit at 0 (they existed as 4 args before the roster grew to nine).
+  const w = (tryst: number, grimoire: number, aphelion: number, marrow: number) =>
+    ({ tryst, grimoire, aphelion, marrow, umbra: 0, folio: 0, hearth: 0, almanac: 0, bloom: 0 })
 
   it('is false for an unchanged / barely-nudged profile (idempotent + noise-proof)', () => {
     expect(isMaterialShift(w(0.6, 0.2, 0.1, 0.1), w(0.6, 0.2, 0.1, 0.1))).toBe(false)

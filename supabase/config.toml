@@ -204,7 +204,9 @@ anonymous_users = 30
 # Number of sessions that can be refreshed in a 5 minute interval per IP address.
 token_refresh = 150
 # Number of sign up and sign-in requests that can be made in a 5 minute interval per IP address (excludes anonymous users).
-sign_in_sign_ups = 30
+# Local-dev headroom: the fullyParallel e2e suite signs the seeded dev user in from every spec
+# (a11y's skin flips alone are ~12 grants), and back-to-back local runs share the 5-minute window.
+sign_in_sign_ups = 150
 # Number of OTP / Magic link verifications that can be made in a 5 minute interval per IP address.
 token_verifications = 30
 # Number of Web3 logins that can be made in a 5 minute interval per IP address.
@@ -443,3 +445,8 @@ verify_jwt = true
 # Public uptime/health probe (no auth — an external monitor polls it).
 [functions.health]
 verify_jwt = false
+
+# Cover system: editions chooser + the single cover-ingest pipeline. Authenticated only — ingest
+# writes to the caller's user-scoped storage path, and editions ride the shared upstream quotas.
+[functions.covers]
+verify_jwt = true

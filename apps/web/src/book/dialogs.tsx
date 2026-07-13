@@ -173,7 +173,16 @@ export function LogReadForm({ book, onClose }: { book: Book; onClose: () => void
   )
 }
 
-export function EditDetails({ book, onClose }: { book: Book; onClose: () => void }) {
+export function EditDetails({
+  book,
+  onClose,
+  onChangeCover,
+}: {
+  book: Book
+  onClose: () => void
+  /** modest "change cover" affordance — swaps this dialog for the cover sheet */
+  onChangeCover?: () => void
+}) {
   const updateBook = useUpdateBook()
   const setContributors = useSetContributors()
   const suggestions = useAuthorSuggestions()
@@ -214,6 +223,13 @@ export function EditDetails({ book, onClose }: { book: Book; onClose: () => void
 
   return (
     <Modal title="Edit details" onClose={onClose} wide>
+      {onChangeCover && (
+        <div className="mb-3">
+          <button type="button" onClick={onChangeCover} className="text-[12.5px] font-semibold text-primary">
+            Change cover…
+          </button>
+        </div>
+      )}
       <div className="mb-3">
         <span className="mb-1 block text-[11px] uppercase tracking-[0.15em] text-muted">Contributors</span>
         <ContributorEditor value={contribs} onChange={setContribs} suggestions={suggestions} />

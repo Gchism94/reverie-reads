@@ -44,6 +44,31 @@ export function extractOpenLibraryCover(json: OpenLibraryResponse): string {
   return id ? `https://covers.openlibrary.org/b/id/${id}-M.jpg` : ''
 }
 
+// ── Cover system (the cover is the door) ──
+
+/** Where a book's current cover came from — provenance persisted alongside the stored asset. */
+export type CoverSource = 'hardcover' | 'google' | 'openlibrary' | 'upload' | 'camera' | 'url'
+
+export const COVER_SOURCES: readonly CoverSource[] = ['hardcover', 'google', 'openlibrary', 'upload', 'camera', 'url']
+
+export const isCoverSource = (s: unknown): s is CoverSource =>
+  typeof s === 'string' && (COVER_SOURCES as readonly string[]).includes(s)
+
+/** True when the URL already points at the app's own cover Storage (durable, never a hotlink). */
+export const isStoredCoverUrl = (url: string): boolean => url.includes('/storage/v1/object/public/covers/')
+
+/**
+ * The enrichment chain's cover offer, gated by the non-overwrite rule: a USER-CHOSEN cover is never
+ * replaced (same principle as series data) — enrichment fills only where no user choice exists.
+ * mergeImport is already fill-only for non-empty covers; this guard additionally keeps enrichment
+ * from re-offering a cover for a book whose cover the reader deliberately set (or later cleared).
+ */
+export function enrichmentCoverFill(book: { cover: string; coverUserChosen?: boolean }, offered: string): string {
+  if (book.coverUserChosen) return ''
+  if (book.cover) return '' // fill-only — an existing cover (user, seed, or prior fill) stays
+  return offered
+}
+
 type FetchLike = (url: string) => Promise<{ json: () => Promise<unknown> }>
 
 /**
