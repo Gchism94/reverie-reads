@@ -121,16 +121,14 @@ function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<Search
     const f = form.format.toLowerCase()
     const isEbook = f.includes('ebook') || f.includes('kindle')
     const isAudio = f.includes('audio')
-    // Format flags describe copies you HAVE — a wishlist add carries none (format stays as the
-    // edition you're eyeing; possession is what's absent).
-    const owned: Owned =
-      ownership === 'unowned'
-        ? { physical: false, ebook: false, audiobook: false }
-        : {
-            physical: f.includes('hardcover') ? 'hardcover' : isEbook || isAudio ? false : 'paperback',
-            ebook: isEbook,
-            audiobook: isAudio,
-          }
+    // Format flags always record the edition in hand OR the edition you're eyeing — on a
+    // wishlist add they sit latent (bookOwnedFormats suppresses them until the book is owned),
+    // so flipping to Owned later lands with the right copy already marked.
+    const owned: Owned = {
+      physical: f.includes('hardcover') ? 'hardcover' : isEbook || isAudio ? false : 'paperback',
+      ebook: isEbook,
+      audiobook: isAudio,
+    }
     const { first, last } = toFirstLast(contribs)
     const book: Partial<Book> & { title: string } = {
       title: form.title.trim(),

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isOwned, ownedCaption, ownedFormats } from './ownership'
+import { bookOwnedFormats, isOwned, isOwnedBook, ownedCaption, ownedFormats, ownershipTogglePatch } from './ownership'
 
 describe('ownership', () => {
   it('isOwned is true when any format flag is set', () => {
@@ -19,5 +19,30 @@ describe('ownership', () => {
     expect(ownedCaption({ physical: 'hardcover', ebook: false, audiobook: false })).toBe(
       'Owned — hardcover.',
     )
+  })
+
+  it('own → un-own → re-own round-trips without losing the format flags', () => {
+    const flags = { physical: 'paperback' as const, ebook: true, audiobook: false }
+    const start = { ownership: 'owned' as const, owned: { ...flags } }
+    const unowned = { ...start, ...ownershipTogglePatch(start) }
+    expect(unowned.ownership).toBe('unowned')
+    expect(unowned.owned).toEqual(flags) // suppressed, never cleared
+    const back = { ...unowned, ...ownershipTogglePatch(unowned) }
+    expect(back.ownership).toBe('owned')
+    expect(back.owned).toEqual(flags) // the copies come home with the book
+  })
+
+  it('latent flags on a wishlist book reach no Owned·format shelf and no collection stat', () => {
+    const latent = { ownership: 'unowned' as const, owned: { physical: 'hardcover' as const, ebook: true, audiobook: true } }
+    const owned = { ownership: 'owned' as const, owned: { physical: 'paperback' as const, ebook: false, audiobook: false } }
+    // the smart-shelf predicate: every Owned·format shelf filters through bookOwnedFormats
+    expect(bookOwnedFormats(latent)).toEqual([])
+    for (const fmt of ['physical', 'ebook', 'audiobook'] as const) {
+      expect([owned, latent].filter((b) => bookOwnedFormats(b).includes(fmt)).map((b) => b.ownership)).not.toContain('unowned')
+    }
+    // the stats scope: collection stats tally over isOwnedBook only
+    expect([owned, latent].filter(isOwnedBook)).toEqual([owned])
+    // an owned book still reads its flags straight through the gate
+    expect(bookOwnedFormats(owned)).toEqual(['physical'])
   })
 })
