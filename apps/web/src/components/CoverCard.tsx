@@ -1,4 +1,4 @@
-import { formatAuthors, ownedFormats, type Book } from '@reverie/core'
+import { formatAuthors, bookOwnedFormats, type Book } from '@reverie/core'
 import { subgenreGradient } from '../library/constants'
 import { useLabels } from '../skin/labels'
 import { useBrokenCoverIds } from '../data/brokenCovers'
@@ -39,12 +39,18 @@ export function CoverCard({
   const showsPlaceholder = !book.cover || brokenIds.has(book.id)
   const markInk = showsPlaceholder ? 'var(--mark-on-ph)' : 'var(--mark-accent)'
   const markBg = showsPlaceholder ? 'rgba(0,0,0,0.62)' : 'rgba(0,0,0,0.45)'
+  // Unowned (wishlist) ghost: the ARTWORK dims behind --ghost-opacity and the frame goes dashed;
+  // title/author below and the marks keep full contrast (AA untouched).
+  const unowned = book.ownership === 'unowned'
 
   return (
     <div className="group">
       <div
         className="skin-card relative aspect-[2/3] overflow-hidden border border-line transition-shadow motion-reduce:transition-none"
-        style={selected ? { boxShadow: '0 0 0 2.5px var(--primary), var(--shadow)' } : undefined}
+        style={{
+          ...(selected ? { boxShadow: '0 0 0 2.5px var(--primary), var(--shadow)' } : undefined),
+          ...(unowned ? { borderStyle: 'dashed' } : undefined),
+        }}
       >
         <button
           type="button"
@@ -52,7 +58,7 @@ export function CoverCard({
           aria-label={`Open ${book.title}`}
           aria-current={selected ? 'true' : undefined}
           className="block h-full w-full"
-          style={{ background: `linear-gradient(150deg, ${g0}, ${g1})` }}
+          style={{ background: `linear-gradient(150deg, ${g0}, ${g1})`, ...(unowned ? { opacity: 'var(--ghost-opacity)' } : undefined) }}
         >
           {/* cover → skin placeholder fallback + dead-link detection (Cover Studio) */}
           <CoverImage book={book} thumb />
@@ -102,13 +108,22 @@ export function CoverCard({
           </div>
         )}
 
-        {ownedFormats(book.owned).length > 0 && (
+        {unowned && (
+          <span
+            className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide"
+            style={{ background: markBg, color: markInk, borderRadius: 'var(--mark-radius)' }}
+          >
+            ⊹ Wishlist
+          </span>
+        )}
+
+        {bookOwnedFormats(book).length > 0 && (
           <div
             className="absolute bottom-1.5 right-1.5 flex gap-0.5 px-1 py-0.5 text-[10px] backdrop-blur"
             style={{ background: markBg, color: '#fff', borderRadius: 'var(--mark-radius)' }}
-            title={`Owned: ${ownedFormats(book.owned).join(', ')}`}
+            title={`Owned: ${bookOwnedFormats(book).join(', ')}`}
           >
-            {ownedFormats(book.owned).map((f) => (
+            {bookOwnedFormats(book).map((f) => (
               <span key={f}>{FORMAT_ICON[f]}</span>
             ))}
           </div>

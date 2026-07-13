@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Link, createRoute, useNavigate } from '@tanstack/react-router'
+import { createRoute, useNavigate } from '@tanstack/react-router'
 import type { ClubUnitType } from '@reverie/core'
 import { rootRoute } from '../routes/RootRoute'
+import { BackLink } from '../components/BackLink'
 import { CoverImage } from '../components/CoverImage'
 import { useAuth } from '../auth/AuthProvider'
 import {
@@ -61,9 +62,9 @@ function ClubScreen() {
     return (
       <div className="px-6 py-16 text-center text-muted">
         <p>This read-along isn’t available — you may need to join it by code.</p>
-        <Link to="/clubs" className="mt-3 inline-block text-primary">
+        <BackLink fallback="/clubs" className="mt-3 inline-block text-primary">
           ← Back to Clubs
-        </Link>
+        </BackLink>
       </div>
     )
 
@@ -77,9 +78,9 @@ function ClubScreen() {
 
   return (
     <section className="mx-auto max-w-2xl px-4 py-6 sm:px-6">
-      <Link to="/clubs" className="text-[13px] text-muted hover:text-ink">
+      <BackLink fallback="/clubs" className="text-[13px] text-muted hover:text-ink">
         ← Clubs
-      </Link>
+      </BackLink>
 
       <div className="mt-3 flex gap-4">
         <div className="aspect-[2/3] w-20 flex-none overflow-hidden rounded-lg border border-line" style={{ background: 'var(--field)' }}>

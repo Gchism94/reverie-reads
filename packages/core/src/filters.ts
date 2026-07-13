@@ -19,6 +19,8 @@ export interface LibraryFilters {
   intensity: number[]
   /** filter to books where any contributor matches this name ('' = off) */
   author: string
+  /** include unowned (wishlist) books — the default grid shows only what the reader owns */
+  wishlist: boolean
   sort: LibrarySort
 }
 
@@ -33,6 +35,7 @@ export const defaultFilters = (): LibraryFilters => ({
   fave: false,
   intensity: [],
   author: '',
+  wishlist: false,
   sort: 'az',
 })
 
@@ -60,6 +63,8 @@ export function seriesLenBucket(b: Book): SeriesLenBucket {
 
 /** The prototype's library predicate, ported verbatim. */
 export function matchesFilters(b: Book, f: LibraryFilters): boolean {
+  // Collection scoping first: the grid is what you OWN unless the wishlist chip lets the rest in.
+  if (!f.wishlist && b.ownership === 'unowned') return false
   if (f.sub !== 'All' && b.subgenre !== f.sub) return false
   if (f.tags.length && !f.tags.every((t) => b.tags.includes(t))) return false
   if (f.status !== 'All' && b.status !== f.status) return false
@@ -126,6 +131,7 @@ export function activeFilterCount(f: LibraryFilters): number {
   if (f.fave) n++
   if (f.intensity.length) n++
   if (f.author) n++
+  if (f.wishlist) n++
   return n
 }
 

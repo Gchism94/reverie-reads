@@ -151,3 +151,36 @@ describe('ingest idempotency (re-import is a no-op via the merge path)', () => {
     expect(library).toHaveLength(rows.length)
   })
 })
+
+describe('ownership on import', () => {
+  it('Reverie Owned column: yes/blank → owned, no → unowned', () => {
+    const csv = [
+      'Title,Author,ISBN,Status,Rating,Date Read,Tags,Owned',
+      'Kept,Ana Huang,,Read,5,2025-01-02,,Yes',
+      'Blank,Ana Huang,,Unread,,,,',
+      'Wanted,Ana Huang,,Unread,,,,No',
+    ].join('\n')
+    const { profile, rows } = parseImport(csv)
+    expect(profile.name).toBe('reverie')
+    expect(rows.map((r) => r.incoming.ownership)).toEqual(['owned', 'owned', 'unowned'])
+  })
+
+  it('Goodreads Exclusive Shelf: read/currently-reading → owned, to-read → unowned', () => {
+    const csv = [
+      'Title,Author,Exclusive Shelf,My Rating',
+      'Done,Ana Huang,read,5',
+      'Now,Ana Huang,currently-reading,0',
+      'Someday,Ana Huang,to-read,0',
+    ].join('\n')
+    const { rows } = parseImport(csv)
+    expect(rows.map((r) => r.incoming.ownership)).toEqual(['owned', 'owned', 'unowned'])
+    // and to-read stays Unread for reading status — the two axes stay independent
+    expect(rows[2]!.incoming.readStatus).toBe('Unread')
+  })
+
+  it('a plain Unread status without a wishlist shelf stays owned (unread ≠ unowned)', () => {
+    const csv = ['Title,Author,Status', 'OnShelf,Ana Huang,Unread'].join('\n')
+    const { rows } = parseImport(csv)
+    expect(rows[0]!.incoming.ownership).toBe('owned')
+  })
+})

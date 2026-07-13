@@ -1,11 +1,12 @@
 import { useState, type ReactNode } from 'react'
 import { Link, createRoute, useNavigate } from '@tanstack/react-router'
-import { authorOf, buildBuyLinks, buyDisclosure, deriveBoyfriend, isAuthorRole, ordersForBook, ROLE_LABELS, type Book, type Owned } from '@reverie/core'
+import { authorOf, buildBuyLinks, buyDisclosure, deriveBoyfriend, isAuthorRole, ordersForBook, ownershipTogglePatch, ROLE_LABELS, type Book, type Owned } from '@reverie/core'
 import { useFilters } from '../library/filterStore'
 import { useReadingOrders } from '../data/readingOrders'
 import { buyConfig } from '../lib/buyConfig'
 import { useLabels, useVoice } from '../skin/labels'
 import { rootRoute } from '../routes/RootRoute'
+import { BackLink } from '../components/BackLink'
 import { CoverImage } from '../components/CoverImage'
 import { useBooks, useDeleteBook, useUpdateBook } from '../data/books'
 import { useDeleteRead, useReads } from '../data/reads'
@@ -122,9 +123,9 @@ function BookDetailScreen() {
     return (
       <div className="px-6 py-16 text-center text-muted">
         <p>That book isn’t in your library.</p>
-        <Link to="/" className="mt-3 inline-block text-primary">
+        <BackLink fallback="/library" className="mt-3 inline-block text-primary">
           ← Back to library
-        </Link>
+        </BackLink>
       </div>
     )
 
@@ -134,6 +135,9 @@ function BookDetailScreen() {
   const workKey = workKeyFor(book)
   const reviewerName = profile?.displayName || 'Reader'
   const setOwned = (owned: Owned) => updateBook.mutate({ id: book.id, patch: { owned } })
+  // One tap flips owned ⇄ wishlist. Format flags are left alone in both directions — un-owning
+  // suppresses them (bookOwnedFormats gates every read), so coming home restores your copies.
+  const toggleOwnership = () => updateBook.mutate({ id: book.id, patch: ownershipTogglePatch(book) })
   const memberIds = new Set(listIds ?? [])
   const tbrs = (lists ?? []).filter((l) => l.kind === 'tbr')
   const collections = (lists ?? []).filter((l) => l.kind === 'collection')
@@ -155,9 +159,9 @@ function BookDetailScreen() {
 
   return (
     <section className="mx-auto max-w-3xl px-4 py-6 sm:px-6">
-      <Link to="/" className="text-[13px] text-muted hover:text-ink">
+      <BackLink fallback="/library" className="text-[13px] text-muted hover:text-ink">
         ← Library
-      </Link>
+      </BackLink>
 
       {/* header */}
       {/* cover + title share the row even on phones — a stacked w-32 cover left dead space beside it */}
@@ -258,7 +262,7 @@ function BookDetailScreen() {
 
       {/* your copies (per-format ownership) */}
       <div className="mt-6">
-        <OwnedCopies owned={book.owned} onChange={setOwned} />
+        <OwnedCopies ownership={book.ownership} owned={book.owned} onChange={setOwned} onOwnershipToggle={toggleOwnership} />
       </div>
 
       {/* buy at an indie (discover + support — not live inventory) */}
@@ -271,7 +275,7 @@ function BookDetailScreen() {
           <Chip
             key={s}
             active={book.readStatus === s}
-            onClick={() => updateBook.mutate({ id: book.id, patch: { readStatus: s } })}
+            onClick={() => updateBook.mutate({ id: book.id, patch: { readStatus: s, ...(s === 'Reading' ? { readingNowHidden: false } : {}) } })}
           >
             {s}
           </Chip>

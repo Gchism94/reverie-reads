@@ -29,7 +29,7 @@ async function signIn(page: Page) {
   await expect(page.getByRole('navigation')).toBeVisible({ timeout: 20_000 })
 }
 
-async function setupFixtures(): Promise<{ bookId: string; clubId: string; listCode: string }> {
+async function setupFixtures(): Promise<{ bookId: string; clubId: string; listCode: string; shelfId: string }> {
   const sb = createClient(SUPABASE_URL, ANON)
   await sb.auth.signInWithPassword({ email: DEV_EMAIL, password: DEV_PASSWORD })
   const uid = (await sb.auth.getUser()).data.user!.id
@@ -44,17 +44,24 @@ async function setupFixtures(): Promise<{ bookId: string; clubId: string; listCo
   ).data!
   await sb.from('club_members').insert({ club_id: club.id, user_id: uid, display_name: 'Dev', progress: 3 })
 
+  // a shelf with one book, for the /shelf/$listId detail page
+  const shelf = (
+    await sb.from('lists').insert({ owner_id: uid, name: 'A11y Shelf', kind: 'tbr', sort_order: 999999 }).select().single()
+  ).data!
+  await sb.from('list_items').insert({ list_id: shelf.id, book_id: bookId, owner_id: uid, position: 1000 })
+
   const listCode = 'A11YSMOKE'
   await sb.from('shared_docs').upsert({ key: listCode, value: { type: 'list', kind: 'list', name: 'A11y list', items: [], updatedAt: Date.now() } })
   await sb.from('shared_refs').upsert({ owner_id: uid, code: listCode, kind: 'list', name: 'A11y list' }, { onConflict: 'owner_id,code' })
 
-  return { bookId, clubId: club.id, listCode }
+  return { bookId, clubId: club.id, listCode, shelfId: shelf.id }
 }
 
-async function cleanup(clubId: string, listCode: string) {
+async function cleanup(clubId: string, listCode: string, shelfId: string) {
   const sb = createClient(SUPABASE_URL, ANON)
   await sb.auth.signInWithPassword({ email: DEV_EMAIL, password: DEV_PASSWORD })
   await sb.from('clubs').delete().eq('id', clubId)
+  await sb.from('lists').delete().eq('id', shelfId)
   await sb.from('shared_docs').delete().eq('key', listCode)
   await sb.from('shared_refs').delete().eq('code', listCode)
   await setProfileSkinMode('tryst', 'system') // restore the dev profile
@@ -71,7 +78,7 @@ async function setProfileSkinMode(skin: string, mode: string) {
 
 test('every route passes axe (no serious/critical) across all skins x both modes', async ({ page }) => {
   test.setTimeout(600_000)
-  const { bookId, clubId, listCode } = await setupFixtures()
+  const { bookId, clubId, listCode, shelfId } = await setupFixtures()
   await signIn(page)
 
   // Discover browses an external catalog — stub it so the sweep is deterministic and offline-safe.
@@ -127,6 +134,7 @@ test('every route passes axe (no serious/critical) across all skins x both modes
     ['Clubs', '/clubs'],
     ['Club', `/club/${clubId}`],
     ['SharedList', `/list/${listCode}`],
+    ['Shelf detail', `/shelf/${shelfId}`],
     ['Indie', '/indie'],
     ['Skins', '/skins'],
     ['Orders', '/orders'],
@@ -170,7 +178,7 @@ test('every route passes axe (no serious/critical) across all skins x both modes
       }
     }
   } finally {
-    await cleanup(clubId, listCode)
+    await cleanup(clubId, listCode, shelfId)
   }
 
   if (failures.length) console.log('axe serious/critical violations:\n' + failures.join('\n'))
