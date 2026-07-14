@@ -1,5 +1,6 @@
 import type { Book, ReadStatus, SeriesStatus } from './types'
 import { bookSubgenres } from './genreNormalize'
+import { bookTropeNames } from './tropes'
 import { authorOf } from './normalize'
 import { normalizeName } from './contributors'
 
@@ -67,7 +68,10 @@ export function matchesFilters(b: Book, f: LibraryFilters): boolean {
   // Collection scoping first: the grid is what you OWN unless the wishlist chip lets the rest in.
   if (!f.wishlist && b.ownership === 'unowned') return false
   if (f.sub !== 'All' && !bookSubgenres(b).includes(f.sub)) return false
-  if (f.tags.length && !f.tags.every((t) => b.tags.includes(t))) return false
+  if (f.tags.length) {
+    const names = bookTropeNames(b)
+    if (!f.tags.every((t) => names.includes(t))) return false
+  }
   if (f.status !== 'All' && b.status !== f.status) return false
   if (f.len !== 'Any' && seriesLenBucket(b) !== f.len) return false
   if (f.read !== 'All') {
@@ -83,7 +87,7 @@ export function matchesFilters(b: Book, f: LibraryFilters): boolean {
   if (f.intensity.length && !f.intensity.includes(b.intensity ?? 0)) return false
   if (f.author && !bookHasAuthor(b, f.author)) return false
   if (f.q) {
-    const hay = [b.title, authorOf(b), b.series, ...b.tags, ...b.genres].join(' ').toLowerCase()
+    const hay = [b.title, authorOf(b), b.series, ...b.tags, ...b.tropes.map((t) => t.name), ...b.genres].join(' ').toLowerCase()
     if (!hay.includes(f.q.toLowerCase())) return false
   }
   return true

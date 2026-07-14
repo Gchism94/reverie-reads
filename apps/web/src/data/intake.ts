@@ -57,6 +57,7 @@ export function incomingToBook(inc: Incoming): Book {
     subgenres: inc.subgenres?.length ? inc.subgenres : subgenre ? [subgenre] : [],
     genres: inc.genres ?? [],
     tags,
+    tropes: [],
     intensity: inc.intensity ?? null,
     cover: inc.cover ?? '',
     isbn: inc.isbn ?? '',

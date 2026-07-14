@@ -133,6 +133,59 @@ async function fetchHardcoverSeries(name: string, author: string): Promise<Serie
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/** One book's community descriptor names from Hardcover (cached_tags), parsed defensively —
+ *  whatever shape the field takes, only STRINGS come out, deduped, capped. */
+async function fetchHardcoverBookTags(title: string, author: string): Promise<string[]> {
+  if (!HARDCOVER_TOKEN) return []
+  const query = `
+    query ($title: String!) {
+      books(where: { title: { _ilike: $title } }, order_by: { users_count: desc }, limit: 5) {
+        title
+        cached_tags
+        contributions { author { name } }
+      }
+    }`
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), FETCH_WALL_MS)
+  try {
+    const res = await fetch('https://api.hardcover.app/v1/graphql', {
+      method: 'POST',
+      signal: ctrl.signal,
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${HARDCOVER_TOKEN}` },
+      body: JSON.stringify({ query, variables: { title } }),
+    })
+    if (!res.ok) return []
+    const bodyJson = (await res.json()) as any
+    const books: any[] = bodyJson?.data?.books ?? []
+    if (!books.length) return []
+    const match =
+      books.find((b: any) =>
+        author && (b.contributions ?? []).some((c: any) => norm(String(c?.author?.name ?? '')) === norm(author)),
+      ) ?? books[0]
+    const out = new Set<string>()
+    const walk = (v: any): void => {
+      if (out.size >= 40) return
+      if (typeof v === 'string') {
+        const clean = v.trim()
+        if (clean && clean.length <= 60) out.add(clean)
+      } else if (Array.isArray(v)) v.forEach(walk)
+      else if (v && typeof v === 'object') {
+        if (typeof v.tag === 'string') walk(v.tag)
+        else if (typeof v.name === 'string') walk(v.name)
+        else Object.values(v).forEach(walk)
+      }
+    }
+    walk(match?.cached_tags)
+    return [...out]
+  } catch {
+    return []
+  } finally {
+    clearTimeout(timer)
+  }
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   if (req.method !== 'POST') return json({ error: 'method not allowed' }, 405)
@@ -144,12 +197,31 @@ Deno.serve(async (req: Request) => {
   const ures = await fetch(`${DB_URL}/auth/v1/user`, { headers: { apikey: ANON, Authorization: `Bearer ${token}` } })
   if (!ures.ok) return json({ error: 'not authenticated' }, 401)
 
-  let body: { name?: string; author?: string }
+  let body: { mode?: string; name?: string; author?: string; title?: string }
   try {
     body = await req.json()
   } catch {
     return json({ error: 'bad json' }, 400)
   }
+
+  // book-tags: Hardcover's community descriptors for one book — treated as factual metadata
+  // (like page counts); ONLY names leave this function, never counts/popularity/ranking.
+  if (body.mode === 'book-tags') {
+    const title = (body.title ?? '').trim()
+    if (!title) return json({ error: 'missing title' }, 400)
+    try {
+      const key = `booktags:${norm(title)}|${norm(body.author ?? '')}`
+      const cached = (await cacheGet(key)) as unknown as { tags: string[] } | null
+      if (cached) return json(cached)
+      const payload = { tags: await fetchHardcoverBookTags(title, (body.author ?? '').trim()) }
+      await cacheSet(key, payload as unknown as SeriesPayload)
+      return json(payload)
+    } catch (e) {
+      captureEdgeError('series', e)
+      return json({ tags: [] })
+    }
+  }
+
   const name = (body.name ?? '').trim()
   if (!name) return json({ error: 'missing name' }, 400)
 
