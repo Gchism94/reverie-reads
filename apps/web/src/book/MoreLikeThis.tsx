@@ -1,8 +1,10 @@
 import { Link } from '@tanstack/react-router'
 import type { Book } from '@reverie/core'
 import { CoverImage } from '../components/CoverImage'
+import { TasteTier } from '../components/TasteTier'
 import { useBooks } from '../data/books'
 import { useEnsureEmbeddings, useSimilarBooks } from '../data/similar'
+import { useTasteCalibration, useTasteScores } from '../data/taste'
 
 /** Tier 2 on the book screen: the nearest neighbours from YOUR OWN shelves (semantic — same
  *  world, same tropes, same heat — not just same series). Renders nothing until embeddings
@@ -17,6 +19,12 @@ export function MoreLikeThis({ bookId }: { bookId: string }) {
     .map((h) => ({ similarity: h.similarity, book: byId.get(h.book_id) }))
     .filter((h): h is { similarity: number; book: Book } => !!h.book)
     .slice(0, 6)
+
+  // The SAME taste tier a neighbour would show in Discover — a property of (book, reader), not of
+  // this shelf. Sort stays neighbour-to-book similarity (unchanged); the tier is match-to-you.
+  const { data: anchors } = useTasteCalibration()
+  const { data: tasteScores } = useTasteScores(hits.map((h) => h.book.id))
+
   if (!hits.length) return null
 
   return (
@@ -35,6 +43,7 @@ export function MoreLikeThis({ bookId }: { bookId: string }) {
               <CoverImage book={book} />
             </div>
             <div className="mt-1 truncate text-[11.5px] text-muted group-hover:text-ink">{book.title}</div>
+            <TasteTier cos={tasteScores?.[book.id]} anchors={anchors} className="mt-0.5 block text-[10.5px] font-semibold" />
           </Link>
         ))}
       </div>
