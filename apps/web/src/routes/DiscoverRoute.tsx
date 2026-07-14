@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { createRoute, useNavigate } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
-import { genreKey, SKINS, SKIN_ORDER, splitName, type Book } from '@reverie/core'
+import { genreKey, SKINS, SKIN_ORDER, splitName, type Book, type TasteAnchors } from '@reverie/core'
 import { rootRoute } from './RootRoute'
 import { useBooks } from '../data/books'
 import { useLists } from '../data/lists'
@@ -13,7 +13,9 @@ import { Modal } from '../components/Modal'
 import { CoverImage } from '../components/CoverImage'
 import { SearchResults } from '../components/SearchResults'
 import type { SearchResult } from '../lib/search'
-import { fetchDiscover, hitKey, isOwned, ownedKeys, rankHitsByTaste, sortByTaste, tastePercent, type DiscoverHit } from '../lib/discover'
+import { fetchDiscover, hitKey, isOwned, ownedKeys, rankHitsByTaste, sortByTaste, type DiscoverHit } from '../lib/discover'
+import { TasteTier } from '../components/TasteTier'
+import { useTasteCalibration } from '../data/taste'
 
 // Discover (owner-approved): browse the wider catalog by world — defaulting to the room the
 // reader is standing in — with every find one tap from Add. The nine genre chips are the same
@@ -24,7 +26,7 @@ const GENRES: { key: string; label: string }[] = SKIN_ORDER.map((id) => ({
   label: SKINS[id].genre,
 }))
 
-function Card({ hit, owned, taste }: { hit: DiscoverHit; owned: boolean; taste?: number }) {
+function Card({ hit, owned, taste, anchors }: { hit: DiscoverHit; owned: boolean; taste?: number; anchors?: TasteAnchors | null }) {
   const navigate = useNavigate()
   const author = hit.authors[0] ?? ''
   const year = hit.pub.slice(0, 4)
@@ -45,9 +47,12 @@ function Card({ hit, owned, taste }: { hit: DiscoverHit; owned: boolean; taste?:
           {author}
           {year ? <span style={{ color: 'var(--faint, var(--muted))' }}> · {year}</span> : null}
         </div>
-        {taste != null && (
-          /* Tier 2b: closeness to the reader's own taste centroid — personal, never an average */
-          <div className="text-[11px] font-bold text-primary">{tastePercent(taste)}% you</div>
+        {taste != null && anchors && (
+          /* Tier 2b: the named taste tier (fixed per-user anchors) — stable per book, comparable
+             across shelves. The anchored % rides underneath as the drill-down (tooltip), not here. */
+          <div className="mt-0.5">
+            <TasteTier cos={taste} anchors={anchors} />
+          </div>
         )}
       </div>
       <div className="mt-1.5">
@@ -221,6 +226,8 @@ function DiscoverScreen() {
     staleTime: 1000 * 60 * 60 * 6,
     retry: 0,
   })
+  // The reader's fixed display anchors — one fetch, shared by every card (TanStack dedupes the key).
+  const { data: anchors } = useTasteCalibration()
   const ordered = q.data ? (rank.data ? sortByTaste(q.data, rank.data) : q.data.map((hit) => ({ hit }) as { hit: DiscoverHit; taste?: number })) : []
 
   return (
@@ -321,7 +328,7 @@ function DiscoverScreen() {
           )}
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
             {ordered.map(({ hit: h, taste }) => (
-              <Card key={`${h.isbn}|${h.title}`} hit={h} owned={isOwned(h, owned)} taste={taste} />
+              <Card key={`${h.isbn}|${h.title}`} hit={h} owned={isOwned(h, owned)} taste={taste} anchors={anchors} />
             ))}
           </div>
         </>

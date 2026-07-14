@@ -7,7 +7,6 @@ import {
   isOwned,
   ownedKeys,
   sortByTaste,
-  tastePercent,
   volumeToHit,
   type DiscoverHit,
 } from './discover'
@@ -114,13 +113,5 @@ describe('discover — taste ordering (Tier 2b)', () => {
     const out = sortByTaste([a, b, c], {})
     expect(out.map((x) => x.hit.title)).toEqual(['A', 'B', 'C'])
     expect(out.every((x) => x.taste == null)).toBe(true)
-  })
-
-  it('tastePercent spreads the practical cosine band, stays monotonic, clamps', () => {
-    expect(tastePercent(0.92)).toBe(74)
-    expect(tastePercent(0.88)).toBe(53)
-    expect(tastePercent(0.92)).toBeGreaterThan(tastePercent(0.9))
-    expect(tastePercent(0.5)).toBe(1)
-    expect(tastePercent(0.99)).toBe(99)
   })
 })
