@@ -9,6 +9,7 @@ import { useSetContributors } from '../data/contributors'
 import { useAddRead } from '../data/reads'
 import { usePerformMerge } from '../data/mergeBooks'
 import { useLabels } from '../skin/labels'
+import { maybeChainPrompt } from '../lib/chainPrompt'
 import { ContributorEditor } from './ContributorEditor'
 
 /** Distinct contributor names across the library, for autocomplete. */
@@ -117,6 +118,7 @@ export function TropePicker({ book, onClose }: { book: Book; onClose: () => void
 
 export function LogReadForm({ book, onClose }: { book: Book; onClose: () => void }) {
   const addRead = useAddRead(book.id)
+  const { data: books } = useBooks()
   const updateBook = useUpdateBook()
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [format, setFormat] = useState(book.format || 'Paperback')
@@ -126,6 +128,7 @@ export function LogReadForm({ book, onClose }: { book: Book; onClose: () => void
   function save() {
     addRead.mutate({ date, format, rating, notes: notes.trim() })
     updateBook.mutate({ id: book.id, patch: rating ? { readStatus: 'Read', rating } : { readStatus: 'Read' } })
+    void maybeChainPrompt(book, books ?? [])
     onClose()
   }
 
