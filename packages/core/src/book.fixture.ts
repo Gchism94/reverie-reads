@@ -12,7 +12,6 @@ export function makeBook(partial: Partial<Book> & { id: string; title: string })
     status: 'standalone',
     genre: 'romance',
     subgenre: 'Romance',
-    subgenres: ['Romance'],
     genres: [],
     tags: [],
     tropes: [],
