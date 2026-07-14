@@ -1,4 +1,11 @@
-import { isContributorRole, parseCsvIncoming, type Book, type Contributor } from '@reverie/core'
+import {
+  isContributorRole,
+  isKnownTrope,
+  parseCsvRows,
+  type Book,
+  type Contributor,
+  type ImportItemOutcome,
+} from '@reverie/core'
 import { supabase } from '../lib/supabase'
 import type { BookRow } from './types'
 import { applyIncoming, type ReviewCandidate } from './intake'
@@ -212,20 +219,82 @@ export async function restoreBackup(
   return { books: bookIdMap.size, lists: listIdMap.size, reads: reads.length }
 }
 
+/** The name of the default TBR that catches Goodreads `to-read` rows (created on first import). */
+export const IMPORTED_TBR_NAME = 'Imported TBR'
+
+/** Bulk-empty + placement facts the import summary speaks honestly about. */
+export interface ImportExtras {
+  /** to-read rows placed on the Imported TBR */
+  tbrPlaced: number
+  /** Reverie shelves newly created from Goodreads custom Bookshelves */
+  shelvesCreated: string[]
+  /** shelf memberships appended (all shelves, incl. the Imported TBR) */
+  shelved: number
+  /** imported/merged books still without a cover — the enrichment pass will fetch what it can */
+  noCover: number
+  /** imported/merged books without an ISBN (weaker future matching; enrichment may resolve one) */
+  noIsbn: number
+  /** rows whose My Review / Private Notes had no read entry to land on (to-read rows) */
+  unplacedNotes: number
+  /** custom shelves that look like canonical tropes — noted for a FUTURE mapping, never converted */
+  tropeLikeShelves: string[]
+}
+
+/** 'dark-romance' → 'Dark Romance' (Goodreads shelves are slugs; Reverie shelves are names). */
+const shelfDisplayName = (slug: string): string =>
+  slug
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ')
+
+/** Find-or-create a list by (case-insensitive) name; returns its id and whether it was created. */
+async function ensureList(
+  ownerId: string,
+  name: string,
+  kind: 'tbr' | 'collection',
+  cache: Map<string, string>,
+): Promise<{ id: string; created: boolean }> {
+  const key = name.trim().toLowerCase()
+  const hit = cache.get(key)
+  if (hit) return { id: hit, created: false }
+  const { data: created, error } = await supabase
+    .from('lists')
+    .insert({ owner_id: ownerId, name, kind })
+    .select('id')
+    .single()
+  if (error) throw error
+  const id = (created as { id: string }).id
+  cache.set(key, id)
+  return { id, created: true }
+}
+
 /**
  * Import a Goodreads/StoryGraph CSV. Each row is matched against the library (ISBN 10↔13 →
  * title+author → title+series+position → fuzzy). Strong matches fold into the EXISTING record
  * (its id, list/club memberships, reads, and calendar attribution survive; user-authored fields
  * win); fuzzy near-matches are returned for review (never auto-merged); the rest are inserted.
  * Real reads are loaded up front so re-importing the same file is a no-op.
+ *
+ * Row extras land here too: `to-read` rows are placed on the "Imported TBR" (created on first
+ * sight); custom Bookshelves become Reverie shelves (created on first sight, membership appended,
+ * idempotent via the (list_id, book_id) key). Shelves that match canonical tropes are COUNTED for
+ * the summary — a future mapping may offer them as tropes; this import never auto-converts.
  */
 export async function importCsvToBackend(
   currentBooks: Book[],
   text: string,
   opts: { autoMerge: boolean },
-): Promise<{ added: number; merged: number; review: ReviewCandidate[] }> {
+): Promise<{
+  added: number
+  merged: number
+  review: ReviewCandidate[]
+  outcomes: ImportItemOutcome[]
+  bookIds: string[]
+  extras: ImportExtras
+}> {
   const ownerId = await currentUserId()
-  const incomings = parseCsvIncoming(text)
+  const rows = parseCsvRows(text)
   const verdicts = await loadVerdicts()
 
   const { data: readRows, error: re } = await supabase
@@ -248,9 +317,15 @@ export async function importCsvToBackend(
 
   let added = 0
   let merged = 0
+  let unplacedNotes = 0
   const review: ReviewCandidate[] = []
-  for (const inc of incomings) {
-    const res = await applyIncoming(inc, library, ownerId, {
+  const outcomes: ImportItemOutcome[] = []
+  const bookIds: string[] = []
+  const tbrBookIds: string[] = []
+  const shelfBooks = new Map<string, string[]>() // shelf slug → book ids
+
+  for (const row of rows) {
+    const res = await applyIncoming(row.incoming, library, ownerId, {
       fuzzy: 'review',
       autoMergeStrong: opts.autoMerge,
       verdicts,
@@ -258,6 +333,76 @@ export async function importCsvToBackend(
     if (res.outcome === 'added') added++
     else if (res.outcome === 'merged') merged++
     else if (res.outcome === 'review' && res.review) review.push(res.review)
+    if (row.unplacedNotes) unplacedNotes++
+    if (!res.bookId) continue
+    bookIds.push(res.bookId)
+    if (res.outcome === 'added' || res.outcome === 'merged') {
+      outcomes.push({ bookId: res.bookId, disposition: res.outcome })
+    }
+    if (row.incoming.ownership === 'unowned') tbrBookIds.push(res.bookId)
+    for (const shelf of row.shelves) {
+      const arr = shelfBooks.get(shelf) ?? []
+      arr.push(res.bookId)
+      shelfBooks.set(shelf, arr)
+    }
   }
-  return { added, merged, review }
+
+  // ── placements: Imported TBR + custom shelves (create on first sight, membership appended) ──
+  const { data: listRows, error: le } = await supabase.from('lists').select('id, name')
+  if (le) throw le
+  const listCache = new Map<string, string>(
+    ((listRows as { id: string; name: string }[]) ?? []).map((l) => [l.name.trim().toLowerCase(), l.id]),
+  )
+
+  const shelvesCreated: string[] = []
+  let shelved = 0
+  const place = async (listId: string, ids: string[]) => {
+    if (!ids.length) return
+    const items = [...new Set(ids)].map((book_id) => ({ list_id: listId, book_id, owner_id: ownerId }))
+    // (list_id, book_id) is the PK — re-imports append nothing, never duplicate.
+    const { error, count } = await supabase
+      .from('list_items')
+      .upsert(items, { onConflict: 'list_id,book_id', ignoreDuplicates: true, count: 'exact' })
+    if (error) throw error
+    shelved += count ?? 0
+  }
+
+  if (tbrBookIds.length) {
+    const { id, created } = await ensureList(ownerId, IMPORTED_TBR_NAME, 'tbr', listCache)
+    if (created) shelvesCreated.push(IMPORTED_TBR_NAME)
+    await place(id, tbrBookIds)
+  }
+  const tropeLikeShelves: string[] = []
+  for (const [slug, ids] of shelfBooks) {
+    const name = shelfDisplayName(slug)
+    // Trope-shaped shelves ('enemies-to-lovers', 'fae') are still shelves here — the trope system
+    // (PR #53) is the right home, but converting is a FUTURE mapping the reader opts into.
+    if (isKnownTrope(name)) tropeLikeShelves.push(name)
+    const { id, created } = await ensureList(ownerId, name, 'collection', listCache)
+    if (created) shelvesCreated.push(name)
+    await place(id, ids)
+  }
+
+  // ── bulk-empty facts for the honest summary (queried post-merge, so folded rows count right) ──
+  const ids = [...new Set(bookIds)]
+  const countWhere = async (col: 'cover_url' | 'isbn'): Promise<number> => {
+    if (!ids.length) return 0
+    const { count, error } = await supabase
+      .from('books')
+      .select('id', { count: 'exact', head: true })
+      .in('id', ids)
+      .is(col, null)
+    if (error) throw error
+    return count ?? 0
+  }
+  const [noCover, noIsbn] = await Promise.all([countWhere('cover_url'), countWhere('isbn')])
+
+  return {
+    added,
+    merged,
+    review,
+    outcomes,
+    bookIds: ids,
+    extras: { tbrPlaced: tbrBookIds.length, shelvesCreated, shelved, noCover, noIsbn, unplacedNotes, tropeLikeShelves },
+  }
 }

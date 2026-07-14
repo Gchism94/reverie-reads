@@ -5,6 +5,7 @@ import { deriveBoyfriend } from './boyfriend'
 import { cleanIsbn, type Incoming } from './match'
 import { emptyOwned } from './ownership'
 import { fromFirstLast } from './contributors'
+import { parseSeriesFromTitle } from './seriesTitle'
 
 /** Quote-aware CSV parser (escaped quotes, CRLF, blank-line skipping). Ported verbatim. */
 export function parseCSV(text: string): string[][] {
@@ -45,12 +46,40 @@ export function parseCSV(text: string): string[][] {
   return rows
 }
 
+/** Map a Goodreads Binding cell onto the app's format vocabulary; unknown/blank stays absent (''). */
+export function formatFromBinding(binding: string): string {
+  const s = (binding ?? '').trim().toLowerCase()
+  if (!s) return ''
+  if (/kindle|e-?book|nook|digital/.test(s)) return 'eBook'
+  if (/audio/.test(s)) return 'Audiobook'
+  if (/hardcover|hardback|library binding/.test(s)) return 'Hardcover'
+  if (/paperback|softcover|mass market/.test(s)) return 'Paperback'
+  return '' // never guess a format the source didn't name
+}
+
+// Exclusive-shelf values sometimes leak into the custom Bookshelves column — never shelf-ify them.
+const EXCLUSIVE_SHELF_VALUES = new Set(['read', 'currently-reading', 'to-read', 'to read', 'dnf'])
+
+/** One parsed Goodreads/StoryGraph row: the book record + row-level extras the intake layer places
+ *  (custom shelves → Reverie shelves; notes that had no honest home on the book). */
+export interface CsvParsedRow {
+  incoming: Incoming
+  /** custom Bookshelves values (exclusive-shelf leakage removed), original slug spelling */
+  shelves: string[]
+  /** My Review / Private Notes existed but the row had no read entry to carry them (to-read rows) */
+  unplacedNotes: boolean
+}
+
 /**
- * Parse a Goodreads/StoryGraph CSV into incoming book records (no matching/merging here —
- * the caller matches them against the library via match.ts). Reads ISBN-10/13 columns so
- * ISBN-based strong matching can fire.
+ * Parse a Goodreads/StoryGraph CSV into rows: an incoming book record (no matching/merging here —
+ * the caller matches against the library via match.ts) plus the row extras. Field discipline
+ * (docs/task-import-quality.md): series parsed OUT of the title; the `Author l-f` column preferred
+ * for an exact first/last split; Binding → format (never a fabricated 'Paperback'); Date Added →
+ * addedTs; Read Count tops up the read log with undated entries; My Review / Private Notes land as
+ * read-log notes; My Rating 0 = unrated; ISBNs survive the `="..."` Excel wrapper via cleanIsbn.
+ * Average Rating is deliberately NOT read — Reverie is anti-consensus (one reader, one voice).
  */
-export function parseCsvIncoming(text: string): Incoming[] {
+export function parseCsvRows(text: string): CsvParsedRow[] {
   const rows = parseCSV(text)
   if (rows.length < 2) return []
   const head = (rows[0] ?? []).map((h) => h.trim().toLowerCase())
@@ -63,30 +92,68 @@ export function parseCsvIncoming(text: string): Incoming[] {
   }
   const cT = col('title')
   const cA = col('author', 'authors')
+  const cAlf = col('author l-f')
+  const cAdd = col('additional authors')
   const cR = col('my rating', 'star rating', 'rating')
   const cD = col('date read', 'last date read', 'dates read', 'read dates')
   const cS = col('exclusive shelf', 'read status', 'bookshelves', 'shelves')
   const cY = col('original publication year', 'year published', 'publication year')
   const cI13 = col('isbn13', 'isbn-13')
   const cI10 = col('isbn', 'isbn-10')
+  const cB = col('binding')
+  const cDA = col('date added')
+  const cRev = col('my review')
+  const cPN = col('private notes')
+  const cRC = col('read count')
+  // Custom shelves only when Bookshelves ISN'T already serving as the status column.
+  const cShelves = col('bookshelves')
+  const shelvesCol = cShelves >= 0 && cShelves !== cS ? cShelves : -1
   if (cT < 0) return []
 
   const cell = (r: string[], i: number): string => (i >= 0 ? (r[i] ?? '') : '')
-  const out: Incoming[] = []
+  const out: CsvParsedRow[] = []
   for (let i = 1; i < rows.length; i++) {
     const r = rows[i] ?? []
-    const title = cell(r, cT).trim()
-    if (!title) continue
-    const authorRaw = cA >= 0 ? (cell(r, cA).split(/[,;]/)[0]?.trim() ?? '') : ''
-    const parts = authorRaw.split(/\s+/)
-    const last = parts.length > 1 ? parts.slice(1).join(' ') : authorRaw
-    const first = parts.length > 1 ? (parts[0] ?? '') : ''
+    const rawTitle = cell(r, cT).trim()
+    if (!rawTitle) continue
+    // Series lives in the title on Goodreads — parse it out; the junk never reaches the display
+    // title (and a clean title is what makes duplicate matching against the library actually fire).
+    const { title, series, position } = parseSeriesFromTitle(rawTitle)
+
+    // Author: `Author l-f` ("Maas, Sarah J.") gives the exact split; the display column is the
+    // fallback, splitting on the LAST word ("Sarah J Maas" → first "Sarah J", last "Maas") — the
+    // old first-word split garbled middle names into the surname and broke title+author matching.
+    let first = ''
+    let last = ''
+    const lf = cell(r, cAlf).trim()
+    if (lf.includes(',')) {
+      last = (lf.split(',')[0] ?? '').trim()
+      first = lf.slice(lf.indexOf(',') + 1).trim()
+    } else {
+      const authorRaw = cA >= 0 ? (cell(r, cA).split(/[,;]/)[0]?.trim() ?? '') : ''
+      const parts = authorRaw.split(/\s+/)
+      last = parts.length > 1 ? (parts[parts.length - 1] ?? '') : authorRaw
+      first = parts.length > 1 ? parts.slice(0, -1).join(' ') : ''
+    }
+    // Additional Authors → co-author contributors, order preserved after the primary.
+    const contributors = fromFirstLast(first, last)
+    const extras = cell(r, cAdd)
+      .split(/[,;]/)
+      .map((s) => s.trim())
+      .filter(Boolean)
+    for (const name of extras) contributors.push({ name, role: 'co_author', position: contributors.length })
+
+    // Goodreads: rating 0 means UNRATED, not zero stars (app-wide, 0 carries "no rating yet";
+    // the merge never writes a falsy rating over an existing one).
     const rating = cR >= 0 ? Math.round(parseFloat(cell(r, cR)) || 0) : 0
     const shelf = cS >= 0 ? cell(r, cS).toLowerCase() : ''
     let readStatus: ReadStatus = 'Read'
     if (/to-read|to read/.test(shelf)) readStatus = 'Unread'
     else if (/currently/.test(shelf)) readStatus = 'Reading'
     else if (/dnf|did.not/.test(shelf)) readStatus = 'DNF'
+
+    // Dates parse as pure strings (Y/M/D, zero-padded) — no Date() round-trip, so no timezone
+    // can shift a read off its calendar day.
     const dates =
       cD >= 0
         ? [...cell(r, cD).matchAll(/(\d{4})[/-](\d{1,2})[/-](\d{1,2})/g)].map((m) => {
@@ -98,24 +165,73 @@ export function parseCsvIncoming(text: string): Incoming[] {
         : []
     const py = cY >= 0 ? parseInt(cell(r, cY)) || null : null
     const isbn = cleanIsbn(cell(r, cI13)) || cleanIsbn(cell(r, cI10))
-    out.push({
+    const format = formatFromBinding(cell(r, cB))
+
+    // Read log: the dated reads, topped up to Read Count with undated entries (the source says the
+    // book was read N times — that's real data, not a fabricated date). Only for finished books.
+    const reads = dates.map((d) => ({ date: d, format, rating: 0, notes: '' }))
+    const readCount = cRC >= 0 ? parseInt(cell(r, cRC)) || 0 : 0
+    if (readStatus === 'Read' || readStatus === 'DNF') {
+      while (reads.length < readCount) reads.push({ date: '', format, rating: 0, notes: '' })
+    }
+    // My Review + Private Notes ride on the most recent read entry (the read log is the app's
+    // note surface). Rows with notes but no read entry (to-read) are counted for the summary.
+    const review = cell(r, cRev).trim()
+    const privateNotes = cell(r, cPN).trim()
+    const notes = [review, privateNotes].filter(Boolean).join('\n\n')
+    let unplacedNotes = false
+    if (notes) {
+      const target = reads[reads.length - 1]
+      if (target) target.notes = notes
+      else unplacedNotes = true
+    }
+
+    // Date Added → addedTs (noon UTC — date-only, timezone-proof), keeping shelf-history order.
+    const da = cDA >= 0 ? /(\d{4})[/-](\d{1,2})[/-](\d{1,2})/.exec(cell(r, cDA)) : null
+    const addedTs = da ? Date.UTC(Number(da[1]), Number(da[2]) - 1, Number(da[3]), 12) : undefined
+
+    // Custom shelves (exclusive-shelf leakage skipped) → Reverie shelves, created by the intake layer.
+    const shelves =
+      shelvesCol >= 0
+        ? cell(r, shelvesCol)
+            .split(',')
+            .map((s) => s.trim())
+            .filter((s) => s && !EXCLUSIVE_SHELF_VALUES.has(s.toLowerCase()))
+        : []
+
+    const incoming: Incoming = {
       title,
       first,
       last,
+      contributors,
       isbn,
       rating,
       readStatus,
-      reads: dates.map((d) => ({ date: d, format: 'Paperback', rating: 0, notes: '' })),
+      reads,
       pub: { y: py, m: null, d: null },
-      genres: ['Imported'],
       source: 'Imported',
       // Goodreads shelf → ownership: `to-read` is a wishlist (unowned); read / currently-reading
       // rows are books that passed through the reader's hands (owned).
       ownership: /to-read|to read/.test(shelf) ? 'unowned' : 'owned',
       owned: emptyOwned(),
-    })
+    }
+    if (series) {
+      incoming.series = series
+      incoming.position = position
+    }
+    if (format) incoming.format = format
+    if (addedTs != null) incoming.addedTs = addedTs
+    out.push({ incoming, shelves, unplacedNotes })
   }
   return out
+}
+
+/**
+ * Parse a Goodreads/StoryGraph CSV into incoming book records — the row extras dropped.
+ * Kept for callers that only need the books; the web intake path uses parseCsvRows.
+ */
+export function parseCsvIncoming(text: string): Incoming[] {
+  return parseCsvRows(text).map((r) => r.incoming)
 }
 
 export interface CsvImportResult {
@@ -178,8 +294,9 @@ export function importCsv(existing: readonly Book[], text: string): CsvImportRes
 
     const authorRaw = cA >= 0 ? (cell(r, cA).split(/[,;]/)[0]?.trim() ?? '') : ''
     const parts = authorRaw.split(/\s+/)
-    const last = parts.length > 1 ? parts.slice(1).join(' ') : authorRaw
-    const first = parts.length > 1 ? (parts[0] ?? '') : ''
+    // last word = surname (parity with parseCsvRows — the old first-word split garbled middles)
+    const last = parts.length > 1 ? (parts[parts.length - 1] ?? '') : authorRaw
+    const first = parts.length > 1 ? parts.slice(0, -1).join(' ') : ''
     const rating = cR >= 0 ? Math.round(parseFloat(cell(r, cR)) || 0) : 0
     const shelf = cS >= 0 ? cell(r, cS).toLowerCase() : ''
     let rs: ReadStatus = 'Read'
@@ -197,7 +314,11 @@ export function importCsv(existing: readonly Book[], text: string): CsvImportRes
         : []
     const py = cY >= 0 ? parseInt(cell(r, cY)) || null : null
 
-    const match = have.get(norm(title) + '|' + norm(last)) ?? have.get('t:' + norm(title))
+    // Series junk parsed off the title BEFORE matching — "(ACOTAR, #1)" must never block a merge.
+    const parsed = parseSeriesFromTitle(title)
+    const cleanTitle = parsed.title
+
+    const match = have.get(norm(cleanTitle) + '|' + norm(last)) ?? have.get('t:' + norm(cleanTitle))
     if (match) {
       let changed = false
       if (!match.rating && rating) {
@@ -221,43 +342,45 @@ export function importCsv(existing: readonly Book[], text: string): CsvImportRes
       }
       if (changed) updated++
     } else {
+      // Absent source data imports as absent — no fabricated genre/format/intensity
+      // (docs/task-import-quality.md §3). 'Imported' pseudo-genre retired; source records provenance.
       const nb: Book = {
         id: uid(),
-        title,
+        title: cleanTitle,
         first,
         last,
         contributors: fromFirstLast(first, last),
-        series: '',
-        position: '',
+        series: parsed.series,
+        position: parsed.position,
         seriesCount: null,
         status: 'standalone',
-        genre: 'romance',
-        subgenre: 'Romance',
-        subgenres: ['Romance'],
-        genres: ['Imported'],
+        genre: '',
+        subgenre: '',
+        subgenres: [],
+        genres: [],
         tags: [],
         tropes: [],
-        intensity: 0,
+        intensity: null,
         cover: '',
         isbn: '',
         fave: false,
-        // Goodreads shelf → ownership (same rule as parseCsvIncoming): to-read = wishlist.
+        // Goodreads shelf → ownership (same rule as parseCsvRows): to-read = wishlist.
         ownership: /to-read|to read/.test(shelf) ? 'unowned' : 'owned',
         owned: { physical: false, ebook: false, audiobook: false },
-        format: 'Paperback',
+        format: '',
         rating,
         readStatus: rs,
         source: 'Imported',
         pub: { y: py, m: null, d: null },
-        reads: dates.map((d) => ({ date: d, format: 'Paperback', rating: 0, notes: '' })),
+        reads: dates.map((d) => ({ date: d, format: '', rating: 0, notes: '' })),
         plan: null,
         progress: 0,
         addedTs: Date.now(),
       }
       nb.boyfriend = deriveBoyfriend(nb)
       books.push(nb)
-      have.set(norm(title) + '|' + norm(last), nb)
-      have.set('t:' + norm(title), nb)
+      have.set(norm(cleanTitle) + '|' + norm(last), nb)
+      have.set('t:' + norm(cleanTitle), nb)
       added++
     }
   }

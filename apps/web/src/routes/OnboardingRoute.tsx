@@ -8,11 +8,13 @@ import { useEffectiveSkin, useVoice } from '../skin/labels'
 import { useSkin } from '../skin/useSkin'
 import { useBooks } from '../data/books'
 import { importDetectedExport, type ImportExportResult } from '../data/importLibrary'
+import { enrichImported } from '../data/importEnrich'
 import { fileToCsvText } from '../data/xlsxAdapter'
 import { Button } from '../components/Button'
-import { Label, StatNumber } from '../components/Label'
+import { Label } from '../components/Label'
 import { SkinDivider } from '../components/SkinDivider'
 import { DuplicateReview } from '../components/DuplicateReview'
+import { ImportSummary } from '../components/ImportSummary'
 
 // First-run flag — honor-based / client-side (the project's v1 default), so a finished or skipped
 // onboarding never reappears. The trigger that sends a brand-new reader here lives in HomeRoute.
@@ -42,16 +44,6 @@ function Stage({ children }: { children: ReactNode }) {
     <section className="relative z-[1] flex min-h-dvh flex-col items-center justify-center px-5 py-10">
       <div className="w-full max-w-[520px]">{children}</div>
     </section>
-  )
-}
-
-/** A small stat for the import summary — numeral in the skin's figure style. */
-function Stat({ n, l }: { n: number; l: string }) {
-  return (
-    <div className="border border-line px-3 py-2.5 text-center" style={{ background: 'var(--card-solid)', borderRadius: 'var(--radius-panel)' }}>
-      <StatNumber className="block text-[22px] font-bold text-ink">{n}</StatNumber>
-      <span className="skin-label mt-0.5 block text-[9.5px] text-muted">{l}</span>
-    </div>
   )
 }
 
@@ -105,6 +97,8 @@ function OnboardingFlow() {
         await qc.invalidateQueries()
         markOnboarded() // they've brought a library in — don't re-onboard
         setImp({ phase: 'done', r })
+        // Cover handoff: backfill missing covers for the imported books in the background (§3).
+        void enrichImported(qc, r.bookIds)
       } catch (e) {
         setImpErr((e as Error).message)
         setImp(null)
@@ -152,23 +146,9 @@ function OnboardingFlow() {
         <h2 className="mt-2 text-[28px] leading-tight text-ink" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
           Your library, mapped.
         </h2>
-        <p className="mt-2 text-[14px] leading-relaxed text-muted">
-          Detected your {r.profile} export — brought in {r.added} new, folded {r.merged} into what you
-          had{r.readingOrders ? `, and stitched ${r.readingOrders} reading order${r.readingOrders > 1 ? 's' : ''}` : ''}.
-        </p>
-        <div className="mt-4 grid grid-cols-3 gap-2">
-          <Stat n={r.added} l="Added" />
-          <Stat n={r.merged} l="Merged" />
-          <Stat n={r.readingOrders} l="Orders" />
+        <div className="mt-2">
+          <ImportSummary result={r} />
         </div>
-        {/* Non-blocking notice (only when some ISBNs look truncated): the count in skin numerals,
-            the framing in the skin's voice. Detect-and-inform — the books imported fine. */}
-        {r.truncatedIsbns > 0 && (
-          <p className="mt-4 text-[13px] leading-relaxed text-muted">
-            <StatNumber className="font-bold text-ink">{r.truncatedIsbns}</StatNumber>{' '}
-            {r.truncatedIsbns === 1 ? 'ISBN' : 'ISBNs'} {voice.isbnNotice}
-          </p>
-        )}
         {r.review.length > 0 ? (
           <div className="mt-5">
             <span className="skin-label mb-1.5 block text-[11px]" style={{ color: 'var(--accent-ink)' }}>

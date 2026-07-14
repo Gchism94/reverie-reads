@@ -33,6 +33,8 @@ const toBook = (inc: Incoming): Book =>
     title: inc.title,
     first: inc.first ?? '',
     last: inc.last ?? '',
+    contributors: inc.contributors ?? [], // real intake persists these; keep re-import idempotent
+    format: inc.format ?? '',
     isbn: inc.isbn ?? '',
     rating: inc.rating ?? 0,
     readStatus: inc.readStatus ?? 'Unread',

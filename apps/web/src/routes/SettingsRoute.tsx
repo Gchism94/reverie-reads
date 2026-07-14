@@ -7,7 +7,9 @@ import { useBooks } from '../data/books'
 import { useProfile, useUpdateProfile } from '../data/profile'
 import { usePerformMerge } from '../data/mergeBooks'
 import { buildBackup, restoreBackup } from '../data/importExport'
-import { importDetectedExport } from '../data/importLibrary'
+import { importDetectedExport, type ImportExportResult } from '../data/importLibrary'
+import { enrichImported } from '../data/importEnrich'
+import { ImportSummary } from '../components/ImportSummary'
 import { importSessionKey } from '../data/importReview'
 import { deleteAccount } from '../data/account'
 import { bulkComplete, isIncomplete, type BulkProgress } from '../data/enrichLibrary'
@@ -53,6 +55,7 @@ function SettingsScreen() {
   const [showDupes, setShowDupes] = useState(false)
   const [review, setReview] = useState<ReviewCandidate[]>([])
   const [imported, setImported] = useState(false)
+  const [importResult, setImportResult] = useState<ImportExportResult | null>(null)
   const [completing, setCompleting] = useState(false)
   const [progress, setProgress] = useState<BulkProgress | null>(null)
   const stopRef = useRef(false)
@@ -382,18 +385,13 @@ function SettingsScreen() {
                 readFile(e.currentTarget, async (text) => {
                   const r = await importDetectedExport(all, text, { autoMerge })
                   setReview(r.review)
+                  setImportResult(r)
                   // Stash the per-book outcomes so the Import review screen can build its read-model.
                   qc.setQueryData(importSessionKey, { outcomes: r.outcomes, readingOrders: r.readingOrders })
                   setImported(true)
-                  setStatus(
-                    `Imported (${r.profile}) · merged ${r.merged} · added ${r.added} new${
-                      r.readingOrders ? ` · ${r.readingOrders} reading order${r.readingOrders > 1 ? 's' : ''}` : ''
-                    }${r.review.length ? ` · ${r.review.length} to review below` : ''}.${
-                      r.truncatedIsbns
-                        ? ` Note: ${r.truncatedIsbns} ISBN${r.truncatedIsbns > 1 ? 's' : ''} may be missing a leading digit and might not match — re-export with ISBNs as text to fix.`
-                        : ''
-                    }`,
-                  )
+                  setStatus(null) // the summary panel below now speaks for the import
+                  // Cover handoff: backfill missing covers for the imported books in the background (§3).
+                  void enrichImported(qc, r.bookIds)
                 })
               }
             />
@@ -429,6 +427,12 @@ function SettingsScreen() {
             </a>{' '}
             and fill it in.
           </p>
+
+          {importResult && (
+            <div className="mt-4 border-t border-line pt-4">
+              <ImportSummary result={importResult} />
+            </div>
+          )}
 
           {imported && (
             <Link
