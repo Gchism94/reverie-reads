@@ -15,7 +15,7 @@ import { clubRoute } from './routes/ClubRoute'
 import { sharedListRoute } from './routes/SharedListRoute'
 import { indieRoute } from './routes/IndieRoute'
 import { skinsRoute } from './routes/SkinGalleryRoute'
-import { ordersRoute } from './routes/OrdersRoute'
+import { seriesRoute } from './routes/SeriesRoute'
 import { reviewRoute } from './routes/ReviewRoute'
 import { authRoute } from './routes/AuthRoute'
 import { welcomeRoute } from './routes/WelcomeRoute'
@@ -40,7 +40,7 @@ const routeTree = rootRoute.addChildren([
   sharedListRoute,
   indieRoute,
   skinsRoute,
-  ordersRoute,
+  seriesRoute,
   reviewRoute,
   authRoute,
   welcomeRoute,
