@@ -52,6 +52,12 @@ describe('skin character kit contrast (text on the kit surfaces ≥ AA, every sk
         ['input/search text on field', t.ink, mixSrgb(t.ink, t.bg0, 0.05)],
         // structural — section-header readout + accent status-tag text sit in --accent-ink on the page bg.
         ['structural readout / accent tag (accent-ink) on bg', t.accentInk, t.bg0],
+        // taste tiers (taste-tiers): the named match-strength label on a card — top tier lit in the
+        // skin accent (--accent-ink), the floor quieted to --muted, the middle in --ink. All three
+        // over the card surface, every skin × mode (see TASTE_TIER_TOKEN in @reverie/core).
+        ['taste tier — recognition (accent-ink) on card', t.accentInk, t.cardSolid],
+        ['taste tier — mid (ink) on card', t.ink, t.cardSolid],
+        ['taste tier — departure (muted) on card', t.muted, t.cardSolid],
       ]
       for (const [name, fg, bg] of pairs) {
         it(`${skin}/${mode} · ${name} clears ${AA}:1`, () => {

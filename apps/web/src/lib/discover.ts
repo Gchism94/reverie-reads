@@ -159,14 +159,6 @@ export async function rankHitsByTaste(hits: DiscoverHit[], genre: string): Promi
   }
 }
 
-/** Display calibration for raw centroid cosines: short-text embeddings against a genre-tight
- *  centroid all land in a narrow band (~0.80–0.95 in practice — even a productivity manual clears
- *  0.88 against a romantasy shelf), so raw ×100 reads as "everything is loved". The affine spread
- *  keeps ORDER identical (sorting stays on raw cosine) but makes differences readable. */
-export function tastePercent(cos: number): number {
-  return Math.min(99, Math.max(1, Math.round(((cos - 0.78) / 0.19) * 100)))
-}
-
 /** Taste-scored hits first (closest first); unscored hits keep their catalog order behind them. */
 export function sortByTaste(
   hits: readonly DiscoverHit[],
