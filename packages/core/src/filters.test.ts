@@ -17,7 +17,7 @@ describe('matchesFilters', () => {
     series: 'The Empyrean',
     subgenre: 'Romantasy',
     tags: ['Dragon Riders', 'Enemies to Lovers'],
-    status: 'Series',
+    status: 'ongoing',
     readStatus: 'Read',
     fave: true,
   })

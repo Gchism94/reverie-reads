@@ -25,6 +25,10 @@ VITE_GOOGLE_BOOKS_KEY=<the referrer-restricted Books key>
 
 - **Schema**: `supabase db push` (repo is linked to the project; `supabase migration list` to
   compare local↔remote first). Local dev uses `pnpm db:migrate` (adds the PostgREST schema reload).
+  - **Migrations go out from `main` only, after the PR merges — never from a feature branch
+    mid-flight — and the push must be confirmed complete (each version recorded in the migration
+    history, not just the SQL applied) before doing anything else.** (Codifies the 2026-07-14 drift:
+    branch migrations reached prod unrecorded, so a later `db push` tried to re-run them and errored.)
 - **Edge functions**: `supabase functions deploy` (all) or `supabase functions deploy embed` (one).
 - **Web**: Vercel deploy (git-connected or `vercel --prod`).
 
