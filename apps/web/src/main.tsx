@@ -10,7 +10,7 @@ import { APP_NAME } from '@reverie/core'
 import { AuthProvider } from './auth/AuthProvider'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { initErrorMonitoring } from './lib/sentry'
-import { installPreloadErrorReload } from './lib/updates'
+import { BUILD_ID, installPreloadErrorReload } from './lib/updates'
 import { createDexiePersister } from './lib/offlineCache'
 import { router } from './router'
 import './styles/tokens.css'
@@ -26,7 +26,9 @@ installPreloadErrorReload()
 // modules and fights Vite's HMR. Registration failing is fine; the app works without it.
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    void navigator.serviceWorker.register('/sw.js').catch(() => {})
+    // The build id in the script URL makes the browser re-check the worker on every deploy, so a new
+    // build reliably triggers the SW `updatefound` signal the update watch listens for.
+    void navigator.serviceWorker.register(`/sw.js?v=${BUILD_ID}`).catch(() => {})
   })
 }
 
@@ -49,7 +51,10 @@ createRoot(rootEl).render(
     <ErrorBoundary>
       <PersistQueryClientProvider
         client={queryClient}
-        persistOptions={{ persister, maxAge: WEEK, buster: 'v1' }}
+        // buster = the build id: every deploy discards the persisted query cache on load, so a
+        // client that updates after a DB migration can never restore a stale query SHAPE (the
+        // motivating failure). Ties cache lifetime to the deploy, automatically — no manual bump.
+        persistOptions={{ persister, maxAge: WEEK, buster: BUILD_ID }}
         onSuccess={() => {
           // Flush any writes that were queued while offline.
           void queryClient.resumePausedMutations()

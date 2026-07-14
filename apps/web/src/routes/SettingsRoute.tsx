@@ -13,10 +13,12 @@ import { ImportSummary } from '../components/ImportSummary'
 import { importSessionKey } from '../data/importReview'
 import { deleteAccount } from '../data/account'
 import { bulkComplete, isIncomplete, type BulkProgress } from '../data/enrichLibrary'
+import { resharpenCovers, resharpenSource, type ResharpenProgress } from '../data/resharpenCovers'
 import { DuplicateReview } from '../components/DuplicateReview'
 import { fileToCsvText } from '../data/xlsxAdapter'
 import type { ReviewCandidate } from '../data/intake'
-import { SKIN_LIST, type Mode } from '@reverie/core'
+import { APP_NAME, SKIN_LIST, type Mode } from '@reverie/core'
+import { BUILD_LABEL } from '../lib/updates'
 import { useSkin } from '../skin/useSkin'
 import { useSkinControls } from '../skin/controls'
 import { useAuth } from '../auth/AuthProvider'
@@ -59,11 +61,16 @@ function SettingsScreen() {
   const [completing, setCompleting] = useState(false)
   const [progress, setProgress] = useState<BulkProgress | null>(null)
   const stopRef = useRef(false)
+  const [sharpening, setSharpening] = useState(false)
+  const [sharpProgress, setSharpProgress] = useState<ResharpenProgress | null>(null)
+  const sharpStopRef = useRef(false)
   const restoreRef = useRef<HTMLInputElement>(null)
   const csvRef = useRef<HTMLInputElement>(null)
 
   const autoMerge = profile?.autoMergeDuplicates ?? true
   const incompleteCount = (books ?? []).filter(isIncomplete).length
+  // Covers whose STORED pixels can be improved from a larger source (Google/OL) — the re-sharpen set.
+  const sharpenableCount = (books ?? []).filter((b) => resharpenSource(b) !== null).length
 
   // Prime the form fields once the profile loads.
   if (profile && !primed) {
@@ -180,6 +187,27 @@ function SettingsScreen() {
     }
     setCompleting(false)
     setProgress(null)
+  }
+
+  async function runResharpen() {
+    sharpStopRef.current = false
+    setSharpening(true)
+    setSharpProgress({ scanned: 0, total: 0, sharpened: 0 })
+    try {
+      const r = await resharpenCovers(all, setSharpProgress, () => sharpStopRef.current)
+      const prefix =
+        r.stopReason === 'limit'
+          ? 'Paused at the per-run limit — run again to finish. '
+          : r.stopReason === 'user'
+            ? 'Stopped — '
+            : ''
+      setStatus(`${prefix}re-fetched ${r.scanned} of ${r.total} covers · ${r.sharpened} sharpened.`)
+      await qc.invalidateQueries({ queryKey: ['books'] })
+    } catch (e) {
+      setStatus(`Couldn’t finish sharpening covers: ${(e as Error).message}`)
+    }
+    setSharpening(false)
+    setSharpProgress(null)
   }
 
   return (
@@ -309,11 +337,37 @@ function SettingsScreen() {
                 ✨ Complete missing covers &amp; info{incompleteCount ? ` (${incompleteCount})` : ''}
               </button>
             )}
+            {sharpening ? (
+              <button
+                type="button"
+                onClick={() => (sharpStopRef.current = true)}
+                className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink"
+                style={{ background: 'var(--field)' }}
+              >
+                ⏹ Stop{sharpProgress ? ` (${sharpProgress.scanned}/${sharpProgress.total})` : ''}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => void runResharpen()}
+                disabled={!sharpenableCount}
+                className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink disabled:opacity-50"
+                style={{ background: 'var(--field)' }}
+              >
+                🔍 Sharpen covers{sharpenableCount ? ` (${sharpenableCount})` : ''}
+              </button>
+            )}
           </div>
           {completing && progress && (
             <p className="mt-2 text-[12.5px] text-muted">
               Completing details… {progress.scanned}/{progress.total} · filled {progress.filled}. Sources are
               throttled, so this takes a moment; you can keep using the app.
+            </p>
+          )}
+          {sharpening && sharpProgress && (
+            <p className="mt-2 text-[12.5px] text-muted">
+              Sharpening covers… {sharpProgress.scanned}/{sharpProgress.total} · {sharpProgress.sharpened} re-fetched at
+              full resolution. Throttled; you can keep using the app.
             </p>
           )}
           {showDupes && (
@@ -512,6 +566,11 @@ function SettingsScreen() {
         </Section>
 
         {status && <p className="text-center text-[13px] text-primary">{status}</p>}
+
+        {/* Build stamp — which deploy this client is running (the update toast handles new ones). */}
+        <p className="mt-6 text-center text-[11.5px]" style={{ color: 'var(--faint, var(--muted))' }}>
+          {APP_NAME} · build {BUILD_LABEL}
+        </p>
       </div>
     </section>
   )

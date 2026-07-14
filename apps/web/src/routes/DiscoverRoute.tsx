@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { createRoute, useNavigate } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
-import { genreKey, SKINS, SKIN_ORDER, splitName, type Book } from '@reverie/core'
+import { genreKey, SKINS, SKIN_ORDER, splitName, upgradeCoverUrl, type Book } from '@reverie/core'
 import { rootRoute } from './RootRoute'
 import { useBooks } from '../data/books'
 import { useLists } from '../data/lists'
@@ -36,7 +36,7 @@ function Card({ hit, owned, taste }: { hit: DiscoverHit; owned: boolean; taste?:
       <div className="aspect-[2/3] overflow-hidden rounded-[8px] border border-line" style={{ background: 'var(--card)' }}>
         {hit.cover && !coverFailed ? (
           <img
-            src={hit.cover}
+            src={upgradeCoverUrl(hit.cover, 'thumb')}
             alt=""
             loading="lazy"
             decoding="async"
