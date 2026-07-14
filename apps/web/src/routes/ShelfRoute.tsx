@@ -5,6 +5,7 @@ import { rootRoute } from './RootRoute'
 import { BackLink } from '../components/BackLink'
 import { CoverCard } from '../components/CoverCard'
 import { LibraryPicker } from '../components/LibraryPicker'
+import { ExternalSearchSheet } from '../components/ExternalSearchSheet'
 import { SpineShelf } from '../components/SpineShelf'
 import { SectionHeader } from '../components/Structure'
 import { BookmarkGlyph } from '../components/BookmarkGlyph'
@@ -40,6 +41,7 @@ function ShelfScreen() {
 
   const [view, setView] = useState<'spines' | 'grid'>('spines')
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [externalSearch, setExternalSearch] = useState(false)
   // Appends within one picker session step past the stale cache max (invalidation lags picks).
   const [pickCount, setPickCount] = useState(0)
   const [dragIdx, setDragIdx] = useState<number | null>(null)
@@ -235,7 +237,18 @@ function ShelfScreen() {
             setPickerOpen(false)
             setPickCount(0)
           }}
+          // The seam (task §3): "search everywhere" opens the same search backend as Discover,
+          // bound to this shelf — a found book lands here as an unowned copy.
+          onExternalSearch={() => {
+            setPickerOpen(false)
+            setPickCount(0)
+            setExternalSearch(true)
+          }}
         />
+      )}
+
+      {externalSearch && (
+        <ExternalSearchSheet listId={list.id} listName={list.name} books={books ?? []} onClose={() => setExternalSearch(false)} />
       )}
     </section>
   )
