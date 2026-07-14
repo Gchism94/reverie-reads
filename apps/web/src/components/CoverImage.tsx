@@ -1,16 +1,22 @@
 import { useState } from 'react'
-import { upgradeCoverUrl } from '@reverie/core'
+import { coverCandidates, isGoogleNoCoverArt } from '@reverie/core'
 import { markCoverBroken } from '../data/brokenCovers'
 import { CoverPlaceholder } from './CoverPlaceholder'
 
 /**
- * A book cover that degrades gracefully: shows the image, and on a missing OR dead link falls back to
- * the skin-themed placeholder. A failed load is recorded (markCoverBroken) so the cover joins the
- * Cover Studio "needs attention" queue + the aggregated owner telemetry. FILLS its parent (the caller
- * provides the sized/bordered box), so it's a drop-in for the app's `{cover && <img …/>}` cover idiom.
+ * A book cover that degrades gracefully. It walks an ordered candidate chain — the display-upgraded
+ * (larger) URL first, then the **un-upgraded original**, then the skin placeholder — so a hotlinked
+ * cover renders sharp when the larger scan exists but degrades to the real, smaller cover when it
+ * doesn't, never to a broken state. Two failure signals advance the chain:
+ *   · `onError` — a genuinely dead link (404 / network).
+ *   · `onLoad` + `isGoogleNoCoverArt` — Google Books answers a MISSING cover with a stock "image not
+ *     available" plate at HTTP 200, which `onError` can't catch; we detect it by its fixed size.
+ * When the LAST candidate fails, the cover joins the Cover Studio "needs attention" queue (aggregated
+ * telemetry). FILLS its parent (the caller provides the sized/bordered box), so it's a drop-in for the
+ * app's `{cover && <img …/>}` cover idiom.
  *
- * `thumb` prefers the ~300px stored thumbnail (grids/spines/shelves — the ingest pipeline's asset);
- * a dead thumb retries the full asset before surrendering to the placeholder.
+ * `thumb` prefers the ~300px stored thumbnail (grids/spines/shelves — the ingest pipeline's asset) and
+ * a lighter display size; detail/flip ask for the largest.
  */
 export function CoverImage({
   book,
@@ -22,16 +28,20 @@ export function CoverImage({
   thumb?: boolean
 }) {
   const [failed, setFailed] = useState<Set<string>>(() => new Set())
-  // Display-upgrade a hotlinked external cover to the size the surface needs — a never-ingested
-  // Google/Open Library cover otherwise renders at its ~128px thumbnail and pixelates at detail/flip.
-  // Grids ask for a lighter size (thumb → ~300px); detail/flip ask for the largest. Stored assets +
-  // Hardcover/B&N pass through untouched. When a stored thumb is present it's already the right size.
-  const full = book.cover ? upgradeCoverUrl(book.cover, thumb ? 'thumb' : 'full') : null
-  const candidates = [thumb && book.coverThumb ? book.coverThumb : null, full].filter(
-    (u): u is string => !!u && !failed.has(u),
-  )
+  const chain = coverCandidates(book.cover, {
+    size: thumb ? 'thumb' : 'full',
+    storedThumb: thumb ? book.coverThumb : null,
+  })
+  const candidates = chain.filter((u) => !failed.has(u))
   const src = candidates[0]
   if (!src) return <CoverPlaceholder book={book} className={className} />
+  // The last untried candidate: its failure is a genuine dead end → placeholder + broken telemetry.
+  const isLast = candidates.length === 1
+  const fail = (): void => {
+    setFailed((prev) => new Set(prev).add(src))
+    if (book.id && isLast)
+      markCoverBroken({ id: book.id, title: book.title, first: book.first, last: book.last })
+  }
   return (
     <img
       src={src}
@@ -39,12 +49,13 @@ export function CoverImage({
       loading="lazy"
       decoding="async"
       className={className}
-      onError={() => {
-        setFailed((prev) => new Set(prev).add(src))
-        // Only a dead FULL cover joins the broken-cover queue — a stale thumb still has its fallback.
-        if (book.id && src === full)
-          markCoverBroken({ id: book.id, title: book.title, first: book.first, last: book.last })
+      onLoad={(e) => {
+        // A Google "no image" plate loads successfully (HTTP 200) — reject it by its fixed size so the
+        // chain falls back to the real original, or to the honest placeholder when nothing's left.
+        const img = e.currentTarget
+        if (isGoogleNoCoverArt(src, img.naturalWidth, img.naturalHeight)) fail()
       }}
+      onError={fail}
     />
   )
 }
