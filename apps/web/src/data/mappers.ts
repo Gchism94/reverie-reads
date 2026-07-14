@@ -1,5 +1,6 @@
 import {
   isContributorRole,
+  sortBookTropes,
   normalizeSeriesStatus,
   toFirstLast,
   type Book,
@@ -48,6 +49,12 @@ export function toBook(row: BookRow): Book {
     subgenres: row.subgenres?.length ? row.subgenres : row.subgenre ? [row.subgenre] : [],
     genres: row.genres ?? [],
     tags: row.tags ?? [],
+    tropesSuggestedAt: row.tropes_suggested_at,
+    tropes: sortBookTropes(
+      (row.book_tropes ?? [])
+        .filter((bt) => bt.tropes?.name)
+        .map((bt) => ({ id: bt.tropes!.id, name: bt.tropes!.name, emphasis: bt.emphasis === 'pinned' ? ('pinned' as const) : ('present' as const) })),
+    ),
     intensity: row.intensity ?? null,
     cover: row.cover_url ?? '',
     coverConfidence: COVER_CONFIDENCE.includes(row.cover_confidence as (typeof COVER_CONFIDENCE)[number])

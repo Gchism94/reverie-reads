@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import type { Book, SeriesLenBucket } from '@reverie/core'
-import { bookSubgenres, SERIES_STATUS_LABELS, SERIES_STATUS_VALUES } from '@reverie/core'
+import { bookSubgenres, bookTropeNames, SERIES_STATUS_LABELS, SERIES_STATUS_VALUES } from '@reverie/core'
 import { useFilters } from './filterStore'
 import { Chip } from '../components/Chip'
 import { FORMATS, READ_STATUSES } from './constants'
@@ -32,7 +32,7 @@ export function FilterPanel({ books, bare = false }: { books: Book[]; bare?: boo
   )
   const tags = useMemo(() => {
     const counts = new Map<string, number>()
-    for (const b of books) for (const t of b.tags) counts.set(t, (counts.get(t) ?? 0) + 1)
+    for (const b of books) for (const t of bookTropeNames(b)) counts.set(t, (counts.get(t) ?? 0) + 1)
     const sorted = [...counts.keys()].sort((a, b) => (counts.get(b) ?? 0) - (counts.get(a) ?? 0))
     return { all: sorted, shown: showAllTags ? sorted : sorted.slice(0, 14) }
   }, [books, showAllTags])

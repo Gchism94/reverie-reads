@@ -1,0 +1,159 @@
+import { useMemo, useState } from 'react'
+import { createRoute, useNavigate } from '@tanstack/react-router'
+import { FACET_LABELS, isBookRead, isOwnedBook, tropeKin, type Book } from '@reverie/core'
+import { rootRoute } from './RootRoute'
+import { BackLink } from '../components/BackLink'
+import { CoverImage } from '../components/CoverImage'
+import { TropeChip } from '../components/TropeChip'
+import { useBooks } from '../data/books'
+import { useAllBookTropes, useAssignTrope, useTropes, useUnassignTrope } from '../data/tropes'
+import { useLabels } from '../skin/labels'
+
+/**
+ * A trope's own page (docs/task-trope-system.md §5): your shelf of books carrying it, your
+ * read-rate, and KIN — what you pair it with, computed from YOUR library only (nothing global).
+ * The per-trope sweep lives here: flip to sweep and tap covers to tag in bulk.
+ */
+function TropeScreen() {
+  const { tropeId } = tropeRoute.useParams()
+  const navigate = useNavigate()
+  const labels = useLabels()
+  const { data: books } = useBooks()
+  const { data: tropes } = useTropes()
+  const { data: assignments } = useAllBookTropes()
+  const assign = useAssignTrope()
+  const unassign = useUnassignTrope()
+  const [sweep, setSweep] = useState(false)
+
+  const trope = (tropes ?? []).find((t) => t.id === tropeId)
+  const tropeById = useMemo(() => new Map((tropes ?? []).map((t) => [t.id, t])), [tropes])
+
+  const carrierIds = useMemo(
+    () => new Set((assignments ?? []).filter((a) => a.trope_id === tropeId).map((a) => a.book_id)),
+    [assignments, tropeId],
+  )
+  const carriers = useMemo(
+    () => (books ?? []).filter((b) => carrierIds.has(b.id)),
+    [books, carrierIds],
+  )
+  const kin = useMemo(
+    () =>
+      tropeKin(
+        tropeId,
+        (assignments ?? []).map((a) => ({ bookId: a.book_id, tropeId: a.trope_id })),
+      )
+        .map((k) => tropeById.get(k.tropeId))
+        .filter((t): t is NonNullable<typeof t> => !!t),
+    [assignments, tropeId, tropeById],
+  )
+
+  if (!trope)
+    return (
+      <div className="px-6 py-16 text-center text-muted">
+        <p>That {labels.tag.toLowerCase()} isn’t on your shelves.</p>
+        <BackLink fallback="/tropes" className="mt-3 inline-block text-primary">
+          ← All {labels.tags.toLowerCase()}
+        </BackLink>
+      </div>
+    )
+
+  const owned = carriers.filter(isOwnedBook).length
+  const read = carriers.filter(isBookRead).length
+  const gridBooks = sweep ? (books ?? []) : carriers
+
+  const toggle = (b: Book) => {
+    if (!sweep) {
+      void navigate({ to: '/book/$bookId', params: { bookId: b.id } })
+      return
+    }
+    if (carrierIds.has(b.id)) unassign.mutate({ bookId: b.id, tropeId })
+    else assign.mutate({ bookId: b.id, tropeId, emphasis: 'present' }) // sweep tags at present; pins stay per-book
+  }
+
+  return (
+    <section className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
+      <BackLink fallback="/tropes" className="text-[13px] text-muted hover:text-ink">
+        ← {labels.tags}
+      </BackLink>
+
+      <header className="mt-3 flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-[26px] italic leading-tight text-ink" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+            {trope.name}
+          </h1>
+          <p className="mt-0.5 text-[13px] text-muted">
+            {FACET_LABELS[trope.facet]}
+            {trope.personal ? ' · yours' : ''}
+            {trope.aliases.length ? ` · also answers to ${trope.aliases.join(', ')}` : ''}
+          </p>
+          <p className="mt-1.5 text-[14px] text-ink">
+            You own {owned}, read {read}
+            {carriers.length !== owned ? ` — ${carriers.length} carrying it in all` : ''}
+          </p>
+          {kin.length > 0 && (
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              <span className="text-[12px] text-muted">You pair this with</span>
+              {kin.map((k) => (
+                <TropeChip key={k.id} name={k.name} emphasis="present" to={`/tropes/${k.id}`} />
+              ))}
+            </div>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={() => setSweep((s) => !s)}
+          aria-pressed={sweep}
+          className="rounded-full border px-3.5 py-1.5 text-[12.5px] font-semibold"
+          style={sweep ? { background: 'var(--accent-fill)', color: 'var(--on-primary)', borderColor: 'transparent' } : { background: 'var(--card)', color: 'var(--ink)', borderColor: 'var(--line)' }}
+        >
+          {sweep ? 'Done sweeping' : '⟲ Sweep your library'}
+        </button>
+      </header>
+      {sweep && (
+        <p className="mt-2 text-[12.5px] text-muted">Tap covers to tag or untag — highlighted books carry {trope.name}.</p>
+      )}
+
+      {gridBooks.length ? (
+        <div className="mt-5 grid grid-cols-3 gap-3 sm:grid-cols-5 lg:grid-cols-7">
+          {gridBooks.map((b) => {
+            const carrying = carrierIds.has(b.id)
+            return (
+              <button
+                key={b.id}
+                type="button"
+                onClick={() => toggle(b)}
+                aria-pressed={sweep ? carrying : undefined}
+                aria-label={sweep ? `${carrying ? 'Untag' : 'Tag'} ${b.title}` : `Open ${b.title}`}
+                className="relative overflow-hidden rounded-xl border text-left"
+                style={{
+                  borderColor: sweep && carrying ? 'var(--accent-ink)' : 'var(--line)',
+                  boxShadow: sweep && carrying ? '0 0 0 2px var(--accent-ink)' : undefined,
+                  opacity: sweep && !carrying ? 0.6 : 1,
+                }}
+              >
+                <div className="aspect-[2/3] w-full">
+                  <CoverImage book={b} thumb />
+                </div>
+                {sweep && carrying && (
+                  <span aria-hidden className="absolute right-1 top-1 rounded-full px-1.5 text-[11px] font-bold" style={{ background: 'var(--accent-fill)', color: 'var(--on-primary)' }}>
+                    ✓
+                  </span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      ) : (
+        <p className="mt-6 rounded-2xl border border-dashed border-line p-6 text-center text-[13.5px] text-muted">
+          Nothing carries {trope.name} yet — sweep your library and tap the ones that do.
+        </p>
+      )}
+    </section>
+  )
+}
+
+export const tropeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'tropes/$tropeId',
+  component: TropeScreen,
+})

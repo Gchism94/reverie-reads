@@ -82,7 +82,11 @@ export interface Book {
   /** All subgenres (multi-select). The single `subgenre` mirrors element 0. */
   subgenres: string[]
   genres: string[]
-  tags: string[] // generic content tags (the Tryst skin labels these "Tropes")
+  tags: string[] // legacy free tags (pre-trope-system; kept for search + fallback)
+  /** when Hardcover community descriptors were last fetched for suggestions (null = never) */
+  tropesSuggestedAt?: string | null
+  /** the trope join, inline: pinned/present refs (loaded with the book like contributors) */
+  tropes: { id: string; name: string; emphasis: 'pinned' | 'present' }[]
   intensity: number | null // 0..5, null = unset (the Tryst skin labels this "Spice")
   cover: string
   /** confidence of the enrichment-resolved cover/match (E1); unset for user/seed covers (trusted).
