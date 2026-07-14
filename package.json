@@ -22,7 +22,9 @@
     "db:reset": "supabase db reset",
     "db:test": "supabase test db",
     "db:status": "supabase status",
-    "db:seed": "node scripts/seed-dev.mjs"
+    "db:seed": "node scripts/seed-dev.mjs",
+    "deploy:functions": "bash scripts/deploy-guard.sh functions",
+    "deploy:migrations": "bash scripts/deploy-guard.sh migrations"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
