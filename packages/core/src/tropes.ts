@@ -251,6 +251,16 @@ export function resolveTrope<T extends TropeLike>(raw: string, tropes: readonly 
   return null
 }
 
+/** True when raw text names a canonical seed trope (by name or alias). Lets callers without trope
+ *  ROWS (e.g. the importer noting trope-like Goodreads shelves) check against SEED_TROPES, whose
+ *  entries carry no id. Never mutates or converts — a pure "does this look like a known trope?". */
+export function isKnownTrope(raw: string): boolean {
+  const cleaned = norm(raw)
+  if (!cleaned) return false
+  const target = norm(TAG_ALIASES[cleaned] ?? cleaned)
+  return SEED_TROPES.some((t) => norm(t.name) === target || t.aliases.some((a) => norm(a) === target))
+}
+
 /** Type-ahead match across names AND aliases (picker search). */
 export function tropeMatches(query: string, trope: Pick<TropeLike, 'name' | 'aliases'>): boolean {
   const q = norm(query)
