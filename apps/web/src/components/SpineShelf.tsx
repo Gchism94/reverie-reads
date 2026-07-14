@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { upgradeCoverUrl, type Book } from '@reverie/core'
+import { type Book } from '@reverie/core'
 import { Spine } from './Spine'
+import { CoverImage } from './CoverImage'
 
 /**
  * A horizontal shelf of book spines — each a real per-skin Spine (gilt-bound Tryst · brushed-metal
@@ -99,12 +100,12 @@ export function SpineShelf({
               }}
             >
               {shown && b.cover ? (
-                <div
-                  className="h-44 w-[120px] overflow-hidden rounded-md border border-line"
-                  // The flip is a marquee surface (~120px, 2–3× DPR) — use the FULL cover, upgraded
-                  // to the largest the source offers, not the 300px grid thumb.
-                  style={{ background: `center/cover no-repeat url(${upgradeCoverUrl(b.cover, 'full')})` }}
-                />
+                // The flip is a marquee surface (~120px, 2–3× DPR) — CoverImage upgrades to the FULL
+                // cover, but as an <img> it can fall back to the real original (or the skin placeholder)
+                // when the largest scan 404s or returns Google's "no image" plate; a CSS background can't.
+                <div className="h-44 w-[120px] overflow-hidden rounded-md border border-line">
+                  <CoverImage book={b} />
+                </div>
               ) : (
                 <Spine book={b} active={shown} tint={b.coverColor} />
               )}

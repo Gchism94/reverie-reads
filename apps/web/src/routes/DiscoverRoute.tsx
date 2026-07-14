@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { createRoute, useNavigate } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
-import { genreKey, SKINS, SKIN_ORDER, splitName, upgradeCoverUrl, type Book } from '@reverie/core'
+import { genreKey, SKINS, SKIN_ORDER, splitName, type Book } from '@reverie/core'
 import { rootRoute } from './RootRoute'
 import { useBooks } from '../data/books'
 import { useLists } from '../data/lists'
@@ -10,7 +10,7 @@ import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { useSearchEverywhere, useAddFromSearch } from '../data/search'
 import { Chip } from '../components/Chip'
 import { Modal } from '../components/Modal'
-import { CoverPlaceholder } from '../components/CoverPlaceholder'
+import { CoverImage } from '../components/CoverImage'
 import { SearchResults } from '../components/SearchResults'
 import type { SearchResult } from '../lib/search'
 import { fetchDiscover, hitKey, isOwned, ownedKeys, rankHitsByTaste, sortByTaste, tastePercent, type DiscoverHit } from '../lib/discover'
@@ -26,7 +26,6 @@ const GENRES: { key: string; label: string }[] = SKIN_ORDER.map((id) => ({
 
 function Card({ hit, owned, taste }: { hit: DiscoverHit; owned: boolean; taste?: number }) {
   const navigate = useNavigate()
-  const [coverFailed, setCoverFailed] = useState(false)
   const author = hit.authors[0] ?? ''
   const year = hit.pub.slice(0, 4)
   const { first, last } = splitName(author)
@@ -34,18 +33,9 @@ function Card({ hit, owned, taste }: { hit: DiscoverHit; owned: boolean; taste?:
   return (
     <div className="flex flex-col">
       <div className="aspect-[2/3] overflow-hidden rounded-[8px] border border-line" style={{ background: 'var(--card)' }}>
-        {hit.cover && !coverFailed ? (
-          <img
-            src={upgradeCoverUrl(hit.cover, 'thumb')}
-            alt=""
-            loading="lazy"
-            decoding="async"
-            className="h-full w-full object-cover"
-            onError={() => setCoverFailed(true)}
-          />
-        ) : (
-          <CoverPlaceholder book={{ title: hit.title, first, last }} />
-        )}
+        {/* Same cover chain as the library grid: upgraded → original → skin placeholder, with the
+            Google "no image" plate rejected on load (a Discover hit has no library id → no telemetry). */}
+        <CoverImage book={{ title: hit.title, first, last, cover: hit.cover }} thumb />
       </div>
       <div className="mt-2 min-w-0">
         <div className="text-[13px] font-semibold leading-snug text-ink" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>

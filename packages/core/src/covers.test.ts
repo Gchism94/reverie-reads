@@ -2,12 +2,15 @@ import { describe, expect, it } from 'vitest'
 import {
   buildGoogleBooksUrl,
   buildOpenLibraryUrl,
+  coverCandidates,
   coverKey,
   enrichmentCoverFill,
   extractGoogleCover,
   extractOpenLibraryCover,
   fetchCover,
   isCoverSource,
+  isGoogleContentCover,
+  isGoogleNoCoverArt,
   isStoredCoverUrl,
   isUpgradeableCoverUrl,
   upgradeCoverUrl,
@@ -113,5 +116,58 @@ describe('upgradeCoverUrl', () => {
     expect(isUpgradeableCoverUrl('https://covers.openlibrary.org/b/id/9-M.jpg')).toBe(true)
     expect(isUpgradeableCoverUrl('https://assets.hardcover.app/x.jpeg')).toBe(false)
     expect(isUpgradeableCoverUrl('')).toBe(false)
+  })
+})
+
+describe('Google "no image" plate detection (the #56 white-card regression)', () => {
+  const G = 'https://books.google.com/books/content?id=ABC&printsec=frontcover&img=1&zoom=0&source=gbs_api'
+
+  it('isGoogleContentCover matches the content endpoint + its googleusercontent mirror only', () => {
+    expect(isGoogleContentCover(G)).toBe(true)
+    expect(isGoogleContentCover('https://books.googleusercontent.com/books/content?id=X')).toBe(true)
+    expect(isGoogleContentCover('https://covers.openlibrary.org/b/id/9-L.jpg')).toBe(false)
+    expect(isGoogleContentCover('https://assets.hardcover.app/x.jpeg')).toBe(false)
+    expect(isGoogleContentCover('')).toBe(false)
+  })
+
+  it('flags the fixed-size "image not available" plate Google serves at HTTP 200', () => {
+    // measured live: 575×750 for zoom 0/2/3, 128×170 for zoom 1 — byte-stable across book ids
+    expect(isGoogleNoCoverArt(G, 575, 750)).toBe(true)
+    expect(isGoogleNoCoverArt(G, 128, 170)).toBe(true)
+  })
+
+  it('does NOT flag a real cover (even a small one) or a plate-sized image from another host', () => {
+    expect(isGoogleNoCoverArt(G, 128, 198)).toBe(false) // a real 128px Google thumbnail
+    expect(isGoogleNoCoverArt(G, 800, 1313)).toBe(false) // a real full scan
+    // exact-size match is Google-only: another host at 575×750 is a real cover, never the plate
+    expect(isGoogleNoCoverArt('https://covers.openlibrary.org/b/id/9-L.jpg', 575, 750)).toBe(false)
+  })
+})
+
+describe('coverCandidates — the shared fallback chain (upgraded → original → placeholder)', () => {
+  const G = 'https://books.google.com/books/content?id=ABC&img=1&zoom=1'
+
+  it('leads with the upgraded URL and keeps the un-upgraded original as a fallback', () => {
+    expect(coverCandidates(G, { size: 'full' })).toEqual([
+      'https://books.google.com/books/content?id=ABC&img=1&zoom=0',
+      G,
+    ])
+  })
+
+  it('puts a stored thumb first on thumb surfaces (already the right size)', () => {
+    const stored = 'https://x.supabase.co/storage/v1/object/public/covers/u/a/b.webp'
+    expect(coverCandidates(G, { size: 'thumb', storedThumb: stored })).toEqual([
+      stored,
+      'https://books.google.com/books/content?id=ABC&img=1&zoom=2',
+      G,
+    ])
+  })
+
+  it('de-dupes when the cover has no upgrade (upgraded === original) and drops empties', () => {
+    const hc = 'https://assets.hardcover.app/x.jpeg'
+    expect(coverCandidates(hc, { size: 'full' })).toEqual([hc]) // one entry, not two
+    expect(coverCandidates('', { size: 'full' })).toEqual([])
+    expect(coverCandidates(null)).toEqual([])
+    expect(coverCandidates(undefined, { size: 'thumb', storedThumb: null })).toEqual([])
   })
 })

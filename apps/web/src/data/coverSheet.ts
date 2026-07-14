@@ -30,7 +30,7 @@ export interface SetCoverInput {
   userChosen?: boolean
 }
 
-export type SetCoverError = 'not_an_image' | 'too_large' | 'fetch_failed' | 'failed'
+export type SetCoverError = 'not_an_image' | 'too_large' | 'fetch_failed' | 'no_cover_available' | 'failed'
 
 /** Ingest + persist. Resolves with the stored URLs; rejects with a SetCoverError code string. */
 export function useSetCover() {
