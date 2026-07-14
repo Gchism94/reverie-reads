@@ -27,9 +27,21 @@ describe('calibratedBand — fixed-anchor map, stable per book across shelves', 
     expect(calibratedBand(0.92, A)).toBe(calibratedBand(0.92, A))
   })
 
-  it('never divides by zero on degenerate anchors', () => {
-    expect(calibratedBand(0.9, { lo: 0.9, hi: 0.9 })).toBe(1) // cos >= hi
-    expect(calibratedBand(0.85, { lo: 0.9, hi: 0.9 })).toBe(0)
+  it('guards the degenerate/sparse band (hi <= lo) — no divide-by-zero, always a valid [0,1]', () => {
+    // The RPC keeps hi strictly > lo (hi := lo + 0.02 when the loved percentile is null/≤ lo), so this
+    // shouldn't reach the client — but the map must never blow up if it does.
+    for (const bad of [
+      { lo: 0.9, hi: 0.9 }, // hi == lo (uniform library)
+      { lo: 0.9, hi: 0.85 }, // hi < lo (inverted)
+      { lo: 0.9, hi: Number.NaN }, // hi missing
+    ]) {
+      for (const cos of [0.8, 0.9, 0.95]) {
+        const b = calibratedBand(cos, bad)
+        expect(b).toBeGreaterThanOrEqual(0)
+        expect(b).toBeLessThanOrEqual(1)
+      }
+      expect(tasteTierIndex(0.99, bad)).toBeGreaterThanOrEqual(0) // still returns a valid tier, no throw
+    }
   })
 })
 
