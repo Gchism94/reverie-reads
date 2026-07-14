@@ -23,14 +23,26 @@ VITE_GOOGLE_BOOKS_KEY=<the referrer-restricted Books key>
 
 ## Shipping changes
 
-- **Schema**: `supabase db push` (repo is linked to the project; `supabase migration list` to
-  compare local↔remote first). Local dev uses `pnpm db:migrate` (adds the PostgREST schema reload).
-  - **Migrations go out from `main` only, after the PR merges — never from a feature branch
-    mid-flight — and the push must be confirmed complete (each version recorded in the migration
-    history, not just the SQL applied) before doing anything else.** (Codifies the 2026-07-14 drift:
-    branch migrations reached prod unrecorded, so a later `db push` tried to re-run them and errored.)
-- **Edge functions**: `supabase functions deploy` (all) or `supabase functions deploy embed` (one).
+Every prod deploy goes through the **deploy guard** (`scripts/deploy-guard.sh`, wired to the pnpm
+scripts below). It refuses to run unless you are on `main`, the tree is clean, and local `main` is in
+sync with `origin/main`; it then prints exactly what it will touch and waits for a `y/N`.
+
+- **Schema**: `pnpm deploy:migrations` (wraps `supabase db push`; the guard shows the
+  `supabase migration list` local↔remote table first). Local dev uses `pnpm db:migrate` (adds the
+  PostgREST schema reload).
+- **Edge functions**: `pnpm deploy:functions` (all) or `pnpm deploy:functions embed` (one) — wraps
+  `supabase functions deploy`.
 - **Web**: Vercel deploy (git-connected or `vercel --prod`).
+
+> **All prod deploys — migrations AND functions — run from `main` only, after the PR merges, via the
+> guard; never from a feature branch mid-flight.** A push must be confirmed complete (each migration
+> version recorded in the history, not just the SQL applied) before doing anything else. The guard's
+> `--force` / `DEPLOY_ALLOW_DIRTY=1` override exists for a deliberate, confirmed hotfix from a branch
+> — it prints a loud warning and still requires the `y/N`, so it can never fire accidentally.
+> (Codifies the 2026-07-14 incidents: branch migrations reached prod unrecorded so a later `db push`
+> re-ran and errored; and a `covers` function was deployed from a feature branch when a heredoc in a
+> PR body evaluated an un-quoted `supabase functions deploy covers` — see the heredoc rule in
+> `CLAUDE.md`.)
 
 ## Post-deploy configuration checklist (dashboard tasks)
 
