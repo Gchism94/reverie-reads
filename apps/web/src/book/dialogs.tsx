@@ -1,14 +1,13 @@
 import { useState, type ReactNode } from 'react'
-import { authorOf, bookSubgenres, canonicalTag, CORE_GENRES, deriveBoyfriend, fromFirstLast, SERIES_STATUS_LABELS, SERIES_STATUS_VALUES, type Book, type Contributor, type SeriesStatus } from '@reverie/core'
+import { authorOf, bookSubgenres, CORE_GENRES, fromFirstLast, SERIES_STATUS_LABELS, SERIES_STATUS_VALUES, type Book, type Contributor, type SeriesStatus } from '@reverie/core'
 import { Modal } from '../components/Modal'
 import { Chip } from '../components/Chip'
 import { Stars } from '../components/Stars'
-import { FORMATS, subgenresForGenre, tropeGroupsForGenre } from '../library/constants'
+import { FORMATS, subgenresForGenre } from '../library/constants'
 import { useBooks, useUpdateBook } from '../data/books'
 import { useSetContributors } from '../data/contributors'
 import { useAddRead } from '../data/reads'
 import { usePerformMerge } from '../data/mergeBooks'
-import { useLabels } from '../skin/labels'
 import { maybeChainPrompt } from '../lib/chainPrompt'
 import { ContributorEditor } from './ContributorEditor'
 
@@ -30,89 +29,6 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
       <span className="mb-1 block text-[11px] uppercase tracking-[0.15em] text-muted">{label}</span>
       {children}
     </label>
-  )
-}
-
-export function TropePicker({ book, onClose }: { book: Book; onClose: () => void }) {
-  const updateBook = useUpdateBook()
-  const { data: books } = useBooks()
-  const labels = useLabels()
-  const [draft, setDraft] = useState('')
-  // The BOOK'S genre picks the baseline vocabulary (a mystery gets Locked Room, not Fated Mates);
-  // the Universal group rides along, and the reader's own free tags always show as chips too.
-  const groups = tropeGroupsForGenre(book.genre)
-  const vocabulary = Object.values(groups).flat()
-  const libraryTags = [...new Set((books ?? []).flatMap((b) => b.tags))]
-  const inGroups = new Set(vocabulary.map((t) => t.toLowerCase()))
-  const yourTags = [...new Set([...book.tags, ...libraryTags])]
-    .filter((t) => !inGroups.has(t.toLowerCase()))
-    .sort((a, b) => a.localeCompare(b))
-  const toggle = (t: string) => {
-    const tags = book.tags.includes(t) ? book.tags.filter((x) => x !== t) : [...book.tags, t]
-    updateBook.mutate({
-      id: book.id,
-      patch: { tags, boyfriend: deriveBoyfriend({ tags, subgenre: book.subgenre }) },
-    })
-  }
-  const addDraft = () => {
-    // canonicalize against the genre vocabulary + the library's own tags, so "e2l" and
-    // "locked room" converge on the chips everyone else uses
-    const t = canonicalTag(draft, [...vocabulary, ...libraryTags])
-    setDraft('')
-    if (t && !book.tags.includes(t)) toggle(t)
-  }
-  return (
-    <Modal title={`Tag ${labels.tags.toLowerCase()}`} onClose={onClose} wide>
-      {Object.entries(groups).map(([group, list]) => (
-        <div key={group} className="mb-4">
-          <div className="mb-1.5 text-[11px] uppercase tracking-[0.2em] text-muted">{group}</div>
-          <div className="flex flex-wrap gap-1.5">
-            {list.map((t) => (
-              <Chip key={t} active={book.tags.includes(t)} onClick={() => toggle(t)}>
-                {t}
-              </Chip>
-            ))}
-          </div>
-        </div>
-      ))}
-      {yourTags.length > 0 && (
-        <div className="mb-4">
-          <div className="mb-1.5 text-[11px] uppercase tracking-[0.2em] text-muted">Your {labels.tags.toLowerCase()}</div>
-          <div className="flex flex-wrap gap-1.5">
-            {yourTags.map((t) => (
-              <Chip key={t} active={book.tags.includes(t)} onClick={() => toggle(t)}>
-                {t}
-              </Chip>
-            ))}
-          </div>
-        </div>
-      )}
-      <div className="flex gap-2">
-        <input
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault()
-              addDraft()
-            }
-          }}
-          placeholder={`Add your own ${labels.tag}…`}
-          aria-label={`Add a ${labels.tag}`}
-          className={fieldClass}
-          style={fieldStyle}
-        />
-        <button
-          type="button"
-          onClick={addDraft}
-          disabled={!draft.trim()}
-          className="h-10 flex-none rounded-xl border border-line px-4 text-[13px] font-semibold text-ink disabled:opacity-40"
-          style={{ background: 'var(--card)' }}
-        >
-          Add
-        </button>
-      </div>
-    </Modal>
   )
 }
 

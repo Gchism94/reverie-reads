@@ -43,6 +43,10 @@ describe('skin character kit contrast (text on the kit surfaces ≥ AA, every sk
         ['ink on bg', t.ink, t.bg0],
         ['muted on bg', t.muted, t.bg0],
         ['button/active-chip text on accent fill', t.onPrimary, t.accentFill],
+        // trope chips (trope-system): present = ink on the chip wash; pinned = on-primary on
+        // accent fill with the bookmark ornament. Both states, every skin × mode.
+        ['trope chip (present) on chip wash', t.ink, mixSrgb(t.ink, t.bg0, 0.08)],
+        ['trope chip (pinned) on accent fill', t.onPrimary, t.accentFill],
         ['nameplate eyebrow (accent-ink) on plate', t.accentInk, t.cardSolid],
         // 1c — typed text in a search / input field. --field = a 5% ink wash over the bg; model it.
         ['input/search text on field', t.ink, mixSrgb(t.ink, t.bg0, 0.05)],

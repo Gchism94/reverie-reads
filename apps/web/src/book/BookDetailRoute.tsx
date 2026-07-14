@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { Link, createRoute, useNavigate } from '@tanstack/react-router'
-import { authorOf, bookSubgenres, buildBuyLinks, buyDisclosure, deriveBoyfriend, isAuthorRole, ownershipTogglePatch, seriesStatusBadge, ROLE_LABELS, type Book, type Owned } from '@reverie/core'
+import { authorOf, bookSubgenres, buildBuyLinks, buyDisclosure, isAuthorRole, ownershipTogglePatch, seriesStatusBadge, ROLE_LABELS, type Book, type Owned } from '@reverie/core'
 import { useFilters } from '../library/filterStore'
 import { buyConfig } from '../lib/buyConfig'
 import { useLabels, useVoice } from '../skin/labels'
@@ -16,7 +16,9 @@ import { Stars } from '../components/Stars'
 import { Chip } from '../components/Chip'
 import { ARCH, MONTHS, READ_STATUSES, subgenreGradient } from '../library/constants'
 import { maybeChainPrompt } from '../lib/chainPrompt'
-import { EditDetails, LogReadForm, MergeDialog, TropePicker } from './dialogs'
+import { EditDetails, LogReadForm, MergeDialog } from './dialogs'
+import { TropePicker } from '../components/TropePicker'
+import { TropeChip } from '../components/TropeChip'
 import { CoverSheet } from '../components/CoverSheet'
 import { useCoverBackfill } from '../data/coverBackfill'
 import { OwnedCopies } from './OwnedCopies'
@@ -107,6 +109,7 @@ function BookDetailScreen() {
   const createList = useCreateList()
   const setAuthor = useFilters((s) => s.setAuthor)
   const [dialog, setDialog] = useState<Dialog>(null)
+  const [tropesExpanded, setTropesExpanded] = useState(false)
 
   const filterByAuthor = (name: string) => {
     setAuthor(name)
@@ -140,14 +143,6 @@ function BookDetailScreen() {
   const memberIds = new Set(listIds ?? [])
   const tbrs = (lists ?? []).filter((l) => l.kind === 'tbr')
   const collections = (lists ?? []).filter((l) => l.kind === 'collection')
-
-  const removeTag = (t: string) => {
-    const tags = book.tags.filter((x) => x !== t)
-    updateBook.mutate({
-      id: book.id,
-      patch: { tags, boyfriend: deriveBoyfriend({ tags, subgenre: book.subgenre }) },
-    })
-  }
 
   const seriesBadge = seriesStatusBadge(book)
 
@@ -296,20 +291,24 @@ function BookDetailScreen() {
       >
         {labels.tags}
       </Label>
-      <div className="flex flex-wrap gap-1.5">
-        {book.tags.length ? (
-          book.tags.map((t) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => removeTag(t)}
-              className="rounded-full border px-3 py-1.5 text-[12.5px] font-medium"
-              style={{ background: 'var(--accent-fill)', color: 'var(--on-primary)', borderColor: 'transparent' }}
-              aria-label={`Remove ${labels.tag} ${t}`}
-            >
-              {t} ✕
-            </button>
-          ))
+      {/* pinned lead with the skin's ornament; the rest collapse behind a count (≤5 visible) */}
+      <div className="flex flex-wrap items-center gap-1.5">
+        {book.tropes.length ? (
+          <>
+            {(tropesExpanded ? book.tropes : book.tropes.slice(0, 5)).map((t) => (
+              <TropeChip key={t.id} name={t.name} emphasis={t.emphasis} to={`/tropes/${t.id}`} />
+            ))}
+            {book.tropes.length > 5 && (
+              <button
+                type="button"
+                onClick={() => setTropesExpanded((v) => !v)}
+                className="rounded-full border border-line px-2.5 py-1 text-[12px] font-semibold text-muted"
+                style={{ background: 'var(--field)' }}
+              >
+                {tropesExpanded ? 'fewer' : `+${book.tropes.length - 5} more`}
+              </button>
+            )}
+          </>
         ) : (
           <span className="text-[13px] text-muted">No {labels.tags.toLowerCase()} yet</span>
         )}

@@ -29,7 +29,7 @@ async function signIn(page: Page) {
   await expect(page.getByRole('navigation')).toBeVisible({ timeout: 20_000 })
 }
 
-async function setupFixtures(): Promise<{ bookId: string; clubId: string; listCode: string; shelfId: string }> {
+async function setupFixtures(): Promise<{ bookId: string; clubId: string; listCode: string; shelfId: string; tropeId: string }> {
   const sb = createClient(SUPABASE_URL, ANON)
   await sb.auth.signInWithPassword({ email: DEV_EMAIL, password: DEV_PASSWORD })
   const uid = (await sb.auth.getUser()).data.user!.id
@@ -59,18 +59,23 @@ async function setupFixtures(): Promise<{ bookId: string; clubId: string; listCo
     { series_id: series.id, owner_id: uid, position: 2.5, label: 'novella', title: 'A11y Ghost Novella', author: 'Ghost Writer' },
   ])
 
+  // a trope assignment for the /tropes pages (canonical seed row + the fixture book)
+  const trope = (await sb.from('tropes').select('id').is('owner_id', null).eq('name', 'Enemies to Lovers').single()).data!
+  await sb.from('book_tropes').upsert({ book_id: bookId, trope_id: trope.id, owner_id: uid, emphasis: 'pinned' }, { onConflict: 'book_id,trope_id' })
+
   const listCode = 'A11YSMOKE'
   await sb.from('shared_docs').upsert({ key: listCode, value: { type: 'list', kind: 'list', name: 'A11y list', items: [], updatedAt: Date.now() } })
   await sb.from('shared_refs').upsert({ owner_id: uid, code: listCode, kind: 'list', name: 'A11y list' }, { onConflict: 'owner_id,code' })
 
-  return { bookId, clubId: club.id, listCode, shelfId: shelf.id }
+  return { bookId, clubId: club.id, listCode, shelfId: shelf.id, tropeId: trope.id }
 }
 
-async function cleanup(clubId: string, listCode: string, shelfId: string) {
+async function cleanup(clubId: string, listCode: string, shelfId: string, bookId?: string) {
   const sb = createClient(SUPABASE_URL, ANON)
   await sb.auth.signInWithPassword({ email: DEV_EMAIL, password: DEV_PASSWORD })
   await sb.from('clubs').delete().eq('id', clubId)
   await sb.from('lists').delete().eq('id', shelfId)
+  if (bookId) await sb.from('book_tropes').delete().eq('book_id', bookId)
   await sb.from('series').delete().eq('name', 'A11y Saga')
   await sb.from('shared_docs').delete().eq('key', listCode)
   await sb.from('shared_refs').delete().eq('code', listCode)
@@ -88,7 +93,7 @@ async function setProfileSkinMode(skin: string, mode: string) {
 
 test('every route passes axe (no serious/critical) across all skins x both modes', async ({ page }) => {
   test.setTimeout(600_000)
-  const { bookId, clubId, listCode, shelfId } = await setupFixtures()
+  const { bookId, clubId, listCode, shelfId, tropeId } = await setupFixtures()
   await signIn(page)
 
   // Discover browses an external catalog — stub it so the sweep is deterministic and offline-safe.
@@ -148,6 +153,8 @@ test('every route passes axe (no serious/critical) across all skins x both modes
     ['Indie', '/indie'],
     ['Skins', '/skins'],
     ['Series detail', `/series/${encodeURIComponent('A11y Saga')}`],
+    ['Tropes', '/tropes'],
+    ['Trope detail', `/tropes/${tropeId}`],
   ]
   const coreRoutes = allRoutes.filter(([name]) =>
     ['Home', 'Library', 'Book detail', 'Stats', 'Settings', 'Skins', 'Clubs', 'Indie'].includes(name),
@@ -188,7 +195,7 @@ test('every route passes axe (no serious/critical) across all skins x both modes
       }
     }
   } finally {
-    await cleanup(clubId, listCode, shelfId)
+    await cleanup(clubId, listCode, shelfId, bookId)
   }
 
   if (failures.length) console.log('axe serious/critical violations:\n' + failures.join('\n'))
