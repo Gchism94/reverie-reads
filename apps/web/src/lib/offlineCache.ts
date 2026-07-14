@@ -35,3 +35,12 @@ export function createDexiePersister(): Persister {
     },
   }
 }
+
+/**
+ * Drop the persisted query cache immediately (used by the update-apply path). The buster already
+ * discards it on the next new-build load, but clearing it BEFORE the reload guarantees the reloaded
+ * client can't momentarily restore a stale, pre-migration query shape.
+ */
+export async function clearOfflineCache(): Promise<void> {
+  await db.cache.delete(KEY)
+}
