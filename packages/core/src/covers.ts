@@ -57,6 +57,28 @@ export const isCoverSource = (s: unknown): s is CoverSource =>
 /** True when the URL already points at the app's own cover Storage (durable, never a hotlink). */
 export const isStoredCoverUrl = (url: string): boolean => url.includes('/storage/v1/object/public/covers/')
 
+/** The Google Books `books/content` endpoint (its imageLinks host + the googleusercontent mirror) —
+ *  the only cover host whose `zoom` we rewrite, and the one that serves a stock "no image" plate. */
+const GOOGLE_CONTENT_RE = /(?:books\.google\.[a-z.]+|googleusercontent\.com)\/books\/content/i
+export const isGoogleContentCover = (url: string): boolean => GOOGLE_CONTENT_RE.test(url)
+
+/**
+ * Google Books answers a missing cover with a generic "image not available" plate served at **HTTP 200**
+ * — not a 404 — so an `<img>` "loads" it and `onError` never fires. It's a fixed-size asset, byte-stable
+ * across book ids: 575×750 (zoom=0/2/3) and 128×170 (zoom=1). A cross-origin `<img>` can't hash the
+ * bytes (canvas taint), but `naturalWidth/naturalHeight` are always readable, and that size is signal
+ * enough. Used at load time to route the plate to OUR honest placeholder instead of rendering it as a
+ * cover. A false positive only costs a slightly smaller REAL cover (we fall back to the un-upgraded
+ * original), never a broken state — so an exact-size match is deliberately the tightest rule.
+ */
+const GOOGLE_NO_COVER_DIMS: ReadonlyArray<readonly [number, number]> = [
+  [575, 750], // zoom=0 / zoom=2 / zoom=3 — the large plate (what our upgrades request)
+  [128, 170], // zoom=1 — the small plate (the un-upgraded original for a truly cover-less book)
+]
+export function isGoogleNoCoverArt(url: string, naturalWidth: number, naturalHeight: number): boolean {
+  return isGoogleContentCover(url) && GOOGLE_NO_COVER_DIMS.some(([w, h]) => naturalWidth === w && naturalHeight === h)
+}
+
 /**
  * Upgrade an external cover URL to the resolution the surface needs. The sources default to tiny
  * images — Google Books' `imageLinks.thumbnail` is `zoom=1` (~128px) and Open Library defaults to
@@ -73,7 +95,7 @@ export function upgradeCoverUrl(url: string, size: 'full' | 'thumb' = 'full'): s
   if (!url || isStoredCoverUrl(url)) return url
 
   // Google Books content endpoint (the imageLinks.thumbnail host, and its googleusercontent mirror).
-  if (/(?:books\.google\.[a-z.]+|googleusercontent\.com)\/books\/content/i.test(url)) {
+  if (isGoogleContentCover(url)) {
     let u = url.replace(/([?&])edge=curl(&|$)/i, (_m, p1: string, p2: string) => (p2 === '&' ? p1 : '')).replace(/[?&]$/, '')
     const zoom = size === 'thumb' ? '2' : '0'
     u = /[?&]zoom=\d+/i.test(u) ? u.replace(/([?&]zoom=)\d+/i, `$1${zoom}`) : `${u}${u.includes('?') ? '&' : '?'}zoom=${zoom}`
@@ -90,6 +112,32 @@ export function upgradeCoverUrl(url: string, size: 'full' | 'thumb' = 'full'): s
 /** True when a cover URL is an external source we can request at a higher resolution (Google/OL).
  *  Used by the re-sharpen sweep to skip Hardcover/B&N/storage covers (already full-res or opaque). */
 export const isUpgradeableCoverUrl = (url: string): boolean => !!url && upgradeCoverUrl(url, 'full') !== url
+
+/**
+ * The ordered, de-duplicated URLs to try for a book's cover, most-wanted first — the single fallback
+ * chain both the grid/detail `<img>` and the Discover card render. The upgraded (larger) URL leads,
+ * but the **un-upgraded original is always kept as a fallback**: an upgrade that 404s or returns the
+ * source's "no image" plate (see `isGoogleNoCoverArt`) must degrade to the real, smaller cover — never
+ * to a broken/placeholder state for a book that has a cover. A stored ~300px thumb (when present, thumb
+ * surfaces only) leads since it's already the right size. When every candidate fails, the caller shows
+ * the honest skin placeholder. Pure — one implementation, every surface.
+ */
+export function coverCandidates(
+  cover: string | null | undefined,
+  opts: { size?: 'full' | 'thumb'; storedThumb?: string | null } = {},
+): string[] {
+  const { size = 'full', storedThumb } = opts
+  const out: string[] = []
+  const push = (u?: string | null): void => {
+    if (u && !out.includes(u)) out.push(u)
+  }
+  if (size === 'thumb') push(storedThumb) // already the right size — no upgrade round-trip
+  if (cover) {
+    push(upgradeCoverUrl(cover, size)) // sharp when the larger scan exists
+    push(cover) // the real cover at its native (smaller) size — the honest fallback
+  }
+  return out
+}
 
 /**
  * The enrichment chain's cover offer, gated by the non-overwrite rule: a USER-CHOSEN cover is never

@@ -25,7 +25,7 @@ import {
 } from 'npm:@imagemagick/magick-wasm@0.0.35'
 import { envInt, rateLimit, tooMany } from '../_shared/ratelimit.ts'
 import { captureEdgeError, logEvent } from '../_shared/observe.ts'
-import { upgradeCoverUrl } from '../_shared/coverUrl.ts'
+import { isGoogleNoCoverArt, upgradeCoverUrl } from '../_shared/coverUrl.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -230,12 +230,14 @@ async function handleIngest(req: Request, uid: string): Promise<Response> {
   // URL path: fetch server-side (direct image URLs only — a product page yields non-image bytes
   // and fails validation below; we deliberately do NOT scrape HTML for og:image).
   let sourceUrl = fields.sourceUrl
+  let fetchedUrl: string | null = null // the server-fetched image URL (guards against a "no image" plate)
   if (!file) {
     const raw = (fields.url ?? '').trim()
     if (!/^https?:\/\//i.test(raw)) return json({ error: 'bad_url' }, 400)
     // Fetch the LARGEST the source offers (Google zoom=0, OL -L) so the stored asset isn't a 128px
     // thumbnail; record the upgraded URL as provenance so a re-sharpen never re-fetches the small one.
     const url = upgradeCoverUrl(raw, 'full')
+    fetchedUrl = url
     sourceUrl = sourceUrl ? upgradeCoverUrl(sourceUrl, 'full') : url
     let r: Response
     try {
@@ -260,6 +262,13 @@ async function handleIngest(req: Request, uid: string): Promise<Response> {
 
   try {
     const n = await normalizeImage(file)
+    // A server-fetched Google URL that resolves to the source's fixed-size "image not available" plate
+    // is NOT a cover — refuse to store it (a stored plate has no display fallback). Never applies to a
+    // user upload/camera (multipart → file set, no fetchedUrl) or a real cover of any other size.
+    if (fetchedUrl && isGoogleNoCoverArt(fetchedUrl, n.width, n.height)) {
+      logEvent('info', 'covers', 'ingest_rejected_no_image', { uid, source: fields.source, w: n.width, h: n.height })
+      return json({ error: 'no_cover_available' }, 422)
+    }
     const fullPath = `${base}/${rev}.webp`
     const thumbPath = `${base}/${rev}_t.webp`
     const okFull = await putObject(fullPath, n.full, 'image/webp')
