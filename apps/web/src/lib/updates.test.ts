@@ -12,3 +12,11 @@ describe('isNewBuild', () => {
     expect(isNewBuild('', 'abc123')).toBe(false)
   })
 })
+
+describe('BUILD_LABEL', () => {
+  it('is a short, human-readable stamp', async () => {
+    const { BUILD_LABEL, BUILD_ID } = await import('./updates')
+    expect(BUILD_LABEL.length).toBeLessThanOrEqual(7)
+    expect(BUILD_ID === 'dev' ? BUILD_LABEL === 'dev' : BUILD_LABEL === BUILD_ID.slice(0, 7)).toBe(true)
+  })
+})

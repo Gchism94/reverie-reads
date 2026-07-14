@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { upgradeCoverUrl } from '@reverie/core'
 import { markCoverBroken } from '../data/brokenCovers'
 import { CoverPlaceholder } from './CoverPlaceholder'
 
@@ -21,7 +22,12 @@ export function CoverImage({
   thumb?: boolean
 }) {
   const [failed, setFailed] = useState<Set<string>>(() => new Set())
-  const candidates = [thumb && book.coverThumb ? book.coverThumb : null, book.cover].filter(
+  // Display-upgrade a hotlinked external cover to the size the surface needs — a never-ingested
+  // Google/Open Library cover otherwise renders at its ~128px thumbnail and pixelates at detail/flip.
+  // Grids ask for a lighter size (thumb → ~300px); detail/flip ask for the largest. Stored assets +
+  // Hardcover/B&N pass through untouched. When a stored thumb is present it's already the right size.
+  const full = book.cover ? upgradeCoverUrl(book.cover, thumb ? 'thumb' : 'full') : null
+  const candidates = [thumb && book.coverThumb ? book.coverThumb : null, full].filter(
     (u): u is string => !!u && !failed.has(u),
   )
   const src = candidates[0]
@@ -36,7 +42,7 @@ export function CoverImage({
       onError={() => {
         setFailed((prev) => new Set(prev).add(src))
         // Only a dead FULL cover joins the broken-cover queue — a stale thumb still has its fallback.
-        if (book.id && src === book.cover)
+        if (book.id && src === full)
           markCoverBroken({ id: book.id, title: book.title, first: book.first, last: book.last })
       }}
     />

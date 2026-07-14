@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { initUpdateWatch } from '../lib/updates'
+import { applyUpdate, initUpdateWatch } from '../lib/updates'
 
 /** Quiet bottom toast when a newer deploy is live — refresh on the reader's terms, never forced
  *  mid-session. Sits above the mobile tab bar; regular bottom margin on desktop. */
@@ -22,7 +22,7 @@ export function UpdateToast() {
         A new version of Reverie is ready
         <button
           type="button"
-          onClick={() => window.location.reload()}
+          onClick={() => void applyUpdate()}
           className="rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold"
           style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))', color: 'var(--on-primary)' }}
         >
