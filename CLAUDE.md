@@ -78,8 +78,23 @@ pnpm build          # production build
 pnpm test           # unit tests (Vitest)
 pnpm e2e            # Playwright
 pnpm lint           # ESLint
-supabase start      # local stack;  supabase db push / functions deploy
+supabase start      # local stack
+pnpm deploy:migrations   # prod db push — via the deploy guard (main + clean + confirm)
+pnpm deploy:functions    # prod functions deploy — via the deploy guard
 ```
+
+## Shell & deploy safety
+- **Never run a raw `supabase db push` / `supabase functions deploy` against prod.** Go through the
+  guard (`pnpm deploy:migrations` / `pnpm deploy:functions`) — it enforces main + clean tree + in-sync
+  + a `y/N`. Prod deploys happen from `main` after merge, never a feature branch (override is a loud,
+  deliberate exception). See `docs/DEPLOY.md`.
+- **Heredocs containing shell examples MUST be single-quoted** — `<<'EOF'`, not `<<EOF` — so backticks
+  and `$(…)` inside are text, never evaluated. This applies to any heredoc feeding `gh pr create
+  --body`, commit messages, or reports.
+- **A deploy command must never appear as an un-quoted literal** in a PR body, commit message, or
+  report. Write it fenced/inline in a single-quoted heredoc or a `--body-file`; an un-quoted
+  `` `supabase functions deploy …` `` in a double-quoted string executes. (Codifies the 2026-07-14
+  heredoc-eval incident, which deployed a function to prod from a PR-body backtick.)
 
 ## Definition of done (per feature)
 Works against the data model; both themes; responsive; a11y pass; logic covered by
