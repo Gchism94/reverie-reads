@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { Book } from '@reverie/core'
+import { upgradeCoverUrl, type Book } from '@reverie/core'
 import { Spine } from './Spine'
 
 /**
@@ -101,7 +101,9 @@ export function SpineShelf({
               {shown && b.cover ? (
                 <div
                   className="h-44 w-[120px] overflow-hidden rounded-md border border-line"
-                  style={{ background: `center/cover no-repeat url(${b.coverThumb || b.cover})` }}
+                  // The flip is a marquee surface (~120px, 2–3× DPR) — use the FULL cover, upgraded
+                  // to the largest the source offers, not the 300px grid thumb.
+                  style={{ background: `center/cover no-repeat url(${upgradeCoverUrl(b.cover, 'full')})` }}
                 />
               ) : (
                 <Spine book={b} active={shown} tint={b.coverColor} />

@@ -64,7 +64,7 @@ export function SearchResults({
           return (
             <li key={`${r.isbn}|${r.title}`} className="flex items-center gap-3 skin-card border border-line px-2.5 py-2" style={{ background: 'var(--field)' }}>
               <span className="h-14 w-9 flex-none overflow-hidden rounded border border-line" style={{ background: 'var(--card)' }}>
-                <CoverImage book={coverBook(r)} />
+                <CoverImage book={coverBook(r)} thumb />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[13.5px] font-semibold text-ink">{r.title}</span>
@@ -85,7 +85,7 @@ export function SearchResults({
         return (
           <div key={`${r.isbn}|${r.title}`} className="flex flex-col">
             <div className="aspect-[2/3] overflow-hidden rounded-[8px] border border-line" style={{ background: 'var(--card)' }}>
-              <CoverImage book={coverBook(r)} />
+              <CoverImage book={coverBook(r)} thumb />
             </div>
             <div className="mt-2 min-w-0">
               <div className="text-[13px] font-semibold leading-snug text-ink" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>

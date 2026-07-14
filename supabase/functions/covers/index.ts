@@ -25,6 +25,7 @@ import {
 } from 'npm:@imagemagick/magick-wasm@0.0.35'
 import { envInt, rateLimit, tooMany } from '../_shared/ratelimit.ts'
 import { captureEdgeError, logEvent } from '../_shared/observe.ts'
+import { upgradeCoverUrl } from '../_shared/coverUrl.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -42,7 +43,7 @@ const GOOGLE_REFERER = Deno.env.get('BOOKS_KEY_REFERER') ?? 'https://reverieread
 const googleHeaders = (): HeadersInit => (GOOGLE_KEY ? { Referer: GOOGLE_REFERER } : {})
 
 const MAX_INPUT_BYTES = envInt('COVER_MAX_INPUT_BYTES', 8 * 1024 * 1024) // camera photos; crop already shrank most
-const FULL_EDGE = 1200 // long-edge cap for the stored cover
+const FULL_EDGE = 1600 // long-edge cap for the stored cover — headroom for high-DPR (2–3×) detail/flip
 const THUMB_EDGE = 300 // long-edge cap for the grid/spine thumb
 const EDITIONS_TTL_DAYS = 7
 
@@ -230,9 +231,12 @@ async function handleIngest(req: Request, uid: string): Promise<Response> {
   // and fails validation below; we deliberately do NOT scrape HTML for og:image).
   let sourceUrl = fields.sourceUrl
   if (!file) {
-    const url = (fields.url ?? '').trim()
-    if (!/^https?:\/\//i.test(url)) return json({ error: 'bad_url' }, 400)
-    sourceUrl = sourceUrl ?? url
+    const raw = (fields.url ?? '').trim()
+    if (!/^https?:\/\//i.test(raw)) return json({ error: 'bad_url' }, 400)
+    // Fetch the LARGEST the source offers (Google zoom=0, OL -L) so the stored asset isn't a 128px
+    // thumbnail; record the upgraded URL as provenance so a re-sharpen never re-fetches the small one.
+    const url = upgradeCoverUrl(raw, 'full')
+    sourceUrl = sourceUrl ? upgradeCoverUrl(sourceUrl, 'full') : url
     let r: Response
     try {
       r = await fetch(url, { headers: { Accept: 'image/*' }, redirect: 'follow' })
