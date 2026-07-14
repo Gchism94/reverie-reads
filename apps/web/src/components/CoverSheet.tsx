@@ -19,6 +19,7 @@ const ERROR_COPY: Record<SetCoverError | string, string> = {
   too_large: 'That image is too large (8 MB max).',
   fetch_failed: 'Couldn’t fetch that link. Check the URL and try again.',
   bad_url: 'That doesn’t look like a link. Paste a direct image URL.',
+  no_cover_available: 'That source has no real cover for this book — try another edition or add your own.',
   failed: 'Couldn’t save that cover. Try again in a moment.',
 }
 
