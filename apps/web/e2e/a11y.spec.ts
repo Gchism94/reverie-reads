@@ -50,6 +50,15 @@ async function setupFixtures(): Promise<{ bookId: string; clubId: string; listCo
   ).data!
   await sb.from('list_items').insert({ list_id: shelf.id, book_id: bookId, owner_id: uid, position: 1000 })
 
+  // a series with a linked entry + a ghost slot, for the /series/$seriesName page
+  const series = (
+    await sb.from('series').insert({ owner_id: uid, name: 'A11y Saga', status: 'ongoing' }).select().single()
+  ).data!
+  await sb.from('series_entries').insert([
+    { series_id: series.id, owner_id: uid, position: 1, title: 'Linked One', book_id: bookId, user_edited: true },
+    { series_id: series.id, owner_id: uid, position: 2.5, label: 'novella', title: 'A11y Ghost Novella', author: 'Ghost Writer' },
+  ])
+
   const listCode = 'A11YSMOKE'
   await sb.from('shared_docs').upsert({ key: listCode, value: { type: 'list', kind: 'list', name: 'A11y list', items: [], updatedAt: Date.now() } })
   await sb.from('shared_refs').upsert({ owner_id: uid, code: listCode, kind: 'list', name: 'A11y list' }, { onConflict: 'owner_id,code' })
@@ -62,6 +71,7 @@ async function cleanup(clubId: string, listCode: string, shelfId: string) {
   await sb.auth.signInWithPassword({ email: DEV_EMAIL, password: DEV_PASSWORD })
   await sb.from('clubs').delete().eq('id', clubId)
   await sb.from('lists').delete().eq('id', shelfId)
+  await sb.from('series').delete().eq('name', 'A11y Saga')
   await sb.from('shared_docs').delete().eq('key', listCode)
   await sb.from('shared_refs').delete().eq('code', listCode)
   await setProfileSkinMode('tryst', 'system') // restore the dev profile
@@ -137,7 +147,7 @@ test('every route passes axe (no serious/critical) across all skins x both modes
     ['Shelf detail', `/shelf/${shelfId}`],
     ['Indie', '/indie'],
     ['Skins', '/skins'],
-    ['Orders', '/orders'],
+    ['Series detail', `/series/${encodeURIComponent('A11y Saga')}`],
   ]
   const coreRoutes = allRoutes.filter(([name]) =>
     ['Home', 'Library', 'Book detail', 'Stats', 'Settings', 'Skins', 'Clubs', 'Indie'].includes(name),

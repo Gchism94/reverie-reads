@@ -3,6 +3,7 @@ import { Outlet, createRootRoute, useNavigate, useRouterState } from '@tanstack/
 import { Sky } from '../components/Sky'
 import { AppShell } from '../components/AppShell'
 import { UpdateToast } from '../components/UpdateToast'
+import { ChainPrompt } from '../components/ChainPrompt'
 import { useAuth } from '../auth/AuthProvider'
 import { UnauthShell } from '../auth/UnauthShell'
 import { VerifyEmail } from '../auth/VerifyEmail'
@@ -77,6 +78,7 @@ function RootLayout() {
         </AppShell>
       )}
       <UpdateToast />
+      <ChainPrompt />
     </>
   )
 }

@@ -1,12 +1,12 @@
 import { useState, type ReactNode } from 'react'
 import { Link, createRoute, useNavigate } from '@tanstack/react-router'
-import { authorOf, bookSubgenres, buildBuyLinks, buyDisclosure, deriveBoyfriend, isAuthorRole, ordersForBook, ownershipTogglePatch, seriesStatusBadge, ROLE_LABELS, type Book, type Owned } from '@reverie/core'
+import { authorOf, bookSubgenres, buildBuyLinks, buyDisclosure, deriveBoyfriend, isAuthorRole, ownershipTogglePatch, seriesStatusBadge, ROLE_LABELS, type Book, type Owned } from '@reverie/core'
 import { useFilters } from '../library/filterStore'
-import { useReadingOrders } from '../data/readingOrders'
 import { buyConfig } from '../lib/buyConfig'
 import { useLabels, useVoice } from '../skin/labels'
 import { rootRoute } from '../routes/RootRoute'
 import { BackLink } from '../components/BackLink'
+import { SeriesStrip } from '../components/SeriesStrip'
 import { CoverImage } from '../components/CoverImage'
 import { useBooks, useDeleteBook, useUpdateBook } from '../data/books'
 import { useDeleteRead, useReads } from '../data/reads'
@@ -15,6 +15,7 @@ import { useCreateList, useLists } from '../data/lists'
 import { Stars } from '../components/Stars'
 import { Chip } from '../components/Chip'
 import { ARCH, MONTHS, READ_STATUSES, subgenreGradient } from '../library/constants'
+import { maybeChainPrompt } from '../lib/chainPrompt'
 import { EditDetails, LogReadForm, MergeDialog, TropePicker } from './dialogs'
 import { CoverSheet } from '../components/CoverSheet'
 import { useCoverBackfill } from '../data/coverBackfill'
@@ -104,7 +105,6 @@ function BookDetailScreen() {
   const deleteRead = useDeleteRead(bookId)
   const toggleListItem = useToggleListItem(bookId)
   const createList = useCreateList()
-  const { data: readingOrders } = useReadingOrders()
   const setAuthor = useFilters((s) => s.setAuthor)
   const [dialog, setDialog] = useState<Dialog>(null)
 
@@ -130,7 +130,6 @@ function BookDetailScreen() {
     )
 
   const [g0, g1] = subgenreGradient(book.subgenre)
-  const bookOrders = ordersForBook(book, readingOrders ?? [])
   const bf = ARCH[book.boyfriend ?? ''] ?? ARCH.cinnamon
   const workKey = workKeyFor(book)
   const reviewerName = profile?.displayName || 'Reader'
@@ -224,25 +223,7 @@ function BookDetailScreen() {
               <span>{authorOf(book) || 'Unknown author'}</span>
             )}
           </div>
-          {bookOrders.length > 0 && (
-            <div className="mt-1 text-[12.5px] text-muted">
-              Part of reading order:{' '}
-              {bookOrders.map((o, i) => (
-                <span key={o.id}>
-                  {i > 0 ? ', ' : ''}
-                  <Link to="/orders" className="font-semibold text-primary underline-offset-2 hover:underline">
-                    {o.name}
-                  </Link>
-                </span>
-              ))}
-            </div>
-          )}
-          {book.series && (
-            <div className="mt-0.5 text-[14px] italic text-muted" style={{ fontFamily: 'var(--font-display)' }}>
-              {book.series}
-              {book.position !== '' ? ` · #${book.position}` : ''}
-            </div>
-          )}
+          {book.series && <SeriesStrip book={book} />}
           <div className="mt-3 flex flex-wrap gap-1.5">
             {bookSubgenres(book).map((s) => (
               <Pill key={s}>{s}</Pill>
@@ -272,7 +253,10 @@ function BookDetailScreen() {
           <Chip
             key={s}
             active={book.readStatus === s}
-            onClick={() => updateBook.mutate({ id: book.id, patch: { readStatus: s, ...(s === 'Reading' ? { readingNowHidden: false } : {}) } })}
+            onClick={() => {
+              updateBook.mutate({ id: book.id, patch: { readStatus: s, ...(s === 'Reading' ? { readingNowHidden: false } : {}) } })
+              if (s === 'Read') void maybeChainPrompt(book, books ?? [])
+            }}
           >
             {s}
           </Chip>
