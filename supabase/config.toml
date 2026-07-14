@@ -205,8 +205,8 @@ anonymous_users = 30
 token_refresh = 150
 # Number of sign up and sign-in requests that can be made in a 5 minute interval per IP address (excludes anonymous users).
 # Local-dev headroom: the fullyParallel e2e suite signs the seeded dev user in from every spec
-# (a11y's skin flips alone are ~12 grants), and back-to-back local runs share the 5-minute window.
-sign_in_sign_ups = 150
+# (a11y's skin flips alone are ~18 grants), and back-to-back local runs share the 5-minute window.
+sign_in_sign_ups = 400
 # Number of OTP / Magic link verifications that can be made in a 5 minute interval per IP address.
 token_verifications = 30
 # Number of Web3 logins that can be made in a 5 minute interval per IP address.
@@ -450,3 +450,8 @@ verify_jwt = false
 # writes to the caller's user-scoped storage path, and editions ride the shared upstream quotas.
 [functions.covers]
 verify_jwt = true
+
+# Discover search: Hardcover (primary, backend-only) + Google Books fill, per-caller rate-limited,
+# cached per query. Public like enrich/releases — a read-only catalog lookup, no user data touched.
+[functions.search]
+verify_jwt = false
