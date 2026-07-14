@@ -1,26 +1,40 @@
-import { useState } from 'react'
-import { Link, useNavigate } from '@tanstack/react-router'
-import { authorOf, type Book, type SeriesGroup } from '@reverie/core'
+import { useNavigate } from '@tanstack/react-router'
+import { authorOf, SERIES_STATUS_LABELS, type Book, type SeriesGroup } from '@reverie/core'
 import { subgenreGradient } from './constants'
-import { Modal } from '../components/Modal'
-import { useUpdateBook } from '../data/books'
-import { useReadingOrders } from '../data/readingOrders'
+import { useSeriesList } from '../data/series'
 
 const posNum = (b: Book) => (typeof b.position === 'number' ? b.position : Number(b.position) || 0)
 const isRead = (b: Book) => b.readStatus === 'Read' || b.reads.length > 0
 
-function seriesBadge(g: SeriesGroup): { text: string; bg: string; fg: string } {
-  if (g.total && g.owned < g.total)
-    return { text: `📚 ${g.total - g.owned} to get`, bg: 'rgba(232,58,120,0.16)', fg: 'var(--primary)' }
-  if (g.total && g.read >= g.total)
+/**
+ * Library Series mode (docs/task-series-experience.md §3) — each series as a compact strip:
+ * covers in reading order, read ticks, "X to get", the series' publication status. The strip is
+ * a door: tapping opens the full series page (which owns ghosts, Next Up, and reorder).
+ * Standalones stay in the Grid view — a series list stays a series list (reported call).
+ */
+function badgeFor(g: SeriesGroup, canonicalTotal: number | null): { text: string; bg: string; fg: string } {
+  const total = canonicalTotal ?? g.total
+  if (total && g.owned < total)
+    return { text: `📚 ${total - g.owned} to get`, bg: 'rgba(232,58,120,0.16)', fg: 'var(--primary)' }
+  if (total && g.read >= total)
     return { text: '✓ Series done', bg: 'rgba(123,63,160,0.18)', fg: 'var(--ink)' }
-  if (!g.total) return { text: 'length not set', bg: 'rgba(123,63,160,0.14)', fg: 'var(--muted)' }
+  if (!total) return { text: 'length not set', bg: 'rgba(123,63,160,0.14)', fg: 'var(--muted)' }
   return { text: '✓ All owned', bg: 'rgba(123,63,160,0.18)', fg: 'var(--ink)' }
 }
 
-function SeriesCard({ group, onOpen }: { group: SeriesGroup; onOpen: () => void }) {
-  const badge = seriesBadge(group)
-  const slots = Math.min(Math.max(group.owned, group.total ?? 0), 10)
+function SeriesCard({
+  group,
+  canonicalTotal,
+  status,
+  onOpen,
+}: {
+  group: SeriesGroup
+  canonicalTotal: number | null
+  status: string | null
+  onOpen: () => void
+}) {
+  const badge = badgeFor(group, canonicalTotal)
+  const slots = Math.min(Math.max(group.owned, canonicalTotal ?? group.total ?? 0), 10)
   const hasPos = group.books.some((b) => b.position !== '' && b.position != null)
 
   const spines = []
@@ -33,7 +47,7 @@ function SeriesCard({ group, onOpen }: { group: SeriesGroup; onOpen: () => void 
           key={i}
           title={b.title}
           className="relative h-12 w-3 flex-none overflow-hidden rounded-sm"
-          style={{ background: b.cover ? `center/cover url(${b.cover})` : `linear-gradient(${g0}, ${g1})` }}
+          style={{ background: b.cover ? `center/cover url(${b.coverThumb || b.cover})` : `linear-gradient(${g0}, ${g1})` }}
         >
           {isRead(b) && (
             <span
@@ -76,125 +90,58 @@ function SeriesCard({ group, onOpen }: { group: SeriesGroup; onOpen: () => void 
       </div>
       <div className="mt-1 text-[12px] text-muted">
         {authorOf(group.books[0] ?? ({} as Book))} · {group.owned} owned
-        {group.total ? ` of ${group.total}` : ''} · {group.read} read
+        {canonicalTotal ?? group.total ? ` of ${canonicalTotal ?? group.total}` : ''} · {group.read} read
+        {status && <> · {SERIES_STATUS_LABELS[status as keyof typeof SERIES_STATUS_LABELS] ?? status}</>}
       </div>
       <div className="mt-3 flex items-end gap-1">{spines}</div>
     </button>
   )
 }
 
-function SeriesModal({
-  name,
-  allBooks,
-  onClose,
-}: {
-  name: string
-  allBooks: Book[]
-  onClose: () => void
-}) {
+export function SeriesView({ groups }: { groups: SeriesGroup[]; allBooks: Book[] }) {
   const navigate = useNavigate()
-  const updateBook = useUpdateBook()
-  const { data: orders } = useReadingOrders()
-  const books = allBooks.filter((b) => b.series === name).sort((a, b) => posNum(a) - posNum(b))
-  const total = books.find((b) => b.seriesCount != null)?.seriesCount ?? null
-  // Reading orders that pull in this series (as a series item or by including one of its books).
-  const bookIds = new Set(books.map((b) => b.id))
-  const inOrders = (orders ?? []).filter((o) =>
-    o.items.some((it) => (it.kind === 'series' ? it.series === name : !!it.bookId && bookIds.has(it.bookId))),
-  )
+  const { data: canonical } = useSeriesList()
 
-  function setLength() {
-    const input = window.prompt('How many books are in this series?', total ? String(total) : '')
-    if (input == null) return
-    const v = parseInt(input) || null
-    for (const b of books) {
-      updateBook.mutate({
-        id: b.id,
-        patch: { seriesCount: v, status: v && b.status === 'standalone' ? 'ongoing' : b.status },
-      })
-    }
+  const openSeries = (name: string) =>
+    void navigate({ to: '/series/$seriesName', params: { seriesName: encodeURIComponent(name) } })
+
+  const newSeries = () => {
+    const name = window.prompt('Name the series — you can add books on its page.')?.trim()
+    if (name) openSeries(name)
   }
 
-  return (
-    <Modal title={name} onClose={onClose}>
-      <p className="-mt-2 mb-3 text-[13px] text-muted">
-        {books.length} owned{total ? ` of ${total}` : ' · series length not set'}
-      </p>
-      {inOrders.length > 0 && (
-        <p className="-mt-1 mb-3 text-[12.5px] text-muted">
-          Part of reading order:{' '}
-          {inOrders.map((o, i) => (
-            <span key={o.id}>
-              {i > 0 ? ', ' : ''}
-              <Link to="/orders" onClick={onClose} className="font-semibold text-primary underline-offset-2 hover:underline">
-                {o.name}
-              </Link>
-            </span>
-          ))}
-        </p>
-      )}
-      <button
-        type="button"
-        onClick={setLength}
-        className="mb-4 rounded-full border border-line px-3.5 py-1.5 text-[12.5px] font-semibold text-ink"
-        style={{ background: 'var(--card)' }}
-      >
-        {total ? 'Change' : 'Set'} series length
-      </button>
-
-      <ul className="flex flex-col gap-1.5">
-        {books.map((b) => (
-          <li key={b.id}>
-            <button
-              type="button"
-              onClick={() => {
-                onClose()
-                void navigate({ to: '/book/$bookId', params: { bookId: b.id } })
-              }}
-              className="flex w-full items-center gap-3 rounded-xl border border-line px-3 py-2 text-left"
-              style={{ background: 'var(--field)' }}
-            >
-              <span
-                className="flex h-5 w-5 flex-none items-center justify-center rounded-full border border-line text-[11px]"
-                style={isRead(b) ? { background: 'var(--accent-fill)', color: 'var(--on-primary)' } : undefined}
-              >
-                {isRead(b) ? '✓' : ''}
-              </span>
-              <span className="flex-1">
-                <span className="text-[14px] font-semibold text-ink" style={{ fontFamily: 'var(--font-display)' }}>
-                  {b.position !== '' ? `#${b.position} · ` : ''}
-                  {b.title}
-                </span>
-                <span className="block text-[12px] text-muted">
-                  {b.readStatus}
-                  {b.rating ? ` · ${'★'.repeat(Math.round(b.rating))}` : ''}
-                </span>
-              </span>
-            </button>
-          </li>
-        ))}
-      </ul>
-    </Modal>
-  )
-}
-
-export function SeriesView({ groups, allBooks }: { groups: SeriesGroup[]; allBooks: Book[] }) {
-  const [open, setOpen] = useState<string | null>(null)
-  if (!groups.length) {
-    return (
-      <p className="px-2 py-10 text-center text-[14px] text-muted">
-        No series match these filters. Add a series name to a book via “edit details”.
-      </p>
-    )
-  }
   return (
     <>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {groups.map((g) => (
-          <SeriesCard key={g.name} group={g} onOpen={() => setOpen(g.name)} />
-        ))}
+      <div className="mb-3 flex items-center justify-end">
+        <button
+          type="button"
+          onClick={newSeries}
+          className="rounded-full border border-line px-3.5 py-1.5 text-[12.5px] font-semibold text-ink"
+          style={{ background: 'var(--card)' }}
+        >
+          ＋ New series
+        </button>
       </div>
-      {open && <SeriesModal name={open} allBooks={allBooks} onClose={() => setOpen(null)} />}
+      {!groups.length && (
+        <p className="px-2 py-10 text-center text-[14px] text-muted">
+          No series match these filters. Add a series name to a book via “edit details”, or start
+          one with ＋ New series.
+        </p>
+      )}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {groups.map((g) => {
+          const canon = canonical?.get(g.name.toLowerCase())
+          return (
+            <SeriesCard
+              key={g.name}
+              group={g}
+              canonicalTotal={canon?.total && canon.total > g.books.length ? canon.total : null}
+              status={canon?.series.status ?? null}
+              onOpen={() => openSeries(g.name)}
+            />
+          )
+        })}
+      </div>
     </>
   )
 }
