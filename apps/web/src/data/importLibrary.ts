@@ -11,8 +11,19 @@ import {
 import { supabase } from '../lib/supabase'
 import { applyIncoming, type ReviewCandidate } from './intake'
 import { loadVerdicts } from './duplicates'
-import { importCsvToBackend } from './importExport'
+import { importCsvToBackend, type ImportExtras } from './importExport'
 import type { Book } from '@reverie/core'
+
+/** Zero-value extras for the non-Goodreads (profile-mapper) path, which handles its own placement. */
+const EMPTY_EXTRAS: ImportExtras = {
+  tbrPlaced: 0,
+  shelvesCreated: [],
+  shelved: 0,
+  noCover: 0,
+  noIsbn: 0,
+  unplacedNotes: 0,
+  tropeLikeShelves: [],
+}
 
 async function currentUserId(): Promise<string> {
   const { data } = await supabase.auth.getUser()
@@ -42,6 +53,10 @@ export interface ImportExportResult {
   /** read-only notice signal: ISBNs that look like they lost a leading digit (a zero destroyed on
    *  data entry, before the file existed). Books still imported; these just may not match. */
   truncatedIsbns: number
+  /** honest bulk-empty + placement facts the summary speaks to (Goodreads path; empty otherwise) */
+  extras: ImportExtras
+  /** every resolved book id (added or merged) — the enrichment kickoff scopes its first pass to these */
+  bookIds: string[]
 }
 
 /**
@@ -105,10 +120,22 @@ export async function importDetectedExport(
   // the "found" summary can warn without touching any value or the merge.
   const truncatedIsbns = countTruncatedIsbns(parseCSV(text))
 
-  // Generic shape → the existing Goodreads/StoryGraph path (no connected-universe metadata).
+  // Generic shape → the Goodreads/StoryGraph path (no connected-universe metadata, but it DOES
+  // carry the row extras: Imported TBR, custom shelves, and the bulk-empty facts for the summary).
   if (profile.name === 'generic') {
     const r = await importCsvToBackend(currentBooks, text, { autoMerge: opts.autoMerge })
-    return { profile: profile.name, added: r.added, merged: r.merged, review: r.review, ingested: [], readingOrders: 0, outcomes: [], truncatedIsbns }
+    return {
+      profile: profile.name,
+      added: r.added,
+      merged: r.merged,
+      review: r.review,
+      ingested: [],
+      readingOrders: 0,
+      outcomes: r.outcomes,
+      truncatedIsbns,
+      extras: r.extras,
+      bookIds: r.bookIds,
+    }
   }
 
   const ownerId = await currentUserId()
@@ -147,5 +174,16 @@ export async function importDetectedExport(
   const universes = detectUniverses(ingested.map(({ row, bookId }) => universeInputFromRow(row, bookId)))
   const readingOrders = await persistUniverseOrders(universes, ownerId)
 
-  return { profile: profile.name, added, merged, review, ingested, readingOrders, outcomes, truncatedIsbns }
+  return {
+    profile: profile.name,
+    added,
+    merged,
+    review,
+    ingested,
+    readingOrders,
+    outcomes,
+    truncatedIsbns,
+    extras: EMPTY_EXTRAS,
+    bookIds: ingested.map((i) => i.bookId),
+  }
 }

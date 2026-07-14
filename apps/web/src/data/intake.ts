@@ -38,10 +38,12 @@ export interface IntakeResult {
 export type VerdictLookup = Map<string, DuplicateVerdict>
 export const verdictLookupKey = (bookId: string, inc: Incoming): string => `${bookId}|${importKey(inc)}`
 
-/** Build a full Book from an incoming partial (defaults for anything the source didn't give). */
+/** Build a full Book from an incoming partial. Absent source data stays absent — no fabricated
+ *  genre/subgenre/format (docs/task-import-quality.md §3); the add flows pass their own explicit
+ *  values (AddRoute defaults genre to the skin's room), and imports leave the reader to choose. */
 export function incomingToBook(inc: Incoming): Book {
   const tags = inc.tags ?? []
-  const subgenre = inc.subgenre ?? 'Romance'
+  const subgenre = inc.subgenre ?? ''
   return {
     id: '',
     title: inc.title,
@@ -52,7 +54,7 @@ export function incomingToBook(inc: Incoming): Book {
     position: inc.position ?? '',
     seriesCount: inc.seriesCount ?? null,
     status: inc.status ?? 'standalone',
-    genre: inc.genre ?? 'romance',
+    genre: inc.genre ?? '',
     subgenre,
     subgenres: inc.subgenres?.length ? inc.subgenres : subgenre ? [subgenre] : [],
     genres: inc.genres ?? [],
@@ -64,7 +66,7 @@ export function incomingToBook(inc: Incoming): Book {
     fave: inc.fave ?? false,
     ownership: inc.ownership ?? 'owned',
     owned: inc.owned ?? { physical: false, ebook: false, audiobook: false },
-    format: inc.format ?? 'Paperback',
+    format: inc.format ?? '',
     rating: inc.rating ?? 0,
     readStatus: inc.readStatus ?? 'Unread',
     source: inc.source ?? 'Owned',
@@ -73,7 +75,7 @@ export function incomingToBook(inc: Incoming): Book {
     plan: inc.plan ?? null,
     progress: inc.progress ?? 0,
     boyfriend: deriveBoyfriend({ tags, subgenre }),
-    addedTs: Date.now(),
+    addedTs: inc.addedTs ?? Date.now(), // Goodreads Date Added survives (shelf history order)
   }
 }
 

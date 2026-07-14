@@ -149,6 +149,8 @@ export function toBookRow(patch: Partial<Book>): Partial<BookRow> {
   if (patch.readingPosition !== undefined) row.reading_position = patch.readingPosition
   if (patch.readingNowHidden !== undefined) row.reading_now_hidden = patch.readingNowHidden
   if (patch.boyfriend !== undefined) row.boyfriend = patch.boyfriend ?? null
+  // Insert-time only in practice (imports carry Goodreads' Date Added); UI patches never set it.
+  if (patch.addedTs !== undefined && patch.addedTs > 0) row.added_at = new Date(patch.addedTs).toISOString()
   return row
 }
 
