@@ -48,6 +48,8 @@ export interface BookRow {
   updated_at: string
   /** ordered contributor join (present when the books query selects it) */
   book_authors?: BookAuthorRow[]
+  book_tropes?: { emphasis: string; tropes: { id: string; name: string } | null }[]
+  tropes_suggested_at: string | null
 }
 
 /** A row of the book_authors join with its author embedded (PostgREST nested select). */

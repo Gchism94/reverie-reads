@@ -96,13 +96,14 @@ export function BookDetailRail({
         )}
       </div>
 
-      {book.tags.length > 0 && (
+      {book.tropes.length > 0 && (
         <div className="mt-4">
           <div className="mb-1.5 text-[11px] uppercase tracking-[0.2em] text-muted">{labels.tags}</div>
           <div className="flex flex-wrap gap-1.5">
-            {book.tags.slice(0, 10).map((t) => (
-              <Chip key={t}>{t}</Chip>
+            {book.tropes.slice(0, 5).map((t) => (
+              <Chip key={t.id}>{t.emphasis === 'pinned' ? `♥ ${t.name}` : t.name}</Chip>
             ))}
+            {book.tropes.length > 5 && <Chip>+{book.tropes.length - 5}</Chip>}
           </div>
         </div>
       )}
