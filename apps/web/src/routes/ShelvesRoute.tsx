@@ -14,6 +14,7 @@ import {
 } from '../data/lists'
 import { useAddListItem, useAllListItems, useRemoveListItem } from '../data/listItems'
 import { LibraryPicker } from '../components/LibraryPicker'
+import { ExternalSearchSheet } from '../components/ExternalSearchSheet'
 import { SpineShelf } from '../components/SpineShelf'
 import { Modal } from '../components/Modal'
 import { BookmarkGlyph } from '../components/BookmarkGlyph'
@@ -178,6 +179,7 @@ function ShelvesScreen() {
   const [tab, setTab] = useState<Tab>('tbr')
   const [openListId, setOpenListId] = useState<string | null>(null)
   const [pickerFor, setPickerFor] = useState<UiList | null>(null)
+  const [externalFor, setExternalFor] = useState<UiList | null>(null)
   const [dragListIdx, setDragListIdx] = useState<number | null>(null)
 
   const all = books ?? []
@@ -356,6 +358,22 @@ function ShelvesScreen() {
             addItem.mutate({ listId: pickerFor.id, bookId: b.id, afterPosition: Math.max(0, ...positions) })
           }}
           onClose={() => setPickerFor(null)}
+          // The external-search seam — same as the shelf detail page. Without it, "search everywhere"
+          // stays disabled and a book you don't already own can't be added from the Shelves page.
+          onExternalSearch={() => {
+            const l = pickerFor
+            setPickerFor(null)
+            setExternalFor(l)
+          }}
+        />
+      )}
+
+      {externalFor && (
+        <ExternalSearchSheet
+          listId={externalFor.id}
+          listName={externalFor.name}
+          books={all}
+          onClose={() => setExternalFor(null)}
         />
       )}
     </section>
