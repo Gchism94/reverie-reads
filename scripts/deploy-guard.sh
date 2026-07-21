@@ -140,7 +140,12 @@ else
     warn "could not read migration list (offline?) — files present locally:"
     find supabase/migrations -maxdepth 1 -name '*.sql' -exec basename {} \; | sort | sed 's/^/    • /'
   fi
-  DEPLOY_CMD=("$SUPABASE_BIN" db push "${PASSTHRU[@]}")
+  # bash 3.2 (macOS default) aborts on a bare "${PASSTHRU[@]}" when the array is EMPTY under `set -u`
+  # (fixed in bash 4.4) — and zero passthrough args is the common `pnpm deploy:migrations` invocation.
+  # The `${arr[@]+"${arr[@]}"}` idiom expands to nothing when empty and to the elements otherwise, on
+  # every bash. Use it for any UNGUARDED possibly-empty array expansion. (The `names` array below is
+  # instead guarded by a `die` on empty — deploying zero functions should error, not silently run.)
+  DEPLOY_CMD=("$SUPABASE_BIN" db push "${PASSTHRU[@]+"${PASSTHRU[@]}"}")
 fi
 
 say ""
