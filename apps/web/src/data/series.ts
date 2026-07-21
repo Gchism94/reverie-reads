@@ -243,13 +243,21 @@ export function useUpdateSeries(name: string) {
 /** Reposition one entry (drag or ▲▼). Manual order always wins: marks the entry user-edited.
  *  When decimals got too tight the caller sends `updates` — the whole list renumbered to clean
  *  integers in its new visual order (the silent renormalize). */
+/** Mirror a linked entry's position onto its book row, so the book page's "#N in series" agrees with
+ *  the series page's reading order. Ghost entries (no book_id) have nothing to sync. */
+async function syncBookPosition(bookId: string | null | undefined, position: number): Promise<void> {
+  if (!bookId) return
+  await supabase.from('books').update({ position }).eq('id', bookId)
+}
+
 export function useMoveEntry(name: string) {
   const invalidate = useSeriesInvalidate(name)
   return useMutation({
     mutationFn: async (input: {
       entryId: string
       position: number
-      updates?: { id: string; position: number; userEdited: boolean }[]
+      bookId?: string | null
+      updates?: { id: string; position: number; userEdited: boolean; bookId?: string | null }[]
     }) => {
       if (input.updates) {
         for (const u of input.updates) {
@@ -258,6 +266,7 @@ export function useMoveEntry(name: string) {
             .update({ position: u.position, user_edited: u.userEdited })
             .eq('id', u.id)
           if (error) throw error
+          await syncBookPosition(u.bookId, u.position) // series drag → book page reflects it
         }
         return
       }
@@ -266,6 +275,7 @@ export function useMoveEntry(name: string) {
         .update({ position: input.position, user_edited: true })
         .eq('id', input.entryId)
       if (error) throw error
+      await syncBookPosition(input.bookId, input.position)
     },
     onSuccess: () => invalidate(),
   })
@@ -274,25 +284,93 @@ export function useMoveEntry(name: string) {
 export function useUpdateEntry(name: string) {
   const invalidate = useSeriesInvalidate(name)
   return useMutation({
-    mutationFn: async (input: { entryId: string; label?: string | null; position?: number }) => {
+    mutationFn: async (input: { entryId: string; label?: string | null; position?: number; bookId?: string | null }) => {
       const patch: Record<string, unknown> = { user_edited: true }
       if (input.label !== undefined) patch.label = input.label
       if (input.position !== undefined) patch.position = input.position
       const { error } = await supabase.from('series_entries').update(patch).eq('id', input.entryId)
       if (error) throw error
+      if (input.position !== undefined) await syncBookPosition(input.bookId, input.position)
     },
     onSuccess: () => invalidate(),
   })
 }
 
+/**
+ * Remove a slot from the series page ENTIRELY (task-series-defects §Removal). Deletes the entry AND, if
+ * it was linked to a book, clears that book's `series` so the reconciliation in useSeriesDetail can't
+ * re-add it on the next load (which is exactly why removal looked irreversible). Contrast the book page,
+ * which DETACHES the book but keeps the canonical slot as a ghost (see useDetachBookFromSeries).
+ */
 export function useRemoveEntry(name: string) {
   const invalidate = useSeriesInvalidate(name)
   return useMutation({
-    mutationFn: async (entryId: string) => {
-      const { error } = await supabase.from('series_entries').delete().eq('id', entryId)
+    mutationFn: async (input: { entryId: string; bookId?: string | null }) => {
+      const { error } = await supabase.from('series_entries').delete().eq('id', input.entryId)
       if (error) throw error
+      if (input.bookId) {
+        const { error: bErr } = await supabase.from('books').update({ series: '' }).eq('id', input.bookId)
+        if (bErr) throw bErr
+      }
     },
     onSuccess: () => invalidate(),
+  })
+}
+
+/**
+ * Reconcile the book page's series edits into series_entries (task-series-defects §Positions/§Removal).
+ * updateBook writes the book row; this keeps the SERIES side in step so the two surfaces never disagree:
+ *   · position: write the linked entry's position (user_edited, so a source refresh can't move it) — the
+ *     book page's "#N" now takes effect on the series page. If no entry exists yet, the series page's
+ *     reconciliation seeds it from the (just-written) book row, so it lands either way.
+ *   · series change / clear: DETACH from the old series — convert its entry to a GHOST (book_id → null,
+ *     keep the slot's title/author/position) so the canonical reading-order slot survives but the book
+ *     leaves. Without this, clearing the field left the link and the reconciliation re-added the book.
+ * Call AFTER updateBook (the book row must already reflect the new series/position).
+ */
+export function useSyncBookSeries() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ book, newSeries, newPosition }: { book: Book; newSeries: string; newPosition: number | null }) => {
+      const oldSeries = (book.series ?? '').trim()
+      const next = newSeries.trim()
+
+      // Detach from the old series (name changed or cleared): keep the slot as a ghost.
+      if (oldSeries && oldSeries !== next) {
+        const { data: sRows } = await supabase.from('series').select('id').eq('name', oldSeries).limit(1)
+        const sid = (sRows ?? [])[0]?.id as string | undefined
+        if (sid) {
+          await supabase
+            .from('series_entries')
+            .update({
+              book_id: null,
+              title: book.title,
+              author: [book.first, book.last].filter(Boolean).join(' '),
+            })
+            .eq('series_id', sid)
+            .eq('book_id', book.id)
+        }
+      }
+
+      // Write the position into the (possibly new) series so the book page's value takes effect.
+      if (next && newPosition != null) {
+        const { data: sRows } = await supabase.from('series').select('id').eq('name', next).limit(1)
+        const sid = (sRows ?? [])[0]?.id as string | undefined
+        if (sid) {
+          await supabase
+            .from('series_entries')
+            .update({ position: newPosition, user_edited: true })
+            .eq('series_id', sid)
+            .eq('book_id', book.id)
+        }
+      }
+      return { oldSeries, next }
+    },
+    onSuccess: (_r, { book, newSeries }) => {
+      void qc.invalidateQueries({ queryKey: seriesListKey })
+      void qc.invalidateQueries({ queryKey: booksKey })
+      for (const nm of [book.series, newSeries]) if (nm?.trim()) void qc.invalidateQueries({ queryKey: seriesKey(nm) })
+    },
   })
 }
 
