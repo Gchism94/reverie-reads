@@ -8,6 +8,7 @@ import { useAllReads } from '../data/reads'
 import { useLists, type UiList } from '../data/lists'
 import { useAddListItem, useAllListItems } from '../data/listItems'
 import { LibraryPicker } from '../components/LibraryPicker'
+import { ExternalSearchSheet } from '../components/ExternalSearchSheet'
 import { Modal } from '../components/Modal'
 import { useProfile, useUpdateProfile } from '../data/profile'
 import { SpineShelf } from '../components/SpineShelf'
@@ -43,6 +44,7 @@ function HomeScreen() {
   const [readingPickerOpen, setReadingPickerOpen] = useState(false)
   const [removing, setRemoving] = useState<Book | null>(null)
   const [railPickerFor, setRailPickerFor] = useState<UiList | null>(null)
+  const [railExternalFor, setRailExternalFor] = useState<UiList | null>(null)
 
   const all = books ?? []
   const openBook = (id: string) => void navigate({ to: '/book/$bookId', params: { bookId: id } })
@@ -325,6 +327,22 @@ function HomeScreen() {
             addItem.mutate({ listId: railPickerFor.id, bookId: b.id, afterPosition: Math.max(0, ...positions) })
           }}
           onClose={() => setRailPickerFor(null)}
+          // Same shelf-add seam as /shelves and the shelf detail page — without it a book you don't
+          // own can't be added to a priority shelf from Home. (Follow-up to #64.)
+          onExternalSearch={() => {
+            const l = railPickerFor
+            setRailPickerFor(null)
+            setRailExternalFor(l)
+          }}
+        />
+      )}
+
+      {railExternalFor && (
+        <ExternalSearchSheet
+          listId={railExternalFor.id}
+          listName={railExternalFor.name}
+          books={all}
+          onClose={() => setRailExternalFor(null)}
         />
       )}
 
