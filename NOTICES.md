@@ -55,24 +55,15 @@ pnpm licenses list --prod --json     # machine-readable (used to build the table
 |---|---:|---|
 | MIT | 34 | permissive |
 | Apache-2.0 | 2 | permissive (patent grant) |
-| Hippocratic-2.1 | 2 | ⚠ **ethical-source, non-OSI — use restrictions apply** (see flag below) |
-| BSD-2-Clause | 1 | permissive |
+| BSD-2-Clause | 1 | permissive (`leaflet` — the map view) |
 | 0BSD | 1 | permissive (public-domain-equivalent) |
 | Unlicense | 1 | public-domain-equivalent |
-| **Total** | **41** | 6 distinct license types |
+| **Total** | **39** | 5 distinct license types |
 
-No GPL, LGPL, AGPL, MPL, or other reciprocal/copyleft licenses are present in the
-production dependency tree.
-
-### ⚠ Flag: Hippocratic-2.1 (ethical-source, non-OSI)
-
-`react-leaflet` and `@react-leaflet/core` are published under the **Hippocratic License
-2.1**, an *ethical-source* license that is **not OSI-approved** and imposes conditions
-(broadly, that the software not be used in ways that violate applicable human-rights laws).
-It is not copyleft and does not require releasing source, but it is a non-standard,
-condition-bearing license living inside an otherwise permissively-licensed, proprietary
-project. These packages provide the optional map view. **Flagged for the owner's
-awareness**; confirm the terms are acceptable, or drop the map dependency if not.
+**All production dependencies are permissive.** No GPL, LGPL, AGPL, MPL, or other
+reciprocal/copyleft licenses — and no non-OSI / ethical-source licenses — are present in the
+production dependency tree. (The map view uses core `leaflet` (BSD-2-Clause) directly; the
+`react-leaflet` wrapper, which was Hippocratic-2.1, was removed.)
 
 ### Full inventory (appendix)
 
@@ -82,8 +73,6 @@ awareness**; confirm the terms are acceptable, or drop the map dependency if not
 | `dexie` | 4.4.4 | Apache-2.0 |
 | `xlsx` | 0.20.3 | Apache-2.0 |
 | `leaflet` | 1.9.4 | BSD-2-Clause |
-| `@react-leaflet/core` | 3.0.0 | Hippocratic-2.1 |
-| `react-leaflet` | 5.0.0 | Hippocratic-2.1 |
 | `@sentry/browser` | 10.62.0 | MIT |
 | `@sentry/browser-utils` | 10.62.0 | MIT |
 | `@sentry/core` | 10.62.0 | MIT |
