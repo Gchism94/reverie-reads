@@ -4,7 +4,14 @@
 export type ReadStatus = 'Unread' | 'Reading' | 'Read' | 'DNF'
 /** The SERIES' publication status (is the series still being written?) — never the reader's
  *  position in it, which is derived from read states. */
-export type SeriesStatus = 'standalone' | 'ongoing' | 'completed' | 'on_hiatus' | 'cancelled'
+export type SeriesStatus =
+  | 'standalone'
+  | 'ongoing'
+  | 'completed'
+  | 'on_hiatus'
+  | 'cancelled'
+  | 'interconnected_standalone'
+  | 'interconnected_series'
 
 /** Flexible publish-date precision — any part may be null. */
 export interface PubDate {

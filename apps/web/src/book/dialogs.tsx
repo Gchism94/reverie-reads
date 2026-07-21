@@ -6,6 +6,7 @@ import { Stars } from '../components/Stars'
 import { FORMATS, subgenresForGenre } from '../library/constants'
 import { useBooks, useUpdateBook } from '../data/books'
 import { useSetContributors } from '../data/contributors'
+import { useSyncBookSeries } from '../data/series'
 import { useAddRead } from '../data/reads'
 import { usePerformMerge } from '../data/mergeBooks'
 import { maybeChainPrompt } from '../lib/chainPrompt'
@@ -104,6 +105,7 @@ export function EditDetails({
 }) {
   const updateBook = useUpdateBook()
   const setContributors = useSetContributors()
+  const syncBookSeries = useSyncBookSeries()
   const suggestions = useAuthorSuggestions()
   const [contribs, setContribs] = useState<Contributor[]>(
     book.contributors.length ? book.contributors : fromFirstLast(book.first, book.last),
@@ -131,11 +133,12 @@ export function EditDetails({
 
   function save() {
     if (!f.genre) return
+    const position = f.position.trim() === '' ? '' : Number(f.position) || ''
     updateBook.mutate({
       id: book.id,
       patch: {
         series: f.series,
-        position: f.position.trim() === '' ? '' : Number(f.position) || '',
+        position,
         seriesCount: numOrNull(f.seriesCount),
         status: f.status as SeriesStatus,
         genre: f.genre,
@@ -145,6 +148,9 @@ export function EditDetails({
         pub: { y: numOrNull(f.pubY), m: numOrNull(f.pubM), d: numOrNull(f.pubD) },
       },
     })
+    // Reconcile the SERIES side so the series page agrees: a position edit writes through to the
+    // linked entry, and clearing/changing the series detaches the book (keeping the slot as a ghost).
+    syncBookSeries.mutate({ book, newSeries: f.series, newPosition: typeof position === 'number' ? position : null })
     // Contributors persist through the RPC (it also refreshes the primary first/last + byline).
     setContributors.mutate({ bookId: book.id, contributors: contribs })
     onClose()
