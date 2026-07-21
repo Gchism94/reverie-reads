@@ -1,0 +1,38 @@
+Reverie — Proprietary License
+Copyright (c) 2026 Greg Chism. All rights reserved.
+
+This software and its source code (the "Software") are proprietary and confidential.
+No permission is granted to any person to use, copy, modify, merge, publish, distribute,
+sublicense, or sell copies of the Software, in whole or in part, except as expressly
+stated below.
+
+TRAINING-FORK GRANT
+-------------------
+The copyright holder grants designated collaborators a limited, revocable, and
+non-transferable permission to fork, clone, run locally, and modify the Software for two
+purposes only:
+
+  (a) personal learning, and
+  (b) preparing contributions submitted back to this repository.
+
+This grant does NOT permit redistribution of the Software or any derivative of it,
+deployment to any production or public environment, or any commercial use. The grant may
+be revoked at any time and confers no ownership. All contributions submitted back to the
+repository are licensed to the copyright holder under these same terms.
+
+Any other use requires the prior written permission of the copyright holder.
+
+NO WARRANTY
+-----------
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHOR OR COPYRIGHT HOLDER BE LIABLE
+FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR
+OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+
+THIRD-PARTY COMPONENTS AND CONTENT
+----------------------------------
+This license covers only the original source code of this repository. Third-party
+software components, book cover images, and bibliographic/metadata records are governed
+by their own licenses and terms and are not licensed to you by this file. See NOTICES.md.
