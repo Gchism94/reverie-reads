@@ -9,7 +9,33 @@ import {
 describe('series status', () => {
   it('every enum value has display copy', () => {
     for (const v of SERIES_STATUS_VALUES) expect(SERIES_STATUS_LABELS[v]).toBeTruthy()
-    expect(SERIES_STATUS_VALUES).toEqual(['standalone', 'ongoing', 'completed', 'on_hiatus', 'cancelled'])
+    expect(SERIES_STATUS_VALUES).toEqual([
+      'standalone',
+      'ongoing',
+      'completed',
+      'on_hiatus',
+      'cancelled',
+      'interconnected_standalone',
+      'interconnected_series',
+    ])
+  })
+
+  it('normalizes the two widened interconnected values + likely import spellings', () => {
+    expect(normalizeSeriesStatus('interconnected_standalone', true)).toBe('interconnected_standalone')
+    expect(normalizeSeriesStatus('Interconnected Standalone', true)).toBe('interconnected_standalone')
+    expect(normalizeSeriesStatus('interconnected standalones', true)).toBe('interconnected_standalone')
+    expect(normalizeSeriesStatus('interconnected', true)).toBe('interconnected_standalone')
+    expect(normalizeSeriesStatus('shared world', true)).toBe('interconnected_standalone')
+    expect(normalizeSeriesStatus('companion series', true)).toBe('interconnected_standalone')
+    expect(normalizeSeriesStatus('interconnected_series', true)).toBe('interconnected_series')
+    expect(normalizeSeriesStatus('Interconnected Series', true)).toBe('interconnected_series')
+    expect(normalizeSeriesStatus('interconnected universe', true)).toBe('interconnected_series')
+  })
+
+  it('badges the two interconnected statuses', () => {
+    expect(seriesStatusBadge({ status: 'interconnected_standalone', seriesCount: null })).toBe('Interconnected standalone')
+    expect(seriesStatusBadge({ status: 'interconnected_series', seriesCount: 6 })).toBe('Interconnected series of 6')
+    expect(seriesStatusBadge({ status: 'interconnected_series', seriesCount: null })).toBe('Interconnected series')
   })
 
   it('normalizes the pre-expansion spellings (the migration mapping)', () => {
