@@ -12,11 +12,10 @@ describe('embeddingText', () => {
         subgenre: 'Romantasy',
         tags: ['Fae', 'Enemies to Lovers'],
         spice: 4,
-        archetype: 'Fae Warrior',
       }),
     ).toBe(
       'A Court of Thorns and Roses by Sarah J. Maas. Series: ACOTAR. World: romance / Romantasy. ' +
-        'Tropes: enemies to lovers, fae. Lead: Fae Warrior. Heat 4 of 5.',
+        'Tropes: enemies to lovers, fae. Heat 4 of 5.',
     )
   })
 

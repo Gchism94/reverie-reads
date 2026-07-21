@@ -1,6 +1,5 @@
 import type { Book, List, ReadEntry } from './types'
 import { norm } from './normalize'
-import { deriveBoyfriend } from './boyfriend'
 import { strongerOwnership } from './ownership'
 
 /** The slice of library state the merge engine reads and rewrites. */
@@ -129,7 +128,6 @@ export function mergeBooks(
           : statuses.includes('Unread')
             ? 'Unread'
             : p.readStatus
-  p.boyfriend = deriveBoyfriend(p)
 
   const dead = new Set(others.map((b) => b.id))
   const remap = (ids: string[]): string[] => {

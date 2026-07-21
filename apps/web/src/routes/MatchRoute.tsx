@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { createRoute, useNavigate } from '@tanstack/react-router'
-import { buildMatchContext, deriveBoyfriend, scoreMatch, type Book, type MatchProfile, type MatchReason } from '@reverie/core'
+import { buildMatchContext, scoreMatch, type Book, type MatchProfile, type MatchReason } from '@reverie/core'
 import { rootRoute } from './RootRoute'
 import { CoverImage } from '../components/CoverImage'
 import { useBooks } from '../data/books'
@@ -46,15 +46,15 @@ function score(
   // Build a genre-neutral profile from the (romance-flavored) quiz, then score with the core
   // vibe matcher over the library-derived context (tag rarity + series momentum + the LEARNED
   // taste). Taste-only mode (Tier 1) skips the quiz entirely: a mood-neutral profile over the
-  // standing taste. The book-boyfriend archetype rides along as the Tryst skin's signature signal.
+  // standing taste.
   const profile: MatchProfile = opts.tasteOnly
     ? { subWeights: {}, wantTags: [], targetIntensity: null }
     : (() => {
         const subWeights = { ...a.subs }
         if (a.dark) subWeights['Dark Romance'] = (subWeights['Dark Romance'] ?? 0) + 1
-        return { subWeights, wantTags: cravings, targetIntensity: target, archetypeWeights: a.arts }
+        return { subWeights, wantTags: cravings, targetIntensity: target }
       })()
-  const ctx = buildMatchContext(books, { archetype: deriveBoyfriend, dismissedAt: opts.dismissedAt })
+  const ctx = buildMatchContext(books, { dismissedAt: opts.dismissedAt })
 
   const scored: Pick[] = books
     .map((b) => {

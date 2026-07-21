@@ -104,14 +104,6 @@ describe('scoreMatch (Tier 0 vibe matcher)', () => {
     expect(rereader.score).toBeGreaterThan(onceRead.score)
   })
 
-  it('applies the optional skin signature (archetype) via context, neutral without it', () => {
-    const b = makeBook({ id: 'a', title: 'A', tags: ['Mafia'] })
-    const p = { ...profile, archetypeWeights: { mafia: 5 } }
-    const withSig = scoreMatch(b, p, { tagRarity: {}, series: {}, now: 0, archetype: () => 'mafia' })
-    const without = scoreMatch(b, p)
-    expect(withSig.score).toBeGreaterThan(without.score)
-  })
-
   it('LEARNED taste lifts a book wearing the reader\'s loved tags — with no quiz at all', () => {
     const now = Date.parse('2026-01-01')
     const library = [
@@ -150,7 +142,7 @@ describe('scoreMatch (Tier 0 vibe matcher)', () => {
   it('returns reasons sorted by contribution with every component present', () => {
     const b = makeBook({ id: 'a', title: 'A', subgenre: 'Romantasy', tags: ['Fae'], intensity: 4 })
     const { reasons } = scoreMatch(b, profile)
-    expect(reasons).toHaveLength(9)
+    expect(reasons).toHaveLength(8)
     for (let i = 1; i < reasons.length; i++) {
       expect(reasons[i - 1]!.contribution).toBeGreaterThanOrEqual(reasons[i]!.contribution)
     }

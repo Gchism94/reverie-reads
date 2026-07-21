@@ -12,7 +12,6 @@ const FIXTURES: EmbedSource[] = [
     subgenre: 'Romantasy',
     tags: ['Fae', 'Enemies to Lovers', 'Slow Burn'],
     spice: 4,
-    archetype: 'Fae Warrior',
   },
   { title: 'Carnage' },
   { title: 'Mile High', author: 'Liz Tomforde', genre: 'romance', subgenre: 'Sports', tags: ['Hockey', 'grumpy/sunshine'], spice: 3 },

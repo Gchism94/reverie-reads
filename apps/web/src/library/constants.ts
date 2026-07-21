@@ -29,16 +29,20 @@ export const NEUTRAL_SUBGENRE = 'Other'
  *  shelves instead of a hardcoded romance subgenre — the "genre → subgenre" layer the matcher can
  *  lean on. Romance keeps the original set; the other eight genres get a modest, real taxonomy.
  *  `subgenresForGenre()` appends NEUTRAL_SUBGENRE to every genre. */
+// Broadened beyond romance so every genre has a credible, native set (docs/task-taxonomy-neutral.md).
+// Additive: every pre-existing value is preserved (existing books keep their subgenre); the
+// additions per genre are all NEW single-genre values, each mirrored into core's
+// SUBGENRE_PRIMARY_GENRE and the taxonomy_neutral migration's backfill (parity-tested).
 export const GENRE_SUBGENRES: Record<string, readonly string[]> = {
-  romance: ['Romantasy', 'Dark Romance', 'Romance', 'Contemporary', 'Sports', 'Cowboy Romance'],
-  fantasy: ['Epic Fantasy', 'Romantasy', 'Dark Fantasy', 'Cozy Fantasy', 'Portal Fantasy', 'Sword & Sorcery'],
-  'science fiction': ['Space Opera', 'Cyberpunk', 'Dystopian', 'Hard SF', 'Time Travel', 'First Contact'],
-  horror: ['Gothic', 'Supernatural', 'Slasher', 'Cosmic Horror', 'Psychological', 'Haunted House'],
-  mystery: ['Cozy Mystery', 'Noir', 'Thriller', 'Detective', 'Whodunit', 'Locked Room'],
-  literary: ['Literary Fiction', 'Historical', 'Magical Realism', 'Contemporary', 'Short Stories'],
-  cozy: ['Cozy Mystery', 'Cozy Fantasy', 'Small Town', 'Slice of Life', 'Culinary'],
-  nonfiction: ['Memoir', 'History', 'Science', 'Essays', 'Biography', 'Self-Help'],
-  'young adult': ['YA Fantasy', 'YA Romance', 'YA Dystopian', 'Coming of Age', 'YA Contemporary'],
+  romance: ['Romantasy', 'Dark Romance', 'Romance', 'Contemporary', 'Sports', 'Cowboy Romance', 'Historical Romance', 'Paranormal Romance', 'Romantic Comedy'],
+  fantasy: ['Epic Fantasy', 'Romantasy', 'Dark Fantasy', 'Cozy Fantasy', 'Portal Fantasy', 'Sword & Sorcery', 'Urban Fantasy', 'Grimdark', 'Fairytale Retelling'],
+  'science fiction': ['Space Opera', 'Cyberpunk', 'Dystopian', 'Hard SF', 'Time Travel', 'First Contact', 'Post-Apocalyptic', 'Military SF', 'Climate Fiction'],
+  horror: ['Gothic', 'Supernatural', 'Slasher', 'Cosmic Horror', 'Psychological', 'Haunted House', 'Folk Horror', 'Body Horror', 'Splatterpunk'],
+  mystery: ['Cozy Mystery', 'Noir', 'Thriller', 'Detective', 'Whodunit', 'Locked Room', 'Police Procedural', 'Legal Thriller', 'Historical Mystery'],
+  literary: ['Literary Fiction', 'Historical', 'Magical Realism', 'Contemporary', 'Short Stories', 'Satire', 'Speculative Fiction', 'Autofiction', 'Epistolary'],
+  cozy: ['Cozy Mystery', 'Cozy Fantasy', 'Small Town', 'Slice of Life', 'Culinary', 'Cozy Crime', 'Cottagecore', 'Bookshop Cozy', 'Cozy Paranormal'],
+  nonfiction: ['Memoir', 'History', 'Science', 'Essays', 'Biography', 'Self-Help', 'True Crime', 'Travel', 'Philosophy'],
+  'young adult': ['YA Fantasy', 'YA Romance', 'YA Dystopian', 'Coming of Age', 'YA Contemporary', 'YA Horror', 'YA Mystery', 'YA Sci-Fi', 'YA Thriller'],
 }
 
 /** Subgenres to offer for a genre — any spelling a book may carry resolves via `genreKey`
@@ -95,8 +99,7 @@ export const UNIVERSAL_TROPES: string[] = [
 ]
 
 /** Genre → trope groups (the tag-side twin of GENRE_SUBGENRES, same lowercased-genre keys).
- *  Romance keeps the original four groups VERBATIM — `deriveBoyfriend` keys off those exact names.
- *  Each other genre gets a curated 3-group baseline (~15–25 tropes), seeded from established
+ *  Each genre gets a curated 3-group baseline (~15–25 tropes), seeded from established
  *  reader-taxonomy vocabulary (StoryGraph-style content tags), rich enough to feel native without
  *  drowning the picker. Users extend freely — these are the baseline, not the ceiling. */
 export const TROPE_GROUPS_BY_GENRE: Record<string, Record<string, string[]>> = {
@@ -157,26 +160,6 @@ export function tropeGroupsForGenre(genre: string): Record<string, string[]> {
 }
 
 export const ALL_TROPES: string[] = Object.values(TROPE_GROUPS).flat()
-
-export interface Archetype {
-  name: string
-  tag: string
-  emoji: string
-  grad: [string, string]
-  desc: string
-}
-
-export const ARCH: Record<string, Archetype> = {
-  cinnamon: { name: 'The Cinnamon Roll', tag: 'Soft, devoted, falls first', emoji: '🧁', grad: ['#ffb37e', '#ff7e9d'], desc: 'Sweet to the core — open adoration, gentle hands, zero games.' },
-  rogue: { name: 'The Charming Rogue', tag: 'Witty, flirtatious, all banter', emoji: '🃏', grad: ['#ff9a6c', '#f25c8a'], desc: 'Quick with a comeback, slow to admit he’s fallen.' },
-  protector: { name: 'The Brooding Protector', tag: 'Grumpy, fierce, touch-starved', emoji: '🛡️', grad: ['#8e6cff', '#5c3a9e'], desc: 'A wall of grump to the world and a fool for exactly one person.' },
-  gray: { name: 'The Morally Gray Mastermind', tag: 'Powerful, calculating, yours', emoji: '🖤', grad: ['#6a4e9e', '#2e1a3a'], desc: 'Plays a longer game than the room — and it became about you.' },
-  fae: { name: 'The Fae Prince', tag: 'Ethereal, ancient, dangerous', emoji: '🌙', grad: ['#7fd3c6', '#4a6fa5'], desc: 'Centuries old, devastating, bound to you by something older than choice.' },
-  dragon: { name: 'The Dragon Rider', tag: 'Battle-forged, loyal, intense', emoji: '🐉', grad: ['#ff7e5f', '#b23a48'], desc: 'Forged in war, scarred, undone by the one person he never expected to need.' },
-  mafia: { name: 'The Mafia King', tag: 'Lethal, possessive, devoted', emoji: '🥀', grad: ['#c0455f', '#3a0e1a'], desc: 'Runs an empire on fear and runs soft only for you.' },
-  villain: { name: 'The Villain', tag: 'Dark, obsessive, irresistible', emoji: '🔥', grad: ['#b23a6e', '#2a0e22'], desc: 'The bad decision you’d make twice. He’s decided you’re his.' },
-  tortured: { name: 'The Tortured Soul', tag: 'Haunted, aching, worth it', emoji: '🌧️', grad: ['#5a6e8e', '#2a2e3a'], desc: 'Carrying more than he’ll say. The angst is the point.' },
-}
 
 export const SORTS: { value: LibrarySort; label: string }[] = [
   { value: 'az', label: 'Title A–Z' },

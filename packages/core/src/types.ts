@@ -92,7 +92,7 @@ export interface Book {
    *  subgenre/trope vocabularies). '' = not chosen yet — the edit form prompts, never guesses. */
   genre: string
   /** Denormalized FIRST subgenre — kept equal to subgenres[0] (like first/last mirrors
-   *  contributors[0]) so single-value readers (gradient, boyfriend) stay cheap. */
+   *  contributors[0]) so single-value readers (e.g. the subgenre gradient) stay cheap. */
   subgenre: string
   /** All subgenres (multi-select). The single `subgenre` mirrors element 0. */
   subgenres: string[]
@@ -133,7 +133,6 @@ export interface Book {
   readingPosition?: number | null
   /** hidden from the home Reading Now display without changing status/progress */
   readingNowHidden?: boolean
-  boyfriend?: string // derived mood/archetype tag
   addedTs: number
 }
 

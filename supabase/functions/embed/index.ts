@@ -55,7 +55,6 @@ interface BookRow {
   genres: string[] | null
   tags: string[] | null
   intensity: number | null
-  boyfriend: string | null
 }
 
 const toSource = (b: BookRow): EmbedSource => ({
@@ -66,7 +65,6 @@ const toSource = (b: BookRow): EmbedSource => ({
   subgenre: b.subgenre ?? undefined,
   tags: b.tags ?? [],
   spice: b.intensity,
-  archetype: b.boyfriend ?? undefined,
 })
 
 Deno.serve(async (req: Request) => {
@@ -92,7 +90,7 @@ Deno.serve(async (req: Request) => {
 
   try {
     if (body.mode === 'sweep') {
-      const cols = 'id,title,author_first,author_last,series,subgenre,genre,genres,tags,intensity,boyfriend'
+      const cols = 'id,title,author_first,author_last,series,subgenre,genre,genres,tags,intensity'
       const [booksRes, embRes] = await Promise.all([
         fetch(`${DB_URL}/rest/v1/books?select=${cols}`, { headers: usr }),
         fetch(`${DB_URL}/rest/v1/book_embeddings?select=book_id,sig`, { headers: usr }),
