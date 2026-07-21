@@ -104,9 +104,15 @@ function SeriesScreen() {
     const { position, renumber } = positionBetween(prev, nextPos)
     if (renumber) {
       const order = [...rest.slice(0, to), moved, ...rest.slice(to)]
-      moveEntry.mutate({ entryId: moved.id, position, updates: order.map((e, i) => ({ id: e.id, position: i + 1, userEdited: e.id === moved.id ? true : e.userEdited })) })
+      moveEntry.mutate({
+        entryId: moved.id,
+        position,
+        bookId: moved.bookId,
+        // bookId rides along so a linked entry's move mirrors onto books.position (the book page agrees)
+        updates: order.map((e, i) => ({ id: e.id, position: i + 1, userEdited: e.id === moved.id ? true : e.userEdited, bookId: e.bookId })),
+      })
     } else {
-      moveEntry.mutate({ entryId: moved.id, position })
+      moveEntry.mutate({ entryId: moved.id, position, bookId: moved.bookId })
     }
   }
 
@@ -295,7 +301,7 @@ function SeriesScreen() {
                     </button>
                   )}
                   {!book && (
-                    <button type="button" onClick={() => removeEntry.mutate(e.id)} aria-label={`Remove ${e.title} from the series`} className="h-8 w-8 rounded-full text-[13px] text-muted hover:text-ink">
+                    <button type="button" onClick={() => removeEntry.mutate({ entryId: e.id, bookId: e.bookId })} aria-label={`Remove ${e.title} from the series`} className="h-8 w-8 rounded-full text-[13px] text-muted hover:text-ink">
                       ✕
                     </button>
                   )}
