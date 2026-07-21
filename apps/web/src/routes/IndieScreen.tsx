@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { CircleMarker, MapContainer, Popup, TileLayer } from 'react-leaflet'
+import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { useSkin } from '../skin/useSkin'
 import { useProfile, useUpdateProfile } from '../data/profile'
@@ -26,24 +26,68 @@ const TILES = {
 }
 const TILE_ATTR = '&copy; OpenStreetMap contributors &copy; CARTO'
 
+// Escape untrusted store text (OSM/Overpass names + addresses) before it goes into a popup's HTML.
+const esc = (s: string): string =>
+  s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!)
+
+// Thin Leaflet-API map (no react-leaflet — its wrapper is Hippocratic-2.1; core leaflet is BSD-2).
+// One map instance for the component's life; small effects keep tiles (mode), view (loc), and markers
+// (loc + stores) in sync, mirroring what react-leaflet's keyed <MapContainer>/<TileLayer>/<CircleMarker>
+// did. Cleanup calls map.remove() on unmount.
 function StoreMap({ loc, stores }: { loc: ResolvedLocation; stores: Store[] }) {
   const mode = useSkin((s) => s.resolvedMode)
+  const elRef = useRef<HTMLDivElement | null>(null)
+  const mapRef = useRef<L.Map | null>(null)
+  const tileRef = useRef<L.TileLayer | null>(null)
+  const markersRef = useRef<L.LayerGroup | null>(null)
+
+  // Create the map once (per mount); the effects below keep it in sync. leaflet needs a sized
+  // container — the wrapper's h-80 provides it. map.remove() tears down panes + listeners on unmount.
+  useEffect(() => {
+    if (!elRef.current || mapRef.current) return
+    const map = L.map(elRef.current, { center: [loc.lat, loc.lng], zoom: 12, scrollWheelZoom: false })
+    mapRef.current = map
+    markersRef.current = L.layerGroup().addTo(map)
+    return () => {
+      map.remove()
+      mapRef.current = null
+      tileRef.current = null
+      markersRef.current = null
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-once; view/tiles/markers effects sync updates
+  }, [])
+
+  // Tiles — swap the CARTO layer when the skin mode flips (was: <TileLayer key={mode}>).
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+    tileRef.current?.remove()
+    tileRef.current = L.tileLayer(TILES[mode], { attribution: TILE_ATTR }).addTo(map)
+  }, [mode])
+
+  // View — recenter when the resolved location changes (was: <MapContainer key={loc}>).
+  useEffect(() => {
+    mapRef.current?.setView([loc.lat, loc.lng], 12)
+  }, [loc.lat, loc.lng])
+
+  // Markers — the "you are here" dot + one per store, rebuilt when loc or the store list changes.
+  useEffect(() => {
+    const group = markersRef.current
+    if (!group) return
+    group.clearLayers()
+    L.circleMarker([loc.lat, loc.lng], { radius: 7, color: '#f0b14e', fillColor: '#f0b14e', fillOpacity: 0.9 })
+      .bindPopup('You are here')
+      .addTo(group)
+    for (const s of stores) {
+      L.circleMarker([s.lat, s.lng], { radius: 6, color: '#cf2f66', fillColor: '#cf2f66', fillOpacity: 0.85 })
+        .bindPopup(`<b>${esc(s.name)}</b>${s.address ? `<div>${esc(s.address)}</div>` : ''}`)
+        .addTo(group)
+    }
+  }, [loc.lat, loc.lng, stores])
+
   return (
     <div role="region" aria-label="Map of nearby independent bookstores" className="h-80 overflow-hidden rounded-2xl border border-line">
-      <MapContainer key={`${loc.lat},${loc.lng}`} center={[loc.lat, loc.lng]} zoom={12} scrollWheelZoom={false} style={{ height: '100%', width: '100%' }}>
-        <TileLayer key={mode} url={TILES[mode]} attribution={TILE_ATTR} />
-        <CircleMarker center={[loc.lat, loc.lng]} radius={7} pathOptions={{ color: '#f0b14e', fillColor: '#f0b14e', fillOpacity: 0.9 }}>
-          <Popup>You are here</Popup>
-        </CircleMarker>
-        {stores.map((s) => (
-          <CircleMarker key={s.id} center={[s.lat, s.lng]} radius={6} pathOptions={{ color: '#cf2f66', fillColor: '#cf2f66', fillOpacity: 0.85 }}>
-            <Popup>
-              <b>{s.name}</b>
-              {s.address ? <div>{s.address}</div> : null}
-            </Popup>
-          </CircleMarker>
-        ))}
-      </MapContainer>
+      <div ref={elRef} style={{ height: '100%', width: '100%' }} />
     </div>
   )
 }
