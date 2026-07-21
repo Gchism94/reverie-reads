@@ -39,18 +39,27 @@ export function CoverCard({
   const showsPlaceholder = !book.cover || brokenIds.has(book.id)
   const markInk = showsPlaceholder ? 'var(--mark-on-ph)' : 'var(--mark-accent)'
   const markBg = showsPlaceholder ? 'rgba(0,0,0,0.62)' : 'rgba(0,0,0,0.45)'
-  // Unowned (wishlist) ghost: the ARTWORK dims behind --ghost-opacity and the frame goes dashed;
-  // title/author below and the marks keep full contrast (AA untouched).
-  const unowned = book.ownership === 'unowned'
+  // Four-state possession (docs/task-ownership-v2.md). A book NOT in hand (wishlist / unset) gets
+  // the ghost: the ARTWORK dims behind --ghost-opacity and the frame goes dashed. A BORROWED book is
+  // in your hands — it never dims; instead it wears a solid accent ring (distinct from the wishlist
+  // ghost). Title/author below and the marks keep full contrast (AA untouched).
+  const wishlist = book.ownership === 'wishlist'
+  const borrowed = book.ownership === 'borrowed'
+  const ghost = wishlist || book.ownership === 'unset'
+  const ownedFormats = bookOwnedFormats(book)
+  const frameAccent = selected
+    ? { boxShadow: '0 0 0 2.5px var(--primary), var(--shadow)' }
+    : ghost
+      ? { borderStyle: 'dashed' as const }
+      : borrowed
+        ? { boxShadow: 'inset 0 0 0 2px var(--primary)' }
+        : undefined
 
   return (
     <div className="group">
       <div
         className="skin-card relative aspect-[2/3] overflow-hidden border border-line transition-shadow motion-reduce:transition-none"
-        style={{
-          ...(selected ? { boxShadow: '0 0 0 2.5px var(--primary), var(--shadow)' } : undefined),
-          ...(unowned ? { borderStyle: 'dashed' } : undefined),
-        }}
+        style={frameAccent}
       >
         <button
           type="button"
@@ -58,7 +67,7 @@ export function CoverCard({
           aria-label={`Open ${book.title}`}
           aria-current={selected ? 'true' : undefined}
           className="block h-full w-full"
-          style={{ background: `linear-gradient(150deg, ${g0}, ${g1})`, ...(unowned ? { opacity: 'var(--ghost-opacity)' } : undefined) }}
+          style={{ background: `linear-gradient(150deg, ${g0}, ${g1})`, ...(ghost ? { opacity: 'var(--ghost-opacity)' } : undefined) }}
         >
           {/* cover → skin placeholder fallback + dead-link detection (Cover Studio) */}
           <CoverImage book={book} thumb />
@@ -108,26 +117,39 @@ export function CoverCard({
           </div>
         )}
 
-        {unowned && (
+        {/* one bottom-right mark: wishlist ghost, else borrowed (with any format glyphs), else the
+            plain format glyphs of a book you own. The three never collide. */}
+        {wishlist ? (
           <span
             className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide"
             style={{ background: markBg, color: markInk, borderRadius: 'var(--mark-radius)' }}
           >
             ⊹ Wishlist
           </span>
-        )}
-
-        {bookOwnedFormats(book).length > 0 && (
+        ) : borrowed ? (
+          <div
+            className="absolute bottom-1.5 right-1.5 flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide backdrop-blur"
+            style={{ background: markBg, color: markInk, borderRadius: 'var(--mark-radius)' }}
+            title={ownedFormats.length ? `Borrowed: ${ownedFormats.join(', ')}` : 'Borrowed'}
+          >
+            <span>⇄ Borrowed</span>
+            {ownedFormats.map((f) => (
+              <span key={f} className="font-normal">
+                {FORMAT_ICON[f]}
+              </span>
+            ))}
+          </div>
+        ) : ownedFormats.length > 0 ? (
           <div
             className="absolute bottom-1.5 right-1.5 flex gap-0.5 px-1 py-0.5 text-[10px] backdrop-blur"
             style={{ background: markBg, color: '#fff', borderRadius: 'var(--mark-radius)' }}
-            title={`Owned: ${bookOwnedFormats(book).join(', ')}`}
+            title={`Owned: ${ownedFormats.join(', ')}`}
           >
-            {bookOwnedFormats(book).map((f) => (
+            {ownedFormats.map((f) => (
               <span key={f}>{FORMAT_ICON[f]}</span>
             ))}
           </div>
-        )}
+        ) : null}
       </div>
 
       <button type="button" onClick={onOpen} className="mt-1.5 block w-full text-left">

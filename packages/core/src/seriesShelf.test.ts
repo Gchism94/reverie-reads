@@ -27,7 +27,8 @@ const entry = (p: Partial<SeriesEntry> & { id: string; position: number }): Seri
 const read = makeBook({ id: 'r', title: 'Read One', readStatus: 'Read' })
 const reading = makeBook({ id: 'c', title: 'Current', readStatus: 'Reading' })
 const unread = makeBook({ id: 'u', title: 'Owned Unread' })
-const wished = makeBook({ id: 'w', title: 'Wished', ownership: 'unowned' })
+const wished = makeBook({ id: 'w', title: 'Wished', ownership: 'wishlist' })
+const borrowed = makeBook({ id: 'bw', title: 'Borrowed Unread', ownership: 'borrowed' })
 const byId = new Map([read, reading, unread, wished].map((b) => [b.id, b]))
 
 describe('entry ordering and state', () => {
@@ -42,7 +43,8 @@ describe('entry ordering and state', () => {
     expect(entryState(reading, true)).toBe('reading') // reading outranks tbr
     expect(entryState(unread, true)).toBe('tbr')
     expect(entryState(unread, false)).toBe('unread')
-    expect(entryState(wished, false)).toBe('unowned')
+    expect(entryState(wished, false)).toBe('wishlist')
+    expect(entryState(borrowed, false)).toBe('unread') // borrowed = in hand, not "to get"
   })
 })
 

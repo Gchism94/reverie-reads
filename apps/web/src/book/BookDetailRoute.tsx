@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { Link, createRoute, useNavigate } from '@tanstack/react-router'
-import { authorOf, bookSubgenres, buildBuyLinks, buyDisclosure, isAuthorRole, ownershipTogglePatch, seriesStatusBadge, ROLE_LABELS, type Book, type Owned } from '@reverie/core'
+import { authorOf, bookSubgenres, buildBuyLinks, buyDisclosure, isAuthorRole, seriesStatusBadge, ROLE_LABELS, type Book, type BookOwnership, type Owned } from '@reverie/core'
 import { useFilters } from '../library/filterStore'
 import { buyConfig } from '../lib/buyConfig'
 import { useLabels, useVoice } from '../skin/labels'
@@ -14,7 +14,7 @@ import { useBookListIds, useToggleListItem } from '../data/listItems'
 import { useCreateList, useLists } from '../data/lists'
 import { Stars } from '../components/Stars'
 import { Chip } from '../components/Chip'
-import { ARCH, MONTHS, READ_STATUSES, subgenreGradient } from '../library/constants'
+import { ARCH, MONTHS, READ_STATUS_OPTIONS, readStatusLabel, subgenreGradient } from '../library/constants'
 import { maybeChainPrompt } from '../lib/chainPrompt'
 import { EditDetails, LogReadForm, MergeDialog } from './dialogs'
 import { TropePicker } from '../components/TropePicker'
@@ -137,9 +137,10 @@ function BookDetailScreen() {
   const workKey = workKeyFor(book)
   const reviewerName = profile?.displayName || 'Reader'
   const setOwned = (owned: Owned) => updateBook.mutate({ id: book.id, patch: { owned } })
-  // One tap flips owned ⇄ wishlist. Format flags are left alone in both directions — un-owning
-  // suppresses them (bookOwnedFormats gates every read), so coming home restores your copies.
-  const toggleOwnership = () => updateBook.mutate({ id: book.id, patch: ownershipTogglePatch(book) })
+  // Four-state possession (owned / borrowed / wishlist / unset). Format flags are left alone across
+  // any change — dropping possession suppresses them (bookOwnedFormats gates every read), so marking
+  // a book owned or borrowed again restores your copies.
+  const setOwnership = (ownership: BookOwnership) => updateBook.mutate({ id: book.id, patch: { ownership } })
   const memberIds = new Set(listIds ?? [])
   const tbrs = (lists ?? []).filter((l) => l.kind === 'tbr')
   const collections = (lists ?? []).filter((l) => l.kind === 'collection')
@@ -235,16 +236,16 @@ function BookDetailScreen() {
 
       {/* your copies (per-format ownership) */}
       <div className="mt-6">
-        <OwnedCopies ownership={book.ownership} owned={book.owned} onChange={setOwned} onOwnershipToggle={toggleOwnership} />
+        <OwnedCopies ownership={book.ownership} owned={book.owned} onChange={setOwned} onOwnershipChange={setOwnership} />
       </div>
 
       {/* buy at an indie (discover + support — not live inventory) */}
       <BuyAtIndie book={book} />
 
-      {/* reading status */}
+      {/* reading status — "Not set" is a real, selectable state; no forced choice */}
       <Label>Reading status</Label>
       <div className="flex flex-wrap gap-1.5">
-        {READ_STATUSES.map((s) => (
+        {READ_STATUS_OPTIONS.map((s) => (
           <Chip
             key={s}
             active={book.readStatus === s}
@@ -253,7 +254,7 @@ function BookDetailScreen() {
               if (s === 'Read') void maybeChainPrompt(book, books ?? [])
             }}
           >
-            {s}
+            {readStatusLabel(s)}
           </Chip>
         ))}
       </div>

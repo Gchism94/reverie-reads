@@ -11,7 +11,7 @@ import { volumesUrl } from '../lib/googleBooks'
 import { useEffectiveSkin, useLabels, useVoice } from '../skin/labels'
 import { Chip } from '../components/Chip'
 import { ContributorEditor } from '../book/ContributorEditor'
-import { FORMATS, READ_STATUSES, subgenreGradient, subgenresForGenre, tropeGroupsForGenre } from '../library/constants'
+import { FORMATS, READ_STATUS_OPTIONS, readStatusLabel, subgenreGradient, subgenresForGenre, tropeGroupsForGenre } from '../library/constants'
 import { CORE_GENRES } from '@reverie/core'
 
 interface BarcodeDetectorLike {
@@ -62,9 +62,10 @@ function parsePub(s: string): Book['pub'] {
 function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<SearchHit>; defaultUnowned?: boolean; onAdded: () => void }) {
   const intake = useIntake()
   const voice = useVoice()
-  // Context-sensitive default: adding from the library assumes possession; arriving from a wanting
-  // context (Discover) assumes wishlist. Form-session state only — never persisted as a preference.
-  const [ownership, setOwnership] = useState<Book['ownership']>(defaultUnowned ? 'unowned' : 'owned')
+  // Context-sensitive default: arriving from a wanting context (Discover) assumes wishlist; a plain
+  // catalog add leaves possession UNSET rather than forcing "owned" (docs/task-ownership-v2.md).
+  // Form-session state only — never persisted as a preference.
+  const [ownership, setOwnership] = useState<Book['ownership']>(defaultUnowned ? 'wishlist' : 'unset')
   const qc = useQueryClient()
   const { data: books } = useBooks()
   // genre is a required metadata field, not a romance-only tag — default it to the ROOM the reader
@@ -78,7 +79,7 @@ function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<Search
     position: '',
     genre: skinGenre,
     format: 'Paperback' as string,
-    readStatus: 'Unread' as Book['readStatus'],
+    readStatus: 'unset' as Book['readStatus'],
   })
   // Subgenres are a multi-pick; the first selection leads (gradient + boyfriend derivation).
   const [subs, setSubs] = useState<string[]>([subgenresForGenre(skinGenre)[0] as string])
@@ -230,8 +231,10 @@ function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<Search
           ))}
         </select>
         <select value={form.readStatus} onChange={(e) => set('readStatus', e.target.value as Book['readStatus'])} className={inputClass} style={inputStyle}>
-          {READ_STATUSES.map((s) => (
-            <option key={s}>{s}</option>
+          {READ_STATUS_OPTIONS.map((s) => (
+            <option key={s} value={s}>
+              {readStatusLabel(s)}
+            </option>
           ))}
         </select>
       </div>
@@ -255,7 +258,9 @@ function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<Search
           {(
             [
               ['owned', voice.ownIt],
-              ['unowned', voice.wantIt],
+              ['borrowed', voice.borrowedIt],
+              ['wishlist', voice.wantIt],
+              ['unset', voice.unsetIt],
             ] as const
           ).map(([value, label]) => (
             <button

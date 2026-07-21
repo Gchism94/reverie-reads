@@ -1,7 +1,9 @@
 // Domain types — the client-side shapes the prototype's logic operates on
 // (docs/DATA_MODEL.md §1). Step 4 maps these to/from the relational rows in §2.
 
-export type ReadStatus = 'Unread' | 'Reading' | 'Read' | 'DNF'
+/** The reader's status on a book. 'unset' means *no selection* — cataloguing a book must not force
+ *  a read state (docs/task-ownership-v2.md). It is the default for a newly added book. */
+export type ReadStatus = 'unset' | 'Unread' | 'Reading' | 'Read' | 'DNF'
 /** The SERIES' publication status (is the series still being written?) — never the reader's
  *  position in it, which is derived from read states. */
 export type SeriesStatus =
@@ -28,19 +30,25 @@ export interface ReadEntry {
   notes: string
 }
 
-/** Which formats the reader OWNS (independent of the format read). `false` physical = not
- * owned physically; a string narrows the physical copy. Meaningful only when the book's
- * `ownership` is 'owned' — an unowned (wishlist) book carries all-false flags. */
+/** Which formats the reader HAS (independent of the format read). `false` physical = not
+ * possessed physically; a string narrows the physical copy. Meaningful when the book is
+ * possessed ('owned' or 'borrowed') — a wishlist/unset book carries latent flags that no
+ * surface reads (see bookOwnedFormats). */
 export interface Owned {
   physical: false | 'paperback' | 'hardcover' | true
   ebook: boolean
   audiobook: boolean
 }
 
-/** Does the reader possess this book at all? A record existing no longer implies ownership —
- * 'unowned' is the wishlist/TBR state (most of a TBR is books you don't own yet). Two states
- * only, by decision; richer states (borrowed, loaned, preordered) are a later widening. */
-export type BookOwnership = 'owned' | 'unowned'
+/** How the reader possesses this book — four states (docs/task-ownership-v2.md):
+ *  · `owned`    — the reader owns a copy (per-format detail in `owned`)
+ *  · `borrowed` — in the reader's hands but not owned (library loan, a friend's copy). Counts as
+ *                 possessed: it can carry a format and it stays in the default library.
+ *  · `wishlist` — a book the reader WANTS (the old 'unowned' TBR state; renamed for precision)
+ *  · `unset`    — no selection. Cataloguing a book must not force a possession category; this is
+ *                 the default for a newly added book.
+ *  Possession never gates reading history: a book you've read is in your library whatever this says. */
+export type BookOwnership = 'owned' | 'borrowed' | 'wishlist' | 'unset'
 
 /** A contributor's role on a book. Ordered, multi-contributor (docs/DATA_MODEL.md). `narrator` is
  * really audiobook-edition-scoped — kept as a role for now (edition-scoping is a later refinement). */

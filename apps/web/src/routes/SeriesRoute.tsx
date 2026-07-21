@@ -221,7 +221,7 @@ function SeriesScreen() {
                   ? `On ${tbrNameByBook.get(book!.id)!}`
                   : state === 'unread'
                     ? 'On your shelf'
-                    : state === 'unowned'
+                    : state === 'wishlist'
                       ? '⊹ To get'
                       : '⊹ Not in your library'
           return (
@@ -243,7 +243,7 @@ function SeriesScreen() {
             >
               {isNext && (
                 <p className="mb-1.5 text-[10.5px] font-bold uppercase tracking-[0.24em]" style={{ color: 'var(--accent-ink)' }}>
-                  {state === 'ghost' || state === 'unowned' ? 'Next up — you need this one' : 'Next up'}
+                  {state === 'ghost' || state === 'wishlist' ? 'Next up — you need this one' : 'Next up'}
                 </p>
               )}
               <div className="flex items-center gap-3">
@@ -266,7 +266,7 @@ function SeriesScreen() {
                   <button type="button" onClick={() => openBook(book.id)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
                     <div
                       className="h-[60px] w-10 flex-none overflow-hidden rounded-md border border-line"
-                      style={state === 'unowned' ? { opacity: 'var(--ghost-opacity)' } : undefined}
+                      style={state === 'wishlist' ? { opacity: 'var(--ghost-opacity)' } : undefined}
                     >
                       <CoverImage book={book} thumb />
                     </div>
