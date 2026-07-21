@@ -48,6 +48,10 @@ export function CoverImage({
       alt=""
       loading="lazy"
       decoding="async"
+      // Covers sit inside `draggable` reorder containers (shelf grid cards, the /shelves shelf rows).
+      // A native <img> is draggable by default and would hijack the reorder gesture with an image drag
+      // — so opt out and let the parent's drag-to-reorder win. Keyboard ▲▼/◀▶ fallbacks are unaffected.
+      draggable={false}
       className={className}
       onLoad={(e) => {
         // A Google "no image" plate loads successfully (HTTP 200) — reject it by its fixed size so the
