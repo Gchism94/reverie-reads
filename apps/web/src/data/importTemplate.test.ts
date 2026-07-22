@@ -69,6 +69,15 @@ describe('Reverie import template (generated from the core profile)', () => {
     const fourthWing = rows.find((r) => r.incoming.title === 'Fourth Wing')
     expect(fourthWing?.incoming.readStatus).toBe('Unread')
     expect(hacienda?.incoming.readStatus).toBe('Reading')
+
+    // Four-state ownership (docs/task-manual-merge.md §3): the template's Owned column carries
+    // borrowed end to end — Yes → owned, blank → owned, Borrowed → borrowed, No → wishlist.
+    expect(acotar?.incoming.ownership).toBe('owned')
+    expect(hacienda?.incoming.ownership).toBe('owned') // blank counts as owned
+    expect(fourthWing?.incoming.ownership).toBe('wishlist')
+    const finePrint = rows.find((r) => r.incoming.title === 'The Fine Print')
+    expect(finePrint?.incoming.ownership).toBe('borrowed')
+    expect(finePrint?.incoming.readStatus).toBe('Read')
   })
 
   it('committed asset on disk parses to the reverie profile', async () => {
