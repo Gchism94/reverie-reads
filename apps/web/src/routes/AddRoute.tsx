@@ -6,13 +6,15 @@ import { rootRoute } from './RootRoute'
 import { useIntake, type ReviewCandidate } from '../data/intake'
 import { useBooks } from '../data/books'
 import { resolveCandidate, type ReviewAction } from '../data/duplicates'
-import { enrichBook } from '../lib/enrich'
+import { enrichBook, type CoverAlternate } from '../lib/enrich'
 import { volumesUrl } from '../lib/googleBooks'
 import { useEffectiveSkin, useLabels, useVoice } from '../skin/labels'
 import { Chip } from '../components/Chip'
 import { CoverImage } from '../components/CoverImage'
+import { CoverSheet } from '../components/CoverSheet'
+import { TropePicker } from '../components/TropePicker'
 import { ContributorEditor } from '../book/ContributorEditor'
-import { FORMATS, OWNERSHIP_LABELS, READ_STATUS_OPTIONS, readStatusLabel, subgenreGradient, subgenresForGenre, tropeGroupsForGenre } from '../library/constants'
+import { FORMATS, OWNERSHIP_LABELS, READ_STATUS_OPTIONS, readStatusLabel, subgenreGradient, subgenresForGenre } from '../library/constants'
 import { CORE_GENRES } from '@reverie/core'
 
 interface BarcodeDetectorLike {
@@ -60,6 +62,76 @@ function parsePub(s: string): Book['pub'] {
   return { y: +(m[1] ?? 0), m: m[2] ? +m[2] : null, d: m[3] ? +m[3] : null }
 }
 
+/**
+ * Step two of the add flow — the record now exists, so the SAME cover sheet and trope picker the
+ * book screen uses run here against the real book, before the reader leaves. Both components persist
+ * immediately and are keyed to a real book id (cover ingest scopes Storage by book; every trope
+ * gesture writes book_tropes; suggestions query by id), so they can only bind to a saved book — this
+ * refine step is how Add reaches full parity with Edit without a parallel implementation.
+ */
+function RefineAdded({ bookId, onDone }: { bookId: string; onDone: () => void }) {
+  const labels = useLabels()
+  const { data: books } = useBooks()
+  const book = books?.find((b) => b.id === bookId)
+  const [dialog, setDialog] = useState<'cover' | 'trope' | null>(null)
+
+  if (!book) {
+    return (
+      <div className="mt-4 skin-panel border border-line p-4 text-[13px] text-muted" style={{ background: 'var(--card)' }} role="status">
+        Saving…
+      </div>
+    )
+  }
+
+  const [g0, g1] = subgenreGradient(book.subgenre)
+  const tropeCount = book.tropes.length
+
+  return (
+    <div className="mt-4 skin-panel border border-line p-4" style={{ background: 'var(--card)' }}>
+      <h2 className="text-[16px] italic text-ink" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+        Added — finish the details
+      </h2>
+      <p className="mb-3 mt-1 text-[13px] text-muted">
+        {book.title} is in your library. Fix the cover or tag its {labels.tags.toLowerCase()} now — or leave it and edit later.
+      </p>
+      <div className="flex gap-4">
+        <div className="aspect-[2/3] w-20 flex-none overflow-hidden rounded-lg border border-line" style={{ background: `linear-gradient(150deg, ${g0}, ${g1})` }}>
+          <CoverImage book={book} thumb />
+        </div>
+        <div className="flex flex-1 flex-col gap-2">
+          <button
+            type="button"
+            onClick={() => setDialog('cover')}
+            className="h-10 rounded-xl border border-line text-[13.5px] font-semibold text-ink"
+            style={{ background: 'var(--field)' }}
+          >
+            Change cover
+          </button>
+          <button
+            type="button"
+            onClick={() => setDialog('trope')}
+            className="h-10 rounded-xl border border-line text-[13.5px] font-semibold text-ink"
+            style={{ background: 'var(--field)' }}
+          >
+            Tag {labels.tags.toLowerCase()}
+            {tropeCount ? ` · ${tropeCount}` : ''}
+          </button>
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={onDone}
+        className="mt-4 h-11 w-full rounded-xl text-[14px] font-semibold"
+        style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))', color: 'var(--on-primary)' }}
+      >
+        Done
+      </button>
+      {dialog === 'cover' && <CoverSheet book={book} onClose={() => setDialog(null)} />}
+      {dialog === 'trope' && <TropePicker book={book} onClose={() => setDialog(null)} />}
+    </div>
+  )
+}
+
 function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<SearchHit>; defaultUnowned?: boolean; onAdded: () => void }) {
   const intake = useIntake()
   const voice = useVoice()
@@ -73,6 +145,8 @@ function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<Search
   // is in (add in Grimoire → fantasy, in Marrow → horror), never a hardcoded 'romance'.
   const skinGenre = SKINS[useEffectiveSkin()].genre.toLowerCase()
   const [dup, setDup] = useState<ReviewCandidate | null>(null)
+  // Once the record is created we hand off to the refine step (cover + tropes) instead of leaving.
+  const [addedId, setAddedId] = useState<string | null>(null)
   const [contribs, setContribs] = useState<Contributor[]>(contributorsFromAuthors(hit.authors ?? []))
   const [form, setForm] = useState({
     title: hit.title ?? '',
@@ -86,7 +160,6 @@ function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<Search
   const [subs, setSubs] = useState<string[]>([subgenresForGenre(skinGenre)[0] as string])
   const toggleSub = (s: string) =>
     setSubs((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]))
-  const [tags, setTags] = useState<string[]>([])
   const [intensity, setIntensity] = useState(0)
   // Track whether the user edited genre, so enrichment fills it but never overrides their choice.
   const genreEdited = useRef(false)
@@ -94,20 +167,27 @@ function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<Search
   const authorSuggestions = [...new Set((books ?? []).flatMap((b) => b.contributors.map((c) => c.name)).filter(Boolean))].sort()
   const labels = useLabels()
   const [cover, setCover] = useState(hit.cover ?? '')
+  // Enrichment's alternate editions (real cover URLs) — a pre-save chooser so a wrong fetched cover
+  // is fixable before the record even exists; upload/camera/more editions live in the refine step.
+  const [alternates, setAlternates] = useState<CoverAlternate[]>([])
+  const [coverNote, setCoverNote] = useState<string | null>(null)
   const [enriching, setEnriching] = useState(false)
   const set = (k: keyof typeof form, v: string) => setForm((p) => ({ ...p, [k]: v }))
   const [g0, g1] = subgenreGradient(subs[0] ?? '')
 
   async function fetchDetails() {
     setEnriching(true)
+    setCoverNote(null)
     const res = await enrichBook({
       title: form.title,
       author: formatAuthors(contribs),
       isbn: hit.isbn,
     })
     setEnriching(false)
-    if (!res) return
-    if (res.cover && !cover) setCover(res.cover)
+    if (!res) {
+      setCoverNote('Couldn’t reach the catalog just now — add details by hand, or try again.')
+      return
+    }
     // Seed contributors from enrichment only if the user hasn't entered any names yet.
     if (res.authors?.length && !contribs.some((c) => c.name.trim())) setContribs(contributorsFromAuthors(res.authors))
     // Fill only blanks — never overwrite what the user typed. genre is the mapped primary genre
@@ -118,6 +198,20 @@ function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<Search
       position: p.position || (res.seriesPosition != null ? String(res.seriesPosition) : ''),
       genre: genreEdited.current ? p.genre : res.genre || p.genre,
     }))
+    // Cover — honor the match confidence the backend already scores (ISBN, exact title, author
+    // conflict, ambiguity). A HIGH match (or an ISBN scan) auto-fills; anything softer shows the
+    // choice rather than silently committing a guess. Alternates are always offered for override.
+    const alts = res.alternates ?? []
+    setAlternates(alts)
+    const strong = res.confidence === 'high' || !!hit.isbn
+    if (res.cover && !cover) setCover(res.cover) // tentative preview either way — never overwrites a user pick
+    if (!strong && res.cover) {
+      setCoverNote(
+        alts.length
+          ? 'Not a certain match — check the cover and pick the right edition below.'
+          : 'Not a certain match — double-check the cover, or change it after adding.',
+      )
+    }
   }
   const inputClass = 'h-10 w-full skin-card border border-line px-3 text-[14px] text-ink outline-none'
   const inputStyle = { background: 'var(--field)' } as const
@@ -149,7 +243,8 @@ function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<Search
       subgenre: subs[0] ?? '',
       subgenres: subs,
       genres: subs.slice(0, 1),
-      tags,
+      // tropes are tagged in the refine step via the full picker (book_tropes needs a saved id);
+      // no lightweight freeform tags here — the structured trope system is the one source of truth.
       intensity,
       ownership,
       owned,
@@ -167,6 +262,11 @@ function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<Search
       setDup(res.review)
       return
     }
+    // Added or merged — hand off to the refine step against the real book (cover + tropes).
+    if (res.bookId) {
+      setAddedId(res.bookId)
+      return
+    }
     onAdded()
   }
 
@@ -179,6 +279,8 @@ function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<Search
     setDup(null)
     onAdded()
   }
+
+  if (addedId) return <RefineAdded bookId={addedId} onDone={onAdded} />
 
   return (
     <div className="mt-4 skin-panel border border-line p-4" style={{ background: 'var(--card)' }}>
@@ -203,6 +305,30 @@ function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<Search
           <ContributorEditor value={contribs} onChange={setContribs} suggestions={authorSuggestions} />
         </div>
       </div>
+
+      {/* Pick a cover — enrichment's alternate editions, before saving (upload/camera come after add). */}
+      {alternates.length > 0 && (
+        <div className="mt-3">
+          <div className="mb-1.5 text-[11px] uppercase tracking-[0.15em] text-muted">Pick a cover</div>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {alternates.map((a, i) => (
+              <button
+                key={a.isbn13 || a.cover || i}
+                type="button"
+                onClick={() => setCover(a.cover)}
+                aria-label={`Use the ${a.source} cover`}
+                aria-pressed={cover === a.cover}
+                className="h-[4.5rem] w-12 flex-none overflow-hidden rounded"
+                style={{ border: cover === a.cover ? '2px solid var(--primary)' : '1px solid var(--line)' }}
+              >
+                {/* through CoverImage so a "no image" plate never poses as a pickable cover */}
+                <CoverImage book={{ title: form.title, cover: a.cover }} thumb />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {coverNote && <p className="mt-1.5 text-[12px] text-muted">{coverNote}</p>}
 
       <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
         <input value={form.series} onChange={(e) => set('series', e.target.value)} placeholder="Series" className={inputClass} style={inputStyle} />
@@ -250,6 +376,9 @@ function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<Search
             </Chip>
           ))}
         </div>
+        {subs.length > 1 && (
+          <p className="mt-1.5 text-[11px] text-muted">First pick leads — it sets the book’s gradient.</p>
+        )}
       </div>
 
       {/* Ownership — a record no longer implies possession; most of a TBR is books you don't own. */}
@@ -282,17 +411,6 @@ function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<Search
               <span className="block text-[12.5px] font-semibold">{OWNERSHIP_LABELS[value]}</span>
               <span className="block text-[10px] font-normal italic">{sub}</span>
             </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="mt-3">
-        <div className="mb-1.5 text-[11px] uppercase tracking-[0.15em] text-muted">{labels.tags}</div>
-        <div className="flex max-h-32 flex-wrap gap-1.5 overflow-y-auto">
-          {Object.values(tropeGroupsForGenre(skinGenre)).flat().slice(0, 22).map((t) => (
-            <Chip key={t} active={tags.includes(t)} onClick={() => setTags((p) => (p.includes(t) ? p.filter((x) => x !== t) : [...p, t]))}>
-              {t}
-            </Chip>
           ))}
         </div>
       </div>
