@@ -19,7 +19,7 @@ function badgeFor(g: SeriesGroup, canonicalTotal: number | null): { text: string
   if (total && g.read >= total)
     return { text: '✓ Series done', bg: 'rgba(123,63,160,0.18)', fg: 'var(--ink)' }
   if (!total) return { text: 'length not set', bg: 'rgba(123,63,160,0.14)', fg: 'var(--muted)' }
-  return { text: '✓ All owned', bg: 'rgba(123,63,160,0.18)', fg: 'var(--ink)' }
+  return { text: '✓ All collected', bg: 'rgba(123,63,160,0.18)', fg: 'var(--ink)' }
 }
 
 function SeriesCard({

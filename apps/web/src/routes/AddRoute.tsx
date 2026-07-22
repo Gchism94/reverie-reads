@@ -12,7 +12,7 @@ import { useEffectiveSkin, useLabels, useVoice } from '../skin/labels'
 import { Chip } from '../components/Chip'
 import { CoverImage } from '../components/CoverImage'
 import { ContributorEditor } from '../book/ContributorEditor'
-import { FORMATS, READ_STATUS_OPTIONS, readStatusLabel, subgenreGradient, subgenresForGenre, tropeGroupsForGenre } from '../library/constants'
+import { FORMATS, OWNERSHIP_LABELS, READ_STATUS_OPTIONS, readStatusLabel, subgenreGradient, subgenresForGenre, tropeGroupsForGenre } from '../library/constants'
 import { CORE_GENRES } from '@reverie/core'
 
 interface BarcodeDetectorLike {
@@ -263,21 +263,24 @@ function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<Search
               ['wishlist', voice.wantIt],
               ['unset', voice.unsetIt],
             ] as const
-          ).map(([value, label]) => (
+          ).map(([value, sub]) => (
             <button
               key={value}
               type="button"
               role="radio"
               aria-checked={ownership === value}
+              aria-label={OWNERSHIP_LABELS[value]}
               onClick={() => setOwnership(value)}
-              className="skin-control border px-3 py-1.5 text-[12.5px] font-semibold"
+              className="skin-control border px-3 py-1.5 text-center leading-tight"
               style={
                 ownership === value
                   ? { background: 'var(--accent-fill)', color: 'var(--on-primary)', borderColor: 'transparent' }
                   : { background: 'var(--field)', color: 'var(--muted)', borderColor: 'var(--line)' }
               }
             >
-              {label}
+              {/* plain word tells you what it sets; the skin voice is the flavor subtitle */}
+              <span className="block text-[12.5px] font-semibold">{OWNERSHIP_LABELS[value]}</span>
+              <span className="block text-[10px] font-normal italic">{sub}</span>
             </button>
           ))}
         </div>
