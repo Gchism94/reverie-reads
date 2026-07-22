@@ -23,10 +23,13 @@ export interface SkinVoice {
   /** truncated-ISBN notice — the predicate after the count + noun ("3 ISBNs {isbnNotice}"). Honest +
    *  non-alarming: matching, not failure, with a way forward. Neutral default for all skins for now. */
   isbnNotice: string
-  /** add-form ownership options — semantically "I own this" / "I want to read this" (wishlist),
-   *  in the skin's register. Shown under a neutral Ownership label so the meaning never blurs. */
+  /** ownership options — semantically "I own this" / "borrowed (in hand, not owned)" / "I want to
+   *  read this" (wishlist) / "not set" (no choice yet), each in the skin's register. Shown under a
+   *  neutral Ownership label so the meaning never blurs (docs/task-ownership-v2.md). */
   ownIt: string
+  borrowedIt: string
   wantIt: string
+  unsetIt: string
 }
 
 // Neutral, non-alarming default. Reads after "{count} ISBN(s)": e.g. "3 ISBNs may be missing…".
@@ -43,7 +46,9 @@ export const NEUTRAL_VOICE: SkinVoice = {
   motif: '✦',
   isbnNotice: ISBN_NOTICE,
   ownIt: 'I own this',
+  borrowedIt: 'Borrowed',
   wantIt: 'I want to read this',
+  unsetIt: 'Not set',
 }
 
 export const TRYST_VOICE: SkinVoice = {
@@ -60,7 +65,9 @@ export const TRYST_VOICE: SkinVoice = {
   motif: '❦',
   isbnNotice: ISBN_NOTICE,
   ownIt: 'Mine already',
+  borrowedIt: 'Borrowed for now',
   wantIt: 'On my wishlist',
+  unsetIt: 'Undecided',
 }
 
 export const APHELION_VOICE: SkinVoice = {
@@ -77,7 +84,9 @@ export const APHELION_VOICE: SkinVoice = {
   motif: '◇',
   isbnNotice: ISBN_NOTICE,
   ownIt: 'In the hold',
+  borrowedIt: 'On loan',
   wantIt: 'Not yet aboard',
+  unsetIt: 'Unlogged',
 }
 
 // Stage 2 — Grimoire (fantasy · illuminated manuscript) + Marrow (horror · gothic dread), code-first.
@@ -96,7 +105,9 @@ export const GRIMOIRE_VOICE: SkinVoice = {
   motif: '❖',
   isbnNotice: ISBN_NOTICE,
   ownIt: 'In my keeping',
+  borrowedIt: 'Lent to my hand',
   wantIt: 'I seek it still',
+  unsetIt: 'Yet unmarked',
 }
 
 export const MARROW_VOICE: SkinVoice = {
@@ -114,7 +125,9 @@ export const MARROW_VOICE: SkinVoice = {
   motif: '†',
   isbnNotice: ISBN_NOTICE,
   ownIt: 'The house has it',
+  borrowedIt: 'A guest of the house',
   wantIt: 'The house wants it',
+  unsetIt: 'The house hasn’t decided',
 }
 
 // Stage 3 — the five remaining genres, code-first voices.
@@ -133,7 +146,9 @@ export const UMBRA_VOICE: SkinVoice = {
   motif: '▣',
   isbnNotice: ISBN_NOTICE,
   ownIt: 'In evidence',
+  borrowedIt: 'On loan',
   wantIt: 'Still at large',
+  unsetIt: 'Unfiled',
 }
 
 // Fable 5 chunk 3 — an editor's marginalia: dry, exact, quietly fond. Italic Garamond speaks.
@@ -149,7 +164,9 @@ export const FOLIO_VOICE: SkinVoice = {
   motif: '‸',
   isbnNotice: ISBN_NOTICE,
   ownIt: 'On my shelf',
+  borrowedIt: 'Borrowed',
   wantIt: 'On the list',
+  unsetIt: 'Unmarked',
 }
 
 // Fable 5 chunk 3 — the kitchen voice: someone who saves you the last slice. Warm, plain, a little
@@ -164,7 +181,9 @@ export const HEARTH_VOICE: SkinVoice = {
   motif: '✕',
   isbnNotice: ISBN_NOTICE,
   ownIt: 'In the pantry',
+  borrowedIt: 'On loan from a friend',
   wantIt: 'On the shopping list',
+  unsetIt: 'Not sorted yet',
 }
 
 // Fable 5 chunk 3 — the surveyor's log: terse, exact, quietly proud of a full record. Milestone
@@ -179,7 +198,9 @@ export const ALMANAC_VOICE: SkinVoice = {
   motif: '✱',
   isbnNotice: ISBN_NOTICE,
   ownIt: 'In the collection',
+  borrowedIt: 'On loan',
   wantIt: 'On the want list',
+  unsetIt: 'Unlogged',
 }
 
 // Fable 5 chunk 3 — a note passed at 2 a.m.: hushed, a little giddy, always on your side.
@@ -194,7 +215,9 @@ export const BLOOM_VOICE: SkinVoice = {
   motif: '✦',
   isbnNotice: ISBN_NOTICE,
   ownIt: 'Got it already',
+  borrowedIt: 'Just borrowed',
   wantIt: 'Want it so badly',
+  unsetIt: 'Haven’t decided',
 }
 
 export const SKIN_VOICE: Record<SkinId, SkinVoice> = {

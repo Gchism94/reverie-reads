@@ -3,6 +3,7 @@ import { bookSubgenres } from './genreNormalize'
 import { bookTropeNames } from './tropes'
 import { authorOf } from './normalize'
 import { normalizeName } from './contributors'
+import { isPossessed } from './ownership'
 
 export type LibrarySort = 'az' | 'author' | 'rating' | 'intensity' | 'recent' | 'series'
 export type SeriesLenBucket = 'Any' | '1' | '2' | '3' | '4' | '5+' | 'Unknown'
@@ -21,7 +22,8 @@ export interface LibraryFilters {
   intensity: number[]
   /** filter to books where any contributor matches this name ('' = off) */
   author: string
-  /** include unowned (wishlist) books — the default grid shows only what the reader owns */
+  /** include books outside the default scope — wishlist + unset books you don't have and haven't
+   *  read. Off by default: the grid is what you have in hand or have read (see inDefaultLibrary). */
   wishlist: boolean
   sort: LibrarySort
 }
@@ -52,6 +54,12 @@ export function bookHasAuthor(b: Book, name: string): boolean {
 /** A book counts as "read" if marked Read or it has any logged reads. */
 export const isBookRead = (b: Book): boolean => b.readStatus === 'Read' || b.reads.length > 0
 
+/** The default library scope (docs/task-ownership-v2.md): anything you have in hand (owned or
+ *  borrowed) OR have read. Reading history is never hidden by possession — a book you read from
+ *  the library stays in your library. Wishlist and unset-unread books fall outside; the wishlist
+ *  chip lets them back in. */
+export const inDefaultLibrary = (b: Book): boolean => isPossessed(b) || isBookRead(b)
+
 const positionOf = (b: Book, fallback = 0): number =>
   typeof b.position === 'number' ? b.position : Number(b.position) || fallback
 
@@ -65,8 +73,9 @@ export function seriesLenBucket(b: Book): SeriesLenBucket {
 
 /** The prototype's library predicate, ported verbatim. */
 export function matchesFilters(b: Book, f: LibraryFilters): boolean {
-  // Collection scoping first: the grid is what you OWN unless the wishlist chip lets the rest in.
-  if (!f.wishlist && b.ownership === 'unowned') return false
+  // Collection scoping first: the grid is what you HAVE or have READ, unless the wishlist chip
+  // lets the rest (wishlist + unset-unread books) in.
+  if (!f.wishlist && !inDefaultLibrary(b)) return false
   if (f.sub !== 'All' && !bookSubgenres(b).includes(f.sub)) return false
   if (f.tags.length) {
     const names = bookTropeNames(b)
@@ -81,6 +90,7 @@ export function matchesFilters(b: Book, f: LibraryFilters): boolean {
       return false
     if (f.read === 'Reading' && b.readStatus !== 'Reading') return false
     if (f.read === 'DNF' && b.readStatus !== 'DNF') return false
+    if (f.read === 'unset' && b.readStatus !== 'unset') return false
   }
   if (f.format !== 'All' && b.format !== f.format) return false
   if (f.fave && !b.fave) return false

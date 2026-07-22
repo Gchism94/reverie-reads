@@ -9,6 +9,7 @@
 
 import type { Book } from './types'
 import { isBookRead } from './filters'
+import { isPossessed } from './ownership'
 
 export interface SeriesEntry {
   id: string
@@ -30,16 +31,17 @@ export interface SeriesEntry {
 export const sortEntries = (entries: readonly SeriesEntry[]): SeriesEntry[] =>
   [...entries].sort((a, b) => a.position - b.position || a.title.localeCompare(b.title))
 
-/** The reader's relationship to one slot: read ✓ / reading / on a TBR / owned-unread /
- *  wishlist ("to get") / ghost (not in the library at all — also "to get"). */
-export type EntryState = 'read' | 'reading' | 'tbr' | 'unread' | 'unowned' | 'ghost'
+/** The reader's relationship to one slot: read ✓ / reading / on a TBR / in-hand-unread /
+ *  wishlist ("to get" — a book you want or haven't sorted, not in hand) / ghost (not in the
+ *  library at all — also "to get"). Borrowed books count as in hand ('unread', not 'wishlist'). */
+export type EntryState = 'read' | 'reading' | 'tbr' | 'unread' | 'wishlist' | 'ghost'
 
 export function entryState(book: Book | undefined, onTbr: boolean): EntryState {
   if (!book) return 'ghost'
   if (isBookRead(book)) return 'read'
   if (book.readStatus === 'Reading') return 'reading'
   if (onTbr) return 'tbr'
-  if (book.ownership === 'unowned') return 'unowned'
+  if (!isPossessed(book)) return 'wishlist' // wishlist or unset — a slot still to acquire
   return 'unread'
 }
 
@@ -79,7 +81,7 @@ export function seriesProgress(entries: readonly SeriesEntry[], bookById: Readon
   for (const e of entries) {
     const b = e.bookId ? bookById.get(e.bookId) : undefined
     if (b && isBookRead(b)) read++
-    if (!b || b.ownership === 'unowned') toGet++
+    if (!b || !isPossessed(b)) toGet++ // ghost, wishlist, or unset — not in hand
   }
   return { read, total: entries.length, toGet }
 }

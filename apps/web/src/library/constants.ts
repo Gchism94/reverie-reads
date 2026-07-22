@@ -53,6 +53,12 @@ export function subgenresForGenre(genre: string, keep?: string): string[] {
 export const READ_STATUSES = ['Read', 'Reading', 'Unread', 'DNF'] as const
 // Series statuses live in core now: SERIES_STATUS_VALUES + SERIES_STATUS_LABELS (5-value enum).
 
+// Read-status CONTROLS (book detail + add form) lead with a real "Not set" — cataloguing a book must
+// not force a read state (docs/task-ownership-v2.md). 'unset' is the default for a new book. Filters
+// keep the four concrete statuses (READ_STATUSES); no-selection isn't something you filter FOR.
+export const READ_STATUS_OPTIONS = ['unset', 'Read', 'Reading', 'Unread', 'DNF'] as const
+export const readStatusLabel = (s: string): string => (s === 'unset' ? 'Not set' : s)
+
 export const MONTHS = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
 ] as const

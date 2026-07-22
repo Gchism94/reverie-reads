@@ -2,6 +2,7 @@ import type { Book, Owned, ReadEntry } from './types'
 import { norm } from './normalize'
 import { deriveBoyfriend } from './boyfriend'
 import { contributorsChanged, reconcileContributors } from './contributors'
+import { strongerOwnership } from './ownership'
 
 // ── ISBN normalization (match the same book whether it stored ISBN-10 or ISBN-13) ──
 
@@ -180,12 +181,17 @@ export function mergeImport(existing: Book, incoming: Incoming): ImportMergeResu
   const owned = mergeOwned(existing.owned, incoming.owned)
   if (JSON.stringify(owned) !== JSON.stringify(existing.owned)) patch.owned = owned
 
-  // Ownership is one-way on import-merge: an owned import upgrades a wishlist record, but a
-  // to-read row never downgrades a book the reader already owns.
-  if (existing.ownership === 'unowned' && incoming.ownership === 'owned') patch.ownership = 'owned'
+  // Ownership is one-way on import-merge: a stronger possession from the import upgrades the record
+  // (unset → wishlist → borrowed → owned), but a weaker one never downgrades what the reader has.
+  const merged = strongerOwnership(existing.ownership, incoming.ownership ?? 'unset')
+  if (merged !== existing.ownership) patch.ownership = merged
 
-  // Reading status: only promote Unread → Read when the import shows it was read.
-  if (existing.readStatus === 'Unread' && (incoming.readStatus === 'Read' || (incoming.reads?.length ?? 0) > 0)) {
+  // Reading status: only promote toward Read when the import shows more progress — an unset/Unread
+  // record can gain Read, but a Read book is never walked back by a to-read row.
+  if (
+    (existing.readStatus === 'unset' || existing.readStatus === 'Unread') &&
+    (incoming.readStatus === 'Read' || (incoming.reads?.length ?? 0) > 0)
+  ) {
     patch.readStatus = 'Read'
   }
 

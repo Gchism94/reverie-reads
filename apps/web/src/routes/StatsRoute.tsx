@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { createRoute } from '@tanstack/react-router'
-import { authorOf, bookSubgenres, bookTropeNames, isAuthorRole, isOwnedBook } from '@reverie/core'
+import { authorOf, bookSubgenres, bookTropeNames, isAuthorRole, isPossessed } from '@reverie/core'
 import { rootRoute } from './RootRoute'
 import { useBooks } from '../data/books'
 import { useAllReads } from '../data/reads'
@@ -63,9 +63,11 @@ function StatsScreen() {
   const yr = dated.filter((r) => +(r.read_on as string).slice(0, 4) === year)
   const uniq = new Set(yr.map((r) => r.book_id)).size
 
-  // Collection stats (formats you own, series on your shelves) speak about OWNED books;
-  // reading + taste stats (reads, ratings, faves, tags) count regardless of ownership.
-  const ownedAll = all.filter(isOwnedBook)
+  // Collection stats (the formats + series on your shelves) speak about books you HAVE IN HAND —
+  // owned or borrowed — matching the format smart-shelves, which now include borrowed copies
+  // (docs/task-ownership-v2.md). Reading + taste stats (reads, ratings, faves, tags) count
+  // regardless of possession.
+  const ownedAll = all.filter(isPossessed)
   const readIds = new Set([...dated.map((r) => r.book_id), ...all.filter((b) => b.readStatus === 'Read').map((b) => b.id)])
   const readBooks = all.filter((b) => readIds.has(b.id))
   const rated = all.filter((b) => b.rating > 0)

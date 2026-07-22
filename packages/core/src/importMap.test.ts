@@ -153,19 +153,20 @@ describe('ingest idempotency (re-import is a no-op via the merge path)', () => {
 })
 
 describe('ownership on import', () => {
-  it('Reverie Owned column: yes/blank → owned, no → unowned', () => {
+  it('Reverie Owned column: yes/blank → owned, borrow → borrowed, no → wishlist', () => {
     const csv = [
       'Title,Author,ISBN,Status,Rating,Date Read,Tags,Owned',
       'Kept,Ana Huang,,Read,5,2025-01-02,,Yes',
       'Blank,Ana Huang,,Unread,,,,',
+      'Loaned,Ana Huang,,Read,4,2025-02-02,,Borrowed',
       'Wanted,Ana Huang,,Unread,,,,No',
     ].join('\n')
     const { profile, rows } = parseImport(csv)
     expect(profile.name).toBe('reverie')
-    expect(rows.map((r) => r.incoming.ownership)).toEqual(['owned', 'owned', 'unowned'])
+    expect(rows.map((r) => r.incoming.ownership)).toEqual(['owned', 'owned', 'borrowed', 'wishlist'])
   })
 
-  it('Goodreads Exclusive Shelf: read/currently-reading → owned, to-read → unowned', () => {
+  it('Goodreads Exclusive Shelf: read/currently-reading → owned, to-read → wishlist', () => {
     const csv = [
       'Title,Author,Exclusive Shelf,My Rating',
       'Done,Ana Huang,read,5',
@@ -173,7 +174,7 @@ describe('ownership on import', () => {
       'Someday,Ana Huang,to-read,0',
     ].join('\n')
     const { rows } = parseImport(csv)
-    expect(rows.map((r) => r.incoming.ownership)).toEqual(['owned', 'owned', 'unowned'])
+    expect(rows.map((r) => r.incoming.ownership)).toEqual(['owned', 'owned', 'wishlist'])
     // and to-read stays Unread for reading status — the two axes stay independent
     expect(rows[2]!.incoming.readStatus).toBe('Unread')
   })

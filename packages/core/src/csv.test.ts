@@ -71,14 +71,15 @@ describe('importCsv', () => {
 })
 
 describe('ownership from Goodreads shelves (legacy CSV path)', () => {
-  it('to-read → unowned; read/currently-reading → owned', () => {
+  it('to-read → wishlist; borrowed shelf → borrowed; read/currently-reading → owned', () => {
     const text = [
       'Title,Author,Exclusive Shelf,My Rating',
       'Done,Ana Huang,read,4',
       'Someday,Ana Huang,to-read,0',
+      'Loaned,Ana Huang,borrowed,3',
     ].join('\n')
     const rows = parseCsvIncoming(text)
-    expect(rows.map((r) => r.ownership)).toEqual(['owned', 'unowned'])
+    expect(rows.map((r) => r.ownership)).toEqual(['owned', 'wishlist', 'borrowed'])
   })
 })
 
@@ -114,7 +115,7 @@ describe('parseCsvRows (Goodreads field fidelity)', () => {
     expect(r.incoming.format).toBeUndefined() // no Binding → no format (not 'Paperback')
     expect(r.incoming.pub).toEqual({ y: null, m: null, d: null })
     expect(r.incoming.rating).toBe(0) // My Rating 0 = unrated
-    expect(r.incoming.ownership).toBe('unowned') // to-read → wishlist
+    expect(r.incoming.ownership).toBe('wishlist') // to-read → wishlist
     expect(r.incoming.readStatus).toBe('Unread')
     expect(r.incoming.reads).toEqual([]) // no dated read, not read → no fabricated read
     expect(r.incoming.series).toBeUndefined()

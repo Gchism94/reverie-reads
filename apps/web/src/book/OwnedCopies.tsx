@@ -1,57 +1,77 @@
-import { ownedCaption, type Book, type Owned } from '@reverie/core'
+import { OWNERSHIP_VALUES, isPossessed, ownedCaption, type Book, type BookOwnership, type Owned } from '@reverie/core'
 import { Switch } from '../components/Switch'
+import { useVoice } from '../skin/labels'
 
 /**
- * "Your copies" — possession lives here. One tap flips owned ⇄ wishlist (`ownership`); the
- * per-format switches describe WHICH copies an owned book has, so they hide for a wishlist book
- * (formats you don't have yet aren't a thing to toggle). Reading status, shelves, ratings, and
- * notes never depend on any of this — library books and borrowed reads exist.
+ * "Your copies" — possession lives here. A four-state control (docs/task-ownership-v2.md) sets how
+ * you have the book — owned / borrowed / wishlist / not set — in the active skin's voice. The
+ * per-format switches describe WHICH copies a book IN HAND has, so they show for owned AND borrowed
+ * (you can record the format of a book you read but don't own) and hide for wishlist/unset. Reading
+ * status, shelves, ratings, and notes never depend on any of this.
  */
 export function OwnedCopies({
   ownership,
   owned,
   onChange,
-  onOwnershipToggle,
+  onOwnershipChange,
 }: {
   ownership: Book['ownership']
   owned: Owned
   onChange: (next: Owned) => void
-  onOwnershipToggle: () => void
+  onOwnershipChange: (next: BookOwnership) => void
 }) {
-  const unowned = ownership === 'unowned'
+  const voice = useVoice()
+  const possessed = isPossessed({ ownership })
   const physicalOn = owned.physical !== false
   const physicalKind = typeof owned.physical === 'string' ? owned.physical : null
 
+  const label: Record<BookOwnership, string> = {
+    owned: voice.ownIt,
+    borrowed: voice.borrowedIt,
+    wishlist: voice.wantIt,
+    unset: voice.unsetIt,
+  }
+  const caption: Record<BookOwnership, string> = {
+    owned: ownedCaption(owned, 'Owned'),
+    borrowed: ownedCaption(owned, 'Borrowed'),
+    wishlist: 'A book you want, not one you have yet — mark it owned or borrowed when it comes home.',
+    unset: 'Possession not set — record it as owned, borrowed, or a wishlist want whenever you like.',
+  }
+
   return (
     <div className="rounded-2xl border border-line p-4" style={{ background: 'var(--card)' }}>
-      <div className="mb-1 flex items-center justify-between">
+      <div className="mb-2 flex items-center justify-between gap-2">
         <span className="text-[11px] uppercase tracking-[0.2em] text-muted">Your copies</span>
-        <button
-          type="button"
-          onClick={onOwnershipToggle}
-          aria-pressed={!unowned}
-          className="rounded-full border px-2.5 py-1 text-[11.5px] font-semibold"
-          style={
-            unowned
-              ? { background: 'var(--chip)', color: 'var(--muted)', borderColor: 'var(--line)', borderStyle: 'dashed' }
-              : { background: 'var(--accent-fill)', color: 'var(--on-primary)', borderColor: 'transparent' }
-          }
-        >
-          {unowned ? '⊹ Wishlist' : 'Owned'}
-        </button>
       </div>
-      <p className="mb-3 text-[13px] text-ink">
-        {unowned ? 'A book you want, not one you have yet — tap Wishlist when it comes home.' : ownedCaption(owned)}
-      </p>
+      <div className="mb-3 flex flex-wrap gap-1.5" role="radiogroup" aria-label="Ownership">
+        {OWNERSHIP_VALUES.map((value) => (
+          <button
+            key={value}
+            type="button"
+            role="radio"
+            aria-checked={ownership === value}
+            onClick={() => onOwnershipChange(value)}
+            className="skin-control border px-3 py-1.5 text-[11.5px] font-semibold"
+            style={
+              ownership === value
+                ? { background: 'var(--accent-fill)', color: 'var(--on-primary)', borderColor: 'transparent' }
+                : { background: 'var(--field)', color: 'var(--muted)', borderColor: 'var(--line)' }
+            }
+          >
+            {label[value]}
+          </button>
+        ))}
+      </div>
+      <p className="mb-3 text-[13px] text-ink">{caption[ownership]}</p>
 
-      {!unowned && (
+      {possessed && (
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between gap-3">
             <span className="text-[14px] text-ink">📖 Physical</span>
             <Switch
               checked={physicalOn}
               onChange={(on) => onChange({ ...owned, physical: on ? (physicalKind ?? 'paperback') : false })}
-              label="Own a physical copy"
+              label="Have a physical copy"
             />
           </div>
           {physicalOn && (
@@ -77,11 +97,11 @@ export function OwnedCopies({
 
           <div className="flex items-center justify-between gap-3">
             <span className="text-[14px] text-ink">📱 Ebook</span>
-            <Switch checked={owned.ebook} onChange={(on) => onChange({ ...owned, ebook: on })} label="Own an ebook" />
+            <Switch checked={owned.ebook} onChange={(on) => onChange({ ...owned, ebook: on })} label="Have an ebook" />
           </div>
           <div className="flex items-center justify-between gap-3">
             <span className="text-[14px] text-ink">🎧 Audiobook</span>
-            <Switch checked={owned.audiobook} onChange={(on) => onChange({ ...owned, audiobook: on })} label="Own an audiobook" />
+            <Switch checked={owned.audiobook} onChange={(on) => onChange({ ...owned, audiobook: on })} label="Have an audiobook" />
           </div>
         </div>
       )}

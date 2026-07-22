@@ -147,7 +147,7 @@ function ResultActions({ result }: { result: SearchResult }) {
         <ShelfChooser
           onClose={() => setChooseShelf(false)}
           onPick={(listId) => {
-            add.mutate({ result, ownership: 'unowned', listId })
+            add.mutate({ result, ownership: 'wishlist', listId })
             setChooseShelf(false)
           }}
         />

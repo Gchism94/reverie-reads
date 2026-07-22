@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { authorOf, isOwnedBook, type Book } from '@reverie/core'
+import { authorOf, type Book } from '@reverie/core'
 import { Modal } from './Modal'
 import { CoverImage } from './CoverImage'
 
@@ -74,7 +74,8 @@ export function LibraryPicker({
                   <span className="block truncate text-[13.5px] font-semibold text-ink">{b.title}</span>
                   <span className="block truncate text-[11.5px] text-muted">
                     {authorOf(b)}
-                    {!isOwnedBook(b) && ' · ⊹ wishlist'}
+                    {b.ownership === 'wishlist' && ' · ⊹ wishlist'}
+                    {b.ownership === 'borrowed' && ' · ⇄ borrowed'}
                   </span>
                 </span>
                 <span className="flex-none text-[12.5px] font-semibold" style={{ color: added ? 'var(--muted)' : 'var(--accent-ink)' }}>

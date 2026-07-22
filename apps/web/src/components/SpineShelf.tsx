@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { type Book } from '@reverie/core'
+import { isPossessed, type Book } from '@reverie/core'
 import { Spine } from './Spine'
 import { CoverImage } from './CoverImage'
 
@@ -69,9 +69,10 @@ export function SpineShelf({
     >
       {books.map((b) => {
         const shown = b.id === shownId
-        // Wishlist (unowned) spines sit ghosted on the shelf — a TBR shelf is mostly books you
-        // don't own yet. Artwork-only dim (--ghost-opacity); the title stays in the aria-label.
-        const unowned = b.ownership === 'unowned'
+        // Spines you don't have in hand (wishlist / unset) sit ghosted on the shelf — a TBR shelf is
+        // mostly books you don't own yet. A borrowed book is in hand, so it never ghosts. Artwork-only
+        // dim (--ghost-opacity); the title stays in the aria-label.
+        const unowned = !isPossessed(b)
         return (
           <button
             key={b.id}

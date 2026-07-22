@@ -210,9 +210,14 @@ export function parseCsvRows(text: string): CsvParsedRow[] {
       reads,
       pub: { y: py, m: null, d: null },
       source: 'Imported',
-      // Goodreads shelf → ownership: `to-read` is a wishlist (unowned); read / currently-reading
-      // rows are books that passed through the reader's hands (owned).
-      ownership: /to-read|to read/.test(shelf) ? 'unowned' : 'owned',
+      // Goodreads shelf → ownership: `to-read` is a wishlist; a `borrowed`/`loan` shelf is
+      // borrowed; read / currently-reading rows are books that passed through the reader's hands
+      // (owned). (docs/task-ownership-v2.md — the four-state model.)
+      ownership: /to-read|to read/.test(shelf)
+        ? 'wishlist'
+        : /borrow|on loan|library loan/.test(shelf)
+          ? 'borrowed'
+          : 'owned',
       owned: emptyOwned(),
     }
     if (series) {
@@ -364,8 +369,13 @@ export function importCsv(existing: readonly Book[], text: string): CsvImportRes
         cover: '',
         isbn: '',
         fave: false,
-        // Goodreads shelf → ownership (same rule as parseCsvRows): to-read = wishlist.
-        ownership: /to-read|to read/.test(shelf) ? 'unowned' : 'owned',
+        // Goodreads shelf → ownership (same rule as parseCsvRows): to-read = wishlist, a
+        // borrow/loan shelf = borrowed, otherwise owned.
+        ownership: /to-read|to read/.test(shelf)
+          ? 'wishlist'
+          : /borrow|on loan|library loan/.test(shelf)
+            ? 'borrowed'
+            : 'owned',
         owned: { physical: false, ebook: false, audiobook: false },
         format: '',
         rating,
