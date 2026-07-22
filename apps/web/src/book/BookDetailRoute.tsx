@@ -14,7 +14,7 @@ import { useBookListIds, useToggleListItem } from '../data/listItems'
 import { useCreateList, useLists } from '../data/lists'
 import { Stars } from '../components/Stars'
 import { Chip } from '../components/Chip'
-import { ARCH, MONTHS, READ_STATUS_OPTIONS, readStatusLabel, subgenreGradient } from '../library/constants'
+import { MONTHS, READ_STATUS_OPTIONS, readStatusLabel, subgenreGradient } from '../library/constants'
 import { maybeChainPrompt } from '../lib/chainPrompt'
 import { EditDetails, LogReadForm, MergeDialog } from './dialogs'
 import { TropePicker } from '../components/TropePicker'
@@ -133,7 +133,6 @@ function BookDetailScreen() {
     )
 
   const [g0, g1] = subgenreGradient(book.subgenre)
-  const bf = ARCH[book.boyfriend ?? ''] ?? ARCH.cinnamon
   const workKey = workKeyFor(book)
   const reviewerName = profile?.displayName || 'Reader'
   const setOwned = (owned: Owned) => updateBook.mutate({ id: book.id, patch: { owned } })
@@ -227,9 +226,6 @@ function BookDetailScreen() {
             <Pill>{seriesBadge}</Pill>
             {(book.intensity ?? 0) > 0 && <Pill>{labels.intensityGlyph.repeat(book.intensity ?? 0)}</Pill>}
             {fmtPub(book.pub) && <Pill>📅 {fmtPub(book.pub)}</Pill>}
-            <Pill muted>
-              {bf?.emoji} {bf?.name.replace(/^The /, '')} vibe
-            </Pill>
           </div>
         </div>
       </div>

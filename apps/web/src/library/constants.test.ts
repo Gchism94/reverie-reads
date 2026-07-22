@@ -57,7 +57,7 @@ describe('genre taxonomy alignment', () => {
     expect(tropeGroupsForGenre('')).toEqual({ Universal: UNIVERSAL_TROPES })
   })
 
-  it('romance keeps its founding groups verbatim (deriveBoyfriend keys off these names)', () => {
+  it('romance keeps its founding trope groups verbatim', () => {
     const romance = tropeGroupsForGenre('romance')
     for (const [group, tropes] of Object.entries(TROPE_GROUPS)) {
       expect(romance[group]).toEqual(tropes)

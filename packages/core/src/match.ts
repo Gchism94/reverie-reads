@@ -1,6 +1,5 @@
 import type { Book, Owned, ReadEntry } from './types'
 import { norm } from './normalize'
-import { deriveBoyfriend } from './boyfriend'
 import { contributorsChanged, reconcileContributors } from './contributors'
 import { strongerOwnership } from './ownership'
 
@@ -193,13 +192,6 @@ export function mergeImport(existing: Book, incoming: Incoming): ImportMergeResu
     (incoming.readStatus === 'Read' || (incoming.reads?.length ?? 0) > 0)
   ) {
     patch.readStatus = 'Read'
-  }
-
-  if (patch.tags || patch.subgenre) {
-    patch.boyfriend = deriveBoyfriend({
-      tags: patch.tags ?? existing.tags,
-      subgenre: patch.subgenre ?? existing.subgenre,
-    })
   }
 
   const haveDates = new Set(existing.reads.map((r) => r.date).filter(Boolean))

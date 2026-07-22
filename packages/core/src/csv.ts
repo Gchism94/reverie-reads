@@ -1,7 +1,6 @@
 import type { Book, ReadStatus } from './types'
 import { norm } from './normalize'
 import { uid } from './id'
-import { deriveBoyfriend } from './boyfriend'
 import { cleanIsbn, type Incoming } from './match'
 import { emptyOwned } from './ownership'
 import { fromFirstLast } from './contributors'
@@ -387,7 +386,6 @@ export function importCsv(existing: readonly Book[], text: string): CsvImportRes
         progress: 0,
         addedTs: Date.now(),
       }
-      nb.boyfriend = deriveBoyfriend(nb)
       books.push(nb)
       have.set(norm(cleanTitle) + '|' + norm(last), nb)
       have.set('t:' + norm(cleanTitle), nb)

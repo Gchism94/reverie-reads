@@ -38,9 +38,7 @@ const FIELD_LABELS: Record<string, string> = {
 /** Human summary of what folding the incoming record would ADD to the existing one. */
 function foldSummary(existing: Book, inc: Incoming): string[] {
   const { patch, newReads } = mergeImport(existing, inc)
-  const fields = Object.keys(patch)
-    .filter((k) => k !== 'boyfriend')
-    .map((k) => FIELD_LABELS[k] ?? k)
+  const fields = Object.keys(patch).map((k) => FIELD_LABELS[k] ?? k)
   const seen = new Set<string>()
   const out = fields.filter((f) => (seen.has(f) ? false : (seen.add(f), true)))
   if (newReads.length) out.push(`${newReads.length} read date${newReads.length > 1 ? 's' : ''}`)
