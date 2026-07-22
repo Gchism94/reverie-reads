@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { parseSeriesFromTitle } from './seriesTitle'
+import { parseSeriesFromTitle, planTitleCleanup } from './seriesTitle'
+import { findDuplicateGroups } from './merge'
+import { makeBook } from './book.fixture'
 
 describe('parseSeriesFromTitle (Goodreads series-in-title)', () => {
   it('parses the canonical form', () => {
@@ -59,5 +61,64 @@ describe('parseSeriesFromTitle (Goodreads series-in-title)', () => {
   it('passes plain titles through untouched', () => {
     expect(parseSeriesFromTitle('It Ends with Us')).toEqual({ title: 'It Ends with Us', series: '', position: '', more: [] })
     expect(parseSeriesFromTitle('')).toEqual({ title: '', series: '', position: '', more: [] })
+  })
+})
+
+describe('planTitleCleanup (legacy re-parse sweep)', () => {
+  it('cleans the title and fills series/position only when the book has none', () => {
+    const plan = planTitleCleanup([
+      makeBook({ id: '1', title: 'Iron Flame (The Empyrean, #2)' }), // no series → fill
+    ])
+    expect(plan).toHaveLength(1)
+    expect(plan[0]).toMatchObject({
+      id: '1',
+      oldTitle: 'Iron Flame (The Empyrean, #2)',
+      newTitle: 'Iron Flame',
+      series: 'The Empyrean',
+      position: 2,
+      fillsSeries: true,
+    })
+  })
+
+  it('never overwrites user-entered series info — cleans the title only', () => {
+    const plan = planTitleCleanup([
+      makeBook({ id: '1', title: 'Iron Flame (The Empyrean, #2)', series: 'My Own Series', position: 5 }),
+    ])
+    expect(plan[0]).toMatchObject({ newTitle: 'Iron Flame', series: '', position: '', fillsSeries: false })
+  })
+
+  it('leaves clean titles and non-series parentheticals alone', () => {
+    const plan = planTitleCleanup([
+      makeBook({ id: '1', title: 'It Ends with Us' }),
+      makeBook({ id: '2', title: 'Powerless (Deluxe Edition)' }),
+      makeBook({ id: '3', title: 'The Hacienda (Unabridged)' }),
+    ])
+    expect(plan).toHaveLength(0)
+  })
+
+  it('is idempotent — re-running over a cleaned library finds nothing', () => {
+    const first = planTitleCleanup([makeBook({ id: '1', title: 'Iron Flame (The Empyrean, #2)' })])
+    const cleaned = makeBook({ id: '1', title: first[0]!.newTitle, series: first[0]!.series, position: first[0]!.position })
+    expect(planTitleCleanup([cleaned])).toHaveLength(0)
+  })
+
+  // Part 4: cleaning the junk lets the detector catch pairs it previously missed. A dirty Goodreads
+  // title and its clean twin don't share a dupKey until the junk is stripped.
+  it('cleaning junk titles reveals duplicates the matcher missed (before/after)', () => {
+    const library = [
+      makeBook({ id: 'dirty', title: 'Fourth Wing (The Empyrean, #1)', last: 'Yarros' }),
+      makeBook({ id: 'clean', title: 'Fourth Wing', last: 'Yarros' }),
+    ]
+    // Before: different titles → no duplicate group detected.
+    expect(findDuplicateGroups(library)).toHaveLength(0)
+
+    // Apply the sweep's planned new titles, then re-detect.
+    const plan = planTitleCleanup(library)
+    const swept = library.map((b) => {
+      const c = plan.find((p) => p.id === b.id)
+      return c ? makeBook({ ...b, title: c.newTitle }) : b
+    })
+    expect(findDuplicateGroups(swept)).toHaveLength(1) // now they collide → mergeable
+    expect(findDuplicateGroups(swept)[0]).toHaveLength(2)
   })
 })

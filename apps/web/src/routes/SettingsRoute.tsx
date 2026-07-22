@@ -1,9 +1,9 @@
 import { useRef, useState } from 'react'
 import { createRoute, Link } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
-import { findDuplicateGroups, richness, type Book } from '@reverie/core'
+import { findDuplicateGroups, planTitleCleanup, richness, type Book } from '@reverie/core'
 import { rootRoute } from './RootRoute'
-import { useBooks } from '../data/books'
+import { useBooks, useUpdateBook } from '../data/books'
 import { useProfile, useUpdateProfile } from '../data/profile'
 import { usePerformMerge } from '../data/mergeBooks'
 import { buildBackup, restoreBackup } from '../data/importExport'
@@ -42,6 +42,7 @@ function SettingsScreen() {
   const { data: profile } = useProfile()
   const { data: books } = useBooks()
   const updateProfile = useUpdateProfile()
+  const updateBook = useUpdateBook()
   const performMerge = usePerformMerge()
   const activeSkin = useSkin((s) => s.skin)
   const activeMode = useSkin((s) => s.mode)
@@ -64,6 +65,9 @@ function SettingsScreen() {
   const [sharpening, setSharpening] = useState(false)
   const [sharpProgress, setSharpProgress] = useState<ResharpenProgress | null>(null)
   const sharpStopRef = useRef(false)
+  const [showSweep, setShowSweep] = useState(false)
+  const [sweeping, setSweeping] = useState(false)
+  const [sweepProgress, setSweepProgress] = useState<{ done: number; total: number } | null>(null)
   const restoreRef = useRef<HTMLInputElement>(null)
   const csvRef = useRef<HTMLInputElement>(null)
 
@@ -81,6 +85,9 @@ function SettingsScreen() {
 
   const all = books ?? []
   const dupes = findDuplicateGroups(all)
+  // Legacy titles imported before #54 still carry Goodreads series junk ("Title (Series, #2)"); the
+  // sweep re-parses them, cleaning the title and filling series only where the book has none.
+  const titleCleanups = planTitleCleanup(all)
 
   const saveProfile = () =>
     updateProfile.mutate(
@@ -124,6 +131,37 @@ function SettingsScreen() {
         setStatus(`Failed: ${(e as Error).message}`)
       }
     })()
+  }
+
+  // Apply the legacy-title sweep. Batched + resumable: each row is its own optimistic write, and a
+  // fresh plan is computed at click time, so a re-run after a stop simply continues (already-clean
+  // titles no longer match). Fills series/position ONLY where the book had none (non-overwrite).
+  async function applySweep() {
+    const plan = planTitleCleanup(all)
+    if (!plan.length) return
+    setSweeping(true)
+    let done = 0
+    for (const c of plan) {
+      const patch: Partial<Book> = { title: c.newTitle }
+      if (c.fillsSeries) {
+        patch.series = c.series
+        patch.position = c.position
+        patch.status = 'ongoing'
+      }
+      try {
+        await updateBook.mutateAsync({ id: c.id, patch })
+        done++
+        setSweepProgress({ done, total: plan.length })
+      } catch (e) {
+        setStatus(`Cleaned ${done} of ${plan.length} titles; stopped (${(e as Error).message}). Re-run to continue.`)
+        setSweeping(false)
+        return
+      }
+    }
+    setSweeping(false)
+    setSweepProgress(null)
+    setShowSweep(false)
+    setStatus(`Cleaned ${done} legacy title${done === 1 ? '' : 's'}`)
   }
 
   async function mergeOneGroup(group: Book[]) {
@@ -357,6 +395,15 @@ function SettingsScreen() {
                 🔍 Sharpen covers{sharpenableCount ? ` (${sharpenableCount})` : ''}
               </button>
             )}
+            <button
+              type="button"
+              onClick={() => setShowSweep((v) => !v)}
+              disabled={!titleCleanups.length}
+              className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink disabled:opacity-50"
+              style={{ background: 'var(--field)' }}
+            >
+              🧹 Clean up legacy titles{titleCleanups.length ? ` (${titleCleanups.length})` : ''}
+            </button>
           </div>
           {completing && progress && (
             <p className="mt-2 text-[12.5px] text-muted">
@@ -403,6 +450,42 @@ function SettingsScreen() {
               ) : (
                 <p className="text-[13px] text-muted">No likely duplicates found ✨ — your library’s clean.</p>
               )}
+            </div>
+          )}
+          {showSweep && (
+            <div className="mt-3">
+              <p className="mb-2 text-[13px] text-muted">
+                {titleCleanups.length} title{titleCleanups.length === 1 ? '' : 's'} still carry series junk. Review below —
+                the series and position fill in only where a book has none, and nothing is renamed until you apply.
+              </p>
+              <ul className="mb-3 flex max-h-[40dvh] flex-col gap-1.5 overflow-y-auto">
+                {titleCleanups.slice(0, 100).map((c) => (
+                  <li key={c.id} className="skin-card border border-line p-2.5 text-[13px]" style={{ background: 'var(--field)' }}>
+                    <div className="text-muted line-through">{c.oldTitle}</div>
+                    <div className="font-semibold text-ink">{c.newTitle}</div>
+                    {c.fillsSeries && (
+                      <div className="text-[12px]" style={{ color: 'var(--accent-ink)' }}>
+                        + series: {c.series}
+                        {c.position !== '' ? ` #${c.position}` : ''}
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              {titleCleanups.length > 100 && (
+                <p className="mb-2 text-[12px] text-muted">…and {titleCleanups.length - 100} more will be cleaned too.</p>
+              )}
+              <button
+                type="button"
+                onClick={() => void applySweep()}
+                disabled={sweeping}
+                className="rounded-full px-4 py-2 text-[13px] font-semibold disabled:opacity-50"
+                style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))', color: 'var(--on-primary)' }}
+              >
+                {sweeping && sweepProgress
+                  ? `Cleaning… ${sweepProgress.done}/${sweepProgress.total}`
+                  : `Clean ${titleCleanups.length} title${titleCleanups.length === 1 ? '' : 's'}`}
+              </button>
             </div>
           )}
         </Section>

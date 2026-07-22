@@ -26,9 +26,11 @@ export const TEMPLATE_GUIDE_SHEET = 'How to use'
  * One per status so the examples double as a legend (Read / Reading / Unread).
  */
 export const TEMPLATE_EXAMPLE_ROWS: readonly (readonly string[])[] = [
-  // Owned column doubles as its own legend: Yes, blank (= Yes), and No (wishlist).
+  // Owned column doubles as its own legend: Yes, blank (= Yes), Borrowed (a copy in hand on loan),
+  // and No (wishlist). One per status too, so the examples double as a Status legend.
   ['A Court of Thorns and Roses', 'Sarah J. Maas', '9781619634442', 'Read', '5', '2025-03-04', 'fae, enemies-to-lovers', 'Yes'],
   ['The Hacienda', 'Isabel Cañas', '0593436695', 'Reading', '4', '', 'gothic, slow-burn', ''],
+  ['The Fine Print', 'Lauren Asher', '9781734070583', 'Read', '4', '2025-01-12', 'billionaire, forced-proximity', 'Borrowed'],
   ['Fourth Wing', 'Rebecca Yarros', '9781649374042', 'Unread', '', '', 'dragons, romantasy', 'No'],
 ]
 
@@ -46,9 +48,10 @@ const GUIDE_LINES: readonly string[] = [
   '• Rating — your own rating, 0–5. Leave blank if unrated.',
   '• Date Read — when you finished it (YYYY-MM-DD). Optional.',
   '• Tags — comma-separated tropes / spice / vibes. Optional.',
-  '• Owned — Yes or No. Blank counts as Yes; No marks a wishlist book (want it, don’t own it yet).',
+  '• Owned — Yes, Borrowed, or No. Blank counts as Yes; Borrowed = a copy you have on loan (a book',
+  '  in hand, just not yours to keep); No marks a wishlist book (want it, don’t own it yet).',
   '',
-  'The three rows in “My Library” are examples — delete them and add your own.',
+  'The rows in “My Library” are examples — delete them and add your own.',
   'Re-importing is safe: Reverie matches and merges, it never makes duplicates.',
 ]
 

@@ -3,6 +3,8 @@
 // breaks title-based duplicate matching against a clean library. Parse it out; never guess:
 // only parentheticals that actually look series-shaped are consumed — "(Special Edition)" stays.
 
+import type { Book } from './types'
+
 export interface SeriesRef {
   series: string
   /** '' when the parenthetical names a range (#1-3 omnibus) or carries no single position */
@@ -55,4 +57,49 @@ export function parseSeriesFromTitle(raw: string): ParsedSeriesTitle {
 
   const [first, ...more] = refs
   return { title, series: first?.series ?? '', position: first?.position ?? '', more }
+}
+
+// ── legacy re-parse sweep (docs/task-manual-merge.md §1) ──
+// Rows imported before #54 still carry the series junk in their title. Re-run the parser over the
+// existing library: clean the title, and fill series/position ONLY where the book has none — never
+// overwrite user-entered series info (the #52 non-overwrite principle). Non-series parentheticals
+// ("(Deluxe Edition)") are left alone by the parser, so they never match here.
+
+/** One planned title cleanup — what the row is now, what it becomes, and whether series is filled. */
+export interface TitleCleanup {
+  id: string
+  oldTitle: string
+  newTitle: string
+  /** series to write — non-empty ONLY when the book had no series and the title named one */
+  series: string
+  position: number | ''
+  /** true when this cleanup also fills series/position (the book had no series data) */
+  fillsSeries: boolean
+}
+
+/**
+ * Plan the legacy-title sweep over a library: one TitleCleanup per row whose title actually carries
+ * series junk (the parser removed something). Pure + previewable — the caller shows these and writes
+ * only on confirm. A book that already has a series keeps it: only its title is cleaned, never its
+ * series/position. Idempotent: re-running over already-clean titles yields nothing.
+ */
+export function planTitleCleanup(
+  books: readonly Pick<Book, 'id' | 'title' | 'series' | 'position'>[],
+): TitleCleanup[] {
+  const out: TitleCleanup[] = []
+  for (const b of books) {
+    const parsed = parseSeriesFromTitle(b.title)
+    // Only rows where junk was actually stripped are candidates (empty result = don't blank a title).
+    if (!parsed.title || parsed.title === (b.title ?? '').trim()) continue
+    const hasSeries = !!(b.series && b.series.trim())
+    out.push({
+      id: b.id,
+      oldTitle: b.title,
+      newTitle: parsed.title,
+      series: hasSeries ? '' : parsed.series,
+      position: hasSeries ? '' : parsed.position,
+      fillsSeries: !hasSeries && !!parsed.series,
+    })
+  }
+  return out
 }
