@@ -41,7 +41,6 @@ export interface BookRow {
   progress: number | null
   reading_position: number | null
   reading_now_hidden: boolean
-  boyfriend: string | null
   authors_display: string | null
   enriched_at: string | null
   added_at: string

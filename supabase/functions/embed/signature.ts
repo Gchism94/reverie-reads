@@ -22,8 +22,6 @@ export interface EmbedSource {
   tags?: readonly string[]
   /** heat 0–5 (0/null = unsaid) */
   spice?: number | null
-  /** derived lead archetype (boyfriend) */
-  archetype?: string
 }
 
 /** The one line the model reads. Stable field order; tags deduped case-insensitively and sorted,
@@ -40,7 +38,6 @@ export function embeddingText(s: EmbedSource): string {
     s.series?.trim() ? `Series: ${s.series.trim()}.` : '',
     world ? `World: ${world}.` : '',
     tags.length ? `Tropes: ${tags.join(', ')}.` : '',
-    s.archetype?.trim() ? `Lead: ${s.archetype.trim()}.` : '',
     s.spice != null && s.spice > 0 ? `Heat ${s.spice} of 5.` : '',
   ]
   return bits.filter(Boolean).join(' ')

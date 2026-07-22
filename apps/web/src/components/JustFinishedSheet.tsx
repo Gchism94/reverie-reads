@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { cycleEmphasis, deriveBoyfriend, frequentTropes, PIN_CAP, PIN_CAP_COPY, type ChipEmphasis, type TropeEmphasis } from '@reverie/core'
+import { cycleEmphasis, frequentTropes, PIN_CAP, PIN_CAP_COPY, type ChipEmphasis, type TropeEmphasis } from '@reverie/core'
 import { Modal } from './Modal'
 import { TropeChip } from './TropeChip'
 import { useBooks, useUpdateBook } from '../data/books'
@@ -64,9 +64,6 @@ export function JustFinishedSheet() {
   const onBook = new Map(book.tropes.map((t) => [t.id, t.emphasis]))
   const pinnedCount = book.tropes.filter((t) => t.emphasis === 'pinned').length
 
-  const rederive = (names: string[]) =>
-    updateBook.mutate({ id: book.id, patch: { boyfriend: deriveBoyfriend({ tags: names, subgenre: book.subgenre }) } })
-
   const cycle = (tropeId: string) => {
     setNote(null)
     const cur: ChipEmphasis = onBook.get(tropeId) ?? 'off'
@@ -75,14 +72,10 @@ export function JustFinishedSheet() {
       setNote(PIN_CAP_COPY)
       nextE = 'off'
     }
-    const rest = book.tropes.filter((t) => t.id !== tropeId).map((t) => t.name)
-    const name = byId.get(tropeId)?.name
     if (nextE === 'off') {
       unassign.mutate({ bookId: book.id, tropeId })
-      rederive(rest)
     } else {
       assign.mutate({ bookId: book.id, tropeId, emphasis: nextE as TropeEmphasis })
-      rederive(name ? [...rest, name] : rest)
     }
   }
 

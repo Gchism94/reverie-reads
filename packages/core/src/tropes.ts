@@ -222,6 +222,34 @@ export const SEED_TROPES: readonly SeedTrope[] = [
   t('Funny', 'vibe', [n], ['humor', 'humour']),
   t('Moving', 'vibe', [n]),
   t('Practical', 'vibe', [n]),
+
+  // ── genre-neutral broadening (docs/task-taxonomy-neutral.md) — canonical tropes for the
+  //    non-romance genres the seed under-served. Additive; names deduped against the seed above. ──
+  t('Red Herring', 'plot', [m]),
+  t('Whodunit', 'plot', [m]),
+  t('Closed Circle', 'setting_world', [m], ['closed circle mystery']),
+  t('Chase Sequence', 'plot', [m]),
+  t('Demonic Possession', 'plot', [h]),
+  t('Creature Feature', 'characters', [h]),
+  t('Occult Ritual', 'plot', [h], ['occult']),
+  t('Slow-Burn Dread', 'vibe', [h]),
+  t('Time Loop', 'plot', [s]),
+  t('Uploaded Minds', 'characters', [s]),
+  t('Colony World', 'setting_world', [s]),
+  t('Character Study', 'vibe', [l]),
+  t('Intergenerational Saga', 'plot', [l]),
+  t('Quiet Prose', 'vibe', [l]),
+  t('Deep Dive', 'plot', [n]),
+  t('Reportage', 'plot', [n], ['journalism']),
+  t('Field Notes', 'setting_world', [n]),
+  t('Village Life', 'setting_world', [c]),
+  t('Baking & Recipes', 'setting_world', [c], ['baking and recipes']),
+  t('Community Fair', 'setting_world', [c]),
+  t('First Heartbreak', 'plot', [y]),
+  t('Boarding School', 'setting_world', [y]),
+  t('Coming Out', 'plot', [y]),
+  t('Hidden Magic', 'plot', [f]),
+  t('Portal World', 'setting_world', [f]),
 ]
 
 // ── resolution: raw text → canonical trope (aliases + formatting shorthands compose) ──
@@ -304,7 +332,7 @@ export const PIN_CAP_COPY = 'Three pins is the shape of a heart — swap one out
 export const sortBookTropes = (refs: readonly BookTropeRef[]): BookTropeRef[] =>
   [...refs].sort((a, b) => (a.emphasis === b.emphasis ? a.name.localeCompare(b.name) : a.emphasis === 'pinned' ? -1 : 1))
 
-/** Trope names a book answers to (filters, boyfriend derivation, search) — join first, legacy
+/** Trope names a book answers to (filters, search) — join first, legacy
  *  tags as a fallback so pre-migration caches keep matching. */
 export function bookTropeNames(b: Pick<Book, 'tropes' | 'tags'>): string[] {
   const names = b.tropes.map((t) => t.name)

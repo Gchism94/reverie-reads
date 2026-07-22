@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { createRoute, useNavigate } from '@tanstack/react-router'
-import { contributorsFromAuthors, deriveBoyfriend, formatAuthors, SKINS, toFirstLast, type Book, type Contributor, type Owned } from '@reverie/core'
+import { contributorsFromAuthors, formatAuthors, SKINS, toFirstLast, type Book, type Contributor, type Owned } from '@reverie/core'
 import { useQueryClient } from '@tanstack/react-query'
 import { rootRoute } from './RootRoute'
 import { useIntake, type ReviewCandidate } from '../data/intake'
@@ -81,7 +81,7 @@ function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<Search
     format: 'Paperback' as string,
     readStatus: 'unset' as Book['readStatus'],
   })
-  // Subgenres are a multi-pick; the first selection leads (gradient + boyfriend derivation).
+  // Subgenres are a multi-pick; the first selection leads (drives the cover gradient).
   const [subs, setSubs] = useState<string[]>([subgenresForGenre(skinGenre)[0] as string])
   const toggleSub = (s: string) =>
     setSubs((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]))
@@ -159,7 +159,6 @@ function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<Search
       source: 'Owned',
       pub: parsePub(hit.pub ?? ''),
     }
-    book.boyfriend = deriveBoyfriend({ tags, subgenre: subs[0] ?? '' })
     // Dedup on intake: a strong match folds into the existing record instead of duplicating.
     // With auto-merge off, a match comes back for an inline decision instead.
     const res = await intake(book, 'add')

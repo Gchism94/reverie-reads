@@ -18,8 +18,8 @@ import { buildTasteProfile, tasteFit, type TasteProfile } from './tasteProfile'
 //    book N of a series they haven't started is suppressed instead of ranked like book 1;
 //  · NOVELTY and QUALITY are separated: unread still leads, but a much-reread book is a love
 //    signal, not "seen it" — and DNF is finally a real negative on both axes.
-// Absent optional signals (no target intensity, no archetype hook, empty cravings) sit at a 0.5
-// NEUTRAL so a missing signal never advantages or tanks a book. Pure + deterministic throughout.
+// Absent optional signals (no target intensity, empty cravings) sit at a 0.5 NEUTRAL so a missing
+// signal never advantages or tanks a book. Pure + deterministic throughout.
 
 export interface MatchProfile {
   /** weight per subgenre/genre name the reader leaned toward in the quiz */
@@ -28,8 +28,6 @@ export interface MatchProfile {
   wantTags: string[]
   /** desired intensity 0..5, or null for no preference */
   targetIntensity: number | null
-  /** optional skin-specific signature weights, keyed by whatever `archetype(book)` returns */
-  archetypeWeights?: Record<string, number>
 }
 
 export type MatchReasonKey =
@@ -41,7 +39,6 @@ export type MatchReasonKey =
   | 'quality'
   | 'novelty'
   | 'series'
-  | 'archetype'
 
 export interface MatchReason {
   key: MatchReasonKey
@@ -81,14 +78,12 @@ export interface MatchContext {
   dismissedAt?: Record<string, number>
   /** the clock the context was built with (injected for determinism) */
   now: number
-  /** optional skin signature: maps a book to an archetype key scored via archetypeWeights */
-  archetype?: (b: Book) => string
 }
 
 /** Named weights — Σ = 1, so the blended score reads as a percentage. Tuned, not sacred: they live
  *  in ONE place precisely so they can be argued with (and later learned from feedback). */
 export const MATCH_WEIGHTS: Record<MatchReasonKey, number> = {
-  tags: 0.2, // the quiz's cravings — still the loudest single voice…
+  tags: 0.25, // the quiz's cravings — the loudest single voice (absorbed the retired archetype's 0.05)
   tasteTags: 0.13, // …but the LEARNED tag taste now speaks alongside it
   subgenre: 0.1,
   tasteWorld: 0.07,
@@ -96,7 +91,6 @@ export const MATCH_WEIGHTS: Record<MatchReasonKey, number> = {
   quality: 0.08,
   novelty: 0.15,
   series: 0.1,
-  archetype: 0.05,
 }
 
 const NEUTRAL = 0.5
@@ -107,7 +101,7 @@ const positionOf = (b: Book): number | null =>
 /** Precompute the library-derived signals (tag rarity + series progress) once per match run. */
 export function buildMatchContext(
   books: readonly Book[],
-  opts: { archetype?: (b: Book) => string; dismissedAt?: Record<string, number>; now?: number } = {},
+  opts: { dismissedAt?: Record<string, number>; now?: number } = {},
 ): MatchContext {
   const now = opts.now ?? Date.now()
   const df = new Map<string, number>()
@@ -134,7 +128,6 @@ export function buildMatchContext(
     taste: buildTasteProfile(books, { now }),
     dismissedAt: opts.dismissedAt,
     now,
-    archetype: opts.archetype,
   }
 }
 
@@ -213,15 +206,6 @@ export function scoreMatch(b: Book, p: MatchProfile, ctx?: MatchContext): MatchS
     add('series', value, { series: { name: b.series, position: pos, lovedEarlier, unstartedEarlier } })
   } else {
     add('series', NEUTRAL)
-  }
-
-  // archetype — the optional skin signature (Tryst's book boyfriend), neutral when absent
-  const arch = ctx?.archetype
-  if (arch && p.archetypeWeights && Object.keys(p.archetypeWeights).length) {
-    const maxA = Math.max(...Object.values(p.archetypeWeights), 1)
-    add('archetype', (p.archetypeWeights[arch(b)] ?? 0) / maxA)
-  } else {
-    add('archetype', NEUTRAL)
   }
 
   const score = Math.round(reasons.reduce((s, r) => s + MATCH_WEIGHTS[r.key] * r.value, 0) * 100)

@@ -50,15 +50,17 @@ describe('subgenre → primary-genre inference stays true to the taxonomy', () =
   })
 })
 
-describe('the book_editing migration mirrors the inference map exactly', () => {
-  const sql = readFileSync(
-    join(__dirname, '../../../../supabase/migrations/20260715010000_book_editing.sql'),
-    'utf8',
-  )
-  const valuesBlock = sql.slice(sql.indexOf('from (values'), sql.indexOf(') as m(subgenre, genre)'))
-  const sqlPairs = [...valuesBlock.matchAll(/\('([^']+)', '([^']+)'\)/g)].map((m) => [m[1], m[2]] as const)
+describe('the migrations mirror the inference map exactly', () => {
+  // The map is backfilled across two migrations: book_editing (the original taxonomy) and
+  // taxonomy_neutral (the genre-neutral broadening). Their UNION must equal SUBGENRE_PRIMARY_GENRE.
+  const pairsFrom = (file: string): (readonly [string, string])[] => {
+    const sql = readFileSync(join(__dirname, '../../../../supabase/migrations/', file), 'utf8')
+    const valuesBlock = sql.slice(sql.indexOf('from (values'), sql.indexOf(') as m(subgenre, genre)'))
+    return [...valuesBlock.matchAll(/\('([^']+)', '([^']+)'\)/g)].map((m) => [m[1]!, m[2]!] as const)
+  }
+  const sqlPairs = [...pairsFrom('20260715010000_book_editing.sql'), ...pairsFrom('20260721020000_taxonomy_neutral.sql')]
 
-  it('every TS pair appears in the SQL VALUES list, and nothing extra', () => {
+  it('every TS pair appears across the SQL VALUES lists, and nothing extra', () => {
     const ts = Object.entries(SUBGENRE_PRIMARY_GENRE)
     expect(new Map(sqlPairs)).toEqual(new Map(ts))
     expect(sqlPairs.length).toBe(ts.length)

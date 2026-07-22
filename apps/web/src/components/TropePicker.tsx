@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   cycleEmphasis,
-  deriveBoyfriend,
   type ChipEmphasis,
   FACET_LABELS,
   frequentTropes,
@@ -16,7 +15,6 @@ import {
 } from '@reverie/core'
 import { Modal } from './Modal'
 import { TropeChip } from './TropeChip'
-import { useUpdateBook } from '../data/books'
 import {
   useAllBookTropes,
   useAssignTrope,
@@ -46,7 +44,6 @@ export function TropePicker({ book, onClose }: { book: Book; onClose: () => void
   const createPersonal = useCreatePersonalTrope()
   const fetchSuggestions = useFetchSuggestions()
   const resolveSuggestion = useResolveSuggestion()
-  const updateBook = useUpdateBook()
 
   const [q, setQ] = useState('')
   const [note, setNote] = useState<string | null>(null)
@@ -64,19 +61,11 @@ export function TropePicker({ book, onClose }: { book: Book; onClose: () => void
   const onBook = useMemo(() => new Map(book.tropes.map((t) => [t.id, t.emphasis])), [book.tropes])
   const pinnedCount = book.tropes.filter((t) => t.emphasis === 'pinned').length
 
-  /** keep the archetype derivation fed with the book's live trope names */
-  const rederive = (names: string[]) =>
-    updateBook.mutate({ id: book.id, patch: { boyfriend: deriveBoyfriend({ tags: names, subgenre: book.subgenre }) } })
-
   const setEmphasis = (tropeId: string, next: ChipEmphasis) => {
-    const names = book.tropes.filter((t) => t.id !== tropeId).map((t) => t.name)
-    const name = byId.get(tropeId)?.name
     if (next === 'off') {
       unassign.mutate({ bookId: book.id, tropeId })
-      rederive(names)
     } else {
       assign.mutate({ bookId: book.id, tropeId, emphasis: next as TropeEmphasis })
-      rederive(name ? [...names, name] : names)
     }
   }
 

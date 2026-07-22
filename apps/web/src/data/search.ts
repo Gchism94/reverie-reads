@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { contributorsFromAuthors, deriveBoyfriend, splitName, type Book, type Incoming } from '@reverie/core'
+import { contributorsFromAuthors, splitName, type Book, type Incoming } from '@reverie/core'
 import { supabase } from '../lib/supabase'
 import { searchEverywhere, type SearchResult } from '../lib/search'
 import { enrichBook } from '../lib/enrich'
@@ -60,7 +60,6 @@ async function buildIncoming(result: SearchResult, ownership: Book['ownership'])
     ownership,
     owned: { physical: false, ebook: false, audiobook: false },
     source: 'Discover',
-    boyfriend: deriveBoyfriend({ tags: [], subgenre: '' }),
   }
 }
 

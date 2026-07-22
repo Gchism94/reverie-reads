@@ -1,7 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query'
 import {
   decideIntake,
-  deriveBoyfriend,
   fromFirstLast,
   importKey,
   matchBook,
@@ -74,7 +73,6 @@ export function incomingToBook(inc: Incoming): Book {
     reads: [],
     plan: inc.plan ?? null,
     progress: inc.progress ?? 0,
-    boyfriend: deriveBoyfriend({ tags, subgenre }),
     addedTs: inc.addedTs ?? Date.now(), // Goodreads Date Added survives (shelf history order)
   }
 }
