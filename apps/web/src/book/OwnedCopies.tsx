@@ -1,6 +1,7 @@
 import { OWNERSHIP_VALUES, isPossessed, ownedCaption, type Book, type BookOwnership, type Owned } from '@reverie/core'
 import { Switch } from '../components/Switch'
 import { useVoice } from '../skin/labels'
+import { OWNERSHIP_LABELS } from '../library/constants'
 
 /**
  * "Your copies" — possession lives here. A four-state control (docs/task-ownership-v2.md) sets how
@@ -25,7 +26,8 @@ export function OwnedCopies({
   const physicalOn = owned.physical !== false
   const physicalKind = typeof owned.physical === 'string' ? owned.physical : null
 
-  const label: Record<BookOwnership, string> = {
+  // Plain word is the button (legible at a glance); the skin voice is the flavor subtitle beneath it.
+  const voiceSub: Record<BookOwnership, string> = {
     owned: voice.ownIt,
     borrowed: voice.borrowedIt,
     wishlist: voice.wantIt,
@@ -50,15 +52,17 @@ export function OwnedCopies({
             type="button"
             role="radio"
             aria-checked={ownership === value}
+            aria-label={OWNERSHIP_LABELS[value]}
             onClick={() => onOwnershipChange(value)}
-            className="skin-control border px-3 py-1.5 text-[11.5px] font-semibold"
+            className="skin-control border px-3 py-1.5 text-center leading-tight"
             style={
               ownership === value
                 ? { background: 'var(--accent-fill)', color: 'var(--on-primary)', borderColor: 'transparent' }
                 : { background: 'var(--field)', color: 'var(--muted)', borderColor: 'var(--line)' }
             }
           >
-            {label[value]}
+            <span className="block text-[12px] font-semibold">{OWNERSHIP_LABELS[value]}</span>
+            <span className="block text-[9.5px] font-normal italic">{voiceSub[value]}</span>
           </button>
         ))}
       </div>

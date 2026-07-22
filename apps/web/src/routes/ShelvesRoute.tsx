@@ -143,8 +143,8 @@ const OWNED_SHELVES: { fmt: OwnedFormat; label: string; icon: string }[] = [
 function OwnedShelves({ books, onOpen }: { books: Book[]; onOpen: (id: string) => void }) {
   return (
     <div className="mb-8">
-      <h2 className="text-[16px] font-semibold text-ink">Owned</h2>
-      <p className="mb-3 text-[12px] text-muted">Updates as you mark the copies you own — no add or remove.</p>
+      <h2 className="text-[16px] font-semibold text-ink">Your copies</h2>
+      <p className="mb-3 text-[12px] text-muted">Updates as you mark copies you have, owned or borrowed — no add or remove.</p>
       <div className="flex flex-col gap-5">
         {OWNED_SHELVES.map(({ fmt, label, icon }) => {
           const shelf = books.filter((b) => bookOwnedFormats(b).includes(fmt))

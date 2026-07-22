@@ -1,4 +1,14 @@
-import { genreKey, type LibrarySort } from '@reverie/core'
+import { genreKey, type BookOwnership, type LibrarySort } from '@reverie/core'
+
+/** Plain, legible ownership words for the CONTROLS (docs/task-ownership-legibility.md). The button
+ *  label must say what tapping it does at a glance; the per-skin voice (SkinVoice ownIt/borrowedIt/
+ *  wantIt/unsetIt) rides underneath as a flavor subtitle, never as the only signal. */
+export const OWNERSHIP_LABELS: Record<BookOwnership, string> = {
+  owned: 'Owned',
+  borrowed: 'Borrowed',
+  wishlist: 'Wishlist',
+  unset: 'Not set',
+}
 
 // Vocabularies from the prototype (kept identical so behavior matches).
 export const FORMATS = [
