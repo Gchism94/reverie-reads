@@ -3,7 +3,9 @@ import {
   sortBookTropes,
   normalizeSeriesStatus,
   toFirstLast,
+  OWNERSHIP_VALUES,
   type Book,
+  type BookOwnership,
   type Contributor,
   type List,
   type ReadEntry,
@@ -11,7 +13,7 @@ import {
 } from '@reverie/core'
 import type { BookRow, ListRow, ReadRow } from './types'
 
-const READ_STATUS: readonly ReadStatus[] = ['Unread', 'Reading', 'Read', 'DNF']
+const READ_STATUS: readonly ReadStatus[] = ['unset', 'Unread', 'Reading', 'Read', 'DNF']
 const COVER_CONFIDENCE = ['high', 'medium', 'low', 'none'] as const
 
 /** Map the book_authors join into an ordered, role-typed contributor list. */
@@ -67,7 +69,13 @@ export function toBook(row: BookRow): Book {
     coverColor: row.cover_color ?? undefined,
     isbn: row.isbn ?? '',
     fave: row.fave,
-    ownership: row.ownership === 'unowned' ? 'unowned' : 'owned',
+    // Four-state ownership (docs/task-ownership-v2.md); a pre-migration 'unowned' row reads as
+    // wishlist (its meaning), anything unrecognized falls back to owned.
+    ownership: OWNERSHIP_VALUES.includes(row.ownership as BookOwnership)
+      ? (row.ownership as BookOwnership)
+      : row.ownership === 'unowned'
+        ? 'wishlist'
+        : 'owned',
     owned: {
       physical:
         row.owned_physical === 'paperback' || row.owned_physical === 'hardcover'

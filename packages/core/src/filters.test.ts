@@ -105,20 +105,28 @@ describe('activeFilterCount', () => {
   })
 })
 
-describe('ownership scoping (wishlist chip)', () => {
+describe('ownership scoping — default library = have or have read (task-ownership-v2)', () => {
   const owned = makeBook({ id: 'o', title: 'Owned One' })
-  const wished = makeBook({ id: 'w', title: 'Wished One', ownership: 'unowned' })
+  const borrowed = makeBook({ id: 'b', title: 'Borrowed One', ownership: 'borrowed', readStatus: 'unset' })
+  const wished = makeBook({ id: 'w', title: 'Wished One', ownership: 'wishlist', readStatus: 'unset' })
+  const unset = makeBook({ id: 'u', title: 'Uncatalogued', ownership: 'unset', readStatus: 'unset' })
+  // the reading-history hole: read it, don't own it, never marked it borrowed
+  const readNotOwned = makeBook({ id: 'r', title: 'Read Not Owned', ownership: 'wishlist', readStatus: 'Read' })
 
-  it('default filters hide unowned books — the grid is what you own', () => {
+  it('default grid shows owned, borrowed, and anything read — hides wishlist/unset you have not read', () => {
     const f = defaultFilters()
     expect(matchesFilters(owned, f)).toBe(true)
+    expect(matchesFilters(borrowed, f)).toBe(true) // in hand, though not owned
+    expect(matchesFilters(readNotOwned, f)).toBe(true) // reading history never hidden by possession
     expect(matchesFilters(wished, f)).toBe(false)
+    expect(matchesFilters(unset, f)).toBe(false)
   })
 
-  it('the wishlist flag lets unowned books in (includes, not replaces)', () => {
+  it('the wishlist flag lets the hidden remainder (wishlist + unset) in', () => {
     const f = { ...defaultFilters(), wishlist: true }
     expect(matchesFilters(owned, f)).toBe(true)
     expect(matchesFilters(wished, f)).toBe(true)
+    expect(matchesFilters(unset, f)).toBe(true)
   })
 
   it('counts as an active filter', () => {

@@ -84,13 +84,20 @@ describe('ownership on merge', () => {
   })
 
   it('one owned copy makes the merged record owned', () => {
-    const next = mergeBooks(state({ id: 'a', title: 'T', ownership: 'unowned' }, { id: 'b', title: 'T', ownership: 'owned' }), 'a', ['b'])
+    const next = mergeBooks(state({ id: 'a', title: 'T', ownership: 'wishlist' }, { id: 'b', title: 'T', ownership: 'owned' }), 'a', ['b'])
     expect(next.books.find((b) => b.id === 'a')!.ownership).toBe('owned')
   })
 
   it('two wishlist copies stay wishlist', () => {
-    const next = mergeBooks(state({ id: 'a', title: 'T', ownership: 'unowned' }, { id: 'b', title: 'T', ownership: 'unowned' }), 'a', ['b'])
-    expect(next.books.find((b) => b.id === 'a')!.ownership).toBe('unowned')
+    const next = mergeBooks(state({ id: 'a', title: 'T', ownership: 'wishlist' }, { id: 'b', title: 'T', ownership: 'wishlist' }), 'a', ['b'])
+    expect(next.books.find((b) => b.id === 'a')!.ownership).toBe('wishlist')
+  })
+
+  it('borrowed loses to owned but beats wishlist (strongest possession wins)', () => {
+    const owned = mergeBooks(state({ id: 'a', title: 'T', ownership: 'borrowed' }, { id: 'b', title: 'T', ownership: 'owned' }), 'a', ['b'])
+    expect(owned.books.find((b) => b.id === 'a')!.ownership).toBe('owned')
+    const borrowed = mergeBooks(state({ id: 'a', title: 'T', ownership: 'wishlist' }, { id: 'b', title: 'T', ownership: 'borrowed' }), 'a', ['b'])
+    expect(borrowed.books.find((b) => b.id === 'a')!.ownership).toBe('borrowed')
   })
 })
 

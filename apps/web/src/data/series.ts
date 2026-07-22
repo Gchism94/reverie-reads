@@ -431,7 +431,7 @@ export function useAddGhostEntry(name: string) {
 }
 
 /**
- * The ghost-slot add action: creates a real (unowned — per ownership model, a wanting context)
+ * The ghost-slot add action: creates a real (wishlist — per ownership model, a wanting context)
  * book record, links the entry, and optionally lands it straight on a TBR.
  */
 export function useAcquireGhost(name: string) {
@@ -450,7 +450,7 @@ export function useAcquireGhost(name: string) {
           author_last: last || null,
           series: name,
           position: input.entry.position,
-          ownership: 'unowned',
+          ownership: 'wishlist',
           genre: input.genre,
           source: 'Series',
         })

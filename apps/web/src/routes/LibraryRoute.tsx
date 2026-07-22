@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { createRoute, Link, useNavigate } from '@tanstack/react-router'
-import { groupSeries, isOwnedBook, matchesFilters, sortBooks, type Book } from '@reverie/core'
+import { groupSeries, inDefaultLibrary, matchesFilters, sortBooks, type Book } from '@reverie/core'
 import { rootRoute } from './RootRoute'
 import { useBooks, useUpdateBook } from '../data/books'
 import { useFilters } from '../library/filterStore'
@@ -126,8 +126,9 @@ function LibraryScreen() {
     () => (books ? sortBooks(books.filter((b) => matchesFilters(b, filters)), filters.sort) : []),
     [books, filters],
   )
-  // Collection counts speak about what you OWN; wishlist records join in only via the filter chip.
-  const ownedBooks = useMemo(() => (books ?? []).filter(isOwnedBook), [books])
+  // The default library — what you have in hand (owned or borrowed) or have read. Wishlist and
+  // unset-unread records join in only via the filter chip (docs/task-ownership-v2.md).
+  const libraryBooks = useMemo(() => (books ?? []).filter(inDefaultLibrary), [books])
 
   if (isLoading) return <Centered>{voice.loading}</Centered>
   if (isError) return <Centered>Couldn’t load your library — {(error as Error).message}</Centered>
@@ -140,9 +141,9 @@ function LibraryScreen() {
     else void navigate({ to: '/book/$bookId', params: { bookId: id } })
   }
 
-  // The "/ total" readout compares against the active scope: owned by default, everything when
-  // the wishlist chip is on.
-  const baseCount = filters.wishlist ? books.length : ownedBooks.length
+  // The "/ total" readout compares against the active scope: the default library by default,
+  // everything when the wishlist chip is on.
+  const baseCount = filters.wishlist ? books.length : libraryBooks.length
 
   const selected = (selectedId && visible.find((b) => b.id === selectedId)) || null
   const coverSheetBook = (coverSheetId && books.find((b) => b.id === coverSheetId)) || null
@@ -161,7 +162,7 @@ function LibraryScreen() {
           Library
         </h1>
         <span className="text-[12.5px] text-muted">
-          {ownedBooks.length} books · {ownedBooks.filter((b) => b.fave).length} faves
+          {libraryBooks.length} books · {libraryBooks.filter((b) => b.fave).length} faves
         </span>
       </header>
 

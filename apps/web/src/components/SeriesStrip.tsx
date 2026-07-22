@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
-import { sortEntries, type Book, type SeriesEntry } from '@reverie/core'
+import { isPossessed, sortEntries, type Book, type SeriesEntry } from '@reverie/core'
 import { CoverImage } from './CoverImage'
 import { fetchSeriesEntries } from '../data/series'
 import { useBooks } from '../data/books'
@@ -52,7 +52,7 @@ export function SeriesStrip({ book }: { book: Book }) {
     return (
       <span
         className="h-[54px] w-9 flex-none overflow-hidden rounded-md border border-line"
-        style={!b ? { borderStyle: 'dashed', background: 'var(--chip)' } : b.ownership === 'unowned' ? { opacity: 'var(--ghost-opacity)' } : undefined}
+        style={!b ? { borderStyle: 'dashed', background: 'var(--chip)' } : !isPossessed(b) ? { opacity: 'var(--ghost-opacity)' } : undefined}
         title={`${dir === 'prev' ? 'Before' : 'After'} this one: ${b?.title ?? e.title}`}
       >
         {b ? <CoverImage book={b} thumb /> : <span className="flex h-full items-center justify-center text-[13px] text-muted">⊹</span>}

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { createRoute, useNavigate } from '@tanstack/react-router'
-import { authorOf, isOwnedBook, type Book } from '@reverie/core'
+import { authorOf, isPossessed, type Book } from '@reverie/core'
 import { rootRoute } from './RootRoute'
 import { CoverImage } from '../components/CoverImage'
 import { useBooks, useUpdateBook } from '../data/books'
@@ -148,7 +148,7 @@ function HomeScreen() {
             </div>
           )}
           <div className="mt-2.5 flex flex-wrap gap-1.5">
-            <StatusTag tone="muted">{all.filter(isOwnedBook).length} books</StatusTag>
+            <StatusTag tone="muted">{all.filter(isPossessed).length} books</StatusTag>
             <StatusTag glyph="♥">{all.filter((b) => b.fave).length} faves</StatusTag>
             {priorityLists.length > 0 && <StatusTag glyph={<BookmarkGlyph />}>{priorityTotal} priority</StatusTag>}
           </div>

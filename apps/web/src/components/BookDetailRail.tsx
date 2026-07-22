@@ -39,6 +39,7 @@ export function BookDetailRail({
   const isRead = book.readStatus === 'Read' || book.reads.length > 0
   const intensity = book.intensity ?? 0
   const owned = bookOwnedFormats(book)
+  const borrowed = book.ownership === 'borrowed'
 
   return (
     <div className="flex h-full flex-col overflow-y-auto px-4 py-5">
@@ -108,8 +109,8 @@ export function BookDetailRail({
         </div>
       )}
 
-      {/* Read-only here like the rest of the rail — the ownership TOGGLE lives on the full page. */}
-      {book.ownership === 'unowned' && (
+      {/* Read-only here like the rest of the rail — the ownership CONTROL lives on the full page. */}
+      {book.ownership === 'wishlist' && (
         <div className="mt-4">
           <span
             className="inline-flex items-center gap-1 rounded-full border border-dashed border-line px-2.5 py-1 text-[12px] font-semibold text-muted"
@@ -119,10 +120,20 @@ export function BookDetailRail({
           </span>
         </div>
       )}
+      {borrowed && (
+        <div className="mt-4">
+          <span
+            className="inline-flex items-center gap-1 rounded-full border border-line px-2.5 py-1 text-[12px] font-semibold text-ink"
+            style={{ background: 'var(--chip)' }}
+          >
+            ⇄ Borrowed — in hand, not owned
+          </span>
+        </div>
+      )}
 
       {owned.length > 0 && (
         <div className="mt-4">
-          <div className="mb-1.5 text-[11px] uppercase tracking-[0.2em] text-muted">Owned</div>
+          <div className="mb-1.5 text-[11px] uppercase tracking-[0.2em] text-muted">{borrowed ? 'Borrowed' : 'Owned'}</div>
           <div className="flex flex-wrap gap-1.5">
             {owned.map((f) => (
               <span

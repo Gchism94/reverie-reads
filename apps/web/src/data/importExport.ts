@@ -339,7 +339,7 @@ export async function importCsvToBackend(
     if (res.outcome === 'added' || res.outcome === 'merged') {
       outcomes.push({ bookId: res.bookId, disposition: res.outcome })
     }
-    if (row.incoming.ownership === 'unowned') tbrBookIds.push(res.bookId)
+    if (row.incoming.ownership === 'wishlist') tbrBookIds.push(res.bookId)
     for (const shelf of row.shelves) {
       const arr = shelfBooks.get(shelf) ?? []
       arr.push(res.bookId)

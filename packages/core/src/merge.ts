@@ -1,6 +1,7 @@
 import type { Book, List, ReadEntry } from './types'
 import { norm } from './normalize'
 import { deriveBoyfriend } from './boyfriend'
+import { strongerOwnership } from './ownership'
 
 /** The slice of library state the merge engine reads and rewrites. */
 export interface LibraryState {
@@ -93,8 +94,9 @@ export function mergeBooks(
     ebook: all.some((b) => b.owned.ebook),
     audiobook: all.some((b) => b.owned.audiobook),
   }
-  // One owned copy makes the merged record owned — a wishlist duplicate never erases a real copy.
-  p.ownership = all.some((b) => b.ownership !== 'unowned') ? 'owned' : 'unowned'
+  // The strongest possession across copies wins (owned > borrowed > wishlist > unset) — a real
+  // copy never loses to a wishlist duplicate, and owning beats borrowing.
+  p.ownership = all.reduce((best, b) => strongerOwnership(best, b.ownership), 'unset' as Book['ownership'])
 
   // First non-empty value wins for these descriptive fields.
   if (!p.series) p.series = all.map((b) => b.series).find(Boolean) ?? p.series
@@ -124,7 +126,9 @@ export function mergeBooks(
         ? 'Reading'
         : statuses.includes('DNF')
           ? 'DNF'
-          : p.readStatus
+          : statuses.includes('Unread')
+            ? 'Unread'
+            : p.readStatus
   p.boyfriend = deriveBoyfriend(p)
 
   const dead = new Set(others.map((b) => b.id))

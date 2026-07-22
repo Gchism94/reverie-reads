@@ -254,14 +254,19 @@ export function rowToImported(row: string[], idx: Record<string, number>): Impor
   // A recorded read date with no explicit status still means the book was read.
   if (readStatus === 'Unread' && reads.length) readStatus = 'Read'
 
-  // Ownership: an explicit Owned column wins (yes/blank = owned, no = unowned — the template's
-  // rule); otherwise a Goodreads-style wishlist shelf (`to-read`/`tbr`) marks the row unowned.
-  // Plain "Unread" is NOT a wishlist signal — unread books you own are normal.
+  // Ownership (four-state — docs/task-ownership-v2.md): an explicit Owned column wins (yes/blank =
+  // owned, borrow/loan = borrowed, no/wish = wishlist); otherwise a Goodreads-style wishlist shelf
+  // (`to-read`/`tbr`) marks the row wishlist. Plain "Unread" is NOT a wishlist signal — unread
+  // books you own are normal.
   let ownership: Book['ownership'] = 'owned'
   const ownedCell = cell('owned').trim().toLowerCase()
-  if (ownedCell) ownership = /^(n|no|false|0|unowned|wish)/.test(ownedCell) ? 'unowned' : 'owned'
-  else if ((idx.readStatus ?? -1) >= 0 && /to-read|to read|wishlist|tbr/.test(cell('readStatus').toLowerCase()))
-    ownership = 'unowned'
+  if (ownedCell) {
+    if (/borrow|loan/.test(ownedCell)) ownership = 'borrowed'
+    else if (/^(n|no|false|0|unowned|wish)/.test(ownedCell)) ownership = 'wishlist'
+    else ownership = 'owned'
+  } else if ((idx.readStatus ?? -1) >= 0 && /to-read|to read|wishlist|tbr/.test(cell('readStatus').toLowerCase())) {
+    ownership = 'wishlist'
+  }
 
   const incoming: Incoming = {
     title,
