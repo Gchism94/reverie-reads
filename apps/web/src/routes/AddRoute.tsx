@@ -10,6 +10,7 @@ import { enrichBook } from '../lib/enrich'
 import { volumesUrl } from '../lib/googleBooks'
 import { useEffectiveSkin, useLabels, useVoice } from '../skin/labels'
 import { Chip } from '../components/Chip'
+import { CoverImage } from '../components/CoverImage'
 import { ContributorEditor } from '../book/ContributorEditor'
 import { FORMATS, READ_STATUS_OPTIONS, readStatusLabel, subgenreGradient, subgenresForGenre, tropeGroupsForGenre } from '../library/constants'
 import { CORE_GENRES } from '@reverie/core'
@@ -184,7 +185,8 @@ function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<Search
       <div className="flex gap-4">
         <div className="flex-none">
           <div className="aspect-[2/3] w-20 overflow-hidden rounded-lg border border-line" style={{ background: `linear-gradient(150deg, ${g0}, ${g1})` }}>
-            {cover && <img src={cover} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />}
+            {/* through CoverImage so a Google "no image" plate is rejected on load, same as the grid */}
+            {cover && <CoverImage book={{ title: form.title, cover }} thumb />}
           </div>
           <button
             type="button"
@@ -553,7 +555,8 @@ function AddScreen() {
                 style={{ background: 'var(--field)' }}
               >
                 <div className="h-16 w-11 flex-none overflow-hidden rounded border border-line" style={{ background: 'var(--chip)' }}>
-                  {it.cover && <img src={it.cover} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />}
+                  {/* through CoverImage so a Google "no image" plate never renders as a result cover */}
+                  {it.cover && <CoverImage book={{ title: it.title, cover: it.cover }} thumb />}
                 </div>
                 <div className="min-w-0">
                   <div className="truncate text-[14px] font-semibold text-ink">{it.title}</div>
