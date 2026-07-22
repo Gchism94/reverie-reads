@@ -22,6 +22,7 @@ function book(over: Partial<Book> & { id: string; genre: string; subgenre: strin
     subgenres: [over.subgenre],
     tags: [],
     tropes: [],
+    moods: [],
     intensity: 3,
     cover: '',
     isbn: '',

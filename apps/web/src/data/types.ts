@@ -48,6 +48,8 @@ export interface BookRow {
   /** ordered contributor join (present when the books query selects it) */
   book_authors?: BookAuthorRow[]
   book_tropes?: { emphasis: string; tropes: { id: string; name: string } | null }[]
+  /** reader-assigned mood join (present when the books query selects it) */
+  book_moods?: { moods: { id: string; name: string } | null }[]
   tropes_suggested_at: string | null
 }
 
