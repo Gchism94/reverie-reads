@@ -123,6 +123,7 @@ const book = (over: Partial<Book>): Book => ({
   genres: [],
   tags: [],
   tropes: [],
+  moods: [],
   intensity: null,
   cover: '',
   isbn: '',

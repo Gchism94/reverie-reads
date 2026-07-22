@@ -11,6 +11,7 @@ import { useAddRead } from '../data/reads'
 import { usePerformMerge } from '../data/mergeBooks'
 import { maybeChainPrompt } from '../lib/chainPrompt'
 import { ContributorEditor } from './ContributorEditor'
+import { MoodPicker } from '../components/MoodPicker'
 
 /** Distinct contributor names across the library, for autocomplete. */
 function useAuthorSuggestions(): string[] {
@@ -228,6 +229,13 @@ export function EditDetails({
         {subs.length > 1 && (
           <p className="mt-1.5 text-[11px] text-muted">First pick leads — it sets the book’s gradient.</p>
         )}
+      </div>
+      {/* Mood — the reader's own impression (how it landed). Reader-assigned, never derived; assigns
+          persist immediately (book_moods), independent of this form's Save. */}
+      <div className="mt-3">
+        <span className="mb-1 block text-[11px] uppercase tracking-[0.15em] text-muted">Mood</span>
+        <p className="mb-1.5 text-[12px] text-muted">How did it land on you? Optional, and yours alone.</p>
+        <MoodPicker book={book} />
       </div>
       <div className="mt-3 grid grid-cols-3 gap-3">
         <Field label="Pub year">

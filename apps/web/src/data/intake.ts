@@ -59,6 +59,7 @@ export function incomingToBook(inc: Incoming): Book {
     genres: inc.genres ?? [],
     tags,
     tropes: [],
+    moods: [],
     intensity: inc.intensity ?? null,
     cover: inc.cover ?? '',
     isbn: inc.isbn ?? '',

@@ -1,6 +1,7 @@
 import {
   isContributorRole,
   sortBookTropes,
+  sortBookMoods,
   normalizeSeriesStatus,
   toFirstLast,
   OWNERSHIP_VALUES,
@@ -56,6 +57,12 @@ export function toBook(row: BookRow): Book {
       (row.book_tropes ?? [])
         .filter((bt) => bt.tropes?.name)
         .map((bt) => ({ id: bt.tropes!.id, name: bt.tropes!.name, emphasis: bt.emphasis === 'pinned' ? ('pinned' as const) : ('present' as const) })),
+    ),
+    // reader-assigned moods (join); empty when the reader hasn't assigned any — never derived.
+    moods: sortBookMoods(
+      (row.book_moods ?? [])
+        .filter((bm) => bm.moods?.name)
+        .map((bm) => ({ id: bm.moods!.id, name: bm.moods!.name })),
     ),
     intensity: row.intensity ?? null,
     cover: row.cover_url ?? '',

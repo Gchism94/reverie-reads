@@ -102,6 +102,9 @@ export interface Book {
   tropesSuggestedAt?: string | null
   /** the trope join, inline: pinned/present refs (loaded with the book like contributors) */
   tropes: { id: string; name: string; emphasis: 'pinned' | 'present' }[]
+  /** reader-assigned moods (join, inline) — how the book LANDED on the reader. NEVER derived:
+   *  absence is a valid, quiet state, never backfilled with a guess (docs/task-mood.md). */
+  moods: { id: string; name: string }[]
   intensity: number | null // 0..5, null = unset (the Tryst skin labels this "Spice")
   cover: string
   /** confidence of the enrichment-resolved cover/match (E1); unset for user/seed covers (trusted).

@@ -13,7 +13,7 @@ export function useBooks() {
     queryFn: async (): Promise<Book[]> => {
       const { data, error } = await supabase
         .from('books')
-        .select('*, book_authors(position, role, authors(id, name)), book_tropes(emphasis, tropes(id, name))')
+        .select('*, book_authors(position, role, authors(id, name)), book_tropes(emphasis, tropes(id, name)), book_moods(moods(id, name))')
         .order('added_at', { ascending: true })
       if (error) throw error
       return (data as BookRow[]).map(toBook)
