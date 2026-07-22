@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { splitName } from '@reverie/core'
 import { useBooks } from '../data/books'
 import { releaseWindow, useAuthorFollows, useAuthorReleases, useSetFollow, yourAuthors, type AuthorRelease } from '../data/releases'
-import { CoverPlaceholder } from '../components/CoverPlaceholder'
+import { CoverImage } from '../components/CoverImage'
 import { Chip } from '../components/Chip'
 
 // "Coming soon from your authors" (owner-approved releases run): the external half of the
@@ -13,7 +13,6 @@ import { Chip } from '../components/Chip'
 
 function ReleaseCard({ r }: { r: AuthorRelease }) {
   const navigate = useNavigate()
-  const [coverFailed, setCoverFailed] = useState(false)
   const { first, last } = splitName(r.author)
   return (
     <button
@@ -28,11 +27,8 @@ function ReleaseCard({ r }: { r: AuthorRelease }) {
       aria-label={`Add ${r.title}`}
     >
       <div className="aspect-[2/3] overflow-hidden rounded-lg border border-line" style={{ background: 'var(--field)' }}>
-        {r.cover && !coverFailed ? (
-          <img src={r.cover} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" onError={() => setCoverFailed(true)} />
-        ) : (
-          <CoverPlaceholder book={{ title: r.title, first, last }} />
-        )}
+        {/* CoverImage handles dead links AND the Google "no image" plate, degrading to the placeholder */}
+        <CoverImage book={{ title: r.title, first, last, cover: r.cover }} thumb />
       </div>
       <div className="mt-1 truncate text-[12px] font-semibold text-ink">{r.title}</div>
       <div className="truncate text-[11px] text-muted">{r.author}</div>
