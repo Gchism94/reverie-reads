@@ -3,6 +3,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { cycleEmphasis, frequentTropes, PIN_CAP, PIN_CAP_COPY, type ChipEmphasis, type TropeEmphasis } from '@reverie/core'
 import { Modal } from './Modal'
 import { TropeChip } from './TropeChip'
+import { MoodPicker } from './MoodPicker'
 import { useBooks, useUpdateBook } from '../data/books'
 import { useAddListItem, useAllListItems } from '../data/listItems'
 import { useLists } from '../data/lists'
@@ -163,6 +164,13 @@ export function JustFinishedSheet() {
         </div>
       )}
       {note && <p className="mb-3 text-[12.5px]" style={{ color: 'var(--accent-ink)' }}>{note}</p>}
+
+      {/* Mood — the natural moment: you just closed the book feeling something. Skippable like the
+          rest of this ONE sheet; reader-assigned, never derived (docs/task-mood.md §2). */}
+      <div className="mb-4">
+        <div className="mb-1.5 text-[11px] uppercase tracking-[0.2em] text-muted">How did it land?</div>
+        <MoodPicker book={book} />
+      </div>
 
       {next && (
         <div className="mb-4 rounded-2xl border p-3" style={{ borderColor: 'var(--accent-ink)', background: 'var(--card)' }}>

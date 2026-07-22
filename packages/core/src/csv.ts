@@ -364,6 +364,7 @@ export function importCsv(existing: readonly Book[], text: string): CsvImportRes
         genres: [],
         tags: [],
         tropes: [],
+        moods: [],
         intensity: null,
         cover: '',
         isbn: '',

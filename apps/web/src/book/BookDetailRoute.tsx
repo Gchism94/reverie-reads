@@ -19,6 +19,9 @@ import { maybeChainPrompt } from '../lib/chainPrompt'
 import { EditDetails, LogReadForm, MergeDialog } from './dialogs'
 import { TropePicker } from '../components/TropePicker'
 import { TropeChip } from '../components/TropeChip'
+import { MoodChip } from '../components/MoodChip'
+import { MoodPicker } from '../components/MoodPicker'
+import { Modal } from '../components/Modal'
 import { CoverSheet } from '../components/CoverSheet'
 import { useCoverBackfill } from '../data/coverBackfill'
 import { OwnedCopies } from './OwnedCopies'
@@ -91,7 +94,7 @@ function ProgressSlider({ book }: { book: Book }) {
   )
 }
 
-type Dialog = 'trope' | 'log' | 'edit' | 'merge' | 'cover' | null
+type Dialog = 'trope' | 'mood' | 'log' | 'edit' | 'merge' | 'cover' | null
 
 function BookDetailScreen() {
   const { bookId } = bookRoute.useParams()
@@ -311,6 +314,25 @@ function BookDetailScreen() {
         )}
       </div>
 
+      {/* Mood — the reader's OWN impression (how it landed), its own area, apart from the descriptive
+          tropes above. Never derived: empty is a valid, quiet state (docs/task-mood.md). */}
+      <Label
+        action={
+          <button type="button" onClick={() => setDialog('mood')} className="text-[12px] text-primary">
+            {book.moods.length ? 'edit' : '+ mood'}
+          </button>
+        }
+      >
+        Mood
+      </Label>
+      <div className="flex flex-wrap items-center gap-1.5">
+        {book.moods.length ? (
+          book.moods.map((m) => <MoodChip key={m.id} name={m.name} to={`/moods/${m.id}`} />)
+        ) : (
+          <span className="text-[13px] text-muted">No mood set — how did it land on you?</span>
+        )}
+      </div>
+
       {/* read log */}
       <Label
         action={
@@ -444,6 +466,14 @@ function BookDetailScreen() {
       </div>
 
       {dialog === 'trope' && <TropePicker book={book} onClose={() => setDialog(null)} />}
+      {dialog === 'mood' && (
+        <Modal title="Mood" onClose={() => setDialog(null)}>
+          <p className="-mt-2 mb-3 text-[13px] text-muted">
+            How did {book.title} land on you? Tap what you felt — yours alone, and only if you want to.
+          </p>
+          <MoodPicker book={book} />
+        </Modal>
+      )}
       {dialog === 'log' && <LogReadForm book={book} onClose={() => setDialog(null)} />}
       {dialog === 'edit' && (
         <EditDetails book={book} onClose={() => setDialog(null)} onChangeCover={() => setDialog('cover')} />
