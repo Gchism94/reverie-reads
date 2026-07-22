@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { createRoute, useNavigate } from '@tanstack/react-router'
-import { buildMatchContext, scoreMatch, type Book, type MatchProfile, type MatchReason } from '@reverie/core'
+import { buildMatchContext, CORE_GENRES, scoreMatch, type Book, type MatchProfile, type MatchReason } from '@reverie/core'
 import { rootRoute } from './RootRoute'
 import { CoverImage } from '../components/CoverImage'
 import { useBooks } from '../data/books'
@@ -8,7 +8,7 @@ import { useCreateList, useLists } from '../data/lists'
 import { useAddBooksToList } from '../data/listItems'
 import { useDismissed, useDismissBook, useLegacyDismissalSync } from '../data/matchFeedback'
 import { useEnsureEmbeddings, useVibeSearch, type SimilarHit } from '../data/similar'
-import { applyAnswer, emptyAnswers, HEAT, QUIZ, WORLD, type QuizAnswers } from '../library/quiz'
+import { applyAnswer, buildQuizProfile, emptyAnswers, HEAT, INTENSITY, QUIZ, type QuizAnswers } from '../library/quiz'
 
 interface Pick {
   b: Book
@@ -34,26 +34,65 @@ function whyLine(reasons: MatchReason[]): string {
   return 'A fresh pick from your shelves'
 }
 
+/** Title-case a lowercased primary-genre key back to its CORE_GENRES display spelling. */
+const genreLabel = (key: string): string =>
+  CORE_GENRES.find((g) => g.toLowerCase() === key) ?? key.replace(/\b\w/g, (c) => c.toUpperCase())
+
+const modeOf = (m: Map<string, number>): string | undefined =>
+  [...m.entries()].sort((x, y) => y[1] - x[1])[0]?.[0]
+
+/** Result vocabulary drawn from the MATCHED books, not a fixed romance script (task §3). The headline
+ *  and pills describe what was actually surfaced — the dominant subgenre/genre, its real tropes, and
+ *  a representative intensity — so a horror result reads like horror and a literary one like literary.
+ *  Intensity shows as spice (🌶️) only when the match is romance-leaning; otherwise a neutral word. */
+function describeMatches(picks: Pick[], a: QuizAnswers): { headline: string; sub: string; tags: string[] } {
+  const top = picks.slice(0, 8).map((p) => p.b)
+  if (!top.length) {
+    return { headline: 'Nothing quite fits tonight', sub: 'Try a different mood or retake the quiz', tags: [] }
+  }
+  const subCount = new Map<string, number>()
+  const genreCount = new Map<string, number>()
+  const tropeCount = new Map<string, number>()
+  const intensities: number[] = []
+  for (const b of top) {
+    if (b.subgenre) subCount.set(b.subgenre, (subCount.get(b.subgenre) ?? 0) + 1)
+    if (b.genre) genreCount.set(b.genre, (genreCount.get(b.genre) ?? 0) + 1)
+    for (const t of b.tropes) tropeCount.set(t.name, (tropeCount.get(t.name) ?? 0) + 1)
+    if (b.intensity != null) intensities.push(b.intensity)
+  }
+  const domGenreKey = modeOf(genreCount)
+  const domSub = modeOf(subCount)
+  const domGenreLabel = domGenreKey ? genreLabel(domGenreKey) : undefined
+  const headline = `${a.pace === 'slow' ? 'Slow-burn ' : ''}${domSub ?? domGenreLabel ?? 'Your shelves'}`
+
+  const topTropes = [...tropeCount.entries()].sort((x, y) => y[1] - x[1]).slice(0, 3).map(([t]) => t)
+  const tags: string[] = []
+  const sorted = [...intensities].sort((x, y) => x - y)
+  const median = sorted[Math.floor(sorted.length / 2)]
+  if (median != null) {
+    const iv = Math.max(0, Math.min(5, Math.round(median)))
+    const word = (domGenreKey === 'romance' ? HEAT[iv] : INTENSITY[iv]) ?? ''
+    if (iv > 0 && word) tags.push(domGenreKey === 'romance' ? `${'🌶️'.repeat(iv)} ${word}` : word)
+  }
+  // add the parent genre only when the headline led with a subgenre (avoid echoing it)
+  if (domGenreLabel && domGenreLabel.toLowerCase() !== headline.toLowerCase()) tags.push(domGenreLabel)
+  tags.push(...topTropes)
+  return { headline, sub: 'Picked for your mood tonight', tags: [...new Set(tags)] }
+}
+
 function score(
   books: Book[],
   a: QuizAnswers,
   opts: { tasteOnly?: boolean; dismissedAt?: Record<string, number> } = {},
 ): { picks: Pick[]; headline: string; sub: string; tags: string[] } {
-  const target = a.spices.length ? Math.round(a.spices.reduce((x, y) => x + y, 0) / a.spices.length) : 3
-  const topSub = Object.entries(a.subs).sort((x, y) => y[1] - x[1])[0]?.[0] ?? 'Romance'
-  const cravings = [...new Set(a.tropes)]
-
-  // Build a genre-neutral profile from the (romance-flavored) quiz, then score with the core
-  // vibe matcher over the library-derived context (tag rarity + series momentum + the LEARNED
-  // taste). Taste-only mode (Tier 1) skips the quiz entirely: a mood-neutral profile over the
-  // standing taste.
+  // Build a genre-neutral profile from the quiz, then score with the core vibe matcher over the
+  // library-derived context (tag rarity + series momentum + the LEARNED taste). The genre lean is
+  // keyed off the lowercased primary-genre keys, so it steers any of the nine genres (the matcher
+  // resolves subWeights[book.subgenre] ?? subWeights[book.genre]). Taste-only mode (Tier 1) skips
+  // the quiz entirely: a mood-neutral profile over the standing taste.
   const profile: MatchProfile = opts.tasteOnly
     ? { subWeights: {}, wantTags: [], targetIntensity: null }
-    : (() => {
-        const subWeights = { ...a.subs }
-        if (a.dark) subWeights['Dark Romance'] = (subWeights['Dark Romance'] ?? 0) + 1
-        return { subWeights, wantTags: cravings, targetIntensity: target }
-      })()
+    : buildQuizProfile(a)
   const ctx = buildMatchContext(books, { dismissedAt: opts.dismissedAt })
 
   const scored: Pick[] = books
@@ -64,6 +103,8 @@ function score(
     })
     .sort((x, y) => y.s - x.s)
 
+  const picks = scored.filter((x) => x.s >= 45).slice(0, 12) // 0..100 — keep genuinely-decent fits
+
   if (opts.tasteOnly) {
     // headline chips = the standing loves the profile actually learned
     const loves = Object.entries(ctx.taste?.tagAffinity ?? {})
@@ -72,27 +113,14 @@ function score(
       .slice(0, 3)
       .map(([t]) => t.replace(/\b\w/g, (c) => c.toUpperCase()))
     return {
-      picks: scored.filter((x) => x.s >= 45).slice(0, 12),
+      picks,
       headline: 'Your standing taste',
       sub: 'Learned from how you rate, reread, and shelve',
       tags: loves,
     }
   }
 
-  const heatWord = HEAT[target] || 'Steamy'
-  const worldWord = WORLD[topSub] ?? 'romance'
-  const paceLabel = a.pace ? { slow: 'slow burn', mid: 'steady build', fast: 'fast burn' }[a.pace] : ''
-  const subBits: string[] = []
-  if (a.pace === 'slow') subBits.push('A slow burn')
-  if (cravings.length) subBits.push(cravings.slice(0, 2).join(' · '))
-  const tags = [`${'🌶️'.repeat(target)} ${heatWord}`, worldWord, ...(paceLabel ? [paceLabel] : []), ...cravings.slice(0, 3)]
-
-  return {
-    picks: scored.filter((x) => x.s >= 45).slice(0, 12), // 0..100 now — keep genuinely-decent fits
-    headline: `${heatWord} ${worldWord}`,
-    sub: subBits.join(' — ') || 'Picked for your mood tonight',
-    tags,
-  }
+  return { picks, ...describeMatches(picks, a) }
 }
 
 function MatchScreen() {
