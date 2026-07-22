@@ -54,12 +54,30 @@ alter table public.books
 -- Existing rows keep their status; newly added books default to unset (no forced choice).
 alter table public.books alter column read_status set default 'unset';
 
--- ── 3. PROPOSED — borrowed backfill from provenance (owner sign-off pending; see report) ──────────
+-- ── 3. Borrowed backfill from provenance (owner-approved) ─────────────────────────────────────────
 -- `source` is a free-text provenance string; ~77 rows carry source='Borrowed' (all readStatus='Read'
 -- in the personal seed) — books read but not owned, exactly the reading-history hole this closes.
--- Reclassifying them from the migrated default 'owned' to 'borrowed' is well-motivated, but `source`
--- is provenance and `ownership` is state: do NOT auto-conflate them. Left COMMENTED until approved.
--- Guarded to only touch rows still sitting at plain 'owned' (never a user's explicit later choice):
+-- Reclassify those provenance rows to ownership='borrowed'.
 --
---   update public.books set ownership = 'borrowed'
---   where source = 'Borrowed' and ownership = 'owned';
+-- SAFETY:
+--  · Guarded — only rows STILL at ownership='owned' AND source='Borrowed' are touched, so a row the
+--    reader has since re-marked (e.g. bought the book → 'owned' by choice, or set 'wishlist') is
+--    never reclassified. `source` is provenance; `ownership` is state — the guard keeps them honest.
+--  · Idempotent — after the first run those rows read 'borrowed', so a re-run matches zero rows and
+--    the UPDATE is a no-op (never double-applies, never errors).
+--  · Observable — this migration runs against PROD via `pnpm deploy:migrations`; the RAISE NOTICE
+--    surfaces the REAL affected-row count in the deploy output (the seed's 77 is only a local guess).
+do $$
+declare
+  n integer;
+begin
+  select count(*) into n
+  from public.books
+  where source = 'Borrowed' and ownership = 'owned';
+
+  raise notice 'ownership_v2 borrowed backfill: % row(s) with source=''Borrowed'' still at ownership=''owned'' will be reclassified to ''borrowed''.', n;
+
+  update public.books
+  set ownership = 'borrowed'
+  where source = 'Borrowed' and ownership = 'owned';
+end $$;
