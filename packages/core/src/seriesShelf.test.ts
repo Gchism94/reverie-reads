@@ -9,6 +9,7 @@ import {
   positionBetween,
   progressLine,
   renumberEntries,
+  seedSeriesPositions,
   seriesProgress,
   sortEntries,
   type SeriesEntry,
@@ -139,5 +140,72 @@ describe('source merge — fills gaps, never overwrites', () => {
     const { inserts, moves } = mergeSourceEntries(existing, [])
     expect(inserts).toEqual([])
     expect(moves).toEqual([])
+  })
+})
+
+describe('seeding positions for books joining a series', () => {
+  const c = (id: string, position: number | null, title = id) => ({ id, title, position })
+
+  it('keeps believable in-series indices exactly as the reader set them', () => {
+    const got = seedSeriesPositions([c('a', 1), c('b', 2), c('c', 3)])
+    expect([...got]).toEqual([
+      ['a', 1],
+      ['b', 2],
+      ['c', 3],
+    ])
+  })
+
+  it('keeps the GAPS in a believable set — owning #1, #2, #5 means two are missing', () => {
+    const got = seedSeriesPositions([c('a', 1), c('b', 2), c('e', 5)])
+    expect(got.get('e')).toBe(5)
+  })
+
+  it('renumbers an import global-order set, preserving its relative order', () => {
+    // the audit's reproduction: 412 / 87 / 1290 rendered as "#87, #412, #1290"
+    const got = seedSeriesPositions([c('first', 412), c('second', 87), c('third', 1290)])
+    expect(got.get('second')).toBe(1)
+    expect(got.get('first')).toBe(2)
+    expect(got.get('third')).toBe(3)
+  })
+
+  it('distrusts the whole set when any one value is absurd', () => {
+    const got = seedSeriesPositions([c('a', 1), c('b', 2), c('runaway', 900)])
+    expect([...got.values()]).toEqual([1, 2, 3])
+  })
+
+  it('distrusts duplicates — two books cannot share a slot', () => {
+    const got = seedSeriesPositions([c('a', 1), c('b', 1), c('c', 2)])
+    expect(new Set(got.values()).size).toBe(3)
+  })
+
+  it('orders null positions by title so the result is deterministic, not row-order', () => {
+    const got = seedSeriesPositions([c('z', null, 'Zeta'), c('a', null, 'Alpha'), c('m', null, 'Mu')])
+    expect([...got]).toEqual([
+      ['a', 1],
+      ['m', 2],
+      ['z', 3],
+    ])
+  })
+
+  it('sorts null positions after numbered ones and appends them', () => {
+    const got = seedSeriesPositions([c('two', 2), c('none', null, 'Aaa'), c('one', 1)])
+    expect(got.get('one')).toBe(1)
+    expect(got.get('two')).toBe(2)
+    expect(got.get('none')).toBe(3)
+  })
+
+  it('appends after the existing arrangement instead of renumbering it', () => {
+    const got = seedSeriesPositions([c('late', null)], 7)
+    expect(got.get('late')).toBe(8)
+  })
+
+  it('clears honoured indices before appending a null-position straggler', () => {
+    const got = seedSeriesPositions([c('a', 1), c('e', 5), c('none', null, 'Zzz')])
+    expect(got.get('none')).toBe(6)
+  })
+
+  it('keeps decimal novella slots — #2.5 is a real position', () => {
+    const got = seedSeriesPositions([c('a', 1), c('novella', 2.5), c('b', 3)])
+    expect(got.get('novella')).toBe(2.5)
   })
 })

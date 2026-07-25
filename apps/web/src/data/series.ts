@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   ghostMatchesBook,
   mergeSourceEntries,
+  seedSeriesPositions,
   sortEntries,
   type Book,
   type SeriesEntry,
@@ -16,7 +17,12 @@ import { allListItemsKey } from './listItems'
  * the reading order). Series are identified by NAME app-wide (books carry a series string); the
  * row is created lazily the first time a series is opened, and RECONCILED against the library:
  * every book naming this series gets an entry, ghosts adopt matching imports. Source (Hardcover)
- * data only ever FILLS GAPS — a user_edited entry is never touched, nothing is ever deleted.
+ * data only ever FILLS GAPS — a user_edited entry is never touched.
+ *
+ * REMOVAL means one thing on both surfaces (book page and series page): the slot is gone and the
+ * book stops naming the series. It is a SOFT delete — the row survives with `removed_at` stamped —
+ * because a canonical source refresh would otherwise re-insert the ghost the reader just dismissed.
+ * Tombstones are invisible to every read below; only the source merge is shown them.
  */
 
 export interface UiSeries {
@@ -48,12 +54,21 @@ interface SeriesEntryRowT {
   book_id: string | null
   source: string
   user_edited: boolean
+  removed_at: string | null
 }
 
 export interface SeriesDetail {
   series: UiSeries
   entries: SeriesEntry[]
+  /** Slots the reader removed. Never rendered — carried so a source refresh can't resurrect them. */
+  removed: SeriesEntry[]
 }
+
+/**
+ * The patch that retires a slot. `book_id → null` frees the (series_id, book_id) unique index for a
+ * later re-add, and `user_edited` keeps the source merge from trying to reposition a tombstone.
+ */
+const removalPatch = () => ({ removed_at: new Date().toISOString(), book_id: null, user_edited: true })
 
 const toUiSeries = (row: SeriesRowT): UiSeries => ({
   id: row.id,
@@ -98,7 +113,7 @@ export function useSeriesList() {
     queryFn: async (): Promise<Map<string, { series: UiSeries; total: number; ghosts: number }>> => {
       const [{ data: rows, error }, { data: ents, error: e2 }] = await Promise.all([
         supabase.from('series').select('*'),
-        supabase.from('series_entries').select('id, series_id, book_id'),
+        supabase.from('series_entries').select('id, series_id, book_id').is('removed_at', null),
       ])
       if (error) throw error
       if (e2) throw e2
@@ -145,14 +160,22 @@ export function useSeriesDetail(name: string) {
 
       const [{ data: entRows, error: eErr }, { data: libRows, error: bErr }] = await Promise.all([
         supabase.from('series_entries').select('*').eq('series_id', seriesRow.id),
+        // Deterministic order matters: these rows SEED the reading order, and an unordered fetch
+        // made a null-position library number itself by whatever order Postgres happened to return.
+        // Numbered books first (ascending), then the unnumbered ones alphabetically.
         supabase
           .from('books')
           .select('id, title, author_first, author_last, position, status')
-          .eq('series', name),
+          .eq('series', name)
+          .order('position', { ascending: true, nullsFirst: false })
+          .order('title', { ascending: true }),
       ])
       if (eErr) throw eErr
       if (bErr) throw bErr
-      let entries = ((entRows ?? []) as SeriesEntryRowT[]).map(toEntry)
+      const allRows = (entRows ?? []) as SeriesEntryRowT[]
+      let entries = allRows.filter((r) => !r.removed_at).map(toEntry)
+      const removed = allRows.filter((r) => r.removed_at).map(toEntry)
+      const removedTitle = new Set(removed.map((e) => e.title.trim().toLowerCase()))
       const lib = (libRows ?? []) as { id: string; title: string; author_first: string | null; author_last: string | null; position: number | null; status: string | null }[]
 
       // 1) ghosts adopt matching library books (an import landed after the ghost was seeded)
@@ -166,20 +189,40 @@ export function useSeriesDetail(name: string) {
           linked.add(b.id)
         }
       }
-      // 2) every library book naming this series gets an entry
-      let appendAt = Math.floor(Math.max(0, ...entries.map((e) => e.position)))
-      const inserts = lib
-        .filter((b) => !linked.has(b.id))
-        .map((b) => ({
-          series_id: seriesRow.id,
-          owner_id: uid,
-          position: b.position ?? ++appendAt,
-          title: b.title,
-          author: [b.author_first, b.author_last].filter(Boolean).join(' '),
-          book_id: b.id,
-          source: 'manual',
-          user_edited: true,
-        }))
+      // 2) every library book naming this series gets an entry. A book that names the series is the
+      //    reader asking for it back, so a matching tombstone REVIVES rather than blocking — removal
+      //    outlives a source refresh, not a deliberate re-add.
+      const joining = lib.filter((b) => !linked.has(b.id))
+      const revive = joining.filter((b) => removedTitle.has(b.title.trim().toLowerCase()))
+      for (const b of revive) {
+        const t = removed.find((e) => e.title.trim().toLowerCase() === b.title.trim().toLowerCase())
+        if (!t) continue
+        const { data: back } = await supabase
+          .from('series_entries')
+          .update({ removed_at: null, book_id: b.id })
+          .eq('id', t.id)
+          .select()
+        const row = ((back ?? []) as SeriesEntryRowT[])[0]
+        if (row) entries = [...entries, toEntry(row)]
+        linked.add(b.id)
+      }
+      // Positions come from the core seeder, not raw books.position: imports park global-order
+      // numbers there (412, 1290) and seeding those verbatim is what made positions look random.
+      const fresh = joining.filter((b) => !linked.has(b.id))
+      const seeded = seedSeriesPositions(
+        fresh.map((b) => ({ id: b.id, title: b.title, position: b.position })),
+        Math.max(0, ...entries.map((e) => e.position)),
+      )
+      const inserts = fresh.map((b) => ({
+        series_id: seriesRow.id,
+        owner_id: uid,
+        position: seeded.get(b.id) ?? 0,
+        title: b.title,
+        author: [b.author_first, b.author_last].filter(Boolean).join(' '),
+        book_id: b.id,
+        source: 'manual',
+        user_edited: true,
+      }))
       if (inserts.length) {
         const { data: added, error: iErr } = await supabase.from('series_entries').insert(inserts).select()
         if (iErr) throw iErr
@@ -194,7 +237,7 @@ export function useSeriesDetail(name: string) {
           Object.assign(seriesRow, { status: seed })
         }
       }
-      return { series: toUiSeries(seriesRow), entries: sortEntries(entries) }
+      return { series: toUiSeries(seriesRow), entries: sortEntries(entries), removed }
     },
   })
 }
@@ -204,7 +247,7 @@ export async function fetchSeriesEntries(name: string): Promise<SeriesEntry[] | 
   const { data: rows } = await supabase.from('series').select('id').eq('name', name).limit(1)
   const row = (rows ?? [])[0] as { id: string } | undefined
   if (!row) return null
-  const { data: ents } = await supabase.from('series_entries').select('*').eq('series_id', row.id)
+  const { data: ents } = await supabase.from('series_entries').select('*').eq('series_id', row.id).is('removed_at', null)
   return sortEntries(((ents ?? []) as SeriesEntryRowT[]).map(toEntry))
 }
 
@@ -297,36 +340,48 @@ export function useUpdateEntry(name: string) {
 }
 
 /**
- * Remove a slot from the series page ENTIRELY (task-series-defects §Removal). Deletes the entry AND, if
- * it was linked to a book, clears that book's `series` so the reconciliation in useSeriesDetail can't
- * re-add it on the next load (which is exactly why removal looked irreversible). Contrast the book page,
- * which DETACHES the book but keeps the canonical slot as a ghost (see useDetachBookFromSeries).
+ * Remove a slot — the ONE removal, shared by the series page's ✕ and the book page's cleared series
+ * field (docs/task-series-defects.md §Removal, revised). The slot goes and, when a book was linked,
+ * that book stops naming the series so reconciliation can't re-add it. The row is soft-deleted rather
+ * than dropped so a later Hardcover refresh can't resurrect what the reader dismissed.
+ *
+ * Works for ghosts too (no bookId) — dismissing a canonical slot you'll never want is the same act.
  */
 export function useRemoveEntry(name: string) {
+  const qc = useQueryClient()
   const invalidate = useSeriesInvalidate(name)
   return useMutation({
     mutationFn: async (input: { entryId: string; bookId?: string | null }) => {
-      const { error } = await supabase.from('series_entries').delete().eq('id', input.entryId)
+      const { error } = await supabase.from('series_entries').update(removalPatch()).eq('id', input.entryId)
       if (error) throw error
       if (input.bookId) {
-        const { error: bErr } = await supabase.from('books').update({ series: '' }).eq('id', input.bookId)
+        const { error: bErr } = await supabase.from('books').update({ series: null }).eq('id', input.bookId)
         if (bErr) throw bErr
       }
     },
-    onSuccess: () => invalidate(),
+    onSuccess: () => {
+      invalidate()
+      void qc.invalidateQueries({ queryKey: booksKey })
+      void qc.invalidateQueries({ queryKey: ['series-strip'] })
+    },
   })
 }
 
 /**
- * Reconcile the book page's series edits into series_entries (task-series-defects §Positions/§Removal).
- * updateBook writes the book row; this keeps the SERIES side in step so the two surfaces never disagree:
- *   · position: write the linked entry's position (user_edited, so a source refresh can't move it) — the
- *     book page's "#N" now takes effect on the series page. If no entry exists yet, the series page's
- *     reconciliation seeds it from the (just-written) book row, so it lands either way.
- *   · series change / clear: DETACH from the old series — convert its entry to a GHOST (book_id → null,
- *     keep the slot's title/author/position) so the canonical reading-order slot survives but the book
- *     leaves. Without this, clearing the field left the link and the reconciliation re-added the book.
- * Call AFTER updateBook (the book row must already reflect the new series/position).
+ * Reconcile the book page's series edits into series_entries (docs/task-series-defects.md §Positions,
+ * §Removal). updateBook writes the book row; this keeps the SERIES side in step so the two surfaces
+ * never disagree:
+ *   · position: write the linked entry's position (user_edited, so a source refresh can't move it) —
+ *     the book page's "#N" takes effect on the series page. If no entry exists yet, reconciliation
+ *     seeds it from the (just-written) book row, so it lands either way. Clearing the number sends the
+ *     slot to the END of the order rather than leaving a stale one — the same rule the seeder uses for
+ *     a book with no number at all.
+ *   · series change / clear: REMOVE the old slot. #65 kept it as a ghost, which readers reported as
+ *     "removal doesn't stick" — the book was still sitting in the series. Removal now means the same
+ *     thing here as it does on the series page.
+ *
+ * MUST run after updateBook has SETTLED: reconciliation revives a tombstone for any book still naming
+ * the series, so removing before the book row is written would immediately undo itself.
  */
 export function useSyncBookSeries() {
   const qc = useQueryClient()
@@ -334,32 +389,39 @@ export function useSyncBookSeries() {
     mutationFn: async ({ book, newSeries, newPosition }: { book: Book; newSeries: string; newPosition: number | null }) => {
       const oldSeries = (book.series ?? '').trim()
       const next = newSeries.trim()
+      const seriesIdFor = async (nm: string): Promise<string | undefined> => {
+        const { data } = await supabase.from('series').select('id').eq('name', nm).limit(1)
+        return (data ?? [])[0]?.id as string | undefined
+      }
 
-      // Detach from the old series (name changed or cleared): keep the slot as a ghost.
+      // Left the old series (name changed or cleared) — retire the slot.
       if (oldSeries && oldSeries !== next) {
-        const { data: sRows } = await supabase.from('series').select('id').eq('name', oldSeries).limit(1)
-        const sid = (sRows ?? [])[0]?.id as string | undefined
+        const sid = await seriesIdFor(oldSeries)
         if (sid) {
-          await supabase
-            .from('series_entries')
-            .update({
-              book_id: null,
-              title: book.title,
-              author: [book.first, book.last].filter(Boolean).join(' '),
-            })
-            .eq('series_id', sid)
-            .eq('book_id', book.id)
+          await supabase.from('series_entries').update(removalPatch()).eq('series_id', sid).eq('book_id', book.id)
         }
       }
 
       // Write the position into the (possibly new) series so the book page's value takes effect.
-      if (next && newPosition != null) {
-        const { data: sRows } = await supabase.from('series').select('id').eq('name', next).limit(1)
-        const sid = (sRows ?? [])[0]?.id as string | undefined
+      if (next) {
+        const sid = await seriesIdFor(next)
         if (sid) {
+          let position = newPosition
+          if (position == null) {
+            // Cleared: don't leave the old number standing. Send it to the end, where a book whose
+            // place in the order isn't known belongs.
+            const { data: maxRows } = await supabase
+              .from('series_entries')
+              .select('position')
+              .eq('series_id', sid)
+              .is('removed_at', null)
+              .order('position', { ascending: false })
+              .limit(1)
+            position = Math.floor(Number((maxRows ?? [])[0]?.position ?? 0)) + 1
+          }
           await supabase
             .from('series_entries')
-            .update({ position: newPosition, user_edited: true })
+            .update({ position, user_edited: true })
             .eq('series_id', sid)
             .eq('book_id', book.id)
         }
@@ -369,9 +431,36 @@ export function useSyncBookSeries() {
     onSuccess: (_r, { book, newSeries }) => {
       void qc.invalidateQueries({ queryKey: seriesListKey })
       void qc.invalidateQueries({ queryKey: booksKey })
-      for (const nm of [book.series, newSeries]) if (nm?.trim()) void qc.invalidateQueries({ queryKey: seriesKey(nm) })
+      void qc.invalidateQueries({ queryKey: ['series-strip'] })
+      // REMOVE rather than invalidate: the series query is persisted to IndexedDB and staleTime keeps
+      // a restored copy "fresh", so an invalidated query still PAINTS the old badges for a beat before
+      // the refetch lands. Dropping it means the series page opens on its loading line and the first
+      // thing the reader sees is the number they just typed.
+      for (const nm of [book.series, newSeries]) if (nm?.trim()) qc.removeQueries({ queryKey: seriesKey(nm) })
     },
   })
+}
+
+/**
+ * Revive a tombstone matching this title, if one exists — an explicit add is the reader taking their
+ * removal back, and reusing the row keeps it from going on suppressing source refreshes forever.
+ * Returns true when it handled the add.
+ */
+async function revivedTombstone(seriesId: string, title: string, position: number, bookId: string | null): Promise<boolean> {
+  const { data } = await supabase
+    .from('series_entries')
+    .select('id, title')
+    .eq('series_id', seriesId)
+    .not('removed_at', 'is', null)
+  const match = ((data ?? []) as { id: string; title: string }[]).find(
+    (r) => r.title.trim().toLowerCase() === title.trim().toLowerCase(),
+  )
+  if (!match) return false
+  const { error } = await supabase
+    .from('series_entries')
+    .update({ removed_at: null, book_id: bookId, position, user_edited: true })
+    .eq('id', match.id)
+  return !error
 }
 
 /** Add library books (the picker path) — appended to the end in pick order. */
@@ -382,18 +471,25 @@ export function useAddSeriesEntries(name: string) {
     mutationFn: async (input: { seriesId: string; books: Book[]; after: number }) => {
       const uid = await ownerId()
       let at = Math.floor(input.after)
-      const rows = input.books.map((b) => ({
-        series_id: input.seriesId,
-        owner_id: uid,
-        position: ++at,
-        title: b.title,
-        author: [b.first, b.last].filter(Boolean).join(' '),
-        book_id: b.id,
-        source: 'manual',
-        user_edited: true,
-      }))
-      const { error } = await supabase.from('series_entries').insert(rows)
-      if (error) throw error
+      const rows: Record<string, unknown>[] = []
+      for (const b of input.books) {
+        const position = ++at
+        if (await revivedTombstone(input.seriesId, b.title, position, b.id)) continue
+        rows.push({
+          series_id: input.seriesId,
+          owner_id: uid,
+          position,
+          title: b.title,
+          author: [b.first, b.last].filter(Boolean).join(' '),
+          book_id: b.id,
+          source: 'manual',
+          user_edited: true,
+        })
+      }
+      if (rows.length) {
+        const { error } = await supabase.from('series_entries').insert(rows)
+        if (error) throw error
+      }
       // membership implies the book carries the series name
       for (const b of input.books) {
         if (b.series !== name) {
@@ -415,6 +511,7 @@ export function useAddGhostEntry(name: string) {
   return useMutation({
     mutationFn: async (input: { seriesId: string; title: string; author: string; position: number }) => {
       const uid = await ownerId()
+      if (await revivedTombstone(input.seriesId, input.title, input.position, null)) return
       const { error } = await supabase.from('series_entries').insert({
         series_id: input.seriesId,
         owner_id: uid,
@@ -500,7 +597,9 @@ export function useApplySeriesSource(name: string) {
       const payload = data as { sourceRef: string | null; entries: { position: number; title: string; author: string }[]; unavailable?: boolean }
       const src = payload.entries ?? []
       const { detail } = input
-      const { inserts, moves } = mergeSourceEntries(detail.entries, src)
+      // Tombstones join `existing` so a removed slot MATCHES and is therefore never re-inserted —
+      // the whole point of keeping them. They carry user_edited, so the merge can't try to move one.
+      const { inserts, moves } = mergeSourceEntries([...detail.entries, ...detail.removed], src)
       for (const m of moves) {
         await supabase.from('series_entries').update({ position: m.position }).eq('id', m.id)
       }

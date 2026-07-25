@@ -22,9 +22,10 @@ const COVER_GRID: React.CSSProperties = {
 
 /**
  * The shelf/TBR detail page — a marquee surface: the signature spine-shelf treatment by default,
- * a cover grid for utility. Reordering lives in the GRID view (drag a card, or the ▲▼ keyboard
- * fallback under each card); the spine view stays the untouched signature look. All styling is
- * the existing slot/token kit — nothing bespoke.
+ * a cover grid for utility. BOTH views reorder (drag, or the keyboard arrows beside each book):
+ * reorder used to live in the Grid view only, which is not the view a reader lands on, so
+ * "reordering books in a shelf doesn't work" was the honest reading. All styling is the existing
+ * slot/token kit — nothing bespoke.
  */
 function ShelfScreen() {
   const { listId } = shelfRoute.useParams()
@@ -175,7 +176,9 @@ function ShelfScreen() {
           Empty shelf — add the first book. {voice.motif}
         </p>
       ) : view === 'spines' ? (
-        <SpineShelf books={shelfBooks} onOpen={openBook} onAdd={() => setPickerOpen(true)} addLabel={`Add a book to ${list.name}`} />
+        // The default view is arrangeable too — reorder used to exist only in Grid, which is not
+        // where a reader lands (docs/task-shelf-regressions.md, audit follow-up).
+        <SpineShelf books={shelfBooks} onOpen={openBook} onAdd={() => setPickerOpen(true)} addLabel={`Add a book to ${list.name}`} onReorder={applyOrder} />
       ) : (
         <div style={COVER_GRID}>
           {shelfBooks.map((b, i) => (
