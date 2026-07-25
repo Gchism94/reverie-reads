@@ -54,7 +54,25 @@ createRoot(rootEl).render(
         // buster = the build id: every deploy discards the persisted query cache on load, so a
         // client that updates after a DB migration can never restore a stale query SHAPE (the
         // motivating failure). Ties cache lifetime to the deploy, automatically — no manual bump.
-        persistOptions={{ persister, maxAge: WEEK, buster: BUILD_ID }}
+        persistOptions={{
+          persister,
+          maxAge: WEEK,
+          buster: BUILD_ID,
+          dehydrateOptions: {
+            // The series shelf is NOT mirrored offline. Its query reconciles the library into
+            // series_entries — it WRITES on every run — so a restored copy is a snapshot of a
+            // derived view that can't refresh itself offline anyway. Persisting it also meant a
+            // freshly edited position repainted the OLD badges on load, because staleTime kept the
+            // restored copy "fresh" long enough to render. Let the page open on its loading line
+            // and show what the reader just typed.
+            // `status === 'success'` mirrors TanStack's defaultShouldDehydrateQuery. Inlined rather
+            // than imported: react-query and react-query-persist-client resolve two different
+            // query-core builds here, so the exported helper's Query type doesn't match this
+            // parameter's. One boolean is cheaper than a cast.
+            shouldDehydrateQuery: (q) =>
+              q.state.status === 'success' && q.queryKey[0] !== 'series' && q.queryKey[0] !== 'series-strip',
+          },
+        }}
         onSuccess={() => {
           // Flush any writes that were queued while offline.
           void queryClient.resumePausedMutations()

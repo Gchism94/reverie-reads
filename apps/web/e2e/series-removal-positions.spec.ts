@@ -349,6 +349,12 @@ test('book-page position edits take effect immediately on the series page', asyn
 
     await setPosition(ids[1]!, 'Audit Bravo', '9')
     await expect.poll(async () => (await bookRow(c, 'Audit Bravo'))?.position, { timeout: 15_000 }).toBe(9)
+    // Wait for the SERIES side too before leaving the page. useSyncBookSeries is chained after
+    // updateBook, so the book row lands first; navigating between the two would tear down the page
+    // mid-mutation and the guard below would be measuring a lost write, not a stale repaint.
+    await expect
+      .poll(async () => (await liveEntries(c)).find((e) => e.title === 'Audit Bravo')?.position, { timeout: 15_000 })
+      .toBe(9)
 
     // The stale-paint guard: sample repeatedly from the moment the page opens. The pre-fix build
     // restored the persisted cache and painted ["#1","#2","#3"] for ~2s before the refetch landed.
