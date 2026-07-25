@@ -202,6 +202,17 @@ interface IngestFields {
 
 const SOURCES = new Set(['hardcover', 'google', 'openlibrary', 'upload', 'camera', 'url'])
 
+// Sources whose bytes may be STORED (docs/reverie-metadata-sourcing.md §Covers). Google Books is
+// display-time only: its terms prohibit permanent copies and caching beyond the cache header, so a
+// Google image may be hotlinked at display size but never ingested. This is the authoritative gate —
+// the client refuses too, but the client is not the security boundary.
+const INGESTIBLE_SOURCES = new Set(['hardcover', 'openlibrary', 'upload', 'camera', 'url'])
+
+/** Host check, because the declared source is not sufficient: a Google URL wearing the label 'url'
+ *  (the lazy backfill's label for pre-existing covers) is still a Google image. */
+const isGoogleHostedCover = (url: string): boolean =>
+  /(?:books\.google\.[a-z.]+|googleusercontent\.com)\/books\/content/i.test(url || '')
+
 async function handleIngest(req: Request, uid: string): Promise<Response> {
   let file: Uint8Array | null = null
   let fields: IngestFields
@@ -226,6 +237,17 @@ async function handleIngest(req: Request, uid: string): Promise<Response> {
 
   if (!fields.bookId || !/^[0-9a-f-]{16,64}$/i.test(fields.bookId)) return json({ error: 'bad_book_id' }, 400)
   if (!SOURCES.has(fields.source)) return json({ error: 'bad_source' }, 400)
+  // Refuse to persist a display-only source, by label OR by host.
+  if (!INGESTIBLE_SOURCES.has(fields.source)) {
+    logEvent('info', 'covers', 'ingest_refused_display_only', { uid, source: fields.source })
+    return json({ error: 'display_only_source' }, 422)
+  }
+  for (const candidate of [fields.url, fields.sourceUrl]) {
+    if (candidate && isGoogleHostedCover(candidate)) {
+      logEvent('info', 'covers', 'ingest_refused_display_only', { uid, source: fields.source, host: 'google' })
+      return json({ error: 'display_only_source' }, 422)
+    }
+  }
 
   // URL path: fetch server-side (direct image URLs only — a product page yields non-image bytes
   // and fails validation below; we deliberately do NOT scrape HTML for og:image).

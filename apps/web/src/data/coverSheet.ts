@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { Book, CoverSource } from '@reverie/core'
+import { mayIngestCover, upgradeCoverUrl, type Book, type CoverSource } from '@reverie/core'
 import { fetchEditions, ingestCover, type EditionOption } from '../lib/covers'
 import { clearCoverBroken } from './brokenCovers'
 import { useUpdateBook } from './books'
@@ -16,6 +16,13 @@ export function useEditionOptions(book: Book, enabled: boolean) {
     queryFn: () => fetchEditions({ isbn: book.isbn || undefined, title: book.title, author }),
     enabled: enabled && !!(book.isbn || book.title),
     staleTime: 5 * 60 * 1000,
+    // Candidates we can actually KEEP lead the list. Google editions stay — they're legitimate
+    // display candidates and often the only ones — but a reader scanning top-down meets the
+    // storable options first. Stable within each group, so each source's own order survives.
+    select: (list) => [
+      ...list.filter((e) => mayIngestCover(e.source, e.cover)),
+      ...list.filter((e) => !mayIngestCover(e.source, e.cover)),
+    ],
   })
 }
 
@@ -30,14 +37,52 @@ export interface SetCoverInput {
   userChosen?: boolean
 }
 
-export type SetCoverError = 'not_an_image' | 'too_large' | 'fetch_failed' | 'no_cover_available' | 'failed'
+export type SetCoverError =
+  | 'not_an_image'
+  | 'too_large'
+  | 'fetch_failed'
+  | 'no_cover_available'
+  | 'display_only_source'
+  | 'failed'
 
-/** Ingest + persist. Resolves with the stored URLs; rejects with a SetCoverError code string. */
+/**
+ * Set a book's cover. Two outcomes by design (docs/reverie-metadata-sourcing.md §Covers):
+ *
+ *  · INGEST — Open Library, upload, camera, a pasted link, Hardcover: the bytes go through the
+ *    pipeline and are stored in the reader's own Storage path, with provenance.
+ *  · HOTLINK — Google Books: usable as an edition candidate and rendered at display size, but its
+ *    terms forbid permanent copies, so we keep the URL and store nothing. The reader's pick still
+ *    works and still counts as their choice; only the bytes stay where they are.
+ *
+ * The hotlink branch is what keeps a Google edition from becoming a dead end in the sheet — the
+ * alternative was offering a candidate that errors when picked.
+ */
 export function useSetCover() {
   const qc = useQueryClient()
   const update = useUpdateBook()
   return useMutation({
     mutationFn: async ({ book, source, file, url, sourceUrl, userChosen = true }: SetCoverInput) => {
+      const chosen = { coverUserChosen: true, coverConfidence: undefined } as const
+
+      // Display-only: record the reference, fetch nothing. Judged by host as well as by label,
+      // since the lazy backfill's 'url' label can carry a Google image.
+      if (!file && !mayIngestCover(source, url)) {
+        const display = upgradeCoverUrl(url ?? '', 'full')
+        if (!display) throw new Error('failed')
+        await update.mutateAsync({
+          id: book.id,
+          patch: {
+            cover: display,
+            coverThumb: upgradeCoverUrl(url ?? '', 'thumb'),
+            coverSource: source,
+            coverSourceUrl: sourceUrl ?? url,
+            ...(userChosen ? chosen : {}),
+          },
+        })
+        clearCoverBroken(book.id)
+        return { cover: display, thumb: '', sourceUrl: sourceUrl ?? url ?? null, color: null, hotlinked: true }
+      }
+
       const outcome = await ingestCover({ bookId: book.id, source, file, url, sourceUrl })
       if (outcome.status === 'error') throw new Error(outcome.code)
       const d = outcome.data
@@ -49,11 +94,11 @@ export function useSetCover() {
           coverSource: source,
           coverSourceUrl: d.sourceUrl ?? undefined,
           coverColor: d.color ?? undefined,
-          ...(userChosen ? { coverUserChosen: true, coverConfidence: undefined } : {}),
+          ...(userChosen ? chosen : {}),
         },
       })
       clearCoverBroken(book.id)
-      return d
+      return { ...d, hotlinked: false }
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['books'] })
