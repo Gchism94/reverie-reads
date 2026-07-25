@@ -22,9 +22,10 @@ const COVER_GRID: React.CSSProperties = {
 
 /**
  * The shelf/TBR detail page — a marquee surface: the signature spine-shelf treatment by default,
- * a cover grid for utility. Reordering lives in the GRID view (drag a card, or the ▲▼ keyboard
- * fallback under each card); the spine view stays the untouched signature look. All styling is
- * the existing slot/token kit — nothing bespoke.
+ * a cover grid for utility. BOTH views reorder (drag, or the keyboard arrows beside each book):
+ * reorder used to live in the Grid view only, which is not the view a reader lands on, so
+ * "reordering books in a shelf doesn't work" was the honest reading. All styling is the existing
+ * slot/token kit — nothing bespoke.
  */
 function ShelfScreen() {
   const { listId } = shelfRoute.useParams()
