@@ -176,7 +176,7 @@ test('Discover search: add a result to a shelf as unowned via the shelf chooser'
         { timeout: 15_000 },
       )
       .toBe(1)
-    expect((await bookByTitle(c.sb, c.uid, 'Wildfire Vow'))?.ownership).toBe('unowned')
+    expect((await bookByTitle(c.sb, c.uid, 'Wildfire Vow'))?.ownership).toBe('wishlist') // #68: 'unowned' → 'wishlist'
   } finally {
     await reset(c)
   }
@@ -214,7 +214,7 @@ test('Shelf picker seam: "search everywhere" finds and adds an unowned book to t
         { timeout: 15_000 },
       )
       .toBe(1)
-    expect((await bookByTitle(c.sb, c.uid, 'Wildfire Vow'))?.ownership).toBe('unowned')
+    expect((await bookByTitle(c.sb, c.uid, 'Wildfire Vow'))?.ownership).toBe('wishlist') // #68: 'unowned' → 'wishlist'
   } finally {
     await reset(c)
   }
