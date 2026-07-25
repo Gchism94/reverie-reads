@@ -10,6 +10,7 @@ export type ReportTarget = 'review' | 'club_comment'
  */
 export function useReportContent() {
   return useMutation({
+    meta: { action: 'The report' },
     mutationFn: async ({ targetType, targetId, reason }: { targetType: ReportTarget; targetId: string; reason?: string }) => {
       const { data: auth } = await supabase.auth.getUser()
       const uid = auth.user?.id

@@ -146,6 +146,7 @@ export function useClubLockedInfo(id: string) {
 export function useCreateClub() {
   const qc = useQueryClient()
   return useMutation({
+    meta: { action: 'The club' },
     mutationFn: async (input: {
       title: string
       author: string
@@ -186,6 +187,7 @@ export function useCreateClub() {
 export function useJoinClub() {
   const qc = useQueryClient()
   return useMutation({
+    meta: { action: 'The club' },
     mutationFn: async ({ code, displayName }: { code: string; displayName: string }): Promise<string | null> => {
       const { data, error } = await supabase.rpc('join_club_by_code', { p_code: code, p_name: displayName })
       if (error) throw error
@@ -198,6 +200,7 @@ export function useJoinClub() {
 export function useSetProgress(id: string) {
   const qc = useQueryClient()
   return useMutation({
+    meta: { action: 'The club' },
     mutationFn: async (progress: number): Promise<void> => {
       const { data: auth } = await supabase.auth.getUser()
       const uid = auth.user?.id
@@ -220,6 +223,7 @@ export function useSetProgress(id: string) {
 export function usePostComment(id: string) {
   const qc = useQueryClient()
   return useMutation({
+    meta: { action: 'The club' },
     mutationFn: async ({ unit, body }: { unit: number; body: string }): Promise<void> => {
       const { data: auth } = await supabase.auth.getUser()
       const uid = auth.user?.id
@@ -235,6 +239,7 @@ export function usePostComment(id: string) {
 export function useSetCommentHidden(id: string) {
   const qc = useQueryClient()
   return useMutation({
+    meta: { action: 'The club' },
     mutationFn: async ({ commentId, hidden }: { commentId: string; hidden: boolean }): Promise<void> => {
       const { error } = await supabase.from('club_comments').update({ hidden }).eq('id', commentId)
       if (error) throw error
@@ -246,6 +251,7 @@ export function useSetCommentHidden(id: string) {
 export function useLeaveClub() {
   const qc = useQueryClient()
   return useMutation({
+    meta: { action: 'The club' },
     mutationFn: async (id: string): Promise<void> => {
       const { data: auth } = await supabase.auth.getUser()
       const uid = auth.user?.id

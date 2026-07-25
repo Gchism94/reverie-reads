@@ -80,6 +80,7 @@ export function useProfile() {
 export function useUpdateProfile() {
   const qc = useQueryClient()
   return useMutation({
+    meta: { action: 'Your profile' },
     mutationFn: async (patch: {
       displayName?: string
       goalYear?: number | null

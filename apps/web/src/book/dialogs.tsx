@@ -1,5 +1,22 @@
 import { useState, type ReactNode } from 'react'
-import { authorOf, bookSubgenres, CORE_GENRES, fromFirstLast, mergeBooks, SERIES_STATUS_LABELS, SERIES_STATUS_VALUES, type Book, type Contributor, type SeriesStatus } from '@reverie/core'
+import {
+  authorOf,
+  bookSubgenres,
+  CORE_GENRES,
+  fromFirstLast,
+  mergeBooks,
+  parseNumericFields,
+  PUB_DAY,
+  PUB_MONTH,
+  PUB_YEAR,
+  SERIES_COUNT,
+  SERIES_POSITION,
+  SERIES_STATUS_LABELS,
+  SERIES_STATUS_VALUES,
+  type Book,
+  type Contributor,
+  type SeriesStatus,
+} from '@reverie/core'
 import { Modal } from '../components/Modal'
 import { Chip } from '../components/Chip'
 import { Stars } from '../components/Stars'
@@ -12,6 +29,7 @@ import { usePerformMerge } from '../data/mergeBooks'
 import { maybeChainPrompt } from '../lib/chainPrompt'
 import { ContributorEditor } from './ContributorEditor'
 import { MoodPicker } from '../components/MoodPicker'
+import { readableWriteError } from '../lib/writeErrors'
 
 /** Distinct contributor names across the library, for autocomplete. */
 function useAuthorSuggestions(): string[] {
@@ -25,11 +43,17 @@ const fieldClass =
   'h-10 w-full rounded-xl border border-line px-3 text-[14px] text-ink outline-none'
 const fieldStyle = { background: 'var(--field)' } as const
 
-function Field({ label, children }: { label: string; children: ReactNode }) {
+function Field({ label, children, error }: { label: string; children: ReactNode; error?: string }) {
   return (
     <label className="block">
       <span className="mb-1 block text-[11px] uppercase tracking-[0.15em] text-muted">{label}</span>
       {children}
+      {/* Named right under the field that's wrong, so a rejected value is obvious and local. */}
+      {error && (
+        <span className="mt-1 block text-[11.5px]" style={{ color: 'var(--accent-ink)' }}>
+          {error}
+        </span>
+      )}
     </label>
   )
 }
@@ -44,8 +68,13 @@ export function LogReadForm({ book, onClose }: { book: Book; onClose: () => void
   const [notes, setNotes] = useState('')
 
   function save() {
+    // The read's rating belongs to the READ. It used to be written onto books.rating as well, so
+    // logging a reread you merely liked silently overwrote the rating you gave the book — and with
+    // it the input to stats, taste matching and recommendations. The two are separate judgements:
+    // this one is "how was this time through", the book's own rating stays the reader's to set on
+    // the book page. Only the read STATUS follows from logging a read.
     addRead.mutate({ date, format, rating, notes: notes.trim() })
-    updateBook.mutate({ id: book.id, patch: rating ? { readStatus: 'Read', rating } : { readStatus: 'Read' } })
+    updateBook.mutate({ id: book.id, patch: { readStatus: 'Read' } })
     void maybeChainPrompt(book, books ?? [])
     onClose()
   }
@@ -129,60 +158,83 @@ export function EditDetails({
     setSubs((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]))
   const subVocab = subgenresForGenre(f.genre)
   const subOptions = [...subs.filter((s) => !subVocab.includes(s)), ...subVocab]
-  const set = (k: keyof typeof f, v: string) => setF((prev) => ({ ...prev, [k]: v }))
-  const numOrNull = (v: string) => (v.trim() === '' ? null : Number(v) || null)
-
-  // `Number(v) || ''` treated 0 as empty, so #0 (a prequel slot the app positions with elsewhere)
-  // could not be set and silently cleared the field instead. Parse explicitly; only genuinely blank
-  // or non-numeric input means "no position".
-  const parsePosition = (v: string): number | '' => {
-    const raw = v.trim()
-    if (raw === '') return ''
-    const n = Number(raw)
-    return Number.isFinite(n) ? n : ''
+  const set = (k: keyof typeof f, v: string) => {
+    setF((prev) => ({ ...prev, [k]: v }))
+    setFieldErrors((prev) => (prev[k] ? { ...prev, [k]: undefined } : prev)) // typing clears its own error
   }
   const oldSeries = book.series.trim()
   const leavingSeries = !!oldSeries && f.series.trim() !== oldSeries
   const [confirmingLeave, setConfirmingLeave] = useState(false)
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof typeof f, string | undefined>>>({})
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
-  function save() {
-    if (!f.genre) return
-    const position = parsePosition(f.position)
-    // Sequenced, not fired alongside: useSyncBookSeries removes the old slot, and reconciliation
-    // revives a tombstone for any book still naming the series — so the book row has to be written
-    // FIRST or the removal would immediately undo itself.
-    //
-    // The chain hangs off mutateAsync's promise rather than a per-call onSuccess because this dialog
-    // closes immediately: per-call callbacks belong to the observer and are dropped on unmount, while
-    // this promise (and each hook's own onSuccess) survives it.
-    void updateBook
-      .mutateAsync({
+  /** All five numeric fields through the ONE parser, with the bounds the columns actually enforce. */
+  const readNumbers = () =>
+    parseNumericFields({
+      position: { raw: f.position, spec: SERIES_POSITION },
+      seriesCount: { raw: f.seriesCount, spec: SERIES_COUNT },
+      pubY: { raw: f.pubY, spec: PUB_YEAR },
+      pubM: { raw: f.pubM, spec: PUB_MONTH },
+      pubD: { raw: f.pubD, spec: PUB_DAY },
+    })
+
+  /**
+   * Save, as ONE sequenced operation that either lands or reports where it stopped.
+   *
+   * Three independent writes used to be fired off side by side and the dialog closed immediately.
+   * If the book patch was rejected — an out-of-range month was enough — the contributors RPC still
+   * succeeded, leaving the byline changed and every other field reverted, with nothing said. So:
+   * validate first (the rejection above is now impossible), then run the writes in order, stopping
+   * at the first failure, and keep the dialog open so the reader can see and fix it.
+   *
+   * Order is forced: useSyncBookSeries removes the old slot, and reconciliation revives a tombstone
+   * for any book still naming the series — so the book row must be written before the series sync.
+   */
+  async function save() {
+    if (!f.genre || saving) return
+    const parsed = readNumbers()
+    if (!parsed.ok) {
+      setFieldErrors(parsed.errors)
+      setSaveError('Some values need fixing before this can save.')
+      setConfirmingLeave(false)
+      return
+    }
+    const { position: pos, seriesCount, pubY, pubM, pubD } = parsed.values
+    const position = pos ?? ''
+
+    setSaving(true)
+    setSaveError(null)
+    // `action` names the step, so a failure at any point says which one didn't save.
+    try {
+      await updateBook.mutateAsync({
         id: book.id,
         patch: {
           series: f.series,
           position,
-          seriesCount: numOrNull(f.seriesCount),
+          seriesCount,
           status: f.status as SeriesStatus,
           genre: f.genre,
           subgenres: subs,
           subgenre: subs[0] ?? '',
           format: f.format,
-          pub: { y: numOrNull(f.pubY), m: numOrNull(f.pubM), d: numOrNull(f.pubD) },
+          pub: { y: pubY, m: pubM, d: pubD },
         },
       })
-      .then(() =>
-        syncBookSeries.mutate({
-          book,
-          newSeries: f.series,
-          newPosition: typeof position === 'number' ? position : null,
-        }),
-      )
-      .catch(() => {
-        /* useUpdateBook rolls its optimistic patch back; nothing to reconcile on the series side */
-      })
-    // Contributors persist through the RPC (it also refreshes the primary first/last + byline).
-    setContributors.mutate({ bookId: book.id, contributors: contribs })
-    onClose()
+      // Series sync stays adjacent to the book write it depends on, so the two never diverge.
+      await syncBookSeries.mutateAsync({ book, newSeries: f.series, newPosition: pos })
+      // Contributors last: the most independent write, through its own RPC (it also refreshes the
+      // primary first/last + byline).
+      await setContributors.mutateAsync({ bookId: book.id, contributors: contribs })
+      onClose()
+    } catch (err) {
+      // The global MutationCache handler already surfaced the toast; this names the state INSIDE the
+      // dialog and — crucially — leaves it OPEN, so nothing is silently half-applied behind a
+      // dismissed sheet. Steps before the failure did land; the reader sees the form still showing
+      // what they typed and can retry.
+      setSaveError(readableWriteError(err))
+      setSaving(false)
+    }
   }
 
   return (
@@ -202,11 +254,11 @@ export function EditDetails({
         <Field label="Series">
           <input value={f.series} onChange={(e) => set('series', e.target.value)} className={fieldClass} style={fieldStyle} />
         </Field>
-        <Field label="Position">
-          <input value={f.position} onChange={(e) => set('position', e.target.value)} className={fieldClass} style={fieldStyle} />
+        <Field label="Position" error={fieldErrors.position}>
+          <input value={f.position} onChange={(e) => set('position', e.target.value)} inputMode="decimal" aria-invalid={!!fieldErrors.position} className={fieldClass} style={fieldStyle} />
         </Field>
-        <Field label="Series length">
-          <input value={f.seriesCount} onChange={(e) => set('seriesCount', e.target.value)} placeholder="None set" className={fieldClass} style={fieldStyle} />
+        <Field label="Series length" error={fieldErrors.seriesCount}>
+          <input value={f.seriesCount} onChange={(e) => set('seriesCount', e.target.value)} placeholder="None set" inputMode="numeric" aria-invalid={!!fieldErrors.seriesCount} className={fieldClass} style={fieldStyle} />
         </Field>
         <Field label="Series status">
           {/* the SERIES' publication status — the reader's own progress lives in reads */}
@@ -266,14 +318,14 @@ export function EditDetails({
         <MoodPicker book={book} />
       </div>
       <div className="mt-3 grid grid-cols-3 gap-3">
-        <Field label="Pub year">
-          <input value={f.pubY} onChange={(e) => set('pubY', e.target.value)} className={fieldClass} style={fieldStyle} />
+        <Field label="Pub year" error={fieldErrors.pubY}>
+          <input value={f.pubY} onChange={(e) => set('pubY', e.target.value)} placeholder="2021" inputMode="numeric" aria-invalid={!!fieldErrors.pubY} className={fieldClass} style={fieldStyle} />
         </Field>
-        <Field label="Month">
-          <input value={f.pubM} onChange={(e) => set('pubM', e.target.value)} className={fieldClass} style={fieldStyle} />
+        <Field label="Month" error={fieldErrors.pubM}>
+          <input value={f.pubM} onChange={(e) => set('pubM', e.target.value)} placeholder="1–12" inputMode="numeric" aria-invalid={!!fieldErrors.pubM} className={fieldClass} style={fieldStyle} />
         </Field>
-        <Field label="Day">
-          <input value={f.pubD} onChange={(e) => set('pubD', e.target.value)} className={fieldClass} style={fieldStyle} />
+        <Field label="Day" error={fieldErrors.pubD}>
+          <input value={f.pubD} onChange={(e) => set('pubD', e.target.value)} placeholder="1–31" inputMode="numeric" aria-invalid={!!fieldErrors.pubD} className={fieldClass} style={fieldStyle} />
         </Field>
       </div>
       {/* Clearing or renaming the series REMOVES this book's slot from that series' reading order —
@@ -299,24 +351,31 @@ export function EditDetails({
             </button>
             <button
               type="button"
-              onClick={save}
-              className="h-11 flex-1 rounded-xl text-[14px] font-semibold"
+              onClick={() => void save()}
+              disabled={saving}
+              className="h-11 flex-1 rounded-xl text-[14px] font-semibold disabled:opacity-50"
               style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))', color: 'var(--on-primary)' }}
             >
-              Save and remove
+              {saving ? 'Saving…' : 'Save and remove'}
             </button>
           </div>
         </div>
       ) : (
         <button
           type="button"
-          onClick={() => (leavingSeries ? setConfirmingLeave(true) : save())}
-          disabled={!f.genre}
+          onClick={() => (leavingSeries ? setConfirmingLeave(true) : void save())}
+          disabled={!f.genre || saving}
           className="mt-4 h-11 w-full rounded-xl text-[14px] font-semibold disabled:opacity-40"
           style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))', color: 'var(--on-primary)' }}
         >
-          {f.genre ? 'Save details' : 'Pick a genre to save'}
+          {saving ? 'Saving…' : f.genre ? 'Save details' : 'Pick a genre to save'}
         </button>
+      )}
+      {/* The dialog stays OPEN on failure — the reader keeps what they typed and can see why. */}
+      {saveError && (
+        <p role="alert" className="mt-2 text-[12.5px]" style={{ color: 'var(--accent-ink)' }}>
+          {saveError}
+        </p>
       )}
     </Modal>
   )

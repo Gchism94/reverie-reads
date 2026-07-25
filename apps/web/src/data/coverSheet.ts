@@ -61,6 +61,7 @@ export function useSetCover() {
   const qc = useQueryClient()
   const update = useUpdateBook()
   return useMutation({
+    meta: { action: 'The cover' },
     mutationFn: async ({ book, source, file, url, sourceUrl, userChosen = true }: SetCoverInput) => {
       const chosen = { coverUserChosen: true, coverConfidence: undefined } as const
 

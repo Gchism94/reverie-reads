@@ -92,6 +92,7 @@ export function useAuthorFollows() {
 export function useSetFollow() {
   const qc = useQueryClient()
   return useMutation({
+    meta: { action: 'Release tracking' },
     mutationFn: async ({ name, state }: { name: string; state: FollowState | null }): Promise<void> => {
       const { data: auth } = await supabase.auth.getUser()
       const userId = auth.user?.id

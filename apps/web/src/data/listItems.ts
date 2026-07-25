@@ -43,6 +43,7 @@ export function useBookListIds(bookId: string) {
 export function useAddBooksToList() {
   const qc = useQueryClient()
   return useMutation({
+    meta: { action: 'The shelf' },
     mutationFn: async ({ listId, bookIds }: { listId: string; bookIds: string[] }): Promise<void> => {
       const { data: auth } = await supabase.auth.getUser()
       const ownerId = auth.user?.id
@@ -66,6 +67,7 @@ export function useAddBooksToList() {
 export function useRemoveListItem() {
   const qc = useQueryClient()
   return useMutation({
+    meta: { action: 'The shelf' },
     mutationFn: async ({ listId, bookId }: { listId: string; bookId: string }): Promise<void> => {
       const { error } = await supabase
         .from('list_items')
@@ -87,6 +89,7 @@ export function useToggleListItem(bookId: string) {
   const qc = useQueryClient()
   const key = bookListsKey(bookId)
   return useMutation({
+    meta: { action: 'The shelf' },
     mutationFn: async ({ listId, member }: { listId: string; member: boolean }): Promise<void> => {
       if (member) {
         const { error } = await supabase
@@ -129,6 +132,7 @@ export function useToggleListItem(bookId: string) {
 export function useAddListItem() {
   const qc = useQueryClient()
   return useMutation({
+    meta: { action: 'The shelf' },
     mutationFn: async ({ listId, bookId, afterPosition }: { listId: string; bookId: string; afterPosition: number }): Promise<void> => {
       const { data: auth } = await supabase.auth.getUser()
       const ownerId = auth.user?.id
