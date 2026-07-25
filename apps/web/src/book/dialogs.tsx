@@ -132,26 +132,54 @@ export function EditDetails({
   const set = (k: keyof typeof f, v: string) => setF((prev) => ({ ...prev, [k]: v }))
   const numOrNull = (v: string) => (v.trim() === '' ? null : Number(v) || null)
 
+  // `Number(v) || ''` treated 0 as empty, so #0 (a prequel slot the app positions with elsewhere)
+  // could not be set and silently cleared the field instead. Parse explicitly; only genuinely blank
+  // or non-numeric input means "no position".
+  const parsePosition = (v: string): number | '' => {
+    const raw = v.trim()
+    if (raw === '') return ''
+    const n = Number(raw)
+    return Number.isFinite(n) ? n : ''
+  }
+  const oldSeries = book.series.trim()
+  const leavingSeries = !!oldSeries && f.series.trim() !== oldSeries
+  const [confirmingLeave, setConfirmingLeave] = useState(false)
+
   function save() {
     if (!f.genre) return
-    const position = f.position.trim() === '' ? '' : Number(f.position) || ''
-    updateBook.mutate({
-      id: book.id,
-      patch: {
-        series: f.series,
-        position,
-        seriesCount: numOrNull(f.seriesCount),
-        status: f.status as SeriesStatus,
-        genre: f.genre,
-        subgenres: subs,
-        subgenre: subs[0] ?? '',
-        format: f.format,
-        pub: { y: numOrNull(f.pubY), m: numOrNull(f.pubM), d: numOrNull(f.pubD) },
-      },
-    })
-    // Reconcile the SERIES side so the series page agrees: a position edit writes through to the
-    // linked entry, and clearing/changing the series detaches the book (keeping the slot as a ghost).
-    syncBookSeries.mutate({ book, newSeries: f.series, newPosition: typeof position === 'number' ? position : null })
+    const position = parsePosition(f.position)
+    // Sequenced, not fired alongside: useSyncBookSeries removes the old slot, and reconciliation
+    // revives a tombstone for any book still naming the series — so the book row has to be written
+    // FIRST or the removal would immediately undo itself.
+    //
+    // The chain hangs off mutateAsync's promise rather than a per-call onSuccess because this dialog
+    // closes immediately: per-call callbacks belong to the observer and are dropped on unmount, while
+    // this promise (and each hook's own onSuccess) survives it.
+    void updateBook
+      .mutateAsync({
+        id: book.id,
+        patch: {
+          series: f.series,
+          position,
+          seriesCount: numOrNull(f.seriesCount),
+          status: f.status as SeriesStatus,
+          genre: f.genre,
+          subgenres: subs,
+          subgenre: subs[0] ?? '',
+          format: f.format,
+          pub: { y: numOrNull(f.pubY), m: numOrNull(f.pubM), d: numOrNull(f.pubD) },
+        },
+      })
+      .then(() =>
+        syncBookSeries.mutate({
+          book,
+          newSeries: f.series,
+          newPosition: typeof position === 'number' ? position : null,
+        }),
+      )
+      .catch(() => {
+        /* useUpdateBook rolls its optimistic patch back; nothing to reconcile on the series side */
+      })
     // Contributors persist through the RPC (it also refreshes the primary first/last + byline).
     setContributors.mutate({ bookId: book.id, contributors: contribs })
     onClose()
@@ -248,15 +276,48 @@ export function EditDetails({
           <input value={f.pubD} onChange={(e) => set('pubD', e.target.value)} className={fieldClass} style={fieldStyle} />
         </Field>
       </div>
-      <button
-        type="button"
-        onClick={save}
-        disabled={!f.genre}
-        className="mt-4 h-11 w-full rounded-xl text-[14px] font-semibold disabled:opacity-40"
-        style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))', color: 'var(--on-primary)' }}
-      >
-        {f.genre ? 'Save details' : 'Pick a genre to save'}
-      </button>
+      {/* Clearing or renaming the series REMOVES this book's slot from that series' reading order —
+          the same removal the series page's ✕ performs. Destructive enough to name before it happens. */}
+      {confirmingLeave ? (
+        <div className="mt-4 rounded-xl border border-line p-3" style={{ background: 'var(--field)' }}>
+          <p className="text-[13px] text-ink">
+            {f.series.trim()
+              ? `Moving this book to ${f.series.trim()} removes its slot from ${oldSeries}.`
+              : `This removes the book’s slot from ${oldSeries}.`}{' '}
+            <span className="text-muted">
+              The book stays in your library, and fetching {oldSeries} again won’t bring the slot back.
+            </span>
+          </p>
+          <div className="mt-3 flex gap-2">
+            <button
+              type="button"
+              onClick={() => setConfirmingLeave(false)}
+              className="h-11 flex-1 rounded-xl border border-line text-[13.5px] font-semibold text-ink"
+              style={{ background: 'var(--card)' }}
+            >
+              Keep it in {oldSeries}
+            </button>
+            <button
+              type="button"
+              onClick={save}
+              className="h-11 flex-1 rounded-xl text-[14px] font-semibold"
+              style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))', color: 'var(--on-primary)' }}
+            >
+              Save and remove
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => (leavingSeries ? setConfirmingLeave(true) : save())}
+          disabled={!f.genre}
+          className="mt-4 h-11 w-full rounded-xl text-[14px] font-semibold disabled:opacity-40"
+          style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))', color: 'var(--on-primary)' }}
+        >
+          {f.genre ? 'Save details' : 'Pick a genre to save'}
+        </button>
+      )}
     </Modal>
   )
 }

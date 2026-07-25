@@ -7,24 +7,42 @@ import { CoverImage } from './CoverImage'
  * A horizontal shelf of book spines — each a real per-skin Spine (gilt-bound Tryst · brushed-metal
  * Aphelion), sized book-to-book. The spine nearest the shelf's centre widens, and flips open to its
  * cover when it has one — the design's signature spine-shelf interaction.
+ *
+ * Pass `onReorder` to make the shelf arrangeable in place (drag a spine, or the ◀▶ under it).
+ * Reordering used to live only in the shelf page's GRID view, which is not the view a reader lands
+ * on — so "reordering books in a shelf doesn't work" was the honest reading. Surfaces that are about
+ * something other than one shelf's order (the /shelves overview, Home's rails) simply omit it.
  */
 export function SpineShelf({
   books,
   onOpen,
   onAdd,
   addLabel = 'Add a book',
+  onReorder,
 }: {
   books: Book[]
   onOpen: (id: string) => void
   /** renders a "+" end-cap slot on the shelf — the add-book affordance in shelf form */
   onAdd?: () => void
   addLabel?: string
+  /** when set, spines can be dragged (and keyboard-moved) into a new order */
+  onReorder?: (orderedIds: string[]) => void
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const [activeId, setActiveId] = useState<string | null>(books[0]?.id ?? null)
   // Pointer/keyboard reveal, layered over the scroll-driven pick: shelves too short to scroll
   // never move activeId, so hover / :focus-visible / first-tap must be able to flip a spine too.
   const [pointerId, setPointerId] = useState<string | null>(null)
+  const [dragIdx, setDragIdx] = useState<number | null>(null)
+
+  /** Move the spine at `from` into slot `to`, then hand the whole new order up. */
+  const place = (from: number, to: number) => {
+    if (!onReorder || from === to || to < 0 || to >= books.length || from < 0 || from >= books.length) return
+    const ids = books.map((b) => b.id)
+    const [moved] = ids.splice(from, 1)
+    ids.splice(to, 0, moved!)
+    onReorder(ids)
+  }
 
   useEffect(() => {
     const el = ref.current
@@ -67,16 +85,24 @@ export function SpineShelf({
       style={{ scrollbarWidth: 'none' }}
       onPointerLeave={() => setPointerId(null)}
     >
-      {books.map((b) => {
+      {books.map((b, i) => {
         const shown = b.id === shownId
         // Spines you don't have in hand (wishlist / unset) sit ghosted on the shelf — a TBR shelf is
         // mostly books you don't own yet. A borrowed book is in hand, so it never ghosts. Artwork-only
         // dim (--ghost-opacity); the title stays in the aria-label.
         const unowned = !isPossessed(b)
         return (
+          <div key={b.id} className="flex flex-none flex-col items-center self-end">
           <button
-            key={b.id}
             data-spine={b.id}
+            draggable={!!onReorder}
+            onDragStart={() => setDragIdx(i)}
+            onDragOver={(e) => onReorder && e.preventDefault()}
+            onDrop={() => {
+              if (dragIdx != null) place(dragIdx, i)
+              setDragIdx(null)
+            }}
+            onDragEnd={() => setDragIdx(null)}
             // One rule, every modality: a not-yet-revealed spine's first activation reveals it; the
             // revealed spine opens. Mouse hover reveals before the click ever lands (click opens);
             // touch gets tap-to-reveal then tap-to-open; keyboard reveals on focus, Enter opens.
@@ -90,6 +116,7 @@ export function SpineShelf({
             title={b.title}
             aria-label={shown ? `Open ${b.title}` : `Reveal ${b.title}`}
             className="flex-none snap-center self-end"
+            style={dragIdx === i ? { opacity: 0.4 } : undefined}
           >
             {/* the featured volume lifts off the shelf, the skin's accent pointing beneath it —
                 the chunk-4 composed screens' shared shelf gesture (all nine skins agree) */}
@@ -119,6 +146,33 @@ export function SpineShelf({
               )}
             </span>
           </button>
+          {/* The keyboard half of the gesture — drag alone would leave the shelf unarrangeable
+              without a pointer. Quiet enough to leave the signature look intact. */}
+          {onReorder && (
+            <span className="mt-1 flex gap-0.5">
+              <button
+                type="button"
+                onClick={() => place(i, i - 1)}
+                disabled={i === 0}
+                aria-label={`Move ${b.title} earlier`}
+                className="rounded border border-line px-1 text-[11px] leading-none text-muted disabled:opacity-30"
+                style={{ background: 'var(--chip)' }}
+              >
+                ◀
+              </button>
+              <button
+                type="button"
+                onClick={() => place(i, i + 1)}
+                disabled={i === books.length - 1}
+                aria-label={`Move ${b.title} later`}
+                className="rounded border border-line px-1 text-[11px] leading-none text-muted disabled:opacity-30"
+                style={{ background: 'var(--chip)' }}
+              >
+                ▶
+              </button>
+            </span>
+          )}
+          </div>
         )
       })}
       {onAdd && (

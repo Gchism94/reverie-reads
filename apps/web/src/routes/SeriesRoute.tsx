@@ -62,6 +62,7 @@ function SeriesScreen() {
   // Appends within one picker session step past the stale cache max (invalidation lags picks).
   const [pickCount, setPickCount] = useState(0)
   const [acquiring, setAcquiring] = useState<SeriesEntry | null>(null)
+  const [removing, setRemoving] = useState<SeriesEntry | null>(null)
   const [dragIdx, setDragIdx] = useState<number | null>(null)
   const [sourceNote, setSourceNote] = useState<string | null>(null)
 
@@ -300,11 +301,16 @@ function SeriesScreen() {
                       ＋ Add
                     </button>
                   )}
-                  {!book && (
-                    <button type="button" onClick={() => removeEntry.mutate({ entryId: e.id, bookId: e.bookId })} aria-label={`Remove ${e.title} from the series`} className="h-8 w-8 rounded-full text-[13px] text-muted hover:text-ink">
-                      ✕
-                    </button>
-                  )}
+                  {/* Every slot can be removed — ghost or not. Gating this on `!book` is what left a
+                      book added from here with no way out (docs/task-series-defects.md §Removal). */}
+                  <button
+                    type="button"
+                    onClick={() => setRemoving(e)}
+                    aria-label={`Remove ${book?.title ?? e.title} from the series`}
+                    className="h-8 w-8 rounded-full text-[13px] text-muted hover:text-ink"
+                  >
+                    ✕
+                  </button>
                   <span className="flex flex-col">
                     <button type="button" onClick={() => placeAt(i, i - 1)} disabled={i === 0} aria-label={`Move ${book?.title ?? e.title} earlier`} className="h-6 w-7 text-[11px] text-muted disabled:opacity-30">
                       ▲
@@ -337,6 +343,42 @@ function SeriesScreen() {
             setPickCount((n) => n + 1)
           }}
         />
+      )}
+
+      {/* Removal is one act with one meaning on both surfaces: the slot goes, and a linked book stops
+          naming the series. Confirmed because it discards the slot's place in the order. */}
+      {removing && (
+        <Modal title="Remove from this series?" onClose={() => setRemoving(null)}>
+          <p className="-mt-2 mb-4 text-[13px] text-muted">
+            <span className="font-semibold text-ink">{(removing.bookId ? byId.get(removing.bookId)?.title : null) ?? removing.title}</span>{' '}
+            leaves {detail.series.name} and its place in the order goes with it.
+            {removing.bookId
+              ? ' The book stays in your library — it just stops belonging to this series.'
+              : ' Fetching the series data again won’t bring it back.'}
+          </p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setRemoving(null)}
+              className="h-11 flex-1 rounded-xl border border-line text-[13.5px] font-semibold text-ink"
+              style={{ background: 'var(--card)' }}
+            >
+              Keep it
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                removeEntry.mutate({ entryId: removing.id, bookId: removing.bookId })
+                setRemoving(null)
+              }}
+              disabled={removeEntry.isPending}
+              className="h-11 flex-1 rounded-xl text-[14px] font-semibold disabled:opacity-50"
+              style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))', color: 'var(--on-primary)' }}
+            >
+              Remove
+            </button>
+          </div>
+        </Modal>
       )}
 
       {acquiring && (

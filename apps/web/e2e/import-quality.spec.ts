@@ -156,7 +156,7 @@ test('Goodreads import: fidelity fixes land in the DB, summary is honest, axe gr
     // fractional series position + to-read → unowned
     const reck = (await book(sb, "Zephyr's Reckoning"))!
     expect(Number(reck.position)).toBe(2.5)
-    expect(reck.ownership).toBe('unowned')
+    expect(reck.ownership).toBe('wishlist') // #68 renamed 'unowned' → 'wishlist' (four-state ownership)
     expect(reck.read_status).toBe('Unread')
 
     // Date Read → read log row
