@@ -16,6 +16,23 @@ import { createClient } from '@supabase/supabase-js'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
+// The seed JSON predates the snake_case status enum — it still carries the app's ORIGINAL
+// spellings ('Series' | 'Complete' | 'Standalone'), which books_status_check has rejected since
+// 20260715010000_book_editing.sql. Normalize through the SAME core function the app and the CSV
+// importer use, so the enum has exactly one mapping and this script can't drift from it again.
+// Imported straight from source: Node strips the (type-only) annotations natively — 22.18+ / 23+.
+let normalizeSeriesStatus
+try {
+  ;({ normalizeSeriesStatus } = await import('../packages/core/src/seriesStatus.ts'))
+} catch (e) {
+  console.error(
+    `Seed failed: could not load @reverie/core's status normalizer (${e.message ?? e}).\n` +
+      `This script reads the TypeScript source directly, which needs Node 22.18+ or 23+ ` +
+      `(running ${process.version}). Upgrade Node, then re-run \`pnpm db:seed\`.`,
+  )
+  process.exit(1)
+}
+
 const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:55321'
 // Standard local-only service-role key (iss: supabase-demo). Not a production secret.
 const SERVICE_ROLE_KEY =
@@ -59,7 +76,7 @@ function toRow(b, ownerId) {
     series: b.series || null,
     position: num(b.position),
     series_count: b.seriesCount ?? null,
-    status: b.status || null,
+    status: normalizeSeriesStatus(b.status, !!b.series),
     genre: b.genre ?? 'romance',
     subgenre: b.subgenre || null,
     genres: b.genres ?? [],
