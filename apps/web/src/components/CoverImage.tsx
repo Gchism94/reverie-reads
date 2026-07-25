@@ -22,10 +22,22 @@ export function CoverImage({
   book,
   className = 'h-full w-full object-cover',
   thumb = false,
+  ghost = false,
 }: {
   book: { id?: string; title?: string; first?: string; last?: string; cover?: string | null; coverThumb?: string | null }
   className?: string
   thumb?: boolean
+  /**
+   * "Not in hand" (wishlist / unset): dim the ARTWORK behind --ghost-opacity.
+   *
+   * Owned here rather than by the caller because only this component knows whether it is about to
+   * render artwork or the placeholder — and the placeholder is TYPE. Callers used to wrap the whole
+   * box in the opacity, which composited the placeholder's title and author against the card behind
+   * it and dropped them under AA (axe caught marrow's box-lid plate at 4.16:1 dark, 3.38:1 light).
+   * Dimming a photograph is a legible visual state; dimming a word is just harder to read. When the
+   * placeholder shows, the ghost signal is carried by the caller's dashed frame instead.
+   */
+  ghost?: boolean
 }) {
   const [failed, setFailed] = useState<Set<string>>(() => new Set())
   const chain = coverCandidates(book.cover, {
@@ -53,6 +65,7 @@ export function CoverImage({
       // — so opt out and let the parent's drag-to-reorder win. Keyboard ▲▼/◀▶ fallbacks are unaffected.
       draggable={false}
       className={className}
+      style={ghost ? { opacity: 'var(--ghost-opacity)' } : undefined}
       onLoad={(e) => {
         // A Google "no image" plate loads successfully (HTTP 200) — reject it by its fixed size so the
         // chain falls back to the real original, or to the honest placeholder when nothing's left.
