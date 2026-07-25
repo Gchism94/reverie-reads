@@ -262,6 +262,7 @@ function useSeriesInvalidate(name: string) {
 export function useUpdateSeries(name: string) {
   const qc = useQueryClient()
   return useMutation({
+    meta: { action: 'The series' },
     mutationFn: async (input: { id: string; name?: string; status?: SeriesStatus | null }) => {
       const patch: Record<string, unknown> = {}
       if (input.name !== undefined) patch.name = input.name
@@ -296,6 +297,7 @@ async function syncBookPosition(bookId: string | null | undefined, position: num
 export function useMoveEntry(name: string) {
   const invalidate = useSeriesInvalidate(name)
   return useMutation({
+    meta: { action: 'The series' },
     mutationFn: async (input: {
       entryId: string
       position: number
@@ -327,6 +329,7 @@ export function useMoveEntry(name: string) {
 export function useUpdateEntry(name: string) {
   const invalidate = useSeriesInvalidate(name)
   return useMutation({
+    meta: { action: 'The series' },
     mutationFn: async (input: { entryId: string; label?: string | null; position?: number; bookId?: string | null }) => {
       const patch: Record<string, unknown> = { user_edited: true }
       if (input.label !== undefined) patch.label = input.label
@@ -351,6 +354,7 @@ export function useRemoveEntry(name: string) {
   const qc = useQueryClient()
   const invalidate = useSeriesInvalidate(name)
   return useMutation({
+    meta: { action: 'The series' },
     mutationFn: async (input: { entryId: string; bookId?: string | null }) => {
       const { error } = await supabase.from('series_entries').update(removalPatch()).eq('id', input.entryId)
       if (error) throw error
@@ -386,6 +390,7 @@ export function useRemoveEntry(name: string) {
 export function useSyncBookSeries() {
   const qc = useQueryClient()
   return useMutation({
+    meta: { action: 'The series' },
     mutationFn: async ({ book, newSeries, newPosition }: { book: Book; newSeries: string; newPosition: number | null }) => {
       const oldSeries = (book.series ?? '').trim()
       const next = newSeries.trim()
@@ -468,6 +473,7 @@ export function useAddSeriesEntries(name: string) {
   const qc = useQueryClient()
   const invalidate = useSeriesInvalidate(name)
   return useMutation({
+    meta: { action: 'The series' },
     mutationFn: async (input: { seriesId: string; books: Book[]; after: number }) => {
       const uid = await ownerId()
       let at = Math.floor(input.after)
@@ -509,6 +515,7 @@ export function useAddSeriesEntries(name: string) {
 export function useAddGhostEntry(name: string) {
   const invalidate = useSeriesInvalidate(name)
   return useMutation({
+    meta: { action: 'The series' },
     mutationFn: async (input: { seriesId: string; title: string; author: string; position: number }) => {
       const uid = await ownerId()
       if (await revivedTombstone(input.seriesId, input.title, input.position, null)) return
@@ -535,6 +542,7 @@ export function useAcquireGhost(name: string) {
   const qc = useQueryClient()
   const invalidate = useSeriesInvalidate(name)
   return useMutation({
+    meta: { action: 'The series' },
     mutationFn: async (input: { entry: SeriesEntry; genre: string; tbrId?: string }): Promise<string> => {
       const uid = await ownerId()
       const { first, last } = splitName(input.entry.author)
@@ -588,6 +596,7 @@ export function useAcquireGhost(name: string) {
 export function useApplySeriesSource(name: string) {
   const invalidate = useSeriesInvalidate(name)
   return useMutation({
+    meta: { action: 'The series' },
     mutationFn: async (input: { detail: SeriesDetail; author: string }): Promise<{ added: number; unavailable: boolean }> => {
       const uid = await ownerId()
       const { data, error } = await supabase.functions.invoke('series', {

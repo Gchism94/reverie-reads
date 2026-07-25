@@ -64,6 +64,7 @@ export function useSharedDoc(code: string) {
 export function useCreateSharedList() {
   const qc = useQueryClient()
   return useMutation({
+    meta: { action: 'The shared list' },
     mutationFn: async (input: { name: string; kind: SharedKind }): Promise<string> => {
       const { data: auth } = await supabase.auth.getUser()
       const uid = auth.user?.id
@@ -84,6 +85,7 @@ export function useCreateSharedList() {
 export function useJoinSharedList() {
   const qc = useQueryClient()
   return useMutation({
+    meta: { action: 'The shared list' },
     mutationFn: async (code: string): Promise<SharedListDoc | null> => {
       const trimmed = code.trim().toUpperCase()
       const { data, error } = await supabase.from('shared_docs').select('value').eq('key', trimmed).maybeSingle()
@@ -107,6 +109,7 @@ export function useJoinSharedList() {
 export function useMutateSharedDoc(code: string) {
   const qc = useQueryClient()
   return useMutation({
+    meta: { action: 'The shared list' },
     mutationFn: async (update: (doc: SharedListDoc) => SharedListDoc): Promise<void> => {
       const { data, error } = await supabase.from('shared_docs').select('value').eq('key', code).single()
       if (error) throw error
@@ -122,6 +125,7 @@ export function useMutateSharedDoc(code: string) {
 export function useLeaveSharedList() {
   const qc = useQueryClient()
   return useMutation({
+    meta: { action: 'The shared list' },
     mutationFn: async (code: string): Promise<void> => {
       const { data: auth } = await supabase.auth.getUser()
       const uid = auth.user?.id

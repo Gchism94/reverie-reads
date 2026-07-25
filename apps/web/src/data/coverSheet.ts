@@ -37,6 +37,7 @@ export function useSetCover() {
   const qc = useQueryClient()
   const update = useUpdateBook()
   return useMutation({
+    meta: { action: 'The cover' },
     mutationFn: async ({ book, source, file, url, sourceUrl, userChosen = true }: SetCoverInput) => {
       const outcome = await ingestCover({ bookId: book.id, source, file, url, sourceUrl })
       if (outcome.status === 'error') throw new Error(outcome.code)

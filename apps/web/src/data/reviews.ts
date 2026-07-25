@@ -51,6 +51,7 @@ export function useReviews(workKey: string, enabled: boolean) {
 export function useUpsertReview(workKey: string) {
   const qc = useQueryClient()
   return useMutation({
+    meta: { action: 'Your review' },
     mutationFn: async ({ rating, body, reviewerName }: { rating: number; body: string; reviewerName: string }) => {
       const { data: auth } = await supabase.auth.getUser()
       const uid = auth.user?.id
@@ -71,6 +72,7 @@ export function useUpsertReview(workKey: string) {
 export function useSetReviewHidden(workKey: string) {
   const qc = useQueryClient()
   return useMutation({
+    meta: { action: 'Your review' },
     mutationFn: async ({ id, hidden }: { id: string; hidden: boolean }) => {
       const { error } = await supabase.from('reviews').update({ hidden }).eq('id', id)
       if (error) throw error

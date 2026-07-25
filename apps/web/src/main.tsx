@@ -4,7 +4,7 @@ import './lib/authCallback'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { RouterProvider } from '@tanstack/react-router'
-import { QueryClient } from '@tanstack/react-query'
+import { MutationCache, QueryClient } from '@tanstack/react-query'
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client'
 import { APP_NAME } from '@reverie/core'
 import { AuthProvider } from './auth/AuthProvider'
@@ -12,6 +12,7 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 import { initErrorMonitoring } from './lib/sentry'
 import { BUILD_ID, installPreloadErrorReload } from './lib/updates'
 import { createDexiePersister } from './lib/offlineCache'
+import { reportWriteError } from './lib/writeErrors'
 import { router } from './router'
 import './styles/tokens.css'
 import './styles/globals.css'
@@ -36,6 +37,13 @@ const WEEK = 1000 * 60 * 60 * 24 * 7
 
 // gcTime must outlast maxAge so cached queries survive to be persisted/restored offline.
 const queryClient = new QueryClient({
+  // Every failed write reports here. Wiring it at the cache rather than in each hook means the
+  // WHOLE data layer is covered by construction — a new mutation can't forget to handle failure,
+  // which is how a rejected save came to look exactly like a successful one. Individual hooks keep
+  // their own onError for the optimistic rollback; this only adds the telling.
+  mutationCache: new MutationCache({
+    onError: (error, _vars, _ctx, mutation) => reportWriteError(error, mutation.options.meta),
+  }),
   defaultOptions: {
     queries: { gcTime: WEEK, staleTime: 1000 * 30, retry: 1, refetchOnWindowFocus: false },
   },
