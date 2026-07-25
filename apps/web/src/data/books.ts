@@ -24,6 +24,7 @@ export function useBooks() {
 export function useAddBook() {
   const qc = useQueryClient()
   return useMutation({
+    meta: { action: 'The new book' },
     mutationFn: async (input: Partial<Book> & { title: string }): Promise<Book> => {
       const { data: auth } = await supabase.auth.getUser()
       const ownerId = auth.user?.id
@@ -41,6 +42,7 @@ export function useAddBook() {
 export function useUpdateBook() {
   const qc = useQueryClient()
   return useMutation({
+    meta: { action: 'Book details' },
     mutationFn: async ({ id, patch }: { id: string; patch: Partial<Book> }): Promise<Book> => {
       const { data, error } = await supabase
         .from('books')
@@ -69,6 +71,7 @@ export function useUpdateBook() {
 export function useDeleteBook() {
   const qc = useQueryClient()
   return useMutation({
+    meta: { action: 'Deleting the book' },
     mutationFn: async (id: string): Promise<void> => {
       const { error } = await supabase.from('books').delete().eq('id', id)
       if (error) throw error

@@ -64,6 +64,7 @@ async function ownerId(): Promise<string> {
 export function useCreateOrder() {
   const qc = useQueryClient()
   return useMutation({
+    meta: { action: 'The reading order' },
     mutationFn: async ({ name, description }: { name: string; description?: string }): Promise<string> => {
       const owner_id = await ownerId()
       const { data, error } = await supabase
@@ -81,6 +82,7 @@ export function useCreateOrder() {
 export function useUpdateOrder() {
   const qc = useQueryClient()
   return useMutation({
+    meta: { action: 'The reading order' },
     mutationFn: async ({ id, name, description }: { id: string; name?: string; description?: string }): Promise<void> => {
       const patch: Record<string, string | null> = {}
       if (name !== undefined) patch.name = name
@@ -95,6 +97,7 @@ export function useUpdateOrder() {
 export function useDeleteOrder() {
   const qc = useQueryClient()
   return useMutation({
+    meta: { action: 'The reading order' },
     mutationFn: async (id: string): Promise<void> => {
       const { error } = await supabase.from('reading_orders').delete().eq('id', id)
       if (error) throw error
@@ -107,6 +110,7 @@ export function useDeleteOrder() {
 export function useAddOrderItem() {
   const qc = useQueryClient()
   return useMutation({
+    meta: { action: 'The reading order' },
     mutationFn: async ({
       order,
       bookId,
@@ -134,6 +138,7 @@ export function useAddOrderItem() {
 export function useRemoveOrderItem() {
   const qc = useQueryClient()
   return useMutation({
+    meta: { action: 'The reading order' },
     mutationFn: async (itemId: string): Promise<void> => {
       const { error } = await supabase.from('reading_order_items').delete().eq('id', itemId)
       if (error) throw error
@@ -145,6 +150,7 @@ export function useRemoveOrderItem() {
 export function useSetItemNote() {
   const qc = useQueryClient()
   return useMutation({
+    meta: { action: 'The reading order' },
     mutationFn: async ({ itemId, note }: { itemId: string; note: string }): Promise<void> => {
       const { error } = await supabase.from('reading_order_items').update({ note: note || null }).eq('id', itemId)
       if (error) throw error
@@ -160,6 +166,7 @@ export function useSetItemNote() {
 export function useReorderItem() {
   const qc = useQueryClient()
   return useMutation({
+    meta: { action: 'The reading order' },
     mutationFn: async ({ order, itemId, toIndex }: { order: ReadingOrder; itemId: string; toIndex: number }): Promise<void> => {
       const before = new Map(order.items.map((i) => [i.id, i.position]))
       const next = reorderItems(order.items, itemId, toIndex)

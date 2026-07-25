@@ -68,6 +68,7 @@ export function useDismissed() {
 export function useDismissBook() {
   const qc = useQueryClient()
   return useMutation({
+    meta: { action: 'Your feedback' },
     mutationFn: async (bookId: string): Promise<void> => {
       const { data: auth } = await supabase.auth.getUser()
       const userId = auth.user?.id

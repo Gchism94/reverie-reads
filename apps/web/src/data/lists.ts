@@ -48,6 +48,7 @@ export function useLists() {
 export function useCreateList() {
   const qc = useQueryClient()
   return useMutation({
+    meta: { action: 'The shelf' },
     mutationFn: async (input: {
       name: string
       kind: 'tbr' | 'collection'
@@ -84,6 +85,7 @@ export function useCreateList() {
 export function useUpdateList() {
   const qc = useQueryClient()
   return useMutation({
+    meta: { action: 'The shelf' },
     mutationFn: async ({
       id,
       name,
@@ -111,6 +113,7 @@ export function useUpdateList() {
 export function useDeleteList() {
   const qc = useQueryClient()
   return useMutation({
+    meta: { action: 'The shelf' },
     mutationFn: async (id: string): Promise<void> => {
       const { error } = await supabase.from('lists').delete().eq('id', id)
       if (error) throw error
@@ -126,6 +129,7 @@ export function useDeleteList() {
 export function useReorderList() {
   const qc = useQueryClient()
   return useMutation({
+    meta: { action: 'The shelf' },
     mutationFn: async ({
       listId,
       orderedBookIds,
@@ -147,6 +151,7 @@ export function useReorderList() {
 export function useReorderLists() {
   const qc = useQueryClient()
   return useMutation({
+    meta: { action: 'The shelf' },
     mutationFn: async (orderedListIds: string[]): Promise<void> => {
       await Promise.all(
         orderedListIds.map((id, i) =>

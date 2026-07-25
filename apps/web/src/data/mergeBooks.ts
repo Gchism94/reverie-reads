@@ -15,6 +15,7 @@ import { listsKey } from './lists'
 export function usePerformMerge() {
   const qc = useQueryClient()
   return useMutation({
+    meta: { action: 'The merge' },
     mutationFn: async ({ primary, loser }: { primary: Book; loser: Book }): Promise<void> => {
       const merged = mergeBooksCore(
         { books: [primary, loser], tbrs: [], collections: [] },
