@@ -122,6 +122,67 @@ export function renumberEntries(entries: readonly SeriesEntry[]): SeriesEntry[] 
 export const ghostMatchesBook = (e: SeriesEntry, b: Pick<Book, 'title'>): boolean =>
   e.bookId == null && e.title.trim().toLowerCase() === b.title.trim().toLowerCase()
 
+/** A library book waiting for its first series slot, as the reconciliation sees it. */
+export interface SeedCandidate {
+  id: string
+  title: string
+  /** books.position — an in-series index if the reader set it, but an import may put ANYTHING here */
+  position: number | null
+}
+
+/**
+ * No real series numbers its volumes past this. Imports (Hardcover, CSV) routinely park a GLOBAL
+ * order number in books.position — 412, 1290 — and seeding those verbatim is what made series
+ * positions look random. Above the ceiling we stop believing the field.
+ */
+const SERIES_POSITION_CEILING = 100
+
+/**
+ * Are these books' positions usable as the series' reading order? Judged as a SET, not per book:
+ * one absurd value means the column is carrying something other than an in-series index, so none of
+ * it can be trusted. Gaps are fine and meaningful (owning #1, #2, #5 says you're missing two).
+ */
+const positionsAreInSeriesIndices = (candidates: readonly SeedCandidate[]): boolean => {
+  const seen = new Set<number>()
+  for (const c of candidates) {
+    if (c.position == null) continue // a gap in the data, not evidence against the rest
+    if (!Number.isFinite(c.position) || c.position <= 0 || c.position > SERIES_POSITION_CEILING) return false
+    if (seen.has(c.position)) return false // duplicate slots — an import artifact, not an order
+    seen.add(c.position)
+  }
+  return true
+}
+
+/**
+ * Positions for books joining a series, keyed by book id (docs/task-series-defects.md §3c).
+ *
+ * Believable in-series indices are KEPT — including their gaps, which carry real meaning. Anything
+ * else (import global-order numbers, duplicates) is renumbered to a clean 1..n that PRESERVES the
+ * relative order the numbers implied, so the reader's shelf reads sensibly instead of "#87, #412,
+ * #1290". Books with no position at all sort last by title, so a null-position library gets a
+ * deterministic order rather than whatever order the rows happened to come back in.
+ *
+ * `startAfter` is the current maximum live position: existing slots are never renumbered, so a book
+ * arriving later appends instead of disturbing an arrangement the reader made.
+ */
+export function seedSeriesPositions(candidates: readonly SeedCandidate[], startAfter = 0): Map<string, number> {
+  const ordered = [...candidates].sort(
+    (a, b) => (a.position ?? Infinity) - (b.position ?? Infinity) || a.title.localeCompare(b.title),
+  )
+  const trusted = positionsAreInSeriesIndices(ordered)
+  const out = new Map<string, number>()
+  // Keeping believable indices means the append cursor has to clear them too, or a null-position
+  // straggler would land on top of a slot we just honoured.
+  let cursor = Math.floor(
+    Math.max(startAfter, trusted ? Math.max(0, ...ordered.map((c) => c.position ?? 0)) : 0),
+  )
+  for (const c of ordered) {
+    if (trusted && c.position != null) out.set(c.id, c.position)
+    else out.set(c.id, ++cursor)
+  }
+  return out
+}
+
 /** A canonical slot as the source catalog reports it. */
 export interface SourceSeriesEntry {
   position: number
