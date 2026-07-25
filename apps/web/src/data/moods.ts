@@ -77,6 +77,7 @@ function useInvalidateMoods() {
 export function useAssignMood() {
   const invalidate = useInvalidateMoods()
   return useMutation({
+    meta: { action: 'Mood' },
     mutationFn: async (input: { bookId: string; moodId: string }) => {
       const { data: auth } = await supabase.auth.getUser()
       const ownerId = auth.user?.id
@@ -93,6 +94,7 @@ export function useAssignMood() {
 export function useUnassignMood() {
   const invalidate = useInvalidateMoods()
   return useMutation({
+    meta: { action: 'Mood' },
     mutationFn: async (input: { bookId: string; moodId: string }) => {
       const { error } = await supabase.from('book_moods').delete().eq('book_id', input.bookId).eq('mood_id', input.moodId)
       if (error) throw error
@@ -106,6 +108,7 @@ export function useUnassignMood() {
 export function useCreatePersonalMood() {
   const qc = useQueryClient()
   return useMutation({
+    meta: { action: 'Mood' },
     mutationFn: async (input: { name: string; canonicalId?: string }): Promise<UiMood> => {
       const { data: auth } = await supabase.auth.getUser()
       const ownerId = auth.user?.id

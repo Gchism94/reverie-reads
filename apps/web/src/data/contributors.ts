@@ -35,6 +35,7 @@ export async function persistContributors(bookId: string, contributors: Contribu
 export function useSetContributors() {
   const qc = useQueryClient()
   return useMutation({
+    meta: { action: 'Contributors' },
     mutationFn: ({ bookId, contributors }: { bookId: string; contributors: Contributor[] }) =>
       persistContributors(bookId, contributors),
     onSuccess: () => qc.invalidateQueries({ queryKey: booksKey }),

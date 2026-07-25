@@ -86,6 +86,7 @@ function useInvalidateTropes() {
 export function useAssignTrope() {
   const invalidate = useInvalidateTropes()
   return useMutation({
+    meta: { action: 'Tropes' },
     mutationFn: async (input: { bookId: string; tropeId: string; emphasis?: TropeEmphasis }) => {
       const { data: auth } = await supabase.auth.getUser()
       const ownerId = auth.user?.id
@@ -105,6 +106,7 @@ export function useAssignTrope() {
 export function useUnassignTrope() {
   const invalidate = useInvalidateTropes()
   return useMutation({
+    meta: { action: 'Tropes' },
     mutationFn: async (input: { bookId: string; tropeId: string }) => {
       const { error } = await supabase.from('book_tropes').delete().eq('book_id', input.bookId).eq('trope_id', input.tropeId)
       if (error) throw error
@@ -118,6 +120,7 @@ export function useUnassignTrope() {
 export function useCreatePersonalTrope() {
   const qc = useQueryClient()
   return useMutation({
+    meta: { action: 'Tropes' },
     mutationFn: async (input: { name: string; facet?: TropeFacet; canonicalId?: string }): Promise<UiTrope> => {
       const { data: auth } = await supabase.auth.getUser()
       const ownerId = auth.user?.id
@@ -166,6 +169,7 @@ export function useSuggestions(bookId: string) {
 export function useFetchSuggestions() {
   const qc = useQueryClient()
   return useMutation({
+    meta: { action: 'Tropes' },
     mutationFn: async (input: { book: Book; tropes: { id: string; name: string; aliases: string[] }[] }): Promise<number> => {
       const { data: auth } = await supabase.auth.getUser()
       const ownerId = auth.user?.id
@@ -206,6 +210,7 @@ export function useResolveSuggestion() {
   const qc = useQueryClient()
   const invalidate = useInvalidateTropes()
   return useMutation({
+    meta: { action: 'Tropes' },
     mutationFn: async (input: { bookId: string; tropeId: string; accept: boolean }) => {
       if (input.accept) {
         const { data: auth } = await supabase.auth.getUser()

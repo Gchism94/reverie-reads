@@ -3,6 +3,7 @@ import { Outlet, createRootRoute, useNavigate, useRouterState } from '@tanstack/
 import { Sky } from '../components/Sky'
 import { AppShell } from '../components/AppShell'
 import { UpdateToast } from '../components/UpdateToast'
+import { WriteErrorToast } from '../components/WriteErrorToast'
 import { JustFinishedSheet } from '../components/JustFinishedSheet'
 import { useAuth } from '../auth/AuthProvider'
 import { UnauthShell } from '../auth/UnauthShell'
@@ -57,6 +58,7 @@ function RootLayout() {
       <>
         <UnauthShell />
         <UpdateToast />
+        <WriteErrorToast />
       </>
     )
   }
@@ -78,6 +80,7 @@ function RootLayout() {
         </AppShell>
       )}
       <UpdateToast />
+      <WriteErrorToast />
       <JustFinishedSheet />
     </>
   )

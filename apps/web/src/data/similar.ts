@@ -57,6 +57,7 @@ export function useEnsureEmbeddings() {
 /** Free-text vibe search over the reader's own library (embedded server-side, same model). */
 export function useVibeSearch() {
   return useMutation({
+    meta: { action: 'Similar books' },
     mutationFn: async (query: string): Promise<SimilarHit[]> => {
       const { data, error } = await supabase.functions.invoke('embed', { body: { mode: 'vibe', query, count: 12 } })
       if (error) throw error

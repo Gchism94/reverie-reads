@@ -52,6 +52,7 @@ export function useAddRead(bookId: string) {
   const qc = useQueryClient()
   const key = readsKey(bookId)
   return useMutation({
+    meta: { action: 'The read log' },
     mutationFn: async (entry: ReadEntry): Promise<void> => {
       const { data: auth } = await supabase.auth.getUser()
       const ownerId = auth.user?.id
@@ -84,6 +85,7 @@ export function useDeleteRead(bookId: string) {
   const qc = useQueryClient()
   const key = readsKey(bookId)
   return useMutation({
+    meta: { action: 'The read log' },
     mutationFn: async (readId: string): Promise<void> => {
       const { error } = await supabase.from('reads').delete().eq('id', readId)
       if (error) throw error
