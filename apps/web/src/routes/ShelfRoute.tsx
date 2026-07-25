@@ -175,7 +175,9 @@ function ShelfScreen() {
           Empty shelf — add the first book. {voice.motif}
         </p>
       ) : view === 'spines' ? (
-        <SpineShelf books={shelfBooks} onOpen={openBook} onAdd={() => setPickerOpen(true)} addLabel={`Add a book to ${list.name}`} />
+        // The default view is arrangeable too — reorder used to exist only in Grid, which is not
+        // where a reader lands (docs/task-shelf-regressions.md, audit follow-up).
+        <SpineShelf books={shelfBooks} onOpen={openBook} onAdd={() => setPickerOpen(true)} addLabel={`Add a book to ${list.name}`} onReorder={applyOrder} />
       ) : (
         <div style={COVER_GRID}>
           {shelfBooks.map((b, i) => (

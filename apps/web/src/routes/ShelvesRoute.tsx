@@ -269,13 +269,13 @@ function ShelvesScreen() {
           {shown.map((l, i) => {
             const shelfBooks = booksFor(l.id)
             return (
+              // The card is a drop TARGET but not a drag source: making the whole thing draggable
+              // meant dragging a book cover picked up the entire shelf instead of doing nothing.
+              // The grab handle below is the only place a shelf drag can start.
               <div
                 key={l.id}
-                draggable
-                onDragStart={() => setDragListIdx(i)}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={() => dropListOn(i)}
-                onDragEnd={() => setDragListIdx(null)}
                 style={dragListIdx === i ? { opacity: 0.4 } : undefined}
               >
                 <div className="mb-1 flex items-center justify-between gap-3">
@@ -297,6 +297,17 @@ function ShelvesScreen() {
                     </p>
                   </div>
                   <div className="flex flex-none items-center gap-1.5">
+                    <button
+                      type="button"
+                      draggable
+                      onDragStart={() => setDragListIdx(i)}
+                      onDragEnd={() => setDragListIdx(null)}
+                      aria-label={`Drag to reorder ${l.name}`}
+                      title={`Drag to reorder ${l.name}`}
+                      className="cursor-grab px-1 text-[13px] leading-none text-muted"
+                    >
+                      ⠿
+                    </button>
                     <span className="flex flex-col">
                       <button type="button" onClick={() => moveList(i, -1)} aria-label={`Move ${l.name} up`} className="px-1 py-0.5 text-[12px] leading-none text-muted">
                         ▲

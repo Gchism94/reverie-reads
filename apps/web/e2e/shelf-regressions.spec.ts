@@ -126,7 +126,9 @@ test('Shelves page: "search everywhere" adds an unowned book to a shelf (regress
     await expect(sheet.getByText('Wildfire Vow')).toBeVisible({ timeout: 15_000 })
     await sheet.getByRole('button', { name: '＋ Add', exact: true }).first().click()
 
-    // Lands on the shelf as unowned — never having opened the book's detail page.
+    // Lands on the shelf as a wishlist copy — never having opened the book's detail page.
+    // (#68's four-state ownership renamed 'unowned' → 'wishlist'; this guard kept asserting the old
+    // value and had been failing silently ever since.)
     await expect
       .poll(
         async () => {
@@ -138,7 +140,7 @@ test('Shelves page: "search everywhere" adds an unowned book to a shelf (regress
         { timeout: 15_000 },
       )
       .toBe(1)
-    expect((await bookByTitle(c.sb, c.uid, 'Wildfire Vow'))?.ownership).toBe('unowned')
+    expect((await bookByTitle(c.sb, c.uid, 'Wildfire Vow'))?.ownership).toBe('wishlist')
     expect(page.url()).not.toContain('/book/') // proved we never visited the book page
   } finally {
     await reset(c)
@@ -194,6 +196,119 @@ test('Shelf reorder: covers are not drag-hijackable and the keyboard fallback re
     await page.getByRole('button', { name: 'Grid', exact: true }).click()
     await expect(page.getByText('Bravo Book')).toBeVisible()
     expect(await orderTitles()).toEqual(['Bravo Book', 'Alpha Book', 'Charlie Book'])
+  } finally {
+    await reset(c)
+  }
+})
+
+// ── The audit follow-up: reorder must work by real DRAG, and in the view a reader actually lands on ──
+//
+// The two guards above assert `draggable=false` on covers and exercise the KEYBOARD fallback. Neither
+// performs a drag, and neither leaves the Grid view — so both passed while the shelf page's DEFAULT
+// (spine) view had no reorder affordance at all, and while dragging a book cover on /shelves picked up
+// the whole shelf. These drive the real gestures.
+
+/** Three owned books with covers on one shelf, spaced 1000 apart. Returns [listId, orderFn]. */
+async function shelfOf(c: Client, name: string, titles: string[]) {
+  const { data: list } = await c.sb.from('lists').insert({ owner_id: c.uid, name, kind: 'tbr' }).select('id').single()
+  const listId = (list as { id: string }).id
+  for (let i = 0; i < titles.length; i++) {
+    const { data: b } = await c.sb
+      .from('books')
+      .insert({ owner_id: c.uid, title: titles[i], author_first: 'Test', author_last: 'Author', ownership: 'owned', cover_url: '/landing-covers/everflame.jpg' })
+      .select('id')
+      .single()
+    await c.sb.from('list_items').insert({ list_id: listId, book_id: (b as { id: string }).id, owner_id: c.uid, position: (i + 1) * 1000 })
+  }
+  const order = async () => {
+    const rows = await positionsFor(c.sb, listId)
+    const byId = new Map(
+      ((await c.sb.from('books').select('id, title').eq('owner_id', c.uid)).data ?? []).map((b) => [(b as { id: string }).id, (b as { title: string }).title]),
+    )
+    return rows.map((r) => byId.get(r.book_id))
+  }
+  return { listId, order }
+}
+
+test('Shelf page: the DEFAULT (spine) view reorders by drag and by keyboard, and persists', async ({ page }) => {
+  test.setTimeout(180_000)
+  const c = await client()
+  await reset(c)
+  const { listId, order } = await shelfOf(c, 'Spine Order', ['Alpha Book', 'Bravo Book', 'Charlie Book'])
+  await stubBackends(page)
+  try {
+    await signIn(page, c.session)
+    await page.goto(`/shelf/${listId}`)
+    // No view switching: this is where the reader lands. Pre-fix there was nothing to reorder with.
+    await expect(page.getByRole('button', { name: 'Move Alpha Book earlier' })).toBeVisible({ timeout: 20_000 })
+    expect(await order()).toEqual(['Alpha Book', 'Bravo Book', 'Charlie Book'])
+
+    // Real drag: Alpha's spine onto Charlie's slot.
+    const spines = page.locator('[data-spine]')
+    await expect(spines).toHaveCount(3)
+    await spines.nth(0).dragTo(spines.nth(2))
+    await expect.poll(order, { timeout: 15_000 }).toEqual(['Bravo Book', 'Charlie Book', 'Alpha Book'])
+
+    // Keyboard equivalent — a drag-only affordance would fail the a11y bar.
+    await page.getByRole('button', { name: 'Move Alpha Book earlier' }).click()
+    await expect.poll(order, { timeout: 15_000 }).toEqual(['Bravo Book', 'Alpha Book', 'Charlie Book'])
+
+    // Persisted, not just optimistic.
+    await page.reload()
+    await expect(page.getByRole('button', { name: 'Move Alpha Book earlier' })).toBeVisible({ timeout: 20_000 })
+    expect(await order()).toEqual(['Bravo Book', 'Alpha Book', 'Charlie Book'])
+  } finally {
+    await reset(c)
+  }
+})
+
+test('Shelf page: the Grid view reorders by real drag (not just a draggable-attribute check)', async ({ page }) => {
+  test.setTimeout(180_000)
+  const c = await client()
+  await reset(c)
+  const { listId, order } = await shelfOf(c, 'Grid Order', ['Alpha Book', 'Bravo Book', 'Charlie Book'])
+  await stubBackends(page)
+  try {
+    await signIn(page, c.session)
+    await page.goto(`/shelf/${listId}`)
+    await page.getByRole('button', { name: 'Grid', exact: true }).click()
+    await expect(page.getByRole('button', { name: 'Move Alpha Book later' })).toBeVisible({ timeout: 20_000 })
+
+    const cards = page.locator('div[draggable="true"]')
+    await expect(cards).toHaveCount(3)
+    await cards.nth(0).dragTo(cards.nth(2))
+    await expect.poll(order, { timeout: 15_000 }).toEqual(['Bravo Book', 'Charlie Book', 'Alpha Book'])
+  } finally {
+    await reset(c)
+  }
+})
+
+test('Shelves page: dragging a book cover does not move the shelf — only the grab handle does', async ({ page }) => {
+  test.setTimeout(180_000)
+  const c = await client()
+  await reset(c)
+  await shelfOf(c, 'Aaa Shelf', ['Alpha Book'])
+  await shelfOf(c, 'Bbb Shelf', ['Bravo Book'])
+  const shelfOrder = async () =>
+    (((await c.sb.from('lists').select('name, sort_order').eq('owner_id', c.uid).order('sort_order', { ascending: true, nullsFirst: false })).data ??
+      []) as { name: string }[]).map((l) => l.name)
+  await stubBackends(page)
+  try {
+    await signIn(page, c.session)
+    await page.goto('/shelves')
+    await expect(page.getByRole('heading', { name: /Aaa Shelf/ })).toBeVisible({ timeout: 20_000 })
+    expect(await shelfOrder()).toEqual(['Aaa Shelf', 'Bbb Shelf'])
+
+    // Pre-fix the whole shelf card was draggable, so this dragged Aaa Shelf onto Bbb Shelf.
+    const covers = page.locator('[data-spine]')
+    await expect(covers).toHaveCount(2)
+    await covers.nth(0).dragTo(covers.nth(1))
+    await page.waitForTimeout(2000)
+    expect(await shelfOrder(), 'dragging a book must not reorder shelves').toEqual(['Aaa Shelf', 'Bbb Shelf'])
+
+    // The handle is the one place a shelf drag starts — and it still works.
+    await page.getByRole('button', { name: /Drag to reorder Aaa Shelf/i }).dragTo(page.getByRole('button', { name: /Drag to reorder Bbb Shelf/i }))
+    await expect.poll(shelfOrder, { timeout: 15_000 }).toEqual(['Bbb Shelf', 'Aaa Shelf'])
   } finally {
     await reset(c)
   }
