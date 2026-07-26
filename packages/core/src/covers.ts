@@ -54,6 +54,45 @@ export const COVER_SOURCES: readonly CoverSource[] = ['hardcover', 'google', 'op
 export const isCoverSource = (s: unknown): s is CoverSource =>
   typeof s === 'string' && (COVER_SOURCES as readonly string[]).includes(s)
 
+/**
+ * INGEST POSTURE (docs/reverie-metadata-sourcing.md §Covers).
+ *
+ * Google Books' terms prohibit permanent copies and caching beyond the cache header, so a
+ * Google-derived image may be HOTLINKED at display size but must never be ingested into our
+ * Storage. Everything below is the single place that rule is expressed; the client gates and the
+ * ingest Edge Function both read it, so the two can't drift.
+ *
+ * Ingestible today:
+ *   · openlibrary — the most defensible external source (CC0 record; see the doc's residual-risk note)
+ *   · upload / camera — unambiguously the reader's own copy, in their own scoped path
+ *   · url — a link the reader deliberately pasted, subject to the HOST check below
+ *   · hardcover — unchanged by this pass; the doc flags its license as asserted rather than granted,
+ *     but that is a separate decision (remediation item 4), not this one's to make silently.
+ */
+export const INGESTIBLE_COVER_SOURCES: readonly CoverSource[] = ['openlibrary', 'upload', 'camera', 'url', 'hardcover']
+
+/** Display-time only: hotlink at display size, never fetched into Storage. */
+export const DISPLAY_ONLY_COVER_SOURCES: readonly CoverSource[] = ['google']
+
+export const isIngestibleCoverSource = (s: CoverSource): boolean =>
+  (INGESTIBLE_COVER_SOURCES as readonly string[]).includes(s)
+
+/**
+ * Whether these bytes may be stored, judged by HOST rather than by the declared source alone.
+ * The declared source is not sufficient: the lazy backfill migrates pre-existing cover URLs under
+ * the source label 'url', and a Google thumbnail wearing that label would be persisted just the
+ * same. The host is the fact that matters.
+ */
+export function isIngestibleCoverUrl(url: string): boolean {
+  if (!url) return false
+  if (isStoredCoverUrl(url)) return false // already ours; nothing to fetch
+  return !isGoogleContentCover(url)
+}
+
+/** Both gates at once — what every ingest entry point should ask before calling the pipeline. */
+export const mayIngestCover = (source: CoverSource, url?: string): boolean =>
+  isIngestibleCoverSource(source) && (!url || isIngestibleCoverUrl(url))
+
 /** True when the URL already points at the app's own cover Storage (durable, never a hotlink). */
 export const isStoredCoverUrl = (url: string): boolean => url.includes('/storage/v1/object/public/covers/')
 
@@ -154,20 +193,21 @@ export function enrichmentCoverFill(book: { cover: string; coverUserChosen?: boo
 type FetchLike = (url: string) => Promise<{ json: () => Promise<unknown> }>
 
 /**
- * Resolve a cover URL: Google Books first, then Open Library — the prototype's fallback
- * order. The fetch implementation is injected so core stays runtime-agnostic and testable.
+ * Resolve a cover URL for INGEST. Open Library only.
+ *
+ * The prototype's order was Google first, Open Library second, and this fed a pipeline that stores
+ * what it resolves — so the preferred source was the one whose terms forbid storing. Open Library is
+ * now the source, and a miss returns empty rather than falling back to Google: whatever this returns
+ * gets persisted, and a Google URL must never be. An empty result is the honest placeholder's cue.
+ *
+ * Google remains available at DISPLAY time (search results, edition candidates, hotlinked
+ * thumbnails) — see `coverCandidates`, which is untouched. This function is about bytes we keep.
  */
 export async function fetchCover(b: CoverLookup, fetchImpl: FetchLike): Promise<string> {
   try {
-    const res = await fetchImpl(buildGoogleBooksUrl(b))
-    const url = extractGoogleCover((await res.json()) as GoogleBooksResponse)
-    if (url) return url
-  } catch {
-    /* fall through to Open Library */
-  }
-  try {
     const res = await fetchImpl(buildOpenLibraryUrl(b))
-    return extractOpenLibraryCover((await res.json()) as OpenLibraryResponse)
+    const url = extractOpenLibraryCover((await res.json()) as OpenLibraryResponse)
+    return isIngestibleCoverUrl(url) ? url : ''
   } catch {
     return ''
   }
