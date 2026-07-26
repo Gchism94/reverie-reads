@@ -4,7 +4,7 @@ import './lib/authCallback'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { RouterProvider } from '@tanstack/react-router'
-import { MutationCache, QueryClient } from '@tanstack/react-query'
+import { defaultShouldDehydrateQuery, MutationCache, QueryClient } from '@tanstack/react-query'
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client'
 import { APP_NAME } from '@reverie/core'
 import { AuthProvider } from './auth/AuthProvider'
@@ -73,12 +73,12 @@ createRoot(rootEl).render(
             // freshly edited position repainted the OLD badges on load, because staleTime kept the
             // restored copy "fresh" long enough to render. Let the page open on its loading line
             // and show what the reader just typed.
-            // `status === 'success'` mirrors TanStack's defaultShouldDehydrateQuery. Inlined rather
-            // than imported: react-query and react-query-persist-client resolve two different
-            // query-core builds here, so the exported helper's Query type doesn't match this
-            // parameter's. One boolean is cheaper than a cast.
+            // Defers to TanStack's own default for everything else, so this stays correct if the
+            // library's notion of "worth persisting" changes. (#78 had to inline the predicate —
+            // react-query and react-query-persist-client resolved two different query-core builds,
+            // so the helper's Query type didn't match this parameter's. #80 collapsed them to one.)
             shouldDehydrateQuery: (q) =>
-              q.state.status === 'success' && q.queryKey[0] !== 'series' && q.queryKey[0] !== 'series-strip',
+              defaultShouldDehydrateQuery(q) && q.queryKey[0] !== 'series' && q.queryKey[0] !== 'series-strip',
           },
         }}
         onSuccess={() => {

@@ -1,6 +1,16 @@
 import { useRef, useState } from 'react'
 import { createRoute, useNavigate } from '@tanstack/react-router'
-import { contributorsFromAuthors, formatAuthors, SKINS, toFirstLast, type Book, type Contributor, type Owned } from '@reverie/core'
+import {
+  contributorsFromAuthors,
+  formatAuthors,
+  parseNumericField,
+  SERIES_POSITION,
+  SKINS,
+  toFirstLast,
+  type Book,
+  type Contributor,
+  type Owned,
+} from '@reverie/core'
 import { useQueryClient } from '@tanstack/react-query'
 import { rootRoute } from './RootRoute'
 import { useIntake, type ReviewCandidate } from '../data/intake'
@@ -161,6 +171,9 @@ function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<Search
   const toggleSub = (s: string) =>
     setSubs((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]))
   const [intensity, setIntensity] = useState(0)
+  // Position gets the same treatment Edit got in #78: one explicit parser, errors shown rather than
+  // silently coerced. `Number(v) || ''` turned 0 into "unset" and quietly ate "1.5 (novella)".
+  const [positionError, setPositionError] = useState<string | null>(null)
   // Track whether the user edited genre, so enrichment fills it but never overrides their choice.
   const genreEdited = useRef(false)
   // Distinct contributor names across the library, for the editor's autocomplete.
@@ -172,7 +185,10 @@ function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<Search
   const [alternates, setAlternates] = useState<CoverAlternate[]>([])
   const [coverNote, setCoverNote] = useState<string | null>(null)
   const [enriching, setEnriching] = useState(false)
-  const set = (k: keyof typeof form, v: string) => setForm((p) => ({ ...p, [k]: v }))
+  const set = (k: keyof typeof form, v: string) => {
+    setForm((p) => ({ ...p, [k]: v }))
+    if (k === 'position') setPositionError(null)
+  }
   const [g0, g1] = subgenreGradient(subs[0] ?? '')
 
   async function fetchDetails() {
@@ -218,6 +234,11 @@ function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<Search
 
   async function save() {
     if (!form.title.trim()) return
+    const parsedPosition = parseNumericField(form.position, SERIES_POSITION)
+    if (!parsedPosition.ok) {
+      setPositionError(parsedPosition.error)
+      return
+    }
     const f = form.format.toLowerCase()
     const isEbook = f.includes('ebook') || f.includes('kindle')
     const isAudio = f.includes('audio')
@@ -236,7 +257,7 @@ function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<Search
       last,
       contributors: contribs.filter((c) => c.name.trim()),
       series: form.series.trim(),
-      position: form.position.trim() === '' ? '' : Number(form.position) || '',
+      position: parsedPosition.value ?? '',
       seriesCount: null,
       status: form.series.trim() ? 'ongoing' : 'standalone',
       genre: form.genre.trim() || skinGenre,
@@ -332,7 +353,15 @@ function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<Search
 
       <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
         <input value={form.series} onChange={(e) => set('series', e.target.value)} placeholder="Series" className={inputClass} style={inputStyle} />
-        <input value={form.position} onChange={(e) => set('position', e.target.value)} placeholder="Book #" className={inputClass} style={inputStyle} />
+        <input
+          value={form.position}
+          onChange={(e) => set('position', e.target.value)}
+          placeholder="Book #"
+          inputMode="decimal"
+          aria-invalid={!!positionError}
+          className={inputClass}
+          style={inputStyle}
+        />
         <select
           value={form.genre}
           onChange={(e) => {
@@ -365,6 +394,11 @@ function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<Search
           ))}
         </select>
       </div>
+      {positionError && (
+        <p role="alert" className="mt-1.5 text-[12px]" style={{ color: 'var(--accent-ink)' }}>
+          {positionError}
+        </p>
+      )}
 
       {/* Subgenres — multi-pick from the CHOSEN genre's shelf (selections survive a genre switch). */}
       <div className="mt-3">
@@ -652,6 +686,18 @@ function AddScreen() {
           style={{ background: 'var(--card)' }}
         >
           {streamRef.current ? 'Stop' : '📷 Scan'}
+        </button>
+        {/* A peer of Search and Scan, as the intro copy has always promised. It used to appear ONLY
+            in the results-empty branch — so a search that returned the WRONG books (rather than
+            none) left no way in, and the reader had to adopt a wrong hit or search gibberish to
+            force the empty state. The form already accepts a bare { title }. */}
+        <button
+          type="button"
+          onClick={() => setPicked({ title: q.trim() })}
+          className="h-11 rounded-full border border-line px-5 text-[14px] font-semibold text-ink"
+          style={{ background: 'var(--card)' }}
+        >
+          Add manually
         </button>
       </div>
 
