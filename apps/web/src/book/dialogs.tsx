@@ -29,6 +29,7 @@ import { usePerformMerge } from '../data/mergeBooks'
 import { maybeChainPrompt } from '../lib/chainPrompt'
 import { ContributorEditor } from './ContributorEditor'
 import { MoodPicker } from '../components/MoodPicker'
+import { useLabels } from '../skin/labels'
 import { readableWriteError } from '../lib/writeErrors'
 
 /** Distinct contributor names across the library, for autocomplete. */
@@ -134,6 +135,7 @@ export function EditDetails({
   onChangeCover?: () => void
 }) {
   const updateBook = useUpdateBook()
+  const labels = useLabels()
   const setContributors = useSetContributors()
   const syncBookSeries = useSyncBookSeries()
   const suggestions = useAuthorSuggestions()
@@ -141,6 +143,8 @@ export function EditDetails({
     book.contributors.length ? book.contributors : fromFirstLast(book.first, book.last),
   )
   const [f, setF] = useState({
+    title: book.title,
+    isbn: book.isbn,
     series: book.series,
     position: book.position === '' ? '' : String(book.position),
     seriesCount: book.seriesCount == null ? '' : String(book.seriesCount),
@@ -154,6 +158,9 @@ export function EditDetails({
   // Subgenres are a multi-pick; the first selection leads (it colors the gradient). Picks made
   // under one genre survive a genre switch — nothing is silently dropped.
   const [subs, setSubs] = useState<string[]>(() => bookSubgenres(book))
+  // Spice was settable in Add and NOWHERE else — a book's intensity could not be changed after
+  // creation except by CSV import. Same control as Add, so the gesture is the one readers know.
+  const [intensity, setIntensity] = useState<number>(book.intensity ?? 0)
   const toggleSub = (s: string) =>
     setSubs((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]))
   const subVocab = subgenresForGenre(f.genre)
@@ -210,6 +217,11 @@ export function EditDetails({
       await updateBook.mutateAsync({
         id: book.id,
         patch: {
+          // Title and ISBN were write-once through the UI, which compounds badly with adopting a
+          // wrong search hit — the record was uncorrectable from the app afterwards.
+          title: f.title.trim() || book.title,
+          isbn: f.isbn.trim(),
+          intensity,
           series: f.series,
           position,
           seriesCount,
@@ -246,6 +258,17 @@ export function EditDetails({
           </button>
         </div>
       )}
+      <div className="mb-3">
+        <Field label="Title">
+          <input
+            value={f.title}
+            onChange={(e) => set('title', e.target.value)}
+            aria-label="Title"
+            className={fieldClass}
+            style={fieldStyle}
+          />
+        </Field>
+      </div>
       <div className="mb-3">
         <span className="mb-1 block text-[11px] uppercase tracking-[0.15em] text-muted">Contributors</span>
         <ContributorEditor value={contribs} onChange={setContribs} suggestions={suggestions} />
@@ -290,6 +313,17 @@ export function EditDetails({
             ))}
           </select>
         </Field>
+        <Field label="ISBN">
+          <input
+            value={f.isbn}
+            onChange={(e) => set('isbn', e.target.value)}
+            placeholder="None set"
+            inputMode="numeric"
+            aria-label="ISBN"
+            className={fieldClass}
+            style={fieldStyle}
+          />
+        </Field>
       </div>
       <div className="mt-3">
         <span className="mb-1 block text-[11px] uppercase tracking-[0.15em] text-muted">Subgenres</span>
@@ -309,6 +343,22 @@ export function EditDetails({
         {subs.length > 1 && (
           <p className="mt-1.5 text-[11px] text-muted">First pick leads — it sets the book’s gradient.</p>
         )}
+      </div>
+      {/* Spice / intensity — settable here at last; Add was previously the only place it could be set. */}
+      <div className="mt-3 flex items-center gap-2">
+        <span className="text-[11px] uppercase tracking-[0.15em] text-muted">{labels.intensity}</span>
+        {[1, 2, 3, 4, 5].map((i) => (
+          <button
+            key={i}
+            type="button"
+            onClick={() => setIntensity(intensity === i ? 0 : i)}
+            aria-label={`${labels.intensity} ${i}`}
+            aria-pressed={i <= intensity}
+            style={{ opacity: i <= intensity ? 1 : 0.3 }}
+          >
+            {labels.intensityGlyph}
+          </button>
+        ))}
       </div>
       {/* Mood — the reader's own impression (how it landed). Reader-assigned, never derived; assigns
           persist immediately (book_moods), independent of this form's Save. */}
