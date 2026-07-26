@@ -687,6 +687,18 @@ function AddScreen() {
         >
           {streamRef.current ? 'Stop' : '📷 Scan'}
         </button>
+        {/* A peer of Search and Scan, as the intro copy has always promised. It used to appear ONLY
+            in the results-empty branch — so a search that returned the WRONG books (rather than
+            none) left no way in, and the reader had to adopt a wrong hit or search gibberish to
+            force the empty state. The form already accepts a bare { title }. */}
+        <button
+          type="button"
+          onClick={() => setPicked({ title: q.trim() })}
+          className="h-11 rounded-full border border-line px-5 text-[14px] font-semibold text-ink"
+          style={{ background: 'var(--card)' }}
+        >
+          Add manually
+        </button>
       </div>
 
       {scanStatus && (
