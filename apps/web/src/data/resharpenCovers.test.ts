@@ -5,15 +5,24 @@ import { resharpenSource } from './resharpenCovers'
 const book = (b: Partial<Book>): Book => ({ id: 'b', title: 'T', cover: '', ...b }) as Book
 const STORAGE = 'https://x.supabase.co/storage/v1/object/public/covers/u/a/b.webp'
 const GOOGLE = 'https://books.google.com/books/content?id=X&img=1&zoom=1&source=gbs_api'
+const OL = 'https://covers.openlibrary.org/b/id/9-M.jpg'
 
 describe('resharpenSource (which covers the sweep re-fetches)', () => {
-  it('targets a raw upgradeable hotlink (Google/OL) → the hotlink itself', () => {
-    expect(resharpenSource(book({ cover: GOOGLE }))).toBe(GOOGLE)
-    expect(resharpenSource(book({ cover: 'https://covers.openlibrary.org/b/id/9-M.jpg' }))).toContain('openlibrary')
+  it('targets a raw upgradeable Open Library hotlink → the hotlink itself', () => {
+    expect(resharpenSource(book({ cover: OL }))).toContain('openlibrary')
   })
 
   it('targets a stored cover whose ORIGIN is upgradeable → the source URL (backfilled ~128px)', () => {
-    expect(resharpenSource(book({ cover: STORAGE, coverSourceUrl: GOOGLE }))).toBe(GOOGLE)
+    expect(resharpenSource(book({ cover: STORAGE, coverSourceUrl: OL }))).toBe(OL)
+  })
+
+  // Re-sharpening means FETCHING AND STORING, which is exactly what Google's terms forbid
+  // (docs/reverie-metadata-sourcing.md §Covers). A Google cover stays the hotlink it is.
+  it('skips Google entirely — display-time only, never re-fetched into Storage', () => {
+    expect(resharpenSource(book({ cover: GOOGLE }))).toBeNull()
+    expect(resharpenSource(book({ cover: STORAGE, coverSourceUrl: GOOGLE }))).toBeNull()
+    // including the googleusercontent mirror
+    expect(resharpenSource(book({ cover: 'https://books.googleusercontent.com/books/content?id=Y&zoom=1' }))).toBeNull()
   })
 
   it('skips a user-chosen cover — sacred, never re-fetched', () => {

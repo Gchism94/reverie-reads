@@ -1,0 +1,332 @@
+# Reverie: Book Metadata Sourcing & Licensing
+
+*Supersedes "Reverie Phase 0: Book Metadata Source Matrix and Licensing Analysis."*
+
+## Why this rewrite exists
+
+The original analysis was scoped for a different product: a 200k–500k record
+deep-metadata corpus intended for publication as an open derived dataset, built by
+ingesting bulk dumps into Postgres (~250GB working space), reconciled with OpenRefine
+tooling, and published under CC0 with BY-SA material segregated into a separate module.
+
+Reverie is not that. Reverie is a proprietary, deployed personal-library app that
+enriches individual readers' libraries on demand. Almost every constraint that dominates
+the original — copyleft contamination, share-alike segregation, non-commercial traps in a
+published dataset, bulk-dump cadence, entity-reconciliation accuracy at scale — either
+doesn't apply or applies in a much weaker form. Meanwhile the one constraint the original
+correctly identifies as *the* unresolved risk — cover images — applies to us directly and
+is the single place our shipped implementation currently diverges from a defensible
+posture.
+
+This document keeps the original's research, discards its corpus-building apparatus, and
+re-scopes its conclusions to the product we actually run.
+
+---
+
+## What Reverie is (the constraints that actually bind)
+
+- **Proprietary, all rights reserved.** We publish no dataset. Nothing we ingest is
+  redistributed to anyone.
+- **Per-user libraries at human scale** — hundreds to low thousands of books per reader,
+  not millions of records.
+- **On-demand enrichment**, not bulk ingestion. We look a book up when a reader adds it.
+- **Deployed and public-facing** (reveriereads.app), not a localhost hobby project. This
+  matters: several sources' terms distinguish personal/backend use from serving a public
+  app.
+- **Our differentiators are built, not sourced.** The trope taxonomy, mood dimension,
+  taste calibration, tier vocabulary, series curation, and skin system are all ours.
+
+That last point is the strategic one. Because the interesting parts of Reverie are
+generated rather than licensed, our external data needs are unusually narrow — which
+means we can afford to source conservatively without losing anything that makes the
+product distinctive.
+
+## The four things we need from outside
+
+1. **Identity and lookup** — resolve "this book" to title, author(s), ISBN, publisher,
+   year, page count, format.
+2. **Series membership and reading-order position**, including decimal positions for
+   novellas.
+3. **Cover images.**
+4. **Edition alternates** — so a reader can pick the edition they actually own.
+
+Everything else — genre assignment, tropes, mood, spice, ratings, reading history,
+shelves, taste — originates with the reader or with us.
+
+---
+
+## Source stack
+
+### Tier 1 — build on these (CC0, unambiguous)
+
+**Open Library / Internet Archive — CC0.** Bibliographic records, ISBNs, crosswalk
+identifiers (OLID, LCCN, OCLC, Goodreads, Wikidata), and — critically — **the most
+defensible cover source available to us.** The Internet Archive asserts no new copyright
+over the database, though it also cannot warrant that every cover is free of third-party
+rights. "Best available, honestly caveated" is the correct characterization; it is
+materially better than every alternative. Coverage is strong on mainstream English trade
+fiction, weaker on contemporary self-published titles.
+
+**Wikidata — CC0.** The best *openly licensed* source of structured reading order:
+property **P179** (part of the series) with the **P1545** series-ordinal qualifier, which
+supports decimal ordinals ("4.5") as strings. This maps exactly onto the decimal-position
+model Reverie already implements. Also the richest crosswalk hub (VIAF, ISNI, OLID, ISBN,
+LC). Coverage concentrates on notable series and is thin on indie/self-published — so it
+is a seed, not a complete answer.
+
+### Tier 2 — live lookup only, never stored
+
+**Google Books.** Usable as a live lookup and display-time source. **Not** usable as a
+store: Google's terms prohibit creating permanent copies, prohibit caching beyond the
+cache header, and require deletion of stored content on termination. Google also licenses
+much of the underlying data rather than owning it.
+
+Practical consequence for us: Google is fine for search results, edition candidates, and
+hotlinked thumbnails. It is not a legitimate ingest source for our cover pipeline. See
+**Covers** below.
+
+### Tier 3 — paid gap-fill (recommended addition)
+
+**ISBNdb — ~$36–100/month.** Roughly 111M titles with materially better coverage of
+contemporary and self-published print titles, bindings, page counts, publishers, and
+cover URLs than any open source. Bulk redistribution is prohibited — **which costs us
+nothing, because we publish nothing.** For a proprietary app doing per-book API
+enrichment, ISBNdb's constraints and Reverie's needs are unusually well matched.
+
+This is the documented answer to a problem we have hit repeatedly: every time enrichment
+comes back empty for an indie or KU title, or a cover simply doesn't exist at any free
+source, this is the gap being felt. Worth a trial subscription evaluated against a sample
+of real misses before committing.
+
+*Before subscribing: read the current ToS redistribution clause directly. The original
+analysis flagged that it had not verified the operative language.*
+
+### Tier 4 — currently in use, risk flagged
+
+**Hardcover.** Currently our primary backend source for series seeding, trope
+suggestions, and Discover search. Three concerns, in order of seriousness: the license is
+asserted as "same as OpenLibrary" rather than granted as CC0, with acknowledged rights
+caveats; API tokens are personal, backend/localhost-oriented, expire annually, and there
+is no allowlisting path for third-party sites; there is no bulk export or documented
+commercial tier.
+
+None of that makes Hardcover unusable today, but it is the shakiest dependency in the
+stack and it is load-bearing across three features. Mitigation is to reduce what depends
+on it (move series seeding to Wikidata) and to keep every Hardcover-derived field
+treated as a *suggestion the reader confirms* rather than authoritative data — which is
+already how our trope suggestions work.
+
+### Do not use
+
+- **Goodreads** — API retired December 2020, no new keys, no licensing path, developer
+  terms prohibit storage. Goodreads IDs survive as reconciliation keys via Wikidata and
+  Open Library.
+- **Amazon Product Advertising API** — requires an Associates account with qualifying
+  sales; PA-API 5.0 retires April 2026 in favor of a Creators API with a higher sales
+  bar. Intended for affiliate display, not as a metadata or cover backend.
+- **OCLC WorldCat / Nielsen BookData / Bowker** — institutional or enterprise contracts
+  only; no self-serve tier; use restrictions preclude our use case.
+- **LibraryThing Common Knowledge** — genuinely the best series data available, but
+  CC BY-SA. Share-alike is a live problem *for us specifically*: incorporating BY-SA
+  content into a proprietary app is the exact incompatibility to avoid. `thingISBN` is
+  non-commercial, which is worse. Do not ingest.
+- **TV Tropes** — CC BY-NC-SA, no API, no dump, contributors assign rights irrevocably.
+  Non-commercial disqualifies it entirely.
+- **BISAC / Thema** — the code list is free to *use for classification*, but
+  incorporating the list into a system requires a paid license and the documentation is
+  copyright BISG. We avoid this entirely by having built our own genre taxonomy.
+
+---
+
+## Covers — the one place we currently diverge
+
+### Current implementation
+
+Reverie's cover pipeline (shipped across the cover-system work) fetches an image, ingests
+it through an edge function, normalizes it to webp at 1600px long edge plus a 300px
+thumbnail, and stores it permanently in a user-scoped Supabase Storage path, retaining
+the source URL for provenance. Sources include Google Books, Open Library, Hardcover,
+user upload, and camera capture.
+
+**The divergence:** storing Google-derived images permanently is inconsistent with
+Google's terms. This was not an oversight in reasoning so much as a gap in what the
+sourcing analysis said versus what the pipeline was built to do.
+
+### Target posture
+
+**Ingest and store** (defensible):
+- **Open Library** covers — the most defensible external source; make this the preferred
+  ingest source.
+- **Reader uploads and camera captures** — unambiguously the reader's own, stored in
+  their own scoped path. This is the strongest position in the whole stack.
+- **Publisher-supplied assets**, if ever obtained through a legitimate ONIX or trade
+  relationship.
+
+**Display-time only, never persisted**:
+- **Google Books** thumbnails — hotlink at display size, no ingest, no storage.
+- Any other source without an explicit grant.
+
+**Honest absence**: where no defensible cover exists, the skin-tokened placeholder is the
+correct outcome — never a wrong cover, never Google's "image not available" plate (see
+the plate-detection work already shipped).
+
+### Why camera capture matters more than it looks
+
+Camera capture is the only cover source that is unambiguously ours, and it happens to
+cover precisely the gap no database fills: indie, KU, signed, and special editions. It is
+simultaneously the most legally defensible path and the most personal one — the reader
+photographing the actual copy on their actual shelf. It should be promoted in the UI, not
+buried as a fallback.
+
+### Implemented posture
+
+One rule, expressed once in `packages/core/src/covers.ts` and read by every caller:
+`INGESTIBLE_COVER_SOURCES` / `isIngestibleCoverUrl` / `mayIngestCover`.
+
+- **Ingest chain prefers Open Library.** `fetchCover` resolves from Open Library only; a miss
+  returns empty rather than falling back to Google, because whatever it returns is persisted.
+  The enrich Edge Function already ordered `openlibrary,google`.
+- **Google is display-time only.** It is refused at four ingest entry points — the lazy
+  backfill, the re-sharpen sweep, the cover sheet, and the `covers` Edge Function, which is
+  the authoritative gate (the client is not the security boundary). Refusal is by **host** as
+  well as by source label, because the lazy backfill migrates pre-existing covers under the
+  label `url`, and a Google image wearing that label is still a Google image.
+- **Google still renders.** `coverCandidates`, the zoom upgrade, and the "image not available"
+  plate detection are untouched. Picking a Google edition in the cover sheet now stores the
+  *reference* rather than the bytes, so it remains a working choice rather than a dead end;
+  the row is labelled "linked, not saved".
+- **Upload and camera stay first-class stored sources**, and camera now leads the sheet.
+- **Hardcover's ingest posture is unchanged** by this pass. The doc flags its licence as
+  asserted rather than granted, but that is remediation item 4's decision, not this one's.
+
+### Auditing what is already stored
+
+Covers ingested before the above are still in Storage. Two populations, because the lazy
+backfill recorded its source as `url`, not `google`:
+
+```sql
+-- Google-derived assets already ingested into our own Storage.
+select
+  coalesce(cover_source, '(null)') as cover_source,
+  count(*) as stored_google_derived
+from public.books
+where cover_url like '%/storage/v1/object/public/covers/%'
+  and (
+    cover_source = 'google'
+    or cover_source_url ~* '(books[.]google[.][a-z.]+|googleusercontent[.]com)/books/content'
+  )
+group by 1
+order by 2 desc;
+```
+
+Options, for the owner to choose — **no action taken**:
+
+- **Re-source from Open Library** — cleanest posture; costs coverage, since Open Library will
+  not have every title and those books fall back to the honest placeholder.
+- **Leave in place** — lowest disruption. Private per-user storage, no redistribution; the
+  practical exposure argument in *Honest statement of residual risk* applies. Stops the
+  population growing without pretending the existing copies aren't there.
+- **Purge to placeholder** — strictest reading; every affected book visibly loses its cover
+  until re-covered, which is a real cost to the reader for a risk that is already low.
+
+A middle path exists: purge nothing, but let the re-sharpen sweep re-source from Open Library
+where a match exists and leave the rest, converting opportunistically rather than in one pass.
+
+### Honest statement of residual risk
+
+Cover art is the publisher's or artist's copyright regardless of the metadata license
+attached to the record. **No source cleanly licenses an independent app to store and
+serve high-resolution covers.** Open Library is the most defensible option, not a clean
+grant. Reverie's practical exposure is low — private per-user storage, human-scale
+libraries, no redistribution, no public gallery — but "low practical risk" and "clearly
+permitted" are different things, and the two should not be quietly conflated. Treat
+covers as a per-source permissions question and revisit if Reverie's usage pattern
+changes (public shelves, shared lists, marketing surfaces).
+
+---
+
+## Series ordering — recommended upgrade
+
+Move primary series seeding from **Hardcover** to **Wikidata (P179 + P1545)**:
+
+- CC0, so no license ambiguity.
+- Decimal ordinals are native to the model, matching Reverie's existing decimal-position
+  and label implementation (`#2.5`, "novella").
+- Reduces load-bearing dependence on the stack's shakiest source.
+
+Retain Hardcover as a **gap-filler** for series Wikidata doesn't cover, and keep manual
+curation first-class — no source is complete, and Reverie's position-seeding logic
+already assumes source data may be wrong or absent. User edits must continue to win over
+any source refresh, which is the existing non-overwrite principle.
+
+---
+
+## Tropes, genre, and mood — validated, no change needed
+
+The original analysis independently confirms three decisions Reverie already made:
+
+- **No usable openly-licensed trope dataset exists.** TV Tropes is non-commercial with no
+  export; fan wikis are BY-SA or BY-NC-SA; AO3 tags aren't published as a reusable
+  dataset; academic corpora aren't production metadata. Building our own taxonomy was the
+  only viable path, and the analysis explicitly frames a bespoke taxonomy as a
+  differentiator aligned with anti-consensus discovery. Our facet-based canonical set
+  plus reader-created personal tropes is the recommended posture.
+- **Genre taxonomy built in-house avoids BISAC licensing** entirely. Our nine primaries
+  plus multi-select subgenres are ours to change and ours to ship.
+- **Mood is reader-assigned and unsourced by construction** — there is no external
+  dataset to conflict with, and the no-derivation guarantee means there never will be.
+
+Nothing to change. This section exists so the decisions are recorded as *validated*
+rather than merely made.
+
+---
+
+## What Reverie explicitly does not do
+
+- No bulk dump ingestion, no Postgres corpus, no ~250GB working set.
+- No entity-reconciliation pipeline (BookReconciler, OpenRefine, VIAF clustering).
+- No published derived dataset — which dissolves the entire copyleft-contamination and
+  license-segregation problem the original analysis spends most of its length on.
+- No BISAC or Thema list redistribution.
+- No scraping of any source, including archived copies.
+
+---
+
+## Remediation and opportunity queue
+
+Ordered by value, not urgency. None of these is an outage.
+
+1. ~~**Cover source re-ordering**~~ — **implemented** (branch `fix/cover-sourcing`). See
+   *Implemented posture* below. The audit of already-stored assets is **outstanding and
+   awaiting a decision** — see *Auditing what is already stored*.
+2. **Series seeding to Wikidata.** Primary source becomes CC0 with native decimal
+   ordinals; Hardcover retained as gap-fill.
+3. **Evaluate ISBNdb.** Trial against a sample of real enrichment misses — indie, KU, and
+   contemporary titles where the current chain comes back empty. This is the documented
+   fix for a recurring gap. Read the ToS redistribution clause before subscribing.
+4. **Hardcover risk decision.** Decide deliberately whether to keep it as a suggestion
+   source (acceptable, with everything reader-confirmed) or reduce dependence further.
+   Token expiry and the absence of third-party allowlisting are the operational risks.
+5. **Attribution surface.** Add a Settings → About → *Data sources* panel naming Open
+   Library / Internet Archive, Wikidata, Google Books, Hardcover, OpenStreetMap and CARTO
+   (already attributed on the indie-bookstore map), and any paid source added later. CC0
+   requires no attribution; naming sources anyway is both courteous and consistent with
+   the app's honesty about where things come from.
+
+---
+
+## Open questions and residual risks
+
+- **Covers remain the largest unresolved legal question.** Open Library is the most
+  defensible option available, not a clean grant. Reader-captured covers are the only
+  unambiguous ones.
+- **Hardcover's license is asserted, not granted**, and its tokens are not designed for a
+  deployed third-party app.
+- **ISBNdb's operative redistribution language** should be read directly before
+  subscribing, not inferred.
+- **Multi-user changes the calculus.** Everything above assumes private, per-user
+  libraries with no public surface. Public shelves, shared lists, or marketing use of
+  cover imagery would each warrant a fresh look.
+- **This document is not legal advice.** It reflects a careful reading of published terms
+  and a conservative posture. If Reverie ever becomes commercially significant, the cover
+  question in particular deserves a lawyer.

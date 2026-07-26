@@ -1,20 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  buildGoogleBooksUrl,
-  buildOpenLibraryUrl,
-  coverCandidates,
-  coverKey,
-  enrichmentCoverFill,
-  extractGoogleCover,
-  extractOpenLibraryCover,
-  fetchCover,
-  isCoverSource,
-  isGoogleContentCover,
-  isGoogleNoCoverArt,
-  isStoredCoverUrl,
-  isUpgradeableCoverUrl,
-  upgradeCoverUrl,
-} from './covers'
+import { DISPLAY_ONLY_COVER_SOURCES, buildGoogleBooksUrl, buildOpenLibraryUrl, coverCandidates, coverKey, enrichmentCoverFill, extractGoogleCover, extractOpenLibraryCover, fetchCover, isCoverSource, isGoogleContentCover, isGoogleNoCoverArt, isIngestibleCoverSource, isIngestibleCoverUrl, isStoredCoverUrl, isUpgradeableCoverUrl, mayIngestCover, upgradeCoverUrl } from './covers'
 
 describe('cover helpers', () => {
   it('builds a normalized cover key and query URLs', () => {
@@ -169,5 +154,66 @@ describe('coverCandidates — the shared fallback chain (upgraded → original �
     expect(coverCandidates('', { size: 'full' })).toEqual([])
     expect(coverCandidates(null)).toEqual([])
     expect(coverCandidates(undefined, { size: 'thumb', storedThumb: null })).toEqual([])
+  })
+})
+
+describe('ingest posture — Google is display-time only', () => {
+  const GOOGLE = 'https://books.google.com/books/content?id=abc&printsec=frontcover&img=1&zoom=1'
+  const GOOGLE_MIRROR = 'https://books.googleusercontent.com/books/content?id=xyz&zoom=1'
+  const OL = 'https://covers.openlibrary.org/b/id/12345-M.jpg'
+  const STORED = 'https://x.supabase.co/storage/v1/object/public/covers/u/1/2/3.webp'
+
+  it('names Google as the one display-only source', () => {
+    expect(DISPLAY_ONLY_COVER_SOURCES).toEqual(['google'])
+    expect(isIngestibleCoverSource('google')).toBe(false)
+    for (const s of ['openlibrary', 'upload', 'camera', 'url', 'hardcover'] as const) {
+      expect(isIngestibleCoverSource(s), s).toBe(true)
+    }
+  })
+
+  it('refuses Google by HOST, whatever the declared source says', () => {
+    // the lazy backfill labels pre-existing covers 'url' — the host is what actually matters
+    expect(isIngestibleCoverUrl(GOOGLE)).toBe(false)
+    expect(isIngestibleCoverUrl(GOOGLE_MIRROR)).toBe(false)
+    expect(mayIngestCover('url', GOOGLE)).toBe(false)
+    expect(mayIngestCover('openlibrary', GOOGLE)).toBe(false)
+  })
+
+  it('allows the defensible sources', () => {
+    expect(isIngestibleCoverUrl(OL)).toBe(true)
+    expect(mayIngestCover('openlibrary', OL)).toBe(true)
+    expect(mayIngestCover('camera')).toBe(true) // file upload, no URL
+    expect(mayIngestCover('upload')).toBe(true)
+  })
+
+  it('treats an already-stored URL as nothing to ingest', () => {
+    expect(isIngestibleCoverUrl(STORED)).toBe(false)
+    expect(isIngestibleCoverUrl('')).toBe(false)
+  })
+
+  it('still RENDERS a Google cover — display is untouched by the ingest rule', () => {
+    const chain = coverCandidates(GOOGLE, { size: 'full' })
+    expect(chain.length).toBeGreaterThan(0)
+    expect(chain[0]).toContain('zoom=0') // upgraded for display, just never stored
+    expect(isGoogleNoCoverArt(GOOGLE, 575, 750)).toBe(true) // plate guard intact
+  })
+})
+
+describe('fetchCover — Open Library only, never a URL we cannot keep', () => {
+  const olJson = { docs: [{ cover_i: 12345 }] }
+
+  it('resolves from Open Library', async () => {
+    const fetchImpl = async () => ({ json: async () => olJson })
+    await expect(fetchCover({ title: 'T', last: 'L' }, fetchImpl)).resolves.toContain('covers.openlibrary.org')
+  })
+
+  it('returns empty on a miss rather than falling back to Google', async () => {
+    const calls: string[] = []
+    const fetchImpl = async (url: string) => {
+      calls.push(url)
+      return { json: async () => ({ docs: [] }) }
+    }
+    await expect(fetchCover({ title: 'T', last: 'L' }, fetchImpl)).resolves.toBe('')
+    expect(calls.every((u) => !u.includes('googleapis'))).toBe(true)
   })
 })

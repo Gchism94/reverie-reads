@@ -1,4 +1,4 @@
-import { isStoredCoverUrl, isUpgradeableCoverUrl, upgradeCoverUrl, type Book, type CoverSource } from '@reverie/core'
+import { isIngestibleCoverUrl, isStoredCoverUrl, isUpgradeableCoverUrl, upgradeCoverUrl, type Book, type CoverSource } from '@reverie/core'
 import { supabase } from '../lib/supabase'
 import { toBookRow } from './mappers'
 import { ingestCover } from '../lib/covers'
@@ -37,10 +37,17 @@ export function resharpenSource(b: Book): string | null {
   if (b.coverUserChosen) return null // the reader's chosen cover is sacred
   if (b.coverSource === 'camera' || b.coverSource === 'upload') return null // the reader's own image
   if (!b.cover) return null
-  // A raw hotlink we can request larger (Google/OL) — ingest it durably at full res.
-  if (!isStoredCoverUrl(b.cover) && isUpgradeableCoverUrl(b.cover)) return b.cover
+  // Google is display-time only (docs/reverie-metadata-sourcing.md §Covers) — re-sharpening one
+  // would mean fetching and storing it, which is the very thing its terms forbid. A Google cover
+  // stays a hotlink at whatever size it renders; the sweep leaves it alone.
+  // A raw hotlink we can request larger (Open Library) — ingest it durably at full res.
+  if (!isStoredCoverUrl(b.cover) && isUpgradeableCoverUrl(b.cover)) {
+    return isIngestibleCoverUrl(b.cover) ? b.cover : null
+  }
   // Already stored, but from an upgradeable origin (a backfilled ~128px thumbnail) — re-fetch bigger.
-  if (isStoredCoverUrl(b.cover) && b.coverSourceUrl && isUpgradeableCoverUrl(b.coverSourceUrl)) return b.coverSourceUrl
+  if (isStoredCoverUrl(b.cover) && b.coverSourceUrl && isUpgradeableCoverUrl(b.coverSourceUrl)) {
+    return isIngestibleCoverUrl(b.coverSourceUrl) ? b.coverSourceUrl : null
+  }
   return null
 }
 
