@@ -205,7 +205,7 @@ test('Edit details: title, ISBN and spice are editable and persist', async ({ pa
   }
 })
 
-test('Edit details: an emptied title falls back rather than blanking the record', async ({ page }) => {
+test('Edit details: an emptied title is refused, not silently reverted', async ({ page }) => {
   test.setTimeout(180_000)
   const c = await client()
   await reset(c)
@@ -218,9 +218,21 @@ test('Edit details: an emptied title falls back rather than blanking the record'
     const dlg = await openEdit(page)
     await dlg.getByLabel('Title').fill('   ')
     await dlg.getByRole('button', { name: /Save details/i }).click()
+
+    // Refused in the form: the dialog STAYS OPEN, the field says why, and nothing is written.
+    // Quietly restoring the old title would look identical to a successful save — the exact
+    // invisible-write pattern #78 exists to eliminate.
+    await expect(dlg).toBeVisible()
+    await expect(dlg.getByText('A book needs a title.')).toBeVisible()
+    await expect(dlg.getByLabel('Title')).toHaveAttribute('aria-invalid', 'true')
+    expect((await rowOf(c, id)).title).toBe('Keep My Name')
+
+    // Typing clears the error, and a real title saves.
+    await dlg.getByLabel('Title').fill('A Real Title')
+    await expect(dlg.getByText('A book needs a title.')).toHaveCount(0)
+    await dlg.getByRole('button', { name: /Save details/i }).click()
     await expect(dlg).toBeHidden({ timeout: 15_000 })
-    // A book with no title is not a book — the previous title stands.
-    await expect.poll(async () => (await rowOf(c, id)).title, { timeout: 15_000 }).toBe('Keep My Name')
+    await expect.poll(async () => (await rowOf(c, id)).title, { timeout: 15_000 }).toBe('A Real Title')
   } finally {
     await reset(c)
   }

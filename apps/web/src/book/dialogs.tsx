@@ -201,13 +201,18 @@ export function EditDetails({
   async function save() {
     if (!f.genre || saving) return
     const parsed = readNumbers()
-    if (!parsed.ok) {
-      setFieldErrors(parsed.errors)
+    // A blank title is REFUSED, not quietly reverted to the old one. Silently substituting a value
+    // the reader didn't type is the same invisible write #78 exists to eliminate: the dialog would
+    // close, the save would look successful, and the edit would simply not have happened.
+    const errors: Partial<Record<keyof typeof f, string>> = parsed.ok ? {} : { ...parsed.errors }
+    if (!f.title.trim()) errors.title = 'A book needs a title.'
+    if (Object.keys(errors).length) {
+      setFieldErrors(errors)
       setSaveError('Some values need fixing before this can save.')
       setConfirmingLeave(false)
       return
     }
-    const { position: pos, seriesCount, pubY, pubM, pubD } = parsed.values
+    const { position: pos, seriesCount, pubY, pubM, pubD } = (parsed as Extract<typeof parsed, { ok: true }>).values
     const position = pos ?? ''
 
     setSaving(true)
@@ -219,7 +224,7 @@ export function EditDetails({
         patch: {
           // Title and ISBN were write-once through the UI, which compounds badly with adopting a
           // wrong search hit — the record was uncorrectable from the app afterwards.
-          title: f.title.trim() || book.title,
+          title: f.title.trim(),
           isbn: f.isbn.trim(),
           intensity,
           series: f.series,
@@ -259,11 +264,12 @@ export function EditDetails({
         </div>
       )}
       <div className="mb-3">
-        <Field label="Title">
+        <Field label="Title" error={fieldErrors.title}>
           <input
             value={f.title}
             onChange={(e) => set('title', e.target.value)}
             aria-label="Title"
+            aria-invalid={!!fieldErrors.title}
             className={fieldClass}
             style={fieldStyle}
           />
