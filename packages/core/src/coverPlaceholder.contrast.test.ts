@@ -65,3 +65,41 @@ describe('cover placeholder contrast (every skin × mode × accent ≥ AA)', () 
     }
   }
 })
+
+// The DESIGNED plates that paste a paper LABEL (box-lid, case-file, proof-sheet, linen-board,
+// buff-manual, sky-mockup) don't use the `plain` recipe above — they set title and author in
+// --paper-ink on --paper. That pair was never covered here, which is how marrow's box-lid reached
+// the axe sweep. Values transcribed from tokens.css and verified against it.
+//
+// SCOPE, deliberately: only the six skins that actually define --paper. Tryst, Grimoire and
+// Aphelion's plates (cloth-boards / vellum-boards / specimen-plate) set type in --ph-ink on the
+// board gradient and carry no paper label, so a row for them would assert two colours that never
+// meet. A full per-variant matrix is the next step and is NOT a naive token cross-product — bloom,
+// for instance, puts its type on --paper over a --ph-* sky, so pairing --ph-ink with --ph-b there
+// measures nothing that renders.
+const PAPER_TOKENS: Record<string, { paper: string; paperInk: string }> = {
+  'marrow/dark': { paper: '#ded6c6', paperInk: '#2a2620' },
+  'marrow/light': { paper: '#f4efe3', paperInk: '#2a2620' },
+  'umbra/dark': { paper: '#e2d9c2', paperInk: '#2a251c' },
+  'umbra/light': { paper: '#f8f2e2', paperInk: '#2a251c' },
+  'folio/dark': { paper: '#d3cfc3', paperInk: '#2b2820' },
+  'folio/light': { paper: '#f7f5ee', paperInk: '#2b2820' },
+  'hearth/dark': { paper: '#efe4cc', paperInk: '#3d3226' },
+  'hearth/light': { paper: '#faf5ea', paperInk: '#3d3226' },
+  'almanac/dark': { paper: '#efe6cc', paperInk: '#241f14' },
+  'almanac/light': { paper: '#fbf6e8', paperInk: '#2b2820' },
+  'bloom/dark': { paper: '#fbfbff', paperInk: '#2b2a3a' },
+  'bloom/light': { paper: '#ffffff', paperInk: '#2b2a3a' },
+}
+
+describe('designed placeholder plates — the pasted paper label clears AA', () => {
+  for (const [key, t] of Object.entries(PAPER_TOKENS)) {
+    it(`${key} label type clears ${AA_NORMAL}:1 on its paper`, () => {
+      const fg = parseColor(t.paperInk)
+      const bg = parseColor(t.paper)
+      expect(fg && bg).toBeTruthy()
+      const ratio = contrastRatio(fg!, bg!)
+      expect(ratio, `${key}: ${t.paperInk} on ${t.paper} = ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(AA_NORMAL)
+    })
+  }
+})

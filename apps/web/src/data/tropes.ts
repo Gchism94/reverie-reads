@@ -147,6 +147,11 @@ export interface UiSuggestion {
 export function useSuggestions(bookId: string) {
   return useQuery({
     queryKey: suggestionsKey(bookId),
+    // JustFinishedSheet renders on every route and asks for suggestions before it has a book,
+    // passing ''. Without this the query ran anyway and PostgREST rejected `book_id=eq.` as an
+    // invalid uuid — a 400 and a console error on every single page load. Guarded here rather than
+    // at the call site so no future caller can reintroduce it.
+    enabled: !!bookId,
     queryFn: async (): Promise<UiSuggestion[]> => {
       const { data, error } = await supabase
         .from('trope_suggestions')

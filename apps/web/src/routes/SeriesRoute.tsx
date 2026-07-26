@@ -267,9 +267,9 @@ function SeriesScreen() {
                   <button type="button" onClick={() => openBook(book.id)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
                     <div
                       className="h-[60px] w-10 flex-none overflow-hidden rounded-md border border-line"
-                      style={state === 'wishlist' ? { opacity: 'var(--ghost-opacity)' } : undefined}
+                      style={state === 'wishlist' ? { borderStyle: 'dashed' } : undefined}
                     >
-                      <CoverImage book={book} thumb />
+                      <CoverImage book={book} thumb ghost={state === 'wishlist'} />
                     </div>
                     <span className="min-w-0">
                       <span className="block truncate text-[15px] font-semibold text-ink" style={{ fontFamily: 'var(--font-display)' }}>
