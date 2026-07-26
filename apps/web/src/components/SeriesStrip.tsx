@@ -52,10 +52,10 @@ export function SeriesStrip({ book }: { book: Book }) {
     return (
       <span
         className="h-[54px] w-9 flex-none overflow-hidden rounded-md border border-line"
-        style={!b ? { borderStyle: 'dashed', background: 'var(--chip)' } : !isPossessed(b) ? { opacity: 'var(--ghost-opacity)' } : undefined}
+        style={!b ? { borderStyle: 'dashed', background: 'var(--chip)' } : undefined}
         title={`${dir === 'prev' ? 'Before' : 'After'} this one: ${b?.title ?? e.title}`}
       >
-        {b ? <CoverImage book={b} thumb /> : <span className="flex h-full items-center justify-center text-[13px] text-muted">⊹</span>}
+        {b ? <CoverImage book={b} thumb ghost={!isPossessed(b)} /> : <span className="flex h-full items-center justify-center text-[13px] text-muted">⊹</span>}
       </span>
     )
   }

@@ -67,10 +67,12 @@ export function CoverCard({
           aria-label={`Open ${book.title}`}
           aria-current={selected ? 'true' : undefined}
           className="block h-full w-full"
-          style={{ background: `linear-gradient(150deg, ${g0}, ${g1})`, ...(ghost ? { opacity: 'var(--ghost-opacity)' } : undefined) }}
+          style={{ background: `linear-gradient(150deg, ${g0}, ${g1})` }}
         >
-          {/* cover → skin placeholder fallback + dead-link detection (Cover Studio) */}
-          <CoverImage book={book} thumb />
+          {/* cover → skin placeholder fallback + dead-link detection (Cover Studio). The ghost dim
+              lives INSIDE CoverImage so it never lands on the placeholder's type — the dashed frame
+              above already carries "not in hand". */}
+          <CoverImage book={book} thumb ghost={ghost} />
         </button>
 
         {/* the honest placeholder invites — a quiet affordance, not a restyle (import-quality owns
