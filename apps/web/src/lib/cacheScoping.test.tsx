@@ -1,5 +1,5 @@
 import { act, render, screen, waitFor } from '@testing-library/react'
-import { QueryClient, useQuery } from '@tanstack/react-query'
+import { QueryClient, useIsRestoring, useQuery } from '@tanstack/react-query'
 import { PersistQueryClientProvider, type PersistedClient } from '@tanstack/react-query-persist-client'
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -73,6 +73,14 @@ const persistedBooks = (titles: string[]): PersistedClient => ({
   } as PersistedClient['clientState'],
 })
 
+/** Renders a marker once restoration has finished. Without this the negative assertions below are
+ *  vacuous: `waitFor(() => expect(...).not.toBeInTheDocument())` succeeds on its FIRST tick, which
+ *  can land before the async restore has hydrated anything — so the test would pass even with the
+ *  scoping reverted. Mutation testing caught exactly that. */
+function RestoreGate() {
+  return useIsRestoring() ? <span>restoring</span> : <span>restored</span>
+}
+
 /** The screen under test: whatever `['books']` holds, rendered as a list a reader would see. */
 function Library({ fetchBooks }: { fetchBooks: () => Promise<string[]> }) {
   const { data } = useQuery({ queryKey: ['books'], queryFn: fetchBooks, staleTime: 0 })
@@ -123,13 +131,15 @@ describe('guard: one reader’s cached library never renders for another', () =>
         client={new QueryClient()}
         persistOptions={{ persister: createDexiePersister(), buster: BUSTER }}
       >
+        <RestoreGate />
         <Library fetchBooks={b.fetch} />
       </PersistQueryClientProvider>,
     )
 
-    // Restoration has run; B's own fetch has NOT resolved. This is the exact window in which the
-    // real app painted 286 of A's book cards.
-    await waitFor(() => expect(screen.queryByText('Fourth Wing')).not.toBeInTheDocument())
+    // Restoration has DEFINITELY run, and B's own fetch has not resolved. This is the exact window
+    // in which the real app painted 286 of A's book cards.
+    expect(await screen.findByText('restored')).toBeInTheDocument()
+    expect(screen.queryByText('Fourth Wing')).not.toBeInTheDocument()
     expect(screen.queryByText('Iron Flame')).not.toBeInTheDocument()
 
     await act(async () => {
