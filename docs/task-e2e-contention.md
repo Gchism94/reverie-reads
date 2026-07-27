@@ -19,6 +19,7 @@ The cost is not the red. It is that we learned to read red as noise, which let
 two PRs ship with broken UI flows.
 
 ## Preconditions — stop and report if unmet
+
 - `main` current at 27e8540 or later, working tree clean, local Supabase running.
 
 ## Phase 1 — Audit and experiment. Change nothing permanent. Report and stop.
@@ -93,6 +94,7 @@ So the fix follows the measurement, not the hypothesis. Three items, and only th
 **Deliberately NOT in this branch** — both wanted, both follow-ups. Landing either
 alongside the worker change would make a green result prove nothing about which
 change mattered:
+
 - the per-user migration for `a11y` / `fonts` / `cover-sheet` (the three files still
   sharing the seeded dev account);
 - serving a production build via `vite preview` instead of the dev server.
@@ -100,7 +102,7 @@ change mattered:
 ## Acceptance — revised
 
 The doc's original higher-worker criterion no longer applies: it was written to
-prove a data-scoping fix had removed a contention mechanism. This fix *concedes*
+prove a data-scoping fix had removed a contention mechanism. This fix _concedes_
 capacity rather than removing a mechanism, so surviving more pressure is not the
 claim being made. Finding the ceiling is.
 
@@ -111,7 +113,31 @@ claim being made. Finding the ceiling is.
 - `retries: 0` for these runs regardless of the config's normal value. We are
   measuring flake, not tolerating it.
 
+### Measured outcome — acceptance NOT met
+
+| workers     | runs | green | mean wall clock         |
+| ----------- | ---- | ----- | ----------------------- |
+| 1           | 3    | **3** | 6.3m                    |
+| 2 (default) | 5    | **4** | 5.7m                    |
+| 3           | 1    | **1** | 5.2m                    |
+| 4           | 3    | **0** | — (8, 8 and 3 failures) |
+
+The five-consecutive-green bar was **not cleared**: run 2 of 5 failed on
+`cover-sheet` waiting 15s for "Cover updated." after an edition pick, with the
+a11y sweep occupying the other worker at the time. The ceiling probes behaved as
+predicted — 3 green, 4 red — so the default is not arbitrary, but "2 has margin"
+is the weaker claim the data actually supports: 2 is the cheapest mostly-reliable
+setting, not a proven-clean one.
+
+What this establishes: **worker count was a real cause but not the only one.**
+Going from 4 to 2 took the failure rate from ~8 per run to ~1 in 5 runs. The
+residue is the three specs still sharing the seeded dev account — the deferred
+follow-up — which is now the highest-value next change rather than a
+nice-to-have. Parallelism is worth little here regardless: serializing the whole
+suite costs ~10%, because the a11y sweep is the wall-clock floor either way.
+
 ## Out of scope — recorded
+
 - The e2e cases recorded in docs/task-offline-session.md for the offline paths.
   They go in a follow-up branch, not this one — adding specs while stabilizing
   muddies the signal. Once the suite is trustworthy they become its first real

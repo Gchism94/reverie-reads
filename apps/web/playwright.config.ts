@@ -21,9 +21,22 @@ const BASE_URL = `http://localhost:${PORT}`
 // saturation throughout: PostgREST answering `PGRST002 Could not query the database for the schema
 // cache`, GoTrue returning empty sign-in failures, and ordinary round-trips missing 15–20s budgets.
 //
-// Two is green, and costs nothing: the a11y sweep alone runs ~4.4 minutes and is the wall-clock
-// floor, so a full run takes about as long at 2 workers as at 4. Above 2 this suite buys contention
-// and no speed. Serialized (workers=1) it is also green but ~40% slower.
+// Measured on this box, fresh DB before every run, retries 0:
+//
+//   workers=1   3 runs, 3 green            mean 6.3m
+//   workers=2   5 runs, 4 green            mean 5.7m   ← default
+//   workers=3   1 run,  1 green                 5.2m
+//   workers=4   3 runs, 0 green            (8, 8 and 3 failures)
+//
+// Two is the default because it is the cheapest setting that is mostly reliable, not because it is
+// proven clean: one of its five runs still failed. Parallelism buys very little here — the a11y
+// sweep alone is ~4.4m and is the wall-clock floor, so serializing the entire rest of the suite
+// costs only ~10% (6.3m vs 5.7m), and going past 2 buys no speed at all while going red.
+//
+// The residual failure is NOT worker count. It is that a11y, fonts and cover-sheet still share the
+// one seeded dev account, so the heaviest test runs concurrently with the heaviest sweep against
+// the same rows. Migrating those three to per-file users is the follow-up that should actually
+// close this; raise the worker count again only after it lands and five consecutive runs are green.
 const WORKERS = Number(process.env.E2E_WORKERS ?? 2)
 
 export default defineConfig({

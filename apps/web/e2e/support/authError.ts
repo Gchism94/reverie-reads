@@ -33,7 +33,8 @@ export function authFailure(context: string, email: string, error: unknown): str
     const own = Object.getOwnPropertyNames(error as object).filter(
       (k) => !['name', 'message', 'status', 'code', 'stack'].includes(k),
     )
-    if (own.length) extra = ` extra=${JSON.stringify(Object.fromEntries(own.map((k) => [k, (error as Record<string, unknown>)[k]])))}`
+    if (own.length)
+      extra = ` extra=${JSON.stringify(Object.fromEntries(own.map((k) => [k, (error as Record<string, unknown>)[k]])))}`
   } catch {
     /* a getter that throws must not replace the diagnosis with its own failure */
   }
