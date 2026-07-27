@@ -250,3 +250,33 @@ describe('an unreadable auth key is reported, not swallowed', () => {
     expect(messages).toHaveLength(1) // once per load — a broken format must not burn the quota
   })
 })
+
+describe('a null session from an EVENT is not a sign-out', () => {
+  // auth-js emits INITIAL_SESSION with null as soon as a listener attaches if its own load failed —
+  // which offline is exactly what happens. Blindly trusting it dropped the reader on the landing
+  // ~25s into an offline launch. The manual condition caught this; these guard it.
+  it('ignores an INITIAL_SESSION null while the stored session is still there', async () => {
+    storeSession(SESSION_A)
+    getSessionImpl = () => new Promise(() => {})
+
+    renderApp()
+    expect(screen.getByText('your library')).toBeInTheDocument()
+    await waitFor(() => expect(emitAuth).not.toBeNull())
+
+    await act(async () => emitAuth!('INITIAL_SESSION', null))
+    expect(screen.getByText('your library')).toBeInTheDocument()
+    expect(screen.queryByText('signed out')).not.toBeInTheDocument()
+  })
+
+  it('honours a null once the stored session is genuinely gone', async () => {
+    storeSession(SESSION_A)
+    getSessionImpl = () => new Promise(() => {})
+
+    renderApp()
+    await waitFor(() => expect(emitAuth).not.toBeNull())
+    localStorage.removeItem(AUTH_KEY)
+    await act(async () => emitAuth!('INITIAL_SESSION', null))
+
+    await waitFor(() => expect(screen.getByText('signed out')).toBeInTheDocument())
+  })
+})

@@ -78,7 +78,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
       .catch(() => setLoading(false))
     const { data: sub } = supabase.auth.onAuthStateChange((event, next) => {
-      setSession(next)
+      // NOT `setSession(next)`. auth-js emits INITIAL_SESSION as soon as a listener attaches, with
+      // whatever its own load resolved — and offline with an expired token that is `null`, both on
+      // the success path and in its catch (which emits INITIAL_SESSION null explicitly). Taking
+      // that at face value wiped the session seeded from storage and dropped the reader back on the
+      // landing ~25s in. Caught by the manual offline condition, not by the unit guards.
+      //
+      // Storage is the source of truth for "is there a session at all": a null from an event only
+      // means signed out when the stored session is gone too. SIGNED_OUT below is the explicit
+      // signal, and auth-js removes storage before it fires.
+      setSession(next ?? storedSession())
       // The event used to be ignored entirely (`_event`). It is the hook that makes sign-out
       // actually forget: nothing else cleared either cache, so the reader's library outlived their
       // session in BOTH places.
@@ -94,6 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // and by then auth-js has already removed the stored session, so the scoped persister has no
       // id and writes nothing. The table clear that follows would sweep such a row regardless.
       if (event === 'SIGNED_OUT') {
+        setSession(null)
         queryClient.clear()
         void clearAllOfflineCaches()
       }
