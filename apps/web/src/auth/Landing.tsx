@@ -2,6 +2,7 @@ import { Suspense, lazy, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { APP_NAME } from '@reverie/core'
 import { Wordmark } from './Wordmark'
+import { ChunkBoundary } from '../components/ChunkBoundary'
 import { Mockup } from './landing/Mockup'
 
 // Below-the-fold sections are a separate chunk so the hero paints first for new visitors.
@@ -136,9 +137,15 @@ export function Landing() {
       <NightSky />
       <Nav />
       <Hero />
-      <Suspense fallback={<div className="py-24 text-center text-[13px] text-muted">Loading…</div>}>
-        <LandingBelowFold />
-      </Suspense>
+      {/* The below-fold chunk is the one piece of this page that has to be fetched. If it can't be
+          — offline, or a stale client after a deploy — the hero, nav and CTA above have already
+          rendered and must stay. Before this, that single failed import unwound to the app-wide
+          boundary and replaced a working page with "Something went wrong!". */}
+      <ChunkBoundary label="landing-below-fold">
+        <Suspense fallback={<div className="py-24 text-center text-[13px] text-muted">Loading…</div>}>
+          <LandingBelowFold />
+        </Suspense>
+      </ChunkBoundary>
     </main>
   )
 }
