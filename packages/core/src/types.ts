@@ -121,6 +121,8 @@ export interface Book {
   /** dominant cover colour (hex), extracted at ingest — feeds the per-book spine tint */
   coverColor?: string
   isbn: string
+  /** Page count for the edition in hand. null = UNKNOWN — renders blank, never a fabricated 0. */
+  pages: number | null
   fave: boolean
   ownership: BookOwnership // owned vs wishlist — presence in the library no longer implies possession
   owned: Owned // per-format detail for an owned book (which formats)

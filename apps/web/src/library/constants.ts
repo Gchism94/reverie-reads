@@ -1,4 +1,4 @@
-import { genreKey, type BookOwnership, type LibrarySort } from '@reverie/core'
+import { coverGradient, genreKey, type BookOwnership, type LibrarySort } from '@reverie/core'
 
 /** Plain, legible ownership words for the CONTROLS (docs/task-ownership-legibility.md). The button
  *  label must say what tapping it does at a glance; the per-skin voice (SkinVoice ownIt/borrowedIt/
@@ -62,6 +62,25 @@ export const GENRE_SUBGENRES: Record<string, readonly string[]> = {
 export function subgenresForGenre(genre: string, keep?: string): string[] {
   const list = [...(GENRE_SUBGENRES[genreKey(genre)] ?? []), NEUTRAL_SUBGENRE]
   return keep && !list.includes(keep) ? [keep, ...list] : list
+}
+
+/**
+ * Every OTHER genre's subgenres — the "show the rest" disclosure behind both pickers.
+ *
+ * Storage never needed this opened up: `subgenres` is a flat, unscoped text[], and both forms
+ * already preserve out-of-vocabulary picks across a genre switch. The constraint was the PICKER's
+ * vocabulary alone, which meant a horror-romance could keep a cross-genre pair it already had but
+ * could never be given one. De-duplicated and sorted, so the disclosure reads as a vocabulary
+ * rather than as nine concatenated shelves.
+ */
+export function otherGenreSubgenres(genre: string): string[] {
+  const own = new Set(subgenresForGenre(genre))
+  const rest = new Set<string>()
+  for (const [key, list] of Object.entries(GENRE_SUBGENRES)) {
+    if (key === genreKey(genre)) continue
+    for (const sub of list) if (!own.has(sub)) rest.add(sub)
+  }
+  return [...rest].sort((a, b) => a.localeCompare(b))
 }
 
 export const READ_STATUSES = ['Read', 'Reading', 'Unread', 'DNF'] as const
@@ -181,15 +200,14 @@ export const SORTS: { value: LibrarySort; label: string }[] = [
 ]
 
 /** Subgenre → two-stop gradient for cover fallbacks (from the prototype's SUBGRAD). */
-export function subgenreGradient(subgenre: string): [string, string] {
-  const map: Record<string, [string, string]> = {
-    Romantasy: ['#6a4e9e', '#c0455f'],
-    'Dark Romance': ['#3a0e1a', '#9e2a4e'],
-    Romance: ['#ff7e9d', '#ffb37e'],
-    Contemporary: ['#ff9a6c', '#f25c8a'],
-    Sports: ['#ff7e5f', '#e8345f'],
-    'Cowboy Romance': ['#c98a4b', '#9e3a2a'],
-    Fantasy: ['#4a6fa5', '#6a3d7a'],
-  }
-  return map[subgenre] ?? ['#c0455f', '#6a4e9e']
+/**
+ * The cover gradient for a book. Delegates to core's `coverGradient`: PRIMARY GENRE picks the hue
+ * family, the first subgenre only modulates lightness/saturation within it.
+ *
+ * Kept under its old name and shape as the single seam every surface already calls — CoverCard,
+ * SeriesView, BookDetailRail, the book page, Add's preview and RefineAdded. The signature gained
+ * `genre` rather than sprouting a second function, so there is one tint rule, not two.
+ */
+export function subgenreGradient(subgenre: string, genre = ''): [string, string] {
+  return coverGradient(genre, subgenre)
 }

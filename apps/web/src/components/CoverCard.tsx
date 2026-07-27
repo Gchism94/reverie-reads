@@ -23,7 +23,7 @@ export function CoverCard({
   selected?: boolean
 }) {
   const author = formatAuthors(book.contributors) || [book.first, book.last].filter(Boolean).join(' ')
-  const [g0, g1] = subgenreGradient(book.subgenre)
+  const [g0, g1] = subgenreGradient(book.subgenre, book.genre)
   const isRead = book.readStatus === 'Read' || book.reads.length > 0
   const labels = useLabels()
   const intensity = book.intensity ?? 0

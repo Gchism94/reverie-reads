@@ -41,7 +41,7 @@ function SeriesCard({
   for (let i = 1; i <= slots; i++) {
     const b = hasPos ? group.books.find((x) => posNum(x) === i) : group.books[i - 1]
     if (b) {
-      const [g0, g1] = subgenreGradient(b.subgenre)
+      const [g0, g1] = subgenreGradient(b.subgenre, b.genre)
       spines.push(
         <div
           key={i}

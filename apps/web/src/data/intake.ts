@@ -62,6 +62,7 @@ export function incomingToBook(inc: Incoming): Book {
     moods: [],
     intensity: inc.intensity ?? null,
     cover: inc.cover ?? '',
+    pages: inc.pages ?? null,
     isbn: inc.isbn ?? '',
     fave: inc.fave ?? false,
     ownership: inc.ownership ?? 'owned',
