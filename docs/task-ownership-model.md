@@ -1,5 +1,11 @@
 # Task: Ownership Model — Decouple "Owned" from "In My Library"
 
+> **Status: shipped in #48 — superseded by `docs/task-ownership-v2.md`.** This is the brief the
+> work was built against, not a description of how the app behaves today. The two-state `owned |
+> unowned` model this specifies is **no longer the model** — #68 replaced it with four states
+> (`owned | borrowed | wishlist | unset`). Read it as history. For current behavior, read the
+> code and `docs/DATA_MODEL.md`.
+
 **Branch:** `feat/ownership-model`
 **Dependencies:** none, but **blocks** `feat/shelf-system`, `feat/series-experience` (gap adds), and `feat/discover-search`. Merge this first.
 **Golden rule applies:** eyeball on the real authenticated app before merge.

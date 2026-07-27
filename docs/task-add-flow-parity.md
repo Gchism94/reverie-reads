@@ -1,5 +1,10 @@
 # Task: Add-Flow Parity — Bring Add Book Up to Edit Book
 
+> **Status: shipped in #73.** This is the brief the work was built against, not a description of
+> how the app behaves today. Add gained the cross-genre subgenre disclosure in #82, which also
+> decided Add stays deliberately leaner than Edit. For current behavior, read the code and
+> `docs/DATA_MODEL.md`.
+
 **Branch:** `feat/add-flow-parity`
 **Repo:** book-corpus
 **Dependencies:** `feat/ownership-v2` (four-state ownership) and `fix/ownership-legibility`

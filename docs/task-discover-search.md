@@ -1,5 +1,8 @@
 # Task: Discover Search
 
+> **Status: shipped in #55.** This is the brief the work was built against, not a description of
+> how the app behaves today. For current behavior, read the code and `docs/DATA_MODEL.md`.
+
 **Branch:** `feat/discover-search`
 **Dependencies:** `feat/ownership-model` merged (add-as-unowned actions). Pairs with the picker seam left in `feat/shelf-system`.
 **Golden rule applies:** eyeball on the real authenticated app before merge.

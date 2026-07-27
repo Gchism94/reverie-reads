@@ -1,5 +1,9 @@
 # Task: Trope System — Structure, Weight, and a Reason to Tag
 
+> **Status: shipped in #53.** This is the brief the work was built against, not a description of
+> how the app behaves today. The vocabulary broadened beyond romance in #69. For current
+> behavior, read the code and `docs/DATA_MODEL.md`.
+
 **Branch:** `feat/trope-system`
 **Dependencies:** none hard. Coordinate with `feat/series-experience` if merged: the post-read trope prompt and the next-in-series prompt must render as **one** "just finished" sheet, never two stacked dialogs. Downstream consumers (do not build, do not foreclose): bingo auto-fill, Wrapped top-tropes, trope/spice analytics, taste-ranking signals.
 **Golden rule applies:** eyeball on the real authenticated app before merge.

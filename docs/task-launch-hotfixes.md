@@ -1,5 +1,8 @@
 # Task: Launch Hotfixes
 
+> **Status: shipped in #47.** This is the brief the work was built against, not a description of
+> how the app behaves today. For current behavior, read the code and `docs/DATA_MODEL.md`.
+
 **Branch:** `fix/launch-hotfixes`
 **Dependencies:** none — start immediately
 **Golden rule applies:** no merge until eyeballed on the real authenticated app at real mobile and desktop viewports. Not `/lab`, not specimens.

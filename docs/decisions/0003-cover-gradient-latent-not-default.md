@@ -34,9 +34,41 @@ real palette. A change that violent producing no visible difference is proof the
 **Surfaces verified as non-rendering:** the library grid (Marrow/dark and Hearth/light) and the
 book detail page.
 
-**Surfaces NOT checked:** `SeriesView`, `BookDetailRail`, Add's cover preview, and `RefineAdded`.
-They may or may not expose the gradient. Anyone building the opt-in setting should start by
-auditing those four rather than assuming either way.
+### The four remaining surfaces — audited 2026-07-27
+
+Measured by asking the browser what is actually painted at each gradient element's centre
+(`elementFromPoint`): if a descendant sits on top, the gradient is occluded.
+
+| Surface | Result | Why |
+|---|---|---|
+| `SeriesView` | occluded | 160×241 cover boxes covered by the placeholder plate |
+| `BookDetailRail` | occluded | 161×243 and 142×214 boxes, same |
+| **Add's cover preview** | **rendered — now fixed** | see below |
+| `RefineAdded` | occluded *(code-derived, not measured)* | renders `<CoverImage>` unconditionally, which always paints an `<img>` or the placeholder |
+
+*Method note: `RefineAdded` resisted automated measurement (reaching step two reliably needs a
+completed add through the intake/dedup path). Its row above is read from the code, not observed,
+and is flagged as such rather than presented as a measurement. It has not been upgraded since.*
+
+### Add's cover preview — the one escape, resolved 2026-07-26
+
+`AddRoute.tsx` rendered the preview cover **conditionally** — `{cover && <CoverImage … />}` — so a
+book with no cover yet left the gradient box empty and the tint showed through bare. Every other
+surface renders `CoverImage` unconditionally, and `CoverImage` always paints something opaque
+(an `<img>`, or the placeholder when the candidate chain is exhausted).
+
+That was worse than the tint appearing nowhere: a genre colour visible in exactly one screen,
+during the add flow, that vanishes the moment the book is saved reads as a bug, not a feature.
+
+**Fixed by making the preview consistent with everywhere else** — the placeholder now draws
+unconditionally, so a coverless book in the add form gets the same designed plate it will get once
+saved. This was the direction chosen deliberately: the alternative (making every other surface
+conditional) would have exposed the gradient app-wide, which is precisely the change this ADR
+declines to make. The preview also now passes the in-progress author through, so the plate reads as
+the book rather than as "Untitled".
+
+With this, the gradient renders on **no** surface. The decision below is now uniform rather than
+uniform-with-one-exception.
 
 ## Why the code is kept rather than reverted
 
@@ -69,5 +101,7 @@ subgenre cannot silently produce an illegible plate.
 - No visual change ships from this work. The "100% of the library re-tints overnight" framing that
   preceded the screenshots was wrong: the CSS value changes for every book, the pixels do not.
 - The opt-in setting is unscheduled and unpromised.
-- The four unchecked surfaces above are the open question, and are recorded here so the next person
-  does not have to rediscover them.
+- **The gradient now escapes nowhere.** Add's cover preview was the sole exception and was
+  reconciled on 2026-07-26 by drawing its placeholder unconditionally (above). The one visible
+  change from that fix is in Add itself: a coverless book in progress shows the skin's placeholder
+  plate instead of a bare tinted box.
