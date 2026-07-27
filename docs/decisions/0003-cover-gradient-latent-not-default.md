@@ -34,9 +34,32 @@ real palette. A change that violent producing no visible difference is proof the
 **Surfaces verified as non-rendering:** the library grid (Marrow/dark and Hearth/light) and the
 book detail page.
 
-**Surfaces NOT checked:** `SeriesView`, `BookDetailRail`, Add's cover preview, and `RefineAdded`.
-They may or may not expose the gradient. Anyone building the opt-in setting should start by
-auditing those four rather than assuming either way.
+### The four remaining surfaces — audited 2026-07-27
+
+Measured by asking the browser what is actually painted at each gradient element's centre
+(`elementFromPoint`): if a descendant sits on top, the gradient is occluded.
+
+| Surface | Result | Why |
+|---|---|---|
+| `SeriesView` | occluded | 160×241 cover boxes covered by the placeholder plate |
+| `BookDetailRail` | occluded | 161×243 and 142×214 boxes, same |
+| **Add's cover preview** | **RENDERS** | see below |
+| `RefineAdded` | occluded *(code-derived, not measured)* | renders `<CoverImage>` unconditionally, which always paints an `<img>` or the placeholder |
+
+**Add's cover preview is an inconsistency, and it is the one place the tint currently escapes.**
+`AddRoute.tsx:317` renders the cover **conditionally** — `{cover && <CoverImage … />}` — so a book
+with no cover yet leaves the gradient box empty and the tint shows through bare. Every other
+surface renders `CoverImage` unconditionally, and CoverImage always paints something opaque.
+
+That is worse than the tint appearing nowhere: a genre colour that shows up in exactly one screen,
+during the add flow, and then vanishes once the book is saved, reads as a bug rather than a
+feature. Whoever builds the opt-in setting should treat this as the first thing to reconcile —
+either make the preview consistent with everywhere else, or make everywhere else consistent with
+it, but not leave it as the sole exception.
+
+*Method note: `RefineAdded` resisted automated measurement (reaching step two reliably needs a
+completed add through the intake/dedup path). Its behaviour above is read from the code, not
+observed, and is flagged as such rather than presented as a measurement.*
 
 ## Why the code is kept rather than reverted
 
@@ -69,5 +92,5 @@ subgenre cannot silently produce an illegible plate.
 - No visual change ships from this work. The "100% of the library re-tints overnight" framing that
   preceded the screenshots was wrong: the CSS value changes for every book, the pixels do not.
 - The opt-in setting is unscheduled and unpromised.
-- The four unchecked surfaces above are the open question, and are recorded here so the next person
-  does not have to rediscover them.
+- The gradient escapes in exactly one place — Add's cover preview — because that surface renders
+  its cover conditionally. Reconciling it is the first task for whoever builds the opt-in setting.

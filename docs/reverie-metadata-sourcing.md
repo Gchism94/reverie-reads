@@ -199,10 +199,18 @@ One rule, expressed once in `packages/core/src/covers.ts` and read by every call
 - **Hardcover's ingest posture is unchanged** by this pass. The doc flags its licence as
   asserted rather than granted, but that is remediation item 4's decision, not this one's.
 
-### Auditing what is already stored
+### What was already stored — audited, decided, closed
 
-Covers ingested before the above are still in Storage. Two populations, because the lazy
-backfill recorded its source as `url`, not `google`:
+**Run against production, 2026-07-26. Result: 3 rows.**
+
+| `cover_source` | stored, Google-derived |
+|---|---|
+| `url` | 3 |
+
+Zero rows carried `cover_source = 'google'`. All three came in through the lazy backfill, which
+labelled what it swept `'url'` regardless of host — which is exactly why the query matches on the
+**host in `cover_source_url`** as well as on the source label. Counting the label alone would have
+reported none and closed the question wrongly.
 
 ```sql
 -- Google-derived assets already ingested into our own Storage.
@@ -219,18 +227,16 @@ group by 1
 order by 2 desc;
 ```
 
-Options, for the owner to choose — **no action taken**:
+**Decision (owner, 2026-07-26): leave them in place.** The host-based gate shipped in the same
+change stopped the population growing, and three rows in a private, per-user library — no
+redistribution, no public surface — does not justify a re-source pass or the visible cost of
+purging a reader's covers to a placeholder. The options weighed (re-source / leave / purge, plus
+an opportunistic convert-on-re-sharpen middle path) are recorded in the branch history; this is
+the settled answer, not a deferral.
 
-- **Re-source from Open Library** — cleanest posture; costs coverage, since Open Library will
-  not have every title and those books fall back to the honest placeholder.
-- **Leave in place** — lowest disruption. Private per-user storage, no redistribution; the
-  practical exposure argument in *Honest statement of residual risk* applies. Stops the
-  population growing without pretending the existing copies aren't there.
-- **Purge to placeholder** — strictest reading; every affected book visibly loses its cover
-  until re-covered, which is a real cost to the reader for a risk that is already low.
-
-A middle path exists: purge nothing, but let the re-sharpen sweep re-source from Open Library
-where a match exists and leave the rest, converting opportunistically rather than in one pass.
+Revisit only if the exposure assumptions change — public shelves, shared lists, or marketing use
+of cover imagery would each warrant a fresh look, as would the count growing, which would mean the
+gate has a hole.
 
 ### Honest statement of residual risk
 
@@ -296,9 +302,9 @@ rather than merely made.
 
 Ordered by value, not urgency. None of these is an outage.
 
-1. ~~**Cover source re-ordering**~~ — **implemented** (branch `fix/cover-sourcing`). See
-   *Implemented posture* below. The audit of already-stored assets is **outstanding and
-   awaiting a decision** — see *Auditing what is already stored*.
+1. ~~**Cover source re-ordering**~~ — **done** (#79). See *Implemented posture* below. The audit
+   of already-stored assets is **complete and decided** — 3 rows, left in place; see *What was
+   already stored*.
 2. **Series seeding to Wikidata.** Primary source becomes CC0 with native decimal
    ordinals; Hardcover retained as gap-fill.
 3. **Evaluate ISBNdb.** Trial against a sample of real enrichment misses — indie, KU, and

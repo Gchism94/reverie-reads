@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 const SUPABASE_URL = 'http://127.0.0.1:55321'
 const ANON =
@@ -35,6 +35,17 @@ async function setupFixtures(): Promise<{ bookId: string; clubId: string; listCo
   const uid = (await sb.auth.getUser()).data.user!.id
   const bookId = (await sb.from('books').select('id').order('added_at').limit(1).single()).data!.id
 
+  // Clear any fixtures a PREVIOUS run left behind, before creating this run's.
+  //
+  // Cleanup lives in the test's `finally`, but setup runs before that block exists — so an
+  // interrupted or failed run (Ctrl-C, a CI timeout, a throw in here) leaks whatever it had already
+  // created. `series` is UNIQUE (owner_id, name), which turned that leak into a ratchet: one
+  // orphaned 'A11y Saga' row made the insert below return null, `.data!.id` threw, setup died
+  // BEFORE the try block, and the club and shelf it had just made leaked too — wedging the suite
+  // deterministically until someone deleted a row by hand. Clubs and lists have no unique
+  // constraint, so they simply accumulated (4 of each, when this was found).
+  await clearFixtures(sb)
+
   const club = (
     await sb
       .from('clubs')
@@ -68,6 +79,13 @@ async function setupFixtures(): Promise<{ bookId: string; clubId: string; listCo
   await sb.from('shared_refs').upsert({ owner_id: uid, code: listCode, kind: 'list', name: 'A11y list' }, { onConflict: 'owner_id,code' })
 
   return { bookId, clubId: club.id, listCode, shelfId: shelf.id, tropeId: trope.id }
+}
+
+/** Remove every fixture row this spec creates, by its stable name — safe to run before or after. */
+async function clearFixtures(sb: SupabaseClient) {
+  await sb.from('series').delete().eq('name', 'A11y Saga')
+  await sb.from('clubs').delete().eq('title', 'A11y Read-along')
+  await sb.from('lists').delete().eq('name', 'A11y Shelf')
 }
 
 async function cleanup(clubId: string, listCode: string, shelfId: string, bookId?: string) {
