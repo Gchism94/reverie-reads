@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { authFailure } from './support/authError'
 
 // Regression guards for docs/task-shelf-regressions.md — the two capabilities that shipped at #48/#49
 // and silently broke:
@@ -56,7 +57,7 @@ async function client(): Promise<Client> {
   await ensureUser()
   const sb = createClient(SUPABASE_URL, ANON)
   const { data, error } = await sb.auth.signInWithPassword({ email: TEST_EMAIL, password: TEST_PASSWORD })
-  if (error || !data.session) throw new Error(`sign-in failed: ${error?.message}`)
+  if (error || !data.session) throw new Error(authFailure('shelf-regressions', TEST_EMAIL, error))
   shared = { sb, session: data.session, uid: data.session.user.id }
   return shared
 }

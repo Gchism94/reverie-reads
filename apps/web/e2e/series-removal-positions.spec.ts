@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { authFailure } from './support/authError'
 
 // Regression guards for docs/task-series-defects.md as REVISED by the #64/#65 audit. The original
 // work was verified at the DB level only, and three of its four claims did not survive an eyeball:
@@ -39,7 +40,7 @@ async function client(): Promise<Client> {
   await ensureUser()
   const sb = createClient(SUPABASE_URL, ANON)
   const { data, error } = await sb.auth.signInWithPassword({ email: TEST_EMAIL, password: TEST_PASSWORD })
-  if (error || !data.session) throw new Error(`sign-in failed: ${error?.message}`)
+  if (error || !data.session) throw new Error(authFailure('series-removal-positions', TEST_EMAIL, error))
   shared = { sb, session: data.session, uid: data.session.user.id }
   return shared
 }

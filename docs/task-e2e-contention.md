@@ -63,33 +63,51 @@ two PRs ship with broken UI flows.
    e2e runs in CI, and whether it blocks merge. A suite with retries on hides the
    signal we are trying to restore.
 
-## Phase 2 — Fix (shape approved after the audit)
+## Phase 2 — Fix (revised after the audit; owner-approved 2026-07-27)
 
-Working plan, subject to what Phase 1 finds:
+**Why this is narrower than the plan above.** The original plan led with
+worker-scoped test users, because parallel data contention was the working
+hypothesis. Phase 1 measured that hypothesis at **zero**: across two default-worker
+runs (8 failures each, 6 overlapping), not one failure was attributable to another
+worker changing a row. The isolation already in the suite held — ten spec files
+already mint a dedicated per-file user, mutating files already declare
+`mode: 'serial'`, and canonical vocabulary is provably unwritable (an authenticated
+`owner_id: null` insert is refused `42501` on both `tropes` and `moods`). What the
+runs actually showed was **backend and machine saturation**: PostgREST returning
+`PGRST002 Could not query the database for the schema cache`, GoTrue returning
+empty sign-in failures, and round-trips missing 15–20s budgets. Four Chromiums plus
+axe plus the Vite dev server plus Docker Supabase do not fit on eight cores.
 
-- **Worker-scoped test users.** Each worker gets its own account, created in
-  setup and torn down after. Deletion is one delete from `auth.users` with
-  everything cascading — verified in fix/landing-truth — so teardown is cheap
-  and complete.
-- **Per-worker seed.** Whatever fixture data specs need, seeded per user and
-  idempotent. If the full 290-book seed is too heavy at N workers, report the
-  cost and propose a minimal seed with specs creating their own data.
-- **Genuinely shared state stays shared only if read-only.** Anything shared and
-  mutated must be scoped, or its specs serialized deliberately and annotated with
-  why.
-- **Saturation, if it's real:** tune worker count to the machine rather than
-  hardcoding four, and report the number chosen and the evidence.
+So the fix follows the measurement, not the hypothesis. Three items, and only these:
 
-## Acceptance — this is the part that matters
+1. **Worker count from an env var, default 2 locally** — not a hardcoded 4. Four
+   workers saturate this box; two is green and no slower, because the a11y sweep
+   (~4.4m) is the wall-clock floor either way. A CI runner will have different
+   capacity, which is why it is an env var rather than a new hardcoded number.
+2. **`trace: 'retain-on-failure'`**, replacing `on-first-retry`. At `retries: 0`
+   the old setting was inert, which is how the first round of error text was lost.
+   Retries stay at 0.
+3. **Sign-in helper error surfacing.** `test sign-in failed: {}` told us nothing
+   about a real failure. Log the actual error shape.
 
-A single green run proves nothing about a flaky suite. Required:
+**Deliberately NOT in this branch** — both wanted, both follow-ups. Landing either
+alongside the worker change would make a green result prove nothing about which
+change mattered:
+- the per-user migration for `a11y` / `fonts` / `cover-sheet` (the three files still
+  sharing the seeded dev account);
+- serving a production build via `vite preview` instead of the dev server.
 
-- Full suite, default workers, **five consecutive runs, all green**, fresh DB
-  before each. Report all five.
-- One run at **higher worker count than default** — if it survives more
-  contention pressure, that is evidence the mechanism is actually fixed rather
-  than merely made less likely. If it fails there, say so; that is information,
-  not defeat.
+## Acceptance — revised
+
+The doc's original higher-worker criterion no longer applies: it was written to
+prove a data-scoping fix had removed a contention mechanism. This fix *concedes*
+capacity rather than removing a mechanism, so surviving more pressure is not the
+claim being made. Finding the ceiling is.
+
+- Full suite at the new default, **five consecutive runs, all green**, fresh DB
+  before each. Report all five with timings.
+- **Then find the ceiling:** one run at 3 workers, one at 4. Report both. If 3 is
+  green and 4 is not, we know 2 has margin and the number is not arbitrary.
 - `retries: 0` for these runs regardless of the config's normal value. We are
   measuring flake, not tolerating it.
 
@@ -103,8 +121,8 @@ A single green run proves nothing about a flaky suite. Required:
 ## Completion report
 
 Item 1's three runs verbatim, the failure classification with error text, the
-audit answers, the fix shape and why, the five acceptance runs, the
-higher-worker run, and the gate. Whether e2e should now block merge, with your
-recommendation.
+audit answers, the fix shape and why, the five acceptance runs, the two
+ceiling-finding runs (3 and 4 workers), and the gate. Whether e2e should now
+block merge, with your recommendation.
 
 No merge without my word.
