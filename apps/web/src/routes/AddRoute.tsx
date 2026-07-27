@@ -24,7 +24,7 @@ import { CoverImage } from '../components/CoverImage'
 import { CoverSheet } from '../components/CoverSheet'
 import { TropePicker } from '../components/TropePicker'
 import { ContributorEditor } from '../book/ContributorEditor'
-import { FORMATS, OWNERSHIP_LABELS, READ_STATUS_OPTIONS, readStatusLabel, subgenreGradient, subgenresForGenre } from '../library/constants'
+import { FORMATS, OWNERSHIP_LABELS, READ_STATUS_OPTIONS, readStatusLabel, otherGenreSubgenres, subgenreGradient, subgenresForGenre } from '../library/constants'
 import { CORE_GENRES } from '@reverie/core'
 
 interface BarcodeDetectorLike {
@@ -93,7 +93,7 @@ function RefineAdded({ bookId, onDone }: { bookId: string; onDone: () => void })
     )
   }
 
-  const [g0, g1] = subgenreGradient(book.subgenre)
+  const [g0, g1] = subgenreGradient(book.subgenre, book.genre)
   const tropeCount = book.tropes.length
 
   return (
@@ -171,6 +171,7 @@ function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<Search
   const toggleSub = (s: string) =>
     setSubs((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]))
   const [intensity, setIntensity] = useState(0)
+  const [showOtherSubs, setShowOtherSubs] = useState(false)
   // Position gets the same treatment Edit got in #78: one explicit parser, errors shown rather than
   // silently coerced. `Number(v) || ''` turned 0 into "unset" and quietly ate "1.5 (novella)".
   const [positionError, setPositionError] = useState<string | null>(null)
@@ -189,7 +190,11 @@ function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<Search
     setForm((p) => ({ ...p, [k]: v }))
     if (k === 'position') setPositionError(null)
   }
-  const [g0, g1] = subgenreGradient(subs[0] ?? '')
+  const ownSubOptions = [
+    ...subs.filter((x) => !subgenresForGenre(form.genre || skinGenre).includes(x)),
+    ...subgenresForGenre(form.genre || skinGenre),
+  ]
+  const [g0, g1] = subgenreGradient(subs[0] ?? '', form.genre || skinGenre)
 
   async function fetchDetails() {
     setEnriching(true)
@@ -400,15 +405,38 @@ function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<Search
         </p>
       )}
 
-      {/* Subgenres — multi-pick from the CHOSEN genre's shelf (selections survive a genre switch). */}
+      {/* Subgenres — multi-pick from the CHOSEN genre's shelf (selections survive a genre switch),
+          with every other genre's shelf a disclosure away: a horror-romance is a real shape, and
+          storage (flat text[]) always allowed it — only this vocabulary didn't. */}
       <div className="mt-3">
         <div className="mb-1.5 text-[11px] uppercase tracking-[0.15em] text-muted">Subgenres</div>
         <div className="flex flex-wrap gap-1.5">
-          {[...subs.filter((s) => !subgenresForGenre(form.genre || skinGenre).includes(s)), ...subgenresForGenre(form.genre || skinGenre)].map((s) => (
+          {ownSubOptions.map((s) => (
             <Chip key={s} active={subs.includes(s)} onClick={() => toggleSub(s)}>
               {s}
             </Chip>
           ))}
+        </div>
+        <div className="mt-2">
+          <button
+            type="button"
+            onClick={() => setShowOtherSubs((v) => !v)}
+            aria-expanded={showOtherSubs}
+            className="text-[12px] font-semibold text-primary"
+          >
+            {showOtherSubs ? 'Hide other genres’ subgenres' : 'Other genres’ subgenres…'}
+          </button>
+          {showOtherSubs && (
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {otherGenreSubgenres(form.genre || skinGenre)
+                .filter((x) => !ownSubOptions.includes(x))
+                .map((s) => (
+                  <Chip key={s} active={subs.includes(s)} onClick={() => toggleSub(s)}>
+                    {s}
+                  </Chip>
+                ))}
+            </div>
+          )}
         </div>
         {subs.length > 1 && (
           <p className="mt-1.5 text-[11px] text-muted">First pick leads — it sets the book’s gradient.</p>

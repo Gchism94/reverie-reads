@@ -8,6 +8,7 @@ import {
   parseNumericFields,
   PUB_DAY,
   PUB_MONTH,
+  PAGE_COUNT,
   PUB_YEAR,
   SERIES_COUNT,
   SERIES_POSITION,
@@ -20,7 +21,7 @@ import {
 import { Modal } from '../components/Modal'
 import { Chip } from '../components/Chip'
 import { Stars } from '../components/Stars'
-import { FORMATS, OWNERSHIP_LABELS, subgenresForGenre } from '../library/constants'
+import { FORMATS, otherGenreSubgenres, OWNERSHIP_LABELS, READ_STATUS_OPTIONS, readStatusLabel, subgenresForGenre } from '../library/constants'
 import { useBooks, useUpdateBook } from '../data/books'
 import { useSetContributors } from '../data/contributors'
 import { useSyncBookSeries } from '../data/series'
@@ -28,6 +29,7 @@ import { useAddRead } from '../data/reads'
 import { usePerformMerge } from '../data/mergeBooks'
 import { maybeChainPrompt } from '../lib/chainPrompt'
 import { ContributorEditor } from './ContributorEditor'
+import { OwnedCopies } from './OwnedCopies'
 import { MoodPicker } from '../components/MoodPicker'
 import { useLabels } from '../skin/labels'
 import { readableWriteError } from '../lib/writeErrors'
@@ -148,6 +150,7 @@ export function EditDetails({
     series: book.series,
     position: book.position === '' ? '' : String(book.position),
     seriesCount: book.seriesCount == null ? '' : String(book.seriesCount),
+    pages: book.pages == null ? '' : String(book.pages),
     status: book.status as string,
     genre: book.genre,
     format: book.format,
@@ -165,6 +168,11 @@ export function EditDetails({
     setSubs((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]))
   const subVocab = subgenresForGenre(f.genre)
   const subOptions = [...subs.filter((s) => !subVocab.includes(s)), ...subVocab]
+  // Cross-genre subgenres are a real shape — a horror-romance is not a taxonomy error. Storage
+  // always allowed it (flat text[]); only the picker's vocabulary didn't. Disclosed rather than
+  // shown by default, so the genre's own shelf stays the obvious first answer.
+  const [showOtherSubs, setShowOtherSubs] = useState(false)
+  const otherSubs = otherGenreSubgenres(f.genre).filter((x) => !subOptions.includes(x))
   const set = (k: keyof typeof f, v: string) => {
     setF((prev) => ({ ...prev, [k]: v }))
     setFieldErrors((prev) => (prev[k] ? { ...prev, [k]: undefined } : prev)) // typing clears its own error
@@ -181,6 +189,7 @@ export function EditDetails({
     parseNumericFields({
       position: { raw: f.position, spec: SERIES_POSITION },
       seriesCount: { raw: f.seriesCount, spec: SERIES_COUNT },
+      pages: { raw: f.pages, spec: PAGE_COUNT },
       pubY: { raw: f.pubY, spec: PUB_YEAR },
       pubM: { raw: f.pubM, spec: PUB_MONTH },
       pubD: { raw: f.pubD, spec: PUB_DAY },
@@ -212,7 +221,7 @@ export function EditDetails({
       setConfirmingLeave(false)
       return
     }
-    const { position: pos, seriesCount, pubY, pubM, pubD } = (parsed as Extract<typeof parsed, { ok: true }>).values
+    const { position: pos, seriesCount, pages, pubY, pubM, pubD } = (parsed as Extract<typeof parsed, { ok: true }>).values
     const position = pos ?? ''
 
     setSaving(true)
@@ -230,6 +239,7 @@ export function EditDetails({
           series: f.series,
           position,
           seriesCount,
+          pages,
           status: f.status as SeriesStatus,
           genre: f.genre,
           subgenres: subs,
@@ -319,6 +329,18 @@ export function EditDetails({
             ))}
           </select>
         </Field>
+        <Field label="Pages" error={fieldErrors.pages}>
+          <input
+            value={f.pages}
+            onChange={(e) => set('pages', e.target.value)}
+            placeholder="Unknown"
+            inputMode="numeric"
+            aria-label="Pages"
+            aria-invalid={!!fieldErrors.pages}
+            className={fieldClass}
+            style={fieldStyle}
+          />
+        </Field>
         <Field label="ISBN">
           <input
             value={f.isbn}
@@ -346,10 +368,66 @@ export function EditDetails({
             This book hasn’t chosen its genre yet — pick one above and its subgenre shelf appears.
           </p>
         )}
+        {f.genre && (
+          <div className="mt-2">
+            <button
+              type="button"
+              onClick={() => setShowOtherSubs((v) => !v)}
+              aria-expanded={showOtherSubs}
+              className="text-[12px] font-semibold text-primary"
+            >
+              {showOtherSubs ? 'Hide other genres’ subgenres' : 'Other genres’ subgenres…'}
+            </button>
+            {showOtherSubs && (
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {otherSubs.map((s) => (
+                  <Chip key={s} active={subs.includes(s)} onClick={() => toggleSub(s)}>
+                    {s}
+                  </Chip>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         {subs.length > 1 && (
           <p className="mt-1.5 text-[11px] text-muted">First pick leads — it sets the book’s gradient.</p>
         )}
       </div>
+      {/* Reader state — ownership, the formats in hand, and read status. These lived ONLY on the book
+          page's inline controls, so "edit details" was not actually the place you edit the details
+          (the post-#80 matrix). Same components as the book page: OwnedCopies owns ownership AND the
+          per-format flags together, and the read-status chips are the same vocabulary. They persist
+          IMMEDIATELY, like MoodPicker below — independent of this form's Save, because that is how
+          they behave on the book page and a control should not change meaning by moving. */}
+      <div className="mt-4">
+        <span className="mb-1 block text-[11px] uppercase tracking-[0.15em] text-muted">Your copies</span>
+        <OwnedCopies
+          ownership={book.ownership}
+          owned={book.owned}
+          onChange={(owned) => updateBook.mutate({ id: book.id, patch: { owned } })}
+          onOwnershipChange={(ownership) => updateBook.mutate({ id: book.id, patch: { ownership } })}
+        />
+      </div>
+      <div className="mt-3">
+        <span className="mb-1 block text-[11px] uppercase tracking-[0.15em] text-muted">Reading status</span>
+        <div className="flex flex-wrap gap-1.5">
+          {READ_STATUS_OPTIONS.map((rs) => (
+            <Chip
+              key={rs}
+              active={book.readStatus === rs}
+              onClick={() =>
+                updateBook.mutate({
+                  id: book.id,
+                  patch: { readStatus: rs, ...(rs === 'Reading' ? { readingNowHidden: false } : {}) },
+                })
+              }
+            >
+              {readStatusLabel(rs)}
+            </Chip>
+          ))}
+        </div>
+      </div>
+
       {/* Spice / intensity — settable here at last; Add was previously the only place it could be set. */}
       <div className="mt-3 flex items-center gap-2">
         <span className="text-[11px] uppercase tracking-[0.15em] text-muted">{labels.intensity}</span>
