@@ -93,6 +93,10 @@ export async function applyUpdate(): Promise<void> {
 /** Reload once when a lazy chunk 404s after a deploy; a second failure surfaces normally. */
 export function installPreloadErrorReload(): void {
   window.addEventListener('vite:preloadError', (event) => {
+    // Offline there is no new deploy to pick up, so the reload cannot help — it just runs the whole
+    // failing boot again and doubles time-to-error (measured 25.6s → 51.1s before the surrounding
+    // fixes). Let the error fall through to the boundary that can actually render something.
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return
     if (sessionStorage.getItem(RELOADED_FLAG)) return
     sessionStorage.setItem(RELOADED_FLAG, '1')
     event.preventDefault()

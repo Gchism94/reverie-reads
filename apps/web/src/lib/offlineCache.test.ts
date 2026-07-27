@@ -5,8 +5,9 @@ import {
   clearOfflineCache,
   createDexiePersister,
   evictLegacyOfflineCache,
-  storedUserId,
+  evictOtherReaders,
 } from './offlineCache'
+import { storedUserId } from './storedSession'
 
 const client = (buster: string): PersistedClient => ({
   timestamp: 1,
@@ -153,3 +154,17 @@ async function seedLegacyRow(): Promise<void> {
   await db.table('cache').put({ id: 'react-query', client: client('LEGACY') })
   db.close()
 }
+
+describe('arriving reader evicts the others', () => {
+  it('evictOtherReaders keeps only the signing-in reader’s row', async () => {
+    const persister = createDexiePersister()
+    signedInAs('user-a')
+    await persister.persistClient(client('A'))
+    signedInAs('user-b')
+    await persister.persistClient(client('B'))
+    await seedLegacyRow()
+
+    await evictOtherReaders('user-b')
+    expect(await rows()).toEqual(['react-query:user-b'])
+  })
+})

@@ -2,7 +2,15 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import { useQueryClient } from '@tanstack/react-query'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
-import { clearAllOfflineCaches } from '../lib/offlineCache'
+import { clearAllOfflineCaches, evictOtherReaders } from '../lib/offlineCache'
+import { storedSession } from '../lib/storedSession'
+import { signOutLocally } from '../lib/offlineSignOut'
+
+/** A refresh that failed because the network did, not because the credential is bad. auth-js
+ *  preserves the stored session in this case and clears it in the other, so this is the signal
+ *  that decides whether a null result means "signed out" or "cannot reach the server". */
+const isNetworkAuthFailure = (error: unknown): boolean =>
+  !!error && typeof error === 'object' && (error as { name?: string }).name === 'AuthRetryableFetchError'
 
 /** OAuth providers the auth screen offers. Inert until the owner provisions client id/secret in
  *  Supabase auth settings (see SOCIAL_AUTH_ENABLED). */
@@ -41,17 +49,34 @@ const AuthContext = createContext<AuthValue>({
 export const useAuth = () => useContext(AuthContext)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null)
-  const [loading, setLoading] = useState(true)
+  // Seeded SYNCHRONOUSLY from the persisted session. Boot no longer waits on a network round-trip
+  // to decide who the reader is: the answer is already in localStorage. This is the whole
+  // no-boot-gate fix — a bounded race or a timeout would still have made every offline launch
+  // wait, and waiting was never the point. With a stored session we render immediately and let the
+  // refresh land later; with none, getSession() answers without touching the network anyway.
+  const [session, setSession] = useState<Session | null>(() => storedSession())
+  const [loading, setLoading] = useState(() => storedSession() === null)
   // Available because AuthProvider sits INSIDE PersistQueryClientProvider, which renders the
   // QueryClientProvider. No re-ordering needed to reach it.
   const queryClient = useQueryClient()
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session)
-      setLoading(false)
-    })
+    supabase.auth
+      .getSession()
+      .then(({ data, error }) => {
+        // The error used to be dropped on the floor, and that was the defect. Offline with an
+        // expired access token, getSession resolves {session: null, error: AuthRetryableFetchError}
+        // after ~25s of bounded retries — auth-js having deliberately KEPT the session in storage.
+        // Taking that null at face value replaced the reader's library with the signed-out
+        // marketing page, which then crashed on a lazy chunk it could not fetch.
+        if (data.session) setSession(data.session)
+        else if (!isNetworkAuthFailure(error)) setSession(null)
+        // else: keep the session seeded from storage. A genuinely rejected refresh token is NOT
+        // retryable, and auth-js has already wiped storage and emitted SIGNED_OUT by that point,
+        // so this branch cannot strand a signed-out reader in a stale library.
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
     const { data: sub } = supabase.auth.onAuthStateChange((event, next) => {
       setSession(next)
       // The event used to be ignored entirely (`_event`). It is the hook that makes sign-out
@@ -72,6 +97,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         queryClient.clear()
         void clearAllOfflineCaches()
       }
+      // Arriving on a shared device, leave nobody else's library behind you. Sign-out already
+      // clears the table, but the previous reader may simply have closed the tab.
+      if (event === 'SIGNED_IN' && next?.user?.id) void evictOtherReaders(next.user.id)
     })
     return () => sub.subscription.unsubscribe()
   }, [queryClient])
@@ -79,15 +107,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value: AuthValue = {
     session,
     loading,
-    // No direct cache clear here on purpose: the SIGNED_OUT handler above already does it, and a
-    // second call would only fire in the case where it should NOT. supabase's _signOut posts to the
-    // server first and returns early WITHOUT removing the local session if that request fails with
-    // anything other than 404/401/403 — so a sign-out attempted offline leaves the reader signed in
-    // and emits no event. Clearing the mirror there would strip their offline library while leaving
-    // them logged in. (That offline sign-out does nothing at all is a real defect, but it belongs to
-    // fix/offline-session, not to cache scoping — recorded, not fixed here.)
     signOut: async () => {
-      await supabase.auth.signOut()
+      // Capture the access token BEFORE anything clears — it is the only credential that can revoke
+      // the server session, and it is never written anywhere. In memory or nowhere.
+      const accessToken = session?.access_token ?? null
+      const { error } = await supabase.auth.signOut()
+      if (!error) return // normal path: auth-js removed the session and SIGNED_OUT does the rest
+
+      if (!isNetworkAuthFailure(error)) return // a real server refusal — surfacing it is honest
+      // Offline. Sign out on THIS DEVICE anyway: stop the refresh ticker so nothing resurrects the
+      // session, drop the stored key, then do by hand what SIGNED_OUT would have done.
+      await signOutLocally(accessToken)
+      queryClient.clear()
+      await clearAllOfflineCaches()
+      setSession(null)
     },
     signInWithPassword: async (email, password) => {
       const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password })

@@ -1,5 +1,6 @@
 import Dexie, { type Table } from 'dexie'
 import type { PersistedClient, Persister } from '@tanstack/react-query-persist-client'
+import { storedUserId } from './storedSession'
 
 interface CacheRow {
   id: string
@@ -28,48 +29,9 @@ const LEGACY_KEY = 'react-query'
 /** One row per reader. */
 const rowKey = (userId: string): string => `react-query:${userId}`
 
-/**
- * supabase-js derives its session storage key from the project URL:
- * `sb-${hostname.split('.')[0]}-auth-token`. Deriving it the same way here means no scanning and no
- * guessing — the key is a pure function of the env we already build with.
- */
-function authStorageKey(): string | null {
-  const url = import.meta.env.VITE_SUPABASE_URL as string | undefined
-  if (!url) return null
-  try {
-    return `sb-${new URL(url).hostname.split('.')[0]}-auth-token`
-  } catch {
-    return null
-  }
-}
-
-/**
- * The signed-in reader's id, read SYNCHRONOUSLY from the persisted session — no network, no await
- * on auth. That is what lets the cache be scoped without re-ordering the providers or gating boot:
- * restoration already runs in `PersistQueryClientProvider`'s own effect and never blocked render,
- * so the only thing that needed fixing was *which row* it reads. Measured at ~0.1ms.
- *
- * auth-js stores the session as plain `JSON.stringify` and keeps `user` inline (no `userStorage`
- * option is set), so `user.id` is available here.
- *
- * FAILS CLOSED, deliberately. A missing key, private-mode denial, malformed JSON, or a future
- * encoded storage format all return null — which disables the mirror rather than falling back to an
- * unscoped row. Losing the offline cache is a degradation; showing one reader another's library is
- * a defect.
- */
-export function storedUserId(): string | null {
-  const key = authStorageKey()
-  if (!key || typeof window === 'undefined') return null
-  try {
-    const raw = window.localStorage.getItem(key)
-    if (!raw) return null
-    const parsed = JSON.parse(raw) as { user?: { id?: unknown } } | null
-    const id = parsed?.user?.id
-    return typeof id === 'string' && id ? id : null
-  } catch {
-    return null
-  }
-}
+// Identity comes from storedSession.ts, which reads the persisted session synchronously and — since
+// the offline-session work — also reports a PRESENT-but-unparseable auth key rather than silently
+// treating it as signed out. Everything here still fails closed: no readable reader, no row.
 
 /**
  * A TanStack Query persister backed by Dexie/IndexedDB — the local-first mirror. The query
@@ -130,6 +92,22 @@ export async function clearOfflineCache(): Promise<void> {
  */
 export async function clearAllOfflineCaches(): Promise<void> {
   await db.cache.clear()
+}
+
+/**
+ * Drop every row that is not this reader's — called on SIGNED_IN.
+ *
+ * Sign-out already clears the table, but sign-out is not guaranteed to have happened: the previous
+ * reader may have closed the tab, or (before the offline sign-out fix) tried to sign out with no
+ * connectivity and silently stayed signed in. Evicting on the way IN means a reader arriving on a
+ * shared device leaves no one else's library behind them, whatever the previous reader did. Also
+ * sweeps the pre-scoping row as a side effect.
+ */
+export async function evictOtherReaders(userId: string): Promise<void> {
+  const mine = rowKey(userId)
+  const keys = (await db.cache.toCollection().primaryKeys()) as string[]
+  const others = keys.filter((k) => k !== mine)
+  if (others.length) await db.cache.bulkDelete(others)
 }
 
 /**
