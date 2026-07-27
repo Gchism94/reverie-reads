@@ -367,6 +367,7 @@ export function importCsv(existing: readonly Book[], text: string): CsvImportRes
         moods: [],
         intensity: null,
         cover: '',
+        pages: null,
         isbn: '',
         fave: false,
         // Goodreads shelf → ownership (same rule as parseCsvRows): to-read = wishlist, a

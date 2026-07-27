@@ -126,6 +126,7 @@ const book = (over: Partial<Book>): Book => ({
   moods: [],
   intensity: null,
   cover: '',
+  pages: null,
   isbn: '',
   fave: false,
   ownership: 'owned',

@@ -115,6 +115,10 @@ export function editionSyncPatch(book: Book, e: EditionOption): Partial<Book> {
   const format = mapEditionFormat(e.format)
   if (format && format !== book.format) patch.format = format
   if (e.year && e.year !== book.pub.y) patch.pub = { ...book.pub, y: e.year }
+  // The edition already carries a page count and the chooser already shows it ("352 pp") — it was
+  // simply discarded on pick because the model had nowhere to put it. Offered, never forced: this
+  // rides the same "also update edition details" confirmation as ISBN, format and year.
+  if (e.pages && e.pages !== book.pages) patch.pages = e.pages
   return patch
 }
 

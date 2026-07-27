@@ -111,6 +111,7 @@ export function CoverSheet({ book, onClose }: { book: Book; onClose: () => void 
                   syncPatch.format,
                   syncPatch.isbn ? `ISBN ${syncPatch.isbn}` : null,
                   syncPatch.pub?.y ? `${syncPatch.pub.y}` : null,
+                  syncPatch.pages ? `${syncPatch.pages} pp` : null,
                 ]
                   .filter(Boolean)
                   .join(' · ')}
