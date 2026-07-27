@@ -1,5 +1,9 @@
 # Task: Shelf & TBR System Overhaul
 
+> **Status: shipped in #49.** This is the brief the work was built against, not a description of
+> how the app behaves today. Regressions in this area were fixed in #64 and again in #77. For
+> current behavior, read the code and `docs/DATA_MODEL.md`.
+
 **Branch:** `feat/shelf-system`
 **Dependencies:** `feat/ownership-model` must be merged first.
 **Golden rule applies:** eyeball on the real authenticated app before merge.

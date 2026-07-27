@@ -1,5 +1,10 @@
 # Task: Cover System — The Cover Is the Door
 
+> **Status: shipped in #50.** This is the brief the work was built against, not a description of
+> how the app behaves today. The ingest posture narrowed in #79 — Google Books is display-only
+> now. See `docs/decisions/0005-google-covers-display-only.md`. For current behavior, read the
+> code and `docs/DATA_MODEL.md`.
+
 **Branch:** `feat/cover-system`
 **Dependencies:** none hard; can run parallel to other feature branches. Coordinate lightly with `fix/import-quality` (the no-cover placeholder gains an affordance here; the placeholder's visual policy lives there).
 **Golden rule applies:** eyeball on the real authenticated app before merge — on a real phone for the camera path, not just devtools emulation.

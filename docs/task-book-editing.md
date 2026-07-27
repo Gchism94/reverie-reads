@@ -1,5 +1,10 @@
 # Task: Book Editing — Genre Model, Series Status, Field Flexibility
 
+> **Status: shipped in #51.** This is the brief the work was built against, not a description of
+> how the app behaves today. The series-status enum widened to seven values in #65; page count
+> and edit-as-superset landed in #82. For current behavior, read the code and
+> `docs/DATA_MODEL.md`.
+
 **Branch:** `feat/book-editing`
 **Dependencies:** none hard; can run parallel to shelf-system. Series *status* enum lands here; series *experience* is a separate task that consumes it. Covers and tropes are their own tasks (`feat/cover-system`, `feat/trope-system`) — do not touch them here.
 **Golden rule applies:** eyeball on the real authenticated app before merge.

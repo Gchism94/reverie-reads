@@ -195,6 +195,9 @@ function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<Search
     ...subgenresForGenre(form.genre || skinGenre),
   ]
   const [g0, g1] = subgenreGradient(subs[0] ?? '', form.genre || skinGenre)
+  // For the preview plate — the placeholder sets the author line from these, so a coverless book
+  // in progress reads as itself rather than as "Untitled".
+  const { first: previewFirst, last: previewLast } = toFirstLast(contribs)
 
   async function fetchDetails() {
     setEnriching(true)
@@ -313,8 +316,12 @@ function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<Search
       <div className="flex gap-4">
         <div className="flex-none">
           <div className="aspect-[2/3] w-20 overflow-hidden rounded-lg border border-line" style={{ background: `linear-gradient(150deg, ${g0}, ${g1})` }}>
-            {/* through CoverImage so a Google "no image" plate is rejected on load, same as the grid */}
-            {cover && <CoverImage book={{ title: form.title, cover }} thumb />}
+            {/* Through CoverImage so a Google "no image" plate is rejected on load, same as the grid —
+                and UNCONDITIONALLY, so a coverless book gets the skin's designed plate here exactly as
+                it does everywhere else. Rendering this conditionally left the gradient bare on the one
+                screen and made the genre tint visible in Add and nowhere after it
+                (docs/decisions/0003-cover-gradient-latent-not-default.md). */}
+            <CoverImage book={{ title: form.title, first: previewFirst, last: previewLast, cover }} thumb />
           </div>
           <button
             type="button"

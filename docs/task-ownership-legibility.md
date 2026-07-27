@@ -1,5 +1,8 @@
 # Task: Ownership Legibility — Readable Labels, Honest Shelf Names
 
+> **Status: shipped in #71.** This is the brief the work was built against, not a description of
+> how the app behaves today. For current behavior, read the code and `docs/DATA_MODEL.md`.
+
 **Branch:** `fix/ownership-legibility`
 **Repo:** book-corpus
 **Dependencies:** `feat/ownership-v2` merged (it is). No migration — copy/label and shelf-

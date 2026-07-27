@@ -1,5 +1,8 @@
 # Task: De-Romance the Match Quiz
 
+> **Status: shipped in #72.** This is the brief the work was built against, not a description of
+> how the app behaves today. For current behavior, read the code and `docs/DATA_MODEL.md`.
+
 **Branch:** `fix/match-deromance`
 **Repo:** book-corpus
 **Dependencies:** `feat/taxonomy-neutral` (#69) merged (it is — the broadened

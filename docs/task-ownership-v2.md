@@ -1,5 +1,9 @@
 # Task: Ownership Model v2 — Borrowed, Unset, and the Reading-History Hole
 
+> **Status: shipped in #68.** This is the brief the work was built against, not a description of
+> how the app behaves today. This is the current possession model. `docs/DATA_MODEL.md` carries
+> the shipped shape. For current behavior, read the code and `docs/DATA_MODEL.md`.
+
 **Branch:** `feat/ownership-v2`
 **Repo:** book-corpus
 **Dependencies:** `fix/shelf-regressions` merged first (it touches the same shelf/library

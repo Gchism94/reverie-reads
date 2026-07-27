@@ -1,5 +1,8 @@
 # Task: Manual Merge, Legacy Title Re-Parse & Borrowed Import
 
+> **Status: shipped in #75.** This is the brief the work was built against, not a description of
+> how the app behaves today. For current behavior, read the code and `docs/DATA_MODEL.md`.
+
 **Branch:** `feat/manual-merge`
 **Repo:** book-corpus
 **Dependencies:** none hard. Builds on ownership-v2 (four-state) and #54's `seriesTitle.ts`.

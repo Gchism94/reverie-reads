@@ -1,5 +1,9 @@
 # Task: De-Romance the Taxonomy & Remove Vibes Entirely
 
+> **Status: shipped in #69.** This is the brief the work was built against, not a description of
+> how the app behaves today. Subgenres stopped being scoped to the primary genre in #82 (the
+> cross-genre disclosure). For current behavior, read the code and `docs/DATA_MODEL.md`.
+
 **Branch:** `feat/taxonomy-neutral`
 **Repo:** book-corpus
 **Dependencies:** none hard, but coordinate with `feat/add-flow-parity` (both touch the
