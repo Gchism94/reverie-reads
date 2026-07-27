@@ -18,10 +18,19 @@ describe('buildBuyLinks', () => {
     expect(url).not.toContain('/a/5780/')
   })
 
-  it("routes Bookshop profit through the chosen store's id when known", () => {
-    const links = buildBuyLinks(book, { ...base, store: { name: 'Powell’s', bookshopId: '99', website: 'https://powells.com' } })
-    expect(links.find((l) => l.provider === 'bookshop')!.url).toBe('https://bookshop.org/a/99/9780306406157')
+  // Replaces "routes Bookshop profit through the chosen store's id when known", which asserted a
+  // branch nothing in the app could reach — no OSM tag, column or type ever carried a Bookshop id,
+  // so the test was false assurance about where money goes. What a chosen store ACTUALLY does is
+  // add a direct link to its own shop, first in the list; Bookshop stays a plain by-ISBN link.
+  it('puts the chosen store first and leaves the Bookshop link plain by-ISBN', () => {
+    const links = buildBuyLinks(book, { ...base, store: { name: 'Powell’s', website: 'https://powells.com' } })
     expect(links[0]).toMatchObject({ provider: 'store', url: 'https://powells.com' })
+    expect(links.find((l) => l.provider === 'bookshop')!.url).toBe('https://bookshop.org/book/9780306406157')
+  })
+
+  it('omits the store link when the chosen store has no website on file', () => {
+    const links = buildBuyLinks(book, { ...base, store: { name: 'A Shop With No Site' } })
+    expect(links.some((l) => l.provider === 'store')).toBe(false)
   })
 
   it('affiliate mode uses the app affiliate id (config flip, not a refactor)', () => {
@@ -39,6 +48,15 @@ describe('buyDisclosure', () => {
   it('states the app earns nothing in store mode and names the store', () => {
     expect(buyDisclosure(base)).toContain('Reverie earns nothing')
     expect(buyDisclosure({ ...base, store: { name: 'Powell’s' } })).toContain('Powell’s')
+  })
+
+  // The chosen store is paid by the DIRECT link only; Bookshop/Libro carry no per-store
+  // attribution. The line must not merge the two into one "supports <store>" claim.
+  it('does not claim the chosen store is paid by the Bookshop/Libro links', () => {
+    const line = buyDisclosure({ ...base, store: { name: 'Powell’s' } })
+    expect(line).toMatch(/Shopping Powell’s directly supports them/)
+    expect(line).toContain('indie bookstores generally')
+    expect(line).not.toMatch(/Supports Powell’s and other indies/)
   })
   it('discloses commission in affiliate mode', () => {
     expect(buyDisclosure({ ...base, mode: 'affiliate' })).toContain('commission')

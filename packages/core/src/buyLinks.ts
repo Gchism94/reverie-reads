@@ -3,9 +3,19 @@ import { normalizeIsbn } from './match'
 // Buy-link layer. Attribution is a config-driven strategy so the money routing can flip later
 // without a refactor (docs/SCALING.md):
 //   'store'     — DEFAULT. Route to the reader's chosen local indie; the store keeps the full
-//                 profit and the app earns nothing. Bookshop.org links carry the store's own
-//                 affiliate id when known, else a plain by-ISBN link (Bookshop's model already
-//                 funds indies). Libro.fm already pays a share to the listener's chosen bookshop.
+//                 profit and the app earns nothing. Bookshop.org links are plain by-ISBN links —
+//                 Bookshop's own model already funds indies collectively. Libro.fm already pays a
+//                 share to the listener's chosen bookshop.
+//
+//                 There is deliberately NO per-store Bookshop attribution. An earlier
+//                 `store.bookshopId` field promised to route Bookshop profit to the reader's own
+//                 chosen shop "when known", but nothing could ever know it: the store comes from
+//                 OpenStreetMap, which has no Bookshop.org affiliate tag, and neither
+//                 `profiles.default_store_*` nor the DefaultStore type ever carried such a column.
+//                 The branch was unreachable in the app while a unit test asserted it worked —
+//                 false assurance about where money goes, which is the worst place to keep any.
+//                 Wiring it needs a real source (a Bookshop shop-slug mapping + somewhere to store
+//                 it), at which point add the field back WITH the plumbing, not ahead of it.
 //   'affiliate' — App earns a commission via Reverie's own affiliate ids. NOT shipped; flipping
 //                 to it is a config change + the honest disclosure line below, not new code.
 // Format routing: print/ebook → Bookshop.org (by ISBN-13); audiobook → Libro.fm.
@@ -18,8 +28,9 @@ export interface BuyConfig {
   bookshopAffiliateId: string
   /** Reverie's own Libro.fm affiliate id — present-but-unused in 'store' mode. */
   libroAffiliateId: string
-  /** The reader's chosen local store (from the indie finder); routes Bookshop profit when it has an id. */
-  store?: { name: string; website?: string; bookshopId?: string }
+  /** The reader's chosen local store (from the indie finder). Adds a direct link to that store's
+   *  own shop; it does NOT redirect Bookshop profit — see the note above. */
+  store?: { name: string; website?: string }
 }
 
 export interface BuyLink {
@@ -38,7 +49,8 @@ function bookshopUrl(b: BuyBook, config: BuyConfig): string {
     const q = `${b.title} ${authorOf(b)}`.trim()
     return `https://bookshop.org/beta-search?keywords=${encodeURIComponent(q)}`
   }
-  const id = config.mode === 'affiliate' ? config.bookshopAffiliateId : (config.store?.bookshopId ?? '')
+  // Only affiliate mode carries an id; store mode is always the plain by-ISBN link.
+  const id = config.mode === 'affiliate' ? config.bookshopAffiliateId : ''
   return id ? `https://bookshop.org/a/${id}/${isbn13}` : `https://bookshop.org/book/${isbn13}`
 }
 
@@ -65,12 +77,20 @@ export function buildBuyLinks(book: BuyBook, config: BuyConfig): BuyLink[] {
   return links
 }
 
-/** Honest one-liner shown beneath the links; explains where the money goes for the active mode. */
+/**
+ * Honest one-liner shown beneath the links; explains where the money goes for the active mode.
+ *
+ * The store-set line used to read "Supports <store> and other indies", which implied the reader's
+ * chosen shop was paid for ALL three links. It isn't: only the direct link to their own storefront
+ * reaches them. The Bookshop link is a plain by-ISBN link (no per-store attribution exists — see
+ * the note at the top of this file), and Libro.fm pays a share to whichever bookshop the listener
+ * picked ON LIBRO.FM, which is not the store set here. The line now separates the two.
+ */
 export function buyDisclosure(config: BuyConfig): string {
   if (config.mode === 'affiliate') {
     return 'These are affiliate links — Reverie may earn a small commission, and indie bookstores still get their share.'
   }
   return config.store
-    ? `Supports ${config.store.name} and other indies — Reverie earns nothing.`
+    ? `Shopping ${config.store.name} directly supports them; the Bookshop.org and Libro.fm links support indie bookstores generally. Reverie earns nothing.`
     : 'Bookshop.org and Libro.fm fund independent bookstores. Reverie earns nothing on these links.'
 }

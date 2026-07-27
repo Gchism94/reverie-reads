@@ -44,6 +44,14 @@ const uuid = () => `id-${++seq}`
 /** Read a string column off an untyped fake row. */
 const str = (r: Row | undefined, col: string): string => String(r?.[col] ?? '')
 
+/** Every query the code under test issued — the evidence for the coverage guard at the bottom. */
+interface Access {
+  table: Table
+  columns: string
+  mode: 'select' | 'insert' | 'upsert' | 'update'
+}
+let access: Access[] = []
+
 /** Embedded-select resolution, keyed by the exact select string the code under test uses. */
 function project(table: Table, columns: string, rows: Row[]): Row[] {
   if (table === 'book_tropes' && columns.includes('tropes(')) {
@@ -63,7 +71,12 @@ function project(table: Table, columns: string, rows: Row[]): Row[] {
     return rows.map((r) => ({ id: r.id, book_authors: [] }))
   }
   if (table === 'reading_orders' && columns.includes('reading_order_items(')) {
-    return rows.map((r) => ({ ...r, reading_order_items: [] }))
+    return rows.map((r) => ({
+      ...r,
+      reading_order_items: db.reading_order_items
+        .filter((i) => i.reading_order_id === r.id)
+        .map((i) => ({ position: i.position, book_id: i.book_id, series: i.series, note: i.note })),
+    }))
   }
   return rows
 }
@@ -114,6 +127,7 @@ class Query implements PromiseLike<{ data: Row[] | Row | null; error: unknown }>
   }
 
   private async run(single: boolean): Promise<{ data: Row[] | Row | null; error: unknown }> {
+    access.push({ table: this.table, columns: this.columns, mode: this.mode })
     const table = db[this.table]
     if (this.mode === 'insert' || this.mode === 'upsert') {
       const written: Row[] = (this.pending ?? []).map((r) => ({ id: r.id ?? uuid(), ...r }))
@@ -160,6 +174,7 @@ vi.mock('../lib/supabase', () => ({
 vi.mock('./contributors', () => ({ persistContributors: vi.fn(async () => {}) }))
 
 const { buildBackup, restoreBackup } = await import('./importExport')
+const { BACKED_UP_TABLES, USER_OWNED_TABLES } = await import('./ownedTables')
 
 /** A library with two books, canonical + personal tropes, a mood, and two followed authors. */
 function seedOldAccount() {
@@ -183,15 +198,23 @@ function seedOldAccount() {
       { user_id: OWNER, author_name: 'Rebecca Yarros', state: 'followed' },
       { user_id: OWNER, author_name: 'A Noisy Newsletter', state: 'muted' },
     ],
-    reads: [],
-    lists: [],
-    list_items: [],
-    reviews: [],
-    reading_orders: [],
-    reading_order_items: [],
-    merge_verdicts: [],
+    // Every other backed-up table carries at least one row, so the coverage guard below exercises
+    // the real write path for each rather than passing because a section happened to be empty.
+    reads: [{ id: 'r1', book_id: 'book-a', owner_id: OWNER, read_on: '2026-03-04', format: 'ebook', rating: 5, notes: 'reread' }],
+    lists: [{ id: 'l1', owner_id: OWNER, name: 'Imported TBR', kind: 'tbr', is_priority: true }],
+    list_items: [{ list_id: 'l1', book_id: 'book-b', owner_id: OWNER, position: 1 }],
+    reviews: [{ id: 'rv1', work_key: 'w-fourth-wing', reviewer_id: OWNER, reviewer_name: 'Reader', rating: 5, body: 'Dragons.' }],
+    reading_orders: [{ id: 'ro1', owner_id: OWNER, name: 'Empyrean — reading order', description: 'publication order' }],
+    reading_order_items: [
+      { reading_order_id: 'ro1', owner_id: OWNER, position: 1024, book_id: 'book-a', series: null, note: null },
+      { reading_order_id: 'ro1', owner_id: OWNER, position: 2048, book_id: 'book-b', series: null, note: 'read after B1' },
+    ],
+    merge_verdicts: [{ owner_id: OWNER, book_id: 'book-a', incoming_key: 'fourth wing|yarros', verdict: 'distinct' }],
     profiles: [{ id: OWNER, display_name: 'Reader', skin: 'tryst' }],
   }
+  // A PERSONAL mood too, so the mood-coining write path is covered like the trope one.
+  db.moods.push({ id: 'm-mine', owner_id: OWNER, name: 'Unhinged In A Good Way' })
+  db.book_moods.push({ book_id: 'book-b', mood_id: 'm-mine', owner_id: OWNER })
 }
 
 /** Wipe every owned row — what delete-account's cascade does, verified against a live database —
@@ -209,6 +232,7 @@ function wipeToFreshAccount({ keepCanonical = true } = {}) {
 beforeEach(() => {
   seq = 0
   currentUser = OWNER
+  access = []
   seedOldAccount()
 })
 
@@ -221,7 +245,7 @@ describe('backup round trip — the data v4 dropped on the floor', () => {
 
     expect(result.books).toBe(2)
     expect(result.tropes).toBe(3)
-    expect(result.moods).toBe(1)
+    expect(result.moods).toBe(2)
     expect(result.follows).toBe(2)
 
     // Every assignment landed, on the NEW book ids, owned by the NEW account.
@@ -243,9 +267,14 @@ describe('backup round trip — the data v4 dropped on the floor', () => {
     )
     expect(str(pinned, 'emphasis')).toBe('pinned')
 
-    // Moods.
-    expect(db.book_moods).toHaveLength(1)
-    expect(str(db.moods.find((m) => m.id === db.book_moods[0]?.mood_id), 'name')).toBe('Devastating')
+    // Moods — the canonical one and the reader's own coinage.
+    expect(db.book_moods).toHaveLength(2)
+    const moodNameFor = (title: string) =>
+      db.book_moods
+        .filter((r) => r.book_id === byTitle(title))
+        .map((r) => str(db.moods.find((m) => m.id === r.mood_id), 'name'))
+    expect(moodNameFor('Fourth Wing')).toEqual(['Devastating'])
+    expect(moodNameFor('Iron Flame')).toEqual(['Unhinged In A Good Way'])
 
     // Follows, with muted still muted — the states are opposites, so a flip would be a real defect.
     expect(
@@ -283,10 +312,10 @@ describe('backup round trip — the data v4 dropped on the floor', () => {
     const result = await restoreBackup(json)
 
     expect(result.tropes).toBe(3)
-    expect(result.moods).toBe(1)
+    expect(result.moods).toBe(2)
     // Everything had to be coined; nothing was silently dropped for want of a vocabulary row.
     expect(db.tropes.map((t) => str(t, 'name')).sort()).toEqual(['Dragons With Opinions', 'Enemies to Lovers'])
-    expect(db.moods.map((m) => str(m, 'name'))).toEqual(['Devastating'])
+    expect(db.moods.map((m) => str(m, 'name')).sort()).toEqual(['Devastating', 'Unhinged In A Good Way'])
   })
 
   it('matches vocabulary case-insensitively, the way the DB unique index does', async () => {
@@ -389,5 +418,60 @@ describe('backup round trip — hostile and partial files', () => {
 
     expect(result.books).toBe(2)
     expect(result.tropes).toBe(3) // the three real ones; the orphan is skipped, not thrown on
+  })
+})
+
+// ── the structural guard: the registry must describe what the code actually does ──
+//
+// ownedTables.test.ts proves nothing user-owned escapes the registry and that deletion cascades to
+// all of it. This half proves the other direction: a table declared `backup: true` is genuinely
+// read by buildBackup AND written by restoreBackup. Together they close the v4 gap — a new
+// user-owned table cannot be added without a written decision, and a decision to back it up cannot
+// be left unimplemented.
+describe('backup coverage matches the ownedTables registry', () => {
+  /** Drive a full export → restore and report every table the two touched. */
+  async function recordFullCycle() {
+    const json = await buildBackup()
+    const reads = access.filter((a) => a.mode === 'select')
+    access = []
+    wipeToFreshAccount()
+    await restoreBackup(json)
+    const writes = access.filter((a) => a.mode !== 'select')
+    return { reads, writes }
+  }
+
+  it('every table declared backup:true is read by buildBackup and written by restoreBackup', async () => {
+    const { reads, writes } = await recordFullCycle()
+    const readTables = new Set<string>(reads.map((a) => a.table))
+    const writtenTables = new Set<string>(writes.map((a) => a.table))
+
+    const missing: string[] = []
+    for (const entry of BACKED_UP_TABLES) {
+      const plan = entry.plan as { backup: true; via?: string }
+      if (plan.via) {
+        // Read through a parent's embedded select (PostgREST `parent(child(...))`).
+        const embedded = reads.some((a) => a.table === plan.via && a.columns.includes(`${entry.table}(`))
+        if (!embedded) missing.push(`${entry.table} (not embedded in a ${plan.via} select)`)
+      } else if (!readTables.has(entry.table)) {
+        missing.push(`${entry.table} (never read by buildBackup)`)
+      }
+      if (!writtenTables.has(entry.table)) missing.push(`${entry.table} (never written by restoreBackup)`)
+    }
+
+    expect(
+      missing,
+      'Declared backup:true in ownedTables.ts but not actually carried by the backup. Either wire ' +
+        'it into buildBackup/restoreBackup, or change its plan to backup:false with a reason.',
+    ).toEqual([])
+  })
+
+  it('the three tables v4 dropped are all declared backup:true', () => {
+    // The regression that started this. Named explicitly so a future edit that quietly flips one
+    // back to backup:false has to argue with a test rather than slip through a diff.
+    for (const t of ['book_tropes', 'book_moods', 'author_follows']) {
+      const entry = USER_OWNED_TABLES.find((e) => e.table === t)
+      expect(entry, `${t} vanished from the registry`).toBeDefined()
+      expect(entry!.plan.backup, `${t} must be backed up — v4 dropping it is the bug this guards`).toBe(true)
+    }
   })
 })

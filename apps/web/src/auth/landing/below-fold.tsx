@@ -48,9 +48,16 @@ const PRIVACY = [
   // OVERRIDE: residency framing, no "yours alone"/never-public read and no "syncs only when you ask" (it syncs to your account).
   // CORRECTED: the old line ("your data, your device — Reverie runs in your browser") stated data
   // RESIDENCY, and it was false. The library lives in hosted Postgres behind row-level security;
-  // there is no local-only mode at all (RootRoute gates the whole app on a session). The device
-  // holds a Dexie cache, which is what makes it work offline — that part was true and is kept.
-  ['Private by default', 'Your library lives in your own account, where row-level security keeps it readable only by you, and nothing is public unless you share it. It’s mirrored to your device, so it opens and reads offline.'],
+  // there is no local-only mode at all (RootRoute gates the whole app on a session).
+  //
+  // NO OFFLINE CLAIM HERE, deliberately. Offline works only while the stored access token is still
+  // valid (~1h). Measured on a production build with the network cut: within the hour the library
+  // renders 286 cards from the Dexie mirror and a book opens; with an EXPIRED token it hangs on the
+  // loading line and hits the ErrorBoundary at ~70s, because AuthProvider awaits
+  // supabase.auth.getSession(), whose refresh cannot complete offline. Until that falls back to the
+  // stored session, "works offline" is false for the case the word evokes — opening the app the
+  // next morning without signal. Re-add this only when an offline launch survives token expiry.
+  ['Private by default', 'Your library lives in your own account, where row-level security keeps it readable only by you, and nothing is public unless you share it.'],
 ]
 
 function Eyebrow({ children }: { children: string }) {
@@ -180,9 +187,12 @@ export default function LandingBelowFold() {
             Get started
           </Link>
         </div>
-        {/* "Free to begin" removed — no pricing model to back. */}
+        {/* "Free to begin" removed — no pricing model to back. "works offline" removed for the
+            same reason as the privacy card above: an offline launch past the access token's ~1h
+            life hangs and then errors. Both offline claims go together — leaving this one would
+            have kept the falsehood on the page while the fix elsewhere looked complete. */}
         <p className="mt-4 text-[12.5px]" style={{ color: 'var(--faint)' }}>
-          Runs in your browser · works offline · installs as a PWA
+          Runs in your browser · installs as a PWA
         </p>
       </section>
 
