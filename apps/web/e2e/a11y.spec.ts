@@ -109,7 +109,11 @@ async function setProfileSkinMode(skin: string, mode: string) {
   await sb.from('profiles').update({ skin, mode }).eq('id', uid)
 }
 
-test('every route passes axe (no serious/critical) across all skins x both modes', async ({ page }) => {
+// Title states the real scope on purpose. It used to read "across all skins x both modes", which
+// overstated it twice over: the sweep runs FOUR of the nine skins, and only tryst gets every route
+// (the other three get the core set below). The exhaustive-across-all-nine layer is the
+// registry-keyed contrast tests in packages/core, not this.
+test('axe (no serious/critical): every route in tryst, a core set in 3 alternate skins — each x both modes', async ({ page }) => {
   test.setTimeout(600_000)
   const { bookId, clubId, listCode, shelfId, tropeId } = await setupFixtures()
   await signIn(page)
