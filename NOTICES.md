@@ -88,10 +88,10 @@ production dependency tree. (The map view uses core `leaflet` (BSD-2-Clause) dir
 | `@supabase/storage-js` | 2.108.2 | MIT |
 | `@supabase/supabase-js` | 2.108.2 | MIT |
 | `@tanstack/history` | 1.162.0 | MIT |
-| `@tanstack/query-core` | 5.101.0, 5.101.1 | MIT |
-| `@tanstack/query-persist-client-core` | 5.101.1 | MIT |
-| `@tanstack/react-query` | 5.101.0 | MIT |
-| `@tanstack/react-query-persist-client` | 5.101.1 | MIT |
+| `@tanstack/query-core` | 5.101.4 | MIT |
+| `@tanstack/query-persist-client-core` | 5.101.4 | MIT |
+| `@tanstack/react-query` | 5.101.4 | MIT |
+| `@tanstack/react-query-persist-client` | 5.101.4 | MIT |
 | `@tanstack/react-router` | 1.170.16 | MIT |
 | `@tanstack/react-store` | 0.9.3 | MIT |
 | `@tanstack/router-core` | 1.171.13 | MIT |

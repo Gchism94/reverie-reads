@@ -1,5 +1,8 @@
 # Task: Mood — A Reader-Assigned Dimension
 
+> **Status: shipped in #74.** This is the brief the work was built against, not a description of
+> how the app behaves today. For current behavior, read the code and `docs/DATA_MODEL.md`.
+
 **Branch:** `feat/mood`
 **Repo:** book-corpus
 **Dependencies:** `feat/taxonomy-neutral` (#69) merged first — the derived "vibe" chip must

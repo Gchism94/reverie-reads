@@ -1,5 +1,9 @@
 # Task: Regression Investigation — Shelf Add & Shelf Reorder
 
+> **Status: shipped in #64.** This is the brief the work was built against, not a description of
+> how the app behaves today. Shelf reorder needed surfacing again in #77. For current behavior,
+> read the code and `docs/DATA_MODEL.md`.
+
 **Branch:** `fix/shelf-regressions`
 **Repo:** book-corpus
 **Priority:** highest — this is shipped, verified functionality that has since broken.

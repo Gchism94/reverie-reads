@@ -41,8 +41,11 @@ own values. Names only:
 
 - **Required:** `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_GOOGLE_BOOKS_KEY`
   (referrer-restricted).
-- **Optional:** `VITE_SENTRY_DSN`, `VITE_RELEASE`, `VITE_SOCIAL_AUTH_ENABLED`,
+- **Optional:** `VITE_SENTRY_DSN`, `VITE_SOCIAL_AUTH_ENABLED`,
   `VITE_BUY_ATTRIBUTION_MODE`, `VITE_BOOKSHOP_AFFILIATE_ID`, `VITE_LIBRO_AFFILIATE_ID`.
+- **Set by the build, not by you:** `VITE_BUILD_ID` and `VITE_RELEASE` are both baked to the
+  deploy's commit SHA by a `define` in `apps/web/vite.config.ts`. Setting either in a `.env`
+  has no effect — the define substitutes them at build time.
 - **Server / edge secrets** (deployment environment only — never in the repo): the Supabase
   service-role key, `HARDCOVER_TOKEN`, and any provider API keys. See `docs/DEPLOY.md`.
 
@@ -55,7 +58,7 @@ are not and live only in deployment secrets.
 pnpm dev      # web app (Vite dev server)
 pnpm build    # production build (core tsc + web tsc/vite)
 pnpm test     # unit tests (Vitest, all packages)
-pnpm e2e      # Playwright end-to-end (includes the all-skins axe sweep)
+pnpm e2e      # Playwright end-to-end (includes the axe sweep — four skins x both modes)
 pnpm lint     # ESLint
 ```
 

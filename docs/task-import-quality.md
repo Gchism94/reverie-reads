@@ -1,5 +1,9 @@
 # Task: Import Quality — Goodreads Mapping Fidelity & Honest Placeholders
 
+> **Status: shipped in #54.** This is the brief the work was built against, not a description of
+> how the app behaves today. Borrowed-copy CSV import landed in #75. For current behavior, read
+> the code and `docs/DATA_MODEL.md`.
+
 **Branch:** `fix/import-quality`
 **Dependencies:** `feat/ownership-model` merged (for the to-read → unowned mapping). Benefits from `feat/series-experience` for series linking but can gate that piece if it hasn't landed.
 **Golden rule applies:** eyeball on the real authenticated app before merge — with a real Goodreads export, not a synthetic fixture only.

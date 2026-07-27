@@ -1,5 +1,10 @@
 # Task: Series Defects — Removal, Positions, and Status Widening
 
+> **Status: shipped in #65.** This is the brief the work was built against, not a description of
+> how the app behaves today. Revised by #77: removal is now one operation across both entry
+> points, and a removal is a tombstone. See `docs/decisions/0004-series-removal-semantics.md`.
+> For current behavior, read the code and `docs/DATA_MODEL.md`.
+
 **Branch:** `fix/series-defects`
 **Repo:** book-corpus
 **Dependencies:** none hard; can run parallel to the ownership/add-flow lane.

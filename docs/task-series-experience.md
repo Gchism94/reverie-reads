@@ -1,5 +1,11 @@
 # Task: Series Experience — The Series Page IS the Reading Order
 
+> **Status: shipped in #52.** This is the brief the work was built against, not a description of
+> how the app behaves today. Removal semantics were revised in #77
+> (`docs/decisions/0004-series-removal-semantics.md`). The one-order decision holds —
+> `docs/decisions/0001-series-single-order.md`. For current behavior, read the code and
+> `docs/DATA_MODEL.md`.
+
 **Branch:** `feat/series-experience`
 **Dependencies:** `feat/ownership-model` (ghost-slot adds) and `feat/book-editing` (series status enum) merged first.
 **Golden rule applies:** eyeball on the real authenticated app before merge.

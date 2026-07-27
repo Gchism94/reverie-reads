@@ -1,21 +1,30 @@
 # CLAUDE.md
 
-Context for Claude Code. Read this first, then `docs/CLAUDE_CODE_KICKOFF.md` for the
-sequenced build plan. Keep this file updated as the project evolves.
+Context for Claude Code. Read this first, then `docs/DATA_MODEL.md` before touching anything
+that stores a book. `docs/CLAUDE_CODE_KICKOFF.md` is the original build plan — history now,
+not a to-do list. Keep this file updated as the project evolves.
 
 ## What this is
-Reverie — a personal library app for romance / romantasy / dark-romance readers
-(spice levels, tropes, series gaps, rereads, plus a book-club layer), with a gothic
-New Orleans look. We have a complete single-file **prototype** and a finished **design**;
-this phase builds the real front end + back end.
+Reverie — a personal library app behind a skinnable, **genre-neutral** interface: nine
+distinct skins (romance, fantasy, sci-fi, horror, mystery, literary, cozy, nonfiction, YA)
+that reskin the whole app to the shelf you're in. It handles intensity levels, tropes, moods,
+series gaps, rereads, per-format ownership, cover sourcing, offline caching, and a book-club
+layer, and ranks what to read next against *your* library rather than aggregated ratings.
+
+It **began** as a romance / romantasy / dark-romance app with a gothic New Orleans look, and
+that heritage survives as the Tryst skin. Do not write romance-only vocabulary, defaults or
+logic into shared code — #69 and #72 de-romanced the taxonomy, the Match quiz and the copy.
+Genre-specific language belongs in a skin, not in the core.
 
 ## Status & your job
-- `prototype/Reverie_Library.html` = the current working app and **feature reference**.
-  It is NOT the codebase to extend — rebuild properly. Behavior parity is the bar.
-- Design is done; canonical tokens/components are in `design/DESIGN_SYSTEM.md`. If design
-  exports exist, they're in `design/from-claude-design/`.
-- Build the product per `ROADMAP.md` / `docs/CLAUDE_CODE_KICKOFF.md`, starting with a
-  scaffold and a first vertical slice (Library + Book detail).
+- **The real app is built and shipped.** `apps/web` + `packages/core` + `supabase/` are the
+  product; work happens there, on a feature branch, behind a PR.
+- `prototype/Reverie_Library.html` is **historical reference only** — the original feature
+  source. The shipped app has long since passed it (skins, moods, tropes-as-join, four-state
+  ownership, series entries). Where they differ, the shipped app is right; do not "restore
+  parity" with the prototype.
+- Design: canonical tokens/components in `design/DESIGN_SYSTEM.md`; design exports, if any,
+  in `design/from-claude-design/`.
 
 ## Stack (decided — don't re-litigate without asking)
 - **Monorepo**, pnpm workspaces.
@@ -29,11 +38,12 @@ this phase builds the real front end + back end.
   (local-first is the goal, not the v1 blocker).
 - **Tests:** Vitest (unit), Playwright (e2e). **Lint/format:** ESLint + Prettier.
 
-## Target layout (create these; keep existing folders as reference)
+## Layout
 ```
-apps/web/            React app (UI, routes, components)
-packages/core/       shared TS types + ported logic (merge, CSV import, spoiler gate)
-supabase/            migrations, edge functions, seed (migrate backend/supabase_schema.sql here)
+apps/web/            React app (UI, routes, components) + Playwright e2e
+packages/core/       shared TS types + pure logic (merge, CSV import, spoiler gate, skins,
+                     covers, taste) — everything testable without a browser
+supabase/            migrations, edge functions, seed
 prototype/ data/ design/ docs/ backend/   ← reference material, not shipped
 ```
 
@@ -41,7 +51,9 @@ prototype/ data/ design/ docs/ backend/   ← reference material, not shipped
 - Features to match → `docs/FEATURES.md`, `docs/REQUIREMENTS.md`
 - Architecture & API surface → `docs/ARCHITECTURE.md`
 - DB schema & object shapes → `docs/DATA_MODEL.md`
-- Design tokens (two themes), type, motion, components → `design/DESIGN_SYSTEM.md`
+- Design tokens, type, motion, components → `design/DESIGN_SYSTEM.md`; the nine skins'
+  token sets live in `packages/core/src/skins.ts` + `apps/web/src/styles/tokens.css`
+- Decisions with a rationale → `docs/decisions/` (ADRs)
 - Cover/metadata/release data sources → `docs/DATA_SOURCES.md`
 - Sharing & book-club design → `docs/SHARING.md`
 - Seed data → `data/personal_seed.json` (290 real books); design-ready subset in
@@ -49,36 +61,50 @@ prototype/ data/ design/ docs/ backend/   ← reference material, not shipped
 
 ## Conventions
 - TypeScript strict; functional components + hooks; small, focused modules.
-- **No hardcoded colors** — use the design tokens (CSS vars / Tailwind theme) for both
-  **Nocturne** (dark, default) and **Magnolia Dawn** (light). Those are the only two
-  themes. (Nocturne has no crimson — magenta/violet/midnight-blue/gold.)
+- **No hardcoded colors** — use the design tokens (CSS vars / Tailwind theme). There are
+  **nine skins**, not two themes: `tryst`, `grimoire`, `aphelion`, `marrow`, `umbra`, `folio`,
+  `hearth`, `almanac`, `bloom` (`packages/core/src/skins.ts`), each with its own token set and
+  its own light/dark pair; `mode` is light/dark/system, independent of the skin. "Nocturne /
+  Magnolia Dawn" is prototype-era naming and no longer names anything in the code.
 - Mobile-first; responsive to desktop.
-- Accessibility is part of done: visible keyboard focus, adequate contrast in both
-  themes, and **respect `prefers-reduced-motion`** (disable the night-sky drift/twinkle).
+- Accessibility is part of done: visible keyboard focus, adequate contrast in **every skin** in
+  both modes, and **respect `prefers-reduced-motion`** (disable the night-sky drift/twinkle).
+  Two layers guard contrast, and they cover different amounts: the **core contrast tests** are
+  keyed off the `SKINS` registry, so all nine are checked and a new skin fails until it has
+  tokens; the **e2e axe sweep** runs four (`tryst`, `grimoire`, `aphelion`, `marrow`) × both
+  modes. A new component's contrast belongs in a registry-keyed core test — that is the layer
+  that is exhaustive.
 - **Port, don't rewrite** the prototype's already-tested logic: the merge engine, the
   Goodreads/StoryGraph CSV importer, and the spoiler-gating rule (`comment.unit <=
   myProgress`). Move them into `packages/core` with tests.
 - Copy stays sentence case, plain verbs, no filler; empty states invite action.
-- **Per-format ownership.** A book carries `owned: {physical, ebook, audiobook}` (toggles
-  on book detail; physical may split paperback/hardcover). The **Owned · Physical /
-  Ebook / Audiobook** shelves are *smart shelves* derived from those flags — separate
-  shelves per format, not manual lists. Ownership is independent of the format read in
-  the reread log.
+- **Possession is four states; per-format ownership is a separate field.** `ownership` is
+  `'owned' | 'borrowed' | 'wishlist' | 'unset'` (`unset` is the default — cataloguing a book
+  must not force a possession category, and `borrowed` counts as possessed). `owned:
+  {physical, ebook, audiobook}` answers *which formats*, and only means anything for a
+  possessed book. **Never infer possession from the `owned` booleans** — `all-false =
+  wishlist` was the pre-#68 model and is now wrong. Ask `ownership`, or use
+  `bookOwnedFormats`. The **Owned · Physical / Ebook / Audiobook** shelves are *smart shelves*
+  derived from both — not manual lists. Ownership is independent of the format read in the
+  reread log, and never gates reading history.
 - **No aggregate rating.** Never compute or display an averaged star rating anywhere.
-  Keep the reader's own rating (`myRating` + per-read). Others' opinions appear only as
-  an opt-in list of **individual** reviews on the book screen — never a single number.
+  Keep the reader's own rating (`rating` on the book + per-read). Others' opinions appear only
+  as an opt-in list of **individual** reviews on the book screen — never a single number.
 - **Mass import + mass merge.** Bulk-add (CSV today; bulk ISBN/title) and a bulk
   de-dupe flow that resolves all detected duplicate groups at once (run on import).
   Reuse the ported merge engine.
 
-## Commands (create these scripts during scaffold)
+## Commands
 ```
 pnpm dev            # run web app
-pnpm build          # production build
-pnpm test           # unit tests (Vitest)
-pnpm e2e            # Playwright
+pnpm build          # production build (core tsc, then web tsc/vite)
+pnpm test           # unit tests (Vitest, all packages)
+pnpm e2e            # Playwright (includes the axe sweep — four skins x both modes)
 pnpm lint           # ESLint
-supabase start      # local stack
+pnpm typecheck      # tsc --noEmit, all packages
+pnpm db:start       # local Supabase stack   (db:stop / db:reset / db:status)
+pnpm db:migrate     # apply migrations + reload the PostgREST schema
+pnpm db:seed        # load the dev library
 pnpm deploy:migrations   # prod db push — via the deploy guard (main + clean + confirm)
 pnpm deploy:functions    # prod functions deploy — via the deploy guard
 ```
@@ -97,8 +123,9 @@ pnpm deploy:functions    # prod functions deploy — via the deploy guard
   heredoc-eval incident, which deployed a function to prod from a PR-body backtick.)
 
 ## Definition of done (per feature)
-Works against the data model; both themes; responsive; a11y pass; logic covered by
-tests; matches the prototype's behavior and the design tokens.
+Works against the data model; correct in **all nine skins**, light and dark; responsive;
+a11y pass; logic covered by tests; uses the design tokens. Verify in the real browser UI —
+several defects have been "fixed" in code paths no reader can reach.
 
 ## Decisions still needing the owner (use these defaults until told otherwise)
 1. **App name — DECIDED (owner, 2026-07): Reverie is the name.** No longer a
