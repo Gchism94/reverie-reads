@@ -1,9 +1,18 @@
 import { Link } from '@tanstack/react-router'
-import { APP_NAME, SKINS, SKIN_LIST, type SkinId } from '@reverie/core'
+import { APP_NAME, revenueCopy, SKINS, SKIN_LIST, type SkinId } from '@reverie/core'
+import { buyConfig } from '../../lib/buyConfig'
 import { Wordmark } from '../Wordmark'
 import { SkinShowcase } from './SkinShowcase'
 
 const display = { fontFamily: 'var(--font-display)', fontWeight: 600 } as const
+
+// Every money claim on this page comes from ONE place, derived from the live buy config, so
+// flipping VITE_BUY_ATTRIBUTION_MODE=affiliate cannot leave "we earn nothing" on a public page.
+// The whole config is passed, not just the mode: revenueCopy keys on the EFFECTIVE mode, so an
+// affiliate deploy with no Bookshop id — which emits plain links and earns nothing — keeps the
+// no-cut copy instead of announcing a commission it never collects.
+// Guarded by packages/core/src/revenueCopy.test.ts.
+const MONEY = revenueCopy(buyConfig())
 
 /** Minimal stroke icons (token-coloured, no raster). */
 function Icon({ d }: { d: string }) {
@@ -15,22 +24,50 @@ function Icon({ d }: { d: string }) {
 }
 
 // Copy matches the design, with the decided overrides applied (see comments).
+//
+// EVERY claim here is load-bearing: it is the first thing a logged-out visitor reads, and it is the
+// one surface where an aspiration reads as a shipped feature. Each line below was checked against
+// the code that implements it, and several were narrowed to what actually runs. If you widen one,
+// re-check the implementation first — the previous copy oversold five features and stated one
+// outright falsehood about where the reader's data lives.
 const FEATURES = [
-  { icon: 'M4 5h10a2 2 0 0 1 2 2v12H6a2 2 0 0 1-2-2zM16 7h4v12h-4', title: 'Track & organize', body: 'A place for every shelf: your TBR, collections, rereads, and a reading calendar that keeps the whole year in view.' },
-  { icon: 'M4 7v10M8 7v10M12 7v10M16 7v10M20 7v10', title: 'Scan & auto-complete', body: 'Point your camera at a barcode. Title, author, series, cover and metadata fill themselves in — no typing.' },
-  { icon: 'M5 6h14M5 12h14M5 18h9', title: 'Series & reading orders', body: 'Tangled, interconnected series sorted into the exact order to read them — spin-offs, novellas and all.' },
+  // The calendar is a MONTH grid (PlannerRoute) with the year's totals in the stat tiles above it.
+  // There is no year view, so "keeps the whole year in view" was a promise the screen didn't keep.
+  { icon: 'M4 5h10a2 2 0 0 1 2 2v12H6a2 2 0 0 1-2-2zM16 7h4v12h-4', title: 'Track & organize', body: 'A place for every shelf: your TBR, collections, rereads, and a reading calendar of every finish and plan, with the year’s totals on top.' },
+  // Scanning uses the native BarcodeDetector, which is Chromium-only — absent on every iOS browser
+  // and Firefox, where the button explains itself and search takes over. And a scan SEEDS a lookup
+  // you pick from; it doesn't silently fill the form. Both caveats belong here, not in the app.
+  { icon: 'M4 7v10M8 7v10M12 7v10M16 7v10M20 7v10', title: 'Scan & auto-complete', body: 'Point your camera at a barcode, or type a title. Reverie looks the book up and fills in author, series, cover and metadata. Camera scanning needs a Chrome-based browser; search works everywhere.' },
+  // detectUniverses only sequences rows that ALREADY carry a global-order column, so the app
+  // preserves a curated order — it never derives one. A stock Goodreads export has no such column.
+  { icon: 'M5 6h14M5 12h14M5 18h9', title: 'Series & reading orders', body: 'Tangled, interconnected series kept in the exact order to read them — spin-offs, novellas and all — carried over from your import or arranged by hand.' },
   // OVERRIDE: Wrapped is PRIVATE (was "a shareable Wrapped … worth posting").
   { icon: 'M4 19V9m5 10V5m5 14v-7m5 7V8', title: 'Your year, as art', body: 'Beautiful stats and a private Wrapped — your reading year as art, for your eyes only.' },
-  { icon: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M12 8l2 4-2 4-2-4z', title: 'Find your next read', body: 'A mood matchmaker that reads the room — time, energy, craving — and hands you exactly the right next book.' },
-  // CONFIRMED real (store mode = no cut); dropped the absolute "and never will" (an affiliate mode is planned, with disclosure).
-  { icon: 'M4 9h16l-1 11H5zM9 9V6a3 3 0 0 1 6 0v3', title: 'Buy indie', tag: 'We earn nothing', body: 'Every buy link points to Bookshop.org and Libro.fm, so your purchases support local bookstores — Reverie takes no cut.' },
+  // The quiz asks craving, intensity, pace, tropes and closing feeling (library/quiz.ts). Nothing
+  // asks how much TIME you have, and page count is not a match signal — so "time" was fiction.
+  { icon: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M12 8l2 4-2 4-2-4z', title: 'Find your next read', body: 'A mood matchmaker that reads the room — mood, intensity, what you’re craving — and hands you exactly the right next book.' },
+  // Tag + body come from revenueCopy(buyConfig()) — never hardcoded. The old line also
+  // promised "your local indie" unconditionally, which was false for any reader who had not picked
+  // a store in the finder; buildBuyLinks only adds that link once one is chosen.
+  { icon: 'M4 9h16l-1 11H5zM9 9V6a3 3 0 0 1 6 0v3', title: 'Buy indie', tag: MONEY.tag, body: MONEY.body },
 ]
 
 const PRIVACY = [
-  ['Export anytime', 'Your whole collection, downloadable in an open format whenever you want it. No lock-in.'],
+  ['Export anytime', 'Your whole collection — books, tropes, moods, reads, shelves and reviews — in one JSON file whenever you want it. No lock-in.'],
   ['No ads, ever', 'No trackers, no sponsored shelves, no selling your taste to the highest bidder.'],
   // OVERRIDE: residency framing, no "yours alone"/never-public read and no "syncs only when you ask" (it syncs to your account).
-  ['Your data, your device', 'Reverie runs in your browser and works offline — your library is yours to keep and export.'],
+  // CORRECTED: the old line ("your data, your device — Reverie runs in your browser") stated data
+  // RESIDENCY, and it was false. The library lives in hosted Postgres behind row-level security;
+  // there is no local-only mode at all (RootRoute gates the whole app on a session).
+  //
+  // NO OFFLINE CLAIM HERE, deliberately. Offline works only while the stored access token is still
+  // valid (~1h). Measured on a production build with the network cut: within the hour the library
+  // renders 286 cards from the Dexie mirror and a book opens; with an EXPIRED token it hangs on the
+  // loading line and hits the ErrorBoundary at ~70s, because AuthProvider awaits
+  // supabase.auth.getSession(), whose refresh cannot complete offline. Until that falls back to the
+  // stored session, "works offline" is false for the case the word evokes — opening the app the
+  // next morning without signal. Re-add this only when an offline launch survives token expiry.
+  ['Private by default', 'Your library lives in your own account, where row-level security keeps it readable only by you, and nothing is public unless you share it.'],
 ]
 
 function Eyebrow({ children }: { children: string }) {
@@ -89,7 +126,11 @@ export default function LandingBelowFold() {
         </div>
       </section>
 
-      {/* For every reader — light band; 4 REAL skins + adaptive (count aligned to what ships, not nine) */}
+      {/* For every reader — light band. The cards map over SKIN_LIST, so the count and the names
+          come from the registry and cannot drift from it; all nine skins have real token blocks in
+          tokens.css + skin-kit.css, and "Nine skins today" below is accurate. (A stale comment here
+          used to claim only four shipped — it predated the Stage-3 skins and would have talked the
+          next editor into shrinking a correct number.) */}
       <section id="readers" className="band-light">
         <div className="mx-auto max-w-[1180px] px-6 py-20 sm:py-24">
           <div className="text-center">
@@ -156,9 +197,12 @@ export default function LandingBelowFold() {
             Get started
           </Link>
         </div>
-        {/* "Free to begin" removed — no pricing model to back. */}
+        {/* "Free to begin" removed — no pricing model to back. "works offline" removed for the
+            same reason as the privacy card above: an offline launch past the access token's ~1h
+            life hangs and then errors. Both offline claims go together — leaving this one would
+            have kept the falsehood on the page while the fix elsewhere looked complete. */}
         <p className="mt-4 text-[12.5px]" style={{ color: 'var(--faint)' }}>
-          Runs in your browser · works offline · installs as a PWA
+          Runs in your browser · installs as a PWA
         </p>
       </section>
 
@@ -186,7 +230,7 @@ export default function LandingBelowFold() {
         <div className="border-t" style={{ borderColor: 'var(--line)' }}>
           <div className="mx-auto flex max-w-[1180px] flex-col gap-1 px-6 py-5 text-[12px] sm:flex-row sm:items-center sm:justify-between" style={{ color: 'var(--faint)' }}>
             <span>© {new Date().getFullYear()} {APP_NAME}. Made for readers.</span>
-            <span>Buy links support indie bookstores · {APP_NAME} earns nothing.</span>
+            <span>{MONEY.footer}</span>
           </div>
         </div>
       </footer>
