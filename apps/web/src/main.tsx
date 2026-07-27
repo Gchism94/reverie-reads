@@ -11,7 +11,7 @@ import { AuthProvider } from './auth/AuthProvider'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { initErrorMonitoring } from './lib/sentry'
 import { BUILD_ID, installPreloadErrorReload } from './lib/updates'
-import { createDexiePersister } from './lib/offlineCache'
+import { createDexiePersister, evictLegacyOfflineCache } from './lib/offlineCache'
 import { reportWriteError } from './lib/writeErrors'
 import { router } from './router'
 import './styles/tokens.css'
@@ -22,6 +22,12 @@ import './styles/skin-kit.css'
 document.title = APP_NAME
 initErrorMonitoring()
 installPreloadErrorReload()
+
+// One-time sweep of the pre-scoping cache row. Before the persister was scoped per reader, every
+// library was written to a single unscoped key; a reader who never signs out again would keep a full
+// copy of theirs in IndexedDB forever, orphaned and unreadable. Fire-and-forget — nothing waits on
+// it, and it is a no-op once swept.
+void evictLegacyOfflineCache()
 
 // Offline app shell + installability (public/sw.js). Prod only — a SW in dev serves stale
 // modules and fights Vite's HMR. Registration failing is fine; the app works without it.
