@@ -14,7 +14,14 @@ export function UnauthShell() {
   return (
     <div className="gold-brand">
       {/* Held to the copy standard: it must not imply the reader is signed out anywhere but here.
-          They were offline, so the server was never told; other devices are untouched. */}
+          They were offline, so the server was never told; other devices are untouched.
+
+          One nuance, considered rather than missed: if this tab stays open and connectivity
+          returns, the queued logout in offlineSignOut fires from the in-memory token and DOES end
+          other sessions. So "stay signed in" is true at the moment this renders, and may later be
+          superseded by the app's own action. The alternative — hedging it up front — would be
+          false in the common case, where the tab is closed and nothing is ever sent. A line that
+          is true when read beats one that is vague about both outcomes. */}
       {localOnly && (
         <p role="status" className="px-6 py-3 text-center text-[13px]" style={{ background: 'var(--card)', color: 'var(--muted)' }}>
           Signed out on this device. You were offline, so any other devices stay signed in.
