@@ -266,6 +266,22 @@ sharing happens through shared lists and clubs (`CLAUDE.md`, open decision 2).
 
 ### Notes
 
+- **`profiles` rows are created by a trigger, not by the app.** `on_auth_user_created` fires
+  `after insert on auth.users` and inserts the profile, `security definer` so it writes
+  regardless of the caller's role; `display_name` defaults to the `display_name` user-metadata
+  key, falling back to the local part of the email
+  (`supabase/migrations/20260624010100_profiles_trigger.sql`). Two consequences worth knowing:
+  no client code should ever insert a profile — signing up is enough, and an explicit insert
+  hits a `profiles_pkey` duplicate-key error; and the whole `auth.users → profiles → …` cascade
+  chain exists from the first moment a user exists, which is what makes account deletion
+  complete (see below).
+- **Account deletion is one `delete from auth.users`, and everything else cascades.** The
+  `delete-account` edge function deletes the caller's auth record; every user-owned table
+  reaches `auth.users` through `ON DELETE CASCADE`, directly or via `profiles`. Verified
+  against a live database, not just read off the migrations. Canonical (`owner_id is null`)
+  `tropes`/`moods` rows correctly survive — they are shared vocabulary, not the reader's.
+  `apps/web/src/data/ownedTables.test.ts` parses these migrations and fails if any owner-scoped
+  table lacks a cascade path, so the property cannot quietly lapse.
 - **`series_entries.removed_at` is a tombstone, not a delete.** Removing a book from a series
   soft-deletes the entry (`removed_at = now()`, `book_id = null`, `user_edited = true`) rather
   than dropping the row, so a later Hardcover refresh cannot resurrect a slot the reader

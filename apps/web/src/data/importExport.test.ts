@@ -25,12 +25,16 @@ type Table =
   | 'reading_orders'
   | 'reading_order_items'
   | 'merge_verdicts'
+  | 'series'
+  | 'series_entries'
+  | 'trope_suggestions'
   | 'profiles'
 type Db = Record<Table, Row[]>
 
 const TABLES: Table[] = [
   'books', 'tropes', 'moods', 'book_tropes', 'book_moods', 'author_follows', 'reads', 'lists',
-  'list_items', 'reviews', 'reading_orders', 'reading_order_items', 'merge_verdicts', 'profiles',
+  'list_items', 'reviews', 'reading_orders', 'reading_order_items', 'merge_verdicts', 'series',
+  'series_entries', 'trope_suggestions', 'profiles',
 ]
 
 const OWNER = 'user-old'
@@ -67,6 +71,19 @@ function project(table: Table, columns: string, rows: Row[]): Row[] {
       moods: db.moods.find((m) => m.id === r.mood_id) ?? null,
     }))
   }
+  if (table === 'series_entries' && columns.includes('series(')) {
+    return rows.map((r) => ({
+      position: r.position, label: r.label, title: r.title, author: r.author,
+      source: r.source, removed_at: r.removed_at,
+      series: db.series.find((x) => x.id === r.series_id) ?? null,
+    }))
+  }
+  if (table === 'trope_suggestions' && columns.includes('tropes(')) {
+    return rows.map((r) => ({
+      book_id: r.book_id, state: r.state,
+      tropes: db.tropes.find((t) => t.id === r.trope_id) ?? null,
+    }))
+  }
   if (table === 'books' && columns.includes('book_authors(')) {
     return rows.map((r) => ({ id: r.id, book_authors: [] }))
   }
@@ -83,6 +100,7 @@ function project(table: Table, columns: string, rows: Row[]): Row[] {
 
 class Query implements PromiseLike<{ data: Row[] | Row | null; error: unknown }> {
   private filters: [string, unknown][] = []
+  private negated: string[] = []
   private columns = '*'
   private pending: Row[] | null = null
   private mode: 'select' | 'insert' | 'upsert' | 'update' = 'select'
@@ -96,6 +114,11 @@ class Query implements PromiseLike<{ data: Row[] | Row | null; error: unknown }>
   }
   eq(col: string, val: unknown) {
     this.filters.push([col, val])
+    return this
+  }
+  /** `.not('removed_at', 'is', null)` — the only negated filter the code under test uses. */
+  not(col: string, _op: string, _val: unknown) {
+    this.negated.push(col)
     return this
   }
   insert(rows: Row | Row[]) {
@@ -158,7 +181,9 @@ class Query implements PromiseLike<{ data: Row[] | Row | null; error: unknown }>
     const hits = project(
       this.table,
       this.columns,
-      table.filter((r) => this.filters.every(([c, v]) => r[c] === v)),
+      table.filter(
+        (r) => this.filters.every(([c, v]) => r[c] === v) && this.negated.every((c) => r[c] != null),
+      ),
     )
     return { data: single ? (hits[0] ?? null) : hits, error: null }
   }
@@ -173,7 +198,7 @@ vi.mock('../lib/supabase', () => ({
 // Contributor persistence has its own RPC and its own tests; it is not what these assert.
 vi.mock('./contributors', () => ({ persistContributors: vi.fn(async () => {}) }))
 
-const { buildBackup, restoreBackup } = await import('./importExport')
+const { buildBackup, restoreBackup, seriesTombstones, dismissalsByBook } = await import('./importExport')
 const { BACKED_UP_TABLES, USER_OWNED_TABLES } = await import('./ownedTables')
 
 /** A library with two books, canonical + personal tropes, a mood, and two followed authors. */
@@ -210,6 +235,20 @@ function seedOldAccount() {
       { reading_order_id: 'ro1', owner_id: OWNER, position: 2048, book_id: 'book-b', series: null, note: 'read after B1' },
     ],
     merge_verdicts: [{ owner_id: OWNER, book_id: 'book-a', incoming_key: 'fourth wing|yarros', verdict: 'distinct' }],
+    // ── the reader's refusals ──
+    series: [{ id: 'ser1', owner_id: OWNER, name: 'Empyrean' }],
+    series_entries: [
+      // A LIVE slot (removed_at null) — must NOT be exported; it is derived and reconciles itself.
+      { id: 'se-live', series_id: 'ser1', owner_id: OWNER, position: 1, title: 'Fourth Wing', author: 'Rebecca Yarros', label: null, source: 'hardcover', book_id: 'book-a', user_edited: false, removed_at: null },
+      // A TOMBSTONE — the reader deleted this slot and a refresh must never resurrect it.
+      { id: 'se-dead', series_id: 'ser1', owner_id: OWNER, position: 3, title: 'Onyx Storm', author: 'Rebecca Yarros', label: 'Book 3', source: 'hardcover', book_id: null, user_edited: true, removed_at: '2026-07-01T10:00:00.000Z' },
+    ],
+    trope_suggestions: [
+      // OPEN — a pending question, not a decision; must NOT travel.
+      { book_id: 'book-a', trope_id: 't-canon', owner_id: OWNER, state: 'open', source: 'hardcover' },
+      // DISMISSED — the reader waved it away; must survive.
+      { book_id: 'book-b', trope_id: 't-canon', owner_id: OWNER, state: 'dismissed', source: 'hardcover' },
+    ],
     profiles: [{ id: OWNER, display_name: 'Reader', skin: 'tryst' }],
   }
   // A PERSONAL mood too, so the mood-coining write path is covered like the trope one.
@@ -473,5 +512,107 @@ describe('backup coverage matches the ownedTables registry', () => {
       expect(entry, `${t} vanished from the registry`).toBeDefined()
       expect(entry!.plan.backup, `${t} must be backed up — v4 dropping it is the bug this guards`).toBe(true)
     }
+  })
+})
+
+// ── the refusals: negative space that must survive a round trip ──
+describe('backup round trip — the reader’s refusals', () => {
+  it('a removed series slot stays removed, and a live slot is not exported', async () => {
+    const parsed = JSON.parse(await buildBackup()) as {
+      series_tombstones: { series: string; position: number; title: string; removed_at: string }[]
+    }
+    // Only the tombstone travels. Exporting the live slot would restore a DERIVED row as if it
+    // were authored, and the series shelf rebuilds those on its own.
+    expect(parsed.series_tombstones).toHaveLength(1)
+    expect(parsed.series_tombstones[0]).toMatchObject({ series: 'Empyrean', position: 3, title: 'Onyx Storm' })
+
+    wipeToFreshAccount()
+    const result = await restoreBackup(JSON.stringify(parsed))
+
+    expect(result.tombstones).toBe(1)
+    // The parent series was materialized so the tombstone has somewhere to live.
+    const series = db.series.find((x) => str(x, 'name') === 'Empyrean')
+    expect(series).toBeDefined()
+    expect(str(series, 'owner_id')).toBe(NEW_OWNER)
+
+    expect(db.series_entries).toHaveLength(1)
+    const dead = db.series_entries[0]!
+    expect(str(dead, 'series_id')).toBe(str(series, 'id'))
+    expect(dead.removed_at).toBe('2026-07-01T10:00:00.000Z')
+    // A tombstone is by definition an unlinked slot the reader touched.
+    expect(dead.book_id).toBeNull()
+    expect(dead.user_edited).toBe(true)
+    expect(str(dead, 'title')).toBe('Onyx Storm')
+    expect(dead.position).toBe(3)
+  })
+
+  it('a dismissed trope suggestion stays dismissed, and an open one does not travel', async () => {
+    const parsed = JSON.parse(await buildBackup()) as { trope_dismissals: Record<string, string[]> }
+    // book-b's dismissal travels; book-a's OPEN suggestion is a question the catalog may ask again.
+    expect(parsed.trope_dismissals).toEqual({ 'book-b': ['Enemies to Lovers'] })
+
+    wipeToFreshAccount()
+    const result = await restoreBackup(JSON.stringify(parsed))
+
+    expect(result.dismissals).toBe(1)
+    expect(db.trope_suggestions).toHaveLength(1)
+    const row = db.trope_suggestions[0]!
+    expect(row.state).toBe('dismissed')
+    expect(str(row, 'owner_id')).toBe(NEW_OWNER)
+    // Resolved by NAME onto the new account's canonical trope, and onto the new book id.
+    expect(str(row, 'trope_id')).toBe(str(db.tropes.find((t) => str(t, 'name') === 'Enemies to Lovers'), 'id'))
+    expect(str(row, 'book_id')).toBe(str(db.books.find((b) => str(b, 'title') === 'Iron Flame'), 'id'))
+  })
+
+  it('skips a dismissal whose trope exists in no vocabulary rather than coining one for a refusal', async () => {
+    const parsed = JSON.parse(await buildBackup()) as {
+      trope_dismissals: Record<string, string[]>
+      tropes: Record<string, unknown>
+    }
+    parsed.trope_dismissals = { 'book-b': ['A Trope Nobody Has'] }
+    parsed.tropes = {} // and it is not assigned anywhere either, so nothing coins it
+    wipeToFreshAccount({ keepCanonical: false })
+
+    const result = await restoreBackup(JSON.stringify(parsed))
+
+    expect(result.dismissals).toBe(0)
+    expect(db.tropes).toHaveLength(0) // no vocabulary invented out of a rejection
+  })
+
+  it('drops a tombstone whose series name is missing rather than orphaning it', async () => {
+    const parsed = JSON.parse(await buildBackup()) as { series_tombstones: { series: string }[] }
+    parsed.series_tombstones = [{ series: '   ' } as { series: string }]
+    wipeToFreshAccount()
+
+    const result = await restoreBackup(JSON.stringify(parsed))
+
+    expect(result.tombstones).toBe(0)
+    expect(db.series_entries).toHaveLength(0)
+  })
+})
+
+// The round-trip tests above cannot catch OVER-capture in these two shapers: the queries filter
+// server-side (`.not('removed_at','is',null)` / `.eq('state','dismissed')`), so a live row never
+// reaches them through that path. Mutation-testing showed exactly that blind spot — widening either
+// shaper left the suite green. These exercise the functions directly, with mixed input, so the
+// "only the refusal travels" rule is guarded on its own and not just by the query.
+describe('refusal shapers reject the positive half on their own', () => {
+  it('seriesTombstones keeps only rows with a removed_at', () => {
+    const rows = [
+      { position: 1, label: null, title: 'Live', author: 'A', source: 'hardcover', removed_at: null, series: { name: 'S' } },
+      { position: 3, label: 'B3', title: 'Dead', author: 'A', source: 'hardcover', removed_at: '2026-07-01T00:00:00.000Z', series: { name: 'S' } },
+      // a tombstone whose series row didn't come back — unkeyable, so it is dropped
+      { position: 4, label: null, title: 'Orphan', author: 'A', source: 'manual', removed_at: '2026-07-02T00:00:00.000Z', series: null },
+    ] as unknown as Parameters<typeof seriesTombstones>[0]
+    expect(seriesTombstones(rows).map((t) => t.title)).toEqual(['Dead'])
+  })
+
+  it('dismissalsByBook keeps only dismissed suggestions', () => {
+    const rows = [
+      { book_id: 'b1', state: 'open', tropes: { name: 'Open One' } },
+      { book_id: 'b1', state: 'dismissed', tropes: { name: 'Waved Away' } },
+      { book_id: 'b2', state: 'dismissed', tropes: null },
+    ] as unknown as Parameters<typeof dismissalsByBook>[0]
+    expect(dismissalsByBook(rows)).toEqual({ b1: ['Waved Away'] })
   })
 })

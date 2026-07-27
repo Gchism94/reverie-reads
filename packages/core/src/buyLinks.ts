@@ -78,6 +78,45 @@ export function buildBuyLinks(book: BuyBook, config: BuyConfig): BuyLink[] {
 }
 
 /**
+ * The landing page's revenue claims, DERIVED from the attribution mode rather than hardcoded.
+ *
+ * The whole point: flipping `VITE_BUY_ATTRIBUTION_MODE=affiliate` must not be able to leave "we
+ * earn nothing" on a public page. Config that silently falsifies shipped copy is the same class of
+ * bug as the landing audit's other findings, just with a deploy-time trigger instead of a code one.
+ * `revenueCopy.test.ts` fails if any no-cut phrasing survives into affiliate mode.
+ *
+ * "never Amazon" is mode-INDEPENDENT and stays in both: no code path in either mode produces an
+ * Amazon URL, and a test pins that claim to the links `buildBuyLinks` actually emits.
+ */
+export interface RevenueCopy {
+  /** Badge on the buy card. Null in affiliate mode — a "we earn nothing" badge would be a lie. */
+  tag: string | null
+  /** The buy card's body. */
+  body: string
+  /** The site footer's money line. */
+  footer: string
+}
+
+export function revenueCopy(mode: AttributionMode): RevenueCopy {
+  // The indie link is CONDITIONAL — it exists only once the reader picks a store in the finder, so
+  // the copy says "once you choose one" rather than implying every reader gets a local-shop link.
+  const routing =
+    'Buy links go to Bookshop.org and Libro.fm — never Amazon — plus your own local shop once you choose one in the indie finder.'
+  if (mode === 'affiliate') {
+    return {
+      tag: 'Affiliate links',
+      body: `${routing} Your purchases support independent bookstores, and Reverie earns a small commission on some links.`,
+      footer: 'Buy links support indie bookstores · Reverie earns a small commission.',
+    }
+  }
+  return {
+    tag: 'We earn nothing',
+    body: `${routing} Your purchases support independent bookstores, and Reverie takes no cut.`,
+    footer: 'Buy links support indie bookstores · Reverie earns nothing.',
+  }
+}
+
+/**
  * Honest one-liner shown beneath the links; explains where the money goes for the active mode.
  *
  * The store-set line used to read "Supports <store> and other indies", which implied the reader's

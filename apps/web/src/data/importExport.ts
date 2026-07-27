@@ -198,6 +198,128 @@ export function bookMoodRows(
   return rows
 }
 
+// ── the two "refusals": data whose whole meaning is that the reader said NO ──
+//
+// A series-removal tombstone and a dismissed trope suggestion are both negative space: nothing is
+// visible when they work. That is exactly why they were easy to leave out of the backup — and why
+// leaving them out is worse than losing an ordinary row. Restore without them and the library does
+// not merely forget, it ARGUES: a Hardcover refresh resurrects the series slot the reader deleted,
+// and suggestions they already waved away come back. A refusal that does not survive is a refusal
+// the app overrules.
+//
+// Only the NEGATIVE half of each table travels. Live series entries and open suggestions are
+// genuinely derived and rebuild themselves; carrying them would restore a derived view as if it
+// were authored.
+
+/** A removed series slot: identified by series NAME + position, since series ids are per-account. */
+export interface BackupTombstone {
+  series: string
+  position: number
+  title: string
+  author: string
+  label: string | null
+  source: string
+  removed_at: string
+}
+
+interface TombstoneJoinRow {
+  position: number
+  label: string | null
+  title: string
+  author: string
+  source: string
+  removed_at: string
+  series: Embedded<{ name: string }>
+}
+
+/** `series_entries` rows carrying a tombstone → a portable, name-keyed list. */
+export function seriesTombstones(rows: readonly TombstoneJoinRow[]): BackupTombstone[] {
+  const out: BackupTombstone[] = []
+  for (const r of rows) {
+    const name = one(r.series)?.name
+    if (!name || !r.removed_at) continue
+    out.push({
+      series: name,
+      position: r.position,
+      title: r.title ?? '',
+      author: r.author ?? '',
+      label: r.label ?? null,
+      source: r.source ?? 'manual',
+      removed_at: r.removed_at,
+    })
+  }
+  return out
+}
+
+interface DismissalJoinRow {
+  book_id: string
+  state: string
+  tropes: Embedded<{ name: string }>
+}
+
+/** Dismissed suggestions → `{ [bookId]: tropeName[] }`. Only 'dismissed' travels; an OPEN
+ *  suggestion is a pending question the catalog can ask again, not a reader decision. */
+export function dismissalsByBook(rows: readonly DismissalJoinRow[]): Record<string, string[]> {
+  const out: Record<string, string[]> = {}
+  for (const r of rows) {
+    const name = one(r.tropes)?.name
+    if (!name || r.state !== 'dismissed') continue
+    ;(out[r.book_id] ??= []).push(name)
+  }
+  return out
+}
+
+/** The `series_entries` tombstone rows to insert, under the series ids resolved by name. */
+export function tombstoneRows(
+  tombstones: readonly BackupTombstone[],
+  seriesIdByName: Map<string, string>,
+  ownerId: string,
+): Record<string, unknown>[] {
+  const rows: Record<string, unknown>[] = []
+  for (const t of tombstones) {
+    const seriesId = seriesIdByName.get(nameKey(t.series ?? ''))
+    if (!seriesId) continue
+    rows.push({
+      series_id: seriesId,
+      owner_id: ownerId,
+      position: t.position,
+      label: t.label,
+      title: t.title,
+      author: t.author,
+      // book_id stays null and user_edited stays true — a tombstone is by definition an unlinked
+      // slot the reader touched. Re-adding the same book revives it, exactly as before the restore.
+      book_id: null,
+      source: t.source === 'hardcover' ? 'hardcover' : 'manual',
+      user_edited: true,
+      removed_at: t.removed_at,
+    })
+  }
+  return rows
+}
+
+/** The `trope_suggestions` rows to insert. A name that resolves to no vocabulary row is skipped:
+ *  coining a personal trope purely to hold a rejection would invent vocabulary out of a refusal. */
+export function dismissalRows(
+  byBook: Record<string, string[]>,
+  bookIdMap: Map<string, string>,
+  idx: Map<string, string>,
+  ownerId: string,
+): { book_id: string; trope_id: string; owner_id: string; state: string; source: string }[] {
+  const rows = []
+  for (const [oldBookId, names] of Object.entries(byBook)) {
+    const bookId = bookIdMap.get(oldBookId)
+    if (!bookId) continue
+    const seen = new Set<string>()
+    for (const name of names) {
+      const tropeId = idx.get(nameKey(name))
+      if (!tropeId || seen.has(tropeId)) continue
+      seen.add(tropeId)
+      rows.push({ book_id: bookId, trope_id: tropeId, owner_id: ownerId, state: 'dismissed', source: 'hardcover' })
+    }
+  }
+  return rows
+}
+
 /**
  * Followed/muted authors. No id remap — the app's author identity IS the display name. An
  * unrecognized state is DROPPED, not defaulted: 'followed' and 'muted' are opposites, and guessing
@@ -224,7 +346,8 @@ export function followRows(
  * Serialize the WHOLE account to a JSON backup (v5): books (incl. genre/tags/intensity/owned
  * formats), per-book contributors, assigned tropes (with emphasis) and moods, reads, lists +
  * memberships, the user's reviews, reading orders + items, merge verdicts, followed/muted authors,
- * and the profile (skin/mode + adaptive taste state + goal).
+ * the reader's REFUSALS (removed series slots and dismissed trope suggestions), and the profile
+ * (skin/mode + adaptive taste state + goal).
  *
  * The bar is the one deletion sets: `delete-account` removes the auth user and every owned row
  * cascades with it (verified against a live database, not just read off the migrations — tropes,
@@ -236,7 +359,7 @@ export function followRows(
  */
 export async function buildBackup(): Promise<string> {
   const ownerId = await currentUserId()
-  const [books, contribs, bookTropes, bookMoods, reads, lists, items, reviews, orders, verdicts, follows, profile] =
+  const [books, contribs, bookTropes, bookMoods, reads, lists, items, reviews, orders, verdicts, follows, tombstones, dismissals, profile] =
     await Promise.all([
       supabase.from('books').select('*'),
       supabase.from('books').select('id, book_authors(position, role, authors(name))'),
@@ -250,13 +373,20 @@ export async function buildBackup(): Promise<string> {
       supabase.from('reading_orders').select('id, name, description, reading_order_items(position, book_id, series, note)'),
       supabase.from('merge_verdicts').select('book_id, incoming_key, verdict'),
       supabase.from('author_follows').select('author_name, state'),
+      // The two refusals — see the note above. Tombstones key on the series NAME; dismissals on
+      // the trope name, for the same reason every other taxonomy reference does.
+      supabase
+        .from('series_entries')
+        .select('position, label, title, author, source, removed_at, series(name)')
+        .not('removed_at', 'is', null),
+      supabase.from('trope_suggestions').select('book_id, state, tropes(name)').eq('state', 'dismissed'),
       supabase
         .from('profiles')
         .select('display_name, goal_year, goal_target, auto_merge_duplicates, default_store_id, default_store_name, default_store_website, skin, mode, adaptive_skin, adaptive_locked')
         .eq('id', ownerId)
         .maybeSingle(),
     ])
-  for (const r of [books, contribs, bookTropes, bookMoods, reads, lists, items, reviews, orders, verdicts, follows])
+  for (const r of [books, contribs, bookTropes, bookMoods, reads, lists, items, reviews, orders, verdicts, follows, tombstones, dismissals])
     if (r.error) throw r.error
 
   // Per-book contributors, keyed by (old) book id.
@@ -284,6 +414,8 @@ export async function buildBackup(): Promise<string> {
     reading_orders: orders.data,
     merge_verdicts: verdicts.data,
     author_follows: follows.data ?? [],
+    series_tombstones: seriesTombstones((tombstones.data as unknown as TombstoneJoinRow[]) ?? []),
+    trope_dismissals: dismissalsByBook((dismissals.data as unknown as DismissalJoinRow[]) ?? []),
     profile: profile.data ?? null,
   })
 }
@@ -301,7 +433,45 @@ interface BackupShape {
   reading_orders?: { name: string; description: string | null; reading_order_items: { position: number; book_id: string | null; series: string | null; note: string | null }[] }[]
   merge_verdicts?: { book_id: string; incoming_key: string; verdict: string }[]
   author_follows?: BackupFollow[]
+  /** v5+: the reader's refusals. */
+  series_tombstones?: BackupTombstone[]
+  trope_dismissals?: Record<string, string[]>
   profile?: Record<string, unknown> | null
+}
+
+/**
+ * Re-create the removed-series-slot tombstones. They need parent `series` rows to hang off, so this
+ * materializes them by name — the same rows the series shelf would reconcile into existence on its
+ * next read, created early here so a tombstone has somewhere to live.
+ */
+async function restoreTombstones(tombstones: readonly BackupTombstone[], ownerId: string): Promise<number> {
+  if (!tombstones.length) return 0
+
+  const wanted = new Map<string, string>()
+  for (const t of tombstones) if (t.series?.trim()) wanted.set(nameKey(t.series), t.series.trim())
+  if (!wanted.size) return 0
+
+  const { data: existing, error: readErr } = await supabase.from('series').select('id, name')
+  if (readErr) throw readErr
+  const seriesIdByName = new Map<string, string>()
+  for (const row of (existing as { id: string; name: string }[]) ?? []) seriesIdByName.set(nameKey(row.name), row.id)
+
+  const toCreate = [...wanted.entries()].filter(([k]) => !seriesIdByName.has(k)).map(([, name]) => name)
+  if (toCreate.length) {
+    const { data: made, error } = await supabase
+      .from('series')
+      .insert(toCreate.map((name) => ({ owner_id: ownerId, name })))
+      .select('id, name')
+    if (error) throw error
+    for (const row of (made as { id: string; name: string }[]) ?? []) seriesIdByName.set(nameKey(row.name), row.id)
+  }
+
+  const rows = tombstoneRows(tombstones, seriesIdByName, ownerId)
+  if (rows.length) {
+    const { error } = await supabase.from('series_entries').insert(rows)
+    if (error) throw error
+  }
+  return rows.length
 }
 
 /**
@@ -313,10 +483,18 @@ async function restoreTaxonomy(
   data: BackupShape,
   bookIdMap: Map<string, string>,
   ownerId: string,
-): Promise<{ tropes: number; moods: number }> {
+): Promise<{ tropes: number; moods: number; dismissals: number }> {
   const tropesByBookId = data.tropes ?? {}
   const moodsByBookId = data.moods ?? {}
-  if (!Object.keys(tropesByBookId).length && !Object.keys(moodsByBookId).length) return { tropes: 0, moods: 0 }
+  // Dismissals resolve against the SAME trope index, so they belong to this pass.
+  const dismissalsByBookId = data.trope_dismissals ?? {}
+  if (
+    !Object.keys(tropesByBookId).length &&
+    !Object.keys(moodsByBookId).length &&
+    !Object.keys(dismissalsByBookId).length
+  ) {
+    return { tropes: 0, moods: 0, dismissals: 0 }
+  }
 
   const [tv, mv] = await Promise.all([
     supabase.from('tropes').select('id, name, owner_id'),
@@ -364,14 +542,22 @@ async function restoreTaxonomy(
     if (error) throw error
   }
 
-  return { tropes: tRows.length, moods: mRows.length }
+  // Dismissed suggestions last: they resolve against the index AFTER coining, so a dismissal for a
+  // trope the reader also has assigned still finds its row.
+  const dRows = dismissalRows(dismissalsByBookId, bookIdMap, tropeIdx, ownerId)
+  if (dRows.length) {
+    const { error } = await supabase.from('trope_suggestions').upsert(dRows, { onConflict: 'book_id,trope_id' })
+    if (error) throw error
+  }
+
+  return { tropes: tRows.length, moods: mRows.length, dismissals: dRows.length }
 }
 
 /** Restore a backup as new rows owned by the current user (ids are remapped, not reused). Reads v4
  *  and v5 files; a v4 file simply carries no tropes, moods or follows to restore. */
 export async function restoreBackup(
   json: string,
-): Promise<{ books: number; lists: number; reads: number; tropes: number; moods: number; follows: number }> {
+): Promise<{ books: number; lists: number; reads: number; tropes: number; moods: number; follows: number; tombstones: number; dismissals: number }> {
   const ownerId = await currentUserId()
   const data = JSON.parse(json) as BackupShape
   if (!data.books) throw new Error('That file doesn’t look like a Reverie backup.')
@@ -499,6 +685,10 @@ export async function restoreBackup(
     if (error) throw error
   }
 
+  // The reader's refusals (v5): removed series slots stay removed, dismissed suggestions stay
+  // dismissed. After books, so the tombstones' series sit alongside the restored library.
+  const tombstoneCount = await restoreTombstones(data.series_tombstones ?? [], ownerId)
+
   // Profile: restore appearance + adaptive taste state + goal onto the current account.
   if (data.profile) {
     const { error } = await supabase.from('profiles').update(data.profile).eq('id', ownerId)
@@ -512,6 +702,8 @@ export async function restoreBackup(
     tropes: taxonomy.tropes,
     moods: taxonomy.moods,
     follows: follows.length,
+    tombstones: tombstoneCount,
+    dismissals: taxonomy.dismissals,
   }
 }
 

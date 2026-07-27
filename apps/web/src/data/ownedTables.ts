@@ -84,7 +84,7 @@ export const USER_OWNED_TABLES: OwnedTable[] = [
   {
     table: 'series',
     owner: 'owner_id',
-    plan: { backup: false, why: 'Reconciled from the library on read — the series shelf query rewrites it on every run, so a restored copy is a snapshot of a derived view.' },
+    plan: { backup: false, why: 'Reconciled from the library on read — the series shelf query rewrites it on every run, so a restored copy is a snapshot of a derived view. Restore DOES create rows here, but only as the parent a removal tombstone hangs off; no series data is carried.' },
   },
 
   // ── shared/social: restoring these into another account would fabricate history ──
@@ -114,16 +114,18 @@ export const USER_OWNED_TABLES: OwnedTable[] = [
     plan: { backup: false, why: 'Moderation records, not library data — they belong to the report queue, not to the reader.' },
   },
 
-  // ── KNOWN GAPS: reader intent that does not currently survive a restore ──
+  // ── refusals: the reader said NO, and that must survive too ──
+  // Only the negative half of each table travels. The positive half is genuinely derived and
+  // regenerates on its own; the refusal cannot, and losing it makes the app overrule the reader.
   {
     table: 'series_entries',
     owner: 'owner_id',
-    plan: { backup: false, why: 'KNOWN GAP. Mostly derived from books + a Hardcover refresh, BUT `removed_at` is a deliberate tombstone recording that the reader removed a slot. That intent is lost on restore, so a later refresh can resurrect a slot they removed. Backing up just the tombstones would close it.' },
+    plan: { backup: true },
   },
   {
     table: 'trope_suggestions',
     owner: 'owner_id',
-    plan: { backup: false, why: 'KNOWN GAP. Regenerable from Hardcover, but the `dismissed` state is a reader decision; after a restore, suggestions they already waved away can reappear once.' },
+    plan: { backup: true },
   },
 ]
 

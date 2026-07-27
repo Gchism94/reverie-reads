@@ -1,9 +1,15 @@
 import { Link } from '@tanstack/react-router'
-import { APP_NAME, SKINS, SKIN_LIST, type SkinId } from '@reverie/core'
+import { APP_NAME, revenueCopy, SKINS, SKIN_LIST, type SkinId } from '@reverie/core'
+import { ATTRIBUTION_MODE } from '../../lib/buyConfig'
 import { Wordmark } from '../Wordmark'
 import { SkinShowcase } from './SkinShowcase'
 
 const display = { fontFamily: 'var(--font-display)', fontWeight: 600 } as const
+
+// Every money claim on this page comes from ONE place, derived from the live attribution mode, so
+// flipping VITE_BUY_ATTRIBUTION_MODE=affiliate cannot leave "we earn nothing" on a public page.
+// Guarded by packages/core/src/revenueCopy.test.ts.
+const MONEY = revenueCopy(ATTRIBUTION_MODE)
 
 /** Minimal stroke icons (token-coloured, no raster). */
 function Icon({ d }: { d: string }) {
@@ -37,9 +43,10 @@ const FEATURES = [
   // The quiz asks craving, intensity, pace, tropes and closing feeling (library/quiz.ts). Nothing
   // asks how much TIME you have, and page count is not a match signal — so "time" was fiction.
   { icon: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M12 8l2 4-2 4-2-4z', title: 'Find your next read', body: 'A mood matchmaker that reads the room — mood, intensity, what you’re craving — and hands you exactly the right next book.' },
-  // CONFIRMED real (store mode = no cut); dropped the absolute "and never will" (an affiliate mode is planned, with disclosure).
-  // "Every" was wrong: with a default store set, buildBuyLinks puts that store's OWN site first.
-  { icon: 'M4 9h16l-1 11H5zM9 9V6a3 3 0 0 1 6 0v3', title: 'Buy indie', tag: 'We earn nothing', body: 'Buy links go to your local indie, Bookshop.org and Libro.fm — never Amazon. Your purchases support independent bookstores, and Reverie takes no cut.' },
+  // Tag + body come from revenueCopy(ATTRIBUTION_MODE) — never hardcoded. The old line also
+  // promised "your local indie" unconditionally, which was false for any reader who had not picked
+  // a store in the finder; buildBuyLinks only adds that link once one is chosen.
+  { icon: 'M4 9h16l-1 11H5zM9 9V6a3 3 0 0 1 6 0v3', title: 'Buy indie', tag: MONEY.tag, body: MONEY.body },
 ]
 
 const PRIVACY = [
@@ -220,7 +227,7 @@ export default function LandingBelowFold() {
         <div className="border-t" style={{ borderColor: 'var(--line)' }}>
           <div className="mx-auto flex max-w-[1180px] flex-col gap-1 px-6 py-5 text-[12px] sm:flex-row sm:items-center sm:justify-between" style={{ color: 'var(--faint)' }}>
             <span>© {new Date().getFullYear()} {APP_NAME}. Made for readers.</span>
-            <span>Buy links support indie bookstores · {APP_NAME} earns nothing.</span>
+            <span>{MONEY.footer}</span>
           </div>
         </div>
       </footer>

@@ -510,7 +510,7 @@ function SettingsScreen() {
                 readFile(e.currentTarget, async (text) => {
                   const r = await restoreBackup(text)
                   setStatus(
-                    `Restored ${r.books} books, ${r.lists} lists, ${r.reads} reads, ${r.tropes} tropes, ${r.moods} moods, ${r.follows} followed authors`,
+                    `Restored ${r.books} books, ${r.lists} lists, ${r.reads} reads, ${r.tropes} tropes, ${r.moods} moods, ${r.follows} followed authors, ${r.tombstones} removed series slots, ${r.dismissals} dismissed suggestions`,
                   )
                 })
               }
@@ -595,7 +595,9 @@ function SettingsScreen() {
           <p className="mt-3 text-[12px] text-muted">
             The JSON export is a complete copy — books, contributors, tropes, moods, reads, shelves,
             reviews, reading orders, merge decisions, followed authors, and your appearance + taste
-            profile. Everything deleting your account would erase, this hands back.
+            profile. It also keeps your refusals: series slots you removed stay removed, and trope
+            suggestions you dismissed stay dismissed. Everything deleting your account would erase,
+            this hands back.
           </p>
         </Section>
 
