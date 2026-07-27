@@ -99,6 +99,7 @@ export function toBook(row: BookRow): Book {
       ? (row.read_status as ReadStatus)
       : 'Unread',
     source: row.source ?? '',
+    pages: row.pages,
     pub: { y: row.pub_y, m: row.pub_m, d: row.pub_d },
     reads: [],
     plan: row.plan_date,
@@ -153,6 +154,7 @@ export function toBookRow(patch: Partial<Book>): Partial<BookRow> {
   if (patch.rating !== undefined) row.rating = patch.rating
   if (patch.readStatus !== undefined) row.read_status = patch.readStatus
   if (patch.source !== undefined) row.source = patch.source || null
+  if (patch.pages !== undefined) row.pages = patch.pages
   if (patch.pub !== undefined) {
     row.pub_y = patch.pub.y
     row.pub_m = patch.pub.m

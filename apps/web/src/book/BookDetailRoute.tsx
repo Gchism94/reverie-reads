@@ -135,7 +135,7 @@ function BookDetailScreen() {
       </div>
     )
 
-  const [g0, g1] = subgenreGradient(book.subgenre)
+  const [g0, g1] = subgenreGradient(book.subgenre, book.genre)
   const workKey = workKeyFor(book)
   const reviewerName = profile?.displayName || 'Reader'
   const setOwned = (owned: Owned) => updateBook.mutate({ id: book.id, patch: { owned } })
@@ -229,6 +229,8 @@ function BookDetailScreen() {
             <Pill>{seriesBadge}</Pill>
             {(book.intensity ?? 0) > 0 && <Pill>{labels.intensityGlyph.repeat(book.intensity ?? 0)}</Pill>}
             {fmtPub(book.pub) && <Pill>📅 {fmtPub(book.pub)}</Pill>}
+            {/* Absent when unknown — no pill at all, rather than a fabricated 0 or a guess. */}
+            {book.pages != null && <Pill>{book.pages} pp</Pill>}
           </div>
         </div>
       </div>

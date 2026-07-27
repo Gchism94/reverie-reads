@@ -34,6 +34,7 @@ export interface BookRow {
   rating: number | null
   read_status: string
   source: string | null
+  pages: number | null
   pub_y: number | null
   pub_m: number | null
   pub_d: number | null

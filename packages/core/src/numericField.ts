@@ -31,6 +31,8 @@ export const PUB_YEAR: NumericFieldSpec = { label: 'Pub year', min: 1, max: 9999
 export const PUB_MONTH: NumericFieldSpec = { label: 'Month', min: 1, max: 12, integer: true }
 export const PUB_DAY: NumericFieldSpec = { label: 'Day', min: 1, max: 31, integer: true }
 export const SERIES_COUNT: NumericFieldSpec = { label: 'Series length', min: 1, max: 999, integer: true }
+/** Mirrors books_pages_check. A book with 0 pages is a data error, not an edition. */
+export const PAGE_COUNT: NumericFieldSpec = { label: 'Pages', min: 1, max: 20000, integer: true }
 /** Positions carry decimals on purpose — #0.5 prequels, #2.5 novellas — and 0 is a real slot. */
 export const SERIES_POSITION: NumericFieldSpec = { label: 'Position', min: 0, max: 9999 }
 
