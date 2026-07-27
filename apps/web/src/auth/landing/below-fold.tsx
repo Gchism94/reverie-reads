@@ -15,22 +15,42 @@ function Icon({ d }: { d: string }) {
 }
 
 // Copy matches the design, with the decided overrides applied (see comments).
+//
+// EVERY claim here is load-bearing: it is the first thing a logged-out visitor reads, and it is the
+// one surface where an aspiration reads as a shipped feature. Each line below was checked against
+// the code that implements it, and several were narrowed to what actually runs. If you widen one,
+// re-check the implementation first — the previous copy oversold five features and stated one
+// outright falsehood about where the reader's data lives.
 const FEATURES = [
-  { icon: 'M4 5h10a2 2 0 0 1 2 2v12H6a2 2 0 0 1-2-2zM16 7h4v12h-4', title: 'Track & organize', body: 'A place for every shelf: your TBR, collections, rereads, and a reading calendar that keeps the whole year in view.' },
-  { icon: 'M4 7v10M8 7v10M12 7v10M16 7v10M20 7v10', title: 'Scan & auto-complete', body: 'Point your camera at a barcode. Title, author, series, cover and metadata fill themselves in — no typing.' },
-  { icon: 'M5 6h14M5 12h14M5 18h9', title: 'Series & reading orders', body: 'Tangled, interconnected series sorted into the exact order to read them — spin-offs, novellas and all.' },
+  // The calendar is a MONTH grid (PlannerRoute) with the year's totals in the stat tiles above it.
+  // There is no year view, so "keeps the whole year in view" was a promise the screen didn't keep.
+  { icon: 'M4 5h10a2 2 0 0 1 2 2v12H6a2 2 0 0 1-2-2zM16 7h4v12h-4', title: 'Track & organize', body: 'A place for every shelf: your TBR, collections, rereads, and a reading calendar of every finish and plan, with the year’s totals on top.' },
+  // Scanning uses the native BarcodeDetector, which is Chromium-only — absent on every iOS browser
+  // and Firefox, where the button explains itself and search takes over. And a scan SEEDS a lookup
+  // you pick from; it doesn't silently fill the form. Both caveats belong here, not in the app.
+  { icon: 'M4 7v10M8 7v10M12 7v10M16 7v10M20 7v10', title: 'Scan & auto-complete', body: 'Point your camera at a barcode, or type a title. Reverie looks the book up and fills in author, series, cover and metadata. Camera scanning needs a Chrome-based browser; search works everywhere.' },
+  // detectUniverses only sequences rows that ALREADY carry a global-order column, so the app
+  // preserves a curated order — it never derives one. A stock Goodreads export has no such column.
+  { icon: 'M5 6h14M5 12h14M5 18h9', title: 'Series & reading orders', body: 'Tangled, interconnected series kept in the exact order to read them — spin-offs, novellas and all — carried over from your import or arranged by hand.' },
   // OVERRIDE: Wrapped is PRIVATE (was "a shareable Wrapped … worth posting").
   { icon: 'M4 19V9m5 10V5m5 14v-7m5 7V8', title: 'Your year, as art', body: 'Beautiful stats and a private Wrapped — your reading year as art, for your eyes only.' },
-  { icon: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M12 8l2 4-2 4-2-4z', title: 'Find your next read', body: 'A mood matchmaker that reads the room — time, energy, craving — and hands you exactly the right next book.' },
+  // The quiz asks craving, intensity, pace, tropes and closing feeling (library/quiz.ts). Nothing
+  // asks how much TIME you have, and page count is not a match signal — so "time" was fiction.
+  { icon: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M12 8l2 4-2 4-2-4z', title: 'Find your next read', body: 'A mood matchmaker that reads the room — mood, intensity, what you’re craving — and hands you exactly the right next book.' },
   // CONFIRMED real (store mode = no cut); dropped the absolute "and never will" (an affiliate mode is planned, with disclosure).
-  { icon: 'M4 9h16l-1 11H5zM9 9V6a3 3 0 0 1 6 0v3', title: 'Buy indie', tag: 'We earn nothing', body: 'Every buy link points to Bookshop.org and Libro.fm, so your purchases support local bookstores — Reverie takes no cut.' },
+  // "Every" was wrong: with a default store set, buildBuyLinks puts that store's OWN site first.
+  { icon: 'M4 9h16l-1 11H5zM9 9V6a3 3 0 0 1 6 0v3', title: 'Buy indie', tag: 'We earn nothing', body: 'Buy links go to your local indie, Bookshop.org and Libro.fm — never Amazon. Your purchases support independent bookstores, and Reverie takes no cut.' },
 ]
 
 const PRIVACY = [
-  ['Export anytime', 'Your whole collection, downloadable in an open format whenever you want it. No lock-in.'],
+  ['Export anytime', 'Your whole collection — books, tropes, moods, reads, shelves and reviews — in one JSON file whenever you want it. No lock-in.'],
   ['No ads, ever', 'No trackers, no sponsored shelves, no selling your taste to the highest bidder.'],
   // OVERRIDE: residency framing, no "yours alone"/never-public read and no "syncs only when you ask" (it syncs to your account).
-  ['Your data, your device', 'Reverie runs in your browser and works offline — your library is yours to keep and export.'],
+  // CORRECTED: the old line ("your data, your device — Reverie runs in your browser") stated data
+  // RESIDENCY, and it was false. The library lives in hosted Postgres behind row-level security;
+  // there is no local-only mode at all (RootRoute gates the whole app on a session). The device
+  // holds a Dexie cache, which is what makes it work offline — that part was true and is kept.
+  ['Private by default', 'Your library lives in your own account, where row-level security keeps it readable only by you, and nothing is public unless you share it. It’s mirrored to your device, so it opens and reads offline.'],
 ]
 
 function Eyebrow({ children }: { children: string }) {
@@ -89,7 +109,11 @@ export default function LandingBelowFold() {
         </div>
       </section>
 
-      {/* For every reader — light band; 4 REAL skins + adaptive (count aligned to what ships, not nine) */}
+      {/* For every reader — light band. The cards map over SKIN_LIST, so the count and the names
+          come from the registry and cannot drift from it; all nine skins have real token blocks in
+          tokens.css + skin-kit.css, and "Nine skins today" below is accurate. (A stale comment here
+          used to claim only four shipped — it predated the Stage-3 skins and would have talked the
+          next editor into shrinking a correct number.) */}
       <section id="readers" className="band-light">
         <div className="mx-auto max-w-[1180px] px-6 py-20 sm:py-24">
           <div className="text-center">
