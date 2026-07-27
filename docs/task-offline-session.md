@@ -193,6 +193,24 @@ is how fix/landing-truth lost an hour.
 
 No merge without my word.
 
+## Chosen trades — accepted, not defects
+
+Recorded here rather than only in a completion report, so the next session inherits the
+reasoning and not just the behaviour.
+
+- **A revoked-elsewhere reader briefly sees their own library.** Boot seeds `session`
+  synchronously from the persisted session, so if the refresh token was revoked on another
+  device the reader renders their library for the moment it takes `SIGNED_OUT` to land,
+  then drops to the front door. It is their own data on their own device, and the exposure
+  window is the price of never gating boot on the network — which is the whole fix. A
+  bounded race or a timeout would have reintroduced the wait for every offline launch to
+  narrow a window that shows a reader nothing they are not entitled to see.
+- **A genuinely signed-out reader opening offline sees above-fold landing content only.**
+  The `ChunkBoundary` keeps the hero, nav and CTA rather than crashing to
+  "Something went wrong!", but the below-fold sections cannot be fetched and do not render.
+  The target behaviour presumes a stored session, so this is out of scope; precaching the
+  chunk would fix it and was deliberately not done. Recorded, not fixed.
+
 ## Out of scope — recorded, not for this branch
 - Restore duplication semantics. Answered: a restore is an add, not a sync.
   Book-keyed rows multiply with the duplicated books; user-keyed and series-keyed
