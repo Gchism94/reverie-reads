@@ -18,8 +18,8 @@ const code = SOURCE.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, ''
 const NO_CUT_CLAIMS = [/takes no cut/i, /earns? nothing/i, /no commission/i]
 
 describe('the landing states no money claim of its own', () => {
-  it('derives its revenue copy from revenueCopy(ATTRIBUTION_MODE)', () => {
-    expect(code).toMatch(/revenueCopy\(ATTRIBUTION_MODE\)/)
+  it('derives its revenue copy from revenueCopy(buyConfig())', () => {
+    expect(code).toMatch(/revenueCopy\(buyConfig\(\)\)/)
     expect(code).toMatch(/tag: MONEY\.tag/)
     expect(code).toMatch(/body: MONEY\.body/)
     expect(code).toMatch(/\{MONEY\.footer\}/)
@@ -28,7 +28,7 @@ describe('the landing states no money claim of its own', () => {
   it.each(NO_CUT_CLAIMS)('hardcodes no literal matching %s', (claim) => {
     expect(
       code,
-      `below-fold.tsx hardcodes a revenue claim. It must come from revenueCopy(ATTRIBUTION_MODE), ` +
+      `below-fold.tsx hardcodes a revenue claim. It must come from revenueCopy(buyConfig()), ` +
         `or flipping VITE_BUY_ATTRIBUTION_MODE=affiliate would publish a false one.`,
     ).not.toMatch(claim)
   })

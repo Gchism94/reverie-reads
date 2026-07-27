@@ -269,16 +269,37 @@ export function dismissalsByBook(rows: readonly DismissalJoinRow[]): Record<stri
   return out
 }
 
-/** The `series_entries` tombstone rows to insert, under the series ids resolved by name. */
+/** The natural key of a slot: which series, and where in it. `series_entries` has a synthetic uuid
+ *  PK and no unique constraint, so this is the only thing that identifies "the same slot". */
+const slotKey = (seriesId: string, position: number): string => `${seriesId}@${position}`
+
+/**
+ * The `series_entries` tombstone rows to insert, under the series ids resolved by name.
+ *
+ * `taken` carries the slots that already exist in this account, and anything landing on one is
+ * skipped. Two reasons, and the first is a bug this closes: because the parent series is resolved
+ * BY NAME it is not recreated per restore, so restoring the same file twice appended a second,
+ * byte-identical tombstone to the same series at the same position — a real duplicate, unlike the
+ * join tables that upsert on a composite key. Second, if the slot is occupied by a LIVE entry, the
+ * account has already said something about it more recently than the backup did (the reader
+ * re-added the book); a tombstone beside a live row at the same position is a contradiction, not
+ * an addition. Existing state wins either way.
+ */
 export function tombstoneRows(
   tombstones: readonly BackupTombstone[],
   seriesIdByName: Map<string, string>,
   ownerId: string,
+  taken: ReadonlySet<string> = new Set(),
 ): Record<string, unknown>[] {
   const rows: Record<string, unknown>[] = []
+  const claimed = new Set(taken)
   for (const t of tombstones) {
     const seriesId = seriesIdByName.get(nameKey(t.series ?? ''))
     if (!seriesId) continue
+    // Also dedupes WITHIN one file: a hand-edited backup listing the same slot twice inserts once.
+    const key = slotKey(seriesId, t.position)
+    if (claimed.has(key)) continue
+    claimed.add(key)
     rows.push({
       series_id: seriesId,
       owner_id: ownerId,
@@ -466,7 +487,18 @@ async function restoreTombstones(tombstones: readonly BackupTombstone[], ownerId
     for (const row of (made as { id: string; name: string }[]) ?? []) seriesIdByName.set(nameKey(row.name), row.id)
   }
 
-  const rows = tombstoneRows(tombstones, seriesIdByName, ownerId)
+  // Which slots this account already has — live or dead — so a re-restore can't duplicate one.
+  const seriesIds = [...seriesIdByName.values()]
+  const { data: occupied, error: slotErr } = await supabase
+    .from('series_entries')
+    .select('series_id, position')
+  if (slotErr) throw slotErr
+  const taken = new Set<string>()
+  for (const row of (occupied as { series_id: string; position: number }[]) ?? []) {
+    if (seriesIds.includes(row.series_id)) taken.add(slotKey(row.series_id, row.position))
+  }
+
+  const rows = tombstoneRows(tombstones, seriesIdByName, ownerId, taken)
   if (rows.length) {
     const { error } = await supabase.from('series_entries').insert(rows)
     if (error) throw error

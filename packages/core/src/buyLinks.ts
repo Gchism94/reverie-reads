@@ -16,18 +16,25 @@ import { normalizeIsbn } from './match'
 //                 false assurance about where money goes, which is the worst place to keep any.
 //                 Wiring it needs a real source (a Bookshop shop-slug mapping + somewhere to store
 //                 it), at which point add the field back WITH the plumbing, not ahead of it.
-//   'affiliate' — App earns a commission via Reverie's own affiliate ids. NOT shipped; flipping
-//                 to it is a config change + the honest disclosure line below, not new code.
+//   'affiliate' — App earns a commission via Reverie's own Bookshop.org affiliate id. NOT shipped;
+//                 flipping to it is a config change + the honest disclosure line below, not new
+//                 code. Bookshop is the ONLY monetizable channel here: libroUrl takes no config and
+//                 emits a plain search link, so audio earns nothing in either mode.
+//
+//                 A `libroAffiliateId` used to sit in this config, and nothing ever read it — the
+//                 same dead-config shape as the removed `store.bookshopId`. Libro.fm mints
+//                 per-product affiliate links from a signed-in Awin session rather than from an id
+//                 in a URL, so the field could never have worked as written. Removed rather than
+//                 left to imply audio revenue that does not exist.
 // Format routing: print/ebook → Bookshop.org (by ISBN-13); audiobook → Libro.fm.
 
 export type AttributionMode = 'store' | 'affiliate'
 
 export interface BuyConfig {
   mode: AttributionMode
-  /** Reverie's own Bookshop.org affiliate id — present-but-unused in 'store' mode. */
+  /** Reverie's own Bookshop.org affiliate id — present-but-unused in 'store' mode. This is the
+   *  ONLY channel that can carry it, which is why effectiveMode() keys on this field alone. */
   bookshopAffiliateId: string
-  /** Reverie's own Libro.fm affiliate id — present-but-unused in 'store' mode. */
-  libroAffiliateId: string
   /** The reader's chosen local store (from the indie finder). Adds a direct link to that store's
    *  own shop; it does NOT redirect Bookshop profit — see the note above. */
   store?: { name: string; website?: string }
@@ -97,7 +104,24 @@ export interface RevenueCopy {
   footer: string
 }
 
-export function revenueCopy(mode: AttributionMode): RevenueCopy {
+/** The subset of config that decides whether the app can actually earn anything. */
+export type AttributionSource = Pick<BuyConfig, 'mode' | 'bookshopAffiliateId'>
+
+/**
+ * The mode the app is EFFECTIVELY in, which is what every money claim must key on.
+ *
+ * `mode: 'affiliate'` is only a declaration of intent. Bookshop is the sole channel that can carry
+ * Reverie's tag, so with no `bookshopAffiliateId` set, `bookshopUrl` emits the same plain by-ISBN
+ * link store mode does and the app earns exactly nothing — while the declared mode would have had
+ * the page announce a commission. Half-configured affiliate mode is not affiliate mode; it is store
+ * mode with a misleading label, and the copy should say what the links do, not what the env says.
+ */
+export function effectiveMode(config: AttributionSource): AttributionMode {
+  return config.mode === 'affiliate' && config.bookshopAffiliateId.trim() ? 'affiliate' : 'store'
+}
+
+export function revenueCopy(config: AttributionSource): RevenueCopy {
+  const mode = effectiveMode(config)
   // The indie link is CONDITIONAL — it exists only once the reader picks a store in the finder, so
   // the copy says "once you choose one" rather than implying every reader gets a local-shop link.
   const routing =
@@ -126,7 +150,10 @@ export function revenueCopy(mode: AttributionMode): RevenueCopy {
  * picked ON LIBRO.FM, which is not the store set here. The line now separates the two.
  */
 export function buyDisclosure(config: BuyConfig): string {
-  if (config.mode === 'affiliate') {
+  // effectiveMode, not config.mode — see the note there. A half-configured affiliate deploy emits
+  // plain links, so claiming a commission beneath them would be false in the reader's favour but
+  // false all the same.
+  if (effectiveMode(config) === 'affiliate') {
     return 'These are affiliate links — Reverie may earn a small commission, and indie bookstores still get their share.'
   }
   return config.store

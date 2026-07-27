@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { buildBuyLinks, buyDisclosure, type BuyConfig } from './buyLinks'
 
-const base: BuyConfig = { mode: 'store', bookshopAffiliateId: '5780', libroAffiliateId: 'rev', store: undefined }
+const base: BuyConfig = { mode: 'store', bookshopAffiliateId: '5780', store: undefined }
 const book = { title: 'Fourth Wing', first: 'Rebecca', last: 'Yarros', isbn: '0306406152' }
 
 describe('buildBuyLinks', () => {

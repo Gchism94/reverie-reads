@@ -1,15 +1,18 @@
 import { Link } from '@tanstack/react-router'
 import { APP_NAME, revenueCopy, SKINS, SKIN_LIST, type SkinId } from '@reverie/core'
-import { ATTRIBUTION_MODE } from '../../lib/buyConfig'
+import { buyConfig } from '../../lib/buyConfig'
 import { Wordmark } from '../Wordmark'
 import { SkinShowcase } from './SkinShowcase'
 
 const display = { fontFamily: 'var(--font-display)', fontWeight: 600 } as const
 
-// Every money claim on this page comes from ONE place, derived from the live attribution mode, so
+// Every money claim on this page comes from ONE place, derived from the live buy config, so
 // flipping VITE_BUY_ATTRIBUTION_MODE=affiliate cannot leave "we earn nothing" on a public page.
+// The whole config is passed, not just the mode: revenueCopy keys on the EFFECTIVE mode, so an
+// affiliate deploy with no Bookshop id — which emits plain links and earns nothing — keeps the
+// no-cut copy instead of announcing a commission it never collects.
 // Guarded by packages/core/src/revenueCopy.test.ts.
-const MONEY = revenueCopy(ATTRIBUTION_MODE)
+const MONEY = revenueCopy(buyConfig())
 
 /** Minimal stroke icons (token-coloured, no raster). */
 function Icon({ d }: { d: string }) {
@@ -43,7 +46,7 @@ const FEATURES = [
   // The quiz asks craving, intensity, pace, tropes and closing feeling (library/quiz.ts). Nothing
   // asks how much TIME you have, and page count is not a match signal — so "time" was fiction.
   { icon: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M12 8l2 4-2 4-2-4z', title: 'Find your next read', body: 'A mood matchmaker that reads the room — mood, intensity, what you’re craving — and hands you exactly the right next book.' },
-  // Tag + body come from revenueCopy(ATTRIBUTION_MODE) — never hardcoded. The old line also
+  // Tag + body come from revenueCopy(buyConfig()) — never hardcoded. The old line also
   // promised "your local indie" unconditionally, which was false for any reader who had not picked
   // a store in the finder; buildBuyLinks only adds that link once one is chosen.
   { icon: 'M4 9h16l-1 11H5zM9 9V6a3 3 0 0 1 6 0v3', title: 'Buy indie', tag: MONEY.tag, body: MONEY.body },

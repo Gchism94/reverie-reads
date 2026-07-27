@@ -384,6 +384,50 @@ describe('backup round trip — the data v4 dropped on the floor', () => {
     expect([...perBook.values()].every((n) => n === 1)).toBe(true)
     expect(db.book_tropes.length).toBe(tropesAfterFirst * 2) // second set of books, still 1:1
     expect(db.author_follows).toHaveLength(2)
+
+    // TOMBSTONES DO NOT DOUBLE. Unlike the join tables, series_entries has a synthetic PK and the
+    // parent series is resolved BY NAME rather than recreated, so the second restore used to append
+    // a byte-identical second tombstone to the same series at the same position.
+    expect(db.series_entries).toHaveLength(1)
+    const slots = db.series_entries.map((r) => `${str(r, 'series_id')}@${r.position}`)
+    expect(new Set(slots).size).toBe(slots.length)
+    expect(db.series).toHaveLength(1) // and the parent series was reused, not duplicated
+
+    // Dismissals DO get a row per restored book copy — that is the same additive semantics as
+    // book_tropes (each restore makes new books), not a duplicate: the (book_id, trope_id) key is
+    // distinct every time. Asserted rather than assumed, since the two tables differ here.
+    expect(db.trope_suggestions).toHaveLength(2)
+    const perSuggestion = new Set(db.trope_suggestions.map((r) => `${str(r, 'book_id')}|${str(r, 'trope_id')}`))
+    expect(perSuggestion.size).toBe(2)
+  })
+
+  it('a tombstone is not added beside a LIVE slot the account already has at that position', async () => {
+    const json = await buildBackup()
+    wipeToFreshAccount()
+    // The new account re-added the book the backup says was removed — a later decision than the
+    // backup's, so it must win.
+    db.series.push({ id: 'ser-new', owner_id: NEW_OWNER, name: 'Empyrean' })
+    db.series_entries.push({
+      id: 'se-live-new', series_id: 'ser-new', owner_id: NEW_OWNER, position: 3,
+      title: 'Onyx Storm', author: 'Rebecca Yarros', book_id: 'some-book', user_edited: false, removed_at: null,
+    })
+
+    const result = await restoreBackup(json)
+
+    expect(result.tombstones).toBe(0)
+    expect(db.series_entries).toHaveLength(1)
+    expect(db.series_entries[0]?.removed_at).toBeNull()
+  })
+
+  it('dedupes repeated slots WITHIN a single hand-edited file', async () => {
+    const parsed = JSON.parse(await buildBackup()) as { series_tombstones: unknown[] }
+    parsed.series_tombstones = [parsed.series_tombstones[0], parsed.series_tombstones[0]]
+    wipeToFreshAccount()
+
+    const result = await restoreBackup(JSON.stringify(parsed))
+
+    expect(result.tombstones).toBe(1)
+    expect(db.series_entries).toHaveLength(1)
   })
 
   it('reads a v4 file (no tropes/moods/follows) without complaint', async () => {
