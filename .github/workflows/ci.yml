@@ -73,11 +73,23 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ci-placeholder-anon-key
         run: pnpm build
 
+  # a11y is split into its own job (ci/throughput stage 2) — it was ~55-58% of the suite's wall
+  # clock, so running it in parallel with everything else, on its own runner with its own Supabase
+  # stack and database, is the actual throughput lever; E2E_WORKERS and job-internal parallelism
+  # were not (see playwright.config.ts). NOT bundled with raising E2E_WORKERS or any other change —
+  # that's its own stage, measured on its own, so a result here proves only what the split did.
+  #
+  # BOTH jobs below are still named starting with `e2e` / literally `e2e` on purpose: the repo's
+  # branch-protection ruleset requires status checks named exactly `gate` and `e2e`. Keeping that
+  # name on the rest-of-suite job (the closer descendant of the job it replaces) means the existing
+  # required check keeps working unmodified. `e2e-a11y` is a NEW check — it runs and reports, but
+  # it is not yet in the required list, so a red a11y job does not currently block merge. That's a
+  # ruleset change, which is the owner's to make, not something to route around here.
   e2e:
     name: e2e
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
     env:
       # The LOCAL Supabase stack's well-known demo values — already hardcoded in every e2e spec
       # file (verified byte-identical to apps/web/.env.local), not a secret. Deliberately the
@@ -139,17 +151,80 @@ jobs:
         # No `db:seed` step, and no separate `db:reset` — Docker volumes are never cached between
         # runs, so this is already a genuinely fresh database. Nothing reads dev@reverie.local any
         # more (test/trio-migration): a11y seeds its OWN user by invoking scripts/seed-dev.mjs
-        # directly from the spec (with DEV_EMAIL overridden), so seeding happens exactly once, only
-        # for the one test that needs it, instead of unconditionally for a fixture nothing uses.
+        # directly from the spec (with DEV_EMAIL overridden) — in the OTHER job below, since a11y
+        # itself no longer runs here.
         run: supabase start -x studio,vector,edge-runtime,imgproxy
 
-      - name: e2e
-        run: pnpm e2e
+      - name: e2e (rest of suite)
+        run: pnpm --filter @reverie/web e2e --project=rest
 
       - name: Upload Playwright traces
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: playwright-traces
+          path: apps/web/test-results/
+          retention-days: 7
+
+  e2e-a11y:
+    name: e2e-a11y
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      VITE_SUPABASE_URL: http://127.0.0.1:55321
+      VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
+      E2E_WORKERS: 1
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.9.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Get installed Playwright version
+        id: playwright-version
+        run: |
+          version="$(pnpm --filter @reverie/web exec playwright --version | sed 's/^Version //')"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ steps.playwright-version.outputs.version }}
+
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm --filter @reverie/web exec playwright install --with-deps chromium
+
+      - name: Install Playwright OS dependencies (cache hit — browsers already present)
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: pnpm --filter @reverie/web exec playwright install-deps chromium
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.0
+
+      - name: Start Supabase
+        run: supabase start -x studio,vector,edge-runtime,imgproxy
+
+      - name: e2e (a11y)
+        run: pnpm --filter @reverie/web e2e --project=a11y
+
+      - name: Upload Playwright traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces-a11y
           path: apps/web/test-results/
           retention-days: 7
