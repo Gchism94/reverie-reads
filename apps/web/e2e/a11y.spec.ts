@@ -171,6 +171,60 @@ async function setProfileSkinMode(skin: string, mode: string) {
   await sb.from('profiles').update({ skin, mode }).eq('id', uid)
 }
 
+/**
+ * Guard against the exact regression class the pre-seed above exists to remove: `data-skin` /
+ * `data-mode` land synchronously with the attribute write, but a `.skin-control`'s own rendered
+ * `color` (`color: var(--ink)`, `transition: all var(--motion-duration)`) can still be mid-flight
+ * toward that value — `data-mode` alone was already correct at the exact instant CI read an
+ * unsettled color, so it cannot catch this. This checks the RENDERED color a control is actually
+ * painting, not the attribute.
+ *
+ * The expected value is never hardcoded: a detached element stamped fresh with the target
+ * `data-skin`/`data-mode` has no prior state to transition FROM, so its first computed `--ink` is
+ * the token's cascade resolution, straight from tokens.css, with nothing here to go stale against
+ * it. If a silently-broken pre-seed reintroduces the boot-light-then-flip sequence, this fails
+ * loudly instead of the suite passing on a `data-mode` read that was never wrong to begin with.
+ */
+async function assertInkSettled(page: Page, skin: string, mode: string, where: string) {
+  const result = await page.evaluate(
+    ({ skin, mode }) => {
+      const probe = document.createElement('div')
+      probe.dataset.skin = skin
+      probe.dataset.mode = mode
+      probe.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none'
+      document.body.appendChild(probe)
+      const expectedInk = getComputedStyle(probe).getPropertyValue('--ink').trim()
+      probe.remove()
+
+      // .skin-btn-primary is EXCLUDED on purpose — its color is --cta-ink, a different token, and
+      // matching it here produced a guaranteed false mismatch against the --ink expectation below.
+      // Two DIFFERENT ways a control ends up --ink-colored: skin-kit's base rules set it directly
+      // (.skin-btn-secondary / .skin-btn-icon); AppShell's nav chrome does it via Tailwind's
+      // text-ink utility (--color-ink: var(--ink) in globals.css) on a bare .skin-control. Either
+      // is present on every authenticated route via AppShell alone.
+      const control = document.querySelector(
+        '.skin-btn-secondary, .skin-btn-icon, .skin-control.text-ink',
+      )
+      const renderedColor = control ? getComputedStyle(control).color : null
+      // Resolve the expected value through the SAME parse path (a live element's computed style)
+      // so an rgb()-vs-hex string mismatch can't produce a false failure.
+      const expectedProbe = document.createElement('div')
+      expectedProbe.style.cssText = `position:absolute;visibility:hidden;color:${expectedInk}`
+      document.body.appendChild(expectedProbe)
+      const expectedColor = getComputedStyle(expectedProbe).color
+      expectedProbe.remove()
+
+      return { controlFound: !!control, renderedColor, expectedColor }
+    },
+    { skin, mode },
+  )
+  expect(result.controlFound, `${where}: no .skin-control present to check`).toBe(true)
+  expect(
+    result.renderedColor,
+    `${where}: a .skin-control's rendered color has not settled to the ${skin}/${mode} ink token`,
+  ).toBe(result.expectedColor)
+}
+
 // Title states the real scope on purpose. It used to read "across all skins x both modes", which
 // overstated it twice over: the sweep runs FOUR of the nine skins, and only tryst gets every route
 // (the other three get the core set below). The exhaustive-across-all-nine layer is the
@@ -261,6 +315,25 @@ test('axe (no serious/critical): every route in tryst, a core set in 3 alternate
       const routes = skin === 'tryst' ? allRoutes : coreRoutes
       for (const mode of MODES) {
         await setProfileSkinMode(skin, mode) // skin-sync picks this up on each fresh load
+        // Pre-seed the target BEFORE the next navigation reloads index.html's boot script, so it
+        // stamps data-skin/data-mode correctly on FIRST PAINT instead of booting 'system' — which
+        // resolves to Playwright's default light colorScheme — and letting useSkinSync flip it only
+        // after the profile query lands. That flip left .skin-control's transition (all
+        // var(--motion-duration), ~0.18s) still interpolating a control's rendered color when axe
+        // scanned, which is what actually produced the CI-only violation this guards against — a
+        // WCAG-real read of an unsettled paint, not a real defect (instrumented and confirmed via a
+        // throwaway diagnosis spec on fix/a11y-contrast-diagnosis, reported and closed unmerged).
+        // page.goto() below is a full browser navigation (confirmed by the boot
+        // script re-running), and localStorage is origin-scoped, so this write — made on the page
+        // this function is ALREADY on, from signIn()'s own navigation — survives it. This removes
+        // the race; it does not wait it out.
+        await page.evaluate(
+          ({ skin, mode }) => {
+            localStorage.setItem('reverie.skin', skin)
+            localStorage.setItem('reverie.mode', mode)
+          },
+          { skin, mode },
+        )
         // Drop the persisted query cache so the fresh profile (not a stale persisted one) loads.
         await page.evaluate(() => indexedDB.deleteDatabase('reverie-offline'))
         for (const [name, path] of routes) {
@@ -269,6 +342,7 @@ test('axe (no serious/critical): every route in tryst, a core set in 3 alternate
           await page.locator('main').waitFor({ state: 'visible' })
           await expect(page.locator('html')).toHaveAttribute('data-skin', skin)
           await expect(page.locator('html')).toHaveAttribute('data-mode', mode)
+          await assertInkSettled(page, skin, mode, `${skin}/${mode} ${name}`)
 
           const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze()
           const serious = results.violations.filter(

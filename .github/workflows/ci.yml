@@ -1,0 +1,153 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    name: gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      # lib/supabase.ts throws at IMPORT time (not just build time) if either var is unset — unit
+      # tests hit this too, verified locally: `pnpm test` fails 8 files/17 tests with no .env.local
+      # present. The JOB default is the LOCAL stack's well-known demo values (not a secret — already
+      # hardcoded in every e2e spec file) because three test files derive their expected localStorage
+      # key from this URL's hostname (authStorageKey(): `sb-${hostname.split('.')[0]}-auth-token`) and
+      # hardcode the result as `sb-127-auth-token` — a non-local placeholder here silently produces a
+      # DIFFERENT key and breaks 17 tests across offlineSession/cacheScoping/offlineCache, discovered
+      # by a real run on this runner, not anticipated. No live Supabase connection is required: every
+      # test that touches `../lib/supabase` mocks it, so this is a string used for key derivation
+      # only. The Build step below overrides both vars specifically, because THAT step needs the
+      # opposite — a non-local value, or assert-dist-clean.mjs (which enforces under CI) refuses the
+      # bundle. Two different needs inside one job, solved with a step-level override rather than
+      # blurring the job-vs-job separation docs/task-ci.md item 3 actually asks for.
+      VITE_SUPABASE_URL: http://127.0.0.1:55321
+      VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.9.0
+
+      - uses: actions/setup-node@v4
+        with:
+          # >=20.11 satisfies package.json engines, but scripts/seed-dev.mjs imports TypeScript
+          # source directly and needs >=22.18 to do it — the e2e job's dev-library seed step
+          # depends on this, so both jobs pin the same major to keep the pnpm cache key aligned.
+          node-version: '22'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Prettier
+        run: pnpm format:check
+
+      - name: Build
+        # Kept despite Vercel already building on every PR: this is the only place packages/core's
+        # typecheck+build runs, and a failure here is legible (a named CI step) rather than buried
+        # in a Vercel log a contributor may not open. Overrides the job's local env with a non-local
+        # placeholder — assert-dist-clean.mjs enforces under CI and refuses a bundle that bakes a
+        # local Supabase URL; vite.config.ts's own local-URL check is gated on VERCEL specifically
+        # and so doesn't fire here, but the value still has to be non-local for assert-dist-clean.
+        env:
+          VITE_SUPABASE_URL: https://ci-placeholder.supabase.co
+          VITE_SUPABASE_ANON_KEY: ci-placeholder-anon-key
+        run: pnpm build
+
+  e2e:
+    name: e2e
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # The LOCAL Supabase stack's well-known demo values — already hardcoded in every e2e spec
+      # file (verified byte-identical to apps/web/.env.local), not a secret. Deliberately the
+      # opposite of the gate job's placeholder above; the two must never merge into one job.
+      VITE_SUPABASE_URL: http://127.0.0.1:55321
+      VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
+      E2E_WORKERS: 1
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.9.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Get installed Playwright version
+        id: playwright-version
+        run: |
+          version="$(pnpm --filter @reverie/web exec playwright --version | sed 's/^Version //')"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ steps.playwright-version.outputs.version }}
+
+      # Deliberately NOT caching the Supabase Docker images (docs/task-ci.md item 4's audit found
+      # no evidence it would help, and GitHub's cache would store multiple GB and restore near the
+      # pull cost anyway).
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm --filter @reverie/web exec playwright install --with-deps chromium
+
+      - name: Install Playwright OS dependencies (cache hit — browsers already present)
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: pnpm --filter @reverie/web exec playwright install-deps chromium
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.0
+
+      - name: Start Supabase
+        # Only studio/vector/edge-runtime reliably exclude via -x on this CLI version — verified by
+        # isolated testing, not assumed from the Phase 1 prose. `analytics` (the audit's "logflare")
+        # does NOT actually exclude; passing it is a harmless no-op, kept out here rather than left
+        # in to avoid relying on behavior that isn't real. `imgproxy` never starts in this project's
+        # config regardless of -x (also a no-op, kept for clarity). storage-api and realtime are
+        # deliberately NOT excluded — unverified is unverified.
+        run: supabase start -x studio,vector,edge-runtime,imgproxy
+
+      - name: Seed the dev library
+        # No separate `db:reset` — Docker volumes are never cached between runs, so `supabase
+        # start` on a runner is already a genuinely fresh database.
+        run: pnpm db:seed
+
+      - name: e2e
+        run: pnpm e2e
+
+      - name: Upload Playwright traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: apps/web/test-results/
+          retention-days: 7
