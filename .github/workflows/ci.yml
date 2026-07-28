@@ -40,8 +40,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           # >=20.11 satisfies package.json engines, but scripts/seed-dev.mjs imports TypeScript
-          # source directly and needs >=22.18 to do it — the e2e job's dev-library seed step
-          # depends on this, so both jobs pin the same major to keep the pnpm cache key aligned.
+          # source directly and needs >=22.18 to do it — a11y.spec.ts invokes that script directly
+          # (test/trio-migration), so the e2e job still depends on this. Both jobs pin the same
+          # major to keep the pnpm cache key aligned.
           node-version: '22'
           cache: pnpm
 
@@ -134,12 +135,13 @@ jobs:
         # in to avoid relying on behavior that isn't real. `imgproxy` never starts in this project's
         # config regardless of -x (also a no-op, kept for clarity). storage-api and realtime are
         # deliberately NOT excluded — unverified is unverified.
+        #
+        # No `db:seed` step, and no separate `db:reset` — Docker volumes are never cached between
+        # runs, so this is already a genuinely fresh database. Nothing reads dev@reverie.local any
+        # more (test/trio-migration): a11y seeds its OWN user by invoking scripts/seed-dev.mjs
+        # directly from the spec (with DEV_EMAIL overridden), so seeding happens exactly once, only
+        # for the one test that needs it, instead of unconditionally for a fixture nothing uses.
         run: supabase start -x studio,vector,edge-runtime,imgproxy
-
-      - name: Seed the dev library
-        # No separate `db:reset` — Docker volumes are never cached between runs, so `supabase
-        # start` on a runner is already a genuinely fresh database.
-        run: pnpm db:seed
 
       - name: e2e
         run: pnpm e2e
