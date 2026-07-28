@@ -129,6 +129,36 @@ pnpm deploy:functions    # prod functions deploy — via the deploy guard
   report. Write it fenced/inline in a single-quoted heredoc or a `--body-file`; an un-quoted
   `` `supabase functions deploy …` `` in a double-quoted string executes. (Codifies the 2026-07-14
   heredoc-eval incident, which deployed a function to prod from a PR-body backtick.)
+- **No writes to the production database from a Code session — ever, including throwaway
+  accounts meant for immediate deletion.** `docs/DEPLOY.md`'s smoke test uses exactly that
+  pattern — a self-deleting account exercising the full lifecycle against prod — but that is the
+  owner's checklist to run by hand, not something a Code session does on its own. Verification
+  that requires a real prod account is the owner's to run, not Code's.
+
+## Testing & verification discipline
+
+Five rules, each earned by a real failure this session. A rule without its reason gets dropped
+by whoever inherits it, so the reason stays attached.
+
+- **Grepping a bundle for strings measures dead-code elimination, not rendering.** Vite
+  constant-folds and eliminates unused branches, so a string's presence or absence in the built
+  output tracks the bundler's optimization, not what reaches the screen. Serve the build and read
+  the DOM.
+- **A negative assertion must first wait for the moment the thing would appear.**
+  `waitFor(() => expect(...).not.toBeInTheDocument())` succeeds on its very first tick, before any
+  async work has had a chance to produce what's being denied — it fails in the safe-looking
+  direction, certifying an absence that was never actually tested.
+- **A test name is a promise about what is proven.** "restoring the same file twice does not
+  double the assignments" described behavior the test did not assert, and two reports
+  contradicted each other for a full round because of it. Name what the assertions actually
+  check, not what you hope the surrounding code does.
+- **Commit before mutation testing.** Mutation testing deliberately corrupts the tree to prove a
+  guard has teeth; `git checkout` against uncommitted work has destroyed a real implementation
+  once already. Verify each revert with `git status --porcelain` before the next mutant.
+- **Every completion report on a branch touching `apps/`, `packages/`, `supabase/`, or test
+  infrastructure includes one full e2e run** at the default worker count, fresh DB, retries 0. If
+  it's red, report it red — do not re-run until it's green. Docs-only branches are exempt, and
+  the report should say so explicitly rather than silently omitting the run.
 
 ## Definition of done (per feature)
 
