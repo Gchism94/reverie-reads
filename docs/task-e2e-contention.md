@@ -237,9 +237,20 @@ single test against a fresh DB, reverted, and confirmed `git status
 The poll fails on a genuinely broken write rather than passing on a timing
 accident, which is the property the old unwaited `expect()` didn't have.
 
-### Acceptance re-run #2 (workers=1, after the fix)
+### Acceptance re-run #2 (workers=1, after the fix) — MET, 5/5
 
-<!-- filled in after the five runs below -->
+Same conditions as the first re-run: both other Docker Supabase stacks
+stopped, fresh DB before every run, retries 0.
+
+| run | exit | result    | wall clock |
+| --- | ---- | --------- | ---------- |
+| 1   | 0    | 49 passed | 4.3m       |
+| 2   | 0    | 49 passed | 4.3m       |
+| 3   | 0    | 49 passed | 4.4m       |
+| 4   | 0    | 49 passed | 4.3m       |
+| 5   | 0    | 49 passed | 4.2m       |
+
+Five consecutive, fully green, mean 4.3m. **Acceptance is met.**
 
 ## Follow-up — recorded here, not fixed on this branch
 
