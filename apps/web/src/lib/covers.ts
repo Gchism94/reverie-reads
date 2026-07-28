@@ -26,9 +26,7 @@ export interface IngestResult {
   degraded?: boolean
 }
 
-export type IngestOutcome =
-  | { status: 'ok'; data: IngestResult }
-  | { status: 'error'; code: string }
+export type IngestOutcome = { status: 'ok'; data: IngestResult } | { status: 'error'; code: string }
 
 /** Fetch alternate editions for a book (Hardcover + Google, server-cached per book). */
 export async function fetchEditions(input: {
@@ -69,13 +67,21 @@ export async function ingestCover(input: {
       if (input.sourceUrl) form.set('sourceUrl', input.sourceUrl)
       body = form
     } else {
-      body = { action: 'ingest', bookId: input.bookId, source: input.source, url: input.url, sourceUrl: input.sourceUrl }
+      body = {
+        action: 'ingest',
+        bookId: input.bookId,
+        source: input.source,
+        url: input.url,
+        sourceUrl: input.sourceUrl,
+      }
     }
     const { data, error } = await supabase.functions.invoke('covers', { body })
     if (error) {
       // FunctionsHttpError carries the response; surface the server's error code for the sheet copy.
       const ctx = (error as { context?: Response }).context
-      const code = ctx ? ((await ctx.json().catch(() => null)) as { error?: string } | null)?.error : undefined
+      const code = ctx
+        ? ((await ctx.json().catch(() => null)) as { error?: string } | null)?.error
+        : undefined
       return { status: 'error', code: code ?? 'failed' }
     }
     const d = data as IngestResult & { error?: string }

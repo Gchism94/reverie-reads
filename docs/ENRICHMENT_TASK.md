@@ -14,6 +14,7 @@ live only in adapters/Edge.
 ---
 
 ## E1 — Enrichment resolution engine (title+author -> ISBN -> cover + confidence)
+
 The real data has NO ISBNs and NO covers, only title+author(+series). Resolve the rest.
 
 - Adapters support a TITLE+AUTHOR SEARCH path (not ISBN-only). Source priority for this catalog
@@ -33,6 +34,7 @@ The real data has NO ISBNs and NO covers, only title+author(+series). Resolve th
   RESUMABLE and IDEMPOTENT (re-run picks up where it left off, no dupes) -- this runs over 1000+ books.
 
 ACCEPTANCE E1
+
 - title+author -> ISBN + cover + confidence resolved across Hardcover/Google Books/Open Library, cached.
 - user-authored fields never overwritten; only blanks filled.
 - confidence tiers assigned; alternates retained.
@@ -43,6 +45,7 @@ ACCEPTANCE E1
 ---
 
 ## E2 — Close the two open import flags (real-data validation)
+
 Carryover from I1/I3 (see docs/IMPORT_REAL_VALIDATION.md). Fixture: data/fixtures/library_connected_series.csv.
 
 FLAG 1 (multi-value genre, I1): genre is ";"/","-delimited and dual-core. Split -> dominant (FIRST token)
@@ -54,6 +57,7 @@ detectUniverses must handle ties DELIBERATELY -- preserve all tied books at that
 last-write-wins / drop. Document the chosen tie semantics in the doc.
 
 ACCEPTANCE E2
+
 - multi-genre: dominant primary + retained secondary; real Library dominant tally = Romance 484 /
   Fantasy 5 / 1 -> enrichment; the 128 romantasy rows keep both genres. unit + fixture tests.
 - tied order: Rina Kent's 41-book universe materializes with ties preserved (no collisions/drops);
@@ -62,6 +66,7 @@ ACCEPTANCE E2
 ---
 
 ## E3 — Surface results for the review screen + Cover Studio (data contract)
+
 Produce the structured "what happened / what needs a look" read-model the onboarding/import review and the
 Cover Studio consume. (UI is built later; this task provides the DATA.)
 
@@ -73,12 +78,14 @@ Cover Studio consume. (UI is built later; this task provides the DATA.)
   photo / skin-themed placeholder on top of these).
 
 ACCEPTANCE E3
+
 - after import+enrichment, summary + bucketed needs-a-look payload available, each item with the fields
   the review + Studio need (incl. cover alternates). pure shape + unit test; consumable by the review screen.
 
 ---
 
 ## GUARDRAILS (all checkpoints)
+
 - pure logic in @reverie/core + unit tests; network only in adapters/Edge.
 - user-authored fields always win; enrichment fills blanks only; caches keyed by work, service-role-only;
   covers to Storage/CDN (H2).
@@ -90,18 +97,21 @@ ACCEPTANCE E3
   docs/design untouched.
 
 ## FIXTURES / TESTS
+
 - data/fixtures/library_connected_series.csv (Flag 2, committed).
 - add small fixtures: multi-genre rows (Flag 1); enrichment matching (exact / fuzzy / ambiguous /
   author-whitespace); confidence tiers.
 - full-tally validation against the real files in data/raw/ (gitignored).
 
 ## OUT OF SCOPE (later)
+
 - The Cover Studio UI (book-detail cover editor, batch triage, skin-themed typographic placeholder
   generation) -- separate design + build; this task only emits the data it consumes.
 
 ---
 
 ## STATUS — 2026-06-27
+
 - E2 DONE (d676a5b): both import flags closed + ground-truth-validated. detectUniverses stable-sorts by
   globalOrder and preserves every tied book as a repeated position (no collide/drop); locked by
   importRealValidation.test.ts. Multi-genre split + dominant/secondary retained; tally validated.
@@ -112,8 +122,10 @@ ACCEPTANCE E3
 ---
 
 ## STATUS — 2026-06-27 (cont.) — E3 seam/read-model DONE
+
 Import<->enrichment seam + review read-model built + tested. Gate: typecheck/lint/build, 198 core + 4 web
 (joiner +4). Committed 11 integration source files; desktop-align WIP + docs/design untouched/unstaged.
+
 - Import signals: genreNormalize reports unmappedGenre; importDetectedExport returns ImportItemOutcome[]
   (disposition added/merged, Duplicate flag, unmapped genre).
 - Confidence: new books.cover_confidence (migration + BookRow/mappers); bulkComplete records it ONLY when
@@ -125,6 +137,7 @@ Import<->enrichment seam + review read-model built + tested. Gate: typecheck/lin
 - LEFT FOR UI PASS: the review screen + Cover Studio that render the model; on-demand alternate fetch.
 
 OPEN ITEMS:
+
 - CONFIRM E1 resolution engine: does enrichment do TITLE+AUTHOR search + ISBN self-resolution? (data has
   NO ISBNs -> ISBN-only fills ~0 covers). + confidence tiers + throttle/backoff/resume/idempotent over
   1000+ books. The seam is ready; covers only populate if this engine is in.
@@ -135,7 +148,9 @@ OPEN ITEMS:
 ---
 
 ## STATUS — 2026-06-27 (cont.) — E1 CONFIRMED IN + dry-run
+
 E1 resolution engine is implemented (not just the contract):
+
 - title+author search (searchGoogle/searchOpenLibrary/searchHardcover) -> gatherCandidates in priority
   Hardcover->Google->OpenLibrary -> selectBestMatch (high/med/low/none + wrong-book safety; pure core,
   Edge parity in resolve.ts) -> selfIsbn13 self-resolution (index.ts:289) -> re-fetch by ISBN for the
@@ -143,17 +158,18 @@ E1 resolution engine is implemented (not just the contract):
 - 1000-book run: bulkComplete passes title+author; THROTTLE_MS=220; MAX_PER_RUN=400; resumable +
   negative-cached (enriched_at recheck); pauses-without-stamping on 429; Edge backs off on 5xx; global
   cache by isbn/title -> idempotent.
-DRY-RUN (real Library file, OL-ONLY -- Google 429 on shared IP, Hardcover OFF/no token), 30/490 sample:
+  DRY-RUN (real Library file, OL-ONLY -- Google 429 on shared IP, Hardcover OFF/no token), 30/490 sample:
   cover 8/30 (27%) | ISBN-13 14/30 (47%) | confidence high 15 / med 0 / low 0 / none 15.
   Conservative floor: NOT ~0 (title-only works on no-ISBN data). The 47% ISBN vs 27% cover gap = self-
   resolution working (production fetches cover by resolved ISBN from Google/Hardcover). Wrong-book safety
   held (0 low/0 med). UNTESTED LIVE: Google + Hardcover SEARCH adapters (parse/parity-verified only).
-CONFIRMS: needsLook.missingCover (no cover) is a SEPARATE bucket from needsLook.lowConfidenceCover;
-coverTriage = both. E2 secondary-sort-within-tie DONE (9eea651): ties sort globalOrder->seriesNumber->
-seriesOrder->title, order-independence tested.
-PUSHED: f32b065..7c68cae (8 commits: code + docs/design record).
+  CONFIRMS: needsLook.missingCover (no cover) is a SEPARATE bucket from needsLook.lowConfidenceCover;
+  coverTriage = both. E2 secondary-sort-within-tie DONE (9eea651): ties sort globalOrder->seriesNumber->
+  seriesOrder->title, order-independence tested.
+  PUSHED: f32b065..7c68cae (8 commits: code + docs/design record).
 
 ## NEXT GATE (before triage UI) — live full-run with Hardcover + Google ON
+
 - OWNER: set HARDCOVER_TOKEN (free; runbook) + Google key/quota; deploy enrich; run bulkComplete over the
   real file; read true coverage + confidence split from books.cover_confidence.
 - WHY: proves the two live adapters (Google + Hardcover search) AND gives the REAL tail size to design
@@ -162,14 +178,17 @@ PUSHED: f32b065..7c68cae (8 commits: code + docs/design record).
   +Hardcover) to right-size the tail before the UI.
 
 ## REPO HYGIENE
-gitignore *.dc.html going forward (design re-exports are multi-MB + frequent -> history bloat); keep .md
+
+gitignore \*.dc.html going forward (design re-exports are multi-MB + frequent -> history bloat); keep .md
 handoffs versioned (they carry the framing + structural spec; bundles regenerable from the Design URLs).
 Existing ~7.3M not worth a history rewrite.
 
 ---
 
 ## GO — live hit-rate run (HARDCOVER_TOKEN set 2026-06-27)
+
 The gate before the triage UI. Run on Code's side (+ owner deploy):
+
 1. Confirm GOOGLE_BOOKS_KEY also set as an Edge secret (run must hit all 3 sources, not just
    Hardcover+OL). Deploy enrich.
 2. Build the hit-rate harness (Code's offer) if not yet built; run with the full roster
@@ -180,4 +199,4 @@ The gate before the triage UI. Run on Code's side (+ owner deploy):
    (missingCover + lowConfidence counts), + a few low-confidence cases to eyeball for wrong-book.
 4. Full population of ~1500+ books runs progressively/resumably (MAX_PER_RUN=400) during the real
    import -- spans multiple days under the free Google quota; expected, not a blocker.
-GATE OUTPUT -> scopes the Cover Studio (true tail size) + greenlights the onboarding/import triage UI.
+   GATE OUTPUT -> scopes the Cover Studio (true tail size) + greenlights the onboarding/import triage UI.

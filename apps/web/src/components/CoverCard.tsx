@@ -22,7 +22,8 @@ export function CoverCard({
   /** Master-detail selection (desktop): draws the accent ring + marks aria-current. */
   selected?: boolean
 }) {
-  const author = formatAuthors(book.contributors) || [book.first, book.last].filter(Boolean).join(' ')
+  const author =
+    formatAuthors(book.contributors) || [book.first, book.last].filter(Boolean).join(' ')
   const [g0, g1] = subgenreGradient(book.subgenre, book.genre)
   const isRead = book.readStatus === 'Read' || book.reads.length > 0
   const labels = useLabels()
@@ -93,9 +94,15 @@ export function CoverCard({
           type="button"
           onClick={onToggleFave}
           aria-pressed={book.fave}
-          aria-label={book.fave ? `Remove ${book.title} from favorites` : `Add ${book.title} to favorites`}
+          aria-label={
+            book.fave ? `Remove ${book.title} from favorites` : `Add ${book.title} to favorites`
+          }
           className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center text-[14px] opacity-0 backdrop-blur transition-opacity focus-visible:opacity-100 group-hover:opacity-100 aria-pressed:opacity-100"
-          style={{ background: markBg, color: book.fave ? markInk : '#fff', borderRadius: 'var(--mark-radius)' }}
+          style={{
+            background: markBg,
+            color: book.fave ? markInk : '#fff',
+            borderRadius: 'var(--mark-radius)',
+          }}
         >
           {book.fave ? '♥' : '♡'}
         </button>

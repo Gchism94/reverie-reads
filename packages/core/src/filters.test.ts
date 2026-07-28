@@ -24,9 +24,9 @@ describe('matchesFilters', () => {
 
   it('requires ALL selected tropes to be present', () => {
     expect(matchesFilters(book, { ...defaultFilters(), tags: ['Dragon Riders'] })).toBe(true)
-    expect(
-      matchesFilters(book, { ...defaultFilters(), tags: ['Dragon Riders', 'Mafia'] }),
-    ).toBe(false)
+    expect(matchesFilters(book, { ...defaultFilters(), tags: ['Dragon Riders', 'Mafia'] })).toBe(
+      false,
+    )
   })
 
   it('matches subgenre, fave, and free-text search across fields', () => {
@@ -55,7 +55,12 @@ describe('matchesFilters', () => {
     expect(matchesFilters(spicy, { ...defaultFilters(), intensity: [4, 5] })).toBe(true)
     expect(matchesFilters(sweet, { ...defaultFilters(), intensity: [4, 5] })).toBe(false)
     // an unrated book (intensity 0/undefined) never matches a positive-level filter
-    expect(matchesFilters(makeBook({ id: 'z', title: 'Z', intensity: 0 }), { ...defaultFilters(), intensity: [3] })).toBe(false)
+    expect(
+      matchesFilters(makeBook({ id: 'z', title: 'Z', intensity: 0 }), {
+        ...defaultFilters(),
+        intensity: [3],
+      }),
+    ).toBe(false)
   })
 })
 
@@ -69,10 +74,7 @@ describe('seriesLenBucket', () => {
 
 describe('sortBooks', () => {
   it('sorts A–Z by title', () => {
-    const books = [
-      makeBook({ id: '1', title: 'Zodiac' }),
-      makeBook({ id: '2', title: 'Apple' }),
-    ]
+    const books = [makeBook({ id: '1', title: 'Zodiac' }), makeBook({ id: '2', title: 'Apple' })]
     expect(sortBooks(books, 'az').map((b) => b.title)).toEqual(['Apple', 'Zodiac'])
   })
 })
@@ -98,7 +100,13 @@ describe('activeFilterCount', () => {
   it('counts each active facet (search excluded)', () => {
     expect(activeFilterCount(defaultFilters())).toBe(0)
     expect(
-      activeFilterCount({ ...defaultFilters(), sub: 'Romantasy', tags: ['Fae'], fave: true, q: 'x' }),
+      activeFilterCount({
+        ...defaultFilters(),
+        sub: 'Romantasy',
+        tags: ['Fae'],
+        fave: true,
+        q: 'x',
+      }),
     ).toBe(3)
     // intensity counts as one facet however many levels are picked
     expect(activeFilterCount({ ...defaultFilters(), intensity: [3, 4, 5] })).toBe(1)
@@ -107,11 +115,31 @@ describe('activeFilterCount', () => {
 
 describe('ownership scoping — default library = have or have read (task-ownership-v2)', () => {
   const owned = makeBook({ id: 'o', title: 'Owned One' })
-  const borrowed = makeBook({ id: 'b', title: 'Borrowed One', ownership: 'borrowed', readStatus: 'unset' })
-  const wished = makeBook({ id: 'w', title: 'Wished One', ownership: 'wishlist', readStatus: 'unset' })
-  const unset = makeBook({ id: 'u', title: 'Uncatalogued', ownership: 'unset', readStatus: 'unset' })
+  const borrowed = makeBook({
+    id: 'b',
+    title: 'Borrowed One',
+    ownership: 'borrowed',
+    readStatus: 'unset',
+  })
+  const wished = makeBook({
+    id: 'w',
+    title: 'Wished One',
+    ownership: 'wishlist',
+    readStatus: 'unset',
+  })
+  const unset = makeBook({
+    id: 'u',
+    title: 'Uncatalogued',
+    ownership: 'unset',
+    readStatus: 'unset',
+  })
   // the reading-history hole: read it, don't own it, never marked it borrowed
-  const readNotOwned = makeBook({ id: 'r', title: 'Read Not Owned', ownership: 'wishlist', readStatus: 'Read' })
+  const readNotOwned = makeBook({
+    id: 'r',
+    title: 'Read Not Owned',
+    ownership: 'wishlist',
+    readStatus: 'Read',
+  })
 
   it('default grid shows owned, borrowed, and anything read — hides wishlist/unset you have not read', () => {
     const f = defaultFilters()
@@ -135,7 +163,12 @@ describe('ownership scoping — default library = have or have read (task-owners
 })
 
 describe('subgenre filter over subgenres[]', () => {
-  const multi = makeBook({ id: 'm', title: 'Many Shelves', subgenre: 'Epic Fantasy', subgenres: ['Epic Fantasy', 'Romantasy', 'Dark Fantasy'] })
+  const multi = makeBook({
+    id: 'm',
+    title: 'Many Shelves',
+    subgenre: 'Epic Fantasy',
+    subgenres: ['Epic Fantasy', 'Romantasy', 'Dark Fantasy'],
+  })
   const legacy = makeBook({ id: 'l', title: 'Old Single', subgenre: 'Noir', subgenres: [] })
 
   it('a book appears under EVERY subgenre it holds', () => {

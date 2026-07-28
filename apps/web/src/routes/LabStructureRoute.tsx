@@ -1,7 +1,14 @@
 import { createRoute } from '@tanstack/react-router'
 import { type SkinId } from '@reverie/core'
 import { rootRoute } from './RootRoute'
-import { Frame, ProgressMeter, SectionHeader, SignatureEmblem, SignatureRing, StatusTag } from '../components/Structure'
+import {
+  Frame,
+  ProgressMeter,
+  SectionHeader,
+  SignatureEmblem,
+  SignatureRing,
+  StatusTag,
+} from '../components/Structure'
 import { Spine } from '../components/Spine'
 import { BookmarkGlyph } from '../components/BookmarkGlyph'
 
@@ -13,7 +20,12 @@ const SHELF: { id: string; title: string; first: string; last: string }[] = [
   { id: 'sp-c', title: 'Apogee', first: 'I', last: 'Mar' },
   { id: 'sp-d', title: 'The Lamplighter’s Unspoken Promise', first: 'D', last: 'Marchand' },
   { id: 'sp-e', title: 'Signal Lost', first: 'T', last: 'Reyes' },
-  { id: 'sp-f', title: 'The Exhaustively Complete Chronicle of Everything: A Subtitle', first: 'L', last: 'Stern' },
+  {
+    id: 'sp-f',
+    title: 'The Exhaustively Complete Chronicle of Everything: A Subtitle',
+    first: 'L',
+    last: 'Stern',
+  },
   { id: 'sp-g', title: 'Lure', first: 'J', last: 'Okafor' },
 ]
 
@@ -36,14 +48,29 @@ const CELLS: { skin: SkinId; mode: 'dark' | 'light'; label: string }[] = [
 function MiniCard({ skin }: { skin: SkinId }) {
   return (
     <div className="w-[120px] shrink-0">
-      <div className="skin-card aspect-[2/3] overflow-hidden border border-line" style={{ background: 'linear-gradient(150deg, var(--card-2), var(--bg1))' }}>
-        <div className="grid h-full w-full place-items-center italic" style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: '1.4rem', color: 'var(--ink)' }}>
+      <div
+        className="skin-card aspect-[2/3] overflow-hidden border border-line"
+        style={{ background: 'linear-gradient(150deg, var(--card-2), var(--bg1))' }}
+      >
+        <div
+          className="grid h-full w-full place-items-center italic"
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontWeight: 600,
+            fontSize: '1.4rem',
+            color: 'var(--ink)',
+          }}
+        >
           CL
         </div>
       </div>
       <div className="mt-1.5 flex flex-wrap gap-1">
-        <StatusTag skin={skin} glyph="✓">Read</StatusTag>
-        <StatusTag skin={skin} tone="muted">Own</StatusTag>
+        <StatusTag skin={skin} glyph="✓">
+          Read
+        </StatusTag>
+        <StatusTag skin={skin} tone="muted">
+          Own
+        </StatusTag>
       </div>
     </div>
   )
@@ -51,20 +78,34 @@ function MiniCard({ skin }: { skin: SkinId }) {
 
 function Cell({ skin, mode, label }: { skin: SkinId; mode: 'dark' | 'light'; label: string }) {
   return (
-    <div data-skin={skin} data-mode={mode} className="overflow-hidden rounded-2xl border border-line p-5" style={{ background: 'var(--bg0)', color: 'var(--ink)' }}>
+    <div
+      data-skin={skin}
+      data-mode={mode}
+      className="overflow-hidden rounded-2xl border border-line p-5"
+      style={{ background: 'var(--bg0)', color: 'var(--ink)' }}
+    >
       <div className="skin-label mb-4 text-[10px] text-muted">{label}</div>
 
       {/* hero — Frame + signature goal ring + status tags */}
       <Frame skin={skin} className="flex items-center gap-4 p-4">
         <SignatureRing skin={skin} value={42} max={60} size={84} />
         <div className="min-w-0 flex-1">
-          <div className="text-[18px] italic text-ink" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+          <div
+            className="text-[18px] italic text-ink"
+            style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+          >
             Good evening.
           </div>
           <div className="mt-2 flex flex-wrap gap-1.5">
-            <StatusTag skin={skin} tone="muted">248 books</StatusTag>
-            <StatusTag skin={skin} glyph="♥">17 faves</StatusTag>
-            <StatusTag skin={skin} glyph={<BookmarkGlyph />}>3 priority</StatusTag>
+            <StatusTag skin={skin} tone="muted">
+              248 books
+            </StatusTag>
+            <StatusTag skin={skin} glyph="♥">
+              17 faves
+            </StatusTag>
+            <StatusTag skin={skin} glyph={<BookmarkGlyph />}>
+              3 priority
+            </StatusTag>
           </div>
         </div>
       </Frame>
@@ -81,7 +122,10 @@ function Cell({ skin, mode, label }: { skin: SkinId; mode: 'dark' | 'light'; lab
 
       {/* spine shelf — varying title lengths on real-style data */}
       <SectionHeader skin={skin} className="mt-5" label="On the shelf" readout={SHELF.length} />
-      <div className="mt-3 flex items-end gap-1.5 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+      <div
+        className="mt-3 flex items-end gap-1.5 overflow-x-auto pb-1"
+        style={{ scrollbarWidth: 'none' }}
+      >
         {SHELF.map((b, i) => (
           <Spine key={b.id} book={b} skin={skin} active={i === 1} />
         ))}
@@ -100,7 +144,10 @@ function Cell({ skin, mode, label }: { skin: SkinId; mode: 'dark' | 'light'; lab
 
 function StructureLab() {
   return (
-    <div className="mx-auto min-h-dvh max-w-[1120px] px-6 py-10" style={{ background: 'var(--bg0)' }}>
+    <div
+      className="mx-auto min-h-dvh max-w-[1120px] px-6 py-10"
+      style={{ background: 'var(--bg0)' }}
+    >
       <h1 className="text-[24px] font-bold text-ink" style={{ fontFamily: 'var(--font-display)' }}>
         Structural character — bones, not paint
       </h1>

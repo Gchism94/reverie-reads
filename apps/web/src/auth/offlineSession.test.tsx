@@ -10,7 +10,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 // session sat in localStorage the whole time while the reader was shown the signed-out page.
 
 let emitAuth: ((event: AuthChangeEvent, session: Session | null) => void) | null = null
-let getSessionImpl: () => Promise<{ data: { session: Session | null }; error?: unknown }> = async () => ({
+let getSessionImpl: () => Promise<{
+  data: { session: Session | null }
+  error?: unknown
+}> = async () => ({
   data: { session: null },
 })
 let signOutImpl: () => Promise<{ error: unknown }> = async () => ({ error: null })
@@ -36,13 +39,24 @@ vi.mock('../lib/supabase', () => ({
 }))
 
 const { AuthProvider, useAuth } = await import('./AuthProvider')
-const { createDexiePersister, clearAllOfflineCaches, evictOtherReaders } = await import('../lib/offlineCache')
+const { createDexiePersister, clearAllOfflineCaches, evictOtherReaders } =
+  await import('../lib/offlineCache')
 const { readStoredSession, resetUnreadableReportForTests } = await import('../lib/storedSession')
 
 const AUTH_KEY = 'sb-127-auth-token'
-const SESSION_A = { access_token: 'token-a', refresh_token: 'r-a', user: { id: 'user-a' } } as unknown as Session
-const retryable = Object.assign(new Error('Failed to fetch'), { name: 'AuthRetryableFetchError', status: 0 })
-const rejected = Object.assign(new Error('Invalid Refresh Token'), { name: 'AuthApiError', status: 400 })
+const SESSION_A = {
+  access_token: 'token-a',
+  refresh_token: 'r-a',
+  user: { id: 'user-a' },
+} as unknown as Session
+const retryable = Object.assign(new Error('Failed to fetch'), {
+  name: 'AuthRetryableFetchError',
+  status: 0,
+})
+const rejected = Object.assign(new Error('Invalid Refresh Token'), {
+  name: 'AuthApiError',
+  status: 400,
+})
 
 const storeSession = (s: Session) => localStorage.setItem(AUTH_KEY, JSON.stringify(s))
 const authKeyPresent = () => localStorage.getItem(AUTH_KEY) != null
@@ -119,7 +133,11 @@ describe('boot never waits on the network to know who the reader is', () => {
 
   it('clears the mirror when auth-js reports the session gone', async () => {
     storeSession(SESSION_A)
-    await createDexiePersister().persistClient({ timestamp: 1, buster: 'b', clientState: { mutations: [], queries: [] } })
+    await createDexiePersister().persistClient({
+      timestamp: 1,
+      buster: 'b',
+      clientState: { mutations: [], queries: [] },
+    })
     expect(await rowIds()).toEqual(['react-query:user-a'])
 
     renderApp()
@@ -155,7 +173,11 @@ describe('signing out with no connectivity', () => {
     storeSession(SESSION_A)
     getSessionImpl = async () => ({ data: { session: SESSION_A } })
     signOutImpl = async () => ({ error: retryable }) // offline: the server was never reached
-    await createDexiePersister().persistClient({ timestamp: 1, buster: 'b', clientState: { mutations: [], queries: [] } })
+    await createDexiePersister().persistClient({
+      timestamp: 1,
+      buster: 'b',
+      clientState: { mutations: [], queries: [] },
+    })
 
     renderWithButton()
     await waitFor(() => expect(screen.getByText('your library')).toBeInTheDocument())
@@ -209,9 +231,17 @@ describe('signing out with no connectivity', () => {
 describe('arriving on a shared device', () => {
   it('evicts every other reader’s row on SIGNED_IN', async () => {
     storeSession({ ...SESSION_A, user: { id: 'user-a' } } as Session)
-    await createDexiePersister().persistClient({ timestamp: 1, buster: 'b', clientState: { mutations: [], queries: [] } })
+    await createDexiePersister().persistClient({
+      timestamp: 1,
+      buster: 'b',
+      clientState: { mutations: [], queries: [] },
+    })
     storeSession({ ...SESSION_A, user: { id: 'user-b' } } as Session)
-    await createDexiePersister().persistClient({ timestamp: 1, buster: 'b', clientState: { mutations: [], queries: [] } })
+    await createDexiePersister().persistClient({
+      timestamp: 1,
+      buster: 'b',
+      clientState: { mutations: [], queries: [] },
+    })
     expect(await rowIds()).toEqual(['react-query:user-a', 'react-query:user-b'])
 
     await evictOtherReaders('user-b')
@@ -220,7 +250,11 @@ describe('arriving on a shared device', () => {
 
   it('runs that eviction from the SIGNED_IN event', async () => {
     storeSession({ ...SESSION_A, user: { id: 'user-a' } } as Session)
-    await createDexiePersister().persistClient({ timestamp: 1, buster: 'b', clientState: { mutations: [], queries: [] } })
+    await createDexiePersister().persistClient({
+      timestamp: 1,
+      buster: 'b',
+      clientState: { mutations: [], queries: [] },
+    })
 
     renderApp()
     await waitFor(() => expect(emitAuth).not.toBeNull())

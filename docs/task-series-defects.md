@@ -92,7 +92,7 @@ entry and the ✕ disappeared for good. #65 changed that button's call signature
 guard, which left `useRemoveEntry`'s "clear books.series" branch unreachable with a bookId —
 dead code. This is the defect the DB-only verification could not have caught.
 
-**Positions were still seeded from raw `books.position`.** #65 fixed *editability* but not the
+**Positions were still seeded from raw `books.position`.** #65 fixed _editability_ but not the
 seeding its own root-cause analysis named: an import parks a GLOBAL order number there, so
 412/87/1290 rendered as "#87, #412, #1290". `seedSeriesPositions` (core) now judges the set as
 a whole — believable in-series indices are kept, gaps included, since owning #1, #2, #5 means

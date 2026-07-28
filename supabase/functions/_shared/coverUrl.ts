@@ -19,7 +19,9 @@ const GOOGLE_NO_COVER_DIMS: ReadonlyArray<readonly [number, number]> = [
   [128, 170],
 ]
 export function isGoogleNoCoverArt(url: string, width: number, height: number): boolean {
-  return isGoogleContentCover(url) && GOOGLE_NO_COVER_DIMS.some(([w, h]) => width === w && height === h)
+  return (
+    isGoogleContentCover(url) && GOOGLE_NO_COVER_DIMS.some(([w, h]) => width === w && height === h)
+  )
 }
 
 /** `size:'full'` = largest available (detail/flip); `'thumb'` = ~300px (light grid). Idempotent. */
@@ -27,9 +29,13 @@ export function upgradeCoverUrl(url: string, size: 'full' | 'thumb' = 'full'): s
   if (!url || isStored(url)) return url
 
   if (isGoogleContentCover(url)) {
-    let u = url.replace(/([?&])edge=curl(&|$)/i, (_m, p1: string, p2: string) => (p2 === '&' ? p1 : '')).replace(/[?&]$/, '')
+    let u = url
+      .replace(/([?&])edge=curl(&|$)/i, (_m, p1: string, p2: string) => (p2 === '&' ? p1 : ''))
+      .replace(/[?&]$/, '')
     const zoom = size === 'thumb' ? '2' : '0'
-    u = /[?&]zoom=\d+/i.test(u) ? u.replace(/([?&]zoom=)\d+/i, `$1${zoom}`) : `${u}${u.includes('?') ? '&' : '?'}zoom=${zoom}`
+    u = /[?&]zoom=\d+/i.test(u)
+      ? u.replace(/([?&]zoom=)\d+/i, `$1${zoom}`)
+      : `${u}${u.includes('?') ? '&' : '?'}zoom=${zoom}`
     return u
   }
 

@@ -59,7 +59,15 @@ const LITERARY_DESCRIPTIVE: Record<string, string> = {
 }
 
 // non-genre tokens that appear in the genre column and should simply be dropped.
-const DROP_TOKENS = new Set(['standalone', 'standalones', 'complete', 'completed', 'tbr', 'n/a', 'none'])
+const DROP_TOKENS = new Set([
+  'standalone',
+  'standalones',
+  'complete',
+  'completed',
+  'tbr',
+  'n/a',
+  'none',
+])
 
 // spice-ish tokens → the intensity signal (kept as a tag too). Binary in the exports, so a single
 // representative level.

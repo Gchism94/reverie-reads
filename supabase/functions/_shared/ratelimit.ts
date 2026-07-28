@@ -35,17 +35,34 @@ export interface RateResult {
 }
 
 /** Count one hit for the caller in a fixed window; returns whether it's allowed (+ retry signal). */
-export async function rateLimit(req: Request, name: string, max: number, windowSecs: number): Promise<RateResult> {
+export async function rateLimit(
+  req: Request,
+  name: string,
+  max: number,
+  windowSecs: number,
+): Promise<RateResult> {
   if (!DB_URL || !SERVICE) return { allowed: true, retryAfter: 0, remaining: max }
   try {
     const r = await fetch(`${DB_URL}/rest/v1/rpc/rate_limit_consume`, {
       method: 'POST',
-      headers: { apikey: SERVICE, Authorization: `Bearer ${SERVICE}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ p_key: callerBucket(req, name), p_max: max, p_window_secs: windowSecs }),
+      headers: {
+        apikey: SERVICE,
+        Authorization: `Bearer ${SERVICE}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        p_key: callerBucket(req, name),
+        p_max: max,
+        p_window_secs: windowSecs,
+      }),
     })
     if (!r.ok) return { allowed: true, retryAfter: 0, remaining: max } // fail open
     const j = (await r.json()) as { allowed?: boolean; retry_after?: number; remaining?: number }
-    return { allowed: !!j.allowed, retryAfter: Number(j.retry_after ?? 0), remaining: Number(j.remaining ?? 0) }
+    return {
+      allowed: !!j.allowed,
+      retryAfter: Number(j.retry_after ?? 0),
+      remaining: Number(j.remaining ?? 0),
+    }
   } catch {
     return { allowed: true, retryAfter: 0, remaining: max }
   }

@@ -67,7 +67,10 @@ export const foldDiacritics = (s: string): string =>
     .replace(/[\u0300-\u036f]/g, '')
 
 /** Clean a field for a search query: fold diacritics, collapse whitespace, trim (data has "Celia "). */
-export const cleanField = (s: string): string => foldDiacritics(String(s ?? '')).replace(/\s+/g, ' ').trim()
+export const cleanField = (s: string): string =>
+  foldDiacritics(String(s ?? ''))
+    .replace(/\s+/g, ' ')
+    .trim()
 
 /** Equality key for a title/author: fold diacritics, lowercase, reduce to a–z0–9 single-spaced tokens. */
 export const matchKey = (s: string): string =>
@@ -102,7 +105,8 @@ const jaccard = (a: Set<string>, b: Set<string>): number => {
   return union ? inter / union : 0
 }
 
-const titlesEqual = (a: string, b: string): boolean => matchKey(a) !== '' && matchKey(a) === matchKey(b)
+const titlesEqual = (a: string, b: string): boolean =>
+  matchKey(a) !== '' && matchKey(a) === matchKey(b)
 const titlesClose = (a: string, b: string): boolean => {
   const ka = matchKey(a)
   const kb = matchKey(b)
@@ -120,7 +124,10 @@ const surname = (author: string): string => {
   return parts.length ? (parts[parts.length - 1] ?? '') : ''
 }
 
-const authorMatches = (queryAuthor: string | undefined, candAuthors: string[] | undefined): boolean => {
+const authorMatches = (
+  queryAuthor: string | undefined,
+  candAuthors: string[] | undefined,
+): boolean => {
   if (!queryAuthor || !queryAuthor.trim()) return false
   const qk = matchKey(queryAuthor)
   const qs = surname(queryAuthor)
@@ -178,14 +185,22 @@ export function scoreCandidate(q: MatchQuery, c: ResolveCandidate): ScoredCandid
   // Author can only be CONFIRMED (or refuted) when BOTH sides name one. A source that omits authors
   // (e.g. Hardcover) leaves it unconfirmed → medium, never treated as a conflict.
   const authorConflict = authorGiven && candHasAuthors && !authorMatch
-  const seriesMatch = !!(q.series && c.record.series && matchKey(q.series) === matchKey(c.record.series))
+  const seriesMatch = !!(
+    q.series &&
+    c.record.series &&
+    matchKey(q.series) === matchKey(c.record.series)
+  )
 
   let confidence: Confidence
   if (!close) confidence = 'none'
-  else if (authorConflict) confidence = 'low' // both name an author and they disagree → wrong-book risk
-  else if (exact && authorMatch) confidence = 'high' // exact title + confirmed author
-  else if (exact) confidence = 'medium' // exact title, author unconfirmable on one side
-  else if (authorMatch) confidence = 'medium' // close title + confirmed author
+  else if (authorConflict)
+    confidence = 'low' // both name an author and they disagree → wrong-book risk
+  else if (exact && authorMatch)
+    confidence = 'high' // exact title + confirmed author
+  else if (exact)
+    confidence = 'medium' // exact title, author unconfirmable on one side
+  else if (authorMatch)
+    confidence = 'medium' // close title + confirmed author
   else confidence = 'low' // close title only, unconfirmed
 
   if (confidence === 'medium' && authorMatch && seriesMatch) confidence = 'high'
@@ -214,16 +229,27 @@ const reasonFor = (s: ScoredCandidate): string => {
  * - self-resolve the best match's ISBN-13;
  * - keep the other distinct candidates that have a cover or ISBN as Cover-Studio edition choices.
  */
-export function selectBestMatch(q: MatchQuery, candidates: readonly ResolveCandidate[]): ResolvedMatch {
+export function selectBestMatch(
+  q: MatchQuery,
+  candidates: readonly ResolveCandidate[],
+): ResolvedMatch {
   const query = buildQueryString(q)
   const scored = candidates.map((c) => scoreCandidate(q, c)).filter((s) => s.confidence !== 'none')
   if (!scored.length) {
-    return { best: null, confidence: 'none', query, isbn13: '', alternates: [], reason: 'no candidate matched the title' }
+    return {
+      best: null,
+      confidence: 'none',
+      query,
+      isbn13: '',
+      alternates: [],
+      reason: 'no candidate matched the title',
+    }
   }
 
   const sorted = [...scored].sort((a, b) => {
     if (RANK[b.confidence] !== RANK[a.confidence]) return RANK[b.confidence] - RANK[a.confidence]
-    if (SOURCE_PRIORITY[b.source] !== SOURCE_PRIORITY[a.source]) return SOURCE_PRIORITY[b.source] - SOURCE_PRIORITY[a.source]
+    if (SOURCE_PRIORITY[b.source] !== SOURCE_PRIORITY[a.source])
+      return SOURCE_PRIORITY[b.source] - SOURCE_PRIORITY[a.source]
     return completeness(b.record) - completeness(a.record)
   })
 
@@ -250,7 +276,8 @@ export function selectBestMatch(q: MatchQuery, candidates: readonly ResolveCandi
     const id = editionIdentity(s)
     if (seen.has(id)) continue
     seen.add(id)
-    if (s.record.cover || selfIsbn13(s.record)) alternates.push({ source: s.source, record: s.record })
+    if (s.record.cover || selfIsbn13(s.record))
+      alternates.push({ source: s.source, record: s.record })
   }
 
   return { best, confidence, query, isbn13, alternates, reason }

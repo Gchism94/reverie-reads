@@ -12,10 +12,17 @@ const isRead = (b: Book) => b.readStatus === 'Read' || b.reads.length > 0
  * a door: tapping opens the full series page (which owns ghosts, Next Up, and reorder).
  * Standalones stay in the Grid view — a series list stays a series list (reported call).
  */
-function badgeFor(g: SeriesGroup, canonicalTotal: number | null): { text: string; bg: string; fg: string } {
+function badgeFor(
+  g: SeriesGroup,
+  canonicalTotal: number | null,
+): { text: string; bg: string; fg: string } {
   const total = canonicalTotal ?? g.total
   if (total && g.owned < total)
-    return { text: `📚 ${total - g.owned} to get`, bg: 'rgba(232,58,120,0.16)', fg: 'var(--primary)' }
+    return {
+      text: `📚 ${total - g.owned} to get`,
+      bg: 'rgba(232,58,120,0.16)',
+      fg: 'var(--primary)',
+    }
   if (total && g.read >= total)
     return { text: '✓ Series done', bg: 'rgba(123,63,160,0.18)', fg: 'var(--ink)' }
   if (!total) return { text: 'length not set', bg: 'rgba(123,63,160,0.14)', fg: 'var(--muted)' }
@@ -47,7 +54,11 @@ function SeriesCard({
           key={i}
           title={b.title}
           className="relative h-12 w-3 flex-none overflow-hidden rounded-sm"
-          style={{ background: b.cover ? `center/cover url(${b.coverThumb || b.cover})` : `linear-gradient(${g0}, ${g1})` }}
+          style={{
+            background: b.cover
+              ? `center/cover url(${b.coverThumb || b.cover})`
+              : `linear-gradient(${g0}, ${g1})`,
+          }}
         >
           {isRead(b) && (
             <span
@@ -78,7 +89,10 @@ function SeriesCard({
       style={{ background: 'var(--card)' }}
     >
       <div className="flex items-start justify-between gap-2">
-        <h3 className="text-[18px] italic text-ink" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+        <h3
+          className="text-[18px] italic text-ink"
+          style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+        >
           {group.name}
         </h3>
         <span
@@ -90,8 +104,11 @@ function SeriesCard({
       </div>
       <div className="mt-1 text-[12px] text-muted">
         {authorOf(group.books[0] ?? ({} as Book))} · {group.owned} owned
-        {canonicalTotal ?? group.total ? ` of ${canonicalTotal ?? group.total}` : ''} · {group.read} read
-        {status && <> · {SERIES_STATUS_LABELS[status as keyof typeof SERIES_STATUS_LABELS] ?? status}</>}
+        {(canonicalTotal ?? group.total) ? ` of ${canonicalTotal ?? group.total}` : ''} ·{' '}
+        {group.read} read
+        {status && (
+          <> · {SERIES_STATUS_LABELS[status as keyof typeof SERIES_STATUS_LABELS] ?? status}</>
+        )}
       </div>
       <div className="mt-3 flex items-end gap-1">{spines}</div>
     </button>

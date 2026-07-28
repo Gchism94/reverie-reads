@@ -2,7 +2,7 @@
 
 > **Status: shipped in #61.** This is the brief the work was built against, not a description of
 > how the app behaves today. `NOTICES.md` is regenerated from `pnpm licenses list --prod
-> --json`, not edited by hand. For current behavior, read the code and `docs/DATA_MODEL.md`.
+--json`, not edited by hand. For current behavior, read the code and `docs/DATA_MODEL.md`.
 
 **Branch:** `chore/license-and-docs` off updated main
 **Repo:** book-corpus

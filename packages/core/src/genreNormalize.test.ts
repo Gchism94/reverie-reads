@@ -1,13 +1,45 @@
 import { describe, expect, it } from 'vitest'
-import { CORE_GENRES, genreKey, normalizeImportGenres, SPICE_INTENSITY, bookSubgenres, inferGenreFromSubgenre } from './genreNormalize'
+import {
+  CORE_GENRES,
+  genreKey,
+  normalizeImportGenres,
+  SPICE_INTENSITY,
+  bookSubgenres,
+  inferGenreFromSubgenre,
+} from './genreNormalize'
 
 // Real distinct genre strings from Chism_Books.xlsx (the "Library" sheet), as extracted.
 const CHISM_GENRE_VOCAB = [
-  'Horror', 'Fantasy; Romance', 'Romance', 'Fantasy', 'Horror; Fantasy', 'Nonfiction',
-  'Romance; Fantasy', 'Fantasy; Horror', 'romance', 'horror', 'Horror; SciFi', 'SciFi',
-  'fantasy; romance', 'Fantasy; SciFi', 'Fiction', 'romance; fantasy', 'SciFi; Fantasy',
-  'Mystery', 'Poetry', 'SciFi; Horror', 'Thriller', 'Historical Fiction', 'Mystery; Horror',
-  'Romance; fantasy', 'fiction', 'historical fiction', 'Scifi', 'Horror; Romance', 'fantasy', 'scifi',
+  'Horror',
+  'Fantasy; Romance',
+  'Romance',
+  'Fantasy',
+  'Horror; Fantasy',
+  'Nonfiction',
+  'Romance; Fantasy',
+  'Fantasy; Horror',
+  'romance',
+  'horror',
+  'Horror; SciFi',
+  'SciFi',
+  'fantasy; romance',
+  'Fantasy; SciFi',
+  'Fiction',
+  'romance; fantasy',
+  'SciFi; Fantasy',
+  'Mystery',
+  'Poetry',
+  'SciFi; Horror',
+  'Thriller',
+  'Historical Fiction',
+  'Mystery; Horror',
+  'Romance; fantasy',
+  'fiction',
+  'historical fiction',
+  'Scifi',
+  'Horror; Romance',
+  'fantasy',
+  'scifi',
 ]
 
 const g = (genre: string, tags = '') => normalizeImportGenres(genre, tags)
@@ -36,14 +68,33 @@ describe('normalizeImportGenres — primary genre + cores', () => {
     expect(g('SciFi; Horror').genres).toEqual(['Science fiction', 'Horror'])
   })
   it('maps Fiction/Poetry/Historical (Fiction) → Literary + a descriptive tag', () => {
-    expect(g('Fiction')).toMatchObject({ genre: 'Literary', genres: ['Literary'], tags: ['fiction'] })
+    expect(g('Fiction')).toMatchObject({
+      genre: 'Literary',
+      genres: ['Literary'],
+      tags: ['fiction'],
+    })
     expect(g('Poetry')).toMatchObject({ genre: 'Literary', tags: ['poetry'] })
-    expect(g('Historical Fiction')).toMatchObject({ genre: 'Literary', tags: ['historical fiction'] })
+    expect(g('Historical Fiction')).toMatchObject({
+      genre: 'Literary',
+      tags: ['historical fiction'],
+    })
     expect(g('Historical')).toMatchObject({ genre: 'Literary', tags: ['historical'] })
   })
   it('blank genre stays null with empty arrays', () => {
-    expect(g('')).toEqual({ genre: null, genres: [], tags: [], intensity: null, unmappedGenre: null })
-    expect(g('   ')).toEqual({ genre: null, genres: [], tags: [], intensity: null, unmappedGenre: null })
+    expect(g('')).toEqual({
+      genre: null,
+      genres: [],
+      tags: [],
+      intensity: null,
+      unmappedGenre: null,
+    })
+    expect(g('   ')).toEqual({
+      genre: null,
+      genres: [],
+      tags: [],
+      intensity: null,
+      unmappedGenre: null,
+    })
   })
   it('drops non-genre markers like "standalone"', () => {
     expect(g('Romance; standalone').genres).toEqual(['Romance'])
@@ -62,7 +113,15 @@ describe('normalizeImportGenres — the confirmed Chism tally', () => {
   it('the genre column resolves to exactly the expected core set', () => {
     const cores = new Set<string>()
     for (const v of CHISM_GENRE_VOCAB) for (const c of normalizeImportGenres(v).genres) cores.add(c)
-    expect([...cores].sort()).toEqual(['Fantasy', 'Horror', 'Literary', 'Mystery', 'Nonfiction', 'Romance', 'Science fiction'])
+    expect([...cores].sort()).toEqual([
+      'Fantasy',
+      'Horror',
+      'Literary',
+      'Mystery',
+      'Nonfiction',
+      'Romance',
+      'Science fiction',
+    ])
     // No Cozy or YA come from the Chism genre column (they live in tags, if at all).
     expect(cores.has('Cozy')).toBe(false)
     expect(cores.has('Young adult')).toBe(false)
@@ -99,7 +158,15 @@ describe('normalizeImportGenres — tags + intensity', () => {
 describe('normalizeImportGenres — Library shape vocab', () => {
   it('the Library genre column is overwhelmingly Romance with a little Fantasy', () => {
     // Representative of Library_App_list (Romance 484 / Fantasy 5): aliases + typos all resolve.
-    const sample = ['Romance', 'romance', 'romace', 'Romance; standalone', 'Fantasy', 'Fantays', 'Fantast']
+    const sample = [
+      'Romance',
+      'romance',
+      'romace',
+      'Romance; standalone',
+      'Fantasy',
+      'Fantays',
+      'Fantast',
+    ]
     const primaries = new Set(sample.map((s) => normalizeImportGenres(s).genre))
     expect([...primaries].sort()).toEqual(['Fantasy', 'Romance'])
   })
@@ -143,7 +210,15 @@ describe('primary-genre inference from a single subgenre', () => {
   })
 
   it('never guesses on shared or legacy subgenres — the reader decides', () => {
-    for (const shared of ['Romantasy', 'Contemporary', 'Cozy Mystery', 'Cozy Fantasy', 'Other', 'Fantasy', '']) {
+    for (const shared of [
+      'Romantasy',
+      'Contemporary',
+      'Cozy Mystery',
+      'Cozy Fantasy',
+      'Other',
+      'Fantasy',
+      '',
+    ]) {
       expect(inferGenreFromSubgenre(shared)).toBeNull()
     }
   })
@@ -151,7 +226,10 @@ describe('primary-genre inference from a single subgenre', () => {
 
 describe('bookSubgenres', () => {
   it('prefers the array, falls back to the legacy single, tolerates neither', () => {
-    expect(bookSubgenres({ subgenre: 'Noir', subgenres: ['Noir', 'Thriller'] })).toEqual(['Noir', 'Thriller'])
+    expect(bookSubgenres({ subgenre: 'Noir', subgenres: ['Noir', 'Thriller'] })).toEqual([
+      'Noir',
+      'Thriller',
+    ])
     expect(bookSubgenres({ subgenre: 'Noir', subgenres: [] })).toEqual(['Noir'])
     expect(bookSubgenres({ subgenre: '', subgenres: [] })).toEqual([])
   })

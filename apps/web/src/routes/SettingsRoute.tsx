@@ -153,7 +153,9 @@ function SettingsScreen() {
         done++
         setSweepProgress({ done, total: plan.length })
       } catch (e) {
-        setStatus(`Cleaned ${done} of ${plan.length} titles; stopped (${(e as Error).message}). Re-run to continue.`)
+        setStatus(
+          `Cleaned ${done} of ${plan.length} titles; stopped (${(e as Error).message}). Re-run to continue.`,
+        )
         setSweeping(false)
         return
       }
@@ -176,7 +178,8 @@ function SettingsScreen() {
   async function mergeGroup(group: Book[]) {
     const primary = [...group].sort((a, b) => richness(b) - richness(a))[0]
     if (!primary) return
-    if (!window.confirm(`Merge ${group.length} copies of “${primary.title}” into one entry?`)) return
+    if (!window.confirm(`Merge ${group.length} copies of “${primary.title}” into one entry?`))
+      return
     try {
       await mergeOneGroup(group)
       setStatus('Merged')
@@ -188,7 +191,10 @@ function SettingsScreen() {
   // Each pair-merge is an atomic RPC, so a failure leaves earlier groups merged and the rest
   // untouched — re-running "Merge all" simply continues from the still-duplicated groups.
   async function mergeAllGroups() {
-    if (!window.confirm(`Review and merge all ${dupes.length} duplicate groups into one entry each?`)) return
+    if (
+      !window.confirm(`Review and merge all ${dupes.length} duplicate groups into one entry each?`)
+    )
+      return
     let merged = 0
     for (const g of dupes) {
       try {
@@ -218,7 +224,9 @@ function SettingsScreen() {
             : r.stopReason === 'user'
               ? 'Stopped — '
               : ''
-      setStatus(`${prefix}checked ${r.scanned} of ${r.total} · filled ${r.filled} · ${r.nothing} had nothing new.`)
+      setStatus(
+        `${prefix}checked ${r.scanned} of ${r.total} · filled ${r.filled} · ${r.nothing} had nothing new.`,
+      )
       await qc.invalidateQueries({ queryKey: ['books'] })
     } catch (e) {
       setStatus(`Couldn’t finish completing details: ${(e as Error).message}`)
@@ -250,32 +258,57 @@ function SettingsScreen() {
 
   return (
     <section className="mx-auto max-w-2xl px-4 py-6 sm:px-6">
-      <h1 className="mb-4 text-[22px] italic text-ink" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+      <h1
+        className="mb-4 text-[22px] italic text-ink"
+        style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+      >
         Settings
       </h1>
 
       <div className="flex flex-col gap-4">
         <Section title="Account">
           <p className="text-[13px] text-muted">
-            Signed in as <span className="text-ink">{session?.user.email}</span>. Your library is stored
-            in your account and follows you across devices — sign in anywhere to see the same shelves.
+            Signed in as <span className="text-ink">{session?.user.email}</span>. Your library is
+            stored in your account and follows you across devices — sign in anywhere to see the same
+            shelves.
           </p>
         </Section>
 
         <Section title="Profile & goal">
           <label className="mb-3 block">
-            <span className="mb-1 block text-[11px] uppercase tracking-[0.15em] text-muted">Display name</span>
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Shown in clubs & shared lists" className={fieldClass} style={fieldStyle} />
+            <span className="mb-1 block text-[11px] uppercase tracking-[0.15em] text-muted">
+              Display name
+            </span>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Shown in clubs & shared lists"
+              className={fieldClass}
+              style={fieldStyle}
+            />
           </label>
           <label className="mb-3 block">
-            <span className="mb-1 block text-[11px] uppercase tracking-[0.15em] text-muted">Reading goal for {YEAR}</span>
-            <input value={goal} onChange={(e) => setGoal(e.target.value)} type="number" min={0} placeholder="e.g. 50" className={fieldClass} style={fieldStyle} />
+            <span className="mb-1 block text-[11px] uppercase tracking-[0.15em] text-muted">
+              Reading goal for {YEAR}
+            </span>
+            <input
+              value={goal}
+              onChange={(e) => setGoal(e.target.value)}
+              type="number"
+              min={0}
+              placeholder="e.g. 50"
+              className={fieldClass}
+              style={fieldStyle}
+            />
           </label>
           <button
             type="button"
             onClick={saveProfile}
             className="h-10 rounded-xl px-5 text-[14px] font-semibold"
-            style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))', color: 'var(--on-primary)' }}
+            style={{
+              background: 'linear-gradient(135deg, var(--primary), var(--gold))',
+              color: 'var(--on-primary)',
+            }}
           >
             Save
           </button>
@@ -299,8 +332,16 @@ function SettingsScreen() {
                 className="flex-1 rounded-xl border px-3 py-2.5 text-[13px] font-semibold"
                 style={
                   activeMode === value
-                    ? { background: 'var(--accent-fill)', color: 'var(--on-primary)', borderColor: 'transparent' }
-                    : { background: 'var(--field)', color: 'var(--ink)', borderColor: 'var(--line)' }
+                    ? {
+                        background: 'var(--accent-fill)',
+                        color: 'var(--on-primary)',
+                        borderColor: 'transparent',
+                      }
+                    : {
+                        background: 'var(--field)',
+                        color: 'var(--ink)',
+                        borderColor: 'var(--line)',
+                      }
                 }
               >
                 {label}
@@ -327,10 +368,15 @@ function SettingsScreen() {
                 }
               >
                 <div className="flex items-baseline justify-between gap-2">
-                  <span className="text-[14px] font-semibold text-ink" style={{ fontFamily: s.displayFont }}>
+                  <span
+                    className="text-[14px] font-semibold text-ink"
+                    style={{ fontFamily: s.displayFont }}
+                  >
                     {s.label}
                   </span>
-                  {activeSkin === s.id && <span className="text-[11px] font-semibold text-primary">active</span>}
+                  {activeSkin === s.id && (
+                    <span className="text-[11px] font-semibold text-primary">active</span>
+                  )}
                 </div>
                 <div className="text-[11.5px] text-muted">{s.genre}</div>
               </button>
@@ -372,7 +418,8 @@ function SettingsScreen() {
                 className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink disabled:opacity-50"
                 style={{ background: 'var(--field)' }}
               >
-                ✨ Complete missing covers &amp; info{incompleteCount ? ` (${incompleteCount})` : ''}
+                ✨ Complete missing covers &amp; info
+                {incompleteCount ? ` (${incompleteCount})` : ''}
               </button>
             )}
             {sharpening ? (
@@ -407,14 +454,15 @@ function SettingsScreen() {
           </div>
           {completing && progress && (
             <p className="mt-2 text-[12.5px] text-muted">
-              Completing details… {progress.scanned}/{progress.total} · filled {progress.filled}. Sources are
-              throttled, so this takes a moment; you can keep using the app.
+              Completing details… {progress.scanned}/{progress.total} · filled {progress.filled}.
+              Sources are throttled, so this takes a moment; you can keep using the app.
             </p>
           )}
           {sharpening && sharpProgress && (
             <p className="mt-2 text-[12.5px] text-muted">
-              Sharpening covers… {sharpProgress.scanned}/{sharpProgress.total} · {sharpProgress.sharpened} re-fetched at
-              full resolution. Throttled; you can keep using the app.
+              Sharpening covers… {sharpProgress.scanned}/{sharpProgress.total} ·{' '}
+              {sharpProgress.sharpened} re-fetched at full resolution. Throttled; you can keep using
+              the app.
             </p>
           )}
           {showDupes && (
@@ -425,16 +473,26 @@ function SettingsScreen() {
                   onClick={() => void mergeAllGroups()}
                   disabled={performMerge.isPending}
                   className="self-start rounded-full px-4 py-2 text-[13px] font-semibold disabled:opacity-50"
-                  style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))', color: 'var(--on-primary)' }}
+                  style={{
+                    background: 'linear-gradient(135deg, var(--primary), var(--gold))',
+                    color: 'var(--on-primary)',
+                  }}
                 >
                   Merge all {dupes.length} groups
                 </button>
               )}
               {dupes.length ? (
                 dupes.map((g, i) => (
-                  <div key={i} className="flex items-center justify-between gap-3 skin-card border border-line p-3" style={{ background: 'var(--field)' }}>
+                  <div
+                    key={i}
+                    className="flex items-center justify-between gap-3 skin-card border border-line p-3"
+                    style={{ background: 'var(--field)' }}
+                  >
                     <span className="text-[14px] font-semibold text-ink">
-                      {g[0]?.title} <span className="text-[12px] font-normal text-muted">· {g.length} copies</span>
+                      {g[0]?.title}{' '}
+                      <span className="text-[12px] font-normal text-muted">
+                        · {g.length} copies
+                      </span>
                     </span>
                     <button
                       type="button"
@@ -448,19 +506,26 @@ function SettingsScreen() {
                   </div>
                 ))
               ) : (
-                <p className="text-[13px] text-muted">No likely duplicates found ✨ — your library’s clean.</p>
+                <p className="text-[13px] text-muted">
+                  No likely duplicates found ✨ — your library’s clean.
+                </p>
               )}
             </div>
           )}
           {showSweep && (
             <div className="mt-3">
               <p className="mb-2 text-[13px] text-muted">
-                {titleCleanups.length} title{titleCleanups.length === 1 ? '' : 's'} still carry series junk. Review below —
-                the series and position fill in only where a book has none, and nothing is renamed until you apply.
+                {titleCleanups.length} title{titleCleanups.length === 1 ? '' : 's'} still carry
+                series junk. Review below — the series and position fill in only where a book has
+                none, and nothing is renamed until you apply.
               </p>
               <ul className="mb-3 flex max-h-[40dvh] flex-col gap-1.5 overflow-y-auto">
                 {titleCleanups.slice(0, 100).map((c) => (
-                  <li key={c.id} className="skin-card border border-line p-2.5 text-[13px]" style={{ background: 'var(--field)' }}>
+                  <li
+                    key={c.id}
+                    className="skin-card border border-line p-2.5 text-[13px]"
+                    style={{ background: 'var(--field)' }}
+                  >
                     <div className="text-muted line-through">{c.oldTitle}</div>
                     <div className="font-semibold text-ink">{c.newTitle}</div>
                     {c.fillsSeries && (
@@ -473,14 +538,19 @@ function SettingsScreen() {
                 ))}
               </ul>
               {titleCleanups.length > 100 && (
-                <p className="mb-2 text-[12px] text-muted">…and {titleCleanups.length - 100} more will be cleaned too.</p>
+                <p className="mb-2 text-[12px] text-muted">
+                  …and {titleCleanups.length - 100} more will be cleaned too.
+                </p>
               )}
               <button
                 type="button"
                 onClick={() => void applySweep()}
                 disabled={sweeping}
                 className="rounded-full px-4 py-2 text-[13px] font-semibold disabled:opacity-50"
-                style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))', color: 'var(--on-primary)' }}
+                style={{
+                  background: 'linear-gradient(135deg, var(--primary), var(--gold))',
+                  color: 'var(--on-primary)',
+                }}
               >
                 {sweeping && sweepProgress
                   ? `Cleaning… ${sweepProgress.done}/${sweepProgress.total}`
@@ -492,13 +562,28 @@ function SettingsScreen() {
 
         <Section title="Backup & import">
           <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={() => void exportBackup()} className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink" style={{ background: 'var(--field)' }}>
+            <button
+              type="button"
+              onClick={() => void exportBackup()}
+              className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink"
+              style={{ background: 'var(--field)' }}
+            >
               ⬇ Export library (JSON)
             </button>
-            <button type="button" onClick={() => restoreRef.current?.click()} className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink" style={{ background: 'var(--field)' }}>
+            <button
+              type="button"
+              onClick={() => restoreRef.current?.click()}
+              className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink"
+              style={{ background: 'var(--field)' }}
+            >
               ⬆ Restore backup
             </button>
-            <button type="button" onClick={() => csvRef.current?.click()} className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink" style={{ background: 'var(--field)' }}>
+            <button
+              type="button"
+              onClick={() => csvRef.current?.click()}
+              className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink"
+              style={{ background: 'var(--field)' }}
+            >
               📚 Import a library export (CSV or Excel)
             </button>
             <input
@@ -526,7 +611,10 @@ function SettingsScreen() {
                   setReview(r.review)
                   setImportResult(r)
                   // Stash the per-book outcomes so the Import review screen can build its read-model.
-                  qc.setQueryData(importSessionKey, { outcomes: r.outcomes, readingOrders: r.readingOrders })
+                  qc.setQueryData(importSessionKey, {
+                    outcomes: r.outcomes,
+                    readingOrders: r.readingOrders,
+                  })
                   setImported(true)
                   setStatus(null) // the summary panel below now speaks for the import
                   // Cover handoff: backfill missing covers for the imported books in the background (§3).
@@ -546,8 +634,8 @@ function SettingsScreen() {
             <span>
               Auto-merge exact duplicates on import
               <span className="block text-[12px] text-muted">
-                Folds ISBN / title + author matches in silently. Off sends every match to the review queue.
-                Similar-but-not-exact matches always go to review.
+                Folds ISBN / title + author matches in silently. Off sends every match to the review
+                queue. Similar-but-not-exact matches always go to review.
               </span>
             </span>
           </label>
@@ -585,7 +673,9 @@ function SettingsScreen() {
 
           {review.length > 0 && (
             <div className="mt-4 border-t border-line pt-4">
-              <h3 className="mb-2 text-[14px] font-semibold text-ink">Review possible duplicates ({review.length})</h3>
+              <h3 className="mb-2 text-[14px] font-semibold text-ink">
+                Review possible duplicates ({review.length})
+              </h3>
               <p className="mb-3 text-[12.5px] text-muted">
                 Your entry is always the one that’s kept — merging only folds in any new details.
               </p>
@@ -605,13 +695,31 @@ function SettingsScreen() {
           <p className="mb-2 text-[13px] text-muted">What this app stores in your account:</p>
           <ul className="flex flex-col gap-1.5 text-[12.5px] text-muted">
             {[
-              ['Your library', 'books and the details you add — series, tropes/tags, intensity, genre, owned formats, covers, ISBNs.'],
-              ['Reading activity', 'ratings, read status, reread log with dates, and reading goals.'],
-              ['Authorship', 'contributors (authors, co-authors, translators…) you record on a book.'],
+              [
+                'Your library',
+                'books and the details you add — series, tropes/tags, intensity, genre, owned formats, covers, ISBNs.',
+              ],
+              [
+                'Reading activity',
+                'ratings, read status, reread log with dates, and reading goals.',
+              ],
+              [
+                'Authorship',
+                'contributors (authors, co-authors, translators…) you record on a book.',
+              ],
               ['Shelves & orders', 'your TBR/collections and custom reading orders.'],
-              ['Reviews & clubs', 'reviews you write and club memberships, progress, and comments (only where you opt in).'],
-              ['Taste profile', 'an adaptive-skin signal derived from your library to theme the app — kept private in your profile.'],
-              ['Account', 'your email (for sign-in) and display name. No third-party trackers run in the app.'],
+              [
+                'Reviews & clubs',
+                'reviews you write and club memberships, progress, and comments (only where you opt in).',
+              ],
+              [
+                'Taste profile',
+                'an adaptive-skin signal derived from your library to theme the app — kept private in your profile.',
+              ],
+              [
+                'Account',
+                'your email (for sign-in) and display name. No third-party trackers run in the app.',
+              ],
             ].map(([k, v]) => (
               <li key={k}>
                 <span className="font-semibold text-ink">{k}:</span> {v}
@@ -620,14 +728,16 @@ function SettingsScreen() {
           </ul>
           <p className="mt-3 text-[12px] text-muted">
             Book metadata is fetched from public sources (Open Library, Google Books) through our
-            server and cached globally by work — never tied to you. Export or delete everything below.
+            server and cached globally by work — never tied to you. Export or delete everything
+            below.
           </p>
         </Section>
 
         <Section title="Delete account">
           <p className="text-[13px] text-muted">
             Permanently delete your account and <b>all</b> of your data — library, reads, shelves,
-            reviews, reading orders, and profile. This cannot be undone. Consider exporting a backup first.
+            reviews, reading orders, and profile. This cannot be undone. Consider exporting a backup
+            first.
           </p>
           <label className="mt-3 block">
             <span className="mb-1 block text-[12px] text-muted">
@@ -647,7 +757,11 @@ function SettingsScreen() {
             onClick={() => void runDelete()}
             disabled={deleting || deleteText.trim().toLowerCase() !== confirmText}
             className="mt-3 h-10 rounded-xl border px-5 text-[14px] font-semibold disabled:opacity-40"
-            style={{ background: 'var(--field)', borderColor: 'var(--primary)', color: 'var(--primary)' }}
+            style={{
+              background: 'var(--field)',
+              borderColor: 'var(--primary)',
+              color: 'var(--primary)',
+            }}
           >
             {deleting ? 'Deleting…' : 'Delete my account permanently'}
           </button>
@@ -656,7 +770,10 @@ function SettingsScreen() {
         {status && <p className="text-center text-[13px] text-primary">{status}</p>}
 
         {/* Build stamp — which deploy this client is running (the update toast handles new ones). */}
-        <p className="mt-6 text-center text-[11.5px]" style={{ color: 'var(--faint, var(--muted))' }}>
+        <p
+          className="mt-6 text-center text-[11.5px]"
+          style={{ color: 'var(--faint, var(--muted))' }}
+        >
           {APP_NAME} · build {BUILD_LABEL}
         </p>
       </div>

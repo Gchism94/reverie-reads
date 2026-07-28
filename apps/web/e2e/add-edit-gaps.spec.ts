@@ -21,15 +21,26 @@ const PASSWORD = 'add-edit-gaps-e2e-password'
 
 test.describe.configure({ mode: 'serial' })
 
-type Client = { sb: SupabaseClient; session: { access_token: string; refresh_token: string }; uid: string }
+type Client = {
+  sb: SupabaseClient
+  session: { access_token: string; refresh_token: string }
+  uid: string
+}
 let shared: Client | null = null
 async function client(): Promise<Client> {
   if (shared) return shared
-  const admin = createClient(SUPABASE_URL, SERVICE, { auth: { autoRefreshToken: false, persistSession: false } })
+  const admin = createClient(SUPABASE_URL, SERVICE, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  })
   const { data } = await admin.auth.admin.listUsers()
   let uid = data?.users?.find((u) => u.email === EMAIL)?.id
-  if (!uid) uid = (await admin.auth.admin.createUser({ email: EMAIL, password: PASSWORD, email_confirm: true })).data.user!.id
-  await admin.from('profiles').upsert({ id: uid, display_name: 'Add Edit Gaps', skin: 'tryst', mode: 'system' })
+  if (!uid)
+    uid = (
+      await admin.auth.admin.createUser({ email: EMAIL, password: PASSWORD, email_confirm: true })
+    ).data.user!.id
+  await admin
+    .from('profiles')
+    .upsert({ id: uid, display_name: 'Add Edit Gaps', skin: 'tryst', mode: 'system' })
   const sb = createClient(SUPABASE_URL, ANON)
   const { data: s, error } = await sb.auth.signInWithPassword({ email: EMAIL, password: PASSWORD })
   if (error || !s.session) throw new Error(authFailure('add-edit-gaps', EMAIL, error))
@@ -45,7 +56,9 @@ async function reset(c: Client) {
 
 async function signIn(page: Page, session: { access_token: string; refresh_token: string }) {
   await page.addInitScript(() => localStorage.setItem('reverie.onboarded', '1'))
-  await page.goto(`/#access_token=${session.access_token}&refresh_token=${session.refresh_token}&expires_in=3600&token_type=bearer&type=magiclink`)
+  await page.goto(
+    `/#access_token=${session.access_token}&refresh_token=${session.refresh_token}&expires_in=3600&token_type=bearer&type=magiclink`,
+  )
   await page.getByRole('button', { name: /enter your library/i }).click({ timeout: 20_000 })
   await expect(page.getByRole('navigation')).toBeVisible({ timeout: 20_000 })
   await page.evaluate(() => indexedDB.deleteDatabase('reverie-offline'))
@@ -77,7 +90,8 @@ const makeBook = async (c: Client, patch: Record<string, unknown> = {}) => {
 }
 
 const rowOf = async (c: Client, id: string) =>
-  (await c.sb.from('books').select('title, isbn, intensity, position').eq('id', id).single()).data as {
+  (await c.sb.from('books').select('title, isbn, intensity, position').eq('id', id).single())
+    .data as {
     title: string
     isbn: string | null
     intensity: number | null
@@ -111,7 +125,9 @@ test('Add: position 0 and decimals are settable; junk is refused visibly', async
     // Junk is refused in the form — pre-fix it became '' with no word said.
     await position.fill('1.5 (novella)')
     await page.getByRole('button', { name: /^Add to my library$/ }).click()
-    await expect(page.getByRole('alert').filter({ hasText: /must be a number/i })).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByRole('alert').filter({ hasText: /must be a number/i })).toBeVisible({
+      timeout: 10_000,
+    })
     await expect(position).toHaveAttribute('aria-invalid', 'true')
     expect((await c.sb.from('books').select('id').eq('owner_id', c.uid)).data).toEqual([]) // nothing written
 
@@ -119,9 +135,16 @@ test('Add: position 0 and decimals are settable; junk is refused visibly', async
     await position.fill('0')
     await page.getByRole('button', { name: /^Add to my library$/ }).click()
     await expect
-      .poll(async () => ((await c.sb.from('books').select('position, title').eq('owner_id', c.uid)).data ?? []).length, { timeout: 20_000 })
+      .poll(
+        async () =>
+          ((await c.sb.from('books').select('position, title').eq('owner_id', c.uid)).data ?? [])
+            .length,
+        { timeout: 20_000 },
+      )
       .toBe(1)
-    const rows = (await c.sb.from('books').select('position').eq('owner_id', c.uid)).data as { position: number | null }[]
+    const rows = (await c.sb.from('books').select('position').eq('owner_id', c.uid)).data as {
+      position: number | null
+    }[]
     expect(Number(rows[0]!.position)).toBe(0)
   } finally {
     await reset(c)
@@ -141,9 +164,15 @@ test('Add: a decimal position survives', async ({ page }) => {
     await page.getByPlaceholder('Book #').fill('2.5')
     await page.getByRole('button', { name: /^Add to my library$/ }).click()
     await expect
-      .poll(async () => ((await c.sb.from('books').select('position').eq('owner_id', c.uid)).data ?? []).length, { timeout: 20_000 })
+      .poll(
+        async () =>
+          ((await c.sb.from('books').select('position').eq('owner_id', c.uid)).data ?? []).length,
+        { timeout: 20_000 },
+      )
       .toBe(1)
-    const rows = (await c.sb.from('books').select('position').eq('owner_id', c.uid)).data as { position: number | null }[]
+    const rows = (await c.sb.from('books').select('position').eq('owner_id', c.uid)).data as {
+      position: number | null
+    }[]
     expect(Number(rows[0]!.position)).toBe(2.5)
   } finally {
     await reset(c)
@@ -182,7 +211,9 @@ test('Edit details: title, ISBN and spice are editable and persist', async ({ pa
   try {
     await signIn(page, c.session)
     await page.goto(`/book/${id}`)
-    await expect(page.getByRole('heading', { name: 'Wrong Hit Title' })).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByRole('heading', { name: 'Wrong Hit Title' })).toBeVisible({
+      timeout: 20_000,
+    })
 
     const dlg = await openEdit(page)
     await dlg.getByLabel('Title').fill('The Corrected Title')
@@ -192,15 +223,19 @@ test('Edit details: title, ISBN and spice are editable and persist', async ({ pa
     await dlg.getByRole('button', { name: /Save details/i }).click()
     await expect(dlg).toBeHidden({ timeout: 15_000 })
 
-    await expect.poll(async () => await rowOf(c, id), { timeout: 15_000 }).toMatchObject({
-      title: 'The Corrected Title',
-      isbn: '9780316580792',
-      intensity: 3,
-    })
+    await expect
+      .poll(async () => await rowOf(c, id), { timeout: 15_000 })
+      .toMatchObject({
+        title: 'The Corrected Title',
+        isbn: '9780316580792',
+        intensity: 3,
+      })
 
     // Survives a reload, and the page heading follows the new title.
     await page.reload()
-    await expect(page.getByRole('heading', { name: 'The Corrected Title' })).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByRole('heading', { name: 'The Corrected Title' })).toBeVisible({
+      timeout: 20_000,
+    })
   } finally {
     await reset(c)
   }
@@ -215,7 +250,9 @@ test('Edit details: an emptied title is refused, not silently reverted', async (
   try {
     await signIn(page, c.session)
     await page.goto(`/book/${id}`)
-    await expect(page.getByRole('heading', { name: 'Keep My Name' })).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByRole('heading', { name: 'Keep My Name' })).toBeVisible({
+      timeout: 20_000,
+    })
     const dlg = await openEdit(page)
     await dlg.getByLabel('Title').fill('   ')
     await dlg.getByRole('button', { name: /Save details/i }).click()
@@ -233,7 +270,9 @@ test('Edit details: an emptied title is refused, not silently reverted', async (
     await expect(dlg.getByText('A book needs a title.')).toHaveCount(0)
     await dlg.getByRole('button', { name: /Save details/i }).click()
     await expect(dlg).toBeHidden({ timeout: 15_000 })
-    await expect.poll(async () => (await rowOf(c, id)).title, { timeout: 15_000 }).toBe('A Real Title')
+    await expect
+      .poll(async () => (await rowOf(c, id)).title, { timeout: 15_000 })
+      .toBe('A Real Title')
   } finally {
     await reset(c)
   }

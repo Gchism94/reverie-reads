@@ -59,7 +59,12 @@ describe('parseSeriesFromTitle (Goodreads series-in-title)', () => {
   })
 
   it('passes plain titles through untouched', () => {
-    expect(parseSeriesFromTitle('It Ends with Us')).toEqual({ title: 'It Ends with Us', series: '', position: '', more: [] })
+    expect(parseSeriesFromTitle('It Ends with Us')).toEqual({
+      title: 'It Ends with Us',
+      series: '',
+      position: '',
+      more: [],
+    })
     expect(parseSeriesFromTitle('')).toEqual({ title: '', series: '', position: '', more: [] })
   })
 })
@@ -82,9 +87,19 @@ describe('planTitleCleanup (legacy re-parse sweep)', () => {
 
   it('never overwrites user-entered series info — cleans the title only', () => {
     const plan = planTitleCleanup([
-      makeBook({ id: '1', title: 'Iron Flame (The Empyrean, #2)', series: 'My Own Series', position: 5 }),
+      makeBook({
+        id: '1',
+        title: 'Iron Flame (The Empyrean, #2)',
+        series: 'My Own Series',
+        position: 5,
+      }),
     ])
-    expect(plan[0]).toMatchObject({ newTitle: 'Iron Flame', series: '', position: '', fillsSeries: false })
+    expect(plan[0]).toMatchObject({
+      newTitle: 'Iron Flame',
+      series: '',
+      position: '',
+      fillsSeries: false,
+    })
   })
 
   it('leaves clean titles and non-series parentheticals alone', () => {
@@ -98,7 +113,12 @@ describe('planTitleCleanup (legacy re-parse sweep)', () => {
 
   it('is idempotent — re-running over a cleaned library finds nothing', () => {
     const first = planTitleCleanup([makeBook({ id: '1', title: 'Iron Flame (The Empyrean, #2)' })])
-    const cleaned = makeBook({ id: '1', title: first[0]!.newTitle, series: first[0]!.series, position: first[0]!.position })
+    const cleaned = makeBook({
+      id: '1',
+      title: first[0]!.newTitle,
+      series: first[0]!.series,
+      position: first[0]!.position,
+    })
     expect(planTitleCleanup([cleaned])).toHaveLength(0)
   })
 

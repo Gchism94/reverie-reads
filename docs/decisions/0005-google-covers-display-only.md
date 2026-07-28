@@ -34,7 +34,7 @@ we keep the pipeline and narrow what may enter it.
 
 **Google still renders.** `coverCandidates`, the zoom upgrade, and the "image not available" plate
 detection are untouched. Choosing a Google edition in the cover sheet remains a working choice: it
-stores the *reference* rather than the bytes, and the row is labelled "linked, not saved". Demoting
+stores the _reference_ rather than the bytes, and the row is labelled "linked, not saved". Demoting
 Google to display-only is not the same as removing it, and a reader who picks a Google edition
 should get a cover, not a dead end.
 
@@ -71,6 +71,6 @@ query, so a future audit re-runs the same check rather than inventing one.
 - **Open Library becomes the quality floor for automated covers.** It has thinner coverage than
   Google, so more books resolve to no cover. That is the intended outcome: the skin-tokened
   placeholder is an honest absence, and it is a designed plate rather than a gray box.
-- Adding a new cover source means adding it to `INGESTIBLE_COVER_SOURCES` *and* justifying it here.
+- Adding a new cover source means adding it to `INGESTIBLE_COVER_SOURCES` _and_ justifying it here.
 - **Hardcover's ingest posture is unchanged by this ADR.** `docs/reverie-metadata-sourcing.md` flags
   its licence as asserted rather than granted; that is a separate open question, not settled here.

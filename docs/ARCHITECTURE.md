@@ -30,6 +30,7 @@ offline, and be trivially portable. That ceiling is now the reason to rebuild: r
 multi-device sync, real auth, and real multi-user collaboration need a backend.
 
 ### Limits we're rebuilding to escape
+
 - Library lives only in one browser; no cross-device sync.
 - "Household sync" and book clubs are capability-code only — no accounts, no identity,
   last-write-wins on a whole-document blob.
@@ -68,20 +69,21 @@ client + REST/realtime API — same data model, simpler client.)
 
 ### Recommended stack (pragmatic, low-ops)
 
-| Layer | Recommendation | Why |
-|---|---|---|
-| Front end | **React + TypeScript + Vite**, Tailwind for tokens | Component reuse across the many views; TS for the data model; Tailwind maps cleanly to the design tokens |
-| Routing/state | TanStack Router/Query or a local-first lib (e.g. a sync engine) | Query-cache + sync fit the local-first model |
-| Local store | **IndexedDB** (via a wrapper) | Holds the full library offline; bigger than localStorage |
-| Backend | **Supabase** (Postgres + Auth + Realtime + Storage + Edge Functions) | One service covers auth, db, realtime, file storage, and serverless enrichment; already used by the prototype's share layer |
-| Auth | Supabase Auth (email magic-link + OAuth) | Gives real identity for household members and club readers |
-| Enrichment | Supabase Edge Functions calling Google Books → Open Library → Hardcover | Moves cover/metadata/release lookups server-side, cached, rate-limit-aware (see `DATA_SOURCES.md`) |
-| Hosting | Static host (Vercel/Netlify/Pages) + Supabase | Cheap, simple, scales fine for this |
+| Layer         | Recommendation                                                          | Why                                                                                                                         |
+| ------------- | ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Front end     | **React + TypeScript + Vite**, Tailwind for tokens                      | Component reuse across the many views; TS for the data model; Tailwind maps cleanly to the design tokens                    |
+| Routing/state | TanStack Router/Query or a local-first lib (e.g. a sync engine)         | Query-cache + sync fit the local-first model                                                                                |
+| Local store   | **IndexedDB** (via a wrapper)                                           | Holds the full library offline; bigger than localStorage                                                                    |
+| Backend       | **Supabase** (Postgres + Auth + Realtime + Storage + Edge Functions)    | One service covers auth, db, realtime, file storage, and serverless enrichment; already used by the prototype's share layer |
+| Auth          | Supabase Auth (email magic-link + OAuth)                                | Gives real identity for household members and club readers                                                                  |
+| Enrichment    | Supabase Edge Functions calling Google Books → Open Library → Hardcover | Moves cover/metadata/release lookups server-side, cached, rate-limit-aware (see `DATA_SOURCES.md`)                          |
+| Hosting       | Static host (Vercel/Netlify/Pages) + Supabase                           | Cheap, simple, scales fine for this                                                                                         |
 
 Nothing here is locked in — it's the low-friction default. The data model in
 `DATA_MODEL.md` is what actually matters and is stack-independent.
 
 ### What the backend unlocks
+
 - **Accounts + multi-device:** your library follows you; no more single-browser lock-in.
 - **Household library:** a shared library space with member identities and roles.
 - **Real clubs:** read-alongs and shared/club TBRs with per-user progress and identity,
@@ -92,7 +94,9 @@ Nothing here is locked in — it's the low-friction default. The data model in
   StoryGraph CSV import processed in an Edge Function, cached for everyone.
 
 ### Proposed API surface (illustrative)
+
 REST/RPC + realtime subscriptions, all row-level-security scoped to the signed-in user:
+
 - `books` CRUD; bulk import; `reads` sub-resource (date/format/rating/notes).
 - `lists` (TBRs/collections) CRUD + membership; `priority` flag.
 - `households` + `household_members`; shared library scoping.
@@ -100,6 +104,7 @@ REST/RPC + realtime subscriptions, all row-level-security scoped to the signed-i
 - `enrich(isbn|title)` and `import_csv(file)` as Edge Functions.
 
 ### Migration from the prototype
+
 1. Lift the `DB` object shapes (`DATA_MODEL.md`) into a Postgres schema (relational
    version already sketched there).
 2. Reuse `personal_seed.json` as the first account's seed import.
@@ -109,6 +114,7 @@ REST/RPC + realtime subscriptions, all row-level-security scoped to the signed-i
 4. Rebuild the UI from `design/DESIGN_SYSTEM.md` and `DESIGN_PROMPT.md`.
 
 ### Open decisions (resolve early in the build phase)
+
 - Local-first sync engine vs. conventional REST + cache.
 - Whether spoiler gating must be server-enforced or honor-based is fine.
 - Household model: shared single library vs. linked personal libraries.

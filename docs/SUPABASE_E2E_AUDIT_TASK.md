@@ -2,7 +2,7 @@
 
 GOAL: AUDIT + REPORT (don't change anything this pass -- propose fixes, await green-light). The desktop-align
 merge is gated on the a11y axe sweep, which currently fails NOT on accessibility but on infrastructure:
-  page.goto ERR_CONNECTION_REFUSED at http://127.0.0.1:55321/auth/v1/verify?...&redirect_to=http://127.0.0.1:3000
+page.goto ERR_CONNECTION_REFUSED at http://127.0.0.1:55321/auth/v1/verify?...&redirect_to=http://127.0.0.1:3000
 during the magic-link signIn round-trip in e2e/a11y.spec.ts. shell.spec.ts (signed-out, no Supabase) PASSES.
 
 CENTRAL QUESTION (resolve FIRST): is this repo configured for a LOCAL supabase stack used by e2e, or has it
@@ -11,6 +11,7 @@ the app may only have used remote -- in which case `supabase start` has nothing 
 never existed. The whole fix path forks on this.
 
 REPORT each -- present / missing / misconfigured + recommended fix:
+
 1. CLI + stack location: `supabase --version`; where `supabase/` lives (repo root vs apps/web); is config.toml
    present? Is Docker installed AND running (local stack needs it)?
 2. config.toml API port: does it match the 55321 the app/test expect? (CLI default is 54321 -- confirm this
@@ -35,11 +36,13 @@ DELIVERABLE: a short present/missing/misconfigured report + the MINIMAL change s
 AA verdict (incl. the redirect-port alignment). Propose diffs; DO NOT apply until reviewed. Read-only this pass.
 
 ## DECISION (Greg green-light, 2026-06-28): Option B + preflight
-Audit resolved the central question: LOCAL stack, up + seeded (dev user, 289 books). Earlier ERR_CONNECTION_
+
+Audit resolved the central question: LOCAL stack, up + seeded (dev user, 289 books). Earlier ERR*CONNECTION*
 REFUSED@55321 = stack-was-down snapshots. Current real blocker = item 3 (redirect allow-list): app passes
 emailRedirectTo=window.location.origin (:4317), :4317 not allow-listed -> GoTrue falls back to site_url :3000
 -> dead. The :4317 pin exposed it.
 APPLY:
+
 - Option B (seeded signInWithPassword session + token-hash; detectSessionInUrl consumes it). Drops Mailpit +
   redirect + rate-limit dependencies; runs now, no config restart. Matches the "seed a session not email
   round-trip" robustness direction already flagged.
@@ -49,7 +52,7 @@ APPLY:
   doesn't use the redirect).
 - ALSO: sign in once in globalSetup + persist storageState (tests reuse one session; zeroes rate-limit
   exposure). Kill stray node PID 21069.
-NOT losing much: B skips the real magic-link round-trip (mostly GoTrue; shell.spec covers signed-out; auth
-changes when password+social lands). If the live magic-link path is ever wanted -> a SEPARATE dedicated auth
-e2e, not on the a11y sweep. DEV_PASSWORD = local throwaway only.
-NEXT: apply -> run AA sweep -> first real accessibility verdict -> if green, merge desktop-align.
+  NOT losing much: B skips the real magic-link round-trip (mostly GoTrue; shell.spec covers signed-out; auth
+  changes when password+social lands). If the live magic-link path is ever wanted -> a SEPARATE dedicated auth
+  e2e, not on the a11y sweep. DEV_PASSWORD = local throwaway only.
+  NEXT: apply -> run AA sweep -> first real accessibility verdict -> if green, merge desktop-align.

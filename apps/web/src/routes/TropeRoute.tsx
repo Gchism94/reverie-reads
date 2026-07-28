@@ -78,7 +78,10 @@ function TropeScreen() {
 
       <header className="mt-3 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-[26px] italic leading-tight text-ink" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+          <h1
+            className="text-[26px] italic leading-tight text-ink"
+            style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+          >
             {trope.name}
           </h1>
           <p className="mt-0.5 text-[13px] text-muted">
@@ -104,13 +107,23 @@ function TropeScreen() {
           onClick={() => setSweep((s) => !s)}
           aria-pressed={sweep}
           className="rounded-full border px-3.5 py-1.5 text-[12.5px] font-semibold"
-          style={sweep ? { background: 'var(--accent-fill)', color: 'var(--on-primary)', borderColor: 'transparent' } : { background: 'var(--card)', color: 'var(--ink)', borderColor: 'var(--line)' }}
+          style={
+            sweep
+              ? {
+                  background: 'var(--accent-fill)',
+                  color: 'var(--on-primary)',
+                  borderColor: 'transparent',
+                }
+              : { background: 'var(--card)', color: 'var(--ink)', borderColor: 'var(--line)' }
+          }
         >
           {sweep ? 'Done sweeping' : '⟲ Sweep your library'}
         </button>
       </header>
       {sweep && (
-        <p className="mt-2 text-[12.5px] text-muted">Tap covers to tag or untag — highlighted books carry {trope.name}.</p>
+        <p className="mt-2 text-[12.5px] text-muted">
+          Tap covers to tag or untag — highlighted books carry {trope.name}.
+        </p>
       )}
 
       {gridBooks.length ? (
@@ -135,7 +148,11 @@ function TropeScreen() {
                   <CoverImage book={b} thumb />
                 </div>
                 {sweep && carrying && (
-                  <span aria-hidden className="absolute right-1 top-1 rounded-full px-1.5 text-[11px] font-bold" style={{ background: 'var(--accent-fill)', color: 'var(--on-primary)' }}>
+                  <span
+                    aria-hidden
+                    className="absolute right-1 top-1 rounded-full px-1.5 text-[11px] font-bold"
+                    style={{ background: 'var(--accent-fill)', color: 'var(--on-primary)' }}
+                  >
                     ✓
                   </span>
                 )}

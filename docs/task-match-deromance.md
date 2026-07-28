@@ -69,7 +69,7 @@ logged below), but NOT this task. Here: make the existing quiz genre-neutral.
 - The acceptance test that matters: run the quiz choosing non-romance answers (e.g.
   "dark & intense" intending horror) against the current mixed library (which now has
   King, Koontz, Rice, etc.) and confirm the result can surface horror, not romance.
-- Confirm a romance answer still yields romance — de-romancing must not *break* romance,
+- Confirm a romance answer still yields romance — de-romancing must not _break_ romance,
   just stop it being the only outcome.
 
 ## Logged for the future (do NOT build): approach (b)

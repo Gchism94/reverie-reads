@@ -32,7 +32,11 @@ const cors = {
 
 const DB_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const SERVICE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-const dbHeaders = { apikey: SERVICE, Authorization: `Bearer ${SERVICE}`, 'Content-Type': 'application/json' }
+const dbHeaders = {
+  apikey: SERVICE,
+  Authorization: `Bearer ${SERVICE}`,
+  'Content-Type': 'application/json',
+}
 
 interface ProfileRow {
   id: string
@@ -44,7 +48,10 @@ interface ProfileRow {
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   if (!DB_URL || !SERVICE) {
-    return new Response(JSON.stringify({ error: 'missing service env' }), { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify({ error: 'missing service env' }), {
+      status: 500,
+      headers: { ...cors, 'Content-Type': 'application/json' },
+    })
   }
   const at = new Date().toISOString()
   let scanned = 0
@@ -61,7 +68,10 @@ Deno.serve(async (req: Request) => {
       scanned++
       const current = p.adaptive_skin?.weights
       if (!current) continue
-      const br = await fetch(`${DB_URL}/rest/v1/books?select=subgenre,tags,rating,fave,read_status&owner_id=eq.${p.id}`, { headers: dbHeaders })
+      const br = await fetch(
+        `${DB_URL}/rest/v1/books?select=subgenre,tags,rating,fave,read_status&owner_id=eq.${p.id}`,
+        { headers: dbHeaders },
+      )
       const books = (await br.json()) as BookRow[]
       const next = computeWeights(books ?? [])
 
@@ -77,15 +87,31 @@ Deno.serve(async (req: Request) => {
         (!dismissed || isMaterialShift(dismissed, next))
       if (!writeNeeded) continue
 
-      const body = { adaptive_pending: { weights: next, dominant: dominantSkin(next), insight: tasteInsight(next), at } }
-      await fetch(`${DB_URL}/rest/v1/profiles?id=eq.${p.id}`, { method: 'PATCH', headers: dbHeaders, body: JSON.stringify(body) })
+      const body = {
+        adaptive_pending: {
+          weights: next,
+          dominant: dominantSkin(next),
+          insight: tasteInsight(next),
+          at,
+        },
+      }
+      await fetch(`${DB_URL}/rest/v1/profiles?id=eq.${p.id}`, {
+        method: 'PATCH',
+        headers: dbHeaders,
+        body: JSON.stringify(body),
+      })
       updated++
     }
 
     logEvent('info', 'evolve-skins', 'run_complete', { scanned, updated })
-    return new Response(JSON.stringify({ scanned, updated }), { headers: { ...cors, 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify({ scanned, updated }), {
+      headers: { ...cors, 'Content-Type': 'application/json' },
+    })
   } catch (e) {
     captureEdgeError('evolve-skins', e, { scanned, updated })
-    return new Response(JSON.stringify({ error: String(e), scanned, updated }), { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify({ error: String(e), scanned, updated }), {
+      status: 500,
+      headers: { ...cors, 'Content-Type': 'application/json' },
+    })
   }
 })

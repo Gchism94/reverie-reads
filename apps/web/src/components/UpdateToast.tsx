@@ -17,14 +17,20 @@ export function UpdateToast() {
     >
       <div
         className="flex items-center gap-3 rounded-full border border-line py-2 pl-4 pr-2 text-[13px] text-ink"
-        style={{ background: 'linear-gradient(var(--card), var(--card)), var(--bg)', boxShadow: 'var(--shadow)' }}
+        style={{
+          background: 'linear-gradient(var(--card), var(--card)), var(--bg)',
+          boxShadow: 'var(--shadow)',
+        }}
       >
         A new version of Reverie is ready
         <button
           type="button"
           onClick={() => void applyUpdate()}
           className="rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold"
-          style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))', color: 'var(--on-primary)' }}
+          style={{
+            background: 'linear-gradient(135deg, var(--primary), var(--gold))',
+            color: 'var(--on-primary)',
+          }}
         >
           Refresh
         </button>

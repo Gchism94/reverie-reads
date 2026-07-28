@@ -44,7 +44,8 @@ export function SeriesStrip({ book }: { book: Book }) {
   const idx = entries.findIndex((e) => e.bookId === book.id)
   const prev = idx > 0 ? entries[idx - 1] : undefined
   const next = idx >= 0 && idx < entries.length - 1 ? entries[idx + 1] : undefined
-  const posText = book.position !== '' ? `#${book.position}` : idx >= 0 ? `#${entries[idx]!.position}` : ''
+  const posText =
+    book.position !== '' ? `#${book.position}` : idx >= 0 ? `#${entries[idx]!.position}` : ''
 
   const neighbour = (e: SeriesEntry | undefined, dir: 'prev' | 'next') => {
     if (!e) return <span className="h-[54px] w-9 flex-none" aria-hidden />
@@ -55,7 +56,11 @@ export function SeriesStrip({ book }: { book: Book }) {
         style={!b ? { borderStyle: 'dashed', background: 'var(--chip)' } : undefined}
         title={`${dir === 'prev' ? 'Before' : 'After'} this one: ${b?.title ?? e.title}`}
       >
-        {b ? <CoverImage book={b} thumb ghost={!isPossessed(b)} /> : <span className="flex h-full items-center justify-center text-[13px] text-muted">⊹</span>}
+        {b ? (
+          <CoverImage book={b} thumb ghost={!isPossessed(b)} />
+        ) : (
+          <span className="flex h-full items-center justify-center text-[13px] text-muted">⊹</span>
+        )}
       </span>
     )
   }
@@ -70,12 +75,16 @@ export function SeriesStrip({ book }: { book: Book }) {
     >
       {neighbour(prev, 'prev')}
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[13.5px] font-semibold text-ink" style={{ fontFamily: 'var(--font-display)' }}>
+        <span
+          className="block truncate text-[13.5px] font-semibold text-ink"
+          style={{ fontFamily: 'var(--font-display)' }}
+        >
           {book.series}
         </span>
         <span className="block text-[12px] text-muted">
           {posText}
-          {entries.length ? `${posText ? ' of ' : ''}${entries.length}` : ''} · see the whole series →
+          {entries.length ? `${posText ? ' of ' : ''}${entries.length}` : ''} · see the whole series
+          →
         </span>
       </span>
       {neighbour(next, 'next')}

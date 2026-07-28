@@ -15,9 +15,9 @@ the real app:
 
 1. **The skin vocabulary is too obscure to operate.** On Marrow, the ownership control
    reads "The house has it / A guest of the house / The house wants it / The house hasn't
-   decided." Lovely as flavor, but as *buttons the user taps* they fail the basic test:
+   decided." Lovely as flavor, but as _buttons the user taps_ they fail the basic test:
    you can't tell what tapping one does without reading the subtext. Evocative is fine
-   for labels you *read* (like the taste tiers); it's wrong for controls you *operate*.
+   for labels you _read_ (like the taste tiers); it's wrong for controls you _operate_.
 
 2. **A borrowed book appears under a shelf labeled "Owned."** Setting a book to borrowed
    (with a format) correctly lands it on the Physical format shelf — but that shelf's
@@ -27,7 +27,7 @@ the real app:
 
 - **Vocabulary:** plain, legible button word is primary; skin voice becomes a subtitle/
   secondary line, not the button label itself.
-- **Shelves:** borrowed books *belong* on the format shelves (a borrowed paperback is a
+- **Shelves:** borrowed books _belong_ on the format shelves (a borrowed paperback is a
   physical copy in hand). The fix is to **relabel** the shelf, not remove borrowed books
   from it.
 

@@ -28,7 +28,10 @@ const TILE_ATTR = '&copy; OpenStreetMap contributors &copy; CARTO'
 
 // Escape untrusted store text (OSM/Overpass names + addresses) before it goes into a popup's HTML.
 const esc = (s: string): string =>
-  s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!)
+  s.replace(
+    /[&<>"']/g,
+    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!,
+  )
 
 // Thin Leaflet-API map (no react-leaflet — its wrapper is Hippocratic-2.1; core leaflet is BSD-2).
 // One map instance for the component's life; small effects keep tiles (mode), view (loc), and markers
@@ -45,7 +48,11 @@ function StoreMap({ loc, stores }: { loc: ResolvedLocation; stores: Store[] }) {
   // container — the wrapper's h-80 provides it. map.remove() tears down panes + listeners on unmount.
   useEffect(() => {
     if (!elRef.current || mapRef.current) return
-    const map = L.map(elRef.current, { center: [loc.lat, loc.lng], zoom: 12, scrollWheelZoom: false })
+    const map = L.map(elRef.current, {
+      center: [loc.lat, loc.lng],
+      zoom: 12,
+      scrollWheelZoom: false,
+    })
     mapRef.current = map
     markersRef.current = L.layerGroup().addTo(map)
     return () => {
@@ -75,18 +82,32 @@ function StoreMap({ loc, stores }: { loc: ResolvedLocation; stores: Store[] }) {
     const group = markersRef.current
     if (!group) return
     group.clearLayers()
-    L.circleMarker([loc.lat, loc.lng], { radius: 7, color: '#f0b14e', fillColor: '#f0b14e', fillOpacity: 0.9 })
+    L.circleMarker([loc.lat, loc.lng], {
+      radius: 7,
+      color: '#f0b14e',
+      fillColor: '#f0b14e',
+      fillOpacity: 0.9,
+    })
       .bindPopup('You are here')
       .addTo(group)
     for (const s of stores) {
-      L.circleMarker([s.lat, s.lng], { radius: 6, color: '#cf2f66', fillColor: '#cf2f66', fillOpacity: 0.85 })
+      L.circleMarker([s.lat, s.lng], {
+        radius: 6,
+        color: '#cf2f66',
+        fillColor: '#cf2f66',
+        fillOpacity: 0.85,
+      })
         .bindPopup(`<b>${esc(s.name)}</b>${s.address ? `<div>${esc(s.address)}</div>` : ''}`)
         .addTo(group)
     }
   }, [loc.lat, loc.lng, stores])
 
   return (
-    <div role="region" aria-label="Map of nearby independent bookstores" className="h-80 overflow-hidden rounded-2xl border border-line">
+    <div
+      role="region"
+      aria-label="Map of nearby independent bookstores"
+      className="h-80 overflow-hidden rounded-2xl border border-line"
+    >
       <div ref={elRef} style={{ height: '100%', width: '100%' }} />
     </div>
   )
@@ -97,10 +118,22 @@ function StoreMap({ loc, stores }: { loc: ResolvedLocation; stores: Store[] }) {
 function ShopOnlineFallback() {
   return (
     <div className="mt-3 flex flex-wrap gap-2">
-      <a href="https://bookshop.org" target="_blank" rel="noreferrer" className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink" style={{ background: 'var(--field)' }}>
+      <a
+        href="https://bookshop.org"
+        target="_blank"
+        rel="noreferrer"
+        className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink"
+        style={{ background: 'var(--field)' }}
+      >
         Print &amp; ebooks · Bookshop.org ↗
       </a>
-      <a href="https://libro.fm" target="_blank" rel="noreferrer" className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink" style={{ background: 'var(--field)' }}>
+      <a
+        href="https://libro.fm"
+        target="_blank"
+        rel="noreferrer"
+        className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink"
+        style={{ background: 'var(--field)' }}
+      >
         Audiobooks · Libro.fm ↗
       </a>
     </div>
@@ -121,7 +154,11 @@ function StoreList({
       {stores.map((s) => {
         const isDefault = s.id === defaultId
         return (
-          <li key={s.id} className="rounded-2xl border border-line p-3" style={{ background: 'var(--card)' }}>
+          <li
+            key={s.id}
+            className="rounded-2xl border border-line p-3"
+            style={{ background: 'var(--card)' }}
+          >
             <div className="flex items-baseline justify-between gap-2">
               <span className="text-[15px] font-semibold text-ink">
                 {isDefault && <span title="Your store">✓ </span>}
@@ -168,7 +205,9 @@ export default function IndieScreen() {
   const defaultStore = profile?.defaultStore ?? null
 
   const setDefault = (s: Store | null) =>
-    updateProfile.mutate({ defaultStore: s ? { id: s.id, name: s.name, website: s.website } : null })
+    updateProfile.mutate({
+      defaultStore: s ? { id: s.id, name: s.name, website: s.website } : null,
+    })
 
   const stores = useQuery({
     queryKey: ['bookstores', loc?.lat, loc?.lng],
@@ -210,10 +249,16 @@ export default function IndieScreen() {
 
   return (
     <section className="mx-auto max-w-3xl px-4 py-6 sm:px-6">
-      <h1 className="text-[22px] italic text-ink" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+      <h1
+        className="text-[22px] italic text-ink"
+        style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+      >
         Indie bookstores near you
       </h1>
-      <div className="mt-3 rounded-xl border border-line p-3 text-[13px] text-muted" style={{ background: 'var(--card)' }}>
+      <div
+        className="mt-3 rounded-xl border border-line p-3 text-[13px] text-muted"
+        style={{ background: 'var(--card)' }}
+      >
         📚 Discover &amp; support independent bookstores. This is discovery and support — not live
         inventory; we won’t promise “in stock near you.”
       </div>
@@ -224,7 +269,10 @@ export default function IndieScreen() {
           onClick={() => void detectLocation()}
           disabled={busy}
           className="h-11 rounded-full px-5 text-[14px] font-semibold disabled:opacity-50"
-          style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))', color: 'var(--on-primary)' }}
+          style={{
+            background: 'linear-gradient(135deg, var(--primary), var(--gold))',
+            color: 'var(--on-primary)',
+          }}
         >
           📍 Use my location
         </button>
@@ -258,7 +306,9 @@ export default function IndieScreen() {
 
       {!loc ? (
         <div className="mt-6 rounded-2xl border border-line p-6 text-center">
-          <p className="text-[14px] text-muted">Set a location to find nearby independent bookstores — or shop indies online:</p>
+          <p className="text-[14px] text-muted">
+            Set a location to find nearby independent bookstores — or shop indies online:
+          </p>
           <div className="flex justify-center">
             <ShopOnlineFallback />
           </div>
@@ -279,10 +329,15 @@ export default function IndieScreen() {
             </button>
           </p>
 
-          {stores.isLoading && <p className="py-8 text-center text-[14px] text-muted">Finding nearby bookshops…</p>}
+          {stores.isLoading && (
+            <p className="py-8 text-center text-[14px] text-muted">Finding nearby bookshops…</p>
+          )}
           {stores.isError && (
             <div className="rounded-2xl border border-line p-6 text-center">
-              <p className="text-[14px] text-muted">Couldn’t reach the bookstore directory just now — but you can still support indies online:</p>
+              <p className="text-[14px] text-muted">
+                Couldn’t reach the bookstore directory just now — but you can still support indies
+                online:
+              </p>
               <div className="flex justify-center">
                 <ShopOnlineFallback />
               </div>
@@ -295,14 +350,18 @@ export default function IndieScreen() {
                 {stores.data.length} independent shop(s) nearby · chains excluded
                 {defaultStore ? ` · your store: ${defaultStore.name}` : ''}
               </p>
-              <StoreList stores={stores.data} defaultId={defaultStore?.id ?? null} onSetDefault={setDefault} />
+              <StoreList
+                stores={stores.data}
+                defaultId={defaultStore?.id ?? null}
+                onSetDefault={setDefault}
+              />
             </>
           )}
           {stores.data && stores.data.length === 0 && (
             <div className="mt-4 rounded-2xl border border-line p-6 text-center">
               <p className="text-[14px] text-muted">
-                No independent bookstores found nearby — map coverage is uneven outside the US and some
-                shops aren’t listed yet. You can still buy from indies online:
+                No independent bookstores found nearby — map coverage is uneven outside the US and
+                some shops aren’t listed yet. You can still buy from indies online:
               </p>
               <div className="flex justify-center">
                 <ShopOnlineFallback />

@@ -51,7 +51,12 @@ export interface MatchReason {
   /** the book's tags the reader demonstrably loves (key === 'tasteTags') */
   lovedTags?: string[]
   /** series detail (key === 'series') */
-  series?: { name: string; position: number | null; lovedEarlier: boolean; unstartedEarlier: boolean }
+  series?: {
+    name: string
+    position: number | null
+    lovedEarlier: boolean
+    unstartedEarlier: boolean
+  }
 }
 
 export interface MatchScore {
@@ -120,7 +125,8 @@ export function buildMatchContext(
     const st = (series[b.series] ??= { readPositions: [], avgReadRating: null })
     const pos = positionOf(b)
     if (pos != null) st.readPositions.push(pos)
-    if (b.rating > 0) st.avgReadRating = st.avgReadRating == null ? b.rating : (st.avgReadRating + b.rating) / 2
+    if (b.rating > 0)
+      st.avgReadRating = st.avgReadRating == null ? b.rating : (st.avgReadRating + b.rating) / 2
   }
   return {
     tagRarity,
@@ -136,7 +142,12 @@ export function scoreMatch(b: Book, p: MatchProfile, ctx?: MatchContext): MatchS
   const reasons: MatchReason[] = []
   const add = (key: MatchReasonKey, value: number, extra?: Partial<MatchReason>) => {
     const v = Math.max(0, Math.min(1, value))
-    reasons.push({ key, value: v, contribution: Math.round(MATCH_WEIGHTS[key] * v * 1000) / 10, ...extra })
+    reasons.push({
+      key,
+      value: v,
+      contribution: Math.round(MATCH_WEIGHTS[key] * v * 1000) / 10,
+      ...extra,
+    })
   }
 
   // tags — rarity-weighted overlap of the cravings with the book's own tags
@@ -199,11 +210,16 @@ export function scoreMatch(b: Book, p: MatchProfile, ctx?: MatchContext): MatchS
   const pos = positionOf(b)
   const st = b.series ? ctx?.series[b.series] : undefined
   if (b.series && !read && !dnf) {
-    const earlierRead = !!st && st.readPositions.length > 0 && (pos == null || st.readPositions.some((rp) => rp < pos))
+    const earlierRead =
+      !!st &&
+      st.readPositions.length > 0 &&
+      (pos == null || st.readPositions.some((rp) => rp < pos))
     const lovedEarlier = earlierRead && (st?.avgReadRating ?? 0) >= 4
     const unstartedEarlier = pos != null && pos > 1 && !st?.readPositions.length
     const value = lovedEarlier ? 1 : earlierRead ? 0.7 : unstartedEarlier ? 0.15 : NEUTRAL
-    add('series', value, { series: { name: b.series, position: pos, lovedEarlier, unstartedEarlier } })
+    add('series', value, {
+      series: { name: b.series, position: pos, lovedEarlier, unstartedEarlier },
+    })
   } else {
     add('series', NEUTRAL)
   }

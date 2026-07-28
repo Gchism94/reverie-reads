@@ -22,15 +22,19 @@ export interface NumericFieldSpec {
 
 export type NumericFieldResult =
   /** `null` = genuinely blank, which is a legitimate "not set" for every field here */
-  | { ok: true; value: number | null }
-  | { ok: false; error: string }
+  { ok: true; value: number | null } | { ok: false; error: string }
 
 /** Mirrors `books_pub_*_check`. Year has no CHECK, but the column is a smallint — bound it well
  *  under the 32767 overflow so a typo can't 500, while still admitting genuinely old books. */
 export const PUB_YEAR: NumericFieldSpec = { label: 'Pub year', min: 1, max: 9999, integer: true }
 export const PUB_MONTH: NumericFieldSpec = { label: 'Month', min: 1, max: 12, integer: true }
 export const PUB_DAY: NumericFieldSpec = { label: 'Day', min: 1, max: 31, integer: true }
-export const SERIES_COUNT: NumericFieldSpec = { label: 'Series length', min: 1, max: 999, integer: true }
+export const SERIES_COUNT: NumericFieldSpec = {
+  label: 'Series length',
+  min: 1,
+  max: 999,
+  integer: true,
+}
 /** Mirrors books_pages_check. A book with 0 pages is a data error, not an edition. */
 export const PAGE_COUNT: NumericFieldSpec = { label: 'Pages', min: 1, max: 20000, integer: true }
 /** Positions carry decimals on purpose — #0.5 prequels, #2.5 novellas — and 0 is a real slot. */

@@ -5,7 +5,12 @@ import { SPINE_TINT_MIXES, tintedSpineColors, type SpineTokenSample } from './sp
 // Tryst/dark sample: gilt title on a deep plum gradient — lots of contrast headroom.
 const DARK: SpineTokenSample = { title: '#f0b14e', muted: '#caa9c4', lo: '#1f0a18', hi: '#3c1428' }
 // Umbra/dark paper strip sample: DARK type on a LIGHT strip — headroom shrinks fast under dark tints.
-const LIGHT_SURFACE: SpineTokenSample = { title: '#2a251c', muted: '#5d574a', lo: '#e2d9c2', hi: '#e2d9c2' }
+const LIGHT_SURFACE: SpineTokenSample = {
+  title: '#2a251c',
+  muted: '#5d574a',
+  lo: '#e2d9c2',
+  hi: '#e2d9c2',
+}
 
 describe('tintedSpineColors', () => {
   it('is deterministic and returns the strongest AA-safe mix', () => {
@@ -43,7 +48,12 @@ describe('tintedSpineColors', () => {
     // Muted #5d574a on the light strip has ~4.9:1 headroom; a saturated mid-luminance tint kills it.
     const t = tintedSpineColors('#6e6152', { ...LIGHT_SURFACE, muted: '#6a6455' })
     // Whether or not this exact tint fails, a mid-gray surface with mid-gray text must:
-    const hopeless = tintedSpineColors('#808080', { title: '#6a6a6a', muted: '#6a6a6a', lo: '#777777', hi: '#777777' })
+    const hopeless = tintedSpineColors('#808080', {
+      title: '#6a6a6a',
+      muted: '#6a6a6a',
+      lo: '#777777',
+      hi: '#777777',
+    })
     expect(hopeless).toBeNull()
     if (t) expect(t.mix).toBeLessThanOrEqual(SPINE_TINT_MIXES[1])
   })

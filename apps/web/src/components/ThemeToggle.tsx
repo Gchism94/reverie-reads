@@ -39,7 +39,10 @@ export function ThemeToggle({ compact = false }: { compact?: boolean }) {
       <span
         aria-hidden
         className="flex h-[26px] w-[26px] items-center justify-center rounded-full text-[13px]"
-        style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))', color: 'var(--on-primary)' }}
+        style={{
+          background: 'linear-gradient(135deg, var(--primary), var(--gold))',
+          color: 'var(--on-primary)',
+        }}
       >
         {icon}
       </span>

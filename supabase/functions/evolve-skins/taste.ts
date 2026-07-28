@@ -15,18 +15,49 @@ export type SkinId =
   | 'hearth'
   | 'almanac'
   | 'bloom'
-export const SKIN_ORDER: SkinId[] = ['tryst', 'grimoire', 'aphelion', 'marrow', 'umbra', 'folio', 'hearth', 'almanac', 'bloom']
+export const SKIN_ORDER: SkinId[] = [
+  'tryst',
+  'grimoire',
+  'aphelion',
+  'marrow',
+  'umbra',
+  'folio',
+  'hearth',
+  'almanac',
+  'bloom',
+]
 export type Weights = Record<SkinId, number>
 
 // Mirrors SKIN_AFFINITY in packages/core/src/adaptive.ts.
 export const AFFINITY: Record<SkinId, { subgenres: string[]; tags: string[] }> = {
   tryst: {
     subgenres: ['Romance', 'Contemporary', 'Sports', 'Cowboy Romance'],
-    tags: ['Slow Burn', 'Friends to Lovers', 'Grumpy/Sunshine', 'Small Town', 'Second Chance', 'He Falls First', 'Fake Dating', 'Found Family'],
+    tags: [
+      'Slow Burn',
+      'Friends to Lovers',
+      'Grumpy/Sunshine',
+      'Small Town',
+      'Second Chance',
+      'He Falls First',
+      'Fake Dating',
+      'Found Family',
+    ],
   },
   grimoire: {
     subgenres: ['Romantasy', 'Fantasy'],
-    tags: ['Fae', 'Dragon Riders', 'Magic Academy', 'Court Intrigue', 'Chosen One', 'Shifters', 'Cursed', 'Fated Mates', 'Hidden Powers', 'Rebellion', 'Bonded Pair'],
+    tags: [
+      'Fae',
+      'Dragon Riders',
+      'Magic Academy',
+      'Court Intrigue',
+      'Chosen One',
+      'Shifters',
+      'Cursed',
+      'Fated Mates',
+      'Hidden Powers',
+      'Rebellion',
+      'Bonded Pair',
+    ],
   },
   aphelion: {
     subgenres: ['Science Fiction', 'Sci-Fi', 'Dystopian'],
@@ -34,11 +65,32 @@ export const AFFINITY: Record<SkinId, { subgenres: string[]; tags: string[] }> =
   },
   marrow: {
     subgenres: ['Dark Romance', 'Horror', 'Thriller'],
-    tags: ['Mafia', 'Stalker', 'Villain Romance', 'Serial Killers', 'Captive/Captor', 'Morally Black MMC', 'Obsessive', 'Anti-Hero', 'Bully Romance', 'Possessive', 'Revenge'],
+    tags: [
+      'Mafia',
+      'Stalker',
+      'Villain Romance',
+      'Serial Killers',
+      'Captive/Captor',
+      'Morally Black MMC',
+      'Obsessive',
+      'Anti-Hero',
+      'Bully Romance',
+      'Possessive',
+      'Revenge',
+    ],
   },
   umbra: {
     subgenres: ['Mystery', 'Thriller', 'Crime', 'Detective', 'Suspense'],
-    tags: ['Whodunit', 'Noir', 'Heist', 'Spy', 'Cozy Mystery', 'Locked Room', 'Cold Case', 'Conspiracy'],
+    tags: [
+      'Whodunit',
+      'Noir',
+      'Heist',
+      'Spy',
+      'Cozy Mystery',
+      'Locked Room',
+      'Cold Case',
+      'Conspiracy',
+    ],
   },
   folio: {
     subgenres: ['Literary', 'Literary Fiction', 'Classics', 'Fiction', 'Poetry'],
@@ -54,7 +106,15 @@ export const AFFINITY: Record<SkinId, { subgenres: string[]; tags: string[] }> =
   },
   bloom: {
     subgenres: ['YA', 'Young Adult', 'New Adult', 'Contemporary'],
-    tags: ['Coming of Age', 'First Love', 'Enemies to Lovers', 'Road Trip', 'Summer', 'High School', 'Friendship'],
+    tags: [
+      'Coming of Age',
+      'First Love',
+      'Enemies to Lovers',
+      'Road Trip',
+      'Summer',
+      'High School',
+      'Friendship',
+    ],
   },
 }
 
@@ -95,7 +155,9 @@ export function computeWeights(books: BookRow[]): Weights {
     }
   }
   const total = SKIN_ORDER.reduce((s, id) => s + raw[id] + skinFloor(id), 0) || 1
-  return Object.fromEntries(SKIN_ORDER.map((id) => [id, (raw[id] + skinFloor(id)) / total])) as Weights
+  return Object.fromEntries(
+    SKIN_ORDER.map((id) => [id, (raw[id] + skinFloor(id)) / total]),
+  ) as Weights
 }
 
 export const dominantSkin = (w: Weights): SkinId =>
@@ -124,6 +186,7 @@ export function tasteInsight(w: Weights): string {
   const ranked = SKIN_ORDER.filter((id) => w[id] > 0.05).sort((a, b) => w[b] - w[a])
   const top = ranked[0] ?? 'tryst'
   const second = ranked[1]
-  if (second && w[second] > w[top] * 0.6) return `leaning ${flavour[top]}, with a ${flavour[second]} streak`
+  if (second && w[second] > w[top] * 0.6)
+    return `leaning ${flavour[top]}, with a ${flavour[second]} streak`
   return `leaning ${flavour[top]}`
 }

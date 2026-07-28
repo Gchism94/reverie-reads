@@ -17,16 +17,23 @@ describe('ownership', () => {
   })
 
   it('lists owned formats and writes a state-aware caption', () => {
-    expect(ownedFormats({ physical: false, ebook: true, audiobook: true })).toEqual(['ebook', 'audiobook'])
-    expect(ownedCaption({ physical: false, ebook: false, audiobook: false })).toBe('No copies marked yet.')
+    expect(ownedFormats({ physical: false, ebook: true, audiobook: true })).toEqual([
+      'ebook',
+      'audiobook',
+    ])
+    expect(ownedCaption({ physical: false, ebook: false, audiobook: false })).toBe(
+      'No copies marked yet.',
+    )
     expect(ownedCaption({ physical: false, ebook: true, audiobook: true })).toBe(
       'Owned in 2 formats — ebook & audiobook.',
     )
-    expect(ownedCaption({ physical: 'hardcover', ebook: false, audiobook: false })).toBe('Owned — hardcover.')
-    // a borrowed book records its format without ever reading as "owned"
-    expect(ownedCaption({ physical: 'paperback', ebook: false, audiobook: false }, 'Borrowed')).toBe(
-      'Borrowed — paperback.',
+    expect(ownedCaption({ physical: 'hardcover', ebook: false, audiobook: false })).toBe(
+      'Owned — hardcover.',
     )
+    // a borrowed book records its format without ever reading as "owned"
+    expect(
+      ownedCaption({ physical: 'paperback', ebook: false, audiobook: false }, 'Borrowed'),
+    ).toBe('Borrowed — paperback.')
   })
 
   it('isOwnedBook is strict (owned only); isPossessed adds borrowed', () => {
@@ -49,7 +56,10 @@ describe('ownership', () => {
   })
 
   it('a BORROWED book keeps its format — the type of a read-but-not-owned book is recordable', () => {
-    const borrowed = { ownership: 'borrowed' as const, owned: { physical: 'paperback' as const, ebook: false, audiobook: false } }
+    const borrowed = {
+      ownership: 'borrowed' as const,
+      owned: { physical: 'paperback' as const, ebook: false, audiobook: false },
+    }
     expect(bookOwnedFormats(borrowed)).toEqual(['physical'])
     // but it is NOT counted as owned by the strict collection scope
     expect(isOwnedBook(borrowed)).toBe(false)
@@ -57,14 +67,25 @@ describe('ownership', () => {
   })
 
   it('latent flags on a wishlist/unset book reach no format shelf', () => {
-    const wishlist = { ownership: 'wishlist' as const, owned: { physical: 'hardcover' as const, ebook: true, audiobook: true } }
-    const unset = { ownership: 'unset' as const, owned: { physical: 'paperback' as const, ebook: true, audiobook: false } }
-    const owned = { ownership: 'owned' as const, owned: { physical: 'paperback' as const, ebook: false, audiobook: false } }
+    const wishlist = {
+      ownership: 'wishlist' as const,
+      owned: { physical: 'hardcover' as const, ebook: true, audiobook: true },
+    }
+    const unset = {
+      ownership: 'unset' as const,
+      owned: { physical: 'paperback' as const, ebook: true, audiobook: false },
+    }
+    const owned = {
+      ownership: 'owned' as const,
+      owned: { physical: 'paperback' as const, ebook: false, audiobook: false },
+    }
     // every Owned·format shelf filters through bookOwnedFormats — latent flags stay suppressed
     expect(bookOwnedFormats(wishlist)).toEqual([])
     expect(bookOwnedFormats(unset)).toEqual([])
     for (const fmt of ['physical', 'ebook', 'audiobook'] as const) {
-      const carriers = [owned, wishlist, unset].filter((b) => bookOwnedFormats(b).includes(fmt)).map((b) => b.ownership)
+      const carriers = [owned, wishlist, unset]
+        .filter((b) => bookOwnedFormats(b).includes(fmt))
+        .map((b) => b.ownership)
       expect(carriers).not.toContain('wishlist')
       expect(carriers).not.toContain('unset')
     }

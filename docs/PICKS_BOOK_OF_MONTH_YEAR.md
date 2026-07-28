@@ -1,11 +1,13 @@
 # Book of the Month / Year — sentiment-ranked picks (2026-06-28)
 
 ## Concept (Greg)
+
 Lightweight sentiment/NLP ranks your read books by RATING x REVIEW sentiment, surfaces the top
 candidate(s) (or the single one if only one exists); USER crowns "Book of the Month." Year-end: surface
 the year's standouts (the 12 monthly crowns + high-ranked also-rans); USER crowns "Book of the Year."
 
 ## Why it fits the privacy rule (elegant, not a breach)
+
 The ranking, sentiment scores, ratings, and runners-up are PRIVATE decision-support (help YOU choose).
 The ONLY public output is a single human-chosen CROWN, stripped of all numbers. A crown is UN-AGGREGATABLE
 by design (no "community average crown") -> advances the "no conglomerate ratings, taste-not-consensus"
@@ -15,6 +17,7 @@ number-free signal). Value: discovery -- "what people read + loved," a high-sign
 (1/month, 1/year -> meaningful, un-spammable, no inflation incentive).
 
 ## Design decisions (made)
+
 - RANKING = suggester, not judge. Rating = primary/reliable signal; review SENTIMENT = within-rating
   discriminator (breaks "which of my three 5-stars was THE one"). Human always makes the final call ->
   NLP can be imperfect, low-stakes.
@@ -30,6 +33,7 @@ number-free signal). Value: discovery -- "what people read + loved," a high-sign
   discovery lights up with the public layer. Delight works standalone.
 
 ## FLAGS / open
+
 - SENTIMENT genre-vernacular caveat: in romance/romantasy "wrecked me / sobbing / feral / unhinged /
   ruined me" = top PRAISE; a generic lexicon scores them NEGATIVE and buries favorites. Mitigate: rating
   primary (sentiment only refines) + a small custom reader-vernacular lexicon (flip those terms). Human
@@ -42,5 +46,6 @@ number-free signal). Value: discovery -- "what people read + loved," a high-sign
   blurb ("why I loved it")? Never the rating either way. -> awaiting Greg.
 
 ## Cross-refs
+
 SOCIAL_DISCOVERY_PHASE.md (crown = a number-free, un-aggregatable discovery primitive on the follow graph);
 STATS_PRIVACY_AND_FEATURES.md (ranking/sentiment/ratings stay private; crown is the lone shareable output).

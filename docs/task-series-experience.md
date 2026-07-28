@@ -12,7 +12,7 @@
 
 ## Context
 
-Launch feedback: "how do I look at the series?", book detail doesn't show the other books in a series, and the "Order" tab confused its one tester. Design decision, locked: **the standalone Order tab dies.** Reading order is not metadata to consult; it's a position the reader occupies. The series page renders *as* the order, with the user's state woven in. The old prototype's Grid ⇄ Series library toggle returns.
+Launch feedback: "how do I look at the series?", book detail doesn't show the other books in a series, and the "Order" tab confused its one tester. Design decision, locked: **the standalone Order tab dies.** Reading order is not metadata to consult; it's a position the reader occupies. The series page renders _as_ the order, with the user's state woven in. The old prototype's Grid ⇄ Series library toggle returns.
 
 ## 1. Series detail page
 
@@ -40,7 +40,7 @@ One ordered shelf, top to bottom (or a vertical-scrolling spine arrangement — 
 
 ## 5. Post-read chain prompt
 
-- On marking a book read, if a next-in-series entry exists: one-tap prompt — "Next: {title}" with actions *Reading now / Add to TBR / dismiss*. If next is unowned, the add action creates the unowned record. Non-blocking, easily dismissed, never repeated for the same event.
+- On marking a book read, if a next-in-series entry exists: one-tap prompt — "Next: {title}" with actions _Reading now / Add to TBR / dismiss_. If next is unowned, the add action creates the unowned record. Non-blocking, easily dismissed, never repeated for the same event.
 
 ## Explicitly deferred (record as ADR)
 

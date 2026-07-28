@@ -20,7 +20,9 @@ function RootLayout() {
   // A page load carrying an auth-callback hash (email confirmation / recovery / expired link)
   // belongs on /welcome, wherever Supabase redirected it. One-shot state: only the arriving load
   // redirects; once there, normal navigation resumes.
-  const [callbackPending, setCallbackPending] = useState(() => authCallback.present && pathname !== '/welcome')
+  const [callbackPending, setCallbackPending] = useState(
+    () => authCallback.present && pathname !== '/welcome',
+  )
   useEffect(() => {
     if (callbackPending) {
       void navigate({ to: '/welcome', replace: true })
@@ -43,11 +45,14 @@ function RootLayout() {
   // sign-up with confirmation on creates NO session until the link is opened, so that flow stays on
   // the unauthenticated shell (the auth screen shows "check your inbox"); this gate catches the
   // residual case of a session that exists but is unconfirmed (e.g. OAuth without a verified email).
-  const verified = !!session?.user && (!!session.user.email_confirmed_at || !!session.user.confirmed_at)
+  const verified =
+    !!session?.user && (!!session.user.email_confirmed_at || !!session.user.confirmed_at)
 
   if (loading) {
     return (
-      <div className="relative z-[1] flex min-h-dvh items-center justify-center text-muted">{voice.loading}</div>
+      <div className="relative z-[1] flex min-h-dvh items-center justify-center text-muted">
+        {voice.loading}
+      </div>
     )
   }
 

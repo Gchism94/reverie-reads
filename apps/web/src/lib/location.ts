@@ -49,7 +49,8 @@ export async function geocodePlace(query: string): Promise<ResolvedLocation | nu
   try {
     const { data, error } = await supabase.functions.invoke('geo', { body: { op: 'geocode', q } })
     if (error) return null
-    const rows = (data as { payload?: { lat: string; lon: string; display_name: string }[] } | null)?.payload
+    const rows = (data as { payload?: { lat: string; lon: string; display_name: string }[] } | null)
+      ?.payload
     const r = rows?.[0]
     return r ? { lat: Number(r.lat), lng: Number(r.lon), label: r.display_name } : null
   } catch {
@@ -61,7 +62,9 @@ export async function geocodePlace(query: string): Promise<ResolvedLocation | nu
 export async function reverseGeocode(lat: number, lng: number): Promise<string> {
   const fallback = `${lat.toFixed(3)}, ${lng.toFixed(3)}`
   try {
-    const { data, error } = await supabase.functions.invoke('geo', { body: { op: 'reverse', lat, lng } })
+    const { data, error } = await supabase.functions.invoke('geo', {
+      body: { op: 'reverse', lat, lng },
+    })
     if (error) return fallback
     const j = (data as { payload?: { display_name?: string } } | null)?.payload
     return j?.display_name ?? fallback

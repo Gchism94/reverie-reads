@@ -43,12 +43,26 @@ export function TropeChip({
   )
   if (to)
     return (
-      <Link to={to} className={className} style={style} title={title ?? name} aria-label={`${name}${pinned ? ' (pinned)' : ''}`}>
+      <Link
+        to={to}
+        className={className}
+        style={style}
+        title={title ?? name}
+        aria-label={`${name}${pinned ? ' (pinned)' : ''}`}
+      >
         {body}
       </Link>
     )
   return (
-    <button type="button" onClick={onClick} aria-pressed={!off} aria-label={`${name}${pinned ? ' (pinned)' : off ? '' : ' (tagged)'}`} className={className} style={style} title={title ?? name}>
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={!off}
+      aria-label={`${name}${pinned ? ' (pinned)' : off ? '' : ' (tagged)'}`}
+      className={className}
+      style={style}
+      title={title ?? name}
+    >
       {body}
     </button>
   )

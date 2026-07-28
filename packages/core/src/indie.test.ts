@@ -33,7 +33,19 @@ describe('geoCacheKey', () => {
 
 describe('parseStores', () => {
   const els: OverpassEl[] = [
-    { type: 'node', id: 1, lat: 29.96, lon: -90.06, tags: { name: 'Crescent City Books', 'addr:street': 'Chartres St', 'addr:city': 'New Orleans', opening_hours: '10:00-18:00', website: 'https://ccbooks.com' } },
+    {
+      type: 'node',
+      id: 1,
+      lat: 29.96,
+      lon: -90.06,
+      tags: {
+        name: 'Crescent City Books',
+        'addr:street': 'Chartres St',
+        'addr:city': 'New Orleans',
+        opening_hours: '10:00-18:00',
+        website: 'https://ccbooks.com',
+      },
+    },
     { type: 'way', id: 2, center: { lat: 29.99, lon: -90.1 }, tags: { name: 'Barnes & Noble' } }, // chain → excluded
     { type: 'node', id: 3, lat: 29.95, lon: -90.07, tags: {} }, // unnamed, kept (no name)
     { type: 'node', id: 4, tags: { name: 'No Coords' } }, // missing coords → skipped
@@ -50,7 +62,14 @@ describe('parseStores', () => {
   })
   it('handles way/relation center coords + contact:* fallbacks', () => {
     const out = parseStores(
-      [{ type: 'way', id: 9, center: { lat: 29.95, lon: -90.07 }, tags: { name: 'Indie', 'contact:phone': '555-1234', 'contact:website': 'https://i.co' } }],
+      [
+        {
+          type: 'way',
+          id: 9,
+          center: { lat: 29.95, lon: -90.07 },
+          tags: { name: 'Indie', 'contact:phone': '555-1234', 'contact:website': 'https://i.co' },
+        },
+      ],
       29.95,
       -90.07,
     )

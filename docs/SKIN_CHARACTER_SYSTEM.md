@@ -1,23 +1,26 @@
 # Skin Character System — make each skin a PLACE, not a palette (2026-06-28)
 
 ## North star (Greg)
+
 Each theme must STICK OUT; the library must feel UNIQUE, GORGEOUS, WARM + INVITING -- a PERSONAL LIBRARY you'd
 spend an evening in, NOT just another app. Today genre lives only in the skins (color/font/night sky) wrapped
 around generic SaaS chrome -> reads as "a themeable book tracker." Genre must reach everything a person touches.
 
 ## Hard guardrail
+
 DISTINCTIVE SURFACE, CONVENTIONAL INTERACTION. A button may look like an object of its world but must obviously
 read + behave as a button. AA contrast NON-NEGOTIABLE (we earned the contrast lesson -- don't trade it back):
 texture never buries text (opaque scrims where needed); motion always calms under prefers-reduced-motion.
 Character is ADDITIVE to a usable, accessible base -- never a substitute.
 
 ## The levers (strongest "reads differently" first) -> all expressed as PER-SKIN TOKENS
+
 1. TYPOGRAPHY: display face past headings into labels, numerals, stat blocks, empty states; expressive type
    scale; label small-caps/tracking; numeral style (oldstyle/lining, tabular); shelf-label / nameplate / drop-cap
    treatments. Tokens: --font-display/--font-body (exist) + --label-transform, --label-tracking, --numeral-style,
    --type-scale.
 2. SHAPE/LINE: per-skin radius scale, border weight + style, control silhouette (pill vs cut-corner vs rect),
-   divider/rule style (iron filigree vs hairline instrument rule). Tokens: --radius-*, --border-width, --rule-style.
+   divider/rule style (iron filigree vs hairline instrument rule). Tokens: --radius-\*, --border-width, --rule-style.
 3. MATERIAL/TEXTURE: a whisper of surface material so a card feels like a surface not a div -- vellum (Grimoire),
    granite (Marrow), starfield/grid (Aphelion), velvet/haze (Tryst), warm paper (Calliope/Compendium). CHEAP CSS
    (gradients/noise), AA-safe (opaque card behind text -- the placeholder lesson), no external images. Tokens:
@@ -31,16 +34,19 @@ Character is ADDITIVE to a usable, accessible base -- never a substitute.
    vernacular-aware (ties to the sentiment lexicon).
 
 ## Warmth / "a place, not a dashboard"
+
 Tactile texture; generous type; personal touches (a nameplate, "Good evening, reader"); lean into the spatial
 library metaphor the 3-column master-detail already implies (detail rail = the book in your hands). Avoid flat-
 gray SaaS cards + generic toasts.
 
 ## Mechanics
+
 Skins already set tokens via data-skin/data-mode on <html>. This EXPANDS the per-skin token set to cover all the
 above. Components CONSUME tokens (never hardcode). The @reverie/core contrast test extends to the new token combos
 (text on textured surfaces, marks, bands) across the full skin x mode matrix.
 
 ## Sequencing (deliberate re-order, ahead of Onboarding)
+
 1. EXPLORE + LOCK the vocabulary now: design tool brief renders the full kit-of-parts in TRYST + APHELION
    (opposite ends: warm-ornate vs cold-precise) -> proves "same button, two worlds" -> lock the token vocabulary.
    BOUNDED (exploration + token spec, not an endless polish pass).

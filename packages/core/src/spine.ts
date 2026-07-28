@@ -46,7 +46,11 @@ export function fitSpineTitle(
   const fontPx = Math.max(min, Math.min(max, Math.floor(availPx / (len * ratio))))
   const maxChars = Math.max(1, Math.floor(availPx / (fontPx * ratio)))
   if (title.length <= maxChars) return { text: title, fontPx, truncated: false }
-  return { text: `${title.slice(0, Math.max(1, maxChars - 1)).trimEnd()}…`, fontPx, truncated: true }
+  return {
+    text: `${title.slice(0, Math.max(1, maxChars - 1)).trimEnd()}…`,
+    fontPx,
+    truncated: true,
+  }
 }
 
 /** Deterministic catalog callsign for archive-style spines / plates (Aphelion's `APH·07 / 0318`).

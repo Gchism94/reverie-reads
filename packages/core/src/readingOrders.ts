@@ -107,7 +107,10 @@ export interface ExpandedEntry {
  * to that series' books in series order at that slot. Books missing from the library are skipped;
  * duplicates (a book listed explicitly AND inside an expanded series) are deduped, first slot wins.
  */
-export function expandOrder(items: readonly ReadingOrderItem[], library: readonly Book[]): ExpandedEntry[] {
+export function expandOrder(
+  items: readonly ReadingOrderItem[],
+  library: readonly Book[],
+): ExpandedEntry[] {
   const byId = new Map(library.map((b) => [b.id, b]))
   const seriesBooks = new Map(groupSeries(library).map((g) => [g.name, g.books]))
   const out: ExpandedEntry[] = []

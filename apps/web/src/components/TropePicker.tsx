@@ -80,8 +80,13 @@ export function TropePicker({ book, onClose }: { book: Book; onClose: () => void
     setEmphasis(tropeId, next)
   }
 
-  const frequentIds = useMemo(() => frequentTropes((allAssignments ?? []).map((a) => ({ tropeId: a.trope_id }))), [allAssignments])
-  const frequent = frequentIds.map((id) => byId.get(id)).filter((t): t is NonNullable<typeof t> => !!t && !onBook.has(t.id))
+  const frequentIds = useMemo(
+    () => frequentTropes((allAssignments ?? []).map((a) => ({ tropeId: a.trope_id }))),
+    [allAssignments],
+  )
+  const frequent = frequentIds
+    .map((id) => byId.get(id))
+    .filter((t): t is NonNullable<typeof t> => !!t && !onBook.has(t.id))
 
   const matching = useMemo(() => (tropes ?? []).filter((t) => tropeMatches(q, t)), [tropes, q])
   const exactExists = (tropes ?? []).some((t) => t.name.toLowerCase() === q.trim().toLowerCase())
@@ -113,14 +118,23 @@ export function TropePicker({ book, onClose }: { book: Book; onClose: () => void
 
   return (
     <Modal title={`Tag ${labels.tags.toLowerCase()}`} onClose={onClose} wide>
-      <p className="-mt-2 mb-3 text-[12.5px] text-muted">Tap to tag · tap again to pin (up to {PIN_CAP}) · a third tap clears.</p>
+      <p className="-mt-2 mb-3 text-[12.5px] text-muted">
+        Tap to tag · tap again to pin (up to {PIN_CAP}) · a third tap clears.
+      </p>
 
       {book.tropes.length > 0 && (
         <div className="mb-4">
-          <div className="mb-1.5 text-[11px] uppercase tracking-[0.2em] text-muted">On this book</div>
+          <div className="mb-1.5 text-[11px] uppercase tracking-[0.2em] text-muted">
+            On this book
+          </div>
           <div className="flex flex-wrap gap-1.5">
             {book.tropes.map((t) => (
-              <TropeChip key={t.id} name={t.name} emphasis={t.emphasis} onClick={() => cycle(t.id)} />
+              <TropeChip
+                key={t.id}
+                name={t.name}
+                emphasis={t.emphasis}
+                onClick={() => cycle(t.id)}
+              />
             ))}
           </div>
         </div>
@@ -132,10 +146,19 @@ export function TropePicker({ book, onClose }: { book: Book; onClose: () => void
           <div className="flex flex-wrap items-center gap-1.5">
             {openSuggestions.map((s) => (
               <span key={s.tropeId} className="inline-flex items-center gap-0.5">
-                <TropeChip name={s.name} emphasis="off" onClick={() => resolveSuggestion.mutate({ bookId: book.id, tropeId: s.tropeId, accept: true })} title={`Suggested: ${s.name} — tap to add`} />
+                <TropeChip
+                  name={s.name}
+                  emphasis="off"
+                  onClick={() =>
+                    resolveSuggestion.mutate({ bookId: book.id, tropeId: s.tropeId, accept: true })
+                  }
+                  title={`Suggested: ${s.name} — tap to add`}
+                />
                 <button
                   type="button"
-                  onClick={() => resolveSuggestion.mutate({ bookId: book.id, tropeId: s.tropeId, accept: false })}
+                  onClick={() =>
+                    resolveSuggestion.mutate({ bookId: book.id, tropeId: s.tropeId, accept: false })
+                  }
                   aria-label={`Dismiss suggestion ${s.name}`}
                   className="h-6 w-6 rounded-full text-[11px] text-muted hover:text-ink"
                 >
@@ -149,7 +172,9 @@ export function TropePicker({ book, onClose }: { book: Book; onClose: () => void
 
       {frequent.length > 0 && !q && (
         <div className="mb-4">
-          <div className="mb-1.5 text-[11px] uppercase tracking-[0.2em] text-muted">Your frequent</div>
+          <div className="mb-1.5 text-[11px] uppercase tracking-[0.2em] text-muted">
+            Your frequent
+          </div>
           <div className="flex flex-wrap gap-1.5">
             {frequent.map((t) => (
               <TropeChip key={t.id} name={t.name} emphasis="off" onClick={() => cycle(t.id)} />
@@ -174,7 +199,11 @@ export function TropePicker({ book, onClose }: { book: Book; onClose: () => void
           style={{ background: 'var(--field)' }}
         />
       </div>
-      {note && <p className="mb-3 text-[12.5px]" style={{ color: 'var(--accent-ink)' }}>{note}</p>}
+      {note && (
+        <p className="mb-3 text-[12.5px]" style={{ color: 'var(--accent-ink)' }}>
+          {note}
+        </p>
+      )}
       {q.trim() && !exactExists && (
         <button
           type="button"
@@ -194,10 +223,18 @@ export function TropePicker({ book, onClose }: { book: Book; onClose: () => void
         if (!group.length) return null
         return (
           <div key={facet} className="mb-4">
-            <div className="mb-1.5 text-[11px] uppercase tracking-[0.2em] text-muted">{FACET_LABELS[facet]}</div>
+            <div className="mb-1.5 text-[11px] uppercase tracking-[0.2em] text-muted">
+              {FACET_LABELS[facet]}
+            </div>
             <div className="flex flex-wrap gap-1.5">
               {group.slice(0, q ? 40 : 16).map((t) => (
-                <TropeChip key={t.id} name={t.name} emphasis={onBook.get(t.id) ?? 'off'} onClick={() => cycle(t.id)} title={t.personal ? `${t.name} (yours)` : t.name} />
+                <TropeChip
+                  key={t.id}
+                  name={t.name}
+                  emphasis={onBook.get(t.id) ?? 'off'}
+                  onClick={() => cycle(t.id)}
+                  title={t.personal ? `${t.name} (yours)` : t.name}
+                />
               ))}
             </div>
           </div>

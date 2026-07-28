@@ -44,18 +44,30 @@ const STUB_RESULTS = [
 ]
 
 async function ensureUser(): Promise<void> {
-  const admin = createClient(SUPABASE_URL, SERVICE, { auth: { autoRefreshToken: false, persistSession: false } })
+  const admin = createClient(SUPABASE_URL, SERVICE, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  })
   const { data } = await admin.auth.admin.listUsers()
   let uid = data?.users?.find((u) => u.email === TEST_EMAIL)?.id
   if (!uid) {
-    const { data: created, error } = await admin.auth.admin.createUser({ email: TEST_EMAIL, password: TEST_PASSWORD, email_confirm: true })
+    const { data: created, error } = await admin.auth.admin.createUser({
+      email: TEST_EMAIL,
+      password: TEST_PASSWORD,
+      email_confirm: true,
+    })
     if (error) throw error
     uid = created.user!.id
   }
-  await admin.from('profiles').upsert({ id: uid, display_name: 'Discover E2E', skin: 'tryst', mode: 'system' })
+  await admin
+    .from('profiles')
+    .upsert({ id: uid, display_name: 'Discover E2E', skin: 'tryst', mode: 'system' })
 }
 
-type Client = { sb: SupabaseClient; session: { access_token: string; refresh_token: string }; uid: string }
+type Client = {
+  sb: SupabaseClient
+  session: { access_token: string; refresh_token: string }
+  uid: string
+}
 
 // One password sign-in for the whole file (the per-IP sign_in_sign_ups budget is shared with the
 // heavy a11y sweep). The page-side hash sign-in doesn't count against it.
@@ -64,7 +76,10 @@ async function client(): Promise<Client> {
   if (shared) return shared
   await ensureUser()
   const sb = createClient(SUPABASE_URL, ANON)
-  const { data, error } = await sb.auth.signInWithPassword({ email: TEST_EMAIL, password: TEST_PASSWORD })
+  const { data, error } = await sb.auth.signInWithPassword({
+    email: TEST_EMAIL,
+    password: TEST_PASSWORD,
+  })
   if (error || !data.session) throw new Error(authFailure('discover-search', TEST_EMAIL, error))
   shared = { sb, session: data.session, uid: data.session.user.id }
   return shared
@@ -82,7 +97,9 @@ async function reset(c: Client) {
 
 async function signIn(page: Page, session: { access_token: string; refresh_token: string }) {
   await page.addInitScript(() => localStorage.setItem('reverie.onboarded', '1'))
-  await page.goto(`/#access_token=${session.access_token}&refresh_token=${session.refresh_token}&expires_in=3600&token_type=bearer&type=magiclink`)
+  await page.goto(
+    `/#access_token=${session.access_token}&refresh_token=${session.refresh_token}&expires_in=3600&token_type=bearer&type=magiclink`,
+  )
   await page.getByRole('button', { name: /enter your library/i }).click({ timeout: 20_000 })
   await expect(page.getByRole('navigation')).toBeVisible({ timeout: 20_000 })
   await page.evaluate(() => indexedDB.deleteDatabase('reverie-offline'))
@@ -90,25 +107,50 @@ async function signIn(page: Page, session: { access_token: string; refresh_token
 
 async function stubBackends(page: Page) {
   // Deterministic search + enrichment. enrich returns a minimal record (the add path pulls it).
-  await page.route('**/functions/v1/search**', (r) => r.fulfill({ json: { results: STUB_RESULTS } }))
+  await page.route('**/functions/v1/search**', (r) =>
+    r.fulfill({ json: { results: STUB_RESULTS } }),
+  )
   await page.route('**/functions/v1/enrich**', (r) => r.fulfill({ json: { rateLimited: false } }))
-  await page.route('**/functions/v1/covers**', (r) => r.fulfill({ status: 422, json: { error: 'fetch_failed' } }))
-  await page.route('**/functions/v1/embed**', (r) => r.fulfill({ json: { hasTaste: false, scores: [] } }))
+  await page.route('**/functions/v1/covers**', (r) =>
+    r.fulfill({ status: 422, json: { error: 'fetch_failed' } }),
+  )
+  await page.route('**/functions/v1/embed**', (r) =>
+    r.fulfill({ json: { hasTaste: false, scores: [] } }),
+  )
   await page.route('**/functions/v1/releases**', (r) => r.fulfill({ json: { hits: [] } }))
   await page.route('**/books/v1/volumes**', (r) => r.fulfill({ json: { items: [] } }))
 }
 
 const bookByTitle = async (sb: SupabaseClient, uid: string, title: string) =>
-  (await sb.from('books').select('id, ownership, series, cover_url').eq('owner_id', uid).eq('title', title).maybeSingle()).data as
-    | { id: string; ownership: string; series: string | null; cover_url: string | null }
-    | null
+  (
+    await sb
+      .from('books')
+      .select('id, ownership, series, cover_url')
+      .eq('owner_id', uid)
+      .eq('title', title)
+      .maybeSingle()
+  ).data as {
+    id: string
+    ownership: string
+    series: string | null
+    cover_url: string | null
+  } | null
 
-test('Discover search: results dedupe against library, add owned + add-to-shelf, taste rail toggles, axe', async ({ page }) => {
+test('Discover search: results dedupe against library, add owned + add-to-shelf, taste rail toggles, axe', async ({
+  page,
+}) => {
   test.setTimeout(180_000)
   const c = await client()
   await reset(c)
   // Seed one owned book that matches a stub result → it should show "On your shelf", not add buttons.
-  await c.sb.from('books').insert({ owner_id: c.uid, title: 'Seeded Owned Book', author_first: 'Ada', author_last: 'Known', isbn: '9781111111119', ownership: 'owned' })
+  await c.sb.from('books').insert({
+    owner_id: c.uid,
+    title: 'Seeded Owned Book',
+    author_first: 'Ada',
+    author_last: 'Known',
+    isbn: '9781111111119',
+    ownership: 'owned',
+  })
   await c.sb.from('lists').insert({ owner_id: c.uid, name: 'Weekend TBR', kind: 'tbr' })
   await stubBackends(page)
   try {
@@ -134,11 +176,17 @@ test('Discover search: results dedupe against library, add owned + add-to-shelf,
 
     // Add the new result to the library (owned).
     await page.getByRole('button', { name: '＋ Add', exact: true }).first().click()
-    await expect.poll(async () => (await bookByTitle(c.sb, c.uid, 'Wildfire Vow'))?.ownership, { timeout: 15_000 }).toBe('owned')
+    await expect
+      .poll(async () => (await bookByTitle(c.sb, c.uid, 'Wildfire Vow'))?.ownership, {
+        timeout: 15_000,
+      })
+      .toBe('owned')
     const added = await bookByTitle(c.sb, c.uid, 'Wildfire Vow')
     expect(added?.series).toBe('Emberwild') // full metadata (series) landed, not a thin stub
     // once added, the card flips to "On your shelf" (deduped against the now-larger library)
-    await expect(page.getByRole('link', { name: /On your shelf/i })).toHaveCount(2, { timeout: 15_000 })
+    await expect(page.getByRole('link', { name: /On your shelf/i })).toHaveCount(2, {
+      timeout: 15_000,
+    })
 
     // Clear the search → the taste rail returns intact.
     await page.getByLabel('Clear search').click()
@@ -148,11 +196,17 @@ test('Discover search: results dedupe against library, add owned + add-to-shelf,
   }
 })
 
-test('Discover search: add a result to a shelf as unowned via the shelf chooser', async ({ page }) => {
+test('Discover search: add a result to a shelf as unowned via the shelf chooser', async ({
+  page,
+}) => {
   test.setTimeout(180_000)
   const c = await client()
   await reset(c)
-  const { data: list } = await c.sb.from('lists').insert({ owner_id: c.uid, name: 'Weekend TBR', kind: 'tbr' }).select('id').single()
+  const { data: list } = await c.sb
+    .from('lists')
+    .insert({ owner_id: c.uid, name: 'Weekend TBR', kind: 'tbr' })
+    .select('id')
+    .single()
   const listId = (list as { id: string }).id
   await stubBackends(page)
   try {
@@ -162,7 +216,10 @@ test('Discover search: add a result to a shelf as unowned via the shelf chooser'
     await expect(page.getByText('Wildfire Vow')).toBeVisible({ timeout: 15_000 })
 
     await page.getByRole('button', { name: '＋ Shelf', exact: true }).first().click()
-    await page.getByRole('dialog', { name: 'Add to a shelf' }).getByRole('button', { name: /Weekend TBR/ }).click()
+    await page
+      .getByRole('dialog', { name: 'Add to a shelf' })
+      .getByRole('button', { name: /Weekend TBR/ })
+      .click()
 
     // The book lands UNOWNED and is placed on the shelf. Poll the MEMBERSHIP — it's written right
     // after the book in the same mutation, so waiting on the book row alone would race the placement.
@@ -171,7 +228,11 @@ test('Discover search: add a result to a shelf as unowned via the shelf chooser'
         async () => {
           const b = await bookByTitle(c.sb, c.uid, 'Wildfire Vow')
           if (!b) return 0
-          const { count } = await c.sb.from('list_items').select('book_id', { count: 'exact', head: true }).eq('list_id', listId).eq('book_id', b.id)
+          const { count } = await c.sb
+            .from('list_items')
+            .select('book_id', { count: 'exact', head: true })
+            .eq('list_id', listId)
+            .eq('book_id', b.id)
           return count ?? 0
         },
         { timeout: 15_000 },
@@ -183,11 +244,17 @@ test('Discover search: add a result to a shelf as unowned via the shelf chooser'
   }
 })
 
-test('Shelf picker seam: "search everywhere" finds and adds an unowned book to this shelf', async ({ page }) => {
+test('Shelf picker seam: "search everywhere" finds and adds an unowned book to this shelf', async ({
+  page,
+}) => {
   test.setTimeout(180_000)
   const c = await client()
   await reset(c)
-  const { data: list } = await c.sb.from('lists').insert({ owner_id: c.uid, name: 'Someday Shelf', kind: 'tbr' }).select('id').single()
+  const { data: list } = await c.sb
+    .from('lists')
+    .insert({ owner_id: c.uid, name: 'Someday Shelf', kind: 'tbr' })
+    .select('id')
+    .single()
   const listId = (list as { id: string }).id
   await stubBackends(page)
   try {
@@ -209,7 +276,11 @@ test('Shelf picker seam: "search everywhere" finds and adds an unowned book to t
         async () => {
           const b = await bookByTitle(c.sb, c.uid, 'Wildfire Vow')
           if (!b) return 0
-          const { count } = await c.sb.from('list_items').select('book_id', { count: 'exact', head: true }).eq('list_id', listId).eq('book_id', b.id)
+          const { count } = await c.sb
+            .from('list_items')
+            .select('book_id', { count: 'exact', head: true })
+            .eq('list_id', listId)
+            .eq('book_id', b.id)
           return count ?? 0
         },
         { timeout: 15_000 },

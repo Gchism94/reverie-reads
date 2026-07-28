@@ -31,13 +31,17 @@ export class ErrorBoundary extends Component<Props, State> {
           Something went sideways
         </h1>
         <p className="mt-3 max-w-[40ch] text-[14px] text-muted">
-          An unexpected error interrupted the page. Reloading usually clears it — your library is safe.
+          An unexpected error interrupted the page. Reloading usually clears it — your library is
+          safe.
         </p>
         <button
           type="button"
           onClick={() => location.reload()}
           className="mt-6 h-11 rounded-full px-6 text-[14px] font-semibold"
-          style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))', color: 'var(--on-primary)' }}
+          style={{
+            background: 'linear-gradient(135deg, var(--primary), var(--gold))',
+            color: 'var(--on-primary)',
+          }}
         >
           Reload
         </button>

@@ -17,8 +17,24 @@ describe('scoreMatch (Tier 0 vibe matcher)', () => {
   })
 
   it('ranks an on-profile unread book above an off-profile read one, within 0..100', () => {
-    const onProfile = makeBook({ id: 'a', title: 'Match', subgenre: 'Romantasy', tags: ['Enemies to Lovers', 'Fae'], intensity: 4, rating: 5, readStatus: 'Unread' })
-    const offProfile = makeBook({ id: 'b', title: 'Miss', subgenre: 'Contemporary', tags: [], intensity: 1, rating: 0, readStatus: 'Read' })
+    const onProfile = makeBook({
+      id: 'a',
+      title: 'Match',
+      subgenre: 'Romantasy',
+      tags: ['Enemies to Lovers', 'Fae'],
+      intensity: 4,
+      rating: 5,
+      readStatus: 'Unread',
+    })
+    const offProfile = makeBook({
+      id: 'b',
+      title: 'Miss',
+      subgenre: 'Contemporary',
+      tags: [],
+      intensity: 1,
+      rating: 0,
+      readStatus: 'Read',
+    })
     const hi = scoreMatch(onProfile, profile)
     const lo = scoreMatch(offProfile, profile)
     expect(hi.score).toBeGreaterThan(lo.score)
@@ -50,7 +66,11 @@ describe('scoreMatch (Tier 0 vibe matcher)', () => {
       makeBook({ id: '4', title: 'L4', tags: ['Slow Burn', 'Locked Room'] }),
     ]
     const ctx = buildMatchContext(library)
-    const p: MatchProfile = { subWeights: {}, wantTags: ['Slow Burn', 'Locked Room'], targetIntensity: null }
+    const p: MatchProfile = {
+      subWeights: {},
+      wantTags: ['Slow Burn', 'Locked Room'],
+      targetIntensity: null,
+    }
     const rare = scoreMatch(makeBook({ id: 'r', title: 'R', tags: ['Locked Room'] }), p, ctx)
     const common = scoreMatch(makeBook({ id: 'c', title: 'C', tags: ['Slow Burn'] }), p, ctx)
     expect(rare.score).toBeGreaterThan(common.score)
@@ -58,21 +78,45 @@ describe('scoreMatch (Tier 0 vibe matcher)', () => {
   })
 
   it('tag matching is case-insensitive', () => {
-    const p: MatchProfile = { subWeights: {}, wantTags: ['enemies to lovers'], targetIntensity: null }
+    const p: MatchProfile = {
+      subWeights: {},
+      wantTags: ['enemies to lovers'],
+      targetIntensity: null,
+    }
     const b = makeBook({ id: 'a', title: 'A', tags: ['Enemies to Lovers'] })
     expect(scoreMatch(b, p).reasons.find((x) => x.key === 'tags')?.value).toBe(1)
   })
 
   it('series momentum: the next book of a LOVED series beats the same book unloved or unstarted', () => {
     const loved = buildMatchContext([
-      makeBook({ id: '1', title: 'Book 1', series: 'S', position: 1, readStatus: 'Read', rating: 5 }),
+      makeBook({
+        id: '1',
+        title: 'Book 1',
+        series: 'S',
+        position: 1,
+        readStatus: 'Read',
+        rating: 5,
+      }),
     ])
     const meh = buildMatchContext([
-      makeBook({ id: '1', title: 'Book 1', series: 'S', position: 1, readStatus: 'Read', rating: 3 }),
+      makeBook({
+        id: '1',
+        title: 'Book 1',
+        series: 'S',
+        position: 1,
+        readStatus: 'Read',
+        rating: 3,
+      }),
     ])
     const none = buildMatchContext([])
     const p: MatchProfile = { subWeights: {}, wantTags: [], targetIntensity: null }
-    const book2 = makeBook({ id: '2', title: 'Book 2', series: 'S', position: 2, readStatus: 'Unread' })
+    const book2 = makeBook({
+      id: '2',
+      title: 'Book 2',
+      series: 'S',
+      position: 2,
+      readStatus: 'Unread',
+    })
     const sLoved = scoreMatch(book2, p, loved)
     const sMeh = scoreMatch(book2, p, meh)
     const sNone = scoreMatch(book2, p, none)
@@ -80,7 +124,11 @@ describe('scoreMatch (Tier 0 vibe matcher)', () => {
     expect(sMeh.score).toBeGreaterThan(sNone.score)
     expect(sLoved.reasons.find((x) => x.key === 'series')?.series?.lovedEarlier).toBe(true)
     // and an UNSTARTED series' book 2 is suppressed below a standalone
-    const standalone = scoreMatch(makeBook({ id: 's', title: 'Solo', readStatus: 'Unread' }), p, none)
+    const standalone = scoreMatch(
+      makeBook({ id: 's', title: 'Solo', readStatus: 'Unread' }),
+      p,
+      none,
+    )
     expect(sNone.score).toBeLessThan(standalone.score)
   })
 
@@ -99,12 +147,15 @@ describe('scoreMatch (Tier 0 vibe matcher)', () => {
       { date: '2025-01-01', format: 'ebook', rating: 0, notes: '' },
       { date: '2025-06-01', format: 'ebook', rating: 0, notes: '' },
     ]
-    const rereader = scoreMatch(makeBook({ id: 'a', title: 'A', readStatus: 'Read', rating: 4, reads }), p)
+    const rereader = scoreMatch(
+      makeBook({ id: 'a', title: 'A', readStatus: 'Read', rating: 4, reads }),
+      p,
+    )
     const onceRead = scoreMatch(makeBook({ id: 'b', title: 'B', readStatus: 'Read', rating: 4 }), p)
     expect(rereader.score).toBeGreaterThan(onceRead.score)
   })
 
-  it('LEARNED taste lifts a book wearing the reader\'s loved tags — with no quiz at all', () => {
+  it("LEARNED taste lifts a book wearing the reader's loved tags — with no quiz at all", () => {
     const now = Date.parse('2026-01-01')
     const library = [
       makeBook({ id: '1', title: 'Loved 1', tags: ['Locked Room'], readStatus: 'Read', rating: 5 }),

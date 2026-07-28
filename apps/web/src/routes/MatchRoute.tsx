@@ -1,6 +1,13 @@
 import { useMemo, useState } from 'react'
 import { createRoute, useNavigate } from '@tanstack/react-router'
-import { buildMatchContext, CORE_GENRES, scoreMatch, type Book, type MatchProfile, type MatchReason } from '@reverie/core'
+import {
+  buildMatchContext,
+  CORE_GENRES,
+  scoreMatch,
+  type Book,
+  type MatchProfile,
+  type MatchReason,
+} from '@reverie/core'
 import { rootRoute } from './RootRoute'
 import { CoverImage } from '../components/CoverImage'
 import { useBooks } from '../data/books'
@@ -8,7 +15,15 @@ import { useCreateList, useLists } from '../data/lists'
 import { useAddBooksToList } from '../data/listItems'
 import { useDismissed, useDismissBook, useLegacyDismissalSync } from '../data/matchFeedback'
 import { useEnsureEmbeddings, useVibeSearch, type SimilarHit } from '../data/similar'
-import { applyAnswer, buildQuizProfile, emptyAnswers, HEAT, INTENSITY, QUIZ, type QuizAnswers } from '../library/quiz'
+import {
+  applyAnswer,
+  buildQuizProfile,
+  emptyAnswers,
+  HEAT,
+  INTENSITY,
+  QUIZ,
+  type QuizAnswers,
+} from '../library/quiz'
 
 interface Pick {
   b: Book
@@ -26,7 +41,8 @@ function whyLine(reasons: MatchReason[]): string {
   const tags = reasons.find((r) => r.key === 'tags')
   if (tags?.matchedTags?.length) return `Matches ${tags.matchedTags.slice(0, 2).join(' · ')}`
   const taste = reasons.find((r) => r.key === 'tasteTags')
-  if (taste?.lovedTags?.length) return `Close to your loves: ${taste.lovedTags.slice(0, 2).join(' · ')}`
+  if (taste?.lovedTags?.length)
+    return `Close to your loves: ${taste.lovedTags.slice(0, 2).join(' · ')}`
   const sub = reasons.find((r) => r.key === 'subgenre')
   if (sub && sub.value >= 0.9) return 'Squarely your world'
   const heat = reasons.find((r) => r.key === 'intensity')
@@ -45,10 +61,17 @@ const modeOf = (m: Map<string, number>): string | undefined =>
  *  and pills describe what was actually surfaced — the dominant subgenre/genre, its real tropes, and
  *  a representative intensity — so a horror result reads like horror and a literary one like literary.
  *  Intensity shows as spice (🌶️) only when the match is romance-leaning; otherwise a neutral word. */
-function describeMatches(picks: Pick[], a: QuizAnswers): { headline: string; sub: string; tags: string[] } {
+function describeMatches(
+  picks: Pick[],
+  a: QuizAnswers,
+): { headline: string; sub: string; tags: string[] } {
   const top = picks.slice(0, 8).map((p) => p.b)
   if (!top.length) {
-    return { headline: 'Nothing quite fits tonight', sub: 'Try a different mood or retake the quiz', tags: [] }
+    return {
+      headline: 'Nothing quite fits tonight',
+      sub: 'Try a different mood or retake the quiz',
+      tags: [],
+    }
   }
   const subCount = new Map<string, number>()
   const genreCount = new Map<string, number>()
@@ -65,7 +88,10 @@ function describeMatches(picks: Pick[], a: QuizAnswers): { headline: string; sub
   const domGenreLabel = domGenreKey ? genreLabel(domGenreKey) : undefined
   const headline = `${a.pace === 'slow' ? 'Slow-burn ' : ''}${domSub ?? domGenreLabel ?? 'Your shelves'}`
 
-  const topTropes = [...tropeCount.entries()].sort((x, y) => y[1] - x[1]).slice(0, 3).map(([t]) => t)
+  const topTropes = [...tropeCount.entries()]
+    .sort((x, y) => y[1] - x[1])
+    .slice(0, 3)
+    .map(([t]) => t)
   const tags: string[] = []
   const sorted = [...intensities].sort((x, y) => x - y)
   const median = sorted[Math.floor(sorted.length / 2)]
@@ -75,7 +101,8 @@ function describeMatches(picks: Pick[], a: QuizAnswers): { headline: string; sub
     if (iv > 0 && word) tags.push(domGenreKey === 'romance' ? `${'🌶️'.repeat(iv)} ${word}` : word)
   }
   // add the parent genre only when the headline led with a subgenre (avoid echoing it)
-  if (domGenreLabel && domGenreLabel.toLowerCase() !== headline.toLowerCase()) tags.push(domGenreLabel)
+  if (domGenreLabel && domGenreLabel.toLowerCase() !== headline.toLowerCase())
+    tags.push(domGenreLabel)
   tags.push(...topTropes)
   return { headline, sub: 'Picked for your mood tonight', tags: [...new Set(tags)] }
 }
@@ -149,7 +176,10 @@ function MatchScreen() {
 
   const openBook = (id: string) => void navigate({ to: '/book/$bookId', params: { bookId: id } })
   const result = useMemo(
-    () => (step >= QUIZ.length ? score(books ?? [], answers, { tasteOnly, dismissedAt: dismissed }) : null),
+    () =>
+      step >= QUIZ.length
+        ? score(books ?? [], answers, { tasteOnly, dismissedAt: dismissed })
+        : null,
     [step, books, answers, tasteOnly, dismissed],
   )
   // Tier 2 vibe path: the reader's words, embedded server-side and ranked over their shelves,
@@ -190,10 +220,18 @@ function MatchScreen() {
 
   async function addTop3() {
     if (!banner) return
-    const top3 = visiblePicks.filter((p) => !p.isRead).slice(0, 3).map((p) => p.b.id)
+    const top3 = visiblePicks
+      .filter((p) => !p.isRead)
+      .slice(0, 3)
+      .map((p) => p.b.id)
     if (!top3.length) return
     let priority = (lists ?? []).find((l) => l.kind === 'tbr' && l.priority)
-    if (!priority) priority = await createList.mutateAsync({ name: 'Priority TBR', kind: 'tbr', isPriority: true })
+    if (!priority)
+      priority = await createList.mutateAsync({
+        name: 'Priority TBR',
+        kind: 'tbr',
+        isPriority: true,
+      })
     await addToList.mutateAsync({ listId: priority.id, bookIds: top3 })
     setAdded(`Added ${top3.length} to ${priority.name}`)
   }
@@ -204,14 +242,26 @@ function MatchScreen() {
     if (!q) return null
     return (
       <section className="mx-auto max-w-xl px-4 py-10 sm:px-6">
-        <div className="rounded-3xl border border-line p-6" style={{ background: 'var(--card)', boxShadow: 'var(--shadow)' }}>
-          <div className="mb-3 h-1.5 overflow-hidden rounded-full" style={{ background: 'var(--chip)' }}>
-            <div className="h-full rounded-full" style={{ width: `${(step / QUIZ.length) * 100}%`, background: 'var(--primary)' }} />
+        <div
+          className="rounded-3xl border border-line p-6"
+          style={{ background: 'var(--card)', boxShadow: 'var(--shadow)' }}
+        >
+          <div
+            className="mb-3 h-1.5 overflow-hidden rounded-full"
+            style={{ background: 'var(--chip)' }}
+          >
+            <div
+              className="h-full rounded-full"
+              style={{ width: `${(step / QUIZ.length) * 100}%`, background: 'var(--primary)' }}
+            />
           </div>
           <div className="text-[12px] uppercase tracking-[0.2em] text-muted">
             Question {step + 1} of {QUIZ.length}
           </div>
-          <h1 className="mt-2 text-[26px] italic leading-tight text-ink" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+          <h1
+            className="mt-2 text-[26px] italic leading-tight text-ink"
+            style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+          >
             {q.q}
           </h1>
           <div className="mt-5 flex flex-col gap-2.5">
@@ -275,10 +325,14 @@ function MatchScreen() {
                 </button>
               </form>
               {vibeSearch.isError && (
-                <p className="mt-2 text-[12px] text-muted">The vibe engine isn’t reachable right now — the quiz still works.</p>
+                <p className="mt-2 text-[12px] text-muted">
+                  The vibe engine isn’t reachable right now — the quiz still works.
+                </p>
               )}
               {vibeSearch.isSuccess && !vibeSearch.data?.length && (
-                <p className="mt-2 text-[12px] text-muted">Still embedding your shelves — give it a minute and try again.</p>
+                <p className="mt-2 text-[12px] text-muted">
+                  Still embedding your shelves — give it a minute and try again.
+                </p>
               )}
             </>
           )}
@@ -292,16 +346,27 @@ function MatchScreen() {
     <section className="px-4 py-8 sm:px-6">
       <div
         className="mx-auto max-w-xl rounded-3xl p-6 text-center"
-        style={{ background: 'linear-gradient(150deg, var(--violet), var(--primary))', color: 'var(--on-primary)' }}
+        style={{
+          background: 'linear-gradient(150deg, var(--violet), var(--primary))',
+          color: 'var(--on-primary)',
+        }}
       >
-        <div className="text-[12px] uppercase tracking-[0.16em] opacity-85">What you’re in the mood for</div>
-        <h1 className="mt-1 text-[30px] italic capitalize leading-tight" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+        <div className="text-[12px] uppercase tracking-[0.16em] opacity-85">
+          What you’re in the mood for
+        </div>
+        <h1
+          className="mt-1 text-[30px] italic capitalize leading-tight"
+          style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+        >
           {banner.headline}
         </h1>
         <div className="mt-1 opacity-90">{banner.sub}</div>
         <div className="mt-3 flex flex-wrap justify-center gap-1.5">
           {banner.tags.map((t) => (
-            <span key={t} className="rounded-full bg-white/20 px-2.5 py-1 text-[12px] font-semibold">
+            <span
+              key={t}
+              className="rounded-full bg-white/20 px-2.5 py-1 text-[12px] font-semibold"
+            >
               {t}
             </span>
           ))}
@@ -313,18 +378,28 @@ function MatchScreen() {
           type="button"
           onClick={addTop3}
           className="rounded-full px-4 py-2 text-[13px] font-semibold"
-          style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))', color: 'var(--on-primary)' }}
+          style={{
+            background: 'linear-gradient(135deg, var(--primary), var(--gold))',
+            color: 'var(--on-primary)',
+          }}
         >
           ＋ Add top 3 to Priority TBR
         </button>
-        <button type="button" onClick={reset} className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink">
+        <button
+          type="button"
+          onClick={reset}
+          className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink"
+        >
           ↻ Retake
         </button>
       </div>
       {added && <p className="mt-2 text-center text-[13px] text-primary">{added}</p>}
 
       <div className="mt-8 text-center">
-        <h2 className="text-[18px] italic text-ink" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+        <h2
+          className="text-[18px] italic text-ink"
+          style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+        >
           Matched from your shelves
         </h2>
         <p className="text-[12.5px] text-muted">Unread picks first — your next read awaits</p>
@@ -332,8 +407,16 @@ function MatchScreen() {
       <div className="mx-auto mt-4 grid max-w-4xl grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
         {visiblePicks.map(({ b, s, isRead, why }) => (
           <div key={b.id} className="group relative">
-            <button type="button" onClick={() => openBook(b.id)} className="w-full text-left" aria-label={`Open ${b.title}`}>
-              <div className="aspect-[2/3] overflow-hidden rounded-lg border border-line" style={{ background: 'var(--field)' }}>
+            <button
+              type="button"
+              onClick={() => openBook(b.id)}
+              className="w-full text-left"
+              aria-label={`Open ${b.title}`}
+            >
+              <div
+                className="aspect-[2/3] overflow-hidden rounded-lg border border-line"
+                style={{ background: 'var(--field)' }}
+              >
                 <CoverImage book={b} />
               </div>
               <div className="mt-1 truncate text-[12px] font-semibold text-ink">{b.title}</div>

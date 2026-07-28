@@ -82,9 +82,13 @@ function SeriesScreen() {
   const entries = useMemo(() => sortEntries(detail?.entries ?? []), [detail])
   const progress = useMemo(() => seriesProgress(entries, byId), [entries, byId])
   const next = useMemo(() => nextUp(entries, byId), [entries, byId])
-  const memberIds = useMemo(() => new Set(entries.map((e) => e.bookId).filter((x): x is string => !!x)), [entries])
+  const memberIds = useMemo(
+    () => new Set(entries.map((e) => e.bookId).filter((x): x is string => !!x)),
+    [entries],
+  )
   // the genre a ghost-born record inherits — its siblings know the shelf
-  const siblingGenre = entries.map((e) => (e.bookId ? byId.get(e.bookId)?.genre : '')).find(Boolean) ?? ''
+  const siblingGenre =
+    entries.map((e) => (e.bookId ? byId.get(e.bookId)?.genre : '')).find(Boolean) ?? ''
 
   if (isLoading || !detail)
     return (
@@ -110,7 +114,12 @@ function SeriesScreen() {
         position,
         bookId: moved.bookId,
         // bookId rides along so a linked entry's move mirrors onto books.position (the book page agrees)
-        updates: order.map((e, i) => ({ id: e.id, position: i + 1, userEdited: e.id === moved.id ? true : e.userEdited, bookId: e.bookId })),
+        updates: order.map((e, i) => ({
+          id: e.id,
+          position: i + 1,
+          userEdited: e.id === moved.id ? true : e.userEdited,
+          bookId: e.bookId,
+        })),
       })
     } else {
       moveEntry.mutate({ entryId: moved.id, position, bookId: moved.bookId })
@@ -118,7 +127,10 @@ function SeriesScreen() {
   }
 
   const editLabel = (e: SeriesEntry) => {
-    const label = window.prompt('Tag this position — “novella”, “prequel”… (empty clears it)', e.label ?? '')
+    const label = window.prompt(
+      'Tag this position — “novella”, “prequel”… (empty clears it)',
+      e.label ?? '',
+    )
     if (label == null) return
     updateEntry.mutate({ entryId: e.id, label: label.trim() || null })
   }
@@ -128,7 +140,14 @@ function SeriesScreen() {
     if (!newName || newName === detail.series.name) return
     updateSeries.mutate(
       { id: detail.series.id, name: newName },
-      { onSuccess: () => void navigate({ to: '/series/$seriesName', params: { seriesName: encodeURIComponent(newName) }, replace: true }) },
+      {
+        onSuccess: () =>
+          void navigate({
+            to: '/series/$seriesName',
+            params: { seriesName: encodeURIComponent(newName) },
+            replace: true,
+          }),
+      },
     )
   }
 
@@ -142,10 +161,23 @@ function SeriesScreen() {
 
   const fetchSource = () =>
     applySource.mutate(
-      { detail, author: entries.map((e) => (e.bookId ? byId.get(e.bookId) : null)).map((b) => (b ? [b.first, b.last].filter(Boolean).join(' ') : '')).find(Boolean) ?? '' },
+      {
+        detail,
+        author:
+          entries
+            .map((e) => (e.bookId ? byId.get(e.bookId) : null))
+            .map((b) => (b ? [b.first, b.last].filter(Boolean).join(' ') : ''))
+            .find(Boolean) ?? '',
+      },
       {
         onSuccess: (r) =>
-          setSourceNote(r.added ? `${r.added} canonical ${r.added === 1 ? 'entry' : 'entries'} added from Hardcover.` : r.unavailable ? 'No source data for this series — yours to arrange.' : 'Already up to date.'),
+          setSourceNote(
+            r.added
+              ? `${r.added} canonical ${r.added === 1 ? 'entry' : 'entries'} added from Hardcover.`
+              : r.unavailable
+                ? 'No source data for this series — yours to arrange.'
+                : 'Already up to date.',
+          ),
         onError: () => setSourceNote('Couldn’t reach the catalog just now.'),
       },
     )
@@ -158,16 +190,29 @@ function SeriesScreen() {
 
       <header className="mt-3">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <h1 className="min-w-0 text-[26px] italic leading-tight text-ink" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+          <h1
+            className="min-w-0 text-[26px] italic leading-tight text-ink"
+            style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+          >
             {detail.series.name}
-            <button type="button" onClick={rename} aria-label="Rename series" className="ml-2 align-middle text-[13px] not-italic text-muted hover:text-ink">
+            <button
+              type="button"
+              onClick={rename}
+              aria-label="Rename series"
+              className="ml-2 align-middle text-[13px] not-italic text-muted hover:text-ink"
+            >
               ✎
             </button>
           </h1>
           {/* the SERIES' publication status — the reader's own position lives in the shelf below */}
           <select
             value={detail.series.status ?? ''}
-            onChange={(e) => updateSeries.mutate({ id: detail.series.id, status: (e.target.value || null) as SeriesStatus | null })}
+            onChange={(e) =>
+              updateSeries.mutate({
+                id: detail.series.id,
+                status: (e.target.value || null) as SeriesStatus | null,
+              })
+            }
             aria-label="Series status"
             className="skin-control h-9 border border-line px-2.5 text-[12.5px] font-semibold text-ink"
             style={{ background: 'var(--card)' }}
@@ -184,23 +229,48 @@ function SeriesScreen() {
         {/* progress lockup: "Read 3 of 7 · 2 to get" + a subtle rule */}
         <p className="mt-2 text-[14px] text-ink">
           {progressLine(progress)}
-          {detail.series.status && <span className="text-muted"> · {SERIES_STATUS_LABELS[detail.series.status]}</span>}
+          {detail.series.status && (
+            <span className="text-muted"> · {SERIES_STATUS_LABELS[detail.series.status]}</span>
+          )}
         </p>
-        <div aria-hidden className="mt-2 h-[3px] w-full overflow-hidden rounded-full" style={{ background: 'var(--chip)' }}>
+        <div
+          aria-hidden
+          className="mt-2 h-[3px] w-full overflow-hidden rounded-full"
+          style={{ background: 'var(--chip)' }}
+        >
           <div
             className="h-full rounded-full"
-            style={{ width: `${progress.total ? Math.round((progress.read / progress.total) * 100) : 0}%`, background: 'linear-gradient(90deg, var(--primary), var(--gold))' }}
+            style={{
+              width: `${progress.total ? Math.round((progress.read / progress.total) * 100) : 0}%`,
+              background: 'linear-gradient(90deg, var(--primary), var(--gold))',
+            }}
           />
         </div>
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          <button type="button" onClick={() => setPickerOpen(true)} className="rounded-full border border-line px-3.5 py-1.5 text-[12.5px] font-semibold text-ink" style={{ background: 'var(--card)' }}>
+          <button
+            type="button"
+            onClick={() => setPickerOpen(true)}
+            className="rounded-full border border-line px-3.5 py-1.5 text-[12.5px] font-semibold text-ink"
+            style={{ background: 'var(--card)' }}
+          >
             ＋ Add books
           </button>
-          <button type="button" onClick={addGhostSlot} className="rounded-full border border-dashed border-line px-3.5 py-1.5 text-[12.5px] font-semibold text-muted" style={{ background: 'var(--chip)' }}>
+          <button
+            type="button"
+            onClick={addGhostSlot}
+            className="rounded-full border border-dashed border-line px-3.5 py-1.5 text-[12.5px] font-semibold text-muted"
+            style={{ background: 'var(--chip)' }}
+          >
             ＋ One you don’t have yet
           </button>
-          <button type="button" onClick={fetchSource} disabled={applySource.isPending} className="rounded-full border border-line px-3.5 py-1.5 text-[12.5px] font-semibold text-muted disabled:opacity-50" style={{ background: 'var(--card)' }}>
+          <button
+            type="button"
+            onClick={fetchSource}
+            disabled={applySource.isPending}
+            className="rounded-full border border-line px-3.5 py-1.5 text-[12.5px] font-semibold text-muted disabled:opacity-50"
+            style={{ background: 'var(--card)' }}
+          >
             {applySource.isPending ? 'Checking the catalog…' : '⟳ Fetch series data'}
           </button>
         </div>
@@ -238,13 +308,26 @@ function SeriesScreen() {
               className="relative rounded-2xl border p-3"
               style={
                 isNext
-                  ? { borderColor: 'var(--accent-ink)', background: 'var(--card)', boxShadow: '0 6px 24px color-mix(in srgb, var(--accent) 18%, transparent)' }
-                  : { borderColor: 'var(--line)', background: state === 'ghost' ? 'transparent' : 'var(--card)', ...(state === 'ghost' ? { borderStyle: 'dashed' } : {}) }
+                  ? {
+                      borderColor: 'var(--accent-ink)',
+                      background: 'var(--card)',
+                      boxShadow: '0 6px 24px color-mix(in srgb, var(--accent) 18%, transparent)',
+                    }
+                  : {
+                      borderColor: 'var(--line)',
+                      background: state === 'ghost' ? 'transparent' : 'var(--card)',
+                      ...(state === 'ghost' ? { borderStyle: 'dashed' } : {}),
+                    }
               }
             >
               {isNext && (
-                <p className="mb-1.5 text-[10.5px] font-bold uppercase tracking-[0.24em]" style={{ color: 'var(--accent-ink)' }}>
-                  {state === 'ghost' || state === 'wishlist' ? 'Next up — you need this one' : 'Next up'}
+                <p
+                  className="mb-1.5 text-[10.5px] font-bold uppercase tracking-[0.24em]"
+                  style={{ color: 'var(--accent-ink)' }}
+                >
+                  {state === 'ghost' || state === 'wishlist'
+                    ? 'Next up — you need this one'
+                    : 'Next up'}
                 </p>
               )}
               <div className="flex items-center gap-3">
@@ -257,14 +340,21 @@ function SeriesScreen() {
                 >
                   <span className="text-[15px] font-bold text-ink">{fmtPos(e.position)}</span>
                   {e.label && (
-                    <span className="mt-0.5 rounded-full px-1.5 py-px text-[9.5px] font-semibold uppercase tracking-wide" style={{ background: 'var(--chip)', color: 'var(--muted)' }}>
+                    <span
+                      className="mt-0.5 rounded-full px-1.5 py-px text-[9.5px] font-semibold uppercase tracking-wide"
+                      style={{ background: 'var(--chip)', color: 'var(--muted)' }}
+                    >
                       {e.label}
                     </span>
                   )}
                 </button>
 
                 {book ? (
-                  <button type="button" onClick={() => openBook(book.id)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+                  <button
+                    type="button"
+                    onClick={() => openBook(book.id)}
+                    className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                  >
                     <div
                       className="h-[60px] w-10 flex-none overflow-hidden rounded-md border border-line"
                       style={state === 'wishlist' ? { borderStyle: 'dashed' } : undefined}
@@ -272,7 +362,10 @@ function SeriesScreen() {
                       <CoverImage book={book} thumb ghost={state === 'wishlist'} />
                     </div>
                     <span className="min-w-0">
-                      <span className="block truncate text-[15px] font-semibold text-ink" style={{ fontFamily: 'var(--font-display)' }}>
+                      <span
+                        className="block truncate text-[15px] font-semibold text-ink"
+                        style={{ fontFamily: 'var(--font-display)' }}
+                      >
                         {book.title}
                       </span>
                       <span className="block text-[12px] text-muted">{stateLine}</span>
@@ -280,11 +373,17 @@ function SeriesScreen() {
                   </button>
                 ) : (
                   <div className="flex min-w-0 flex-1 items-center gap-3">
-                    <div className="flex h-[60px] w-10 flex-none items-center justify-center rounded-md border border-dashed border-line text-[16px] text-muted" style={{ background: 'var(--chip)' }}>
+                    <div
+                      className="flex h-[60px] w-10 flex-none items-center justify-center rounded-md border border-dashed border-line text-[16px] text-muted"
+                      style={{ background: 'var(--chip)' }}
+                    >
                       ⊹
                     </div>
                     <span className="min-w-0">
-                      <span className="block truncate text-[15px] font-semibold text-muted" style={{ fontFamily: 'var(--font-display)' }}>
+                      <span
+                        className="block truncate text-[15px] font-semibold text-muted"
+                        style={{ fontFamily: 'var(--font-display)' }}
+                      >
                         {e.title}
                       </span>
                       <span className="block text-[12px] text-muted">
@@ -297,7 +396,12 @@ function SeriesScreen() {
 
                 <div className="flex flex-none items-center gap-1">
                   {!book && (
-                    <button type="button" onClick={() => setAcquiring(e)} className="rounded-full px-3 py-1.5 text-[12px] font-semibold" style={{ background: 'var(--accent-fill)', color: 'var(--on-primary)' }}>
+                    <button
+                      type="button"
+                      onClick={() => setAcquiring(e)}
+                      className="rounded-full px-3 py-1.5 text-[12px] font-semibold"
+                      style={{ background: 'var(--accent-fill)', color: 'var(--on-primary)' }}
+                    >
                       ＋ Add
                     </button>
                   )}
@@ -312,10 +416,22 @@ function SeriesScreen() {
                     ✕
                   </button>
                   <span className="flex flex-col">
-                    <button type="button" onClick={() => placeAt(i, i - 1)} disabled={i === 0} aria-label={`Move ${book?.title ?? e.title} earlier`} className="h-6 w-7 text-[11px] text-muted disabled:opacity-30">
+                    <button
+                      type="button"
+                      onClick={() => placeAt(i, i - 1)}
+                      disabled={i === 0}
+                      aria-label={`Move ${book?.title ?? e.title} earlier`}
+                      className="h-6 w-7 text-[11px] text-muted disabled:opacity-30"
+                    >
                       ▲
                     </button>
-                    <button type="button" onClick={() => placeAt(i, i + 1)} disabled={i === entries.length - 1} aria-label={`Move ${book?.title ?? e.title} later`} className="h-6 w-7 text-[11px] text-muted disabled:opacity-30">
+                    <button
+                      type="button"
+                      onClick={() => placeAt(i, i + 1)}
+                      disabled={i === entries.length - 1}
+                      aria-label={`Move ${book?.title ?? e.title} later`}
+                      className="h-6 w-7 text-[11px] text-muted disabled:opacity-30"
+                    >
                       ▼
                     </button>
                   </span>
@@ -328,7 +444,8 @@ function SeriesScreen() {
 
       {!entries.length && (
         <p className="mt-6 rounded-2xl border border-dashed border-line p-6 text-center text-[13.5px] text-muted">
-          Nothing on this shelf yet — add books from your library, or slot in the ones you still need.
+          Nothing on this shelf yet — add books from your library, or slot in the ones you still
+          need.
         </p>
       )}
 
@@ -339,7 +456,11 @@ function SeriesScreen() {
           excludeIds={memberIds}
           onClose={() => setPickerOpen(false)}
           onPick={(b: Book) => {
-            addEntries.mutate({ seriesId: detail.series.id, books: [b], after: Math.max(0, ...entries.map((x) => x.position)) + pickCount })
+            addEntries.mutate({
+              seriesId: detail.series.id,
+              books: [b],
+              after: Math.max(0, ...entries.map((x) => x.position)) + pickCount,
+            })
             setPickCount((n) => n + 1)
           }}
         />
@@ -350,7 +471,9 @@ function SeriesScreen() {
       {removing && (
         <Modal title="Remove from this series?" onClose={() => setRemoving(null)}>
           <p className="-mt-2 mb-4 text-[13px] text-muted">
-            <span className="font-semibold text-ink">{(removing.bookId ? byId.get(removing.bookId)?.title : null) ?? removing.title}</span>{' '}
+            <span className="font-semibold text-ink">
+              {(removing.bookId ? byId.get(removing.bookId)?.title : null) ?? removing.title}
+            </span>{' '}
             leaves {detail.series.name} and its place in the order goes with it.
             {removing.bookId
               ? ' The book stays in your library — it just stops belonging to this series.'
@@ -373,7 +496,10 @@ function SeriesScreen() {
               }}
               disabled={removeEntry.isPending}
               className="h-11 flex-1 rounded-xl text-[14px] font-semibold disabled:opacity-50"
-              style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))', color: 'var(--on-primary)' }}
+              style={{
+                background: 'linear-gradient(135deg, var(--primary), var(--gold))',
+                color: 'var(--on-primary)',
+              }}
             >
               Remove
             </button>
@@ -384,7 +510,8 @@ function SeriesScreen() {
       {acquiring && (
         <Modal title={`Add ${acquiring.title}`} onClose={() => setAcquiring(null)}>
           <p className="-mt-2 mb-3 text-[13px] text-muted">
-            Lands in your library as a wishlist copy — {fmtPos(acquiring.position)} stays its place in the order.
+            Lands in your library as a wishlist copy — {fmtPos(acquiring.position)} stays its place
+            in the order.
           </p>
           <div className="flex flex-col gap-2">
             <button

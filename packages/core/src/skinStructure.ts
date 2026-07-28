@@ -18,7 +18,17 @@ export interface SpineStyle {
   /** binding surface (CSS/SVG only): leather sheen · brushed metal · tooled tome (raised cords) ·
    *  ash cloth box · fog-cloth ledger (typed paper strip) · proof-paper galley · oat-linen volume ·
    *  buff field manual · the dawn sky (Firstlight's one gradient, night at the head) */
-  binding: 'plain' | 'leather' | 'brushed' | 'tome' | 'cloth' | 'ledger' | 'galley' | 'linen' | 'manual' | 'sky'
+  binding:
+    | 'plain'
+    | 'leather'
+    | 'brushed'
+    | 'tome'
+    | 'cloth'
+    | 'ledger'
+    | 'galley'
+    | 'linen'
+    | 'manual'
+    | 'sky'
   /** head + tail decorative bands ('bone-rule' = Marrow's single bone hairline at the head;
    *  'pencil' = Marginalia's double graphite hairlines; 'stitched' = Hearth's thread runs;
    *  'ink-block' = Almanac's solid ink band blocks (the tail block carries the REF №);
@@ -26,7 +36,17 @@ export interface SpineStyle {
   band: 'plain' | 'gilt' | 'tick' | 'bone-rule' | 'pencil' | 'stitched' | 'ink-block' | 'gel'
   /** tail mark — fleuron seal · status LED · gilt sigil ❖ · oxblood dip · brass eyelet ·
    *  proofreader's caret ‸ · sewn wooden button · double index rule · the small rising sun */
-  colophon: 'none' | 'fleuron' | 'led' | 'sigil' | 'dip' | 'eyelet' | 'caret' | 'button' | 'rule' | 'sun'
+  colophon:
+    | 'none'
+    | 'fleuron'
+    | 'led'
+    | 'sigil'
+    | 'dip'
+    | 'eyelet'
+    | 'caret'
+    | 'button'
+    | 'rule'
+    | 'sun'
   /** optional head label — gilt title panel · callsign chip · pasted № label · typed case number ·
    *  REF № set in the tail ink block (Almanac) */
   label: 'none' | 'panel' | 'callsign' | 'pasted-no' | 'case-no' | 'ref-no'
@@ -39,22 +59,71 @@ export interface SkinStructure {
    *  rubricated thick-thin pair (¶) · fractured-at-midpoint · typed docket (RE: + stamped count) ·
    *  red-caret + pencil rule (Marginalia) · stitched thread leader (Hearth) · orange tick + double
    *  rule with a unit-labelled tabular count (Almanac) · gel sparkle + dotted leader (Firstlight) */
-  sectionRule: 'hairline' | 'fleuron' | 'tick-rule' | 'double-rule' | 'fractured' | 'docket' | 'caret-rule' | 'stitched' | 'index-rule' | 'dotted'
+  sectionRule:
+    | 'hairline'
+    | 'fleuron'
+    | 'tick-rule'
+    | 'double-rule'
+    | 'fractured'
+    | 'docket'
+    | 'caret-rule'
+    | 'stitched'
+    | 'index-rule'
+    | 'dotted'
   /** how a panel / hero card is framed: … · a bond leaf with the red margin rule (Marginalia) ·
    *  a linen placemat with a dashed thread frame stitched inside the edge (Hearth) · a buff record
    *  card, band + double rule (Almanac) · an opaque white sticker with a 3px ring (Firstlight) */
-  frame: 'none' | 'gilt-plate' | 'corner-bracket' | 'illuminated-border' | 'chamfer-tray' | 'case-folder' | 'margin-rule' | 'stitched-inset' | 'record-card' | 'sticker-ring'
+  frame:
+    | 'none'
+    | 'gilt-plate'
+    | 'corner-bracket'
+    | 'illuminated-border'
+    | 'chamfer-tray'
+    | 'case-folder'
+    | 'margin-rule'
+    | 'stitched-inset'
+    | 'record-card'
+    | 'sticker-ring'
   /** status-tag / mark silhouette + treatment: … · drawn proof marks, never boxed (Marginalia) ·
    *  jar labels with dashed-thread stitching (Hearth) · index tabs, squared with a rounded outer
    *  edge (Almanac) · puffy stickers with a gel ring (Firstlight) */
-  tag: 'round' | 'squared-bracket' | 'lozenge' | 'chamfer-chip' | 'stamp-ring' | 'drawn-mark' | 'jar-label' | 'index-tab' | 'puffy-sticker'
+  tag:
+    | 'round'
+    | 'squared-bracket'
+    | 'lozenge'
+    | 'chamfer-chip'
+    | 'stamp-ring'
+    | 'drawn-mark'
+    | 'jar-label'
+    | 'index-tab'
+    | 'puffy-sticker'
   /** progress meter form: bar · dots · etched segments · tally strokes (5s) · vertebra column ·
    *  tack board with the red thread strung · a pencil rule written over in graphite, red caret at
    *  the full stop (Marginalia) · a hem of jam cross-stitches (Hearth) · a measuring rule with an
    *  orange pointer (Almanac) · the sun climbing to the horizon line (Firstlight) */
-  progress: 'bar' | 'dots' | 'segmented' | 'tally' | 'vertebrae' | 'thread-board' | 'page-lines' | 'cross-stitch' | 'rule-ticks' | 'sun-rise'
+  progress:
+    | 'bar'
+    | 'dots'
+    | 'segmented'
+    | 'tally'
+    | 'vertebrae'
+    | 'thread-board'
+    | 'page-lines'
+    | 'cross-stitch'
+    | 'rule-ticks'
+    | 'sun-rise'
   /** the big signature emblem (and the goal-ring treatment) — see SignatureMotif */
-  motif: 'none' | 'fleuron' | 'radar' | 'sigil' | 'crack' | 'window' | 'caret' | 'button' | 'tab' | 'sun'
+  motif:
+    | 'none'
+    | 'fleuron'
+    | 'radar'
+    | 'sigil'
+    | 'crack'
+    | 'window'
+    | 'caret'
+    | 'button'
+    | 'tab'
+    | 'sun'
   /** the book-spine treatment (Structural Character signature component) */
   spine: SpineStyle
   /** the designed coverless plate (Fable 5 slot 9, placeholderCover): each skin gets a bespoke plate
@@ -62,7 +131,17 @@ export interface SkinStructure {
    *  'plain' renders the neutral title/author plate, so unset skins don't regress. Chunk 3 adds the
    *  uncorrected proof (Marginalia) · the linen board with its paper label (Hearth) · the buff manual
    *  with the band block + tab (Almanac) · the sky mock-up, a sticker on the dawn (Firstlight). */
-  placeholder: 'plain' | 'cloth-boards' | 'specimen-plate' | 'vellum-boards' | 'box-lid' | 'case-file' | 'proof-sheet' | 'linen-board' | 'buff-manual' | 'sky-mockup'
+  placeholder:
+    | 'plain'
+    | 'cloth-boards'
+    | 'specimen-plate'
+    | 'vellum-boards'
+    | 'box-lid'
+    | 'case-file'
+    | 'proof-sheet'
+    | 'linen-board'
+    | 'buff-manual'
+    | 'sky-mockup'
 }
 
 /** Plain bones — what every not-yet-structured skin renders, so nothing regresses. */
@@ -85,7 +164,13 @@ export const SKIN_STRUCTURE: Record<SkinId, SkinStructure> = {
     tag: 'round',
     progress: 'dots',
     motif: 'fleuron',
-    spine: { binding: 'leather', band: 'gilt', colophon: 'fleuron', label: 'panel', titleUpper: false },
+    spine: {
+      binding: 'leather',
+      band: 'gilt',
+      colophon: 'fleuron',
+      label: 'panel',
+      titleUpper: false,
+    },
     placeholder: 'cloth-boards',
   },
   aphelion: {
@@ -94,7 +179,13 @@ export const SKIN_STRUCTURE: Record<SkinId, SkinStructure> = {
     tag: 'squared-bracket',
     progress: 'segmented',
     motif: 'radar',
-    spine: { binding: 'brushed', band: 'tick', colophon: 'led', label: 'callsign', titleUpper: true },
+    spine: {
+      binding: 'brushed',
+      band: 'tick',
+      colophon: 'led',
+      label: 'callsign',
+      titleUpper: true,
+    },
     placeholder: 'specimen-plate',
   },
   // Fable 5 chunk 2 — the working spellbook · the specimen archive · the unsolved case ("Gaslight";
@@ -114,7 +205,13 @@ export const SKIN_STRUCTURE: Record<SkinId, SkinStructure> = {
     tag: 'chamfer-chip',
     progress: 'vertebrae',
     motif: 'crack',
-    spine: { binding: 'cloth', band: 'bone-rule', colophon: 'dip', label: 'pasted-no', titleUpper: true },
+    spine: {
+      binding: 'cloth',
+      band: 'bone-rule',
+      colophon: 'dip',
+      label: 'pasted-no',
+      titleUpper: true,
+    },
     placeholder: 'box-lid',
   },
   umbra: {
@@ -123,7 +220,13 @@ export const SKIN_STRUCTURE: Record<SkinId, SkinStructure> = {
     tag: 'stamp-ring',
     progress: 'thread-board',
     motif: 'window',
-    spine: { binding: 'ledger', band: 'gilt', colophon: 'eyelet', label: 'case-no', titleUpper: true },
+    spine: {
+      binding: 'ledger',
+      band: 'gilt',
+      colophon: 'eyelet',
+      label: 'case-no',
+      titleUpper: true,
+    },
     placeholder: 'case-file',
   },
   // Fable 5 chunk 3 — the working proof ("Marginalia"; live id stays `folio`) · the kitchen-table
@@ -135,7 +238,13 @@ export const SKIN_STRUCTURE: Record<SkinId, SkinStructure> = {
     tag: 'drawn-mark',
     progress: 'page-lines',
     motif: 'caret',
-    spine: { binding: 'galley', band: 'pencil', colophon: 'caret', label: 'none', titleUpper: false },
+    spine: {
+      binding: 'galley',
+      band: 'pencil',
+      colophon: 'caret',
+      label: 'none',
+      titleUpper: false,
+    },
     placeholder: 'proof-sheet',
   },
   hearth: {
@@ -144,7 +253,13 @@ export const SKIN_STRUCTURE: Record<SkinId, SkinStructure> = {
     tag: 'jar-label',
     progress: 'cross-stitch',
     motif: 'button',
-    spine: { binding: 'linen', band: 'stitched', colophon: 'button', label: 'none', titleUpper: false },
+    spine: {
+      binding: 'linen',
+      band: 'stitched',
+      colophon: 'button',
+      label: 'none',
+      titleUpper: false,
+    },
     placeholder: 'linen-board',
   },
   almanac: {
@@ -153,7 +268,13 @@ export const SKIN_STRUCTURE: Record<SkinId, SkinStructure> = {
     tag: 'index-tab',
     progress: 'rule-ticks',
     motif: 'tab',
-    spine: { binding: 'manual', band: 'ink-block', colophon: 'rule', label: 'ref-no', titleUpper: true },
+    spine: {
+      binding: 'manual',
+      band: 'ink-block',
+      colophon: 'rule',
+      label: 'ref-no',
+      titleUpper: true,
+    },
     placeholder: 'buff-manual',
   },
   bloom: {

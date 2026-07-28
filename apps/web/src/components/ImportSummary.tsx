@@ -9,7 +9,10 @@ import type { ImportExportResult } from '../data/importLibrary'
 
 function Tile({ n, label }: { n: number; label: string }) {
   return (
-    <div className="rounded-xl border border-line px-3 py-2.5 text-center" style={{ background: 'var(--field)' }}>
+    <div
+      className="rounded-xl border border-line px-3 py-2.5 text-center"
+      style={{ background: 'var(--field)' }}
+    >
       <StatNumber className="block text-[22px] font-bold text-ink">{n}</StatNumber>
       <span className="text-[11px] uppercase tracking-[0.12em] text-muted">{label}</span>
     </div>
@@ -17,7 +20,13 @@ function Tile({ n, label }: { n: number; label: string }) {
 }
 
 /** The summary body (headline + tiles + notices). Callers wrap it with their own frame + actions. */
-export function ImportSummary({ result, children }: { result: ImportExportResult; children?: ReactNode }) {
+export function ImportSummary({
+  result,
+  children,
+}: {
+  result: ImportExportResult
+  children?: ReactNode
+}) {
   const r = result
   const notices = summaryNotices(r)
   const showShelves = r.extras.shelved > 0
@@ -27,7 +36,10 @@ export function ImportSummary({ result, children }: { result: ImportExportResult
       <div className="mt-4 grid grid-cols-3 gap-2">
         <Tile n={r.added} label="Added" />
         <Tile n={r.merged} label="Merged" />
-        <Tile n={showShelves ? r.extras.shelved : r.readingOrders} label={showShelves ? 'Shelved' : 'Orders'} />
+        <Tile
+          n={showShelves ? r.extras.shelved : r.readingOrders}
+          label={showShelves ? 'Shelved' : 'Orders'}
+        />
       </div>
       {notices.length > 0 && (
         <ul className="mt-4 flex flex-col gap-1.5">

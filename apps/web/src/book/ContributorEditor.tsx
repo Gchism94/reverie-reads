@@ -1,5 +1,11 @@
 import { useId } from 'react'
-import { CONTRIBUTOR_ROLES, ROLE_LABELS, renumber, type Contributor, type ContributorRole } from '@reverie/core'
+import {
+  CONTRIBUTOR_ROLES,
+  ROLE_LABELS,
+  renumber,
+  type Contributor,
+  type ContributorRole,
+} from '@reverie/core'
 
 /**
  * Edit a book's ordered contributor list: add / remove / reorder (accessible up-down buttons) /
@@ -22,7 +28,10 @@ export function ContributorEditor({
   const update = (i: number, patch: Partial<Contributor>) =>
     onChange(renumber(rows.map((c, idx) => (idx === i ? { ...c, ...patch } : c))))
   const remove = (i: number) => onChange(renumber(rows.filter((_, idx) => idx !== i)))
-  const add = () => onChange(renumber([...rows, { name: '', role: 'author' as ContributorRole, position: rows.length }]))
+  const add = () =>
+    onChange(
+      renumber([...rows, { name: '', role: 'author' as ContributorRole, position: rows.length }]),
+    )
   const move = (i: number, dir: -1 | 1) => {
     const j = i + dir
     if (j < 0 || j >= rows.length) return

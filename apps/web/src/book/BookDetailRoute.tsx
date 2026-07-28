@@ -1,6 +1,17 @@
 import { useState, type ReactNode } from 'react'
 import { Link, createRoute, useNavigate } from '@tanstack/react-router'
-import { authorOf, bookSubgenres, buildBuyLinks, buyDisclosure, isAuthorRole, seriesStatusBadge, ROLE_LABELS, type Book, type BookOwnership, type Owned } from '@reverie/core'
+import {
+  authorOf,
+  bookSubgenres,
+  buildBuyLinks,
+  buyDisclosure,
+  isAuthorRole,
+  seriesStatusBadge,
+  ROLE_LABELS,
+  type Book,
+  type BookOwnership,
+  type Owned,
+} from '@reverie/core'
 import { useFilters } from '../library/filterStore'
 import { buyConfig } from '../lib/buyConfig'
 import { useLabels, useVoice } from '../skin/labels'
@@ -14,7 +25,12 @@ import { useBookListIds, useToggleListItem } from '../data/listItems'
 import { useCreateList, useLists } from '../data/lists'
 import { Stars } from '../components/Stars'
 import { Chip } from '../components/Chip'
-import { MONTHS, READ_STATUS_OPTIONS, readStatusLabel, subgenreGradient } from '../library/constants'
+import {
+  MONTHS,
+  READ_STATUS_OPTIONS,
+  readStatusLabel,
+  subgenreGradient,
+} from '../library/constants'
 import { maybeChainPrompt } from '../lib/chainPrompt'
 import { EditDetails, LogReadForm, MergeDialog } from './dialogs'
 import { TropePicker } from '../components/TropePicker'
@@ -142,7 +158,8 @@ function BookDetailScreen() {
   // Four-state possession (owned / borrowed / wishlist / unset). Format flags are left alone across
   // any change — dropping possession suppresses them (bookOwnedFormats gates every read), so marking
   // a book owned or borrowed again restores your copies.
-  const setOwnership = (ownership: BookOwnership) => updateBook.mutate({ id: book.id, patch: { ownership } })
+  const setOwnership = (ownership: BookOwnership) =>
+    updateBook.mutate({ id: book.id, patch: { ownership } })
   const memberIds = new Set(listIds ?? [])
   const tbrs = (lists ?? []).filter((l) => l.kind === 'tbr')
   const collections = (lists ?? []).filter((l) => l.kind === 'collection')
@@ -171,7 +188,11 @@ function BookDetailScreen() {
             <span
               aria-hidden
               className="absolute bottom-2 left-1/2 -translate-x-1/2 whitespace-nowrap px-2 py-0.5 text-[10px] font-semibold backdrop-blur"
-              style={{ background: 'rgba(0,0,0,0.62)', color: 'var(--mark-on-ph)', borderRadius: 'var(--mark-radius)' }}
+              style={{
+                background: 'rgba(0,0,0,0.62)',
+                color: 'var(--mark-on-ph)',
+                borderRadius: 'var(--mark-radius)',
+              }}
             >
               + add a cover
             </span>
@@ -211,7 +232,10 @@ function BookDetailScreen() {
                     </button>
                   ) : (
                     <span>
-                      {c.name} <span className="text-[12px] lowercase">· {ROLE_LABELS[c.role].toLowerCase()}</span>
+                      {c.name}{' '}
+                      <span className="text-[12px] lowercase">
+                        · {ROLE_LABELS[c.role].toLowerCase()}
+                      </span>
                     </span>
                   )}
                   {i < book.contributors.length - 1 ? <span aria-hidden>,</span> : null}
@@ -227,7 +251,9 @@ function BookDetailScreen() {
               <Pill key={s}>{s}</Pill>
             ))}
             <Pill>{seriesBadge}</Pill>
-            {(book.intensity ?? 0) > 0 && <Pill>{labels.intensityGlyph.repeat(book.intensity ?? 0)}</Pill>}
+            {(book.intensity ?? 0) > 0 && (
+              <Pill>{labels.intensityGlyph.repeat(book.intensity ?? 0)}</Pill>
+            )}
             {fmtPub(book.pub) && <Pill>📅 {fmtPub(book.pub)}</Pill>}
             {/* Absent when unknown — no pill at all, rather than a fabricated 0 or a guess. */}
             {book.pages != null && <Pill>{book.pages} pp</Pill>}
@@ -237,7 +263,12 @@ function BookDetailScreen() {
 
       {/* your copies (per-format ownership) */}
       <div className="mt-6">
-        <OwnedCopies ownership={book.ownership} owned={book.owned} onChange={setOwned} onOwnershipChange={setOwnership} />
+        <OwnedCopies
+          ownership={book.ownership}
+          owned={book.owned}
+          onChange={setOwned}
+          onOwnershipChange={setOwnership}
+        />
       </div>
 
       {/* buy at an indie (discover + support — not live inventory) */}
@@ -251,7 +282,10 @@ function BookDetailScreen() {
             key={s}
             active={book.readStatus === s}
             onClick={() => {
-              updateBook.mutate({ id: book.id, patch: { readStatus: s, ...(s === 'Reading' ? { readingNowHidden: false } : {}) } })
+              updateBook.mutate({
+                id: book.id,
+                patch: { readStatus: s, ...(s === 'Reading' ? { readingNowHidden: false } : {}) },
+              })
               if (s === 'Read') void maybeChainPrompt(book, books ?? [])
             }}
           >
@@ -265,15 +299,24 @@ function BookDetailScreen() {
       {/* rating */}
       <Label
         action={
-          <button type="button" onClick={() => setDialog('edit')} className="text-[12px] text-primary">
+          <button
+            type="button"
+            onClick={() => setDialog('edit')}
+            className="text-[12px] text-primary"
+          >
             edit details
           </button>
         }
       >
         Your rating
       </Label>
-      <Stars value={book.rating} onChange={(v) => updateBook.mutate({ id: book.id, patch: { rating: v } })} />
-      <p className="mt-1 text-[11.5px] text-muted">Your rating only — Reverie never shows an averaged score.</p>
+      <Stars
+        value={book.rating}
+        onChange={(v) => updateBook.mutate({ id: book.id, patch: { rating: v } })}
+      />
+      <p className="mt-1 text-[11.5px] text-muted">
+        Your rating only — Reverie never shows an averaged score.
+      </p>
 
       {/* reviews (opt-in, individual voices) */}
       <div className="mt-4">
@@ -286,7 +329,11 @@ function BookDetailScreen() {
       {/* tags (Tryst skin: "Tropes") */}
       <Label
         action={
-          <button type="button" onClick={() => setDialog('trope')} className="text-[12px] text-primary">
+          <button
+            type="button"
+            onClick={() => setDialog('trope')}
+            className="text-[12px] text-primary"
+          >
             + tag
           </button>
         }
@@ -320,7 +367,11 @@ function BookDetailScreen() {
           tropes above. Never derived: empty is a valid, quiet state (docs/task-mood.md). */}
       <Label
         action={
-          <button type="button" onClick={() => setDialog('mood')} className="text-[12px] text-primary">
+          <button
+            type="button"
+            onClick={() => setDialog('mood')}
+            className="text-[12px] text-primary"
+          >
             {book.moods.length ? 'edit' : '+ mood'}
           </button>
         }
@@ -338,7 +389,11 @@ function BookDetailScreen() {
       {/* read log */}
       <Label
         action={
-          <button type="button" onClick={() => setDialog('log')} className="text-[12px] text-primary">
+          <button
+            type="button"
+            onClick={() => setDialog('log')}
+            className="text-[12px] text-primary"
+          >
             + log a read
           </button>
         }
@@ -354,7 +409,11 @@ function BookDetailScreen() {
       </div>
       <div className="flex flex-col gap-2">
         {(reads ?? []).map((r) => (
-          <div key={r.id} className="rounded-xl border border-line p-3" style={{ background: 'var(--field)' }}>
+          <div
+            key={r.id}
+            className="rounded-xl border border-line p-3"
+            style={{ background: 'var(--field)' }}
+          >
             <div className="flex items-center justify-between gap-2">
               <span className="text-[13.5px] font-semibold text-ink">{fmtDate(r.date)}</span>
               <button
@@ -382,7 +441,10 @@ function BookDetailScreen() {
             onClick={async () => {
               const name = window.prompt('Name the new shelf / collection:')
               if (!name) return
-              const created = await createList.mutateAsync({ name: name.trim(), kind: 'collection' })
+              const created = await createList.mutateAsync({
+                name: name.trim(),
+                kind: 'collection',
+              })
               toggleListItem.mutate({ listId: created.id, member: false })
             }}
             className="text-[12px] text-primary"
@@ -471,14 +533,19 @@ function BookDetailScreen() {
       {dialog === 'mood' && (
         <Modal title="Mood" onClose={() => setDialog(null)}>
           <p className="-mt-2 mb-3 text-[13px] text-muted">
-            How did {book.title} land on you? Tap what you felt — yours alone, and only if you want to.
+            How did {book.title} land on you? Tap what you felt — yours alone, and only if you want
+            to.
           </p>
           <MoodPicker book={book} />
         </Modal>
       )}
       {dialog === 'log' && <LogReadForm book={book} onClose={() => setDialog(null)} />}
       {dialog === 'edit' && (
-        <EditDetails book={book} onClose={() => setDialog(null)} onChangeCover={() => setDialog('cover')} />
+        <EditDetails
+          book={book}
+          onClose={() => setDialog(null)}
+          onChangeCover={() => setDialog('cover')}
+        />
       )}
       {dialog === 'cover' && <CoverSheet book={book} onClose={() => setDialog(null)} />}
       {dialog === 'merge' && (
@@ -495,7 +562,10 @@ function BuyAtIndie({ book }: { book: Book }) {
   const config = buyConfig(profile?.defaultStore)
   const links = buildBuyLinks(book, config)
   return (
-    <details className="mt-4 rounded-2xl border border-line p-4" style={{ background: 'var(--card)' }}>
+    <details
+      className="mt-4 rounded-2xl border border-line p-4"
+      style={{ background: 'var(--card)' }}
+    >
       <summary className="cursor-pointer text-[14px] font-semibold text-ink">
         Buy at an indie{profile?.defaultStore ? ` · ${profile.defaultStore.name}` : ''}
       </summary>

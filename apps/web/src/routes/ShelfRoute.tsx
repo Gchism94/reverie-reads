@@ -105,7 +105,10 @@ function ShelfScreen() {
 
       <header className="mt-3 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-[26px] italic leading-tight text-ink" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+          <h1
+            className="text-[26px] italic leading-tight text-ink"
+            style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+          >
             {list.priority && (
               <span style={{ color: 'var(--accent-ink)' }}>
                 <BookmarkGlyph size={15} />{' '}
@@ -120,7 +123,10 @@ function ShelfScreen() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex rounded-full border border-line p-1" style={{ background: 'var(--card)' }}>
+          <div
+            className="flex rounded-full border border-line p-1"
+            style={{ background: 'var(--card)' }}
+          >
             {(
               [
                 ['spines', 'Shelf'],
@@ -133,7 +139,11 @@ function ShelfScreen() {
                 onClick={() => setView(v)}
                 aria-pressed={view === v}
                 className="rounded-full px-3 py-1 text-[12.5px] font-semibold"
-                style={view === v ? { background: 'var(--accent-fill)', color: 'var(--on-primary)' } : { color: 'var(--muted)' }}
+                style={
+                  view === v
+                    ? { background: 'var(--accent-fill)', color: 'var(--on-primary)' }
+                    : { color: 'var(--muted)' }
+                }
               >
                 {label}
               </button>
@@ -151,8 +161,12 @@ function ShelfScreen() {
           <button
             type="button"
             onClick={() => {
-              const description = window.prompt('Describe this shelf (shown under its name):', list.description)
-              if (description != null) updateList.mutate({ id: list.id, description: description.trim() })
+              const description = window.prompt(
+                'Describe this shelf (shown under its name):',
+                list.description,
+              )
+              if (description != null)
+                updateList.mutate({ id: list.id, description: description.trim() })
             }}
             className="rounded-full border border-line px-3 py-1.5 text-[12.5px] font-semibold text-ink"
             style={{ background: 'var(--card)' }}
@@ -169,7 +183,11 @@ function ShelfScreen() {
         </div>
       </header>
 
-      <SectionHeader className="mb-3 mt-6" label={view === 'spines' ? 'The shelf' : 'Arrange'} readout={shelfBooks.length} />
+      <SectionHeader
+        className="mb-3 mt-6"
+        label={view === 'spines' ? 'The shelf' : 'Arrange'}
+        readout={shelfBooks.length}
+      />
 
       {shelfBooks.length === 0 ? (
         <p className="skin-panel border border-line p-6 text-center text-[14px] text-muted">
@@ -178,7 +196,13 @@ function ShelfScreen() {
       ) : view === 'spines' ? (
         // The default view is arrangeable too — reorder used to exist only in Grid, which is not
         // where a reader lands (docs/task-shelf-regressions.md, audit follow-up).
-        <SpineShelf books={shelfBooks} onOpen={openBook} onAdd={() => setPickerOpen(true)} addLabel={`Add a book to ${list.name}`} onReorder={applyOrder} />
+        <SpineShelf
+          books={shelfBooks}
+          onOpen={openBook}
+          onAdd={() => setPickerOpen(true)}
+          addLabel={`Add a book to ${list.name}`}
+          onReorder={applyOrder}
+        />
       ) : (
         <div style={COVER_GRID}>
           {shelfBooks.map((b, i) => (
@@ -191,7 +215,11 @@ function ShelfScreen() {
               onDragEnd={() => setDragIdx(null)}
               style={dragIdx === i ? { opacity: 0.4 } : undefined}
             >
-              <CoverCard book={b} onOpen={() => openBook(b.id)} onToggleFave={() => updateBook.mutate({ id: b.id, patch: { fave: !b.fave } })} />
+              <CoverCard
+                book={b}
+                onOpen={() => openBook(b.id)}
+                onToggleFave={() => updateBook.mutate({ id: b.id, patch: { fave: !b.fave } })}
+              />
               <div className="mt-1 flex items-center justify-between">
                 <span className="flex gap-0.5">
                   <button
@@ -233,7 +261,11 @@ function ShelfScreen() {
           books={books ?? []}
           excludeIds={memberIds}
           onPick={(b) => {
-            addItem.mutate({ listId: list.id, bookId: b.id, afterPosition: maxPosition + pickCount * 1000 })
+            addItem.mutate({
+              listId: list.id,
+              bookId: b.id,
+              afterPosition: maxPosition + pickCount * 1000,
+            })
             setPickCount((c) => c + 1)
           }}
           onClose={() => {
@@ -251,7 +283,12 @@ function ShelfScreen() {
       )}
 
       {externalSearch && (
-        <ExternalSearchSheet listId={list.id} listName={list.name} books={books ?? []} onClose={() => setExternalSearch(false)} />
+        <ExternalSearchSheet
+          listId={list.id}
+          listName={list.name}
+          books={books ?? []}
+          onClose={() => setExternalSearch(false)}
+        />
       )}
     </section>
   )

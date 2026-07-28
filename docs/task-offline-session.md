@@ -46,9 +46,10 @@ token is valid and refreshable — the failure is the offline refresh path.
 
 **Consequence for the fix: unblocking the await is not enough.** With `session` still
 null the app would boot fast, render the landing, hit the chunk and crash just the same.
-The session must be *restored*, not merely resolved faster.
+The session must be _restored_, not merely resolved faster.
 
 ## Preconditions — stop and report if unmet
+
 - `main` current at 3bfe107 or later, working tree clean.
 
 ## Phase 1 — DONE. Findings recorded above and in the branch report.
@@ -59,7 +60,7 @@ answered and need no re-audit:
 - **The two error classes are reliably distinguishable, three ways.** Network failure →
   `AuthRetryableFetchError` (`status: 0`); rejected refresh token → `AuthApiError`
   (`status: 400`, local GoTrue body `{"code":400,"error_code":"validation_failed",
-  "msg":"Refresh token is not valid"}`). auth-js already does the right thing with
+"msg":"Refresh token is not valid"}`). auth-js already does the right thing with
   storage: it preserves the session on a retryable error and calls `_removeSession()` on
   a genuine rejection. Measured — offline: settles 51.5s, session **preserved**; revoked
   token online: settles 0.5s, session **cleared**. So the dangerous case (falling back on
@@ -82,7 +83,7 @@ answered and need no re-audit:
 2. **Error-class distinguishability.** When the token refresh fails, can the code
    tell a network failure from a rejected refresh token (revoked, expired beyond
    recovery, signed out elsewhere)? Quote the shapes both produce. This decides
-   whether the fix is safe — falling back to a stored session on a *revoked*
+   whether the fix is safe — falling back to a stored session on a _revoked_
    token would keep a signed-out reader looking signed in.
 
 3. **Existing offline affordances.** Is there already an offline indicator,
@@ -94,7 +95,7 @@ answered and need no re-audit:
 ### Added scope (approved after Phase 1)
 
 1. **Correct this doc's mechanism section.** Done above.
-2. **Offline sign-out is a first-class item.** `_signOut` posts to the server *first* and
+2. **Offline sign-out is a first-class item.** `_signOut` posts to the server _first_ and
    returns early on network failure, so the local session survives and no event fires — a
    reader on a shared device believes they signed out and has not. **Report the shape
    before coding**: can the local session be removed without the server round trip, and
@@ -212,6 +213,7 @@ reasoning and not just the behaviour.
   chunk would fix it and was deliberately not done. Recorded, not fixed.
 
 ## Out of scope — recorded, not for this branch
+
 - Restore duplication semantics. Answered: a restore is an add, not a sync.
   Book-keyed rows multiply with the duplicated books; user-keyed and series-keyed
   rows don't. The guardrail (warn before restoring into a non-empty library, with
@@ -220,6 +222,7 @@ reasoning and not just the behaviour.
   after this one.
 
 ## Standing rules reaffirmed this session
+
 - No writes to the production database from a Code session, ever — including
   throwaway accounts intended for immediate deletion.
 - Grepping a bundle for strings measures dead-code elimination, not rendering.

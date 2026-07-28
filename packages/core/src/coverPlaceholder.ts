@@ -43,10 +43,16 @@ export function monogram(title: string): string {
 }
 
 /** Derive the deterministic placeholder spec for a book (title + optional split author name). */
-export function placeholderSpec(book: { title?: string; first?: string; last?: string }): PlaceholderSpec {
+export function placeholderSpec(book: {
+  title?: string
+  first?: string
+  last?: string
+}): PlaceholderSpec {
   const title = String(book.title ?? '')
   const author = [book.first, book.last].filter(Boolean).join(' ').trim()
-  const accentVar = PLACEHOLDER_ACCENTS[hash(title || author || '∅') % PLACEHOLDER_ACCENTS.length] as PlaceholderAccent
+  const accentVar = PLACEHOLDER_ACCENTS[
+    hash(title || author || '∅') % PLACEHOLDER_ACCENTS.length
+  ] as PlaceholderAccent
   return { title, author, initials: monogram(title), accentVar }
 }
 
@@ -73,7 +79,10 @@ export const PLACEHOLDER_FG_MIX = 0.28 // 0.3 grazed 4.496:1 on Hearth's toasted
 
 /** The placeholder's CSS colours for a chosen accent var — `color-mix` over live skin tokens, so it
  *  re-themes for free. The component spreads this onto the surface (bg) and glyph (color). */
-export function placeholderColorVars(accentVar: PlaceholderAccent): { background: string; color: string } {
+export function placeholderColorVars(accentVar: PlaceholderAccent): {
+  background: string
+  color: string
+} {
   return {
     background: `color-mix(in srgb, var(${accentVar}) ${PLACEHOLDER_BG_MIX * 100}%, var(--card-solid))`,
     color: `color-mix(in srgb, var(${accentVar}) ${PLACEHOLDER_FG_MIX * 100}%, var(--ink))`,
@@ -82,7 +91,11 @@ export function placeholderColorVars(accentVar: PlaceholderAccent): { background
 
 /** The same recipe resolved to concrete hex, given a skin/mode's token values — the pure form the
  *  contrast test asserts on. Mirrors {@link placeholderColorVars} channel-for-channel. */
-export function resolvePlaceholderColors(tokens: { accent: string; ink: string; cardSolid: string }): {
+export function resolvePlaceholderColors(tokens: {
+  accent: string
+  ink: string
+  cardSolid: string
+}): {
   background: string
   color: string
 } {

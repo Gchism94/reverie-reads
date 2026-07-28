@@ -20,7 +20,7 @@ direction: readers love tools that feel tailored to them.
 ## Architecture (refactor the current theming into a skin engine)
 
 - A **skin registry**: each skin provides `{ id, name, genre, fonts, light tokens, dark
-  tokens, ambient, ornament, featuredFields }`.
+tokens, ambient, ornament, featuredFields }`.
 - A **SkinProvider** applies the active skin's token bundle for the current mode. The
   existing Nocturne/Magnolia Dawn becomes the Reverie skin's dark/light. Feasible at low
   risk **because nothing is hardcoded** — it's all tokens already.
@@ -33,17 +33,17 @@ direction: readers love tools that feel tailored to them.
 
 ## Tier-1 preset skins (one per major genre — starter set, registry is extensible)
 
-| Skin | Genre | Aesthetic direction (light + dark) |
-|---|---|---|
-| **Reverie** *(built)* | Romance / Romantasy | gothic New Orleans; gaslit night sky, filigree, Fraunces |
-| **(tbd)** | Fantasy / Epic | illuminated-manuscript; parchment + embers, gold, mythic serif |
-| **(tbd)** | Science Fiction | cosmic/cyber; deep space, neon/holographic, grid, geometric sans |
-| **(tbd)** | Mystery / Thriller | noir; fog + shadow, ink, a single sharp accent under lamplight |
-| **(tbd)** | Horror | eerie; desaturated, candlelit, high-contrast, unsettling (distinct from romance gothic) |
-| **(tbd)** | Literary / Classics | editorial/timeless; cream, restrained, archival serif |
-| **(tbd)** | Cozy | cottagecore; warm wool/tea tones, soft light, rounded |
-| **(tbd)** | Nonfiction / Knowledge | clean/archival; paper, structured, calm, indexed |
-| **(tbd)** | YA / Contemporary | bright, saturated, playful, modern |
+| Skin                  | Genre                  | Aesthetic direction (light + dark)                                                      |
+| --------------------- | ---------------------- | --------------------------------------------------------------------------------------- |
+| **Reverie** _(built)_ | Romance / Romantasy    | gothic New Orleans; gaslit night sky, filigree, Fraunces                                |
+| **(tbd)**             | Fantasy / Epic         | illuminated-manuscript; parchment + embers, gold, mythic serif                          |
+| **(tbd)**             | Science Fiction        | cosmic/cyber; deep space, neon/holographic, grid, geometric sans                        |
+| **(tbd)**             | Mystery / Thriller     | noir; fog + shadow, ink, a single sharp accent under lamplight                          |
+| **(tbd)**             | Horror                 | eerie; desaturated, candlelit, high-contrast, unsettling (distinct from romance gothic) |
+| **(tbd)**             | Literary / Classics    | editorial/timeless; cream, restrained, archival serif                                   |
+| **(tbd)**             | Cozy                   | cottagecore; warm wool/tea tones, soft light, rounded                                   |
+| **(tbd)**             | Nonfiction / Knowledge | clean/archival; paper, structured, calm, indexed                                        |
+| **(tbd)**             | YA / Contemporary      | bright, saturated, playful, modern                                                      |
 
 Each needs: light + dark palette, display font, ambient background motif, ornament, and
 its featured fields. (A design tool pass produces these, the way Reverie was made.)
@@ -66,13 +66,15 @@ lately"). The reader can **keep / revert / lock**. Recompute is a scheduled Edge
 **Also tunes recommendations:** the same profile feeds Match and "find my next read."
 
 ## Sequencing (after Phase 5)
-1. **Skin engine** refactor (registry + provider; current themes → Reverie skin). 
+
+1. **Skin engine** refactor (registry + provider; current themes → Reverie skin).
 2. **Generalize data** (tropes→tags, spice→optional intensity, genre signal). Can start
    earlier since it's data-model work.
 3. **Tier-1 skins** — design pass for the genre set, then implement as token bundles.
 4. **Tier-2 adaptive** — profile aggregation → blend generator → monthly reveal + control.
 
 ## Decisions for the owner
+
 1. **App name vs skin name.** "Reverie" becomes the **romance skin's** name; the
    generalized **app needs its own name** (reshapes `docs/TRADEMARK.md`). Decide the app
    name before it's public.
@@ -90,20 +92,20 @@ lately"). The reader can **keep / revert / lock**. Recompute is a scheduled Edge
 ## Proposed Tier-1 skin-name family (holistic set — preliminary TM reads)
 
 A single evocative word per genre, same naming convention as Reverie. Skin names are
-theme names *inside* the product (low TM stakes vs. the umbrella app name). ✅ = no obvious
+theme names _inside_ the product (low TM stakes vs. the umbrella app name). ✅ = no obvious
 collision surfaced; ◑ = verify before locking.
 
-| Genre | Skin name | Vibe | TM read |
-|---|---|---|---|
-| Romance | **Reverie** | gothic New Orleans, dreamlike | locked |
-| Fantasy | **Grimoire** | book of spells (meta) | ✅ (swapped from "Lore" — Lore is crowded: Amazon series + RPG software) |
-| Sci-Fi | **Parallax** | cosmic, optical | ✅ (Nova/Orbit/Nebula crowded) |
-| Mystery | **Cipher** | codes, shadow | ◑ verify (security/crypto uses) |
-| Horror | **Marrow** | dread in the bones | ✅ ownable |
-| Literary | **Verso** | the left-hand page | ✅ (Quill/Canon taken) |
-| Cozy | **Snug** | warmth, tea, blanket | ◑ verify (swapped from "Wren" — Wren Kitchens CAD sw + Wren lang) |
-| Nonfiction | **Almanac** | indexed knowledge | ✅ (Atlas crowded) |
-| YA / Contemporary | **Bloom** / **Pip** | bright, growing | ◑ Bloom common; Pip cleaner |
+| Genre             | Skin name           | Vibe                          | TM read                                                                  |
+| ----------------- | ------------------- | ----------------------------- | ------------------------------------------------------------------------ |
+| Romance           | **Reverie**         | gothic New Orleans, dreamlike | locked                                                                   |
+| Fantasy           | **Grimoire**        | book of spells (meta)         | ✅ (swapped from "Lore" — Lore is crowded: Amazon series + RPG software) |
+| Sci-Fi            | **Parallax**        | cosmic, optical               | ✅ (Nova/Orbit/Nebula crowded)                                           |
+| Mystery           | **Cipher**          | codes, shadow                 | ◑ verify (security/crypto uses)                                          |
+| Horror            | **Marrow**          | dread in the bones            | ✅ ownable                                                               |
+| Literary          | **Verso**           | the left-hand page            | ✅ (Quill/Canon taken)                                                   |
+| Cozy              | **Snug**            | warmth, tea, blanket          | ◑ verify (swapped from "Wren" — Wren Kitchens CAD sw + Wren lang)        |
+| Nonfiction        | **Almanac**         | indexed knowledge             | ✅ (Atlas crowded)                                                       |
+| YA / Contemporary | **Bloom** / **Pip** | bright, growing               | ◑ Bloom common; Pip cleaner                                              |
 
 Tested this round: Lore (crowded), Wren (occupied) → swapped. Others are knowledge-based
 reads, formally testable on request. Umbrella **app** name still separate and is the real
@@ -117,17 +119,17 @@ Legend: ✅ live-checked clear · ◑ likely/known collision, verify · (unmarke
 known brands from memory, not individually USPTO-pulled. Skin names are low-stakes theme
 names; the umbrella **app** name is the real clearance target.
 
-| Genre | Option 1 | Option 2 | Option 3 |
-|---|---|---|---|
-| Romance | **Reverie** (locked) | Ardor | Tryst |
-| Fantasy | **Grimoire** ✅ | Wyrd | Mythos ◑ |
-| Sci-Fi | Parallax | Apogee | Aphelion |
-| Mystery | Alibi | Gambit ◑ | Sleuth ◑ |
-| Horror | Marrow | Wight | Mortis ◑ |
-| Literary | Calliope | Atrium | Inkwell ◑ |
-| Cozy | Mull | Hygge ◑ | Cwtch |
-| Nonfiction | Almanac | Compendium | Lyceum |
-| YA / Contemporary | Zest | Bramble | Halcyon |
+| Genre             | Option 1             | Option 2   | Option 3  |
+| ----------------- | -------------------- | ---------- | --------- |
+| Romance           | **Reverie** (locked) | Ardor      | Tryst     |
+| Fantasy           | **Grimoire** ✅      | Wyrd       | Mythos ◑  |
+| Sci-Fi            | Parallax             | Apogee     | Aphelion  |
+| Mystery           | Alibi                | Gambit ◑   | Sleuth ◑  |
+| Horror            | Marrow               | Wight      | Mortis ◑  |
+| Literary          | Calliope             | Atrium     | Inkwell ◑ |
+| Cozy              | Mull                 | Hygge ◑    | Cwtch     |
+| Nonfiction        | Almanac              | Compendium | Lyceum    |
+| YA / Contemporary | Zest                 | Bramble    | Halcyon   |
 
 Confirmed TAKEN in app/Class-9 (excluded): Cipher (Cipher Security, reg. Class 9),
 Snug (Snug Safety app), Lore (Amazon series + RPG software), Wren (Wren Kitchens CAD sw +
@@ -144,17 +146,18 @@ NOT clearance) · ▲ occupied/caution (live mark or active software product fou
 
 Romance: Reverie ✓locked · Ardor ○ (energy drinks IC32) · Tryst ○ (café IC43)
 Fantasy: Grimoire ○ · Wyrd ○ (board games IC28, Wyrd Miniatures) · Mythos ○ (sw/studio marks dead)
-Sci-Fi:  Parallax ▲ (live IC42 SaaS, Right Team #6259268) · Apogee ▲ (healthcare sw + Apogee audio HW IC9) · Aphelion ○ (only dead game mark)
+Sci-Fi: Parallax ▲ (live IC42 SaaS, Right Team #6259268) · Apogee ▲ (healthcare sw + Apogee audio HW IC9) · Aphelion ○ (only dead game mark)
 Mystery: Alibi ▲ (live IC42 ML sw, Seldon #6689301 + UK crime-TV) · Gambit ▲ (live IC42 sw, Gambit Comms #2742662 + Marvel) · Sleuth ▲ (sleuth.io DevOps) — ALL THREE OCCUPIED
-Horror:  Marrow ○ · Wight ○ (only IoW canned goods 1975) · Mortis ○ (game character only)
+Horror: Marrow ○ · Wight ○ (only IoW canned goods 1975) · Mortis ○ (game character only)
 Literary: Calliope ○ · Atrium ▲ (legal-tech etc.) · Inkwell ▲ (scattered SMB) — note Verso also out (Verso Books publisher)
-Cozy:    Mull ○ · Hygge ▲ (crowded + Hygge Software) · Cwtch ▲ (active OSS messaging app) — Snug/Wren/Hearth already taken
+Cozy: Mull ○ · Hygge ▲ (crowded + Hygge Software) · Cwtch ▲ (active OSS messaging app) — Snug/Wren/Hearth already taken
 Nonfiction: Almanac ▲ (prior IC9 mark cancelled + almanac.io) · Compendium ○ · Lyceum ○
-YA:      Zest ▲ (Zest AI fintech) · Bramble ▲-lean (compound "Bramble Bubble" game; bare word clearer) · Halcyon ▲ (live IC42, Halcyon Tech #7069927)
+YA: Zest ▲ (Zest AI fintech) · Bramble ▲-lean (compound "Bramble Bubble" game; bare word clearer) · Halcyon ▲ (live IC42, Halcyon Tech #7069927)
 
 Confirmed TAKEN earlier (excluded): Cipher (IC9 Cipher Security), Snug (Snug Safety app), Lore, Wren.
 
 ### Clean-leaning option exists per genre?
+
 - Romance: YES (Ardor, Tryst both clear; Reverie locked)
 - Fantasy: YES (Grimoire, Wyrd, Mythos all clear)
 - Horror: YES (Marrow, Wight, Mortis all clear)
@@ -175,11 +178,12 @@ attorney TESS/TSDR knockout search before adoption.
 ## Working demo: design/Skin_System_Demo.html
 
 Single-file, self-contained proof of the skin system. Demonstrates:
+
 - One genre-neutral library shell (top bar, hero, two shelves, book-detail panel) re-skinned
   live across 4 Tier-1 skins: Reverie (Romance, finalized gothic-NOLA), Grimoire (Fantasy),
   Aphelion (Sci-Fi), Marrow (Horror) — all names cleared in the trademark pull.
 - Skin and light/dark as INDEPENDENT axes (4 skins x 2 modes = 8 token bundles).
-- A token contract (--bg/--ink/--primary/--secondary/--tertiary/--line/--font-*/ambiance)
+- A token contract (--bg/--ink/--primary/--secondary/--tertiary/--line/--font-\*/ambiance)
   that mirrors the production token names, so each skin is just a bundle the registry adds.
 - A JS SKIN registry driving the switcher (adding a genre = entry + token block, nothing else).
 - Skin-aware signature: ambient glows/stars/fog/grain/vignette + a per-skin divider motif

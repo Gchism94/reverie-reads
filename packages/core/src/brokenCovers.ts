@@ -15,7 +15,10 @@ export interface BrokenCover {
  * error more than once) and names a few example titles. Pure — the caller owns batching + the actual
  * captureMessage call.
  */
-export function summarizeBrokenCovers(items: readonly BrokenCover[]): { count: number; message: string } {
+export function summarizeBrokenCovers(items: readonly BrokenCover[]): {
+  count: number
+  message: string
+} {
   const seen = new Set<string>()
   const unique: BrokenCover[] = []
   for (const i of items) {

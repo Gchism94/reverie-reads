@@ -1,4 +1,5 @@
 # Import enhancement — real-export ingest — coding agent task
+
 # Implements docs/IMPORT_MAPPING.md (decisions locked 2026-06-27)
 
 Paste into coding agent. Extends the Phase 5 CSV import to robustly ingest real library exports,
@@ -10,6 +11,7 @@ match/merge path; user-authored fields always win; never pollute the dev-only se
 docs/design untouched; report commit + acceptance per checkpoint.
 
 ## I1 — Genre/tag normalization engine (pure, in @reverie/core)
+
 - Canonical CORE set (= the 9 skins): Romance, Fantasy, Sci-Fi, Horror, Mystery, Literary, Cozy,
   Nonfiction, YA. Alias/typo map per IMPORT_MAPPING.md B (romace->Romance; Fantays/Fantast->Fantasy;
   scifi/sci-fi->Sci-Fi; Thriller->Mystery; Fiction/Poetry/Historical Fiction/Short Stories->Literary
@@ -23,6 +25,7 @@ docs/design untouched; report commit + acceptance per checkpoint.
   tags, spicy -> intensity.
 
 ## I2 — Column mapping + ingest (both shapes + generic)
+
 - Configurable column map so varied exports work, with built-in profiles for the two real shapes:
   Library (title; author first/last; series; series order; Series #; global order; series type; genre;
   tags; release date) and Chism (Title; Author First/Last; Series; Genre; Tags; GC Read; TC Read;
@@ -37,6 +40,7 @@ docs/design untouched; report commit + acceptance per checkpoint.
   re-import is a no-op; ignored columns dropped.
 
 ## I3 — Connected series -> D3 reading orders
+
 - Detect connected universes: rows with `global order` set (and/or series type = "interconnected
   standalone" / a shared Series # family). Group each universe into ONE reading_order named
   "<universe> -- reading order".
@@ -48,10 +52,12 @@ docs/design untouched; report commit + acceptance per checkpoint.
   incl. the epilogue placement; books still belong to their own series; owner-scoped RLS.
 
 ## Checkpoints
+
 - I1 normalization engine · I2 mapping + ingest + dedupe + read-status · I3 connected-series reading
   orders.
 
 ## Guardrails
+
 Pure logic unit-tested with the real exports as fixtures; user-authored fields always win; idempotent
 re-import via the existing merge path; never pollute the dev-only seed; RLS preserved; gate green;
 stage source only; docs/design untouched.

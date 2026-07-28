@@ -10,7 +10,11 @@ export type { Store } from '@reverie/core'
 
 /** Find independent bookstores near a point (chains excluded, distance-sorted). Throws on a proxy
  *  failure so the caller can show its degraded state. */
-export async function findBookstores(lat: number, lng: number, radiusMeters = 25000): Promise<Store[]> {
+export async function findBookstores(
+  lat: number,
+  lng: number,
+  radiusMeters = 25000,
+): Promise<Store[]> {
   const { data, error } = await supabase.functions.invoke('geo', {
     body: { op: 'stores', lat, lng, radius: radiusMeters },
   })

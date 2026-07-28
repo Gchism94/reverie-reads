@@ -25,7 +25,13 @@ interface LandingBook {
 }
 
 const READING: LandingBook[] = [
-  { id: 'acotar', title: 'A Court of Thorns and Roses', first: 'Sarah J.', last: 'Maas', plate: true },
+  {
+    id: 'acotar',
+    title: 'A Court of Thorns and Roses',
+    first: 'Sarah J.',
+    last: 'Maas',
+    plate: true,
+  },
   { id: 'king-of-wrath', title: 'King of Wrath', first: 'Ana', last: 'Huang', plate: false },
   { id: 'everflame', title: 'Spark of the Everflame', first: 'Penn', last: 'Cole', plate: false },
   { id: 'never-king', title: 'The Never King', first: 'Nikki', last: 'St. Crowe', plate: true },
@@ -34,10 +40,28 @@ const READING: LandingBook[] = [
 // Plates carry multi-word titles only: the plate's one-word big-type floor (fine at app thumb
 // sizes) clips mid-word inside these very small landing tiles.
 const SHELF: LandingBook[] = [
-  { id: 'throne-of-glass', title: 'Throne of Glass', first: 'Sarah J.', last: 'Maas', plate: false },
-  { id: 'feathers-so-vicious', title: 'Feathers So Vicious', first: 'Liv', last: 'Zander', plate: true },
+  {
+    id: 'throne-of-glass',
+    title: 'Throne of Glass',
+    first: 'Sarah J.',
+    last: 'Maas',
+    plate: false,
+  },
+  {
+    id: 'feathers-so-vicious',
+    title: 'Feathers So Vicious',
+    first: 'Liv',
+    last: 'Zander',
+    plate: true,
+  },
   { id: 'mile-high', title: 'Mile High', first: 'Liz', last: 'Tomforde', plate: false },
-  { id: 'love-and-other-killers', title: 'Love and Other Killers', first: 'Brynne', last: 'Weaver', plate: true },
+  {
+    id: 'love-and-other-killers',
+    title: 'Love and Other Killers',
+    first: 'Brynne',
+    last: 'Weaver',
+    plate: true,
+  },
   { id: 'consider-me', title: 'Consider Me', first: 'Becka', last: 'Mack', plate: false },
   { id: 'carnage', title: 'Carnage', first: 'Shantel', last: 'Tessier', plate: false },
 ]
@@ -109,13 +133,27 @@ function Jacket({ book, i }: { book: LandingBook; i: number }) {
   )
 }
 
-function Tile({ book, i, skin, className = '' }: { book: LandingBook; i: number; skin?: SkinId; className?: string }) {
+function Tile({
+  book,
+  i,
+  skin,
+  className = '',
+}: {
+  book: LandingBook
+  i: number
+  skin?: SkinId
+  className?: string
+}) {
   return (
     <div
       className={`aspect-[2/3] min-w-0 flex-1 overflow-hidden rounded-[5px] border ${className}`}
       style={{ borderColor: 'var(--line)' }}
     >
-      {skin && book.plate ? <CoverPlaceholder book={book} skin={skin} /> : <CoverArt book={book} i={i} />}
+      {skin && book.plate ? (
+        <CoverPlaceholder book={book} skin={skin} />
+      ) : (
+        <CoverArt book={book} i={i} />
+      )}
     </div>
   )
 }
@@ -123,7 +161,10 @@ function Tile({ book, i, skin, className = '' }: { book: LandingBook; i: number;
 function Shelf({ label, books, skin }: { label: string; books: LandingBook[]; skin?: SkinId }) {
   return (
     <div>
-      <div className="mb-1.5 text-[8px] font-semibold uppercase tracking-[0.14em]" style={{ color: 'var(--muted)' }}>
+      <div
+        className="mb-1.5 text-[8px] font-semibold uppercase tracking-[0.14em]"
+        style={{ color: 'var(--muted)' }}
+      >
         {label}
       </div>
       <div className="flex gap-1.5">
@@ -145,15 +186,26 @@ export function Mockup({ ariaLabel, skin }: { ariaLabel?: string; skin?: SkinId 
       style={{ background: 'var(--bg0)', borderColor: 'var(--line)', boxShadow: 'var(--shadow)' }}
     >
       {/* browser chrome */}
-      <div className="flex items-center gap-2 border-b px-3 py-2" style={{ borderColor: 'var(--line)', background: 'var(--card)' }}>
+      <div
+        className="flex items-center gap-2 border-b px-3 py-2"
+        style={{ borderColor: 'var(--line)', background: 'var(--card)' }}
+      >
         <span className="flex gap-1.5" aria-hidden>
           {['var(--primary)', 'var(--gold)', 'var(--violet, var(--muted))'].map((c, i) => (
-            <span key={i} className="h-2.5 w-2.5 rounded-full" style={{ background: c, opacity: 0.7 }} />
+            <span
+              key={i}
+              className="h-2.5 w-2.5 rounded-full"
+              style={{ background: c, opacity: 0.7 }}
+            />
           ))}
         </span>
         <span
           className="ml-2 flex-1 rounded-full px-3 py-1 text-[9px]"
-          style={{ background: 'var(--field)', color: 'var(--muted)', border: '1px solid var(--line)' }}
+          style={{
+            background: 'var(--field)',
+            color: 'var(--muted)',
+            border: '1px solid var(--line)',
+          }}
         >
           Search your library… ⌘K
         </span>
@@ -161,14 +213,20 @@ export function Mockup({ ariaLabel, skin }: { ariaLabel?: string; skin?: SkinId 
 
       <div className="flex">
         {/* sidebar */}
-        <div className="amside hidden w-[92px] shrink-0 flex-col gap-1 border-r p-3 sm:flex" style={{ borderColor: 'var(--line)', background: 'var(--card)' }}>
+        <div
+          className="amside hidden w-[92px] shrink-0 flex-col gap-1 border-r p-3 sm:flex"
+          style={{ borderColor: 'var(--line)', background: 'var(--card)' }}
+        >
           {NAV.map((n, i) => (
             <span
               key={n}
               className="rounded-md px-2 py-1 text-[9px] font-medium"
               style={
                 i === 1
-                  ? { background: 'color-mix(in srgb, var(--primary) 16%, transparent)', color: 'var(--ink)' }
+                  ? {
+                      background: 'color-mix(in srgb, var(--primary) 16%, transparent)',
+                      color: 'var(--ink)',
+                    }
                   : { color: 'var(--muted)' }
               }
             >
@@ -179,7 +237,10 @@ export function Mockup({ ariaLabel, skin }: { ariaLabel?: string; skin?: SkinId 
 
         {/* main panel */}
         <div className="min-w-0 flex-1 p-4">
-          <div className="text-[13px] leading-tight" style={{ fontFamily: 'var(--font-display)', fontWeight: 600, color: 'var(--ink)' }}>
+          <div
+            className="text-[13px] leading-tight"
+            style={{ fontFamily: 'var(--font-display)', fontWeight: 600, color: 'var(--ink)' }}
+          >
             Good evening, reader
           </div>
           <div className="mt-0.5 text-[9.5px]" style={{ color: 'var(--muted)' }}>

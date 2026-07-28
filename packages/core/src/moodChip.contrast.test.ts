@@ -29,7 +29,10 @@ describe('mood chip contrast — assigned chip legible at every skin × mode', (
         const bg = parseColor(tokens.cardSolid)
         expect(fg && bg).toBeTruthy()
         const ratio = contrastRatio(fg!, bg!)
-        expect(ratio, `${skin}/${mode}: ${tokens.ink} on ${tokens.cardSolid} = ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(AA_NORMAL)
+        expect(
+          ratio,
+          `${skin}/${mode}: ${tokens.ink} on ${tokens.cardSolid} = ${ratio.toFixed(2)}:1`,
+        ).toBeGreaterThanOrEqual(AA_NORMAL)
       })
 
       it(`${skin}/${mode} · accent (accent-ink on card) clears ${AA_GRAPHICAL}:1`, () => {
@@ -37,7 +40,10 @@ describe('mood chip contrast — assigned chip legible at every skin × mode', (
         const bg = parseColor(tokens.cardSolid)
         expect(fg && bg).toBeTruthy()
         const ratio = contrastRatio(fg!, bg!)
-        expect(ratio, `${skin}/${mode}: ${tokens.accentInk} on ${tokens.cardSolid} = ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(AA_GRAPHICAL)
+        expect(
+          ratio,
+          `${skin}/${mode}: ${tokens.accentInk} on ${tokens.cardSolid} = ${ratio.toFixed(2)}:1`,
+        ).toBeGreaterThanOrEqual(AA_GRAPHICAL)
       })
     }
   }

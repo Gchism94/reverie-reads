@@ -31,7 +31,11 @@ export function ReviewsPanel({ workKey, reviewerName }: { workKey: string; revie
 
   if (!open) {
     return (
-      <button type="button" onClick={() => setOpen(true)} className="text-[13px] font-semibold text-primary">
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="text-[13px] font-semibold text-primary"
+      >
         Read reviews →
       </button>
     )
@@ -43,7 +47,11 @@ export function ReviewsPanel({ workKey, reviewerName }: { workKey: string; revie
         <span className="text-[14px] font-semibold text-ink">
           Reviews{reviews ? ` (${reviews.length})` : ''}
         </span>
-        <button type="button" onClick={() => setOpen(false)} className="text-[12px] text-muted hover:text-ink">
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="text-[12px] text-muted hover:text-ink"
+        >
           hide
         </button>
       </div>
@@ -54,7 +62,11 @@ export function ReviewsPanel({ workKey, reviewerName }: { workKey: string; revie
       <div className="flex flex-col gap-2">
         {reviews?.length ? (
           reviews.map((r) => (
-            <div key={r.id} className="rounded-xl border border-line p-3" style={{ background: 'var(--field)' }}>
+            <div
+              key={r.id}
+              className="rounded-xl border border-line p-3"
+              style={{ background: 'var(--field)' }}
+            >
               <div className="flex items-center gap-2">
                 <span
                   className="flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-bold"
@@ -68,9 +80,20 @@ export function ReviewsPanel({ workKey, reviewerName }: { workKey: string; revie
               </div>
               {r.body && <div className="mt-1.5 text-[13.5px] text-ink">{r.body}</div>}
               <div className="mt-2 flex items-center gap-3 text-[11.5px]">
-                {r.hidden && <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: 'var(--chip)', color: 'var(--muted)' }}>Hidden — only you can see this</span>}
+                {r.hidden && (
+                  <span
+                    className="rounded-full px-2 py-0.5 text-[11px] font-semibold"
+                    style={{ background: 'var(--chip)', color: 'var(--muted)' }}
+                  >
+                    Hidden — only you can see this
+                  </span>
+                )}
                 {uid === r.reviewerId ? (
-                  <button type="button" onClick={() => setHidden.mutate({ id: r.id, hidden: !r.hidden })} className="text-muted hover:text-ink">
+                  <button
+                    type="button"
+                    onClick={() => setHidden.mutate({ id: r.id, hidden: !r.hidden })}
+                    className="text-muted hover:text-ink"
+                  >
                     {r.hidden ? 'Unhide' : 'Hide'}
                   </button>
                 ) : reported[r.id] ? (
@@ -78,7 +101,12 @@ export function ReviewsPanel({ workKey, reviewerName }: { workKey: string; revie
                 ) : (
                   <button
                     type="button"
-                    onClick={() => report.mutate({ targetType: 'review', targetId: r.id }, { onSuccess: () => setReported((p) => ({ ...p, [r.id]: true })) })}
+                    onClick={() =>
+                      report.mutate(
+                        { targetType: 'review', targetId: r.id },
+                        { onSuccess: () => setReported((p) => ({ ...p, [r.id]: true })) },
+                      )
+                    }
                     className="text-muted hover:text-ink"
                   >
                     Report
@@ -93,7 +121,9 @@ export function ReviewsPanel({ workKey, reviewerName }: { workKey: string; revie
       </div>
 
       <div className="mt-3 border-t border-line pt-3">
-        <div className="mb-1 text-[11px] uppercase tracking-[0.15em] text-muted">Write your review</div>
+        <div className="mb-1 text-[11px] uppercase tracking-[0.15em] text-muted">
+          Write your review
+        </div>
         <Stars value={rating} onChange={setRating} />
         <textarea
           value={body}
@@ -108,7 +138,10 @@ export function ReviewsPanel({ workKey, reviewerName }: { workKey: string; revie
           disabled={upsert.isPending || (!rating && !body.trim())}
           onClick={() => upsert.mutate({ rating, body: body.trim(), reviewerName })}
           className="mt-2 rounded-full px-4 py-2 text-[13px] font-semibold disabled:opacity-50"
-          style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))', color: 'var(--on-primary)' }}
+          style={{
+            background: 'linear-gradient(135deg, var(--primary), var(--gold))',
+            color: 'var(--on-primary)',
+          }}
         >
           Post review
         </button>

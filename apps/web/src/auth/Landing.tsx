@@ -21,8 +21,34 @@ const NAV = [
 function NightSky() {
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-      <div className="nebula rv-anim" style={{ width: '52vmax', height: '52vmax', top: '-14%', left: '-8%', background: 'var(--gold)', animationName: 'rv-drift-a', animationDuration: '40s', animationTimingFunction: 'ease-in-out', animationIterationCount: 'infinite' }} />
-      <div className="nebula rv-anim" style={{ width: '46vmax', height: '46vmax', top: '10%', right: '-12%', background: 'var(--violet)', animationName: 'rv-drift-b', animationDuration: '47s', animationTimingFunction: 'ease-in-out', animationIterationCount: 'infinite' }} />
+      <div
+        className="nebula rv-anim"
+        style={{
+          width: '52vmax',
+          height: '52vmax',
+          top: '-14%',
+          left: '-8%',
+          background: 'var(--gold)',
+          animationName: 'rv-drift-a',
+          animationDuration: '40s',
+          animationTimingFunction: 'ease-in-out',
+          animationIterationCount: 'infinite',
+        }}
+      />
+      <div
+        className="nebula rv-anim"
+        style={{
+          width: '46vmax',
+          height: '46vmax',
+          top: '10%',
+          right: '-12%',
+          background: 'var(--violet)',
+          animationName: 'rv-drift-b',
+          animationDuration: '47s',
+          animationTimingFunction: 'ease-in-out',
+          animationIterationCount: 'infinite',
+        }}
+      />
     </div>
   )
 }
@@ -30,7 +56,13 @@ function NightSky() {
 function Nav() {
   const [open, setOpen] = useState(false)
   return (
-    <nav className="sticky top-0 z-20 backdrop-blur-lg" style={{ background: 'color-mix(in srgb, var(--bg0) 72%, transparent)', borderBottom: '1px solid var(--line)' }}>
+    <nav
+      className="sticky top-0 z-20 backdrop-blur-lg"
+      style={{
+        background: 'color-mix(in srgb, var(--bg0) 72%, transparent)',
+        borderBottom: '1px solid var(--line)',
+      }}
+    >
       <div className="mx-auto flex max-w-[1180px] items-center justify-between px-6 py-3.5">
         <Link to="/" aria-label={`${APP_NAME} home`}>
           <Wordmark />
@@ -38,17 +70,30 @@ function Nav() {
 
         <div className="hidden items-center gap-7 md:flex">
           {NAV.map(([label, href]) => (
-            <a key={href} href={href} className="text-[13.5px] font-medium text-muted hover:text-ink">
+            <a
+              key={href}
+              href={href}
+              className="text-[13.5px] font-medium text-muted hover:text-ink"
+            >
               {label}
             </a>
           ))}
         </div>
 
         <div className="hidden items-center gap-3 md:flex">
-          <Link to="/auth" search={{ mode: 'signin' }} className="text-[13.5px] font-semibold text-ink">
+          <Link
+            to="/auth"
+            search={{ mode: 'signin' }}
+            className="text-[13.5px] font-semibold text-ink"
+          >
             Log in
           </Link>
-          <Link to="/auth" search={{ mode: 'signup' }} className="flex h-9 items-center rounded-full px-4 text-[13.5px] font-semibold" style={{ background: 'var(--gold)', color: 'var(--on-primary)' }}>
+          <Link
+            to="/auth"
+            search={{ mode: 'signup' }}
+            className="flex h-9 items-center rounded-full px-4 text-[13.5px] font-semibold"
+            style={{ background: 'var(--gold)', color: 'var(--on-primary)' }}
+          >
             Get started
           </Link>
         </div>
@@ -65,17 +110,34 @@ function Nav() {
       </div>
 
       {open && (
-        <div className="border-t px-6 py-3 md:hidden" style={{ borderColor: 'var(--line)', background: 'var(--bg0)' }}>
+        <div
+          className="border-t px-6 py-3 md:hidden"
+          style={{ borderColor: 'var(--line)', background: 'var(--bg0)' }}
+        >
           <div className="flex flex-col gap-1">
             {NAV.map(([label, href]) => (
-              <a key={href} href={href} onClick={() => setOpen(false)} className="rounded-lg px-2 py-2 text-[14px] font-medium text-muted hover:text-ink">
+              <a
+                key={href}
+                href={href}
+                onClick={() => setOpen(false)}
+                className="rounded-lg px-2 py-2 text-[14px] font-medium text-muted hover:text-ink"
+              >
                 {label}
               </a>
             ))}
-            <Link to="/auth" search={{ mode: 'signin' }} className="rounded-lg px-2 py-2 text-[14px] font-semibold text-ink">
+            <Link
+              to="/auth"
+              search={{ mode: 'signin' }}
+              className="rounded-lg px-2 py-2 text-[14px] font-semibold text-ink"
+            >
               Log in
             </Link>
-            <Link to="/auth" search={{ mode: 'signup' }} className="mt-1 flex h-11 items-center justify-center rounded-full text-[14px] font-semibold" style={{ background: 'var(--gold)', color: 'var(--on-primary)' }}>
+            <Link
+              to="/auth"
+              search={{ mode: 'signup' }}
+              className="mt-1 flex h-11 items-center justify-center rounded-full text-[14px] font-semibold"
+              style={{ background: 'var(--gold)', color: 'var(--on-primary)' }}
+            >
               Get started
             </Link>
           </div>
@@ -90,10 +152,16 @@ function Hero() {
     <header id="top" className="relative mx-auto max-w-[1180px] px-6 py-16 sm:py-24">
       <div className="grid items-center gap-12 lg:grid-cols-[1.04fr_0.96fr]">
         <div className="text-center lg:text-left">
-          <p className="text-[12px] font-semibold uppercase tracking-[0.22em]" style={{ color: 'var(--eyebrow)' }}>
+          <p
+            className="text-[12px] font-semibold uppercase tracking-[0.22em]"
+            style={{ color: 'var(--eyebrow)' }}
+          >
             {APP_NAME} · your reading life
           </p>
-          <h1 className="mx-auto mt-4 max-w-[15ch] text-balance text-[clamp(40px,7vw,62px)] leading-[1.02] text-ink lg:mx-0" style={display}>
+          <h1
+            className="mx-auto mt-4 max-w-[15ch] text-balance text-[clamp(40px,7vw,62px)] leading-[1.02] text-ink lg:mx-0"
+            style={display}
+          >
             A reading life,{' '}
             <span className="italic" style={{ color: 'var(--gold)' }}>
               beautifully kept.
@@ -108,11 +176,19 @@ function Hero() {
               to="/auth"
               search={{ mode: 'signup' }}
               className="flex h-12 items-center rounded-full px-7 text-[15px] font-semibold"
-              style={{ background: 'var(--gold)', color: 'var(--on-primary)', boxShadow: '0 10px 26px color-mix(in srgb, var(--gold) 36%, transparent)' }}
+              style={{
+                background: 'var(--gold)',
+                color: 'var(--on-primary)',
+                boxShadow: '0 10px 26px color-mix(in srgb, var(--gold) 36%, transparent)',
+              }}
             >
               Get started
             </Link>
-            <a href="#skins" className="flex h-12 items-center rounded-full px-6 text-[15px] font-semibold text-ink" style={{ border: '1px solid var(--line)' }}>
+            <a
+              href="#skins"
+              className="flex h-12 items-center rounded-full px-6 text-[15px] font-semibold text-ink"
+              style={{ border: '1px solid var(--line)' }}
+            >
               See how it works
             </a>
           </div>
@@ -142,7 +218,9 @@ export function Landing() {
           rendered and must stay. Before this, that single failed import unwound to the app-wide
           boundary and replaced a working page with "Something went wrong!". */}
       <ChunkBoundary label="landing-below-fold">
-        <Suspense fallback={<div className="py-24 text-center text-[13px] text-muted">Loading…</div>}>
+        <Suspense
+          fallback={<div className="py-24 text-center text-[13px] text-muted">Loading…</div>}
+        >
           <LandingBelowFold />
         </Suspense>
       </ChunkBoundary>

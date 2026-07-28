@@ -62,7 +62,12 @@ export function useAdaptiveControls() {
       const bundle = materializeAdaptive(pending)
       setBundle(bundle)
       setSkinLocal('adaptive')
-      update.mutate({ adaptiveSkin: bundle, skin: 'adaptive', adaptivePending: null, adaptiveDismissed: null })
+      update.mutate({
+        adaptiveSkin: bundle,
+        skin: 'adaptive',
+        adaptivePending: null,
+        adaptiveDismissed: null,
+      })
     },
     /** Reveal "not now": keep the current skin, clear the pending, and REMEMBER the dismissed signal
      *  so the cron won't re-nag the same shift — it resurfaces only if taste drifts materially past
@@ -70,7 +75,8 @@ export function useAdaptiveControls() {
     dismissPending: (pending: AdaptivePending) =>
       update.mutate({ adaptivePending: null, adaptiveDismissed: pending }),
     /** Reveal "lock": freeze the current skin; clear pending + dismissal (lock means never ask). */
-    lockPending: () => update.mutate({ adaptiveLocked: true, adaptivePending: null, adaptiveDismissed: null }),
+    lockPending: () =>
+      update.mutate({ adaptiveLocked: true, adaptivePending: null, adaptiveDismissed: null }),
   }
 }
 

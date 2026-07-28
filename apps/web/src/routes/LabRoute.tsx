@@ -49,19 +49,32 @@ function LabCard() {
       >
         <div
           className="grid h-full w-full place-items-center italic"
-          style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: '1.7rem', color: 'var(--ink)' }}
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontWeight: 600,
+            fontSize: '1.7rem',
+            color: 'var(--ink)',
+          }}
         >
           CL
         </div>
         <span
           className="absolute left-1.5 top-1.5 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide"
-          style={{ background: SCRIM, color: 'var(--mark-accent)', borderRadius: 'var(--mark-radius)' }}
+          style={{
+            background: SCRIM,
+            color: 'var(--mark-accent)',
+            borderRadius: 'var(--mark-radius)',
+          }}
         >
           Read
         </span>
         <span
           className="absolute right-1.5 top-1.5 grid h-7 w-7 place-items-center text-[14px]"
-          style={{ background: SCRIM, color: 'var(--mark-accent)', borderRadius: 'var(--mark-radius)' }}
+          style={{
+            background: SCRIM,
+            color: 'var(--mark-accent)',
+            borderRadius: 'var(--mark-radius)',
+          }}
         >
           ♥
         </span>
@@ -93,7 +106,15 @@ function LabRing({ aph }: { aph: boolean }) {
   return (
     <div className="relative h-14 w-14 flex-none">
       <svg width="56" height="56" className="-rotate-90">
-        <circle cx="28" cy="28" r="20" fill="none" stroke="var(--chip-border)" strokeWidth="6" strokeDasharray={aph ? '1 4' : undefined} />
+        <circle
+          cx="28"
+          cy="28"
+          r="20"
+          fill="none"
+          stroke="var(--chip-border)"
+          strokeWidth="6"
+          strokeDasharray={aph ? '1 4' : undefined}
+        />
         <circle
           cx="28"
           cy="28"
@@ -117,7 +138,11 @@ function LabRing({ aph }: { aph: boolean }) {
 function LabControls({ skin }: { skin: SkinId }) {
   return (
     <div className="flex flex-wrap items-center gap-2.5">
-      <button type="button" className="skin-control px-3.5 py-2 text-[12px]" style={{ background: 'var(--accent-fill)', color: 'var(--on-primary)' }}>
+      <button
+        type="button"
+        className="skin-control px-3.5 py-2 text-[12px]"
+        style={{ background: 'var(--accent-fill)', color: 'var(--on-primary)' }}
+      >
         Begin
       </button>
       <input
@@ -126,14 +151,23 @@ function LabControls({ skin }: { skin: SkinId }) {
         className="skin-field h-9 w-32 border border-line px-3 text-[12px] text-ink outline-none"
         style={{ background: 'var(--field)' }}
       />
-      <span className="skin-control inline-flex items-center border border-line px-3 py-2 text-[12px] text-ink" style={{ background: 'var(--card)' }}>
+      <span
+        className="skin-control inline-flex items-center border border-line px-3 py-2 text-[12px] text-ink"
+        style={{ background: 'var(--card)' }}
+      >
         Sort ▾
       </span>
       <span
         className="relative inline-block h-6 w-11 border border-line"
-        style={{ borderRadius: 'var(--radius-control)', background: 'linear-gradient(135deg, var(--primary), var(--gold))' }}
+        style={{
+          borderRadius: 'var(--radius-control)',
+          background: 'linear-gradient(135deg, var(--primary), var(--gold))',
+        }}
       >
-        <span className="absolute top-[2px] h-[18px] w-[18px] bg-white" style={{ left: 'calc(100% - 20px)', borderRadius: 'var(--radius-control)' }} />
+        <span
+          className="absolute top-[2px] h-[18px] w-[18px] bg-white"
+          style={{ left: 'calc(100% - 20px)', borderRadius: 'var(--radius-control)' }}
+        />
       </span>
       <LabRing aph={skin === 'aphelion'} />
     </div>
@@ -178,7 +212,10 @@ function SkinLab() {
   // Each cell forces a skin via data-skin; load every pairing so they render in their true type.
   useEffect(() => loadAllSkinFonts(), [])
   return (
-    <div className="mx-auto min-h-dvh max-w-[1120px] px-6 py-10" style={{ background: 'var(--bg0)' }}>
+    <div
+      className="mx-auto min-h-dvh max-w-[1120px] px-6 py-10"
+      style={{ background: 'var(--bg0)' }}
+    >
       <h1 className="text-[24px] font-bold text-ink" style={{ fontFamily: 'var(--font-display)' }}>
         Skin character — nine worlds
       </h1>

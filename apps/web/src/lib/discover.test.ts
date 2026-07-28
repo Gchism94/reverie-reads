@@ -29,7 +29,9 @@ const book = (b: { title: string; isbn?: string; author?: string }): Book =>
 
 describe('discover — genre queries', () => {
   it('covers exactly the nine canonical genres (same alignment guard as the taxonomies)', () => {
-    expect(Object.keys(GENRE_DISCOVER_QUERY).sort()).toEqual(CORE_GENRES.map((g) => g.toLowerCase()).sort())
+    expect(Object.keys(GENRE_DISCOVER_QUERY).sort()).toEqual(
+      CORE_GENRES.map((g) => g.toLowerCase()).sort(),
+    )
   })
 
   it('resolves any genre spelling via genreKey; unknown genres browse themselves', () => {
@@ -79,7 +81,11 @@ describe('discover — dedupe', () => {
 
 describe('discover — ownership', () => {
   const owned = ownedKeys([
-    book({ title: 'A Court of Thorns and Roses', isbn: '978-1-63557-556-9', author: 'Sarah J. Maas' }),
+    book({
+      title: 'A Court of Thorns and Roses',
+      isbn: '978-1-63557-556-9',
+      author: 'Sarah J. Maas',
+    }),
     book({ title: 'King of Wrath', author: 'Ana Huang' }),
   ])
 
@@ -89,11 +95,18 @@ describe('discover — ownership', () => {
 
   it('matches by title + first author, case- and punctuation-insensitive', () => {
     expect(isOwned(hit({ title: 'KING OF WRATH', authors: ['ana huang'] }), owned)).toBe(true)
-    expect(isOwned(hit({ title: 'A Court of Thorns & Roses…', authors: ['Sarah J Maas'] }), owned)).toBe(false) // '&' ≠ 'and' — aliasing stays out of v1
+    expect(
+      isOwned(hit({ title: 'A Court of Thorns & Roses…', authors: ['Sarah J Maas'] }), owned),
+    ).toBe(false) // '&' ≠ 'and' — aliasing stays out of v1
   })
 
   it('does not claim strangers', () => {
-    expect(isOwned(hit({ title: 'King of Pride', authors: ['Ana Huang'], isbn: '9781728289731' }), owned)).toBe(false)
+    expect(
+      isOwned(
+        hit({ title: 'King of Pride', authors: ['Ana Huang'], isbn: '9781728289731' }),
+        owned,
+      ),
+    ).toBe(false)
   })
 })
 

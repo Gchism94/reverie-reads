@@ -60,8 +60,12 @@ export function haversineKm(aLat: number, aLng: number, bLat: number, bLng: numb
  * repeat searches from the same area share one cached Overpass response (the cost lever). The
  * client computes distances from the REAL point, so rounding the cache key doesn't blur results.
  */
-export const geoCacheKey = (lat: number, lng: number, radiusMeters: number, precision = 2): string =>
-  `stores:${lat.toFixed(precision)},${lng.toFixed(precision)}:${radiusMeters}`
+export const geoCacheKey = (
+  lat: number,
+  lng: number,
+  radiusMeters: number,
+  precision = 2,
+): string => `stores:${lat.toFixed(precision)},${lng.toFixed(precision)}:${radiusMeters}`
 
 /** Turn raw Overpass elements into independent Stores, distance-sorted from (lat,lng). */
 export function parseStores(elements: readonly OverpassEl[], lat: number, lng: number): Store[] {
@@ -73,7 +77,13 @@ export function parseStores(elements: readonly OverpassEl[], lat: number, lng: n
     if (eLat == null || eLng == null) continue
     const name = t.name ?? 'Unnamed bookshop'
     if (isChain(name)) continue
-    const address = [t['addr:housenumber'], t['addr:street'], t['addr:city'], t['addr:state'], t['addr:postcode']]
+    const address = [
+      t['addr:housenumber'],
+      t['addr:street'],
+      t['addr:city'],
+      t['addr:state'],
+      t['addr:postcode'],
+    ]
       .filter(Boolean)
       .join(' ')
       .trim()

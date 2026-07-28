@@ -4,6 +4,7 @@ A sequenced, agent-friendly build plan. Each step is small and ends with a check
 top to bottom; commit at each checkpoint. Full context is in `AGENTS.md` and `docs/`.
 
 ## Paste-to-start prompt
+
 > Read `AGENTS.md` and `docs/CODING_AGENT_KICKOFF.md`. Then do Step 1 (scaffold) and stop
 > for review. After I approve, continue one step at a time, committing at each checkpoint.
 > Use the decided stack; keep both themes (Nocturne default + Magnolia Dawn) wired from
@@ -12,6 +13,7 @@ top to bottom; commit at each checkpoint. Full context is in `AGENTS.md` and `do
 ---
 
 ## Step 1 — Scaffold
+
 - pnpm monorepo: `apps/web` (React+TS+Vite+Tailwind+TanStack Router/Query),
   `packages/core` (types + logic), `supabase/`.
 - ESLint + Prettier + Vitest + Playwright configured; the `pnpm` scripts in `AGENTS.md`.
@@ -21,6 +23,7 @@ top to bottom; commit at each checkpoint. Full context is in `AGENTS.md` and `do
   `pnpm lint` and `pnpm test` pass.
 
 ## Step 2 — Backend foundation
+
 - Migrate `backend/supabase_schema.sql` into `supabase/` and expand to the relational
   schema in `docs/DATA_MODEL.md` (profiles, books, reads, lists/list_items, clubs/…),
   with row-level security scoped to the user.
@@ -29,6 +32,7 @@ top to bottom; commit at each checkpoint. Full context is in `AGENTS.md` and `do
   `books` and nothing else (RLS verified by test).
 
 ## Step 3 — Shared core (`packages/core`)
+
 - TypeScript types for Book / List / Read / Club from `docs/DATA_MODEL.md`.
 - Port with unit tests: **merge engine**, **CSV importer** (Goodreads/StoryGraph),
   **spoiler-gate** rule. Port cover-URL helpers.
@@ -36,11 +40,13 @@ top to bottom; commit at each checkpoint. Full context is in `AGENTS.md` and `do
   gate (`unit <= progress`).
 
 ## Step 4 — Data layer + seed
+
 - Supabase client + TanStack Query hooks (books, lists, reads) with optimistic writes.
 - Import `data/personal_seed.json` (290 books) as the dev account's seed.
 - **Check:** the app reads/writes books through the backend; seed shows up.
 
 ## Step 5 — First vertical slice: Library + Book detail
+
 - Library: cover grid, search, filter panel (tropes, subgenre, series status, series
   length incl. **"None set"**, reading status, format, faves, sort), Grid ⇄ Series view
   (owned-of-total, gap badges, set length). Show small owned-format icons on cards.
@@ -52,6 +58,7 @@ top to bottom; commit at each checkpoint. Full context is in `AGENTS.md` and `do
   both themes; mobile + desktop; a11y pass.
 
 ## Step 5b — Owned smart-shelves + mass tools
+
 - Shelves: auto **Owned · Physical / Ebook / Audiobook** shelves derived from `owned`
   (separate shelves, pinned above manual TBRs/collections), with live counts.
 - **Mass import** (CSV + bulk ISBN/title) and **mass merge** (resolve all detected
@@ -60,14 +67,17 @@ top to bottom; commit at each checkpoint. Full context is in `AGENTS.md` and `do
   import lands many books and auto-dedupes.
 
 ## Step 6 — Remaining screens to parity
+
 Home (greeting, goal ring, reading-now progress, priority shelf, coming-soon) · Shelves
 (TBRs incl. priority + Collections as spine shelves) · Planner (Calendar with/without
 rereads + planned dates; Releases with flexible precision) · Stats ("Wrapped") · Match ·
 Add (barcode + ISBN/title search + manual) · Settings (theme, goal, backup/restore, CSV
 import, merge duplicates).
+
 - **Check:** each screen matches `docs/FEATURES.md` and the design.
 
 ## Step 7 — Multi-user
+
 - Accounts + multi-device sync (library follows the user).
 - Clubs on the backend: read-alongs (per-user progress), shared/club TBRs, comments with
   the spoiler gate; Realtime for live updates; keep capability-code joins.
@@ -75,6 +85,7 @@ import, merge duplicates).
 - **Check:** two accounts can share a list and run a read-along; comments stay gated.
 
 ## Step 8 — Offline + polish
+
 - Dexie offline mirror + background sync; optimistic UI everywhere.
 - Server-side enrichment Edge Function (Google Books → Open Library → Hardcover;
   see `docs/DATA_SOURCES.md`); CSV import as an Edge Function.
@@ -84,6 +95,7 @@ import, merge duplicates).
 ---
 
 ## Guardrails
+
 - Don't extend the 262 KB single-file prototype — it's reference only.
 - Don't hardcode colors or the app name.
 - Keep exactly two themes.

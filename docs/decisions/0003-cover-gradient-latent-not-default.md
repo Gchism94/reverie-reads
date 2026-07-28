@@ -39,16 +39,16 @@ book detail page.
 Measured by asking the browser what is actually painted at each gradient element's centre
 (`elementFromPoint`): if a descendant sits on top, the gradient is occluded.
 
-| Surface | Result | Why |
-|---|---|---|
-| `SeriesView` | occluded | 160×241 cover boxes covered by the placeholder plate |
-| `BookDetailRail` | occluded | 161×243 and 142×214 boxes, same |
-| **Add's cover preview** | **rendered — now fixed** | see below |
-| `RefineAdded` | occluded *(code-derived, not measured)* | renders `<CoverImage>` unconditionally, which always paints an `<img>` or the placeholder |
+| Surface                 | Result                                  | Why                                                                                       |
+| ----------------------- | --------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `SeriesView`            | occluded                                | 160×241 cover boxes covered by the placeholder plate                                      |
+| `BookDetailRail`        | occluded                                | 161×243 and 142×214 boxes, same                                                           |
+| **Add's cover preview** | **rendered — now fixed**                | see below                                                                                 |
+| `RefineAdded`           | occluded _(code-derived, not measured)_ | renders `<CoverImage>` unconditionally, which always paints an `<img>` or the placeholder |
 
-*Method note: `RefineAdded` resisted automated measurement (reaching step two reliably needs a
+_Method note: `RefineAdded` resisted automated measurement (reaching step two reliably needs a
 completed add through the intake/dedup path). Its row above is read from the code, not observed,
-and is flagged as such rather than presented as a measurement. It has not been upgraded since.*
+and is flagged as such rather than presented as a measurement. It has not been upgraded since._
 
 ### Add's cover preview — the one escape, resolved 2026-07-26
 

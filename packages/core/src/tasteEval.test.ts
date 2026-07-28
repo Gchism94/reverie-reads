@@ -11,22 +11,72 @@ function plantedLibrary(): Book[] {
   const books: Book[] = []
   // 8 loved locked-room noirs (the held-out set), 8 hated billionaires, filler + unread candidates
   for (let i = 0; i < 8; i++) {
-    books.push(makeBook({ id: `love-${i}`, title: `Love ${i}`, tags: ['Locked Room', 'Noir'], subgenre: 'Noir', readStatus: 'Read', rating: 5 }))
-    books.push(makeBook({ id: `hate-${i}`, title: `Hate ${i}`, tags: ['Billionaire'], subgenre: 'Romance', readStatus: i % 2 ? 'DNF' : 'Read', rating: i % 2 ? 0 : 1 }))
-    books.push(makeBook({ id: `mid-${i}`, title: `Mid ${i}`, tags: ['Small Town'], subgenre: 'Contemporary', readStatus: 'Read', rating: 3 }))
+    books.push(
+      makeBook({
+        id: `love-${i}`,
+        title: `Love ${i}`,
+        tags: ['Locked Room', 'Noir'],
+        subgenre: 'Noir',
+        readStatus: 'Read',
+        rating: 5,
+      }),
+    )
+    books.push(
+      makeBook({
+        id: `hate-${i}`,
+        title: `Hate ${i}`,
+        tags: ['Billionaire'],
+        subgenre: 'Romance',
+        readStatus: i % 2 ? 'DNF' : 'Read',
+        rating: i % 2 ? 0 : 1,
+      }),
+    )
+    books.push(
+      makeBook({
+        id: `mid-${i}`,
+        title: `Mid ${i}`,
+        tags: ['Small Town'],
+        subgenre: 'Contemporary',
+        readStatus: 'Read',
+        rating: 3,
+      }),
+    )
   }
   for (let i = 0; i < 6; i++) {
-    books.push(makeBook({ id: `cand-love-${i}`, title: `CandL ${i}`, tags: ['Locked Room'], subgenre: 'Noir', readStatus: 'Unread' }))
-    books.push(makeBook({ id: `cand-hate-${i}`, title: `CandH ${i}`, tags: ['Billionaire'], subgenre: 'Romance', readStatus: 'Unread' }))
+    books.push(
+      makeBook({
+        id: `cand-love-${i}`,
+        title: `CandL ${i}`,
+        tags: ['Locked Room'],
+        subgenre: 'Noir',
+        readStatus: 'Unread',
+      }),
+    )
+    books.push(
+      makeBook({
+        id: `cand-hate-${i}`,
+        title: `CandH ${i}`,
+        tags: ['Billionaire'],
+        subgenre: 'Romance',
+        readStatus: 'Unread',
+      }),
+    )
   }
   return books
 }
 
 // ── 2 · the real 290-book seed (prototype export shape: tropes/spice) ──
 type SeedBook = {
-  title: string; series?: string; position?: string | number; subgenre?: string
-  genres?: string[]; tropes?: string[]; spice?: number; rating?: number
-  readStatus?: string; fave?: boolean
+  title: string
+  series?: string
+  position?: string | number
+  subgenre?: string
+  genres?: string[]
+  tropes?: string[]
+  spice?: number
+  rating?: number
+  readStatus?: string
+  fave?: boolean
 }
 const seed: Book[] = (rawSeed as SeedBook[]).map((s, i) =>
   makeBook({

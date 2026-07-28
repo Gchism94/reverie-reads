@@ -18,7 +18,9 @@ test('Fraunces (display face) actually loads — no silent serif fallback', asyn
   const loaded = await page.evaluate(() =>
     (document as Document & { fonts: FontFaceSet }).fonts.check('600 24px "Fraunces"'),
   )
-  expect(loaded, 'Fraunces did not load — Tryst would silently fall back to system serif').toBe(true)
+  expect(loaded, 'Fraunces did not load — Tryst would silently fall back to system serif').toBe(
+    true,
+  )
 })
 
 test('auth screen offers password + social, and toggles sign-in / sign-up', async ({ page }) => {

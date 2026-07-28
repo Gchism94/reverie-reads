@@ -21,7 +21,11 @@ export function Chip({
       className="skin-control border px-3 py-1.5 text-[12.5px] transition-colors motion-reduce:transition-none"
       style={
         active
-          ? { background: 'var(--accent-fill)', color: 'var(--on-primary)', borderColor: 'transparent' }
+          ? {
+              background: 'var(--accent-fill)',
+              color: 'var(--on-primary)',
+              borderColor: 'transparent',
+            }
           : { background: 'var(--chip)', color: 'var(--ink)', borderColor: 'var(--chip-border)' }
       }
     >

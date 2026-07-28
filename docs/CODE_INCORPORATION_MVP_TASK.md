@@ -6,6 +6,7 @@
 > Do NOT start incorporation until STEP 0 is fully done.
 
 ## STEP 0 — clean main first (hard gate)
+
 1. Merge both open chains down, in order: import chain **#10→#11→#13→#14→#18**, then structural line
    **#15→#16→#17**, resolving the flagged **LibraryRoute conflict** (both stacks edit the library screen from
    opposite sides).
@@ -15,6 +16,7 @@
 3. Full gate green on main. Only then branch for incorporation.
 
 ## THE PRIME RULE — extraction into the existing contract, not rearchitecture
+
 The redesign fills the architecture you built; it does not replace it. `SKINS`, the token contract,
 `SKIN_STRUCTURE`, the `Spine` slot, the registry-keyed tests, the voice pack — all stay. Incorporation =
 decode each specimen (the standard bundle format you've decoded three times) and update **values + structural
@@ -23,6 +25,7 @@ contract extension PR first (schema + neutral default + doc), then fills — fla
 Extract real values; never guess. If something is ambiguous in a specimen, ask Greg rather than inventing.
 
 ## STAGED INCORPORATION (prove first, then fan out — per chunk)
+
 **Stage I — system + refined Tryst/Aphelion.** Decode chunk 1; diff refined values/structures against current;
 update the two reference skins (values, structures, spines, placeholder covers). These are live, proven skins —
 treat this as a refinement diff, not a rebuild; anything that looks like a regression against the current
@@ -37,6 +40,7 @@ next stage lands. For skin chunks, stage a side-by-side of each new skin's compo
 both modes.
 
 ## MVP POLISH (after Stage IV, same discipline)
+
 - **Fan structure everywhere**: every remaining surface composes from slots — nav, stats, planner, orders,
   settings, onboarding screens, import flow (Building / found / dedupe / Ready), toasts, dialogs. Zero
   surfaces left on the generic card-and-label.
@@ -49,6 +53,7 @@ both modes.
   anything deliberately deferred.
 
 ## GUARDRAILS (all standing, now at nine-skin scale)
+
 - **AA**: the registry-keyed contrast test auto-covers nine skins × two modes — extend it to every new
   structural text surface, spine text at minimum sizes (13px/9px), placeholder covers, and voice copy surfaces.
 - **Reduced-motion**: every skin's animated character rides `.rv-anim`.
@@ -60,6 +65,7 @@ both modes.
 - **GATE** per PR: core + typecheck + lint + build + the full axe e2e sweep (all nine × both modes) green.
 
 ## MVP DEFINITION OF DONE
+
 1. Clean main; both prior chains banked; LibraryRoute verification passed.
 2. All nine skins: full identity (tokens + structure + motif + spine + placeholder + voice), extracted from the
    design pass, live on the real app.

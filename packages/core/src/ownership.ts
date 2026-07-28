@@ -22,7 +22,12 @@ export const isPossessed = (b: Pick<Book, 'ownership'>): boolean =>
 
 /** Rank for resolving a single ownership from several (dedupe / import merge): a real possession
  *  never loses to a want, and owned beats borrowed. Higher wins. */
-export const OWNERSHIP_RANK: Record<BookOwnership, number> = { owned: 3, borrowed: 2, wishlist: 1, unset: 0 }
+export const OWNERSHIP_RANK: Record<BookOwnership, number> = {
+  owned: 3,
+  borrowed: 2,
+  wishlist: 1,
+  unset: 0,
+}
 
 /** The stronger of two ownership states (owned > borrowed > wishlist > unset). */
 export const strongerOwnership = (a: BookOwnership, b: BookOwnership): BookOwnership =>

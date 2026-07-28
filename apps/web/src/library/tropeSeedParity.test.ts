@@ -15,7 +15,10 @@ describe('trope seed ↔ migration parity', () => {
       sql.indexOf('insert into public.tropes (name, facet, genre_affinity, aliases)'),
       sql.indexOf('on conflict do nothing'),
     )
-    return { block, rows: [...block.matchAll(/\('((?:[^']|'')+)', '(\w+)', (.*?), (.*?)\)(?:,|\s*$)/gm)] }
+    return {
+      block,
+      rows: [...block.matchAll(/\('((?:[^']|'')+)', '(\w+)', (.*?), (.*?)\)(?:,|\s*$)/gm)],
+    }
   }
   const original = rowsFrom('20260717010000_trope_system.sql')
   const added = rowsFrom('20260721020000_taxonomy_neutral.sql')

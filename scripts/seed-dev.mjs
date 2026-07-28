@@ -137,7 +137,10 @@ async function seedContributors(ownerId) {
   await admin.from('book_authors').delete().eq('owner_id', ownerId)
   await admin.from('authors').delete().eq('owner_id', ownerId)
   const authorRows = [...byKey].map(([name_key, name]) => ({ owner_id: ownerId, name, name_key }))
-  const { data: authors, error: ae } = await admin.from('authors').insert(authorRows).select('id, name_key')
+  const { data: authors, error: ae } = await admin
+    .from('authors')
+    .insert(authorRows)
+    .select('id, name_key')
   if (ae) throw ae
   const idByKey = new Map(authors.map((a) => [a.name_key, a.id]))
 
@@ -146,7 +149,13 @@ async function seedContributors(ownerId) {
   for (const b of books) {
     const name = fullName(b)
     if (!name) continue
-    links.push({ book_id: b.id, author_id: idByKey.get(nameKey(name)), owner_id: ownerId, position: 0, role: 'author' })
+    links.push({
+      book_id: b.id,
+      author_id: idByKey.get(nameKey(name)),
+      owner_id: ownerId,
+      position: 0,
+      role: 'author',
+    })
   }
   if (links.length) {
     const { error: le } = await admin.from('book_authors').insert(links)
@@ -173,7 +182,9 @@ async function main() {
     .select('*', { count: 'exact', head: true })
     .eq('owner_id', ownerId)
 
-  console.log(`Seeded ${rows.length} books (${authorCount} distinct authors) for ${DEV_EMAIL} (owner ${ownerId}); table now holds ${count}.`)
+  console.log(
+    `Seeded ${rows.length} books (${authorCount} distinct authors) for ${DEV_EMAIL} (owner ${ownerId}); table now holds ${count}.`,
+  )
 }
 
 main().catch((e) => {

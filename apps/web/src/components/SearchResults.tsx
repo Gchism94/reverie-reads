@@ -14,10 +14,15 @@ function ResultMeta({ result }: { result: SearchResult }) {
     <>
       <div className="truncate text-[12px] text-muted">
         {author}
-        {result.year ? <span style={{ color: 'var(--faint, var(--muted))' }}> · {result.year}</span> : null}
+        {result.year ? (
+          <span style={{ color: 'var(--faint, var(--muted))' }}> · {result.year}</span>
+        ) : null}
       </div>
       {result.series && (
-        <div className="truncate text-[11px] italic" style={{ color: 'var(--faint, var(--muted))', fontFamily: 'var(--font-display)' }}>
+        <div
+          className="truncate text-[11px] italic"
+          style={{ color: 'var(--faint, var(--muted))', fontFamily: 'var(--font-display)' }}
+        >
           {result.series}
           {result.seriesPosition != null ? ` · #${result.seriesPosition}` : ''}
         </div>
@@ -62,15 +67,26 @@ export function SearchResults({
         {results.map((r) => {
           const inLib = libraryMatch(r, books)
           return (
-            <li key={`${r.isbn}|${r.title}`} className="flex items-center gap-3 skin-card border border-line px-2.5 py-2" style={{ background: 'var(--field)' }}>
-              <span className="h-14 w-9 flex-none overflow-hidden rounded border border-line" style={{ background: 'var(--card)' }}>
+            <li
+              key={`${r.isbn}|${r.title}`}
+              className="flex items-center gap-3 skin-card border border-line px-2.5 py-2"
+              style={{ background: 'var(--field)' }}
+            >
+              <span
+                className="h-14 w-9 flex-none overflow-hidden rounded border border-line"
+                style={{ background: 'var(--card)' }}
+              >
                 <CoverImage book={coverBook(r)} thumb />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-[13.5px] font-semibold text-ink">{r.title}</span>
+                <span className="block truncate text-[13.5px] font-semibold text-ink">
+                  {r.title}
+                </span>
                 <ResultMeta result={r} />
               </span>
-              <span className="flex-none">{inLib ? <OnShelf book={inLib} /> : renderActions(r)}</span>
+              <span className="flex-none">
+                {inLib ? <OnShelf book={inLib} /> : renderActions(r)}
+              </span>
             </li>
           )
         })}
@@ -84,16 +100,29 @@ export function SearchResults({
         const inLib = libraryMatch(r, books)
         return (
           <div key={`${r.isbn}|${r.title}`} className="flex flex-col">
-            <div className="aspect-[2/3] overflow-hidden rounded-[8px] border border-line" style={{ background: 'var(--card)' }}>
+            <div
+              className="aspect-[2/3] overflow-hidden rounded-[8px] border border-line"
+              style={{ background: 'var(--card)' }}
+            >
               <CoverImage book={coverBook(r)} thumb />
             </div>
             <div className="mt-2 min-w-0">
-              <div className="text-[13px] font-semibold leading-snug text-ink" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+              <div
+                className="text-[13px] font-semibold leading-snug text-ink"
+                style={{
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                }}
+              >
                 {r.title}
               </div>
               <ResultMeta result={r} />
             </div>
-            <div className="mt-1.5 flex flex-wrap gap-1.5">{inLib ? <OnShelf book={inLib} /> : renderActions(r)}</div>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {inLib ? <OnShelf book={inLib} /> : renderActions(r)}
+            </div>
           </div>
         )
       })}

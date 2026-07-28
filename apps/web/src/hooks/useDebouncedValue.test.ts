@@ -7,7 +7,9 @@ describe('useDebouncedValue', () => {
   afterEach(() => vi.useRealTimers())
 
   it('holds the previous value until the delay elapses', () => {
-    const { result, rerender } = renderHook(({ v }) => useDebouncedValue(v, 400), { initialProps: { v: 'a' } })
+    const { result, rerender } = renderHook(({ v }) => useDebouncedValue(v, 400), {
+      initialProps: { v: 'a' },
+    })
     expect(result.current).toBe('a')
     rerender({ v: 'ab' })
     rerender({ v: 'abc' })

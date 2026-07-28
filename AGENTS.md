@@ -5,11 +5,12 @@ that stores a book. `docs/CODING_AGENT_KICKOFF.md` is the original build plan �
 not a to-do list. Keep this file updated as the project evolves.
 
 ## What this is
+
 Reverie — a personal library app behind a skinnable, **genre-neutral** interface: nine
 distinct skins (romance, fantasy, sci-fi, horror, mystery, literary, cozy, nonfiction, YA)
 that reskin the whole app to the shelf you're in. It handles intensity levels, tropes, moods,
 series gaps, rereads, per-format ownership, cover sourcing, offline caching, and a book-club
-layer, and ranks what to read next against *your* library rather than aggregated ratings.
+layer, and ranks what to read next against _your_ library rather than aggregated ratings.
 
 It **began** as a romance / romantasy / dark-romance app with a gothic New Orleans look, and
 that heritage survives as the Tryst skin. Do not write romance-only vocabulary, defaults or
@@ -17,6 +18,7 @@ logic into shared code — #69 and #72 de-romanced the taxonomy, the Match quiz 
 Genre-specific language belongs in a skin, not in the core.
 
 ## Status & your job
+
 - **The real app is built and shipped.** `apps/web` + `packages/core` + `supabase/` are the
   product; work happens there, on a feature branch, behind a PR.
 - `prototype/Reverie_Library.html` is **historical reference only** — the original feature
@@ -27,6 +29,7 @@ Genre-specific language belongs in a skin, not in the core.
   in `design/from-design-tool/`.
 
 ## Stack (decided — don't re-litigate without asking)
+
 - **Monorepo**, pnpm workspaces.
 - **Web:** React + TypeScript (strict) + Vite + Tailwind (design tokens) +
   TanStack Router + TanStack Query. Light UI state via Zustand. Offline cache via
@@ -39,6 +42,7 @@ Genre-specific language belongs in a skin, not in the core.
 - **Tests:** Vitest (unit), Playwright (e2e). **Lint/format:** ESLint + Prettier.
 
 ## Layout
+
 ```
 apps/web/            React app (UI, routes, components) + Playwright e2e
 packages/core/       shared TS types + pure logic (merge, CSV import, spoiler gate, skins,
@@ -48,6 +52,7 @@ prototype/ data/ design/ docs/ backend/   ← reference material, not shipped
 ```
 
 ## Where the answers live
+
 - Features to match → `docs/FEATURES.md`, `docs/REQUIREMENTS.md`
 - Architecture & API surface → `docs/ARCHITECTURE.md`
 - DB schema & object shapes → `docs/DATA_MODEL.md`
@@ -60,6 +65,7 @@ prototype/ data/ design/ docs/ backend/   ← reference material, not shipped
   `data/reverie_design_seed.json`
 
 ## Conventions
+
 - TypeScript strict; functional components + hooks; small, focused modules.
 - **No hardcoded colors** — use the design tokens (CSS vars / Tailwind theme). There are
   **nine skins**, not two themes: `tryst`, `grimoire`, `aphelion`, `marrow`, `umbra`, `folio`,
@@ -76,15 +82,15 @@ prototype/ data/ design/ docs/ backend/   ← reference material, not shipped
   that is exhaustive.
 - **Port, don't rewrite** the prototype's already-tested logic: the merge engine, the
   Goodreads/StoryGraph CSV importer, and the spoiler-gating rule (`comment.unit <=
-  myProgress`). Move them into `packages/core` with tests.
+myProgress`). Move them into `packages/core` with tests.
 - Copy stays sentence case, plain verbs, no filler; empty states invite action.
 - **Possession is four states; per-format ownership is a separate field.** `ownership` is
   `'owned' | 'borrowed' | 'wishlist' | 'unset'` (`unset` is the default — cataloguing a book
   must not force a possession category, and `borrowed` counts as possessed). `owned:
-  {physical, ebook, audiobook}` answers *which formats*, and only means anything for a
+{physical, ebook, audiobook}` answers _which formats_, and only means anything for a
   possessed book. **Never infer possession from the `owned` booleans** — `all-false =
-  wishlist` was the pre-#68 model and is now wrong. Ask `ownership`, or use
-  `bookOwnedFormats`. The **Owned · Physical / Ebook / Audiobook** shelves are *smart shelves*
+wishlist` was the pre-#68 model and is now wrong. Ask `ownership`, or use
+  `bookOwnedFormats`. The **Owned · Physical / Ebook / Audiobook** shelves are _smart shelves_
   derived from both — not manual lists. Ownership is independent of the format read in the
   reread log, and never gates reading history.
 - **No aggregate rating.** Never compute or display an averaged star rating anywhere.
@@ -95,6 +101,7 @@ prototype/ data/ design/ docs/ backend/   ← reference material, not shipped
   Reuse the ported merge engine.
 
 ## Commands
+
 ```
 pnpm dev            # run web app
 pnpm build          # production build (core tsc, then web tsc/vite)
@@ -110,24 +117,27 @@ pnpm deploy:functions    # prod functions deploy — via the deploy guard
 ```
 
 ## Shell & deploy safety
+
 - **Never run a raw `supabase db push` / `supabase functions deploy` against prod.** Go through the
   guard (`pnpm deploy:migrations` / `pnpm deploy:functions`) — it enforces main + clean tree + in-sync
-  + a `y/N`. Prod deploys happen from `main` after merge, never a feature branch (override is a loud,
-  deliberate exception). See `docs/DEPLOY.md`.
+  - a `y/N`. Prod deploys happen from `main` after merge, never a feature branch (override is a loud,
+    deliberate exception). See `docs/DEPLOY.md`.
 - **Heredocs containing shell examples MUST be single-quoted** — `<<'EOF'`, not `<<EOF` — so backticks
   and `$(…)` inside are text, never evaluated. This applies to any heredoc feeding `gh pr create
-  --body`, commit messages, or reports.
+--body`, commit messages, or reports.
 - **A deploy command must never appear as an un-quoted literal** in a PR body, commit message, or
   report. Write it fenced/inline in a single-quoted heredoc or a `--body-file`; an un-quoted
   `` `supabase functions deploy …` `` in a double-quoted string executes. (Codifies the 2026-07-14
   heredoc-eval incident, which deployed a function to prod from a PR-body backtick.)
 
 ## Definition of done (per feature)
+
 Works against the data model; correct in **all nine skins**, light and dark; responsive;
 a11y pass; logic covered by tests; uses the design tokens. Verify in the real browser UI —
 several defects have been "fixed" in code paths no reader can reach.
 
 ## Decisions still needing the owner (use these defaults until told otherwise)
+
 1. **App name — DECIDED (owner, 2026-07): Reverie is the name.** No longer a
    placeholder. Keep reading it from `APP_NAME` in `@reverie/core` (never hardcode);
    `docs/TRADEMARK.md` stays as history.

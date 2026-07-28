@@ -25,10 +25,17 @@ const TTL: Record<string, number> = { stores: 7 * DAY, geocode: 30 * DAY, revers
 
 const DB_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const SERVICE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-const dbHeaders = { apikey: SERVICE, Authorization: `Bearer ${SERVICE}`, 'Content-Type': 'application/json' }
+const dbHeaders = {
+  apikey: SERVICE,
+  Authorization: `Bearer ${SERVICE}`,
+  'Content-Type': 'application/json',
+}
 
 const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...cors, 'Content-Type': 'application/json' },
+  })
 
 interface GeoInput {
   op: 'stores' | 'geocode' | 'reverse'
@@ -41,7 +48,10 @@ interface GeoInput {
 // One backoff retry so a transient 429/5xx doesn't fail the call.
 async function fetchUpstream(url: string, init?: RequestInit): Promise<unknown> {
   for (let attempt = 0; attempt < 2; attempt++) {
-    const r = await fetch(url, { ...init, headers: { 'User-Agent': UA, Accept: 'application/json', ...(init?.headers ?? {}) } })
+    const r = await fetch(url, {
+      ...init,
+      headers: { 'User-Agent': UA, Accept: 'application/json', ...(init?.headers ?? {}) },
+    })
     if ((r.status === 429 || r.status >= 500) && attempt === 0) {
       await new Promise((res) => setTimeout(res, 600))
       continue
@@ -54,14 +64,18 @@ async function fetchUpstream(url: string, init?: RequestInit): Promise<unknown> 
 
 function cacheKeyFor(input: GeoInput): string {
   if (input.op === 'geocode') return `geocode:${(input.q ?? '').trim().toLowerCase()}`
-  if (input.op === 'reverse') return `reverse:${(input.lat ?? 0).toFixed(3)},${(input.lng ?? 0).toFixed(3)}`
+  if (input.op === 'reverse')
+    return `reverse:${(input.lat ?? 0).toFixed(3)},${(input.lng ?? 0).toFixed(3)}`
   return `stores:${(input.lat ?? 0).toFixed(2)},${(input.lng ?? 0).toFixed(2)}:${input.radius ?? 25000}`
 }
 
 async function readCache(key: string, op: string): Promise<unknown | null> {
   if (!DB_URL) return null
   try {
-    const r = await fetch(`${DB_URL}/rest/v1/geo_cache?key=eq.${encodeURIComponent(key)}&select=payload,fetched_at`, { headers: dbHeaders })
+    const r = await fetch(
+      `${DB_URL}/rest/v1/geo_cache?key=eq.${encodeURIComponent(key)}&select=payload,fetched_at`,
+      { headers: dbHeaders },
+    )
     const rows = (await r.json()) as { payload: unknown; fetched_at: string }[]
     const row = rows?.[0]
     if (!row) return null
@@ -96,7 +110,9 @@ async function fetchLive(input: GeoInput): Promise<unknown> {
     })
   }
   if (input.op === 'geocode') {
-    return await fetchUpstream(`${NOMINATIM}/search?format=jsonv2&limit=1&q=${encodeURIComponent((input.q ?? '').trim())}`)
+    return await fetchUpstream(
+      `${NOMINATIM}/search?format=jsonv2&limit=1&q=${encodeURIComponent((input.q ?? '').trim())}`,
+    )
   }
   // reverse
   return await fetchUpstream(`${NOMINATIM}/reverse?format=jsonv2&lat=${input.lat}&lon=${input.lng}`)

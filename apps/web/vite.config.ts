@@ -22,7 +22,11 @@ const emitVersion: Plugin = {
   name: 'reverie:emit-version',
   apply: 'build',
   generateBundle() {
-    this.emitFile({ type: 'asset', fileName: 'version.json', source: JSON.stringify({ build: buildId }) })
+    this.emitFile({
+      type: 'asset',
+      fileName: 'version.json',
+      source: JSON.stringify({ build: buildId }),
+    })
   },
 }
 
@@ -35,38 +39,42 @@ export default defineConfig(({ command, mode }) => {
     const env = { ...loadEnv(mode, __dirname, 'VITE_'), ...process.env }
     const sbUrl = env.VITE_SUPABASE_URL
     if (!sbUrl) {
-      throw new Error('VITE_SUPABASE_URL is missing — refusing to build. Set it in the environment (Vercel) or apps/web/.env.local (dev).')
+      throw new Error(
+        'VITE_SUPABASE_URL is missing — refusing to build. Set it in the environment (Vercel) or apps/web/.env.local (dev).',
+      )
     }
     if (process.env.VERCEL && /\b(localhost|127\.0\.0\.1)\b/.test(sbUrl)) {
-      throw new Error(`VITE_SUPABASE_URL points at a local Supabase (${sbUrl}) in a Vercel build — fix the Vercel env before deploying.`)
+      throw new Error(
+        `VITE_SUPABASE_URL points at a local Supabase (${sbUrl}) in a Vercel build — fix the Vercel env before deploying.`,
+      )
     }
   }
 
   return {
-  plugins: [react(), tailwindcss(), emitVersion],
-  define: {
-    'import.meta.env.VITE_BUILD_ID': JSON.stringify(buildId),
-    'import.meta.env.VITE_RELEASE': JSON.stringify(buildId),
-  },
-  server: { port: 5173 },
-  build: {
-    rollupOptions: {
-      output: {
-        // Split big, stable vendors into their own cacheable chunks.
-        manualChunks: {
-          react: ['react', 'react-dom'],
-          router: ['@tanstack/react-router'],
-          query: ['@tanstack/react-query', '@tanstack/react-query-persist-client'],
-          supabase: ['@supabase/supabase-js'],
+    plugins: [react(), tailwindcss(), emitVersion],
+    define: {
+      'import.meta.env.VITE_BUILD_ID': JSON.stringify(buildId),
+      'import.meta.env.VITE_RELEASE': JSON.stringify(buildId),
+    },
+    server: { port: 5173 },
+    build: {
+      rollupOptions: {
+        output: {
+          // Split big, stable vendors into their own cacheable chunks.
+          manualChunks: {
+            react: ['react', 'react-dom'],
+            router: ['@tanstack/react-router'],
+            query: ['@tanstack/react-query', '@tanstack/react-query-persist-client'],
+            supabase: ['@supabase/supabase-js'],
+          },
         },
       },
     },
-  },
-  test: {
-    environment: 'jsdom',
-    globals: true,
-    setupFiles: ['./src/test/setup.ts'],
-    include: ['src/**/*.{test,spec}.{ts,tsx}'],
-  },
+    test: {
+      environment: 'jsdom',
+      globals: true,
+      setupFiles: ['./src/test/setup.ts'],
+      include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    },
   }
 })

@@ -15,12 +15,13 @@ Two capabilities shipped and were scripted-verified on the real authenticated ap
 PR #48 (ownership model) and PR #49 (shelf system):
 
 1. Adding a book you do **not** own to a shelf or TBR, via the shelf's own add button,
-   without visiting the book's detail page. (#49 acceptance: *"an unowned book added to
-   a TBR via the shelf's picker without ever visiting the book's page"* — passed.)
+   without visiting the book's detail page. (#49 acceptance: _"an unowned book added to
+   a TBR via the shelf's picker without ever visiting the book's page"_ — passed.)
 2. Reordering books **within** a shelf by drag, with a keyboard fallback. (#49
-   acceptance: *"book reorder persists"* — passed.)
+   acceptance: _"book reorder persists"_ — passed.)
 
 A tester **on the current production build** reports both are now broken:
+
 - "cannot add books to your shelves/tbrs that you do not have in your library"
 - "Once in a shelf, you cannot edit the order of books on the shelf"
 

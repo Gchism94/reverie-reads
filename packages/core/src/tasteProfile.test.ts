@@ -12,16 +12,45 @@ describe('bookVerdict', () => {
     expect(bookVerdict(makeBook({ id: '4', title: 'd', readStatus: 'Unread' }))).toBeNull()
     // an unrated finish is a mild positive; a fave lifts it
     expect(bookVerdict(makeBook({ id: '5', title: 'e', readStatus: 'Read' }))).toBeCloseTo(0.2)
-    expect(bookVerdict(makeBook({ id: '6', title: 'f', readStatus: 'Read', fave: true }))).toBeCloseTo(0.6)
+    expect(
+      bookVerdict(makeBook({ id: '6', title: 'f', readStatus: 'Read', fave: true })),
+    ).toBeCloseTo(0.6)
   })
 })
 
 describe('buildTasteProfile + tasteFit', () => {
   const library = [
-    makeBook({ id: '1', title: 'L1', tags: ['Locked Room', 'Noir'], subgenre: 'Noir', readStatus: 'Read', rating: 5 }),
-    makeBook({ id: '2', title: 'L2', tags: ['Locked Room'], subgenre: 'Noir', readStatus: 'Read', rating: 5 }),
-    makeBook({ id: '3', title: 'H1', tags: ['Billionaire'], subgenre: 'Romance', readStatus: 'Read', rating: 1 }),
-    makeBook({ id: '4', title: 'H2', tags: ['Billionaire'], subgenre: 'Romance', readStatus: 'DNF' }),
+    makeBook({
+      id: '1',
+      title: 'L1',
+      tags: ['Locked Room', 'Noir'],
+      subgenre: 'Noir',
+      readStatus: 'Read',
+      rating: 5,
+    }),
+    makeBook({
+      id: '2',
+      title: 'L2',
+      tags: ['Locked Room'],
+      subgenre: 'Noir',
+      readStatus: 'Read',
+      rating: 5,
+    }),
+    makeBook({
+      id: '3',
+      title: 'H1',
+      tags: ['Billionaire'],
+      subgenre: 'Romance',
+      readStatus: 'Read',
+      rating: 1,
+    }),
+    makeBook({
+      id: '4',
+      title: 'H2',
+      tags: ['Billionaire'],
+      subgenre: 'Romance',
+      readStatus: 'DNF',
+    }),
     makeBook({ id: '5', title: 'U', tags: ['Fae'], subgenre: 'Romantasy', readStatus: 'Unread' }),
   ]
   const taste = buildTasteProfile(library, { now: NOW })
@@ -66,7 +95,9 @@ describe('buildTasteProfile + tasteFit', () => {
   })
 
   it('cold start (no signal) returns pure neutral', () => {
-    const empty = buildTasteProfile([makeBook({ id: '1', title: 'a', readStatus: 'Unread' })], { now: NOW })
+    const empty = buildTasteProfile([makeBook({ id: '1', title: 'a', readStatus: 'Unread' })], {
+      now: NOW,
+    })
     expect(empty.signalCount).toBe(0)
     const fit = tasteFit(makeBook({ id: 'x', title: 'X', tags: ['Anything'] }), empty)
     expect(fit.tagFit).toBe(0.5)

@@ -97,7 +97,16 @@ export function matchesFilters(b: Book, f: LibraryFilters): boolean {
   if (f.intensity.length && !f.intensity.includes(b.intensity ?? 0)) return false
   if (f.author && !bookHasAuthor(b, f.author)) return false
   if (f.q) {
-    const hay = [b.title, authorOf(b), b.series, ...b.tags, ...b.tropes.map((t) => t.name), ...b.genres].join(' ').toLowerCase()
+    const hay = [
+      b.title,
+      authorOf(b),
+      b.series,
+      ...b.tags,
+      ...b.tropes.map((t) => t.name),
+      ...b.genres,
+    ]
+      .join(' ')
+      .toLowerCase()
     if (!hay.includes(f.q.toLowerCase())) return false
   }
   return true
@@ -127,7 +136,8 @@ export function sortBooks(books: readonly Book[], sort: LibrarySort): Book[] {
       break
     case 'series':
       c.sort(
-        (a, b) => (a.series || 'zzz').localeCompare(b.series || 'zzz') || positionOf(a) - positionOf(b),
+        (a, b) =>
+          (a.series || 'zzz').localeCompare(b.series || 'zzz') || positionOf(a) - positionOf(b),
       )
       break
   }

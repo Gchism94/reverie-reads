@@ -52,7 +52,10 @@ const isAhead = (e: SeriesEntry, bookById: ReadonlyMap<string, Book>): boolean =
 }
 
 /** The first entry in order the reader hasn't finished — the page's emotional center. */
-export function nextUp(entries: readonly SeriesEntry[], bookById: ReadonlyMap<string, Book>): SeriesEntry | null {
+export function nextUp(
+  entries: readonly SeriesEntry[],
+  bookById: ReadonlyMap<string, Book>,
+): SeriesEntry | null {
   return sortEntries(entries).find((e) => isAhead(e, bookById)) ?? null
 }
 
@@ -75,7 +78,10 @@ export interface SeriesProgress {
   toGet: number
 }
 
-export function seriesProgress(entries: readonly SeriesEntry[], bookById: ReadonlyMap<string, Book>): SeriesProgress {
+export function seriesProgress(
+  entries: readonly SeriesEntry[],
+  bookById: ReadonlyMap<string, Book>,
+): SeriesProgress {
   let read = 0
   let toGet = 0
   for (const e of entries) {
@@ -97,7 +103,10 @@ export function progressLine(p: SeriesProgress): string {
  * #3 lands exactly 2.5, not 2.4999 — trying one decimal place, then two. When neighbours are too
  * tight for a clean value, the caller renumbers the whole list (renormalize silently, per task).
  */
-export function positionBetween(prev: number | null, next: number | null): { position: number; renumber: boolean } {
+export function positionBetween(
+  prev: number | null,
+  next: number | null,
+): { position: number; renumber: boolean } {
   if (prev == null && next == null) return { position: 1, renumber: false }
   if (prev == null) {
     // before the first entry — #0.5-style prequel space; keep one clean decimal below
@@ -146,7 +155,8 @@ const positionsAreInSeriesIndices = (candidates: readonly SeedCandidate[]): bool
   const seen = new Set<number>()
   for (const c of candidates) {
     if (c.position == null) continue // a gap in the data, not evidence against the rest
-    if (!Number.isFinite(c.position) || c.position <= 0 || c.position > SERIES_POSITION_CEILING) return false
+    if (!Number.isFinite(c.position) || c.position <= 0 || c.position > SERIES_POSITION_CEILING)
+      return false
     if (seen.has(c.position)) return false // duplicate slots — an import artifact, not an order
     seen.add(c.position)
   }
@@ -165,7 +175,10 @@ const positionsAreInSeriesIndices = (candidates: readonly SeedCandidate[]): bool
  * `startAfter` is the current maximum live position: existing slots are never renumbered, so a book
  * arriving later appends instead of disturbing an arrangement the reader made.
  */
-export function seedSeriesPositions(candidates: readonly SeedCandidate[], startAfter = 0): Map<string, number> {
+export function seedSeriesPositions(
+  candidates: readonly SeedCandidate[],
+  startAfter = 0,
+): Map<string, number> {
   const ordered = [...candidates].sort(
     (a, b) => (a.position ?? Infinity) - (b.position ?? Infinity) || a.title.localeCompare(b.title),
   )
@@ -210,7 +223,12 @@ export function mergeSourceEntries(
       inserts.push(s)
       continue
     }
-    if (!match.userEdited && match.source === 'hardcover' && s.position > 0 && match.position !== s.position) {
+    if (
+      !match.userEdited &&
+      match.source === 'hardcover' &&
+      s.position > 0 &&
+      match.position !== s.position
+    ) {
       moves.push({ id: match.id, position: s.position })
     }
   }

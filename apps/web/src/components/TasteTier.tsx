@@ -7,7 +7,11 @@ import {
 } from '@reverie/core'
 import { useEffectiveSkin } from '../skin/labels'
 
-const TOKEN_VAR = { 'accent-ink': 'var(--accent-ink)', ink: 'var(--ink)', muted: 'var(--muted)' } as const
+const TOKEN_VAR = {
+  'accent-ink': 'var(--accent-ink)',
+  ink: 'var(--ink)',
+  muted: 'var(--muted)',
+} as const
 
 /**
  * The named taste tier — the HEADLINE of match strength (replacing the old per-shelf "% you"). The

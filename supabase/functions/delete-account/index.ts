@@ -18,10 +18,17 @@ const cors = {
 const DB_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const SERVICE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 const ANON = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-const svc = { apikey: SERVICE, Authorization: `Bearer ${SERVICE}`, 'Content-Type': 'application/json' }
+const svc = {
+  apikey: SERVICE,
+  Authorization: `Bearer ${SERVICE}`,
+  'Content-Type': 'application/json',
+}
 
 const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...cors, 'Content-Type': 'application/json' },
+  })
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
@@ -41,15 +48,23 @@ Deno.serve(async (req: Request) => {
 
   try {
     // 2. Clean up capability-keyed shared docs this user created (not owner-scoped → no cascade).
-    const refs = await fetch(`${DB_URL}/rest/v1/shared_refs?owner_id=eq.${uid}&select=code`, { headers: svc })
+    const refs = await fetch(`${DB_URL}/rest/v1/shared_refs?owner_id=eq.${uid}&select=code`, {
+      headers: svc,
+    })
     const codes = ((await refs.json()) as { code: string }[]).map((r) => r.code).filter(Boolean)
     if (codes.length) {
       const list = codes.map((c) => `"${c}"`).join(',')
-      await fetch(`${DB_URL}/rest/v1/shared_docs?key=in.(${list})`, { method: 'DELETE', headers: svc })
+      await fetch(`${DB_URL}/rest/v1/shared_docs?key=in.(${list})`, {
+        method: 'DELETE',
+        headers: svc,
+      })
     }
 
     // 3. Delete the auth user → cascades every owned row. (should_soft_delete=false → hard delete.)
-    const del = await fetch(`${DB_URL}/auth/v1/admin/users/${uid}`, { method: 'DELETE', headers: svc })
+    const del = await fetch(`${DB_URL}/auth/v1/admin/users/${uid}`, {
+      method: 'DELETE',
+      headers: svc,
+    })
     if (!del.ok && del.status !== 404) {
       return json({ error: `delete failed: ${del.status} ${await del.text()}` }, 500)
     }

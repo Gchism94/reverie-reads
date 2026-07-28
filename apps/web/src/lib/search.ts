@@ -22,7 +22,11 @@ export interface SearchResult {
   seriesPosition?: number | null
 }
 
-const norm = (s: string): string => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
+const norm = (s: string): string =>
+  s
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim()
 const isbnKey = (isbn: string): string => (isbn || '').replace(/[^0-9Xx]/g, '').toLowerCase()
 
 /** Identity for dedupe: ISBN-13 (or any ISBN) when present, else normalized title + first author. */
@@ -91,7 +95,9 @@ async function googleFallback(q: string, signal?: AbortSignal): Promise<SearchRe
   const isbnQ = q.replace(/[^0-9Xx]/g, '')
   const looksIsbn = isbnQ.length >= 10 && /^[0-9Xx\- ]+$/.test(q)
   const query = looksIsbn ? `isbn:${isbnQ}` : encodeURIComponent(q)
-  const res = await fetch(volumesUrl(`q=${query}&maxResults=20&printType=books&langRestrict=en`), { signal })
+  const res = await fetch(volumesUrl(`q=${query}&maxResults=20&printType=books&langRestrict=en`), {
+    signal,
+  })
   if (!res.ok) return []
   const json = (await res.json()) as { items?: unknown[] }
   return (json.items ?? []).map(volumeToResult).filter((r): r is SearchResult => r !== null)
@@ -108,7 +114,9 @@ export async function searchEverywhere(q: string, signal?: AbortSignal): Promise
   try {
     const { data, error } = await supabase.functions.invoke('search', { body: { q: query } })
     if (!error) {
-      const results = ((data as { results?: SearchResult[] })?.results ?? []).filter((r) => r?.title && r.cover)
+      const results = ((data as { results?: SearchResult[] })?.results ?? []).filter(
+        (r) => r?.title && r.cover,
+      )
       if (results.length) return dedupeResults(results)
     }
   } catch {

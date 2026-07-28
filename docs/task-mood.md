@@ -12,13 +12,13 @@ be gone before mood arrives, or the two concepts collide in the UI.
 
 The old "vibe" chip was **model-derived** — `deriveBoyfriend()` inferred an archetype from
 tags and stamped "🃏 Charming Rogue vibe" on the book without the reader asking. It was
-removed in #69 precisely because that inference was unwanted. Mood replaces the *idea* of
-"how this book feels" but inverts the *authority*: **mood is reader-assigned. The reader
+removed in #69 precisely because that inference was unwanted. Mood replaces the _idea_ of
+"how this book feels" but inverts the _authority_: **mood is reader-assigned. The reader
 attaches it because they felt it. The model may, at most, suggest — it must never
 auto-apply, never derive, never stamp a default.**
 
-This is the anti-consensus thesis in its purest form: tropes describe what is *in* a book
-(objective-ish, suggestible); mood describes how it *landed on the reader* (subjective,
+This is the anti-consensus thesis in its purest form: tropes describe what is _in_ a book
+(objective-ish, suggestible); mood describes how it _landed on the reader_ (subjective,
 personal, theirs alone). Keep the two concepts cleanly separate — mood is NOT a trope
 facet.
 
@@ -72,7 +72,7 @@ facet.
 ## Explicitly out of scope
 
 - Any model-derived mood. No inference logic of any kind.
-- Aggregating moods across users, or showing how *others* felt about a book — mood is
+- Aggregating moods across users, or showing how _others_ felt about a book — mood is
   private and personal, never a consensus signal. This is a hard line.
 - **Match result pills (from #72) are NOT mood.** Those pills describe the matched book's
   genre/subgenre/tropes — descriptive metadata about the book. Reader-assigned mood is a

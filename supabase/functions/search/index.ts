@@ -30,7 +30,11 @@ const cors = {
 
 const DB_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const SERVICE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-const dbHeaders = { apikey: SERVICE, Authorization: `Bearer ${SERVICE}`, 'Content-Type': 'application/json' }
+const dbHeaders = {
+  apikey: SERVICE,
+  Authorization: `Bearer ${SERVICE}`,
+  'Content-Type': 'application/json',
+}
 
 const GOOGLE_KEY = Deno.env.get('GOOGLE_BOOKS_KEY') ?? ''
 const googleKey = () => (GOOGLE_KEY ? `&key=${encodeURIComponent(GOOGLE_KEY)}` : '')
@@ -59,7 +63,10 @@ interface SearchResult {
 }
 
 const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...cors, 'Content-Type': 'application/json' },
+  })
 
 // ── Hardcover (primary) ──
 
@@ -104,10 +111,14 @@ async function hardcoverGql(query: string, variables: Record<string, unknown>): 
  *  result can show its series name (task §1) — Google can't. */
 function hcDocToResult(doc: any): SearchResult | null {
   if (!doc?.title) return null
-  const isbns: string[] = [...new Set((doc.isbns ?? []).map((x: string) => cleanIsbn(String(x))).filter(Boolean))] as string[]
+  const isbns: string[] = [
+    ...new Set((doc.isbns ?? []).map((x: string) => cleanIsbn(String(x))).filter(Boolean)),
+  ] as string[]
   const isbn13 = isbns.find((i) => i.length === 13)
   const isbn10 = isbns.find((i) => i.length === 10)
-  const year = doc.release_year ? String(doc.release_year) : String(doc.release_date ?? '').slice(0, 4)
+  const year = doc.release_year
+    ? String(doc.release_year)
+    : String(doc.release_date ?? '').slice(0, 4)
   return {
     source: 'hardcover',
     title: String(doc.title),
@@ -118,7 +129,8 @@ function hcDocToResult(doc: any): SearchResult | null {
     isbn10,
     year: /^\d{4}$/.test(year) ? year : '',
     series: (doc.series_names ?? [])[0] || undefined,
-    seriesPosition: typeof doc.featured_series_position === 'number' ? doc.featured_series_position : null,
+    seriesPosition:
+      typeof doc.featured_series_position === 'number' ? doc.featured_series_position : null,
   }
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
@@ -129,7 +141,9 @@ async function hardcoverSearch(q: string): Promise<SearchResult[]> {
     { q, n: RESULT_LIMIT },
   )) as { search?: { results?: { hits?: { document?: unknown }[] } } } | null
   const hits = d?.search?.results?.hits ?? []
-  return hits.map((h) => hcDocToResult(h?.document)).filter((r): r is SearchResult => r !== null && !!r.cover)
+  return hits
+    .map((h) => hcDocToResult(h?.document))
+    .filter((r): r is SearchResult => r !== null && !!r.cover)
 }
 
 // ── Google Books (secondary fill) ──
@@ -149,9 +163,12 @@ async function googleSearch(q: string): Promise<SearchResult[]> {
     const v = it.volumeInfo ?? {}
     if (typeof v.title !== 'string' || !v.title) continue
     const links = v.imageLinks as { thumbnail?: string; smallThumbnail?: string } | undefined
-    const cover = (links?.thumbnail ?? links?.smallThumbnail ?? '').replace('http:', 'https:').replace('&edge=curl', '')
+    const cover = (links?.thumbnail ?? links?.smallThumbnail ?? '')
+      .replace('http:', 'https:')
+      .replace('&edge=curl', '')
     if (!cover) continue
-    const ids = (v.industryIdentifiers as { type?: string; identifier?: string }[] | undefined) ?? []
+    const ids =
+      (v.industryIdentifiers as { type?: string; identifier?: string }[] | undefined) ?? []
     const isbn13 = ids.find((i) => i.type === 'ISBN_13')?.identifier
     const isbn10 = ids.find((i) => i.type === 'ISBN_10')?.identifier
     const year = typeof v.publishedDate === 'string' ? v.publishedDate.slice(0, 4) : ''
@@ -172,7 +189,8 @@ async function googleSearch(q: string): Promise<SearchResult[]> {
 // ── dedupe ──
 
 const resultKey = (r: SearchResult): string =>
-  cleanIsbn(r.isbn13 ?? r.isbn ?? '').toLowerCase() || `${norm(r.title)}|${norm(r.authors[0] ?? '')}`
+  cleanIsbn(r.isbn13 ?? r.isbn ?? '').toLowerCase() ||
+  `${norm(r.title)}|${norm(r.authors[0] ?? '')}`
 
 function dedupe(results: SearchResult[]): SearchResult[] {
   const seen = new Set<string>()
@@ -193,10 +211,16 @@ const cacheKey = (q: string): string => `search:${norm(q)}`
 async function readCache(key: string): Promise<SearchResult[] | null> {
   if (!DB_URL) return null
   try {
-    const r = await fetch(`${DB_URL}/rest/v1/enrichment_cache?key=eq.${encodeURIComponent(key)}&select=record,fetched_at`, {
-      headers: dbHeaders,
-    })
-    const rows = (await r.json()) as { record?: { results?: SearchResult[] }; fetched_at?: string }[]
+    const r = await fetch(
+      `${DB_URL}/rest/v1/enrichment_cache?key=eq.${encodeURIComponent(key)}&select=record,fetched_at`,
+      {
+        headers: dbHeaders,
+      },
+    )
+    const rows = (await r.json()) as {
+      record?: { results?: SearchResult[] }
+      fetched_at?: string
+    }[]
     const row = rows?.[0]
     if (!row?.record?.results || !row.fetched_at) return null
     if (Date.now() - Date.parse(row.fetched_at) > SEARCH_TTL_MIN * 60_000) return null

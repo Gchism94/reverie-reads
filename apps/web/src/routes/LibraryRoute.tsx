@@ -40,7 +40,10 @@ function EmptyState() {
         <Link
           to="/add"
           className="skin-control flex h-11 items-center px-6 text-[14px]"
-          style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))', color: 'var(--on-primary)' }}
+          style={{
+            background: 'linear-gradient(135deg, var(--primary), var(--gold))',
+            color: 'var(--on-primary)',
+          }}
         >
           ＋ {voice.empty.cta}
         </Link>
@@ -65,7 +68,15 @@ const COVER_GRID: React.CSSProperties = {
 /** Detail rail as an overlay drawer (lg→xl tier, on selection) so the cover grid keeps its columns.
  *  Modal: backdrop dismiss, Escape, focus the close button on open. Appears without motion (the panel
  *  is mounted on select), so it's inherently reduced-motion-safe. */
-function DetailDrawer({ book, onClose, onToggleFave }: { book: Book; onClose: () => void; onToggleFave: (id: string) => void }) {
+function DetailDrawer({
+  book,
+  onClose,
+  onToggleFave,
+}: {
+  book: Book
+  onClose: () => void
+  onToggleFave: (id: string) => void
+}) {
   const closeRef = useRef<HTMLButtonElement>(null)
   useEffect(() => {
     closeRef.current?.focus()
@@ -77,7 +88,12 @@ function DetailDrawer({ book, onClose, onToggleFave }: { book: Book; onClose: ()
   }, [onClose])
 
   return (
-    <div className="fixed inset-0 z-40" role="dialog" aria-modal="true" aria-label={`${book.title} details`}>
+    <div
+      className="fixed inset-0 z-40"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${book.title} details`}
+    >
       <button
         type="button"
         aria-label="Close details"
@@ -123,7 +139,13 @@ function LibraryScreen() {
   const voice = useVoice()
 
   const visible = useMemo(
-    () => (books ? sortBooks(books.filter((b) => matchesFilters(b, filters)), filters.sort) : []),
+    () =>
+      books
+        ? sortBooks(
+            books.filter((b) => matchesFilters(b, filters)),
+            filters.sort,
+          )
+        : [],
     [books, filters],
   )
   // The default library — what you have in hand (owned or borrowed) or have read. Wishlist and
@@ -134,7 +156,8 @@ function LibraryScreen() {
   if (isError) return <Centered>Couldn’t load your library — {(error as Error).message}</Centered>
   if (!books || books.length === 0) return <EmptyState />
 
-  const toggleFave = (id: string, fave: boolean) => updateBook.mutate({ id, patch: { fave: !fave } })
+  const toggleFave = (id: string, fave: boolean) =>
+    updateBook.mutate({ id, patch: { fave: !fave } })
 
   const activate = (id: string) => {
     if (isDesktop) setSelectedId(id)
@@ -216,13 +239,23 @@ function LibraryScreen() {
         {center}
 
         {/* Detail — docked right rail at xl; between lg and xl it's the overlay drawer below */}
-        <aside aria-label="Book details" className="hidden xl:sticky xl:top-0 xl:block xl:h-dvh xl:border-l xl:border-line">
-          <BookDetailRail book={dockedBook} onToggleFave={(id) => toggleFave(id, dockedBook?.fave ?? false)} />
+        <aside
+          aria-label="Book details"
+          className="hidden xl:sticky xl:top-0 xl:block xl:h-dvh xl:border-l xl:border-line"
+        >
+          <BookDetailRail
+            book={dockedBook}
+            onToggleFave={(id) => toggleFave(id, dockedBook?.fave ?? false)}
+          />
         </aside>
       </section>
 
       {isDesktop && !isWide && selected && (
-        <DetailDrawer book={selected} onClose={() => setSelectedId(null)} onToggleFave={(id) => toggleFave(id, selected.fave)} />
+        <DetailDrawer
+          book={selected}
+          onClose={() => setSelectedId(null)}
+          onToggleFave={(id) => toggleFave(id, selected.fave)}
+        />
       )}
 
       {/* the placeholder's quiet "add a cover" affordance opens the same sheet as book detail */}

@@ -2,9 +2,22 @@ import { useEffect, useRef, useState } from 'react'
 import { mayIngestCover, type Book, type CoverSource } from '@reverie/core'
 import { Modal } from './Modal'
 import { useUpdateBook } from '../data/books'
-import { editionSyncPatch, useEditionOptions, useSetCover, type SetCoverError } from '../data/coverSheet'
+import {
+  editionSyncPatch,
+  useEditionOptions,
+  useSetCover,
+  type SetCoverError,
+} from '../data/coverSheet'
 import type { EditionOption } from '../lib/covers'
-import { clampOffset, COVER_ASPECT, CROP_MAX_ZOOM, CROP_OUT_HEIGHT, CROP_OUT_WIDTH, sourceRect, type CropState } from '../lib/cropMath'
+import {
+  clampOffset,
+  COVER_ASPECT,
+  CROP_MAX_ZOOM,
+  CROP_OUT_HEIGHT,
+  CROP_OUT_WIDTH,
+  sourceRect,
+  type CropState,
+} from '../lib/cropMath'
 
 // The cover sheet — the cover is the door. Four ways in, one pipeline out (the covers Edge
 // Function): shoot your own copy, upload an image, pick an edition (with context: format · year ·
@@ -16,7 +29,8 @@ import { clampOffset, COVER_ASPECT, CROP_MAX_ZOOM, CROP_OUT_HEIGHT, CROP_OUT_WID
 // hold — unambiguously the reader's own — and the only one that covers indie, KU, signed and
 // special editions, which no database has. It was buried under the edition list; it goes first.
 
-const fieldClass = 'h-10 w-full rounded-xl border border-line px-3 text-[14px] text-ink outline-none'
+const fieldClass =
+  'h-10 w-full rounded-xl border border-line px-3 text-[14px] text-ink outline-none'
 const fieldStyle = { background: 'var(--field)' } as const
 
 const ERROR_COPY: Record<SetCoverError | string, string> = {
@@ -24,13 +38,19 @@ const ERROR_COPY: Record<SetCoverError | string, string> = {
   too_large: 'That image is too large (8 MB max).',
   fetch_failed: 'Couldn’t fetch that link. Check the URL and try again.',
   bad_url: 'That doesn’t look like a link. Paste a direct image URL.',
-  no_cover_available: 'That source has no real cover for this book — try another edition or add your own.',
-  display_only_source: 'That source can only be linked, not saved. Take a photo or upload an image to keep a copy.',
+  no_cover_available:
+    'That source has no real cover for this book — try another edition or add your own.',
+  display_only_source:
+    'That source can only be linked, not saved. Take a photo or upload an image to keep a copy.',
   failed: 'Couldn’t save that cover. Try again in a moment.',
 }
 
 function SectionLabel({ children }: { children: string }) {
-  return <div className="mb-1.5 mt-5 text-[11px] uppercase tracking-[0.2em] text-muted first:mt-0">{children}</div>
+  return (
+    <div className="mb-1.5 mt-5 text-[11px] uppercase tracking-[0.2em] text-muted first:mt-0">
+      {children}
+    </div>
+  )
 }
 
 export function CoverSheet({ book, onClose }: { book: Book; onClose: () => void }) {
@@ -47,7 +67,10 @@ export function CoverSheet({ book, onClose }: { book: Book; onClose: () => void 
 
   const saving = setCover.isPending
 
-  const apply = (input: { source: CoverSource; file?: Blob; url?: string; sourceUrl?: string }, edition?: EditionOption) => {
+  const apply = (
+    input: { source: CoverSource; file?: Blob; url?: string; sourceUrl?: string },
+    edition?: EditionOption,
+  ) => {
     setError(null)
     setCover.mutate(
       { book, ...input },
@@ -92,7 +115,10 @@ export function CoverSheet({ book, onClose }: { book: Book; onClose: () => void 
       <p className="-mt-2 mb-3 text-[13px] text-muted">{book.title}</p>
 
       {synced && (
-        <div className="mb-4 rounded-xl border border-line p-3" style={{ background: 'var(--field)' }}>
+        <div
+          className="mb-4 rounded-xl border border-line p-3"
+          style={{ background: 'var(--field)' }}
+        >
           <div className="text-[13.5px] font-semibold text-ink">Cover updated.</div>
           {canSync && (
             <button
@@ -129,14 +155,30 @@ export function CoverSheet({ book, onClose }: { book: Book; onClose: () => void 
         The truest cover is the one on your shelf — and the only one that exists for indie, KU and
         special editions.
       </p>
-      <input ref={cameraRef} type="file" accept="image/*" capture="environment" hidden onChange={(e) => onFile(e.currentTarget, 'camera')} />
-      <input ref={uploadRef} type="file" accept="image/*" hidden onChange={(e) => onFile(e.currentTarget, 'upload')} />
+      <input
+        ref={cameraRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        hidden
+        onChange={(e) => onFile(e.currentTarget, 'camera')}
+      />
+      <input
+        ref={uploadRef}
+        type="file"
+        accept="image/*"
+        hidden
+        onChange={(e) => onFile(e.currentTarget, 'upload')}
+      />
       <button
         type="button"
         disabled={saving}
         onClick={() => cameraRef.current?.click()}
         className="h-12 w-full rounded-xl text-[14px] font-semibold disabled:opacity-50"
-        style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))', color: 'var(--on-primary)' }}
+        style={{
+          background: 'linear-gradient(135deg, var(--primary), var(--gold))',
+          color: 'var(--on-primary)',
+        }}
       >
         📷 Photograph your copy
       </button>
@@ -166,7 +208,10 @@ export function CoverSheet({ book, onClose }: { book: Book; onClose: () => void 
                 className="flex w-full items-center gap-3 rounded-xl border border-line p-2 text-left disabled:opacity-50"
                 style={{ background: 'var(--field)' }}
               >
-                <span className="block w-10 flex-none overflow-hidden rounded border border-line" style={{ aspectRatio: '2 / 3' }}>
+                <span
+                  className="block w-10 flex-none overflow-hidden rounded border border-line"
+                  style={{ aspectRatio: '2 / 3' }}
+                >
                   <img src={e.cover} alt="" loading="lazy" className="h-full w-full object-cover" />
                 </span>
                 <span className="min-w-0 flex-1">
@@ -174,20 +219,22 @@ export function CoverSheet({ book, onClose }: { book: Book; onClose: () => void 
                     {[e.format, e.year].filter(Boolean).join(' · ') || 'Edition'}
                   </span>
                   <span className="block truncate text-[12px] text-muted">
-                    {[e.publisher, e.pages ? `${e.pages} pp` : null].filter(Boolean).join(' · ') || e.title}
+                    {[e.publisher, e.pages ? `${e.pages} pp` : null].filter(Boolean).join(' · ') ||
+                      e.title}
                   </span>
                 </span>
                 <span className="flex-none text-right text-[10px] uppercase tracking-wide text-muted">
                   {e.source}
                   {/* Google can be shown but not stored — say so before the tap, not after. */}
-                  {!mayIngestCover(e.source, e.cover) && <span className="block normal-case tracking-normal">linked, not saved</span>}
+                  {!mayIngestCover(e.source, e.cover) && (
+                    <span className="block normal-case tracking-normal">linked, not saved</span>
+                  )}
                 </span>
               </button>
             </li>
           ))}
         </ul>
       )}
-
 
       <SectionLabel>From a link</SectionLabel>
       <form
@@ -218,7 +265,11 @@ export function CoverSheet({ book, onClose }: { book: Book; onClose: () => void 
         </button>
       </form>
 
-      {saving && <p className="mt-3 text-[13px] text-muted" role="status">Saving cover…</p>}
+      {saving && (
+        <p className="mt-3 text-[13px] text-muted" role="status">
+          Saving cover…
+        </p>
+      )}
       {error && !crop && (
         <p className="mt-3 text-[13px] text-primary" role="alert">
           {error}
@@ -240,7 +291,12 @@ function CoverCrop({
   onSave: (blob: Blob) => void
   onCancel: () => void
 }) {
-  const [img, setImg] = useState<{ el: HTMLImageElement; url: string; w: number; h: number } | null>(null)
+  const [img, setImg] = useState<{
+    el: HTMLImageElement
+    url: string
+    w: number
+    h: number
+  } | null>(null)
   const [state, setState] = useState<CropState>({ zoom: 1, tx: 0, ty: 0 })
   const [readError, setReadError] = useState(false)
   const frameRef = useRef<HTMLDivElement>(null)
@@ -293,7 +349,7 @@ function CoverCrop({
     )
   }
 
-  const scale = img ? (Math.max(FRAME_W / img.w, FRAME_H / img.h) * clamped.zoom) : 1
+  const scale = img ? Math.max(FRAME_W / img.w, FRAME_H / img.h) * clamped.zoom : 1
 
   return (
     <div className="flex flex-col items-center">
@@ -337,7 +393,11 @@ function CoverCrop({
             }}
           />
         )}
-        {!img && <div className="grid h-full w-full place-items-center text-[13px] text-muted">Loading…</div>}
+        {!img && (
+          <div className="grid h-full w-full place-items-center text-[13px] text-muted">
+            Loading…
+          </div>
+        )}
       </div>
 
       <label className="mt-4 flex w-full items-center gap-3">
@@ -351,7 +411,15 @@ function CoverCrop({
           disabled={!img}
           onChange={(e) => {
             if (!img) return
-            setState(clampOffset({ ...clamped, zoom: Number(e.target.value) }, img.w, img.h, FRAME_W, FRAME_H))
+            setState(
+              clampOffset(
+                { ...clamped, zoom: Number(e.target.value) },
+                img.w,
+                img.h,
+                FRAME_W,
+                FRAME_H,
+              ),
+            )
           }}
           className="w-full"
           style={{ accentColor: 'var(--primary)' }}
@@ -373,7 +441,10 @@ function CoverCrop({
           onClick={save}
           disabled={!img || saving}
           className="h-11 flex-1 rounded-xl text-[14px] font-semibold disabled:opacity-50"
-          style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))', color: 'var(--on-primary)' }}
+          style={{
+            background: 'linear-gradient(135deg, var(--primary), var(--gold))',
+            color: 'var(--on-primary)',
+          }}
         >
           {saving ? 'Saving…' : 'Save cover'}
         </button>

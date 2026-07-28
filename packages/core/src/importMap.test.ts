@@ -93,7 +93,11 @@ describe('parseImport — Library shape (connected-universe columns + fractional
     expect(rows[1]!.incoming.genre).toBe('Romance') // "romace" typo → Romance
   })
   it('captures global order / series # / series type metadata + release date', () => {
-    expect(rows[0]!).toMatchObject({ globalOrder: 7, seriesNumber: 1, seriesType: 'interconnected standalone' })
+    expect(rows[0]!).toMatchObject({
+      globalOrder: 7,
+      seriesNumber: 1,
+      seriesType: 'interconnected standalone',
+    })
     expect(rows[0]!.incoming.pub).toEqual({ y: 2021, m: 3, d: 15 })
     expect(rows[1]!.incoming.pub).toEqual({ y: 2022, m: null, d: null })
   })
@@ -121,7 +125,10 @@ describe('parseImport is deterministic', () => {
 
 // Mirror the app's intake (matchBook → decideIntake → add/mergeImport) in pure form to prove a
 // re-import folds into existing books instead of duplicating.
-function ingest(rows: ReturnType<typeof parseImport>['rows'], library: Book[]): { added: number; merged: number } {
+function ingest(
+  rows: ReturnType<typeof parseImport>['rows'],
+  library: Book[],
+): { added: number; merged: number } {
   let added = 0
   let merged = 0
   for (const { incoming } of rows) {
@@ -163,7 +170,12 @@ describe('ownership on import', () => {
     ].join('\n')
     const { profile, rows } = parseImport(csv)
     expect(profile.name).toBe('reverie')
-    expect(rows.map((r) => r.incoming.ownership)).toEqual(['owned', 'owned', 'borrowed', 'wishlist'])
+    expect(rows.map((r) => r.incoming.ownership)).toEqual([
+      'owned',
+      'owned',
+      'borrowed',
+      'wishlist',
+    ])
   })
 
   it('Goodreads Exclusive Shelf: read/currently-reading → owned, to-read → wishlist', () => {

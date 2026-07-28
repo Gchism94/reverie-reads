@@ -62,7 +62,10 @@ describe('skin character kit contrast (text on the kit surfaces ≥ AA, every sk
       for (const [name, fg, bg] of pairs) {
         it(`${skin}/${mode} · ${name} clears ${AA}:1`, () => {
           const r = ratio(fg, bg)
-          expect(r, `${skin}/${mode} ${name}: ${fg} on ${bg} = ${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(AA)
+          expect(
+            r,
+            `${skin}/${mode} ${name}: ${fg} on ${bg} = ${r.toFixed(2)}:1`,
+          ).toBeGreaterThanOrEqual(AA)
         })
       }
 
@@ -81,7 +84,10 @@ describe('skin character kit contrast (text on the kit surfaces ≥ AA, every sk
         for (const [name, fg, bg] of spinePairs) {
           it(`${skin}/${mode} · ${name} clears ${AA}:1`, () => {
             const r = ratio(fg, bg)
-            expect(r, `${skin}/${mode} ${name}: ${fg} on ${bg} = ${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(AA)
+            expect(
+              r,
+              `${skin}/${mode} ${name}: ${fg} on ${bg} = ${r.toFixed(2)}:1`,
+            ).toBeGreaterThanOrEqual(AA)
           })
         }
       }
@@ -92,18 +98,29 @@ describe('skin character kit contrast (text on the kit surfaces ≥ AA, every sk
         const f5pairs: [string, string, string][] = [
           ['CTA text on the CTA card', f5.ctaInk, mixSrgb(f5.ctaHi, f5.ctaLo, 0.5)],
           ['spine title on the binding (mid)', f5.spineTitle, mixSrgb(f5.spineLo, f5.spineHi, 0.5)],
-          ['spine author on the binding (mid)', f5.spineMuted, mixSrgb(f5.spineLo, f5.spineHi, 0.5)],
+          [
+            'spine author on the binding (mid)',
+            f5.spineMuted,
+            mixSrgb(f5.spineLo, f5.spineHi, 0.5),
+          ],
           ...f5.phStops.map((stop, i): [string, string, string] => [
-            `placeholder title on board stop ${i}`, f5.phInk, stop,
+            `placeholder title on board stop ${i}`,
+            f5.phInk,
+            stop,
           ]),
           ...f5.phStops.map((stop, i): [string, string, string] => [
-            `placeholder author on board stop ${i}`, mixSrgb(f5.phMutedInk, stop, f5.phMutedAlpha), stop,
+            `placeholder author on board stop ${i}`,
+            mixSrgb(f5.phMutedInk, stop, f5.phMutedAlpha),
+            stop,
           ]),
         ]
         for (const [name, fg, bg] of f5pairs) {
           it(`${skin}/${mode} · ${name} clears ${AA}:1`, () => {
             const r = ratio(fg, bg)
-            expect(r, `${skin}/${mode} ${name}: ${fg} on ${bg} = ${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(AA)
+            expect(
+              r,
+              `${skin}/${mode} ${name}: ${fg} on ${bg} = ${r.toFixed(2)}:1`,
+            ).toBeGreaterThanOrEqual(AA)
           })
         }
       }

@@ -1,13 +1,16 @@
 # Cover sourcing strategy + Cover Studio
 
 ## Context
+
 The real import files (Library, Chism) carry NO cover URLs and NO ISBNs -- only title/author/series/
 genre/tags/read-status. So covers can't be imported directly; they must be sourced. Decision (Greg,
 2026-06-27): best-effort via the APIs, manual entry for the rest, with a first-class user-facing way to
 add covers easily (the "Cover Studio").
 
 ## Part 1 -- API auto-fetch (best effort)
+
 Run during enrichment (reuses D1 aggregator + H2 cover-caching to Storage/CDN):
+
 - Match by TITLE + AUTHOR (no ISBN in the data). Adapters must support a title+author SEARCH path,
   not ISBN-only lookup.
 - SELF-RESOLVE an ISBN from the search result, then fetch the best cover from that ISBN. The resolved
@@ -21,6 +24,7 @@ Run during enrichment (reuses D1 aggregator + H2 cover-caching to Storage/CDN):
   miss or mis-match -> handled by the Cover Studio.
 
 ## Part 2 -- Cover Studio (the manual surface; deliberately NOT a Hardcover clone)
+
 PURPOSE: Hardcover/Open Library/Goodreads maintain ONE canonical cover per book, shared by everyone.
 Reverie is a PRIVATE, personal library. The Cover Studio exists for the opposite reason: to make your
 library faithfully and beautifully YOURS -- your editions, your copies, your aesthetic -- where catalogs
@@ -28,6 +32,7 @@ only offer the generic canonical version. A cover is a personal expression of yo
 field to get "right." One-liner: "Hardcover catalogs the book; the Cover Studio curates your copy of it."
 
 PILLARS:
+
 1. EDITION-FAITHFUL, not canonical. Offer the editions the APIs found and let the user pick the one
    that matches the copy they own (special/illustrated/signed editions common in romance/romantasy).
 2. PHOTOGRAPH YOUR COPY. Snap the physical book (mobile) -> becomes the thumbnail. Mirrors the real
@@ -42,12 +47,14 @@ PILLARS:
    editing, no moderation queue -- consistent with the v1 lean scope and the non-overlap with Hardcover.
 
 WHERE IT LIVES:
+
 - Batch: the onboarding/import REVIEW screen surfaces a "missing or low-confidence covers" bucket ->
   enters Cover Studio triage. (Acceptance hook for the onboarding/import build.)
 - Anytime: each book's detail has an "edit cover" entry into the same Studio options, so curation is
   ongoing, not just at import.
 
 ## Build hooks
+
 - ENRICHMENT (coding agent): add title+author search + ISBN self-resolution + cover fetch + confidence
   score; cache via H2. (Extends D1; informs the import task.)
 - ONBOARDING/IMPORT review acceptance: include the missing/low-confidence covers batch -> Studio.
@@ -55,6 +62,7 @@ WHERE IT LIVES:
   cover editor + batch triage + themed-placeholder preview across skins).
 
 ## Build status (updated 2026-06-28)
+
 - DONE — API auto-fetch (Part 1): title+author search -> ISBN self-resolution -> cover, across
   Hardcover -> Google -> Open Library, deployed live; covers cached to Storage/CDN (non-blocking, async)
   and globally cached. Measured ~87% cover / 87% ISBN on a 30-title real-Library sample (Hardcover
@@ -74,6 +82,7 @@ WHERE IT LIVES:
 ---
 
 ## Cover durability + dead-link handling (added 2026-06-27)
+
 Context: in the current tool, covers are external image LINKS (and the export drops them). External links rot.
 
 PRINCIPLE: Reverie stores covers as OWNED, cached images in Storage/CDN (extends H2) -- NEVER as bare

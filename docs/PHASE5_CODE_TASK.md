@@ -5,6 +5,7 @@ as an explicitly-scoped commit (no `git add -A`). Full spec: `PHASE5_ENHANCEMENT
 Desktop/PWA (P3) is a separate Design-then-build workstream — not in this task.
 
 ## Paste-to-start prompt
+
 > Read `docs/PHASE5_ENHANCEMENTS.md` and `docs/PHASE5_CODE_TASK.md`. Build Track A
 > (auto import + enrichment + merge) and Track B (find local indie bookstore) in parallel,
 > one step at a time, scoped commits, stopping at each checkpoint for review. Auto-merge
@@ -19,7 +20,8 @@ Desktop/PWA (P3) is a separate Design-then-build workstream — not in this task
 covers to a full normalized record (series + position, pub date + precision, page count,
 ISBN-10/13, language, genres, description, best cover). Fallback Google Books → Open
 Library → Hardcover; cache (metadata cache keyed by ISBN/work); throttle + backoff.
-- *Check:* add-by-ISBN returns a full record; 2nd call hits cache; missing-cover degrades
+
+- _Check:_ add-by-ISBN returns a full record; 2nd call hits cache; missing-cover degrades
   to manual without failing.
 
 **A2 — Match + merge at every intake path.** Add duplicate detection to manual add,
@@ -28,18 +30,21 @@ ISBN exact → normalized title+author → title+series+position → fuzzy (soft
 Pick the **most complete** record as primary (reuse `richness()`), fold the other in via
 the atomic `merge_books` RPC; multi-value fields union, single-value fill-blanks, and
 **user-authored fields (`myRating`, notes, curated tropes, `owned`) always win**.
-- *Check:* a CSV overlapping the library auto-merges strong matches, routes a fuzzy
+
+- _Check:_ a CSV overlapping the library auto-merges strong matches, routes a fuzzy
   near-match to review, loses no data, preserves user fields; bulk merge stays atomic
   per pair and re-runnable.
 
 **A3 — Auto vs review UX.** Settings default "auto-merge duplicates" = on for **strong**
 matches; review queue with side-by-side preview (kept / added) + Merge · Keep both ·
 Always; single-add inline prompt; post-import summary ("merged N, added M").
-- *Check:* both auto and review paths tested; fuzzy always lands in review.
+
+- _Check:_ both auto and review paths tested; fuzzy always lands in review.
 
 **A4 — Bulk "complete missing covers/info."** A library action that enriches records with
 missing fields only, throttled + cached, with progress.
-- *Check:* runs across the library, fills blanks without clobbering, respects rate limits.
+
+- _Check:_ runs across the library, fills blanks without clobbering, respects rate limits.
 
 ---
 
@@ -47,24 +52,28 @@ missing fields only, throttled + cached, with progress.
 
 **B1 — Location.** Browser geolocation (consented) + manual ZIP/city fallback; ephemeral,
 not persisted server-side.
-- *Check:* both inputs resolve to a usable location; declining geolocation falls back to
+
+- _Check:_ both inputs resolve to a usable location; declining geolocation falls back to
   manual cleanly.
 
 **B2 — Nearby discovery.** v1 source = OpenStreetMap Overpass `shop=books` near location →
 name/address/hours/phone/website/distance; bias to independents via a maintained
 chain-exclusion list; render **map + list** in both themes.
-- *Check:* a test location returns nearby stores; chains excluded; map + list render in
+
+- _Check:_ a test location returns nearby stores; chains excluded; map + list render in
   Nocturne and Magnolia Dawn; non-US / no-results shows a graceful empty state.
 
 **B3 — Buy / support.** Bookshop.org affiliate links for print/ebook (choose-a-store
 model); Libro.fm for audiobooks; format-aware "Buy at an indie" on book detail; user can
 set a **default local store** that persists and shows on book pages.
-- *Check:* links open the correct affiliate URL per format; default store persists across
+
+- _Check:_ links open the correct affiliate URL per format; default store persists across
   sessions/devices.
 
 **B4 — Honesty + edges.** Clearly label "discover + support, not live inventory"; handle
 non-US and no-results; degrade to a plain Bookshop.org link when no nearby data.
-- *Check:* messaging is clear; no path implies live stock.
+
+- _Check:_ messaging is clear; no path implies live stock.
 
 > **Owner actions before B ships:** Bookshop.org affiliate ID, Libro.fm affiliate, and
 > (if upgrading B2 to Google Places) a Places API key + billing. Verify current terms.
@@ -72,6 +81,7 @@ non-US and no-results; degrade to a plain Bookshop.org link when no nearby data.
 ---
 
 ## Shared definition of done
+
 - `pnpm lint`, `typecheck`, `test`, `build` green; the both-themes axe smoke extended to
   the new screens (review queue, indie-bookstore view).
 - New fields round-trip through backup/export.
@@ -82,8 +92,9 @@ non-US and no-results; degrade to a plain Bookshop.org link when no nearby data.
 ## Checkpoint-1 review refinements (apply in A2 / B2)
 
 ### A2
+
 - **Surviving row on import = the EXISTING library record.** Keep its `id`, list/club
-  memberships, reads, and calendar attribution; apply the *most-complete field values*
+  memberships, reads, and calendar attribution; apply the _most-complete field values_
   into it (user-authored fields still win). Only promote a different primary when merging
   **two pre-existing** library records (the dedupe-your-library case). This avoids
   migrating memberships on every import. ("Most complete as starting point" = field
@@ -98,6 +109,7 @@ non-US and no-results; degrade to a plain Bookshop.org link when no nearby data.
   always routes to review, never auto-merges.
 
 ### B2
+
 - **Overpass:** query `shop=books` as node AND way/relation; use center coords for
   ways/areas; sort by distance.
 - **Themed map tiles:** raw OSM tiles are single-style and not meant for heavy embedding —
@@ -114,6 +126,7 @@ non-US and no-results; degrade to a plain Bookshop.org link when no nearby data.
 ## Checkpoint-2 review refinements (apply in A3 / A4 / B3 / B4)
 
 ### A3 — auto-merge toggle + review queue
+
 - **Remember "Keep both" / dismissed decisions.** Persist a "not a duplicate" verdict for
   a pair so it isn't re-flagged on every future import — otherwise the queue nags forever.
 - **Batch-friendly queue:** a large import yields many candidates — support select-all →
@@ -126,6 +139,7 @@ non-US and no-results; degrade to a plain Bookshop.org link when no nearby data.
 - **Post-import summary:** "merged N · added M new · K to review," linking into the queue.
 
 ### A4 — bulk "complete missing covers/info"
+
 - **Throttle + respect daily caps** (Google ~1000/day, OL 100/IP/5min): queue with
   backoff; a 1,000-book run must not blow limits.
 - **Resumable:** persist progress; on rerun skip already-complete books and **cache
@@ -133,6 +147,7 @@ non-US and no-results; degrade to a plain Bookshop.org link when no nearby data.
 - **Fill-only-missing** (same no-clobber guardrail); show progress + a final summary.
 
 ### B3 — Bookshop.org / Libro.fm buy links
+
 - **Affiliate IDs via config/env;** degrade to plain links if unset so the feature works
   before sign-ups land.
 - **Format routing:** print/ebook → Bookshop.org (link by ISBN-13); audiobook → Libro.fm.
@@ -147,6 +162,7 @@ non-US and no-results; degrade to a plain Bookshop.org link when no nearby data.
   physical in-store stock.
 
 ### B4 — honesty / edges
+
 - Non-US coverage varies (Bookshop has some non-US storefronts) — degrade gracefully,
   never dead-end. Buy-link copy stays "support this indie online," consistent with the
   no-live-inventory banner.
@@ -163,6 +179,7 @@ New migrations (applied locally): merge_prefs, enriched_at, default_store. Sourc
 docs/ untouched.
 
 Acceptance vs Checkpoint-2 refinements — all met:
+
 - A3: persisted per-pair verdicts (keep-separate / always-merge) so dismissed/keep-both don't
   re-flag on re-import; "always merge" per-pair, distinct from the global auto_merge_duplicates
   toggle; batch review (select-all -> Merge / Keep both / Dismiss); pure tested decideIntake
@@ -185,6 +202,7 @@ OWNER ACTIONS (non-blocking; only to switch to affiliate mode): Bookshop.org aff
 Libro.fm/Awin affiliate ID, then set VITE_BUY_ATTRIBUTION_MODE=affiliate.
 
 FOLLOW-UPS to confirm (carry into Phase 6 hardening):
+
 1. RLS — confirm per-user policies on the new merge_verdicts and default_store migrations (report
    lists migrations, not policies). New tables without RLS leak or deny under the app's model.
 2. A4 quota — confirm the bulk fill respects a per-run/day ceiling (Google Books ~1000/day per

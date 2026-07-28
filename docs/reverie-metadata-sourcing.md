@@ -1,6 +1,6 @@
 # Reverie: Book Metadata Sourcing & Licensing
 
-*Supersedes "Reverie Phase 0: Book Metadata Source Matrix and Licensing Analysis."*
+_Supersedes "Reverie Phase 0: Book Metadata Source Matrix and Licensing Analysis."_
 
 ## Why this rewrite exists
 
@@ -14,7 +14,7 @@ enriches individual readers' libraries on demand. Almost every constraint that d
 the original — copyleft contamination, share-alike segregation, non-commercial traps in a
 published dataset, bulk-dump cadence, entity-reconciliation accuracy at scale — either
 doesn't apply or applies in a much weaker form. Meanwhile the one constraint the original
-correctly identifies as *the* unresolved risk — cover images — applies to us directly and
+correctly identifies as _the_ unresolved risk — cover images — applies to us directly and
 is the single place our shipped implementation currently diverges from a defensible
 posture.
 
@@ -67,7 +67,7 @@ rights. "Best available, honestly caveated" is the correct characterization; it 
 materially better than every alternative. Coverage is strong on mainstream English trade
 fiction, weaker on contemporary self-published titles.
 
-**Wikidata — CC0.** The best *openly licensed* source of structured reading order:
+**Wikidata — CC0.** The best _openly licensed_ source of structured reading order:
 property **P179** (part of the series) with the **P1545** series-ordinal qualifier, which
 supports decimal ordinals ("4.5") as strings. This maps exactly onto the decimal-position
 model Reverie already implements. Also the richest crosswalk hub (VIAF, ISNI, OLID, ISBN,
@@ -98,8 +98,8 @@ comes back empty for an indie or KU title, or a cover simply doesn't exist at an
 source, this is the gap being felt. Worth a trial subscription evaluated against a sample
 of real misses before committing.
 
-*Before subscribing: read the current ToS redistribution clause directly. The original
-analysis flagged that it had not verified the operative language.*
+_Before subscribing: read the current ToS redistribution clause directly. The original
+analysis flagged that it had not verified the operative language._
 
 ### Tier 4 — currently in use, risk flagged
 
@@ -113,7 +113,7 @@ commercial tier.
 None of that makes Hardcover unusable today, but it is the shakiest dependency in the
 stack and it is load-bearing across three features. Mitigation is to reduce what depends
 on it (move series seeding to Wikidata) and to keep every Hardcover-derived field
-treated as a *suggestion the reader confirms* rather than authoritative data — which is
+treated as a _suggestion the reader confirms_ rather than authoritative data — which is
 already how our trope suggestions work.
 
 ### Do not use
@@ -127,12 +127,12 @@ already how our trope suggestions work.
 - **OCLC WorldCat / Nielsen BookData / Bowker** — institutional or enterprise contracts
   only; no self-serve tier; use restrictions preclude our use case.
 - **LibraryThing Common Knowledge** — genuinely the best series data available, but
-  CC BY-SA. Share-alike is a live problem *for us specifically*: incorporating BY-SA
+  CC BY-SA. Share-alike is a live problem _for us specifically_: incorporating BY-SA
   content into a proprietary app is the exact incompatibility to avoid. `thingISBN` is
   non-commercial, which is worse. Do not ingest.
 - **TV Tropes** — CC BY-NC-SA, no API, no dump, contributors assign rights irrevocably.
   Non-commercial disqualifies it entirely.
-- **BISAC / Thema** — the code list is free to *use for classification*, but
+- **BISAC / Thema** — the code list is free to _use for classification_, but
   incorporating the list into a system requires a paid license and the documentation is
   copyright BISG. We avoid this entirely by having built our own genre taxonomy.
 
@@ -155,6 +155,7 @@ sourcing analysis said versus what the pipeline was built to do.
 ### Target posture
 
 **Ingest and store** (defensible):
+
 - **Open Library** covers — the most defensible external source; make this the preferred
   ingest source.
 - **Reader uploads and camera captures** — unambiguously the reader's own, stored in
@@ -163,6 +164,7 @@ sourcing analysis said versus what the pipeline was built to do.
   relationship.
 
 **Display-time only, never persisted**:
+
 - **Google Books** thumbnails — hotlink at display size, no ingest, no storage.
 - Any other source without an explicit grant.
 
@@ -193,7 +195,7 @@ One rule, expressed once in `packages/core/src/covers.ts` and read by every call
   label `url`, and a Google image wearing that label is still a Google image.
 - **Google still renders.** `coverCandidates`, the zoom upgrade, and the "image not available"
   plate detection are untouched. Picking a Google edition in the cover sheet now stores the
-  *reference* rather than the bytes, so it remains a working choice rather than a dead end;
+  _reference_ rather than the bytes, so it remains a working choice rather than a dead end;
   the row is labelled "linked, not saved".
 - **Upload and camera stay first-class stored sources**, and camera now leads the sheet.
 - **Hardcover's ingest posture is unchanged** by this pass. The doc flags its licence as
@@ -204,8 +206,8 @@ One rule, expressed once in `packages/core/src/covers.ts` and read by every call
 **Run against production, 2026-07-26. Result: 3 rows.**
 
 | `cover_source` | stored, Google-derived |
-|---|---|
-| `url` | 3 |
+| -------------- | ---------------------- |
+| `url`          | 3                      |
 
 Zero rows carried `cover_source = 'google'`. All three came in through the lazy backfill, which
 labelled what it swept `'url'` regardless of host — which is exactly why the query matches on the
@@ -282,7 +284,7 @@ The original analysis independently confirms three decisions Reverie already mad
 - **Mood is reader-assigned and unsourced by construction** — there is no external
   dataset to conflict with, and the no-derivation guarantee means there never will be.
 
-Nothing to change. This section exists so the decisions are recorded as *validated*
+Nothing to change. This section exists so the decisions are recorded as _validated_
 rather than merely made.
 
 ---
@@ -302,9 +304,9 @@ rather than merely made.
 
 Ordered by value, not urgency. None of these is an outage.
 
-1. ~~**Cover source re-ordering**~~ — **done** (#79). See *Implemented posture* below. The audit
-   of already-stored assets is **complete and decided** — 3 rows, left in place; see *What was
-   already stored*.
+1. ~~**Cover source re-ordering**~~ — **done** (#79). See _Implemented posture_ below. The audit
+   of already-stored assets is **complete and decided** — 3 rows, left in place; see _What was
+   already stored_.
 2. **Series seeding to Wikidata.** Primary source becomes CC0 with native decimal
    ordinals; Hardcover retained as gap-fill.
 3. **Evaluate ISBNdb.** Trial against a sample of real enrichment misses — indie, KU, and
@@ -313,7 +315,7 @@ Ordered by value, not urgency. None of these is an outage.
 4. **Hardcover risk decision.** Decide deliberately whether to keep it as a suggestion
    source (acceptable, with everything reader-confirmed) or reduce dependence further.
    Token expiry and the absence of third-party allowlisting are the operational risks.
-5. **Attribution surface.** Add a Settings → About → *Data sources* panel naming Open
+5. **Attribution surface.** Add a Settings → About → _Data sources_ panel naming Open
    Library / Internet Archive, Wikidata, Google Books, Hardcover, OpenStreetMap and CARTO
    (already attributed on the indie-bookstore map), and any paid source added later. CC0
    requires no attribution; naming sources anyway is both courteous and consistent with

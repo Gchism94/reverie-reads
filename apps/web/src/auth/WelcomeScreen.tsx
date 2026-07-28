@@ -17,7 +17,10 @@ const reqs = (pw: string) => [
 function Card({ children }: { children: ReactNode }) {
   return (
     <main className="relative z-[1] mx-auto flex min-h-dvh w-full max-w-[520px] items-center px-6">
-      <div className="w-full rounded-3xl border border-line p-7 text-center" style={{ background: 'var(--card)', boxShadow: 'var(--shadow)' }}>
+      <div
+        className="w-full rounded-3xl border border-line p-7 text-center"
+        style={{ background: 'var(--card)', boxShadow: 'var(--shadow)' }}
+      >
         <Link to="/" className="mb-6 inline-block">
           <Wordmark />
         </Link>
@@ -64,11 +67,15 @@ function SetNewPassword() {
   if (done) {
     return (
       <>
-        <span aria-hidden className="block text-[34px]">🗝️</span>
+        <span aria-hidden className="block text-[34px]">
+          🗝️
+        </span>
         <h1 className="mt-3 text-[26px] italic leading-tight text-ink" style={displayFont}>
           Password updated
         </h1>
-        <p className="mt-3 text-[14px] leading-relaxed text-muted">You’re signed in — your shelves are just as you left them.</p>
+        <p className="mt-3 text-[14px] leading-relaxed text-muted">
+          You’re signed in — your shelves are just as you left them.
+        </p>
         <EnterButton />
       </>
     )
@@ -79,7 +86,9 @@ function SetNewPassword() {
       <h1 className="text-[26px] italic leading-tight text-ink" style={displayFont}>
         Set a new password
       </h1>
-      <p className="mt-2 text-[14px] text-muted">Choose a new password to finish resetting your account.</p>
+      <p className="mt-2 text-[14px] text-muted">
+        Choose a new password to finish resetting your account.
+      </p>
       <form onSubmit={submit} className="mt-5 flex flex-col gap-3 text-left" noValidate>
         <input
           type="password"
@@ -92,7 +101,11 @@ function SetNewPassword() {
         />
         <ul className="flex flex-col gap-1">
           {reqs(password).map((r) => (
-            <li key={r.label} className="flex items-center gap-2 text-[12px]" style={{ color: r.ok ? 'var(--ok)' : 'var(--muted)' }}>
+            <li
+              key={r.label}
+              className="flex items-center gap-2 text-[12px]"
+              style={{ color: r.ok ? 'var(--ok)' : 'var(--muted)' }}
+            >
               <span aria-hidden>{r.ok ? '✓' : '○'}</span>
               {r.label}
             </li>
@@ -146,7 +159,9 @@ export function WelcomeScreen() {
     const expired = authCallback.errorCode === 'otp_expired'
     return (
       <Card>
-        <span aria-hidden className="block text-[34px]">🕯️</span>
+        <span aria-hidden className="block text-[34px]">
+          🕯️
+        </span>
         <h1 className="mt-3 text-[26px] italic leading-tight text-ink" style={displayFont}>
           That link didn’t work
         </h1>
@@ -177,7 +192,9 @@ export function WelcomeScreen() {
   if (session) {
     return (
       <Card>
-        <span aria-hidden className="block text-[34px]">✨</span>
+        <span aria-hidden className="block text-[34px]">
+          ✨
+        </span>
         <h1 className="mt-3 text-[26px] italic leading-tight text-ink" style={displayFont}>
           You’re in
         </h1>
@@ -191,7 +208,9 @@ export function WelcomeScreen() {
 
   return (
     <Card>
-      <span aria-hidden className="block text-[34px]">✉️</span>
+      <span aria-hidden className="block text-[34px]">
+        ✉️
+      </span>
       <h1 className="mt-3 text-[26px] italic leading-tight text-ink" style={displayFont}>
         {slow ? 'Taking longer than expected' : 'Confirming…'}
       </h1>
