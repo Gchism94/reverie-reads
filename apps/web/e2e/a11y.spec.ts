@@ -320,9 +320,10 @@ test('axe (no serious/critical): every route in tryst, a core set in 3 alternate
         // resolves to Playwright's default light colorScheme — and letting useSkinSync flip it only
         // after the profile query lands. That flip left .skin-control's transition (all
         // var(--motion-duration), ~0.18s) still interpolating a control's rendered color when axe
-        // scanned, which is what actually produced the CI-only violation this guards against
-        // (docs/task-a11y-contrast-diagnosis's findings — a WCAG-real read of an unsettled paint,
-        // not a real defect). page.goto() below is a full browser navigation (confirmed by the boot
+        // scanned, which is what actually produced the CI-only violation this guards against — a
+        // WCAG-real read of an unsettled paint, not a real defect (instrumented and confirmed via a
+        // throwaway diagnosis spec on fix/a11y-contrast-diagnosis, reported and closed unmerged).
+        // page.goto() below is a full browser navigation (confirmed by the boot
         // script re-running), and localStorage is origin-scoped, so this write — made on the page
         // this function is ALREADY on, from signIn()'s own navigation — survives it. This removes
         // the race; it does not wait it out.
