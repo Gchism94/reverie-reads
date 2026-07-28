@@ -38,25 +38,40 @@ const STUB_RESULTS = [
 ]
 
 async function ensureUser(): Promise<void> {
-  const admin = createClient(SUPABASE_URL, SERVICE, { auth: { autoRefreshToken: false, persistSession: false } })
+  const admin = createClient(SUPABASE_URL, SERVICE, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  })
   const { data } = await admin.auth.admin.listUsers()
   let uid = data?.users?.find((u) => u.email === TEST_EMAIL)?.id
   if (!uid) {
-    const { data: created, error } = await admin.auth.admin.createUser({ email: TEST_EMAIL, password: TEST_PASSWORD, email_confirm: true })
+    const { data: created, error } = await admin.auth.admin.createUser({
+      email: TEST_EMAIL,
+      password: TEST_PASSWORD,
+      email_confirm: true,
+    })
     if (error) throw error
     uid = created.user!.id
   }
-  await admin.from('profiles').upsert({ id: uid, display_name: 'Shelf Regress E2E', skin: 'tryst', mode: 'system' })
+  await admin
+    .from('profiles')
+    .upsert({ id: uid, display_name: 'Shelf Regress E2E', skin: 'tryst', mode: 'system' })
 }
 
-type Client = { sb: SupabaseClient; session: { access_token: string; refresh_token: string }; uid: string }
+type Client = {
+  sb: SupabaseClient
+  session: { access_token: string; refresh_token: string }
+  uid: string
+}
 
 let shared: Client | null = null
 async function client(): Promise<Client> {
   if (shared) return shared
   await ensureUser()
   const sb = createClient(SUPABASE_URL, ANON)
-  const { data, error } = await sb.auth.signInWithPassword({ email: TEST_EMAIL, password: TEST_PASSWORD })
+  const { data, error } = await sb.auth.signInWithPassword({
+    email: TEST_EMAIL,
+    password: TEST_PASSWORD,
+  })
   if (error || !data.session) throw new Error(authFailure('shelf-regressions', TEST_EMAIL, error))
   shared = { sb, session: data.session, uid: data.session.user.id }
   return shared
@@ -74,38 +89,58 @@ async function reset(c: Client) {
 
 async function signIn(page: Page, session: { access_token: string; refresh_token: string }) {
   await page.addInitScript(() => localStorage.setItem('reverie.onboarded', '1'))
-  await page.goto(`/#access_token=${session.access_token}&refresh_token=${session.refresh_token}&expires_in=3600&token_type=bearer&type=magiclink`)
+  await page.goto(
+    `/#access_token=${session.access_token}&refresh_token=${session.refresh_token}&expires_in=3600&token_type=bearer&type=magiclink`,
+  )
   await page.getByRole('button', { name: /enter your library/i }).click({ timeout: 20_000 })
   await expect(page.getByRole('navigation')).toBeVisible({ timeout: 20_000 })
   await page.evaluate(() => indexedDB.deleteDatabase('reverie-offline'))
 }
 
 async function stubBackends(page: Page) {
-  await page.route('**/functions/v1/search**', (r) => r.fulfill({ json: { results: STUB_RESULTS } }))
+  await page.route('**/functions/v1/search**', (r) =>
+    r.fulfill({ json: { results: STUB_RESULTS } }),
+  )
   await page.route('**/functions/v1/enrich**', (r) => r.fulfill({ json: { rateLimited: false } }))
-  await page.route('**/functions/v1/covers**', (r) => r.fulfill({ status: 422, json: { error: 'fetch_failed' } }))
-  await page.route('**/functions/v1/embed**', (r) => r.fulfill({ json: { hasTaste: false, scores: [] } }))
+  await page.route('**/functions/v1/covers**', (r) =>
+    r.fulfill({ status: 422, json: { error: 'fetch_failed' } }),
+  )
+  await page.route('**/functions/v1/embed**', (r) =>
+    r.fulfill({ json: { hasTaste: false, scores: [] } }),
+  )
   await page.route('**/functions/v1/releases**', (r) => r.fulfill({ json: { hits: [] } }))
   await page.route('**/books/v1/volumes**', (r) => r.fulfill({ json: { items: [] } }))
 }
 
 const bookByTitle = async (sb: SupabaseClient, uid: string, title: string) =>
-  (await sb.from('books').select('id, ownership').eq('owner_id', uid).eq('title', title).maybeSingle()).data as
-    | { id: string; ownership: string }
-    | null
+  (
+    await sb
+      .from('books')
+      .select('id, ownership')
+      .eq('owner_id', uid)
+      .eq('title', title)
+      .maybeSingle()
+  ).data as { id: string; ownership: string } | null
 
 const positionsFor = async (sb: SupabaseClient, listId: string) =>
-  ((await sb.from('list_items').select('book_id, position').eq('list_id', listId).order('position')).data ?? []) as {
+  ((await sb.from('list_items').select('book_id, position').eq('list_id', listId).order('position'))
+    .data ?? []) as {
     book_id: string
     position: number
   }[]
 
 // ── Regression 1: add an unowned book to a shelf from the /shelves page, never visiting the book page ──
-test('Shelves page: "search everywhere" adds an unowned book to a shelf (regression: seam missing on /shelves)', async ({ page }) => {
+test('Shelves page: "search everywhere" adds an unowned book to a shelf (regression: seam missing on /shelves)', async ({
+  page,
+}) => {
   test.setTimeout(180_000)
   const c = await client()
   await reset(c)
-  const { data: list } = await c.sb.from('lists').insert({ owner_id: c.uid, name: 'Regress TBR', kind: 'tbr' }).select('id').single()
+  const { data: list } = await c.sb
+    .from('lists')
+    .insert({ owner_id: c.uid, name: 'Regress TBR', kind: 'tbr' })
+    .select('id')
+    .single()
   const listId = (list as { id: string }).id
   await stubBackends(page)
   try {
@@ -135,7 +170,11 @@ test('Shelves page: "search everywhere" adds an unowned book to a shelf (regress
         async () => {
           const b = await bookByTitle(c.sb, c.uid, 'Wildfire Vow')
           if (!b) return 0
-          const { count } = await c.sb.from('list_items').select('book_id', { count: 'exact', head: true }).eq('list_id', listId).eq('book_id', b.id)
+          const { count } = await c.sb
+            .from('list_items')
+            .select('book_id', { count: 'exact', head: true })
+            .eq('list_id', listId)
+            .eq('book_id', b.id)
           return count ?? 0
         },
         { timeout: 15_000 },
@@ -149,21 +188,39 @@ test('Shelves page: "search everywhere" adds an unowned book to a shelf (regress
 })
 
 // ── Regression 2: reorder within a shelf — covers must not hijack the drag; keyboard reorder persists ──
-test('Shelf reorder: covers are not drag-hijackable and the keyboard fallback reorders + persists', async ({ page }) => {
+test('Shelf reorder: covers are not drag-hijackable and the keyboard fallback reorders + persists', async ({
+  page,
+}) => {
   test.setTimeout(180_000)
   const c = await client()
   await reset(c)
-  const { data: list } = await c.sb.from('lists').insert({ owner_id: c.uid, name: 'Order Shelf', kind: 'tbr' }).select('id').single()
+  const { data: list } = await c.sb
+    .from('lists')
+    .insert({ owner_id: c.uid, name: 'Order Shelf', kind: 'tbr' })
+    .select('id')
+    .single()
   const listId = (list as { id: string }).id
   // three owned books with covers (so CoverImage renders an <img>), spaced positions
   const titles = ['Alpha Book', 'Bravo Book', 'Charlie Book']
   for (let i = 0; i < titles.length; i++) {
     const { data: b } = await c.sb
       .from('books')
-      .insert({ owner_id: c.uid, title: titles[i], author_first: 'Test', author_last: 'Author', ownership: 'owned', cover_url: '/landing-covers/everflame.jpg' })
+      .insert({
+        owner_id: c.uid,
+        title: titles[i],
+        author_first: 'Test',
+        author_last: 'Author',
+        ownership: 'owned',
+        cover_url: '/landing-covers/everflame.jpg',
+      })
       .select('id')
       .single()
-    await c.sb.from('list_items').insert({ list_id: listId, book_id: (b as { id: string }).id, owner_id: c.uid, position: (i + 1) * 1000 })
+    await c.sb.from('list_items').insert({
+      list_id: listId,
+      book_id: (b as { id: string }).id,
+      owner_id: c.uid,
+      position: (i + 1) * 1000,
+    })
   }
   await stubBackends(page)
   try {
@@ -176,21 +233,27 @@ test('Shelf reorder: covers are not drag-hijackable and the keyboard fallback re
     // attr) this fails; post-fix (draggable={false}) it passes.
     const covers = page.locator('img[alt=""]')
     await expect(covers.first()).toBeVisible()
-    const draggables = await covers.evaluateAll((imgs) => imgs.map((i) => (i as HTMLImageElement).draggable))
+    const draggables = await covers.evaluateAll((imgs) =>
+      imgs.map((i) => (i as HTMLImageElement).draggable),
+    )
     expect(draggables.every((d) => d === false)).toBe(true)
 
     // Keyboard fallback: move the first book (Alpha) one step later → Bravo leads. Persist + survive reload.
     const orderTitles = async () => {
       const rows = await positionsFor(c.sb, listId)
       const byId = new Map(
-        ((await c.sb.from('books').select('id, title').eq('owner_id', c.uid)).data ?? []).map((b) => [(b as { id: string }).id, (b as { title: string }).title]),
+        ((await c.sb.from('books').select('id, title').eq('owner_id', c.uid)).data ?? []).map(
+          (b) => [(b as { id: string }).id, (b as { title: string }).title],
+        ),
       )
       return rows.map((r) => byId.get(r.book_id))
     }
     expect(await orderTitles()).toEqual(['Alpha Book', 'Bravo Book', 'Charlie Book'])
 
     await page.getByRole('button', { name: 'Move Alpha Book later' }).click()
-    await expect.poll(orderTitles, { timeout: 15_000 }).toEqual(['Bravo Book', 'Alpha Book', 'Charlie Book'])
+    await expect
+      .poll(orderTitles, { timeout: 15_000 })
+      .toEqual(['Bravo Book', 'Alpha Book', 'Charlie Book'])
 
     // survives a full reload (persistence, not just optimistic UI)
     await page.reload()
@@ -211,88 +274,140 @@ test('Shelf reorder: covers are not drag-hijackable and the keyboard fallback re
 
 /** Three owned books with covers on one shelf, spaced 1000 apart. Returns [listId, orderFn]. */
 async function shelfOf(c: Client, name: string, titles: string[]) {
-  const { data: list } = await c.sb.from('lists').insert({ owner_id: c.uid, name, kind: 'tbr' }).select('id').single()
+  const { data: list } = await c.sb
+    .from('lists')
+    .insert({ owner_id: c.uid, name, kind: 'tbr' })
+    .select('id')
+    .single()
   const listId = (list as { id: string }).id
   for (let i = 0; i < titles.length; i++) {
     const { data: b } = await c.sb
       .from('books')
-      .insert({ owner_id: c.uid, title: titles[i], author_first: 'Test', author_last: 'Author', ownership: 'owned', cover_url: '/landing-covers/everflame.jpg' })
+      .insert({
+        owner_id: c.uid,
+        title: titles[i],
+        author_first: 'Test',
+        author_last: 'Author',
+        ownership: 'owned',
+        cover_url: '/landing-covers/everflame.jpg',
+      })
       .select('id')
       .single()
-    await c.sb.from('list_items').insert({ list_id: listId, book_id: (b as { id: string }).id, owner_id: c.uid, position: (i + 1) * 1000 })
+    await c.sb.from('list_items').insert({
+      list_id: listId,
+      book_id: (b as { id: string }).id,
+      owner_id: c.uid,
+      position: (i + 1) * 1000,
+    })
   }
   const order = async () => {
     const rows = await positionsFor(c.sb, listId)
     const byId = new Map(
-      ((await c.sb.from('books').select('id, title').eq('owner_id', c.uid)).data ?? []).map((b) => [(b as { id: string }).id, (b as { title: string }).title]),
+      ((await c.sb.from('books').select('id, title').eq('owner_id', c.uid)).data ?? []).map((b) => [
+        (b as { id: string }).id,
+        (b as { title: string }).title,
+      ]),
     )
     return rows.map((r) => byId.get(r.book_id))
   }
   return { listId, order }
 }
 
-test('Shelf page: the DEFAULT (spine) view reorders by drag and by keyboard, and persists', async ({ page }) => {
+test('Shelf page: the DEFAULT (spine) view reorders by drag and by keyboard, and persists', async ({
+  page,
+}) => {
   test.setTimeout(180_000)
   const c = await client()
   await reset(c)
-  const { listId, order } = await shelfOf(c, 'Spine Order', ['Alpha Book', 'Bravo Book', 'Charlie Book'])
+  const { listId, order } = await shelfOf(c, 'Spine Order', [
+    'Alpha Book',
+    'Bravo Book',
+    'Charlie Book',
+  ])
   await stubBackends(page)
   try {
     await signIn(page, c.session)
     await page.goto(`/shelf/${listId}`)
     // No view switching: this is where the reader lands. Pre-fix there was nothing to reorder with.
-    await expect(page.getByRole('button', { name: 'Move Alpha Book earlier' })).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByRole('button', { name: 'Move Alpha Book earlier' })).toBeVisible({
+      timeout: 20_000,
+    })
     expect(await order()).toEqual(['Alpha Book', 'Bravo Book', 'Charlie Book'])
 
     // Real drag: Alpha's spine onto Charlie's slot.
     const spines = page.locator('[data-spine]')
     await expect(spines).toHaveCount(3)
     await spines.nth(0).dragTo(spines.nth(2))
-    await expect.poll(order, { timeout: 15_000 }).toEqual(['Bravo Book', 'Charlie Book', 'Alpha Book'])
+    await expect
+      .poll(order, { timeout: 15_000 })
+      .toEqual(['Bravo Book', 'Charlie Book', 'Alpha Book'])
 
     // Keyboard equivalent — a drag-only affordance would fail the a11y bar.
     await page.getByRole('button', { name: 'Move Alpha Book earlier' }).click()
-    await expect.poll(order, { timeout: 15_000 }).toEqual(['Bravo Book', 'Alpha Book', 'Charlie Book'])
+    await expect
+      .poll(order, { timeout: 15_000 })
+      .toEqual(['Bravo Book', 'Alpha Book', 'Charlie Book'])
 
     // Persisted, not just optimistic.
     await page.reload()
-    await expect(page.getByRole('button', { name: 'Move Alpha Book earlier' })).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByRole('button', { name: 'Move Alpha Book earlier' })).toBeVisible({
+      timeout: 20_000,
+    })
     expect(await order()).toEqual(['Bravo Book', 'Alpha Book', 'Charlie Book'])
   } finally {
     await reset(c)
   }
 })
 
-test('Shelf page: the Grid view reorders by real drag (not just a draggable-attribute check)', async ({ page }) => {
+test('Shelf page: the Grid view reorders by real drag (not just a draggable-attribute check)', async ({
+  page,
+}) => {
   test.setTimeout(180_000)
   const c = await client()
   await reset(c)
-  const { listId, order } = await shelfOf(c, 'Grid Order', ['Alpha Book', 'Bravo Book', 'Charlie Book'])
+  const { listId, order } = await shelfOf(c, 'Grid Order', [
+    'Alpha Book',
+    'Bravo Book',
+    'Charlie Book',
+  ])
   await stubBackends(page)
   try {
     await signIn(page, c.session)
     await page.goto(`/shelf/${listId}`)
     await page.getByRole('button', { name: 'Grid', exact: true }).click()
-    await expect(page.getByRole('button', { name: 'Move Alpha Book later' })).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByRole('button', { name: 'Move Alpha Book later' })).toBeVisible({
+      timeout: 20_000,
+    })
 
     const cards = page.locator('div[draggable="true"]')
     await expect(cards).toHaveCount(3)
     await cards.nth(0).dragTo(cards.nth(2))
-    await expect.poll(order, { timeout: 15_000 }).toEqual(['Bravo Book', 'Charlie Book', 'Alpha Book'])
+    await expect
+      .poll(order, { timeout: 15_000 })
+      .toEqual(['Bravo Book', 'Charlie Book', 'Alpha Book'])
   } finally {
     await reset(c)
   }
 })
 
-test('Shelves page: dragging a book cover does not move the shelf — only the grab handle does', async ({ page }) => {
+test('Shelves page: dragging a book cover does not move the shelf — only the grab handle does', async ({
+  page,
+}) => {
   test.setTimeout(180_000)
   const c = await client()
   await reset(c)
   await shelfOf(c, 'Aaa Shelf', ['Alpha Book'])
   await shelfOf(c, 'Bbb Shelf', ['Bravo Book'])
   const shelfOrder = async () =>
-    (((await c.sb.from('lists').select('name, sort_order').eq('owner_id', c.uid).order('sort_order', { ascending: true, nullsFirst: false })).data ??
-      []) as { name: string }[]).map((l) => l.name)
+    (
+      ((
+        await c.sb
+          .from('lists')
+          .select('name, sort_order')
+          .eq('owner_id', c.uid)
+          .order('sort_order', { ascending: true, nullsFirst: false })
+      ).data ?? []) as { name: string }[]
+    ).map((l) => l.name)
   await stubBackends(page)
   try {
     await signIn(page, c.session)
@@ -305,10 +420,15 @@ test('Shelves page: dragging a book cover does not move the shelf — only the g
     await expect(covers).toHaveCount(2)
     await covers.nth(0).dragTo(covers.nth(1))
     await page.waitForTimeout(2000)
-    expect(await shelfOrder(), 'dragging a book must not reorder shelves').toEqual(['Aaa Shelf', 'Bbb Shelf'])
+    expect(await shelfOrder(), 'dragging a book must not reorder shelves').toEqual([
+      'Aaa Shelf',
+      'Bbb Shelf',
+    ])
 
     // The handle is the one place a shelf drag starts — and it still works.
-    await page.getByRole('button', { name: /Drag to reorder Aaa Shelf/i }).dragTo(page.getByRole('button', { name: /Drag to reorder Bbb Shelf/i }))
+    await page
+      .getByRole('button', { name: /Drag to reorder Aaa Shelf/i })
+      .dragTo(page.getByRole('button', { name: /Drag to reorder Bbb Shelf/i }))
     await expect.poll(shelfOrder, { timeout: 15_000 }).toEqual(['Bbb Shelf', 'Aaa Shelf'])
   } finally {
     await reset(c)

@@ -95,13 +95,16 @@ async function adapterGoogle(input: EnrichInput): Promise<SourceRecord | null> {
   const q = input.isbn
     ? `isbn:${cleanIsbn(input.isbn)}`
     : `intitle:${encodeURIComponent(`"${input.title}"`)}${input.author ? `+inauthor:${encodeURIComponent(`"${input.author}"`)}` : ''}`
-  const j = (await fetchJson(`https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=1${googleKey()}`)) as { items?: unknown[] }
+  const j = (await fetchJson(
+    `https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=1${googleKey()}`,
+  )) as { items?: unknown[] }
   const item = j?.items?.[0]
   return item ? normalizeGoogle(item) : null
 }
 
 async function adapterOpenLibrary(input: EnrichInput): Promise<SourceRecord | null> {
-  const fields = 'key,edition_key,title,author_name,first_publish_year,isbn,number_of_pages_median,subject,language,cover_i,series'
+  const fields =
+    'key,edition_key,title,author_name,first_publish_year,isbn,number_of_pages_median,subject,language,cover_i,series'
   const url = input.isbn
     ? `https://openlibrary.org/search.json?q=isbn:${cleanIsbn(input.isbn)}&fields=${fields}&limit=1`
     : `https://openlibrary.org/search.json?title=${encodeURIComponent(input.title ?? '')}&author=${encodeURIComponent(input.author ?? '')}&fields=${fields}&limit=1`
@@ -114,14 +117,18 @@ async function adapterOpenLibrary(input: EnrichInput): Promise<SourceRecord | nu
 // title search must go through the `search` query (Typesense-backed); each hit's `document` is the
 // search-doc shape → normalizeHardcoverSearch. Shared by the single-fetch adapter + the multi-candidate
 // search adapter. Best romance/indie cover coverage in this catalog.
-async function hardcoverSearchRecords(title: string | undefined, limit: number): Promise<SourceRecord[]> {
+async function hardcoverSearchRecords(
+  title: string | undefined,
+  limit: number,
+): Promise<SourceRecord[]> {
   const auth = hardcoverAuth()
   if (!auth || !title) return []
   const j = (await fetchJson('https://api.hardcover.app/v1/graphql', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: auth },
     body: JSON.stringify({
-      query: 'query($q:String!,$n:Int!){ search(query:$q, query_type:"Book", per_page:$n){ results } }',
+      query:
+        'query($q:String!,$n:Int!){ search(query:$q, query_type:"Book", per_page:$n){ results } }',
       variables: { q: title, n: limit },
     }),
   })) as { data?: { search?: { results?: { hits?: { document?: unknown }[] } } } }
@@ -138,7 +145,9 @@ async function adapterIsbndb(input: EnrichInput): Promise<SourceRecord | null> {
   const key = Deno.env.get('ISBNDB_KEY')
   const isbn = cleanIsbn(input.isbn ?? '')
   if (!key || !isbn) return null // ISBNdb is queried by ISBN (the completeness backstop)
-  const j = (await fetchJson(`https://api2.isbndb.com/book/${isbn}`, { headers: { Authorization: key } })) as {
+  const j = (await fetchJson(`https://api2.isbndb.com/book/${isbn}`, {
+    headers: { Authorization: key },
+  })) as {
     book?: unknown
   }
   return j?.book ? normalizeIsbndb(j) : null
@@ -160,7 +169,9 @@ const SEARCH_LIMIT = 5
 async function searchGoogle(input: EnrichInput): Promise<ResolveCandidate[]> {
   if (!input.title) return []
   const q = `intitle:${encodeURIComponent(`"${input.title}"`)}${input.author ? `+inauthor:${encodeURIComponent(`"${input.author}"`)}` : ''}`
-  const j = (await fetchJson(`https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=${SEARCH_LIMIT}${googleKey()}`)) as { items?: unknown[] }
+  const j = (await fetchJson(
+    `https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=${SEARCH_LIMIT}${googleKey()}`,
+  )) as { items?: unknown[] }
   return (j?.items ?? [])
     .map((it): ResolveCandidate => ({ source: 'google', record: normalizeGoogle(it) }))
     .filter((c) => c.record.title)
@@ -168,7 +179,8 @@ async function searchGoogle(input: EnrichInput): Promise<ResolveCandidate[]> {
 
 async function searchOpenLibrary(input: EnrichInput): Promise<ResolveCandidate[]> {
   if (!input.title) return []
-  const fields = 'key,edition_key,title,author_name,first_publish_year,isbn,number_of_pages_median,subject,language,cover_i,series'
+  const fields =
+    'key,edition_key,title,author_name,first_publish_year,isbn,number_of_pages_median,subject,language,cover_i,series'
   const url = `https://openlibrary.org/search.json?title=${encodeURIComponent(input.title)}&author=${encodeURIComponent(input.author ?? '')}&fields=${fields}&limit=${SEARCH_LIMIT}`
   const j = (await fetchJson(url, { headers: { 'User-Agent': UA } })) as { docs?: unknown[] }
   return (j?.docs ?? [])
@@ -188,7 +200,9 @@ const SEARCHERS: Partial<Record<EnrichSource, (i: EnrichInput) => Promise<Resolv
 }
 
 /** Search the enabled sources (catalog priority: Hardcover → Google → Open Library) for candidates. */
-async function gatherCandidates(input: EnrichInput): Promise<{ candidates: ResolveCandidate[]; rateLimited: boolean }> {
+async function gatherCandidates(
+  input: EnrichInput,
+): Promise<{ candidates: ResolveCandidate[]; rateLimited: boolean }> {
   const order: EnrichSource[] = ['hardcover', 'google', 'openlibrary']
   const enabled = new Set(enabledSources())
   const candidates: ResolveCandidate[] = []
@@ -246,7 +260,9 @@ Deno.serve(async (req: Request) => {
     // Manual Cover Studio pick: materialize ONE chosen cover URL to Storage/CDN (owned, not a hotlink),
     // keyed by its edition ISBN so repeats dedup. Falls back to the source URL on any failure.
     if (input.action === 'cacheCover' && input.cover) {
-      const key = (cleanIsbn(input.isbn13 ?? '') || input.cover).replace(/[^a-z0-9]/gi, '_').slice(0, 80)
+      const key = (cleanIsbn(input.isbn13 ?? '') || input.cover)
+        .replace(/[^a-z0-9]/gi, '_')
+        .slice(0, 80)
       return json({ cover: await cacheCover(input.cover, key) })
     }
     const mode = input.mode ?? 'full'
@@ -271,7 +287,9 @@ Deno.serve(async (req: Request) => {
       const order = enabledSources()
       let rec: SourceRecord | null = null
       let used: EnrichSource | null = null
-      for (const s of order.includes('openlibrary') ? ['openlibrary', 'google'] as EnrichSource[] : order) {
+      for (const s of order.includes('openlibrary')
+        ? (['openlibrary', 'google'] as EnrichSource[])
+        : order) {
         try {
           rec = await ADAPTERS[s](input)
         } catch {
@@ -336,21 +354,32 @@ Deno.serve(async (req: Request) => {
     scheduleCoverCache(key, merged)
     // Flag rate-limited only when nothing resolved, so a bulk run pauses/resumes instead of
     // stamping the book checked. A partial record is still useful → not flagged.
-    const body = { ...toResponse(merged), source: sourceList, confidence, query: matchQuery || undefined, alternates }
+    const body = {
+      ...toResponse(merged),
+      source: sourceList,
+      confidence,
+      query: matchQuery || undefined,
+      alternates,
+    }
     return json(rateLimited && !sourceList ? { ...body, rateLimited: true } : body)
   } catch (e) {
     captureEdgeError('enrich', e)
-    return new Response(JSON.stringify({ error: String(e) }), { status: 400, headers: { ...cors, 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify({ error: String(e) }), {
+      status: 400,
+      headers: { ...cors, 'Content-Type': 'application/json' },
+    })
   }
 })
 
-const json = (body: unknown) => new Response(JSON.stringify(body), { headers: { ...cors, 'Content-Type': 'application/json' } })
+const json = (body: unknown) =>
+  new Response(JSON.stringify(body), { headers: { ...cors, 'Content-Type': 'application/json' } })
 
 function emptyMerged(input: EnrichInput): EnrichedRecord {
-  return mergeRecords(
-    [],
-    { title: input.title, author: input.author, isbn: cleanIsbn(input.isbn ?? '') } as unknown as Partial<EnrichedRecord>,
-  )
+  return mergeRecords([], {
+    title: input.title,
+    author: input.author,
+    isbn: cleanIsbn(input.isbn ?? ''),
+  } as unknown as Partial<EnrichedRecord>)
 }
 
 // Response shape is a SUPERSET of the legacy EnrichResult (so existing callers keep working) plus
@@ -386,7 +415,9 @@ function toResponse(r: EnrichedRecord) {
 // ── enrichment_cache (global, service-role only) ──
 function cacheKeyFor(input: EnrichInput): string {
   const isbn = cleanIsbn(input.isbn ?? '')
-  return isbn.length >= 10 ? `isbn:${isbn}` : `ta:${norm(input.title ?? '')}|${norm(input.author ?? '')}`
+  return isbn.length >= 10
+    ? `isbn:${isbn}`
+    : `ta:${norm(input.title ?? '')}|${norm(input.author ?? '')}`
 }
 
 // ── cover image caching (Storage bucket 'covers', global + CDN-served) ──
@@ -420,7 +451,12 @@ async function cacheCover(sourceUrl: string, key: string): Promise<string> {
     const contentType = img.headers.get('content-type') ?? 'image/jpeg'
     const up = await fetch(`${DB_URL}/storage/v1/object/covers/${path}`, {
       method: 'POST',
-      headers: { apikey: SERVICE, Authorization: `Bearer ${SERVICE}`, 'Content-Type': contentType, 'x-upsert': 'true' },
+      headers: {
+        apikey: SERVICE,
+        Authorization: `Bearer ${SERVICE}`,
+        'Content-Type': contentType,
+        'x-upsert': 'true',
+      },
       body: bytes,
     })
     return up.ok ? publicUrl : sourceUrl
@@ -483,7 +519,11 @@ function isFresh(row: CacheRow): boolean {
 
 const DB_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const SERVICE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-const dbHeaders = { apikey: SERVICE, Authorization: `Bearer ${SERVICE}`, 'Content-Type': 'application/json' }
+const dbHeaders = {
+  apikey: SERVICE,
+  Authorization: `Bearer ${SERVICE}`,
+  'Content-Type': 'application/json',
+}
 
 async function readCache(key: string): Promise<CacheRow | null> {
   if (!DB_URL) return null

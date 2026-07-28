@@ -36,7 +36,9 @@
   --border-width: 1px;
   --ctl-clip: none; /* corner-notch silhouette via clip-path (sci-fi bevel) */
   --label-font: var(--font-sans); /* generic UI label / control text font */
-  --control-font: var(--label-font); /* button/control text — may split from labels (Tryst: Hanken labels, Fraunces controls) */
+  --control-font: var(
+    --label-font
+  ); /* button/control text — may split from labels (Tryst: Hanken labels, Fraunces controls) */
   --label-transform: none; /* small generic labels (eyebrows / section / shelf) */
   --control-transform: none; /* button / chip text */
   --label-tracking: 0.04em;
@@ -60,10 +62,16 @@
   --ambient-texture-blend: normal; /* mix-blend-mode for the texture over the bg */
   --ambient-texture-opacity: 0; /* off by default; skins reuse --grain-opacity */
   --ambient-texture-mask: none; /* optional radial fade so a mesh doesn't tile to the edges */
-  --panel-fill: var(--card-solid); /* OPAQUE nameplate / stat-panel base — the AA floor for text-on-panel */
-  --accent-ink: var(--ink); /* accent-tinted TEXT colour that clears AA on the plate (eyebrows); per-mode below */
+  --panel-fill: var(
+    --card-solid
+  ); /* OPAQUE nameplate / stat-panel base — the AA floor for text-on-panel */
+  --accent-ink: var(
+    --ink
+  ); /* accent-tinted TEXT colour that clears AA on the plate (eyebrows); per-mode below */
   --ornament-frame: transparent; /* inset hairline frame colour on plates (Tryst gilt double-rule) */
-  --mark-accent: var(--accent); /* card-mark glyph accent (skin signature; AA-resolved per surface in JS) */
+  --mark-accent: var(
+    --accent
+  ); /* card-mark glyph accent (skin signature; AA-resolved per surface in JS) */
   --mark-radius: var(--radius-control); /* card-mark chip silhouette (pill vs notched square) */
 
   /* ── Fable 5 material values (chunk 1) — neutral defaults; designed skins override per mode.
@@ -78,7 +86,9 @@
   --gold-deep: color-mix(in srgb, var(--gold) 62%, #201505);
   --spine-lo: var(--card-solid);
   --spine-hi: var(--card-solid);
-  --spine-title: var(--ink); /* bound-spine title ink (gilt in Tryst dark; bronze in daylight for AA) */
+  --spine-title: var(
+    --ink
+  ); /* bound-spine title ink (gilt in Tryst dark; bronze in daylight for AA) */
   --spine-muted: var(--muted);
   --spine-sheen: none;
   --spine-emboss: none;
@@ -152,7 +162,8 @@
 
   /* 1b material — instrument grid mesh (the export's 46px lattice in primary, masked to fade out),
      opaque plate, corner-bracket frame (drawn structurally on plates/cards), squared cyan marks. */
-  --ambient-texture: linear-gradient(color-mix(in srgb, var(--primary) 6%, transparent) 1px, transparent 1px),
+  --ambient-texture:
+    linear-gradient(color-mix(in srgb, var(--primary) 6%, transparent) 1px, transparent 1px),
     linear-gradient(90deg, color-mix(in srgb, var(--primary) 6%, transparent) 1px, transparent 1px);
   --ambient-texture-size: 46px 46px;
   --ambient-texture-blend: normal;
@@ -197,7 +208,16 @@
   --radius-control: 0px; /* chamfered, never rounded — the cut lives in --ctl-clip */
   --radius-card: 2px;
   --radius-panel: 0px; /* trays are chamfer-cut (clip on the frame) */
-  --ctl-clip: polygon(6px 0, calc(100% - 6px) 0, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0 calc(100% - 6px), 0 6px); /* cut bone, 45° */
+  --ctl-clip: polygon(
+    6px 0,
+    calc(100% - 6px) 0,
+    100% 6px,
+    100% calc(100% - 6px),
+    calc(100% - 6px) 100%,
+    6px 100%,
+    0 calc(100% - 6px),
+    0 6px
+  ); /* cut bone, 45° */
   --label-font: var(--font-sans); /* Fable 5: Libre Franklin, the specimen-label grotesque */
   --label-transform: uppercase;
   --control-transform: none;
@@ -293,7 +313,8 @@
   --motion-ease: cubic-bezier(0.34, 1.3, 0.64, 1); /* presses settle */
   --motion-duration: 220ms;
   /* linen weave ≈4% over the wood grain — two crosshatch runs over the turbulence */
-  --ambient-texture: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.045) 0 1px, transparent 1px 3px),
+  --ambient-texture:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.045) 0 1px, transparent 1px 3px),
     repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.04) 0 1px, transparent 1px 3px),
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   --ambient-texture-size: auto, auto, 200px 200px;
@@ -309,7 +330,9 @@
    Numbers are data: tabular, unit-labelled. Orange is spent on exactly one tab per view. The one
    skin allowed to box its marks. Everything racks flush; nothing floats. ── */
 [data-skin='almanac'] {
-  --accent: var(--violet); /* the BRIGHT safety orange — tab fills only; --primary is the text-scale orange */
+  --accent: var(
+    --violet
+  ); /* the BRIGHT safety orange — tab fills only; --primary is the text-scale orange */
   --radius-control: 2px; /* stamp blocks */
   --radius-card: 2px; /* record cards; tabs get a 3px outer radius */
   --radius-panel: 2px;
@@ -322,7 +345,12 @@
   --label-weight: 700;
   --numeral-font: var(--font-sans); /* Archivo tabular figures, unit-labelled */
   --numeral-feature: 'tnum' 1;
-  --motion-ease: cubic-bezier(0.4, 0, 0.2, 1); /* reference books don't animate — wag is the tab's alone */
+  --motion-ease: cubic-bezier(
+    0.4,
+    0,
+    0.2,
+    1
+  ); /* reference books don't animate — wag is the tab's alone */
   --motion-duration: 140ms;
   --ambient-texture: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   --ambient-texture-size: 180px 180px;
@@ -357,7 +385,12 @@
   --ambient-texture-size: 200px 200px;
   --ambient-texture-blend: soft-light;
   --ambient-texture-opacity: var(--grain-opacity); /* grain .04 on sky */
-  --ornament-frame: rgba(255, 255, 255, 0.35); /* the sticker ring is the border; nothing else outlines */
+  --ornament-frame: rgba(
+    255,
+    255,
+    255,
+    0.35
+  ); /* the sticker ring is the border; nothing else outlines */
   --mark-radius: 999px; /* puffy stickers */
 }
 
@@ -405,7 +438,9 @@
   --cta-lo: #e9d7bc;
   --cta-ink: #5a1f38;
   --cta-border: rgba(240, 177, 78, 0.55);
-  --cta-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65), inset 0 -8px 16px rgba(154, 106, 36, 0.16), 0 12px 28px rgba(0, 0, 0, 0.5), 0 2px 5px rgba(0, 0, 0, 0.4);
+  --cta-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.65), inset 0 -8px 16px rgba(154, 106, 36, 0.16),
+    0 12px 28px rgba(0, 0, 0, 0.5), 0 2px 5px rgba(0, 0, 0, 0.4);
   --seal-hi: #c23a60;
   --seal-mid: #8e2443;
   --seal-lo: #651830;
@@ -415,7 +450,14 @@
   --spine-hi: #3c1428;
   --spine-title: #f0b14e; /* gilt-stamped */
   --spine-muted: #caa9c4;
-  --spine-sheen: linear-gradient(90deg, rgba(0, 0, 0, 0.52) 0%, rgba(255, 255, 255, 0.05) 16%, rgba(255, 255, 255, 0.13) 50%, rgba(255, 255, 255, 0.03) 72%, rgba(0, 0, 0, 0.56) 100%);
+  --spine-sheen: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.52) 0%,
+    rgba(255, 255, 255, 0.05) 16%,
+    rgba(255, 255, 255, 0.13) 50%,
+    rgba(255, 255, 255, 0.03) 72%,
+    rgba(0, 0, 0, 0.56) 100%
+  );
   --spine-emboss: 0 1px 1px rgba(0, 0, 0, 0.7), 0 -1px 0 rgba(255, 238, 200, 0.22);
   --ph-a: #2a1030;
   --ph-b: #4a163a;
@@ -424,7 +466,6 @@
   --ph-muted: rgba(255, 222, 200, 0.78);
   --ph-glow: radial-gradient(120% 60% at 80% 0%, rgba(240, 177, 78, 0.16), transparent 55%);
 }
-
 
 [data-skin='tryst'][data-mode='light'] {
   --bg0: #f8eee4;
@@ -460,7 +501,9 @@
   --cta-lo: #8e1f42;
   --cta-ink: #fff4ea;
   --cta-border: rgba(108, 67, 19, 0.5);
-  --cta-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), inset 0 -8px 16px rgba(0, 0, 0, 0.18), 0 10px 24px rgba(150, 60, 90, 0.35);
+  --cta-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28), inset 0 -8px 16px rgba(0, 0, 0, 0.18),
+    0 10px 24px rgba(150, 60, 90, 0.35);
   --seal-hi: #b53257;
   --seal-mid: #8e1f42;
   --seal-lo: #6b1730;
@@ -470,7 +513,14 @@
   --spine-hi: #ecccd4;
   --spine-title: #6c4313; /* AA: specimen gold #8a5717 = 3.5:1 on the light leather; deep bronze clears */
   --spine-muted: #60394b; /* AA: specimen #8a5d72 = 3.1:1; plum-muted mix clears */
-  --spine-sheen: linear-gradient(90deg, rgba(0, 0, 0, 0.16) 0%, rgba(255, 255, 255, 0.34) 18%, rgba(255, 255, 255, 0.55) 50%, rgba(255, 255, 255, 0.28) 72%, rgba(0, 0, 0, 0.17) 100%);
+  --spine-sheen: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.16) 0%,
+    rgba(255, 255, 255, 0.34) 18%,
+    rgba(255, 255, 255, 0.55) 50%,
+    rgba(255, 255, 255, 0.28) 72%,
+    rgba(0, 0, 0, 0.17) 100%
+  );
   --spine-emboss: 0 1px 0 rgba(255, 255, 255, 0.55), 0 -1px 0 rgba(70, 42, 12, 0.28);
   --ph-a: #f3e2d8;
   --ph-b: #e8cbc9;
@@ -515,13 +565,22 @@
   --cta-lo: #c9a22e;
   --cta-ink: #241f10;
   --cta-border: rgba(138, 106, 47, 0.7);
-  --cta-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), inset 0 -8px 14px rgba(120, 90, 20, 0.2), 0 10px 24px rgba(0, 0, 0, 0.45);
+  --cta-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5), inset 0 -8px 14px rgba(120, 90, 20, 0.2),
+    0 10px 24px rgba(0, 0, 0, 0.45);
   --gold-deep: #8a6a2f;
   --spine-hi: #292416;
   --spine-lo: #3a3320;
   --spine-title: #d4af37;
   --spine-muted: #b3ab8a;
-  --spine-sheen: linear-gradient(90deg, rgba(0, 0, 0, 0.5) 0%, rgba(255, 255, 255, 0.06) 16%, rgba(255, 255, 255, 0.13) 50%, rgba(255, 255, 255, 0.03) 72%, rgba(0, 0, 0, 0.54) 100%);
+  --spine-sheen: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.5) 0%,
+    rgba(255, 255, 255, 0.06) 16%,
+    rgba(255, 255, 255, 0.13) 50%,
+    rgba(255, 255, 255, 0.03) 72%,
+    rgba(0, 0, 0, 0.54) 100%
+  );
   --spine-emboss: 0 1px 1px rgba(0, 0, 0, 0.65), 0 -1px 0 rgba(255, 240, 190, 0.22);
   --ph-a: #2e2a18;
   --ph-b: #3d3520;
@@ -569,7 +628,14 @@
   --spine-lo: #e6d7b2;
   --spine-title: #7a5c14;
   --spine-muted: #5e5742; /* AA: specimen #7c745c = 3.4:1 on the light ground; darkened in-family */
-  --spine-sheen: linear-gradient(90deg, rgba(0, 0, 0, 0.15) 0%, rgba(255, 255, 255, 0.35) 18%, rgba(255, 255, 255, 0.55) 50%, rgba(255, 255, 255, 0.28) 72%, rgba(0, 0, 0, 0.16) 100%);
+  --spine-sheen: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.15) 0%,
+    rgba(255, 255, 255, 0.35) 18%,
+    rgba(255, 255, 255, 0.55) 50%,
+    rgba(255, 255, 255, 0.28) 72%,
+    rgba(0, 0, 0, 0.16) 100%
+  );
   --spine-emboss: 0 1px 0 rgba(255, 255, 255, 0.5), 0 -1px 0 rgba(60, 44, 10, 0.25);
   --ph-a: #f3e8ca;
   --ph-b: #e9dab4;
@@ -613,11 +679,20 @@
   --cta-lo: #3ec2d2;
   --cta-ink: #02080a;
   --cta-border: rgba(79, 209, 224, 0.8);
-  --cta-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), inset 0 -5px 10px rgba(2, 8, 10, 0.18), 0 0 0 1px rgba(79, 209, 224, 0.25), 0 8px 22px rgba(79, 209, 224, 0.3);
+  --cta-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45), inset 0 -5px 10px rgba(2, 8, 10, 0.18),
+    0 0 0 1px rgba(79, 209, 224, 0.25), 0 8px 22px rgba(79, 209, 224, 0.3);
   --spine-lo: #0a1220;
   --spine-hi: #1a2a42;
   --spine-muted: #8595b4;
-  --spine-sheen: linear-gradient(90deg, rgba(0, 0, 0, 0.42) 0%, rgba(255, 255, 255, 0.04) 22%, rgba(255, 255, 255, 0.1) 50%, rgba(255, 255, 255, 0.03) 76%, rgba(0, 0, 0, 0.46) 100%);
+  --spine-sheen: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.42) 0%,
+    rgba(255, 255, 255, 0.04) 22%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.03) 76%,
+    rgba(0, 0, 0, 0.46) 100%
+  );
   --ph-a: #0a1530;
   --ph-b: #142a52;
   --ph-c: #08111f;
@@ -659,11 +734,20 @@
   --cta-lo: #0a6e80;
   --cta-ink: #f2fbfd;
   --cta-border: rgba(8, 86, 100, 0.7);
-  --cta-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -5px 10px rgba(2, 8, 10, 0.15), 0 8px 20px rgba(10, 110, 128, 0.25);
+  --cta-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -5px 10px rgba(2, 8, 10, 0.15),
+    0 8px 20px rgba(10, 110, 128, 0.25);
   --spine-lo: #c8d6e6;
   --spine-hi: #e9f0f8;
   --spine-muted: #4d5d73; /* AA: specimen #566880 = 4.4:1 on the pale metal; darkened */
-  --spine-sheen: linear-gradient(90deg, rgba(0, 0, 0, 0.14) 0%, rgba(255, 255, 255, 0.32) 22%, rgba(255, 255, 255, 0.55) 50%, rgba(255, 255, 255, 0.28) 76%, rgba(0, 0, 0, 0.15) 100%);
+  --spine-sheen: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.14) 0%,
+    rgba(255, 255, 255, 0.32) 22%,
+    rgba(255, 255, 255, 0.55) 50%,
+    rgba(255, 255, 255, 0.28) 76%,
+    rgba(0, 0, 0, 0.15) 100%
+  );
   --ph-a: #e8f0f9;
   --ph-b: #cfdded;
   --ph-c: #dfe9f4;
@@ -708,12 +792,21 @@
   --cta-lo: #d8cfba;
   --cta-ink: #241d18;
   --cta-border: transparent;
-  --cta-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), inset 0 -6px 12px rgba(90, 75, 55, 0.22), 0 12px 28px rgba(0, 0, 0, 0.55);
+  --cta-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6), inset 0 -6px 12px rgba(90, 75, 55, 0.22),
+    0 12px 28px rgba(0, 0, 0, 0.55);
   --spine-hi: #1b1d21;
   --spine-lo: #26282e;
   --spine-title: #e9e4db;
   --spine-muted: #a8a39a;
-  --spine-sheen: linear-gradient(90deg, rgba(0, 0, 0, 0.48) 0%, rgba(255, 255, 255, 0.05) 18%, rgba(255, 255, 255, 0.1) 50%, rgba(255, 255, 255, 0.03) 74%, rgba(0, 0, 0, 0.5) 100%);
+  --spine-sheen: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.48) 0%,
+    rgba(255, 255, 255, 0.05) 18%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.03) 74%,
+    rgba(0, 0, 0, 0.5) 100%
+  );
   --ph-a: #24262c;
   --ph-b: #1b1d21;
   --ph-c: #212328;
@@ -761,7 +854,14 @@
   --spine-lo: #c6bfae;
   --spine-title: #2a251e;
   --spine-muted: #52483e; /* AA: specimen #5d574c = 4.3:1 on the light cloth; darkened in-family */
-  --spine-sheen: linear-gradient(90deg, rgba(0, 0, 0, 0.16) 0%, rgba(255, 255, 255, 0.32) 18%, rgba(255, 255, 255, 0.5) 50%, rgba(255, 255, 255, 0.26) 74%, rgba(0, 0, 0, 0.17) 100%);
+  --spine-sheen: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.16) 0%,
+    rgba(255, 255, 255, 0.32) 18%,
+    rgba(255, 255, 255, 0.5) 50%,
+    rgba(255, 255, 255, 0.26) 74%,
+    rgba(0, 0, 0, 0.17) 100%
+  );
   --ph-a: #d8d2c4;
   --ph-b: #c9c2b2;
   --ph-c: #d2cbbc;
@@ -807,12 +907,21 @@
   --cta-lo: #c1902f;
   --cta-ink: #2a2214;
   --cta-border: rgba(90, 66, 14, 0.7);
-  --cta-shadow: inset 0 1px 0 rgba(255, 240, 200, 0.6), inset 0 -6px 12px rgba(70, 50, 10, 0.3), 0 10px 24px rgba(0, 0, 0, 0.5);
+  --cta-shadow:
+    inset 0 1px 0 rgba(255, 240, 200, 0.6), inset 0 -6px 12px rgba(70, 50, 10, 0.3),
+    0 10px 24px rgba(0, 0, 0, 0.5);
   --spine-hi: #181c22;
   --spine-lo: #272c35;
   --spine-title: #2a251c; /* typed on the pasted strip (--paper) */
   --spine-muted: #5d574a;
-  --spine-sheen: linear-gradient(90deg, rgba(0, 0, 0, 0.48) 0%, rgba(255, 255, 255, 0.05) 18%, rgba(255, 255, 255, 0.1) 50%, rgba(255, 255, 255, 0.03) 74%, rgba(0, 0, 0, 0.5) 100%);
+  --spine-sheen: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.48) 0%,
+    rgba(255, 255, 255, 0.05) 18%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.03) 74%,
+    rgba(0, 0, 0, 0.5) 100%
+  );
   --ph-a: #2a2f38;
   --ph-b: #1c2028;
   --ph-c: #242932;
@@ -861,7 +970,14 @@
   --spine-lo: #b7b1a0;
   --spine-title: #2a251c;
   --spine-muted: #55636f;
-  --spine-sheen: linear-gradient(90deg, rgba(0, 0, 0, 0.15) 0%, rgba(255, 255, 255, 0.32) 18%, rgba(255, 255, 255, 0.5) 50%, rgba(255, 255, 255, 0.26) 74%, rgba(0, 0, 0, 0.16) 100%);
+  --spine-sheen: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.15) 0%,
+    rgba(255, 255, 255, 0.32) 18%,
+    rgba(255, 255, 255, 0.5) 50%,
+    rgba(255, 255, 255, 0.26) 74%,
+    rgba(0, 0, 0, 0.16) 100%
+  );
   --ph-a: #d6d0c0;
   --ph-b: #c5bfae;
   --ph-c: #cfc9b9;
@@ -930,7 +1046,12 @@
   --fog: rgba(23, 21, 15, 0.16);
   --on-primary: #fbf1ea;
   --vignette: rgba(20, 18, 13, 0.78); /* THE DARK DESK — the mode lives here, not in the page */
-  --desk-edge: rgba(16, 14, 10, 0.6); /* verdict 1a: the desk closes in — two rooms, not two brightnesses */
+  --desk-edge: rgba(
+    16,
+    14,
+    10,
+    0.6
+  ); /* verdict 1a: the desk closes in — two rooms, not two brightnesses */
   --grain-opacity: 0.05;
   --font-display: 'EB Garamond', Georgia, serif;
   --font-sans: 'EB Garamond', Georgia, serif;
@@ -951,7 +1072,14 @@
   --spine-hi: #f4f2ea;
   --spine-title: #2b2820;
   --spine-muted: #6b675e; /* AA: the sheet's pencil #78736a = 4.0:1 on the galley; darkened */
-  --spine-sheen: linear-gradient(90deg, rgba(0, 0, 0, 0.12) 0%, rgba(255, 255, 255, 0.3) 18%, rgba(255, 255, 255, 0.5) 50%, rgba(255, 255, 255, 0.24) 74%, rgba(0, 0, 0, 0.13) 100%);
+  --spine-sheen: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.12) 0%,
+    rgba(255, 255, 255, 0.3) 18%,
+    rgba(255, 255, 255, 0.5) 50%,
+    rgba(255, 255, 255, 0.24) 74%,
+    rgba(0, 0, 0, 0.13) 100%
+  );
   --ph-a: #f4f2ea;
   --ph-b: #e4e1d6;
   --ph-c: #edeae0;
@@ -972,7 +1100,14 @@
   --spine-hi: #c6c3b8;
   --spine-title: #2b2820;
   --spine-muted: #46433b; /* AA: re-deepened for the cooled galley (4.85:1) */
-  --spine-sheen: linear-gradient(90deg, rgba(0, 0, 0, 0.28) 0%, rgba(255, 255, 255, 0.18) 18%, rgba(255, 255, 255, 0.35) 50%, rgba(255, 255, 255, 0.14) 74%, rgba(0, 0, 0, 0.3) 100%);
+  --spine-sheen: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.28) 0%,
+    rgba(255, 255, 255, 0.18) 18%,
+    rgba(255, 255, 255, 0.35) 50%,
+    rgba(255, 255, 255, 0.14) 74%,
+    rgba(0, 0, 0, 0.3) 100%
+  );
   --ph-a: #bcb8ac;
   --ph-b: #a3a094;
   --ph-c: #b1ada1;
@@ -1062,7 +1197,14 @@
   --spine-hi: #e8dab4;
   --spine-title: #3d3226;
   --spine-muted: #5c5240; /* AA: sheet #8a7d66 = 2.9:1 on the linen; darkened */
-  --spine-sheen: linear-gradient(90deg, rgba(0, 0, 0, 0.13) 0%, rgba(255, 255, 255, 0.3) 18%, rgba(255, 255, 255, 0.5) 50%, rgba(255, 255, 255, 0.24) 74%, rgba(0, 0, 0, 0.14) 100%);
+  --spine-sheen: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.13) 0%,
+    rgba(255, 255, 255, 0.3) 18%,
+    rgba(255, 255, 255, 0.5) 50%,
+    rgba(255, 255, 255, 0.24) 74%,
+    rgba(0, 0, 0, 0.14) 100%
+  );
   --ph-a: #e8dab4;
   --ph-b: #d8c698;
   --ph-c: #e1d2a6;
@@ -1083,7 +1225,14 @@
   --spine-hi: #705a37;
   --spine-title: #f0e8d6;
   --spine-muted: #d9ccb0; /* AA: re-lifted for the toasted cloth (4.74:1) */
-  --spine-sheen: linear-gradient(90deg, rgba(0, 0, 0, 0.42) 0%, rgba(255, 255, 255, 0.07) 18%, rgba(255, 255, 255, 0.14) 50%, rgba(255, 255, 255, 0.05) 74%, rgba(0, 0, 0, 0.44) 100%);
+  --spine-sheen: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.42) 0%,
+    rgba(255, 255, 255, 0.07) 18%,
+    rgba(255, 255, 255, 0.14) 50%,
+    rgba(255, 255, 255, 0.05) 74%,
+    rgba(0, 0, 0, 0.44) 100%
+  );
   --ph-a: #705a37;
   --ph-b: #5c4829;
   --ph-c: #665231;
@@ -1171,7 +1320,14 @@
   --spine-hi: #eadfbe;
   --spine-title: #2b2820;
   --spine-muted: #5f5947; /* AA: the sheet's translucent ink = 3.9:1 flattened; darkened */
-  --spine-sheen: linear-gradient(90deg, rgba(0, 0, 0, 0.12) 0%, rgba(255, 255, 255, 0.3) 18%, rgba(255, 255, 255, 0.5) 50%, rgba(255, 255, 255, 0.22) 74%, rgba(0, 0, 0, 0.13) 100%);
+  --spine-sheen: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.12) 0%,
+    rgba(255, 255, 255, 0.3) 18%,
+    rgba(255, 255, 255, 0.5) 50%,
+    rgba(255, 255, 255, 0.22) 74%,
+    rgba(0, 0, 0, 0.13) 100%
+  );
   --ph-a: #eadfbe;
   --ph-b: #d8cba2;
   --ph-c: #e2d6b2;
@@ -1192,7 +1348,14 @@
   --spine-hi: #b3a67e;
   --spine-title: #241f14; /* the buff manual keeps its ink in the tent — paper never inverts */
   --spine-muted: #3a3426; /* AA: sheet rgba(36,31,20,.72) = 3.4:1 flattened on buff; darkened */
-  --spine-sheen: linear-gradient(90deg, rgba(0, 0, 0, 0.3) 0%, rgba(255, 255, 255, 0.12) 18%, rgba(255, 255, 255, 0.26) 50%, rgba(255, 255, 255, 0.1) 74%, rgba(0, 0, 0, 0.32) 100%);
+  --spine-sheen: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.3) 0%,
+    rgba(255, 255, 255, 0.12) 18%,
+    rgba(255, 255, 255, 0.26) 50%,
+    rgba(255, 255, 255, 0.1) 74%,
+    rgba(0, 0, 0, 0.32) 100%
+  );
   --ph-a: #b3a67e;
   --ph-b: #9a8c64;
   --ph-c: #a89a72;
@@ -1282,7 +1445,14 @@
   --spine-hi: #d5d4ea;
   --spine-title: #2b2a3a;
   --spine-muted: #4a4866;
-  --spine-sheen: linear-gradient(90deg, rgba(0, 0, 0, 0.12) 0%, rgba(255, 255, 255, 0.3) 18%, rgba(255, 255, 255, 0.5) 50%, rgba(255, 255, 255, 0.22) 74%, rgba(0, 0, 0, 0.13) 100%);
+  --spine-sheen: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.12) 0%,
+    rgba(255, 255, 255, 0.3) 18%,
+    rgba(255, 255, 255, 0.5) 50%,
+    rgba(255, 255, 255, 0.22) 74%,
+    rgba(0, 0, 0, 0.13) 100%
+  );
   --ph-a: #c9cee8;
   --ph-b: #e6c8d2;
   --ph-c: #f7d488;
@@ -1305,7 +1475,14 @@
   --spine-title: #eef0fa;
   --spine-muted: #b8bcd8;
   --spine-emboss: 0 1px 2px rgba(10, 10, 26, 0.5); /* the night holds the type up off the sky */
-  --spine-sheen: linear-gradient(90deg, rgba(0, 0, 0, 0.4) 0%, rgba(255, 255, 255, 0.07) 18%, rgba(255, 255, 255, 0.14) 50%, rgba(255, 255, 255, 0.05) 74%, rgba(0, 0, 0, 0.42) 100%);
+  --spine-sheen: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.4) 0%,
+    rgba(255, 255, 255, 0.07) 18%,
+    rgba(255, 255, 255, 0.14) 50%,
+    rgba(255, 255, 255, 0.05) 74%,
+    rgba(0, 0, 0, 0.42) 100%
+  );
   --ph-a: #20223a;
   --ph-b: #5c4a86;
   --ph-c: #f0b45c;
@@ -1317,84 +1494,208 @@
 
 /* The living sky — soft glows that drift/breathe, faint twinkle, slow fog. */
 @keyframes rv-drift-a {
-  0% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(7%, -5%) scale(1.18); }
-  100% { transform: translate(0, 0) scale(1); }
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(7%, -5%) scale(1.18);
+  }
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
 }
 @keyframes rv-drift-b {
-  0% { transform: translate(0, 0) scale(1.1); }
-  50% { transform: translate(-8%, 5%) scale(1); }
-  100% { transform: translate(0, 0) scale(1.1); }
+  0% {
+    transform: translate(0, 0) scale(1.1);
+  }
+  50% {
+    transform: translate(-8%, 5%) scale(1);
+  }
+  100% {
+    transform: translate(0, 0) scale(1.1);
+  }
 }
 @keyframes rv-drift-c {
-  0% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(5%, 6%) scale(1.22); }
-  100% { transform: translate(0, 0) scale(1); }
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(5%, 6%) scale(1.22);
+  }
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
 }
 @keyframes rv-drift-d {
-  0% { transform: translate(0, 0) scale(1.05); }
-  50% { transform: translate(-6%, -6%) scale(1.15); }
-  100% { transform: translate(0, 0) scale(1.05); }
+  0% {
+    transform: translate(0, 0) scale(1.05);
+  }
+  50% {
+    transform: translate(-6%, -6%) scale(1.15);
+  }
+  100% {
+    transform: translate(0, 0) scale(1.05);
+  }
 }
 @keyframes rv-twinkle {
-  0%, 100% { opacity: 0.12; }
-  50% { opacity: 0.95; }
+  0%,
+  100% {
+    opacity: 0.12;
+  }
+  50% {
+    opacity: 0.95;
+  }
 }
 @keyframes rv-fog {
-  0% { transform: translateX(-12%); }
-  100% { transform: translateX(12%); }
+  0% {
+    transform: translateX(-12%);
+  }
+  100% {
+    transform: translateX(12%);
+  }
 }
 
 /* ── Per-skin character motion (Skin Character System). All carry `.rv-anim`, so the reduced-motion
    rule below calms them exactly like the night sky. Tryst = warm gaslit flicker + page-turn shimmer;
    Aphelion = precise scan sweep + instrument twinkle. ── */
-@keyframes flick { /* Tryst: gas-lamp glow */
-  0%, 100% { opacity: 0.92; } 43% { opacity: 0.66; } 46% { opacity: 0.96; } 59% { opacity: 0.74; } 72% { opacity: 0.9; }
+@keyframes flick {
+  /* Tryst: gas-lamp glow */
+  0%,
+  100% {
+    opacity: 0.92;
+  }
+  43% {
+    opacity: 0.66;
+  }
+  46% {
+    opacity: 0.96;
+  }
+  59% {
+    opacity: 0.74;
+  }
+  72% {
+    opacity: 0.9;
+  }
 }
-@keyframes shim { /* Tryst: loading shimmer */
-  0% { transform: translateX(-130%); } 100% { transform: translateX(320%); }
+@keyframes shim {
+  /* Tryst: loading shimmer */
+  0% {
+    transform: translateX(-130%);
+  }
+  100% {
+    transform: translateX(320%);
+  }
 }
-@keyframes scan { /* Aphelion: loading scan sweep */
-  0% { transform: translateY(-120%); } 100% { transform: translateY(2000%); }
+@keyframes scan {
+  /* Aphelion: loading scan sweep */
+  0% {
+    transform: translateY(-120%);
+  }
+  100% {
+    transform: translateY(2000%);
+  }
 }
-@keyframes aphtw { /* Aphelion: instrument twinkle */
-  0%, 100% { opacity: 0.18; } 50% { opacity: 0.95; }
+@keyframes aphtw {
+  /* Aphelion: instrument twinkle */
+  0%,
+  100% {
+    opacity: 0.18;
+  }
+  50% {
+    opacity: 0.95;
+  }
 }
-@keyframes sig-blink { /* Aphelion: status dot */
-  0%, 100% { opacity: 1; } 50% { opacity: 0.2; }
+@keyframes sig-blink {
+  /* Aphelion: status dot */
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.2;
+  }
 }
-@keyframes gleam { /* Grimoire: gold leaf catches the candle (reduced motion: held warm) */
-  0%, 78%, 100% { filter: brightness(1); }
-  86% { filter: brightness(1.35) drop-shadow(0 0 6px color-mix(in srgb, var(--gold) 60%, transparent)); }
+@keyframes gleam {
+  /* Grimoire: gold leaf catches the candle (reduced motion: held warm) */
+  0%,
+  78%,
+  100% {
+    filter: brightness(1);
+  }
+  86% {
+    filter: brightness(1.35) drop-shadow(0 0 6px color-mix(in srgb, var(--gold) 60%, transparent));
+  }
 }
-@keyframes crackdraw { /* Marrow: the house settles — drawn once, then still */
-  from { stroke-dashoffset: 100; }
-  to { stroke-dashoffset: 0; }
+@keyframes crackdraw {
+  /* Marrow: the house settles — drawn once, then still */
+  from {
+    stroke-dashoffset: 100;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
 }
-@keyframes fogdrift { /* Gaslight: fog crosses the lit window */
-  from { transform: translateX(-40%); }
-  to { transform: translateX(40%); }
+@keyframes fogdrift {
+  /* Gaslight: fog crosses the lit window */
+  from {
+    transform: translateX(-40%);
+  }
+  to {
+    transform: translateX(40%);
+  }
 }
-@keyframes radar-sweep { /* Aphelion: cycle-ring radar sweep (rides .rv-anim) */
-  to { transform: rotate(360deg); }
+@keyframes radar-sweep {
+  /* Aphelion: cycle-ring radar sweep (rides .rv-anim) */
+  to {
+    transform: rotate(360deg);
+  }
 }
-@keyframes dashdraw { /* Marginalia: the caret writes itself in (reduced motion: ink dry) */
-  0% { stroke-dashoffset: 200; }
-  35%, 100% { stroke-dashoffset: 0; }
+@keyframes dashdraw {
+  /* Marginalia: the caret writes itself in (reduced motion: ink dry) */
+  0% {
+    stroke-dashoffset: 200;
+  }
+  35%,
+  100% {
+    stroke-dashoffset: 0;
+  }
 }
-@keyframes sway { /* Hearth: a just-sewn button still swings on its thread */
-  0%, 100% { transform: rotate(-7deg); }
-  50% { transform: rotate(6deg); }
+@keyframes sway {
+  /* Hearth: a just-sewn button still swings on its thread */
+  0%,
+  100% {
+    transform: rotate(-7deg);
+  }
+  50% {
+    transform: rotate(6deg);
+  }
 }
-@keyframes wag { /* Almanac: the tab flags you down — wags once, settles, wags again */
-  0%, 48%, 100% { transform: rotate(0deg); }
-  12% { transform: rotate(-10deg); }
-  24% { transform: rotate(6deg); }
-  36% { transform: rotate(-3deg); }
+@keyframes wag {
+  /* Almanac: the tab flags you down — wags once, settles, wags again */
+  0%,
+  48%,
+  100% {
+    transform: rotate(0deg);
+  }
+  12% {
+    transform: rotate(-10deg);
+  }
+  24% {
+    transform: rotate(6deg);
+  }
+  36% {
+    transform: rotate(-3deg);
+  }
 }
-@keyframes dawn { /* Firstlight: the sun bobs above the horizon while something is happening */
-  0%, 100% { transform: translateY(3px); }
-  50% { transform: translateY(0); }
+@keyframes dawn {
+  /* Firstlight: the sun bobs above the horizon while something is happening */
+  0%,
+  100% {
+    transform: translateY(3px);
+  }
+  50% {
+    transform: translateY(0);
+  }
 }
 
 /* Respect reduced motion: hold the sky AND all per-skin character motion perfectly still. */

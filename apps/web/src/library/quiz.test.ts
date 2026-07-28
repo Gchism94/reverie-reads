@@ -45,25 +45,65 @@ function book(over: Partial<Book> & { id: string; genre: string; subgenre: strin
 // A genuinely mixed library — romance, horror, literary, cozy — none read/rated, so the quiz's lean
 // (not a pre-learned romance taste) decides the ranking.
 const LIBRARY: Book[] = [
-  book({ id: 'romance-1', genre: 'romance', subgenre: 'Romance', tags: ['Enemies to Lovers', 'Slow Burn'], intensity: 2 }),
-  book({ id: 'romance-2', genre: 'romance', subgenre: 'Dark Romance', tags: ['Slow Burn'], intensity: 3 }),
-  book({ id: 'horror-1', genre: 'horror', subgenre: 'Cosmic Horror', tags: ['Unreliable Narrator', 'Twist Ending'], intensity: 4 }),
-  book({ id: 'horror-2', genre: 'horror', subgenre: 'Gothic', tags: ['Haunted House'], intensity: 4 }),
-  book({ id: 'literary-1', genre: 'literary', subgenre: 'Literary Fiction', tags: ['Grief & Memory'], intensity: 2 }),
-  book({ id: 'cozy-1', genre: 'cozy', subgenre: 'Small Town', tags: ['Slice of Life'], intensity: 1 }),
+  book({
+    id: 'romance-1',
+    genre: 'romance',
+    subgenre: 'Romance',
+    tags: ['Enemies to Lovers', 'Slow Burn'],
+    intensity: 2,
+  }),
+  book({
+    id: 'romance-2',
+    genre: 'romance',
+    subgenre: 'Dark Romance',
+    tags: ['Slow Burn'],
+    intensity: 3,
+  }),
+  book({
+    id: 'horror-1',
+    genre: 'horror',
+    subgenre: 'Cosmic Horror',
+    tags: ['Unreliable Narrator', 'Twist Ending'],
+    intensity: 4,
+  }),
+  book({
+    id: 'horror-2',
+    genre: 'horror',
+    subgenre: 'Gothic',
+    tags: ['Haunted House'],
+    intensity: 4,
+  }),
+  book({
+    id: 'literary-1',
+    genre: 'literary',
+    subgenre: 'Literary Fiction',
+    tags: ['Grief & Memory'],
+    intensity: 2,
+  }),
+  book({
+    id: 'cozy-1',
+    genre: 'cozy',
+    subgenre: 'Small Town',
+    tags: ['Slice of Life'],
+    intensity: 1,
+  }),
 ]
 
 /** Fold a set of per-question option choices through the real quiz. */
 function answer(choices: number[]): QuizAnswers {
-  return choices.reduce((a, optIndex, q) => applyAnswer(a, QUIZ[q]!.opts[optIndex]!), emptyAnswers())
+  return choices.reduce(
+    (a, optIndex, q) => applyAnswer(a, QUIZ[q]!.opts[optIndex]!),
+    emptyAnswers(),
+  )
 }
 
 /** Top-ranked book id for a given set of answers over the mixed library. */
 function topPick(a: QuizAnswers): string {
   const ctx = buildMatchContext(LIBRARY, { now: 0 })
   const profile = buildQuizProfile(a)
-  return LIBRARY.map((b) => ({ id: b.id, s: scoreMatch(b, profile, ctx).score }))
-    .sort((x, y) => y.s - x.s)[0]!.id
+  return LIBRARY.map((b) => ({ id: b.id, s: scoreMatch(b, profile, ctx).score })).sort(
+    (x, y) => y.s - x.s,
+  )[0]!.id
 }
 
 /** The genre key with the strongest accumulated lean. */

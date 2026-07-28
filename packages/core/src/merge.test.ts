@@ -77,34 +77,75 @@ describe('findDuplicateGroups', () => {
 })
 
 describe('ownership on merge', () => {
-  const state = (a: Parameters<typeof makeBook>[0], b: Parameters<typeof makeBook>[0]): LibraryState => ({
+  const state = (
+    a: Parameters<typeof makeBook>[0],
+    b: Parameters<typeof makeBook>[0],
+  ): LibraryState => ({
     books: [makeBook(a), makeBook(b)],
     tbrs: [],
     collections: [],
   })
 
   it('one owned copy makes the merged record owned', () => {
-    const next = mergeBooks(state({ id: 'a', title: 'T', ownership: 'wishlist' }, { id: 'b', title: 'T', ownership: 'owned' }), 'a', ['b'])
+    const next = mergeBooks(
+      state(
+        { id: 'a', title: 'T', ownership: 'wishlist' },
+        { id: 'b', title: 'T', ownership: 'owned' },
+      ),
+      'a',
+      ['b'],
+    )
     expect(next.books.find((b) => b.id === 'a')!.ownership).toBe('owned')
   })
 
   it('two wishlist copies stay wishlist', () => {
-    const next = mergeBooks(state({ id: 'a', title: 'T', ownership: 'wishlist' }, { id: 'b', title: 'T', ownership: 'wishlist' }), 'a', ['b'])
+    const next = mergeBooks(
+      state(
+        { id: 'a', title: 'T', ownership: 'wishlist' },
+        { id: 'b', title: 'T', ownership: 'wishlist' },
+      ),
+      'a',
+      ['b'],
+    )
     expect(next.books.find((b) => b.id === 'a')!.ownership).toBe('wishlist')
   })
 
   it('borrowed loses to owned but beats wishlist (strongest possession wins)', () => {
-    const owned = mergeBooks(state({ id: 'a', title: 'T', ownership: 'borrowed' }, { id: 'b', title: 'T', ownership: 'owned' }), 'a', ['b'])
+    const owned = mergeBooks(
+      state(
+        { id: 'a', title: 'T', ownership: 'borrowed' },
+        { id: 'b', title: 'T', ownership: 'owned' },
+      ),
+      'a',
+      ['b'],
+    )
     expect(owned.books.find((b) => b.id === 'a')!.ownership).toBe('owned')
-    const borrowed = mergeBooks(state({ id: 'a', title: 'T', ownership: 'wishlist' }, { id: 'b', title: 'T', ownership: 'borrowed' }), 'a', ['b'])
+    const borrowed = mergeBooks(
+      state(
+        { id: 'a', title: 'T', ownership: 'wishlist' },
+        { id: 'b', title: 'T', ownership: 'borrowed' },
+      ),
+      'a',
+      ['b'],
+    )
     expect(borrowed.books.find((b) => b.id === 'a')!.ownership).toBe('borrowed')
   })
 })
 
 describe('merge unions subgenres', () => {
   it('keeps the primary book’s order first and mirrors the single field', () => {
-    const primary = makeBook({ id: 'p', title: 'Primary', subgenre: 'Epic Fantasy', subgenres: ['Epic Fantasy', 'Romantasy'] })
-    const loser = makeBook({ id: 'l', title: 'Dupe', subgenre: 'Dark Fantasy', subgenres: ['Dark Fantasy', 'Romantasy'] })
+    const primary = makeBook({
+      id: 'p',
+      title: 'Primary',
+      subgenre: 'Epic Fantasy',
+      subgenres: ['Epic Fantasy', 'Romantasy'],
+    })
+    const loser = makeBook({
+      id: 'l',
+      title: 'Dupe',
+      subgenre: 'Dark Fantasy',
+      subgenres: ['Dark Fantasy', 'Romantasy'],
+    })
     const state: LibraryState = { books: [primary, loser], tbrs: [], collections: [] }
     const merged = mergeBooks(state, 'p', ['l']).books[0]!
     expect(merged.subgenres).toEqual(['Epic Fantasy', 'Romantasy', 'Dark Fantasy'])

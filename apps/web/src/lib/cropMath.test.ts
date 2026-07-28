@@ -17,7 +17,9 @@ describe('cropMath', () => {
     const s = coverScale(1000, 1500, FRAME.w, FRAME.h)
     expect(Math.abs(c.tx)).toBeLessThanOrEqual((1000 * s - FRAME.w) / 2 + 1e-9)
     expect(Math.abs(c.ty)).toBeLessThanOrEqual((1500 * s - FRAME.h) / 2 + 1e-9)
-    expect(clampOffset({ zoom: 99, tx: 0, ty: 0 }, 100, 150, FRAME.w, FRAME.h).zoom).toBe(CROP_MAX_ZOOM)
+    expect(clampOffset({ zoom: 99, tx: 0, ty: 0 }, 100, 150, FRAME.w, FRAME.h).zoom).toBe(
+      CROP_MAX_ZOOM,
+    )
   })
 
   it('sourceRect at rest is the centred cover crop', () => {
@@ -42,7 +44,11 @@ describe('cropMath', () => {
   })
 
   it('output keeps the 2:3 aspect at any zoom/pan', () => {
-    for (const st of [{ zoom: 1, tx: 0, ty: 0 }, { zoom: 1.7, tx: 33, ty: -21 }, { zoom: 4, tx: -80, ty: 55 }]) {
+    for (const st of [
+      { zoom: 1, tx: 0, ty: 0 },
+      { zoom: 1.7, tx: 33, ty: -21 },
+      { zoom: 4, tx: -80, ty: 55 },
+    ]) {
       const r = sourceRect(st, 2811, 1993, FRAME.w, FRAME.h)
       expect(r.sw / r.sh).toBeCloseTo(2 / 3, 5)
     }

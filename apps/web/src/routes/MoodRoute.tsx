@@ -27,7 +27,10 @@ function MoodScreen() {
     () => new Set((assignments ?? []).filter((a) => a.mood_id === moodId).map((a) => a.book_id)),
     [assignments, moodId],
   )
-  const carriers = useMemo(() => (books ?? []).filter((b) => carrierIds.has(b.id)), [books, carrierIds])
+  const carriers = useMemo(
+    () => (books ?? []).filter((b) => carrierIds.has(b.id)),
+    [books, carrierIds],
+  )
 
   if (!mood)
     return (
@@ -59,7 +62,10 @@ function MoodScreen() {
 
       <header className="mt-3 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-[26px] italic leading-tight text-ink" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+          <h1
+            className="text-[26px] italic leading-tight text-ink"
+            style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+          >
             {mood.name}
           </h1>
           <p className="mt-0.5 text-[13px] text-muted">
@@ -74,13 +80,23 @@ function MoodScreen() {
           onClick={() => setSweep((s) => !s)}
           aria-pressed={sweep}
           className="rounded-full border px-3.5 py-1.5 text-[12.5px] font-semibold"
-          style={sweep ? { background: 'var(--accent-fill)', color: 'var(--on-primary)', borderColor: 'transparent' } : { background: 'var(--card)', color: 'var(--ink)', borderColor: 'var(--line)' }}
+          style={
+            sweep
+              ? {
+                  background: 'var(--accent-fill)',
+                  color: 'var(--on-primary)',
+                  borderColor: 'transparent',
+                }
+              : { background: 'var(--card)', color: 'var(--ink)', borderColor: 'var(--line)' }
+          }
         >
           {sweep ? 'Done' : '⟲ Sweep your library'}
         </button>
       </header>
       {sweep && (
-        <p className="mt-2 text-[12.5px] text-muted">Tap covers to add or remove {mood.name} — highlighted books felt this way.</p>
+        <p className="mt-2 text-[12.5px] text-muted">
+          Tap covers to add or remove {mood.name} — highlighted books felt this way.
+        </p>
       )}
 
       {gridBooks.length ? (
@@ -93,7 +109,11 @@ function MoodScreen() {
                 type="button"
                 onClick={() => toggle(b)}
                 aria-pressed={sweep ? carrying : undefined}
-                aria-label={sweep ? `${carrying ? 'Remove' : 'Add'} ${mood.name} — ${b.title}` : `Open ${b.title}`}
+                aria-label={
+                  sweep
+                    ? `${carrying ? 'Remove' : 'Add'} ${mood.name} — ${b.title}`
+                    : `Open ${b.title}`
+                }
                 className="relative overflow-hidden rounded-xl border text-left"
                 style={{
                   borderColor: sweep && carrying ? 'var(--accent-ink)' : 'var(--line)',
@@ -105,7 +125,11 @@ function MoodScreen() {
                   <CoverImage book={b} thumb />
                 </div>
                 {sweep && carrying && (
-                  <span aria-hidden className="absolute right-1 top-1 rounded-full px-1.5 text-[11px] font-bold" style={{ background: 'var(--accent-fill)', color: 'var(--on-primary)' }}>
+                  <span
+                    aria-hidden
+                    className="absolute right-1 top-1 rounded-full px-1.5 text-[11px] font-bold"
+                    style={{ background: 'var(--accent-fill)', color: 'var(--on-primary)' }}
+                  >
                     ✓
                   </span>
                 )}

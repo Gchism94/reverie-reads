@@ -51,11 +51,15 @@ export function readableWriteError(error: unknown): string {
   if (/books_pub_m_check/.test(raw)) return 'The publication month has to be between 1 and 12.'
   if (/books_pub_d_check/.test(raw)) return 'The publication day has to be between 1 and 31.'
   if (/books_status_check/.test(raw)) return 'That series status isn’t one of the allowed values.'
-  if (/books_ownership_check/.test(raw)) return 'That ownership value isn’t one of the allowed values.'
-  if (/books_rating_check|reads_rating_check/.test(raw)) return 'A rating has to be between 0 and 5.'
+  if (/books_ownership_check/.test(raw))
+    return 'That ownership value isn’t one of the allowed values.'
+  if (/books_rating_check|reads_rating_check/.test(raw))
+    return 'A rating has to be between 0 and 5.'
   if (/duplicate key|already exists|_uidx/.test(raw)) return 'That already exists.'
-  if (/row-level security|permission denied|JWT|401|403/i.test(raw)) return 'You’re signed out, or that isn’t yours to change.'
-  if (/Failed to fetch|NetworkError|network/i.test(raw)) return 'No connection — the change didn’t reach the server.'
+  if (/row-level security|permission denied|JWT|401|403/i.test(raw))
+    return 'You’re signed out, or that isn’t yours to change.'
+  if (/Failed to fetch|NetworkError|network/i.test(raw))
+    return 'No connection — the change didn’t reach the server.'
   if (/violates check constraint/.test(raw)) return 'One of those values isn’t allowed.'
   return 'The change didn’t save.'
 }

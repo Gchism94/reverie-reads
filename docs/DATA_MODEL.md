@@ -108,15 +108,15 @@ comments. Reproduced here with the parts that most often get guessed wrong calle
 
 #### Possession is four states, and `owned` does not decide it
 
-`ownership` is the answer to *how do you have this book*; `owned` is the answer to *which
-formats*. They are separate fields and the first one governs.
+`ownership` is the answer to _how do you have this book_; `owned` is the answer to _which
+formats_. They are separate fields and the first one governs.
 
-| `ownership` | meaning |
-|---|---|
-| `owned` | the reader owns a copy — per-format detail in `owned` |
-| `borrowed` | in the reader's hands but not owned (library loan, a friend's copy). **Counts as possessed:** carries a format, stays in the default library |
-| `wishlist` | a book the reader *wants* — the old `unowned` TBR state, renamed for precision |
-| `unset` | **the default for a newly added book.** Cataloguing must not force a possession category |
+| `ownership` | meaning                                                                                                                                      |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `owned`     | the reader owns a copy — per-format detail in `owned`                                                                                        |
+| `borrowed`  | in the reader's hands but not owned (library loan, a friend's copy). **Counts as possessed:** carries a format, stays in the default library |
+| `wishlist`  | a book the reader _wants_ — the old `unowned` TBR state, renamed for precision                                                               |
+| `unset`     | **the default for a newly added book.** Cataloguing must not force a possession category                                                     |
 
 > **`all-false = wishlist` is wrong and was never true after ownership-v2.** A wishlist book
 > carries whatever latent format flags it happens to have; no surface reads them. Ask
@@ -125,7 +125,7 @@ formats*. They are separate fields and the first one governs.
 > Possession never gates reading history: a book you have read is in your library whatever
 > `ownership` says.
 
-The **Owned · Physical / Ebook / Audiobook** shelves are *smart shelves* derived from
+The **Owned · Physical / Ebook / Audiobook** shelves are _smart shelves_ derived from
 `ownership` + `owned`, not manual lists. Ownership is independent of `reads[].format` — you
 can read a borrowed copy you don't own.
 
@@ -138,11 +138,13 @@ of distinct voices — never reduced to a headline number. There is no aggregate
 anywhere in the schema, by design.
 
 ### List (TBR or collection)
+
 ```jsonc
 { id, name, priority?: bool, ids: [ bookId, … ] }
 ```
 
 ### Shared documents (capability-keyed; stored remotely under a share code)
+
 ```jsonc
 // shared list / book-club TBR
 { type:"list", kind:"list"|"clubtbr", name, items:[{id,title,author,cover,by}], updatedAt }
@@ -289,7 +291,7 @@ sharing happens through shared lists and clubs (`CLAUDE.md`, open decision 2).
   `series_entries_live_idx`). Re-adding the same book revives the tombstone instead of
   inserting a duplicate.
 - **Removal is one operation on both surfaces.** The series screen's ✕ and clearing the series
-  field on the book both take the same path — soft-delete the entry *and* clear `books.series`.
+  field on the book both take the same path — soft-delete the entry _and_ clear `books.series`.
   See `docs/decisions/0004-series-removal-semantics.md`.
 - `series_count IS NULL` drives the **"None set"** filter ("what needs completing").
 - `pub_y/m/d` keep flexible publish-date precision; `pub_m`/`pub_d` are range-checked in the

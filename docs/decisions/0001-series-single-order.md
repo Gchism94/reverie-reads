@@ -12,7 +12,7 @@ Hardcover refreshes).
 
 Alternate orders — publication vs. chronological vs. author-recommended — are **deferred**, not
 rejected. Readers of interleaved universes (e.g. publication-order vs. timeline-order debates)
-are real, but launch feedback asked for *a* series view, not a choice of them, and every deferred
+are real, but launch feedback asked for _a_ series view, not a choice of them, and every deferred
 dimension keeps the drag/decimal/ghost model simpler to trust.
 
 ## Where the extension attaches later

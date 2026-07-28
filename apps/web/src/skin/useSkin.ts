@@ -60,7 +60,9 @@ function apply(skin: ActiveSkin, mode: Mode, bundle: AdaptiveBundle | null): voi
   root.dataset.skin = skin
   root.dataset.mode = resolved
   // Load only this skin's font pairing (adaptive borrows its dominant Tier-1 skin's type).
-  loadSkinFont(skin === 'adaptive' ? ((bundle?.dominant as SkinId) ?? DEFAULT_SKIN) : (skin as SkinId))
+  loadSkinFont(
+    skin === 'adaptive' ? ((bundle?.dominant as SkinId) ?? DEFAULT_SKIN) : (skin as SkinId),
+  )
   if (skin === 'adaptive' && bundle) {
     const vars = adaptiveVars(bundle, resolved)
     for (const k of ADAPTIVE_VAR_KEYS) {

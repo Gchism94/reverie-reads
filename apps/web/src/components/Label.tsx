@@ -9,6 +9,12 @@ export function Label({ children, className = '' }: { children: ReactNode; class
 
 /** Stat-block numeral — old-style Fraunces figures in Tryst, tabular Space Mono in Aphelion (via
  *  `.skin-numeral`). Caller sets size/weight/colour. */
-export function StatNumber({ children, className = '' }: { children: ReactNode; className?: string }) {
+export function StatNumber({
+  children,
+  className = '',
+}: {
+  children: ReactNode
+  className?: string
+}) {
   return <span className={`skin-numeral ${className}`}>{children}</span>
 }

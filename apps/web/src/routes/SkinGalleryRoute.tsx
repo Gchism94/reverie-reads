@@ -1,6 +1,13 @@
 import { useEffect, useMemo, type CSSProperties } from 'react'
 import { createRoute } from '@tanstack/react-router'
-import { SKINS, SKIN_LIST, type AdaptiveBundle, type Mode, type ResolvedMode, type Skin } from '@reverie/core'
+import {
+  SKINS,
+  SKIN_LIST,
+  type AdaptiveBundle,
+  type Mode,
+  type ResolvedMode,
+  type Skin,
+} from '@reverie/core'
 import { rootRoute } from './RootRoute'
 import { useBooks } from '../data/books'
 import { useProfile } from '../data/profile'
@@ -36,7 +43,10 @@ function SkinCard({
         <div className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--muted)' }}>
           {skin.genre}
         </div>
-        <div className="mt-0.5 text-[22px] leading-tight" style={{ fontFamily: 'var(--font-display)', color: 'var(--ink)', fontWeight: 600 }}>
+        <div
+          className="mt-0.5 text-[22px] leading-tight"
+          style={{ fontFamily: 'var(--font-display)', color: 'var(--ink)', fontWeight: 600 }}
+        >
           {skin.label}
         </div>
         <div className="mt-1 text-[13px]" style={{ color: 'var(--muted)' }}>
@@ -45,18 +55,29 @@ function SkinCard({
 
         <div className="mt-3 flex gap-1.5">
           {SWATCHES.map((v) => (
-            <span key={v} className="h-5 w-5 rounded-full border" style={{ background: `var(${v})`, borderColor: 'var(--chip-border)' }} />
+            <span
+              key={v}
+              className="h-5 w-5 rounded-full border"
+              style={{ background: `var(${v})`, borderColor: 'var(--chip-border)' }}
+            />
           ))}
         </div>
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <span
             className="rounded-full border px-3 py-1 text-[12px] font-medium"
-            style={{ background: 'var(--chip)', color: 'var(--ink)', borderColor: 'var(--chip-border)' }}
+            style={{
+              background: 'var(--chip)',
+              color: 'var(--ink)',
+              borderColor: 'var(--chip-border)',
+            }}
           >
             Sample tag
           </span>
-          <span className="rounded-full px-3 py-1 text-[12px] font-semibold" style={{ background: 'var(--accent-fill)', color: 'var(--on-primary)' }}>
+          <span
+            className="rounded-full px-3 py-1 text-[12px] font-semibold"
+            style={{ background: 'var(--accent-fill)', color: 'var(--on-primary)' }}
+          >
             Primary
           </span>
           <span className="text-[12px]" style={{ color: 'var(--primary)' }}>
@@ -67,7 +88,10 @@ function SkinCard({
         <SkinDivider skin={skin.id} className="mt-3" />
       </div>
 
-      <div className="flex items-center justify-between border-t px-4 py-2.5" style={{ borderColor: 'var(--line)', background: 'var(--card)' }}>
+      <div
+        className="flex items-center justify-between border-t px-4 py-2.5"
+        style={{ borderColor: 'var(--line)', background: 'var(--card)' }}
+      >
         {active ? (
           <span className="text-[12.5px] font-semibold" style={{ color: 'var(--primary)' }}>
             ✓ Active skin
@@ -91,7 +115,15 @@ function SkinCard({
   )
 }
 
-function AdaptiveCard({ bundle, mode, active }: { bundle: AdaptiveBundle; mode: ResolvedMode; active: boolean }) {
+function AdaptiveCard({
+  bundle,
+  mode,
+  active,
+}: {
+  bundle: AdaptiveBundle
+  mode: ResolvedMode
+  active: boolean
+}) {
   // Paint the card with the generated palette via inline vars; data-skin lets the base rule derive
   // the translucent tokens (--field/--chip) from this palette's --ink.
   const vars = adaptiveVars(bundle, mode) as unknown as CSSProperties
@@ -100,13 +132,20 @@ function AdaptiveCard({ bundle, mode, active }: { bundle: AdaptiveBundle; mode: 
       data-skin="adaptive"
       data-mode={mode}
       className="overflow-hidden rounded-2xl border"
-      style={{ ...vars, background: 'var(--bg0)', borderColor: active ? 'var(--primary)' : 'var(--line)' }}
+      style={{
+        ...vars,
+        background: 'var(--bg0)',
+        borderColor: active ? 'var(--primary)' : 'var(--line)',
+      }}
     >
       <div className="p-4">
         <div className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--muted)' }}>
           Adaptive · blended from your reading
         </div>
-        <div className="mt-0.5 text-[22px] leading-tight" style={{ fontFamily: 'var(--font-display)', color: 'var(--ink)', fontWeight: 600 }}>
+        <div
+          className="mt-0.5 text-[22px] leading-tight"
+          style={{ fontFamily: 'var(--font-display)', color: 'var(--ink)', fontWeight: 600 }}
+        >
           Your skin
         </div>
         <div className="mt-1 text-[13px]" style={{ color: 'var(--muted)' }}>
@@ -114,14 +153,28 @@ function AdaptiveCard({ bundle, mode, active }: { bundle: AdaptiveBundle; mode: 
         </div>
         <div className="mt-3 flex gap-1.5">
           {(['--bg0', '--card', '--primary', '--accent-fill', '--gold'] as const).map((v) => (
-            <span key={v} className="h-5 w-5 rounded-full border" style={{ background: `var(${v})`, borderColor: 'var(--chip-border)' }} />
+            <span
+              key={v}
+              className="h-5 w-5 rounded-full border"
+              style={{ background: `var(${v})`, borderColor: 'var(--chip-border)' }}
+            />
           ))}
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          <span className="rounded-full border px-3 py-1 text-[12px] font-medium" style={{ background: 'var(--chip)', color: 'var(--ink)', borderColor: 'var(--chip-border)' }}>
+          <span
+            className="rounded-full border px-3 py-1 text-[12px] font-medium"
+            style={{
+              background: 'var(--chip)',
+              color: 'var(--ink)',
+              borderColor: 'var(--chip-border)',
+            }}
+          >
             Sample tag
           </span>
-          <span className="rounded-full px-3 py-1 text-[12px] font-semibold" style={{ background: 'var(--accent-fill)', color: 'var(--on-primary)' }}>
+          <span
+            className="rounded-full px-3 py-1 text-[12px] font-semibold"
+            style={{ background: 'var(--accent-fill)', color: 'var(--on-primary)' }}
+          >
             Primary
           </span>
           <span className="text-[12px]" style={{ color: 'var(--primary)' }}>
@@ -149,12 +202,15 @@ function AdaptiveSection({ mode }: { mode: ResolvedMode }) {
     <div className="mt-8">
       <h2 className="text-[16px] font-semibold text-ink">Adaptive skin</h2>
       <p className="mt-1 text-[13px] text-muted">
-        A one-of-a-kind palette blended from the Tier-1 skins, weighted by what you actually read and
-        love. Regenerate it whenever your taste shifts.
+        A one-of-a-kind palette blended from the Tier-1 skins, weighted by what you actually read
+        and love. Regenerate it whenever your taste shifts.
       </p>
       <div className="mt-3 grid gap-4 sm:grid-cols-2">
         <AdaptiveCard bundle={preview} mode={mode} active={isActive} />
-        <div className="flex flex-col justify-center gap-2 rounded-2xl border border-line p-4" style={{ background: 'var(--card)' }}>
+        <div
+          className="flex flex-col justify-center gap-2 rounded-2xl border border-line p-4"
+          style={{ background: 'var(--card)' }}
+        >
           <button
             type="button"
             onClick={() => regenerate()}
@@ -182,7 +238,8 @@ function AdaptiveSection({ mode }: { mode: ResolvedMode }) {
             {locked ? '🔒 Locked — unlock to evolve' : '🔓 Lock this skin'}
           </button>
           <p className="text-[12px] text-muted">
-            {isActive ? 'Active.' : 'Not in use yet.'} Locking stops the monthly refresh from changing it.
+            {isActive ? 'Active.' : 'Not in use yet.'} Locking stops the monthly refresh from
+            changing it.
           </p>
         </div>
       </div>
@@ -200,12 +257,15 @@ function SkinGalleryScreen() {
 
   return (
     <section className="mx-auto max-w-4xl px-4 py-6 sm:px-6">
-      <h1 className="text-[22px] italic text-ink" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+      <h1
+        className="text-[22px] italic text-ink"
+        style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+      >
         Skins
       </h1>
       <p className="mt-1 text-[13px] text-muted">
-        A skin restyles the whole app — palette, type, and ambiance — to fit what you read. Light and
-        dark is a separate choice; previews update with it.
+        A skin restyles the whole app — palette, type, and ambiance — to fit what you read. Light
+        and dark is a separate choice; previews update with it.
       </p>
 
       <div className="mt-4 flex items-center gap-2">
@@ -225,7 +285,11 @@ function SkinGalleryScreen() {
             className="rounded-full border px-3 py-1.5 text-[12.5px] font-semibold"
             style={
               activeMode === value
-                ? { background: 'var(--accent-fill)', color: 'var(--on-primary)', borderColor: 'transparent' }
+                ? {
+                    background: 'var(--accent-fill)',
+                    color: 'var(--on-primary)',
+                    borderColor: 'transparent',
+                  }
                 : { background: 'var(--field)', color: 'var(--ink)', borderColor: 'var(--line)' }
             }
           >
@@ -236,7 +300,13 @@ function SkinGalleryScreen() {
 
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         {SKIN_LIST.map((s) => (
-          <SkinCard key={s.id} skin={s} mode={resolvedMode} active={activeSkin === s.id} onSelect={() => setSkin(s.id)} />
+          <SkinCard
+            key={s.id}
+            skin={s}
+            mode={resolvedMode}
+            active={activeSkin === s.id}
+            onSelect={() => setSkin(s.id)}
+          />
         ))}
       </div>
 

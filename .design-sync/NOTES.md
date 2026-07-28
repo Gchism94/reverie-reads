@@ -1,6 +1,7 @@
 # design-sync notes — Reverie
 
 ## Shape / approach
+
 - This repo is an **app + a logic-only core**, NOT a packaged component library and **no Storybook**.
   `@reverie/core` is pure logic (no UI); `apps/web` is the application; its components are coupled to
   the Supabase data hooks, TanStack Router, and the Zustand skin store.
@@ -13,6 +14,7 @@
   `package-validate.mjs --no-render-check` (exits 0).
 
 ## Bundle contents (hand-authored, off-converter)
+
 - `styles.css` → `@import tokens/tokens.css` + the Google-Fonts `@import` (remote → `[FONT_REMOTE]`).
 - `tokens/tokens.css` — copied verbatim from `apps/web/src/styles/tokens.css` (the source of truth).
 - `_ds_bundle.js` — empty (`window.ReverieDS = {}`); header `components: []` (no importable JS).
@@ -23,10 +25,12 @@
   families. **Keep in sync with `apps/web/src/skin/fonts.ts`** (the app's runtime per-skin loader).
 
 ## Render check
+
 - NOT machine-run (no Playwright/Chromium; owner opted to eyeball + verify live in the DS pane).
   The 3 cards are static HTML; re-run `package-validate.mjs ./ds-bundle` with a browser to machine-verify.
 
 ## Re-sync risks (watch-list)
+
 - `_ds_sync.json` is **absent** (off-script, no clean renderHash recipe for hand-authored cards) →
   every re-sync re-verifies from scratch. Expected, not a bug.
 - The bundle is hand-authored, so the converter/driver re-sync path does NOT apply — re-sync = re-run

@@ -57,14 +57,40 @@ export function CoverPlaceholder({
           justifyContent: 'center',
           overflow: 'hidden',
           padding: '12% 9%',
-          background: 'var(--ph-glow), linear-gradient(160deg, var(--ph-a), var(--ph-b) 55%, var(--ph-c))',
+          background:
+            'var(--ph-glow), linear-gradient(160deg, var(--ph-a), var(--ph-b) 55%, var(--ph-c))',
           containerType: 'inline-size',
         }}
       >
         {/* blind-ruled gilt double frame */}
-        <span aria-hidden className="pointer-events-none absolute" style={{ inset: '5.5%', border: '1px solid color-mix(in srgb, var(--gold) 50%, transparent)', borderRadius: 4 }} />
-        <span aria-hidden className="pointer-events-none absolute" style={{ inset: '8.5%', border: '1px solid color-mix(in srgb, var(--gold) 26%, transparent)', borderRadius: 2 }} />
-        <span aria-hidden style={{ color: 'var(--gold)', fontSize: 'clamp(10px, 9cqw, 14px)', fontFamily: 'var(--font-display)', lineHeight: 1, marginBottom: '7%' }}>
+        <span
+          aria-hidden
+          className="pointer-events-none absolute"
+          style={{
+            inset: '5.5%',
+            border: '1px solid color-mix(in srgb, var(--gold) 50%, transparent)',
+            borderRadius: 4,
+          }}
+        />
+        <span
+          aria-hidden
+          className="pointer-events-none absolute"
+          style={{
+            inset: '8.5%',
+            border: '1px solid color-mix(in srgb, var(--gold) 26%, transparent)',
+            borderRadius: 2,
+          }}
+        />
+        <span
+          aria-hidden
+          style={{
+            color: 'var(--gold)',
+            fontSize: 'clamp(10px, 9cqw, 14px)',
+            fontFamily: 'var(--font-display)',
+            lineHeight: 1,
+            marginBottom: '7%',
+          }}
+        >
           ❦
         </span>
         <span
@@ -86,12 +112,27 @@ export function CoverPlaceholder({
         >
           {title || 'Untitled'}
         </span>
-        <span aria-hidden style={{ width: '18%', height: 1, background: 'color-mix(in srgb, var(--gold) 50%, transparent)', margin: '7% 0' }} />
+        <span
+          aria-hidden
+          style={{
+            width: '18%',
+            height: 1,
+            background: 'color-mix(in srgb, var(--gold) 50%, transparent)',
+            margin: '7% 0',
+          }}
+        />
         {author && (
           <span
             aria-hidden
             className="uppercase"
-            style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 'clamp(9px, 6.5cqw, 10px)', letterSpacing: '0.2em', color: 'var(--ph-muted)', textAlign: 'center' }}
+            style={{
+              fontFamily: 'var(--font-sans)',
+              fontWeight: 600,
+              fontSize: 'clamp(9px, 6.5cqw, 10px)',
+              letterSpacing: '0.2em',
+              color: 'var(--ph-muted)',
+              textAlign: 'center',
+            }}
           >
             {author}
           </span>
@@ -104,7 +145,17 @@ export function CoverPlaceholder({
     const call = callsign(book.id ?? title ?? 'specimen', skinId.slice(0, 3).toUpperCase())
     const grid = 'color-mix(in srgb, var(--primary) 9%, transparent)'
     const bracket = (pos: Record<string, number | string>) => (
-      <span aria-hidden style={{ position: 'absolute', width: '6.5%', aspectRatio: '1', borderColor: 'var(--primary)', borderStyle: 'solid', ...pos }} />
+      <span
+        aria-hidden
+        style={{
+          position: 'absolute',
+          width: '6.5%',
+          aspectRatio: '1',
+          borderColor: 'var(--primary)',
+          borderStyle: 'solid',
+          ...pos,
+        }}
+      />
     )
     return (
       <div
@@ -128,18 +179,68 @@ export function CoverPlaceholder({
         {/* callsign chip */}
         <span
           aria-hidden
-          style={{ position: 'absolute', left: '7%', top: '6.5%', border: '1px solid color-mix(in srgb, var(--primary) 55%, transparent)', background: 'var(--plate)', padding: '2% 4%', borderRadius: 1, lineHeight: 1.35 }}
+          style={{
+            position: 'absolute',
+            left: '7%',
+            top: '6.5%',
+            border: '1px solid color-mix(in srgb, var(--primary) 55%, transparent)',
+            background: 'var(--plate)',
+            padding: '2% 4%',
+            borderRadius: 1,
+            lineHeight: 1.35,
+          }}
         >
-          <span className="block font-bold" style={{ fontFamily: 'var(--font-mono)', fontSize: 'clamp(8px, 6cqw, 9px)', letterSpacing: '0.08em', color: 'var(--accent-ink)' }}>
+          <span
+            className="block font-bold"
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 'clamp(8px, 6cqw, 9px)',
+              letterSpacing: '0.08em',
+              color: 'var(--accent-ink)',
+            }}
+          >
             {call.code}
           </span>
-          <span className="block font-bold" style={{ fontFamily: 'var(--font-mono)', fontSize: 'clamp(8px, 6cqw, 9px)', letterSpacing: '0.04em', color: 'var(--ph-muted)' }}>
+          <span
+            className="block font-bold"
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 'clamp(8px, 6cqw, 9px)',
+              letterSpacing: '0.04em',
+              color: 'var(--ph-muted)',
+            }}
+          >
             {call.id}
           </span>
         </span>
         {/* the orbit ring holding where art would go */}
-        <span aria-hidden style={{ position: 'absolute', left: '50%', top: '36%', width: '39%', aspectRatio: '1', transform: 'translate(-50%, -50%)', border: '1px solid color-mix(in srgb, var(--primary) 55%, transparent)', borderRadius: '50%' }} />
-        <span aria-hidden style={{ position: 'absolute', left: '50%', top: '36%', width: 5, height: 5, transform: 'translate(-50%, -50%)', borderRadius: '50%', background: 'var(--primary)', boxShadow: '0 0 8px var(--primary)' }} />
+        <span
+          aria-hidden
+          style={{
+            position: 'absolute',
+            left: '50%',
+            top: '36%',
+            width: '39%',
+            aspectRatio: '1',
+            transform: 'translate(-50%, -50%)',
+            border: '1px solid color-mix(in srgb, var(--primary) 55%, transparent)',
+            borderRadius: '50%',
+          }}
+        />
+        <span
+          aria-hidden
+          style={{
+            position: 'absolute',
+            left: '50%',
+            top: '36%',
+            width: 5,
+            height: 5,
+            transform: 'translate(-50%, -50%)',
+            borderRadius: '50%',
+            background: 'var(--primary)',
+            boxShadow: '0 0 8px var(--primary)',
+          }}
+        />
         <span
           aria-hidden
           style={{
@@ -166,7 +267,16 @@ export function CoverPlaceholder({
           <span
             aria-hidden
             className="uppercase"
-            style={{ position: 'absolute', left: '8%', bottom: '8%', fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 'clamp(8px, 6.5cqw, 9px)', letterSpacing: '0.16em', color: 'var(--ph-muted)' }}
+            style={{
+              position: 'absolute',
+              left: '8%',
+              bottom: '8%',
+              fontFamily: 'var(--font-mono)',
+              fontWeight: 700,
+              fontSize: 'clamp(8px, 6.5cqw, 9px)',
+              letterSpacing: '0.16em',
+              color: 'var(--ph-muted)',
+            }}
           >
             {author}
           </span>
@@ -174,12 +284,21 @@ export function CoverPlaceholder({
         <span
           aria-hidden
           className="rv-anim"
-          style={{ position: 'absolute', right: '7%', bottom: '8%', width: 5, height: 5, borderRadius: '50%', background: 'var(--primary)', boxShadow: '0 0 8px var(--primary)', animation: 'sig-blink 2.4s step-end infinite' }}
+          style={{
+            position: 'absolute',
+            right: '7%',
+            bottom: '8%',
+            width: 5,
+            height: 5,
+            borderRadius: '50%',
+            background: 'var(--primary)',
+            boxShadow: '0 0 8px var(--primary)',
+            animation: 'sig-blink 2.4s step-end infinite',
+          }}
         />
       </div>
     )
   }
-
 
   if (variant === 'vellum-boards') {
     const initial = (title || 'U').charAt(0).toUpperCase()
@@ -203,9 +322,25 @@ export function CoverPlaceholder({
         }}
       >
         {/* blind double frame with gilt corner squares */}
-        <span aria-hidden className="pointer-events-none absolute" style={{ inset: '6%', border: '1px solid color-mix(in srgb, var(--gold) 55%, transparent)' }} />
-        <span aria-hidden className="pointer-events-none absolute" style={{ inset: '9%', border: '1px solid color-mix(in srgb, var(--gold) 27%, transparent)' }} />
-        {(['4% 4% auto auto', '4% auto auto 4%', 'auto 4% 4% auto', 'auto auto 4% 4%'] as const).map((inset, i) => {
+        <span
+          aria-hidden
+          className="pointer-events-none absolute"
+          style={{
+            inset: '6%',
+            border: '1px solid color-mix(in srgb, var(--gold) 55%, transparent)',
+          }}
+        />
+        <span
+          aria-hidden
+          className="pointer-events-none absolute"
+          style={{
+            inset: '9%',
+            border: '1px solid color-mix(in srgb, var(--gold) 27%, transparent)',
+          }}
+        />
+        {(
+          ['4% 4% auto auto', '4% auto auto 4%', 'auto 4% 4% auto', 'auto auto 4% 4%'] as const
+        ).map((inset, i) => {
           const [top, right, bottom, left] = inset.split(' ')
           return (
             <span
@@ -263,13 +398,42 @@ export function CoverPlaceholder({
         >
           {title || 'Untitled'}
         </span>
-        <span aria-hidden style={{ width: '18%', height: 1, background: 'color-mix(in srgb, var(--gold) 55%, transparent)', margin: '7% 0 5%' }} />
+        <span
+          aria-hidden
+          style={{
+            width: '18%',
+            height: 1,
+            background: 'color-mix(in srgb, var(--gold) 55%, transparent)',
+            margin: '7% 0 5%',
+          }}
+        />
         {author && (
           <>
-            <span aria-hidden className="uppercase" style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 'clamp(8px, 6cqw, 9px)', letterSpacing: '0.2em', color: 'var(--ph-muted)' }}>
+            <span
+              aria-hidden
+              className="uppercase"
+              style={{
+                fontFamily: 'var(--font-sans)',
+                fontWeight: 600,
+                fontSize: 'clamp(8px, 6cqw, 9px)',
+                letterSpacing: '0.2em',
+                color: 'var(--ph-muted)',
+              }}
+            >
               by the hand of
             </span>
-            <span aria-hidden className="uppercase" style={{ marginTop: '2%', fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 'clamp(9px, 7cqw, 10px)', letterSpacing: '0.16em', color: 'var(--rubric)' }}>
+            <span
+              aria-hidden
+              className="uppercase"
+              style={{
+                marginTop: '2%',
+                fontFamily: 'var(--font-sans)',
+                fontWeight: 600,
+                fontSize: 'clamp(9px, 7cqw, 10px)',
+                letterSpacing: '0.16em',
+                color: 'var(--rubric)',
+              }}
+            >
               {author}
             </span>
           </>
@@ -280,7 +444,8 @@ export function CoverPlaceholder({
 
   if (variant === 'box-lid') {
     const call = callsign(book.id ?? title ?? 'specimen', 'NO')
-    const cham = 'polygon(6px 0, calc(100% - 6px) 0, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0 calc(100% - 6px), 0 6px)'
+    const cham =
+      'polygon(6px 0, calc(100% - 6px) 0, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0 calc(100% - 6px), 0 6px)'
     return (
       <div
         role="img"
@@ -295,11 +460,30 @@ export function CoverPlaceholder({
           containerType: 'inline-size',
         }}
       >
-        <span aria-hidden className="pointer-events-none absolute" style={{ inset: '5.5%', border: '1px solid color-mix(in srgb, var(--ph-ink) 25%, transparent)' }} />
+        <span
+          aria-hidden
+          className="pointer-events-none absolute"
+          style={{
+            inset: '5.5%',
+            border: '1px solid color-mix(in srgb, var(--ph-ink) 25%, transparent)',
+          }}
+        />
         {/* № pasted top-left */}
         <span
           aria-hidden
-          style={{ position: 'absolute', left: '9%', top: '7%', background: 'var(--paper)', color: 'var(--paper-ink)', padding: '2% 4%', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.4)', fontFamily: 'var(--font-sans)', fontWeight: 700, fontSize: 'clamp(8px, 6cqw, 9px)', letterSpacing: '0.08em' }}
+          style={{
+            position: 'absolute',
+            left: '9%',
+            top: '7%',
+            background: 'var(--paper)',
+            color: 'var(--paper-ink)',
+            padding: '2% 4%',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.4)',
+            fontFamily: 'var(--font-sans)',
+            fontWeight: 700,
+            fontSize: 'clamp(8px, 6cqw, 9px)',
+            letterSpacing: '0.08em',
+          }}
         >
           № {call.id}
         </span>
@@ -334,18 +518,58 @@ export function CoverPlaceholder({
           >
             {title || 'Untitled'}
           </span>
-          <span className="mx-auto my-[6%] block" style={{ width: '20%', height: 1, background: 'color-mix(in srgb, var(--paper-ink) 40%, transparent)' }} />
+          <span
+            className="mx-auto my-[6%] block"
+            style={{
+              width: '20%',
+              height: 1,
+              background: 'color-mix(in srgb, var(--paper-ink) 40%, transparent)',
+            }}
+          />
           {author && (
-            <span className="block uppercase" style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 'clamp(8px, 6.5cqw, 9px)', letterSpacing: '0.18em', color: 'color-mix(in srgb, var(--paper-ink) 78%, var(--paper))' }}>
+            <span
+              className="block uppercase"
+              style={{
+                fontFamily: 'var(--font-sans)',
+                fontWeight: 600,
+                fontSize: 'clamp(8px, 6.5cqw, 9px)',
+                letterSpacing: '0.18em',
+                color: 'color-mix(in srgb, var(--paper-ink) 78%, var(--paper))',
+              }}
+            >
               {author}
             </span>
           )}
         </span>
-        <span aria-hidden className="uppercase" style={{ position: 'absolute', left: '9%', bottom: '10%', fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 'clamp(8px, 6cqw, 9px)', letterSpacing: '0.16em', color: 'var(--ph-muted)' }}>
+        <span
+          aria-hidden
+          className="uppercase"
+          style={{
+            position: 'absolute',
+            left: '9%',
+            bottom: '10%',
+            fontFamily: 'var(--font-sans)',
+            fontWeight: 600,
+            fontSize: 'clamp(8px, 6cqw, 9px)',
+            letterSpacing: '0.16em',
+            color: 'var(--ph-muted)',
+          }}
+        >
           Collected
         </span>
         {/* the tail dipped in oxblood */}
-        <span aria-hidden style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '4.5%', background: 'linear-gradient(180deg, color-mix(in srgb, var(--accent-fill) 50%, transparent), var(--accent-fill))' }} />
+        <span
+          aria-hidden
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: '4.5%',
+            background:
+              'linear-gradient(180deg, color-mix(in srgb, var(--accent-fill) 50%, transparent), var(--accent-fill))',
+          }}
+        />
       </div>
     )
   }
@@ -367,15 +591,47 @@ export function CoverPlaceholder({
         }}
       >
         {/* brass head band */}
-        <span aria-hidden style={{ position: 'absolute', left: 0, right: 0, top: 0, height: '5.5%', background: 'repeating-linear-gradient(180deg, var(--gold) 0 1.5px, color-mix(in srgb, var(--gold) 45%, #000) 1.5px 3px)' }} />
+        <span
+          aria-hidden
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            top: 0,
+            height: '5.5%',
+            background:
+              'repeating-linear-gradient(180deg, var(--gold) 0 1.5px, color-mix(in srgb, var(--gold) 45%, #000) 1.5px 3px)',
+          }}
+        />
         {/* typed case number */}
-        <span aria-hidden style={{ position: 'absolute', right: '8%', top: '9%', fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 'clamp(8px, 6.5cqw, 9px)', letterSpacing: '0.1em', color: 'var(--gold)' }}>
+        <span
+          aria-hidden
+          style={{
+            position: 'absolute',
+            right: '8%',
+            top: '9%',
+            fontFamily: 'var(--font-mono)',
+            fontWeight: 700,
+            fontSize: 'clamp(8px, 6.5cqw, 9px)',
+            letterSpacing: '0.1em',
+            color: 'var(--gold)',
+          }}
+        >
           No.{call.id}
         </span>
         {/* the typed paper label, pasted square */}
         <span
           aria-hidden
-          style={{ position: 'absolute', left: '10%', right: '10%', top: '32%', background: 'var(--paper)', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(0, 0, 0, 0.08)', padding: '8% 7%', textAlign: 'center' }}
+          style={{
+            position: 'absolute',
+            left: '10%',
+            right: '10%',
+            top: '32%',
+            background: 'var(--paper)',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(0, 0, 0, 0.08)',
+            padding: '8% 7%',
+            textAlign: 'center',
+          }}
         >
           <span
             className="block uppercase"
@@ -395,13 +651,34 @@ export function CoverPlaceholder({
             {title || 'Untitled'}
           </span>
           {author && (
-            <span className="mt-[5%] block uppercase" style={{ fontFamily: 'var(--font-mono)', fontWeight: 400, fontSize: 'clamp(8px, 6.5cqw, 9px)', letterSpacing: '0.1em', color: 'color-mix(in srgb, var(--paper-ink) 78%, var(--paper))' }}>
+            <span
+              className="mt-[5%] block uppercase"
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontWeight: 400,
+                fontSize: 'clamp(8px, 6.5cqw, 9px)',
+                letterSpacing: '0.1em',
+                color: 'color-mix(in srgb, var(--paper-ink) 78%, var(--paper))',
+              }}
+            >
               {author}
             </span>
           )}
         </span>
         {/* the eyelet + the stamp */}
-        <span aria-hidden className="rounded-full" style={{ position: 'absolute', right: '9%', bottom: '16%', width: '6%', aspectRatio: '1', border: '1.5px solid var(--gold)', boxShadow: '0 1px 2px rgba(0, 0, 0, 0.4)' }} />
+        <span
+          aria-hidden
+          className="rounded-full"
+          style={{
+            position: 'absolute',
+            right: '9%',
+            bottom: '16%',
+            width: '6%',
+            aspectRatio: '1',
+            border: '1.5px solid var(--gold)',
+            boxShadow: '0 1px 2px rgba(0, 0, 0, 0.4)',
+          }}
+        />
         <span
           aria-hidden
           className="uppercase"
@@ -450,9 +727,31 @@ export function CoverPlaceholder({
         {/* the masking-tape tab, pressed on a little crooked */}
         <span
           aria-hidden
-          style={{ position: 'absolute', left: '50%', top: '-4%', transform: 'translateX(-50%) rotate(3deg)', width: '24%', height: '9%', border: '2px solid var(--ph-muted)', borderBottom: 0, borderRadius: '7px 7px 3px 3px', opacity: 0.75 }}
+          style={{
+            position: 'absolute',
+            left: '50%',
+            top: '-4%',
+            transform: 'translateX(-50%) rotate(3deg)',
+            width: '24%',
+            height: '9%',
+            border: '2px solid var(--ph-muted)',
+            borderBottom: 0,
+            borderRadius: '7px 7px 3px 3px',
+            opacity: 0.75,
+          }}
         />
-        <span aria-hidden className="uppercase" style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 'clamp(8px, 6cqw, 9.5px)', letterSpacing: '0.26em', color: 'var(--ph-muted)', marginBottom: '9%' }}>
+        <span
+          aria-hidden
+          className="uppercase"
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontWeight: 600,
+            fontSize: 'clamp(8px, 6cqw, 9.5px)',
+            letterSpacing: '0.26em',
+            color: 'var(--ph-muted)',
+            marginBottom: '9%',
+          }}
+        >
           A novel
         </span>
         <span
@@ -474,19 +773,50 @@ export function CoverPlaceholder({
         >
           {title || 'Untitled'}
         </span>
-        <span aria-hidden style={{ width: '20%', height: 1, background: 'var(--ph-muted)', margin: '8% 0' }} />
+        <span
+          aria-hidden
+          style={{ width: '20%', height: 1, background: 'var(--ph-muted)', margin: '8% 0' }}
+        />
         {author && (
-          <span aria-hidden style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontWeight: 500, fontSize: 'clamp(9px, 7cqw, 10.5px)', color: 'var(--ph-ink)' }}>
+          <span
+            aria-hidden
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontStyle: 'italic',
+              fontWeight: 500,
+              fontSize: 'clamp(9px, 7cqw, 10.5px)',
+              color: 'var(--ph-ink)',
+            }}
+          >
             {author}
           </span>
         )}
         <span
           aria-hidden
-          style={{ position: 'absolute', right: '7%', bottom: '7%', fontFamily: 'var(--font-hand)', fontSize: 'clamp(11px, 10cqw, 15px)', color: 'var(--accent-fill)', transform: 'rotate(-6deg)' }}
+          style={{
+            position: 'absolute',
+            right: '7%',
+            bottom: '7%',
+            fontFamily: 'var(--font-hand)',
+            fontSize: 'clamp(11px, 10cqw, 15px)',
+            color: 'var(--accent-fill)',
+            transform: 'rotate(-6deg)',
+          }}
         >
           no jacket yet
         </span>
-        <span aria-hidden style={{ position: 'absolute', left: '8%', bottom: '6%', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 'clamp(11px, 10cqw, 15px)', color: 'var(--accent-fill)' }}>
+        <span
+          aria-hidden
+          style={{
+            position: 'absolute',
+            left: '8%',
+            bottom: '6%',
+            fontFamily: 'var(--font-display)',
+            fontWeight: 700,
+            fontSize: 'clamp(11px, 10cqw, 15px)',
+            color: 'var(--accent-fill)',
+          }}
+        >
           ‸
         </span>
       </div>
@@ -516,9 +846,28 @@ export function CoverPlaceholder({
           containerType: 'inline-size',
         }}
       >
-        <span aria-hidden className="pointer-events-none absolute" style={{ inset: '6%', borderRadius: 4, border: '2px dashed color-mix(in srgb, var(--thread) 75%, transparent)' }} />
+        <span
+          aria-hidden
+          className="pointer-events-none absolute"
+          style={{
+            inset: '6%',
+            borderRadius: 4,
+            border: '2px dashed color-mix(in srgb, var(--thread) 75%, transparent)',
+          }}
+        />
         {/* the pasted recipe card */}
-        <span aria-hidden style={{ position: 'relative', width: '76%', background: 'var(--paper)', borderRadius: 8, padding: '9% 7%', textAlign: 'center', boxShadow: '0 3px 8px rgba(40, 28, 12, 0.3)' }}>
+        <span
+          aria-hidden
+          style={{
+            position: 'relative',
+            width: '76%',
+            background: 'var(--paper)',
+            borderRadius: 8,
+            padding: '9% 7%',
+            textAlign: 'center',
+            boxShadow: '0 3px 8px rgba(40, 28, 12, 0.3)',
+          }}
+        >
           <span
             className="block"
             style={{
@@ -535,9 +884,28 @@ export function CoverPlaceholder({
           >
             {title || 'Untitled'}
           </span>
-          <span aria-hidden className="mx-auto block" style={{ width: '22%', height: 2, backgroundImage: 'repeating-linear-gradient(90deg, var(--accent-fill) 0 4px, transparent 4px 7px)', margin: '7% auto' }} />
+          <span
+            aria-hidden
+            className="mx-auto block"
+            style={{
+              width: '22%',
+              height: 2,
+              backgroundImage:
+                'repeating-linear-gradient(90deg, var(--accent-fill) 0 4px, transparent 4px 7px)',
+              margin: '7% auto',
+            }}
+          />
           {author && (
-            <span className="block uppercase" style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 'clamp(8px, 6.5cqw, 9px)', letterSpacing: '0.14em', color: 'color-mix(in srgb, var(--paper-ink) 78%, var(--paper))' }}>
+            <span
+              className="block uppercase"
+              style={{
+                fontFamily: 'var(--font-sans)',
+                fontWeight: 600,
+                fontSize: 'clamp(8px, 6.5cqw, 9px)',
+                letterSpacing: '0.14em',
+                color: 'color-mix(in srgb, var(--paper-ink) 78%, var(--paper))',
+              }}
+            >
               {author}
             </span>
           )}
@@ -579,8 +947,28 @@ export function CoverPlaceholder({
         }}
       >
         {/* the band block */}
-        <span aria-hidden style={{ position: 'absolute', left: 0, right: 0, top: '22%', background: 'var(--cta-lo)', padding: '8% 8% 9%' }}>
-          <span className="block uppercase" style={{ fontFamily: 'var(--font-sans)', fontWeight: 700, fontSize: 'clamp(7.5px, 5.5cqw, 8.5px)', letterSpacing: '0.22em', color: 'color-mix(in srgb, var(--cta-ink) 78%, var(--cta-lo))', marginBottom: '4%' }}>
+        <span
+          aria-hidden
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            top: '22%',
+            background: 'var(--cta-lo)',
+            padding: '8% 8% 9%',
+          }}
+        >
+          <span
+            className="block uppercase"
+            style={{
+              fontFamily: 'var(--font-sans)',
+              fontWeight: 700,
+              fontSize: 'clamp(7.5px, 5.5cqw, 8.5px)',
+              letterSpacing: '0.22em',
+              color: 'color-mix(in srgb, var(--cta-ink) 78%, var(--cta-lo))',
+              marginBottom: '4%',
+            }}
+          >
             Field reference
           </span>
           <span
@@ -601,17 +989,66 @@ export function CoverPlaceholder({
             {title || 'Untitled'}
           </span>
           {author && (
-            <span className="block uppercase" style={{ marginTop: '4%', fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 'clamp(8px, 6.5cqw, 9px)', letterSpacing: '0.14em', color: 'color-mix(in srgb, var(--cta-ink) 78%, var(--cta-lo))' }}>
+            <span
+              className="block uppercase"
+              style={{
+                marginTop: '4%',
+                fontFamily: 'var(--font-sans)',
+                fontWeight: 600,
+                fontSize: 'clamp(8px, 6.5cqw, 9px)',
+                letterSpacing: '0.14em',
+                color: 'color-mix(in srgb, var(--cta-ink) 78%, var(--cta-lo))',
+              }}
+            >
               {author} · REF {call.id.slice(1)}
             </span>
           )}
         </span>
         {/* the orange tab, off the edge */}
-        <span aria-hidden style={{ position: 'absolute', right: 0, top: '8%', width: '5.5%', height: '17%', background: 'var(--accent)', borderRadius: '2px 0 0 2px', boxShadow: '-1px 1px 3px rgba(0, 0, 0, 0.3)' }} />
+        <span
+          aria-hidden
+          style={{
+            position: 'absolute',
+            right: 0,
+            top: '8%',
+            width: '5.5%',
+            height: '17%',
+            background: 'var(--accent)',
+            borderRadius: '2px 0 0 2px',
+            boxShadow: '-1px 1px 3px rgba(0, 0, 0, 0.3)',
+          }}
+        />
         {/* the double rule + grommet at the foot */}
-        <span aria-hidden style={{ position: 'absolute', left: '8%', right: '8%', bottom: '8%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ width: '54%', height: 4, borderTop: '1px solid var(--ph-ink)', borderBottom: '1px solid var(--ph-ink)', opacity: 0.6 }} />
-          <span className="rounded-full" style={{ width: 'clamp(7px, 6cqw, 9px)', aspectRatio: '1', border: '2px solid var(--ph-ink)', opacity: 0.7 }} />
+        <span
+          aria-hidden
+          style={{
+            position: 'absolute',
+            left: '8%',
+            right: '8%',
+            bottom: '8%',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <span
+            style={{
+              width: '54%',
+              height: 4,
+              borderTop: '1px solid var(--ph-ink)',
+              borderBottom: '1px solid var(--ph-ink)',
+              opacity: 0.6,
+            }}
+          />
+          <span
+            className="rounded-full"
+            style={{
+              width: 'clamp(7px, 6cqw, 9px)',
+              aspectRatio: '1',
+              border: '2px solid var(--ph-ink)',
+              opacity: 0.7,
+            }}
+          />
         </span>
       </div>
     )
@@ -639,13 +1076,51 @@ export function CoverPlaceholder({
           containerType: 'inline-size',
         }}
       >
-        <span aria-hidden className="rv-sky-star absolute rounded-full" style={{ left: '22%', top: '12%', width: 2.5, height: 2.5, background: 'rgba(238, 240, 250, 0.9)' }} />
-        <span aria-hidden className="rv-sky-star absolute rounded-full" style={{ left: '72%', top: '8%', width: 2, height: 2, background: 'rgba(238, 240, 250, 0.6)' }} />
-        <span aria-hidden className="rv-sky-star absolute rounded-full" style={{ left: '56%', top: '20%', width: 1.5, height: 1.5, background: 'rgba(238, 240, 250, 0.5)' }} />
+        <span
+          aria-hidden
+          className="rv-sky-star absolute rounded-full"
+          style={{
+            left: '22%',
+            top: '12%',
+            width: 2.5,
+            height: 2.5,
+            background: 'rgba(238, 240, 250, 0.9)',
+          }}
+        />
+        <span
+          aria-hidden
+          className="rv-sky-star absolute rounded-full"
+          style={{
+            left: '72%',
+            top: '8%',
+            width: 2,
+            height: 2,
+            background: 'rgba(238, 240, 250, 0.6)',
+          }}
+        />
+        <span
+          aria-hidden
+          className="rv-sky-star absolute rounded-full"
+          style={{
+            left: '56%',
+            top: '20%',
+            width: 1.5,
+            height: 1.5,
+            background: 'rgba(238, 240, 250, 0.5)',
+          }}
+        />
         {/* the sticker */}
         <span
           aria-hidden
-          style={{ position: 'relative', width: '78%', background: 'var(--paper)', borderRadius: 11, padding: '9% 7%', textAlign: 'center', boxShadow: '0 0 0 3px rgba(255, 255, 255, 0.35), 0 5px 12px rgba(10, 10, 30, 0.35)' }}
+          style={{
+            position: 'relative',
+            width: '78%',
+            background: 'var(--paper)',
+            borderRadius: 11,
+            padding: '9% 7%',
+            textAlign: 'center',
+            boxShadow: '0 0 0 3px rgba(255, 255, 255, 0.35), 0 5px 12px rgba(10, 10, 30, 0.35)',
+          }}
         >
           <span
             className="block"
@@ -664,7 +1139,16 @@ export function CoverPlaceholder({
             {title || 'Untitled'}
           </span>
           {author && (
-            <span className="mt-[5%] block uppercase" style={{ fontFamily: 'var(--font-sans)', fontWeight: 700, fontSize: 'clamp(8px, 6.5cqw, 9px)', letterSpacing: '0.14em', color: 'var(--ph-muted)' }}>
+            <span
+              className="mt-[5%] block uppercase"
+              style={{
+                fontFamily: 'var(--font-sans)',
+                fontWeight: 700,
+                fontSize: 'clamp(8px, 6.5cqw, 9px)',
+                letterSpacing: '0.14em',
+                color: 'var(--ph-muted)',
+              }}
+            >
               {author}
             </span>
           )}
@@ -679,14 +1163,24 @@ export function CoverPlaceholder({
             width: 'clamp(12px, 11cqw, 17px)',
             aspectRatio: '1',
             background: 'var(--gold)',
-            clipPath: 'polygon(50% 0, 63% 34%, 98% 38%, 72% 60%, 81% 95%, 50% 74%, 19% 95%, 28% 60%, 2% 38%, 37% 34%)',
+            clipPath:
+              'polygon(50% 0, 63% 34%, 98% 38%, 72% 60%, 81% 95%, 50% 74%, 19% 95%, 28% 60%, 2% 38%, 37% 34%)',
             boxShadow: '0 0 0 2.5px rgba(255, 255, 255, 0.7)',
           }}
         />
         <span
           aria-hidden
           className="rounded-full"
-          style={{ position: 'absolute', left: '50%', bottom: '4%', transform: 'translateX(-50%)', width: 'clamp(9px, 8.5cqw, 13px)', aspectRatio: '1', background: 'radial-gradient(circle at 40% 35%, #ffe2a0, var(--gold))', boxShadow: '0 0 10px var(--gold)' }}
+          style={{
+            position: 'absolute',
+            left: '50%',
+            bottom: '4%',
+            transform: 'translateX(-50%)',
+            width: 'clamp(9px, 8.5cqw, 13px)',
+            aspectRatio: '1',
+            background: 'radial-gradient(circle at 40% 35%, #ffe2a0, var(--gold))',
+            boxShadow: '0 0 10px var(--gold)',
+          }}
         />
       </div>
     )
@@ -712,7 +1206,11 @@ export function CoverPlaceholder({
         containerType: 'inline-size',
       }}
     >
-      <span aria-hidden className="block flex-none" style={{ height: 2, width: '34%', background: colors.color, opacity: 0.55 }} />
+      <span
+        aria-hidden
+        className="block flex-none"
+        style={{ height: 2, width: '34%', background: colors.color, opacity: 0.55 }}
+      />
       <span
         aria-hidden
         style={{

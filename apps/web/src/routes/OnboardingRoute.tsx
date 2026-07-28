@@ -55,7 +55,10 @@ function Progress({ step, total }: { step: number; total: number }) {
         <span
           key={i}
           className="h-1.5 rounded-full transition-all motion-reduce:transition-none"
-          style={{ width: i === step ? 22 : 7, background: i === step ? 'var(--accent)' : 'var(--chip-border)' }}
+          style={{
+            width: i === step ? 22 : 7,
+            background: i === step ? 'var(--accent)' : 'var(--chip-border)',
+          }}
         />
       ))}
     </div>
@@ -122,16 +125,28 @@ function OnboardingFlow() {
       <Stage>
         <div className="text-center">
           <Label className="block text-[11px] text-muted">Bringing it in</Label>
-          <h2 className="mt-3 text-[28px] leading-tight text-ink" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+          <h2
+            className="mt-3 text-[28px] leading-tight text-ink"
+            style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+          >
             Building your library…
           </h2>
-          <p className="mt-2 text-[14px] italic text-muted" style={{ fontFamily: 'var(--font-display)' }}>
+          <p
+            className="mt-2 text-[14px] italic text-muted"
+            style={{ fontFamily: 'var(--font-display)' }}
+          >
             {voice.loading}
           </p>
-          <div className="mx-auto mt-6 h-1.5 w-[min(320px,80%)] overflow-hidden rounded-full" style={{ background: 'var(--chip)' }}>
+          <div
+            className="mx-auto mt-6 h-1.5 w-[min(320px,80%)] overflow-hidden rounded-full"
+            style={{ background: 'var(--chip)' }}
+          >
             <div
               className="rv-anim h-full w-2/5 rounded-full"
-              style={{ background: 'linear-gradient(90deg, transparent, var(--accent), transparent)', animation: 'shim 1.4s ease-in-out infinite' }}
+              style={{
+                background: 'linear-gradient(90deg, transparent, var(--accent), transparent)',
+                animation: 'shim 1.4s ease-in-out infinite',
+              }}
             />
           </div>
         </div>
@@ -143,7 +158,10 @@ function OnboardingFlow() {
     return (
       <Stage>
         <Label className="block text-[11px] text-muted">Here’s what we found</Label>
-        <h2 className="mt-2 text-[28px] leading-tight text-ink" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+        <h2
+          className="mt-2 text-[28px] leading-tight text-ink"
+          style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+        >
           Your library, mapped.
         </h2>
         <div className="mt-2">
@@ -151,7 +169,10 @@ function OnboardingFlow() {
         </div>
         {r.review.length > 0 ? (
           <div className="mt-5">
-            <span className="skin-label mb-1.5 block text-[11px]" style={{ color: 'var(--accent-ink)' }}>
+            <span
+              className="skin-label mb-1.5 block text-[11px]"
+              style={{ color: 'var(--accent-ink)' }}
+            >
               Needs a look · {r.review.length}
             </span>
             <DuplicateReview
@@ -187,19 +208,27 @@ function OnboardingFlow() {
             ☾
           </div>
           <Label className="mt-4 block text-[11px] text-muted">Welcome</Label>
-          <h1 className="mt-3 text-balance text-[40px] leading-[1.05] text-ink" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
-            Welcome to <span style={{ color: 'var(--accent-ink)', fontStyle: 'italic' }}>{APP_NAME}</span>.
+          <h1
+            className="mt-3 text-balance text-[40px] leading-[1.05] text-ink"
+            style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+          >
+            Welcome to{' '}
+            <span style={{ color: 'var(--accent-ink)', fontStyle: 'italic' }}>{APP_NAME}</span>.
           </h1>
           <p className="mx-auto mt-4 max-w-[40ch] text-[15px] leading-relaxed text-muted">
-            Your whole reading life — kept beautifully, dressed in a look that fits what you love. Let’s
-            bring it together.
+            Your whole reading life — kept beautifully, dressed in a look that fits what you love.
+            Let’s bring it together.
           </p>
           <div className="mt-7 flex justify-center">
             <Button onClick={() => setStep(1)}>Let’s go →</Button>
           </div>
           <p className="mt-5 text-[12.5px] text-muted">
             About two minutes ·{' '}
-            <button type="button" onClick={() => leave('/library')} className="underline underline-offset-2 hover:text-ink">
+            <button
+              type="button"
+              onClick={() => leave('/library')}
+              className="underline underline-offset-2 hover:text-ink"
+            >
               nothing to lose if you skip
             </button>
           </p>
@@ -214,7 +243,10 @@ function OnboardingFlow() {
       <Stage>
         <Progress step={0} total={3} />
         <Label className="block text-[11px] text-muted">Step 1 of 3</Label>
-        <h2 className="mt-2 text-[28px] leading-tight text-ink" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+        <h2
+          className="mt-2 text-[28px] leading-tight text-ink"
+          style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+        >
           What do you love to read?
         </h2>
         <p className="mt-2 text-[14px] leading-relaxed text-muted">
@@ -234,7 +266,9 @@ function OnboardingFlow() {
                 className="skin-card flex flex-col items-start gap-0.5 border px-3.5 py-3 text-left transition-colors motion-reduce:transition-none"
                 style={{
                   borderColor: selected ? 'var(--accent)' : 'var(--line)',
-                  background: selected ? 'color-mix(in srgb, var(--accent) 12%, var(--card-solid))' : 'var(--card-solid)',
+                  background: selected
+                    ? 'color-mix(in srgb, var(--accent) 12%, var(--card-solid))'
+                    : 'var(--card-solid)',
                   boxShadow: selected ? '0 0 0 1px var(--accent)' : undefined,
                 }}
               >
@@ -245,11 +279,17 @@ function OnboardingFlow() {
           })}
         </div>
 
-        <div className="mt-5 border border-line px-4 py-3" style={{ background: 'var(--card-solid)', borderRadius: 'var(--radius-panel)' }}>
+        <div
+          className="mt-5 border border-line px-4 py-3"
+          style={{ background: 'var(--card-solid)', borderRadius: 'var(--radius-panel)' }}
+        >
           <span className="skin-label block text-[11px]" style={{ color: 'var(--accent-ink)' }}>
             Your skin · {skinLabel}
           </span>
-          <p className="mt-1 text-[13px] italic text-muted" style={{ fontFamily: 'var(--font-display)' }}>
+          <p
+            className="mt-1 text-[13px] italic text-muted"
+            style={{ fontFamily: 'var(--font-display)' }}
+          >
             {skinTagline}
           </p>
         </div>
@@ -279,15 +319,33 @@ function OnboardingFlow() {
   // ── step 2 · bring your library in ──
   if (step === 2) {
     const options: { title: string; body: string; cta: string; onClick: () => void }[] = [
-      { title: 'Upload a file', body: 'Move a Goodreads or StoryGraph export — or any spreadsheet (CSV or Excel) — and we map the columns for you.', cta: 'Choose a file →', onClick: () => csvRef.current?.click() },
-      { title: 'Scan books', body: 'Point your camera at a barcode and add titles one by one.', cta: 'Open scanner →', onClick: () => leave('/add') },
-      { title: 'Start fresh', body: 'Add titles by hand as you go. Your shelves grow with you.', cta: 'Continue →', onClick: () => setStep(3) },
+      {
+        title: 'Upload a file',
+        body: 'Move a Goodreads or StoryGraph export — or any spreadsheet (CSV or Excel) — and we map the columns for you.',
+        cta: 'Choose a file →',
+        onClick: () => csvRef.current?.click(),
+      },
+      {
+        title: 'Scan books',
+        body: 'Point your camera at a barcode and add titles one by one.',
+        cta: 'Open scanner →',
+        onClick: () => leave('/add'),
+      },
+      {
+        title: 'Start fresh',
+        body: 'Add titles by hand as you go. Your shelves grow with you.',
+        cta: 'Continue →',
+        onClick: () => setStep(3),
+      },
     ]
     return (
       <Stage>
         <Progress step={1} total={3} />
         <Label className="block text-[11px] text-muted">Step 2 of 3</Label>
-        <h2 className="mt-2 text-[28px] leading-tight text-ink" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+        <h2
+          className="mt-2 text-[28px] leading-tight text-ink"
+          style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+        >
           Bring your library in.
         </h2>
         <p className="mt-2 text-[14px] leading-relaxed text-muted">
@@ -308,7 +366,10 @@ function OnboardingFlow() {
                 <div className="text-[15px] font-semibold text-ink">{o.title}</div>
                 <div className="mt-0.5 text-[12.5px] leading-snug text-muted">{o.body}</div>
               </div>
-              <span className="shrink-0 text-[13px] font-semibold" style={{ color: 'var(--accent-ink)' }}>
+              <span
+                className="shrink-0 text-[13px] font-semibold"
+                style={{ color: 'var(--accent-ink)' }}
+              >
                 {o.cta}
               </span>
             </button>
@@ -330,10 +391,17 @@ function OnboardingFlow() {
 
         {impErr && (
           <p className="mt-3 text-[12.5px]" style={{ color: 'var(--primary)' }}>
-            That file didn’t import — {impErr}. A Goodreads or StoryGraph export (CSV or Excel) works best.
+            That file didn’t import — {impErr}. A Goodreads or StoryGraph export (CSV or Excel)
+            works best.
           </p>
         )}
-        <input ref={csvRef} type="file" accept=".csv,.xlsx,text/csv" hidden onChange={(e) => onFile(e.currentTarget)} />
+        <input
+          ref={csvRef}
+          type="file"
+          accept=".csv,.xlsx,text/csv"
+          hidden
+          onChange={(e) => onFile(e.currentTarget)}
+        />
 
         <div className="mt-6">
           <Button variant="ghost" onClick={() => setStep(1)}>
@@ -350,12 +418,15 @@ function OnboardingFlow() {
       <div className="text-center">
         <SkinDivider className="mb-4" />
         <Label className="block text-[11px] text-muted">Your library is ready</Label>
-        <h2 className="mt-3 text-[34px] leading-tight text-ink" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+        <h2
+          className="mt-3 text-[34px] leading-tight text-ink"
+          style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+        >
           You’re all set.
         </h2>
         <p className="mx-auto mt-3 max-w-[40ch] text-[15px] leading-relaxed text-muted">
-          Your shelves are ready, dressed in {skinLabel}. Add your first book whenever you like — the
-          home screen comes alive as your library grows.
+          Your shelves are ready, dressed in {skinLabel}. Add your first book whenever you like —
+          the home screen comes alive as your library grows.
         </p>
         <div className="mt-7 flex justify-center">
           <Button onClick={() => leave('/library')}>Open my library →</Button>

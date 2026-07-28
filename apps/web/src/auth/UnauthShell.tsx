@@ -23,7 +23,11 @@ export function UnauthShell() {
           false in the common case, where the tab is closed and nothing is ever sent. A line that
           is true when read beats one that is vague about both outcomes. */}
       {localOnly && (
-        <p role="status" className="px-6 py-3 text-center text-[13px]" style={{ background: 'var(--card)', color: 'var(--muted)' }}>
+        <p
+          role="status"
+          className="px-6 py-3 text-center text-[13px]"
+          style={{ background: 'var(--card)', color: 'var(--muted)' }}
+        >
           Signed out on this device. You were offline, so any other devices stay signed in.
         </p>
       )}

@@ -37,7 +37,17 @@ describe('seed taxonomy', () => {
   })
 
   it('keeps the existing vocabulary — spot checks across the nine genre lists', () => {
-    for (const name of ['Enemies to Lovers', 'Fated Mates', 'Locked Room', 'Haunted House', 'Space Opera', 'Memoir', 'Slice of Life', 'Epistolary', 'Magic Academy']) {
+    for (const name of [
+      'Enemies to Lovers',
+      'Fated Mates',
+      'Locked Room',
+      'Haunted House',
+      'Space Opera',
+      'Memoir',
+      'Slice of Life',
+      'Epistolary',
+      'Magic Academy',
+    ]) {
       expect(SEED_TROPES.some((t) => t.name === name)).toBe(true)
     }
   })
@@ -88,8 +98,11 @@ describe('assignment logic', () => {
 
   it('frequent tropes rank by usage', () => {
     const use = [
-      { tropeId: 'slow' }, { tropeId: 'slow' }, { tropeId: 'slow' },
-      { tropeId: 'e2l' }, { tropeId: 'e2l' },
+      { tropeId: 'slow' },
+      { tropeId: 'slow' },
+      { tropeId: 'slow' },
+      { tropeId: 'e2l' },
+      { tropeId: 'e2l' },
       { tropeId: 'fae' },
     ]
     expect(frequentTropes(use, 2)).toEqual(['slow', 'e2l'])
@@ -97,9 +110,13 @@ describe('assignment logic', () => {
 
   it('kin is co-occurrence in YOUR books only', () => {
     const a = [
-      { bookId: 'b1', tropeId: 'grumpy' }, { bookId: 'b1', tropeId: 'slow' },
-      { bookId: 'b2', tropeId: 'grumpy' }, { bookId: 'b2', tropeId: 'slow' }, { bookId: 'b2', tropeId: 'fae' },
-      { bookId: 'b3', tropeId: 'fae' }, { bookId: 'b3', tropeId: 'e2l' },
+      { bookId: 'b1', tropeId: 'grumpy' },
+      { bookId: 'b1', tropeId: 'slow' },
+      { bookId: 'b2', tropeId: 'grumpy' },
+      { bookId: 'b2', tropeId: 'slow' },
+      { bookId: 'b2', tropeId: 'fae' },
+      { bookId: 'b3', tropeId: 'fae' },
+      { bookId: 'b3', tropeId: 'e2l' },
     ]
     const kin = tropeKin('grumpy', a)
     expect(kin[0]).toEqual({ tropeId: 'slow', count: 2 })

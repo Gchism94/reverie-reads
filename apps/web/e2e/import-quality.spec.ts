@@ -24,7 +24,9 @@ const TEST_PASSWORD = 'import-e2e-password'
 test.describe.configure({ mode: 'serial' })
 
 async function ensureTestUser(): Promise<void> {
-  const admin = createClient(SUPABASE_URL, SERVICE, { auth: { autoRefreshToken: false, persistSession: false } })
+  const admin = createClient(SUPABASE_URL, SERVICE, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  })
   const { data: existing } = await admin.auth.admin.listUsers()
   if (existing?.users?.some((u) => u.email === TEST_EMAIL)) return
   const { data, error } = await admin.auth.admin.createUser({
@@ -34,7 +36,9 @@ async function ensureTestUser(): Promise<void> {
   })
   if (error) throw error
   // The app expects a profiles row (skin/mode live there); create it if the trigger didn't.
-  await admin.from('profiles').upsert({ id: data.user!.id, display_name: 'Import E2E', skin: 'tryst', mode: 'system' })
+  await admin
+    .from('profiles')
+    .upsert({ id: data.user!.id, display_name: 'Import E2E', skin: 'tryst', mode: 'system' })
 }
 
 const FIXTURE = fileURLToPath(new URL('./fixtures/goodreads-import.csv', import.meta.url))
@@ -49,7 +53,10 @@ const IMPORT_TITLES = [
 async function devClient() {
   await ensureTestUser()
   const sb = createClient(SUPABASE_URL, ANON)
-  const { data, error } = await sb.auth.signInWithPassword({ email: TEST_EMAIL, password: TEST_PASSWORD })
+  const { data, error } = await sb.auth.signInWithPassword({
+    email: TEST_EMAIL,
+    password: TEST_PASSWORD,
+  })
   if (error || !data.session) throw new Error(authFailure('import-quality', TEST_EMAIL, error))
   return { sb, session: data.session, uid: data.session.user.id }
 }
@@ -68,7 +75,14 @@ async function cleanup(c: DevClient) {
     .from('lists')
     .delete()
     .eq('owner_id', c.uid)
-    .in('name', ['Imported TBR', 'Windborne Buddy Read', 'Dark Romance', 'Fae', 'Enemies To Lovers', 'Signed Copies'])
+    .in('name', [
+      'Imported TBR',
+      'Windborne Buddy Read',
+      'Dark Romance',
+      'Fae',
+      'Enemies To Lovers',
+      'Signed Copies',
+    ])
 }
 
 async function signIn(page: Page, session: { access_token: string; refresh_token: string }) {
@@ -87,13 +101,17 @@ async function signIn(page: Page, session: { access_token: string; refresh_token
 async function book(sb: SupabaseClient, title: string) {
   const { data } = await sb
     .from('books')
-    .select('id, title, series, position, genre, subgenre, format, rating, ownership, read_status, pub_y, added_at')
+    .select(
+      'id, title, series, position, genre, subgenre, format, rating, ownership, read_status, pub_y, added_at',
+    )
     .eq('title', title)
     .maybeSingle()
   return data as Record<string, unknown> | null
 }
 
-test('Goodreads import: fidelity fixes land in the DB, summary is honest, axe green', async ({ page }) => {
+test('Goodreads import: fidelity fixes land in the DB, summary is honest, axe green', async ({
+  page,
+}) => {
   test.setTimeout(180_000)
   const dev = await devClient()
   await cleanup(dev) // in case a prior run crashed mid-way
@@ -102,9 +120,15 @@ test('Goodreads import: fidelity fixes land in the DB, summary is honest, axe gr
     // import doesn't depend on the network. The books still land; covers just stay placeholders.
     await page.route('**/functions/v1/enrich**', (r) => r.fulfill({ json: { rateLimited: false } }))
     await page.route('**/books/v1/volumes**', (r) => r.fulfill({ json: { items: [] } }))
-    await page.route('**/functions/v1/covers**', (r) => r.fulfill({ status: 422, json: { error: 'fetch_failed' } }))
-    await page.route('**/functions/v1/embed**', (r) => r.fulfill({ json: { embedded: 0, remaining: 0, hits: [] } }))
-    await page.route('**/functions/v1/releases**', (r) => r.fulfill({ json: { authors: {}, pending: [], hits: [] } }))
+    await page.route('**/functions/v1/covers**', (r) =>
+      r.fulfill({ status: 422, json: { error: 'fetch_failed' } }),
+    )
+    await page.route('**/functions/v1/embed**', (r) =>
+      r.fulfill({ json: { embedded: 0, remaining: 0, hits: [] } }),
+    )
+    await page.route('**/functions/v1/releases**', (r) =>
+      r.fulfill({ json: { authors: {}, pending: [], hits: [] } }),
+    )
 
     await signIn(page, dev.session)
     await page.goto('/settings')
@@ -165,34 +189,62 @@ test('Goodreads import: fidelity fixes land in the DB, summary is honest, axe gr
     expect((reads as { read_on: string }[]).some((r) => r.read_on === '2025-03-04')).toBe(true)
 
     // to-read → Imported TBR membership
-    const { data: tbr } = await sb.from('lists').select('id').eq('owner_id', dev.uid).eq('name', 'Imported TBR').maybeSingle()
+    const { data: tbr } = await sb
+      .from('lists')
+      .select('id')
+      .eq('owner_id', dev.uid)
+      .eq('name', 'Imported TBR')
+      .maybeSingle()
     expect(tbr).toBeTruthy()
-    const { count } = await sb.from('list_items').select('book_id', { count: 'exact', head: true }).eq('list_id', (tbr as { id: string }).id)
+    const { count } = await sb
+      .from('list_items')
+      .select('book_id', { count: 'exact', head: true })
+      .eq('list_id', (tbr as { id: string }).id)
     expect(count).toBeGreaterThanOrEqual(2) // Reckoning + Nightjar
 
     // custom Bookshelves → shelves (created, membership appended)
-    const { data: darkRom } = await sb.from('lists').select('id').eq('owner_id', dev.uid).eq('name', 'Dark Romance').maybeSingle()
+    const { data: darkRom } = await sb
+      .from('lists')
+      .select('id')
+      .eq('owner_id', dev.uid)
+      .eq('name', 'Dark Romance')
+      .maybeSingle()
     expect(darkRom).toBeTruthy()
-  } finally { if (!process.env.SKIP_CLEANUP) await cleanup(dev) }
+  } finally {
+    if (!process.env.SKIP_CLEANUP) await cleanup(dev)
+  }
 })
 
 // A no-cover import lands on the skin-tokened placeholder (cover system, PR #50) across skins —
 // the placeholder is #50's surface; this proves the import degrades INTO it, contrast intact.
-test('imported no-cover books render the honest placeholder (axe green, all swept skins)', async ({ page }) => {
+test('imported no-cover books render the honest placeholder (axe green, all swept skins)', async ({
+  page,
+}) => {
   test.setTimeout(180_000)
   const dev = await devClient()
   await cleanup(dev)
   try {
     await page.route('**/functions/v1/enrich**', (r) => r.fulfill({ json: { rateLimited: false } }))
-    await page.route('**/functions/v1/covers**', (r) => r.fulfill({ status: 422, json: { error: 'fetch_failed' } }))
+    await page.route('**/functions/v1/covers**', (r) =>
+      r.fulfill({ status: 422, json: { error: 'fetch_failed' } }),
+    )
     await page.route('**/books/v1/volumes**', (r) => r.fulfill({ json: { items: [] } }))
-    await page.route('**/functions/v1/embed**', (r) => r.fulfill({ json: { embedded: 0, remaining: 0, hits: [] } }))
-    await page.route('**/functions/v1/releases**', (r) => r.fulfill({ json: { authors: {}, pending: [], hits: [] } }))
+    await page.route('**/functions/v1/embed**', (r) =>
+      r.fulfill({ json: { embedded: 0, remaining: 0, hits: [] } }),
+    )
+    await page.route('**/functions/v1/releases**', (r) =>
+      r.fulfill({ json: { authors: {}, pending: [], hits: [] } }),
+    )
 
     // Seed the imports straight in as unowned/no-cover (import already e2e-covered above), so this
     // test focuses on the placeholder render + contrast.
     // owned so they appear in the default library view (which scopes to owned; wishlist is chip-gated)
-    const rows = IMPORT_TITLES.map((title) => ({ owner_id: dev.uid, title, ownership: 'owned' as const, read_status: 'Unread' }))
+    const rows = IMPORT_TITLES.map((title) => ({
+      owner_id: dev.uid,
+      title,
+      ownership: 'owned' as const,
+      read_status: 'Unread',
+    }))
     await dev.sb.from('books').insert(rows)
 
     await signIn(page, dev.session)
@@ -207,9 +259,13 @@ test('imported no-cover books render the honest placeholder (axe green, all swep
       await page.getByText("Zephyr's Oath").first().waitFor({ timeout: 15_000 })
       await page.waitForLoadState('networkidle')
       const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze()
-      const serious = axe.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical')
+      const serious = axe.violations.filter(
+        (v) => v.impact === 'serious' || v.impact === 'critical',
+      )
       expect(serious, `[${skin}/${mode}] ${serious.map((v) => v.id).join(', ')}`).toHaveLength(0)
     }
     await dev.sb.from('profiles').update({ skin: 'tryst', mode: 'system' }).eq('id', dev.uid)
-  } finally { if (!process.env.SKIP_CLEANUP) await cleanup(dev) }
+  } finally {
+    if (!process.env.SKIP_CLEANUP) await cleanup(dev)
+  }
 })

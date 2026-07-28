@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { contrastRatio, parseColor } from './adaptive'
-import { PLACEHOLDER_ACCENTS, resolvePlaceholderColors, type PlaceholderAccent } from './coverPlaceholder'
+import {
+  PLACEHOLDER_ACCENTS,
+  resolvePlaceholderColors,
+  type PlaceholderAccent,
+} from './coverPlaceholder'
 import { SKINS, type SkinId } from './skins'
 
 // Guardrail for Cover Studio pillar #3: the no-cover placeholder must clear WCAG AA at EVERY skin ×
@@ -18,26 +22,152 @@ const AA_NORMAL = 4.5
 type SkinTokens = { ink: string; cardSolid: string } & Record<PlaceholderAccent, string>
 
 const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, SkinTokens> = {
-  'tryst/dark': { ink: '#f5e9f0', cardSolid: '#1d0e29', '--accent-fill': '#a3244a', '--violet': '#7b3fa0', '--blue': '#16266a', '--gold': '#f0b14e' },
-  'tryst/light': { ink: '#351523', cardSolid: '#fdf8f1', '--accent-fill': '#9c2246', '--violet': '#7b3fa0', '--blue': '#2e3a73', '--gold': '#8a5717' },
-  'grimoire/dark': { ink: '#ece7d6', cardSolid: '#161b12', '--accent-fill': '#3aa97e', '--violet': '#b08828', '--blue': '#1f7d57', '--gold': '#d4af37' },
-  'grimoire/light': { ink: '#2a2418', cardSolid: '#f7efd9', '--accent-fill': '#1f7d57', '--violet': '#8a6a2f', '--blue': '#1f7d57', '--gold': '#b08828' },
-  'aphelion/dark': { ink: '#e6edf7', cardSolid: '#0c1220', '--accent-fill': '#1f8fa3', '--violet': '#6b8cff', '--blue': '#3a52c4', '--gold': '#b9c7e0' },
-  'aphelion/light': { ink: '#0e1626', cardSolid: '#f7fafe', '--accent-fill': '#0a6e80', '--violet': '#3a52c4', '--blue': '#3a52c4', '--gold': '#5a6b86' },
-  'marrow/dark': { ink: '#e9e4db', cardSolid: '#212328', '--accent-fill': '#a84545', '--violet': '#6f7d86', '--blue': '#56616b', '--gold': '#8c9a3c' },
-  'marrow/light': { ink: '#1b1815', cardSolid: '#f4f0e8', '--accent-fill': '#8a3232', '--violet': '#56616b', '--blue': '#56616b', '--gold': '#6f7a2e' },
-  'umbra/dark': { ink: '#e8e4da', cardSolid: '#191c22', '--accent-fill': '#d9a441', '--violet': '#6b7785', '--blue': '#3f4a5a', '--gold': '#e0a84a' },
-  'umbra/light': { ink: '#23201a', cardSolid: '#f6f4ee', '--accent-fill': '#8a6a1f', '--violet': '#5a6470', '--blue': '#3f4a5a', '--gold': '#8a6a1f' },
+  'tryst/dark': {
+    ink: '#f5e9f0',
+    cardSolid: '#1d0e29',
+    '--accent-fill': '#a3244a',
+    '--violet': '#7b3fa0',
+    '--blue': '#16266a',
+    '--gold': '#f0b14e',
+  },
+  'tryst/light': {
+    ink: '#351523',
+    cardSolid: '#fdf8f1',
+    '--accent-fill': '#9c2246',
+    '--violet': '#7b3fa0',
+    '--blue': '#2e3a73',
+    '--gold': '#8a5717',
+  },
+  'grimoire/dark': {
+    ink: '#ece7d6',
+    cardSolid: '#161b12',
+    '--accent-fill': '#3aa97e',
+    '--violet': '#b08828',
+    '--blue': '#1f7d57',
+    '--gold': '#d4af37',
+  },
+  'grimoire/light': {
+    ink: '#2a2418',
+    cardSolid: '#f7efd9',
+    '--accent-fill': '#1f7d57',
+    '--violet': '#8a6a2f',
+    '--blue': '#1f7d57',
+    '--gold': '#b08828',
+  },
+  'aphelion/dark': {
+    ink: '#e6edf7',
+    cardSolid: '#0c1220',
+    '--accent-fill': '#1f8fa3',
+    '--violet': '#6b8cff',
+    '--blue': '#3a52c4',
+    '--gold': '#b9c7e0',
+  },
+  'aphelion/light': {
+    ink: '#0e1626',
+    cardSolid: '#f7fafe',
+    '--accent-fill': '#0a6e80',
+    '--violet': '#3a52c4',
+    '--blue': '#3a52c4',
+    '--gold': '#5a6b86',
+  },
+  'marrow/dark': {
+    ink: '#e9e4db',
+    cardSolid: '#212328',
+    '--accent-fill': '#a84545',
+    '--violet': '#6f7d86',
+    '--blue': '#56616b',
+    '--gold': '#8c9a3c',
+  },
+  'marrow/light': {
+    ink: '#1b1815',
+    cardSolid: '#f4f0e8',
+    '--accent-fill': '#8a3232',
+    '--violet': '#56616b',
+    '--blue': '#56616b',
+    '--gold': '#6f7a2e',
+  },
+  'umbra/dark': {
+    ink: '#e8e4da',
+    cardSolid: '#191c22',
+    '--accent-fill': '#d9a441',
+    '--violet': '#6b7785',
+    '--blue': '#3f4a5a',
+    '--gold': '#e0a84a',
+  },
+  'umbra/light': {
+    ink: '#23201a',
+    cardSolid: '#f6f4ee',
+    '--accent-fill': '#8a6a1f',
+    '--violet': '#5a6470',
+    '--blue': '#3f4a5a',
+    '--gold': '#8a6a1f',
+  },
   // Fable 5 chunk 3 palettes — Marginalia (the page never inverts), Hearth (kitchen linen),
   // Almanac (buff + ink block), Firstlight (sky + sticker).
-  'folio/dark': { ink: '#2b2820', cardSolid: '#d3cfc3', '--accent-fill': '#b1362b', '--violet': '#3f5a8a', '--blue': '#3f5a8a', '--gold': '#6b675e' },
-  'folio/light': { ink: '#2b2820', cardSolid: '#f7f5ee', '--accent-fill': '#b1362b', '--violet': '#3f5a8a', '--blue': '#3f5a8a', '--gold': '#78736a' },
-  'hearth/dark': { ink: '#f0e8d6', cardSolid: '#5c4829', '--accent-fill': '#b13a4e', '--violet': '#9aa878', '--blue': '#8a9968', '--gold': '#c9a86a' },
-  'hearth/light': { ink: '#3d3226', cardSolid: '#dccca2', '--accent-fill': '#b13a4e', '--violet': '#6f7d4e', '--blue': '#5c7d6a', '--gold': '#8a6a3c' },
-  'almanac/dark': { ink: '#e6ddc2', cardSolid: '#241f14', '--accent-fill': '#241f14', '--violet': '#cf6b26', '--blue': '#8a9968', '--gold': '#b3a67e' },
-  'almanac/light': { ink: '#2b2820', cardSolid: '#eadfbe', '--accent-fill': '#2b2820', '--violet': '#c05e1e', '--blue': '#5c7d6a', '--gold': '#6f6552' },
-  'bloom/dark': { ink: '#eef0fa', cardSolid: '#1f2240', '--accent-fill': '#6a55c9', '--violet': '#c06a5c', '--blue': '#262a4d', '--gold': '#f5b85a' },
-  'bloom/light': { ink: '#2b2a3a', cardSolid: '#ffffff', '--accent-fill': '#6a55c9', '--violet': '#b86a5c', '--blue': '#6a55c9', '--gold': '#c9862e' },
+  'folio/dark': {
+    ink: '#2b2820',
+    cardSolid: '#d3cfc3',
+    '--accent-fill': '#b1362b',
+    '--violet': '#3f5a8a',
+    '--blue': '#3f5a8a',
+    '--gold': '#6b675e',
+  },
+  'folio/light': {
+    ink: '#2b2820',
+    cardSolid: '#f7f5ee',
+    '--accent-fill': '#b1362b',
+    '--violet': '#3f5a8a',
+    '--blue': '#3f5a8a',
+    '--gold': '#78736a',
+  },
+  'hearth/dark': {
+    ink: '#f0e8d6',
+    cardSolid: '#5c4829',
+    '--accent-fill': '#b13a4e',
+    '--violet': '#9aa878',
+    '--blue': '#8a9968',
+    '--gold': '#c9a86a',
+  },
+  'hearth/light': {
+    ink: '#3d3226',
+    cardSolid: '#dccca2',
+    '--accent-fill': '#b13a4e',
+    '--violet': '#6f7d4e',
+    '--blue': '#5c7d6a',
+    '--gold': '#8a6a3c',
+  },
+  'almanac/dark': {
+    ink: '#e6ddc2',
+    cardSolid: '#241f14',
+    '--accent-fill': '#241f14',
+    '--violet': '#cf6b26',
+    '--blue': '#8a9968',
+    '--gold': '#b3a67e',
+  },
+  'almanac/light': {
+    ink: '#2b2820',
+    cardSolid: '#eadfbe',
+    '--accent-fill': '#2b2820',
+    '--violet': '#c05e1e',
+    '--blue': '#5c7d6a',
+    '--gold': '#6f6552',
+  },
+  'bloom/dark': {
+    ink: '#eef0fa',
+    cardSolid: '#1f2240',
+    '--accent-fill': '#6a55c9',
+    '--violet': '#c06a5c',
+    '--blue': '#262a4d',
+    '--gold': '#f5b85a',
+  },
+  'bloom/light': {
+    ink: '#2b2a3a',
+    cardSolid: '#ffffff',
+    '--accent-fill': '#6a55c9',
+    '--violet': '#b86a5c',
+    '--blue': '#6a55c9',
+    '--gold': '#c9862e',
+  },
 }
 
 const MODES = ['dark', 'light'] as const
@@ -54,12 +184,19 @@ describe('cover placeholder contrast (every skin × mode × accent ≥ AA)', () 
 
       for (const accent of PLACEHOLDER_ACCENTS) {
         it(`${skin}/${mode} · ${accent} glyph clears ${AA_NORMAL}:1`, () => {
-          const { background, color } = resolvePlaceholderColors({ accent: tokens[accent], ink: tokens.ink, cardSolid: tokens.cardSolid })
+          const { background, color } = resolvePlaceholderColors({
+            accent: tokens[accent],
+            ink: tokens.ink,
+            cardSolid: tokens.cardSolid,
+          })
           const fg = parseColor(color)
           const bg = parseColor(background)
           expect(fg && bg).toBeTruthy()
           const ratio = contrastRatio(fg!, bg!)
-          expect(ratio, `${skin}/${mode} ${accent}: ${color} on ${background} = ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(AA_NORMAL)
+          expect(
+            ratio,
+            `${skin}/${mode} ${accent}: ${color} on ${background} = ${ratio.toFixed(2)}:1`,
+          ).toBeGreaterThanOrEqual(AA_NORMAL)
         })
       }
     }
@@ -99,7 +236,10 @@ describe('designed placeholder plates — the pasted paper label clears AA', () 
       const bg = parseColor(t.paper)
       expect(fg && bg).toBeTruthy()
       const ratio = contrastRatio(fg!, bg!)
-      expect(ratio, `${key}: ${t.paperInk} on ${t.paper} = ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(AA_NORMAL)
+      expect(
+        ratio,
+        `${key}: ${t.paperInk} on ${t.paper} = ${ratio.toFixed(2)}:1`,
+      ).toBeGreaterThanOrEqual(AA_NORMAL)
     })
   }
 })

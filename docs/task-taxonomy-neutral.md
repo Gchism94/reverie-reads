@@ -12,11 +12,12 @@ trope/subgenre pickers) — sequence them, don't run them simultaneously on the 
 ## Context
 
 Reverie is positioned as a genre-neutral reading platform, but it was originally built
-around romance and the taxonomy still shows it. Tester feedback: *"Subgenres are still
-only narrowly romance focused"*, *"Only a small selection of tropes"*, and *"Keeps adding
-weird vibe tags"* with an example of an auto-generated `🃏 Charming Rogue vibe` chip.
+around romance and the taxonomy still shows it. Tester feedback: _"Subgenres are still
+only narrowly romance focused"_, _"Only a small selection of tropes"_, and _"Keeps adding
+weird vibe tags"_ with an example of an auto-generated `🃏 Charming Rogue vibe` chip.
 
 Two confirmed decisions:
+
 1. **Vibes are removed completely** — the derived boyfriend/archetype "vibe" concept and
    its chips are deleted, not hidden or made optional. They go along with the tags they
    were derived from, per the owner.

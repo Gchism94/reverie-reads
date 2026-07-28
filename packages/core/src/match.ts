@@ -106,7 +106,11 @@ export type IntakeDecision = 'merge' | 'add' | 'review' | 'skip'
  */
 export function decideIntake(
   strength: MatchStrength,
-  opts: { autoMergeStrong: boolean; verdict?: DuplicateVerdict | null; fuzzyMode: 'review' | 'add' },
+  opts: {
+    autoMergeStrong: boolean
+    verdict?: DuplicateVerdict | null
+    fuzzyMode: 'review' | 'add'
+  },
 ): IntakeDecision {
   if (strength === 'none') return 'add'
   if (opts.verdict === 'always_merge') return 'merge'
@@ -143,7 +147,19 @@ function mergeOwned(existing: Owned, incoming?: Owned): Owned {
 export function mergeImport(existing: Book, incoming: Incoming): ImportMergeResult {
   const patch: Partial<Book> = {}
 
-  const fill = <K extends 'first' | 'last' | 'series' | 'genre' | 'subgenre' | 'status' | 'cover' | 'isbn' | 'format' | 'source'>(
+  const fill = <
+    K extends
+      | 'first'
+      | 'last'
+      | 'series'
+      | 'genre'
+      | 'subgenre'
+      | 'status'
+      | 'cover'
+      | 'isbn'
+      | 'format'
+      | 'source',
+  >(
     k: K,
   ) => {
     if (!existing[k] && incoming[k]) patch[k] = incoming[k]
@@ -159,8 +175,10 @@ export function mergeImport(existing: Book, incoming: Incoming): ImportMergeResu
   fill('format')
   fill('source')
 
-  if (existing.position === '' && incoming.position != null && incoming.position !== '') patch.position = incoming.position
-  if (existing.seriesCount == null && incoming.seriesCount != null) patch.seriesCount = incoming.seriesCount
+  if (existing.position === '' && incoming.position != null && incoming.position !== '')
+    patch.position = incoming.position
+  if (existing.seriesCount == null && incoming.seriesCount != null)
+    patch.seriesCount = incoming.seriesCount
   if ((!existing.pub || !existing.pub.y) && incoming.pub?.y) patch.pub = incoming.pub
   if (existing.intensity == null && incoming.intensity != null) patch.intensity = incoming.intensity // fill a blank only
   if (!existing.rating && incoming.rating) patch.rating = incoming.rating // fill a blank rating only
@@ -174,7 +192,8 @@ export function mergeImport(existing: Book, incoming: Incoming): ImportMergeResu
   // Contributors: union the lists (additive; existing order + curation preserved, user edits win).
   if (incoming.contributors?.length) {
     const reconciled = reconcileContributors(existing.contributors ?? [], incoming.contributors)
-    if (contributorsChanged(existing.contributors ?? [], reconciled)) patch.contributors = reconciled
+    if (contributorsChanged(existing.contributors ?? [], reconciled))
+      patch.contributors = reconciled
   }
 
   const owned = mergeOwned(existing.owned, incoming.owned)

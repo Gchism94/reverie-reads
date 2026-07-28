@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { buildBuyLinks, buyDisclosure, effectiveMode, revenueCopy, type AttributionMode, type BuyConfig } from './buyLinks'
+import {
+  buildBuyLinks,
+  buyDisclosure,
+  effectiveMode,
+  revenueCopy,
+  type AttributionMode,
+  type BuyConfig,
+} from './buyLinks'
 
 // Config must not be able to make shipped copy false.
 //
@@ -36,7 +43,9 @@ describe('revenue copy tracks the attribution mode', () => {
   it('affiliate mode drops EVERY no-cut claim and discloses the commission', () => {
     const copy = allCopy(configFor('affiliate'))
     for (const claim of NO_CUT_CLAIMS) {
-      expect(copy, `affiliate mode still renders a no-cut claim matching ${claim}`).not.toMatch(claim)
+      expect(copy, `affiliate mode still renders a no-cut claim matching ${claim}`).not.toMatch(
+        claim,
+      )
     }
     expect(copy).toMatch(/commission/i)
     // A "we earn nothing" badge in affiliate mode would be the loudest lie on the page.
@@ -44,7 +53,9 @@ describe('revenue copy tracks the attribution mode', () => {
   })
 
   it('the footer money line changes with the mode too', () => {
-    expect(revenueCopy(configFor('store')).footer).not.toBe(revenueCopy(configFor('affiliate')).footer)
+    expect(revenueCopy(configFor('store')).footer).not.toBe(
+      revenueCopy(configFor('affiliate')).footer,
+    )
     expect(revenueCopy(configFor('affiliate')).footer).toMatch(/commission/i)
   })
 })
@@ -75,7 +86,10 @@ describe('the indie link is described as conditional, because it is', () => {
   // buildBuyLinks only adds the store link when the reader has chosen one. Copy that promised
   // "buy links go to your local indie" was false for every reader who never opened the finder.
   it('a reader with no store set gets only Bookshop and Libro', () => {
-    const links = buildBuyLinks({ title: 'T', isbn: '0306406152' }, { ...configFor('store'), store: undefined })
+    const links = buildBuyLinks(
+      { title: 'T', isbn: '0306406152' },
+      { ...configFor('store'), store: undefined },
+    )
     expect(links.map((l) => l.provider)).toEqual(['bookshop', 'libro'])
   })
 

@@ -62,7 +62,8 @@ function ListModal({
           className="rounded-full border border-line px-3 py-1.5 text-[12.5px] font-semibold text-ink"
           style={{ background: 'var(--card)' }}
         >
-          <BookmarkGlyph filled={list.priority} /> {list.priority ? 'Priority list' : 'Make priority'}
+          <BookmarkGlyph filled={list.priority} />{' '}
+          {list.priority ? 'Priority list' : 'Make priority'}
         </button>
         <button
           type="button"
@@ -95,17 +96,38 @@ function ListModal({
             const b = byId.get(id)
             if (!b) return null
             return (
-              <li key={id} className="flex items-center gap-2 skin-card border border-line px-3 py-2" style={{ background: 'var(--field)' }}>
+              <li
+                key={id}
+                className="flex items-center gap-2 skin-card border border-line px-3 py-2"
+                style={{ background: 'var(--field)' }}
+              >
                 <span className="flex flex-col">
-                  <button type="button" onClick={() => move(i, -1)} aria-label="Move up" className="px-1 py-0.5 text-[12px] leading-none text-muted">
+                  <button
+                    type="button"
+                    onClick={() => move(i, -1)}
+                    aria-label="Move up"
+                    className="px-1 py-0.5 text-[12px] leading-none text-muted"
+                  >
                     ▲
                   </button>
-                  <button type="button" onClick={() => move(i, 1)} aria-label="Move down" className="px-1 py-0.5 text-[12px] leading-none text-muted">
+                  <button
+                    type="button"
+                    onClick={() => move(i, 1)}
+                    aria-label="Move down"
+                    className="px-1 py-0.5 text-[12px] leading-none text-muted"
+                  >
                     ▼
                   </button>
                 </span>
-                <button type="button" onClick={() => onOpenBook(id)} className="min-w-0 flex-1 text-left">
-                  <span className="block truncate text-[14px] font-semibold text-ink" style={{ fontFamily: 'var(--font-display)' }}>
+                <button
+                  type="button"
+                  onClick={() => onOpenBook(id)}
+                  className="min-w-0 flex-1 text-left"
+                >
+                  <span
+                    className="block truncate text-[14px] font-semibold text-ink"
+                    style={{ fontFamily: 'var(--font-display)' }}
+                  >
                     {b.title}
                   </span>
                   <span className="block truncate text-[12px] text-muted">{authorOf(b)}</span>
@@ -144,14 +166,17 @@ function OwnedShelves({ books, onOpen }: { books: Book[]; onOpen: (id: string) =
   return (
     <div className="mb-8">
       <h2 className="text-[16px] font-semibold text-ink">Your copies</h2>
-      <p className="mb-3 text-[12px] text-muted">Updates as you mark copies you have, owned or borrowed — no add or remove.</p>
+      <p className="mb-3 text-[12px] text-muted">
+        Updates as you mark copies you have, owned or borrowed — no add or remove.
+      </p>
       <div className="flex flex-col gap-5">
         {OWNED_SHELVES.map(({ fmt, label, icon }) => {
           const shelf = books.filter((b) => bookOwnedFormats(b).includes(fmt))
           return (
             <div key={fmt}>
               <div className="mb-1 text-[14px] font-semibold text-ink">
-                {icon} {label} <span className="text-[12px] font-normal text-muted">· {shelf.length}</span>
+                {icon} {label}{' '}
+                <span className="text-[12px] font-normal text-muted">· {shelf.length}</span>
               </div>
               {shelf.length ? (
                 <SpineShelf books={shelf} onOpen={onOpen} />
@@ -227,7 +252,10 @@ function ShelvesScreen() {
 
   return (
     <section className="px-4 py-6 sm:px-6">
-      <h1 className="mb-4 text-[22px] italic text-ink" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+      <h1
+        className="mb-4 text-[22px] italic text-ink"
+        style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+      >
         Shelves
       </h1>
 
@@ -236,7 +264,10 @@ function ShelvesScreen() {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-[16px] font-semibold text-ink">Your lists</h2>
         <div className="flex items-center gap-2">
-          <div className="flex rounded-full border border-line p-1" style={{ background: 'var(--card)' }}>
+          <div
+            className="flex rounded-full border border-line p-1"
+            style={{ background: 'var(--card)' }}
+          >
             {(['tbr', 'collection'] as const).map((t) => (
               <button
                 key={t}
@@ -244,7 +275,11 @@ function ShelvesScreen() {
                 onClick={() => setTab(t)}
                 aria-pressed={tab === t}
                 className="rounded-full px-3 py-1.5 text-[12.5px] font-semibold"
-                style={tab === t ? { background: 'var(--accent-fill)', color: 'var(--on-primary)' } : { color: 'var(--muted)' }}
+                style={
+                  tab === t
+                    ? { background: 'var(--accent-fill)', color: 'var(--on-primary)' }
+                    : { color: 'var(--muted)' }
+                }
               >
                 {t === 'tbr' ? 'TBRs' : 'Collections'}
               </button>
@@ -253,11 +288,16 @@ function ShelvesScreen() {
           <button
             type="button"
             onClick={() => {
-              const name = window.prompt(tab === 'tbr' ? 'Name this TBR list:' : 'Name this collection:')
+              const name = window.prompt(
+                tab === 'tbr' ? 'Name this TBR list:' : 'Name this collection:',
+              )
               if (name?.trim()) createList.mutate({ name: name.trim(), kind: tab })
             }}
             className="rounded-full px-4 py-2 text-[13px] font-semibold"
-            style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))', color: 'var(--on-primary)' }}
+            style={{
+              background: 'linear-gradient(135deg, var(--primary), var(--gold))',
+              color: 'var(--on-primary)',
+            }}
           >
             ＋ New {tab === 'tbr' ? 'TBR' : 'collection'}
           </button>
@@ -281,14 +321,26 @@ function ShelvesScreen() {
                 <div className="mb-1 flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     {/* the shelf's name IS the door to its full page */}
-                    <button type="button" onClick={() => void navigate({ to: '/shelf/$listId', params: { listId: l.id } })} className="block text-left">
-                      <h2 className="text-[18px] italic text-ink underline-offset-4 hover:underline" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void navigate({ to: '/shelf/$listId', params: { listId: l.id } })
+                      }
+                      className="block text-left"
+                    >
+                      <h2
+                        className="text-[18px] italic text-ink underline-offset-4 hover:underline"
+                        style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+                      >
                         {l.priority && (
                           <span style={{ color: 'var(--accent-ink)' }}>
                             <BookmarkGlyph size={12} />{' '}
                           </span>
                         )}
-                        {l.name} <span aria-hidden className="text-[13px] text-muted">›</span>
+                        {l.name}{' '}
+                        <span aria-hidden className="text-[13px] text-muted">
+                          ›
+                        </span>
                       </h2>
                     </button>
                     <p className="text-[12px] text-muted">
@@ -309,10 +361,20 @@ function ShelvesScreen() {
                       ⠿
                     </button>
                     <span className="flex flex-col">
-                      <button type="button" onClick={() => moveList(i, -1)} aria-label={`Move ${l.name} up`} className="px-1 py-0.5 text-[12px] leading-none text-muted">
+                      <button
+                        type="button"
+                        onClick={() => moveList(i, -1)}
+                        aria-label={`Move ${l.name} up`}
+                        className="px-1 py-0.5 text-[12px] leading-none text-muted"
+                      >
                         ▲
                       </button>
-                      <button type="button" onClick={() => moveList(i, 1)} aria-label={`Move ${l.name} down`} className="px-1 py-0.5 text-[12px] leading-none text-muted">
+                      <button
+                        type="button"
+                        onClick={() => moveList(i, 1)}
+                        aria-label={`Move ${l.name} down`}
+                        className="px-1 py-0.5 text-[12px] leading-none text-muted"
+                      >
                         ▼
                       </button>
                     </span>
@@ -327,11 +389,20 @@ function ShelvesScreen() {
                   </div>
                 </div>
                 {shelfBooks.length ? (
-                  <SpineShelf books={shelfBooks} onOpen={openBook} onAdd={() => setPickerFor(l)} addLabel={`Add a book to ${l.name}`} />
+                  <SpineShelf
+                    books={shelfBooks}
+                    onOpen={openBook}
+                    onAdd={() => setPickerFor(l)}
+                    addLabel={`Add a book to ${l.name}`}
+                  />
                 ) : (
                   <p className="skin-panel border border-line p-4 text-[13px] text-muted">
                     No books yet —{' '}
-                    <button type="button" onClick={() => setPickerFor(l)} className="font-semibold text-primary underline-offset-2 hover:underline">
+                    <button
+                      type="button"
+                      onClick={() => setPickerFor(l)}
+                      className="font-semibold text-primary underline-offset-2 hover:underline"
+                    >
                       add the first
                     </button>
                     .
@@ -365,8 +436,14 @@ function ShelvesScreen() {
           books={all}
           excludeIds={new Set(booksFor(pickerFor.id).map((b) => b.id))}
           onPick={(b) => {
-            const positions = (items ?? []).filter((it) => it.list_id === pickerFor.id).map((it) => it.position ?? 0)
-            addItem.mutate({ listId: pickerFor.id, bookId: b.id, afterPosition: Math.max(0, ...positions) })
+            const positions = (items ?? [])
+              .filter((it) => it.list_id === pickerFor.id)
+              .map((it) => it.position ?? 0)
+            addItem.mutate({
+              listId: pickerFor.id,
+              bookId: b.id,
+              afterPosition: Math.max(0, ...positions),
+            })
           }}
           onClose={() => setPickerFor(null)}
           // The external-search seam — same as the shelf detail page. Without it, "search everywhere"

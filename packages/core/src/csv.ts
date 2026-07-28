@@ -140,7 +140,8 @@ export function parseCsvRows(text: string): CsvParsedRow[] {
       .split(/[,;]/)
       .map((s) => s.trim())
       .filter(Boolean)
-    for (const name of extras) contributors.push({ name, role: 'co_author', position: contributors.length })
+    for (const name of extras)
+      contributors.push({ name, role: 'co_author', position: contributors.length })
 
     // Goodreads: rating 0 means UNRATED, not zero stars (app-wide, 0 carries "no rating yet";
     // the merge never writes a falsy rating over an existing one).

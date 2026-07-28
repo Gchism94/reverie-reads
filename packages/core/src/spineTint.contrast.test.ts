@@ -13,13 +13,20 @@ import { tintedSpineColors } from './spineTint'
 
 const AA = 4.5
 const TINTS = [
-  '#e74c3c', '#c0392b', // reds
-  '#3498db', '#1b4f72', // blues
-  '#2ecc71', '#145a32', // greens
-  '#f5e642', '#f39c12', // yellow/orange
-  '#8e44ad', '#4a235a', // purples
-  '#e8b4c8', '#f7ecd9', // pastels / cream boards
-  '#111111', '#f8f8f8', // near-black jacket, near-white jacket
+  '#e74c3c',
+  '#c0392b', // reds
+  '#3498db',
+  '#1b4f72', // blues
+  '#2ecc71',
+  '#145a32', // greens
+  '#f5e642',
+  '#f39c12', // yellow/orange
+  '#8e44ad',
+  '#4a235a', // purples
+  '#e8b4c8',
+  '#f7ecd9', // pastels / cream boards
+  '#111111',
+  '#f8f8f8', // near-black jacket, near-white jacket
   '#7f8c8d', // mid gray (the hostile case — must clamp or reject)
 ]
 const MODES = ['dark', 'light'] as const
@@ -41,8 +48,14 @@ describe('spine tint contrast (tinted binding keeps spine text ≥ AA, every ski
           const mid = parseColor(mixSrgb(t.lo, t.hi, 0.5))!
           const rTitle = contrastRatio(parseColor(f5.spineTitle)!, mid)
           const rMuted = contrastRatio(parseColor(f5.spineMuted)!, mid)
-          expect(rTitle, `title on tinted mid = ${rTitle.toFixed(2)}:1 (mix ${t.mix})`).toBeGreaterThanOrEqual(AA)
-          expect(rMuted, `author on tinted mid = ${rMuted.toFixed(2)}:1 (mix ${t.mix})`).toBeGreaterThanOrEqual(AA)
+          expect(
+            rTitle,
+            `title on tinted mid = ${rTitle.toFixed(2)}:1 (mix ${t.mix})`,
+          ).toBeGreaterThanOrEqual(AA)
+          expect(
+            rMuted,
+            `author on tinted mid = ${rMuted.toFixed(2)}:1 (mix ${t.mix})`,
+          ).toBeGreaterThanOrEqual(AA)
         })
       }
     }

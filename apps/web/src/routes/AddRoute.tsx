@@ -24,7 +24,15 @@ import { CoverImage } from '../components/CoverImage'
 import { CoverSheet } from '../components/CoverSheet'
 import { TropePicker } from '../components/TropePicker'
 import { ContributorEditor } from '../book/ContributorEditor'
-import { FORMATS, OWNERSHIP_LABELS, READ_STATUS_OPTIONS, readStatusLabel, otherGenreSubgenres, subgenreGradient, subgenresForGenre } from '../library/constants'
+import {
+  FORMATS,
+  OWNERSHIP_LABELS,
+  READ_STATUS_OPTIONS,
+  readStatusLabel,
+  otherGenreSubgenres,
+  subgenreGradient,
+  subgenresForGenre,
+} from '../library/constants'
 import { CORE_GENRES } from '@reverie/core'
 
 interface BarcodeDetectorLike {
@@ -49,12 +57,22 @@ async function searchGoogleBooks(q: string): Promise<SearchHit[]> {
   const query = isISBN ? `isbn:${q.replace(/[^0-9Xx]/g, '')}` : encodeURIComponent(q)
   const res = await fetch(volumesUrl(`q=${query}&maxResults=8`))
   const json = (await res.json()) as {
-    items?: { volumeInfo?: { title?: string; authors?: string[]; imageLinks?: { thumbnail?: string }; publishedDate?: string; industryIdentifiers?: { type: string; identifier: string }[] } }[]
+    items?: {
+      volumeInfo?: {
+        title?: string
+        authors?: string[]
+        imageLinks?: { thumbnail?: string }
+        publishedDate?: string
+        industryIdentifiers?: { type: string; identifier: string }[]
+      }
+    }[]
   }
   return (json.items ?? [])
     .map((it) => {
       const v = it.volumeInfo ?? {}
-      const ind = (v.industryIdentifiers ?? []).find((x) => x.type === 'ISBN_13') ?? (v.industryIdentifiers ?? [])[0]
+      const ind =
+        (v.industryIdentifiers ?? []).find((x) => x.type === 'ISBN_13') ??
+        (v.industryIdentifiers ?? [])[0]
       return {
         title: v.title ?? '',
         authors: v.authors ?? [],
@@ -87,7 +105,11 @@ function RefineAdded({ bookId, onDone }: { bookId: string; onDone: () => void })
 
   if (!book) {
     return (
-      <div className="mt-4 skin-panel border border-line p-4 text-[13px] text-muted" style={{ background: 'var(--card)' }} role="status">
+      <div
+        className="mt-4 skin-panel border border-line p-4 text-[13px] text-muted"
+        style={{ background: 'var(--card)' }}
+        role="status"
+      >
         Saving…
       </div>
     )
@@ -98,14 +120,21 @@ function RefineAdded({ bookId, onDone }: { bookId: string; onDone: () => void })
 
   return (
     <div className="mt-4 skin-panel border border-line p-4" style={{ background: 'var(--card)' }}>
-      <h2 className="text-[16px] italic text-ink" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+      <h2
+        className="text-[16px] italic text-ink"
+        style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+      >
         Added — finish the details
       </h2>
       <p className="mb-3 mt-1 text-[13px] text-muted">
-        {book.title} is in your library. Fix the cover or tag its {labels.tags.toLowerCase()} now — or leave it and edit later.
+        {book.title} is in your library. Fix the cover or tag its {labels.tags.toLowerCase()} now —
+        or leave it and edit later.
       </p>
       <div className="flex gap-4">
-        <div className="aspect-[2/3] w-20 flex-none overflow-hidden rounded-lg border border-line" style={{ background: `linear-gradient(150deg, ${g0}, ${g1})` }}>
+        <div
+          className="aspect-[2/3] w-20 flex-none overflow-hidden rounded-lg border border-line"
+          style={{ background: `linear-gradient(150deg, ${g0}, ${g1})` }}
+        >
           <CoverImage book={book} thumb />
         </div>
         <div className="flex flex-1 flex-col gap-2">
@@ -132,7 +161,10 @@ function RefineAdded({ bookId, onDone }: { bookId: string; onDone: () => void })
         type="button"
         onClick={onDone}
         className="mt-4 h-11 w-full rounded-xl text-[14px] font-semibold"
-        style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))', color: 'var(--on-primary)' }}
+        style={{
+          background: 'linear-gradient(135deg, var(--primary), var(--gold))',
+          color: 'var(--on-primary)',
+        }}
       >
         Done
       </button>
@@ -142,13 +174,23 @@ function RefineAdded({ bookId, onDone }: { bookId: string; onDone: () => void })
   )
 }
 
-function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<SearchHit>; defaultUnowned?: boolean; onAdded: () => void }) {
+function AddForm({
+  hit,
+  defaultUnowned = false,
+  onAdded,
+}: {
+  hit: Partial<SearchHit>
+  defaultUnowned?: boolean
+  onAdded: () => void
+}) {
   const intake = useIntake()
   const voice = useVoice()
   // Context-sensitive default: arriving from a wanting context (Discover) assumes wishlist; a plain
   // catalog add leaves possession UNSET rather than forcing "owned" (docs/task-ownership-v2.md).
   // Form-session state only — never persisted as a preference.
-  const [ownership, setOwnership] = useState<Book['ownership']>(defaultUnowned ? 'wishlist' : 'unset')
+  const [ownership, setOwnership] = useState<Book['ownership']>(
+    defaultUnowned ? 'wishlist' : 'unset',
+  )
   const qc = useQueryClient()
   const { data: books } = useBooks()
   // genre is a required metadata field, not a romance-only tag — default it to the ROOM the reader
@@ -157,7 +199,9 @@ function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<Search
   const [dup, setDup] = useState<ReviewCandidate | null>(null)
   // Once the record is created we hand off to the refine step (cover + tropes) instead of leaving.
   const [addedId, setAddedId] = useState<string | null>(null)
-  const [contribs, setContribs] = useState<Contributor[]>(contributorsFromAuthors(hit.authors ?? []))
+  const [contribs, setContribs] = useState<Contributor[]>(
+    contributorsFromAuthors(hit.authors ?? []),
+  )
   const [form, setForm] = useState({
     title: hit.title ?? '',
     series: '',
@@ -178,7 +222,9 @@ function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<Search
   // Track whether the user edited genre, so enrichment fills it but never overrides their choice.
   const genreEdited = useRef(false)
   // Distinct contributor names across the library, for the editor's autocomplete.
-  const authorSuggestions = [...new Set((books ?? []).flatMap((b) => b.contributors.map((c) => c.name)).filter(Boolean))].sort()
+  const authorSuggestions = [
+    ...new Set((books ?? []).flatMap((b) => b.contributors.map((c) => c.name)).filter(Boolean)),
+  ].sort()
   const labels = useLabels()
   const [cover, setCover] = useState(hit.cover ?? '')
   // Enrichment's alternate editions (real cover URLs) — a pre-save chooser so a wrong fetched cover
@@ -213,7 +259,8 @@ function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<Search
       return
     }
     // Seed contributors from enrichment only if the user hasn't entered any names yet.
-    if (res.authors?.length && !contribs.some((c) => c.name.trim())) setContribs(contributorsFromAuthors(res.authors))
+    if (res.authors?.length && !contribs.some((c) => c.name.trim()))
+      setContribs(contributorsFromAuthors(res.authors))
     // Fill only blanks — never overwrite what the user typed. genre is the mapped primary genre
     // (C1 fill); only applied if the user hasn't edited the genre field themselves.
     setForm((p) => ({
@@ -237,7 +284,8 @@ function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<Search
       )
     }
   }
-  const inputClass = 'h-10 w-full skin-card border border-line px-3 text-[14px] text-ink outline-none'
+  const inputClass =
+    'h-10 w-full skin-card border border-line px-3 text-[14px] text-ink outline-none'
   const inputStyle = { background: 'var(--field)' } as const
 
   async function save() {
@@ -315,13 +363,19 @@ function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<Search
     <div className="mt-4 skin-panel border border-line p-4" style={{ background: 'var(--card)' }}>
       <div className="flex gap-4">
         <div className="flex-none">
-          <div className="aspect-[2/3] w-20 overflow-hidden rounded-lg border border-line" style={{ background: `linear-gradient(150deg, ${g0}, ${g1})` }}>
+          <div
+            className="aspect-[2/3] w-20 overflow-hidden rounded-lg border border-line"
+            style={{ background: `linear-gradient(150deg, ${g0}, ${g1})` }}
+          >
             {/* Through CoverImage so a Google "no image" plate is rejected on load, same as the grid —
                 and UNCONDITIONALLY, so a coverless book gets the skin's designed plate here exactly as
                 it does everywhere else. Rendering this conditionally left the gradient bare on the one
                 screen and made the genre tint visible in Add and nowhere after it
                 (docs/decisions/0003-cover-gradient-latent-not-default.md). */}
-            <CoverImage book={{ title: form.title, first: previewFirst, last: previewLast, cover }} thumb />
+            <CoverImage
+              book={{ title: form.title, first: previewFirst, last: previewLast, cover }}
+              thumb
+            />
           </div>
           <button
             type="button"
@@ -334,15 +388,27 @@ function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<Search
           </button>
         </div>
         <div className="flex-1 space-y-2">
-          <input value={form.title} onChange={(e) => set('title', e.target.value)} placeholder="Title" className={inputClass} style={inputStyle} />
-          <ContributorEditor value={contribs} onChange={setContribs} suggestions={authorSuggestions} />
+          <input
+            value={form.title}
+            onChange={(e) => set('title', e.target.value)}
+            placeholder="Title"
+            className={inputClass}
+            style={inputStyle}
+          />
+          <ContributorEditor
+            value={contribs}
+            onChange={setContribs}
+            suggestions={authorSuggestions}
+          />
         </div>
       </div>
 
       {/* Pick a cover — enrichment's alternate editions, before saving (upload/camera come after add). */}
       {alternates.length > 0 && (
         <div className="mt-3">
-          <div className="mb-1.5 text-[11px] uppercase tracking-[0.15em] text-muted">Pick a cover</div>
+          <div className="mb-1.5 text-[11px] uppercase tracking-[0.15em] text-muted">
+            Pick a cover
+          </div>
           <div className="flex gap-2 overflow-x-auto pb-1">
             {alternates.map((a, i) => (
               <button
@@ -352,7 +418,9 @@ function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<Search
                 aria-label={`Use the ${a.source} cover`}
                 aria-pressed={cover === a.cover}
                 className="h-[4.5rem] w-12 flex-none overflow-hidden rounded"
-                style={{ border: cover === a.cover ? '2px solid var(--primary)' : '1px solid var(--line)' }}
+                style={{
+                  border: cover === a.cover ? '2px solid var(--primary)' : '1px solid var(--line)',
+                }}
               >
                 {/* through CoverImage so a "no image" plate never poses as a pickable cover */}
                 <CoverImage book={{ title: form.title, cover: a.cover }} thumb />
@@ -364,7 +432,13 @@ function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<Search
       {coverNote && <p className="mt-1.5 text-[12px] text-muted">{coverNote}</p>}
 
       <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
-        <input value={form.series} onChange={(e) => set('series', e.target.value)} placeholder="Series" className={inputClass} style={inputStyle} />
+        <input
+          value={form.series}
+          onChange={(e) => set('series', e.target.value)}
+          placeholder="Series"
+          className={inputClass}
+          style={inputStyle}
+        />
         <input
           value={form.position}
           onChange={(e) => set('position', e.target.value)}
@@ -393,12 +467,22 @@ function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<Search
             </option>
           ))}
         </select>
-        <select value={form.format} onChange={(e) => set('format', e.target.value)} className={inputClass} style={inputStyle}>
+        <select
+          value={form.format}
+          onChange={(e) => set('format', e.target.value)}
+          className={inputClass}
+          style={inputStyle}
+        >
           {FORMATS.map((s) => (
             <option key={s}>{s}</option>
           ))}
         </select>
-        <select value={form.readStatus} onChange={(e) => set('readStatus', e.target.value as Book['readStatus'])} className={inputClass} style={inputStyle}>
+        <select
+          value={form.readStatus}
+          onChange={(e) => set('readStatus', e.target.value as Book['readStatus'])}
+          className={inputClass}
+          style={inputStyle}
+        >
           {READ_STATUS_OPTIONS.map((s) => (
             <option key={s} value={s}>
               {readStatusLabel(s)}
@@ -446,7 +530,9 @@ function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<Search
           )}
         </div>
         {subs.length > 1 && (
-          <p className="mt-1.5 text-[11px] text-muted">First pick leads — it sets the book’s gradient.</p>
+          <p className="mt-1.5 text-[11px] text-muted">
+            First pick leads — it sets the book’s gradient.
+          </p>
         )}
       </div>
 
@@ -472,8 +558,16 @@ function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<Search
               className="skin-control border px-3 py-1.5 text-center leading-tight"
               style={
                 ownership === value
-                  ? { background: 'var(--accent-fill)', color: 'var(--on-primary)', borderColor: 'transparent' }
-                  : { background: 'var(--field)', color: 'var(--muted)', borderColor: 'var(--line)' }
+                  ? {
+                      background: 'var(--accent-fill)',
+                      color: 'var(--on-primary)',
+                      borderColor: 'transparent',
+                    }
+                  : {
+                      background: 'var(--field)',
+                      color: 'var(--muted)',
+                      borderColor: 'var(--line)',
+                    }
               }
             >
               {/* plain word tells you what it sets; the skin voice is the flavor subtitle */}
@@ -485,28 +579,54 @@ function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<Search
       </div>
 
       <div className="mt-3 flex items-center gap-2">
-        <span className="text-[11px] uppercase tracking-[0.15em] text-muted">{labels.intensity}</span>
+        <span className="text-[11px] uppercase tracking-[0.15em] text-muted">
+          {labels.intensity}
+        </span>
         {[1, 2, 3, 4, 5].map((i) => (
-          <button key={i} type="button" onClick={() => setIntensity(intensity === i ? 0 : i)} aria-label={`${labels.intensity} ${i}`} aria-pressed={i <= intensity} style={{ opacity: i <= intensity ? 1 : 0.3 }}>
+          <button
+            key={i}
+            type="button"
+            onClick={() => setIntensity(intensity === i ? 0 : i)}
+            aria-label={`${labels.intensity} ${i}`}
+            aria-pressed={i <= intensity}
+            style={{ opacity: i <= intensity ? 1 : 0.3 }}
+          >
             {labels.intensityGlyph}
           </button>
         ))}
       </div>
 
       {dup && (
-        <div className="mt-4 skin-card border border-line p-3 text-[13px]" style={{ background: 'var(--field)' }}>
+        <div
+          className="mt-4 skin-card border border-line p-3 text-[13px]"
+          style={{ background: 'var(--field)' }}
+        >
           <p className="text-ink">
             You may already have <span className="font-semibold">{dup.existingTitle}</span>
             {dup.existingAuthor ? ` · ${dup.existingAuthor}` : ''}.
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
-            <button type="button" onClick={() => void resolveDup('merge')} className="rounded-full px-3 py-1.5 text-[12.5px] font-semibold text-on-primary" style={{ background: 'var(--accent-fill)' }}>
+            <button
+              type="button"
+              onClick={() => void resolveDup('merge')}
+              className="rounded-full px-3 py-1.5 text-[12.5px] font-semibold text-on-primary"
+              style={{ background: 'var(--accent-fill)' }}
+            >
               Merge into it
             </button>
-            <button type="button" onClick={() => void resolveDup('keep_both')} className="rounded-full border border-line px-3 py-1.5 text-[12.5px] font-semibold text-ink" style={{ background: 'var(--card)' }}>
+            <button
+              type="button"
+              onClick={() => void resolveDup('keep_both')}
+              className="rounded-full border border-line px-3 py-1.5 text-[12.5px] font-semibold text-ink"
+              style={{ background: 'var(--card)' }}
+            >
               Keep both
             </button>
-            <button type="button" onClick={() => setDup(null)} className="rounded-full px-3 py-1.5 text-[12.5px] font-semibold text-muted">
+            <button
+              type="button"
+              onClick={() => setDup(null)}
+              className="rounded-full px-3 py-1.5 text-[12.5px] font-semibold text-muted"
+            >
               Cancel
             </button>
           </div>
@@ -517,7 +637,10 @@ function AddForm({ hit, defaultUnowned = false, onAdded }: { hit: Partial<Search
         type="button"
         onClick={() => void save()}
         className="mt-4 h-11 w-full rounded-xl text-[14px] font-semibold"
-        style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))', color: 'var(--on-primary)' }}
+        style={{
+          background: 'linear-gradient(135deg, var(--primary), var(--gold))',
+          color: 'var(--on-primary)',
+        }}
       >
         Add to my library
       </button>
@@ -548,24 +671,27 @@ function BulkAdd() {
         const hit = (await searchGoogleBooks(line))[0]
         if (!hit) continue
         const np = (hit.authors[0] ?? '').trim().split(/\s+/)
-        const res = await intake({
-          title: hit.title,
-          first: np.length > 1 ? (np[0] ?? '') : '',
-          last: np.length > 1 ? np.slice(1).join(' ') : (np[0] ?? ''),
-          status: 'standalone',
-          genre: skinGenre,
-          subgenre: bulkSub,
-          subgenres: [bulkSub],
-          genres: [bulkSub],
-          tags: [],
-          intensity: null,
-          owned: { physical: 'paperback', ebook: false, audiobook: false },
-          cover: hit.cover,
-          isbn: hit.isbn,
-          readStatus: 'Unread',
-          source: 'Owned',
-          pub: parsePub(hit.pub),
-        }, 'add')
+        const res = await intake(
+          {
+            title: hit.title,
+            first: np.length > 1 ? (np[0] ?? '') : '',
+            last: np.length > 1 ? np.slice(1).join(' ') : (np[0] ?? ''),
+            status: 'standalone',
+            genre: skinGenre,
+            subgenre: bulkSub,
+            subgenres: [bulkSub],
+            genres: [bulkSub],
+            tags: [],
+            intensity: null,
+            owned: { physical: 'paperback', ebook: false, audiobook: false },
+            cover: hit.cover,
+            isbn: hit.isbn,
+            readStatus: 'Unread',
+            source: 'Owned',
+            pub: parsePub(hit.pub),
+          },
+          'add',
+        )
         if (res.outcome === 'merged') merged++
         else added++
       } catch {
@@ -573,14 +699,23 @@ function BulkAdd() {
       }
     }
     setBusy(false)
-    setStatus(`Added ${added}${merged ? ` · merged ${merged} into existing` : ''} of ${lines.length}.`)
+    setStatus(
+      `Added ${added}${merged ? ` · merged ${merged} into existing` : ''} of ${lines.length}.`,
+    )
     setText('')
   }
 
   return (
-    <details className="mt-4 skin-panel border border-line p-4" style={{ background: 'var(--card)' }}>
-      <summary className="cursor-pointer text-[14px] font-semibold text-ink">Bulk add — paste a list</summary>
-      <p className="mb-2 mt-2 text-[12.5px] text-muted">One title or ISBN per line. Each is looked up and added.</p>
+    <details
+      className="mt-4 skin-panel border border-line p-4"
+      style={{ background: 'var(--card)' }}
+    >
+      <summary className="cursor-pointer text-[14px] font-semibold text-ink">
+        Bulk add — paste a list
+      </summary>
+      <p className="mb-2 mt-2 text-[12.5px] text-muted">
+        One title or ISBN per line. Each is looked up and added.
+      </p>
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
@@ -595,7 +730,10 @@ function BulkAdd() {
           onClick={() => void run()}
           disabled={busy || !text.trim()}
           className="rounded-full px-4 py-2 text-[13px] font-semibold disabled:opacity-50"
-          style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))', color: 'var(--on-primary)' }}
+          style={{
+            background: 'linear-gradient(135deg, var(--primary), var(--gold))',
+            color: 'var(--on-primary)',
+          }}
         >
           Add all
         </button>
@@ -651,12 +789,16 @@ function AddScreen() {
 
   async function startScan() {
     if (!window.BarcodeDetector || !navigator.mediaDevices) {
-      setScanStatus('Barcode scanning isn’t supported in this browser — search by title or ISBN below.')
+      setScanStatus(
+        'Barcode scanning isn’t supported in this browser — search by title or ISBN below.',
+      )
       return
     }
     try {
       setScanStatus('Requesting camera…')
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' },
+      })
       streamRef.current = stream
       const video = videoRef.current
       if (!video) return
@@ -683,16 +825,23 @@ function AddScreen() {
       void tick()
     } catch (e) {
       stopScan()
-      setScanStatus(`Camera unavailable (${(e as Error).name || 'blocked'}). Search by title or ISBN below.`)
+      setScanStatus(
+        `Camera unavailable (${(e as Error).name || 'blocked'}). Search by title or ISBN below.`,
+      )
     }
   }
 
   return (
     <section className="mx-auto max-w-2xl px-4 py-6 sm:px-6">
-      <h1 className="text-[22px] italic text-ink" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+      <h1
+        className="text-[22px] italic text-ink"
+        style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+      >
         Add a book
       </h1>
-      <p className="mb-4 text-[13px] text-muted">Scan a barcode, search by title or ISBN, or add manually.</p>
+      <p className="mb-4 text-[13px] text-muted">
+        Scan a barcode, search by title or ISBN, or add manually.
+      </p>
 
       <div className="flex flex-wrap gap-2">
         <input
@@ -710,7 +859,10 @@ function AddScreen() {
           type="button"
           onClick={() => void runSearch()}
           className="h-11 rounded-full px-5 text-[14px] font-semibold"
-          style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))', color: 'var(--on-primary)' }}
+          style={{
+            background: 'linear-gradient(135deg, var(--primary), var(--gold))',
+            color: 'var(--on-primary)',
+          }}
         >
           Search
         </button>
@@ -737,11 +889,19 @@ function AddScreen() {
       </div>
 
       {scanStatus && (
-        <div className="mt-3 skin-card border border-line p-3 text-[13px] text-muted" style={{ background: 'var(--card)' }}>
+        <div
+          className="mt-3 skin-card border border-line p-3 text-[13px] text-muted"
+          style={{ background: 'var(--card)' }}
+        >
           {scanStatus}
         </div>
       )}
-      <video ref={videoRef} className={`mt-3 w-full rounded-xl ${streamRef.current ? '' : 'hidden'}`} muted playsInline />
+      <video
+        ref={videoRef}
+        className={`mt-3 w-full rounded-xl ${streamRef.current ? '' : 'hidden'}`}
+        muted
+        playsInline
+      />
 
       {busy && <p className="mt-4 text-center text-[13px] text-muted">Searching…</p>}
 
@@ -756,7 +916,10 @@ function AddScreen() {
                 className="flex items-center gap-3 skin-card border border-line p-2 text-left"
                 style={{ background: 'var(--field)' }}
               >
-                <div className="h-16 w-11 flex-none overflow-hidden rounded border border-line" style={{ background: 'var(--chip)' }}>
+                <div
+                  className="h-16 w-11 flex-none overflow-hidden rounded border border-line"
+                  style={{ background: 'var(--chip)' }}
+                >
                   {/* through CoverImage so a Google "no image" plate never renders as a result cover */}
                   {it.cover && <CoverImage book={{ title: it.title, cover: it.cover }} thumb />}
                 </div>
@@ -772,7 +935,11 @@ function AddScreen() {
           ) : (
             <p className="text-[13px] text-muted">
               {voice.miss}{' '}
-              <button type="button" onClick={() => setPicked({ title: q })} className="font-semibold text-primary">
+              <button
+                type="button"
+                onClick={() => setPicked({ title: q })}
+                className="font-semibold text-primary"
+              >
                 Add it manually
               </button>
               .
@@ -781,7 +948,13 @@ function AddScreen() {
         </div>
       )}
 
-      {picked && <AddForm hit={picked} defaultUnowned={!!prefill.want} onAdded={() => void navigate({ to: '/library' })} />}
+      {picked && (
+        <AddForm
+          hit={picked}
+          defaultUnowned={!!prefill.want}
+          onAdded={() => void navigate({ to: '/library' })}
+        />
+      )}
 
       {!picked && <BulkAdd />}
     </section>

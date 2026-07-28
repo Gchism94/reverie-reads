@@ -7,8 +7,8 @@ Run every check, from the repo root, in order. Do not stop at the first failure 
 1. `pnpm install --frozen-lockfile`
 2. `pnpm build`
 3. `pnpm lint`
-4. `pnpm test`  (core + web unit)
-5. `cd apps/web && npx playwright test --reporter=list --workers=2`  (full e2e)
+4. `pnpm test` (core + web unit)
+5. `cd apps/web && npx playwright test --reporter=list --workers=2` (full e2e)
 
 Report a table: check, result, counts.
 

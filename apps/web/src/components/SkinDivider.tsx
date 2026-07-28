@@ -86,7 +86,13 @@ export function SkinDivider({ skin, className = '' }: { skin?: SkinId; className
   const id = skin ?? active
   return (
     <div className={`flex justify-center ${className}`} aria-hidden>
-      <svg viewBox="0 0 220 26" fill="none" stroke="currentColor" strokeWidth={1.4} style={{ color: 'var(--gold)', height: 22, width: 'auto' }}>
+      <svg
+        viewBox="0 0 220 26"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.4}
+        style={{ color: 'var(--gold)', height: 22, width: 'auto' }}
+      >
         {MOTIFS[id]}
       </svg>
     </div>

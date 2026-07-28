@@ -30,10 +30,15 @@ function TropesScreen() {
 
   return (
     <section className="mx-auto max-w-3xl px-4 py-6 sm:px-6">
-      <h1 className="text-[26px] italic leading-tight text-ink" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+      <h1
+        className="text-[26px] italic leading-tight text-ink"
+        style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+      >
         {labels.tags}
       </h1>
-      <p className="mt-0.5 text-[13px] text-muted">Your vocabulary, loudest first — open one to see its shelf and sweep your library.</p>
+      <p className="mt-0.5 text-[13px] text-muted">
+        Your vocabulary, loudest first — open one to see its shelf and sweep your library.
+      </p>
 
       <input
         value={q}
@@ -46,7 +51,9 @@ function TropesScreen() {
 
       {active.length > 0 && (
         <div className="mt-5">
-          <h2 className="mb-2 text-[11px] uppercase tracking-[0.2em] text-muted">In your library</h2>
+          <h2 className="mb-2 text-[11px] uppercase tracking-[0.2em] text-muted">
+            In your library
+          </h2>
           <div className="flex flex-wrap items-center gap-1.5">
             {active.map((t) => (
               <span key={t.id} className="inline-flex items-center gap-1">
@@ -59,14 +66,24 @@ function TropesScreen() {
       )}
 
       {TROPE_FACETS.map((facet) => {
-        const group = matching.filter((t) => t.facet === facet && (usage.get(t.id) ?? 0) === 0).sort((a, b) => a.name.localeCompare(b.name))
+        const group = matching
+          .filter((t) => t.facet === facet && (usage.get(t.id) ?? 0) === 0)
+          .sort((a, b) => a.name.localeCompare(b.name))
         if (!group.length) return null
         return (
           <div key={facet} className="mt-5">
-            <h2 className="mb-2 text-[11px] uppercase tracking-[0.2em] text-muted">{FACET_LABELS[facet]}</h2>
+            <h2 className="mb-2 text-[11px] uppercase tracking-[0.2em] text-muted">
+              {FACET_LABELS[facet]}
+            </h2>
             <div className="flex flex-wrap gap-1.5">
               {group.slice(0, q ? 60 : 14).map((t) => (
-                <TropeChip key={t.id} name={t.name} emphasis="off" to={`/tropes/${t.id}`} title={t.personal ? `${t.name} (yours)` : t.name} />
+                <TropeChip
+                  key={t.id}
+                  name={t.name}
+                  emphasis="off"
+                  to={`/tropes/${t.id}`}
+                  title={t.personal ? `${t.name} (yours)` : t.name}
+                />
               ))}
             </div>
           </div>

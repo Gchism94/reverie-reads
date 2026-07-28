@@ -17,7 +17,9 @@ describe('spineDims — stable, varied, never uniform (no page/trim data)', () =
     expect(a).not.toEqual(b)
   })
   it('does not collapse to one value across many books', () => {
-    const widths = new Set(Array.from({ length: 40 }, (_, i) => spineDims(`b${i}`).thickness.toFixed(3)))
+    const widths = new Set(
+      Array.from({ length: 40 }, (_, i) => spineDims(`b${i}`).thickness.toFixed(3)),
+    )
     expect(widths.size).toBeGreaterThan(20) // plenty of distinct widths
   })
 })
@@ -35,7 +37,8 @@ describe('fitSpineTitle — scale-to-fit, floor, then truncate', () => {
     expect(r.fontPx).toBeLessThan(22)
   })
   it('a monster title floors at min size AND truncates with an ellipsis (never overflows)', () => {
-    const monster = 'The Exhaustively Complete and Unabridged Chronicle of Everything That Ever Happened, Volume One: A Subtitle'
+    const monster =
+      'The Exhaustively Complete and Unabridged Chronicle of Everything That Ever Happened, Volume One: A Subtitle'
     const avail = 240
     const r = fitSpineTitle(monster, avail, { min: 13, max: 22, charRatio: 0.62 })
     expect(r.fontPx).toBe(13) // hit the floor

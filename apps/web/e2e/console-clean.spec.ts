@@ -17,14 +17,25 @@ const SERVICE =
 const EMAIL = 'console-clean-e2e@reverie.local'
 const PASSWORD = 'console-clean-e2e-password'
 
-type Client = { sb: SupabaseClient; session: { access_token: string; refresh_token: string }; uid: string }
+type Client = {
+  sb: SupabaseClient
+  session: { access_token: string; refresh_token: string }
+  uid: string
+}
 
 async function client(): Promise<Client> {
-  const admin = createClient(SUPABASE_URL, SERVICE, { auth: { autoRefreshToken: false, persistSession: false } })
+  const admin = createClient(SUPABASE_URL, SERVICE, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  })
   const { data } = await admin.auth.admin.listUsers()
   let uid = data?.users?.find((u) => u.email === EMAIL)?.id
-  if (!uid) uid = (await admin.auth.admin.createUser({ email: EMAIL, password: PASSWORD, email_confirm: true })).data.user!.id
-  await admin.from('profiles').upsert({ id: uid, display_name: 'Console Clean', skin: 'tryst', mode: 'system' })
+  if (!uid)
+    uid = (
+      await admin.auth.admin.createUser({ email: EMAIL, password: PASSWORD, email_confirm: true })
+    ).data.user!.id
+  await admin
+    .from('profiles')
+    .upsert({ id: uid, display_name: 'Console Clean', skin: 'tryst', mode: 'system' })
   const sb = createClient(SUPABASE_URL, ANON)
   const { data: s, error } = await sb.auth.signInWithPassword({ email: EMAIL, password: PASSWORD })
   if (error || !s.session) throw new Error(authFailure('console-clean', EMAIL, error))
@@ -39,7 +50,9 @@ async function reset(c: Client) {
 
 async function signIn(page: Page, session: { access_token: string; refresh_token: string }) {
   await page.addInitScript(() => localStorage.setItem('reverie.onboarded', '1'))
-  await page.goto(`/#access_token=${session.access_token}&refresh_token=${session.refresh_token}&expires_in=3600&token_type=bearer&type=magiclink`)
+  await page.goto(
+    `/#access_token=${session.access_token}&refresh_token=${session.refresh_token}&expires_in=3600&token_type=bearer&type=magiclink`,
+  )
   await page.getByRole('button', { name: /enter your library/i }).click({ timeout: 20_000 })
   await expect(page.getByRole('navigation')).toBeVisible({ timeout: 20_000 })
   await page.evaluate(() => indexedDB.deleteDatabase('reverie-offline'))
@@ -53,7 +66,15 @@ test('a book page loads with no failed data requests and no console errors', asy
   // and tell us nothing about the app. The placeholder path exercises the same page.
   const { data } = await c.sb
     .from('books')
-    .insert({ owner_id: c.uid, title: 'Console Probe', author_first: 'Nell', author_last: 'Marrow', genre: 'fantasy', ownership: 'owned', status: 'standalone' })
+    .insert({
+      owner_id: c.uid,
+      title: 'Console Probe',
+      author_first: 'Nell',
+      author_last: 'Marrow',
+      genre: 'fantasy',
+      ownership: 'owned',
+      status: 'standalone',
+    })
     .select('id')
     .single()
   const id = (data as { id: string }).id
@@ -80,10 +101,14 @@ test('a book page loads with no failed data requests and no console errors', asy
   try {
     await signIn(page, c.session)
     await page.goto(`/book/${id}`)
-    await expect(page.getByRole('heading', { name: 'Console Probe' })).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByRole('heading', { name: 'Console Probe' })).toBeVisible({
+      timeout: 20_000,
+    })
     await page.waitForTimeout(3000) // let the deferred queries (suggestions, strips) settle
 
-    expect(badResponses, `failed data requests: ${JSON.stringify(badResponses, null, 2)}`).toEqual([])
+    expect(badResponses, `failed data requests: ${JSON.stringify(badResponses, null, 2)}`).toEqual(
+      [],
+    )
     expect(pageErrors, `uncaught errors: ${JSON.stringify(pageErrors, null, 2)}`).toEqual([])
     expect(consoleErrors, `console errors: ${JSON.stringify(consoleErrors, null, 2)}`).toEqual([])
   } finally {

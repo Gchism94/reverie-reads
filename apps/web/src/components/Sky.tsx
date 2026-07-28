@@ -54,15 +54,24 @@ export function Sky() {
     <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
       <div
         className="rv-anim"
-        style={{ ...glow('var(--glow-a)', '60vmax', { top: '-15%', left: '-10%' }, 'rv-drift-a'), animationDuration: '34s' }}
+        style={{
+          ...glow('var(--glow-a)', '60vmax', { top: '-15%', left: '-10%' }, 'rv-drift-a'),
+          animationDuration: '34s',
+        }}
       />
       <div
         className="rv-anim"
-        style={{ ...glow('var(--glow-b)', '50vmax', { top: '8%', right: '-12%' }, 'rv-drift-b'), animationDuration: '41s' }}
+        style={{
+          ...glow('var(--glow-b)', '50vmax', { top: '8%', right: '-12%' }, 'rv-drift-b'),
+          animationDuration: '41s',
+        }}
       />
       <div
         className="rv-anim"
-        style={{ ...glow('var(--glow-c)', '55vmax', { bottom: '-20%', left: '12%' }, 'rv-drift-c'), animationDuration: '45s' }}
+        style={{
+          ...glow('var(--glow-c)', '55vmax', { bottom: '-20%', left: '12%' }, 'rv-drift-c'),
+          animationDuration: '45s',
+        }}
       />
       <div
         className="rv-anim"

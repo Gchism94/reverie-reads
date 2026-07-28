@@ -13,7 +13,9 @@ error-tracker account/DSN, legal copy (Privacy Policy + ToS), schedule the evolv
 Order: H1 first (it gates a safe public signup), then H2 -> H3 -> H4.
 
 ────────────────────────────────────────────────────────
+
 ## H1 — Data safety & privacy
+
 - SEED SEPARATION: the 290-book personal seed is the OWNER's library. Make it dev/demo-only — a fresh
   public signup must start with an EMPTY library + a proper empty state, never the owner's books. Move
   seeding behind an explicit dev / "load demo data" path; confirm the signup flow provisions an empty
@@ -30,6 +32,7 @@ Order: H1 first (it gates a safe public signup), then H2 -> H3 -> H4.
   profile) to back the privacy policy. [Code provides the surface; Owner/Legal writes the copy.]
 
 ## H2 — External-call resilience (proxy + cache)
+
 - PROXY + CACHE the policy-bound external calls through Edge Functions: Overpass (indie discovery),
   Nominatim (geocoding), map tiles. Set a proper identifying User-Agent (their usage policies require
   it), cache server-side (nearby-store queries by rounded area/geohash; tiles via CDN / tile proxy),
@@ -42,6 +45,7 @@ Order: H1 first (it gates a safe public signup), then H2 -> H3 -> H4.
   covers served from Storage/CDN; a broken source falls back; cache shared + keyed by work.
 
 ## H3 — Auth & abuse
+
 - AUTH HARDENING: require email verification before full access; enable Supabase auth rate-limiting;
   review session/refresh + password policy. Acceptance: unverified users appropriately gated; auth
   endpoints rate-limited.
@@ -56,6 +60,7 @@ Order: H1 first (it gates a safe public signup), then H2 -> H3 -> H4.
   reported content can be hidden; hidden content is not served to others; tested.
 
 ## H4 — Observability & performance
+
 - ERROR MONITORING + LOGS: integrate SENTRY (owner-provisioned; free Developer tier) on web + Edge
   Functions; structured Edge logs; an uptime check. Route ALL capture through a thin provider-agnostic
   captureError()/captureMessage() in @reverie/core — nothing else imports the Sentry SDK directly — so
@@ -71,10 +76,13 @@ Order: H1 first (it gates a safe public signup), then H2 -> H3 -> H4.
   obvious wins. Acceptance: documented scores; no regressions.
 
 ────────────────────────────────────────────────────────
+
 ## Checkpoints (report commit + acceptance at each)
+
 - H1 data safety & privacy · H2 external-call resilience · H3 auth & abuse · H4 observability & perf.
 
 ## Guardrails
+
 Tokens-only + AA; RLS on every new table with a test; deletion transactional + ownership-tested;
 NO third-party secrets in the browser (all keys server-side); proxies send a proper UA + respect
 upstream usage policies; global caches keyed by work; migrate + backfill never dropping data; gate
@@ -83,8 +91,10 @@ green (typecheck/lint/build/tests/axe); stage source only; docs/design untouched
 ---
 
 ## PHASE 7 COMPLETE — 2026-06-27
+
 Commits: H1 784ad0d · H2 e11e6b2 · H3 db920f0 · H4 font/perf f32b065 · H4 error-layer rework c0b96eb.
 Gate green (core 125 unit, web typecheck/lint/unit, build, axe). Staged source only; docs/design untouched.
+
 - H4 ERROR MONITORING (reworked to spec): provider-agnostic captureError/captureMessage +
   setErrorReporter over an ErrorReporter interface in @reverie/core; default structured console
   reporter; capture never throws; pure + 3 unit tests. Sentry SDK imported in ONE file only
@@ -99,6 +109,7 @@ Gate green (core 125 unit, web typecheck/lint/unit, build, axe). Staged source o
   reviewed here; taken on gate + acceptance).
 
 FLAGS:
+
 - .env.example carries the REAL publishable Supabase URL/key. Safe IF it's the publishable/anon key
   (public, RLS-protected) -- CONFIRM it is NOT the secret/service_role key. (.env.example conventionally
   stays placeholders, but the anon key is public so committing it is harmless.)

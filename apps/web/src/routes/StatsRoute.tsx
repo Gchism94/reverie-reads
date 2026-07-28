@@ -21,8 +21,14 @@ function Bars({ entries }: { entries: [string, number][] }) {
           <span className="w-28 flex-none truncate text-muted" title={label}>
             {label}
           </span>
-          <span className="h-2.5 flex-1 overflow-hidden rounded-full" style={{ background: 'var(--chip)' }}>
-            <span className="block h-full rounded-full" style={{ width: `${Math.round((n / max) * 100)}%`, background: 'var(--primary)' }} />
+          <span
+            className="h-2.5 flex-1 overflow-hidden rounded-full"
+            style={{ background: 'var(--chip)' }}
+          >
+            <span
+              className="block h-full rounded-full"
+              style={{ width: `${Math.round((n / max) * 100)}%`, background: 'var(--primary)' }}
+            />
           </span>
           <span className="w-7 flex-none text-right font-semibold text-ink">{n}</span>
         </div>
@@ -55,7 +61,12 @@ function StatsScreen() {
   const reads = useAllReads().data ?? []
   const all = books ?? []
 
-  const years = [...new Set([THIS_YEAR, ...reads.filter((r) => r.read_on).map((r) => +(r.read_on as string).slice(0, 4))])].sort((a, b) => b - a)
+  const years = [
+    ...new Set([
+      THIS_YEAR,
+      ...reads.filter((r) => r.read_on).map((r) => +(r.read_on as string).slice(0, 4)),
+    ]),
+  ].sort((a, b) => b - a)
   const [statsY, setStatsY] = useState(THIS_YEAR)
   const year = years.includes(statsY) ? statsY : (years[0] ?? THIS_YEAR)
 
@@ -68,10 +79,15 @@ function StatsScreen() {
   // (docs/task-ownership-v2.md). Reading + taste stats (reads, ratings, faves, tags) count
   // regardless of possession.
   const ownedAll = all.filter(isPossessed)
-  const readIds = new Set([...dated.map((r) => r.book_id), ...all.filter((b) => b.readStatus === 'Read').map((b) => b.id)])
+  const readIds = new Set([
+    ...dated.map((r) => r.book_id),
+    ...all.filter((b) => b.readStatus === 'Read').map((b) => b.id),
+  ])
   const readBooks = all.filter((b) => readIds.has(b.id))
   const rated = all.filter((b) => b.rating > 0)
-  const avg = rated.length ? (rated.reduce((a, b) => a + b.rating, 0) / rated.length).toFixed(1) : '—'
+  const avg = rated.length
+    ? (rated.reduce((a, b) => a + b.rating, 0) / rated.length).toFixed(1)
+    : '—'
 
   const mo = Array<number>(12).fill(0)
   for (const r of yr) {
@@ -82,18 +98,35 @@ function StatsScreen() {
 
   const byYear: [string, number][] = [...years]
     .sort((a, b) => a - b)
-    .map((y) => [String(y), dated.filter((r) => +(r.read_on as string).slice(0, 4) === y).length] as [string, number])
+    .map(
+      (y) =>
+        [String(y), dated.filter((r) => +(r.read_on as string).slice(0, 4) === y).length] as [
+          string,
+          number,
+        ],
+    )
     .filter((e) => e[1] > 0)
 
   // A 3-subgenre book counts once in each of its buckets (buckets don't sum to the book count).
-  const subg = tally(readBooks.flatMap((b) => bookSubgenres(b)), (s) => s)
+  const subg = tally(
+    readBooks.flatMap((b) => bookSubgenres(b)),
+    (s) => s,
+  )
   const fmts = tally(ownedAll, (b) => b.format)
-  const spdist: [string, number][] = [1, 2, 3, 4, 5].map((i) => [labels.intensityGlyph.repeat(i), readBooks.filter((b) => b.intensity === i).length])
-  const topTags = tally(readBooks.flatMap((b) => bookTropeNames(b)), (t) => t).slice(0, 8)
+  const spdist: [string, number][] = [1, 2, 3, 4, 5].map((i) => [
+    labels.intensityGlyph.repeat(i),
+    readBooks.filter((b) => b.intensity === i).length,
+  ])
+  const topTags = tally(
+    readBooks.flatMap((b) => bookTropeNames(b)),
+    (t) => t,
+  ).slice(0, 8)
   // Count each authoring contributor (co-authors included), not just the primary author.
   const auths = tally(
     all.flatMap((b) =>
-      b.contributors.length ? b.contributors.filter((c) => isAuthorRole(c.role)).map((c) => c.name) : [authorOf(b)].filter(Boolean),
+      b.contributors.length
+        ? b.contributors.filter((c) => isAuthorRole(c.role)).map((c) => c.name)
+        : [authorOf(b)].filter(Boolean),
     ),
     (n) => n,
   ).slice(0, 8)
@@ -101,7 +134,8 @@ function StatsScreen() {
   const readsPerBook = new Map<string, number>()
   for (const r of dated) readsPerBook.set(r.book_id, (readsPerBook.get(r.book_id) ?? 0) + 1)
   const mostReread = [...readsPerBook.entries()].sort((a, b) => b[1] - a[1])[0]
-  const rereadBook = mostReread && mostReread[1] > 1 ? all.find((b) => b.id === mostReread[0]) : undefined
+  const rereadBook =
+    mostReread && mostReread[1] > 1 ? all.find((b) => b.id === mostReread[0]) : undefined
   const busiest = mo.some((x) => x) ? MONTHS[mo.indexOf(Math.max(...mo))] : null
   const seriesCount = new Set(ownedAll.filter((b) => b.series).map((b) => b.series)).size
 
@@ -116,7 +150,10 @@ function StatsScreen() {
   return (
     <section className="px-4 py-6 sm:px-6">
       <header className="mb-1 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-[22px] italic text-ink" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+        <h1
+          className="text-[22px] italic text-ink"
+          style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+        >
           Your Reading, Wrapped
         </h1>
         <select
@@ -139,7 +176,11 @@ function StatsScreen() {
 
       <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
         {stats.map(([n, label]) => (
-          <div key={label} className="skin-panel border border-line p-3 text-center" style={{ background: 'var(--card)' }}>
+          <div
+            key={label}
+            className="skin-panel border border-line p-3 text-center"
+            style={{ background: 'var(--card)' }}
+          >
             <div className="skin-numeral text-[22px] font-bold text-ink">{n}</div>
             <div className="skin-label text-[11px] text-muted">{label}</div>
           </div>
@@ -153,7 +194,10 @@ function StatsScreen() {
               <div key={i} className="flex flex-1 flex-col items-center justify-end gap-1">
                 <div
                   className="w-full rounded-t"
-                  style={{ height: `${n ? Math.max(6, Math.round((n / mmax) * 92)) : 3}px`, background: n ? 'var(--primary)' : 'var(--chip)' }}
+                  style={{
+                    height: `${n ? Math.max(6, Math.round((n / mmax) * 92)) : 3}px`,
+                    background: n ? 'var(--primary)' : 'var(--chip)',
+                  }}
                   title={`${MONTHS[i]}: ${n}`}
                 />
                 <div className="text-[9px] text-muted">{MONTHS[i]?.[0]}</div>
@@ -186,11 +230,20 @@ function StatsScreen() {
         <Card title="Fun facts">
           <div className="flex flex-col gap-2 text-[13px] text-ink">
             {rereadBook && (
-              <div>🔁 Most reread: <b>{rereadBook.title}</b> ({mostReread?.[1]}×)</div>
+              <div>
+                🔁 Most reread: <b>{rereadBook.title}</b> ({mostReread?.[1]}×)
+              </div>
             )}
-            {busiest && <div>🔥 Busiest month of {year}: <b>{busiest}</b></div>}
+            {busiest && (
+              <div>
+                🔥 Busiest month of {year}: <b>{busiest}</b>
+              </div>
+            )}
             <div>♥ {all.filter((b) => b.fave).length} all-time faves</div>
-            <div>{labels.intensityGlyph} {readBooks.filter((b) => (b.intensity ?? 0) >= 4).length} high-{labels.intensity.toLowerCase()} reads</div>
+            <div>
+              {labels.intensityGlyph} {readBooks.filter((b) => (b.intensity ?? 0) >= 4).length}{' '}
+              high-{labels.intensity.toLowerCase()} reads
+            </div>
             <div>📚 {seriesCount} series on your shelves</div>
           </div>
         </Card>

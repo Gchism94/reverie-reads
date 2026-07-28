@@ -51,7 +51,9 @@ for (const file of dist.filter((f) => SCAN_EXT.test(f))) {
     for (const m of text.matchAll(re)) {
       if (ALLOWED.has(m[0]) || seen.has(m.index)) continue
       seen.add(m.index)
-      hits.push(`${relative(DIST, file)}: …${text.slice(Math.max(0, m.index - 40), m.index + m[0].length + 40)}…`)
+      hits.push(
+        `${relative(DIST, file)}: …${text.slice(Math.max(0, m.index - 40), m.index + m[0].length + 40)}…`,
+      )
     }
   }
 }
@@ -66,7 +68,9 @@ const header = `assert-dist-clean: found ${hits.length} local URL(s) baked into 
 console[enforce ? 'error' : 'warn'](header)
 for (const h of hits) console[enforce ? 'error' : 'warn'](`  ${h}`)
 if (enforce) {
-  console.error('Refusing to deploy a bundle that points at a local backend. Fix VITE_SUPABASE_URL in the deploy environment.')
+  console.error(
+    'Refusing to deploy a bundle that points at a local backend. Fix VITE_SUPABASE_URL in the deploy environment.',
+  )
   process.exit(1)
 }
 console.warn('(warning only — local builds bake .env.local by design; deploys enforce this)')

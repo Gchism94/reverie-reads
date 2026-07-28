@@ -27,7 +27,9 @@ describe('subgenre → primary-genre inference stays true to the taxonomy', () =
   it('every single-genre subgenre maps to exactly that genre', () => {
     for (const [sub, genres] of byGenreCount) {
       if (genres.size === 1) {
-        expect(SUBGENRE_PRIMARY_GENRE[sub], `expected '${sub}' → '${[...genres][0]}'`).toBe([...genres][0])
+        expect(SUBGENRE_PRIMARY_GENRE[sub], `expected '${sub}' → '${[...genres][0]}'`).toBe(
+          [...genres][0],
+        )
       }
     }
   })
@@ -35,7 +37,10 @@ describe('subgenre → primary-genre inference stays true to the taxonomy', () =
   it('every shared subgenre (and the neutral catch-all) is absent — never guessed', () => {
     for (const [sub, genres] of byGenreCount) {
       if (genres.size > 1) {
-        expect(SUBGENRE_PRIMARY_GENRE[sub], `'${sub}' is shared by ${[...genres].join(', ')}`).toBeUndefined()
+        expect(
+          SUBGENRE_PRIMARY_GENRE[sub],
+          `'${sub}' is shared by ${[...genres].join(', ')}`,
+        ).toBeUndefined()
       }
     }
     expect(SUBGENRE_PRIMARY_GENRE[NEUTRAL_SUBGENRE.toLowerCase()]).toBeUndefined()
@@ -55,10 +60,18 @@ describe('the migrations mirror the inference map exactly', () => {
   // taxonomy_neutral (the genre-neutral broadening). Their UNION must equal SUBGENRE_PRIMARY_GENRE.
   const pairsFrom = (file: string): (readonly [string, string])[] => {
     const sql = readFileSync(join(__dirname, '../../../../supabase/migrations/', file), 'utf8')
-    const valuesBlock = sql.slice(sql.indexOf('from (values'), sql.indexOf(') as m(subgenre, genre)'))
-    return [...valuesBlock.matchAll(/\('([^']+)', '([^']+)'\)/g)].map((m) => [m[1]!, m[2]!] as const)
+    const valuesBlock = sql.slice(
+      sql.indexOf('from (values'),
+      sql.indexOf(') as m(subgenre, genre)'),
+    )
+    return [...valuesBlock.matchAll(/\('([^']+)', '([^']+)'\)/g)].map(
+      (m) => [m[1]!, m[2]!] as const,
+    )
   }
-  const sqlPairs = [...pairsFrom('20260715010000_book_editing.sql'), ...pairsFrom('20260721020000_taxonomy_neutral.sql')]
+  const sqlPairs = [
+    ...pairsFrom('20260715010000_book_editing.sql'),
+    ...pairsFrom('20260721020000_taxonomy_neutral.sql'),
+  ]
 
   it('every TS pair appears across the SQL VALUES lists, and nothing extra', () => {
     const ts = Object.entries(SUBGENRE_PRIMARY_GENRE)

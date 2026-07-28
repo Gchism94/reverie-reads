@@ -21,9 +21,9 @@ export function SkinEvolveReveal() {
       style={{ background: 'var(--card)', boxShadow: 'var(--shadow)' }}
     >
       <div className="flex-1 text-[13.5px] text-ink">
-        <span className="font-semibold">✦ Your reading profile is evolving.</span>{' '}
-        Lately you’re {pending.insight} — echoing {SKINS[pending.dominant].label}. Refresh your
-        adaptive skin to match?
+        <span className="font-semibold">✦ Your reading profile is evolving.</span> Lately you’re{' '}
+        {pending.insight} — echoing {SKINS[pending.dominant].label}. Refresh your adaptive skin to
+        match?
       </div>
       <div className="flex flex-wrap gap-2">
         <button
@@ -34,7 +34,11 @@ export function SkinEvolveReveal() {
         >
           Refresh my skin
         </button>
-        <Link to="/skins" className="rounded-full border border-line px-4 py-1.5 text-[12.5px] font-semibold text-ink" style={{ background: 'var(--field)' }}>
+        <Link
+          to="/skins"
+          className="rounded-full border border-line px-4 py-1.5 text-[12.5px] font-semibold text-ink"
+          style={{ background: 'var(--field)' }}
+        >
           Preview
         </Link>
         <button

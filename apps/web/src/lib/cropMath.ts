@@ -21,7 +21,13 @@ export function coverScale(imgW: number, imgH: number, frameW: number, frameH: n
 }
 
 /** Clamp a pan offset so the scaled image still covers the whole frame (no blank margins). */
-export function clampOffset(state: CropState, imgW: number, imgH: number, frameW: number, frameH: number): CropState {
+export function clampOffset(
+  state: CropState,
+  imgW: number,
+  imgH: number,
+  frameW: number,
+  frameH: number,
+): CropState {
   const zoom = Math.min(CROP_MAX_ZOOM, Math.max(1, state.zoom))
   const s = coverScale(imgW, imgH, frameW, frameH) * zoom
   const maxTx = Math.max(0, (imgW * s - frameW) / 2)
@@ -41,7 +47,13 @@ export interface SourceRect {
 }
 
 /** The image-space rect that the frame currently shows — what drawImage copies to the output. */
-export function sourceRect(state: CropState, imgW: number, imgH: number, frameW: number, frameH: number): SourceRect {
+export function sourceRect(
+  state: CropState,
+  imgW: number,
+  imgH: number,
+  frameW: number,
+  frameH: number,
+): SourceRect {
   const c = clampOffset(state, imgW, imgH, frameW, frameH)
   const s = coverScale(imgW, imgH, frameW, frameH) * c.zoom
   const sw = frameW / s

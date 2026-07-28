@@ -63,5 +63,6 @@ export const useFilters = create<FilterState>((set) => ({
   setMode: (mode) => set({ mode }),
   togglePanel: () => set((s) => ({ panelOpen: !s.panelOpen })),
   // Clear all facets but keep the search box and chosen sort (matches the prototype).
-  clear: () => set((s) => ({ filters: { ...defaultFilters(), q: s.filters.q, sort: s.filters.sort } })),
+  clear: () =>
+    set((s) => ({ filters: { ...defaultFilters(), q: s.filters.q, sort: s.filters.sort } })),
 }))

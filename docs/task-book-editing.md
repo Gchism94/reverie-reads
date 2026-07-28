@@ -6,7 +6,7 @@
 > `docs/DATA_MODEL.md`.
 
 **Branch:** `feat/book-editing`
-**Dependencies:** none hard; can run parallel to shelf-system. Series *status* enum lands here; series *experience* is a separate task that consumes it. Covers and tropes are their own tasks (`feat/cover-system`, `feat/trope-system`) — do not touch them here.
+**Dependencies:** none hard; can run parallel to shelf-system. Series _status_ enum lands here; series _experience_ is a separate task that consumes it. Covers and tropes are their own tasks (`feat/cover-system`, `feat/trope-system`) — do not touch them here.
 **Golden rule applies:** eyeball on the real authenticated app before merge.
 
 ## Context

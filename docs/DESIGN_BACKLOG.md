@@ -5,12 +5,14 @@ against them on the token system (no hardcoded colors from the mockup). All rend
 (Tryst); show alt-skin proof where relevant.
 
 ## Done / in flight
+
 - DESKTOP — DONE -> design/from-claude-design/desktop/. Skin-agnostic shell on the token contract.
 - SKIN GALLERY — already BUILT in code (C3). Prompt exists (CLAUDE_DESIGN_PROMPT_SKIN_GALLERY.md) if a
   visual polish pass is ever wanted; not required.
 - WRAPPED — IN FLIGHT (prompt: CLAUDE_DESIGN_PROMPT_WRAPPED.md). Review screens when they return.
 
 ## Next (prioritized by launch impact)
+
 1. LANDING / MARKETING PAGE — public front door, unblocked by the Reverie name. Can't launch publicly
    without it. DESIGN APPROVED (gold, genre-neutral) -> handoff at design/from-claude-design/landing/HANDOFF.md.
 2. ONBOARDING / FIRST-RUN — empty state -> import (CSV/scan) -> first-skin reveal. Pairs with Phase 7

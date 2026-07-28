@@ -53,10 +53,12 @@ export function splitName(name: string): { first: string; last: string } {
 }
 
 /** Join first/last back into a display name. */
-export const joinName = (first: string, last: string): string => [first, last].filter(Boolean).join(' ').trim()
+export const joinName = (first: string, last: string): string =>
+  [first, last].filter(Boolean).join(' ').trim()
 
 /** Order by position, defensively (callers may pass an unsorted list). */
-const ordered = (cs: readonly Contributor[]): Contributor[] => [...cs].sort((a, b) => a.position - b.position)
+const ordered = (cs: readonly Contributor[]): Contributor[] =>
+  [...cs].sort((a, b) => a.position - b.position)
 
 /** The primary author: the first (by position) author/co-author, else the first contributor. */
 export function primaryAuthor(contributors: readonly Contributor[]): Contributor | null {
@@ -146,7 +148,10 @@ export function reconcileContributors(
 }
 
 /** Did reconciliation change the list (new contributors added)? */
-export const contributorsChanged = (existing: readonly Contributor[], next: readonly Contributor[]): boolean =>
+export const contributorsChanged = (
+  existing: readonly Contributor[],
+  next: readonly Contributor[],
+): boolean =>
   existing.length !== next.length ||
   next.some((c, i) => {
     const e = existing[i]

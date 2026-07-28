@@ -21,7 +21,11 @@ const ANON = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
 const SERVICE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 const HARDCOVER_TOKEN = Deno.env.get('HARDCOVER_TOKEN') ?? ''
 
-const svc = { apikey: SERVICE, Authorization: `Bearer ${SERVICE}`, 'Content-Type': 'application/json' }
+const svc = {
+  apikey: SERVICE,
+  Authorization: `Bearer ${SERVICE}`,
+  'Content-Type': 'application/json',
+}
 
 const TTL_MS = 24 * 60 * 60 * 1000
 /** one upstream lookup per request, wall-clock capped — an edge isolate must never hang on a
@@ -29,9 +33,16 @@ const TTL_MS = 24 * 60 * 60 * 1000
 const FETCH_WALL_MS = 5000
 
 const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...cors, 'Content-Type': 'application/json' },
+  })
 
-const norm = (s: string): string => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
+const norm = (s: string): string =>
+  s
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim()
 
 /** What the client merges from: one canonical slot per entry. */
 interface SourceEntry {
@@ -47,7 +58,10 @@ interface SeriesPayload {
 }
 
 async function cacheGet(key: string): Promise<SeriesPayload | null> {
-  const res = await fetch(`${DB_URL}/rest/v1/releases_cache?cache_key=eq.${encodeURIComponent(key)}&select=payload,fetched_at`, { headers: svc })
+  const res = await fetch(
+    `${DB_URL}/rest/v1/releases_cache?cache_key=eq.${encodeURIComponent(key)}&select=payload,fetched_at`,
+    { headers: svc },
+  )
   if (!res.ok) return null
   const rows = (await res.json()) as { payload: SeriesPayload; fetched_at: string }[]
   const row = rows[0]
@@ -123,8 +137,14 @@ async function fetchHardcoverSeries(name: string, author: string): Promise<Serie
       seen.add(k)
       return true
     })
-    const positioned = entries.some((e) => e.position > 0) ? entries.filter((e) => e.position > 0) : entries
-    return { name: String(best.s.name ?? name), sourceRef: String(best.s.id ?? ''), entries: positioned }
+    const positioned = entries.some((e) => e.position > 0)
+      ? entries.filter((e) => e.position > 0)
+      : entries
+    return {
+      name: String(best.s.name ?? name),
+      sourceRef: String(best.s.id ?? ''),
+      entries: positioned,
+    }
   } catch {
     return empty
   } finally {
@@ -160,8 +180,12 @@ async function fetchHardcoverBookTags(title: string, author: string): Promise<st
     const books: any[] = bodyJson?.data?.books ?? []
     if (!books.length) return []
     const match =
-      books.find((b: any) =>
-        author && (b.contributions ?? []).some((c: any) => norm(String(c?.author?.name ?? '')) === norm(author)),
+      books.find(
+        (b: any) =>
+          author &&
+          (b.contributions ?? []).some(
+            (c: any) => norm(String(c?.author?.name ?? '')) === norm(author),
+          ),
       ) ?? books[0]
     const out = new Set<string>()
     const walk = (v: any): void => {
@@ -194,7 +218,9 @@ Deno.serve(async (req: Request) => {
   // any signed-in reader may query (public catalog data; the cache is shared on purpose)
   const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '')
   if (!token) return json({ error: 'not authenticated' }, 401)
-  const ures = await fetch(`${DB_URL}/auth/v1/user`, { headers: { apikey: ANON, Authorization: `Bearer ${token}` } })
+  const ures = await fetch(`${DB_URL}/auth/v1/user`, {
+    headers: { apikey: ANON, Authorization: `Bearer ${token}` },
+  })
   if (!ures.ok) return json({ error: 'not authenticated' }, 401)
 
   let body: { mode?: string; name?: string; author?: string; title?: string }

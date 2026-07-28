@@ -29,7 +29,9 @@ export function MoreLikeThis({ bookId }: { bookId: string }) {
 
   return (
     <div className="mt-4">
-      <div className="skin-label mb-2 text-[11px] text-muted">More like this — from your shelves</div>
+      <div className="skin-label mb-2 text-[11px] text-muted">
+        More like this — from your shelves
+      </div>
       <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
         {hits.map(({ book, similarity }) => (
           <Link
@@ -39,11 +41,20 @@ export function MoreLikeThis({ bookId }: { bookId: string }) {
             className="group block"
             title={`${book.title} · ${Math.round(similarity * 100)}% close`}
           >
-            <div className="aspect-[2/3] overflow-hidden rounded-[6px] border border-line" style={{ background: 'var(--card)' }}>
+            <div
+              className="aspect-[2/3] overflow-hidden rounded-[6px] border border-line"
+              style={{ background: 'var(--card)' }}
+            >
               <CoverImage book={book} />
             </div>
-            <div className="mt-1 truncate text-[11.5px] text-muted group-hover:text-ink">{book.title}</div>
-            <TasteTier cos={tasteScores?.[book.id]} anchors={anchors} className="mt-0.5 block text-[10.5px] font-semibold" />
+            <div className="mt-1 truncate text-[11.5px] text-muted group-hover:text-ink">
+              {book.title}
+            </div>
+            <TasteTier
+              cos={tasteScores?.[book.id]}
+              anchors={anchors}
+              className="mt-0.5 block text-[10.5px] font-semibold"
+            />
           </Link>
         ))}
       </div>

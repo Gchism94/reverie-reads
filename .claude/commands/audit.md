@@ -17,6 +17,7 @@ Reproduce before concluding. A plausible reading of the code is not a finding; a
 behaviour is. Where the two disagree, trust the observation and say so.
 
 Prefer the strongest evidence available:
+
 - for behaviour: drive the real UI and read the database directly
 - for "does this render": change the value to something unmistakable and look
 - for "is this reachable": check the guard that gates it, not just the function it calls

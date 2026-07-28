@@ -10,17 +10,48 @@ export type Palette = Record<string, string>
 
 /** Colour tokens that blend channel-wise. */
 export const ADAPTIVE_COLOR_KEYS = [
-  '--bg0', '--bg1', '--ink', '--muted', '--primary', '--accent-fill', '--violet', '--blue',
-  '--gold', '--card', '--card-2', '--line', '--glow-a', '--glow-b', '--glow-c', '--glow-d',
-  '--star', '--fog', '--on-primary', '--vignette',
+  '--bg0',
+  '--bg1',
+  '--ink',
+  '--muted',
+  '--primary',
+  '--accent-fill',
+  '--violet',
+  '--blue',
+  '--gold',
+  '--card',
+  '--card-2',
+  '--line',
+  '--glow-a',
+  '--glow-b',
+  '--glow-c',
+  '--glow-d',
+  '--star',
+  '--fog',
+  '--on-primary',
+  '--vignette',
 ] as const
 
 /** Tokens carried verbatim from the dominant skin (don't blend: shadows, grain, fonts). */
 export const ADAPTIVE_CARRY_KEYS = [
-  '--shadow', '--grain-opacity', '--font-display', '--font-sans', '--font-mono',
+  '--shadow',
+  '--grain-opacity',
+  '--font-display',
+  '--font-sans',
+  '--font-mono',
 ] as const
 
-const SKIN_ORDER: SkinId[] = ['tryst', 'grimoire', 'aphelion', 'marrow', 'umbra', 'folio', 'hearth', 'almanac', 'bloom']
+const SKIN_ORDER: SkinId[] = [
+  'tryst',
+  'grimoire',
+  'aphelion',
+  'marrow',
+  'umbra',
+  'folio',
+  'hearth',
+  'almanac',
+  'bloom',
+]
 
 // ── colour parsing / contrast ──
 
@@ -31,13 +62,26 @@ export function parseColor(input: string): Rgba | null {
   const hex = s.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i)
   if (hex) {
     const h = hex[1]!
-    const f = h.length === 3 ? h.split('').map((c) => c + c).join('') : h
-    return [parseInt(f.slice(0, 2), 16), parseInt(f.slice(2, 4), 16), parseInt(f.slice(4, 6), 16), 1]
+    const f =
+      h.length === 3
+        ? h
+            .split('')
+            .map((c) => c + c)
+            .join('')
+        : h
+    return [
+      parseInt(f.slice(0, 2), 16),
+      parseInt(f.slice(2, 4), 16),
+      parseInt(f.slice(4, 6), 16),
+      1,
+    ]
   }
   const rgb = s.match(/^rgba?\(([^)]+)\)$/i)
   if (rgb) {
     const parts = rgb[1]!.split(/[,/]/).map((p) => p.trim())
-    const r = Number(parts[0]), g = Number(parts[1]), b = Number(parts[2])
+    const r = Number(parts[0]),
+      g = Number(parts[1]),
+      b = Number(parts[2])
     const a = parts[3] != null ? Number(parts[3]) : 1
     if ([r, g, b, a].some((n) => Number.isNaN(n))) return null
     return [r, g, b, a]
@@ -45,7 +89,10 @@ export function parseColor(input: string): Rgba | null {
   return null
 }
 
-const hex2 = (n: number) => Math.round(Math.max(0, Math.min(255, n))).toString(16).padStart(2, '0')
+const hex2 = (n: number) =>
+  Math.round(Math.max(0, Math.min(255, n)))
+    .toString(16)
+    .padStart(2, '0')
 
 export function formatColor([r, g, b, a]: Rgba): string {
   if (a >= 1) return `#${hex2(r)}${hex2(g)}${hex2(b)}`
@@ -66,7 +113,8 @@ function relLuminance([r, g, b]: Rgba): number {
 }
 
 export function contrastRatio(a: Rgba, b: Rgba): number {
-  const la = relLuminance(a), lb = relLuminance(b)
+  const la = relLuminance(a),
+    lb = relLuminance(b)
   const [hi, lo] = la > lb ? [la, lb] : [lb, la]
   return (hi + 0.05) / (lo + 0.05)
 }
@@ -77,7 +125,8 @@ export function contrastRatio(a: Rgba, b: Rgba): number {
  * compute the identical result (e.g. the cover-placeholder contrast guardrail). Throws on bad input.
  */
 export function mixSrgb(a: string, b: string, weightA: number): string {
-  const ca = parseColor(a), cb = parseColor(b)
+  const ca = parseColor(a),
+    cb = parseColor(b)
   if (!ca || !cb) throw new Error(`mixSrgb: bad colour ${!ca ? a : b}`)
   const w = Math.max(0, Math.min(1, weightA))
   const ch = (i: number) => ca[i]! * w + cb[i]! * (1 - w)
@@ -96,12 +145,20 @@ export function blendPalette(palettes: Palette[], weights: number[]): Palette {
   const out: Palette = {}
 
   for (const key of ADAPTIVE_COLOR_KEYS) {
-    let r = 0, g = 0, b = 0, a = 0, wsum = 0
+    let r = 0,
+      g = 0,
+      b = 0,
+      a = 0,
+      wsum = 0
     for (let i = 0; i < palettes.length; i++) {
       const c = parseColor(palettes[i]?.[key] ?? '')
       if (!c) continue
       const w = norm[i]!
-      r += c[0] * w; g += c[1] * w; b += c[2] * w; a += c[3] * w; wsum += w
+      r += c[0] * w
+      g += c[1] * w
+      b += c[2] * w
+      a += c[3] * w
+      wsum += w
     }
     if (wsum > 0) out[key] = formatColor([r / wsum, g / wsum, b / wsum, a / wsum])
   }
@@ -178,11 +235,32 @@ export function nudgeForAA(palette: Palette, target = 4.5): Palette {
 const SKIN_AFFINITY: Record<SkinId, { subgenres: string[]; tags: string[] }> = {
   tryst: {
     subgenres: ['Romance', 'Contemporary', 'Sports', 'Cowboy Romance'],
-    tags: ['Slow Burn', 'Friends to Lovers', 'Grumpy/Sunshine', 'Small Town', 'Second Chance', 'He Falls First', 'Fake Dating', 'Found Family'],
+    tags: [
+      'Slow Burn',
+      'Friends to Lovers',
+      'Grumpy/Sunshine',
+      'Small Town',
+      'Second Chance',
+      'He Falls First',
+      'Fake Dating',
+      'Found Family',
+    ],
   },
   grimoire: {
     subgenres: ['Romantasy', 'Fantasy'],
-    tags: ['Fae', 'Dragon Riders', 'Magic Academy', 'Court Intrigue', 'Chosen One', 'Shifters', 'Cursed', 'Fated Mates', 'Hidden Powers', 'Rebellion', 'Bonded Pair'],
+    tags: [
+      'Fae',
+      'Dragon Riders',
+      'Magic Academy',
+      'Court Intrigue',
+      'Chosen One',
+      'Shifters',
+      'Cursed',
+      'Fated Mates',
+      'Hidden Powers',
+      'Rebellion',
+      'Bonded Pair',
+    ],
   },
   aphelion: {
     subgenres: ['Science Fiction', 'Sci-Fi', 'Dystopian'],
@@ -190,11 +268,32 @@ const SKIN_AFFINITY: Record<SkinId, { subgenres: string[]; tags: string[] }> = {
   },
   marrow: {
     subgenres: ['Dark Romance', 'Horror', 'Thriller'],
-    tags: ['Mafia', 'Stalker', 'Villain Romance', 'Serial Killers', 'Captive/Captor', 'Morally Black MMC', 'Obsessive', 'Anti-Hero', 'Bully Romance', 'Possessive', 'Revenge'],
+    tags: [
+      'Mafia',
+      'Stalker',
+      'Villain Romance',
+      'Serial Killers',
+      'Captive/Captor',
+      'Morally Black MMC',
+      'Obsessive',
+      'Anti-Hero',
+      'Bully Romance',
+      'Possessive',
+      'Revenge',
+    ],
   },
   umbra: {
     subgenres: ['Mystery', 'Thriller', 'Crime', 'Detective', 'Suspense'],
-    tags: ['Whodunit', 'Noir', 'Heist', 'Spy', 'Cozy Mystery', 'Locked Room', 'Cold Case', 'Conspiracy'],
+    tags: [
+      'Whodunit',
+      'Noir',
+      'Heist',
+      'Spy',
+      'Cozy Mystery',
+      'Locked Room',
+      'Cold Case',
+      'Conspiracy',
+    ],
   },
   folio: {
     subgenres: ['Literary', 'Literary Fiction', 'Classics', 'Fiction', 'Poetry'],
@@ -210,7 +309,15 @@ const SKIN_AFFINITY: Record<SkinId, { subgenres: string[]; tags: string[] }> = {
   },
   bloom: {
     subgenres: ['YA', 'Young Adult', 'New Adult', 'Contemporary'],
-    tags: ['Coming of Age', 'First Love', 'Enemies to Lovers', 'Road Trip', 'Summer', 'High School', 'Friendship'],
+    tags: [
+      'Coming of Age',
+      'First Love',
+      'Enemies to Lovers',
+      'Road Trip',
+      'Summer',
+      'High School',
+      'Friendship',
+    ],
   },
 }
 
@@ -247,7 +354,9 @@ export function computeSkinWeights(books: readonly Book[]): Record<SkinId, numbe
   }
   // Floor: a small base weight per skin (Tryst a touch higher as the default anchor).
   const total = SKIN_ORDER.reduce((s, id) => s + raw[id] + skinFloor(id), 0) || 1
-  return Object.fromEntries(SKIN_ORDER.map((id) => [id, (raw[id] + skinFloor(id)) / total])) as Record<SkinId, number>
+  return Object.fromEntries(
+    SKIN_ORDER.map((id) => [id, (raw[id] + skinFloor(id)) / total]),
+  ) as Record<SkinId, number>
 }
 
 /** Base weight that keeps the blend stable for thin data — Tryst anchors as the default skin. */
@@ -292,7 +401,9 @@ export function tasteInsight(weights: Record<SkinId, number>): string {
     almanac: 'nonfiction',
     bloom: 'YA & contemporary',
   }
-  const ranked = SKIN_ORDER.filter((id) => weights[id] > 0.05).sort((a, b) => weights[b] - weights[a])
+  const ranked = SKIN_ORDER.filter((id) => weights[id] > 0.05).sort(
+    (a, b) => weights[b] - weights[a],
+  )
   const top = ranked[0] ?? 'tryst'
   const second = ranked[1]
   if (second && weights[second] > weights[top] * 0.6) {

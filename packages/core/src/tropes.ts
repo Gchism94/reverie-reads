@@ -13,7 +13,13 @@ import type { Book } from './types'
 
 export type TropeFacet = 'dynamics' | 'plot' | 'characters' | 'setting_world' | 'vibe'
 
-export const TROPE_FACETS: readonly TropeFacet[] = ['dynamics', 'plot', 'characters', 'setting_world', 'vibe']
+export const TROPE_FACETS: readonly TropeFacet[] = [
+  'dynamics',
+  'plot',
+  'characters',
+  'setting_world',
+  'vibe',
+]
 
 export const FACET_LABELS: Record<TropeFacet, string> = {
   dynamics: 'Dynamics',
@@ -31,7 +37,12 @@ export interface SeedTrope {
   aliases: string[]
 }
 
-const t = (name: string, facet: TropeFacet, affinity: string[] = [], aliases: string[] = []): SeedTrope => ({
+const t = (
+  name: string,
+  facet: TropeFacet,
+  affinity: string[] = [],
+  aliases: string[] = [],
+): SeedTrope => ({
   name,
   facet,
   affinity,
@@ -286,7 +297,9 @@ export function isKnownTrope(raw: string): boolean {
   const cleaned = norm(raw)
   if (!cleaned) return false
   const target = norm(TAG_ALIASES[cleaned] ?? cleaned)
-  return SEED_TROPES.some((t) => norm(t.name) === target || t.aliases.some((a) => norm(a) === target))
+  return SEED_TROPES.some(
+    (t) => norm(t.name) === target || t.aliases.some((a) => norm(a) === target),
+  )
 }
 
 /** Type-ahead match across names AND aliases (picker search). */
@@ -298,7 +311,10 @@ export function tropeMatches(query: string, trope: Pick<TropeLike, 'name' | 'ali
 
 /** Picker ordering within a facet: the book's genre leans first (affinity is a hint, not a
  *  gate), then everything else, alphabetical inside each band. */
-export function orderByAffinity<T extends { name: string; affinity: string[] }>(tropes: readonly T[], genre: string): T[] {
+export function orderByAffinity<T extends { name: string; affinity: string[] }>(
+  tropes: readonly T[],
+  genre: string,
+): T[] {
   const g = norm(genre)
   const band = (x: T) => (x.affinity.length === 0 ? 1 : x.affinity.includes(g) ? 0 : 2)
   return [...tropes].sort((a, b) => band(a) - band(b) || a.name.localeCompare(b.name))
@@ -330,7 +346,9 @@ export const PIN_CAP_COPY = 'Three pins is the shape of a heart — swap one out
 
 /** A book's tropes for display: pinned first, then present, stable alphabetical inside. */
 export const sortBookTropes = (refs: readonly BookTropeRef[]): BookTropeRef[] =>
-  [...refs].sort((a, b) => (a.emphasis === b.emphasis ? a.name.localeCompare(b.name) : a.emphasis === 'pinned' ? -1 : 1))
+  [...refs].sort((a, b) =>
+    a.emphasis === b.emphasis ? a.name.localeCompare(b.name) : a.emphasis === 'pinned' ? -1 : 1,
+  )
 
 /** Trope names a book answers to (filters, search) — join first, legacy
  *  tags as a fallback so pre-migration caches keep matching. */

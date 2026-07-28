@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { cycleEmphasis, frequentTropes, PIN_CAP, PIN_CAP_COPY, type ChipEmphasis, type TropeEmphasis } from '@reverie/core'
+import {
+  cycleEmphasis,
+  frequentTropes,
+  PIN_CAP,
+  PIN_CAP_COPY,
+  type ChipEmphasis,
+  type TropeEmphasis,
+} from '@reverie/core'
 import { Modal } from './Modal'
 import { TropeChip } from './TropeChip'
 import { MoodPicker } from './MoodPicker'
@@ -48,7 +55,10 @@ export function JustFinishedSheet() {
   const fetchedFor = useRef<string | null>(null)
 
   // the live book (assignments land while the sheet is open)
-  const book = useMemo(() => (books ?? []).find((b) => b.id === target?.book.id) ?? target?.book, [books, target])
+  const book = useMemo(
+    () => (books ?? []).find((b) => b.id === target?.book.id) ?? target?.book,
+    [books, target],
+  )
 
   useEffect(() => {
     if (!target || !tropes || !book) return
@@ -81,19 +91,30 @@ export function JustFinishedSheet() {
   }
 
   const openSuggestions = (suggestions ?? []).filter((s) => !onBook.has(s.tropeId))
-  const frequent = frequentTropes((allAssignments ?? []).map((a) => ({ tropeId: a.trope_id })), 6)
+  const frequent = frequentTropes(
+    (allAssignments ?? []).map((a) => ({ tropeId: a.trope_id })),
+    6,
+  )
     .map((id) => byId.get(id))
     .filter((t): t is NonNullable<typeof t> => !!t && !onBook.has(t.id))
 
   // ── next-in-series actions (the #52 toast's actions, living inside the sheet) ──
   const linked = next?.bookId ? (books ?? []).find((b) => b.id === next.bookId) : undefined
   const tbr = (lists ?? []).find((l) => l.kind === 'tbr')
-  const tbrMax = tbr ? Math.max(0, ...(items ?? []).filter((it) => it.list_id === tbr.id).map((it) => it.position ?? 0)) : 0
+  const tbrMax = tbr
+    ? Math.max(
+        0,
+        ...(items ?? []).filter((it) => it.list_id === tbr.id).map((it) => it.position ?? 0),
+      )
+    : 0
 
   const readNow = () => {
     if (!next) return
     if (linked) {
-      updateBook.mutate({ id: linked.id, patch: { readStatus: 'Reading', readingNowHidden: false } })
+      updateBook.mutate({
+        id: linked.id,
+        patch: { readStatus: 'Reading', readingNowHidden: false },
+      })
       close()
       void navigate({ to: '/book/$bookId', params: { bookId: linked.id } })
     } else {
@@ -101,7 +122,10 @@ export function JustFinishedSheet() {
         { entry: next, genre: target.genre },
         {
           onSuccess: (bookId) => {
-            updateBook.mutate({ id: bookId, patch: { readStatus: 'Reading', readingNowHidden: false } })
+            updateBook.mutate({
+              id: bookId,
+              patch: { readStatus: 'Reading', readingNowHidden: false },
+            })
             close()
             void navigate({ to: '/book/$bookId', params: { bookId } })
           },
@@ -124,7 +148,8 @@ export function JustFinishedSheet() {
   return (
     <Modal title="Just finished" onClose={close}>
       <p className="-mt-2 mb-3 text-[13px] text-muted">
-        {book.title} — shelved. Tag the {labels.tags.toLowerCase()} while it's fresh; tap again to pin.
+        {book.title} — shelved. Tag the {labels.tags.toLowerCase()} while it's fresh; tap again to
+        pin.
       </p>
 
       {(openSuggestions.length > 0 || frequent.length > 0 || book.tropes.length > 0) && (
@@ -132,18 +157,46 @@ export function JustFinishedSheet() {
           {book.tropes.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {book.tropes.map((t) => (
-                <TropeChip key={t.id} name={t.name} emphasis={t.emphasis} onClick={() => cycle(t.id)} />
+                <TropeChip
+                  key={t.id}
+                  name={t.name}
+                  emphasis={t.emphasis}
+                  onClick={() => cycle(t.id)}
+                />
               ))}
             </div>
           )}
           {openSuggestions.length > 0 && (
             <div>
-              <div className="mb-1.5 text-[11px] uppercase tracking-[0.2em] text-muted">Suggested</div>
+              <div className="mb-1.5 text-[11px] uppercase tracking-[0.2em] text-muted">
+                Suggested
+              </div>
               <div className="flex flex-wrap items-center gap-1.5">
                 {openSuggestions.map((s) => (
                   <span key={s.tropeId} className="inline-flex items-center gap-0.5">
-                    <TropeChip name={s.name} emphasis="off" onClick={() => resolveSuggestion.mutate({ bookId: book.id, tropeId: s.tropeId, accept: true })} />
-                    <button type="button" onClick={() => resolveSuggestion.mutate({ bookId: book.id, tropeId: s.tropeId, accept: false })} aria-label={`Dismiss suggestion ${s.name}`} className="h-6 w-6 rounded-full text-[11px] text-muted hover:text-ink">
+                    <TropeChip
+                      name={s.name}
+                      emphasis="off"
+                      onClick={() =>
+                        resolveSuggestion.mutate({
+                          bookId: book.id,
+                          tropeId: s.tropeId,
+                          accept: true,
+                        })
+                      }
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        resolveSuggestion.mutate({
+                          bookId: book.id,
+                          tropeId: s.tropeId,
+                          accept: false,
+                        })
+                      }
+                      aria-label={`Dismiss suggestion ${s.name}`}
+                      className="h-6 w-6 rounded-full text-[11px] text-muted hover:text-ink"
+                    >
                       ✕
                     </button>
                   </span>
@@ -153,7 +206,9 @@ export function JustFinishedSheet() {
           )}
           {frequent.length > 0 && (
             <div>
-              <div className="mb-1.5 text-[11px] uppercase tracking-[0.2em] text-muted">Your frequent</div>
+              <div className="mb-1.5 text-[11px] uppercase tracking-[0.2em] text-muted">
+                Your frequent
+              </div>
               <div className="flex flex-wrap gap-1.5">
                 {frequent.map((t) => (
                   <TropeChip key={t.id} name={t.name} emphasis="off" onClick={() => cycle(t.id)} />
@@ -163,29 +218,60 @@ export function JustFinishedSheet() {
           )}
         </div>
       )}
-      {note && <p className="mb-3 text-[12.5px]" style={{ color: 'var(--accent-ink)' }}>{note}</p>}
+      {note && (
+        <p className="mb-3 text-[12.5px]" style={{ color: 'var(--accent-ink)' }}>
+          {note}
+        </p>
+      )}
 
       {/* Mood — the natural moment: you just closed the book feeling something. Skippable like the
           rest of this ONE sheet; reader-assigned, never derived (docs/task-mood.md §2). */}
       <div className="mb-4">
-        <div className="mb-1.5 text-[11px] uppercase tracking-[0.2em] text-muted">How did it land?</div>
+        <div className="mb-1.5 text-[11px] uppercase tracking-[0.2em] text-muted">
+          How did it land?
+        </div>
         <MoodPicker book={book} />
       </div>
 
       {next && (
-        <div className="mb-4 rounded-2xl border p-3" style={{ borderColor: 'var(--accent-ink)', background: 'var(--card)' }}>
-          <p className="text-[10.5px] font-bold uppercase tracking-[0.24em]" style={{ color: 'var(--accent-ink)' }}>
+        <div
+          className="mb-4 rounded-2xl border p-3"
+          style={{ borderColor: 'var(--accent-ink)', background: 'var(--card)' }}
+        >
+          <p
+            className="text-[10.5px] font-bold uppercase tracking-[0.24em]"
+            style={{ color: 'var(--accent-ink)' }}
+          >
             The story continues
           </p>
-          <p className="mt-1 truncate text-[14.5px] font-semibold text-ink" style={{ fontFamily: 'var(--font-display)' }}>
+          <p
+            className="mt-1 truncate text-[14.5px] font-semibold text-ink"
+            style={{ fontFamily: 'var(--font-display)' }}
+          >
             Next: {linked?.title ?? next.title}
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
-            <button type="button" onClick={readNow} className="rounded-full px-3 py-1.5 text-[12px] font-semibold" style={{ background: 'var(--accent-fill)', color: 'var(--on-primary)' }}>
+            <button
+              type="button"
+              onClick={readNow}
+              className="rounded-full px-3 py-1.5 text-[12px] font-semibold"
+              style={{ background: 'var(--accent-fill)', color: 'var(--on-primary)' }}
+            >
               Reading now
             </button>
-            <button type="button" onClick={addNext} className="rounded-full border border-line px-3 py-1.5 text-[12px] font-semibold text-ink" style={{ background: 'var(--card)' }}>
-              {linked ? (tbr ? `Add to ${tbr.name}` : 'Keep it in mind') : tbr ? `⊹ Add to ${tbr.name}` : '⊹ Add to wishlist'}
+            <button
+              type="button"
+              onClick={addNext}
+              className="rounded-full border border-line px-3 py-1.5 text-[12px] font-semibold text-ink"
+              style={{ background: 'var(--card)' }}
+            >
+              {linked
+                ? tbr
+                  ? `Add to ${tbr.name}`
+                  : 'Keep it in mind'
+                : tbr
+                  ? `⊹ Add to ${tbr.name}`
+                  : '⊹ Add to wishlist'}
             </button>
           </div>
         </div>
@@ -195,7 +281,10 @@ export function JustFinishedSheet() {
         type="button"
         onClick={close}
         className="h-11 w-full rounded-xl text-[14px] font-semibold"
-        style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))', color: 'var(--on-primary)' }}
+        style={{
+          background: 'linear-gradient(135deg, var(--primary), var(--gold))',
+          color: 'var(--on-primary)',
+        }}
       >
         Done
       </button>

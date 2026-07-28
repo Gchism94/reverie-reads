@@ -25,11 +25,25 @@ export function MoodChip({
   const className =
     'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12.5px] italic'
   const style = active
-    ? { background: 'var(--card)', color: 'var(--ink)', borderColor: 'var(--accent-ink)', fontFamily: 'var(--font-display)' }
-    : { background: 'var(--field)', color: 'var(--muted)', borderColor: 'var(--line)', fontFamily: 'var(--font-display)' }
+    ? {
+        background: 'var(--card)',
+        color: 'var(--ink)',
+        borderColor: 'var(--accent-ink)',
+        fontFamily: 'var(--font-display)',
+      }
+    : {
+        background: 'var(--field)',
+        color: 'var(--muted)',
+        borderColor: 'var(--line)',
+        fontFamily: 'var(--font-display)',
+      }
   const body = (
     <>
-      <span aria-hidden className="inline-block h-1.5 w-1.5 flex-none rounded-full" style={{ background: active ? 'var(--accent-ink)' : 'var(--muted)' }} />
+      <span
+        aria-hidden
+        className="inline-block h-1.5 w-1.5 flex-none rounded-full"
+        style={{ background: active ? 'var(--accent-ink)' : 'var(--muted)' }}
+      />
       {name}
     </>
   )
@@ -40,7 +54,15 @@ export function MoodChip({
       </Link>
     )
   return (
-    <button type="button" onClick={onClick} aria-pressed={active} aria-label={`${name}${active ? ' (assigned)' : ''}`} className={className} style={style} title={title ?? name}>
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      aria-label={`${name}${active ? ' (assigned)' : ''}`}
+      className={className}
+      style={style}
+      title={title ?? name}
+    >
       {body}
     </button>
   )

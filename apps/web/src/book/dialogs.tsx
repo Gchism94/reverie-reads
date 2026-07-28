@@ -21,7 +21,14 @@ import {
 import { Modal } from '../components/Modal'
 import { Chip } from '../components/Chip'
 import { Stars } from '../components/Stars'
-import { FORMATS, otherGenreSubgenres, OWNERSHIP_LABELS, READ_STATUS_OPTIONS, readStatusLabel, subgenresForGenre } from '../library/constants'
+import {
+  FORMATS,
+  otherGenreSubgenres,
+  OWNERSHIP_LABELS,
+  READ_STATUS_OPTIONS,
+  readStatusLabel,
+  subgenresForGenre,
+} from '../library/constants'
 import { useBooks, useUpdateBook } from '../data/books'
 import { useSetContributors } from '../data/contributors'
 import { useSyncBookSeries } from '../data/series'
@@ -87,11 +94,22 @@ export function LogReadForm({ book, onClose }: { book: Book; onClose: () => void
       <p className="-mt-2 mb-4 text-[13px] text-muted">{book.title} — add a reread anytime.</p>
       <div className="flex flex-col gap-3">
         <Field label="Date finished">
-          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={fieldClass} style={fieldStyle} />
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className={fieldClass}
+            style={fieldStyle}
+          />
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Format">
-            <select value={format} onChange={(e) => setFormat(e.target.value)} className={fieldClass} style={fieldStyle}>
+            <select
+              value={format}
+              onChange={(e) => setFormat(e.target.value)}
+              className={fieldClass}
+              style={fieldStyle}
+            >
               {FORMATS.map((f) => (
                 <option key={f}>{f}</option>
               ))}
@@ -117,7 +135,10 @@ export function LogReadForm({ book, onClose }: { book: Book; onClose: () => void
           type="button"
           onClick={save}
           className="mt-1 h-11 rounded-xl text-[14px] font-semibold"
-          style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))', color: 'var(--on-primary)' }}
+          style={{
+            background: 'linear-gradient(135deg, var(--primary), var(--gold))',
+            color: 'var(--on-primary)',
+          }}
         >
           Save to read log
         </button>
@@ -180,7 +201,9 @@ export function EditDetails({
   const oldSeries = book.series.trim()
   const leavingSeries = !!oldSeries && f.series.trim() !== oldSeries
   const [confirmingLeave, setConfirmingLeave] = useState(false)
-  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof typeof f, string | undefined>>>({})
+  const [fieldErrors, setFieldErrors] = useState<
+    Partial<Record<keyof typeof f, string | undefined>>
+  >({})
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
 
@@ -221,7 +244,14 @@ export function EditDetails({
       setConfirmingLeave(false)
       return
     }
-    const { position: pos, seriesCount, pages, pubY, pubM, pubD } = (parsed as Extract<typeof parsed, { ok: true }>).values
+    const {
+      position: pos,
+      seriesCount,
+      pages,
+      pubY,
+      pubM,
+      pubD,
+    } = (parsed as Extract<typeof parsed, { ok: true }>).values
     const position = pos ?? ''
 
     setSaving(true)
@@ -268,7 +298,11 @@ export function EditDetails({
     <Modal title="Edit details" onClose={onClose} wide>
       {onChangeCover && (
         <div className="mb-3">
-          <button type="button" onClick={onChangeCover} className="text-[12.5px] font-semibold text-primary">
+          <button
+            type="button"
+            onClick={onChangeCover}
+            className="text-[12.5px] font-semibold text-primary"
+          >
             Change cover…
           </button>
         </div>
@@ -286,22 +320,49 @@ export function EditDetails({
         </Field>
       </div>
       <div className="mb-3">
-        <span className="mb-1 block text-[11px] uppercase tracking-[0.15em] text-muted">Contributors</span>
+        <span className="mb-1 block text-[11px] uppercase tracking-[0.15em] text-muted">
+          Contributors
+        </span>
         <ContributorEditor value={contribs} onChange={setContribs} suggestions={suggestions} />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Series">
-          <input value={f.series} onChange={(e) => set('series', e.target.value)} className={fieldClass} style={fieldStyle} />
+          <input
+            value={f.series}
+            onChange={(e) => set('series', e.target.value)}
+            className={fieldClass}
+            style={fieldStyle}
+          />
         </Field>
         <Field label="Position" error={fieldErrors.position}>
-          <input value={f.position} onChange={(e) => set('position', e.target.value)} inputMode="decimal" aria-invalid={!!fieldErrors.position} className={fieldClass} style={fieldStyle} />
+          <input
+            value={f.position}
+            onChange={(e) => set('position', e.target.value)}
+            inputMode="decimal"
+            aria-invalid={!!fieldErrors.position}
+            className={fieldClass}
+            style={fieldStyle}
+          />
         </Field>
         <Field label="Series length" error={fieldErrors.seriesCount}>
-          <input value={f.seriesCount} onChange={(e) => set('seriesCount', e.target.value)} placeholder="None set" inputMode="numeric" aria-invalid={!!fieldErrors.seriesCount} className={fieldClass} style={fieldStyle} />
+          <input
+            value={f.seriesCount}
+            onChange={(e) => set('seriesCount', e.target.value)}
+            placeholder="None set"
+            inputMode="numeric"
+            aria-invalid={!!fieldErrors.seriesCount}
+            className={fieldClass}
+            style={fieldStyle}
+          />
         </Field>
         <Field label="Series status">
           {/* the SERIES' publication status — the reader's own progress lives in reads */}
-          <select value={f.status} onChange={(e) => set('status', e.target.value)} className={fieldClass} style={fieldStyle}>
+          <select
+            value={f.status}
+            onChange={(e) => set('status', e.target.value)}
+            className={fieldClass}
+            style={fieldStyle}
+          >
             {SERIES_STATUS_VALUES.map((s) => (
               <option key={s} value={s}>
                 {SERIES_STATUS_LABELS[s]}
@@ -310,7 +371,12 @@ export function EditDetails({
           </select>
         </Field>
         <Field label="Genre">
-          <select value={f.genre} onChange={(e) => set('genre', e.target.value)} className={fieldClass} style={fieldStyle}>
+          <select
+            value={f.genre}
+            onChange={(e) => set('genre', e.target.value)}
+            className={fieldClass}
+            style={fieldStyle}
+          >
             {!f.genre && <option value="">Choose a genre…</option>}
             {f.genre && !CORE_GENRES.some((g) => g.toLowerCase() === f.genre) && (
               <option value={f.genre}>{f.genre}</option>
@@ -323,7 +389,12 @@ export function EditDetails({
           </select>
         </Field>
         <Field label="Format">
-          <select value={f.format} onChange={(e) => set('format', e.target.value)} className={fieldClass} style={fieldStyle}>
+          <select
+            value={f.format}
+            onChange={(e) => set('format', e.target.value)}
+            className={fieldClass}
+            style={fieldStyle}
+          >
             {FORMATS.map((s) => (
               <option key={s}>{s}</option>
             ))}
@@ -354,7 +425,9 @@ export function EditDetails({
         </Field>
       </div>
       <div className="mt-3">
-        <span className="mb-1 block text-[11px] uppercase tracking-[0.15em] text-muted">Subgenres</span>
+        <span className="mb-1 block text-[11px] uppercase tracking-[0.15em] text-muted">
+          Subgenres
+        </span>
         {f.genre ? (
           <div className="flex flex-wrap gap-1.5">
             {subOptions.map((s) => (
@@ -390,7 +463,9 @@ export function EditDetails({
           </div>
         )}
         {subs.length > 1 && (
-          <p className="mt-1.5 text-[11px] text-muted">First pick leads — it sets the book’s gradient.</p>
+          <p className="mt-1.5 text-[11px] text-muted">
+            First pick leads — it sets the book’s gradient.
+          </p>
         )}
       </div>
       {/* Reader state — ownership, the formats in hand, and read status. These lived ONLY on the book
@@ -400,16 +475,22 @@ export function EditDetails({
           IMMEDIATELY, like MoodPicker below — independent of this form's Save, because that is how
           they behave on the book page and a control should not change meaning by moving. */}
       <div className="mt-4">
-        <span className="mb-1 block text-[11px] uppercase tracking-[0.15em] text-muted">Your copies</span>
+        <span className="mb-1 block text-[11px] uppercase tracking-[0.15em] text-muted">
+          Your copies
+        </span>
         <OwnedCopies
           ownership={book.ownership}
           owned={book.owned}
           onChange={(owned) => updateBook.mutate({ id: book.id, patch: { owned } })}
-          onOwnershipChange={(ownership) => updateBook.mutate({ id: book.id, patch: { ownership } })}
+          onOwnershipChange={(ownership) =>
+            updateBook.mutate({ id: book.id, patch: { ownership } })
+          }
         />
       </div>
       <div className="mt-3">
-        <span className="mb-1 block text-[11px] uppercase tracking-[0.15em] text-muted">Reading status</span>
+        <span className="mb-1 block text-[11px] uppercase tracking-[0.15em] text-muted">
+          Reading status
+        </span>
         <div className="flex flex-wrap gap-1.5">
           {READ_STATUS_OPTIONS.map((rs) => (
             <Chip
@@ -418,7 +499,10 @@ export function EditDetails({
               onClick={() =>
                 updateBook.mutate({
                   id: book.id,
-                  patch: { readStatus: rs, ...(rs === 'Reading' ? { readingNowHidden: false } : {}) },
+                  patch: {
+                    readStatus: rs,
+                    ...(rs === 'Reading' ? { readingNowHidden: false } : {}),
+                  },
                 })
               }
             >
@@ -430,7 +514,9 @@ export function EditDetails({
 
       {/* Spice / intensity — settable here at last; Add was previously the only place it could be set. */}
       <div className="mt-3 flex items-center gap-2">
-        <span className="text-[11px] uppercase tracking-[0.15em] text-muted">{labels.intensity}</span>
+        <span className="text-[11px] uppercase tracking-[0.15em] text-muted">
+          {labels.intensity}
+        </span>
         {[1, 2, 3, 4, 5].map((i) => (
           <button
             key={i}
@@ -448,30 +534,60 @@ export function EditDetails({
           persist immediately (book_moods), independent of this form's Save. */}
       <div className="mt-3">
         <span className="mb-1 block text-[11px] uppercase tracking-[0.15em] text-muted">Mood</span>
-        <p className="mb-1.5 text-[12px] text-muted">How did it land on you? Optional, and yours alone.</p>
+        <p className="mb-1.5 text-[12px] text-muted">
+          How did it land on you? Optional, and yours alone.
+        </p>
         <MoodPicker book={book} />
       </div>
       <div className="mt-3 grid grid-cols-3 gap-3">
         <Field label="Pub year" error={fieldErrors.pubY}>
-          <input value={f.pubY} onChange={(e) => set('pubY', e.target.value)} placeholder="2021" inputMode="numeric" aria-invalid={!!fieldErrors.pubY} className={fieldClass} style={fieldStyle} />
+          <input
+            value={f.pubY}
+            onChange={(e) => set('pubY', e.target.value)}
+            placeholder="2021"
+            inputMode="numeric"
+            aria-invalid={!!fieldErrors.pubY}
+            className={fieldClass}
+            style={fieldStyle}
+          />
         </Field>
         <Field label="Month" error={fieldErrors.pubM}>
-          <input value={f.pubM} onChange={(e) => set('pubM', e.target.value)} placeholder="1–12" inputMode="numeric" aria-invalid={!!fieldErrors.pubM} className={fieldClass} style={fieldStyle} />
+          <input
+            value={f.pubM}
+            onChange={(e) => set('pubM', e.target.value)}
+            placeholder="1–12"
+            inputMode="numeric"
+            aria-invalid={!!fieldErrors.pubM}
+            className={fieldClass}
+            style={fieldStyle}
+          />
         </Field>
         <Field label="Day" error={fieldErrors.pubD}>
-          <input value={f.pubD} onChange={(e) => set('pubD', e.target.value)} placeholder="1–31" inputMode="numeric" aria-invalid={!!fieldErrors.pubD} className={fieldClass} style={fieldStyle} />
+          <input
+            value={f.pubD}
+            onChange={(e) => set('pubD', e.target.value)}
+            placeholder="1–31"
+            inputMode="numeric"
+            aria-invalid={!!fieldErrors.pubD}
+            className={fieldClass}
+            style={fieldStyle}
+          />
         </Field>
       </div>
       {/* Clearing or renaming the series REMOVES this book's slot from that series' reading order —
           the same removal the series page's ✕ performs. Destructive enough to name before it happens. */}
       {confirmingLeave ? (
-        <div className="mt-4 rounded-xl border border-line p-3" style={{ background: 'var(--field)' }}>
+        <div
+          className="mt-4 rounded-xl border border-line p-3"
+          style={{ background: 'var(--field)' }}
+        >
           <p className="text-[13px] text-ink">
             {f.series.trim()
               ? `Moving this book to ${f.series.trim()} removes its slot from ${oldSeries}.`
               : `This removes the book’s slot from ${oldSeries}.`}{' '}
             <span className="text-muted">
-              The book stays in your library, and fetching {oldSeries} again won’t bring the slot back.
+              The book stays in your library, and fetching {oldSeries} again won’t bring the slot
+              back.
             </span>
           </p>
           <div className="mt-3 flex gap-2">
@@ -488,7 +604,10 @@ export function EditDetails({
               onClick={() => void save()}
               disabled={saving}
               className="h-11 flex-1 rounded-xl text-[14px] font-semibold disabled:opacity-50"
-              style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))', color: 'var(--on-primary)' }}
+              style={{
+                background: 'linear-gradient(135deg, var(--primary), var(--gold))',
+                color: 'var(--on-primary)',
+              }}
             >
               {saving ? 'Saving…' : 'Save and remove'}
             </button>
@@ -500,7 +619,10 @@ export function EditDetails({
           onClick={() => (leavingSeries ? setConfirmingLeave(true) : void save())}
           disabled={!f.genre || saving}
           className="mt-4 h-11 w-full rounded-xl text-[14px] font-semibold disabled:opacity-40"
-          style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))', color: 'var(--on-primary)' }}
+          style={{
+            background: 'linear-gradient(135deg, var(--primary), var(--gold))',
+            color: 'var(--on-primary)',
+          }}
         >
           {saving ? 'Saving…' : f.genre ? 'Save details' : 'Pick a genre to save'}
         </button>
@@ -533,12 +655,29 @@ function ownedFormatList(owned: Book['owned']): string[] {
   return out
 }
 
-function DiffRow({ label, children, changed }: { label: string; children: ReactNode; changed?: boolean }) {
+function DiffRow({
+  label,
+  children,
+  changed,
+}: {
+  label: string
+  children: ReactNode
+  changed?: boolean
+}) {
   return (
     <div className="flex items-start gap-3 py-1.5">
-      <span className="w-24 flex-none text-[11px] uppercase tracking-[0.12em] text-muted">{label}</span>
+      <span className="w-24 flex-none text-[11px] uppercase tracking-[0.12em] text-muted">
+        {label}
+      </span>
       <span className="flex-1 text-[13px] text-ink">{children}</span>
-      {changed && <span className="flex-none text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--accent-ink)' }}>updated</span>}
+      {changed && (
+        <span
+          className="flex-none text-[10px] font-semibold uppercase tracking-wide"
+          style={{ color: 'var(--accent-ink)' }}
+        >
+          updated
+        </span>
+      )}
     </div>
   )
 }
@@ -564,7 +703,9 @@ function MergePreview({
   onConfirm: () => void
   onClose: () => void
 }) {
-  const merged = mergeBooks({ books: [primary, loser], tbrs: [], collections: [] }, primary.id, [loser.id]).books[0] ?? primary
+  const merged =
+    mergeBooks({ books: [primary, loser], tbrs: [], collections: [] }, primary.id, [loser.id])
+      .books[0] ?? primary
   const moods = unionRefs(primary.moods, loser.moods)
   const tropes = unionRefs(primary.tropes, loser.tropes)
   const formats = ownedFormatList(merged.owned)
@@ -575,33 +716,70 @@ function MergePreview({
     <Modal title="Review the merge" onClose={onClose}>
       <p className="-mt-2 mb-3 text-[13px] text-muted">
         <span className="font-semibold text-ink">{loser.title}</span> folds into{' '}
-        <span className="font-semibold text-ink">{primary.title}</span>, then it’s removed. This can’t
-        be undone — check what survives.
+        <span className="font-semibold text-ink">{primary.title}</span>, then it’s removed. This
+        can’t be undone — check what survives.
       </p>
 
       <div className="rounded-xl border border-line p-3" style={{ background: 'var(--field)' }}>
         <DiffRow label="Survivor">
           <span className="font-semibold">{merged.title}</span>
-          <span className="block text-[12px] text-muted">{authorOf(merged) || authorOf(primary) || 'Unknown author'}</span>
+          <span className="block text-[12px] text-muted">
+            {authorOf(merged) || authorOf(primary) || 'Unknown author'}
+          </span>
         </DiffRow>
         <DiffRow label="Ownership" changed={ownershipChanged}>
           {OWNERSHIP_LABELS[merged.ownership]}
-          {ownershipChanged && <span className="text-[12px] text-muted"> — was {OWNERSHIP_LABELS[primary.ownership]}, took the stronger</span>}
+          {ownershipChanged && (
+            <span className="text-[12px] text-muted">
+              {' '}
+              — was {OWNERSHIP_LABELS[primary.ownership]}, took the stronger
+            </span>
+          )}
         </DiffRow>
-        <DiffRow label="Formats">{formats.length ? formats.join(' · ') : <span className="text-muted">none marked</span>}</DiffRow>
+        <DiffRow label="Formats">
+          {formats.length ? formats.join(' · ') : <span className="text-muted">none marked</span>}
+        </DiffRow>
         <DiffRow label="Series">
-          {merged.series ? `${merged.series}${merged.position !== '' ? ` #${merged.position}` : ''}` : <span className="text-muted">none</span>}
+          {merged.series ? (
+            `${merged.series}${merged.position !== '' ? ` #${merged.position}` : ''}`
+          ) : (
+            <span className="text-muted">none</span>
+          )}
         </DiffRow>
         <DiffRow label="Cover">
-          {merged.cover ? (merged.cover === primary.cover ? 'kept this one’s' : 'taken from the other') : <span className="text-muted">none</span>}
+          {merged.cover ? (
+            merged.cover === primary.cover ? (
+              'kept this one’s'
+            ) : (
+              'taken from the other'
+            )
+          ) : (
+            <span className="text-muted">none</span>
+          )}
         </DiffRow>
-        <DiffRow label="Rating">{merged.rating ? `${merged.rating}★` : <span className="text-muted">unrated</span>}</DiffRow>
-        <DiffRow label="Reads">{merged.reads.length ? `${merged.reads.length} kept (from both)` : <span className="text-muted">none</span>}</DiffRow>
+        <DiffRow label="Rating">
+          {merged.rating ? `${merged.rating}★` : <span className="text-muted">unrated</span>}
+        </DiffRow>
+        <DiffRow label="Reads">
+          {merged.reads.length ? (
+            `${merged.reads.length} kept (from both)`
+          ) : (
+            <span className="text-muted">none</span>
+          )}
+        </DiffRow>
         <DiffRow label="Moods">
-          {moods.length ? moods.map((m) => m.name).join(', ') : <span className="text-muted">none</span>}
+          {moods.length ? (
+            moods.map((m) => m.name).join(', ')
+          ) : (
+            <span className="text-muted">none</span>
+          )}
         </DiffRow>
         <DiffRow label="Tropes">
-          {tropes.length ? tropes.map((t) => t.name).join(', ') : <span className="text-muted">none</span>}
+          {tropes.length ? (
+            tropes.map((t) => t.name).join(', ')
+          ) : (
+            <span className="text-muted">none</span>
+          )}
         </DiffRow>
       </div>
 
@@ -611,7 +789,13 @@ function MergePreview({
       </p>
 
       <div className="mt-4 flex gap-2">
-        <button type="button" onClick={onBack} disabled={pending} className="h-11 flex-1 rounded-xl border border-line text-[13.5px] font-semibold text-ink disabled:opacity-50" style={{ background: 'var(--card)' }}>
+        <button
+          type="button"
+          onClick={onBack}
+          disabled={pending}
+          className="h-11 flex-1 rounded-xl border border-line text-[13.5px] font-semibold text-ink disabled:opacity-50"
+          style={{ background: 'var(--card)' }}
+        >
           Back
         </button>
         <button
@@ -619,7 +803,10 @@ function MergePreview({
           onClick={onConfirm}
           disabled={pending}
           className="h-11 flex-1 rounded-xl text-[14px] font-semibold disabled:opacity-50"
-          style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))', color: 'var(--on-primary)' }}
+          style={{
+            background: 'linear-gradient(135deg, var(--primary), var(--gold))',
+            color: 'var(--on-primary)',
+          }}
         >
           {pending ? 'Merging…' : 'Merge — no undo'}
         </button>
@@ -683,7 +870,9 @@ export function MergeDialog({
             >
               <span>
                 <span className="text-[14px] font-semibold text-ink">{b.title}</span>
-                <span className="block text-[12px] text-muted">{authorOf(b) || 'Unknown author'}</span>
+                <span className="block text-[12px] text-muted">
+                  {authorOf(b) || 'Unknown author'}
+                </span>
               </span>
               <span className="text-[12px] font-semibold text-primary">Compare →</span>
             </button>

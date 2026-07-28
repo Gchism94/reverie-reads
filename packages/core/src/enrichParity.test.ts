@@ -35,10 +35,62 @@ import {
 } from '../../../supabase/functions/enrich/resolve'
 
 // Captured raw fixtures spanning all four sources + edge cases (coded subjects, html, isbn-10).
-const GOOGLE = { id: 'v1', volumeInfo: { title: 'Twisted Love', authors: ['Ana Huang'], publisher: 'Bloom', publishedDate: '2021-06-08', pageCount: 348, categories: ['Fiction / Romance / Contemporary'], description: '<p>Enemies <b>to</b> lovers.</p>', imageLinks: { thumbnail: 'http://g/c.jpg&edge=curl' }, industryIdentifiers: [{ type: 'ISBN_13', identifier: '9781735056258' }, { type: 'ISBN_10', identifier: '1735056251' }], language: 'en' } }
-const OL = { key: '/works/OL1W', edition_key: ['OL2M'], title: 'A Court of Thorns and Roses', author_name: ['Sarah J. Maas'], first_publish_year: 2015, number_of_pages_median: 419, isbn: ['9781619634442', '1619634449'], subject: ['Fantasy', 'series:a_court', 'nyt:x=1'], language: ['eng'], cover_i: 8231856 }
-const HC = { id: 9988, title: 'Fourth Wing', pages: 517, release_date: '2023-05-02', description: 'Dragons.', image: { url: 'https://hc/fw.jpg' }, book_series: [{ position: 1, series: { name: 'The Empyrean' } }], taggings: [{ tag: { tag: 'Dragon Riders' } }] }
-const ISBNDB = { book: { title: 'Haunting Adeline', authors: ['H. D. Carlton'], publisher: 'Self', date_published: '2021-08-12', pages: 532, binding: 'Paperback', language: 'en', isbn13: '9781957635019', isbn10: '1957635010', subjects: ['Dark Romance', 'Thriller'], synopsis: '<i>Cat</i> and mouse.', image: 'https://i/ha.jpg' } }
+const GOOGLE = {
+  id: 'v1',
+  volumeInfo: {
+    title: 'Twisted Love',
+    authors: ['Ana Huang'],
+    publisher: 'Bloom',
+    publishedDate: '2021-06-08',
+    pageCount: 348,
+    categories: ['Fiction / Romance / Contemporary'],
+    description: '<p>Enemies <b>to</b> lovers.</p>',
+    imageLinks: { thumbnail: 'http://g/c.jpg&edge=curl' },
+    industryIdentifiers: [
+      { type: 'ISBN_13', identifier: '9781735056258' },
+      { type: 'ISBN_10', identifier: '1735056251' },
+    ],
+    language: 'en',
+  },
+}
+const OL = {
+  key: '/works/OL1W',
+  edition_key: ['OL2M'],
+  title: 'A Court of Thorns and Roses',
+  author_name: ['Sarah J. Maas'],
+  first_publish_year: 2015,
+  number_of_pages_median: 419,
+  isbn: ['9781619634442', '1619634449'],
+  subject: ['Fantasy', 'series:a_court', 'nyt:x=1'],
+  language: ['eng'],
+  cover_i: 8231856,
+}
+const HC = {
+  id: 9988,
+  title: 'Fourth Wing',
+  pages: 517,
+  release_date: '2023-05-02',
+  description: 'Dragons.',
+  image: { url: 'https://hc/fw.jpg' },
+  book_series: [{ position: 1, series: { name: 'The Empyrean' } }],
+  taggings: [{ tag: { tag: 'Dragon Riders' } }],
+}
+const ISBNDB = {
+  book: {
+    title: 'Haunting Adeline',
+    authors: ['H. D. Carlton'],
+    publisher: 'Self',
+    date_published: '2021-08-12',
+    pages: 532,
+    binding: 'Paperback',
+    language: 'en',
+    isbn13: '9781957635019',
+    isbn10: '1957635010',
+    subjects: ['Dark Romance', 'Thriller'],
+    synopsis: '<i>Cat</i> and mouse.',
+    image: 'https://i/ha.jpg',
+  },
+}
 
 describe('enrich mirror ↔ core parity (golden fixtures)', () => {
   it('normalizers produce identical SourceRecords', () => {
@@ -46,14 +98,33 @@ describe('enrich mirror ↔ core parity (golden fixtures)', () => {
     expect(fnNOL(OL)).toEqual(coreNOL(OL))
     expect(fnNH(HC)).toEqual(coreNH(HC))
     expect(fnNI(ISBNDB)).toEqual(coreNI(ISBNDB))
-    const HCS = { id: 714600, title: 'Fourth Wing', author_names: ['Rebecca Yarros'], image: { url: 'https://assets.hardcover.app/x.jpeg' }, isbns: ['1637991029', '9781637991022'], release_date: '2023-05-02', series_names: ['The Empyrean'], featured_series_position: 1, genres: ['Fantasy', 'Romance'], moods: ['adventurous'], pages: 517, description: '<p>Dragons.</p>' }
+    const HCS = {
+      id: 714600,
+      title: 'Fourth Wing',
+      author_names: ['Rebecca Yarros'],
+      image: { url: 'https://assets.hardcover.app/x.jpeg' },
+      isbns: ['1637991029', '9781637991022'],
+      release_date: '2023-05-02',
+      series_names: ['The Empyrean'],
+      featured_series_position: 1,
+      genres: ['Fantasy', 'Romance'],
+      moods: ['adventurous'],
+      pages: 517,
+      description: '<p>Dragons.</p>',
+    }
     expect(fnNHS(HCS)).toEqual(coreNHS(HCS))
   })
 
   it('mapGenre is identical', () => {
     const batteries = [
-      ['Romance', 'Fantasy'], ['Space Opera'], ['Cooking'], ['Dark Romance', 'Horror'],
-      ['Cozy Mysteries'], ['Thriller', 'Suspense'], ['Historical'], ['Juvenile Fiction'],
+      ['Romance', 'Fantasy'],
+      ['Space Opera'],
+      ['Cooking'],
+      ['Dark Romance', 'Horror'],
+      ['Cozy Mysteries'],
+      ['Thriller', 'Suspense'],
+      ['Historical'],
+      ['Juvenile Fiction'],
     ]
     for (const cats of batteries) {
       expect(fnMapGenre(cats)).toEqual(coreMapGenre(cats))
@@ -77,10 +148,20 @@ describe('enrich mirror ↔ core parity (golden fixtures)', () => {
 
 describe('resolve mirror ↔ core parity (E1)', () => {
   it('matchKey + selfIsbn13 are identical', () => {
-    for (const s of ['Céline', 'King of Wrath: A Novel', '  Twisted  Love ', 'A Court of Thorns & Roses']) {
+    for (const s of [
+      'Céline',
+      'King of Wrath: A Novel',
+      '  Twisted  Love ',
+      'A Court of Thorns & Roses',
+    ]) {
       expect(fnMatchKey(s)).toBe(coreMatchKey(s))
     }
-    for (const r of [{ isbn10: '1735056251' }, { isbn13: '978-1-7350-5625-8' }, { isbns: ['1735056251'] }, {}]) {
+    for (const r of [
+      { isbn10: '1735056251' },
+      { isbn13: '978-1-7350-5625-8' },
+      { isbns: ['1735056251'] },
+      {},
+    ]) {
       expect(fnSelfIsbn(r)).toBe(coreSelfIsbn(r))
     }
   })
@@ -88,16 +169,41 @@ describe('resolve mirror ↔ core parity (E1)', () => {
   it('scoreCandidate + selectBestMatch are identical', () => {
     const q = { title: 'King of Wrath', author: 'Ana Huang' }
     const cands: ResolveCandidate[] = [
-      { source: 'hardcover', record: { title: 'King of Wrath', authors: ['Ana Huang'], isbn13: '9780000000001', cover: 'a.jpg' } },
-      { source: 'google', record: { title: 'King of Wrath: A Novel', authors: ['Ana Huang'], isbn13: '9780000000002', cover: 'b.jpg' } },
-      { source: 'openlibrary', record: { title: 'King of Wrath', authors: ['Someone Else'], isbn13: '9780000000003' } },
+      {
+        source: 'hardcover',
+        record: {
+          title: 'King of Wrath',
+          authors: ['Ana Huang'],
+          isbn13: '9780000000001',
+          cover: 'a.jpg',
+        },
+      },
+      {
+        source: 'google',
+        record: {
+          title: 'King of Wrath: A Novel',
+          authors: ['Ana Huang'],
+          isbn13: '9780000000002',
+          cover: 'b.jpg',
+        },
+      },
+      {
+        source: 'openlibrary',
+        record: { title: 'King of Wrath', authors: ['Someone Else'], isbn13: '9780000000003' },
+      },
     ]
     for (const c of cands) expect(fnScore(q, c)).toEqual(coreScore(q, c))
     expect(fnSelect(q, cands)).toEqual(coreSelect(q, cands))
     // ambiguous (no author) path too
     const amb: ResolveCandidate[] = [
-      { source: 'google', record: { title: 'Twisted', authors: ['Ana Huang'], isbn13: '9780000000001' } },
-      { source: 'openlibrary', record: { title: 'Twisted', authors: ['Lisa Jackson'], isbn13: '9780000000002' } },
+      {
+        source: 'google',
+        record: { title: 'Twisted', authors: ['Ana Huang'], isbn13: '9780000000001' },
+      },
+      {
+        source: 'openlibrary',
+        record: { title: 'Twisted', authors: ['Lisa Jackson'], isbn13: '9780000000002' },
+      },
     ]
     expect(fnSelect({ title: 'Twisted' }, amb)).toEqual(coreSelect({ title: 'Twisted' }, amb))
   })

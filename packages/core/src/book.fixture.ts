@@ -19,7 +19,7 @@ export function makeBook(partial: Partial<Book> & { id: string; title: string })
     intensity: 0,
     cover: '',
     pages: null,
-  isbn: '',
+    isbn: '',
     fave: false,
     ownership: 'owned',
     owned: { physical: false, ebook: false, audiobook: false },
@@ -35,6 +35,7 @@ export function makeBook(partial: Partial<Book> & { id: string; title: string })
     ...partial,
     // Keep the mirror invariant: unless the test sets subgenres itself, the array follows the
     // single (a partial overriding only `subgenre` must not keep the default array).
-    subgenres: partial.subgenres ?? ((partial.subgenre ?? 'Romance') ? [partial.subgenre ?? 'Romance'] : []),
+    subgenres:
+      partial.subgenres ?? ((partial.subgenre ?? 'Romance') ? [partial.subgenre ?? 'Romance'] : []),
   }
 }

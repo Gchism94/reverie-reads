@@ -19,7 +19,17 @@ function luminance(h: number, s: number, l: number): number {
   const m = L - c / 2
   const hh = ((h % 360) + 360) % 360
   const [r, g, b] =
-    hh < 60 ? [c, x, 0] : hh < 120 ? [x, c, 0] : hh < 180 ? [0, c, x] : hh < 240 ? [0, x, c] : hh < 300 ? [x, 0, c] : [c, 0, x]
+    hh < 60
+      ? [c, x, 0]
+      : hh < 120
+        ? [x, c, 0]
+        : hh < 180
+          ? [0, c, x]
+          : hh < 240
+            ? [0, x, c]
+            : hh < 300
+              ? [x, 0, c]
+              : [c, 0, x]
   const f = (v: number): number => {
     const u = v + m
     return u <= 0.03928 ? u / 12.92 : Math.pow((u + 0.055) / 1.055, 2.4)
@@ -65,7 +75,10 @@ describe('cover gradient — every generated stop is legible by construction', (
       for (const stop of coverGradient(genre, subgenre)) {
         const [h, s, l] = parseHsl(stop)
         const r = ratio(WHITE, luminance(h, s, l))
-        expect(r, `${genre}/${subgenre || '—'} ${stop} vs white = ${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(AA)
+        expect(
+          r,
+          `${genre}/${subgenre || '—'} ${stop} vs white = ${r.toFixed(2)}:1`,
+        ).toBeGreaterThanOrEqual(AA)
       }
     }
   })
@@ -92,7 +105,10 @@ describe('cover gradient — the subgenre modulates, it never re-genres', () => 
       const key = genre.toLowerCase()
       const base = parseHsl(coverGradient(key, '')[0])[0]
       for (const { subgenre } of gradientMatrix().filter((m) => m.genre === key)) {
-        expect(parseHsl(coverGradient(key, subgenre)[0])[0], `${key}/${subgenre} drifted off its hue`).toBe(base)
+        expect(
+          parseHsl(coverGradient(key, subgenre)[0])[0],
+          `${key}/${subgenre} drifted off its hue`,
+        ).toBe(base)
       }
     }
   })

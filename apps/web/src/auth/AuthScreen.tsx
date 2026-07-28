@@ -22,13 +22,16 @@ const reqs = (pw: string) => [
 function Field({ label, children }: { label: ReactNode; children: ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-[12px] uppercase tracking-[0.16em] text-muted">{label}</span>
+      <span className="mb-1.5 block text-[12px] uppercase tracking-[0.16em] text-muted">
+        {label}
+      </span>
       {children}
     </label>
   )
 }
 
-const inputClass = 'h-11 w-full rounded-xl border border-line px-3.5 text-[15px] text-ink outline-none focus:border-[color:var(--gold)]'
+const inputClass =
+  'h-11 w-full rounded-xl border border-line px-3.5 text-[15px] text-ink outline-none focus:border-[color:var(--gold)]'
 const inputStyle = { background: 'var(--field)' } as const
 
 export function AuthScreen() {
@@ -45,7 +48,11 @@ export function AuthScreen() {
   const emailValid = EMAIL_RE.test(email)
   const pwStrong = reqs(password).every((r) => r.ok)
   const canSubmit =
-    mode === 'forgot' ? emailValid : mode === 'signup' ? emailValid && pwStrong : emailValid && password.length > 0
+    mode === 'forgot'
+      ? emailValid
+      : mode === 'signup'
+        ? emailValid && pwStrong
+        : emailValid && password.length > 0
 
   function go(next: Mode) {
     setMode(next)
@@ -106,7 +113,12 @@ export function AuthScreen() {
               ? '. Open it to finish setting up — verification is required before your first sign-in.'
               : ', a reset link is on its way.'}
           </p>
-          <button type="button" onClick={() => go('signin')} className="mt-6 text-[14px] font-semibold" style={{ color: 'var(--gold)' }}>
+          <button
+            type="button"
+            onClick={() => go('signin')}
+            className="mt-6 text-[14px] font-semibold"
+            style={{ color: 'var(--gold)' }}
+          >
             Back to log in
           </button>
         </div>
@@ -114,7 +126,12 @@ export function AuthScreen() {
     )
   }
 
-  const title = mode === 'signup' ? 'Create your account' : mode === 'forgot' ? 'Reset your password' : 'Welcome back'
+  const title =
+    mode === 'signup'
+      ? 'Create your account'
+      : mode === 'forgot'
+        ? 'Reset your password'
+        : 'Welcome back'
   const sub =
     mode === 'signup'
       ? 'Start your library tonight. Your shelves, yours alone.'
@@ -147,11 +164,19 @@ export function AuthScreen() {
         {mode !== 'forgot' && (
           <div>
             <div className="mb-1.5 flex items-center justify-between">
-              <label htmlFor="password" className="text-[12px] uppercase tracking-[0.16em] text-muted">
+              <label
+                htmlFor="password"
+                className="text-[12px] uppercase tracking-[0.16em] text-muted"
+              >
                 Password
               </label>
               {mode === 'signin' && (
-                <button type="button" onClick={() => go('forgot')} className="text-[11px] font-semibold" style={{ color: 'var(--gold)' }}>
+                <button
+                  type="button"
+                  onClick={() => go('forgot')}
+                  className="text-[11px] font-semibold"
+                  style={{ color: 'var(--gold)' }}
+                >
                   Forgot password?
                 </button>
               )}
@@ -183,7 +208,11 @@ export function AuthScreen() {
         {mode === 'signup' && (
           <ul className="-mt-1 flex flex-col gap-1">
             {reqs(password).map((r) => (
-              <li key={r.label} className="flex items-center gap-2 text-[12px]" style={{ color: r.ok ? 'var(--ok)' : 'var(--muted)' }}>
+              <li
+                key={r.label}
+                className="flex items-center gap-2 text-[12px]"
+                style={{ color: r.ok ? 'var(--ok)' : 'var(--muted)' }}
+              >
                 <span aria-hidden>{r.ok ? '✓' : '○'}</span>
                 {r.label}
               </li>
@@ -215,7 +244,10 @@ export function AuthScreen() {
 
       {mode !== 'forgot' && (
         <>
-          <div className="my-5 flex items-center gap-3 text-[12px]" style={{ color: 'var(--faint)' }}>
+          <div
+            className="my-5 flex items-center gap-3 text-[12px]"
+            style={{ color: 'var(--faint)' }}
+          >
             <span className="h-px flex-1" style={{ background: 'var(--line)' }} />
             or continue with
             <span className="h-px flex-1" style={{ background: 'var(--line)' }} />
@@ -232,7 +264,10 @@ export function AuthScreen() {
                 className="flex h-11 items-center justify-center gap-2 rounded-xl border border-line text-[14px] font-semibold text-ink disabled:opacity-45"
                 style={{ background: 'var(--field)' }}
               >
-                <span aria-hidden style={p === 'google' ? { fontFamily: 'var(--font-display)' } : undefined}>
+                <span
+                  aria-hidden
+                  style={p === 'google' ? { fontFamily: 'var(--font-display)' } : undefined}
+                >
                   {p === 'google' ? 'G' : ''}
                 </span>
                 {p === 'google' ? 'Google' : 'Apple'}
@@ -251,21 +286,36 @@ export function AuthScreen() {
         {mode === 'signup' ? (
           <>
             Already have an account?{' '}
-            <button type="button" onClick={() => go('signin')} className="font-semibold" style={{ color: 'var(--gold)' }}>
+            <button
+              type="button"
+              onClick={() => go('signin')}
+              className="font-semibold"
+              style={{ color: 'var(--gold)' }}
+            >
               Log in
             </button>
           </>
         ) : mode === 'forgot' ? (
           <>
             Remembered it?{' '}
-            <button type="button" onClick={() => go('signin')} className="font-semibold" style={{ color: 'var(--gold)' }}>
+            <button
+              type="button"
+              onClick={() => go('signin')}
+              className="font-semibold"
+              style={{ color: 'var(--gold)' }}
+            >
               Back to log in
             </button>
           </>
         ) : (
           <>
             New to the night shelf?{' '}
-            <button type="button" onClick={() => go('signup')} className="font-semibold" style={{ color: 'var(--gold)' }}>
+            <button
+              type="button"
+              onClick={() => go('signup')}
+              className="font-semibold"
+              style={{ color: 'var(--gold)' }}
+            >
               Create an account
             </button>
           </>
@@ -287,7 +337,10 @@ function Shell({ children }: { children: ReactNode }) {
           <Link to="/" className="inline-block">
             <Wordmark />
           </Link>
-          <h2 className="mt-8 max-w-[14ch] text-balance text-[44px] leading-[1.04] text-ink" style={displayFont}>
+          <h2
+            className="mt-8 max-w-[14ch] text-balance text-[44px] leading-[1.04] text-ink"
+            style={displayFont}
+          >
             A reading life,{' '}
             <span className="italic" style={{ color: 'var(--gold)' }}>
               beautifully kept.
@@ -301,7 +354,10 @@ function Shell({ children }: { children: ReactNode }) {
           </p>
         </aside>
 
-        <div className="w-full rounded-3xl border border-line p-7" style={{ background: 'var(--card)', boxShadow: 'var(--shadow)' }}>
+        <div
+          className="w-full rounded-3xl border border-line p-7"
+          style={{ background: 'var(--card)', boxShadow: 'var(--shadow)' }}
+        >
           <Link to="/" className="mb-6 inline-block md:hidden">
             <Wordmark />
           </Link>

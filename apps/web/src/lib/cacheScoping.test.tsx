@@ -1,6 +1,9 @@
 import { act, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, useIsRestoring, useQuery } from '@tanstack/react-query'
-import { PersistQueryClientProvider, type PersistedClient } from '@tanstack/react-query-persist-client'
+import {
+  PersistQueryClientProvider,
+  type PersistedClient,
+} from '@tanstack/react-query-persist-client'
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -98,7 +101,13 @@ function Library({ fetchBooks }: { fetchBooks: () => Promise<string[]> }) {
 function deferredFetch(value: string[]) {
   let release!: () => void
   const gate = new Promise<void>((r) => (release = r))
-  return { fetch: async () => { await gate; return value }, release }
+  return {
+    fetch: async () => {
+      await gate
+      return value
+    },
+    release,
+  }
 }
 
 async function rowIds(): Promise<string[]> {
@@ -171,7 +180,10 @@ describe('guard: one reader’s cached library never renders for another', () =>
 describe('guard: sign-out forgets the library', () => {
   const renderWithAuth = (fetchBooks: () => Promise<string[]>, client: QueryClient) =>
     render(
-      <PersistQueryClientProvider client={client} persistOptions={{ persister: createDexiePersister(), buster: BUSTER }}>
+      <PersistQueryClientProvider
+        client={client}
+        persistOptions={{ persister: createDexiePersister(), buster: BUSTER }}
+      >
         <AuthProvider>
           <Library fetchBooks={fetchBooks} />
         </AuthProvider>
@@ -206,7 +218,10 @@ describe('guard: sign-out forgets the library', () => {
 
     const b = deferredFetch(B_BOOKS)
     render(
-      <PersistQueryClientProvider client={client} persistOptions={{ persister: createDexiePersister(), buster: BUSTER }}>
+      <PersistQueryClientProvider
+        client={client}
+        persistOptions={{ persister: createDexiePersister(), buster: BUSTER }}
+      >
         <AuthProvider>
           <Gated fetchBooks={b.fetch} />
         </AuthProvider>

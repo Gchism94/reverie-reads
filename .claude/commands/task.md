@@ -21,6 +21,7 @@ Reproduce the problem before changing anything. State the root cause and the evi
 the task doc's stated cause turns out to be wrong, say so plainly and fix the real one.
 
 Distinguish these, and name which applies:
+
 - a real defect in shipped code
 - a stale test assertion that no longer matches a deliberate decision
 - a fix that landed somewhere the reader never reaches

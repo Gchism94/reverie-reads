@@ -6,22 +6,26 @@ quotas, or making the app brittle. This extends the shipped enrich Edge Function
 (A2), and the bulk fill-missing job (A4); it's the spec they should converge to.
 
 ## Principle: AGGREGATE, don't pick
+
 No single source is complete or consistently structured. The right model is a server-side
 aggregator that queries several sources and merges FIELD BY FIELD using a per-field precedence
 policy — never "first source wins wholesale." User-authored fields ALWAYS win and are never
 overwritten (already a merge rule).
 
 ## Step 1 — Resolve identity (work + edition)
+
 A scan is an EAN-13 → ISBN-13 (sometimes ISBN-10). Normalize ISBN-10<->13 (already in core).
 Resolve to two levels:
+
 - EDITION (the scanned copy): this cover, format/binding, page count or audio duration,
   publisher, publication date, language, the specific ISBN. Drives per-format ownership (S1/S2).
 - WORK (the title across editions): canonical title/author, series + position, other
   editions/formats, community tags. Drives series gaps, "other formats", adaptive-skin genre.
-Cross-reference identifiers across sources: Open Library work/edition keys, Google volumeId,
-Hardcover book/edition ids.
+  Cross-reference identifiers across sources: Open Library work/edition keys, Google volumeId,
+  Hardcover book/edition ids.
 
 ## Step 2 — Source roster (what each is genuinely best for)
+
 - Google Books — FREE, ~1,000 requests/day default per key (can request more); broad coverage;
   good for description, categories, search, cover thumbnails. Metadata is inconsistent/loosely
   structured, so it's not authoritative for structured edition fields. Cache hard.
@@ -43,8 +47,10 @@ Hardcover book/edition ids.
   Ingram are largely restricted/commercial.
 
 ## Step 3 — Field-level precedence (the merge map)
+
 For each field: ordered preference; on conflict, the rule noted. (Provenance + fetched-at stored
 per field so conflicts can be re-evaluated and the user can override.)
+
 - canonical title / author: Open Library / Hardcover work-level -> Google -> ISBNdb; prefer the
   edition-matched value.
 - series + position: Hardcover -> Open Library -> manual.
@@ -63,6 +69,7 @@ per field so conflicts can be re-evaluated and the user can override.)
 - ANY user-authored field: always wins; never overwritten by enrichment.
 
 ## Step 4 — Sync fast pass + async completion (UX)
+
 - On scan/add: SYNC fast pass — normalize ISBN, hit cache; on miss, one fast source (Open Library
   or Google by ISBN) for title/author/cover so the book appears instantly in a "completing…" state.
 - BACKGROUND: the enrich Edge Function runs the full multi-source merge, fills missing fields,
@@ -70,6 +77,7 @@ per field so conflicts can be re-evaluated and the user can override.)
 - Never block scanning on a multi-source waterfall.
 
 ## Step 5 — Global shared cache (the cost + speed lever; see SCALING.md)
+
 - Cache the normalized merged record keyed by normalized ISBN-13 AND resolved work/edition id, with
   per-field provenance + fetched-at — GLOBAL, not per-user, so the Nth user scanning the same book
   hits cache and triggers no external calls. This is the single biggest cost control.
@@ -79,16 +87,19 @@ per field so conflicts can be re-evaluated and the user can override.)
   rate-limiting, caching, and required for Hardcover (backend-only) + ISBNdb (key in header).
 
 ## Step 6 — Quota / rate management (grounded)
+
 Google ~1k/day per key (per-run ceiling + cache from A4); Open Library courtesy throttle + UA;
 Hardcover low-volume best-effort with backoff (beta); ISBNdb per-plan daily cap, honor the
 ratelimit headers, note 404 may resolve later (retry). Negative-cache dead-ends (A4). Degrade
 gracefully — partial record + queue for re-enrichment, never a hard failure.
 
 ## Step 7 — Match + dedupe on the way in
+
 Feed the normalized record through match.ts / decideIntake so a scan/add that matches an existing
 book merges (auto for strong, review for fuzzy). Completeness and dedupe happen together.
 
 ## Recommendation (tiered, pluggable)
+
 - v1 (free, now): Open Library (identity + edition + cover fallback) + Google Books (description/
   categories/cover), merged field-level, cached globally, async. Hardcover optional via a backend
   token for series + tags (best-effort). Gets ~80–90% completeness at zero marginal cost.
@@ -99,5 +110,6 @@ book merges (auto for strong, review for fuzzy). Completeness and dedupe happen 
   buy-link attributionMode, so ISBNdb/ONIX/Amazon slot in later without a refactor.
 
 ## Owner actions
+
 - HARDCOVER_TOKEN (backend, server-only) to turn on series/tags now (best-effort).
 - Decide on an ISBNdb subscription when max completeness / rare-title coverage matters (v2).

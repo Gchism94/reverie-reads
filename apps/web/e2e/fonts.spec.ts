@@ -35,7 +35,10 @@ const FAMILIES: [string, string][] = [
 
 test('every designed skin typeface actually loads (no silent fallback)', async ({ page }) => {
   const sb = createClient(SUPABASE_URL, ANON)
-  const { data, error } = await sb.auth.signInWithPassword({ email: 'dev@reverie.local', password: 'reverie-dev-password' })
+  const { data, error } = await sb.auth.signInWithPassword({
+    email: 'dev@reverie.local',
+    password: 'reverie-dev-password',
+  })
   if (error || !data.session) throw new Error(authFailure('fonts', 'dev@reverie.local', error))
   const { access_token, refresh_token } = data.session
   await page.goto(
@@ -48,13 +51,18 @@ test('every designed skin typeface actually loads (no silent fallback)', async (
   await page.goto('/skins') // the gallery loads every skin's pairing
   await page.waitForTimeout(500)
 
-  const results = await page.evaluate(async (families: string[]) => {
-    // ask the font loader for each family explicitly, then report what resolved
-    await Promise.all(families.map((f) => document.fonts.load(`600 16px "${f}"`).catch(() => [])))
-    await document.fonts.ready
-    return families.map((f) => [f, document.fonts.check(`600 16px "${f}"`)] as const)
-  }, FAMILIES.map(([f]) => f))
+  const results = await page.evaluate(
+    async (families: string[]) => {
+      // ask the font loader for each family explicitly, then report what resolved
+      await Promise.all(families.map((f) => document.fonts.load(`600 16px "${f}"`).catch(() => [])))
+      await document.fonts.ready
+      return families.map((f) => [f, document.fonts.check(`600 16px "${f}"`)] as const)
+    },
+    FAMILIES.map(([f]) => f),
+  )
 
-  const missing = results.filter(([, ok]) => !ok).map(([f]) => `${f} (${FAMILIES.find(([n]) => n === f)?.[1]})`)
+  const missing = results
+    .filter(([, ok]) => !ok)
+    .map(([f]) => `${f} (${FAMILIES.find(([n]) => n === f)?.[1]})`)
   expect(missing, `families that never loaded: ${missing.join(', ')}`).toHaveLength(0)
 })

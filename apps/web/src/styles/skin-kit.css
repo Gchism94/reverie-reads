@@ -12,8 +12,12 @@
   transition-duration: var(--motion-duration);
 }
 
-.skin-card { border-radius: var(--radius-card); }
-.skin-panel { border-radius: var(--radius-panel); }
+.skin-card {
+  border-radius: var(--radius-card);
+}
+.skin-panel {
+  border-radius: var(--radius-panel);
+}
 
 /* Free-text field silhouette (search / text inputs): the skin's control SHAPE, but NOT its label
    font or text-transform — typed text must stay as the user typed it (no forced uppercase, no
@@ -122,9 +126,17 @@
 [data-skin='tryst'] .skin-btn-icon {
   border-radius: 50%;
   border: 1px solid rgba(0, 0, 0, 0.3);
-  background: radial-gradient(circle at 35% 28%, var(--seal-hi), var(--seal-mid) 58%, var(--seal-lo));
+  background: radial-gradient(
+    circle at 35% 28%,
+    var(--seal-hi),
+    var(--seal-mid) 58%,
+    var(--seal-lo)
+  );
   color: var(--seal-ink);
-  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.16), inset 0 -4px 9px rgba(0, 0, 0, 0.45), 0 8px 18px color-mix(in srgb, var(--seal-mid) 40%, transparent);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -4px 9px rgba(0, 0, 0, 0.45),
+    0 8px 18px color-mix(in srgb, var(--seal-mid) 40%, transparent);
 }
 /* the guest-book line: an underline, not a box; typed text stays as typed but the field speaks italic serif */
 [data-skin='tryst'] .skin-field {
@@ -171,7 +183,9 @@
   border: 1px solid rgba(0, 0, 0, 0.45);
   background: linear-gradient(160deg, #a8843c, #6e5420 60%, #8a6a2f);
   color: #f6ecd2;
-  box-shadow: inset 0 2px 0 rgba(255, 235, 180, 0.3), inset 0 -4px 8px rgba(0, 0, 0, 0.4);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 235, 180, 0.3),
+    inset 0 -4px 8px rgba(0, 0, 0, 0.4);
 }
 /* the ruled manuscript line under a pilcrow */
 [data-skin='grimoire'] .skin-field {
@@ -203,9 +217,16 @@
   clip-path: none;
   border-radius: 50%;
   border: 1px solid rgba(0, 0, 0, 0.5);
-  background: radial-gradient(circle at 34% 28%, var(--slate), color-mix(in srgb, var(--slate) 62%, #000) 62%, color-mix(in srgb, var(--slate) 45%, #000));
+  background: radial-gradient(
+    circle at 34% 28%,
+    var(--slate),
+    color-mix(in srgb, var(--slate) 62%, #000) 62%,
+    color-mix(in srgb, var(--slate) 45%, #000)
+  );
   color: var(--paper);
-  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.3), inset 0 -4px 8px rgba(0, 0, 0, 0.4);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -4px 8px rgba(0, 0, 0, 0.4);
 }
 /* the ledger line */
 [data-skin='marrow'] .skin-field {
@@ -253,9 +274,16 @@
 [data-skin='umbra'] .skin-btn-icon {
   border-radius: 50%;
   border: 1px solid rgba(0, 0, 0, 0.5);
-  background: radial-gradient(circle at 34% 28%, var(--cta-hi), var(--cta-lo) 58%, color-mix(in srgb, var(--cta-lo) 70%, #000));
+  background: radial-gradient(
+    circle at 34% 28%,
+    var(--cta-hi),
+    var(--cta-lo) 58%,
+    color-mix(in srgb, var(--cta-lo) 70%, #000)
+  );
   color: var(--cta-ink);
-  box-shadow: inset 0 2px 0 rgba(255, 244, 205, 0.5), inset 0 -4px 8px rgba(70, 50, 10, 0.4);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 244, 205, 0.5),
+    inset 0 -4px 8px rgba(70, 50, 10, 0.4);
 }
 /* the typewriter SUBJECT line */
 [data-skin='umbra'] .skin-field {
@@ -318,7 +346,9 @@
     radial-gradient(circle at 62% 62%, rgba(40, 28, 12, 0.7) 1px, transparent 1.6px),
     radial-gradient(circle at 35% 30%, var(--gold), var(--gold-deep));
   color: #fdf3ea;
-  box-shadow: inset 0 1px 0 rgba(255, 244, 205, 0.4), 0 2px 5px rgba(0, 0, 0, 0.3);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 244, 205, 0.4),
+    0 2px 5px rgba(0, 0, 0, 0.3);
 }
 /* the recipe line on paper */
 [data-skin='hearth'] .skin-field {
@@ -382,7 +412,9 @@
   border: 0;
   background: var(--paper);
   color: var(--accent-fill);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-fill) 30%, transparent), 0 2px 6px rgba(40, 40, 80, 0.2);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--accent-fill) 30%, transparent),
+    0 2px 6px rgba(40, 40, 80, 0.2);
 }
 /* the gel-pen line */
 [data-skin='bloom'] .skin-field {
@@ -436,7 +468,11 @@
   right: 2px;
   bottom: 0;
   height: 5px;
-  background-image: repeating-linear-gradient(90deg, color-mix(in srgb, var(--accent) 60%, transparent) 0 1px, transparent 1px 6px);
+  background-image: repeating-linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--accent) 60%, transparent) 0 1px,
+    transparent 1px 6px
+  );
   border-bottom: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
 }
 
@@ -495,7 +531,9 @@
   height: 5px;
   border-radius: 50%;
   background: var(--gold);
-  box-shadow: inset 0 -1px 1px rgba(0, 0, 0, 0.4), 0 1px 1px rgba(0, 0, 0, 0.3);
+  box-shadow:
+    inset 0 -1px 1px rgba(0, 0, 0, 0.4),
+    0 1px 1px rgba(0, 0, 0, 0.3);
   z-index: 1;
 }
 
@@ -559,7 +597,11 @@
   right: 2px;
   bottom: 1px;
   height: 2px;
-  background-image: repeating-linear-gradient(90deg, color-mix(in srgb, var(--accent-fill) 70%, transparent) 0 2px, transparent 2px 8px);
+  background-image: repeating-linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--accent-fill) 70%, transparent) 0 2px,
+    transparent 2px 8px
+  );
 }
 
 /* Modal silhouette — a bottom sheet on mobile, the skin's panel radius from sm: up. */

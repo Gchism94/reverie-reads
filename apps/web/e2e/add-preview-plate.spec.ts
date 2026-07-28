@@ -22,15 +22,26 @@ const PASSWORD = 'add-preview-plate-e2e-password'
 
 test.describe.configure({ mode: 'serial' })
 
-type Client = { sb: SupabaseClient; session: { access_token: string; refresh_token: string }; uid: string }
+type Client = {
+  sb: SupabaseClient
+  session: { access_token: string; refresh_token: string }
+  uid: string
+}
 let shared: Client | null = null
 async function client(): Promise<Client> {
   if (shared) return shared
-  const admin = createClient(SUPABASE_URL, SERVICE, { auth: { autoRefreshToken: false, persistSession: false } })
+  const admin = createClient(SUPABASE_URL, SERVICE, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  })
   const { data } = await admin.auth.admin.listUsers()
   let uid = data?.users?.find((u) => u.email === EMAIL)?.id
-  if (!uid) uid = (await admin.auth.admin.createUser({ email: EMAIL, password: PASSWORD, email_confirm: true })).data.user!.id
-  await admin.from('profiles').upsert({ id: uid, display_name: 'Add Preview Plate', skin: 'tryst', mode: 'system' })
+  if (!uid)
+    uid = (
+      await admin.auth.admin.createUser({ email: EMAIL, password: PASSWORD, email_confirm: true })
+    ).data.user!.id
+  await admin
+    .from('profiles')
+    .upsert({ id: uid, display_name: 'Add Preview Plate', skin: 'tryst', mode: 'system' })
   const sb = createClient(SUPABASE_URL, ANON)
   const { data: s, error } = await sb.auth.signInWithPassword({ email: EMAIL, password: PASSWORD })
   if (error || !s.session) throw new Error(authFailure('add-preview-plate', EMAIL, error))
@@ -40,7 +51,9 @@ async function client(): Promise<Client> {
 
 async function signIn(page: Page, session: { access_token: string; refresh_token: string }) {
   await page.addInitScript(() => localStorage.setItem('reverie.onboarded', '1'))
-  await page.goto(`/#access_token=${session.access_token}&refresh_token=${session.refresh_token}&expires_in=3600&token_type=bearer&type=magiclink`)
+  await page.goto(
+    `/#access_token=${session.access_token}&refresh_token=${session.refresh_token}&expires_in=3600&token_type=bearer&type=magiclink`,
+  )
   await page.getByRole('button', { name: /enter your library/i }).click({ timeout: 20_000 })
   await expect(page.getByRole('navigation')).toBeVisible({ timeout: 20_000 })
   await page.evaluate(() => indexedDB.deleteDatabase('reverie-offline'))
@@ -52,7 +65,9 @@ async function stub(page: Page) {
   await page.route('**/books/v1/volumes**', (r) => r.fulfill({ json: { items: [] } }))
 }
 
-test('a coverless book in the Add form gets the designed plate, not a bare gradient', async ({ page }) => {
+test('a coverless book in the Add form gets the designed plate, not a bare gradient', async ({
+  page,
+}) => {
   const c = await client()
   await stub(page)
   await signIn(page, c.session)

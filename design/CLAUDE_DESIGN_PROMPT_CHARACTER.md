@@ -12,13 +12,14 @@ calm. No external images (CSS/SVG texture + ornament only).
 
 DELIVER: two artboards (one per skin), each showing the SAME kit of parts in that skin's world, ideally arranged
 so the two can be compared side by side:
+
 - Controls: primary button, secondary, ghost/icon button; text input + search field; a chip/tag + a select; a toggle.
 - Library objects: a book card (cover + the small "marks": read/owned/spice/fave); the book-detail rail header
   (title/author/series as a "nameplate"); a shelf-section header/label; a stat block (lean into NUMERALS); the
   reading goal ring.
 - States + voice: an empty state (copy in the skin's VOICE), a toast/notification, a loading state.
-Express, in each: TYPE pushed into labels + numerals + empties; SHAPE (radius/border/silhouette/rule-style);
-MATERIAL (a whisper of surface texture); ORNAMENT (the genre's signature mark at a seam or two); implied MOTION.
+  Express, in each: TYPE pushed into labels + numerals + empties; SHAPE (radius/border/silhouette/rule-style);
+  MATERIAL (a whisper of surface texture); ORNAMENT (the genre's signature mark at a seam or two); implied MOTION.
 
 SKIN 1 — TRYST (flagship; Romance): gaslit New Orleans after dark. WARM. Fraunces (display) pushed into labels +
 oldstyle numerals; Hanken Grotesk body. Palette: deep magenta #e83a78 + gold #f0b14e + violet on near-black plum
@@ -29,7 +30,8 @@ inside Tryst -- this is its world.)
 SKIN 2 — APHELION (Sci-fi): deep space at the orbit's cold far point. COLD + PRECISE. Space Grotesk (display) +
 Space Mono for numerals/labels. Palette: instrument cyan + indigo on near-black blue (#151e3e family), pale ink.
 Character: sharp/precise silhouette, hairline instrument rules, thin radius, a starfield/grid surface, orbit-ring
-+ tick-mark ornament, precise instrument-panel motion. Voice: spare, exact, spacefarer-calm.
+
+- tick-mark ornament, precise instrument-panel motion. Voice: spare, exact, spacefarer-calm.
 
 The test for success: a Tryst primary button and an Aphelion primary button should feel like objects from two
 different worlds -- one gilded and warm, one machined and cold -- yet both instantly read as "press me." If they

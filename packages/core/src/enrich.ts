@@ -101,7 +101,16 @@ const PRECEDENCE: Record<string, EnrichSource[]> = {
   isbn10: ['isbndb', 'openlibrary', 'google'],
 }
 
-const STR_KEYS = ['title', 'series', 'cover', 'publisher', 'binding', 'language', 'isbn13', 'isbn10'] as const
+const STR_KEYS = [
+  'title',
+  'series',
+  'cover',
+  'publisher',
+  'binding',
+  'language',
+  'isbn13',
+  'isbn10',
+] as const
 const NUM_KEYS = ['seriesPosition', 'pageCount', 'pubY', 'pubM', 'pubD'] as const
 
 const dedupe = (a: (string | undefined | null)[]): string[] => [
@@ -124,7 +133,10 @@ function resolveScalar(
     if (!hit) continue
     const v = (hit.record as unknown as Record<string, unknown>)[field]
     if (isNum ? nonNullNum(v) : nonEmptyStr(v)) {
-      return { value: isNum ? (v as number) : (v as string), prov: { source: hit.source, at: hit.at } }
+      return {
+        value: isNum ? (v as number) : (v as string),
+        prov: { source: hit.source, at: hit.at },
+      }
     }
   }
   return { value: isNum ? null : '', prov: null }
@@ -139,15 +151,41 @@ function resolveScalar(
 const GENRE_RULES: { genre: string; label: string; patterns: RegExp[] }[] = [
   { genre: 'romance', label: 'Romance', patterns: [/romance/i] },
   { genre: 'cozy', label: 'Cozy', patterns: [/co[sz]y/i] },
-  { genre: 'fantasy', label: 'Fantasy', patterns: [/fantasy/i, /romantasy/i, /fae\b/i, /sword.*sorcery/i] },
-  { genre: 'science fiction', label: 'Science fiction', patterns: [/science[\s-]*fiction/i, /sci[\s-]*fi/i, /dystopian?/i, /space opera/i, /cyberpunk/i] },
+  {
+    genre: 'fantasy',
+    label: 'Fantasy',
+    patterns: [/fantasy/i, /romantasy/i, /fae\b/i, /sword.*sorcery/i],
+  },
+  {
+    genre: 'science fiction',
+    label: 'Science fiction',
+    patterns: [
+      /science[\s-]*fiction/i,
+      /sci[\s-]*fi/i,
+      /dystopian?/i,
+      /space opera/i,
+      /cyberpunk/i,
+    ],
+  },
   { genre: 'horror', label: 'Horror', patterns: [/horror/i] },
   { genre: 'mystery', label: 'Thriller', patterns: [/thriller/i, /suspense/i] },
-  { genre: 'mystery', label: 'Mystery', patterns: [/myster(y|ies)/i, /detective/i, /crime/i, /noir/i] },
+  {
+    genre: 'mystery',
+    label: 'Mystery',
+    patterns: [/myster(y|ies)/i, /detective/i, /crime/i, /noir/i],
+  },
   { genre: 'literary', label: 'Historical', patterns: [/historical/i] },
-  { genre: 'young adult', label: 'Young adult', patterns: [/young adult\b/i, /\bya\b/i, /juvenile/i] },
+  {
+    genre: 'young adult',
+    label: 'Young adult',
+    patterns: [/young adult\b/i, /\bya\b/i, /juvenile/i],
+  },
   { genre: 'literary', label: 'Literary', patterns: [/literary/i] },
-  { genre: 'nonfiction', label: 'Nonfiction', patterns: [/non[\s-]*fiction/i, /memoir/i, /biography/i, /self[\s-]*help/i, /history/i] },
+  {
+    genre: 'nonfiction',
+    label: 'Nonfiction',
+    patterns: [/non[\s-]*fiction/i, /memoir/i, /biography/i, /self[\s-]*help/i, /history/i],
+  },
 ]
 
 /**
@@ -173,13 +211,26 @@ export function mapGenre(categories: string[]): { genre: string; genres: string[
 // The Edge Function adapters fetch, then call these; tests feed captured fixtures straight in.
 // Kept pure (no network) so they're shared by the mirror and unit-tested without mocking fetch.
 
-const stripHtml = (s: string): string => (s || '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()
-const httpsify = (url: string): string => (url || '').replace(/^http:/, 'https:').replace('&edge=curl', '')
+const stripHtml = (s: string): string =>
+  (s || '')
+    .replace(/<[^>]+>/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+const httpsify = (url: string): string =>
+  (url || '').replace(/^http:/, 'https:').replace('&edge=curl', '')
 
-export function parsePubDate(s: string): { pubY: number | null; pubM: number | null; pubD: number | null } {
+export function parsePubDate(s: string): {
+  pubY: number | null
+  pubM: number | null
+  pubD: number | null
+} {
   const m = String(s || '').match(/^(\d{4})(?:-(\d{2}))?(?:-(\d{2}))?/)
   if (!m) return { pubY: null, pubM: null, pubD: null }
-  return { pubY: Number(m[1]) || null, pubM: m[2] ? Number(m[2]) : null, pubD: m[3] ? Number(m[3]) : null }
+  return {
+    pubY: Number(m[1]) || null,
+    pubM: m[2] ? Number(m[2]) : null,
+    pubD: m[3] ? Number(m[3]) : null,
+  }
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -217,10 +268,17 @@ export function normalizeOpenLibrary(doc: any): SourceRecord {
   let series = Array.isArray(doc.series) ? (doc.series[0] ?? '') : (doc.series ?? '')
   if (!series) {
     const s = subjects.find((x) => /^series?:/i.test(x))
-    if (s) series = s.replace(/^series?:/i, '').replace(/_/g, ' ').trim()
+    if (s)
+      series = s
+        .replace(/^series?:/i, '')
+        .replace(/_/g, ' ')
+        .trim()
   }
   // Drop OL's coded/non-genre subjects (e.g. "nyt:...=...", awards, overly long strings).
-  const categories = [...new Set(subjects.filter((x) => !/[:=]/.test(x) && x.length < 40))].slice(0, 8)
+  const categories = [...new Set(subjects.filter((x) => !/[:=]/.test(x) && x.length < 40))].slice(
+    0,
+    8,
+  )
   const ids: Record<string, string> = {}
   if (doc.key) ids.work = String(doc.key).replace(/^\/works\//, '')
   if (Array.isArray(doc.edition_key) && doc.edition_key[0]) ids.edition = String(doc.edition_key[0])
@@ -272,16 +330,21 @@ export function normalizeHardcover(book: any): SourceRecord {
  */
 export function normalizeHardcoverSearch(doc: any): SourceRecord {
   if (!doc) return {}
-  const isbns = [...new Set((doc.isbns ?? []).map((x: string) => cleanIsbn(String(x))).filter(Boolean))].slice(0, 25) as string[]
+  const isbns = [
+    ...new Set((doc.isbns ?? []).map((x: string) => cleanIsbn(String(x))).filter(Boolean)),
+  ].slice(0, 25) as string[]
   const tags: string[] = [...(doc.genres ?? []), ...(doc.moods ?? []), ...(doc.tags ?? [])]
     .map((t: any) => (typeof t === 'string' ? t : (t?.tag ?? t?.name ?? '')))
     .filter(Boolean)
-  const releaseDate = String(doc.release_date ?? (doc.release_year ? `${doc.release_year}-01-01` : ''))
+  const releaseDate = String(
+    doc.release_date ?? (doc.release_year ? `${doc.release_year}-01-01` : ''),
+  )
   return {
     title: doc.title ?? '',
     authors: doc.author_names ?? [],
     series: (doc.series_names ?? [])[0] ?? '',
-    seriesPosition: typeof doc.featured_series_position === 'number' ? doc.featured_series_position : null,
+    seriesPosition:
+      typeof doc.featured_series_position === 'number' ? doc.featured_series_position : null,
     description: stripHtml(doc.description ?? ''),
     categories: [...new Set(tags)].slice(0, 12),
     cover: doc.image?.url ?? '',
@@ -319,9 +382,30 @@ export function normalizeIsbndb(book: any): SourceRecord {
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
 const EMPTY: EnrichedRecord = {
-  title: '', authors: [], author: '', series: '', seriesPosition: null, description: '', categories: [],
-  genre: '', genres: [], cover: '', pageCount: null, publisher: '', pubY: null, pubM: null, pubD: null,
-  binding: '', language: '', isbn10: '', isbn13: '', isbn: '', isbns: [], ids: {}, workId: '', editionId: '',
+  title: '',
+  authors: [],
+  author: '',
+  series: '',
+  seriesPosition: null,
+  description: '',
+  categories: [],
+  genre: '',
+  genres: [],
+  cover: '',
+  pageCount: null,
+  publisher: '',
+  pubY: null,
+  pubM: null,
+  pubD: null,
+  binding: '',
+  language: '',
+  isbn10: '',
+  isbn13: '',
+  isbn: '',
+  isbns: [],
+  ids: {},
+  workId: '',
+  editionId: '',
   provenance: {},
 }
 
@@ -334,7 +418,10 @@ const EMPTY: EnrichedRecord = {
  * - identifiers: cross-referenced per source;
  * - user-authored fields (the optional `user` partial): ALWAYS win and are stamped 'manual'.
  */
-export function mergeRecords(sources: StampedSource[], user?: Partial<EnrichedRecord> & { at?: string }): EnrichedRecord {
+export function mergeRecords(
+  sources: StampedSource[],
+  user?: Partial<EnrichedRecord> & { at?: string },
+): EnrichedRecord {
   const out: EnrichedRecord = { ...EMPTY, ids: {}, provenance: {} }
 
   for (const key of STR_KEYS) {
@@ -384,10 +471,13 @@ export function mergeRecords(sources: StampedSource[], user?: Partial<EnrichedRe
 
   // ISBNs: union of every source's isbn10/isbn13/isbns; normalize the canonical 13.
   const allIsbns = dedupe(
-    sources.flatMap((s) => [s.record.isbn13, s.record.isbn10, ...(s.record.isbns ?? [])]).map((i) => cleanIsbn(i ?? '')),
+    sources
+      .flatMap((s) => [s.record.isbn13, s.record.isbn10, ...(s.record.isbns ?? [])])
+      .map((i) => cleanIsbn(i ?? '')),
   )
   out.isbns = allIsbns
-  if (!out.isbn13) out.isbn13 = allIsbns.find((i) => i.length === 13) ?? (out.isbn10 ? isbn10to13(out.isbn10) : '')
+  if (!out.isbn13)
+    out.isbn13 = allIsbns.find((i) => i.length === 13) ?? (out.isbn10 ? isbn10to13(out.isbn10) : '')
   if (!out.isbn10) out.isbn10 = allIsbns.find((i) => i.length === 10) ?? ''
   out.isbn = out.isbn13 || normalizeIsbn(out.isbn10) || out.isbn10 || ''
 
@@ -399,7 +489,8 @@ export function mergeRecords(sources: StampedSource[], user?: Partial<EnrichedRe
         .join('|')
     }
     if (!out.workId && s.record.ids?.work) out.workId = `${s.source}:${s.record.ids.work}`
-    if (!out.editionId && s.record.ids?.edition) out.editionId = `${s.source}:${s.record.ids.edition}`
+    if (!out.editionId && s.record.ids?.edition)
+      out.editionId = `${s.source}:${s.record.ids.edition}`
   }
 
   // User-authored fields ALWAYS win — applied last, stamped 'manual'. Empty user values don't clobber.

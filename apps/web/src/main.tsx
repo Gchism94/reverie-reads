@@ -84,7 +84,9 @@ createRoot(rootEl).render(
             // react-query and react-query-persist-client resolved two different query-core builds,
             // so the helper's Query type didn't match this parameter's. #80 collapsed them to one.)
             shouldDehydrateQuery: (q) =>
-              defaultShouldDehydrateQuery(q) && q.queryKey[0] !== 'series' && q.queryKey[0] !== 'series-strip',
+              defaultShouldDehydrateQuery(q) &&
+              q.queryKey[0] !== 'series' &&
+              q.queryKey[0] !== 'series-strip',
           },
         }}
         onSuccess={() => {

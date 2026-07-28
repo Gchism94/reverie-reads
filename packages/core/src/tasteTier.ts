@@ -63,7 +63,12 @@ export const NEUTRAL_TASTE_TIERS: readonly [string, string, string, string] = [
 /** Per-skin tier labels, strongest → floor. Keyed off every SkinId so a new skin fails loudly here. */
 export const TASTE_TIER_LABELS: Record<SkinId, readonly [string, string, string, string]> = {
   // Romance — decadent invitation
-  tryst: ['Made for you', 'Your kind of trouble', 'A curious temptation', 'A walk on the wild side'],
+  tryst: [
+    'Made for you',
+    'Your kind of trouble',
+    'A curious temptation',
+    'A walk on the wild side',
+  ],
   // Fantasy — spellbook / binding
   grimoire: ['Bound to you', 'Your kind of magic', 'A curious enchantment', 'Beyond the wards'],
   // Sci-fi — orbital distance (lean in)
@@ -84,7 +89,9 @@ export const TASTE_TIER_LABELS: Record<SkinId, readonly [string, string, string,
 
 /** The tier label for a skin (falls back to the neutral set for adaptive / unknown skins). */
 export function tasteTierLabel(skin: SkinId | 'adaptive' | string, index: TasteTierIndex): string {
-  const set = (TASTE_TIER_LABELS as Record<string, readonly [string, string, string, string]>)[skin] ?? NEUTRAL_TASTE_TIERS
+  const set =
+    (TASTE_TIER_LABELS as Record<string, readonly [string, string, string, string]>)[skin] ??
+    NEUTRAL_TASTE_TIERS
   return set[index]
 }
 

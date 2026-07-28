@@ -28,8 +28,14 @@ export const SERIES_STATUS_LABELS: Record<SeriesStatus, string> = {
 /** Map any historical or imported spelling onto the enum. The pre-expansion app stored
  *  'Standalone' | 'Series' | 'Complete'; imports bring free text (incl. "interconnected standalone").
  *  Unknown values fall back on whether the book names a series at all. */
-export function normalizeSeriesStatus(raw: string | null | undefined, hasSeries: boolean): SeriesStatus {
-  const v = (raw ?? '').trim().toLowerCase().replace(/[\s-]+/g, '_')
+export function normalizeSeriesStatus(
+  raw: string | null | undefined,
+  hasSeries: boolean,
+): SeriesStatus {
+  const v = (raw ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_')
   if (v === 'standalone' || v === 'standalones') return 'standalone'
   if (v === 'series' || v === 'ongoing' || v === 'in_progress') return 'ongoing'
   if (v === 'complete' || v === 'completed' || v === 'finished') return 'completed'

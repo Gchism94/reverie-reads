@@ -62,7 +62,8 @@ function Band({ kind }: { kind: SpineStyle['band'] }) {
         className="block w-full flex-none"
         style={{
           height: 5,
-          background: 'repeating-linear-gradient(180deg, var(--gold) 0 1.5px, var(--gold-deep) 1.5px 3px)',
+          background:
+            'repeating-linear-gradient(180deg, var(--gold) 0 1.5px, var(--gold-deep) 1.5px 3px)',
           boxShadow: 'inset 0 0 0 1px rgba(0, 0, 0, 0.35)',
         }}
       />
@@ -73,7 +74,11 @@ function Band({ kind }: { kind: SpineStyle['band'] }) {
       <span
         aria-hidden
         className="block w-full flex-none"
-        style={{ height: 6, backgroundImage: 'repeating-linear-gradient(90deg, color-mix(in srgb, var(--accent) 60%, transparent) 0 1px, transparent 1px 6px)' }}
+        style={{
+          height: 6,
+          backgroundImage:
+            'repeating-linear-gradient(90deg, color-mix(in srgb, var(--accent) 60%, transparent) 0 1px, transparent 1px 6px)',
+        }}
       />
     )
   }
@@ -94,7 +99,11 @@ function Band({ kind }: { kind: SpineStyle['band'] }) {
   if (kind === 'pencil') {
     // Marginalia: two grease-pencil hairlines, hand-ruled
     return (
-      <span aria-hidden className="flex w-full flex-none flex-col justify-center gap-[2px] px-1.5" style={{ height: 8 }}>
+      <span
+        aria-hidden
+        className="flex w-full flex-none flex-col justify-center gap-[2px] px-1.5"
+        style={{ height: 8 }}
+      >
         <span style={{ height: 1, background: 'var(--spine-muted)', opacity: 0.7 }} />
         <span style={{ height: 1, background: 'var(--spine-muted)', opacity: 0.45 }} />
       </span>
@@ -104,21 +113,50 @@ function Band({ kind }: { kind: SpineStyle['band'] }) {
     // Hearth: a run of cream thread, stitched
     return (
       <span aria-hidden className="flex w-full flex-none items-center px-1" style={{ height: 8 }}>
-        <span className="w-full" style={{ height: 2, backgroundImage: 'repeating-linear-gradient(90deg, var(--thread) 0 5px, transparent 5px 9px)', borderRadius: 2, opacity: 0.85 }} />
+        <span
+          className="w-full"
+          style={{
+            height: 2,
+            backgroundImage:
+              'repeating-linear-gradient(90deg, var(--thread) 0 5px, transparent 5px 9px)',
+            borderRadius: 2,
+            opacity: 0.85,
+          }}
+        />
       </span>
     )
   }
   if (kind === 'ink-block') {
     // Almanac: a solid ink band block (the tail block carries the REF № — drawn in Spine itself)
-    return <span aria-hidden className="block w-full flex-none" style={{ height: 6, background: 'var(--cta-lo)' }} />
+    return (
+      <span
+        aria-hidden
+        className="block w-full flex-none"
+        style={{ height: 6, background: 'var(--cta-lo)' }}
+      />
+    )
   }
   if (kind === 'gel') {
     // Firstlight: the violet gel strip at the head
     return (
-      <span aria-hidden className="block w-full flex-none" style={{ height: 5, background: 'var(--accent-fill)', boxShadow: 'inset 0 -1px 0 rgba(0, 0, 0, 0.25)' }} />
+      <span
+        aria-hidden
+        className="block w-full flex-none"
+        style={{
+          height: 5,
+          background: 'var(--accent-fill)',
+          boxShadow: 'inset 0 -1px 0 rgba(0, 0, 0, 0.25)',
+        }}
+      />
     )
   }
-  return <span aria-hidden className="block w-full flex-none" style={{ height: 2, background: 'var(--line)' }} />
+  return (
+    <span
+      aria-hidden
+      className="block w-full flex-none"
+      style={{ height: 2, background: 'var(--line)' }}
+    />
+  )
 }
 
 function Colophon({ kind }: { kind: SpineStyle['colophon'] }) {
@@ -126,8 +164,21 @@ function Colophon({ kind }: { kind: SpineStyle['colophon'] }) {
     // the tail seal: a short gilt hairline over the skin's glyph
     return (
       <span aria-hidden className="flex flex-none flex-col items-center gap-1">
-        <span style={{ width: 12, height: 1, background: 'color-mix(in srgb, var(--gold) 70%, transparent)' }} />
-        <span className="text-[11px] leading-none" style={{ color: 'var(--gold)', fontFamily: 'var(--font-display)', textShadow: 'var(--spine-emboss)' }}>
+        <span
+          style={{
+            width: 12,
+            height: 1,
+            background: 'color-mix(in srgb, var(--gold) 70%, transparent)',
+          }}
+        />
+        <span
+          className="text-[11px] leading-none"
+          style={{
+            color: 'var(--gold)',
+            fontFamily: 'var(--font-display)',
+            textShadow: 'var(--spine-emboss)',
+          }}
+        >
           {kind === 'fleuron' ? '❦' : '❖'}
         </span>
       </span>
@@ -138,20 +189,39 @@ function Colophon({ kind }: { kind: SpineStyle['colophon'] }) {
       <span
         aria-hidden
         className="rv-anim flex-none rounded-full"
-        style={{ width: 5, height: 5, background: 'var(--accent)', boxShadow: '0 0 6px var(--accent)', animation: 'sig-blink 2.4s step-end infinite' }}
+        style={{
+          width: 5,
+          height: 5,
+          background: 'var(--accent)',
+          boxShadow: '0 0 6px var(--accent)',
+          animation: 'sig-blink 2.4s step-end infinite',
+        }}
       />
     )
   }
   if (kind === 'eyelet') {
     // Gaslight: a punched brass eyelet at the tail
     return (
-      <span aria-hidden className="flex-none rounded-full" style={{ width: 8, height: 8, border: '1.5px solid var(--gold)', boxShadow: '0 1px 2px rgba(0, 0, 0, 0.4)' }} />
+      <span
+        aria-hidden
+        className="flex-none rounded-full"
+        style={{
+          width: 8,
+          height: 8,
+          border: '1.5px solid var(--gold)',
+          boxShadow: '0 1px 2px rgba(0, 0, 0, 0.4)',
+        }}
+      />
     )
   }
   if (kind === 'caret') {
     // Marginalia: the proofreader's caret at the tail — red, hand-pressed
     return (
-      <span aria-hidden className="flex-none text-[12px] font-bold leading-none" style={{ color: 'var(--accent-fill)', fontFamily: 'var(--font-display)' }}>
+      <span
+        aria-hidden
+        className="flex-none text-[12px] font-bold leading-none"
+        style={{ color: 'var(--accent-fill)', fontFamily: 'var(--font-display)' }}
+      >
         ‸
       </span>
     )
@@ -178,7 +248,13 @@ function Colophon({ kind }: { kind: SpineStyle['colophon'] }) {
       <span
         aria-hidden
         className="flex-none"
-        style={{ width: '55%', height: 3, borderTop: '1px solid var(--spine-title)', borderBottom: '1px solid var(--spine-title)', opacity: 0.55 }}
+        style={{
+          width: '55%',
+          height: 3,
+          borderTop: '1px solid var(--spine-title)',
+          borderBottom: '1px solid var(--spine-title)',
+          opacity: 0.55,
+        }}
       />
     )
   }
@@ -188,7 +264,12 @@ function Colophon({ kind }: { kind: SpineStyle['colophon'] }) {
       <span
         aria-hidden
         className="flex-none rounded-full"
-        style={{ width: 9, height: 9, background: 'radial-gradient(circle at 40% 35%, #ffe2a0, var(--gold))', boxShadow: '0 0 8px var(--gold)' }}
+        style={{
+          width: 9,
+          height: 9,
+          background: 'radial-gradient(circle at 40% 35%, #ffe2a0, var(--gold))',
+          boxShadow: '0 0 8px var(--gold)',
+        }}
       />
     )
   }
@@ -255,26 +336,47 @@ const RADIUS: Record<SpineStyle['binding'], string> = {
  *  from spineDims. Pass `skin` to force a skin (the shelf preview). `tint` is the book's stored
  *  dominant cover colour — mixed into the gradient endpoints when it clears the AA clamp, so shelves
  *  take on the palette of the reader's actual editions (skin default otherwise). */
-export function Spine({ book, active = false, skin, tint }: { book: SpineBook; active?: boolean; skin?: SkinId; tint?: string }) {
+export function Spine({
+  book,
+  active = false,
+  skin,
+  tint,
+}: {
+  book: SpineBook
+  active?: boolean
+  skin?: SkinId
+  tint?: string
+}) {
   const effective = useEffectiveSkin()
   const skinId = skin ?? effective
   const s = useStructure(skin).spine
   // Gradient bindings consume the tint via their --spine-hi/--spine-lo endpoints; 'plain' has no
   // gradient recipe and 'sky' (Firstlight's night-to-dawn) is the skin's signature — both skip it.
-  const tintStyle = useSpineTintStyle(s.binding === 'plain' || s.binding === 'sky' ? undefined : tint)
+  const tintStyle = useSpineTintStyle(
+    s.binding === 'plain' || s.binding === 'sky' ? undefined : tint,
+  )
   const { thickness, trim } = spineDims(book.id)
   const width = active ? 120 : Math.round(WIDTH[0] + thickness * (WIDTH[1] - WIDTH[0]))
   const height = Math.round(HEIGHT[0] + trim * (HEIGHT[1] - HEIGHT[0]))
   const author = authorLabel(book)
   // display-serif spines set the title in --font-display (gilt/graphite/linen/sky warm type)
-  const serif = s.binding === 'leather' || s.binding === 'tome' || s.binding === 'galley' || s.binding === 'linen' || s.binding === 'sky'
+  const serif =
+    s.binding === 'leather' ||
+    s.binding === 'tome' ||
+    s.binding === 'galley' ||
+    s.binding === 'linen' ||
+    s.binding === 'sky'
   const authorAtTail = s.binding === 'brushed' || s.binding === 'cloth'
 
   // Head labels cost real length — only wide/tall spines (or the active one) carry them, per the
   // specimen's width gate.
   const wide = active || (width >= 44 && height >= 176)
   const call =
-    (s.label === 'callsign' || s.label === 'pasted-no' || s.label === 'case-no' || s.label === 'ref-no') && wide
+    (s.label === 'callsign' ||
+      s.label === 'pasted-no' ||
+      s.label === 'case-no' ||
+      s.label === 'ref-no') &&
+    wide
       ? callsign(book.id, skinId.slice(0, 3).toUpperCase())
       : null
 
@@ -298,11 +400,21 @@ export function Spine({ book, active = false, skin, tint }: { book: SpineBook; a
         ? 134
         : 100
   const avail = Math.max(40, height - reserved)
-  const fit = fitSpineTitle(book.title, avail, serif ? { charRatio: 0.58, max: 22 } : { charRatio: 0.72, max: 20 })
+  const fit = fitSpineTitle(
+    book.title,
+    avail,
+    serif ? { charRatio: 0.58, max: 22 } : { charRatio: 0.72, max: 20 },
+  )
   const isShort = book.title.length <= 6 && !fit.truncated
   // ornament pairs + short-title italics belong to the bound/proof serifs, not the linen or sky
-  const italicShort = isShort && (s.binding === 'leather' || s.binding === 'tome' || s.binding === 'galley')
-  const ornament = isShort && (s.binding === 'leather' || s.binding === 'tome') ? (s.binding === 'tome' ? '❖' : '❦') : null
+  const italicShort =
+    isShort && (s.binding === 'leather' || s.binding === 'tome' || s.binding === 'galley')
+  const ornament =
+    isShort && (s.binding === 'leather' || s.binding === 'tome')
+      ? s.binding === 'tome'
+        ? '❖'
+        : '❦'
+      : null
 
   const authorEl = author && (
     <span
@@ -329,7 +441,11 @@ export function Spine({ book, active = false, skin, tint }: { book: SpineBook; a
         textOrientation: 'mixed',
         fontSize: fit.fontPx,
         lineHeight: serif ? 1.04 : 1.08,
-        fontFamily: serif ? 'var(--font-display)' : s.binding === 'ledger' ? 'var(--font-mono)' : 'var(--font-sans)',
+        fontFamily: serif
+          ? 'var(--font-display)'
+          : s.binding === 'ledger'
+            ? 'var(--font-mono)'
+            : 'var(--font-sans)',
         fontWeight: serif ? 600 : 700,
         fontStyle: italicShort ? 'italic' : 'normal',
         fontFeatureSettings: serif && s.binding !== 'sky' ? "'onum' 1" : undefined,
@@ -346,14 +462,25 @@ export function Spine({ book, active = false, skin, tint }: { book: SpineBook; a
   return (
     <div
       className="relative flex flex-col items-center overflow-hidden border border-line transition-[width] duration-300 motion-reduce:transition-none"
-      style={{ width, height, borderRadius: RADIUS[s.binding], ...tintStyle, ...bindingStyle(s.binding) }}
+      style={{
+        width,
+        height,
+        borderRadius: RADIUS[s.binding],
+        ...tintStyle,
+        ...bindingStyle(s.binding),
+      }}
     >
       {/* blind-ruled gilt inset frame (the bound volume) / corner brackets (the archive container) */}
       {s.binding === 'leather' && (
         <span
           aria-hidden
           className="pointer-events-none absolute"
-          style={{ inset: '9px 3px', border: '1px solid color-mix(in srgb, var(--gold) 42%, transparent)', borderRadius: 2, zIndex: 3 }}
+          style={{
+            inset: '9px 3px',
+            border: '1px solid color-mix(in srgb, var(--gold) 42%, transparent)',
+            borderRadius: 2,
+            zIndex: 3,
+          }}
         />
       )}
       {s.binding === 'brushed' && <Brackets />}
@@ -362,14 +489,43 @@ export function Spine({ book, active = false, skin, tint }: { book: SpineBook; a
         <span
           aria-hidden
           className="pointer-events-none absolute"
-          style={{ right: 0, top: '26%', width: 5, height: 24, background: 'var(--accent)', borderRadius: '2px 0 0 2px', boxShadow: '-1px 1px 2px rgba(0, 0, 0, 0.3)', zIndex: 3 }}
+          style={{
+            right: 0,
+            top: '26%',
+            width: 5,
+            height: 24,
+            background: 'var(--accent)',
+            borderRadius: '2px 0 0 2px',
+            boxShadow: '-1px 1px 2px rgba(0, 0, 0, 0.3)',
+            zIndex: 3,
+          }}
         />
       )}
       {s.binding === 'sky' && (
         // stars come out in dark mode only (the .rv-sky-star rule hides them at morning)
         <>
-          <span aria-hidden className="rv-sky-star pointer-events-none absolute rounded-full" style={{ left: '30%', top: '12%', width: 2, height: 2, background: 'rgba(238, 240, 250, 0.8)' }} />
-          <span aria-hidden className="rv-sky-star pointer-events-none absolute rounded-full" style={{ left: '62%', top: '22%', width: 1.5, height: 1.5, background: 'rgba(238, 240, 250, 0.55)' }} />
+          <span
+            aria-hidden
+            className="rv-sky-star pointer-events-none absolute rounded-full"
+            style={{
+              left: '30%',
+              top: '12%',
+              width: 2,
+              height: 2,
+              background: 'rgba(238, 240, 250, 0.8)',
+            }}
+          />
+          <span
+            aria-hidden
+            className="rv-sky-star pointer-events-none absolute rounded-full"
+            style={{
+              left: '62%',
+              top: '22%',
+              width: 1.5,
+              height: 1.5,
+              background: 'rgba(238, 240, 250, 0.55)',
+            }}
+          />
         </>
       )}
       <Band kind={s.band} />
@@ -378,12 +534,31 @@ export function Spine({ book, active = false, skin, tint }: { book: SpineBook; a
         {call && s.label === 'callsign' && (
           <span
             className="flex-none px-1 py-0.5 text-center"
-            style={{ background: 'var(--plate)', border: '1px solid color-mix(in srgb, var(--accent) 55%, transparent)', borderRadius: 1, lineHeight: 1.3 }}
+            style={{
+              background: 'var(--plate)',
+              border: '1px solid color-mix(in srgb, var(--accent) 55%, transparent)',
+              borderRadius: 1,
+              lineHeight: 1.3,
+            }}
           >
-            <span className="block text-[9px] font-bold" style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.08em', color: 'var(--accent-ink)' }}>
+            <span
+              className="block text-[9px] font-bold"
+              style={{
+                fontFamily: 'var(--font-mono)',
+                letterSpacing: '0.08em',
+                color: 'var(--accent-ink)',
+              }}
+            >
               {call.code}
             </span>
-            <span className="block text-[9px] font-bold" style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.04em', color: 'var(--spine-muted)' }}>
+            <span
+              className="block text-[9px] font-bold"
+              style={{
+                fontFamily: 'var(--font-mono)',
+                letterSpacing: '0.04em',
+                color: 'var(--spine-muted)',
+              }}
+            >
               {call.id}
             </span>
           </span>
@@ -391,14 +566,36 @@ export function Spine({ book, active = false, skin, tint }: { book: SpineBook; a
         {call && s.label === 'pasted-no' && (
           <span
             className="flex-none px-1 py-0.5 text-center"
-            style={{ background: 'var(--paper)', color: 'var(--paper-ink)', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.4)', lineHeight: 1.3 }}
+            style={{
+              background: 'var(--paper)',
+              color: 'var(--paper-ink)',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.4)',
+              lineHeight: 1.3,
+            }}
           >
-            <span className="block text-[8.5px] font-bold" style={{ fontFamily: 'var(--font-sans)', letterSpacing: '0.1em' }}>№</span>
-            <span className="block text-[9px] font-bold" style={{ fontFamily: 'var(--font-sans)', letterSpacing: '0.06em' }}>{call.id}</span>
+            <span
+              className="block text-[8.5px] font-bold"
+              style={{ fontFamily: 'var(--font-sans)', letterSpacing: '0.1em' }}
+            >
+              №
+            </span>
+            <span
+              className="block text-[9px] font-bold"
+              style={{ fontFamily: 'var(--font-sans)', letterSpacing: '0.06em' }}
+            >
+              {call.id}
+            </span>
           </span>
         )}
         {call && s.label === 'case-no' && (
-          <span className="flex-none text-[9px] font-bold" style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.08em', color: 'var(--gold)' }}>
+          <span
+            className="flex-none text-[9px] font-bold"
+            style={{
+              fontFamily: 'var(--font-mono)',
+              letterSpacing: '0.08em',
+              color: 'var(--gold)',
+            }}
+          >
             No.{call.id}
           </span>
         )}
@@ -419,7 +616,14 @@ export function Spine({ book, active = false, skin, tint }: { book: SpineBook; a
               {author && (
                 <span
                   className="flex-none whitespace-nowrap uppercase"
-                  style={{ writingMode: 'vertical-rl', textOrientation: 'mixed', fontSize: 9, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', color: 'var(--spine-muted)' }}
+                  style={{
+                    writingMode: 'vertical-rl',
+                    textOrientation: 'mixed',
+                    fontSize: 9,
+                    fontFamily: 'var(--font-mono)',
+                    letterSpacing: '0.1em',
+                    color: 'var(--spine-muted)',
+                  }}
                 >
                   {author}
                 </span>
@@ -429,7 +633,16 @@ export function Spine({ book, active = false, skin, tint }: { book: SpineBook; a
         ) : (
           <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 overflow-hidden">
             {ornament && (
-              <span aria-hidden className="text-[11px] leading-none" style={{ color: 'var(--gold)', opacity: 0.8, fontFamily: 'var(--font-display)', textShadow: 'var(--spine-emboss)' }}>
+              <span
+                aria-hidden
+                className="text-[11px] leading-none"
+                style={{
+                  color: 'var(--gold)',
+                  opacity: 0.8,
+                  fontFamily: 'var(--font-display)',
+                  textShadow: 'var(--spine-emboss)',
+                }}
+              >
                 {ornament}
               </span>
             )}
@@ -438,7 +651,13 @@ export function Spine({ book, active = false, skin, tint }: { book: SpineBook; a
               <span
                 aria-hidden
                 className="text-[11px] leading-none"
-                style={{ color: 'var(--gold)', opacity: 0.8, fontFamily: 'var(--font-display)', textShadow: 'var(--spine-emboss)', transform: 'rotate(180deg)' }}
+                style={{
+                  color: 'var(--gold)',
+                  opacity: 0.8,
+                  fontFamily: 'var(--font-display)',
+                  textShadow: 'var(--spine-emboss)',
+                  transform: 'rotate(180deg)',
+                }}
               >
                 {ornament}
               </span>
@@ -449,7 +668,15 @@ export function Spine({ book, active = false, skin, tint }: { book: SpineBook; a
         {authorAtTail && authorEl}
         {s.binding === 'galley' && wide && (
           // the editor's hand signs the galley off — Caveat, never body copy
-          <span aria-hidden className="flex-none text-[10px] leading-none" style={{ fontFamily: 'var(--font-hand)', color: 'var(--accent-fill)', transform: 'rotate(-4deg)' }}>
+          <span
+            aria-hidden
+            className="flex-none text-[10px] leading-none"
+            style={{
+              fontFamily: 'var(--font-hand)',
+              color: 'var(--accent-fill)',
+              transform: 'rotate(-4deg)',
+            }}
+          >
             proof
           </span>
         )}
@@ -462,14 +689,26 @@ export function Spine({ book, active = false, skin, tint }: { book: SpineBook; a
           className="block w-full flex-none"
           style={{
             height: 12,
-            background: 'linear-gradient(180deg, color-mix(in srgb, var(--accent-fill) 55%, transparent), var(--accent-fill))',
+            background:
+              'linear-gradient(180deg, color-mix(in srgb, var(--accent-fill) 55%, transparent), var(--accent-fill))',
             boxShadow: 'inset 0 2px 3px rgba(0, 0, 0, 0.25)',
           }}
         />
       ) : s.band === 'ink-block' ? (
-        <span aria-hidden className="grid w-full flex-none place-items-center" style={{ height: call ? 14 : 8, background: 'var(--cta-lo)' }}>
+        <span
+          aria-hidden
+          className="grid w-full flex-none place-items-center"
+          style={{ height: call ? 14 : 8, background: 'var(--cta-lo)' }}
+        >
           {call && (
-            <span className="whitespace-nowrap text-[9px] font-bold" style={{ fontFamily: 'var(--font-sans)', letterSpacing: '0.1em', color: 'var(--cta-ink)' }}>
+            <span
+              className="whitespace-nowrap text-[9px] font-bold"
+              style={{
+                fontFamily: 'var(--font-sans)',
+                letterSpacing: '0.1em',
+                color: 'var(--cta-ink)',
+              }}
+            >
               REF {call.id.slice(1)}
             </span>
           )}

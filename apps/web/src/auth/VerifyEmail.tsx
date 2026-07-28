@@ -17,8 +17,16 @@ export function VerifyEmail({ email }: { email?: string }) {
         Confirm your email to continue
       </h1>
       <p className="mt-4 max-w-[42ch] text-[15px] leading-relaxed text-muted">
-        We sent a confirmation link{email ? <> to <span className="text-ink">{email}</span></> : ''}. Open it to
-        verify your address, then come back and sign in.
+        We sent a confirmation link
+        {email ? (
+          <>
+            {' '}
+            to <span className="text-ink">{email}</span>
+          </>
+        ) : (
+          ''
+        )}
+        . Open it to verify your address, then come back and sign in.
       </p>
       <button
         type="button"

@@ -16,9 +16,10 @@ Tester feedback exposed a real design flaw. The two-state ownership model
 default filter scopes to owned — so **a book you read from the library disappears from
 your library entirely.** Reading history is silently gated on ownership. The tester
 asked for "borrowed" three separate times (as an ownership option, as a book "type,"
-and implicitly as *"no place to see the books you 'read' unless you own it"*).
+and implicitly as _"no place to see the books you 'read' unless you own it"_).
 
 Confirmed decisions:
+
 - Ownership becomes **four states**: `owned | borrowed | wishlist | unset`.
 - Read status gains an **unset** state — cataloguing a book must not force
   read/reading/unread/DNF.
@@ -43,14 +44,14 @@ Survey it — it may be usable as backfill signal, but `source` is provenance an
 - Format flags keep the **suppress-not-clear** behavior from #48: flags are retained
   regardless of ownership state and surfaced only where appropriate. `bookOwnedFormats()`
   gates on `owned` today — extend it so **borrowed** books can also carry a format
-  (the tester explicitly wants to record the *type* of a book they read but don't own).
+  (the tester explicitly wants to record the _type_ of a book they read but don't own).
 
 ## Surfaces
 
 - **Library default scope:** `ownership IN ('owned','borrowed') OR readStatus is a read
-  state`. Wishlist and unset books stay out of the default grid but remain reachable via
-  filter chips. Audit every count and stat against this: *collection* stats scope to
-  owned (+borrowed where meaningful — your call, report it); *reading* stats never scope
+state`. Wishlist and unset books stay out of the default grid but remain reachable via
+  filter chips. Audit every count and stat against this: _collection_ stats scope to
+  owned (+borrowed where meaningful — your call, report it); _reading_ stats never scope
   on ownership.
 - **Ownership control** (book detail and add form): four options in each skin's voice,
   including a genuine "not set" that is the default for new books rather than a forced

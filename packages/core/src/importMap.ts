@@ -126,7 +126,10 @@ export interface ImportedRow {
 const normHeader = (h: string) => h.trim().toLowerCase()
 
 /** Resolve a profile's fields to column indices against a header row (−1 when absent). */
-export function buildColumnIndex(headers: string[], profile: ColumnProfile): Record<string, number> {
+export function buildColumnIndex(
+  headers: string[],
+  profile: ColumnProfile,
+): Record<string, number> {
   const lower = headers.map(normHeader)
   const find = (cands?: string[]): number => {
     for (const c of cands ?? []) {
@@ -149,7 +152,8 @@ export function detectProfile(headers: string[]): ColumnProfile {
   const has = (s: string) => h.has(s)
   // Reverie's own template: the clean Title/Author/ISBN/Status/Rating/Date Read/Tags shape. Its plain
   // "rating" + "status" headers distinguish it from a Goodreads export ("my rating"/"exclusive shelf").
-  if (has('status') && has('rating') && has('date read') && (has('isbn') || has('tags'))) return REVERIE_PROFILE
+  if (has('status') && has('rating') && has('date read') && (has('isbn') || has('tags')))
+    return REVERIE_PROFILE
   if (has('gc read') || has('duplicate') || has('completed / standalones')) return CHISM_PROFILE
   if (has('global order') || has('series type') || has('series #')) return LIBRARY_PROFILE
   return GENERIC_PROFILE
@@ -173,7 +177,8 @@ export function parseReleaseDate(raw: string): PubDate {
   if (!s) return { y: null, m: null, d: null }
   if (/^\d{4}$/.test(s)) return { y: Number(s), m: null, d: null }
   const iso = s.match(/^(\d{4})[-/](\d{1,2})(?:[-/](\d{1,2}))?/)
-  if (iso) return { y: Number(iso[1]), m: Number(iso[2]) || null, d: iso[3] ? Number(iso[3]) : null }
+  if (iso)
+    return { y: Number(iso[1]), m: Number(iso[2]) || null, d: iso[3] ? Number(iso[3]) : null }
   const us = s.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/)
   if (us) return { y: Number(us[3]), m: Number(us[1]) || null, d: Number(us[2]) || null }
   // Excel serial day-number (days since 1899-12-30).
@@ -204,7 +209,11 @@ function genericReadStatus(cell: string): ReadStatus {
   return 'Unread'
 }
 
-function contributorsFor(cell: (k: string) => string): { first: string; last: string; contributors: Incoming['contributors'] } {
+function contributorsFor(cell: (k: string) => string): {
+  first: string
+  last: string
+  contributors: Incoming['contributors']
+} {
   const first = cell('authorFirst').trim()
   const last = cell('authorLast').trim()
   if (first || last) return { first, last, contributors: fromFirstLast(first, last) }
@@ -235,7 +244,10 @@ export function rowToImported(row: string[], idx: Record<string, number>): Impor
   if (!title) return null
 
   const { first, last, contributors } = contributorsFor(cell)
-  const { genre, genres, tags, intensity, unmappedGenre } = normalizeImportGenres(cell('genre'), cell('tags'))
+  const { genre, genres, tags, intensity, unmappedGenre } = normalizeImportGenres(
+    cell('genre'),
+    cell('tags'),
+  )
 
   const seriesName = cell('series').trim()
   const orderRaw = cell('seriesOrder').trim()
@@ -264,7 +276,10 @@ export function rowToImported(row: string[], idx: Record<string, number>): Impor
     if (/borrow|loan/.test(ownedCell)) ownership = 'borrowed'
     else if (/^(n|no|false|0|unowned|wish)/.test(ownedCell)) ownership = 'wishlist'
     else ownership = 'owned'
-  } else if ((idx.readStatus ?? -1) >= 0 && /to-read|to read|wishlist|tbr/.test(cell('readStatus').toLowerCase())) {
+  } else if (
+    (idx.readStatus ?? -1) >= 0 &&
+    /to-read|to read|wishlist|tbr/.test(cell('readStatus').toLowerCase())
+  ) {
     ownership = 'wishlist'
   }
 

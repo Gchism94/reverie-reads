@@ -36,9 +36,19 @@ function blendForMode(mode: ResolvedMode, weights: number[]): Palette {
   return nudgeForAA(blendPalette(palettes, weights))
 }
 
-function blendBundle(weights: Record<SkinId, number>, dominant: SkinId, insight: string): AdaptiveBundle {
+function blendBundle(
+  weights: Record<SkinId, number>,
+  dominant: SkinId,
+  insight: string,
+): AdaptiveBundle {
   const ordered = SKIN_ORDER.map((id) => weights[id])
-  return { light: blendForMode('light', ordered), dark: blendForMode('dark', ordered), dominant, weights, insight }
+  return {
+    light: blendForMode('light', ordered),
+    dark: blendForMode('dark', ordered),
+    dominant,
+    weights,
+    insight,
+  }
 }
 
 /**

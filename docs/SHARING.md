@@ -12,11 +12,11 @@ Everything shared is stored as one JSON **document** identified by a random **sh
 The code works like a Google-Doc "anyone with the link": hand it to your household or club and
 they can open and edit the same document. The app picks a sync backend automatically:
 
-| Mode | When | Live? | Notes |
-|---|---|---|---|
-| **Cloud (Supabase)** | You've set a Project URL + anon key in ⚙ Sync setup | Yes, across any device/person | Recommended for a household or remote club |
-| **Host-shared** | Running inside an environment that provides `window.storage` | Yes, for everyone using that copy | e.g. the Claude artifact preview |
-| **This device** | A plain static deployment with no backend configured | No | Still fully usable; share via **Export/Import** codes |
+| Mode                 | When                                                         | Live?                             | Notes                                                 |
+| -------------------- | ------------------------------------------------------------ | --------------------------------- | ----------------------------------------------------- |
+| **Cloud (Supabase)** | You've set a Project URL + anon key in ⚙ Sync setup          | Yes, across any device/person     | Recommended for a household or remote club            |
+| **Host-shared**      | Running inside an environment that provides `window.storage` | Yes, for everyone using that copy | e.g. the Claude artifact preview                      |
+| **This device**      | A plain static deployment with no backend configured         | No                                | Still fully usable; share via **Export/Import** codes |
 
 The app polls the shared document every few seconds while you have a list or read-along open, so
 edits from other people appear on their own. No realtime config required.
@@ -67,7 +67,7 @@ expected.
 ## Privacy & limits
 
 - **Capability codes**: anyone with a code can view and edit that document. Don't post codes publicly.
-- **Last-write-wins**: simultaneous edits to the *same* document resolve to the most recent save. Fine
+- **Last-write-wins**: simultaneous edits to the _same_ document resolve to the most recent save. Fine
   for a few people; the app re-reads just before each change to minimise clobbering.
 - **Whole-library household sync** isn't wired into the UI yet, but it's the same mechanism — a future
   step can store your library under a household code so everyone sees the same shelves.

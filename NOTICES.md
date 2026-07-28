@@ -51,14 +51,14 @@ pnpm licenses list --prod --json     # machine-readable (used to build the table
 
 ### Summary (type → count)
 
-| License | Count | Notes |
-|---|---:|---|
-| MIT | 34 | permissive |
-| Apache-2.0 | 2 | permissive (patent grant) |
-| BSD-2-Clause | 1 | permissive (`leaflet` — the map view) |
-| 0BSD | 1 | permissive (public-domain-equivalent) |
-| Unlicense | 1 | public-domain-equivalent |
-| **Total** | **39** | 5 distinct license types |
+| License      |  Count | Notes                                 |
+| ------------ | -----: | ------------------------------------- |
+| MIT          |     34 | permissive                            |
+| Apache-2.0   |      2 | permissive (patent grant)             |
+| BSD-2-Clause |      1 | permissive (`leaflet` — the map view) |
+| 0BSD         |      1 | permissive (public-domain-equivalent) |
+| Unlicense    |      1 | public-domain-equivalent              |
+| **Total**    | **39** | 5 distinct license types              |
 
 **All production dependencies are permissive.** No GPL, LGPL, AGPL, MPL, or other
 reciprocal/copyleft licenses — and no non-OSI / ethical-source licenses — are present in the
@@ -67,47 +67,47 @@ production dependency tree. (The map view uses core `leaflet` (BSD-2-Clause) dir
 
 ### Full inventory (appendix)
 
-| Package | Version | License |
-|---|---|---|
-| `tslib` | 2.8.1 | 0BSD |
-| `dexie` | 4.4.4 | Apache-2.0 |
-| `xlsx` | 0.20.3 | Apache-2.0 |
-| `leaflet` | 1.9.4 | BSD-2-Clause |
-| `@sentry/browser` | 10.62.0 | MIT |
-| `@sentry/browser-utils` | 10.62.0 | MIT |
-| `@sentry/core` | 10.62.0 | MIT |
-| `@sentry/feedback` | 10.62.0 | MIT |
-| `@sentry/react` | 10.62.0 | MIT |
-| `@sentry/replay` | 10.62.0 | MIT |
-| `@sentry/replay-canvas` | 10.62.0 | MIT |
-| `@supabase/auth-js` | 2.108.2 | MIT |
-| `@supabase/functions-js` | 2.108.2 | MIT |
-| `@supabase/phoenix` | 0.4.4 | MIT |
-| `@supabase/postgrest-js` | 2.108.2 | MIT |
-| `@supabase/realtime-js` | 2.108.2 | MIT |
-| `@supabase/storage-js` | 2.108.2 | MIT |
-| `@supabase/supabase-js` | 2.108.2 | MIT |
-| `@tanstack/history` | 1.162.0 | MIT |
-| `@tanstack/query-core` | 5.101.4 | MIT |
-| `@tanstack/query-persist-client-core` | 5.101.4 | MIT |
-| `@tanstack/react-query` | 5.101.4 | MIT |
-| `@tanstack/react-query-persist-client` | 5.101.4 | MIT |
-| `@tanstack/react-router` | 1.170.16 | MIT |
-| `@tanstack/react-store` | 0.9.3 | MIT |
-| `@tanstack/router-core` | 1.171.13 | MIT |
-| `@tanstack/store` | 0.9.3 | MIT |
-| `@types/react` | 19.2.17 | MIT |
-| `cookie-es` | 3.1.1 | MIT |
-| `csstype` | 3.2.3 | MIT |
-| `iceberg-js` | 0.8.1 | MIT |
-| `react` | 19.2.7 | MIT |
-| `react-dom` | 19.2.7 | MIT |
-| `scheduler` | 0.27.0 | MIT |
-| `seroval` | 1.5.4 | MIT |
-| `seroval-plugins` | 1.5.4 | MIT |
-| `use-sync-external-store` | 1.6.0 | MIT |
-| `zustand` | 5.0.14 | MIT |
-| `isbot` | 5.1.44 | Unlicense |
+| Package                                | Version  | License      |
+| -------------------------------------- | -------- | ------------ |
+| `tslib`                                | 2.8.1    | 0BSD         |
+| `dexie`                                | 4.4.4    | Apache-2.0   |
+| `xlsx`                                 | 0.20.3   | Apache-2.0   |
+| `leaflet`                              | 1.9.4    | BSD-2-Clause |
+| `@sentry/browser`                      | 10.62.0  | MIT          |
+| `@sentry/browser-utils`                | 10.62.0  | MIT          |
+| `@sentry/core`                         | 10.62.0  | MIT          |
+| `@sentry/feedback`                     | 10.62.0  | MIT          |
+| `@sentry/react`                        | 10.62.0  | MIT          |
+| `@sentry/replay`                       | 10.62.0  | MIT          |
+| `@sentry/replay-canvas`                | 10.62.0  | MIT          |
+| `@supabase/auth-js`                    | 2.108.2  | MIT          |
+| `@supabase/functions-js`               | 2.108.2  | MIT          |
+| `@supabase/phoenix`                    | 0.4.4    | MIT          |
+| `@supabase/postgrest-js`               | 2.108.2  | MIT          |
+| `@supabase/realtime-js`                | 2.108.2  | MIT          |
+| `@supabase/storage-js`                 | 2.108.2  | MIT          |
+| `@supabase/supabase-js`                | 2.108.2  | MIT          |
+| `@tanstack/history`                    | 1.162.0  | MIT          |
+| `@tanstack/query-core`                 | 5.101.4  | MIT          |
+| `@tanstack/query-persist-client-core`  | 5.101.4  | MIT          |
+| `@tanstack/react-query`                | 5.101.4  | MIT          |
+| `@tanstack/react-query-persist-client` | 5.101.4  | MIT          |
+| `@tanstack/react-router`               | 1.170.16 | MIT          |
+| `@tanstack/react-store`                | 0.9.3    | MIT          |
+| `@tanstack/router-core`                | 1.171.13 | MIT          |
+| `@tanstack/store`                      | 0.9.3    | MIT          |
+| `@types/react`                         | 19.2.17  | MIT          |
+| `cookie-es`                            | 3.1.1    | MIT          |
+| `csstype`                              | 3.2.3    | MIT          |
+| `iceberg-js`                           | 0.8.1    | MIT          |
+| `react`                                | 19.2.7   | MIT          |
+| `react-dom`                            | 19.2.7   | MIT          |
+| `scheduler`                            | 0.27.0   | MIT          |
+| `seroval`                              | 1.5.4    | MIT          |
+| `seroval-plugins`                      | 1.5.4    | MIT          |
+| `use-sync-external-store`              | 1.6.0    | MIT          |
+| `zustand`                              | 5.0.14   | MIT          |
+| `isbot`                                | 5.1.44   | Unlicense    |
 
 _Generated with `pnpm licenses list --prod` on the production dependency tree. Re-run after
 dependency changes to keep this current._
