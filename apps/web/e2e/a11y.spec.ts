@@ -328,11 +328,8 @@ test('axe (no serious/critical): every route in tryst, a core set in 3 alternate
         // the race; it does not wait it out.
         await page.evaluate(
           ({ skin, mode }) => {
-            // MUTATION-TEST PROBE (fix/a11y-mode-flip): silently no-op the pre-seed — proves
-            // assertInkSettled fails rather than the suite passing on a data-mode read that was
-            // never wrong. Revert before commit.
-            void skin
-            void mode
+            localStorage.setItem('reverie.skin', skin)
+            localStorage.setItem('reverie.mode', mode)
           },
           { skin, mode },
         )
