@@ -26,6 +26,16 @@ forgotten.
   one. Warn with real counts before it happens. Merge-routed restore stays blocked
   on field-level merge picking — trading a visible duplicate for a silent loss is
   the wrong direction.
+- **Flash of the wrong mode on a fresh device.** A reader whose profile `mode` is
+  `dark`, on a device with no `reverie.mode` in localStorage — first-ever load, or
+  right after the sign-out cache clear (`fix/offline-session`) — gets a light
+  first paint (the boot script falls back to `system`, which resolves to
+  whatever `prefers-color-scheme` says) and a ~180ms transition to dark once the
+  profile loads and `useSkinSync` corrects it. Real, reader-facing — not the
+  CI-only race the a11y sweep hit, though it's the same underlying gap: nothing
+  pre-seeds localStorage before the app's own first paint. Made more reachable by
+  the sign-out cache clear, which deliberately wipes local state. App-source; its
+  own branch later.
 
 ## Test-infrastructure follow-ups
 
@@ -33,6 +43,12 @@ forgotten.
   `E2E_WORKERS` back above 1 once CI runtime is a real cost.
 - Offline-path e2e specs recorded in `docs/task-offline-session.md`. They become
   the stabilized suite's first real exercise.
+- The a11y sweep's Playwright trace (~249MB) corrupts at write time on the CI
+  runner in roughly 2 of 3 failures — the artifact uploads, its outer zip passes
+  CRC, but the inner `trace.zip` is not a readable zip. Small traces from the
+  same runs upload and open cleanly, so the mechanism is sound; likely a flush
+  race on oversized captures. Another argument for splitting a11y into its own
+  CI job.
 
 ## Product queue
 
