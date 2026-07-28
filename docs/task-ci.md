@@ -14,6 +14,7 @@ a suite whose red means nothing, which is where this whole arc started. CI is
 what converts a local property into an enforced one.
 
 ## Preconditions — stop and report if unmet
+
 - `main` current at f48e246 or later, working tree clean.
 
 ## Phase 1 — Audit and measure. Change nothing. Report and stop.
@@ -76,6 +77,7 @@ do not ask for admin permissions. Report which checks I should mark required and
 their exact names as they appear in the PR checks list.
 
 ## Out of scope — recorded
+
 - The per-user migration for a11y/fonts/cover-sheet. It comes after CI, and what
   it buys is raising `E2E_WORKERS` back above 1 once runner time is a real cost.
 - a11y's three fixture helpers swallowing sign-in errors, and db:seed's
