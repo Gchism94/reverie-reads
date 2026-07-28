@@ -15,14 +15,21 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      # A non-local placeholder, deliberately never the local stack's URL — apps/web's own build
-      # (assert-dist-clean.mjs) enforces under CI/Vercel and refuses a bundle that bakes a local
-      # Supabase URL, and lib/supabase.ts throws at IMPORT time (not just build time) if either var
-      # is unset — which unit tests hit too, verified locally: `pnpm test` fails 8 files/17 tests
-      # with no .env.local present. This block must stay separate from the e2e job's local values
-      # below (docs/task-ci.md item 3) — they can never share one job.
-      VITE_SUPABASE_URL: https://ci-placeholder.supabase.co
-      VITE_SUPABASE_ANON_KEY: ci-placeholder-anon-key
+      # lib/supabase.ts throws at IMPORT time (not just build time) if either var is unset — unit
+      # tests hit this too, verified locally: `pnpm test` fails 8 files/17 tests with no .env.local
+      # present. The JOB default is the LOCAL stack's well-known demo values (not a secret — already
+      # hardcoded in every e2e spec file) because three test files derive their expected localStorage
+      # key from this URL's hostname (authStorageKey(): `sb-${hostname.split('.')[0]}-auth-token`) and
+      # hardcode the result as `sb-127-auth-token` — a non-local placeholder here silently produces a
+      # DIFFERENT key and breaks 17 tests across offlineSession/cacheScoping/offlineCache, discovered
+      # by a real run on this runner, not anticipated. No live Supabase connection is required: every
+      # test that touches `../lib/supabase` mocks it, so this is a string used for key derivation
+      # only. The Build step below overrides both vars specifically, because THAT step needs the
+      # opposite — a non-local value, or assert-dist-clean.mjs (which enforces under CI) refuses the
+      # bundle. Two different needs inside one job, solved with a step-level override rather than
+      # blurring the job-vs-job separation docs/task-ci.md item 3 actually asks for.
+      VITE_SUPABASE_URL: http://127.0.0.1:55321
+      VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
     steps:
       - uses: actions/checkout@v4
 
@@ -56,7 +63,13 @@ jobs:
       - name: Build
         # Kept despite Vercel already building on every PR: this is the only place packages/core's
         # typecheck+build runs, and a failure here is legible (a named CI step) rather than buried
-        # in a Vercel log a contributor may not open.
+        # in a Vercel log a contributor may not open. Overrides the job's local env with a non-local
+        # placeholder — assert-dist-clean.mjs enforces under CI and refuses a bundle that bakes a
+        # local Supabase URL; vite.config.ts's own local-URL check is gated on VERCEL specifically
+        # and so doesn't fire here, but the value still has to be non-local for assert-dist-clean.
+        env:
+          VITE_SUPABASE_URL: https://ci-placeholder.supabase.co
+          VITE_SUPABASE_ANON_KEY: ci-placeholder-anon-key
         run: pnpm build
 
   e2e:
