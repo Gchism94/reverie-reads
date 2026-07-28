@@ -1,3 +1,5 @@
+import { execFileSync } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
 import { expect, test, type Page } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
@@ -6,12 +8,52 @@ import { authFailure } from './support/authError'
 const SUPABASE_URL = 'http://127.0.0.1:55321'
 const ANON =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0'
-const DEV_EMAIL = 'dev@reverie.local'
-const DEV_PASSWORD = 'reverie-dev-password'
+// A dedicated user, not the shared dev account. This spec is the ONLY one that mutates a profile's
+// skin and mode — eight times per run — which is exactly what fonts and cover-sheet used to race.
+const DEV_EMAIL = 'a11y-e2e@reverie.local'
+const DEV_PASSWORD = 'a11y-e2e-password'
 const SKINS = ['tryst', 'grimoire', 'aphelion', 'marrow'] as const
 const MODES = ['dark', 'light'] as const
 
-/** Establish a session directly: sign in with the seeded dev password via the JS client, then hand
+/**
+ * Give this spec's own user a full library, via the ONE seeding implementation the repo already
+ * has. `scripts/seed-dev.mjs` honours DEV_EMAIL/DEV_PASSWORD and creates the account when absent,
+ * so this needs no duplicated seed logic and no separate CI step — invoking it from the spec keeps
+ * local and CI identical.
+ *
+ * The sweep genuinely needs the books: the seed is what populates the Library grid (286 of its 290
+ * books land in the default library via read_status='Read') and Home's book-derived surfaces. Every
+ * other fixture below this spec creates itself. Measured cost of a fresh user + 290 books: ~0.6s,
+ * against a ~15m job.
+ *
+ * Idempotent — re-running replaces this user's books, so repeat local runs are safe.
+ */
+function seedOwnLibrary(): void {
+  const root = fileURLToPath(new URL('../../..', import.meta.url))
+  execFileSync('node', ['scripts/seed-dev.mjs'], {
+    cwd: root,
+    env: { ...process.env, DEV_EMAIL, DEV_PASSWORD },
+    stdio: 'pipe',
+  })
+}
+
+/**
+ * A signed-in anon client, or a diagnosis. The three fixture helpers below used to call
+ * `signInWithPassword` and discard the result, then dereference `.data.user!.id` — so a failed
+ * sign-in surfaced as a bare `TypeError` on the `.id` access, pointing at the wrong thing entirely.
+ * Route them through the same `authFailure()` reader every other spec uses.
+ */
+async function signedInClient(context: string): Promise<SupabaseClient> {
+  const sb = createClient(SUPABASE_URL, ANON)
+  const { data, error } = await sb.auth.signInWithPassword({
+    email: DEV_EMAIL,
+    password: DEV_PASSWORD,
+  })
+  if (error || !data.session) throw new Error(authFailure(context, DEV_EMAIL, error))
+  return sb
+}
+
+/** Establish a session directly: sign in with this spec's own password via the JS client, then hand
  *  the tokens to the app through the URL hash. The app's supabase client has detectSessionInUrl:true,
  *  so it adopts them on load and persists the session — the same landing the magic-link verify would
  *  produce, minus the email. This avoids Mailpit, the auth redirect allow-list, and the email rate
@@ -40,8 +82,7 @@ async function setupFixtures(): Promise<{
   shelfId: string
   tropeId: string
 }> {
-  const sb = createClient(SUPABASE_URL, ANON)
-  await sb.auth.signInWithPassword({ email: DEV_EMAIL, password: DEV_PASSWORD })
+  const sb = await signedInClient('a11y setupFixtures')
   const uid = (await sb.auth.getUser()).data.user!.id
   const bookId = (await sb.from('books').select('id').order('added_at').limit(1).single()).data!.id
 
@@ -151,8 +192,7 @@ async function clearFixtures(sb: SupabaseClient) {
 }
 
 async function cleanup(clubId: string, listCode: string, shelfId: string, bookId?: string) {
-  const sb = createClient(SUPABASE_URL, ANON)
-  await sb.auth.signInWithPassword({ email: DEV_EMAIL, password: DEV_PASSWORD })
+  const sb = await signedInClient('a11y cleanup')
   await sb.from('clubs').delete().eq('id', clubId)
   await sb.from('lists').delete().eq('id', shelfId)
   if (bookId) await sb.from('book_tropes').delete().eq('book_id', bookId)
@@ -165,8 +205,7 @@ async function cleanup(clubId: string, listCode: string, shelfId: string, bookId
 /** Set the dev profile's skin + mode so the app's skin-sync applies them on the next load
  * (avoids racing the client-side sync — this also exercises the real persistence path). */
 async function setProfileSkinMode(skin: string, mode: string) {
-  const sb = createClient(SUPABASE_URL, ANON)
-  await sb.auth.signInWithPassword({ email: DEV_EMAIL, password: DEV_PASSWORD })
+  const sb = await signedInClient('a11y setProfileSkinMode')
   const uid = (await sb.auth.getUser()).data.user!.id
   await sb.from('profiles').update({ skin, mode }).eq('id', uid)
 }
@@ -233,6 +272,7 @@ test('axe (no serious/critical): every route in tryst, a core set in 3 alternate
   page,
 }) => {
   test.setTimeout(600_000)
+  seedOwnLibrary() // creates this spec's user on first run, and gives it the books the sweep needs
   const { bookId, clubId, listCode, shelfId, tropeId } = await setupFixtures()
   await signIn(page)
 
