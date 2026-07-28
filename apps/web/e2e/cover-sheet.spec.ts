@@ -12,8 +12,13 @@ import { authFailure } from './support/authError'
 const SUPABASE_URL = 'http://127.0.0.1:55321'
 const ANON =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0'
-const DEV_EMAIL = 'dev@reverie.local'
-const DEV_PASSWORD = 'reverie-dev-password'
+const SERVICE =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU'
+// A dedicated user, not the seeded dev account. Every test here builds and tears down its own
+// fixture book, so an empty library is all it ever needed; sharing dev@reverie.local only meant
+// racing a11y's eight profile skin/mode flips per run.
+const EMAIL = 'cover-sheet-e2e@reverie.local'
+const PASSWORD = 'cover-sheet-e2e-password'
 
 // Stub asset per path, so every assertion can tell WHICH ingest produced the cover.
 const STUB = {
@@ -29,6 +34,11 @@ const UPLOAD_FILE = 'public/landing-covers/acotar.jpg'
 
 async function signIn(page: Page, session: { access_token: string; refresh_token: string }) {
   const { access_token, refresh_token } = session
+  // This user's library holds only whatever fixture the current test inserted, and HomeRoute sends
+  // a reader with no books and no onboarding flag to /onboarding, which renders no <nav>. Fixtures
+  // happen to be inserted before this runs today, but set the flag explicitly rather than let the
+  // assertion below depend on that ordering.
+  await page.addInitScript(() => localStorage.setItem('reverie.onboarded', '1'))
   await page.goto(
     `/#access_token=${access_token}&refresh_token=${refresh_token}&expires_in=3600&token_type=bearer&type=magiclink`,
   )
@@ -36,15 +46,33 @@ async function signIn(page: Page, session: { access_token: string; refresh_token
   await expect(page.getByRole('navigation')).toBeVisible({ timeout: 20_000 })
 }
 
+async function ensureUser(): Promise<void> {
+  const admin = createClient(SUPABASE_URL, SERVICE, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  })
+  const { data } = await admin.auth.admin.listUsers()
+  let uid = data?.users?.find((u) => u.email === EMAIL)?.id
+  if (!uid) {
+    const { data: created, error } = await admin.auth.admin.createUser({
+      email: EMAIL,
+      password: PASSWORD,
+      email_confirm: true,
+    })
+    if (error) throw error
+    uid = created.user!.id
+  }
+  await admin
+    .from('profiles')
+    .upsert({ id: uid, display_name: 'Cover Sheet E2E', skin: 'tryst', mode: 'system' })
+}
+
 // One signed-in client per test, shared by fixtures + the page hand-off — the local GoTrue
 // sign_in_sign_ups budget is per-IP, and the fullyParallel suite spends it fast.
 async function devClient() {
+  await ensureUser()
   const sb = createClient(SUPABASE_URL, ANON)
-  const { data, error } = await sb.auth.signInWithPassword({
-    email: DEV_EMAIL,
-    password: DEV_PASSWORD,
-  })
-  if (error || !data.session) throw new Error(authFailure('cover-sheet', DEV_EMAIL, error))
+  const { data, error } = await sb.auth.signInWithPassword({ email: EMAIL, password: PASSWORD })
+  if (error || !data.session) throw new Error(authFailure('cover-sheet', EMAIL, error))
   return { sb, session: data.session, uid: data.session.user.id }
 }
 type DevClient = Awaited<ReturnType<typeof devClient>>

@@ -187,7 +187,36 @@ async function main() {
   )
 }
 
+/**
+ * Describe a thrown Supabase error usefully.
+ *
+ * `e.message ?? e` printed `Seed failed: {}` — Supabase's error objects can carry an empty message,
+ * and the fallback then stringifies an object whose useful fields (status, code, hint, details) are
+ * exactly the ones a bare `%o` drops. Same empty-body shape `apps/web/e2e/support/authError.ts`
+ * exists to unpack; the technique is duplicated rather than imported because that module is
+ * Playwright test-support and this is a root-level script — a dependency the wrong way round.
+ */
+function describeError(e) {
+  if (!e) return '(no error object)'
+  if (typeof e === 'string') return e
+  const fields = ['name', 'status', 'code', 'hint', 'details']
+    .filter((k) => e[k] !== undefined && e[k] !== null && e[k] !== '')
+    .map((k) => `${k}=${JSON.stringify(e[k])}`)
+  const message = e.message ? JSON.stringify(e.message) : '(empty)'
+  let extra = ''
+  try {
+    const known = new Set(['name', 'status', 'code', 'hint', 'details', 'message', 'stack'])
+    const own = Object.getOwnPropertyNames(e).filter((k) => !known.has(k))
+    if (own.length)
+      extra = ` extra=${JSON.stringify(Object.fromEntries(own.map((k) => [k, e[k]])))}`
+  } catch {
+    /* a throwing getter must not replace the diagnosis with its own failure */
+  }
+  return `message=${message}${fields.length ? ' ' + fields.join(' ') : ''}${extra}`
+}
+
 main().catch((e) => {
-  console.error('Seed failed:', e.message ?? e)
+  console.error('Seed failed:', describeError(e))
+  if (e?.stack) console.error(e.stack)
   process.exit(1)
 })
