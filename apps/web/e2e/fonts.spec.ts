@@ -10,6 +10,13 @@ import { authFailure } from './support/authError'
 const SUPABASE_URL = 'http://127.0.0.1:55321'
 const ANON =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0'
+const SERVICE =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU'
+// A dedicated user, not the seeded dev account. This spec only needs SOMEONE signed in — it reads
+// no book data at all — so it takes an empty library and no seed. Sharing dev@reverie.local meant
+// racing a11y, which flips that profile's skin/mode eight times a run.
+const EMAIL = 'fonts-e2e@reverie.local'
+const PASSWORD = 'fonts-e2e-password'
 
 // family → the skin that depends on it
 const FAMILIES: [string, string][] = [
@@ -33,14 +40,36 @@ const FAMILIES: [string, string][] = [
   ['Karla', 'firstlight (bloom) labels'],
 ]
 
-test('every designed skin typeface actually loads (no silent fallback)', async ({ page }) => {
-  const sb = createClient(SUPABASE_URL, ANON)
-  const { data, error } = await sb.auth.signInWithPassword({
-    email: 'dev@reverie.local',
-    password: 'reverie-dev-password',
+async function ensureUser(): Promise<void> {
+  const admin = createClient(SUPABASE_URL, SERVICE, {
+    auth: { autoRefreshToken: false, persistSession: false },
   })
-  if (error || !data.session) throw new Error(authFailure('fonts', 'dev@reverie.local', error))
+  const { data } = await admin.auth.admin.listUsers()
+  let uid = data?.users?.find((u) => u.email === EMAIL)?.id
+  if (!uid) {
+    const { data: created, error } = await admin.auth.admin.createUser({
+      email: EMAIL,
+      password: PASSWORD,
+      email_confirm: true,
+    })
+    if (error) throw error
+    uid = created.user!.id
+  }
+  await admin
+    .from('profiles')
+    .upsert({ id: uid, display_name: 'Fonts E2E', skin: 'tryst', mode: 'system' })
+}
+
+test('every designed skin typeface actually loads (no silent fallback)', async ({ page }) => {
+  await ensureUser()
+  const sb = createClient(SUPABASE_URL, ANON)
+  const { data, error } = await sb.auth.signInWithPassword({ email: EMAIL, password: PASSWORD })
+  if (error || !data.session) throw new Error(authFailure('fonts', EMAIL, error))
   const { access_token, refresh_token } = data.session
+  // This user's library is EMPTY, and HomeRoute redirects a reader with no books and no onboarding
+  // flag to /onboarding — which renders no <nav>, failing the assertion below. Set the flag
+  // explicitly rather than depending on a book happening to exist.
+  await page.addInitScript(() => localStorage.setItem('reverie.onboarded', '1'))
   await page.goto(
     `/#access_token=${access_token}&refresh_token=${refresh_token}&expires_in=3600&token_type=bearer&type=magiclink`,
   )

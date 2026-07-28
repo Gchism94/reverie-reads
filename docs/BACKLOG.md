@@ -43,6 +43,13 @@ forgotten.
   `E2E_WORKERS` back above 1 once CI runtime is a real cost.
 - Offline-path e2e specs recorded in `docs/task-offline-session.md`. They become
   the stabilized suite's first real exercise.
+- **The a11y sweep has never scanned `CoverPlaceholder`** — every seeded book has a
+  `cover_url`, so the placeholder path has never been put in front of axe, despite
+  being the surface with the most contrast-test investment in `packages/core`. Add
+  a coverless book to the a11y fixture set on its own branch, where a red result
+  means one thing. (Deliberately excluded from `test/trio-migration`: bundling it
+  would have made a red acceptance run ambiguous between a migration break and a
+  new discovery.)
 - The a11y sweep's Playwright trace (~249MB) corrupts at write time on the CI
   runner in roughly 2 of 3 failures — the artifact uploads, its outer zip passes
   CRC, but the inner `trace.zip` is not a readable zip. Small traces from the
