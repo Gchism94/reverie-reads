@@ -161,8 +161,12 @@ test('series page: a linked book can be removed, and stays removed', async ({ pa
       'Audit Alpha',
       'Audit Charlie',
     ])
-    // The book keeps existing; it just stops naming the series.
-    expect((await bookRow(c, 'Audit Bravo'))?.series).toBeFalsy()
+    // The book keeps existing; it just stops naming the series. useRemoveEntry writes
+    // series_entries and books.series as two SEPARATE, sequential round trips within one mutation —
+    // not one transaction — so a reader querying independently (this test's own client, not the
+    // app's own invalidation-gated view) can observe the first commit before the second lands. Poll,
+    // matching the liveEntries wait just above, rather than assuming both are visible atomically.
+    await expect.poll(async () => (await bookRow(c, 'Audit Bravo'))?.series, { timeout: 15_000 }).toBeFalsy()
 
     // Survives a full reload — reconciliation must not re-add it.
     await page.reload()

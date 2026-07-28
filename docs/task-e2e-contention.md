@@ -204,27 +204,57 @@ wins the race" to "usually loses it." Not re-run with the stacks back up to
 confirm, on purpose — reintroducing contention to make a result look greener
 would be adjusting the protocol to reach five, which was ruled out explicitly.
 
-**Acceptance is not met.** Reported as red, as instructed — no fix applied, no
-retry, no protocol change.
+**Acceptance was not met at this point in the branch.** Reported as red, as
+instructed — no fix applied yet, no retry, no protocol change. Fixed below,
+once the owner ruled this specific gap in scope: it's test infrastructure, not
+an app defect, and the "report, don't fix" rule was aimed at the latter.
+
+**Why this passed 3-for-3 in Phase 1 and then failed 5-for-5 here, with no
+app-source or spec change in between:** machine contention was scattering
+where the test's poll landed relative to the two-write race window described
+above — sometimes catching it after both writes had committed, sometimes
+before. An idle machine hits the same window on every attempt. The flake was
+masking a hole in the test, not the reverse.
+
+### Fix — `expect.poll` added, mutation-checked
+
+`series-removal-positions.spec.ts:165` now polls `bookRow(c, 'Audit
+Bravo')?.series` with a 15s bound, matching the `liveEntries` poll immediately
+above it, instead of asserting once with no wait. Diff is one assertion plus
+its comment — four lines changed, no other spec touched.
+
+Mutation-checked before trusting it: temporarily short-circuited
+`useRemoveEntry`'s second write (`apps/web/src/data/series.ts` ~L361 — `if
+(false && input.bookId)`) so `books.series` would never clear, re-ran the
+single test against a fresh DB, reverted, and confirmed `git status
+--porcelain` clean before re-running the full suite.
+
+| condition                             | result                                                                    |
+| ------------------------------------- | ------------------------------------------------------------------------- |
+| unmodified app source                 | 7/7 passed (isolated file run); target test 3.6s                          |
+| second write short-circuited (mutant) | **failed** — waited the full 15s, then reported `Received: "Audit Cycle"` |
+
+The poll fails on a genuinely broken write rather than passing on a timing
+accident, which is the property the old unwaited `expect()` didn't have.
+
+### Acceptance re-run #2 (workers=1, after the fix)
+
+<!-- filled in after the five runs below -->
 
 ## Follow-up — recorded here, not fixed on this branch
 
-**Highest priority — this is the one currently blocking the acceptance bar
-outright, 5/5, independent of worker count:**
-
-- **`series-removal-positions.spec.ts:165` is missing an `expect.poll`.**
-  `useRemoveEntry` (`apps/web/src/data/series.ts` ~L353) writes
-  `series_entries` and then `books.series = null` as two sequential,
-  independently-committed calls in one mutation, not a single transaction. The
-  test polls only the first write and then asserts the second with a plain,
-  unwaited `expect()` immediately after — real, if usually small, window
-  between the two commits that the test doesn't cover. Not an app defect: the
-  app's own UI never observes the gap, since it waits for both writes before
-  invalidating. Fix is `expect.poll` on the `bookRow(c, 'Audit Bravo')?.series`
-  check the same way line ~160 already polls `liveEntries` — same shape,
-  should be a small change, but it's a spec edit and this branch is
-  test-infrastructure-only in the narrower "config + helper" sense already
-  established, so it's recorded rather than applied here.
+**`useRemoveEntry`'s two writes are not transactional.** `series_entries` and
+`books.series = null` are two separate, sequentially-committed calls inside
+one mutation (`apps/web/src/data/series.ts` ~L353), not one atomic write. The
+UI never observes the gap between them — it invalidates only after both
+resolve — but a failure or dropped connection between the two commits would
+leave `series_entries` marked removed while the book's own `series` column
+still names it, with no compensating write ever issued. (An existing
+revive-on-refresh path in `series.ts` reconciles a book that still names a
+series it's linked to elsewhere, which may or may not cover this exact
+half-committed shape — that's part of what the audit needs to check.) Needs an
+audit of the dropped-connection path and, if it's a real gap, an atomic fix
+(single RPC or transaction). App-source change — not for this branch.
 
 These belong on the per-user-migration branch that closes the a11y /
 cover-sheet sharing (see "Deliberately NOT in this branch" above), not here —
