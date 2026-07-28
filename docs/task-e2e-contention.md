@@ -81,10 +81,12 @@ axe plus the Vite dev server plus Docker Supabase do not fit on eight cores.
 
 So the fix follows the measurement, not the hypothesis. Three items, and only these:
 
-1. **Worker count from an env var, default 2 locally** — not a hardcoded 4. Four
+1. **Worker count from an env var, default 1 locally** — not a hardcoded 4. Four
    workers saturate this box; two is green and no slower, because the a11y sweep
    (~4.4m) is the wall-clock floor either way. A CI runner will have different
    capacity, which is why it is an env var rather than a new hardcoded number.
+   (Revised again below, after the workers=2 acceptance run itself failed once
+   in five — see "Decision — default lowered to 1".)
 2. **`trace: 'retain-on-failure'`**, replacing `on-first-retry`. At `retries: 0`
    the old setting was inert, which is how the first round of error text was lost.
    Retries stay at 0.
@@ -135,6 +137,114 @@ residue is the three specs still sharing the seeded dev account — the deferred
 follow-up — which is now the highest-value next change rather than a
 nice-to-have. Parallelism is worth little here regardless: serializing the whole
 suite costs ~10%, because the a11y sweep is the wall-clock floor either way.
+
+### Decision — default lowered to 1 (owner, 2026-07-27)
+
+Two of the numbers cited above when workers=2 was chosen were wrong: the
+comment said "two is green" (it was 4-of-5) and estimated workers=1 as "~40%
+slower" (measured: ~10%, ~36 seconds). Corrected in the commit that fixed the
+comment, but the conclusion changes too once the numbers are right — a setting
+that fails one run in five is not an acceptable default to gate merge on, and
+the thing it was bought with (speed) turns out to be nearly free to give back,
+because the ~4.4m a11y sweep is the wall-clock floor at any worker count.
+`E2E_WORKERS` default is now **1**. Re-run: five consecutive full-suite runs at
+the new default, fresh DB before each, retries 0 — see below. The 3-vs-4-worker
+ceiling probes already recorded above are kept as-is; they still show the
+default isn't an arbitrary number, even though the default itself moved.
+
+### Acceptance re-run at the new default (workers=1) — NOT MET, 0/5
+
+Run with both other Docker Supabase stacks (`high-desert`, `redmond-compass`)
+stopped first, so book-corpus had the machine to itself. Fresh DB before every
+run, retries 0.
+
+| run | exit | result                             | wall clock |
+| --- | ---- | ---------------------------------- | ---------- |
+| 1   | 1    | 1 failed, 6 did not run, 42 passed | 4.4m       |
+| 2   | 1    | 1 failed, 6 did not run, 42 passed | 4.2m       |
+| 3   | 1    | 1 failed, 6 did not run, 42 passed | 4.1m       |
+| 4   | 1    | 1 failed, 6 did not run, 42 passed | 4.0m       |
+| 5   | 1    | 1 failed, 6 did not run, 42 passed | 4.1m       |
+
+All five failed on the **identical** assertion, at nearly identical speed —
+1.6–1.9s, nowhere near any timeout budget:
+
+```
+✘ e2e/series-removal-positions.spec.ts:140:1 › series page: a linked book can
+  be removed, and stays removed
+  Error: expect(received).toBeFalsy()
+  Received: "Audit Cycle"
+    > 165 | expect((await bookRow(c, 'Audit Bravo'))?.series).toBeFalsy()
+```
+
+**This is not the saturation/contention pattern this branch was built to fix.**
+5-for-5 identical, at sub-2-second speed, is deterministic, not flaky — and
+worker count is irrelevant to it, since it fails the same way fully serialized.
+Root cause, read from source rather than guessed: `useRemoveEntry` in
+`apps/web/src/data/series.ts` (~L353) does two **sequential**, independently
+committed writes in one mutation — `series_entries.update(removalPatch())`,
+then, only if that succeeds, `books.update({ series: null })` — not a single
+transaction. The test polls only the first write
+(`expect.poll(...liveEntries...)` at line ~160) and then makes a **plain,
+unpolled** `expect()` against the second write immediately after. There's a
+real window, however small, between the two writes committing, and the test
+has no wait covering it. This is a missing-`expect.poll` bug in the spec, not
+an app-source defect — the app's own UI never observes the intermediate state,
+because `onSuccess` fires only after both writes resolve; only a third-party
+reader (this test's direct `c.sb` query) can see the gap.
+
+**Why this didn't fail in the Phase-1 workers=1 runs (3/3 green, same
+assertion, same code, same test).** The only variable that changed between
+then and now is the Docker environment: the other two stacks were still
+running during Phase 1 and are stopped now. That doesn't touch worker count or
+retries, but it very plausibly changes backend latency and therefore exactly
+where in that race window the test's poll happens to land — a smaller,
+more-heavily-loaded-then-idle Postgres could easily flip this from "usually
+wins the race" to "usually loses it." Not re-run with the stacks back up to
+confirm, on purpose — reintroducing contention to make a result look greener
+would be adjusting the protocol to reach five, which was ruled out explicitly.
+
+**Acceptance is not met.** Reported as red, as instructed — no fix applied, no
+retry, no protocol change.
+
+## Follow-up — recorded here, not fixed on this branch
+
+**Highest priority — this is the one currently blocking the acceptance bar
+outright, 5/5, independent of worker count:**
+
+- **`series-removal-positions.spec.ts:165` is missing an `expect.poll`.**
+  `useRemoveEntry` (`apps/web/src/data/series.ts` ~L353) writes
+  `series_entries` and then `books.series = null` as two sequential,
+  independently-committed calls in one mutation, not a single transaction. The
+  test polls only the first write and then asserts the second with a plain,
+  unwaited `expect()` immediately after — real, if usually small, window
+  between the two commits that the test doesn't cover. Not an app defect: the
+  app's own UI never observes the gap, since it waits for both writes before
+  invalidating. Fix is `expect.poll` on the `bookRow(c, 'Audit Bravo')?.series`
+  check the same way line ~160 already polls `liveEntries` — same shape,
+  should be a small change, but it's a spec edit and this branch is
+  test-infrastructure-only in the narrower "config + helper" sense already
+  established, so it's recorded rather than applied here.
+
+These belong on the per-user-migration branch that closes the a11y /
+cover-sheet sharing (see "Deliberately NOT in this branch" above), not here —
+test-infrastructure-only scope. Noted so they aren't lost between branches:
+
+- **`a11y.spec.ts`'s `setupFixtures`, `cleanup`, and `setProfileSkinMode` discard
+  their sign-in error and then dereference `.data.user!.id`.** A failed sign-in
+  in any of the three surfaces as a bare `TypeError` on the `.id` access rather
+  than a diagnosis — the same class of defect `authFailure()` fixed at the
+  actual sign-in helpers, just not yet applied to these three fixture-setup
+  call sites.
+- **`pnpm db:seed` prints `Seed failed: {}`.** Same empty-response-body shape
+  that `authFailure()` exists to unpack, in the seed script rather than a spec.
+- **The failure that survived workers=2 was the shared dev account, not
+  contention in general.** `a11y` occupies one worker for its ~4.4m sweep while
+  `cover-sheet` — the heaviest of the remaining specs — runs concurrently
+  against the same seeded user. `workers=1` dissolves this by serializing
+  everything, which is a real fix for _this_ branch's scope but doesn't touch
+  the underlying cause. The per-user migration is what actually fixes it, and
+  is what would make raising the worker count back above 1 worth doing.
 
 ## Out of scope — recorded
 

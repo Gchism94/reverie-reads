@@ -23,21 +23,24 @@ const BASE_URL = `http://localhost:${PORT}`
 //
 // Measured on this box, fresh DB before every run, retries 0:
 //
-//   workers=1   3 runs, 3 green            mean 6.3m
-//   workers=2   5 runs, 4 green            mean 5.7m   ← default
+//   workers=1   3 runs, 3 green            mean 6.3m   ← default
+//   workers=2   5 runs, 4 green            mean 5.7m
 //   workers=3   1 run,  1 green                 5.2m
 //   workers=4   3 runs, 0 green            (8, 8 and 3 failures)
 //
-// Two is the default because it is the cheapest setting that is mostly reliable, not because it is
-// proven clean: one of its five runs still failed. Parallelism buys very little here — the a11y
-// sweep alone is ~4.4m and is the wall-clock floor, so serializing the entire rest of the suite
-// costs only ~10% (6.3m vs 5.7m), and going past 2 buys no speed at all while going red.
+// One is the default because parallelism buys almost nothing here and costs reliability. The a11y
+// sweep alone is ~4.4m and is the wall-clock floor regardless of worker count, so serializing the
+// entire rest of the suite costs only ~36s (~10%: 6.3m vs 5.7m) — and at workers=2 that ~10% bought
+// a run that still failed one time in five. Going past 2 buys no speed at all while going red.
 //
-// The residual failure is NOT worker count. It is that a11y, fonts and cover-sheet still share the
-// one seeded dev account, so the heaviest test runs concurrently with the heaviest sweep against
-// the same rows. Migrating those three to per-file users is the follow-up that should actually
-// close this; raise the worker count again only after it lands and five consecutive runs are green.
-const WORKERS = Number(process.env.E2E_WORKERS ?? 2)
+// The failure that survived workers=2 was NOT contention between arbitrary specs — it was a11y and
+// cover-sheet, specifically, racing each other for the one seeded dev account they both sign in as:
+// a11y holds one worker for the whole sweep while cover-sheet runs concurrently against the same
+// rows. workers=1 dissolves that by serializing everything; it doesn't fix the underlying sharing.
+// The real fix is the follow-up that migrates a11y/fonts/cover-sheet to per-file users, which is
+// what would make raising this back above 1 worth doing — only re-raise it once that lands and five
+// consecutive runs are green at the higher count.
+const WORKERS = Number(process.env.E2E_WORKERS ?? 1)
 
 export default defineConfig({
   testDir: './e2e',
