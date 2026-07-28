@@ -33,6 +33,12 @@ forgotten.
   `E2E_WORKERS` back above 1 once CI runtime is a real cost.
 - Offline-path e2e specs recorded in `docs/task-offline-session.md`. They become
   the stabilized suite's first real exercise.
+- The a11y sweep's Playwright trace (~249MB) corrupts at write time on the CI
+  runner in roughly 2 of 3 failures — the artifact uploads, its outer zip passes
+  CRC, but the inner `trace.zip` is not a readable zip. Small traces from the
+  same runs upload and open cleanly, so the mechanism is sound; likely a flush
+  race on oversized captures. Another argument for splitting a11y into its own
+  CI job.
 
 ## Product queue
 
