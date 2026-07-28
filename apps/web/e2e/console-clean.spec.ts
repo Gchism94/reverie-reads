@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { authFailure } from './support/authError'
 
 // A book page should load without complaining.
 //
@@ -26,7 +27,7 @@ async function client(): Promise<Client> {
   await admin.from('profiles').upsert({ id: uid, display_name: 'Console Clean', skin: 'tryst', mode: 'system' })
   const sb = createClient(SUPABASE_URL, ANON)
   const { data: s, error } = await sb.auth.signInWithPassword({ email: EMAIL, password: PASSWORD })
-  if (error || !s.session) throw new Error('sign-in failed')
+  if (error || !s.session) throw new Error(authFailure('console-clean', EMAIL, error))
   return { sb, session: s.session, uid: s.session.user.id }
 }
 

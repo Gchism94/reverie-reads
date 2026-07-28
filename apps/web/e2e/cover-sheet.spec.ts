@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 import { createClient } from '@supabase/supabase-js'
+import { authFailure } from './support/authError'
 
 // Cover system e2e (docs/task-cover-system.md): the sheet's four paths against a STUBBED covers
 // Edge Function (deterministic, offline-safe), the lazy backfill, the edition-details sync, the
@@ -40,7 +41,7 @@ async function signIn(page: Page, session: { access_token: string; refresh_token
 async function devClient() {
   const sb = createClient(SUPABASE_URL, ANON)
   const { data, error } = await sb.auth.signInWithPassword({ email: DEV_EMAIL, password: DEV_PASSWORD })
-  if (error || !data.session) throw new Error(`seed sign-in failed: ${error?.message ?? 'no session'}`)
+  if (error || !data.session) throw new Error(authFailure('cover-sheet', DEV_EMAIL, error))
   return { sb, session: data.session, uid: data.session.user.id }
 }
 type DevClient = Awaited<ReturnType<typeof devClient>>

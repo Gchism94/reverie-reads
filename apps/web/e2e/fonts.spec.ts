@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
+import { authFailure } from './support/authError'
 
 // The generalized font guard (Fable 5): every typeface a designed skin depends on must actually
 // load — a silent fallback to Georgia/system-ui would pass axe and every unit test while losing the
@@ -35,7 +36,7 @@ const FAMILIES: [string, string][] = [
 test('every designed skin typeface actually loads (no silent fallback)', async ({ page }) => {
   const sb = createClient(SUPABASE_URL, ANON)
   const { data, error } = await sb.auth.signInWithPassword({ email: 'dev@reverie.local', password: 'reverie-dev-password' })
-  if (error || !data.session) throw new Error(`seed sign-in failed: ${error?.message ?? 'no session'}`)
+  if (error || !data.session) throw new Error(authFailure('fonts', 'dev@reverie.local', error))
   const { access_token, refresh_token } = data.session
   await page.goto(
     `/#access_token=${access_token}&refresh_token=${refresh_token}&expires_in=3600&token_type=bearer&type=magiclink`,

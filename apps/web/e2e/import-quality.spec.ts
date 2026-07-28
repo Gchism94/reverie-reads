@@ -2,6 +2,7 @@ import { fileURLToPath } from 'node:url'
 import { expect, test, type Page } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { authFailure } from './support/authError'
 
 // Import-quality e2e (docs/task-import-quality.md): a real Goodreads export goes in through the
 // REAL app (Settings → import), and we verify the fidelity fixes landed in the DB — series parsed
@@ -49,7 +50,7 @@ async function devClient() {
   await ensureTestUser()
   const sb = createClient(SUPABASE_URL, ANON)
   const { data, error } = await sb.auth.signInWithPassword({ email: TEST_EMAIL, password: TEST_PASSWORD })
-  if (error || !data.session) throw new Error(`test sign-in failed: ${error?.message ?? 'no session'}`)
+  if (error || !data.session) throw new Error(authFailure('import-quality', TEST_EMAIL, error))
   return { sb, session: data.session, uid: data.session.user.id }
 }
 type DevClient = Awaited<ReturnType<typeof devClient>>
