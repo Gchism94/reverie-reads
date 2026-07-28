@@ -1,4 +1,11 @@
-import { OWNERSHIP_VALUES, isPossessed, ownedCaption, type Book, type BookOwnership, type Owned } from '@reverie/core'
+import {
+  OWNERSHIP_VALUES,
+  isPossessed,
+  ownedCaption,
+  type Book,
+  type BookOwnership,
+  type Owned,
+} from '@reverie/core'
 import { Switch } from '../components/Switch'
 import { useVoice } from '../skin/labels'
 import { OWNERSHIP_LABELS } from '../library/constants'
@@ -36,8 +43,10 @@ export function OwnedCopies({
   const caption: Record<BookOwnership, string> = {
     owned: ownedCaption(owned, 'Owned'),
     borrowed: ownedCaption(owned, 'Borrowed'),
-    wishlist: 'A book you want, not one you have yet — mark it owned or borrowed when it comes home.',
-    unset: 'Possession not set — record it as owned, borrowed, or a wishlist want whenever you like.',
+    wishlist:
+      'A book you want, not one you have yet — mark it owned or borrowed when it comes home.',
+    unset:
+      'Possession not set — record it as owned, borrowed, or a wishlist want whenever you like.',
   }
 
   return (
@@ -57,7 +66,11 @@ export function OwnedCopies({
             className="skin-control border px-3 py-1.5 text-center leading-tight"
             style={
               ownership === value
-                ? { background: 'var(--accent-fill)', color: 'var(--on-primary)', borderColor: 'transparent' }
+                ? {
+                    background: 'var(--accent-fill)',
+                    color: 'var(--on-primary)',
+                    borderColor: 'transparent',
+                  }
                 : { background: 'var(--field)', color: 'var(--muted)', borderColor: 'var(--line)' }
             }
           >
@@ -74,7 +87,9 @@ export function OwnedCopies({
             <span className="text-[14px] text-ink">📖 Physical</span>
             <Switch
               checked={physicalOn}
-              onChange={(on) => onChange({ ...owned, physical: on ? (physicalKind ?? 'paperback') : false })}
+              onChange={(on) =>
+                onChange({ ...owned, physical: on ? (physicalKind ?? 'paperback') : false })
+              }
               label="Have a physical copy"
             />
           </div>
@@ -89,8 +104,16 @@ export function OwnedCopies({
                   className="rounded-full border px-2.5 py-1 text-[11.5px] font-semibold capitalize"
                   style={
                     physicalKind === k
-                      ? { background: 'var(--accent-fill)', color: 'var(--on-primary)', borderColor: 'transparent' }
-                      : { background: 'var(--field)', color: 'var(--muted)', borderColor: 'var(--line)' }
+                      ? {
+                          background: 'var(--accent-fill)',
+                          color: 'var(--on-primary)',
+                          borderColor: 'transparent',
+                        }
+                      : {
+                          background: 'var(--field)',
+                          color: 'var(--muted)',
+                          borderColor: 'var(--line)',
+                        }
                   }
                 >
                   {k}
@@ -101,11 +124,19 @@ export function OwnedCopies({
 
           <div className="flex items-center justify-between gap-3">
             <span className="text-[14px] text-ink">📱 Ebook</span>
-            <Switch checked={owned.ebook} onChange={(on) => onChange({ ...owned, ebook: on })} label="Have an ebook" />
+            <Switch
+              checked={owned.ebook}
+              onChange={(on) => onChange({ ...owned, ebook: on })}
+              label="Have an ebook"
+            />
           </div>
           <div className="flex items-center justify-between gap-3">
             <span className="text-[14px] text-ink">🎧 Audiobook</span>
-            <Switch checked={owned.audiobook} onChange={(on) => onChange({ ...owned, audiobook: on })} label="Have an audiobook" />
+            <Switch
+              checked={owned.audiobook}
+              onChange={(on) => onChange({ ...owned, audiobook: on })}
+              label="Have an audiobook"
+            />
           </div>
         </div>
       )}

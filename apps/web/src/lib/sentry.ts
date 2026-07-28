@@ -13,8 +13,12 @@ const BOT = /bot|crawl|spider|headless|lighthouse|preview|slurp|monitor/i
 /** Route uncaught browser errors through the core wrapper (used only when Sentry isn't active). */
 function installManualHandlers(): void {
   if (typeof window === 'undefined') return
-  window.addEventListener('error', (e) => captureError(e.error ?? e.message, { kind: 'window.onerror' }))
-  window.addEventListener('unhandledrejection', (e) => captureError(e.reason, { kind: 'unhandledrejection' }))
+  window.addEventListener('error', (e) =>
+    captureError(e.error ?? e.message, { kind: 'window.onerror' }),
+  )
+  window.addEventListener('unhandledrejection', (e) =>
+    captureError(e.reason, { kind: 'unhandledrejection' }),
+  )
 }
 
 /**

@@ -8,11 +8,7 @@
   "orientation": "portrait",
   "background_color": "#0b0612",
   "theme_color": "#0b0612",
-  "categories": [
-    "books",
-    "lifestyle",
-    "productivity"
-  ],
+  "categories": ["books", "lifestyle", "productivity"],
   "icons": [
     {
       "src": "/favicon.svg",

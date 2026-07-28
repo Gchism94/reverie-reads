@@ -80,7 +80,10 @@ const settle = (map: Map<string, Acc>): Record<string, number> => {
 }
 
 /** Learn the standing taste profile from the library. O(books × tags), cheap enough per render. */
-export function buildTasteProfile(books: readonly Book[], opts: { now?: number } = {}): TasteProfile {
+export function buildTasteProfile(
+  books: readonly Book[],
+  opts: { now?: number } = {},
+): TasteProfile {
   const now = opts.now ?? Date.now()
   const tags = new Map<string, Acc>()
   const subs = new Map<string, Acc>()

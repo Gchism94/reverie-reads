@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { captureError, captureMessage, consoleReporter, setErrorReporter, type ErrorReporter } from './observability'
+import {
+  captureError,
+  captureMessage,
+  consoleReporter,
+  setErrorReporter,
+  type ErrorReporter,
+} from './observability'
 
 afterEach(() => {
   setErrorReporter(consoleReporter) // reset to the default between tests
@@ -24,7 +30,8 @@ describe('observability wrapper', () => {
   })
 
   it('defaults to the console reporter', () => {
-    const cons = (globalThis as unknown as { console: { error: (...a: unknown[]) => void } }).console
+    const cons = (globalThis as unknown as { console: { error: (...a: unknown[]) => void } })
+      .console
     const spy = vi.spyOn(cons, 'error').mockImplementation(() => {})
     captureError(new Error('default'))
     expect(spy).toHaveBeenCalledOnce()

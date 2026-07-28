@@ -24,7 +24,14 @@ export function CoverImage({
   thumb = false,
   ghost = false,
 }: {
-  book: { id?: string; title?: string; first?: string; last?: string; cover?: string | null; coverThumb?: string | null }
+  book: {
+    id?: string
+    title?: string
+    first?: string
+    last?: string
+    cover?: string | null
+    coverThumb?: string | null
+  }
   className?: string
   thumb?: boolean
   /**

@@ -34,7 +34,11 @@ const cors = {
 
 const DB_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const SERVICE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-const dbHeaders = { apikey: SERVICE, Authorization: `Bearer ${SERVICE}`, 'Content-Type': 'application/json' }
+const dbHeaders = {
+  apikey: SERVICE,
+  Authorization: `Bearer ${SERVICE}`,
+  'Content-Type': 'application/json',
+}
 
 const GOOGLE_KEY = Deno.env.get('GOOGLE_BOOKS_KEY') ?? ''
 const googleKey = () => (GOOGLE_KEY ? `&key=${encodeURIComponent(GOOGLE_KEY)}` : '')
@@ -55,7 +59,10 @@ let magickReady: Promise<void> | null = null
 function ensureMagick(): Promise<void> {
   if (!magickReady) {
     magickReady = (async () => {
-      const wasmUrl = new URL('magick.wasm', import.meta.resolve('npm:@imagemagick/magick-wasm@0.0.35'))
+      const wasmUrl = new URL(
+        'magick.wasm',
+        import.meta.resolve('npm:@imagemagick/magick-wasm@0.0.35'),
+      )
       await initializeImageMagick(await Deno.readFile(wasmUrl))
     })()
   }
@@ -65,7 +72,10 @@ function ensureMagick(): Promise<void> {
 // ── shared helpers ──
 
 const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...cors, 'Content-Type': 'application/json' },
+  })
 
 /** The caller's user id from the (gateway-verified) JWT — used only to build the storage path. */
 function jwtSub(req: Request): string | null {
@@ -102,11 +112,20 @@ async function globalBudget(name: string, max: number, windowSecs: number): Prom
 
 type Sniffed = { mime: string; ext: string }
 function sniffImage(b: Uint8Array): Sniffed | null {
-  if (b.length > 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return { mime: 'image/jpeg', ext: 'jpg' }
-  if (b.length > 7 && b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return { mime: 'image/png', ext: 'png' }
-  if (b.length > 11 && b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50) return { mime: 'image/webp', ext: 'webp' }
-  if (b.length > 3 && b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x38) return { mime: 'image/gif', ext: 'gif' }
-  if (b.length > 3 && ((b[0] === 0x49 && b[1] === 0x49 && b[2] === 0x2a) || (b[0] === 0x4d && b[1] === 0x4d && b[2] === 0x00))) return { mime: 'image/tiff', ext: 'tif' }
+  if (b.length > 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff)
+    return { mime: 'image/jpeg', ext: 'jpg' }
+  if (b.length > 7 && b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47)
+    return { mime: 'image/png', ext: 'png' }
+  if (b.length > 11 && b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50)
+    return { mime: 'image/webp', ext: 'webp' }
+  if (b.length > 3 && b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x38)
+    return { mime: 'image/gif', ext: 'gif' }
+  if (
+    b.length > 3 &&
+    ((b[0] === 0x49 && b[1] === 0x49 && b[2] === 0x2a) ||
+      (b[0] === 0x4d && b[1] === 0x4d && b[2] === 0x00))
+  )
+    return { mime: 'image/tiff', ext: 'tif' }
   return null
 }
 
@@ -139,7 +158,10 @@ async function normalizeImage(bytes: Uint8Array): Promise<Normalized> {
   const full = encode(FULL_EDGE, 82)
   const thumb = encode(THUMB_EDGE, 78)
 
-  const { width, height } = ImageMagick.read(bytes, (img) => ({ width: img.width, height: img.height }))
+  const { width, height } = ImageMagick.read(bytes, (img) => ({
+    width: img.width,
+    height: img.height,
+  }))
 
   // Dominant colour: quantize a small copy to a handful of colours and score the histogram by
   // count × saturation, skipping near-white/near-black — the jacket's hue, not its margins.
@@ -163,7 +185,8 @@ async function normalizeImage(bytes: Uint8Array): Promise<Normalized> {
         const lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255
         if (lum > 0.94 || lum < 0.05) continue // margins/shadows
         const score = count * (0.35 + sat)
-        if (!best || score > best.score) best = { score, hex: `#${m[1]}${m[2]}${m[3]}`.toLowerCase() }
+        if (!best || score > best.score)
+          best = { score, hex: `#${m[1]}${m[2]}${m[3]}`.toLowerCase() }
       }
       return best?.hex ?? null
     })
@@ -180,7 +203,12 @@ async function normalizeImage(bytes: Uint8Array): Promise<Normalized> {
 async function putObject(path: string, bytes: Uint8Array, contentType: string): Promise<boolean> {
   const r = await fetch(`${DB_URL}/storage/v1/object/covers/${path}`, {
     method: 'POST',
-    headers: { apikey: SERVICE, Authorization: `Bearer ${SERVICE}`, 'Content-Type': contentType, 'x-upsert': 'true' },
+    headers: {
+      apikey: SERVICE,
+      Authorization: `Bearer ${SERVICE}`,
+      'Content-Type': contentType,
+      'x-upsert': 'true',
+    },
     body: bytes as BodyInit,
   })
   return r.ok
@@ -222,7 +250,8 @@ async function handleIngest(req: Request, uid: string): Promise<Response> {
     const form = await req.formData()
     const f = form.get('file')
     if (f instanceof File) {
-      if (f.size > MAX_INPUT_BYTES) return json({ error: 'too_large', maxBytes: MAX_INPUT_BYTES }, 413)
+      if (f.size > MAX_INPUT_BYTES)
+        return json({ error: 'too_large', maxBytes: MAX_INPUT_BYTES }, 413)
       file = new Uint8Array(await f.arrayBuffer())
     }
     fields = {
@@ -235,7 +264,8 @@ async function handleIngest(req: Request, uid: string): Promise<Response> {
     fields = body
   }
 
-  if (!fields.bookId || !/^[0-9a-f-]{16,64}$/i.test(fields.bookId)) return json({ error: 'bad_book_id' }, 400)
+  if (!fields.bookId || !/^[0-9a-f-]{16,64}$/i.test(fields.bookId))
+    return json({ error: 'bad_book_id' }, 400)
   if (!SOURCES.has(fields.source)) return json({ error: 'bad_source' }, 400)
   // Refuse to persist a display-only source, by label OR by host.
   if (!INGESTIBLE_SOURCES.has(fields.source)) {
@@ -244,7 +274,11 @@ async function handleIngest(req: Request, uid: string): Promise<Response> {
   }
   for (const candidate of [fields.url, fields.sourceUrl]) {
     if (candidate && isGoogleHostedCover(candidate)) {
-      logEvent('info', 'covers', 'ingest_refused_display_only', { uid, source: fields.source, host: 'google' })
+      logEvent('info', 'covers', 'ingest_refused_display_only', {
+        uid,
+        source: fields.source,
+        host: 'google',
+      })
       return json({ error: 'display_only_source' }, 422)
     }
   }
@@ -271,7 +305,8 @@ async function handleIngest(req: Request, uid: string): Promise<Response> {
     const len = Number(r.headers.get('content-length') ?? 0)
     if (len > MAX_INPUT_BYTES) return json({ error: 'too_large', maxBytes: MAX_INPUT_BYTES }, 413)
     const buf = new Uint8Array(await r.arrayBuffer())
-    if (buf.byteLength > MAX_INPUT_BYTES) return json({ error: 'too_large', maxBytes: MAX_INPUT_BYTES }, 413)
+    if (buf.byteLength > MAX_INPUT_BYTES)
+      return json({ error: 'too_large', maxBytes: MAX_INPUT_BYTES }, 413)
     file = buf
   }
 
@@ -288,7 +323,12 @@ async function handleIngest(req: Request, uid: string): Promise<Response> {
     // is NOT a cover — refuse to store it (a stored plate has no display fallback). Never applies to a
     // user upload/camera (multipart → file set, no fetchedUrl) or a real cover of any other size.
     if (fetchedUrl && isGoogleNoCoverArt(fetchedUrl, n.width, n.height)) {
-      logEvent('info', 'covers', 'ingest_rejected_no_image', { uid, source: fields.source, w: n.width, h: n.height })
+      logEvent('info', 'covers', 'ingest_rejected_no_image', {
+        uid,
+        source: fields.source,
+        w: n.width,
+        h: n.height,
+      })
       return json({ error: 'no_cover_available' }, 422)
     }
     const fullPath = `${base}/${rev}.webp`
@@ -296,7 +336,14 @@ async function handleIngest(req: Request, uid: string): Promise<Response> {
     const okFull = await putObject(fullPath, n.full, 'image/webp')
     const okThumb = okFull && (await putObject(thumbPath, n.thumb, 'image/webp'))
     if (!okFull) return json({ error: 'storage_failed' }, 502)
-    logEvent('info', 'covers', 'ingest', { uid, source: fields.source, bytesIn: file.byteLength, bytesOut: n.full.byteLength, w: n.width, h: n.height })
+    logEvent('info', 'covers', 'ingest', {
+      uid,
+      source: fields.source,
+      bytesIn: file.byteLength,
+      bytesOut: n.full.byteLength,
+      w: n.width,
+      h: n.height,
+    })
     return json({
       cover: publicUrl(fullPath),
       thumb: okThumb ? publicUrl(thumbPath) : publicUrl(fullPath),
@@ -313,7 +360,13 @@ async function handleIngest(req: Request, uid: string): Promise<Response> {
     const ok = await putObject(rawPath, file, sniffed.mime)
     if (!ok) return json({ error: 'storage_failed' }, 502)
     const url = publicUrl(rawPath)
-    return json({ cover: url, thumb: url, color: null, sourceUrl: sourceUrl ?? null, degraded: true })
+    return json({
+      cover: url,
+      thumb: url,
+      color: null,
+      sourceUrl: sourceUrl ?? null,
+      degraded: true,
+    })
   }
 }
 
@@ -446,9 +499,12 @@ async function googleEditions(input: EditionsInput): Promise<EditionOption[]> {
     )
   const items: { volumeInfo?: Record<string, unknown> }[] = []
   for (const q of queries) {
-    const r = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=20&printType=books${googleKey()}`, {
-      headers: googleHeaders(),
-    })
+    const r = await fetch(
+      `https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=20&printType=books${googleKey()}`,
+      {
+        headers: googleHeaders(),
+      },
+    )
     if (!r.ok) continue
     const j = (await r.json()) as { items?: { volumeInfo?: Record<string, unknown> }[] }
     items.push(...(j.items ?? []))
@@ -457,12 +513,18 @@ async function googleEditions(input: EditionsInput): Promise<EditionOption[]> {
   for (const it of items) {
     const v = it.volumeInfo ?? {}
     const links = v.imageLinks as { thumbnail?: string; smallThumbnail?: string } | undefined
-    const cover = (links?.thumbnail ?? links?.smallThumbnail ?? '').replace('http:', 'https:').replace('&edge=curl', '')
+    const cover = (links?.thumbnail ?? links?.smallThumbnail ?? '')
+      .replace('http:', 'https:')
+      .replace('&edge=curl', '')
     if (!cover) continue
-    const ids = (v.industryIdentifiers as { type?: string; identifier?: string }[] | undefined) ?? []
+    const ids =
+      (v.industryIdentifiers as { type?: string; identifier?: string }[] | undefined) ?? []
     const isbn13 = ids.find((i) => i.type === 'ISBN_13')?.identifier
     const isbn10 = ids.find((i) => i.type === 'ISBN_10')?.identifier
-    const year = typeof v.publishedDate === 'string' ? Number(v.publishedDate.slice(0, 4)) || undefined : undefined
+    const year =
+      typeof v.publishedDate === 'string'
+        ? Number(v.publishedDate.slice(0, 4)) || undefined
+        : undefined
     out.push({
       source: 'google',
       cover,
@@ -479,7 +541,9 @@ async function googleEditions(input: EditionsInput): Promise<EditionOption[]> {
 
 const editionsCacheKey = (input: EditionsInput): string => {
   const isbn = cleanIsbn(input.isbn ?? '')
-  return isbn.length >= 10 ? `editions:isbn:${isbn}` : `editions:ta:${norm(input.title ?? '')}|${norm(input.author ?? '')}`
+  return isbn.length >= 10
+    ? `editions:isbn:${isbn}`
+    : `editions:ta:${norm(input.title ?? '')}|${norm(input.author ?? '')}`
 }
 
 async function readEditionsCache(key: string): Promise<EditionOption[] | null> {
@@ -489,7 +553,10 @@ async function readEditionsCache(key: string): Promise<EditionOption[] | null> {
       `${DB_URL}/rest/v1/enrichment_cache?key=eq.${encodeURIComponent(key)}&select=record,fetched_at`,
       { headers: dbHeaders },
     )
-    const rows = (await r.json()) as { record?: { editions?: EditionOption[] }; fetched_at?: string }[]
+    const rows = (await r.json()) as {
+      record?: { editions?: EditionOption[] }
+      fetched_at?: string
+    }[]
     const row = rows?.[0]
     if (!row?.record?.editions || !row.fetched_at) return null
     if (Date.now() - Date.parse(row.fetched_at) > EDITIONS_TTL_DAYS * 86_400_000) return null

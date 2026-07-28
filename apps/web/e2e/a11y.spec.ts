@@ -19,7 +19,10 @@ const MODES = ['dark', 'light'] as const
  *  free for supabase-js to consume. */
 async function signIn(page: Page) {
   const sb = createClient(SUPABASE_URL, ANON)
-  const { data, error } = await sb.auth.signInWithPassword({ email: DEV_EMAIL, password: DEV_PASSWORD })
+  const { data, error } = await sb.auth.signInWithPassword({
+    email: DEV_EMAIL,
+    password: DEV_PASSWORD,
+  })
   if (error || !data.session) throw new Error(authFailure('a11y', DEV_EMAIL, error))
   const { access_token, refresh_token } = data.session
   await page.goto(
@@ -30,7 +33,13 @@ async function signIn(page: Page) {
   await expect(page.getByRole('navigation')).toBeVisible({ timeout: 20_000 })
 }
 
-async function setupFixtures(): Promise<{ bookId: string; clubId: string; listCode: string; shelfId: string; tropeId: string }> {
+async function setupFixtures(): Promise<{
+  bookId: string
+  clubId: string
+  listCode: string
+  shelfId: string
+  tropeId: string
+}> {
   const sb = createClient(SUPABASE_URL, ANON)
   await sb.auth.signInWithPassword({ email: DEV_EMAIL, password: DEV_PASSWORD })
   const uid = (await sb.auth.getUser()).data.user!.id
@@ -50,34 +59,86 @@ async function setupFixtures(): Promise<{ bookId: string; clubId: string; listCo
   const club = (
     await sb
       .from('clubs')
-      .insert({ title: 'A11y Read-along', unit_type: 'chapter', unit_count: 10, unit_label: 'Chapter', created_by: uid })
+      .insert({
+        title: 'A11y Read-along',
+        unit_type: 'chapter',
+        unit_count: 10,
+        unit_label: 'Chapter',
+        created_by: uid,
+      })
       .select()
       .single()
   ).data!
-  await sb.from('club_members').insert({ club_id: club.id, user_id: uid, display_name: 'Dev', progress: 3 })
+  await sb
+    .from('club_members')
+    .insert({ club_id: club.id, user_id: uid, display_name: 'Dev', progress: 3 })
 
   // a shelf with one book, for the /shelf/$listId detail page
   const shelf = (
-    await sb.from('lists').insert({ owner_id: uid, name: 'A11y Shelf', kind: 'tbr', sort_order: 999999 }).select().single()
+    await sb
+      .from('lists')
+      .insert({ owner_id: uid, name: 'A11y Shelf', kind: 'tbr', sort_order: 999999 })
+      .select()
+      .single()
   ).data!
-  await sb.from('list_items').insert({ list_id: shelf.id, book_id: bookId, owner_id: uid, position: 1000 })
+  await sb
+    .from('list_items')
+    .insert({ list_id: shelf.id, book_id: bookId, owner_id: uid, position: 1000 })
 
   // a series with a linked entry + a ghost slot, for the /series/$seriesName page
   const series = (
-    await sb.from('series').insert({ owner_id: uid, name: 'A11y Saga', status: 'ongoing' }).select().single()
+    await sb
+      .from('series')
+      .insert({ owner_id: uid, name: 'A11y Saga', status: 'ongoing' })
+      .select()
+      .single()
   ).data!
   await sb.from('series_entries').insert([
-    { series_id: series.id, owner_id: uid, position: 1, title: 'Linked One', book_id: bookId, user_edited: true },
-    { series_id: series.id, owner_id: uid, position: 2.5, label: 'novella', title: 'A11y Ghost Novella', author: 'Ghost Writer' },
+    {
+      series_id: series.id,
+      owner_id: uid,
+      position: 1,
+      title: 'Linked One',
+      book_id: bookId,
+      user_edited: true,
+    },
+    {
+      series_id: series.id,
+      owner_id: uid,
+      position: 2.5,
+      label: 'novella',
+      title: 'A11y Ghost Novella',
+      author: 'Ghost Writer',
+    },
   ])
 
   // a trope assignment for the /tropes pages (canonical seed row + the fixture book)
-  const trope = (await sb.from('tropes').select('id').is('owner_id', null).eq('name', 'Enemies to Lovers').single()).data!
-  await sb.from('book_tropes').upsert({ book_id: bookId, trope_id: trope.id, owner_id: uid, emphasis: 'pinned' }, { onConflict: 'book_id,trope_id' })
+  const trope = (
+    await sb
+      .from('tropes')
+      .select('id')
+      .is('owner_id', null)
+      .eq('name', 'Enemies to Lovers')
+      .single()
+  ).data!
+  await sb
+    .from('book_tropes')
+    .upsert(
+      { book_id: bookId, trope_id: trope.id, owner_id: uid, emphasis: 'pinned' },
+      { onConflict: 'book_id,trope_id' },
+    )
 
   const listCode = 'A11YSMOKE'
-  await sb.from('shared_docs').upsert({ key: listCode, value: { type: 'list', kind: 'list', name: 'A11y list', items: [], updatedAt: Date.now() } })
-  await sb.from('shared_refs').upsert({ owner_id: uid, code: listCode, kind: 'list', name: 'A11y list' }, { onConflict: 'owner_id,code' })
+  await sb.from('shared_docs').upsert({
+    key: listCode,
+    value: { type: 'list', kind: 'list', name: 'A11y list', items: [], updatedAt: Date.now() },
+  })
+  await sb
+    .from('shared_refs')
+    .upsert(
+      { owner_id: uid, code: listCode, kind: 'list', name: 'A11y list' },
+      { onConflict: 'owner_id,code' },
+    )
 
   return { bookId, clubId: club.id, listCode, shelfId: shelf.id, tropeId: trope.id }
 }
@@ -114,7 +175,9 @@ async function setProfileSkinMode(skin: string, mode: string) {
 // overstated it twice over: the sweep runs FOUR of the nine skins, and only tryst gets every route
 // (the other three get the core set below). The exhaustive-across-all-nine layer is the
 // registry-keyed contrast tests in packages/core, not this.
-test('axe (no serious/critical): every route in tryst, a core set in 3 alternate skins — each x both modes', async ({ page }) => {
+test('axe (no serious/critical): every route in tryst, a core set in 3 alternate skins — each x both modes', async ({
+  page,
+}) => {
   test.setTimeout(600_000)
   const { bookId, clubId, listCode, shelfId, tropeId } = await setupFixtures()
   await signIn(page)
@@ -137,7 +200,12 @@ test('axe (no serious/critical): every route in tryst, a core set in 3 alternate
         items: [
           vol('Fourth Wing', 'Rebecca Yarros', '/landing-covers/everflame.jpg', '9781649374042'),
           vol('Iron Flame', 'Rebecca Yarros', '/landing-covers/king-of-wrath.jpg', '9781649374172'),
-          vol('The Serpent and the Wings of Night', 'Carissa Broadbent', '/landing-covers/never-king.jpg', '9781250343178'),
+          vol(
+            'The Serpent and the Wings of Night',
+            'Carissa Broadbent',
+            '/landing-covers/never-king.jpg',
+            '9781250343178',
+          ),
           vol('Divine Rivals', 'Rebecca Ross', '/landing-covers/mile-high.jpg', '9781250857439'),
         ],
       },
@@ -154,7 +222,9 @@ test('axe (no serious/critical): every route in tryst, a core set in 3 alternate
   )
   // Cover system: detail views lazily backfill external covers via the covers fn — stub it so the
   // sweep never depends on a local functions server (and never mutates the seeded covers).
-  await page.route('**/functions/v1/covers**', (route) => route.fulfill({ status: 422, json: { error: 'fetch_failed' } }))
+  await page.route('**/functions/v1/covers**', (route) =>
+    route.fulfill({ status: 422, json: { error: 'fetch_failed' } }),
+  )
 
   // Tryst (the default skin) gets full route coverage; the alternate skins sweep a core set
   // that exercises the whole token surface (palette, cards, fills, links, muted text).
@@ -180,7 +250,9 @@ test('axe (no serious/critical): every route in tryst, a core set in 3 alternate
     ['Trope detail', `/tropes/${tropeId}`],
   ]
   const coreRoutes = allRoutes.filter(([name]) =>
-    ['Home', 'Library', 'Book detail', 'Stats', 'Settings', 'Skins', 'Clubs', 'Indie'].includes(name),
+    ['Home', 'Library', 'Book detail', 'Stats', 'Settings', 'Skins', 'Clubs', 'Indie'].includes(
+      name,
+    ),
   )
 
   const failures: string[] = []
@@ -198,21 +270,25 @@ test('axe (no serious/critical): every route in tryst, a core set in 3 alternate
           await expect(page.locator('html')).toHaveAttribute('data-skin', skin)
           await expect(page.locator('html')).toHaveAttribute('data-mode', mode)
 
-          const results = await new AxeBuilder({ page })
-            .withTags(['wcag2a', 'wcag2aa'])
-            .analyze()
-          const serious = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical')
+          const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze()
+          const serious = results.violations.filter(
+            (v) => v.impact === 'serious' || v.impact === 'critical',
+          )
           for (const v of serious) {
             const detail = v.nodes
               .slice(0, 2)
               .map((n) => {
-                const d = n.any?.[0]?.data as { fgColor?: string; bgColor?: string; contrastRatio?: number } | undefined
+                const d = n.any?.[0]?.data as
+                  | { fgColor?: string; bgColor?: string; contrastRatio?: number }
+                  | undefined
                 return d?.contrastRatio != null
                   ? `${String(n.target)} fg=${d.fgColor} bg=${d.bgColor} ratio=${d.contrastRatio}`
                   : String(n.target)
               })
               .join(' || ')
-            failures.push(`[${skin}/${mode}] ${name} (${path}): ${v.id} (${v.nodes.length}) — ${detail}`)
+            failures.push(
+              `[${skin}/${mode}] ${name} (${path}): ${v.id} (${v.nodes.length}) — ${detail}`,
+            )
           }
         }
       }
@@ -234,7 +310,10 @@ test('unauthenticated landing + auth pass axe', async ({ page }) => {
     ['Auth · sign up', '/auth?mode=signup'],
     // The email-link landing (/welcome): the expired-link view and the set-new-password form
     // both render without a session, driven purely by the callback hash.
-    ['Welcome · expired link', '/welcome#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired'],
+    [
+      'Welcome · expired link',
+      '/welcome#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired',
+    ],
     ['Welcome · set new password', '/welcome#type=recovery'],
   ]
   const failures: string[] = []
@@ -243,12 +322,18 @@ test('unauthenticated landing + auth pass axe', async ({ page }) => {
     await page.locator('main').first().waitFor({ state: 'visible' })
     await page.waitForLoadState('networkidle') // let the landing's lazy below-fold chunk render before scanning
     const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze()
-    for (const v of results.violations.filter((x) => x.impact === 'serious' || x.impact === 'critical')) {
+    for (const v of results.violations.filter(
+      (x) => x.impact === 'serious' || x.impact === 'critical',
+    )) {
       const detail = v.nodes
         .slice(0, 2)
         .map((n) => {
-          const d = n.any?.[0]?.data as { fgColor?: string; bgColor?: string; contrastRatio?: number } | undefined
-          return d?.contrastRatio != null ? `${String(n.target)} fg=${d.fgColor} bg=${d.bgColor} ratio=${d.contrastRatio}` : String(n.target)
+          const d = n.any?.[0]?.data as
+            | { fgColor?: string; bgColor?: string; contrastRatio?: number }
+            | undefined
+          return d?.contrastRatio != null
+            ? `${String(n.target)} fg=${d.fgColor} bg=${d.bgColor} ratio=${d.contrastRatio}`
+            : String(n.target)
         })
         .join(' || ')
       failures.push(`[${name}] (${path}): ${v.id} (${v.nodes.length}) — ${detail}`)

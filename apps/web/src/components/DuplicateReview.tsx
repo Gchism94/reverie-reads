@@ -47,7 +47,13 @@ function foldSummary(existing: Book, inc: Incoming): string[] {
 
 const author = (inc: Incoming) => [inc.first, inc.last].filter(Boolean).join(' ')
 
-export function DuplicateReview({ candidates, onDone }: { candidates: ReviewCandidate[]; onDone?: () => void }) {
+export function DuplicateReview({
+  candidates,
+  onDone,
+}: {
+  candidates: ReviewCandidate[]
+  onDone?: () => void
+}) {
   const qc = useQueryClient()
   const { data: books } = useBooks()
   const byId = useMemo(() => new Map((books ?? []).map((b) => [b.id, b])), [books])
@@ -93,7 +99,10 @@ export function DuplicateReview({ candidates, onDone }: { candidates: ReviewCand
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-line p-2.5" style={{ background: 'var(--field)' }}>
+      <div
+        className="flex flex-wrap items-center gap-2 rounded-xl border border-line p-2.5"
+        style={{ background: 'var(--field)' }}
+      >
         <label className="flex items-center gap-2 text-[12.5px] text-ink">
           <input
             type="checkbox"
@@ -103,14 +112,34 @@ export function DuplicateReview({ candidates, onDone }: { candidates: ReviewCand
           Select all ({queue.length})
         </label>
         <span className="flex-1" />
-        <span className="text-[12px] text-muted">Apply to {selectedItems.length || 'selected'}:</span>
-        <button type="button" disabled={busy || !selectedItems.length} onClick={() => void resolveMany(selectedItems, 'merge')} className="rounded-full px-3 py-1.5 text-[12.5px] font-semibold text-on-primary disabled:opacity-40" style={{ background: 'var(--accent-fill)' }}>
+        <span className="text-[12px] text-muted">
+          Apply to {selectedItems.length || 'selected'}:
+        </span>
+        <button
+          type="button"
+          disabled={busy || !selectedItems.length}
+          onClick={() => void resolveMany(selectedItems, 'merge')}
+          className="rounded-full px-3 py-1.5 text-[12.5px] font-semibold text-on-primary disabled:opacity-40"
+          style={{ background: 'var(--accent-fill)' }}
+        >
           Merge
         </button>
-        <button type="button" disabled={busy || !selectedItems.length} onClick={() => void resolveMany(selectedItems, 'keep_both')} className="rounded-full border border-line px-3 py-1.5 text-[12.5px] font-semibold text-ink disabled:opacity-40" style={{ background: 'var(--card)' }}>
+        <button
+          type="button"
+          disabled={busy || !selectedItems.length}
+          onClick={() => void resolveMany(selectedItems, 'keep_both')}
+          className="rounded-full border border-line px-3 py-1.5 text-[12.5px] font-semibold text-ink disabled:opacity-40"
+          style={{ background: 'var(--card)' }}
+        >
           Keep both
         </button>
-        <button type="button" disabled={busy || !selectedItems.length} onClick={() => void resolveMany(selectedItems, 'dismiss')} className="rounded-full border border-line px-3 py-1.5 text-[12.5px] font-semibold text-muted disabled:opacity-40" style={{ background: 'var(--card)' }}>
+        <button
+          type="button"
+          disabled={busy || !selectedItems.length}
+          onClick={() => void resolveMany(selectedItems, 'dismiss')}
+          className="rounded-full border border-line px-3 py-1.5 text-[12.5px] font-semibold text-muted disabled:opacity-40"
+          style={{ background: 'var(--card)' }}
+        >
           Dismiss
         </button>
       </div>
@@ -122,35 +151,87 @@ export function DuplicateReview({ candidates, onDone }: { candidates: ReviewCand
         const adds = existing ? foldSummary(existing, c.incoming) : []
         const k = keyOf(c)
         return (
-          <div key={k} className="rounded-2xl border border-line p-3" style={{ background: 'var(--card)' }}>
+          <div
+            key={k}
+            className="rounded-2xl border border-line p-3"
+            style={{ background: 'var(--card)' }}
+          >
             <div className="flex items-start gap-2">
-              <input type="checkbox" className="mt-1" checked={selected.has(k)} onChange={(e) => setSelected((s) => { const n = new Set(s); if (e.target.checked) n.add(k); else n.delete(k); return n })} aria-label={`Select ${c.incoming.title}`} />
+              <input
+                type="checkbox"
+                className="mt-1"
+                checked={selected.has(k)}
+                onChange={(e) =>
+                  setSelected((s) => {
+                    const n = new Set(s)
+                    if (e.target.checked) n.add(k)
+                    else n.delete(k)
+                    return n
+                  })
+                }
+                aria-label={`Select ${c.incoming.title}`}
+              />
               <div className="min-w-0 flex-1">
                 <div className="text-[14px] font-semibold text-ink">
-                  {c.incoming.title} <span className="text-[12px] font-normal text-muted">· {author(c.incoming) || 'unknown author'}</span>
+                  {c.incoming.title}{' '}
+                  <span className="text-[12px] font-normal text-muted">
+                    · {author(c.incoming) || 'unknown author'}
+                  </span>
                 </div>
                 <div className="mt-0.5 text-[12.5px] text-muted">
                   Matches your <span className="text-ink">{c.existingTitle}</span>
-                  {c.existingAuthor ? ` · ${c.existingAuthor}` : ''} <span className="italic">({STRENGTH_LABEL[c.strength]})</span>
+                  {c.existingAuthor ? ` · ${c.existingAuthor}` : ''}{' '}
+                  <span className="italic">({STRENGTH_LABEL[c.strength]})</span>
                 </div>
                 <div className="mt-1.5 grid gap-1 text-[12.5px] sm:grid-cols-2">
-                  <div className="rounded-lg border border-line px-2 py-1" style={{ background: 'var(--field)' }}>
+                  <div
+                    className="rounded-lg border border-line px-2 py-1"
+                    style={{ background: 'var(--field)' }}
+                  >
                     <span className="text-[11px] uppercase tracking-[0.12em] text-muted">Kept</span>
-                    <div className="text-ink">your entry — rating, notes, shelves &amp; reads stay</div>
+                    <div className="text-ink">
+                      your entry — rating, notes, shelves &amp; reads stay
+                    </div>
                   </div>
-                  <div className="rounded-lg border border-line px-2 py-1" style={{ background: 'var(--field)' }}>
-                    <span className="text-[11px] uppercase tracking-[0.12em] text-muted">Added on merge</span>
-                    <div className="text-ink">{adds.length ? adds.join(', ') : 'nothing new — already complete'}</div>
+                  <div
+                    className="rounded-lg border border-line px-2 py-1"
+                    style={{ background: 'var(--field)' }}
+                  >
+                    <span className="text-[11px] uppercase tracking-[0.12em] text-muted">
+                      Added on merge
+                    </span>
+                    <div className="text-ink">
+                      {adds.length ? adds.join(', ') : 'nothing new — already complete'}
+                    </div>
                   </div>
                 </div>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  <button type="button" disabled={busy} onClick={() => void resolveMany([c], 'merge')} className="rounded-full px-3 py-1.5 text-[12.5px] font-semibold text-on-primary disabled:opacity-40" style={{ background: 'var(--accent-fill)' }}>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void resolveMany([c], 'merge')}
+                    className="rounded-full px-3 py-1.5 text-[12.5px] font-semibold text-on-primary disabled:opacity-40"
+                    style={{ background: 'var(--accent-fill)' }}
+                  >
                     Merge
                   </button>
-                  <button type="button" disabled={busy} onClick={() => void resolveMany([c], 'keep_both')} className="rounded-full border border-line px-3 py-1.5 text-[12.5px] font-semibold text-ink disabled:opacity-40" style={{ background: 'var(--field)' }}>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void resolveMany([c], 'keep_both')}
+                    className="rounded-full border border-line px-3 py-1.5 text-[12.5px] font-semibold text-ink disabled:opacity-40"
+                    style={{ background: 'var(--field)' }}
+                  >
                     Keep both
                   </button>
-                  <button type="button" disabled={busy} onClick={() => void resolveMany([c], 'always_merge')} className="rounded-full border border-line px-3 py-1.5 text-[12.5px] font-semibold text-muted disabled:opacity-40" style={{ background: 'var(--field)' }} title="Merge now and auto-merge this pair on future imports">
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void resolveMany([c], 'always_merge')}
+                    className="rounded-full border border-line px-3 py-1.5 text-[12.5px] font-semibold text-muted disabled:opacity-40"
+                    style={{ background: 'var(--field)' }}
+                    title="Merge now and auto-merge this pair on future imports"
+                  >
                     Always merge
                   </button>
                 </div>

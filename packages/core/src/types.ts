@@ -52,7 +52,13 @@ export type BookOwnership = 'owned' | 'borrowed' | 'wishlist' | 'unset'
 
 /** A contributor's role on a book. Ordered, multi-contributor (docs/DATA_MODEL.md). `narrator` is
  * really audiobook-edition-scoped — kept as a role for now (edition-scoping is a later refinement). */
-export type ContributorRole = 'author' | 'co_author' | 'translator' | 'illustrator' | 'narrator' | 'editor'
+export type ContributorRole =
+  | 'author'
+  | 'co_author'
+  | 'translator'
+  | 'illustrator'
+  | 'narrator'
+  | 'editor'
 
 /** One ordered contributor on a book (normalized: an `authors` row + a `book_authors` link). */
 export interface Contributor {

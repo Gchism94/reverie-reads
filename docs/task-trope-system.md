@@ -26,9 +26,9 @@ Tropes are currently a flat tag list: unscannable picker, every trope equally lo
 
 ## 3. Entry — kill the grind
 
-- **Picker (edit form and everywhere else):** search-first with type-ahead across names *and* aliases; results grouped by facet; a "your frequent tropes" section on top; ordering within groups biased by the book's primary genre via genre_affinity. Inline create-personal. Selected tropes show a pin toggle.
+- **Picker (edit form and everywhere else):** search-first with type-ahead across names _and_ aliases; results grouped by facet; a "your frequent tropes" section on top; ordering within groups biased by the book's primary genre via genre_affinity. Inline create-personal. Selected tropes show a pin toggle.
 - **The "just finished" sheet:** extend the existing finish-into-read-log moment with a skippable quick-tag step — suggested + frequent tropes as one-tap confirms, pin by press-and-hold or a second tap (pick one gesture and be consistent). If series-experience's chain prompt exists, both live in the same sheet: tropes, then next-in-series. Everything skippable in one gesture.
-- **Suggestions:** at book-add/enrichment time, fetch Hardcover's community tags for the book (backend, cached), map to canonical tropes via name/alias matching, and store as **suggestions** — never auto-applied. The picker and finished-sheet render them in a "suggested" section for one-tap confirm; dismissing hides them. Decision note (flag in report for Greg's veto): community *descriptors* are treated as factual metadata like page counts, not consensus opinion — no counts, popularity, or ranking from the community data ever surfaces. Only the trope names.
+- **Suggestions:** at book-add/enrichment time, fetch Hardcover's community tags for the book (backend, cached), map to canonical tropes via name/alias matching, and store as **suggestions** — never auto-applied. The picker and finished-sheet render them in a "suggested" section for one-tap confirm; dismissing hides them. Decision note (flag in report for Greg's veto): community _descriptors_ are treated as factual metadata like page counts, not consensus opinion — no counts, popularity, or ranking from the community data ever surfaces. Only the trope names.
 - **Per-trope sweep (bulk tagging):** pick a trope → your library as a cover grid → tap covers to toggle the trope on/off (present level; pinning stays per-book). Reachable from the trope page and the tropes index. Simple filtered grid + toggle; no gamified animation needed.
 
 ## 4. Representation — skin-charactered, never a chip wall
@@ -39,7 +39,7 @@ Tropes are currently a flat tag list: unscannable picker, every trope equally lo
 
 ## 5. Trope pages — the payoff
 
-- Every trope chip links to `/tropes/:id`: a shelf/grid of your books carrying it, your read-rate on it ("you own 12, read 9"), and **kin** — the tropes it most co-occurs with *in your library* ("you pair this with grumpy/sunshine"). Co-occurrence is computed from your data only; nothing global.
+- Every trope chip links to `/tropes/:id`: a shelf/grid of your books carrying it, your read-rate on it ("you own 12, read 9"), and **kin** — the tropes it most co-occurs with _in your library_ ("you pair this with grumpy/sunshine"). Co-occurrence is computed from your data only; nothing global.
 - A **tropes index**: your active vocabulary ordered by usage, entry point for browsing and for the per-trope sweep.
 - These pages are private like everything else; no public path, per standing privacy rules.
 

@@ -16,10 +16,20 @@ import { useRealtimeRefetch } from '../hooks/useRealtimeRefetch'
 import { Modal } from '../components/Modal'
 import { useVoice } from '../skin/labels'
 
-function LibraryPicker({ books, onPick, onClose }: { books: Book[]; onPick: (b: Book) => void; onClose: () => void }) {
+function LibraryPicker({
+  books,
+  onPick,
+  onClose,
+}: {
+  books: Book[]
+  onPick: (b: Book) => void
+  onClose: () => void
+}) {
   const [q, setQ] = useState('')
   const results = books
-    .filter((b) => !q || `${b.title} ${authorOf(b)} ${b.series}`.toLowerCase().includes(q.toLowerCase()))
+    .filter(
+      (b) => !q || `${b.title} ${authorOf(b)} ${b.series}`.toLowerCase().includes(q.toLowerCase()),
+    )
     .slice(0, 50)
   return (
     <Modal title="Add from your library" onClose={onClose}>
@@ -33,7 +43,12 @@ function LibraryPicker({ books, onPick, onClose }: { books: Book[]; onPick: (b: 
       <ul className="mt-3 flex max-h-[55dvh] flex-col gap-1.5 overflow-y-auto">
         {results.map((b) => (
           <li key={b.id}>
-            <button type="button" onClick={() => onPick(b)} className="flex w-full items-center justify-between gap-3 rounded-xl border border-line px-3 py-2 text-left" style={{ background: 'var(--field)' }}>
+            <button
+              type="button"
+              onClick={() => onPick(b)}
+              className="flex w-full items-center justify-between gap-3 rounded-xl border border-line px-3 py-2 text-left"
+              style={{ background: 'var(--field)' }}
+            >
               <span>
                 <span className="text-[14px] font-semibold text-ink">{b.title}</span>
                 <span className="block text-[12px] text-muted">{authorOf(b)}</span>
@@ -57,7 +72,11 @@ function SharedListScreen() {
   const leave = useLeaveSharedList()
   const [picking, setPicking] = useState(false)
 
-  useRealtimeRefetch(`shared-${code}`, [{ table: 'shared_docs', filter: `key=eq.${code}` }], [sharedDocKey(code)])
+  useRealtimeRefetch(
+    `shared-${code}`,
+    [{ table: 'shared_docs', filter: `key=eq.${code}` }],
+    [sharedDocKey(code)],
+  )
 
   const by = profile?.displayName || 'Reader'
 
@@ -87,17 +106,27 @@ function SharedListScreen() {
         ← Clubs
       </BackLink>
 
-      <h1 className="mt-3 text-[24px] italic text-ink" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+      <h1
+        className="mt-3 text-[24px] italic text-ink"
+        style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+      >
         {doc.name}
       </h1>
       <div className="text-[13px] text-muted">
         {doc.kind === 'clubtbr' ? 'Book-club TBR' : 'Shared list'} · everyone with the code can edit
       </div>
       <div className="mt-2 flex items-center gap-2">
-        <span className="rounded-lg px-2.5 py-1 font-mono text-[13px] font-bold tracking-wider" style={{ background: 'var(--ink)', color: 'var(--bg0)' }}>
+        <span
+          className="rounded-lg px-2.5 py-1 font-mono text-[13px] font-bold tracking-wider"
+          style={{ background: 'var(--ink)', color: 'var(--bg0)' }}
+        >
           {code}
         </span>
-        <button type="button" onClick={() => void navigator.clipboard?.writeText(code)} className="text-[12px] text-primary">
+        <button
+          type="button"
+          onClick={() => void navigator.clipboard?.writeText(code)}
+          className="text-[12px] text-primary"
+        >
           copy code
         </button>
       </div>
@@ -105,7 +134,11 @@ function SharedListScreen() {
       <div className="mt-5 flex flex-col gap-1.5">
         {doc.items.length ? (
           doc.items.map((it) => (
-            <div key={it.id} className="flex items-center justify-between gap-3 rounded-xl border border-line px-3 py-2" style={{ background: 'var(--field)' }}>
+            <div
+              key={it.id}
+              className="flex items-center justify-between gap-3 rounded-xl border border-line px-3 py-2"
+              style={{ background: 'var(--field)' }}
+            >
               <div className="min-w-0">
                 <div className="truncate text-[14px] font-semibold text-ink">{it.title}</div>
                 <div className="truncate text-[12px] text-muted">
@@ -113,7 +146,11 @@ function SharedListScreen() {
                   {it.by ? ` · added by ${it.by}` : ''}
                 </div>
               </div>
-              <button type="button" onClick={() => removeItem(it.id)} className="text-[12px] text-muted hover:text-primary">
+              <button
+                type="button"
+                onClick={() => removeItem(it.id)}
+                className="text-[12px] text-muted hover:text-primary"
+              >
                 remove
               </button>
             </div>
@@ -124,7 +161,12 @@ function SharedListScreen() {
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2">
-        <button type="button" onClick={() => setPicking(true)} className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink" style={{ background: 'var(--card)' }}>
+        <button
+          type="button"
+          onClick={() => setPicking(true)}
+          className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink"
+          style={{ background: 'var(--card)' }}
+        >
           ＋ From my library
         </button>
         <button
@@ -143,7 +185,11 @@ function SharedListScreen() {
         <button
           type="button"
           onClick={() => {
-            if (window.confirm('Leave this shared list? (It stays available to others with the code.)')) {
+            if (
+              window.confirm(
+                'Leave this shared list? (It stays available to others with the code.)',
+              )
+            ) {
               leave.mutate(code, { onSuccess: () => void navigate({ to: '/clubs' }) })
             }
           }}

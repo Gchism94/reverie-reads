@@ -2,7 +2,14 @@ import { useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import { splitName } from '@reverie/core'
 import { useBooks } from '../data/books'
-import { releaseWindow, useAuthorFollows, useAuthorReleases, useSetFollow, yourAuthors, type AuthorRelease } from '../data/releases'
+import {
+  releaseWindow,
+  useAuthorFollows,
+  useAuthorReleases,
+  useSetFollow,
+  yourAuthors,
+  type AuthorRelease,
+} from '../data/releases'
 import { CoverImage } from '../components/CoverImage'
 import { Chip } from '../components/Chip'
 
@@ -20,13 +27,22 @@ function ReleaseCard({ r }: { r: AuthorRelease }) {
       onClick={() =>
         void navigate({
           to: '/add',
-          search: { title: r.title, author: r.author || undefined, isbn: r.isbn || undefined, cover: r.cover || undefined, pub: r.pub || undefined },
+          search: {
+            title: r.title,
+            author: r.author || undefined,
+            isbn: r.isbn || undefined,
+            cover: r.cover || undefined,
+            pub: r.pub || undefined,
+          },
         })
       }
       className="text-left"
       aria-label={`Add ${r.title}`}
     >
-      <div className="aspect-[2/3] overflow-hidden rounded-lg border border-line" style={{ background: 'var(--field)' }}>
+      <div
+        className="aspect-[2/3] overflow-hidden rounded-lg border border-line"
+        style={{ background: 'var(--field)' }}
+      >
         {/* CoverImage handles dead links AND the Google "no image" plate, degrading to the placeholder */}
         <CoverImage book={{ title: r.title, first, last, cover: r.cover }} thumb />
       </div>
@@ -64,23 +80,40 @@ export function FromYourAuthors() {
 
   return (
     <div className="mb-8">
-      <Section title="Coming soon from your authors" sub="Not on your shelves yet — tap to add" list={upcoming} />
+      <Section
+        title="Coming soon from your authors"
+        sub="Not on your shelves yet — tap to add"
+        list={upcoming}
+      />
       <Section title="New from your authors" sub="Out in the last six months" list={recent} />
 
-      <button type="button" onClick={() => setManageOpen((o) => !o)} className="text-[12.5px] font-semibold text-primary">
+      <button
+        type="button"
+        onClick={() => setManageOpen((o) => !o)}
+        className="text-[12.5px] font-semibold text-primary"
+      >
         {manageOpen ? 'Hide your authors' : `Your authors (${authors.length}) — manage`}
       </button>
       {manageOpen && (
         <div className="mt-2 flex flex-wrap gap-2">
           {authors.map((name) => (
-            <Chip key={name} active onClick={() => setFollow.mutate({ name, state: 'muted' })} title={`Mute ${name}`}>
+            <Chip
+              key={name}
+              active
+              onClick={() => setFollow.mutate({ name, state: 'muted' })}
+              title={`Mute ${name}`}
+            >
               {name} ✕
             </Chip>
           ))}
           {Object.entries(follows)
             .filter(([, s]) => s === 'muted')
             .map(([name]) => (
-              <Chip key={name} onClick={() => setFollow.mutate({ name, state: null })} title={`Unmute ${name}`}>
+              <Chip
+                key={name}
+                onClick={() => setFollow.mutate({ name, state: null })}
+                title={`Unmute ${name}`}
+              >
                 {name} — muted
               </Chip>
             ))}
@@ -88,7 +121,8 @@ export function FromYourAuthors() {
       )}
       {upcoming.length === 0 && recent.length === 0 && (
         <p className="mt-2 text-[12.5px] text-muted">
-          Nothing new from your authors right now — indie release dates often surface late, so check back.
+          Nothing new from your authors right now — indie release dates often surface late, so check
+          back.
         </p>
       )}
     </div>

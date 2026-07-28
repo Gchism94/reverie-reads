@@ -1,5 +1,24 @@
 import { describe, expect, it } from 'vitest'
-import { DISPLAY_ONLY_COVER_SOURCES, buildGoogleBooksUrl, buildOpenLibraryUrl, coverCandidates, coverKey, enrichmentCoverFill, extractGoogleCover, extractOpenLibraryCover, fetchCover, isCoverSource, isGoogleContentCover, isGoogleNoCoverArt, isIngestibleCoverSource, isIngestibleCoverUrl, isStoredCoverUrl, isUpgradeableCoverUrl, mayIngestCover, upgradeCoverUrl } from './covers'
+import {
+  DISPLAY_ONLY_COVER_SOURCES,
+  buildGoogleBooksUrl,
+  buildOpenLibraryUrl,
+  coverCandidates,
+  coverKey,
+  enrichmentCoverFill,
+  extractGoogleCover,
+  extractOpenLibraryCover,
+  fetchCover,
+  isCoverSource,
+  isGoogleContentCover,
+  isGoogleNoCoverArt,
+  isIngestibleCoverSource,
+  isIngestibleCoverUrl,
+  isStoredCoverUrl,
+  isUpgradeableCoverUrl,
+  mayIngestCover,
+  upgradeCoverUrl,
+} from './covers'
 
 describe('cover helpers', () => {
   it('builds a normalized cover key and query URLs', () => {
@@ -10,7 +29,9 @@ describe('cover helpers', () => {
 
   it('extracts covers and forces https on Google thumbnails', () => {
     expect(
-      extractGoogleCover({ items: [{ volumeInfo: { imageLinks: { thumbnail: 'http://x/y?z&edge=curl' } } }] }),
+      extractGoogleCover({
+        items: [{ volumeInfo: { imageLinks: { thumbnail: 'http://x/y?z&edge=curl' } } }],
+      }),
     ).toBe('https://x/y?z')
     expect(extractOpenLibraryCover({ docs: [{ cover_i: 123 }] })).toBe(
       'https://covers.openlibrary.org/b/id/123-M.jpg',
@@ -31,7 +52,9 @@ describe('cover helpers', () => {
 
 describe('cover system provenance + non-overwrite', () => {
   it('recognizes stored (durable) cover URLs vs external hotlinks', () => {
-    expect(isStoredCoverUrl('https://x.supabase.co/storage/v1/object/public/covers/u/a/b.webp')).toBe(true)
+    expect(
+      isStoredCoverUrl('https://x.supabase.co/storage/v1/object/public/covers/u/a/b.webp'),
+    ).toBe(true)
     expect(isStoredCoverUrl('https://books.google.com/books/content?id=1')).toBe(false)
     expect(isStoredCoverUrl('')).toBe(false)
   })
@@ -45,7 +68,12 @@ describe('cover system provenance + non-overwrite', () => {
   })
 
   it('enrichment never overwrites a user-chosen cover', () => {
-    expect(enrichmentCoverFill({ cover: 'https://stored/u.webp', coverUserChosen: true }, 'https://g/new.jpg')).toBe('')
+    expect(
+      enrichmentCoverFill(
+        { cover: 'https://stored/u.webp', coverUserChosen: true },
+        'https://g/new.jpg',
+      ),
+    ).toBe('')
     // even after the reader clears the image, their choice stands
     expect(enrichmentCoverFill({ cover: '', coverUserChosen: true }, 'https://g/new.jpg')).toBe('')
   })
@@ -58,7 +86,8 @@ describe('cover system provenance + non-overwrite', () => {
 })
 
 describe('upgradeCoverUrl', () => {
-  const G = 'https://books.google.com/books/content?id=ABC&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api'
+  const G =
+    'https://books.google.com/books/content?id=ABC&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api'
 
   it('raises Google Books zoom to 0 (largest) for full and strips the page-curl', () => {
     const u = upgradeCoverUrl(G, 'full')
@@ -73,7 +102,9 @@ describe('upgradeCoverUrl', () => {
   })
 
   it('adds a zoom param when none is present', () => {
-    expect(upgradeCoverUrl('https://books.google.com/books/content?id=X&img=1', 'full')).toContain('zoom=0')
+    expect(upgradeCoverUrl('https://books.google.com/books/content?id=X&img=1', 'full')).toContain(
+      'zoom=0',
+    )
   })
 
   it('is idempotent (re-upgrading a full URL is a no-op)', () => {
@@ -82,8 +113,12 @@ describe('upgradeCoverUrl', () => {
   })
 
   it('swaps the Open Library size suffix (-M → -L for full, -S → -M for thumb)', () => {
-    expect(upgradeCoverUrl('https://covers.openlibrary.org/b/id/123-M.jpg', 'full')).toBe('https://covers.openlibrary.org/b/id/123-L.jpg')
-    expect(upgradeCoverUrl('https://covers.openlibrary.org/b/id/123-S.jpg', 'thumb')).toBe('https://covers.openlibrary.org/b/id/123-M.jpg')
+    expect(upgradeCoverUrl('https://covers.openlibrary.org/b/id/123-M.jpg', 'full')).toBe(
+      'https://covers.openlibrary.org/b/id/123-L.jpg',
+    )
+    expect(upgradeCoverUrl('https://covers.openlibrary.org/b/id/123-S.jpg', 'thumb')).toBe(
+      'https://covers.openlibrary.org/b/id/123-M.jpg',
+    )
   })
 
   it('leaves Hardcover, B&N, storage, and empty URLs untouched', () => {
@@ -105,11 +140,14 @@ describe('upgradeCoverUrl', () => {
 })
 
 describe('Google "no image" plate detection (the #56 white-card regression)', () => {
-  const G = 'https://books.google.com/books/content?id=ABC&printsec=frontcover&img=1&zoom=0&source=gbs_api'
+  const G =
+    'https://books.google.com/books/content?id=ABC&printsec=frontcover&img=1&zoom=0&source=gbs_api'
 
   it('isGoogleContentCover matches the content endpoint + its googleusercontent mirror only', () => {
     expect(isGoogleContentCover(G)).toBe(true)
-    expect(isGoogleContentCover('https://books.googleusercontent.com/books/content?id=X')).toBe(true)
+    expect(isGoogleContentCover('https://books.googleusercontent.com/books/content?id=X')).toBe(
+      true,
+    )
     expect(isGoogleContentCover('https://covers.openlibrary.org/b/id/9-L.jpg')).toBe(false)
     expect(isGoogleContentCover('https://assets.hardcover.app/x.jpeg')).toBe(false)
     expect(isGoogleContentCover('')).toBe(false)
@@ -204,7 +242,9 @@ describe('fetchCover — Open Library only, never a URL we cannot keep', () => {
 
   it('resolves from Open Library', async () => {
     const fetchImpl = async () => ({ json: async () => olJson })
-    await expect(fetchCover({ title: 'T', last: 'L' }, fetchImpl)).resolves.toContain('covers.openlibrary.org')
+    await expect(fetchCover({ title: 'T', last: 'L' }, fetchImpl)).resolves.toContain(
+      'covers.openlibrary.org',
+    )
   })
 
   it('returns empty on a miss rather than falling back to Google', async () => {

@@ -23,9 +23,14 @@ describe('buildBuyLinks', () => {
   // so the test was false assurance about where money goes. What a chosen store ACTUALLY does is
   // add a direct link to its own shop, first in the list; Bookshop stays a plain by-ISBN link.
   it('puts the chosen store first and leaves the Bookshop link plain by-ISBN', () => {
-    const links = buildBuyLinks(book, { ...base, store: { name: 'Powell’s', website: 'https://powells.com' } })
+    const links = buildBuyLinks(book, {
+      ...base,
+      store: { name: 'Powell’s', website: 'https://powells.com' },
+    })
     expect(links[0]).toMatchObject({ provider: 'store', url: 'https://powells.com' })
-    expect(links.find((l) => l.provider === 'bookshop')!.url).toBe('https://bookshop.org/book/9780306406157')
+    expect(links.find((l) => l.provider === 'bookshop')!.url).toBe(
+      'https://bookshop.org/book/9780306406157',
+    )
   })
 
   it('omits the store link when the chosen store has no website on file', () => {
@@ -34,12 +39,16 @@ describe('buildBuyLinks', () => {
   })
 
   it('affiliate mode uses the app affiliate id (config flip, not a refactor)', () => {
-    const url = buildBuyLinks(book, { ...base, mode: 'affiliate' }).find((l) => l.provider === 'bookshop')!.url
+    const url = buildBuyLinks(book, { ...base, mode: 'affiliate' }).find(
+      (l) => l.provider === 'bookshop',
+    )!.url
     expect(url).toBe('https://bookshop.org/a/5780/9780306406157')
   })
 
   it('falls back to a Bookshop search when there is no ISBN', () => {
-    const url = buildBuyLinks({ title: 'Untitled', first: 'A', last: 'Author' }, base).find((l) => l.provider === 'bookshop')!.url
+    const url = buildBuyLinks({ title: 'Untitled', first: 'A', last: 'Author' }, base).find(
+      (l) => l.provider === 'bookshop',
+    )!.url
     expect(url).toContain('bookshop.org/beta-search?keywords=')
   })
 })

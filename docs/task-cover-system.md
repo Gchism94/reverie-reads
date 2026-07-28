@@ -20,7 +20,7 @@ Launch feedback: no way to change a book's cover. The design decision, locked: c
 
 ## 2. The cover sheet — four input paths
 
-- **Editions chooser:** fetch alternates from Hardcover editions (backend, 60 req/min, cache per book) and Google Books by ISBN falling back to title+author (existing referrer-restricted client key). Present grouped as *editions with context* — cover, format, year — not a bare image grid. Selecting an edition's cover offers (does not force) syncing the book's format/ISBN/edition fields to match; a one-tap "also update edition details" secondary action.
+- **Editions chooser:** fetch alternates from Hardcover editions (backend, 60 req/min, cache per book) and Google Books by ISBN falling back to title+author (existing referrer-restricted client key). Present grouped as _editions with context_ — cover, format, year — not a bare image grid. Selecting an edition's cover offers (does not force) syncing the book's format/ISBN/edition fields to match; a one-tap "also update edition details" secondary action.
 - **Camera capture:** `<input type="file" accept="image/*" capture="environment">` (PWA-friendly, no native APIs), followed by a simple client-side crop UI constrained to 2:3. No deskew/perspective correction — crop only; keep it light.
 - **Upload** an existing image, same crop step.
 - **Paste a direct image URL.** Direct image URLs only — do not build a product-page scraper.

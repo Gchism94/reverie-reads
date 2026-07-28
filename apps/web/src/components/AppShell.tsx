@@ -45,7 +45,10 @@ const navBase =
 
 function NavLinks({ collapsed }: { collapsed: boolean }) {
   return (
-    <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto overflow-x-hidden" aria-label="Primary">
+    <nav
+      className="flex flex-1 flex-col gap-0.5 overflow-y-auto overflow-x-hidden"
+      aria-label="Primary"
+    >
       {NAV.map((item) => (
         <Link
           key={item.to}
@@ -103,7 +106,11 @@ function Sidebar() {
       {/* The CHROME (chunk-4 composed screens): the brand block names the ROOM, not the widget —
           "Reverie · The standing invitation / The night office / Up too late…" — and wears the
           skin's chrome material as a rail beneath (`.rv-chrome`, per-skin rules in skin-kit.css). */}
-      <Link to="/" className="rv-chrome flex items-center gap-2.5 px-1 py-1 pb-2.5" aria-label={`${APP_NAME} home`}>
+      <Link
+        to="/"
+        className="rv-chrome flex items-center gap-2.5 px-1 py-1 pb-2.5"
+        aria-label={`${APP_NAME} home`}
+      >
         <span
           className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-[9px] text-[18px] italic"
           style={{
@@ -124,7 +131,9 @@ function Sidebar() {
             >
               {APP_NAME}
             </span>
-            <span className="skin-label mt-1 block truncate text-[10px] text-muted">{chromeLine}</span>
+            <span className="skin-label mt-1 block truncate text-[10px] text-muted">
+              {chromeLine}
+            </span>
           </span>
         )}
       </Link>
@@ -147,7 +156,10 @@ function Sidebar() {
       <NavLinks collapsed={collapsed} />
 
       {/* Footer controls */}
-      <div className="mt-3 flex flex-col gap-2 border-t pt-3" style={{ borderColor: 'var(--line)' }}>
+      <div
+        className="mt-3 flex flex-col gap-2 border-t pt-3"
+        style={{ borderColor: 'var(--line)' }}
+      >
         <div className={`flex items-center gap-1.5 ${collapsed ? 'flex-col' : ''}`}>
           <Link
             to="/skins"
@@ -312,7 +324,10 @@ function MobileTabBar() {
                 className="flex flex-col items-center gap-1.5 rounded-xl px-2 py-3 text-[13px] font-medium"
                 style={{ color: 'var(--muted)' }}
                 activeProps={{
-                  style: { color: 'var(--ink)', background: 'color-mix(in srgb, var(--primary) 14%, transparent)' },
+                  style: {
+                    color: 'var(--ink)',
+                    background: 'color-mix(in srgb, var(--primary) 14%, transparent)',
+                  },
                 }}
               >
                 <span className="text-[18px] leading-none" aria-hidden>

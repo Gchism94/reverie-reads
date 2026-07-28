@@ -10,8 +10,12 @@ const listOf = (xs: string[], max = 3): string =>
 /** The headline sentence: what the import did, in one line. */
 export function summaryHeadline(r: ImportExportResult): string {
   const parts = [`brought in ${r.added} new`, `folded ${r.merged} into what you had`]
-  if (r.readingOrders > 0) parts.push(`stitched ${r.readingOrders} reading ${plural(r.readingOrders, 'order')}`)
-  const joined = parts.length > 2 ? `${parts.slice(0, -1).join(', ')}, and ${parts[parts.length - 1]}` : parts.join(', and ')
+  if (r.readingOrders > 0)
+    parts.push(`stitched ${r.readingOrders} reading ${plural(r.readingOrders, 'order')}`)
+  const joined =
+    parts.length > 2
+      ? `${parts.slice(0, -1).join(', ')}, and ${parts[parts.length - 1]}`
+      : parts.join(', and ')
   return `Detected your ${r.profile} export — ${joined}.`
 }
 
@@ -19,17 +23,28 @@ export function summaryHeadline(r: ImportExportResult): string {
 export function summaryNotices(r: ImportExportResult): string[] {
   const lines: string[] = []
   const e = r.extras
-  if (e.tbrPlaced > 0) lines.push(`${e.tbrPlaced} to-read ${plural(e.tbrPlaced, 'book')} placed on your Imported TBR.`)
+  if (e.tbrPlaced > 0)
+    lines.push(`${e.tbrPlaced} to-read ${plural(e.tbrPlaced, 'book')} placed on your Imported TBR.`)
   const customShelves = e.shelvesCreated.filter((n) => n !== 'Imported TBR')
   if (customShelves.length > 0)
-    lines.push(`Created ${customShelves.length} ${plural(customShelves.length, 'shelf', 'shelves')} from your Goodreads shelves: ${listOf(customShelves)}.`)
+    lines.push(
+      `Created ${customShelves.length} ${plural(customShelves.length, 'shelf', 'shelves')} from your Goodreads shelves: ${listOf(customShelves)}.`,
+    )
   if (e.noCover > 0)
-    lines.push(`${e.noCover} ${plural(e.noCover, 'book')} came in without a cover — we'll fetch what we can, and the rest keep an honest placeholder.`)
+    lines.push(
+      `${e.noCover} ${plural(e.noCover, 'book')} came in without a cover — we'll fetch what we can, and the rest keep an honest placeholder.`,
+    )
   if (e.unplacedNotes > 0)
-    lines.push(`${e.unplacedNotes} ${plural(e.unplacedNotes, 'review or note')} couldn't attach to a read yet — they'll land when you log a read.`)
+    lines.push(
+      `${e.unplacedNotes} ${plural(e.unplacedNotes, 'review or note')} couldn't attach to a read yet — they'll land when you log a read.`,
+    )
   if (r.truncatedIsbns > 0)
-    lines.push(`${r.truncatedIsbns} ${plural(r.truncatedIsbns, 'ISBN')} may be missing a leading digit and might not match — re-export with ISBNs as text to fix.`)
+    lines.push(
+      `${r.truncatedIsbns} ${plural(r.truncatedIsbns, 'ISBN')} may be missing a leading digit and might not match — re-export with ISBNs as text to fix.`,
+    )
   if (e.tropeLikeShelves.length > 0)
-    lines.push(`${e.tropeLikeShelves.length} of your shelves look like tropes (${listOf(e.tropeLikeShelves)}) — kept as shelves for now.`)
+    lines.push(
+      `${e.tropeLikeShelves.length} of your shelves look like tropes (${listOf(e.tropeLikeShelves)}) — kept as shelves for now.`,
+    )
   return lines
 }

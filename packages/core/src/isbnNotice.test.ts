@@ -47,7 +47,12 @@ describe('countTruncatedIsbns', () => {
   })
 
   it('returns 0 when there is no ISBN column, or no data rows', () => {
-    expect(countTruncatedIsbns([['Title', 'Author'], ['A', 'B']])).toBe(0)
+    expect(
+      countTruncatedIsbns([
+        ['Title', 'Author'],
+        ['A', 'B'],
+      ]),
+    ).toBe(0)
     expect(countTruncatedIsbns([['Title', 'ISBN']])).toBe(0)
     expect(countTruncatedIsbns([])).toBe(0)
   })

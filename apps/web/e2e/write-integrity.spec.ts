@@ -23,15 +23,26 @@ const PASSWORD = 'write-integrity-e2e-password'
 
 test.describe.configure({ mode: 'serial' })
 
-type Client = { sb: SupabaseClient; session: { access_token: string; refresh_token: string }; uid: string }
+type Client = {
+  sb: SupabaseClient
+  session: { access_token: string; refresh_token: string }
+  uid: string
+}
 let shared: Client | null = null
 async function client(): Promise<Client> {
   if (shared) return shared
-  const admin = createClient(SUPABASE_URL, SERVICE, { auth: { autoRefreshToken: false, persistSession: false } })
+  const admin = createClient(SUPABASE_URL, SERVICE, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  })
   const { data } = await admin.auth.admin.listUsers()
   let uid = data?.users?.find((u) => u.email === EMAIL)?.id
-  if (!uid) uid = (await admin.auth.admin.createUser({ email: EMAIL, password: PASSWORD, email_confirm: true })).data.user!.id
-  await admin.from('profiles').upsert({ id: uid, display_name: 'Write Integrity', skin: 'tryst', mode: 'system' })
+  if (!uid)
+    uid = (
+      await admin.auth.admin.createUser({ email: EMAIL, password: PASSWORD, email_confirm: true })
+    ).data.user!.id
+  await admin
+    .from('profiles')
+    .upsert({ id: uid, display_name: 'Write Integrity', skin: 'tryst', mode: 'system' })
   const sb = createClient(SUPABASE_URL, ANON)
   const { data: s, error } = await sb.auth.signInWithPassword({ email: EMAIL, password: PASSWORD })
   if (error || !s.session) throw new Error(authFailure('write-integrity', EMAIL, error))
@@ -51,7 +62,9 @@ async function reset(c: Client) {
 
 async function signIn(page: Page, session: { access_token: string; refresh_token: string }) {
   await page.addInitScript(() => localStorage.setItem('reverie.onboarded', '1'))
-  await page.goto(`/#access_token=${session.access_token}&refresh_token=${session.refresh_token}&expires_in=3600&token_type=bearer&type=magiclink`)
+  await page.goto(
+    `/#access_token=${session.access_token}&refresh_token=${session.refresh_token}&expires_in=3600&token_type=bearer&type=magiclink`,
+  )
   await page.getByRole('button', { name: /enter your library/i }).click({ timeout: 20_000 })
   await expect(page.getByRole('navigation')).toBeVisible({ timeout: 20_000 })
   await page.evaluate(() => indexedDB.deleteDatabase('reverie-offline'))
@@ -84,8 +97,13 @@ const makeBook = async (c: Client, patch: Record<string, unknown> = {}) => {
 }
 
 const rowOf = async (c: Client, id: string) =>
-  (await c.sb.from('books').select('pub_y, pub_m, pub_d, rating, series_count, read_status, position').eq('id', id).single())
-    .data as {
+  (
+    await c.sb
+      .from('books')
+      .select('pub_y, pub_m, pub_d, rating, series_count, read_status, position')
+      .eq('id', id)
+      .single()
+  ).data as {
     pub_y: number | null
     pub_m: number | null
     pub_d: number | null
@@ -114,7 +132,9 @@ test('publication info saves and survives a reload', async ({ page }) => {
   try {
     await signIn(page, c.session)
     await page.goto(`/book/${id}`)
-    await expect(page.getByRole('heading', { name: 'Integrity Book' })).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByRole('heading', { name: 'Integrity Book' })).toBeVisible({
+      timeout: 20_000,
+    })
     const dlg = await openEdit(page)
     await field(dlg, 'Pub year').fill('2015')
     await field(dlg, 'Month').fill('3')
@@ -122,7 +142,9 @@ test('publication info saves and survives a reload', async ({ page }) => {
     await dlg.getByRole('button', { name: /Save details/i }).click()
     await expect(dlg).toBeHidden({ timeout: 15_000 })
 
-    await expect.poll(async () => await rowOf(c, id), { timeout: 15_000 }).toMatchObject({ pub_y: 2015, pub_m: 3, pub_d: 4 })
+    await expect
+      .poll(async () => await rowOf(c, id), { timeout: 15_000 })
+      .toMatchObject({ pub_y: 2015, pub_m: 3, pub_d: 4 })
     await page.reload()
     await expect(page.getByText('📅 Mar 4, 2015')).toBeVisible({ timeout: 20_000 })
   } finally {
@@ -131,20 +153,25 @@ test('publication info saves and survives a reload', async ({ page }) => {
 })
 
 // ── The CHECK-constraint case: caught in the form, so the patch is never rejected ──
-test('an out-of-range month is refused in the form, and takes nothing else down with it', async ({ page }) => {
+test('an out-of-range month is refused in the form, and takes nothing else down with it', async ({
+  page,
+}) => {
   test.setTimeout(180_000)
   const c = await client()
   await reset(c)
   const id = await makeBook(c, { pub_y: 2020, pub_m: 1, pub_d: 2 })
   const rejected: string[] = []
   page.on('response', (r) => {
-    if (r.url().includes('/rest/v1/books') && r.request().method() === 'PATCH' && r.status() >= 400) rejected.push(r.url())
+    if (r.url().includes('/rest/v1/books') && r.request().method() === 'PATCH' && r.status() >= 400)
+      rejected.push(r.url())
   })
   await stub(page)
   try {
     await signIn(page, c.session)
     await page.goto(`/book/${id}`)
-    await expect(page.getByRole('heading', { name: 'Integrity Book' })).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByRole('heading', { name: 'Integrity Book' })).toBeVisible({
+      timeout: 20_000,
+    })
     const dlg = await openEdit(page)
     await field(dlg, 'Month').fill('13')
     await field(dlg, 'Series length').fill('7') // the canary: pre-fix this was discarded too
@@ -162,7 +189,9 @@ test('an out-of-range month is refused in the form, and takes nothing else down 
     await expect(dlg.getByText('Month must be 12 or less.')).toHaveCount(0) // typing clears it
     await dlg.getByRole('button', { name: /Save details/i }).click()
     await expect(dlg).toBeHidden({ timeout: 15_000 })
-    await expect.poll(async () => await rowOf(c, id), { timeout: 15_000 }).toMatchObject({ pub_m: 6, series_count: 7 })
+    await expect
+      .poll(async () => await rowOf(c, id), { timeout: 15_000 })
+      .toMatchObject({ pub_m: 6, series_count: 7 })
   } finally {
     await reset(c)
   }
@@ -177,7 +206,9 @@ test('an out-of-range day is refused the same way', async ({ page }) => {
   try {
     await signIn(page, c.session)
     await page.goto(`/book/${id}`)
-    await expect(page.getByRole('heading', { name: 'Integrity Book' })).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByRole('heading', { name: 'Integrity Book' })).toBeVisible({
+      timeout: 20_000,
+    })
     const dlg = await openEdit(page)
     await field(dlg, 'Day').fill('32')
     await dlg.getByRole('button', { name: /Save details/i }).click()
@@ -190,9 +221,24 @@ test('an out-of-range day is refused the same way', async ({ page }) => {
 
 // ── The silent-coercion case: non-numeric input is now visible, not turned into null ──
 const JUNK: { name: string; label: string; value: string; error: string }[] = [
-  { name: 'a month typed as a name', label: 'Month', value: 'June', error: 'Month must be a number.' },
-  { name: 'a whole date pasted into the year', label: 'Pub year', value: '2021-06-08', error: 'Pub year must be a number.' },
-  { name: 'a year with a thousands comma', label: 'Pub year', value: '2,021', error: 'Pub year must be a number.' },
+  {
+    name: 'a month typed as a name',
+    label: 'Month',
+    value: 'June',
+    error: 'Month must be a number.',
+  },
+  {
+    name: 'a whole date pasted into the year',
+    label: 'Pub year',
+    value: '2021-06-08',
+    error: 'Pub year must be a number.',
+  },
+  {
+    name: 'a year with a thousands comma',
+    label: 'Pub year',
+    value: '2,021',
+    error: 'Pub year must be a number.',
+  },
 ]
 for (const j of JUNK) {
   test(`non-numeric input is rejected visibly — ${j.name}`, async ({ page }) => {
@@ -204,7 +250,9 @@ for (const j of JUNK) {
     try {
       await signIn(page, c.session)
       await page.goto(`/book/${id}`)
-      await expect(page.getByRole('heading', { name: 'Integrity Book' })).toBeVisible({ timeout: 20_000 })
+      await expect(page.getByRole('heading', { name: 'Integrity Book' })).toBeVisible({
+        timeout: 20_000,
+      })
       const dlg = await openEdit(page)
       await field(dlg, j.label).fill(j.value)
       await dlg.getByRole('button', { name: /Save details/i }).click()
@@ -228,7 +276,9 @@ test('position 0 is still settable through the shared parser', async ({ page }) 
   try {
     await signIn(page, c.session)
     await page.goto(`/book/${id}`)
-    await expect(page.getByRole('heading', { name: 'Integrity Book' })).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByRole('heading', { name: 'Integrity Book' })).toBeVisible({
+      timeout: 20_000,
+    })
     const dlg = await openEdit(page)
     await field(dlg, 'Position').fill('0')
     await dlg.getByRole('button', { name: /Save details/i }).click()
@@ -240,7 +290,9 @@ test('position 0 is still settable through the shared parser', async ({ page }) 
 })
 
 // ── A failed write must never again look like a successful one ──
-test('a rejected save keeps the dialog open, says so, and stops the rest of the chain', async ({ page }) => {
+test('a rejected save keeps the dialog open, says so, and stops the rest of the chain', async ({
+  page,
+}) => {
   test.setTimeout(180_000)
   const c = await client()
   await reset(c)
@@ -250,7 +302,11 @@ test('a rejected save keeps the dialog open, says so, and stops the rest of the 
   // the FAILURE path rather than the validator.
   await page.route('**/rest/v1/books?id=eq.*', async (r) => {
     if (r.request().method() === 'PATCH') {
-      await r.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ message: 'simulated failure' }) })
+      await r.fulfill({
+        status: 400,
+        contentType: 'application/json',
+        body: JSON.stringify({ message: 'simulated failure' }),
+      })
       return
     }
     await r.continue()
@@ -263,13 +319,20 @@ test('a rejected save keeps the dialog open, says so, and stops the rest of the 
   try {
     await signIn(page, c.session)
     await page.goto(`/book/${id}`)
-    await expect(page.getByRole('heading', { name: 'Integrity Book' })).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByRole('heading', { name: 'Integrity Book' })).toBeVisible({
+      timeout: 20_000,
+    })
     const dlg = await openEdit(page)
     await field(dlg, 'Pub year').fill('2015')
     await dlg.getByRole('button', { name: /Save details/i }).click()
 
     // Told, in two places: the global toast and inside the dialog.
-    await expect(page.getByRole('alert').filter({ hasText: /didn’t save/i }).first()).toBeVisible({ timeout: 15_000 })
+    await expect(
+      page
+        .getByRole('alert')
+        .filter({ hasText: /didn’t save/i })
+        .first(),
+    ).toBeVisible({ timeout: 15_000 })
     await expect(dlg).toBeVisible()
     await expect(field(dlg, 'Pub year')).toHaveValue('2015') // the reader keeps what they typed
 
@@ -291,10 +354,15 @@ test('a rating in the reading log leaves the book’s own rating untouched', asy
   try {
     await signIn(page, c.session)
     await page.goto(`/book/${id}`)
-    await expect(page.getByRole('heading', { name: 'Integrity Book' })).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByRole('heading', { name: 'Integrity Book' })).toBeVisible({
+      timeout: 20_000,
+    })
     expect((await rowOf(c, id)).rating).toBe(5)
 
-    await page.getByRole('button', { name: /Log a read/i }).first().click()
+    await page
+      .getByRole('button', { name: /Log a read/i })
+      .first()
+      .click()
     const dlg = page.getByRole('dialog', { name: /Log a read/i })
     await expect(dlg).toBeVisible({ timeout: 15_000 })
     // Give THIS read 2 stars — pre-fix that overwrote the book's 5.
@@ -304,9 +372,15 @@ test('a rating in the reading log leaves the book’s own rating untouched', asy
 
     // The read carries the rating; the book keeps its own; logging still marks it read.
     await expect
-      .poll(async () => ((await c.sb.from('reads').select('rating').eq('book_id', id)).data ?? []).length, { timeout: 15_000 })
+      .poll(
+        async () =>
+          ((await c.sb.from('reads').select('rating').eq('book_id', id)).data ?? []).length,
+        { timeout: 15_000 },
+      )
       .toBe(1)
-    const reads = (await c.sb.from('reads').select('rating').eq('book_id', id)).data as { rating: number }[]
+    const reads = (await c.sb.from('reads').select('rating').eq('book_id', id)).data as {
+      rating: number
+    }[]
     expect(reads[0]!.rating).toBe(2)
     const after = await rowOf(c, id)
     expect(after.rating, 'the book’s own rating must not move').toBe(5)
@@ -314,7 +388,9 @@ test('a rating in the reading log leaves the book’s own rating untouched', asy
 
     // And it survives a reload — the book page still shows five stars.
     await page.reload()
-    await expect(page.getByRole('heading', { name: 'Integrity Book' })).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByRole('heading', { name: 'Integrity Book' })).toBeVisible({
+      timeout: 20_000,
+    })
     expect((await rowOf(c, id)).rating).toBe(5)
   } finally {
     await reset(c)

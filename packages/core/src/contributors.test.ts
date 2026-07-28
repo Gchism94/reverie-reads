@@ -16,7 +16,11 @@ import { mergeImport } from './match'
 import { makeBook } from './book.fixture'
 import type { Contributor } from './types'
 
-const c = (name: string, role: Contributor['role'], position: number): Contributor => ({ name, role, position })
+const c = (name: string, role: Contributor['role'], position: number): Contributor => ({
+  name,
+  role,
+  position,
+})
 
 describe('name helpers', () => {
   it('normalizeName lowercases + collapses whitespace (dedupe key)', () => {
@@ -26,7 +30,9 @@ describe('name helpers', () => {
   it('splitName / joinName / fromFirstLast round-trip the primary author', () => {
     expect(splitName('Sarah J. Maas')).toEqual({ first: 'Sarah J.', last: 'Maas' })
     expect(splitName('Plato')).toEqual({ first: '', last: 'Plato' }) // single token → last
-    expect(fromFirstLast('Ana', 'Huang')).toEqual([{ name: 'Ana Huang', role: 'author', position: 0 }])
+    expect(fromFirstLast('Ana', 'Huang')).toEqual([
+      { name: 'Ana Huang', role: 'author', position: 0 },
+    ])
     expect(fromFirstLast('', '')).toEqual([])
     expect(toFirstLast([c('Ana Huang', 'author', 0)])).toEqual({ first: 'Ana', last: 'Huang' })
   })
@@ -34,7 +40,11 @@ describe('name helpers', () => {
 
 describe('primaryAuthor', () => {
   it('is the first author/co-author by position, ignoring translators', () => {
-    const list = [c('Tr Anslator', 'translator', 0), c('Real Author', 'author', 1), c('Co Writer', 'co_author', 2)]
+    const list = [
+      c('Tr Anslator', 'translator', 0),
+      c('Real Author', 'author', 1),
+      c('Co Writer', 'co_author', 2),
+    ]
     expect(primaryAuthor(list)?.name).toBe('Real Author')
   })
   it('falls back to the first contributor when none are authors', () => {
@@ -47,7 +57,9 @@ describe('formatByline', () => {
   it('formats 1 / 2 / 3+ authors with an ampersand before the last', () => {
     expect(formatByline([c('A', 'author', 0)])).toBe('by A')
     expect(formatByline([c('A', 'author', 0), c('B', 'co_author', 1)])).toBe('by A & B')
-    expect(formatByline([c('A', 'author', 0), c('B', 'co_author', 1), c('C', 'co_author', 2)])).toBe('by A, B & C')
+    expect(
+      formatByline([c('A', 'author', 0), c('B', 'co_author', 1), c('C', 'co_author', 2)]),
+    ).toBe('by A, B & C')
   })
   it('appends non-author roles subtly and respects position order', () => {
     const list = [c('Tomasz', 'author', 1), c('Antonia Lloyd-Jones', 'translator', 0)]
@@ -60,7 +72,9 @@ describe('formatByline', () => {
 
 describe('formatAuthors + contributorsFromAuthors', () => {
   it('formatAuthors shows only authors/co-authors (no roles, no "by")', () => {
-    expect(formatAuthors([c('A', 'author', 0), c('Tr', 'translator', 1), c('B', 'co_author', 2)])).toBe('A & B')
+    expect(
+      formatAuthors([c('A', 'author', 0), c('Tr', 'translator', 1), c('B', 'co_author', 2)]),
+    ).toBe('A & B')
   })
   it('contributorsFromAuthors makes the first an author and the rest co-authors', () => {
     expect(contributorsFromAuthors(['Ilona Andrews', 'Gordon Andrews'])).toEqual([
@@ -69,14 +83,20 @@ describe('formatAuthors + contributorsFromAuthors', () => {
     ])
   })
   it('contributorsFromAuthors honors a role override by normalized name', () => {
-    const out = contributorsFromAuthors(['Olga Tokarczuk', 'Jennifer Croft'], { 'jennifer croft': 'translator' })
+    const out = contributorsFromAuthors(['Olga Tokarczuk', 'Jennifer Croft'], {
+      'jennifer croft': 'translator',
+    })
     expect(out[1]).toEqual({ name: 'Jennifer Croft', role: 'translator', position: 1 })
   })
 })
 
 describe('bookHasAuthor (filter)', () => {
   it('matches any contributor by normalized name', () => {
-    const b = makeBook({ id: '1', title: 'T', contributors: [c('Olga Tokarczuk', 'author', 0), c('Antonia Lloyd-Jones', 'translator', 1)] })
+    const b = makeBook({
+      id: '1',
+      title: 'T',
+      contributors: [c('Olga Tokarczuk', 'author', 0), c('Antonia Lloyd-Jones', 'translator', 1)],
+    })
     expect(bookHasAuthor(b, 'antonia lloyd-jones')).toBe(true)
     expect(bookHasAuthor(b, 'Someone Else')).toBe(false)
     expect(bookHasAuthor(b, '')).toBe(true) // empty filter = no constraint
@@ -102,14 +122,23 @@ describe('reconcileContributors', () => {
     expect(reconcileContributors(list, list)).toEqual(list)
   })
   it('treats the same name in a different role as distinct (e.g. author + narrator)', () => {
-    const out = reconcileContributors([c('Same Name', 'author', 0)], [c('Same Name', 'narrator', 0)])
+    const out = reconcileContributors(
+      [c('Same Name', 'author', 0)],
+      [c('Same Name', 'narrator', 0)],
+    )
     expect(out).toHaveLength(2)
   })
 })
 
 describe('mergeImport — contributor reconciliation', () => {
   it('unions an incoming translator into an existing single-author book', () => {
-    const existing = makeBook({ id: '1', title: 'Drive Your Plow', first: 'Olga', last: 'Tokarczuk', contributors: [c('Olga Tokarczuk', 'author', 0)] })
+    const existing = makeBook({
+      id: '1',
+      title: 'Drive Your Plow',
+      first: 'Olga',
+      last: 'Tokarczuk',
+      contributors: [c('Olga Tokarczuk', 'author', 0)],
+    })
     const { patch, changed } = mergeImport(existing, {
       title: 'Drive Your Plow',
       contributors: [c('Olga Tokarczuk', 'author', 0), c('Antonia Lloyd-Jones', 'translator', 1)],

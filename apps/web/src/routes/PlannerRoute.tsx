@@ -20,7 +20,10 @@ function fmtPub(p: Book['pub']): string {
 
 function Stat({ n, label }: { n: number; label: string }) {
   return (
-    <div className="skin-panel border border-line p-3 text-center" style={{ background: 'var(--card)' }}>
+    <div
+      className="skin-panel border border-line p-3 text-center"
+      style={{ background: 'var(--card)' }}
+    >
       <div className="text-[22px] font-bold text-ink">{n}</div>
       <div className="text-[11px] text-muted">{label}</div>
     </div>
@@ -63,7 +66,9 @@ function Calendar({ books, openBook }: { books: Book[]; openBook: (id: string) =
   const uniqueYear = new Set(yearReads.map((r) => r.book_id)).size
   const readAllTime = books.filter((b) => b.readStatus === 'Read').length
   const planned = books.filter((b) => b.plan).length
-  const upcoming = books.filter((b) => b.plan).sort((a, b) => (a.plan ?? '').localeCompare(b.plan ?? ''))
+  const upcoming = books
+    .filter((b) => b.plan)
+    .sort((a, b) => (a.plan ?? '').localeCompare(b.plan ?? ''))
 
   const prev = () => setCal((c) => (c.m === 0 ? { y: c.y - 1, m: 11 } : { y: c.y, m: c.m - 1 }))
   const next = () => setCal((c) => (c.m === 11 ? { y: c.y + 1, m: 0 } : { y: c.y, m: c.m + 1 }))
@@ -79,13 +84,23 @@ function Calendar({ books, openBook }: { books: Book[]; openBook: (id: string) =
       </div>
 
       <div className="mb-3 flex items-center justify-center gap-4">
-        <button type="button" onClick={prev} aria-label="Previous month" className="h-8 w-8 rounded-full border border-line text-ink">
+        <button
+          type="button"
+          onClick={prev}
+          aria-label="Previous month"
+          className="h-8 w-8 rounded-full border border-line text-ink"
+        >
           ‹
         </button>
         <span className="text-[16px] font-semibold text-ink">
           {MONTHS[cal.m]} {cal.y}
         </span>
-        <button type="button" onClick={next} aria-label="Next month" className="h-8 w-8 rounded-full border border-line text-ink">
+        <button
+          type="button"
+          onClick={next}
+          aria-label="Next month"
+          className="h-8 w-8 rounded-full border border-line text-ink"
+        >
           ›
         </button>
       </div>
@@ -119,10 +134,18 @@ function Calendar({ books, openBook }: { books: Book[]; openBook: (id: string) =
               <div className="text-[11px] text-muted">{d}</div>
               <div className="mt-0.5 flex flex-wrap gap-0.5">
                 {m?.read.map((_, k) => (
-                  <span key={`r${k}`} className="h-1.5 w-1.5 rounded-full" style={{ background: 'var(--primary)' }} />
+                  <span
+                    key={`r${k}`}
+                    className="h-1.5 w-1.5 rounded-full"
+                    style={{ background: 'var(--primary)' }}
+                  />
                 ))}
                 {m?.plan.map((_, k) => (
-                  <span key={`p${k}`} className="h-1.5 w-1.5 rounded-full" style={{ background: 'var(--violet)' }} />
+                  <span
+                    key={`p${k}`}
+                    className="h-1.5 w-1.5 rounded-full"
+                    style={{ background: 'var(--violet)' }}
+                  />
                 ))}
               </div>
             </button>
@@ -156,7 +179,12 @@ function Calendar({ books, openBook }: { books: Book[]; openBook: (id: string) =
             <>
               <div className="mb-1 text-[11px] uppercase tracking-[0.2em] text-muted">Read</div>
               {detail.read.map((b) => (
-                <button key={b.id} type="button" onClick={() => openBook(b.id)} className="mb-1.5 block w-full text-left">
+                <button
+                  key={b.id}
+                  type="button"
+                  onClick={() => openBook(b.id)}
+                  className="mb-1.5 block w-full text-left"
+                >
                   <span className="text-[14px] font-semibold text-ink">{b.title}</span>
                   <span className="block text-[12px] text-muted">{authorOf(b)}</span>
                 </button>
@@ -165,9 +193,16 @@ function Calendar({ books, openBook }: { books: Book[]; openBook: (id: string) =
           )}
           {detail.plan.length > 0 && (
             <>
-              <div className="mb-1 mt-3 text-[11px] uppercase tracking-[0.2em] text-muted">Planned</div>
+              <div className="mb-1 mt-3 text-[11px] uppercase tracking-[0.2em] text-muted">
+                Planned
+              </div>
               {detail.plan.map((b) => (
-                <button key={b.id} type="button" onClick={() => openBook(b.id)} className="mb-1.5 block w-full text-left">
+                <button
+                  key={b.id}
+                  type="button"
+                  onClick={() => openBook(b.id)}
+                  className="mb-1.5 block w-full text-left"
+                >
                   <span className="text-[14px] font-semibold text-ink">{b.title}</span>
                   <span className="block text-[12px] text-muted">{authorOf(b)}</span>
                 </button>
@@ -185,7 +220,9 @@ function Releases({ books, openBook }: { books: Book[]; openBook: (id: string) =
   const key = (p: Book['pub']) => new Date(p.y ?? 0, (p.m ?? 1) - 1, p.d ?? 1).getTime()
   const dated = books.filter((b) => b.pub.y)
   const undated = books.filter((b) => !b.pub.y)
-  const upcoming = dated.filter((b) => key(b.pub) > today.getTime()).sort((a, b) => key(a.pub) - key(b.pub))
+  const upcoming = dated
+    .filter((b) => key(b.pub) > today.getTime())
+    .sort((a, b) => key(a.pub) - key(b.pub))
   const recent = dated
     .filter((b) => key(b.pub) <= today.getTime() && (today.getTime() - key(b.pub)) / 864e5 <= 120)
     .sort((a, b) => key(b.pub) - key(a.pub))
@@ -200,8 +237,17 @@ function Releases({ books, openBook }: { books: Book[]; openBook: (id: string) =
         <p className="mb-2 text-[12.5px] text-muted">{sub}</p>
         <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
           {list.map((b) => (
-            <button key={b.id} type="button" onClick={() => openBook(b.id)} className="text-left" aria-label={`Open ${b.title}`}>
-              <div className="aspect-[2/3] overflow-hidden rounded-lg border border-line" style={{ background: 'var(--field)' }}>
+            <button
+              key={b.id}
+              type="button"
+              onClick={() => openBook(b.id)}
+              className="text-left"
+              aria-label={`Open ${b.title}`}
+            >
+              <div
+                className="aspect-[2/3] overflow-hidden rounded-lg border border-line"
+                style={{ background: 'var(--field)' }}
+              >
                 <CoverImage book={b} />
               </div>
               <div className="mt-1 truncate text-[12px] font-semibold text-ink">{b.title}</div>
@@ -216,7 +262,10 @@ function Releases({ books, openBook }: { books: Book[]; openBook: (id: string) =
     <div>
       {/* the external half: releases you DON'T own yet, from the authors your library loves */}
       <FromYourAuthors />
-      <div className="mb-4 skin-card border border-line p-3 text-[13px] text-muted" style={{ background: 'var(--card)' }}>
+      <div
+        className="mb-4 skin-card border border-line p-3 text-[13px] text-muted"
+        style={{ background: 'var(--card)' }}
+      >
         🗓️ Add a pub date to any book from its detail page — year only, month, or a full date. Books
         with dates appear here.
       </div>
@@ -224,7 +273,11 @@ function Releases({ books, openBook }: { books: Book[]; openBook: (id: string) =
       <Section title="Just released" sub="Out in the last few months" list={recent} />
       <Section title="By release date" sub="Everything else with a date" list={past} />
       {undated.length > 0 && (
-        <Section title="No date yet" sub={`${undated.length} books — open one to add its publication date`} list={undated.slice(0, 18)} />
+        <Section
+          title="No date yet"
+          sub={`${undated.length} books — open one to add its publication date`}
+          list={undated.slice(0, 18)}
+        />
       )}
     </div>
   )
@@ -239,10 +292,16 @@ function PlannerScreen() {
   return (
     <section className="px-4 py-6 sm:px-6">
       <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-[22px] italic text-ink" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+        <h1
+          className="text-[22px] italic text-ink"
+          style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+        >
           Planner
         </h1>
-        <div className="flex rounded-full border border-line p-1" style={{ background: 'var(--card)' }}>
+        <div
+          className="flex rounded-full border border-line p-1"
+          style={{ background: 'var(--card)' }}
+        >
           {(['calendar', 'releases'] as const).map((t) => (
             <button
               key={t}
@@ -250,7 +309,11 @@ function PlannerScreen() {
               onClick={() => setTab(t)}
               aria-pressed={tab === t}
               className="rounded-full px-3 py-1.5 text-[12.5px] font-semibold capitalize"
-              style={tab === t ? { background: 'var(--accent-fill)', color: 'var(--on-primary)' } : { color: 'var(--muted)' }}
+              style={
+                tab === t
+                  ? { background: 'var(--accent-fill)', color: 'var(--on-primary)' }
+                  : { color: 'var(--muted)' }
+              }
             >
               {t}
             </button>

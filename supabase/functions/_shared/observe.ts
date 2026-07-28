@@ -10,7 +10,12 @@ const RELEASE = Deno.env.get('SENTRY_RELEASE') ?? undefined
 type Level = 'info' | 'warn' | 'error'
 
 /** Emit one structured JSON log line. */
-export function logEvent(level: Level, fn: string, event: string, fields: Record<string, unknown> = {}): void {
+export function logEvent(
+  level: Level,
+  fn: string,
+  event: string,
+  fields: Record<string, unknown> = {},
+): void {
   const line = JSON.stringify({ level, fn, event, ts: new Date().toISOString(), ...fields })
   if (level === 'error') console.error(line)
   else if (level === 'warn') console.warn(line)
@@ -42,7 +47,9 @@ function toSentry(fn: string, err: Error, fields: Record<string, unknown>): void
     release: RELEASE,
     server_name: fn,
     tags: { fn, runtime: 'deno-edge' },
-    exception: { values: [{ type: err.name || 'Error', value: err.message, stacktrace: { frames: [] } }] },
+    exception: {
+      values: [{ type: err.name || 'Error', value: err.message, stacktrace: { frames: [] } }],
+    },
     extra: fields,
   }
   const body =
@@ -66,7 +73,11 @@ function toSentry(fn: string, err: Error, fields: Record<string, unknown>): void
 }
 
 /** Log an error structured, and report it to Sentry when configured. */
-export function captureEdgeError(fn: string, error: unknown, fields: Record<string, unknown> = {}): void {
+export function captureEdgeError(
+  fn: string,
+  error: unknown,
+  fields: Record<string, unknown> = {},
+): void {
   const err = error instanceof Error ? error : new Error(String(error))
   logEvent('error', fn, 'unhandled_error', { ...fields, message: err.message, stack: err.stack })
   if (DSN) toSentry(fn, err, fields)

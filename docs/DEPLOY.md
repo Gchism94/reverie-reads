@@ -6,11 +6,11 @@ the runbook for shipping to it. Owner decisions: **Reverie** is the name (2026-0
 
 ## Topology
 
-| Piece | Where | Notes |
-|---|---|---|
-| Backend | Supabase project `tzimctugmzuadrsitnpr` (us-west-2) | Postgres + Auth + Storage + Edge Functions; pgvector enabled |
-| Web app | Vercel — https://reveriereads.vercel.app | custom domain: reveriereads.app |
-| External APIs | Google Books (keyed, client-side) | key lives in env, never committed |
+| Piece         | Where                                               | Notes                                                        |
+| ------------- | --------------------------------------------------- | ------------------------------------------------------------ |
+| Backend       | Supabase project `tzimctugmzuadrsitnpr` (us-west-2) | Postgres + Auth + Storage + Edge Functions; pgvector enabled |
+| Web app       | Vercel — https://reveriereads.vercel.app            | custom domain: reveriereads.app                              |
+| External APIs | Google Books (keyed, client-side)                   | key lives in env, never committed                            |
 
 ## Web env (Vercel project settings)
 

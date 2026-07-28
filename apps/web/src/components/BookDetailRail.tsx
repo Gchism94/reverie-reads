@@ -9,8 +9,6 @@ import { Nameplate } from './Nameplate'
 const FORMAT_ICON = { physical: '📖', ebook: '📱', audiobook: '🎧' } as const
 const FORMAT_LABEL = { physical: 'Physical', ebook: 'Ebook', audiobook: 'Audiobook' } as const
 
-
-
 /** The master-detail right rail: a read-only summary of the selected book with a link into the
  *  full book page for editing. Renders an invitation when nothing is selected. */
 export function BookDetailRail({
@@ -34,7 +32,8 @@ export function BookDetailRail({
     )
   }
 
-  const author = formatAuthors(book.contributors) || [book.first, book.last].filter(Boolean).join(' ')
+  const author =
+    formatAuthors(book.contributors) || [book.first, book.last].filter(Boolean).join(' ')
   const [g0, g1] = subgenreGradient(book.subgenre, book.genre)
   const isRead = book.readStatus === 'Read' || book.reads.length > 0
   const intensity = book.intensity ?? 0
@@ -53,7 +52,9 @@ export function BookDetailRail({
       <Nameplate
         className="mt-4"
         eyebrow={
-          book.series ? `${book.series}${book.position !== '' ? ` · #${book.position}` : ''}` : undefined
+          book.series
+            ? `${book.series}${book.position !== '' ? ` · #${book.position}` : ''}`
+            : undefined
         }
         title={book.title}
         subtitle={author || undefined}
@@ -69,7 +70,10 @@ export function BookDetailRail({
         {isRead && (
           <span
             className="rounded-full px-2.5 py-1 text-[11px] font-semibold"
-            style={{ background: 'color-mix(in srgb, var(--gold) 18%, transparent)', color: 'var(--ink)' }}
+            style={{
+              background: 'color-mix(in srgb, var(--gold) 18%, transparent)',
+              color: 'var(--ink)',
+            }}
           >
             Read
           </span>
@@ -77,7 +81,10 @@ export function BookDetailRail({
         {intensity > 0 && (
           <span
             className="rounded-full px-2.5 py-1 text-[11px] font-semibold"
-            style={{ background: 'color-mix(in srgb, var(--primary) 14%, transparent)', color: 'var(--ink)' }}
+            style={{
+              background: 'color-mix(in srgb, var(--primary) 14%, transparent)',
+              color: 'var(--ink)',
+            }}
             title={`${labels.intensity} ${intensity}/5`}
           >
             {labels.intensityGlyph.repeat(intensity)}
@@ -99,7 +106,9 @@ export function BookDetailRail({
 
       {book.tropes.length > 0 && (
         <div className="mt-4">
-          <div className="mb-1.5 text-[11px] uppercase tracking-[0.2em] text-muted">{labels.tags}</div>
+          <div className="mb-1.5 text-[11px] uppercase tracking-[0.2em] text-muted">
+            {labels.tags}
+          </div>
           <div className="flex flex-wrap gap-1.5">
             {book.tropes.slice(0, 5).map((t) => (
               <Chip key={t.id}>{t.emphasis === 'pinned' ? `♥ ${t.name}` : t.name}</Chip>
@@ -133,7 +142,9 @@ export function BookDetailRail({
 
       {owned.length > 0 && (
         <div className="mt-4">
-          <div className="mb-1.5 text-[11px] uppercase tracking-[0.2em] text-muted">{borrowed ? 'Borrowed' : 'Owned'}</div>
+          <div className="mb-1.5 text-[11px] uppercase tracking-[0.2em] text-muted">
+            {borrowed ? 'Borrowed' : 'Owned'}
+          </div>
           <div className="flex flex-wrap gap-1.5">
             {owned.map((f) => (
               <span
@@ -151,7 +162,10 @@ export function BookDetailRail({
       {/* The RESUME line — every composed rail speaks one when a book is mid-read (chunk 4,
           verdict-approved): "You left off — the lamps are still lit." / "THE TRAIL IS STILL WARM." */}
       {book.readStatus === 'Reading' && (
-        <p className="mt-auto pt-4 text-[13px] italic text-muted" style={{ fontFamily: 'var(--font-display)' }}>
+        <p
+          className="mt-auto pt-4 text-[13px] italic text-muted"
+          style={{ fontFamily: 'var(--font-display)' }}
+        >
           {voice.resume}
         </p>
       )}
@@ -160,7 +174,10 @@ export function BookDetailRail({
         to="/book/$bookId"
         params={{ bookId: book.id }}
         className={`${book.readStatus === 'Reading' ? 'mt-2' : 'mt-auto'} flex h-11 items-center justify-center rounded-full text-[13.5px] font-semibold`}
-        style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))', color: 'var(--on-primary)' }}
+        style={{
+          background: 'linear-gradient(135deg, var(--primary), var(--gold))',
+          color: 'var(--on-primary)',
+        }}
       >
         Open full page
       </Link>

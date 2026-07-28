@@ -10,7 +10,9 @@ import { signOutLocally } from '../lib/offlineSignOut'
  *  preserves the stored session in this case and clears it in the other, so this is the signal
  *  that decides whether a null result means "signed out" or "cannot reach the server". */
 const isNetworkAuthFailure = (error: unknown): boolean =>
-  !!error && typeof error === 'object' && (error as { name?: string }).name === 'AuthRetryableFetchError'
+  !!error &&
+  typeof error === 'object' &&
+  (error as { name?: string }).name === 'AuthRetryableFetchError'
 
 /** OAuth providers the auth screen offers. Inert until the owner provisions client id/secret in
  *  Supabase auth settings (see SOCIAL_AUTH_ENABLED). */

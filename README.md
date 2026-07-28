@@ -4,7 +4,7 @@ Reverie is a personal book library. It tracks the books you own and read behind 
 skinnable, genre-neutral interface — nine distinct "skins" (romance, fantasy, sci-fi,
 horror, mystery, literary, cozy, nonfiction, YA) that reskin the whole app to the shelf
 you're in. Its guiding idea: **your own taste should drive discovery**, so the app ranks
-what to read next against *your* library rather than aggregated star ratings — it never
+what to read next against _your_ library rather than aggregated star ratings — it never
 computes or shows an averaged rating.
 
 It handles spice levels, tropes, series gaps, rereads, per-format ownership, cover

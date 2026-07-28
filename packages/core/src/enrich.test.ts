@@ -12,7 +12,11 @@ import {
 import { CORE_GENRES } from './genreNormalize'
 
 const at = (n: number) => new Date(Date.UTC(2026, 0, n)).toISOString()
-const src = (source: StampedSource['source'], record: StampedSource['record'], day = 1): StampedSource => ({
+const src = (
+  source: StampedSource['source'],
+  record: StampedSource['record'],
+  day = 1,
+): StampedSource => ({
   source,
   at: at(day),
   record,
@@ -48,7 +52,11 @@ describe('mergeRecords — field precedence', () => {
 describe('mergeRecords — union + longest description', () => {
   it('unions categories and ISBNs (deduped) and keeps the longest description', () => {
     const merged = mergeRecords([
-      src('google', { categories: ['Romance', 'Fiction'], description: 'Short.', isbn13: '9781111111111' }),
+      src('google', {
+        categories: ['Romance', 'Fiction'],
+        description: 'Short.',
+        isbn13: '9781111111111',
+      }),
       src('openlibrary', { categories: ['Romance', 'Contemporary'], isbns: ['1111111111'] }),
       src('isbndb', { description: 'A much longer and more complete synopsis of the book.' }),
     ])
@@ -128,9 +136,19 @@ describe('mapGenre', () => {
   it('every primary token is a canonical app genre (lowercased CORE_GENRES key)', () => {
     const keys = new Set<string>(CORE_GENRES.map((g) => g.toLowerCase()))
     const samples = [
-      ['Romance'], ['Cozy Mysteries'], ['Fantasy'], ['Sci-Fi'], ['Horror'], ['Thriller'],
-      ['Mysteries & Detective Stories'], ['Historical'], ['Juvenile Fiction'], ['Literary'],
-      ['Memoir'], ['Space Opera'], ['Young Adult Fiction'],
+      ['Romance'],
+      ['Cozy Mysteries'],
+      ['Fantasy'],
+      ['Sci-Fi'],
+      ['Horror'],
+      ['Thriller'],
+      ['Mysteries & Detective Stories'],
+      ['Historical'],
+      ['Juvenile Fiction'],
+      ['Literary'],
+      ['Memoir'],
+      ['Space Opera'],
+      ['Young Adult Fiction'],
     ]
     for (const cats of samples) {
       const { genre } = mapGenre(cats)
@@ -264,9 +282,24 @@ describe('source normalizers (captured fixtures)', () => {
 
   it('an end-to-end merge of all four normalized sources fills across them by precedence', () => {
     const merged = mergeRecords([
-      src('google', { ...normalizeGoogle({ volumeInfo: { title: 'T', categories: ['Fiction / Romance'], imageLinks: { thumbnail: 'http://c/g.jpg' }, description: 'short' } }) }),
-      src('openlibrary', { ...normalizeOpenLibrary({ title: 'T', subject: ['Romance'], first_publish_year: 2020 }) }),
-      src('isbndb', { ...normalizeIsbndb({ book: { pages: 400, binding: 'Hardcover', synopsis: 'a longer synopsis from isbndb' } }) }),
+      src('google', {
+        ...normalizeGoogle({
+          volumeInfo: {
+            title: 'T',
+            categories: ['Fiction / Romance'],
+            imageLinks: { thumbnail: 'http://c/g.jpg' },
+            description: 'short',
+          },
+        }),
+      }),
+      src('openlibrary', {
+        ...normalizeOpenLibrary({ title: 'T', subject: ['Romance'], first_publish_year: 2020 }),
+      }),
+      src('isbndb', {
+        ...normalizeIsbndb({
+          book: { pages: 400, binding: 'Hardcover', synopsis: 'a longer synopsis from isbndb' },
+        }),
+      }),
     ])
     expect(merged.genre).toBe('romance')
     expect(merged.cover).toBe('https://c/g.jpg')

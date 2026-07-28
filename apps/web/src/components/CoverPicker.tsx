@@ -22,7 +22,8 @@ export function CoverPicker({
 
   const pick = (alt: CoverAlternate) => {
     if (!alt.cover || saving) return
-    const source = alt.source === 'hardcover' || alt.source === 'openlibrary' ? alt.source : 'google'
+    const source =
+      alt.source === 'hardcover' || alt.source === 'openlibrary' ? alt.source : 'google'
     setCover.mutate(
       { book, source, url: alt.cover, sourceUrl: alt.cover },
       {
@@ -52,7 +53,9 @@ export function CoverPicker({
     <div className="mt-1 rounded-lg border border-line p-2" style={{ background: 'var(--field)' }}>
       {isLoading && <div className="text-[11px] text-muted">Finding editions…</div>}
       {saving && <div className="text-[11px] text-muted">Saving cover…</div>}
-      {!isLoading && !saving && alts.length === 0 && <div className="text-[11px] text-muted">No other editions found.</div>}
+      {!isLoading && !saving && alts.length === 0 && (
+        <div className="text-[11px] text-muted">No other editions found.</div>
+      )}
       {alts.length > 0 && (
         <ul className="flex flex-wrap gap-1.5">
           {alts.map((a, i) => (
@@ -71,7 +74,12 @@ export function CoverPicker({
           ))}
         </ul>
       )}
-      <button type="button" onClick={() => setOpen(false)} disabled={saving} className="mt-1.5 text-[11px] text-muted underline disabled:opacity-50">
+      <button
+        type="button"
+        onClick={() => setOpen(false)}
+        disabled={saving}
+        className="mt-1.5 text-[11px] text-muted underline disabled:opacity-50"
+      >
         Cancel
       </button>
     </div>

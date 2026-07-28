@@ -77,9 +77,17 @@ function libroUrl(b: BuyBook): string {
 export function buildBuyLinks(book: BuyBook, config: BuyConfig): BuyLink[] {
   const links: BuyLink[] = []
   if (config.store?.website) {
-    links.push({ provider: 'store', label: `Shop ${config.store.name} online`, url: config.store.website })
+    links.push({
+      provider: 'store',
+      label: `Shop ${config.store.name} online`,
+      url: config.store.website,
+    })
   }
-  links.push({ provider: 'bookshop', label: 'Print or ebook · Bookshop.org', url: bookshopUrl(book, config) })
+  links.push({
+    provider: 'bookshop',
+    label: 'Print or ebook · Bookshop.org',
+    url: bookshopUrl(book, config),
+  })
   links.push({ provider: 'libro', label: 'Audiobook · Libro.fm', url: libroUrl(book) })
   return links
 }

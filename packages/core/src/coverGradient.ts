@@ -57,17 +57,45 @@ const SAT = { lo: 28, hi: 62 } as const
  */
 const SUBGENRE_SHIFT: Record<string, number> = {
   // darker, denser
-  'Dark Romance': -1, Grimdark: -1, 'Dark Fantasy': -0.75, Gothic: -0.75, Horror: -0.75,
-  Thriller: -0.6, 'Post-Apocalyptic': -0.6, Dystopian: -0.55, Noir: -0.6, 'Military SF': -0.4,
-  Psychological: -0.5, 'Serial Killer': -0.8, Supernatural: -0.35, Splatterpunk: -0.9,
+  'Dark Romance': -1,
+  Grimdark: -1,
+  'Dark Fantasy': -0.75,
+  Gothic: -0.75,
+  Horror: -0.75,
+  Thriller: -0.6,
+  'Post-Apocalyptic': -0.6,
+  Dystopian: -0.55,
+  Noir: -0.6,
+  'Military SF': -0.4,
+  Psychological: -0.5,
+  'Serial Killer': -0.8,
+  Supernatural: -0.35,
+  Splatterpunk: -0.9,
   // lighter, softer
-  'Romantic Comedy': 0.9, 'Cozy Fantasy': 0.85, Cozy: 0.85, 'Cozy Mystery': 0.8,
-  Contemporary: 0.5, Romance: 0.55, 'Fairytale Retelling': 0.45, Sports: 0.4,
-  'Historical Romance': 0.25, 'Slice of Life': 0.7, Wholesome: 0.8,
+  'Romantic Comedy': 0.9,
+  'Cozy Fantasy': 0.85,
+  Cozy: 0.85,
+  'Cozy Mystery': 0.8,
+  Contemporary: 0.5,
+  Romance: 0.55,
+  'Fairytale Retelling': 0.45,
+  Sports: 0.4,
+  'Historical Romance': 0.25,
+  'Slice of Life': 0.7,
+  Wholesome: 0.8,
   // mid, with a lean
-  Romantasy: -0.2, 'Urban Fantasy': -0.25, 'Epic Fantasy': 0.1, 'Space Opera': 0.15,
-  Cyberpunk: -0.35, 'Time Travel': 0.2, 'First Contact': 0.3, 'Sword & Sorcery': -0.15,
-  'Paranormal Romance': -0.3, 'Cowboy Romance': 0.3, 'Hard SF': 0, 'Climate Fiction': -0.2,
+  Romantasy: -0.2,
+  'Urban Fantasy': -0.25,
+  'Epic Fantasy': 0.1,
+  'Space Opera': 0.15,
+  Cyberpunk: -0.35,
+  'Time Travel': 0.2,
+  'First Contact': 0.3,
+  'Sword & Sorcery': -0.15,
+  'Paranormal Romance': -0.3,
+  'Cowboy Romance': 0.3,
+  'Hard SF': 0,
+  'Climate Fiction': -0.2,
 }
 
 const clamp = (n: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, n))
@@ -82,7 +110,17 @@ function luminance(h: number, s: number, l: number): number {
   const m = L - c / 2
   const hh = ((h % 360) + 360) % 360
   const [r, g, b] =
-    hh < 60 ? [c, x, 0] : hh < 120 ? [x, c, 0] : hh < 180 ? [0, c, x] : hh < 240 ? [0, x, c] : hh < 300 ? [x, 0, c] : [c, 0, x]
+    hh < 60
+      ? [c, x, 0]
+      : hh < 120
+        ? [x, c, 0]
+        : hh < 180
+          ? [0, c, x]
+          : hh < 240
+            ? [0, x, c]
+            : hh < 300
+              ? [x, 0, c]
+              : [c, 0, x]
   const f = (v: number): number => {
     const u = v + m
     return u <= 0.03928 ? u / 12.92 : Math.pow((u + 0.055) / 1.055, 2.4)
@@ -139,7 +177,8 @@ export function gradientMatrix(): { genre: string; subgenre: string }[] {
   const out: { genre: string; subgenre: string }[] = []
   for (const g of CORE_GENRES) {
     out.push({ genre: g.toLowerCase(), subgenre: '' })
-    for (const sub of Object.keys(SUBGENRE_SHIFT)) out.push({ genre: g.toLowerCase(), subgenre: sub })
+    for (const sub of Object.keys(SUBGENRE_SHIFT))
+      out.push({ genre: g.toLowerCase(), subgenre: sub })
   }
   out.push({ genre: '', subgenre: '' }) // the no-genre-yet book
   return out

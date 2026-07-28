@@ -49,14 +49,20 @@ export function volumeToHit(item: any): DiscoverHit {
   return {
     title: v.title ?? '',
     authors: v.authors ?? [],
-    cover: String(v.imageLinks?.thumbnail ?? '').replace('http:', 'https:').replace('&edge=curl', ''),
+    cover: String(v.imageLinks?.thumbnail ?? '')
+      .replace('http:', 'https:')
+      .replace('&edge=curl', ''),
     isbn: ind?.identifier ?? '',
     pub: v.publishedDate ?? '',
   }
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
-const norm = (s: string): string => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
+const norm = (s: string): string =>
+  s
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim()
 const isbnKey = (isbn: string): string => isbn.replace(/[^0-9Xx]/g, '').toLowerCase()
 
 /** Identity for dedupe/ownership: ISBN when present, else normalized title + first author. */
@@ -96,8 +102,14 @@ export function isOwned(h: DiscoverHit, owned: Set<string>): boolean {
   return owned.has(`${norm(h.title)}|${norm(h.authors[0] ?? '')}`)
 }
 
-async function fetchPage(query: string, orderBy: 'newest' | 'relevance', signal?: AbortSignal): Promise<DiscoverHit[]> {
-  const url = volumesUrl(`q=${encodeURIComponent(query)}&orderBy=${orderBy}&printType=books&langRestrict=en&maxResults=20`)
+async function fetchPage(
+  query: string,
+  orderBy: 'newest' | 'relevance',
+  signal?: AbortSignal,
+): Promise<DiscoverHit[]> {
+  const url = volumesUrl(
+    `q=${encodeURIComponent(query)}&orderBy=${orderBy}&printType=books&langRestrict=en&maxResults=20`,
+  )
   const res = await fetch(url, { signal })
   if (!res.ok) throw new Error(`discover ${res.status}`)
   const json = (await res.json()) as { items?: unknown[] }
@@ -112,9 +124,13 @@ async function fetchPage(query: string, orderBy: 'newest' | 'relevance', signal?
 export async function fetchDiscover(genre: string, signal?: AbortSignal): Promise<DiscoverHit[]> {
   const query = discoverQuery(genre)
   try {
-    const { data, error } = await supabase.functions.invoke('releases', { body: { mode: 'discover', genre: genreKey(genre), query } })
+    const { data, error } = await supabase.functions.invoke('releases', {
+      body: { mode: 'discover', genre: genreKey(genre), query },
+    })
     if (!error) {
-      const hits = ((data as { hits?: DiscoverHit[] })?.hits ?? []).filter((h) => h?.title && h.cover && h.authors?.length)
+      const hits = ((data as { hits?: DiscoverHit[] })?.hits ?? []).filter(
+        (h) => h?.title && h.cover && h.authors?.length,
+      )
       if (hits.length) return hits
     }
   } catch {
@@ -137,7 +153,10 @@ export async function fetchDiscover(genre: string, signal?: AbortSignal): Promis
 /** hitKey → cosine-to-centroid. The fn scores as many items as fit its per-request CPU budget
  *  (all of them on hosted; a few per call on slower runtimes), so we accumulate across a handful
  *  of calls until every hit is scored or a call stops making progress. */
-export async function rankHitsByTaste(hits: DiscoverHit[], genre: string): Promise<Record<string, number> | null> {
+export async function rankHitsByTaste(
+  hits: DiscoverHit[],
+  genre: string,
+): Promise<Record<string, number> | null> {
   try {
     let remaining = hits.slice(0, 16).map((h) => ({
       key: hitKey(h),
@@ -146,7 +165,9 @@ export async function rankHitsByTaste(hits: DiscoverHit[], genre: string): Promi
     }))
     const scores: Record<string, number> = {}
     for (let call = 0; call < 6 && remaining.length; call++) {
-      const { data, error } = await supabase.functions.invoke('embed', { body: { mode: 'rank', items: remaining } })
+      const { data, error } = await supabase.functions.invoke('embed', {
+        body: { mode: 'rank', items: remaining },
+      })
       if (error) break
       const d = data as { hasTaste?: boolean; scores?: { key: string; score: number }[] }
       if (!d?.hasTaste || !d.scores?.length) break
@@ -168,7 +189,9 @@ export function sortByTaste(
     const taste = scores[hitKey(hit)]
     return taste == null ? { hit } : { hit, taste }
   })
-  const scored = annotated.filter((a) => a.taste != null).sort((a, b) => (b.taste ?? 0) - (a.taste ?? 0))
+  const scored = annotated
+    .filter((a) => a.taste != null)
+    .sort((a, b) => (b.taste ?? 0) - (a.taste ?? 0))
   const unscored = annotated.filter((a) => a.taste == null)
   return [...scored, ...unscored]
 }

@@ -26,8 +26,14 @@ const CSV = [
 
 describe('Flag 1 — multi-value genre (I1) keeps both cores', () => {
   it('splits on ";", maps the dominant (first) token to the primary, RETAINS the secondary', () => {
-    expect(normalizeImportGenres('romance; fantasy')).toMatchObject({ genre: 'Romance', genres: ['Romance', 'Fantasy'] })
-    expect(normalizeImportGenres('fantasy; romance')).toMatchObject({ genre: 'Fantasy', genres: ['Fantasy', 'Romance'] })
+    expect(normalizeImportGenres('romance; fantasy')).toMatchObject({
+      genre: 'Romance',
+      genres: ['Romance', 'Fantasy'],
+    })
+    expect(normalizeImportGenres('fantasy; romance')).toMatchObject({
+      genre: 'Fantasy',
+      genres: ['Fantasy', 'Romance'],
+    })
   })
   it('normalizes the "romace" typo and resolves a leaked "standalone" to null (not a genre)', () => {
     expect(normalizeImportGenres('romace').genre).toBe('Romance')
@@ -43,7 +49,9 @@ describe('Flag 1 — multi-value genre (I1) keeps both cores', () => {
     expect(tally.Romance).toBeGreaterThan(tally.Fantasy ?? 0) // Romance dominant, as in the real file
     expect(tally['∅']).toBe(1) // exactly the one leaked "standalone" row → null
     const bothCores = rows.filter(
-      (r) => (r.incoming.genres ?? []).includes('Romance') && (r.incoming.genres ?? []).includes('Fantasy'),
+      (r) =>
+        (r.incoming.genres ?? []).includes('Romance') &&
+        (r.incoming.genres ?? []).includes('Fantasy'),
     )
     expect(bothCores.length).toBeGreaterThan(5) // romantasy rows keep BOTH genres
   })

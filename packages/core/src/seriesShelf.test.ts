@@ -34,7 +34,12 @@ const byId = new Map([read, reading, unread, wished].map((b) => [b.id, b]))
 
 describe('entry ordering and state', () => {
   it('sorts by position with decimals interleaved', () => {
-    const ids = sortEntries([entry({ id: 'a', position: 3 }), entry({ id: 'b', position: 0.5 }), entry({ id: 'c', position: 2.5 }), entry({ id: 'd', position: 1 })]).map((e) => e.id)
+    const ids = sortEntries([
+      entry({ id: 'a', position: 3 }),
+      entry({ id: 'b', position: 0.5 }),
+      entry({ id: 'c', position: 2.5 }),
+      entry({ id: 'd', position: 1 }),
+    ]).map((e) => e.id)
     expect(ids).toEqual(['b', 'd', 'c', 'a'])
   })
 
@@ -102,8 +107,16 @@ describe('decimal positioning (drag-to-reorder)', () => {
     expect(positionBetween(2.5, null)).toEqual({ position: 3, renumber: false })
   })
   it('renumber renormalizes to integers in current order', () => {
-    const out = renumberEntries([entry({ id: 'a', position: 2.44 }), entry({ id: 'b', position: 0.5 }), entry({ id: 'c', position: 2.45 })])
-    expect(out.map((e) => [e.id, e.position])).toEqual([['b', 1], ['a', 2], ['c', 3]])
+    const out = renumberEntries([
+      entry({ id: 'a', position: 2.44 }),
+      entry({ id: 'b', position: 0.5 }),
+      entry({ id: 'c', position: 2.45 }),
+    ])
+    expect(out.map((e) => [e.id, e.position])).toEqual([
+      ['b', 1],
+      ['a', 2],
+      ['c', 3],
+    ])
   })
 })
 
@@ -179,7 +192,11 @@ describe('seeding positions for books joining a series', () => {
   })
 
   it('orders null positions by title so the result is deterministic, not row-order', () => {
-    const got = seedSeriesPositions([c('z', null, 'Zeta'), c('a', null, 'Alpha'), c('m', null, 'Mu')])
+    const got = seedSeriesPositions([
+      c('z', null, 'Zeta'),
+      c('a', null, 'Alpha'),
+      c('m', null, 'Mu'),
+    ])
     expect([...got]).toEqual([
       ['a', 1],
       ['m', 2],

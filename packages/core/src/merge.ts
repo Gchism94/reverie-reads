@@ -10,7 +10,8 @@ export interface LibraryState {
 }
 
 /** Duplicate-detection key: normalized title + author-last. */
-export const dupKey = (b: Pick<Book, 'title' | 'last'>): string => norm(b.title) + '|' + norm(b.last)
+export const dupKey = (b: Pick<Book, 'title' | 'last'>): string =>
+  norm(b.title) + '|' + norm(b.last)
 
 /** How complete a copy is — used to pick the primary in a duplicate group. Ported verbatim. */
 export function richness(b: Book): number {
@@ -95,7 +96,10 @@ export function mergeBooks(
   }
   // The strongest possession across copies wins (owned > borrowed > wishlist > unset) — a real
   // copy never loses to a wishlist duplicate, and owning beats borrowing.
-  p.ownership = all.reduce((best, b) => strongerOwnership(best, b.ownership), 'unset' as Book['ownership'])
+  p.ownership = all.reduce(
+    (best, b) => strongerOwnership(best, b.ownership),
+    'unset' as Book['ownership'],
+  )
 
   // First non-empty value wins for these descriptive fields.
   if (!p.series) p.series = all.map((b) => b.series).find(Boolean) ?? p.series
@@ -103,7 +107,11 @@ export function mergeBooks(
   if (!p.genre) p.genre = all.map((b) => b.genre).find(Boolean) ?? p.genre
   if (!p.subgenre) p.subgenre = all.map((b) => b.subgenre).find(Boolean) ?? p.subgenre
   // Union every side's subgenres, primary's order first; the single field mirrors element 0.
-  p.subgenres = [...new Set(all.flatMap((b) => (b.subgenres.length ? b.subgenres : b.subgenre ? [b.subgenre] : [])))]
+  p.subgenres = [
+    ...new Set(
+      all.flatMap((b) => (b.subgenres.length ? b.subgenres : b.subgenre ? [b.subgenre] : [])),
+    ),
+  ]
   p.subgenre = p.subgenres[0] ?? p.subgenre
   if (!p.format) p.format = all.map((b) => b.format).find(Boolean) ?? p.format
 

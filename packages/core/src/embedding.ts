@@ -29,11 +29,14 @@ export interface EmbedSource {
  *  so reordering chips in the UI never re-embeds a book. */
 export function embeddingText(s: EmbedSource): string {
   // lowercase + dedupe + sort: neither chip case nor chip order can move the signature
-  const tags = [...new Set((s.tags ?? []).map((t) => t.trim().toLowerCase()).filter(Boolean))].sort((a, b) =>
-    a.localeCompare(b),
+  const tags = [...new Set((s.tags ?? []).map((t) => t.trim().toLowerCase()).filter(Boolean))].sort(
+    (a, b) => a.localeCompare(b),
   )
 
-  const world = [s.genre, s.subgenre].map((x) => (x ?? '').trim()).filter(Boolean).join(' / ')
+  const world = [s.genre, s.subgenre]
+    .map((x) => (x ?? '').trim())
+    .filter(Boolean)
+    .join(' / ')
   const bits = [
     `${s.title.trim()}${s.author?.trim() ? ` by ${s.author.trim()}` : ''}.`,
     s.series?.trim() ? `Series: ${s.series.trim()}.` : '',

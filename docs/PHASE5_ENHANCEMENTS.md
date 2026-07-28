@@ -14,6 +14,7 @@ duplicate and either **auto-merge** or **let the user choose**, using the **most
 complete record as the starting point** and **adding anything new** to it.
 
 **Match keys (priority order)**
+
 1. ISBN-13 / ISBN-10 exact — strongest.
 2. Normalized title + primary author (the existing `dupKey`).
 3. Normalized title + series + position.
@@ -26,6 +27,7 @@ reviews). Higher score is primary — **whether that's the existing record or th
 one.** (Reuse the prototype's `richness()`.)
 
 **Merge (fold the other into the primary)** — reuse the atomic `merge_books` RPC:
+
 - Multi-value → **union**: reads (dedup by date), tropes, genres, owned formats (OR the
   flags), list/club memberships, reviews.
 - Single-value → **fill blanks** from the other; if both differ, keep primary's.
@@ -34,6 +36,7 @@ one.** (Reuse the prototype's `richness()`.)
 - Cover: keep primary's; else take the other's; enrichment may upgrade a missing/poor one.
 
 **Modes (both required)**
+
 - **Automatic:** merges silently on **strong** matches (ISBN exact, or exact normalized
   title+author); shows a post-import summary ("merged 12, added 134 new").
 - **Choice / review:** side-by-side preview per detected duplicate — what's kept, what's
@@ -42,6 +45,7 @@ one.** (Reuse the prototype's `richness()`.)
   matches **always** go to review, never auto.
 
 **Acceptance**
+
 - CSV overlapping the library merges by policy: most-complete primary, new info added,
   zero data loss; user-authored fields untouched. Tested in both auto and review paths.
 - ISBN match and title+author match both work; a fuzzy near-match lands in review, not
@@ -88,6 +92,7 @@ mobile view) while keeping the mobile experience, and ship the mobile as an inst
 **Breakpoints:** mobile < 768 · tablet 768–1024 · desktop ≥ 1024 · wide ≥ 1440.
 
 **Desktop layout**
+
 - Persistent **left sidebar nav** (replaces the mobile top/bottom bar).
 - Denser multi-column grids; content max-width on wide screens.
 - **Master–detail** where it helps: Library grid/list + book-detail pane; Clubs list +
@@ -96,6 +101,7 @@ mobile view) while keeping the mobile experience, and ship the mobile as an inst
   (e.g. `/` to search); Stats as a horizontal dashboard; spine shelves show more spines.
 
 **Mobile / app**
+
 - Keep the mobile-first UX; make it an **installable PWA**: web app manifest + icons +
   service worker building on the existing **Dexie offline mirror**. (Native via
   Capacitor/React Native is a later option if app-store presence is wanted — deferred.)
@@ -114,6 +120,7 @@ desktop viewport too.
 ---
 
 ## Decisions (defaults chosen; change any)
+
 1. **Auto vs choice default** → default **review** for the first import, with an
    "always auto-merge" setting; single adds prompt inline.
 2. **What auto-merges** → only **strong** matches (ISBN / exact title+author); fuzzy →
@@ -136,6 +143,7 @@ no public API exposes per-store stock, so don't promise "in stock near you."
 persist precise coordinates server-side; treat location as ephemeral.
 
 **Discovery (nearby stores):**
+
 - v1 default: **OpenStreetMap Overpass** `shop=books` near the location (free, no key) →
   name, address, hours, phone, website, distance; render a **map + list** in both themes.
   Bias toward independents with a maintained **chain-exclusion list** (B&N, Books-A-Million, etc.).
@@ -145,6 +153,7 @@ persist precise coordinates server-side; treat location as ephemeral.
   has no official public API, so treat it as a verification layer, not the primary feed.
 
 **Buy / support integration:**
+
 - Print & ebook → **Bookshop.org** affiliate links (the "choose your local store" model;
   the chosen store gets the full profit). Let the user **set a default local store**,
   surfaced on book detail as "Buy at <store>".
@@ -167,5 +176,6 @@ independents flagged, chains excluded; book detail offers a format-aware indie b
 persists; graceful empty/non-US states; geolocation is consented and not persisted.
 
 ### Decision (default chosen; change it)
+
 6. **Nearby-store source** → v1 **OSM Overpass + chain-exclusion** (free, no key);
    upgrade to **Google Places + ABA/Bookshop cross-ref** later for verified-indie quality.

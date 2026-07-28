@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { CORE_GENRES } from '@reverie/core'
-import { GENRE_SUBGENRES, NEUTRAL_SUBGENRE, otherGenreSubgenres, subgenresForGenre } from './constants'
+import {
+  GENRE_SUBGENRES,
+  NEUTRAL_SUBGENRE,
+  otherGenreSubgenres,
+  subgenresForGenre,
+} from './constants'
 
 // The picker's vocabulary was the ONLY thing scoping subgenres to the primary genre — storage is a
 // flat, unscoped text[] and both forms already preserve out-of-vocabulary picks across a genre

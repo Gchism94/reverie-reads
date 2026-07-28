@@ -24,14 +24,26 @@ describe('parseNumericField', () => {
   })
 
   it('rejects a decimal where the column is whole-numbered', () => {
-    expect(parseNumericField('6.5', PUB_MONTH)).toEqual({ ok: false, error: 'Month must be a whole number.' })
+    expect(parseNumericField('6.5', PUB_MONTH)).toEqual({
+      ok: false,
+      error: 'Month must be a whole number.',
+    })
   })
 
   // The three shapes from the audit that used to vanish into null without a word.
   it('rejects, rather than silently drops, the real-world bad inputs', () => {
-    expect(parseNumericField('June', PUB_MONTH)).toEqual({ ok: false, error: 'Month must be a number.' })
-    expect(parseNumericField('2021-06-08', PUB_YEAR)).toEqual({ ok: false, error: 'Pub year must be a number.' })
-    expect(parseNumericField('2,021', PUB_YEAR)).toEqual({ ok: false, error: 'Pub year must be a number.' })
+    expect(parseNumericField('June', PUB_MONTH)).toEqual({
+      ok: false,
+      error: 'Month must be a number.',
+    })
+    expect(parseNumericField('2021-06-08', PUB_YEAR)).toEqual({
+      ok: false,
+      error: 'Pub year must be a number.',
+    })
+    expect(parseNumericField('2,021', PUB_YEAR)).toEqual({
+      ok: false,
+      error: 'Pub year must be a number.',
+    })
   })
 
   it('is stricter than Number() about junk it would otherwise coerce', () => {
@@ -42,9 +54,18 @@ describe('parseNumericField', () => {
 
   // These are the two that used to reach Postgres and take the whole PATCH down with them.
   it('catches out-of-range month and day before the CHECK constraint can', () => {
-    expect(parseNumericField('13', PUB_MONTH)).toEqual({ ok: false, error: 'Month must be 12 or less.' })
-    expect(parseNumericField('0', PUB_MONTH)).toEqual({ ok: false, error: 'Month must be 1 or more.' })
-    expect(parseNumericField('32', PUB_DAY)).toEqual({ ok: false, error: 'Day must be 31 or less.' })
+    expect(parseNumericField('13', PUB_MONTH)).toEqual({
+      ok: false,
+      error: 'Month must be 12 or less.',
+    })
+    expect(parseNumericField('0', PUB_MONTH)).toEqual({
+      ok: false,
+      error: 'Month must be 1 or more.',
+    })
+    expect(parseNumericField('32', PUB_DAY)).toEqual({
+      ok: false,
+      error: 'Day must be 31 or less.',
+    })
     expect(parseNumericField('0', PUB_DAY)).toEqual({ ok: false, error: 'Day must be 1 or more.' })
   })
 
@@ -57,13 +78,19 @@ describe('parseNumericField', () => {
 
   it('bounds the year well under the smallint overflow', () => {
     expect(parseNumericField('9999', PUB_YEAR)).toEqual({ ok: true, value: 9999 })
-    expect(parseNumericField('40000', PUB_YEAR)).toEqual({ ok: false, error: 'Pub year must be 9999 or less.' })
+    expect(parseNumericField('40000', PUB_YEAR)).toEqual({
+      ok: false,
+      error: 'Pub year must be 9999 or less.',
+    })
     expect(parseNumericField('1', PUB_YEAR)).toEqual({ ok: true, value: 1 }) // genuinely old books
   })
 
   it('bounds series length sensibly', () => {
     expect(parseNumericField('7', SERIES_COUNT)).toEqual({ ok: true, value: 7 })
-    expect(parseNumericField('0', SERIES_COUNT)).toEqual({ ok: false, error: 'Series length must be 1 or more.' })
+    expect(parseNumericField('0', SERIES_COUNT)).toEqual({
+      ok: false,
+      error: 'Series length must be 1 or more.',
+    })
   })
 })
 

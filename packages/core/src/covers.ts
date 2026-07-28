@@ -49,7 +49,14 @@ export function extractOpenLibraryCover(json: OpenLibraryResponse): string {
 /** Where a book's current cover came from — provenance persisted alongside the stored asset. */
 export type CoverSource = 'hardcover' | 'google' | 'openlibrary' | 'upload' | 'camera' | 'url'
 
-export const COVER_SOURCES: readonly CoverSource[] = ['hardcover', 'google', 'openlibrary', 'upload', 'camera', 'url']
+export const COVER_SOURCES: readonly CoverSource[] = [
+  'hardcover',
+  'google',
+  'openlibrary',
+  'upload',
+  'camera',
+  'url',
+]
 
 export const isCoverSource = (s: unknown): s is CoverSource =>
   typeof s === 'string' && (COVER_SOURCES as readonly string[]).includes(s)
@@ -69,7 +76,13 @@ export const isCoverSource = (s: unknown): s is CoverSource =>
  *   · hardcover — unchanged by this pass; the doc flags its license as asserted rather than granted,
  *     but that is a separate decision (remediation item 4), not this one's to make silently.
  */
-export const INGESTIBLE_COVER_SOURCES: readonly CoverSource[] = ['openlibrary', 'upload', 'camera', 'url', 'hardcover']
+export const INGESTIBLE_COVER_SOURCES: readonly CoverSource[] = [
+  'openlibrary',
+  'upload',
+  'camera',
+  'url',
+  'hardcover',
+]
 
 /** Display-time only: hotlink at display size, never fetched into Storage. */
 export const DISPLAY_ONLY_COVER_SOURCES: readonly CoverSource[] = ['google']
@@ -94,7 +107,8 @@ export const mayIngestCover = (source: CoverSource, url?: string): boolean =>
   isIngestibleCoverSource(source) && (!url || isIngestibleCoverUrl(url))
 
 /** True when the URL already points at the app's own cover Storage (durable, never a hotlink). */
-export const isStoredCoverUrl = (url: string): boolean => url.includes('/storage/v1/object/public/covers/')
+export const isStoredCoverUrl = (url: string): boolean =>
+  url.includes('/storage/v1/object/public/covers/')
 
 /** The Google Books `books/content` endpoint (its imageLinks host + the googleusercontent mirror) —
  *  the only cover host whose `zoom` we rewrite, and the one that serves a stock "no image" plate. */
@@ -114,8 +128,15 @@ const GOOGLE_NO_COVER_DIMS: ReadonlyArray<readonly [number, number]> = [
   [575, 750], // zoom=0 / zoom=2 / zoom=3 — the large plate (what our upgrades request)
   [128, 170], // zoom=1 — the small plate (the un-upgraded original for a truly cover-less book)
 ]
-export function isGoogleNoCoverArt(url: string, naturalWidth: number, naturalHeight: number): boolean {
-  return isGoogleContentCover(url) && GOOGLE_NO_COVER_DIMS.some(([w, h]) => naturalWidth === w && naturalHeight === h)
+export function isGoogleNoCoverArt(
+  url: string,
+  naturalWidth: number,
+  naturalHeight: number,
+): boolean {
+  return (
+    isGoogleContentCover(url) &&
+    GOOGLE_NO_COVER_DIMS.some(([w, h]) => naturalWidth === w && naturalHeight === h)
+  )
 }
 
 /**
@@ -135,9 +156,13 @@ export function upgradeCoverUrl(url: string, size: 'full' | 'thumb' = 'full'): s
 
   // Google Books content endpoint (the imageLinks.thumbnail host, and its googleusercontent mirror).
   if (isGoogleContentCover(url)) {
-    let u = url.replace(/([?&])edge=curl(&|$)/i, (_m, p1: string, p2: string) => (p2 === '&' ? p1 : '')).replace(/[?&]$/, '')
+    let u = url
+      .replace(/([?&])edge=curl(&|$)/i, (_m, p1: string, p2: string) => (p2 === '&' ? p1 : ''))
+      .replace(/[?&]$/, '')
     const zoom = size === 'thumb' ? '2' : '0'
-    u = /[?&]zoom=\d+/i.test(u) ? u.replace(/([?&]zoom=)\d+/i, `$1${zoom}`) : `${u}${u.includes('?') ? '&' : '?'}zoom=${zoom}`
+    u = /[?&]zoom=\d+/i.test(u)
+      ? u.replace(/([?&]zoom=)\d+/i, `$1${zoom}`)
+      : `${u}${u.includes('?') ? '&' : '?'}zoom=${zoom}`
     return u
   }
 
@@ -150,7 +175,8 @@ export function upgradeCoverUrl(url: string, size: 'full' | 'thumb' = 'full'): s
 
 /** True when a cover URL is an external source we can request at a higher resolution (Google/OL).
  *  Used by the re-sharpen sweep to skip Hardcover/B&N/storage covers (already full-res or opaque). */
-export const isUpgradeableCoverUrl = (url: string): boolean => !!url && upgradeCoverUrl(url, 'full') !== url
+export const isUpgradeableCoverUrl = (url: string): boolean =>
+  !!url && upgradeCoverUrl(url, 'full') !== url
 
 /**
  * The ordered, de-duplicated URLs to try for a book's cover, most-wanted first — the single fallback
@@ -184,7 +210,10 @@ export function coverCandidates(
  * mergeImport is already fill-only for non-empty covers; this guard additionally keeps enrichment
  * from re-offering a cover for a book whose cover the reader deliberately set (or later cleared).
  */
-export function enrichmentCoverFill(book: { cover: string; coverUserChosen?: boolean }, offered: string): string {
+export function enrichmentCoverFill(
+  book: { cover: string; coverUserChosen?: boolean },
+  offered: string,
+): string {
   if (book.coverUserChosen) return ''
   if (book.cover) return '' // fill-only — an existing cover (user, seed, or prior fill) stays
   return offered

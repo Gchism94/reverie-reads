@@ -15,7 +15,11 @@ import { captureEdgeError } from '../_shared/observe.ts'
 import { embeddingSig, embeddingText, type EmbedSource } from './signature.ts'
 
 declare const Supabase: {
-  ai: { Session: new (model: string) => { run(input: string, opts?: Record<string, unknown>): Promise<number[]> } }
+  ai: {
+    Session: new (model: string) => {
+      run(input: string, opts?: Record<string, unknown>): Promise<number[]>
+    }
+  }
 }
 
 const cors = {
@@ -35,7 +39,10 @@ const SWEEP_MAX = 12
 const SWEEP_WALL_MS = 1200
 
 const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...cors, 'Content-Type': 'application/json' },
+  })
 
 const session = new Supabase.ai.Session('gte-small')
 
@@ -75,7 +82,9 @@ Deno.serve(async (req: Request) => {
   // the caller, from their own token only; all REST below runs AS them (RLS applies)
   const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '')
   if (!token) return json({ error: 'not authenticated' }, 401)
-  const ures = await fetch(`${DB_URL}/auth/v1/user`, { headers: { apikey: ANON, Authorization: `Bearer ${token}` } })
+  const ures = await fetch(`${DB_URL}/auth/v1/user`, {
+    headers: { apikey: ANON, Authorization: `Bearer ${token}` },
+  })
   if (!ures.ok) return json({ error: 'not authenticated' }, 401)
   const uid = ((await ures.json()) as { id?: string })?.id
   if (!uid) return json({ error: 'not authenticated' }, 401)
@@ -96,10 +105,23 @@ Deno.serve(async (req: Request) => {
         fetch(`${DB_URL}/rest/v1/book_embeddings?select=book_id,sig`, { headers: usr }),
       ])
       if (!booksRes.ok || !embRes.ok) {
-        return json({ error: 'read failed', books: booksRes.status, embeddings: embRes.status, detail: (!booksRes.ok ? await booksRes.text() : await embRes.text()).slice(0, 300) }, 500)
+        return json(
+          {
+            error: 'read failed',
+            books: booksRes.status,
+            embeddings: embRes.status,
+            detail: (!booksRes.ok ? await booksRes.text() : await embRes.text()).slice(0, 300),
+          },
+          500,
+        )
       }
       const books = (await booksRes.json()) as BookRow[]
-      const have = new Map(((await embRes.json()) as { book_id: string; sig: string }[]).map((e) => [e.book_id, e.sig]))
+      const have = new Map(
+        ((await embRes.json()) as { book_id: string; sig: string }[]).map((e) => [
+          e.book_id,
+          e.sig,
+        ]),
+      )
 
       const stale = books
         .map((b) => ({ b, src: toSource(b) }))
@@ -149,7 +171,11 @@ Deno.serve(async (req: Request) => {
         .slice(0, 16)
       if (!items.length) return json({ hasTaste: false, scores: [] })
 
-      const cres = await fetch(`${DB_URL}/rest/v1/rpc/taste_centroid`, { method: 'POST', headers: usr, body: '{}' })
+      const cres = await fetch(`${DB_URL}/rest/v1/rpc/taste_centroid`, {
+        method: 'POST',
+        headers: usr,
+        body: '{}',
+      })
       if (!cres.ok) return json({ error: `centroid failed: ${cres.status}` }, 500)
       const raw = (await cres.json()) as string | null
       if (!raw) return json({ hasTaste: false, scores: [] }) // cold start — caller passes through

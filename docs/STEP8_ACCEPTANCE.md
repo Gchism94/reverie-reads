@@ -5,6 +5,7 @@ Run before declaring Step 8 (and the build) done. For each item: verify, then re
 sign-off. Don't mark the step complete with any ✗ outstanding.
 
 ## A. Step 8 scope
+
 - [ ] **Offline mirror (Dexie):** app loads and lets you browse/search/edit the library
       with the network off; changes queue locally.
 - [ ] **Background sync + conflict policy:** offline edits reconcile on reconnect without
@@ -27,7 +28,9 @@ sign-off. Don't mark the step complete with any ✗ outstanding.
       list/club membership. Export → wipe → import reproduces the library exactly.
 
 ## B. Re-verify the late-added ⭐ requirements (most likely to be missing)
+
 These were specced after the original Step 5/6 checks — confirm they actually landed.
+
 - [ ] **S1 Per-format ownership:** book detail has independent Physical / Ebook /
       Audiobook toggles; ≥1 on = owned, all off = not owned/wishlist; live caption.
       (Confirm Physical paperback/hardcover sub-choice per the owner decision.)
@@ -43,9 +46,10 @@ These were specced after the original Step 5/6 checks — confirm they actually 
       ideally an auto-dedupe pass offered on import.
 
 ## C. Realtime + spoiler-gating edge
+
 - [ ] **Gated rows never leak:** a behind-progress reader's Realtime stream and any
       refetch never deliver `club_comments` rows past their progress (RLS verified).
-- [ ] **Locked count still updates live:** when someone posts a comment *ahead* of a
+- [ ] **Locked count still updates live:** when someone posts a comment _ahead_ of a
       reader, that reader's "🔒 N hidden — unlocks at …" indicator updates without a
       manual refresh — via a content-free signal/refetch (e.g. a count RPC or a
       members/activity event), NOT by sending the gated rows. Add a test for this.
@@ -53,11 +57,13 @@ These were specced after the original Step 5/6 checks — confirm they actually 
       now-eligible comments, live.
 
 ## D. Full regression against the master list
+
 - [ ] Walk `docs/REQUIREMENTS.md` top to bottom; confirm each ✅/◑/⭐ item works in the
       built app in both themes, mobile + desktop. Report any gaps.
 - [ ] `pnpm lint`, `typecheck`, `test`, `e2e`, `build` all green; note test count.
 
 ## Final gate
+
 Step 8 is done only when A–D are all ✓ (or any deferral is explicitly listed and
 approved by the owner), the app works offline and reconciles on reconnect, and the
 master requirements pass in both themes.

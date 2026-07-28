@@ -69,7 +69,13 @@ export function MoodPicker({ book }: { book: Book }) {
     <div>
       <div className="flex flex-wrap gap-1.5">
         {ordered.map((m) => (
-          <MoodChip key={m.id} name={m.name} active={assigned.has(m.id)} onClick={() => toggle(m.id)} title={m.personal ? `${m.name} (yours)` : m.name} />
+          <MoodChip
+            key={m.id}
+            name={m.name}
+            active={assigned.has(m.id)}
+            onClick={() => toggle(m.id)}
+            title={m.personal ? `${m.name} (yours)` : m.name}
+          />
         ))}
       </div>
 
@@ -99,7 +105,11 @@ export function MoodPicker({ book }: { book: Book }) {
           </button>
         )}
       </div>
-      {note && <p className="mt-2 text-[12.5px]" style={{ color: 'var(--accent-ink)' }}>{note}</p>}
+      {note && (
+        <p className="mt-2 text-[12.5px]" style={{ color: 'var(--accent-ink)' }}>
+          {note}
+        </p>
+      )}
     </div>
   )
 }

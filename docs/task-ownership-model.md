@@ -2,7 +2,7 @@
 
 > **Status: shipped in #48 — superseded by `docs/task-ownership-v2.md`.** This is the brief the
 > work was built against, not a description of how the app behaves today. The two-state `owned |
-> unowned` model this specifies is **no longer the model** — #68 replaced it with four states
+unowned` model this specifies is **no longer the model** — #68 replaced it with four states
 > (`owned | borrowed | wishlist | unset`). Read it as history. For current behavior, read the
 > code and `docs/DATA_MODEL.md`.
 
@@ -12,7 +12,7 @@
 
 ## Context
 
-Today, a book record existing implies Greg owns it. Consequences from launch feedback: you cannot add a book to a shelf/TBR unless it's "in your library," and any manual add forces owned status. This breaks the core TBR use case — most of a TBR is books you *don't* own yet. Fix the model, not the symptoms.
+Today, a book record existing implies Greg owns it. Consequences from launch feedback: you cannot add a book to a shelf/TBR unless it's "in your library," and any manual add forces owned status. This breaks the core TBR use case — most of a TBR is books you _don't_ own yet. Fix the model, not the symptoms.
 
 ## Data model
 

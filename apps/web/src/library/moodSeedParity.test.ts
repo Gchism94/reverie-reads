@@ -11,7 +11,10 @@ describe('mood seed ↔ migration parity', () => {
     join(__dirname, '../../../../supabase/migrations/20260721030000_mood_system.sql'),
     'utf8',
   )
-  const block = sql.slice(sql.indexOf('insert into public.moods (name)'), sql.indexOf('on conflict do nothing'))
+  const block = sql.slice(
+    sql.indexOf('insert into public.moods (name)'),
+    sql.indexOf('on conflict do nothing'),
+  )
   const names = [...block.matchAll(/\('((?:[^']|'')+)'\)/g)].map((m) => m[1]!.replace(/''/g, "'"))
 
   it('every seed mood appears exactly once, same set as SEED_MOODS', () => {

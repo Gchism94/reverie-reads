@@ -87,12 +87,23 @@ const PLATE: Partial<Record<SkinId, PlateOrnament>> = {
   marrow: {
     // Fable 5: the specimen card — the № pasted at its head does the identifying
     eyebrowColor: 'var(--accent-ink)',
-    subtitleStyle: { fontFamily: 'var(--font-sans)', letterSpacing: '0.1em', textTransform: 'uppercase', fontSize: '11px' },
+    subtitleStyle: {
+      fontFamily: 'var(--font-sans)',
+      letterSpacing: '0.1em',
+      textTransform: 'uppercase',
+      fontSize: '11px',
+    },
     ornament: (
       <span
         aria-hidden
         className="pointer-events-none absolute left-1/2 top-[-9px] -translate-x-1/2 px-1.5 py-0.5 text-[9px] font-bold leading-none"
-        style={{ background: 'var(--paper)', color: 'var(--paper-ink)', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.35)', fontFamily: 'var(--font-sans)', letterSpacing: '0.08em' }}
+        style={{
+          background: 'var(--paper)',
+          color: 'var(--paper-ink)',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.35)',
+          fontFamily: 'var(--font-sans)',
+          letterSpacing: '0.08em',
+        }}
       >
         №
       </span>
@@ -102,7 +113,12 @@ const PLATE: Partial<Record<SkinId, PlateOrnament>> = {
   // Fable 5 Gaslight: the docket — the case number typed on the tab; REPORTED BY beneath
   umbra: {
     eyebrowColor: 'var(--accent-ink)',
-    subtitleStyle: { fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', textTransform: 'uppercase', fontSize: '10.5px' },
+    subtitleStyle: {
+      fontFamily: 'var(--font-mono)',
+      letterSpacing: '0.1em',
+      textTransform: 'uppercase',
+      fontSize: '10.5px',
+    },
     ornament: topGlyph('▣'),
   },
   // Fable 5 Marginalia: the galley slug — the red margin rule down the left, the caret in the margin
@@ -111,8 +127,20 @@ const PLATE: Partial<Record<SkinId, PlateOrnament>> = {
     subtitleStyle: { fontFamily: 'var(--font-display)', fontStyle: 'italic' },
     ornament: (
       <>
-        <span aria-hidden className="pointer-events-none absolute bottom-0 top-0" style={{ left: 10, width: 1, background: 'color-mix(in srgb, var(--accent-fill) 45%, transparent)' }} />
-        <span aria-hidden className="pointer-events-none absolute bottom-1 left-[5px] text-[12px] font-bold leading-none" style={{ color: 'var(--accent-fill)', fontFamily: 'var(--font-display)' }}>
+        <span
+          aria-hidden
+          className="pointer-events-none absolute bottom-0 top-0"
+          style={{
+            left: 10,
+            width: 1,
+            background: 'color-mix(in srgb, var(--accent-fill) 45%, transparent)',
+          }}
+        />
+        <span
+          aria-hidden
+          className="pointer-events-none absolute bottom-1 left-[5px] text-[12px] font-bold leading-none"
+          style={{ color: 'var(--accent-fill)', fontFamily: 'var(--font-display)' }}
+        >
           ‸
         </span>
       </>
@@ -121,7 +149,12 @@ const PLATE: Partial<Record<SkinId, PlateOrnament>> = {
   // Fable 5 Hearth: the pantry label — the sewn button hung over the top rule
   hearth: {
     eyebrowColor: 'var(--accent-ink)',
-    subtitleStyle: { fontFamily: 'var(--font-sans)', letterSpacing: '0.16em', textTransform: 'uppercase', fontSize: '10px' },
+    subtitleStyle: {
+      fontFamily: 'var(--font-sans)',
+      letterSpacing: '0.16em',
+      textTransform: 'uppercase',
+      fontSize: '10px',
+    },
     ornament: (
       <span
         aria-hidden
@@ -139,18 +172,41 @@ const PLATE: Partial<Record<SkinId, PlateOrnament>> = {
   // Fable 5 Almanac: the band block — double rule + grommet filed at the foot
   almanac: {
     eyebrowColor: 'var(--accent-ink)',
-    subtitleStyle: { fontFamily: 'var(--font-sans)', letterSpacing: '0.14em', textTransform: 'uppercase', fontSize: '10.5px' },
+    subtitleStyle: {
+      fontFamily: 'var(--font-sans)',
+      letterSpacing: '0.14em',
+      textTransform: 'uppercase',
+      fontSize: '10.5px',
+    },
     ornament: (
-      <span aria-hidden className="pointer-events-none absolute bottom-2 left-5 right-5 flex items-center justify-between">
-        <span style={{ width: '54%', height: 4, borderTop: '1px solid var(--ornament-frame)', borderBottom: '1px solid var(--ornament-frame)' }} />
-        <span className="rounded-full" style={{ width: 9, height: 9, border: '2.5px solid var(--ornament-frame)' }} />
+      <span
+        aria-hidden
+        className="pointer-events-none absolute bottom-2 left-5 right-5 flex items-center justify-between"
+      >
+        <span
+          style={{
+            width: '54%',
+            height: 4,
+            borderTop: '1px solid var(--ornament-frame)',
+            borderBottom: '1px solid var(--ornament-frame)',
+          }}
+        />
+        <span
+          className="rounded-full"
+          style={{ width: 9, height: 9, border: '2.5px solid var(--ornament-frame)' }}
+        />
       </span>
     ),
   },
   // Fable 5 Firstlight: the sticker plate — the gold star stuck at the corner
   bloom: {
     eyebrowColor: 'var(--accent-ink)',
-    subtitleStyle: { fontFamily: 'var(--font-sans)', letterSpacing: '0.18em', textTransform: 'uppercase', fontSize: '10px' },
+    subtitleStyle: {
+      fontFamily: 'var(--font-sans)',
+      letterSpacing: '0.18em',
+      textTransform: 'uppercase',
+      fontSize: '10px',
+    },
     ornament: (
       <span
         aria-hidden
@@ -159,7 +215,8 @@ const PLATE: Partial<Record<SkinId, PlateOrnament>> = {
           width: 15,
           height: 15,
           background: 'var(--gold)',
-          clipPath: 'polygon(50% 0, 63% 34%, 98% 38%, 72% 60%, 81% 95%, 50% 74%, 19% 95%, 28% 60%, 2% 38%, 37% 34%)',
+          clipPath:
+            'polygon(50% 0, 63% 34%, 98% 38%, 72% 60%, 81% 95%, 50% 74%, 19% 95%, 28% 60%, 2% 38%, 37% 34%)',
           boxShadow: '0 0 0 2px rgba(255, 255, 255, 0.7)',
         }}
       />
@@ -198,17 +255,28 @@ export function Nameplate({
               <span
                 aria-hidden
                 className="rv-anim h-1.5 w-1.5 rounded-full"
-                style={{ background: 'var(--accent)', boxShadow: '0 0 8px var(--accent)', animation: 'sig-blink 2s step-end infinite' }}
+                style={{
+                  background: 'var(--accent)',
+                  boxShadow: '0 0 8px var(--accent)',
+                  animation: 'sig-blink 2s step-end infinite',
+                }}
               />
             )}
-            <span className="skin-label text-[10px]" style={{ color: plate?.eyebrowColor ?? 'var(--muted)' }}>
+            <span
+              className="skin-label text-[10px]"
+              style={{ color: plate?.eyebrowColor ?? 'var(--muted)' }}
+            >
               {eyebrow}
             </span>
           </div>
         )}
         <h2
           className="text-balance text-[22px] leading-tight text-ink"
-          style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontFeatureSettings: 'var(--numeral-feature)' }}
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontWeight: 600,
+            fontFeatureSettings: 'var(--numeral-feature)',
+          }}
         >
           {title}
         </h2>

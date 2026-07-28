@@ -6,6 +6,7 @@ limits, and a sustainable revenue path** — plus settling the name. Nothing her
 at single-user scale; it's the readiness list to work down as MAU grows.
 
 ## 1. Revenue path (optional, but scaffolded)
+
 - Buy-link **attribution is a config-driven strategy**: `store` (default — local store
   keeps full profit, app earns nothing) or `affiliate` (app earns commission). Affiliate
   IDs live in config, present but unused. Flip later to offset costs — config change + an
@@ -13,6 +14,7 @@ at single-user scale; it's the readiness list to work down as MAU grows.
   separately; it may already route to a chosen store.)
 
 ## 2. Cost levers & rate limits (the real scale work)
+
 - **Global, shared caches** are the main lever: the cover/metadata cache must be keyed by
   work/ISBN and shared across **all** users (not per-user), so more users → more cache
   hits → near-flat enrichment cost. Same for geocode results.
@@ -25,6 +27,7 @@ at single-user scale; it's the readiness list to work down as MAU grows.
   free-tier ceilings (MAU, DB size, edge invocations, storage) and set an upgrade trigger.
 
 ## 3. Community features at scale
+
 - **Reviews (R2) and clubs get more useful with more users** — but need guardrails:
   report/block, rate-limiting, and light moderation on user-generated reviews and club
   comments.
@@ -32,16 +35,19 @@ at single-user scale; it's the readiness list to work down as MAU grows.
   scale; consider whether some shares should require an account.
 
 ## 4. Name & trademark (do before there's a URL / listing / marketing)
+
 - A growth product needs the name settled. "Reverie" has a same-class (different-field)
   mark; **Gloaming** is the cleanest cleared option; Vieux Carré / Velvet Hour /
   Magnolia Dawn are still unsearched. See `docs/TRADEMARK.md`. Keep the name out of
   hardcoded strings so a change stays cheap.
 
 ## 5. Households (decision #2)
+
 - If growth includes family/household use, revisit the deferred shared-household-library
   model (today: one library per account + shared lists/clubs).
 
 ## Not now
+
 None of this blocks current work. Sequence it: ship Phase 5 → confirm global caches +
 proxy hardening before any real user influx → settle the name → decide revenue mode when
 costs actually appear.

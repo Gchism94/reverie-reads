@@ -24,7 +24,8 @@ export function useRealtimeRefetch(
         'postgres_changes',
         { event: '*', schema: 'public', table: s.table, ...(s.filter ? { filter: s.filter } : {}) },
         () => {
-          for (const k of JSON.parse(keysId) as QueryKey[]) void qc.invalidateQueries({ queryKey: k })
+          for (const k of JSON.parse(keysId) as QueryKey[])
+            void qc.invalidateQueries({ queryKey: k })
         },
       )
     }

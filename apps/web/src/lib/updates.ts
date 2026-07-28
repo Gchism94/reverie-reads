@@ -58,7 +58,9 @@ export function initUpdateWatch(onNewVersion: () => void): () => void {
 
   // A new service worker installing is the earliest reliable "a deploy is live" signal.
   if ('serviceWorker' in navigator) {
-    void navigator.serviceWorker.getRegistration().then((reg) => reg?.addEventListener('updatefound', () => void check()))
+    void navigator.serviceWorker
+      .getRegistration()
+      .then((reg) => reg?.addEventListener('updatefound', () => void check()))
     navigator.serviceWorker.addEventListener('controllerchange', () => void check())
   }
 

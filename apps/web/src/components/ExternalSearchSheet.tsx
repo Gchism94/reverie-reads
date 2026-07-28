@@ -45,12 +45,23 @@ export function ExternalSearchSheet({
       <div className="mt-3 max-h-[52vh] overflow-y-auto">
         {!searching && (
           <p className="px-1 py-3 text-[13px] text-muted">
-            Type a title, author, or ISBN to find books beyond your library — they’ll land on {listName} as wishlist.
+            Type a title, author, or ISBN to find books beyond your library — they’ll land on{' '}
+            {listName} as wishlist.
           </p>
         )}
-        {searching && q.isPending && <p className="px-1 py-3 text-[13px] text-muted">{voice.loading}</p>}
-        {searching && q.isError && <p className="px-1 py-3 text-[13px] text-primary">Search isn’t answering — usually a rate limit. Try again shortly.</p>}
-        {searching && q.isSuccess && q.data.length === 0 && <p className="px-1 py-3 text-[13px] text-muted">Nothing found — try another spelling or an ISBN.</p>}
+        {searching && q.isPending && (
+          <p className="px-1 py-3 text-[13px] text-muted">{voice.loading}</p>
+        )}
+        {searching && q.isError && (
+          <p className="px-1 py-3 text-[13px] text-primary">
+            Search isn’t answering — usually a rate limit. Try again shortly.
+          </p>
+        )}
+        {searching && q.isSuccess && q.data.length === 0 && (
+          <p className="px-1 py-3 text-[13px] text-muted">
+            Nothing found — try another spelling or an ISBN.
+          </p>
+        )}
         {searching && q.isSuccess && q.data.length > 0 && (
           <SearchResults
             results={q.data}

@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { embeddingSig as coreSig, embeddingText as coreText, type EmbedSource } from './embedding'
 // The same file the Deno embed function imports — if the hand-mirrored copy drifts, this fails.
-import { embeddingSig as fnSig, embeddingText as fnText } from '../../../supabase/functions/embed/signature'
+import {
+  embeddingSig as fnSig,
+  embeddingText as fnText,
+} from '../../../supabase/functions/embed/signature'
 
 const FIXTURES: EmbedSource[] = [
   {
@@ -14,7 +17,14 @@ const FIXTURES: EmbedSource[] = [
     spice: 4,
   },
   { title: 'Carnage' },
-  { title: 'Mile High', author: 'Liz Tomforde', genre: 'romance', subgenre: 'Sports', tags: ['Hockey', 'grumpy/sunshine'], spice: 3 },
+  {
+    title: 'Mile High',
+    author: 'Liz Tomforde',
+    genre: 'romance',
+    subgenre: 'Sports',
+    tags: ['Hockey', 'grumpy/sunshine'],
+    spice: 3,
+  },
   { title: 'The Works of Vermin', author: 'Hiron Ennes', genre: 'horror', tags: [] },
 ]
 

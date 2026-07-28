@@ -30,7 +30,11 @@ const SERVICE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 const BOOKS_KEY = Deno.env.get('GOOGLE_BOOKS_KEY') ?? ''
 const REFERER = Deno.env.get('BOOKS_KEY_REFERER') ?? 'https://reveriereads.app/'
 
-const svc = { apikey: SERVICE, Authorization: `Bearer ${SERVICE}`, 'Content-Type': 'application/json' }
+const svc = {
+  apikey: SERVICE,
+  Authorization: `Bearer ${SERVICE}`,
+  'Content-Type': 'application/json',
+}
 
 const TTL_MS = 24 * 60 * 60 * 1000
 /** upstream author fetches per request — cached names are free, misses accumulate across calls.
@@ -40,7 +44,10 @@ const FETCH_BUDGET = 2
 const FETCH_WALL_MS = 4000
 
 const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...cors, 'Content-Type': 'application/json' },
+  })
 
 /** The client-facing hit shape (same as Discover/Add prefill). */
 interface Hit {
@@ -51,10 +58,17 @@ interface Hit {
   pub: string
 }
 
-const norm = (s: string): string => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
+const norm = (s: string): string =>
+  s
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim()
 
 async function cacheGet(key: string): Promise<unknown | null> {
-  const res = await fetch(`${DB_URL}/rest/v1/releases_cache?cache_key=eq.${encodeURIComponent(key)}&select=payload,fetched_at`, { headers: svc })
+  const res = await fetch(
+    `${DB_URL}/rest/v1/releases_cache?cache_key=eq.${encodeURIComponent(key)}&select=payload,fetched_at`,
+    { headers: svc },
+  )
   if (!res.ok) return null
   const rows = (await res.json()) as { payload: unknown; fetched_at: string }[]
   const row = rows[0]
@@ -77,7 +91,13 @@ function toHit(rec: any): Hit {
     .filter((x: unknown) => x != null)
     .map((x: number, i: number) => (i === 0 ? String(x) : String(x).padStart(2, '0')))
     .join('-')
-  return { title: rec.title ?? '', authors: rec.authors ?? [], cover: rec.cover ?? '', isbn: rec.isbn13 || rec.isbn10 || '', pub }
+  return {
+    title: rec.title ?? '',
+    authors: rec.authors ?? [],
+    cover: rec.cover ?? '',
+    isbn: rec.isbn13 || rec.isbn10 || '',
+    pub,
+  }
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
@@ -105,7 +125,10 @@ function dedupe(hits: Hit[]): Hit[] {
 /** An author's shelf, both orderings merged, sorted newest-first by REAL date (orderBy lies). */
 async function fetchAuthor(name: string): Promise<Hit[]> {
   const q = `inauthor:"${name}"`
-  const [newest, relevant] = await Promise.all([googleVolumes(q, 'newest'), googleVolumes(q, 'relevance')])
+  const [newest, relevant] = await Promise.all([
+    googleVolumes(q, 'newest'),
+    googleVolumes(q, 'relevance'),
+  ])
   // keep hits that actually list the author (inauthor matches loosely) and carry a date
   const own = dedupe([...newest, ...relevant]).filter(
     (h) => h.pub && h.authors.some((a) => norm(a) === norm(name)),
@@ -141,7 +164,9 @@ Deno.serve(async (req: Request) => {
   // any signed-in reader may query (public catalog data; the cache is shared on purpose)
   const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '')
   if (!token) return json({ error: 'not authenticated' }, 401)
-  const ures = await fetch(`${DB_URL}/auth/v1/user`, { headers: { apikey: ANON, Authorization: `Bearer ${token}` } })
+  const ures = await fetch(`${DB_URL}/auth/v1/user`, {
+    headers: { apikey: ANON, Authorization: `Bearer ${token}` },
+  })
   if (!ures.ok) return json({ error: 'not authenticated' }, 401)
 
   let body: { mode?: string; names?: unknown[]; genre?: string; query?: string }

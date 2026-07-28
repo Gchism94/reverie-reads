@@ -4,13 +4,15 @@
 > Greg eyeballed `/lab/skins` and **cleared the full-character direction** — vocabulary locked on Tryst + Aphelion.
 
 ## What this is
-The **mechanical fan-out**, and it's mechanical *because* the hard parts are done: the token contract is
+
+The **mechanical fan-out**, and it's mechanical _because_ the hard parts are done: the token contract is
 complete (Stage 1 type/shape + Stage 1b texture/ornament/nameplate/marks), and the aesthetic direction has
 passed a human eyeball. 1c wires the remaining components onto the **already-locked contract**. Low visual
 stakes, no new character invention — if a component seems to need a token that doesn't exist, that's a **flag
 to Greg**, not a silent new token.
 
 Components to retrofit (all consume existing tokens, none introduce character):
+
 - **Inputs + search**
 - **Select + toggle**
 - **Goal ring**
@@ -22,6 +24,7 @@ When 1c lands, the core kit retrofit is **complete for the two designed skins** 
 Stage 1 arc.
 
 ## Branching (learn from 1b — do NOT assume merged)
+
 - Preferred: branch `skin-character-1c` off **main once #5 and #6 are both merged**, so the full contract is present.
 - If they're not yet merged when you start: **stack the same way 1b did** — branch off `skin-character-1b`
   (PR #6's head), base PR #7 on #6. Merge order becomes **#5 → #6 → #7**. Keep the diff 1c-only.
@@ -30,11 +33,14 @@ Stage 1 arc.
 ---
 
 ## STEP 0 — no extraction needed
+
 Everything 1c needs already exists in `tokens.css` + `docs/SKIN_CHARACTER_CONTRACT.md`. Confirm you're reading
 the **post-1b** contract (texture/ornament/nameplate/mark tokens present). No new decode, no new values.
 
 ## STEP 1 — wire each component to the contract
+
 No hardcoded generic styling. Each component pulls from the existing slots:
+
 - **Inputs + search**: shape (`--radius-control`, `--ctl-clip` notch), type (`--control-transform`,
   `--label-*` for the field label), focus ring off `--accent`. **Affordance is the watch item** — a notched,
   textured field must still obviously read and behave as a text input.
@@ -50,6 +56,7 @@ No hardcoded generic styling. Each component pulls from the existing slots:
   CSS/SVG, no external images.
 
 ## STEP 2 — Tryst + Aphelion fall out of the contract
+
 Because these consume existing per-skin token values, Tryst + Aphelion should be correct once wired. Set
 explicit values only where a component genuinely has no contract slot — and if that happens, **flag it** rather
 than invent.
@@ -57,6 +64,7 @@ than invent.
 ---
 
 ## GUARDRAILS (must hold; gate stays green)
+
 - **AA**: the registry-keyed `skinCharacter.contrast` test auto-covers new text/accent combos across skin ×
   mode — extend it to any new surface 1c introduces (input fields, toggle tracks, toast, empty-state text).
   Lower texture risk than 1b (these mostly sit on opaque surfaces already), but verify, don't assume.
@@ -70,13 +78,16 @@ than invent.
 - **GATE**: core tests + typecheck + lint + build + the 4-skins × 2-modes axe e2e sweep all green.
 
 ## EYEBALL — light, not a re-vote
+
 Direction's settled; 1c doesn't re-open "two worlds." Add the new components to `/lab/skins` so Greg can do a
 **regression pass**: do the controls feel of-a-piece with the proven primitives, any affordance regressions, did
 any generic SaaS styling leak back in. That's the whole check.
 
 ## STAGING
+
 Land Stage 1c as **one reviewable PR**, **branch, not merged**. After it lands, the Stage 1 arc is complete on
 Tryst + Aphelion. Then:
+
 - **Stage 2**: Grimoire + Marrow expressed in the vocabulary.
 - **Stage 3**: the five unbuilt skins, code-first per the sourcing decision (Greg gates; Design rescues only what reads flat).
 - THEN resume Onboarding, finally built in the character vocabulary.

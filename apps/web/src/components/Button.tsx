@@ -11,7 +11,10 @@ export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'icon'
 const VARIANT: Record<ButtonVariant, { cls: string; style: CSSProperties }> = {
   primary: { cls: 'skin-btn-primary h-10 px-5 text-[14px]', style: {} },
   secondary: { cls: 'skin-btn-secondary h-10 px-5 text-[14px]', style: {} },
-  ghost: { cls: 'h-10 px-3 text-[14px] text-muted hover:text-ink', style: { background: 'transparent' } },
+  ghost: {
+    cls: 'h-10 px-3 text-[14px] text-muted hover:text-ink',
+    style: { background: 'transparent' },
+  },
   icon: { cls: 'skin-btn-icon grid h-10 w-10 place-items-center text-[16px]', style: {} },
 }
 

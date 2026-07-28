@@ -22,25 +22,41 @@ const TEST_PASSWORD = 'series-defects-e2e-password'
 test.describe.configure({ mode: 'serial' })
 
 async function ensureUser(): Promise<void> {
-  const admin = createClient(SUPABASE_URL, SERVICE, { auth: { autoRefreshToken: false, persistSession: false } })
+  const admin = createClient(SUPABASE_URL, SERVICE, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  })
   const { data } = await admin.auth.admin.listUsers()
   let uid = data?.users?.find((u) => u.email === TEST_EMAIL)?.id
   if (!uid) {
-    const { data: created, error } = await admin.auth.admin.createUser({ email: TEST_EMAIL, password: TEST_PASSWORD, email_confirm: true })
+    const { data: created, error } = await admin.auth.admin.createUser({
+      email: TEST_EMAIL,
+      password: TEST_PASSWORD,
+      email_confirm: true,
+    })
     if (error) throw error
     uid = created.user!.id
   }
-  await admin.from('profiles').upsert({ id: uid, display_name: 'Series Defects E2E', skin: 'tryst', mode: 'system' })
+  await admin
+    .from('profiles')
+    .upsert({ id: uid, display_name: 'Series Defects E2E', skin: 'tryst', mode: 'system' })
 }
 
-type Client = { sb: SupabaseClient; session: { access_token: string; refresh_token: string }; uid: string }
+type Client = {
+  sb: SupabaseClient
+  session: { access_token: string; refresh_token: string }
+  uid: string
+}
 let shared: Client | null = null
 async function client(): Promise<Client> {
   if (shared) return shared
   await ensureUser()
   const sb = createClient(SUPABASE_URL, ANON)
-  const { data, error } = await sb.auth.signInWithPassword({ email: TEST_EMAIL, password: TEST_PASSWORD })
-  if (error || !data.session) throw new Error(authFailure('series-removal-positions', TEST_EMAIL, error))
+  const { data, error } = await sb.auth.signInWithPassword({
+    email: TEST_EMAIL,
+    password: TEST_PASSWORD,
+  })
+  if (error || !data.session)
+    throw new Error(authFailure('series-removal-positions', TEST_EMAIL, error))
   shared = { sb, session: data.session, uid: data.session.user.id }
   return shared
 }
@@ -61,7 +77,9 @@ async function reset(c: Client) {
 
 async function signIn(page: Page, session: { access_token: string; refresh_token: string }) {
   await page.addInitScript(() => localStorage.setItem('reverie.onboarded', '1'))
-  await page.goto(`/#access_token=${session.access_token}&refresh_token=${session.refresh_token}&expires_in=3600&token_type=bearer&type=magiclink`)
+  await page.goto(
+    `/#access_token=${session.access_token}&refresh_token=${session.refresh_token}&expires_in=3600&token_type=bearer&type=magiclink`,
+  )
   await page.getByRole('button', { name: /enter your library/i }).click({ timeout: 20_000 })
   await expect(page.getByRole('navigation')).toBeVisible({ timeout: 20_000 })
   await page.evaluate(() => indexedDB.deleteDatabase('reverie-offline'))
@@ -77,10 +95,16 @@ const SOURCE_ENTRIES = [
 async function stubBackends(page: Page) {
   await page.route('**/functions/v1/search**', (r) => r.fulfill({ json: { results: [] } }))
   await page.route('**/functions/v1/enrich**', (r) => r.fulfill({ json: { rateLimited: false } }))
-  await page.route('**/functions/v1/covers**', (r) => r.fulfill({ status: 422, json: { error: 'fetch_failed' } }))
-  await page.route('**/functions/v1/embed**', (r) => r.fulfill({ json: { hasTaste: false, scores: [] } }))
+  await page.route('**/functions/v1/covers**', (r) =>
+    r.fulfill({ status: 422, json: { error: 'fetch_failed' } }),
+  )
+  await page.route('**/functions/v1/embed**', (r) =>
+    r.fulfill({ json: { hasTaste: false, scores: [] } }),
+  )
   await page.route('**/functions/v1/releases**', (r) => r.fulfill({ json: { hits: [] } }))
-  await page.route('**/functions/v1/series**', (r) => r.fulfill({ json: { sourceRef: 'stub', entries: SOURCE_ENTRIES } }))
+  await page.route('**/functions/v1/series**', (r) =>
+    r.fulfill({ json: { sourceRef: 'stub', entries: SOURCE_ENTRIES } }),
+  )
   await page.route('**/books/v1/volumes**', (r) => r.fulfill({ json: { items: [] } }))
 }
 
@@ -114,7 +138,12 @@ async function seedSeries(c: Client, positions: (number | null)[] = [1, 2, 3]) {
 }
 
 const liveEntries = async (c: Client) => {
-  const { data: s } = await c.sb.from('series').select('id').eq('owner_id', c.uid).eq('name', SERIES).maybeSingle()
+  const { data: s } = await c.sb
+    .from('series')
+    .select('id')
+    .eq('owner_id', c.uid)
+    .eq('name', SERIES)
+    .maybeSingle()
   if (!s) return []
   const { data } = await c.sb
     .from('series_entries')
@@ -126,11 +155,17 @@ const liveEntries = async (c: Client) => {
 }
 
 const bookRow = async (c: Client, title: string) =>
-  (await c.sb.from('books').select('id, series, position').eq('owner_id', c.uid).eq('title', title).maybeSingle()).data as
-    | { id: string; series: string | null; position: number | null }
-    | null
+  (
+    await c.sb
+      .from('books')
+      .select('id, series, position')
+      .eq('owner_id', c.uid)
+      .eq('title', title)
+      .maybeSingle()
+  ).data as { id: string; series: string | null; position: number | null } | null
 
-const badges = (page: Page) => page.locator('ol li span.text-\\[15px\\].font-bold').allTextContents()
+const badges = (page: Page) =>
+  page.locator('ol li span.text-\\[15px\\].font-bold').allTextContents()
 const openSeries = async (page: Page) => {
   await page.goto(`/series/${encodeURIComponent(SERIES)}`)
   await expect(page.locator('ol li').first()).toBeVisible({ timeout: 20_000 })
@@ -157,16 +192,17 @@ test('series page: a linked book can be removed, and stays removed', async ({ pa
     await expect(confirm).toBeVisible()
     await confirm.getByRole('button', { name: /^Remove$/ }).click()
 
-    await expect.poll(async () => (await liveEntries(c)).map((e) => e.title), { timeout: 15_000 }).toEqual([
-      'Audit Alpha',
-      'Audit Charlie',
-    ])
+    await expect
+      .poll(async () => (await liveEntries(c)).map((e) => e.title), { timeout: 15_000 })
+      .toEqual(['Audit Alpha', 'Audit Charlie'])
     // The book keeps existing; it just stops naming the series. useRemoveEntry writes
     // series_entries and books.series as two SEPARATE, sequential round trips within one mutation —
     // not one transaction — so a reader querying independently (this test's own client, not the
     // app's own invalidation-gated view) can observe the first commit before the second lands. Poll,
     // matching the liveEntries wait just above, rather than assuming both are visible atomically.
-    await expect.poll(async () => (await bookRow(c, 'Audit Bravo'))?.series, { timeout: 15_000 }).toBeFalsy()
+    await expect
+      .poll(async () => (await bookRow(c, 'Audit Bravo'))?.series, { timeout: 15_000 })
+      .toBeFalsy()
 
     // Survives a full reload — reconciliation must not re-add it.
     await page.reload()
@@ -190,7 +226,9 @@ test('series page: a book acquired from a ghost slot can be removed again', asyn
     await signIn(page, c.session)
     // Reached the way the reader does: the book page's "see the whole series" door.
     await page.goto(`/book/${ids[0]}`)
-    await expect(page.getByRole('heading', { name: 'Audit Alpha' })).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByRole('heading', { name: 'Audit Alpha' })).toBeVisible({
+      timeout: 20_000,
+    })
     await page.getByLabel(`Open the ${SERIES} series page`).click()
     await expect(page).toHaveURL(/\/series\//, { timeout: 20_000 })
 
@@ -204,16 +242,24 @@ test('series page: a book acquired from a ghost slot can be removed again', asyn
     await expect(acquire).toBeVisible({ timeout: 15_000 })
     await acquire.getByRole('button', { name: /Add to wishlist/i }).click()
     await expect
-      .poll(async () => (await liveEntries(c)).find((e) => e.title === 'Phantom Tome')?.book_id ?? null, { timeout: 15_000 })
+      .poll(
+        async () => (await liveEntries(c)).find((e) => e.title === 'Phantom Tome')?.book_id ?? null,
+        { timeout: 15_000 },
+      )
       .not.toBeNull()
 
     // Still removable now that it's a real book.
     const linkedRow = page.locator('ol li').filter({ hasText: 'Phantom Tome' })
     await linkedRow.getByRole('button', { name: /Remove Phantom Tome from the series/i }).click()
-    await page.getByRole('dialog', { name: /Remove from this series/i }).getByRole('button', { name: /^Remove$/ }).click()
+    await page
+      .getByRole('dialog', { name: /Remove from this series/i })
+      .getByRole('button', { name: /^Remove$/ })
+      .click()
 
     await expect
-      .poll(async () => (await liveEntries(c)).some((e) => e.title === 'Phantom Tome'), { timeout: 15_000 })
+      .poll(async () => (await liveEntries(c)).some((e) => e.title === 'Phantom Tome'), {
+        timeout: 15_000,
+      })
       .toBe(false)
   } finally {
     await reset(c)
@@ -221,7 +267,9 @@ test('series page: a book acquired from a ghost slot can be removed again', asyn
 })
 
 // ── Defect 1: clearing the series field on the book page removes the slot outright ──
-test('book page: clearing the series field removes the slot, not just the link', async ({ page }) => {
+test('book page: clearing the series field removes the slot, not just the link', async ({
+  page,
+}) => {
   test.setTimeout(180_000)
   const c = await client()
   await reset(c)
@@ -233,10 +281,15 @@ test('book page: clearing the series field removes the slot, not just the link',
     await expect.poll(async () => page.locator('ol li').count(), { timeout: 20_000 }).toBe(3)
 
     await page.goto(`/book/${ids[2]}`)
-    await expect(page.getByRole('heading', { name: 'Audit Charlie' })).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByRole('heading', { name: 'Audit Charlie' })).toBeVisible({
+      timeout: 20_000,
+    })
     await page.getByRole('button', { name: /^Edit details$/i }).click()
     const dialog = page.getByRole('dialog', { name: /Edit details/i })
-    await dialog.locator('label', { hasText: /^Series$/ }).locator('input').fill('')
+    await dialog
+      .locator('label', { hasText: /^Series$/ })
+      .locator('input')
+      .fill('')
 
     // Naming the consequence before it happens.
     await dialog.getByRole('button', { name: /Save details/i }).click()
@@ -244,10 +297,9 @@ test('book page: clearing the series field removes the slot, not just the link',
     await dialog.getByRole('button', { name: /Save and remove/i }).click()
     await expect(dialog).toBeHidden({ timeout: 15_000 })
 
-    await expect.poll(async () => (await liveEntries(c)).map((e) => e.title), { timeout: 15_000 }).toEqual([
-      'Audit Alpha',
-      'Audit Bravo',
-    ])
+    await expect
+      .poll(async () => (await liveEntries(c)).map((e) => e.title), { timeout: 15_000 })
+      .toEqual(['Audit Alpha', 'Audit Bravo'])
     expect((await bookRow(c, 'Audit Charlie'))?.series).toBeFalsy()
 
     // The series page must not show it at all — not as a book, and not as a leftover ghost slot.
@@ -257,7 +309,9 @@ test('book page: clearing the series field removes the slot, not just the link',
 
     // And the book page stops advertising the series.
     await page.goto(`/book/${ids[2]}`)
-    await expect(page.getByRole('heading', { name: 'Audit Charlie' })).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByRole('heading', { name: 'Audit Charlie' })).toBeVisible({
+      timeout: 20_000,
+    })
     await expect(page.getByLabel(`Open the ${SERIES} series page`)).toHaveCount(0)
   } finally {
     await reset(c)
@@ -276,8 +330,15 @@ test('a source refresh does not resurrect a removed slot', async ({ page }) => {
     await openSeries(page)
     await expect.poll(async () => page.locator('ol li').count(), { timeout: 20_000 }).toBe(3)
 
-    await page.locator('ol li').filter({ hasText: 'Audit Bravo' }).getByRole('button', { name: /Remove Audit Bravo/i }).click()
-    await page.getByRole('dialog', { name: /Remove from this series/i }).getByRole('button', { name: /^Remove$/ }).click()
+    await page
+      .locator('ol li')
+      .filter({ hasText: 'Audit Bravo' })
+      .getByRole('button', { name: /Remove Audit Bravo/i })
+      .click()
+    await page
+      .getByRole('dialog', { name: /Remove from this series/i })
+      .getByRole('button', { name: /^Remove$/ })
+      .click()
     await expect.poll(async () => page.locator('ol li').count(), { timeout: 15_000 }).toBe(2)
 
     // The stubbed catalog still reports Audit Bravo as canonical slot #2.
@@ -306,7 +367,11 @@ test('import global-order positions seed as a sane 1..n', async ({ page }) => {
     await expect.poll(async () => page.locator('ol li').count(), { timeout: 20_000 }).toBe(3)
     // Pre-fix this rendered ["#87","#412","#1290"]; relative order is kept, the numbers are sane.
     await expect.poll(() => badges(page), { timeout: 15_000 }).toEqual(['#1', '#2', '#3'])
-    expect((await liveEntries(c)).map((e) => e.title)).toEqual(['Audit Bravo', 'Audit Alpha', 'Audit Charlie'])
+    expect((await liveEntries(c)).map((e) => e.title)).toEqual([
+      'Audit Bravo',
+      'Audit Alpha',
+      'Audit Charlie',
+    ])
   } finally {
     await reset(c)
   }
@@ -324,7 +389,11 @@ test('null positions seed deterministically by title', async ({ page }) => {
     await openSeries(page)
     await expect.poll(async () => page.locator('ol li').count(), { timeout: 20_000 }).toBe(3)
     await expect.poll(() => badges(page), { timeout: 15_000 }).toEqual(['#1', '#2', '#3'])
-    expect((await liveEntries(c)).map((e) => e.title)).toEqual(['Audit Alpha', 'Audit Bravo', 'Audit Charlie'])
+    expect((await liveEntries(c)).map((e) => e.title)).toEqual([
+      'Audit Alpha',
+      'Audit Bravo',
+      'Audit Charlie',
+    ])
   } finally {
     await reset(c)
   }
@@ -347,18 +416,25 @@ test('book-page position edits take effect immediately on the series page', asyn
       await expect(page.getByRole('heading', { name: heading })).toBeVisible({ timeout: 20_000 })
       await page.getByRole('button', { name: /^Edit details$/i }).click()
       const dlg = page.getByRole('dialog', { name: /Edit details/i })
-      await dlg.locator('label', { hasText: /^Position$/ }).locator('input').fill(value)
+      await dlg
+        .locator('label', { hasText: /^Position$/ })
+        .locator('input')
+        .fill(value)
       await dlg.getByRole('button', { name: /Save details/i }).click()
       await expect(dlg).toBeHidden({ timeout: 15_000 })
     }
 
     await setPosition(ids[1]!, 'Audit Bravo', '9')
-    await expect.poll(async () => (await bookRow(c, 'Audit Bravo'))?.position, { timeout: 15_000 }).toBe(9)
+    await expect
+      .poll(async () => (await bookRow(c, 'Audit Bravo'))?.position, { timeout: 15_000 })
+      .toBe(9)
     // Wait for the SERIES side too before leaving the page. useSyncBookSeries is chained after
     // updateBook, so the book row lands first; navigating between the two would tear down the page
     // mid-mutation and the guard below would be measuring a lost write, not a stale repaint.
     await expect
-      .poll(async () => (await liveEntries(c)).find((e) => e.title === 'Audit Bravo')?.position, { timeout: 15_000 })
+      .poll(async () => (await liveEntries(c)).find((e) => e.title === 'Audit Bravo')?.position, {
+        timeout: 15_000,
+      })
       .toBe(9)
 
     // The stale-paint guard: sample repeatedly from the moment the page opens. The pre-fix build
@@ -375,16 +451,24 @@ test('book-page position edits take effect immediately on the series page', asyn
 
     // 3d: 0 is a real position (the prequel slot) — `Number(v) || ''` used to swallow it.
     await setPosition(ids[0]!, 'Audit Alpha', '0')
-    await expect.poll(async () => (await bookRow(c, 'Audit Alpha'))?.position, { timeout: 15_000 }).toBe(0)
     await expect
-      .poll(async () => (await liveEntries(c)).find((e) => e.title === 'Audit Alpha')?.position, { timeout: 15_000 })
+      .poll(async () => (await bookRow(c, 'Audit Alpha'))?.position, { timeout: 15_000 })
+      .toBe(0)
+    await expect
+      .poll(async () => (await liveEntries(c)).find((e) => e.title === 'Audit Alpha')?.position, {
+        timeout: 15_000,
+      })
       .toBe(0)
 
     // 3d: clearing the field must not leave the old number standing on the series side.
     await setPosition(ids[1]!, 'Audit Bravo', '')
-    await expect.poll(async () => (await bookRow(c, 'Audit Bravo'))?.position, { timeout: 15_000 }).toBeNull()
     await expect
-      .poll(async () => (await liveEntries(c)).find((e) => e.title === 'Audit Bravo')?.position, { timeout: 15_000 })
+      .poll(async () => (await bookRow(c, 'Audit Bravo'))?.position, { timeout: 15_000 })
+      .toBeNull()
+    await expect
+      .poll(async () => (await liveEntries(c)).find((e) => e.title === 'Audit Bravo')?.position, {
+        timeout: 15_000,
+      })
       .not.toBe(9)
   } finally {
     await reset(c)

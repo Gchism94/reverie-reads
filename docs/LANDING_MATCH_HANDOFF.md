@@ -4,6 +4,7 @@ Source (Claude Design): "Reverie Landing" project — gold genre-neutral revisio
 Tryst card in "The skins").
 
 ## Get the import command
+
 In Claude Design: Export -> "Send to local coding agent". It generates a ready-to-run command
 (claude_design MCP import + "Implement: <file>"). Run it in CLAUDE CODE, not the chat.
 Use the claude_design MCP (https://api.anthropic.com/v1/design/mcp, auth via /design-login) to import
@@ -12,9 +13,11 @@ https://claude.ai/design/p/4cd3eb88-1d0f-4316-b7fd-2a5887083970?file=Reverie+Lan
 Implement: Reverie Landing.dc.html
 
 ## Paste this framing ALONGSIDE the command (critical)
+
 "Build the Reverie LANDING PAGE as a NEW public, pre-login marketing page in the existing monorepo
 (apps/web) — shown to logged-out visitors as the entry point. This is net-new (unlike the desktop pass,
 which ALIGNS existing screens), but it must stay on the project's conventions:
+
 - Marketing BRAND tokens, genre-neutral: define a small brand palette (deep nocturne bg, GOLD accent
   #f0b14e with DARK text #1a0f14 on filled CTAs, violet #7b3fa0 secondary) as its OWN tokens -- do NOT
   bind the page to a skin's primary (especially not the Tryst pink). No hardcoded hexes lifted from the
@@ -28,16 +31,19 @@ which ALIGNS existing screens), but it must stay on the project's conventions:
 - Gate green (typecheck/lint/build/axe) before reporting; stage source only; docs/design untouched."
 
 ## Sequencing
+
 Run as its own pass -- don't stack it in the same Claude Code session as the desktop-align handoff or
 the in-flight import build (overlapping shell/routing).
 
 ## LANDING DESIGN RECEIVED + MATCH TASK (2026-06-28)
+
 Greg uploaded the real Landing export (Reverie_Landing.html, JS bundle). It's RICHER than the shipped
 brief-based landing -> worth matching. Structure: hero ("A library of your own") -> "Reverie speaks your
 genre" skin-shift differentiator + Adaptive skin -> feature grid (TBR/calendar, barcode scan, series
 reading-orders, stats) -> indie-bookstore values -> privacy section -> closing CTA -> footer.
 
 MATCH the design's structure + visual, but OVERRIDE copy that conflicts with decisions (do NOT regress):
+
 - CRITICAL: design says "a shareable Wrapped that turns your reading year into something worth posting."
   = the RETRACTED claim. Wrapped is PRIVATE. Replace with private framing (e.g. "a private Wrapped — your
   reading year as art, for your eyes only"). NOT shareable, NOT "worth posting".
@@ -49,10 +55,11 @@ MATCH the design's structure + visual, but OVERRIDE copy that conflicts with dec
 - MINOR: "the shelf is yours alone" sits under local-first/"your data, your device" -> reads as data
   residency (fine); just confirm it doesn't read as a "never public" shelf promise. Keep the rest of the
   privacy section (ad-free, no trackers, no data-selling, export/no lock-in) -- accurate.
-Export lives in Greg's working tree (design/from-claude-design/landing/, gitignored, regenerable) -- not in
-this mirror/zip (3.4MB).
+  Export lives in Greg's working tree (design/from-claude-design/landing/, gitignored, regenerable) -- not in
+  this mirror/zip (3.4MB).
 
 ## MATCHED + SHIPPED — 2026-06-28 (branch landing-match, PR #4, NOT merged)
+
 Replaced brief-based landing with one matched to the real export: sticky nav -> split hero (token-only
 mockup) -> "Reverie speaks your genre" skin showcase -> Features (light band) -> For every reader -> Privacy
 -> closing CTA -> footer. Skins shown as LIVE token re-themes of one mockup (not screenshots); Tryst pink

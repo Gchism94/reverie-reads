@@ -13,7 +13,15 @@ describe('ISBN normalization', () => {
 
 describe('matchBook', () => {
   const library = [
-    makeBook({ id: 'a', title: 'Fourth Wing', first: 'Rebecca', last: 'Yarros', isbn: '0306406152', series: 'The Empyrean', position: 1 }),
+    makeBook({
+      id: 'a',
+      title: 'Fourth Wing',
+      first: 'Rebecca',
+      last: 'Yarros',
+      isbn: '0306406152',
+      series: 'The Empyrean',
+      position: 1,
+    }),
     makeBook({ id: 'b', title: 'Iron Flame', last: 'Yarros' }),
   ]
 
@@ -42,16 +50,24 @@ describe('matchBook', () => {
 
 describe('importKey', () => {
   it('keys by canonical ISBN-13 when present (10 and 13 forms collapse)', () => {
-    expect(importKey({ title: 'Fourth Wing', last: 'Yarros', isbn: '0306406152' })).toBe('isbn:9780306406157')
+    expect(importKey({ title: 'Fourth Wing', last: 'Yarros', isbn: '0306406152' })).toBe(
+      'isbn:9780306406157',
+    )
     expect(importKey({ title: 'x', last: 'y', isbn: '9780306406157' })).toBe('isbn:9780306406157')
   })
   it('falls back to normalized title+author without an ISBN', () => {
-    expect(importKey({ title: 'Iron  Flame', last: 'YARROS' })).toBe(importKey({ title: 'iron flame', last: 'yarros' }))
+    expect(importKey({ title: 'Iron  Flame', last: 'YARROS' })).toBe(
+      importKey({ title: 'iron flame', last: 'yarros' }),
+    )
   })
 })
 
 describe('decideIntake', () => {
-  const o = (over: Partial<Parameters<typeof decideIntake>[1]> = {}) => ({ autoMergeStrong: true, fuzzyMode: 'review' as const, ...over })
+  const o = (over: Partial<Parameters<typeof decideIntake>[1]> = {}) => ({
+    autoMergeStrong: true,
+    fuzzyMode: 'review' as const,
+    ...over,
+  })
   it('adds when nothing matched', () => {
     expect(decideIntake('none', o())).toBe('add')
   })
@@ -65,7 +81,9 @@ describe('decideIntake', () => {
   })
   it('a remembered verdict overrides everything (even with auto-merge off)', () => {
     expect(decideIntake('fuzzy', o({ verdict: 'always_merge' }))).toBe('merge')
-    expect(decideIntake('isbn', o({ autoMergeStrong: false, verdict: 'always_merge' }))).toBe('merge')
+    expect(decideIntake('isbn', o({ autoMergeStrong: false, verdict: 'always_merge' }))).toBe(
+      'merge',
+    )
     expect(decideIntake('fuzzy', o({ verdict: 'keep_separate' }))).toBe('skip')
     expect(decideIntake('title-author', o({ verdict: 'keep_separate' }))).toBe('skip')
   })

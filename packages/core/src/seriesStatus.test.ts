@@ -21,9 +21,15 @@ describe('series status', () => {
   })
 
   it('normalizes the two widened interconnected values + likely import spellings', () => {
-    expect(normalizeSeriesStatus('interconnected_standalone', true)).toBe('interconnected_standalone')
-    expect(normalizeSeriesStatus('Interconnected Standalone', true)).toBe('interconnected_standalone')
-    expect(normalizeSeriesStatus('interconnected standalones', true)).toBe('interconnected_standalone')
+    expect(normalizeSeriesStatus('interconnected_standalone', true)).toBe(
+      'interconnected_standalone',
+    )
+    expect(normalizeSeriesStatus('Interconnected Standalone', true)).toBe(
+      'interconnected_standalone',
+    )
+    expect(normalizeSeriesStatus('interconnected standalones', true)).toBe(
+      'interconnected_standalone',
+    )
     expect(normalizeSeriesStatus('interconnected', true)).toBe('interconnected_standalone')
     expect(normalizeSeriesStatus('shared world', true)).toBe('interconnected_standalone')
     expect(normalizeSeriesStatus('companion series', true)).toBe('interconnected_standalone')
@@ -33,9 +39,15 @@ describe('series status', () => {
   })
 
   it('badges the two interconnected statuses', () => {
-    expect(seriesStatusBadge({ status: 'interconnected_standalone', seriesCount: null })).toBe('Interconnected standalone')
-    expect(seriesStatusBadge({ status: 'interconnected_series', seriesCount: 6 })).toBe('Interconnected series of 6')
-    expect(seriesStatusBadge({ status: 'interconnected_series', seriesCount: null })).toBe('Interconnected series')
+    expect(seriesStatusBadge({ status: 'interconnected_standalone', seriesCount: null })).toBe(
+      'Interconnected standalone',
+    )
+    expect(seriesStatusBadge({ status: 'interconnected_series', seriesCount: 6 })).toBe(
+      'Interconnected series of 6',
+    )
+    expect(seriesStatusBadge({ status: 'interconnected_series', seriesCount: null })).toBe(
+      'Interconnected series',
+    )
   })
 
   it('normalizes the pre-expansion spellings (the migration mapping)', () => {
@@ -63,7 +75,9 @@ describe('series status', () => {
   it('badges speak the series’ publication status', () => {
     expect(seriesStatusBadge({ status: 'standalone', seriesCount: null })).toBe('Standalone')
     expect(seriesStatusBadge({ status: 'ongoing', seriesCount: 5 })).toBe('Series of 5')
-    expect(seriesStatusBadge({ status: 'ongoing', seriesCount: null })).toBe('Series · length not set')
+    expect(seriesStatusBadge({ status: 'ongoing', seriesCount: null })).toBe(
+      'Series · length not set',
+    )
     expect(seriesStatusBadge({ status: 'completed', seriesCount: 3 })).toBe('Series complete')
     expect(seriesStatusBadge({ status: 'on_hiatus', seriesCount: null })).toBe('Series on hiatus')
     expect(seriesStatusBadge({ status: 'cancelled', seriesCount: 2 })).toBe('Series cancelled')

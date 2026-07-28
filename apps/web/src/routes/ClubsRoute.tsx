@@ -16,7 +16,15 @@ import { Modal } from '../components/Modal'
 const fieldClass = 'h-10 w-full skin-card border border-line px-3 text-[14px] text-ink outline-none'
 const fieldStyle = { background: 'var(--field)' } as const
 
-function CreateClubModal({ displayName, onClose, onCreated }: { displayName: string; onClose: () => void; onCreated: (id: string) => void }) {
+function CreateClubModal({
+  displayName,
+  onClose,
+  onCreated,
+}: {
+  displayName: string
+  onClose: () => void
+  onCreated: (id: string) => void
+}) {
   const createClub = useCreateClub()
   const [title, setTitle] = useState('')
   const [author, setAuthor] = useState('')
@@ -27,21 +35,48 @@ function CreateClubModal({ displayName, onClose, onCreated }: { displayName: str
   return (
     <Modal title="Start a read-along" onClose={onClose}>
       <div className="flex flex-col gap-3">
-        <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Book title" className={fieldClass} style={fieldStyle} />
+        <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Book title"
+          className={fieldClass}
+          style={fieldStyle}
+        />
         <div className="grid grid-cols-2 gap-3">
-          <input value={author} onChange={(e) => setAuthor(e.target.value)} placeholder="Author" className={fieldClass} style={fieldStyle} />
-          <input value={cover} onChange={(e) => setCover(e.target.value)} placeholder="Cover URL (optional)" className={fieldClass} style={fieldStyle} />
+          <input
+            value={author}
+            onChange={(e) => setAuthor(e.target.value)}
+            placeholder="Author"
+            className={fieldClass}
+            style={fieldStyle}
+          />
+          <input
+            value={cover}
+            onChange={(e) => setCover(e.target.value)}
+            placeholder="Cover URL (optional)"
+            className={fieldClass}
+            style={fieldStyle}
+          />
         </div>
         <div>
-          <div className="mb-1 text-[11px] uppercase tracking-[0.15em] text-muted">Track progress by</div>
-          <div className="flex rounded-full border border-line p-1" style={{ background: 'var(--field)' }}>
+          <div className="mb-1 text-[11px] uppercase tracking-[0.15em] text-muted">
+            Track progress by
+          </div>
+          <div
+            className="flex rounded-full border border-line p-1"
+            style={{ background: 'var(--field)' }}
+          >
             {(['chapter', 'page', 'percent'] as const).map((u) => (
               <button
                 key={u}
                 type="button"
                 onClick={() => setUnitType(u)}
                 className="flex-1 rounded-full px-3 py-1.5 text-[12.5px] font-semibold capitalize"
-                style={unitType === u ? { background: 'var(--accent-fill)', color: 'var(--on-primary)' } : { color: 'var(--muted)' }}
+                style={
+                  unitType === u
+                    ? { background: 'var(--accent-fill)', color: 'var(--on-primary)' }
+                    : { color: 'var(--muted)' }
+                }
               >
                 {u === 'chapter' ? 'Chapters' : u === 'page' ? 'Pages' : 'Percent'}
               </button>
@@ -53,11 +88,19 @@ function CreateClubModal({ displayName, onClose, onCreated }: { displayName: str
             <span className="mb-1 block text-[11px] uppercase tracking-[0.15em] text-muted">
               How many {unitType === 'page' ? 'pages' : 'chapters'}?
             </span>
-            <input value={count} onChange={(e) => setCount(e.target.value)} type="number" min={1} className={fieldClass} style={fieldStyle} />
+            <input
+              value={count}
+              onChange={(e) => setCount(e.target.value)}
+              type="number"
+              min={1}
+              className={fieldClass}
+              style={fieldStyle}
+            />
           </label>
         )}
         <p className="text-[12.5px] text-muted">
-          Comments are tagged to a {unitType} and stay hidden for each reader until they reach that point.
+          Comments are tagged to a {unitType} and stay hidden for each reader until they reach that
+          point.
         </p>
         <button
           type="button"
@@ -76,7 +119,10 @@ function CreateClubModal({ displayName, onClose, onCreated }: { displayName: str
             )
           }
           className="h-11 rounded-xl text-[14px] font-semibold disabled:opacity-50"
-          style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))', color: 'var(--on-primary)' }}
+          style={{
+            background: 'linear-gradient(135deg, var(--primary), var(--gold))',
+            color: 'var(--on-primary)',
+          }}
         >
           Create &amp; get code
         </button>
@@ -85,15 +131,30 @@ function CreateClubModal({ displayName, onClose, onCreated }: { displayName: str
   )
 }
 
-function CreateSharedModal({ onClose, onCreated }: { onClose: () => void; onCreated: (code: string) => void }) {
+function CreateSharedModal({
+  onClose,
+  onCreated,
+}: {
+  onClose: () => void
+  onCreated: (code: string) => void
+}) {
   const createList = useCreateSharedList()
   const [name, setName] = useState('')
   const [kind, setKind] = useState<SharedKind>('list')
   return (
     <Modal title="New shared list" onClose={onClose}>
       <div className="flex flex-col gap-3">
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Household TBR, June Book Club" className={fieldClass} style={fieldStyle} />
-        <div className="flex rounded-full border border-line p-1" style={{ background: 'var(--field)' }}>
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="e.g. Household TBR, June Book Club"
+          className={fieldClass}
+          style={fieldStyle}
+        />
+        <div
+          className="flex rounded-full border border-line p-1"
+          style={{ background: 'var(--field)' }}
+        >
           {(
             [
               ['list', 'Shared list'],
@@ -105,19 +166,31 @@ function CreateSharedModal({ onClose, onCreated }: { onClose: () => void; onCrea
               type="button"
               onClick={() => setKind(k)}
               className="flex-1 rounded-full px-3 py-1.5 text-[12.5px] font-semibold"
-              style={kind === k ? { background: 'var(--accent-fill)', color: 'var(--on-primary)' } : { color: 'var(--muted)' }}
+              style={
+                kind === k
+                  ? { background: 'var(--accent-fill)', color: 'var(--on-primary)' }
+                  : { color: 'var(--muted)' }
+              }
             >
               {label}
             </button>
           ))}
         </div>
-        <p className="text-[12.5px] text-muted">Anyone with the code can add and remove books, and everyone sees changes within a few seconds.</p>
+        <p className="text-[12.5px] text-muted">
+          Anyone with the code can add and remove books, and everyone sees changes within a few
+          seconds.
+        </p>
         <button
           type="button"
           disabled={!name.trim() || createList.isPending}
-          onClick={() => createList.mutate({ name: name.trim(), kind }, { onSuccess: (code) => onCreated(code) })}
+          onClick={() =>
+            createList.mutate({ name: name.trim(), kind }, { onSuccess: (code) => onCreated(code) })
+          }
           className="h-11 rounded-xl text-[14px] font-semibold disabled:opacity-50"
-          style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))', color: 'var(--on-primary)' }}
+          style={{
+            background: 'linear-gradient(135deg, var(--primary), var(--gold))',
+            color: 'var(--on-primary)',
+          }}
         >
           Create &amp; get code
         </button>
@@ -153,13 +226,17 @@ function ClubsScreen() {
     const code = window.prompt('Enter the shared list code:')?.trim()
     if (!code) return
     joinShared.mutate(code, {
-      onSuccess: (doc) => (doc ? openList(code.toUpperCase()) : window.alert('No shared list found for that code.')),
+      onSuccess: (doc) =>
+        doc ? openList(code.toUpperCase()) : window.alert('No shared list found for that code.'),
     })
   }
 
   return (
     <section className="mx-auto max-w-3xl px-4 py-6 sm:px-6">
-      <h1 className="text-[22px] italic text-ink" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+      <h1
+        className="text-[22px] italic text-ink"
+        style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+      >
         Clubs &amp; sharing
       </h1>
       <p className="mb-5 text-[13px] text-muted">
@@ -170,10 +247,23 @@ function ClubsScreen() {
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-[16px] font-semibold text-ink">Read-alongs</h2>
         <div className="flex gap-2">
-          <button type="button" onClick={() => setDialog('club')} className="rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold" style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))', color: 'var(--on-primary)' }}>
+          <button
+            type="button"
+            onClick={() => setDialog('club')}
+            className="rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold"
+            style={{
+              background: 'linear-gradient(135deg, var(--primary), var(--gold))',
+              color: 'var(--on-primary)',
+            }}
+          >
             ＋ Start
           </button>
-          <button type="button" onClick={joinClubByCode} className="rounded-full border border-line px-3.5 py-1.5 text-[12.5px] font-semibold text-ink" style={{ background: 'var(--card)' }}>
+          <button
+            type="button"
+            onClick={joinClubByCode}
+            className="rounded-full border border-line px-3.5 py-1.5 text-[12.5px] font-semibold text-ink"
+            style={{ background: 'var(--card)' }}
+          >
             Join by code
           </button>
         </div>
@@ -181,13 +271,24 @@ function ClubsScreen() {
       {clubs && clubs.length ? (
         <div className="grid gap-2 sm:grid-cols-2">
           {clubs.map((c) => (
-            <button key={c.id} type="button" onClick={() => openClub(c.id)} className="flex items-center gap-3 skin-panel border border-line p-3 text-left" style={{ background: 'var(--card)' }}>
-              <div className="h-14 w-10 flex-none overflow-hidden rounded border border-line" style={{ background: 'var(--field)' }}>
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => openClub(c.id)}
+              className="flex items-center gap-3 skin-panel border border-line p-3 text-left"
+              style={{ background: 'var(--card)' }}
+            >
+              <div
+                className="h-14 w-10 flex-none overflow-hidden rounded border border-line"
+                style={{ background: 'var(--field)' }}
+              >
                 <CoverImage book={{ id: c.id, title: c.title, cover: c.cover }} />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="truncate text-[14px] font-semibold text-ink">{c.title}</div>
-                <div className="truncate text-[12px] text-muted">Read-along · code {c.joinCode}</div>
+                <div className="truncate text-[12px] text-muted">
+                  Read-along · code {c.joinCode}
+                </div>
               </div>
               <span className="text-[18px]">📖</span>
             </button>
@@ -195,7 +296,8 @@ function ClubsScreen() {
         </div>
       ) : (
         <p className="skin-panel border border-line p-4 text-[13px] text-muted">
-          No read-alongs yet. Start one for a book your group is reading — everyone tracks their chapter and comments unlock as you reach them.
+          No read-alongs yet. Start one for a book your group is reading — everyone tracks their
+          chapter and comments unlock as you reach them.
         </p>
       )}
 
@@ -203,10 +305,23 @@ function ClubsScreen() {
       <div className="mb-3 mt-8 flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-[16px] font-semibold text-ink">Shared lists</h2>
         <div className="flex gap-2">
-          <button type="button" onClick={() => setDialog('shared')} className="rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold" style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))', color: 'var(--on-primary)' }}>
+          <button
+            type="button"
+            onClick={() => setDialog('shared')}
+            className="rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold"
+            style={{
+              background: 'linear-gradient(135deg, var(--primary), var(--gold))',
+              color: 'var(--on-primary)',
+            }}
+          >
             ＋ New
           </button>
-          <button type="button" onClick={joinListByCode} className="rounded-full border border-line px-3.5 py-1.5 text-[12.5px] font-semibold text-ink" style={{ background: 'var(--card)' }}>
+          <button
+            type="button"
+            onClick={joinListByCode}
+            className="rounded-full border border-line px-3.5 py-1.5 text-[12.5px] font-semibold text-ink"
+            style={{ background: 'var(--card)' }}
+          >
             Join by code
           </button>
         </div>
@@ -214,7 +329,13 @@ function ClubsScreen() {
       {shared && shared.length ? (
         <div className="grid gap-2 sm:grid-cols-2">
           {shared.map((l) => (
-            <button key={l.code} type="button" onClick={() => openList(l.code)} className="flex items-center gap-3 skin-panel border border-line p-3 text-left" style={{ background: 'var(--card)' }}>
+            <button
+              key={l.code}
+              type="button"
+              onClick={() => openList(l.code)}
+              className="flex items-center gap-3 skin-panel border border-line p-3 text-left"
+              style={{ background: 'var(--card)' }}
+            >
               <div className="min-w-0 flex-1">
                 <div className="truncate text-[14px] font-semibold text-ink">{l.name}</div>
                 <div className="truncate text-[12px] text-muted">
@@ -232,10 +353,23 @@ function ClubsScreen() {
       )}
 
       {dialog === 'club' && (
-        <CreateClubModal displayName={displayName} onClose={() => setDialog(null)} onCreated={(id) => { setDialog(null); openClub(id) }} />
+        <CreateClubModal
+          displayName={displayName}
+          onClose={() => setDialog(null)}
+          onCreated={(id) => {
+            setDialog(null)
+            openClub(id)
+          }}
+        />
       )}
       {dialog === 'shared' && (
-        <CreateSharedModal onClose={() => setDialog(null)} onCreated={(code) => { setDialog(null); openList(code) }} />
+        <CreateSharedModal
+          onClose={() => setDialog(null)}
+          onCreated={(code) => {
+            setDialog(null)
+            openList(code)
+          }}
+        />
       )}
     </section>
   )

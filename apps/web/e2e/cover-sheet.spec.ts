@@ -40,7 +40,10 @@ async function signIn(page: Page, session: { access_token: string; refresh_token
 // sign_in_sign_ups budget is per-IP, and the fullyParallel suite spends it fast.
 async function devClient() {
   const sb = createClient(SUPABASE_URL, ANON)
-  const { data, error } = await sb.auth.signInWithPassword({ email: DEV_EMAIL, password: DEV_PASSWORD })
+  const { data, error } = await sb.auth.signInWithPassword({
+    email: DEV_EMAIL,
+    password: DEV_PASSWORD,
+  })
   if (error || !data.session) throw new Error(authFailure('cover-sheet', DEV_EMAIL, error))
   return { sb, session: data.session, uid: data.session.user.id }
 }
@@ -56,13 +59,19 @@ async function insertFixture(c: DevClient, title: string, coverUrl?: string): Pr
     // ownership the Library grid shows the DEFAULT library — what you have in hand or have read
     // (inDefaultLibrary) — so a bare fixture is deliberately hidden and never renders a card.
     // The placeholder-affordance test needs a book that is actually in the library.
-    .insert({ owner_id: c.uid, title, ownership: 'owned', ...(coverUrl ? { cover_url: coverUrl } : {}) })
+    .insert({
+      owner_id: c.uid,
+      title,
+      ownership: 'owned',
+      ...(coverUrl ? { cover_url: coverUrl } : {}),
+    })
     .select('id')
     .single()
   return r.data!.id
 }
 
-const removeFixture = (c: DevClient, title: string) => c.sb.from('books').delete().eq('title', title)
+const removeFixture = (c: DevClient, title: string) =>
+  c.sb.from('books').delete().eq('title', title)
 
 /** The persisted offline query cache hides freshly-seeded fixtures — drop it before navigating. */
 async function freshCache(page: Page) {
@@ -76,33 +85,66 @@ async function stubCoversFunction(page: Page) {
     const contentType = req.headers()['content-type'] ?? ''
     if (contentType.includes('multipart/form-data')) {
       // camera/upload ingest (post-crop file)
-      return route.fulfill({ json: { cover: STUB.upload, thumb: STUB.upload, color: '#8a2f52', sourceUrl: null } })
+      return route.fulfill({
+        json: { cover: STUB.upload, thumb: STUB.upload, color: '#8a2f52', sourceUrl: null },
+      })
     }
     const body = req.postDataJSON() as { action?: string; url?: string }
     if (body.action === 'editions') {
       return route.fulfill({
         json: {
           editions: [
-            { source: 'hardcover', cover: STUB.edition, isbn13: '9781668001226', format: 'Hardcover', year: 2022, publisher: 'Bloom Books', pages: 368 },
-            { source: 'google', cover: STUB.pasted, isbn13: '9780593598424', year: 2023, publisher: 'Berkley' },
+            {
+              source: 'hardcover',
+              cover: STUB.edition,
+              isbn13: '9781668001226',
+              format: 'Hardcover',
+              year: 2022,
+              publisher: 'Bloom Books',
+              pages: 368,
+            },
+            {
+              source: 'google',
+              cover: STUB.pasted,
+              isbn13: '9780593598424',
+              year: 2023,
+              publisher: 'Berkley',
+            },
           ],
         },
       })
     }
     const url = body.url ?? ''
-    if (url.includes('not-an-image')) return route.fulfill({ status: 415, json: { error: 'not_an_image' } })
-    if (url.includes('external-a')) return route.fulfill({ json: { cover: STUB.backfill, thumb: STUB.backfill, color: '#2f5a8a', sourceUrl: url } })
-    if (url === STUB.edition) return route.fulfill({ json: { cover: STUB.edition, thumb: STUB.edition, color: '#5a2f3a', sourceUrl: url } })
-    return route.fulfill({ json: { cover: STUB.pasted, thumb: STUB.pasted, color: '#3a5a2f', sourceUrl: url } })
+    if (url.includes('not-an-image'))
+      return route.fulfill({ status: 415, json: { error: 'not_an_image' } })
+    if (url.includes('external-a'))
+      return route.fulfill({
+        json: { cover: STUB.backfill, thumb: STUB.backfill, color: '#2f5a8a', sourceUrl: url },
+      })
+    if (url === STUB.edition)
+      return route.fulfill({
+        json: { cover: STUB.edition, thumb: STUB.edition, color: '#5a2f3a', sourceUrl: url },
+      })
+    return route.fulfill({
+      json: { cover: STUB.pasted, thumb: STUB.pasted, color: '#3a5a2f', sourceUrl: url },
+    })
   })
   // Background functions must never stall the run.
-  await page.route('**/functions/v1/embed**', (route) => route.fulfill({ json: { embedded: 0, remaining: 0, hits: [] } }))
-  await page.route('**/functions/v1/releases**', (route) => route.fulfill({ json: { authors: {}, pending: [], hits: [] } }))
+  await page.route('**/functions/v1/embed**', (route) =>
+    route.fulfill({ json: { embedded: 0, remaining: 0, hits: [] } }),
+  )
+  await page.route('**/functions/v1/releases**', (route) =>
+    route.fulfill({ json: { authors: {}, pending: [], hits: [] } }),
+  )
   // The fixture's external hotlink: serve a real image so CoverImage renders it pre-backfill.
-  await page.route('**/covers.example/**', (route) => route.fulfill({ path: 'public/landing-covers/acotar.jpg' }))
+  await page.route('**/covers.example/**', (route) =>
+    route.fulfill({ path: 'public/landing-covers/acotar.jpg' }),
+  )
 }
 
-test('cover sheet: backfill, editions pick + detail sync, URL paste, non-image failure, upload crop', async ({ page }) => {
+test('cover sheet: backfill, editions pick + detail sync, URL paste, non-image failure, upload crop', async ({
+  page,
+}) => {
   test.setTimeout(180_000)
   const TITLE = 'Cover Sheet Hotlinked'
   const dev = await devClient()
@@ -114,7 +156,9 @@ test('cover sheet: backfill, editions pick + detail sync, URL paste, non-image f
 
     // ── lazy backfill: the hotlinked book's detail view moves the cover into storage ──
     await page.goto(`/book/${hotlinkedId}`)
-    const detailCover = page.getByRole('button', { name: /change cover|add a cover/i }).locator('img')
+    const detailCover = page
+      .getByRole('button', { name: /change cover|add a cover/i })
+      .locator('img')
     await expect(detailCover).toHaveAttribute('src', new RegExp(STUB.backfill), { timeout: 15_000 })
 
     // ── the cover is the door: tap it → the sheet ──
@@ -129,7 +173,10 @@ test('cover sheet: backfill, editions pick + detail sync, URL paste, non-image f
     // axe on the open sheet (both entry surfaces share this dialog)
     const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze()
     const serious = axe.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical')
-    expect(serious, serious.map((v) => `${v.id}: ${v.nodes.map((n) => String(n.target)).join(', ')}`).join('\n')).toHaveLength(0)
+    expect(
+      serious,
+      serious.map((v) => `${v.id}: ${v.nodes.map((n) => String(n.target)).join(', ')}`).join('\n'),
+    ).toHaveLength(0)
 
     // ── pick the Hardcover edition → new cover + the OPTIONAL details sync offer ──
     await sheet.getByRole('button', { name: /Hardcover · 2022/ }).click()
@@ -167,7 +214,9 @@ test('cover sheet: backfill, editions pick + detail sync, URL paste, non-image f
   }
 })
 
-test('placeholder affordance: the coverless grid card quietly invites "add a cover" → the sheet', async ({ page }) => {
+test('placeholder affordance: the coverless grid card quietly invites "add a cover" → the sheet', async ({
+  page,
+}) => {
   test.setTimeout(120_000)
   const TITLE = 'Cover Sheet Coverless'
   const dev = await devClient()

@@ -58,7 +58,12 @@ export interface ReviewSummary {
   genres: Record<string, number>
 }
 
-export type NeedsLookReason = 'missing_cover' | 'low_confidence_cover' | 'broken_cover' | 'odd_genre' | 'likely_duplicate'
+export type NeedsLookReason =
+  | 'missing_cover'
+  | 'low_confidence_cover'
+  | 'broken_cover'
+  | 'odd_genre'
+  | 'likely_duplicate'
 
 export interface NeedsLookItem {
   ref: string
@@ -95,7 +100,10 @@ const item = (i: ReviewItemInput, reason: NeedsLookReason, detail: string): Need
   author: i.author,
   reason,
   detail,
-  alternates: reason === 'missing_cover' || reason === 'low_confidence_cover' || reason === 'broken_cover' ? (i.coverAlternates ?? []) : [],
+  alternates:
+    reason === 'missing_cover' || reason === 'low_confidence_cover' || reason === 'broken_cover'
+      ? (i.coverAlternates ?? [])
+      : [],
 })
 
 /**
@@ -135,12 +143,18 @@ export function buildReviewModel(
     // Cover state is one-of (mutually exclusive so the triage queue never double-lists a book):
     // broken (had one, link is dead) → missing (never resolved) → low-confidence (resolved but risky).
     if (i.coverBroken) {
-      brokenCover.push(item(i, 'broken_cover', 'the saved cover link is broken — replace it in the Cover Studio'))
+      brokenCover.push(
+        item(i, 'broken_cover', 'the saved cover link is broken — replace it in the Cover Studio'),
+      )
     } else if (!hasCover(i)) {
       missingCover.push(item(i, 'missing_cover', 'no cover found — add one in the Cover Studio'))
     } else if (isLowConfidenceCover(i)) {
       lowConfidenceCover.push(
-        item(i, 'low_confidence_cover', `cover match is ${i.coverConfidence} confidence — confirm or pick another edition`),
+        item(
+          i,
+          'low_confidence_cover',
+          `cover match is ${i.coverConfidence} confidence — confirm or pick another edition`,
+        ),
       )
     }
 
@@ -149,7 +163,12 @@ export function buildReviewModel(
     }
 
     if (i.duplicateFlagged || i.duplicateDetected) {
-      const why = i.duplicateFlagged && i.duplicateDetected ? 'flagged in the export and detected' : i.duplicateFlagged ? 'flagged in the export' : 'detected as a likely duplicate'
+      const why =
+        i.duplicateFlagged && i.duplicateDetected
+          ? 'flagged in the export and detected'
+          : i.duplicateFlagged
+            ? 'flagged in the export'
+            : 'detected as a likely duplicate'
       likelyDuplicate.push(item(i, 'likely_duplicate', why))
     }
   }

@@ -13,7 +13,15 @@ import { Modal } from '../components/Modal'
 import { CoverImage } from '../components/CoverImage'
 import { SearchResults } from '../components/SearchResults'
 import type { SearchResult } from '../lib/search'
-import { fetchDiscover, hitKey, isOwned, ownedKeys, rankHitsByTaste, sortByTaste, type DiscoverHit } from '../lib/discover'
+import {
+  fetchDiscover,
+  hitKey,
+  isOwned,
+  ownedKeys,
+  rankHitsByTaste,
+  sortByTaste,
+  type DiscoverHit,
+} from '../lib/discover'
 import { TasteTier } from '../components/TasteTier'
 import { useTasteCalibration } from '../data/taste'
 
@@ -26,7 +34,17 @@ const GENRES: { key: string; label: string }[] = SKIN_ORDER.map((id) => ({
   label: SKINS[id].genre,
 }))
 
-function Card({ hit, owned, taste, anchors }: { hit: DiscoverHit; owned: boolean; taste?: number; anchors?: TasteAnchors | null }) {
+function Card({
+  hit,
+  owned,
+  taste,
+  anchors,
+}: {
+  hit: DiscoverHit
+  owned: boolean
+  taste?: number
+  anchors?: TasteAnchors | null
+}) {
   const navigate = useNavigate()
   const author = hit.authors[0] ?? ''
   const year = hit.pub.slice(0, 4)
@@ -34,13 +52,24 @@ function Card({ hit, owned, taste, anchors }: { hit: DiscoverHit; owned: boolean
 
   return (
     <div className="flex flex-col">
-      <div className="aspect-[2/3] overflow-hidden rounded-[8px] border border-line" style={{ background: 'var(--card)' }}>
+      <div
+        className="aspect-[2/3] overflow-hidden rounded-[8px] border border-line"
+        style={{ background: 'var(--card)' }}
+      >
         {/* Same cover chain as the library grid: upgraded → original → skin placeholder, with the
             Google "no image" plate rejected on load (a Discover hit has no library id → no telemetry). */}
         <CoverImage book={{ title: hit.title, first, last, cover: hit.cover }} thumb />
       </div>
       <div className="mt-2 min-w-0">
-        <div className="text-[13px] font-semibold leading-snug text-ink" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+        <div
+          className="text-[13px] font-semibold leading-snug text-ink"
+          style={{
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          }}
+        >
           {hit.title}
         </div>
         <div className="truncate text-[12px] text-muted">
@@ -89,13 +118,21 @@ function Card({ hit, owned, taste, anchors }: { hit: DiscoverHit; owned: boolean
 }
 
 /** A tiny modal listing the reader's shelves/TBRs — pick one to place an unowned copy there (task §2). */
-function ShelfChooser({ onPick, onClose }: { onPick: (listId: string) => void; onClose: () => void }) {
+function ShelfChooser({
+  onPick,
+  onClose,
+}: {
+  onPick: (listId: string) => void
+  onClose: () => void
+}) {
   const { data: lists } = useLists()
   const shelves = lists ?? []
   return (
     <Modal title="Add to a shelf" onClose={onClose}>
       {shelves.length === 0 ? (
-        <p className="text-[13px] text-muted">You don’t have any shelves yet — make one from the Shelves tab.</p>
+        <p className="text-[13px] text-muted">
+          You don’t have any shelves yet — make one from the Shelves tab.
+        </p>
       ) : (
         <ul className="flex max-h-[50vh] flex-col gap-1.5 overflow-y-auto">
           {shelves.map((l) => (
@@ -107,7 +144,9 @@ function ShelfChooser({ onPick, onClose }: { onPick: (listId: string) => void; o
                 style={{ background: 'var(--field)' }}
               >
                 <span className="text-[13.5px] font-semibold text-ink">{l.name}</span>
-                <span className="text-[11px] uppercase tracking-wide text-muted">{l.kind === 'tbr' ? 'TBR' : 'Shelf'}</span>
+                <span className="text-[11px] uppercase tracking-wide text-muted">
+                  {l.kind === 'tbr' ? 'TBR' : 'Shelf'}
+                </span>
               </button>
             </li>
           ))}
@@ -166,7 +205,10 @@ function SearchSection({ query, books }: { query: string; books: Book[] }) {
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4" aria-hidden>
           {Array.from({ length: 8 }, (_, i) => (
             <div key={i} className="flex flex-col gap-2">
-              <div className="aspect-[2/3] rounded-[8px] border border-line" style={{ background: 'var(--card)' }} />
+              <div
+                className="aspect-[2/3] rounded-[8px] border border-line"
+                style={{ background: 'var(--card)' }}
+              />
               <div className="h-3 w-3/4 rounded" style={{ background: 'var(--card)' }} />
               <div className="h-3 w-1/2 rounded" style={{ background: 'var(--card)' }} />
             </div>
@@ -176,7 +218,9 @@ function SearchSection({ query, books }: { query: string; books: Book[] }) {
       {q.isError && (
         <div className="skin-card border border-line p-6 text-center">
           <p className="text-[14px] text-ink">Search isn’t answering right now.</p>
-          <p className="mt-1 text-[12.5px] text-muted">Usually a rate limit — it clears on its own.</p>
+          <p className="mt-1 text-[12.5px] text-muted">
+            Usually a rate limit — it clears on its own.
+          </p>
         </div>
       )}
       {q.isSuccess && q.data.length === 0 && (
@@ -186,7 +230,11 @@ function SearchSection({ query, books }: { query: string; books: Book[] }) {
         </div>
       )}
       {q.isSuccess && q.data.length > 0 && (
-        <SearchResults results={q.data} books={books} renderActions={(r) => <ResultActions result={r} />} />
+        <SearchResults
+          results={q.data}
+          books={books}
+          renderActions={(r) => <ResultActions result={r} />}
+        />
       )}
     </div>
   )
@@ -228,14 +276,23 @@ function DiscoverScreen() {
   })
   // The reader's fixed display anchors — one fetch, shared by every card (TanStack dedupes the key).
   const { data: anchors } = useTasteCalibration()
-  const ordered = q.data ? (rank.data ? sortByTaste(q.data, rank.data) : q.data.map((hit) => ({ hit }) as { hit: DiscoverHit; taste?: number })) : []
+  const ordered = q.data
+    ? rank.data
+      ? sortByTaste(q.data, rank.data)
+      : q.data.map((hit) => ({ hit }) as { hit: DiscoverHit; taste?: number })
+    : []
 
   return (
     <section className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
-      <h1 className="text-[22px] italic text-ink" style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+      <h1
+        className="text-[22px] italic text-ink"
+        style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+      >
         Discover
       </h1>
-      <p className="mb-4 text-[13px] text-muted">New and notable from the wider shelves — one tap from your library.</p>
+      <p className="mb-4 text-[13px] text-muted">
+        New and notable from the wider shelves — one tap from your library.
+      </p>
 
       {/* Search the wider catalog — title, author, or ISBN. An active query replaces the browse rail
           below; clearing it restores the rail intact (task §4). */}
@@ -250,7 +307,10 @@ function DiscoverScreen() {
             className="h-11 w-full skin-card border border-line pl-10 pr-3 text-[14px] text-ink outline-none"
             style={{ background: 'var(--field)' }}
           />
-          <span aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[15px] text-muted">
+          <span
+            aria-hidden
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[15px] text-muted"
+          >
             ⌕
           </span>
           {query && (
@@ -265,7 +325,9 @@ function DiscoverScreen() {
           )}
         </div>
         {query.trim().length > 0 && query.trim().length < 3 && (
-          <p className="mt-1.5 text-[12px] text-muted">Keep typing — search starts at three letters.</p>
+          <p className="mt-1.5 text-[12px] text-muted">
+            Keep typing — search starts at three letters.
+          </p>
         )}
       </div>
 
@@ -274,70 +336,92 @@ function DiscoverScreen() {
 
       {/* ── the taste-ranked browse rail (empty search) ── */}
       {!searching && (
-      <>
-      <div className="mb-5 flex flex-wrap gap-2" role="group" aria-label="Browse a genre">
-        {GENRES.map((g) => (
-          <Chip
-            key={g.key}
-            active={g.key === genreKey(genre)}
-            onClick={() => void navigate({ to: '/discover', search: g.key === skinGenre ? {} : { genre: g.key }, replace: true })}
-          >
-            {g.label}
-          </Chip>
-        ))}
-      </div>
-
-      {q.isPending && (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4" aria-hidden>
-          {Array.from({ length: 8 }, (_, i) => (
-            <div key={i} className="flex flex-col gap-2">
-              <div className="aspect-[2/3] rounded-[8px] border border-line" style={{ background: 'var(--card)' }} />
-              <div className="h-3 w-3/4 rounded" style={{ background: 'var(--card)' }} />
-              <div className="h-3 w-1/2 rounded" style={{ background: 'var(--card)' }} />
-            </div>
-          ))}
-        </div>
-      )}
-
-      {q.isError && (
-        <div className="skin-card border border-line p-6 text-center">
-          <p className="text-[14px] text-ink">The wider shelves aren’t answering right now.</p>
-          <p className="mt-1 text-[12.5px] text-muted">Usually a rate limit — it clears on its own.</p>
-          <button
-            type="button"
-            onClick={() => void q.refetch()}
-            className="skin-control mt-3 border border-line px-4 py-1.5 text-[13px] font-semibold text-ink"
-            style={{ background: 'var(--chip)' }}
-          >
-            Try again
-          </button>
-        </div>
-      )}
-
-      {q.isSuccess && q.data.length === 0 && (
-        <div className="skin-card border border-line p-6 text-center">
-          <p className="text-[14px] text-ink">{voice.miss}</p>
-          <p className="mt-1 text-[12.5px] text-muted">Try another genre — the smaller shelves run thin some weeks.</p>
-        </div>
-      )}
-
-      {q.isSuccess && q.data.length > 0 && (
         <>
-          {rank.data && (
-            <p className="mb-3 text-[12px] text-muted">Closest to your taste first — learned from the books you love.</p>
-          )}
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-            {ordered.map(({ hit: h, taste }) => (
-              <Card key={`${h.isbn}|${h.title}`} hit={h} owned={isOwned(h, owned)} taste={taste} anchors={anchors} />
+          <div className="mb-5 flex flex-wrap gap-2" role="group" aria-label="Browse a genre">
+            {GENRES.map((g) => (
+              <Chip
+                key={g.key}
+                active={g.key === genreKey(genre)}
+                onClick={() =>
+                  void navigate({
+                    to: '/discover',
+                    search: g.key === skinGenre ? {} : { genre: g.key },
+                    replace: true,
+                  })
+                }
+              >
+                {g.label}
+              </Chip>
             ))}
           </div>
-        </>
-      )}
 
-      <p className="mt-6 text-[12px]" style={{ color: 'var(--faint, var(--muted))' }}>
-        Sourced from the wider catalog — indie and KU releases can lag here. Your own shelves always know better.
-      </p>
-      </>
+          {q.isPending && (
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4" aria-hidden>
+              {Array.from({ length: 8 }, (_, i) => (
+                <div key={i} className="flex flex-col gap-2">
+                  <div
+                    className="aspect-[2/3] rounded-[8px] border border-line"
+                    style={{ background: 'var(--card)' }}
+                  />
+                  <div className="h-3 w-3/4 rounded" style={{ background: 'var(--card)' }} />
+                  <div className="h-3 w-1/2 rounded" style={{ background: 'var(--card)' }} />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {q.isError && (
+            <div className="skin-card border border-line p-6 text-center">
+              <p className="text-[14px] text-ink">The wider shelves aren’t answering right now.</p>
+              <p className="mt-1 text-[12.5px] text-muted">
+                Usually a rate limit — it clears on its own.
+              </p>
+              <button
+                type="button"
+                onClick={() => void q.refetch()}
+                className="skin-control mt-3 border border-line px-4 py-1.5 text-[13px] font-semibold text-ink"
+                style={{ background: 'var(--chip)' }}
+              >
+                Try again
+              </button>
+            </div>
+          )}
+
+          {q.isSuccess && q.data.length === 0 && (
+            <div className="skin-card border border-line p-6 text-center">
+              <p className="text-[14px] text-ink">{voice.miss}</p>
+              <p className="mt-1 text-[12.5px] text-muted">
+                Try another genre — the smaller shelves run thin some weeks.
+              </p>
+            </div>
+          )}
+
+          {q.isSuccess && q.data.length > 0 && (
+            <>
+              {rank.data && (
+                <p className="mb-3 text-[12px] text-muted">
+                  Closest to your taste first — learned from the books you love.
+                </p>
+              )}
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                {ordered.map(({ hit: h, taste }) => (
+                  <Card
+                    key={`${h.isbn}|${h.title}`}
+                    hit={h}
+                    owned={isOwned(h, owned)}
+                    taste={taste}
+                    anchors={anchors}
+                  />
+                ))}
+              </div>
+            </>
+          )}
+
+          <p className="mt-6 text-[12px]" style={{ color: 'var(--faint, var(--muted))' }}>
+            Sourced from the wider catalog — indie and KU releases can lag here. Your own shelves
+            always know better.
+          </p>
+        </>
       )}
     </section>
   )

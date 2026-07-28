@@ -16,14 +16,24 @@ import {
 } from './readingOrders'
 import { makeBook } from './book.fixture'
 
-const bookItem = (id: string, bookId: string, position: number, note?: string): ReadingOrderItem => ({
+const bookItem = (
+  id: string,
+  bookId: string,
+  position: number,
+  note?: string,
+): ReadingOrderItem => ({
   id,
   kind: 'book',
   bookId,
   position,
   note,
 })
-const seriesItem = (id: string, series: string, position: number): ReadingOrderItem => ({ id, kind: 'series', series, position })
+const seriesItem = (id: string, series: string, position: number): ReadingOrderItem => ({
+  id,
+  kind: 'series',
+  series,
+  position,
+})
 
 // A small interleaved library: two series + a standalone.
 const library = [
@@ -58,14 +68,21 @@ describe('reorder stability (no collisions over many moves)', () => {
     ])
     // Repeatedly shuffle the last item to the front, then a middle move — a stress test.
     const moves: [string, number][] = [
-      ['5', 0], ['1', 3], ['4', 1], ['2', 4], ['3', 0], ['5', 2], ['1', 4],
+      ['5', 0],
+      ['1', 3],
+      ['4', 1],
+      ['2', 4],
+      ['3', 0],
+      ['5', 2],
+      ['1', 4],
     ]
     for (const [id, to] of moves) {
       items = reorderItems(items, id, to)
       const sorted = sortItems(items)
       const positions = sorted.map((i) => i.position)
       // strictly increasing, all distinct
-      for (let i = 1; i < positions.length; i++) expect(positions[i]).toBeGreaterThan(positions[i - 1]!)
+      for (let i = 1; i < positions.length; i++)
+        expect(positions[i]).toBeGreaterThan(positions[i - 1]!)
       expect(new Set(positions).size).toBe(positions.length)
     }
   })

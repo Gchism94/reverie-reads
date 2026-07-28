@@ -71,8 +71,23 @@ describe('nudgeForAA', () => {
 describe('computeSkinWeights', () => {
   it('skews to grimoire for a fantasy-tagged, loved library', () => {
     const books = [
-      makeBook({ id: '1', title: 'A', subgenre: 'Romantasy', tags: ['Fae', 'Dragon Riders', 'Magic Academy'], rating: 5, fave: true, readStatus: 'Read' }),
-      makeBook({ id: '2', title: 'B', subgenre: 'Romantasy', tags: ['Court Intrigue', 'Chosen One'], rating: 5, readStatus: 'Read' }),
+      makeBook({
+        id: '1',
+        title: 'A',
+        subgenre: 'Romantasy',
+        tags: ['Fae', 'Dragon Riders', 'Magic Academy'],
+        rating: 5,
+        fave: true,
+        readStatus: 'Read',
+      }),
+      makeBook({
+        id: '2',
+        title: 'B',
+        subgenre: 'Romantasy',
+        tags: ['Court Intrigue', 'Chosen One'],
+        rating: 5,
+        readStatus: 'Read',
+      }),
     ]
     const w = computeSkinWeights(books)
     expect(dominantSkin(w)).toBe('grimoire')
@@ -81,10 +96,25 @@ describe('computeSkinWeights', () => {
   })
   it('lifts marrow for dark-romance tags', () => {
     const dark = computeSkinWeights([
-      makeBook({ id: '1', title: 'A', subgenre: 'Dark Romance', tags: ['Mafia', 'Villain Romance', 'Obsessive'], rating: 5, fave: true, readStatus: 'Read' }),
+      makeBook({
+        id: '1',
+        title: 'A',
+        subgenre: 'Dark Romance',
+        tags: ['Mafia', 'Villain Romance', 'Obsessive'],
+        rating: 5,
+        fave: true,
+        readStatus: 'Read',
+      }),
     ])
     const cozy = computeSkinWeights([
-      makeBook({ id: '2', title: 'B', subgenre: 'Romance', tags: ['Slow Burn', 'Small Town'], rating: 5, readStatus: 'Read' }),
+      makeBook({
+        id: '2',
+        title: 'B',
+        subgenre: 'Romance',
+        tags: ['Slow Burn', 'Small Town'],
+        rating: 5,
+        readStatus: 'Read',
+      }),
     ])
     expect(dark.marrow).toBeGreaterThan(cozy.marrow)
   })
@@ -97,8 +127,17 @@ describe('computeSkinWeights', () => {
 describe('isMaterialShift (cron gate)', () => {
   // Full registry-shaped weight vector (Record<SkinId, number>) — the four varied skins carry the
   // scenario, the rest sit at 0 (they existed as 4 args before the roster grew to nine).
-  const w = (tryst: number, grimoire: number, aphelion: number, marrow: number) =>
-    ({ tryst, grimoire, aphelion, marrow, umbra: 0, folio: 0, hearth: 0, almanac: 0, bloom: 0 })
+  const w = (tryst: number, grimoire: number, aphelion: number, marrow: number) => ({
+    tryst,
+    grimoire,
+    aphelion,
+    marrow,
+    umbra: 0,
+    folio: 0,
+    hearth: 0,
+    almanac: 0,
+    bloom: 0,
+  })
 
   it('is false for an unchanged / barely-nudged profile (idempotent + noise-proof)', () => {
     expect(isMaterialShift(w(0.6, 0.2, 0.1, 0.1), w(0.6, 0.2, 0.1, 0.1))).toBe(false)
