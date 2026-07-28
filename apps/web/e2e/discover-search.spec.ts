@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { authFailure } from './support/authError'
 
 // Discover search e2e (docs/task-discover-search.md): search field → results (deduped against the
 // library, "On your shelf" for owned) → add owned / add-to-shelf unowned, and the shelf picker's
@@ -64,7 +65,7 @@ async function client(): Promise<Client> {
   await ensureUser()
   const sb = createClient(SUPABASE_URL, ANON)
   const { data, error } = await sb.auth.signInWithPassword({ email: TEST_EMAIL, password: TEST_PASSWORD })
-  if (error || !data.session) throw new Error(`sign-in failed: ${error?.message}`)
+  if (error || !data.session) throw new Error(authFailure('discover-search', TEST_EMAIL, error))
   shared = { sb, session: data.session, uid: data.session.user.id }
   return shared
 }

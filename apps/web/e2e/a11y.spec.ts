@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { authFailure } from './support/authError'
 
 const SUPABASE_URL = 'http://127.0.0.1:55321'
 const ANON =
@@ -19,7 +20,7 @@ const MODES = ['dark', 'light'] as const
 async function signIn(page: Page) {
   const sb = createClient(SUPABASE_URL, ANON)
   const { data, error } = await sb.auth.signInWithPassword({ email: DEV_EMAIL, password: DEV_PASSWORD })
-  if (error || !data.session) throw new Error(`seed sign-in failed: ${error?.message ?? 'no session'}`)
+  if (error || !data.session) throw new Error(authFailure('a11y', DEV_EMAIL, error))
   const { access_token, refresh_token } = data.session
   await page.goto(
     `/#access_token=${access_token}&refresh_token=${refresh_token}&expires_in=3600&token_type=bearer&type=magiclink`,

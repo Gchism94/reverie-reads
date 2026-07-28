@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { authFailure } from './support/authError'
 
 // ADR 0003's open question, closed. Add's cover preview was the ONE surface where the latent genre
 // gradient reached the screen: it drew its cover conditionally — `{cover && <CoverImage …/>}` — so a
@@ -32,7 +33,7 @@ async function client(): Promise<Client> {
   await admin.from('profiles').upsert({ id: uid, display_name: 'Add Preview Plate', skin: 'tryst', mode: 'system' })
   const sb = createClient(SUPABASE_URL, ANON)
   const { data: s, error } = await sb.auth.signInWithPassword({ email: EMAIL, password: PASSWORD })
-  if (error || !s.session) throw new Error('sign-in failed')
+  if (error || !s.session) throw new Error(authFailure('add-preview-plate', EMAIL, error))
   shared = { sb, session: s.session, uid: s.session.user.id }
   return shared
 }
