@@ -36,10 +36,12 @@ const BASE_URL = `http://localhost:${PORT}`
 // The failure that survived workers=2 was NOT contention between arbitrary specs — it was a11y and
 // cover-sheet, specifically, racing each other for the one seeded dev account they both sign in as:
 // a11y holds one worker for the whole sweep while cover-sheet runs concurrently against the same
-// rows. workers=1 dissolves that by serializing everything; it doesn't fix the underlying sharing.
-// The real fix is the follow-up that migrates a11y/fonts/cover-sheet to per-file users, which is
-// what would make raising this back above 1 worth doing — only re-raise it once that lands and five
-// consecutive runs are green at the higher count.
+// rows. workers=1 dissolved that by serializing everything; it didn't fix the underlying sharing.
+//
+// The real fix — migrating a11y/fonts/cover-sheet to per-file users (test/trio-migration) — has
+// landed. That's what makes raising this back above 1 a live option, but it hasn't been measured
+// yet: this default stays 1 until a dedicated stage does that measurement on its own, rather than
+// bundling a worker-count change into whatever else happened to touch this file.
 const WORKERS = Number(process.env.E2E_WORKERS ?? 1)
 
 export default defineConfig({
@@ -54,7 +56,15 @@ export default defineConfig({
     // flake, not to absorb it — so the trace has to be kept on the first (only) attempt.
     trace: 'retain-on-failure',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  // Two projects, not one, so CI can run a11y on its own runner in parallel with everything else
+  // (ci/throughput stage 2) — a11y alone is ~55-58% of the suite's wall clock. `pnpm e2e` with no
+  // --project flag still runs BOTH, in this same process, so local behavior is unchanged; CI passes
+  // --project explicitly per job. `testIgnore` on `rest` rather than an enumerated file list, so a
+  // new spec added later lands in `rest` automatically instead of silently running nowhere.
+  projects: [
+    { name: 'a11y', testMatch: /a11y\.spec\.ts$/, use: { ...devices['Desktop Chrome'] } },
+    { name: 'rest', testIgnore: /a11y\.spec\.ts$/, use: { ...devices['Desktop Chrome'] } },
+  ],
   webServer: {
     // Runs from this config's dir (apps/web), so `pnpm dev` boots @reverie/web with its own
     // .env.local. The port/strictPort flags override vite.config's default 5173 for e2e only —
