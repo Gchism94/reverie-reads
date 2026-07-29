@@ -26,9 +26,41 @@ forgotten.
   control. Recorded during `fix/deploy-guard`, deliberately not fixed there.
 - **`useRemoveEntry`** (`apps/web/src/data/series.ts` ~L353): two sequential
   independently-committed writes, no transaction. A failure between them leaves
-  `series_entries` removed while `books.series` still names it. Needs a
-  dropped-connection audit; a revive-on-refresh mechanism elsewhere in that file
-  may or may not already cover the half-committed shape.
+  `series_entries` removed while `books.series` still names it. The open question
+  recorded here — whether the revive-on-refresh mechanism covers the half-committed
+  shape — is answered, and the answer is the opposite of covering it: the revive pass
+  (~L192-208) REVIVES any tombstone whose title matches a book still naming the
+  series, so the half-committed state does not go stale, it silently **undoes the
+  removal** on the next read of that page. **S3a landed the schema half** —
+  `remove_series_entry` (`20260731010000`), atomic and ownership-checked, proven by
+  `supabase/tests/series_removal_test.sql`. **S3b switches the client**; until it
+  merges nothing calls the RPC and the defect is live. Rows already in this shape are
+  not healed by the fix — `docs/queries/half-committed-series-removals.sql` finds them.
+- **Revive matches on title alone, so a removal can revive the wrong slot.** The
+  revive pass (`series.ts` ~L196-208) matches a tombstone to a library book on
+  `title.trim().toLowerCase()` and nothing else. Two books sharing a title in one
+  series — a reissue, an unmerged duplicate — and removing one can revive the other's
+  slot. `author` sits on the entry row unused, as does `book_id`. **Independent of
+  atomicity**: `remove_series_entry` closes the half-committed path and leaves this
+  entirely untouched, because this state needs no failure to reach. Found during
+  `fix/atomic-series-removal`, recorded rather than fixed on the owner's instruction —
+  it is the guard that would actually earn its place, unlike a `user_edited` guard,
+  which is unavailable (every tombstone has `user_edited` true — `removalPatch()` and
+  `importExport.ts`'s `tombstoneRows()` both set it unconditionally, so guarding on it
+  would disable revive entirely rather than narrow it).
+- **`useSyncBookSeries` has the same unprotected shape, inverted, and it spans two
+  mutations.** The book page's save runs `updateBook` (writes `books.series`) and then
+  `syncBookSeries` (tombstones the old slot) as separate mutations in that forced order
+  (`book/dialogs.tsx` ~L263-284). A failure between them leaves `books.series` already
+  changed and the old slot still **live** — no tombstone, so revive is irrelevant;
+  instead the old series page keeps showing a book that no longer names it,
+  permanently, because nothing removes a live entry whose book stopped naming the
+  series. That is the #65 symptom `20260725010000` was written to eliminate, reachable
+  again by failure rather than by design. Less harmful than `useRemoveEntry` in one
+  respect: the dialog catches, stays open and names the failed step, so the reader is
+  told. `remove_series_entry` cannot fix it — the inconsistency is between two
+  mutations, not two statements, so closing it means one RPC for the whole book save.
+  Found during `fix/atomic-series-removal`.
 - **Scroll position is unmanaged app-wide.** TanStack Router ships a
   `scrollRestoration` option and it is simply unconfigured on `createRouter`. Wrong
   in both directions: back-navigation doesn't restore where you were, and forward

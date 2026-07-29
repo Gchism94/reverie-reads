@@ -8,7 +8,8 @@ Run every check, from the repo root, in order. Do not stop at the first failure 
 2. `pnpm build`
 3. `pnpm lint`
 4. `pnpm test` (core + web unit)
-5. `cd apps/web && npx playwright test --reporter=list --workers=2` (full e2e)
+5. `cd apps/web && npx playwright test --reporter=list` (full e2e, default worker count —
+   `E2E_WORKERS` is unset; the config's own default is 1)
 
 Report a table: check, result, counts.
 
