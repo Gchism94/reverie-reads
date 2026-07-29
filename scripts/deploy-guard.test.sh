@@ -23,11 +23,20 @@ fail=0
 ok()   { printf '  \033[32m✓\033[0m %s\n' "$1"; pass=$((pass + 1)); }
 bad()  { printf '  \033[31m✗\033[0m %s\n' "$1"; fail=$((fail + 1)); }
 
+# Spelled out rather than `cond && ok || bad`: in that idiom `bad` also runs if `ok` itself fails
+# (SC2015). It happens to be safe here, but a test helper that can double-report is the last thing
+# this branch should ship.
 # assert_has <label> <haystack-file> <needle>
-assert_has() { grep -qF -- "$3" "$2" && ok "$1" || bad "$1 — expected to find: $3"; }
+assert_has() {
+  if grep -qF -- "$3" "$2"; then ok "$1"; else bad "$1 — expected to find: $3"; fi
+}
 # assert_lacks <label> <haystack-file> <needle>
-assert_lacks() { grep -qF -- "$3" "$2" && bad "$1 — expected NOT to find: $3" || ok "$1"; }
-assert_eq() { [ "$2" = "$3" ] && ok "$1" || bad "$1 — expected '$3', got '$2'"; }
+assert_lacks() {
+  if grep -qF -- "$3" "$2"; then bad "$1 — expected NOT to find: $3"; else ok "$1"; fi
+}
+assert_eq() {
+  if [ "$2" = "$3" ]; then ok "$1"; else bad "$1 — expected '$3', got '$2'"; fi
+}
 
 # Build a fake supabase CLI. $1 = mode; it answers `migration list` per mode and refuses to do
 # anything else destructive (a real `db push` must never fire from a test).
