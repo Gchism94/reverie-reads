@@ -84,15 +84,23 @@ prototype/ data/ design/ docs/ backend/   ← reference material, not shipped
   Goodreads/StoryGraph CSV importer, and the spoiler-gating rule (`comment.unit <=
 myProgress`). Move them into `packages/core` with tests.
 - Copy stays sentence case, plain verbs, no filler; empty states invite action.
-- **Possession is four states; per-format ownership is a separate field.** `ownership` is
-  `'owned' | 'borrowed' | 'wishlist' | 'unset'` (`unset` is the default — cataloguing a book
-  must not force a possession category, and `borrowed` counts as possessed). `owned:
-{physical, ebook, audiobook}` answers _which formats_, and only means anything for a
-  possessed book. **Never infer possession from the `owned` booleans** — `all-false =
-wishlist` was the pre-#68 model and is now wrong. Ask `ownership`, or use
-  `bookOwnedFormats`. The **Owned · Physical / Ebook / Audiobook** shelves are _smart shelves_
-  derived from both — not manual lists. Ownership is independent of the format read in the
-  reread log, and never gates reading history.
+- **Possession is five independent flags, and every shelf is a derived view.** `ownership` is
+  `'owned' | 'unowned'` (default `unowned`) and answers only _do you own a copy_. `borrowed`
+  and `wishlist` are **flags beside it, not values inside it** — all combinations are legal
+  ("own the paperback, borrowed the audio, still want the special edition") and the schema
+  constrains none of them. `owned: {physical, ebook, audiobook}` answers _which formats_ and
+  only means anything for a book **in hand**. Ask `isPossessed` (= `owned || borrowed`) or
+  `bookOwnedFormats`; **never infer possession from the `owned` booleans** — `all-false =
+wishlist` was the pre-#68 model and is long wrong. Format flags **suppress, never clear**, so
+  drop → re-acquire loses nothing. A control that must show one word uses `possessionState()`
+  (owned > borrowed > wishlist > unset) and writes back through `possessionPatch()`; both are
+  views, never stored. The **Owned · Physical / Ebook / Audiobook** shelves are _smart shelves_
+  derived from possession — not manual lists. Possession is independent of the format read in
+  the reread log, and never gates reading history.
+- **`isBookRead` and `hasReadingHistory` disagree on DNF on purpose.** `isBookRead` feeds series
+  progress, taste and stats, where an abandoned book must not count as read. `hasReadingHistory`
+  adds DNF and feeds **visibility only** (`inDefaultLibrary`), so a book you started and gave up
+  on stops being invisible. Do not collapse them.
 - **No aggregate rating.** Never compute or display an averaged star rating anywhere.
   Keep the reader's own rating (`rating` on the book + per-read). Others' opinions appear only
   as an opt-in list of **individual** reviews on the book screen — never a single number.
