@@ -611,10 +611,7 @@ function SettingsScreen() {
                   setReview(r.review)
                   setImportResult(r)
                   // Stash the per-book outcomes so the Import review screen can build its read-model.
-                  qc.setQueryData(importSessionKey, {
-                    outcomes: r.outcomes,
-                    readingOrders: r.readingOrders,
-                  })
+                  qc.setQueryData(importSessionKey, { outcomes: r.outcomes })
                   setImported(true)
                   setStatus(null) // the summary panel below now speaks for the import
                   // Cover handoff: backfill missing covers for the imported books in the background (§3).
