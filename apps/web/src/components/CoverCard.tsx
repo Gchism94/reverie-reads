@@ -1,8 +1,16 @@
-import { formatAuthors, bookOwnedFormats, possessionState, type Book } from '@reverie/core'
+import {
+  formatAuthors,
+  bookOwnedFormats,
+  isDnf,
+  possessionState,
+  stateSuffix,
+  type Book,
+} from '@reverie/core'
 import { subgenreGradient } from '../library/constants'
 import { useLabels } from '../skin/labels'
 import { useBrokenCoverIds } from '../data/brokenCovers'
 import { CoverImage } from './CoverImage'
+import { StatePill } from './StatePill'
 
 const FORMAT_ICON = { physical: '📖', ebook: '📱', audiobook: '🎧' } as const
 
@@ -25,7 +33,11 @@ export function CoverCard({
   const author =
     formatAuthors(book.contributors) || [book.first, book.last].filter(Boolean).join(' ')
   const [g0, g1] = subgenreGradient(book.subgenre, book.genre)
-  const isRead = book.readStatus === 'Read' || book.reads.length > 0
+  // The read-status slot renders Read, DNF, or nothing — the two are mutually exclusive recorded
+  // statuses. DNF wins over a logged read: a book you abandoned may still carry a read-log row, and
+  // wearing "Read" because of it would contradict its own recorded status (see isDnf).
+  const dnf = isDnf(book)
+  const isRead = !dnf && (book.readStatus === 'Read' || book.reads.length > 0)
   const labels = useLabels()
   const intensity = book.intensity ?? 0
 
@@ -66,7 +78,10 @@ export function CoverCard({
         <button
           type="button"
           onClick={onOpen}
-          aria-label={`Open ${book.title}`}
+          // State reaches the SCREEN READER here, not only the eye. Before this the marks were
+          // sibling static text and mouse-only `title` tooltips — reachable by accident at best,
+          // and a grep found zero aria hits for borrowed or DNF anywhere in the app.
+          aria-label={`Open ${book.title}${stateSuffix(book)}`}
           aria-current={selected ? 'true' : undefined}
           className="block h-full w-full"
           style={{ background: `linear-gradient(150deg, ${g0}, ${g1})` }}
@@ -108,14 +123,19 @@ export function CoverCard({
           {book.fave ? '♥' : '♡'}
         </button>
 
-        {isRead && (
+        {/* read-status slot: Read, DNF, or nothing. The DNF pill is SOLID (see STATE_PILL_TOKENS) —
+            it has to stay legible over arbitrary cover art, which a translucent scrim does not. */}
+        {dnf ? (
+          <StatePill kind="dnf" className="absolute left-1.5 top-1.5" />
+        ) : isRead ? (
           <span
+            aria-hidden
             className="absolute left-1.5 top-1.5 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide"
             style={{ background: markBg, color: markInk, borderRadius: 'var(--mark-radius)' }}
           >
             Read
           </span>
-        )}
+        ) : null}
 
         {intensity > 0 && (
           <div
@@ -137,18 +157,19 @@ export function CoverCard({
             ⊹ Wishlist
           </span>
         ) : borrowed ? (
-          <div
-            className="absolute bottom-1.5 right-1.5 flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide backdrop-blur"
-            style={{ background: markBg, color: markInk, borderRadius: 'var(--mark-radius)' }}
+          // Converted from the translucent mark to the SOLID pill. Deliberate scope: borrowed's old
+          // mark measured 1.1–2.7:1 against worst-case art and was failing in production.
+          <StatePill
+            kind="borrowed"
+            className="absolute bottom-1.5 right-1.5"
             title={ownedFormats.length ? `Borrowed: ${ownedFormats.join(', ')}` : 'Borrowed'}
           >
-            <span>⇄ Borrowed</span>
             {ownedFormats.map((f) => (
               <span key={f} className="font-normal">
                 {FORMAT_ICON[f]}
               </span>
             ))}
-          </div>
+          </StatePill>
         ) : ownedFormats.length > 0 ? (
           <div
             className="absolute bottom-1.5 right-1.5 flex gap-0.5 px-1 py-0.5 text-[10px] backdrop-blur"

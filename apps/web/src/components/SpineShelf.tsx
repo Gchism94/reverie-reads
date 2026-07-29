@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import { isPossessed, type Book } from '@reverie/core'
+import { isBorrowedBook, isDnf, isPossessed, stateSuffix, type Book } from '@reverie/core'
 import { Spine } from './Spine'
 import { CoverImage } from './CoverImage'
+import { StatePill } from './StatePill'
 
 /**
  * A horizontal shelf of book spines — each a real per-skin Spine (gilt-bound Tryst · brushed-metal
@@ -122,7 +123,14 @@ export function SpineShelf({
                 if (e.target.matches(':focus-visible')) setPointerId(b.id)
               }}
               title={b.title}
-              aria-label={shown ? `Open ${b.title}` : `Reveal ${b.title}`}
+              // On a spine the ACCESSIBLE NAME is the load-bearing channel for state: a 26px spine
+              // cannot carry a text pill, so the edge marker is a find-it-fast affordance and this
+              // is the actual information. Same fixed order as everywhere else — DNF, then borrowed.
+              aria-label={
+                shown
+                  ? `Open ${b.title}${stateSuffix(b)}`
+                  : `Reveal ${b.title}${stateSuffix(b)}`
+              }
               className="flex-none snap-center self-end"
               style={dragIdx === i ? { opacity: 0.4 } : undefined}
             >
@@ -145,11 +153,24 @@ export function SpineShelf({
                   // The flip is a marquee surface (~120px, 2–3× DPR) — CoverImage upgrades to the FULL
                   // cover, but as an <img> it can fall back to the real original (or the skin placeholder)
                   // when the largest scan 404s or returns Google's "no image" plate; a CSS background can't.
-                  <div className="h-44 w-[120px] overflow-hidden rounded-md border border-line">
+                  // The flipped cover is 120px — CoverCard scale — so it carries the real pill
+                  // rather than the edge marker. Without this the featured spine, the most
+                  // prominent book on the shelf, would be the one book showing no state at all.
+                  <div className="relative h-44 w-[120px] overflow-hidden rounded-md border border-line">
                     <CoverImage book={b} />
+                    {isDnf(b) && <StatePill kind="dnf" className="absolute left-1 top-1" />}
+                    {isBorrowedBook(b) && (
+                      <StatePill kind="borrowed" className="absolute bottom-1 right-1" />
+                    )}
                   </div>
                 ) : (
-                  <Spine book={b} active={shown} tint={b.coverColor} />
+                  <Spine
+                    book={b}
+                    active={shown}
+                    tint={b.coverColor}
+                    dnf={isDnf(b)}
+                    borrowed={isBorrowedBook(b)}
+                  />
                 )}
                 {shown && (
                   <span

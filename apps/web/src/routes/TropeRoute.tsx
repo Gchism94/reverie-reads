@@ -1,6 +1,13 @@
 import { useMemo, useState } from 'react'
 import { createRoute, useNavigate } from '@tanstack/react-router'
-import { FACET_LABELS, isBookRead, isOwnedBook, tropeKin, type Book } from '@reverie/core'
+import {
+  FACET_LABELS,
+  isBookRead,
+  isOwnedBook,
+  stateSuffix,
+  tropeKin,
+  type Book,
+} from '@reverie/core'
 import { rootRoute } from './RootRoute'
 import { BackLink } from '../components/BackLink'
 import { CoverImage } from '../components/CoverImage'
@@ -136,7 +143,12 @@ function TropeScreen() {
                 type="button"
                 onClick={() => toggle(b)}
                 aria-pressed={sweep ? carrying : undefined}
-                aria-label={sweep ? `${carrying ? 'Untag' : 'Tag'} ${b.title}` : `Open ${b.title}`}
+                // Thumb-class: state to the screen reader only — see MoodRoute + docs/BACKLOG.md.
+                aria-label={
+                  sweep
+                    ? `${carrying ? 'Untag' : 'Tag'} ${b.title}${stateSuffix(b)}`
+                    : `Open ${b.title}${stateSuffix(b)}`
+                }
                 className="relative overflow-hidden rounded-xl border text-left"
                 style={{
                   borderColor: sweep && carrying ? 'var(--accent-ink)' : 'var(--line)',
