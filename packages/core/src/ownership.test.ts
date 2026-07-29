@@ -10,9 +10,8 @@ import {
   ownedFormats,
   possessionPatch,
   possessionState,
-  strongerPossession,
 } from './ownership'
-import type { Book, PossessionState } from './types'
+import type { Book } from './types'
 
 /** The five possession flags, as the shelf model stores them. Every case below is written as flags
  *  first and checked through the derived word second — the point of the model is that storage is
@@ -116,14 +115,6 @@ describe('ownership — the derived four-state word', () => {
       wishlist: false,
     })
   })
-
-  it('strongerPossession resolves duplicates: owned > borrowed > wishlist > unset', () => {
-    expect(strongerPossession('owned', 'wishlist')).toBe('owned')
-    expect(strongerPossession('wishlist', 'owned')).toBe('owned')
-    expect(strongerPossession('borrowed', 'wishlist')).toBe('borrowed')
-    expect(strongerPossession('owned', 'borrowed')).toBe('owned')
-    expect(strongerPossession('unset', 'wishlist')).toBe('wishlist')
-  })
 })
 
 describe('ownership — suppress, never clear', () => {
@@ -179,37 +170,69 @@ describe('ownership — suppress, never clear', () => {
 })
 
 describe('ownership — merging possession across duplicate copies', () => {
-  const word = (sides: PossessionState[]): PossessionState =>
-    possessionState(mergePossession(sides.map((s) => possessionPatch(s))))
+  /** Every representable possession combination: 2 ownership values x borrowed x wishlist. */
+  const COMBOS: Pick<Book, 'ownership' | 'borrowed' | 'wishlist'>[] = (
+    ['owned', 'unowned'] as const
+  ).flatMap((ownership) =>
+    [false, true].flatMap((borrowed) =>
+      [false, true].map((wishlist) => ({ ownership, borrowed, wishlist })),
+    ),
+  )
 
-  it('reproduces the old rank exactly for every pair of single-word records', () => {
-    // The four-state model resolved a merge with strongerOwnership. Five flags have no single
-    // "strongest", so each has its own rule — but the OBSERVABLE outcome must not have moved.
-    const states: PossessionState[] = ['owned', 'borrowed', 'wishlist', 'unset']
-    for (const a of states) {
-      for (const b of states) {
-        expect(word([a, b]), `${a} + ${b}`).toBe(strongerPossession(a, b))
+  it('carries every signal either side asserted, and invents none', () => {
+    // The union rule stated as a property, over all 64 ordered pairs: a merge may only ADD. It is
+    // deduplication — it decides that two rows describe one book, which is not evidence about what
+    // the reader has or wants, so it has no standing to clear anything.
+    for (const a of COMBOS) {
+      for (const b of COMBOS) {
+        const m = mergePossession([a, b])
+        const label = `${JSON.stringify(a)} + ${JSON.stringify(b)}`
+
+        // preserved
+        if (a.ownership === 'owned' || b.ownership === 'owned')
+          expect(m.ownership, label).toBe('owned')
+        if (a.borrowed || b.borrowed) expect(m.borrowed, label).toBe(true)
+        if (a.wishlist || b.wishlist) expect(m.wishlist, label).toBe(true)
+
+        // not invented
+        if (a.ownership !== 'owned' && b.ownership !== 'owned')
+          expect(m.ownership, label).toBe('unowned')
+        if (!a.borrowed && !b.borrowed) expect(m.borrowed, label).toBe(false)
+        if (!a.wishlist && !b.wishlist) expect(m.wishlist, label).toBe(false)
       }
     }
   })
 
-  it('unions signals the old model had to discard', () => {
-    // owned + borrowed used to collapse to 'owned' and the borrowed copy vanished. Now both survive.
-    const merged = mergePossession([possessionPatch('owned'), possessionPatch('borrowed')])
-    expect(merged).toEqual({ ownership: 'owned', borrowed: true, wishlist: false })
-    expect(possessionState(merged)).toBe('owned') // the word is unchanged; the flag is new
+  it('owned + wishlist keeps BOTH — a want is not cancelled by the copy it merged with', () => {
+    // The case where this rule departs from the four-state model, which resolved the pair to a
+    // single 'owned' and dropped the want. Clearing a reader-authored flag on the inference that
+    // the merge satisfied it is a silent loss; a stale want is the reader's to clear.
+    const merged = mergePossession([possessionPatch('owned'), possessionPatch('wishlist')])
+    expect(merged).toEqual({ ownership: 'owned', borrowed: false, wishlist: true })
+    // it reads as 'owned' — precedence decides the WORD, and the want survives underneath it
+    expect(possessionState(merged)).toBe('owned')
+    expect(isWanted(merged)).toBe(true)
   })
 
-  it('a want satisfied by the copy it merged with stops being a want', () => {
-    expect(mergePossession([possessionPatch('wishlist'), possessionPatch('owned')]).wishlist).toBe(
-      false,
-    )
-    expect(
-      mergePossession([possessionPatch('wishlist'), possessionPatch('borrowed')]).wishlist,
-    ).toBe(false)
-    // but an unsatisfied want survives a merge with a record that has nothing
-    expect(mergePossession([possessionPatch('wishlist'), possessionPatch('unset')]).wishlist).toBe(
-      true,
-    )
+  it('owned + borrowed keeps both, the same way', () => {
+    const merged = mergePossession([possessionPatch('owned'), possessionPatch('borrowed')])
+    expect(merged).toEqual({ ownership: 'owned', borrowed: true, wishlist: false })
+    expect(possessionState(merged)).toBe('owned')
+  })
+
+  it('a want with nothing to merge against survives untouched', () => {
+    expect(mergePossession([possessionPatch('wishlist'), possessionPatch('unset')])).toEqual({
+      ownership: 'unowned',
+      borrowed: false,
+      wishlist: true,
+    })
+  })
+
+  it('merging duplicates that claim nothing still claims nothing', () => {
+    expect(mergePossession([possessionPatch('unset'), possessionPatch('unset')])).toEqual({
+      ownership: 'unowned',
+      borrowed: false,
+      wishlist: false,
+    })
   })
 })

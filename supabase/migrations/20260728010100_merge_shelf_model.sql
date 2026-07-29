@@ -81,9 +81,9 @@ begin
   --    signals, each with its own union rule computed by the core engine (mergeBooks):
   --      ownership       — 'owned' if ANY side owns a copy (a real copy never loses to a non-copy)
   --      borrowed        — OR: a borrowed copy on either side survives the merge
-  --      wishlist        — OR, then SUPPRESSED if the merged record is owned or borrowed: a want
-  --                        satisfied by the copy it merged with is no longer a want. This reproduces
-  --                        the old rank exactly (wishlist lost to borrowed and owned).
+  --      wishlist        — OR: a want on either side survives too, even beside a real copy. A merge
+  --                        deduplicates rows; it is not evidence the want was satisfied, and a
+  --                        stale want is the reader's to clear.
   --      owned_* formats — union, unchanged (hardcover beats paperback beats bare true).
   update public.books set
     title           = coalesce(p_fields ->> 'title', title),

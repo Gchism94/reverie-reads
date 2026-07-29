@@ -63,18 +63,31 @@ controls and badges that must show one answer. Views, never stored.
 
 ## Union rules (merge / import)
 
-There is no single "strongest" value any more, so each signal gets its own rule
-(`mergePossession`):
+There is no single "strongest" value any more. **Every flag unions, uniformly** — ownership,
+borrowed, wishlist, and the three format flags (`mergePossession` + `mergeOwned`):
 
 - `ownership` — `'owned'` if **any** side owns a copy. A real copy never loses to a non-copy.
-- `borrowed` — OR. A borrowed copy on either side survives.
-- `wishlist` — OR, then **suppressed** if the merged record is owned or borrowed: a want the
-  merge itself satisfied is no longer a want.
+- `borrowed` — true if either side has one on loan.
+- `wishlist` — true if either side wants one, **kept even beside a real copy**.
+- `owned.*` — union; `physical` takes the strongest binding (hardcover > paperback > bare true).
 
-That last rule is what reproduces the old rank exactly. `ownership.test.ts` proves the
-equivalence exhaustively — all sixteen ordered pairs of the four words merge to the same word
-`strongerPossession` would have given. The new information is what the old model had to
-discard: owned + borrowed now keeps both.
+**No rule subtracts.** Merging catalogue records is deduplication, not acquisition: it resolves
+"these two rows are the same book", which is not evidence about what the reader has or wants.
+An earlier draft cleared `wishlist` when the merge produced a real copy, reproducing the old
+rank — but that discards a reader-authored flag on the strength of an inference, and a stale
+want is the reader's to clear. `owned + wishlist` now keeps both, exactly as `owned + borrowed`
+does.
+
+This is the one place the new model's **behaviour** differs from the old, rather than only its
+representation, so the test names that case explicitly. The rest of the rule is tested as a
+property over all 64 ordered pairs of representable combinations: a merge carries every signal
+either side asserted and invents none. Nothing asserts fidelity to the four-state rank — that
+model is gone, and a test written in its name would fail in its name the next time this rule
+moves.
+
+`POSSESSION_RANK` / `strongerPossession` were removed with it. They had no production caller
+(the display precedence lives inline in `possessionState`) and existed only to encode the
+discarded rank.
 
 ## Predicates
 

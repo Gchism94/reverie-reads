@@ -199,10 +199,10 @@ export function mergeImport(existing: Book, incoming: Incoming): ImportMergeResu
   const owned = mergeOwned(existing.owned, incoming.owned)
   if (JSON.stringify(owned) !== JSON.stringify(existing.owned)) patch.owned = owned
 
-  // Possession is one-way on import-merge: a signal the import carries is ADDED to the record, but
-  // an absent one never takes away what the reader has — every rule in mergePossession is a union,
-  // so an import that says nothing about possession cannot downgrade anything. (The one subtraction
-  // is deliberate: a wishlist want the import satisfied with a real copy stops being a want.)
+  // Possession is one-way on import-merge: a signal the import carries is ADDED to the record, and
+  // an absent one never takes away what the reader has. Every rule in mergePossession is a union
+  // with no subtraction, so an import can only ever upgrade — it cannot clear a flag the reader set,
+  // whatever it does or doesn't say about possession.
   const possession = mergePossession([
     existing,
     {

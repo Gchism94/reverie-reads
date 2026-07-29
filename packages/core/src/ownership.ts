@@ -87,35 +87,28 @@ export function possessionPatch(
   }
 }
 
-/** Rank for resolving a single possession word from several (dedupe / import merge): a real
- *  possession never loses to a want, and owned beats borrowed. Higher wins. Operates on the derived
- *  WORD — the per-flag union used when merging whole records lives in mergePossession. */
-export const POSSESSION_RANK: Record<PossessionState, number> = {
-  owned: 3,
-  borrowed: 2,
-  wishlist: 1,
-  unset: 0,
-}
-
-/** The stronger of two possession words (owned > borrowed > wishlist > unset). */
-export const strongerPossession = (a: PossessionState, b: PossessionState): PossessionState =>
-  POSSESSION_RANK[a] >= POSSESSION_RANK[b] ? a : b
-
-/** Union the possession signals of records being merged into one. Each flag gets its own rule,
- *  because they are independent — there is no single "strongest" answer to take any more:
+/** Union the possession signals of records being merged into one. Every flag ORs, uniformly:
+ *
  *   · ownership — 'owned' if ANY side owns a copy. A real copy never loses to a non-copy.
- *   · borrowed  — OR. A borrowed copy on either side survives the merge.
- *   · wishlist  — OR, then SUPPRESSED when the merged record is owned or borrowed: a want the
- *                 merge itself satisfied is no longer a want. This is what reproduces the old
- *                 rank exactly (wishlist lost to both borrowed and owned), so merging a wishlist
- *                 duplicate into an owned book still yields a book that is not on the wishlist. */
+ *   · borrowed  — true if either side has one on loan.
+ *   · wishlist  — true if either side wants one. Kept even when the merged record is owned or
+ *                 borrowed, exactly like borrowed is kept beside owned.
+ *
+ *  No rule subtracts. Merging catalogue records is DEDUPLICATION, not acquisition: it resolves
+ *  "these two rows are the same book", which is not evidence about what the reader has or wants.
+ *  An earlier draft cleared `wishlist` when the merge produced a real copy, on the theory that the
+ *  want was satisfied — but that silently discards a reader-authored flag on the strength of an
+ *  inference, and a stale want is the reader's to clear. `owned + wishlist` keeps both, the same
+ *  way `owned + borrowed` does. */
 export function mergePossession(
   sides: readonly Pick<Book, 'ownership' | 'borrowed' | 'wishlist'>[],
 ): Pick<Book, 'ownership' | 'borrowed' | 'wishlist'> {
   const ownership: BookOwnership = sides.some((s) => s.ownership === 'owned') ? 'owned' : 'unowned'
-  const borrowed = sides.some((s) => s.borrowed)
-  const wanted = sides.some((s) => s.wishlist)
-  return { ownership, borrowed, wishlist: wanted && ownership !== 'owned' && !borrowed }
+  return {
+    ownership,
+    borrowed: sides.some((s) => s.borrowed),
+    wishlist: sides.some((s) => s.wishlist),
+  }
 }
 
 /** Human caption for the "Your copies" block of a book IN HAND. `verb` reflects the state
