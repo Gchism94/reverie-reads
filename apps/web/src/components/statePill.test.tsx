@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { STATE_PILL_TOKENS, type Book } from '@reverie/core'
+import { STATE_PILL_LABEL, STATE_PILL_TOKENS, type Book } from '@reverie/core'
 import { CoverCard } from './CoverCard'
 import { SpineShelf } from './SpineShelf'
 
@@ -53,26 +53,40 @@ const book = (over: Partial<Book>): Book => ({
 const noop = () => {}
 const card = (b: Book) => <CoverCard book={b} onOpen={noop} onToggleFave={noop} />
 
-/** The pill element for a state, found by its visible word. */
-const pillFor = (word: 'DNF' | 'Borrowed') => screen.getByText(word).closest('span')
+/** The pill element for a state, found by its visible word.
+ *
+ *  Exact by design, and it works because RTL's getNodeText concatenates only DIRECT text-node
+ *  children — the accent glyph lives in a nested span, so the pill's own text is just the word. */
+const pillFor = (word: 'DNF' | 'Borrowed' | 'Read') => screen.getByText(word).closest('span')
 
 describe('state pills render solid, never a scrim over cover art', () => {
-  it('the DNF pill uses the shared solid surface', () => {
-    render(card(book({ readStatus: 'DNF' })))
-    const pill = pillFor('DNF')
-    expect(pill).toBeTruthy()
-    // The literal token, not a colour — reverting to rgba()/transparent fails here.
-    expect(pill!.style.background).toBe(STATE_PILL_TOKENS.surface)
-    expect(pill!.style.background).not.toMatch(/rgba?\(|transparent/)
-    expect(pill!.style.color).toBe(STATE_PILL_TOKENS.label)
-  })
+  // EVERY pill the card can render, not a subset. A guard covering two of three leaves the same
+  // hole in a new place — which is exactly how the Read pill stayed translucent while the other
+  // two were converted.
+  const CASES: { pill: 'DNF' | 'Borrowed' | 'Read'; book: Book }[] = [
+    { pill: 'DNF', book: book({ readStatus: 'DNF' }) },
+    { pill: 'Borrowed', book: book({ ownership: 'unowned', borrowed: true }) },
+    { pill: 'Read', book: book({ readStatus: 'Read' }) },
+  ]
 
-  it('the borrowed pill uses the same solid surface — it was translucent before this branch', () => {
-    render(card(book({ ownership: 'unowned', borrowed: true })))
-    const pill = pillFor('Borrowed')
-    expect(pill).toBeTruthy()
-    expect(pill!.style.background).toBe(STATE_PILL_TOKENS.surface)
-    expect(pill!.style.background).not.toMatch(/rgba?\(|transparent/)
+  for (const { pill, book: b } of CASES) {
+    it(`the ${pill} pill sits on the shared solid surface`, () => {
+      render(card(b))
+      const el = pillFor(pill)
+      expect(el, `${pill} pill did not render`).toBeTruthy()
+      // The literal token, not a colour — reverting to rgba()/transparent fails here.
+      expect(el!.style.background).toBe(STATE_PILL_TOKENS.surface)
+      expect(el!.style.background).not.toMatch(/rgba?\(|transparent/)
+      expect(el!.style.color).toBe(STATE_PILL_TOKENS.label)
+    })
+  }
+
+  it('covers every pill kind the model defines, so a new one cannot be added untested', () => {
+    // Keyed off the kind union's own label map: adding a fourth pill without adding a case here
+    // fails, rather than silently shipping a fourth translucent mark.
+    const covered = CASES.map((c) => c.pill).sort()
+    const defined = Object.values(STATE_PILL_LABEL).sort()
+    expect(covered).toEqual(defined)
   })
 })
 
@@ -97,6 +111,19 @@ describe('state reaches the accessible name, not only the eye', () => {
   it('a book holding neither state adds nothing', () => {
     render(card(book({ readStatus: 'Read' })))
     expect(screen.getByRole('button', { name: 'Open A Probe' })).toBeTruthy()
+  })
+
+  it('Read stays announceable in place, since no control name carries it', () => {
+    // borrowed and DNF are aria-hidden because the card's NAME repeats them. "Read" is in no name,
+    // so hiding its pill would delete the only channel a screen-reader user has for it.
+    render(card(book({ readStatus: 'Read' })))
+    expect(pillFor('Read')!.getAttribute('aria-hidden')).toBeNull()
+  })
+
+  it('borrowed and DNF pills ARE hidden, because the name already says them', () => {
+    render(card(book({ readStatus: 'DNF', ownership: 'unowned', borrowed: true })))
+    expect(pillFor('DNF')!.getAttribute('aria-hidden')).toBe('true')
+    expect(pillFor('Borrowed')!.getAttribute('aria-hidden')).toBe('true')
   })
 
   it('spines carry the state in the name — the load-bearing channel at 26px', () => {

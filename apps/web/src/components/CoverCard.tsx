@@ -128,13 +128,11 @@ export function CoverCard({
         {dnf ? (
           <StatePill kind="dnf" className="absolute left-1.5 top-1.5" />
         ) : isRead ? (
-          <span
-            aria-hidden
-            className="absolute left-1.5 top-1.5 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide"
-            style={{ background: markBg, color: markInk, borderRadius: 'var(--mark-radius)' }}
-          >
-            Read
-          </span>
+          // Same solid plate as the other two. It was the last translucent pill on the card, and a
+          // card whose other pills are correct while this one is not is the worse of both worlds.
+          // `announce` because, unlike borrowed and DNF, "read" is not in the card's accessible
+          // name — aria-hiding it here would remove the only channel it has.
+          <StatePill kind="read" announce className="absolute left-1.5 top-1.5" />
         ) : null}
 
         {intensity > 0 && (

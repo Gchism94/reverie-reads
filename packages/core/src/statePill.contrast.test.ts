@@ -79,15 +79,26 @@ describe('state pill contrast — legible at every skin × mode, over any cover'
   }
 })
 
-describe('state pill — the two states are never distinguished by colour alone', () => {
-  it('carries distinct text, and one shared accent', async () => {
+describe('state pill — pills are never distinguished by colour alone', () => {
+  it('every kind carries distinct text, over one shared accent', async () => {
     const { STATE_PILL_LABEL, STATE_PILL_SPOKEN, STATE_PILL_GLYPH } = await import('./statePill')
-    // Same accent token for both: colour is skin voice, not meaning. If colour ever became the
-    // differentiator, a monochrome or colour-blind reader would lose the distinction entirely.
-    expect(STATE_PILL_LABEL.dnf).not.toBe(STATE_PILL_LABEL.borrowed)
+    // One accent token for all of them: colour is skin voice, not meaning. If colour ever became
+    // the differentiator, a monochrome or colour-blind reader would lose the distinction entirely.
+    const labels = Object.values(STATE_PILL_LABEL)
+    expect(new Set(labels).size, `labels must be distinct: ${labels.join(', ')}`).toBe(labels.length)
     expect(STATE_PILL_SPOKEN.dnf).not.toBe(STATE_PILL_SPOKEN.borrowed)
     expect(STATE_PILL_GLYPH.dnf).not.toBe(STATE_PILL_GLYPH.borrowed)
     // and the spoken form of DNF is the expansion, not the initialism
     expect(STATE_PILL_SPOKEN.dnf).toBe('did not finish')
+  })
+
+  it('Read is a pill kind but carries no accessible-name entry — that asymmetry is deliberate', async () => {
+    const { STATE_PILL_LABEL, STATE_PILL_SPOKEN } = await import('./statePill')
+    // `read` renders in the shared slot and shares the material, but it is announced by the pill
+    // itself rather than by the control's name — so it must NOT appear in the spoken map, or the
+    // card would say it twice. Asserting the actual asymmetry, not a proxy for it.
+    expect(Object.keys(STATE_PILL_LABEL)).toContain('read')
+    expect(Object.keys(STATE_PILL_SPOKEN)).not.toContain('read')
+    expect(Object.keys(STATE_PILL_SPOKEN).sort()).toEqual(['borrowed', 'dnf'])
   })
 })

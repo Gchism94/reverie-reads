@@ -1,5 +1,10 @@
 import type { ReactNode } from 'react'
-import { STATE_PILL_GLYPH, STATE_PILL_LABEL, STATE_PILL_TOKENS } from '@reverie/core'
+import {
+  STATE_PILL_GLYPH,
+  STATE_PILL_LABEL,
+  STATE_PILL_TOKENS,
+  type StatePillKind,
+} from '@reverie/core'
 
 /**
  * The borrowed / DNF pill — one implementation, so a card, a flipped spine and anything later can
@@ -13,9 +18,10 @@ import { STATE_PILL_GLYPH, STATE_PILL_LABEL, STATE_PILL_TOKENS } from '@reverie/
  * contrast tests pin at ≥4.5:1 across all nine skins in both modes, and it does not care what is
  * behind it.
  *
- * `aria-hidden` on purpose. The state reaches assistive tech through the enclosing control's
- * accessible name (`stateSuffix`), which is one announcement instead of a badge floating loose in
- * the grid; announcing it twice is worse than announcing it once.
+ * `aria-hidden` by default, because borrowed and DNF reach assistive tech through the enclosing
+ * control's accessible name (`stateSuffix`) — one announcement instead of a badge floating loose in
+ * the grid, and announcing it twice is worse than once. `announce` opts out for `read`, whose state
+ * is NOT in any control's name: hiding it there would delete the only channel it has.
  *
  * Colour never distinguishes the two: they differ by SLOT (read-status vs possession) and by TEXT.
  */
@@ -23,18 +29,22 @@ export function StatePill({
   kind,
   className = '',
   title,
+  announce = false,
   children,
 }: {
-  kind: 'dnf' | 'borrowed'
+  kind: StatePillKind
   /** positioning only — the material is fixed by STATE_PILL_TOKENS */
   className?: string
   title?: string
+  /** expose the pill to assistive tech — for a state the enclosing control's name does NOT carry */
+  announce?: boolean
   /** trailing content, e.g. the format glyphs that ride along with Borrowed */
   children?: ReactNode
 }) {
+  const glyph = STATE_PILL_GLYPH[kind]
   return (
     <span
-      aria-hidden
+      aria-hidden={announce ? undefined : true}
       title={title}
       className={`flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${className}`}
       style={{
@@ -43,7 +53,7 @@ export function StatePill({
         borderRadius: STATE_PILL_TOKENS.radius,
       }}
     >
-      <span style={{ color: STATE_PILL_TOKENS.accent }}>{STATE_PILL_GLYPH[kind]}</span>
+      {glyph && <span style={{ color: STATE_PILL_TOKENS.accent }}>{glyph}</span>}
       {STATE_PILL_LABEL[kind]}
       {children}
     </span>

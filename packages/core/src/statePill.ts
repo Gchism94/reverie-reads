@@ -25,16 +25,35 @@ export const isDnf = (b: Pick<Book, 'readStatus'>): boolean => b.readStatus === 
 export const isBorrowedBook = (b: Pick<Book, 'ownership' | 'borrowed' | 'wishlist'>): boolean =>
   possessionState(b) === 'borrowed'
 
-/** Visible pill text. Short enough for a 132px card, and the abbreviation readers already use. */
-export const STATE_PILL_LABEL = { dnf: 'DNF', borrowed: 'Borrowed' } as const
+/** Every pill the card can render. `read` is not a "state pill" in the borrowed/DNF sense — it
+ *  predates them — but it shares their slot and their material, so it shares their implementation:
+ *  one place to change, and one component guard covering all three rather than two of three. */
+export type StatePillKind = 'dnf' | 'borrowed' | 'read'
 
-/** Accessible phrasing, which is NOT the visible text for DNF. "Dee-en-eff" tells a screen-reader
- *  user nothing; the expansion does. Safe to differ because the pill is not a control's own label —
- *  the control is the whole card/spine, and these are appended to ITS name. */
+/** Visible pill text. Short enough for a 132px card, and the abbreviation readers already use. */
+export const STATE_PILL_LABEL: Record<StatePillKind, string> = {
+  dnf: 'DNF',
+  borrowed: 'Borrowed',
+  read: 'Read',
+}
+
+/** Accessible phrasing for the two states that ride in a control's NAME (see stateSuffix). `read`
+ *  is absent deliberately: its pill stays announceable in place, so adding it to the name too would
+ *  say it twice — and changing that is a scope decision, not a contrast fix.
+ *
+ *  Not the visible text for DNF. "Dee-en-eff" tells a screen-reader user nothing; the expansion
+ *  does. Safe to differ because the pill is not a control's own label — the control is the whole
+ *  card/spine, and these are appended to ITS name. */
 export const STATE_PILL_SPOKEN = { dnf: 'did not finish', borrowed: 'borrowed' } as const
 
-/** The leading glyph, carried in the skin's accent. Decorative: the word beside it is the signal. */
-export const STATE_PILL_GLYPH = { dnf: '⊘', borrowed: '⇄' } as const
+/** The leading glyph, carried in the skin's accent. Decorative: the word beside it is the signal.
+ *  `read` has none on purpose — it sits on most of the library, and adding a mark to hundreds of
+ *  cards is a visual change, not the contrast fix this was. */
+export const STATE_PILL_GLYPH: Record<StatePillKind, string> = {
+  dnf: '⊘',
+  borrowed: '⇄',
+  read: '',
+}
 
 /**
  * The pill's material, as token REFERENCES rather than colours.
