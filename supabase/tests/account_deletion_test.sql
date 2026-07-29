@@ -3,7 +3,7 @@
 -- cascade covers EVERY owned table (the function's correctness rests on it) and is owner-isolated.
 
 begin;
-select plan(17);
+select plan(15);
 
 -- Two users; the signup trigger makes a profile for each.
 insert into auth.users (id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
@@ -29,8 +29,9 @@ insert into public.merge_verdicts (owner_id, book_id, incoming_key, verdict) val
 insert into public.clubs (id, title, unit_type, unit_count, created_by) values ('a0000000-0000-0000-0000-0000000000d1', 'A Club', 'chapter', 30, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa');
 insert into public.club_members (club_id, user_id, progress) values ('a0000000-0000-0000-0000-0000000000d1', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 5);
 insert into public.club_comments (club_id, user_id, unit, body) values ('a0000000-0000-0000-0000-0000000000d1', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 1, 'hi');
-insert into public.reading_orders (id, owner_id, name) values ('a0000000-0000-0000-0000-0000000000e1', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Order');
-insert into public.reading_order_items (reading_order_id, owner_id, position, book_id) values ('a0000000-0000-0000-0000-0000000000e1', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 1024, 'a0000000-0000-0000-0000-000000000001');
+-- reading_orders / reading_order_items dropped in chore/drop-reading-orders-schema (S2); their
+-- seed inserts and cascade assertions went with them (their own RLS coverage lived in
+-- reading_orders_test.sql, deleted the same branch).
 insert into public.shared_refs (owner_id, code, kind) values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'code-a', 'list');
 
 -- B keeps a book (and their profile) — must survive A's deletion untouched.
@@ -52,8 +53,6 @@ select is((select count(*)::int from public.merge_verdicts where owner_id = 'aaa
 select is((select count(*)::int from public.clubs where created_by = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'), 0, 'clubs deleted');
 select is((select count(*)::int from public.club_members where user_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'), 0, 'club_members deleted');
 select is((select count(*)::int from public.club_comments where user_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'), 0, 'club_comments deleted');
-select is((select count(*)::int from public.reading_orders where owner_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'), 0, 'reading_orders deleted');
-select is((select count(*)::int from public.reading_order_items where owner_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'), 0, 'reading_order_items deleted');
 select is((select count(*)::int from public.shared_refs where owner_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'), 0, 'shared_refs deleted');
 
 -- B is untouched.

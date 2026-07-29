@@ -1,8 +1,15 @@
 // Account deletion (Phase 7 H1). Irreversible: deletes the CALLING user's auth record, which
 // cascades to every owned row (profiles → books/reads/lists/list_items/reviews/clubs/club_members/
-// club_comments/merge_verdicts, plus authors/book_authors/reading_orders/reading_order_items — all
-// reference auth.users or profiles ON DELETE CASCADE). Capability-keyed shared_docs are not
-// owner-scoped, so we clean up the ones this user created (via their shared_refs codes) first.
+// club_comments/merge_verdicts, plus authors/book_authors — all reference auth.users or profiles
+// ON DELETE CASCADE). Capability-keyed shared_docs are not owner-scoped, so we clean up the ones
+// this user created (via their shared_refs codes) first.
+//
+// reading_orders / reading_order_items were dropped in chore/drop-reading-orders-schema (S2). This
+// function never queried either table directly — deletion here is entirely "delete the auth user,
+// let Postgres cascade" — so removing them from the enumerated list above is a documentation fix,
+// not a behavior change. Edited ahead of the migration anyway, and deployed first: the general
+// discipline is that live code never names a table the schema doesn't have, even when — as here —
+// nothing would actually break if the order were reversed.
 //
 // The user is identified ONLY from their own access token (never a body-supplied id), so a caller
 // can delete only themselves. The service role performs the actual deletion. Deno Edge Function.
