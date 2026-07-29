@@ -67,6 +67,10 @@ export interface SeriesDetail {
 /**
  * The patch that retires a slot. `book_id → null` frees the (series_id, book_id) unique index for a
  * later re-add, and `user_edited` keeps the source merge from trying to reposition a tombstone.
+ *
+ * `remove_series_entry` (20260731010000) writes this same shape in SQL, because that path also has to
+ * clear `books.series` in the same transaction. The two must stay in step: change one and change the
+ * other. Only `useSyncBookSeries` still uses this TS copy — `useRemoveEntry` goes through the RPC.
  */
 const removalPatch = () => ({ removed_at: new Date().toISOString(), book_id: null, user_edited: true })
 
@@ -343,25 +347,33 @@ export function useUpdateEntry(name: string) {
 }
 
 /**
- * Remove a slot — the ONE removal, shared by the series page's ✕ and the book page's cleared series
- * field (docs/task-series-defects.md §Removal, revised). The slot goes and, when a book was linked,
- * that book stops naming the series so reconciliation can't re-add it. The row is soft-deleted rather
- * than dropped so a later Hardcover refresh can't resurrect what the reader dismissed.
+ * Remove a slot — the series page's ✕ (docs/task-series-defects.md §Removal, revised). The slot goes
+ * and, when a book was linked, that book stops naming the series so reconciliation can't re-add it.
+ * The row is soft-deleted rather than dropped so a later Hardcover refresh can't resurrect what the
+ * reader dismissed.
  *
- * Works for ghosts too (no bookId) — dismissing a canonical slot you'll never want is the same act.
+ * ONE RPC, ATOMICALLY (`remove_series_entry`, 20260731010000). This used to be two sequential,
+ * independently-committed writes — tombstone the entry, then null `books.series` — and a failure
+ * between them left the slot tombstoned while the book still named the series. That state did not go
+ * stale, it silently UNDID the removal: the reconciliation in `useSeriesDetail` revives any tombstone
+ * whose title matches a book still naming the series, so the next read of this page brought the slot
+ * back. Both writes now land in one transaction or neither does.
+ *
+ * The RPC takes only the entry id. `book_id` is read from the entry row SERVER-SIDE rather than passed
+ * in: the caller used to send it from whatever the component's cache held, and a stale cache would
+ * clear the wrong book's series while leaving the linked one still naming it — the fix reproducing the
+ * defect through its own call. The entry row is the only authority on what the slot links to.
+ *
+ * Works for ghosts too — an entry with no linked book tombstones and touches no `books` row at all.
  */
 export function useRemoveEntry(name: string) {
   const qc = useQueryClient()
   const invalidate = useSeriesInvalidate(name)
   return useMutation({
     meta: { action: 'The series' },
-    mutationFn: async (input: { entryId: string; bookId?: string | null }) => {
-      const { error } = await supabase.from('series_entries').update(removalPatch()).eq('id', input.entryId)
+    mutationFn: async (input: { entryId: string }) => {
+      const { error } = await supabase.rpc('remove_series_entry', { p_entry: input.entryId })
       if (error) throw error
-      if (input.bookId) {
-        const { error: bErr } = await supabase.from('books').update({ series: null }).eq('id', input.bookId)
-        if (bErr) throw bErr
-      }
     },
     onSuccess: () => {
       invalidate()
