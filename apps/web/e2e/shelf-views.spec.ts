@@ -233,7 +233,7 @@ test('both toggles work in both states and survive a reload', async ({ page }) =
   // Turn both on through the real controls.
   await page.getByRole('switch', { name: 'Split by format' }).click()
   await expect(page.getByText(/Format not set\s*·\s*\d+/)).toBeVisible({ timeout: 15_000 })
-  await page.getByRole('switch', { name: 'Separate DNF' }).click()
+  await page.getByRole('switch', { name: 'Split out did not finish' }).click()
   await expect(page.getByText(/Did not finish\s*·\s*\d+/)).toBeVisible({ timeout: 15_000 })
 
   // Profile-synced, not local: a full reload drops every bit of in-tab state, so the split
@@ -244,7 +244,7 @@ test('both toggles work in both states and survive a reload', async ({ page }) =
     'true',
     { timeout: 20_000 },
   )
-  await expect(page.getByRole('switch', { name: 'Separate DNF' })).toHaveAttribute(
+  await expect(page.getByRole('switch', { name: 'Split out did not finish' })).toHaveAttribute(
     'aria-checked',
     'true',
   )

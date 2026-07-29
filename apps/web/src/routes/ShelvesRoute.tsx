@@ -198,8 +198,11 @@ const COPY = {
     'Nothing shelved yet — mark a book owned, borrowed or wanted and it files itself here.',
   /** The bucket holding owned books with no format recorded. Invites the action that empties it. */
   unmarkedHint: 'No format recorded. Mark one on a book and it moves to that shelf.',
+  // Parallel by construction, and neither contradicts the heading it produces: the shelf reads
+  // "Did not finish", so the control that creates it says the same words rather than abbreviating.
+  // (The cover PILL stays "DNF" — it has ~40px to work with; a section header does not.)
   formatToggle: 'Split by format',
-  dnfToggle: 'Separate DNF',
+  dnfToggle: 'Split out did not finish',
 } as const
 
 /** A breakdown toggle, in the header of the section it splits. Profile-synced, so it follows the
