@@ -27,6 +27,9 @@ export interface BookRow {
   isbn: string | null
   fave: boolean
   ownership: string
+  /** null only from a row cached before the stage-A migration — mappers fall back to the old enum */
+  borrowed: boolean | null
+  wishlist: boolean | null
   owned_physical: string | null
   owned_ebook: boolean
   owned_audiobook: boolean

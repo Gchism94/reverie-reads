@@ -125,13 +125,15 @@ const bookByTitle = async (sb: SupabaseClient, uid: string, title: string) =>
   (
     await sb
       .from('books')
-      .select('id, ownership, series, cover_url')
+      .select('id, ownership, borrowed, wishlist, series, cover_url')
       .eq('owner_id', uid)
       .eq('title', title)
       .maybeSingle()
   ).data as {
     id: string
     ownership: string
+    borrowed: boolean
+    wishlist: boolean
     series: string | null
     cover_url: string | null
   } | null
@@ -238,7 +240,13 @@ test('Discover search: add a result to a shelf as unowned via the shelf chooser'
         { timeout: 15_000 },
       )
       .toBe(1)
-    expect((await bookByTitle(c.sb, c.uid, 'Wildfire Vow'))?.ownership).toBe('wishlist') // #68: 'unowned' → 'wishlist'
+    // Adding from a wanting context records a WANT, not a possession claim: under the shelf model
+    // that is the wishlist flag with ownership left unowned (docs/task-shelf-model.md).
+    expect(await bookByTitle(c.sb, c.uid, 'Wildfire Vow')).toMatchObject({
+      ownership: 'unowned',
+      wishlist: true,
+      borrowed: false,
+    })
   } finally {
     await reset(c)
   }
@@ -286,7 +294,13 @@ test('Shelf picker seam: "search everywhere" finds and adds an unowned book to t
         { timeout: 15_000 },
       )
       .toBe(1)
-    expect((await bookByTitle(c.sb, c.uid, 'Wildfire Vow'))?.ownership).toBe('wishlist') // #68: 'unowned' → 'wishlist'
+    // Adding from a wanting context records a WANT, not a possession claim: under the shelf model
+    // that is the wishlist flag with ownership left unowned (docs/task-shelf-model.md).
+    expect(await bookByTitle(c.sb, c.uid, 'Wildfire Vow')).toMatchObject({
+      ownership: 'unowned',
+      wishlist: true,
+      borrowed: false,
+    })
   } finally {
     await reset(c)
   }

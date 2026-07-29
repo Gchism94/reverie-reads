@@ -555,7 +555,9 @@ export function useAcquireGhost(name: string) {
           author_last: last || null,
           series: name,
           position: input.entry.position,
-          ownership: 'wishlist',
+          ownership: 'unowned',
+          wishlist: true,
+          borrowed: false,
           genre: input.genre,
           source: 'Series',
         })
