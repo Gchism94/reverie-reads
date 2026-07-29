@@ -14,6 +14,8 @@ import { useAddListItem, useAllListItems, useRemoveListItem } from '../data/list
 import { useLists, useReorderList, useUpdateList } from '../data/lists'
 import { useVoice } from '../skin/labels'
 
+type ShelfView = 'spines' | 'grid'
+
 const COVER_GRID: React.CSSProperties = {
   display: 'grid',
   gridTemplateColumns: 'repeat(auto-fill, minmax(132px, 1fr))',
@@ -40,7 +42,18 @@ function ShelfScreen() {
   const updateBook = useUpdateBook()
   const voice = useVoice()
 
-  const [view, setView] = useState<'spines' | 'grid'>('spines')
+  // View lives in the ROUTE — see ShelvesRoute for the full reasoning. `undefined` = the default,
+  // so /shelf/$listId stays canonical and only ?view=grid carries a param. The path param is
+  // untouched; search params are independent of it, so this survives across different shelves.
+  const { view = 'spines' } = shelfRoute.useSearch()
+  const setView = (v: ShelfView) =>
+    // replace: true — back should leave the shelf, not undo a view toggle.
+    void navigate({
+      to: '/shelf/$listId',
+      params: { listId },
+      search: v === 'spines' ? {} : { view: v },
+      replace: true,
+    })
   const [pickerOpen, setPickerOpen] = useState(false)
   const [externalSearch, setExternalSearch] = useState(false)
   // Appends within one picker session step past the stale cache max (invalidation lags picks).
@@ -297,5 +310,9 @@ function ShelfScreen() {
 export const shelfRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'shelf/$listId',
+  // Fails closed — unknown values resolve to the default view rather than throwing.
+  validateSearch: (search: Record<string, unknown>): { view?: ShelfView } => ({
+    view: search.view === 'grid' ? 'grid' : undefined,
+  }),
   component: ShelfScreen,
 })

@@ -201,7 +201,14 @@ function ShelvesScreen() {
   const createList = useCreateList()
   const reorderLists = useReorderLists()
   const addItem = useAddListItem()
-  const [tab, setTab] = useState<Tab>('tbr')
+  // Tab lives in the ROUTE, not component state: the route tree is flat, so navigating to a shelf
+  // fully unmounts this screen and useState would re-initialize on the way back — the reported
+  // defect. `undefined` means the default, so /shelves stays the canonical URL and only
+  // /shelves?tab=collection carries a param (the AuthRoute ?mode= pattern).
+  const { tab = 'tbr' } = shelvesRoute.useSearch()
+  const setTab = (t: Tab) =>
+    // replace: true — back should leave the page, not undo a tab click.
+    void navigate({ to: '/shelves', search: t === 'tbr' ? {} : { tab: t }, replace: true })
   const [openListId, setOpenListId] = useState<string | null>(null)
   const [pickerFor, setPickerFor] = useState<UiList | null>(null)
   const [externalFor, setExternalFor] = useState<UiList | null>(null)
@@ -471,5 +478,11 @@ function ShelvesScreen() {
 export const shelvesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'shelves',
+  // Fails CLOSED, like storedUserId(): anything that isn't a known tab resolves to the default
+  // rather than throwing. A validateSearch that throws takes the whole screen down over a typo in
+  // a shared link, which is a worse outcome than quietly showing the default tab.
+  validateSearch: (search: Record<string, unknown>): { tab?: Tab } => ({
+    tab: search.tab === 'collection' ? 'collection' : undefined,
+  }),
   component: ShelvesScreen,
 })

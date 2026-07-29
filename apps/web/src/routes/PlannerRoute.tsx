@@ -286,7 +286,12 @@ function Releases({ books, openBook }: { books: Book[]; openBook: (id: string) =
 function PlannerScreen() {
   const navigate = useNavigate()
   const { data: books } = useBooks()
-  const [tab, setTab] = useState<Tab>('calendar')
+  // Tab lives in the ROUTE — see ShelvesRoute for the full reasoning. `undefined` = the default,
+  // so /planner stays canonical and only /planner?tab=releases carries a param.
+  const { tab = 'calendar' } = plannerRoute.useSearch()
+  const setTab = (t: Tab) =>
+    // replace: true — back should leave the page, not undo a tab click.
+    void navigate({ to: '/planner', search: t === 'calendar' ? {} : { tab: t }, replace: true })
   const openBook = (id: string) => void navigate({ to: '/book/$bookId', params: { bookId: id } })
 
   return (
@@ -333,5 +338,9 @@ function PlannerScreen() {
 export const plannerRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'planner',
+  // Fails closed — unknown values resolve to the default tab rather than throwing.
+  validateSearch: (search: Record<string, unknown>): { tab?: Tab } => ({
+    tab: search.tab === 'releases' ? 'releases' : undefined,
+  }),
   component: PlannerScreen,
 })
