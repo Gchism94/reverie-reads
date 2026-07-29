@@ -85,7 +85,9 @@ describe('state pill — pills are never distinguished by colour alone', () => {
     // One accent token for all of them: colour is skin voice, not meaning. If colour ever became
     // the differentiator, a monochrome or colour-blind reader would lose the distinction entirely.
     const labels = Object.values(STATE_PILL_LABEL)
-    expect(new Set(labels).size, `labels must be distinct: ${labels.join(', ')}`).toBe(labels.length)
+    expect(new Set(labels).size, `labels must be distinct: ${labels.join(', ')}`).toBe(
+      labels.length,
+    )
     expect(STATE_PILL_SPOKEN.dnf).not.toBe(STATE_PILL_SPOKEN.borrowed)
     expect(STATE_PILL_GLYPH.dnf).not.toBe(STATE_PILL_GLYPH.borrowed)
     // and the spoken form of DNF is the expansion, not the initialism

@@ -127,9 +127,7 @@ export function SpineShelf({
               // cannot carry a text pill, so the edge marker is a find-it-fast affordance and this
               // is the actual information. Same fixed order as everywhere else — DNF, then borrowed.
               aria-label={
-                shown
-                  ? `Open ${b.title}${stateSuffix(b)}`
-                  : `Reveal ${b.title}${stateSuffix(b)}`
+                shown ? `Open ${b.title}${stateSuffix(b)}` : `Reveal ${b.title}${stateSuffix(b)}`
               }
               className="flex-none snap-center self-end"
               style={dragIdx === i ? { opacity: 0.4 } : undefined}
