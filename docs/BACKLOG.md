@@ -5,8 +5,10 @@ forgotten.
 
 ## In flight
 
-- `chore/ci` Phase 2 — spec'd in `docs/task-ci.md`, waiting. Last infrastructure
-  item; everything after it is product.
+- Nothing. The infrastructure arc is done: CI landed (`chore/ci`), the trio moved
+  off the shared dev account (`test/trio-migration`), throughput stages 1–2
+  landed and stage 3 was cancelled on its own measurements
+  (`docs/task-ci.md`). Everything below is product or its own branch.
 
 ## Real bugs, outstanding
 
@@ -15,8 +17,25 @@ forgotten.
   `series_entries` removed while `books.series` still names it. Needs a
   dropped-connection audit; a revive-on-refresh mechanism elsewhere in that file
   may or may not already cover the half-committed shape.
-- **Back-navigation / tab-indexing**: `/shelves` → collections tab → `shelf/{uuid}`
-  → back loses the tab. Tab state belongs in the route.
+- **Scroll position is unmanaged app-wide.** TanStack Router ships a
+  `scrollRestoration` option and it is simply unconfigured on `createRouter`. Wrong
+  in both directions: back-navigation doesn't restore where you were, and forward
+  navigation keeps the _previous_ page's scroll rather than starting at the top.
+  Its own branch — one option flips behavior on every route at once, so a red run
+  needs to mean one thing.
+- **Search text lost on back-navigation**: `/tropes` `q`, `/discover` `query`,
+  `/match` `vibeQ` — all `useState`, same defect class as the tab bug and the same
+  fix shape (a validated search param). Not bundled with `fix/tab-routing` for the
+  same reason.
+- **`/shelves` `openListId` lost alongside the tab** — which shelf accordion is
+  expanded is component state too. Same surface, same class; the tab fix landed
+  without it because the reported defect was the tab.
+- **`/library` filters, sort and mode live in a module-level Zustand store.**
+  Survives back-navigation (the store outlives the unmount), lost on reload,
+  invisible to deep-linking or sharing. That store _masks_ the back-nav symptom
+  rather than having it, which is why `fix/tab-routing` deliberately left it
+  alone. Moving it to the URL needs a store-vs-URL precedence decision first —
+  what wins when both exist.
 - **Swallowed Supabase errors**: a11y's `setupFixtures`, `cleanup`,
   `setProfileSkinMode` discard sign-in errors then dereference `.data.user!.id`,
   surfacing as a bare TypeError. Plus `db:seed`'s `Seed failed: {}`. Same
@@ -89,9 +108,6 @@ onboarding Stages B–D.
 - **`NOTICES.md`**: generated from the pnpm tree, so it cannot see Deno-side Edge
   Function dependencies. `npm:@imagemagick/magick-wasm` (Apache-2.0, covers
   function) is missing and should be added.
-- **`CLAUDE.md` rules pass** — five rules earned this session, none written down:
-  no production DB writes from a Code session, including throwaway accounts;
-  grepping a bundle measures dead-code elimination, not rendering — serve the
-  build and read the DOM; a negative assertion must first wait for the moment the
-  thing would appear; a test name is a promise about what is proven; commit before
-  mutation testing.
+- ~~**`CLAUDE.md` rules pass**~~ — done (#93). Six rules, each with its reason,
+  now live under "Shell & deploy safety" and "Testing & verification discipline"
+  in `CLAUDE.md`.
