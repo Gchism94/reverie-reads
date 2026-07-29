@@ -1,6 +1,14 @@
 import { useState } from 'react'
 import { createRoute, useNavigate } from '@tanstack/react-router'
-import { authorOf, bookOwnedFormats, type Book, type OwnedFormat } from '@reverie/core'
+import {
+  authorOf,
+  deriveShelfSections,
+  visibleSections,
+  type Book,
+  type ShelfBreakdowns,
+  type ShelfKey,
+  type ShelfSectionKey,
+} from '@reverie/core'
 import { rootRoute } from './RootRoute'
 import { useBooks } from '../data/books'
 import {
@@ -18,6 +26,8 @@ import { ExternalSearchSheet } from '../components/ExternalSearchSheet'
 import { SpineShelf } from '../components/SpineShelf'
 import { Modal } from '../components/Modal'
 import { BookmarkGlyph } from '../components/BookmarkGlyph'
+import { Switch } from '../components/Switch'
+import { useProfile, useUpdateProfile } from '../data/profile'
 
 type Tab = 'tbr' | 'collection'
 
@@ -155,40 +165,153 @@ function ListModal({
   )
 }
 
-const OWNED_SHELVES: { fmt: OwnedFormat; label: string; icon: string }[] = [
-  { fmt: 'physical', label: 'Physical', icon: '📖' },
-  { fmt: 'ebook', label: 'Ebook', icon: '📱' },
-  { fmt: 'audiobook', label: 'Audiobook', icon: '🎧' },
-]
+// ── the derived shelves ─────────────────────────────────────────────────────────────────────────
+// Every string a reader sees lives here, in one block, so copy can be reviewed without reading the
+// render. Membership itself is in @reverie/core (deriveShelfSections) and has no strings at all.
 
-/** Smart shelves derived from per-format ownership — auto-updating, not hand-edited. */
-function OwnedShelves({ books, onOpen }: { books: Book[]; onOpen: (id: string) => void }) {
+/** Section headings. Glyphs match the marks the same states already wear on covers — ⇄ borrowed,
+ *  ⊹ wishlist, ⊘ DNF — so a shelf and a pill read as the same fact, not two vocabularies. */
+const SECTION_LABEL: Record<ShelfSectionKey, string> = {
+  owned: 'Owned',
+  borrowed: '⇄ Borrowed',
+  read: 'Read',
+  wishlist: '⊹ Wishlist',
+}
+
+/** Shelf headings within a section. A section with one shelf shows no shelf heading — the section
+ *  heading already said it — so only the split shelves need names. */
+const SHELF_LABEL: Partial<Record<ShelfKey, string>> = {
+  ownedPhysical: '📖 Physical',
+  ownedEbook: '📱 Ebook',
+  ownedAudiobook: '🎧 Audiobook',
+  ownedUnmarked: '📚 Format not set',
+  read: 'Read',
+  dnf: '⊘ Did not finish',
+}
+
+const COPY = {
+  groupHeading: 'Your shelves',
+  /** Shelves overlap by design; without this the counts read as a partition that does not exist. */
+  overlap: 'Views of one library, not folders — a book can sit on more than one.',
+  /** Replaces three separate "flip a copy switch" invitations when nothing is on any shelf. */
+  groupEmpty:
+    'Nothing shelved yet — mark a book owned, borrowed or wanted and it files itself here.',
+  /** The bucket holding owned books with no format recorded. Invites the action that empties it. */
+  unmarkedHint: 'No format recorded. Mark one on a book and it moves to that shelf.',
+  // Parallel by construction, and neither contradicts the heading it produces: the shelf reads
+  // "Did not finish", so the control that creates it says the same words rather than abbreviating.
+  // (The cover PILL stays "DNF" — it has ~40px to work with; a section header does not.)
+  formatToggle: 'Split by format',
+  dnfToggle: 'Split out did not finish',
+} as const
+
+/** A breakdown toggle, in the header of the section it splits. Profile-synced, so it follows the
+ *  reader across devices — the `autoMergeDuplicates` write path, not local state. */
+function BreakdownToggle({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string
+  checked: boolean
+  onChange: (next: boolean) => void
+}) {
+  return (
+    <span className="flex items-center gap-2">
+      <span className="text-[12px] text-muted">{label}</span>
+      <Switch checked={checked} onChange={onChange} label={label} />
+    </span>
+  )
+}
+
+/**
+ * The derived shelves — Owned · Borrowed · Read · Wishlist, each a VIEW of the library rather than
+ * a list anyone edits. Two profile-synced toggles split Owned by format and DNF out of Read.
+ *
+ * Empty shelves do not render, and a section with nothing in it goes with them. The screen this
+ * replaces rendered three format shelves unconditionally, so a library with no format flags — 98%
+ * of production — got the same "flip a copy switch" invitation three times over.
+ */
+function DerivedShelves({
+  books,
+  onOpen,
+  breakdowns,
+  onToggle,
+}: {
+  books: Book[]
+  onOpen: (id: string) => void
+  breakdowns: ShelfBreakdowns
+  onToggle: (which: 'format' | 'dnf', next: boolean) => void
+}) {
+  const sections = visibleSections(deriveShelfSections(books, breakdowns))
+
   return (
     <div className="mb-8">
-      <h2 className="text-[16px] font-semibold text-ink">Your copies</h2>
-      <p className="mb-3 text-[12px] text-muted">
-        Updates as you mark copies you have, owned or borrowed — no add or remove.
-      </p>
-      <div className="flex flex-col gap-5">
-        {OWNED_SHELVES.map(({ fmt, label, icon }) => {
-          const shelf = books.filter((b) => bookOwnedFormats(b).includes(fmt))
-          return (
-            <div key={fmt}>
-              <div className="mb-1 text-[14px] font-semibold text-ink">
-                {icon} {label}{' '}
-                <span className="text-[12px] font-normal text-muted">· {shelf.length}</span>
+      <h2 className="text-[16px] font-semibold text-ink">{COPY.groupHeading}</h2>
+      <p className="mb-4 text-[12px] text-muted">{COPY.overlap}</p>
+
+      {sections.length === 0 ? (
+        <p className="skin-panel border border-line p-6 text-center text-[14px] text-muted">
+          {COPY.groupEmpty}
+        </p>
+      ) : (
+        <div className="flex flex-col gap-7">
+          {sections.map((section) => (
+            <div key={section.key}>
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-[15px] font-semibold text-ink">
+                  {SECTION_LABEL[section.key]}{' '}
+                  {/* A split section shows no total — a total across overlapping shelves asserts a
+                      partition that does not exist. Its shelves carry their own counts. */}
+                  {!section.split && (
+                    <span className="text-[12px] font-normal text-muted">
+                      · {section.shelves[0]!.books.length}
+                    </span>
+                  )}
+                </h3>
+                {section.key === 'owned' && (
+                  <BreakdownToggle
+                    label={COPY.formatToggle}
+                    checked={breakdowns.format}
+                    onChange={(next) => onToggle('format', next)}
+                  />
+                )}
+                {section.key === 'read' && (
+                  <BreakdownToggle
+                    label={COPY.dnfToggle}
+                    checked={breakdowns.dnf}
+                    onChange={(next) => onToggle('dnf', next)}
+                  />
+                )}
               </div>
-              {shelf.length ? (
-                <SpineShelf books={shelf} onOpen={onOpen} />
-              ) : (
-                <p className="skin-card border border-line p-3 text-[13px] text-muted">
-                  Flip a copy switch on a book and it lands here.
-                </p>
-              )}
+
+              <div className="flex flex-col gap-4">
+                {section.shelves.map((shelf) => (
+                  <div key={shelf.key}>
+                    {/* Only a SPLIT section names its shelves; an unsplit section is already named
+                        by its heading, and repeating it reads as two shelves. Keyed off `split`,
+                        not the surviving shelf count: with DNF split on and nothing finished, this
+                        section holds ONE visible shelf — the DNF one — and labelling it "Read"
+                        would file abandoned books under exactly the wrong word. */}
+                    {section.split && (
+                      <div className="mb-1 text-[13.5px] font-semibold text-ink">
+                        {SHELF_LABEL[shelf.key] ?? shelf.key}{' '}
+                        <span className="text-[12px] font-normal text-muted">
+                          · {shelf.books.length}
+                        </span>
+                      </div>
+                    )}
+                    {shelf.key === 'ownedUnmarked' && (
+                      <p className="mb-1 text-[12px] text-muted">{COPY.unmarkedHint}</p>
+                    )}
+                    <SpineShelf books={shelf.books} onOpen={onOpen} />
+                  </div>
+                ))}
+              </div>
             </div>
-          )
-        })}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -198,6 +321,18 @@ function ShelvesScreen() {
   const { data: books } = useBooks()
   const { data: lists } = useLists()
   const { data: items } = useAllListItems()
+  const { data: profile } = useProfile()
+  const updateProfile = useUpdateProfile()
+  // Profile-synced, per the autoMergeDuplicates pattern — a display preference that follows the
+  // reader across devices rather than living in this tab. `?? false` mirrors the column defaults.
+  const breakdowns: ShelfBreakdowns = {
+    format: profile?.shelfBreakdownFormat ?? false,
+    dnf: profile?.shelfBreakdownDnf ?? false,
+  }
+  const setBreakdown = (which: 'format' | 'dnf', next: boolean) =>
+    updateProfile.mutate(
+      which === 'format' ? { shelfBreakdownFormat: next } : { shelfBreakdownDnf: next },
+    )
   const createList = useCreateList()
   const reorderLists = useReorderLists()
   const addItem = useAddListItem()
@@ -266,7 +401,12 @@ function ShelvesScreen() {
         Shelves
       </h1>
 
-      <OwnedShelves books={all} onOpen={openBook} />
+      <DerivedShelves
+        books={all}
+        onOpen={openBook}
+        breakdowns={breakdowns}
+        onToggle={setBreakdown}
+      />
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-[16px] font-semibold text-ink">Your lists</h2>

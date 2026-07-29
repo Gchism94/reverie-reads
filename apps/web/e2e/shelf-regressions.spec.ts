@@ -421,9 +421,18 @@ test('Shelves page: dragging a book cover does not move the shelf — only the g
     expect(await shelfOrder()).toEqual(['Aaa Shelf', 'Bbb Shelf'])
 
     // Pre-fix the whole shelf card was draggable, so this dragged Aaa Shelf onto Bbb Shelf.
-    const covers = page.locator('[data-spine]')
-    await expect(covers).toHaveCount(2)
-    await covers.nth(0).dragTo(covers.nth(1))
+    //
+    // SCOPED to each list's own card. A page-wide `[data-spine]` used to find exactly these two
+    // books; since /shelves grew its derived shelves (Owned · Borrowed · Read · Wishlist) the same
+    // two books also appear above the lists, so the page-wide count is 4 and `nth(0)`/`nth(1)` are
+    // two spines of the SAME book on a derived shelf — which would drag nothing and pass anyway.
+    const cardFor = (name: RegExp) =>
+      page.getByRole('heading', { name }).locator('xpath=../../../..')
+    const aaaCover = cardFor(/Aaa Shelf/).locator('[data-spine]')
+    const bbbCover = cardFor(/Bbb Shelf/).locator('[data-spine]')
+    await expect(aaaCover).toHaveCount(1)
+    await expect(bbbCover).toHaveCount(1)
+    await aaaCover.first().dragTo(bbbCover.first())
     await page.waitForTimeout(2000)
     expect(await shelfOrder(), 'dragging a book must not reorder shelves').toEqual([
       'Aaa Shelf',
