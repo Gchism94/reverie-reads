@@ -1,7 +1,12 @@
 import { readFileSync, writeFileSync } from 'fs'
 import { describe, expect, it } from 'vitest'
 import * as XLSX from 'xlsx'
-import { parseImport, REVERIE_TEMPLATE_COLUMNS } from '@reverie/core'
+import {
+  parseImport,
+  possessionPatch,
+  possessionState,
+  REVERIE_TEMPLATE_COLUMNS,
+} from '@reverie/core'
 import {
   buildImportTemplateWorkbook,
   importTemplateBytes,
@@ -70,13 +75,22 @@ describe('Reverie import template (generated from the core profile)', () => {
     expect(fourthWing?.incoming.readStatus).toBe('Unread')
     expect(hacienda?.incoming.readStatus).toBe('Reading')
 
-    // Four-state ownership (docs/task-manual-merge.md §3): the template's Owned column carries
-    // borrowed end to end — Yes → owned, blank → owned, Borrowed → borrowed, No → wishlist.
-    expect(acotar?.incoming.ownership).toBe('owned')
-    expect(hacienda?.incoming.ownership).toBe('owned') // blank counts as owned
-    expect(fourthWing?.incoming.ownership).toBe('wishlist')
+    // Possession (docs/task-manual-merge.md §3, remodelled by task-shelf-model): the template's
+    // Owned column carries borrowed end to end — Yes → owned, blank → owned, Borrowed → borrowed,
+    // No → wishlist. One spreadsheet cell is one WORD, so the assertion is on the word AND on the
+    // flags it expands to: a cell reading "Borrowed" must produce borrowed=true, not ownership=owned.
     const finePrint = rows.find((r) => r.incoming.title === 'The Fine Print')
-    expect(finePrint?.incoming.ownership).toBe('borrowed')
+    const word = (r: (typeof rows)[number] | undefined) =>
+      r && possessionState({ ...possessionPatch('unset'), ...r.incoming })
+
+    expect(word(acotar)).toBe('owned')
+    expect(word(hacienda)).toBe('owned') // blank counts as owned
+    expect(word(fourthWing)).toBe('wishlist')
+    expect(word(finePrint)).toBe('borrowed')
+
+    expect(acotar?.incoming.ownership).toBe('owned')
+    expect(fourthWing?.incoming).toMatchObject({ ownership: 'unowned', wishlist: true })
+    expect(finePrint?.incoming).toMatchObject({ ownership: 'unowned', borrowed: true })
     expect(finePrint?.incoming.readStatus).toBe('Read')
   })
 

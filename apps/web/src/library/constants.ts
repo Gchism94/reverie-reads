@@ -1,9 +1,12 @@
-import { coverGradient, genreKey, type BookOwnership, type LibrarySort } from '@reverie/core'
+import { coverGradient, genreKey, type LibrarySort, type PossessionState } from '@reverie/core'
 
-/** Plain, legible ownership words for the CONTROLS (docs/task-ownership-legibility.md). The button
+/** Plain, legible possession words for the CONTROLS (docs/task-ownership-legibility.md). The button
  *  label must say what tapping it does at a glance; the per-skin voice (SkinVoice ownIt/borrowedIt/
- *  wantIt/unsetIt) rides underneath as a flavor subtitle, never as the only signal. */
-export const OWNERSHIP_LABELS: Record<BookOwnership, string> = {
+ *  wantIt/unsetIt) rides underneath as a flavor subtitle, never as the only signal.
+ *
+ *  Keyed by the DERIVED possession word, not by the stored `ownership` column — storage is five
+ *  independent flags and a control that must show one answer reads possessionState(). */
+export const OWNERSHIP_LABELS: Record<PossessionState, string> = {
   owned: 'Owned',
   borrowed: 'Borrowed',
   wishlist: 'Wishlist',

@@ -116,11 +116,11 @@ const bookByTitle = async (sb: SupabaseClient, uid: string, title: string) =>
   (
     await sb
       .from('books')
-      .select('id, ownership')
+      .select('id, ownership, borrowed, wishlist')
       .eq('owner_id', uid)
       .eq('title', title)
       .maybeSingle()
-  ).data as { id: string; ownership: string } | null
+  ).data as { id: string; ownership: string; borrowed: boolean; wishlist: boolean } | null
 
 const positionsFor = async (sb: SupabaseClient, listId: string) =>
   ((await sb.from('list_items').select('book_id, position').eq('list_id', listId).order('position'))
@@ -162,9 +162,10 @@ test('Shelves page: "search everywhere" adds an unowned book to a shelf (regress
     await expect(sheet.getByText('Wildfire Vow')).toBeVisible({ timeout: 15_000 })
     await sheet.getByRole('button', { name: '＋ Add', exact: true }).first().click()
 
-    // Lands on the shelf as a wishlist copy — never having opened the book's detail page.
+    // Lands on the shelf as a wanted copy — never having opened the book's detail page.
     // (#68's four-state ownership renamed 'unowned' → 'wishlist'; this guard kept asserting the old
-    // value and had been failing silently ever since.)
+    // value and had been failing silently ever since. The shelf model moves it again, from an enum
+    // value to a flag — so the assertion now names the flag rather than a word.)
     await expect
       .poll(
         async () => {
@@ -180,7 +181,11 @@ test('Shelves page: "search everywhere" adds an unowned book to a shelf (regress
         { timeout: 15_000 },
       )
       .toBe(1)
-    expect((await bookByTitle(c.sb, c.uid, 'Wildfire Vow'))?.ownership).toBe('wishlist')
+    expect(await bookByTitle(c.sb, c.uid, 'Wildfire Vow')).toMatchObject({
+      ownership: 'unowned',
+      wishlist: true,
+      borrowed: false,
+    })
     expect(page.url()).not.toContain('/book/') // proved we never visited the book page
   } finally {
     await reset(c)

@@ -4,9 +4,7 @@ import {
   sortBookMoods,
   normalizeSeriesStatus,
   toFirstLast,
-  OWNERSHIP_VALUES,
   type Book,
-  type BookOwnership,
   type Contributor,
   type List,
   type ReadEntry,
@@ -76,13 +74,13 @@ export function toBook(row: BookRow): Book {
     coverColor: row.cover_color ?? undefined,
     isbn: row.isbn ?? '',
     fave: row.fave,
-    // Four-state ownership (docs/task-ownership-v2.md); a pre-migration 'unowned' row reads as
-    // wishlist (its meaning), anything unrecognized falls back to owned.
-    ownership: OWNERSHIP_VALUES.includes(row.ownership as BookOwnership)
-      ? (row.ownership as BookOwnership)
-      : row.ownership === 'unowned'
-        ? 'wishlist'
-        : 'owned',
+    // Two-state ownership + independent flags (docs/task-shelf-model.md). A row written before the
+    // stage-A migration can still carry a four-state word; read it through the same mapping the
+    // migration applies, so a stale cache or an un-migrated replica degrades to the right meaning
+    // rather than to 'owned'. Anything unrecognized is NOT a possession claim — 'unowned'.
+    ownership: row.ownership === 'owned' ? 'owned' : 'unowned',
+    borrowed: row.borrowed ?? row.ownership === 'borrowed',
+    wishlist: row.wishlist ?? row.ownership === 'wishlist',
     owned: {
       physical:
         row.owned_physical === 'paperback' || row.owned_physical === 'hardcover'
@@ -144,6 +142,8 @@ export function toBookRow(patch: Partial<Book>): Partial<BookRow> {
   if (patch.isbn !== undefined) row.isbn = patch.isbn || null
   if (patch.fave !== undefined) row.fave = patch.fave
   if (patch.ownership !== undefined) row.ownership = patch.ownership
+  if (patch.borrowed !== undefined) row.borrowed = patch.borrowed
+  if (patch.wishlist !== undefined) row.wishlist = patch.wishlist
   if (patch.owned !== undefined) {
     row.owned_physical =
       patch.owned.physical === false ? null : patch.owned.physical === true ? 'yes' : patch.owned.physical

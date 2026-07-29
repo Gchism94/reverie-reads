@@ -102,7 +102,7 @@ async function book(sb: SupabaseClient, title: string) {
   const { data } = await sb
     .from('books')
     .select(
-      'id, title, series, position, genre, subgenre, format, rating, ownership, read_status, pub_y, added_at',
+      'id, title, series, position, genre, subgenre, format, rating, ownership, borrowed, wishlist, read_status, pub_y, added_at',
     )
     .eq('title', title)
     .maybeSingle()
@@ -178,10 +178,10 @@ test('Goodreads import: fidelity fixes land in the DB, summary is honest, axe gr
     expect(salt.format).toBe('Paperback')
     expect(salt.genre).toBe('') // still no genre supplied → none invented
 
-    // fractional series position + to-read → unowned
+    // fractional series position + to-read → a want, not a possession claim
     const reck = (await book(sb, "Zephyr's Reckoning"))!
     expect(Number(reck.position)).toBe(2.5)
-    expect(reck.ownership).toBe('wishlist') // #68 renamed 'unowned' → 'wishlist' (four-state ownership)
+    expect(reck).toMatchObject({ ownership: 'unowned', wishlist: true, borrowed: false })
     expect(reck.read_status).toBe('Unread')
 
     // Date Read → read log row
