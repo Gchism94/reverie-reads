@@ -53,7 +53,6 @@ export interface ReviewSummary {
   merged: number
   inSeries: number
   standalones: number
-  readingOrdersBuilt: number
   /** primary-genre breakdown; unresolved genres tallied under '∅' */
   genres: Record<string, number>
 }
@@ -112,17 +111,13 @@ const item = (i: ReviewItemInput, reason: NeedsLookReason, detail: string): Need
  * (odd genre, likely duplicate) are independent views a book can also appear in. The Cover Studio
  * "needs attention" queue is missing + low-confidence + broken, each carrying its alternate editions.
  */
-export function buildReviewModel(
-  items: readonly ReviewItemInput[],
-  opts: { readingOrdersBuilt?: number } = {},
-): ReviewModel {
+export function buildReviewModel(items: readonly ReviewItemInput[]): ReviewModel {
   const summary: ReviewSummary = {
     total: items.length,
     added: 0,
     merged: 0,
     inSeries: 0,
     standalones: 0,
-    readingOrdersBuilt: opts.readingOrdersBuilt ?? 0,
     genres: {},
   }
   const missingCover: NeedsLookItem[] = []
@@ -205,7 +200,7 @@ export interface ImportItemOutcome {
 export function buildReviewModelFromImport(
   outcomes: readonly ImportItemOutcome[],
   books: readonly Book[],
-  opts: { readingOrdersBuilt?: number; brokenRefs?: ReadonlySet<string> } = {},
+  opts: { brokenRefs?: ReadonlySet<string> } = {},
 ): ReviewModel {
   const byId = new Map(books.map((b) => [b.id, b]))
   const items: ReviewItemInput[] = []
@@ -229,5 +224,5 @@ export function buildReviewModelFromImport(
       duplicateDetected: o.disposition === 'merged',
     })
   }
-  return buildReviewModel(items, opts)
+  return buildReviewModel(items)
 }

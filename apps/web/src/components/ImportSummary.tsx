@@ -29,17 +29,13 @@ export function ImportSummary({
 }) {
   const r = result
   const notices = summaryNotices(r)
-  const showShelves = r.extras.shelved > 0
   return (
     <div>
       <p className="text-[14px] leading-relaxed text-muted">{summaryHeadline(r)}</p>
       <div className="mt-4 grid grid-cols-3 gap-2">
         <Tile n={r.added} label="Added" />
         <Tile n={r.merged} label="Merged" />
-        <Tile
-          n={showShelves ? r.extras.shelved : r.readingOrders}
-          label={showShelves ? 'Shelved' : 'Orders'}
-        />
+        <Tile n={r.extras.shelved} label="Shelved" />
       </div>
       {notices.length > 0 && (
         <ul className="mt-4 flex flex-col gap-1.5">

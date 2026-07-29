@@ -44,9 +44,28 @@ export const USER_OWNED_TABLES: OwnedTable[] = [
   { table: 'list_items', owner: 'owner_id', plan: { backup: true } },
   { table: 'reviews', owner: 'reviewer_id', plan: { backup: true } },
   { table: 'merge_verdicts', owner: 'owner_id', plan: { backup: true } },
-  { table: 'reading_orders', owner: 'owner_id', plan: { backup: true } },
-  // Read through the reading_orders embed, written directly on restore.
-  { table: 'reading_order_items', owner: 'owner_id', plan: { backup: true, via: 'reading_orders' } },
+  // Excluded because they are being demolished, not because they hold nothing worth keeping.
+  // The app stopped reading and writing them in chore/drop-reading-orders (S1); the tables
+  // themselves drop in S2, and these two entries go with them. They must stay REGISTERED until
+  // then — the structural guard requires every table that still cascades to auth.users to appear
+  // here, so deleting the rows while the tables exist would fail it. Backing them up in the
+  // meantime would archive rows nothing can restore into.
+  {
+    table: 'reading_orders',
+    owner: 'owner_id',
+    plan: {
+      backup: false,
+      why: 'Dropped in S2 (chore/drop-reading-orders). Series position is the single ordering mechanism; production held 1 order with 0 items and no UI had read these tables since the Order tab was removed. Backing them up would archive rows restore can no longer accept.',
+    },
+  },
+  {
+    table: 'reading_order_items',
+    owner: 'owner_id',
+    plan: {
+      backup: false,
+      why: 'Dropped in S2 alongside its parent reading_orders — see that entry. Kept registered only because the table still exists in the schema until the S2 migration runs.',
+    },
+  },
   { table: 'profiles', owner: 'id', plan: { backup: true } },
 
   // ── taxonomy: assignments travel by NAME, and the vocabulary rows come with them ──
