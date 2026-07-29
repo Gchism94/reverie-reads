@@ -4,12 +4,14 @@ import {
   contributorsFromAuthors,
   formatAuthors,
   parseNumericField,
+  possessionPatch,
   SERIES_POSITION,
   SKINS,
   toFirstLast,
   type Book,
   type Contributor,
   type Owned,
+  type PossessionState,
 } from '@reverie/core'
 import { useQueryClient } from '@tanstack/react-query'
 import { rootRoute } from './RootRoute'
@@ -187,8 +189,9 @@ function AddForm({
   const voice = useVoice()
   // Context-sensitive default: arriving from a wanting context (Discover) assumes wishlist; a plain
   // catalog add leaves possession UNSET rather than forcing "owned" (docs/task-ownership-v2.md).
-  // Form-session state only — never persisted as a preference.
-  const [ownership, setOwnership] = useState<Book['ownership']>(
+  // Form-session state only — never persisted as a preference. One exclusive WORD; possessionPatch
+  // expands it to the model's flags at submit (docs/task-shelf-model.md).
+  const [possession, setPossession] = useState<PossessionState>(
     defaultUnowned ? 'wishlist' : 'unset',
   )
   const qc = useQueryClient()
@@ -299,7 +302,7 @@ function AddForm({
     const isEbook = f.includes('ebook') || f.includes('kindle')
     const isAudio = f.includes('audio')
     // Format flags always record the edition in hand OR the edition you're eyeing — on a
-    // wishlist add they sit latent (bookOwnedFormats suppresses them until the book is owned),
+    // wishlist add they sit latent (bookOwnedFormats suppresses them until the book is in hand),
     // so flipping to Owned later lands with the right copy already marked.
     const owned: Owned = {
       physical: f.includes('hardcover') ? 'hardcover' : isEbook || isAudio ? false : 'paperback',
@@ -323,7 +326,7 @@ function AddForm({
       // tropes are tagged in the refine step via the full picker (book_tropes needs a saved id);
       // no lightweight freeform tags here — the structured trope system is the one source of truth.
       intensity,
-      ownership,
+      ...possessionPatch(possession),
       owned,
       cover,
       isbn: hit.isbn ?? '',
@@ -552,12 +555,12 @@ function AddForm({
               key={value}
               type="button"
               role="radio"
-              aria-checked={ownership === value}
+              aria-checked={possession === value}
               aria-label={OWNERSHIP_LABELS[value]}
-              onClick={() => setOwnership(value)}
+              onClick={() => setPossession(value)}
               className="skin-control border px-3 py-1.5 text-center leading-tight"
               style={
-                ownership === value
+                possession === value
                   ? {
                       background: 'var(--accent-fill)',
                       color: 'var(--on-primary)',

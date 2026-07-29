@@ -1,7 +1,7 @@
 import type { Book, Owned, ReadEntry } from './types'
 import { norm } from './normalize'
 import { contributorsChanged, reconcileContributors } from './contributors'
-import { strongerOwnership } from './ownership'
+import { mergePossession } from './ownership'
 
 // ── ISBN normalization (match the same book whether it stored ISBN-10 or ISBN-13) ──
 
@@ -199,10 +199,21 @@ export function mergeImport(existing: Book, incoming: Incoming): ImportMergeResu
   const owned = mergeOwned(existing.owned, incoming.owned)
   if (JSON.stringify(owned) !== JSON.stringify(existing.owned)) patch.owned = owned
 
-  // Ownership is one-way on import-merge: a stronger possession from the import upgrades the record
-  // (unset → wishlist → borrowed → owned), but a weaker one never downgrades what the reader has.
-  const merged = strongerOwnership(existing.ownership, incoming.ownership ?? 'unset')
-  if (merged !== existing.ownership) patch.ownership = merged
+  // Possession is one-way on import-merge: a signal the import carries is ADDED to the record, but
+  // an absent one never takes away what the reader has — every rule in mergePossession is a union,
+  // so an import that says nothing about possession cannot downgrade anything. (The one subtraction
+  // is deliberate: a wishlist want the import satisfied with a real copy stops being a want.)
+  const possession = mergePossession([
+    existing,
+    {
+      ownership: incoming.ownership ?? 'unowned',
+      borrowed: incoming.borrowed ?? false,
+      wishlist: incoming.wishlist ?? false,
+    },
+  ])
+  if (possession.ownership !== existing.ownership) patch.ownership = possession.ownership
+  if (possession.borrowed !== existing.borrowed) patch.borrowed = possession.borrowed
+  if (possession.wishlist !== existing.wishlist) patch.wishlist = possession.wishlist
 
   // Reading status: only promote toward Read when the import shows more progress — an unset/Unread
   // record can gain Read, but a Read book is never walked back by a to-read row.

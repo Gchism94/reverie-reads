@@ -21,10 +21,10 @@ const MODES = ['dark', 'light'] as const
  * so this needs no duplicated seed logic and no separate CI step — invoking it from the spec keeps
  * local and CI identical.
  *
- * The sweep genuinely needs the books: the seed is what populates the Library grid (286 of its 290
- * books land in the default library via read_status='Read') and Home's book-derived surfaces. Every
- * other fixture below this spec creates itself. Measured cost of a fresh user + 290 books: ~0.6s,
- * against a ~15m job.
+ * The sweep genuinely needs the books: the seed is what populates the Library grid (all 290 land in
+ * the default library — 213 owned and 77 borrowed since the seed started writing possession) and
+ * Home's book-derived surfaces. Every other fixture below this spec creates itself. Measured cost of
+ * a fresh user + 290 books: ~0.6s, against a ~15m job.
  *
  * Idempotent — re-running replaces this user's books, so repeat local runs are safe.
  */

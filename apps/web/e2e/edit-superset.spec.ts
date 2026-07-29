@@ -78,7 +78,7 @@ const makeBook = async (c: Client, patch: Record<string, unknown> = {}) => {
       author_first: 'Nell',
       author_last: 'Marrow',
       genre: 'fantasy',
-      ownership: 'unset',
+      ownership: 'unowned',
       read_status: 'unset',
       status: 'standalone',
       ...patch,
@@ -93,7 +93,7 @@ const rowOf = async (c: Client, id: string) =>
   (
     await c.sb
       .from('books')
-      .select('pages, subgenres, subgenre, ownership, read_status, genre')
+      .select('pages, subgenres, subgenre, ownership, borrowed, wishlist, read_status, genre')
       .eq('id', id)
       .single()
   ).data as {
@@ -101,6 +101,8 @@ const rowOf = async (c: Client, id: string) =>
     subgenres: string[]
     subgenre: string
     ownership: string
+    borrowed: boolean
+    wishlist: boolean
     read_status: string
     genre: string
   }
@@ -270,7 +272,14 @@ test('edit details carries ownership and read status, persisting immediately', a
     await expect(page.getByRole('heading', { name: 'Superset Probe' })).toBeVisible({
       timeout: 20_000,
     })
-    expect(await rowOf(c, id)).toMatchObject({ ownership: 'unset', read_status: 'unset' })
+    // A freshly catalogued book claims nothing — no ownership, no borrowed copy, no want. Under the
+    // four-state enum this was the single value 'unset'; it is now the absence of every flag.
+    expect(await rowOf(c, id)).toMatchObject({
+      ownership: 'unowned',
+      borrowed: false,
+      wishlist: false,
+      read_status: 'unset',
+    })
 
     const dlg = await openEdit(page)
     await expect(dlg.getByText('Your copies').first()).toBeVisible()

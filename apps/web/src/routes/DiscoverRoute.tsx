@@ -167,7 +167,7 @@ function ResultActions({ result }: { result: SearchResult }) {
       <button
         type="button"
         disabled={busy}
-        onClick={() => add.mutate({ result, ownership: 'owned' })}
+        onClick={() => add.mutate({ result, possession: 'owned' })}
         className="skin-control border border-line px-3 py-1 text-[12px] font-semibold text-ink disabled:opacity-50"
         style={{ background: 'var(--chip)' }}
       >
@@ -186,7 +186,7 @@ function ResultActions({ result }: { result: SearchResult }) {
         <ShelfChooser
           onClose={() => setChooseShelf(false)}
           onPick={(listId) => {
-            add.mutate({ result, ownership: 'wishlist', listId })
+            add.mutate({ result, possession: 'wishlist', listId })
             setChooseShelf(false)
           }}
         />

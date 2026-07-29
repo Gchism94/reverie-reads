@@ -5,10 +5,10 @@
 // dedupe + connected-series steps use). The caller routes Incomings through match.ts / the merge
 // path, so re-import is idempotent.
 
-import type { Book, PubDate, ReadStatus } from './types'
+import type { PossessionState, PubDate, ReadStatus } from './types'
 import { parseCSV } from './csv'
 import { cleanIsbn, type Incoming } from './match'
-import { emptyOwned } from './ownership'
+import { emptyOwned, possessionPatch } from './ownership'
 import { contributorsFromAuthors, fromFirstLast } from './contributors'
 import { normalizeImportGenres } from './genreNormalize'
 
@@ -266,21 +266,22 @@ export function rowToImported(row: string[], idx: Record<string, number>): Impor
   // A recorded read date with no explicit status still means the book was read.
   if (readStatus === 'Unread' && reads.length) readStatus = 'Read'
 
-  // Ownership (four-state — docs/task-ownership-v2.md): an explicit Owned column wins (yes/blank =
-  // owned, borrow/loan = borrowed, no/wish = wishlist); otherwise a Goodreads-style wishlist shelf
-  // (`to-read`/`tbr`) marks the row wishlist. Plain "Unread" is NOT a wishlist signal — unread
-  // books you own are normal.
-  let ownership: Book['ownership'] = 'owned'
+  // Possession (docs/task-shelf-model.md): an explicit Owned column wins (yes/blank = owned,
+  // borrow/loan = borrowed, no/wish = wishlist); otherwise a Goodreads-style wishlist shelf
+  // (`to-read`/`tbr`) marks the row a want. Plain "Unread" is NOT a wishlist signal — unread books
+  // you own are normal. A spreadsheet cell carries one word, so it maps through the four-state
+  // adapter, which expands to the flags the model stores.
+  let possession: PossessionState = 'owned'
   const ownedCell = cell('owned').trim().toLowerCase()
   if (ownedCell) {
-    if (/borrow|loan/.test(ownedCell)) ownership = 'borrowed'
-    else if (/^(n|no|false|0|unowned|wish)/.test(ownedCell)) ownership = 'wishlist'
-    else ownership = 'owned'
+    if (/borrow|loan/.test(ownedCell)) possession = 'borrowed'
+    else if (/^(n|no|false|0|unowned|wish)/.test(ownedCell)) possession = 'wishlist'
+    else possession = 'owned'
   } else if (
     (idx.readStatus ?? -1) >= 0 &&
     /to-read|to read|wishlist|tbr/.test(cell('readStatus').toLowerCase())
   ) {
-    ownership = 'wishlist'
+    possession = 'wishlist'
   }
 
   const incoming: Incoming = {
@@ -298,7 +299,7 @@ export function rowToImported(row: string[], idx: Record<string, number>): Impor
     readStatus,
     pub: parseReleaseDate(cell('releaseDate')),
     source: 'Imported',
-    ownership,
+    ...possessionPatch(possession),
     owned: emptyOwned(),
     ...(isbn ? { isbn } : {}),
     ...(rating ? { rating } : {}),

@@ -66,6 +66,8 @@ export function incomingToBook(inc: Incoming): Book {
     isbn: inc.isbn ?? '',
     fave: inc.fave ?? false,
     ownership: inc.ownership ?? 'owned',
+    borrowed: inc.borrowed ?? false,
+    wishlist: inc.wishlist ?? false,
     owned: inc.owned ?? { physical: false, ebook: false, audiobook: false },
     format: inc.format ?? '',
     rating: inc.rating ?? 0,

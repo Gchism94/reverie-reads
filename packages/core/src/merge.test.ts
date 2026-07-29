@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { findDuplicateGroups, mergeBooks, type LibraryState } from './merge'
 import { makeBook } from './book.fixture'
+import { possessionPatch, possessionState } from './ownership'
+import type { PossessionState } from './types'
 
 const alpha = makeBook({
   id: 'a',
@@ -76,7 +78,7 @@ describe('findDuplicateGroups', () => {
   })
 })
 
-describe('ownership on merge', () => {
+describe('possession on merge', () => {
   const state = (
     a: Parameters<typeof makeBook>[0],
     b: Parameters<typeof makeBook>[0],
@@ -86,49 +88,46 @@ describe('ownership on merge', () => {
     collections: [],
   })
 
-  it('one owned copy makes the merged record owned', () => {
+  /** Merge two records described by their possession WORD and read the survivor's word back. */
+  const mergeWords = (a: PossessionState, b: PossessionState): PossessionState => {
     const next = mergeBooks(
       state(
-        { id: 'a', title: 'T', ownership: 'wishlist' },
-        { id: 'b', title: 'T', ownership: 'owned' },
+        { id: 'a', title: 'T', ...possessionPatch(a) },
+        { id: 'b', title: 'T', ...possessionPatch(b) },
       ),
       'a',
       ['b'],
     )
-    expect(next.books.find((b) => b.id === 'a')!.ownership).toBe('owned')
+    return possessionState(next.books.find((x) => x.id === 'a')!)
+  }
+
+  it('one owned copy makes the merged record owned', () => {
+    expect(mergeWords('wishlist', 'owned')).toBe('owned')
   })
 
   it('two wishlist copies stay wishlist', () => {
-    const next = mergeBooks(
-      state(
-        { id: 'a', title: 'T', ownership: 'wishlist' },
-        { id: 'b', title: 'T', ownership: 'wishlist' },
-      ),
-      'a',
-      ['b'],
-    )
-    expect(next.books.find((b) => b.id === 'a')!.ownership).toBe('wishlist')
+    expect(mergeWords('wishlist', 'wishlist')).toBe('wishlist')
   })
 
   it('borrowed loses to owned but beats wishlist (strongest possession wins)', () => {
-    const owned = mergeBooks(
+    expect(mergeWords('borrowed', 'owned')).toBe('owned')
+    expect(mergeWords('wishlist', 'borrowed')).toBe('borrowed')
+  })
+
+  it('a borrowed copy SURVIVES a merge with an owned one — the old model dropped it', () => {
+    // Under the four-state enum this collapsed to 'owned' and the fact that a borrowed copy was
+    // also in hand was lost. The word is still 'owned'; the flag is the new information.
+    const next = mergeBooks(
       state(
-        { id: 'a', title: 'T', ownership: 'borrowed' },
-        { id: 'b', title: 'T', ownership: 'owned' },
+        { id: 'a', title: 'T', ...possessionPatch('borrowed') },
+        { id: 'b', title: 'T', ...possessionPatch('owned') },
       ),
       'a',
       ['b'],
     )
-    expect(owned.books.find((b) => b.id === 'a')!.ownership).toBe('owned')
-    const borrowed = mergeBooks(
-      state(
-        { id: 'a', title: 'T', ownership: 'wishlist' },
-        { id: 'b', title: 'T', ownership: 'borrowed' },
-      ),
-      'a',
-      ['b'],
-    )
-    expect(borrowed.books.find((b) => b.id === 'a')!.ownership).toBe('borrowed')
+    const survivor = next.books.find((x) => x.id === 'a')!
+    expect(survivor.ownership).toBe('owned')
+    expect(survivor.borrowed).toBe(true)
   })
 })
 

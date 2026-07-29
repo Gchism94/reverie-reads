@@ -1,11 +1,4 @@
-import {
-  OWNERSHIP_VALUES,
-  isPossessed,
-  ownedCaption,
-  type Book,
-  type BookOwnership,
-  type Owned,
-} from '@reverie/core'
+import { POSSESSION_STATES, ownedCaption, type Owned, type PossessionState } from '@reverie/core'
 import { Switch } from '../components/Switch'
 import { useVoice } from '../skin/labels'
 import { OWNERSHIP_LABELS } from '../library/constants'
@@ -16,31 +9,37 @@ import { OWNERSHIP_LABELS } from '../library/constants'
  * per-format switches describe WHICH copies a book IN HAND has, so they show for owned AND borrowed
  * (you can record the format of a book you read but don't own) and hide for wishlist/unset. Reading
  * status, shelves, ratings, and notes never depend on any of this.
+ *
+ * The control is four exclusive WORDS over a model of five independent flags (docs/task-shelf-model.md):
+ * the caller derives the word with possessionState() and writes back through possessionPatch(), so
+ * picking one word still clears the others — the behaviour this control has always had. A book
+ * carrying a combination no single word describes (owned AND wanted) shows the strongest, and the
+ * flag the word doesn't mention survives untouched in storage until something writes here.
  */
 export function OwnedCopies({
-  ownership,
+  possession,
   owned,
   onChange,
-  onOwnershipChange,
+  onPossessionChange,
 }: {
-  ownership: Book['ownership']
+  possession: PossessionState
   owned: Owned
   onChange: (next: Owned) => void
-  onOwnershipChange: (next: BookOwnership) => void
+  onPossessionChange: (next: PossessionState) => void
 }) {
   const voice = useVoice()
-  const possessed = isPossessed({ ownership })
+  const inHand = possession === 'owned' || possession === 'borrowed'
   const physicalOn = owned.physical !== false
   const physicalKind = typeof owned.physical === 'string' ? owned.physical : null
 
   // Plain word is the button (legible at a glance); the skin voice is the flavor subtitle beneath it.
-  const voiceSub: Record<BookOwnership, string> = {
+  const voiceSub: Record<PossessionState, string> = {
     owned: voice.ownIt,
     borrowed: voice.borrowedIt,
     wishlist: voice.wantIt,
     unset: voice.unsetIt,
   }
-  const caption: Record<BookOwnership, string> = {
+  const caption: Record<PossessionState, string> = {
     owned: ownedCaption(owned, 'Owned'),
     borrowed: ownedCaption(owned, 'Borrowed'),
     wishlist:
@@ -55,17 +54,17 @@ export function OwnedCopies({
         <span className="text-[11px] uppercase tracking-[0.2em] text-muted">Your copies</span>
       </div>
       <div className="mb-3 flex flex-wrap gap-1.5" role="radiogroup" aria-label="Ownership">
-        {OWNERSHIP_VALUES.map((value) => (
+        {POSSESSION_STATES.map((value) => (
           <button
             key={value}
             type="button"
             role="radio"
-            aria-checked={ownership === value}
+            aria-checked={possession === value}
             aria-label={OWNERSHIP_LABELS[value]}
-            onClick={() => onOwnershipChange(value)}
+            onClick={() => onPossessionChange(value)}
             className="skin-control border px-3 py-1.5 text-center leading-tight"
             style={
-              ownership === value
+              possession === value
                 ? {
                     background: 'var(--accent-fill)',
                     color: 'var(--on-primary)',
@@ -79,9 +78,9 @@ export function OwnedCopies({
           </button>
         ))}
       </div>
-      <p className="mb-3 text-[13px] text-ink">{caption[ownership]}</p>
+      <p className="mb-3 text-[13px] text-ink">{caption[possession]}</p>
 
-      {possessed && (
+      {inHand && (
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between gap-3">
             <span className="text-[14px] text-ink">📖 Physical</span>

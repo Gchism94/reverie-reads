@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { detectProfile, parseImport, parseReleaseDate } from './importMap'
 import { decideIntake, matchBook, mergeImport } from './match'
 import { makeBook } from './book.fixture'
+import { possessionPatch, possessionState } from './ownership'
 import type { Book } from './types'
 
 // A real-shaped Chism export slice (the "Library" sheet columns, exact headers incl. the ignored
@@ -159,7 +160,11 @@ describe('ingest idempotency (re-import is a no-op via the merge path)', () => {
   })
 })
 
-describe('ownership on import', () => {
+describe('possession on import', () => {
+  /** The one possession word a spreadsheet cell yields, read back through the derived view. */
+  const word = (r: { incoming: Partial<Book> }) =>
+    possessionState({ ...possessionPatch('unset'), ...r.incoming })
+
   it('Reverie Owned column: yes/blank → owned, borrow → borrowed, no → wishlist', () => {
     const csv = [
       'Title,Author,ISBN,Status,Rating,Date Read,Tags,Owned',
@@ -170,12 +175,11 @@ describe('ownership on import', () => {
     ].join('\n')
     const { profile, rows } = parseImport(csv)
     expect(profile.name).toBe('reverie')
-    expect(rows.map((r) => r.incoming.ownership)).toEqual([
-      'owned',
-      'owned',
-      'borrowed',
-      'wishlist',
-    ])
+    // Assert the WORD each cell produces, then the flags behind two of them — a cell reading
+    // "Borrowed" must set borrowed=true, not ownership='owned' (docs/task-shelf-model.md).
+    expect(rows.map((r) => word(r))).toEqual(['owned', 'owned', 'borrowed', 'wishlist'])
+    expect(rows[2]!.incoming).toMatchObject({ ownership: 'unowned', borrowed: true })
+    expect(rows[3]!.incoming).toMatchObject({ ownership: 'unowned', wishlist: true })
   })
 
   it('Goodreads Exclusive Shelf: read/currently-reading → owned, to-read → wishlist', () => {
@@ -186,7 +190,8 @@ describe('ownership on import', () => {
       'Someday,Ana Huang,to-read,0',
     ].join('\n')
     const { rows } = parseImport(csv)
-    expect(rows.map((r) => r.incoming.ownership)).toEqual(['owned', 'owned', 'wishlist'])
+    expect(rows.map((r) => word(r))).toEqual(['owned', 'owned', 'wishlist'])
+    expect(rows[2]!.incoming).toMatchObject({ ownership: 'unowned', wishlist: true })
     // and to-read stays Unread for reading status — the two axes stay independent
     expect(rows[2]!.incoming.readStatus).toBe('Unread')
   })

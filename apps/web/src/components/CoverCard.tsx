@@ -1,4 +1,4 @@
-import { formatAuthors, bookOwnedFormats, type Book } from '@reverie/core'
+import { formatAuthors, bookOwnedFormats, possessionState, type Book } from '@reverie/core'
 import { subgenreGradient } from '../library/constants'
 import { useLabels } from '../skin/labels'
 import { useBrokenCoverIds } from '../data/brokenCovers'
@@ -40,13 +40,14 @@ export function CoverCard({
   const showsPlaceholder = !book.cover || brokenIds.has(book.id)
   const markInk = showsPlaceholder ? 'var(--mark-on-ph)' : 'var(--mark-accent)'
   const markBg = showsPlaceholder ? 'rgba(0,0,0,0.62)' : 'rgba(0,0,0,0.45)'
-  // Four-state possession (docs/task-ownership-v2.md). A book NOT in hand (wishlist / unset) gets
+  // Possession, read through the derived word (docs/task-shelf-model.md). A book NOT in hand gets
   // the ghost: the ARTWORK dims behind --ghost-opacity and the frame goes dashed. A BORROWED book is
-  // in your hands — it never dims; instead it wears a solid accent ring (distinct from the wishlist
-  // ghost). Title/author below and the marks keep full contrast (AA untouched).
-  const wishlist = book.ownership === 'wishlist'
-  const borrowed = book.ownership === 'borrowed'
-  const ghost = wishlist || book.ownership === 'unset'
+  // in your hands — it never dims; instead it wears a solid accent ring (distinct from the ghost).
+  // Title/author below and the marks keep full contrast (AA untouched). One word, not a flag test,
+  // because a book that is owned AND wanted must read as owned — not as a ghost.
+  const possession = possessionState(book)
+  const borrowed = possession === 'borrowed'
+  const ghost = possession === 'wishlist' || possession === 'unset'
   const ownedFormats = bookOwnedFormats(book)
   const frameAccent = selected
     ? { boxShadow: '0 0 0 2.5px var(--primary), var(--shadow)' }
@@ -128,7 +129,7 @@ export function CoverCard({
 
         {/* one bottom-right mark: wishlist ghost, else borrowed (with any format glyphs), else the
             plain format glyphs of a book you own. The three never collide. */}
-        {wishlist ? (
+        {possession === 'wishlist' ? (
           <span
             className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide"
             style={{ background: markBg, color: markInk, borderRadius: 'var(--mark-radius)' }}

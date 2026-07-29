@@ -28,8 +28,13 @@ const entry = (p: Partial<SeriesEntry> & { id: string; position: number }): Seri
 const read = makeBook({ id: 'r', title: 'Read One', readStatus: 'Read' })
 const reading = makeBook({ id: 'c', title: 'Current', readStatus: 'Reading' })
 const unread = makeBook({ id: 'u', title: 'Owned Unread' })
-const wished = makeBook({ id: 'w', title: 'Wished', ownership: 'wishlist' })
-const borrowed = makeBook({ id: 'bw', title: 'Borrowed Unread', ownership: 'borrowed' })
+const wished = makeBook({ id: 'w', title: 'Wished', ownership: 'unowned', wishlist: true })
+const borrowed = makeBook({
+  id: 'bw',
+  title: 'Borrowed Unread',
+  ownership: 'unowned',
+  borrowed: true,
+})
 const byId = new Map([read, reading, unread, wished].map((b) => [b.id, b]))
 
 describe('entry ordering and state', () => {

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { CsvImportError, importCsv, parseCSV, parseCsvIncoming, parseCsvRows } from './csv'
 import { makeBook } from './book.fixture'
+import { possessionPatch, possessionState } from './ownership'
+import type { Book } from './types'
 
 describe('parseCSV', () => {
   it('handles quoted fields, escaped quotes, and CRLF', () => {
@@ -70,7 +72,7 @@ describe('importCsv', () => {
   })
 })
 
-describe('ownership from Goodreads shelves (legacy CSV path)', () => {
+describe('possession from Goodreads shelves (legacy CSV path)', () => {
   it('to-read → wishlist; borrowed shelf → borrowed; read/currently-reading → owned', () => {
     const text = [
       'Title,Author,Exclusive Shelf,My Rating',
@@ -79,7 +81,12 @@ describe('ownership from Goodreads shelves (legacy CSV path)', () => {
       'Loaned,Ana Huang,borrowed,3',
     ].join('\n')
     const rows = parseCsvIncoming(text)
-    expect(rows.map((r) => r.ownership)).toEqual(['owned', 'wishlist', 'borrowed'])
+    // The WORD each shelf yields, then the flags behind the two non-owned ones: a `borrowed` shelf
+    // must set borrowed=true rather than claiming ownership (docs/task-shelf-model.md).
+    const word = (r: Partial<Book>) => possessionState({ ...possessionPatch('unset'), ...r })
+    expect(rows.map(word)).toEqual(['owned', 'wishlist', 'borrowed'])
+    expect(rows[1]).toMatchObject({ ownership: 'unowned', wishlist: true })
+    expect(rows[2]).toMatchObject({ ownership: 'unowned', borrowed: true })
   })
 })
 
@@ -154,7 +161,8 @@ describe('parseCsvRows (Goodreads field fidelity)', () => {
     expect(r.incoming.format).toBeUndefined() // no Binding → no format (not 'Paperback')
     expect(r.incoming.pub).toEqual({ y: null, m: null, d: null })
     expect(r.incoming.rating).toBe(0) // My Rating 0 = unrated
-    expect(r.incoming.ownership).toBe('wishlist') // to-read → wishlist
+    // to-read → a want, not a possession claim
+    expect(r.incoming).toMatchObject({ ownership: 'unowned', wishlist: true })
     expect(r.incoming.readStatus).toBe('Unread')
     expect(r.incoming.reads).toEqual([]) // no dated read, not read → no fabricated read
     expect(r.incoming.series).toBeUndefined()

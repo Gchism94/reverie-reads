@@ -169,6 +169,8 @@ const book = (over: Partial<Book>): Book => ({
   isbn: '',
   fave: false,
   ownership: 'owned',
+  borrowed: false,
+  wishlist: false,
   owned: { physical: false, ebook: false, audiobook: false },
   format: '',
   rating: 0,

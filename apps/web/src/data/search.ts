@@ -1,5 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { contributorsFromAuthors, splitName, type Book, type Incoming } from '@reverie/core'
+import {
+  contributorsFromAuthors,
+  possessionPatch,
+  splitName,
+  type Incoming,
+  type PossessionState,
+} from '@reverie/core'
 import { supabase } from '../lib/supabase'
 import { searchEverywhere, type SearchResult } from '../lib/search'
 import { enrichBook } from '../lib/enrich'
@@ -28,7 +34,7 @@ export function useSearchEverywhere(query: string) {
 
 /** Merge the source's full record into an add-ready Incoming (enrichment leads; the search hit fills
  *  gaps). Absent data stays absent — no fabricated genre/format (import-quality policy). */
-async function buildIncoming(result: SearchResult, ownership: Book['ownership']): Promise<Incoming> {
+async function buildIncoming(result: SearchResult, possession: PossessionState): Promise<Incoming> {
   const enr = await enrichBook({
     title: result.title,
     author: result.authors[0],
@@ -57,7 +63,7 @@ async function buildIncoming(result: SearchResult, ownership: Book['ownership'])
     cover: result.cover || enr?.cover || '',
     isbn: enr?.isbn13 || enr?.isbn || result.isbn13 || result.isbn || '',
     pub: { y: enr?.pubY ?? yearFromResult, m: enr?.pubM ?? null, d: enr?.pubD ?? null },
-    ownership,
+    ...possessionPatch(possession),
     owned: { physical: false, ebook: false, audiobook: false },
     source: 'Discover',
   }
@@ -65,8 +71,9 @@ async function buildIncoming(result: SearchResult, ownership: Book['ownership'])
 
 export interface AddFromSearchInput {
   result: SearchResult
-  ownership: Book['ownership']
-  /** when set, the new book is placed on this shelf/TBR after adding (unowned add-to-shelf) */
+  /** the one possession word the add surface offers; expands to the model's flags */
+  possession: PossessionState
+  /** when set, the new book is placed on this shelf/TBR after adding (not-in-hand add-to-shelf) */
   listId?: string
 }
 
@@ -82,8 +89,8 @@ export function useAddFromSearch() {
   const qc = useQueryClient()
   const intake = useIntake()
   return useMutation<AddFromSearchResult, Error, AddFromSearchInput>({
-    mutationFn: async ({ result, ownership, listId }) => {
-      const incoming = await buildIncoming(result, ownership)
+    mutationFn: async ({ result, possession, listId }) => {
+      const incoming = await buildIncoming(result, possession)
       const res = await intake(incoming, 'add')
       if (listId && res.bookId) {
         const { data: auth } = await supabase.auth.getUser()

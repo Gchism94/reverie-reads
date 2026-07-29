@@ -9,7 +9,9 @@ import {
   seriesStatusBadge,
   ROLE_LABELS,
   type Book,
-  type BookOwnership,
+  possessionPatch,
+  possessionState,
+  type PossessionState,
   type Owned,
 } from '@reverie/core'
 import { useFilters } from '../library/filterStore'
@@ -155,11 +157,12 @@ function BookDetailScreen() {
   const workKey = workKeyFor(book)
   const reviewerName = profile?.displayName || 'Reader'
   const setOwned = (owned: Owned) => updateBook.mutate({ id: book.id, patch: { owned } })
-  // Four-state possession (owned / borrowed / wishlist / unset). Format flags are left alone across
+  // Four-state possession WORD over five independent flags (docs/task-shelf-model.md): picking one
+  // word is exclusive, so possessionPatch writes the whole trio. Format flags are left alone across
   // any change — dropping possession suppresses them (bookOwnedFormats gates every read), so marking
   // a book owned or borrowed again restores your copies.
-  const setOwnership = (ownership: BookOwnership) =>
-    updateBook.mutate({ id: book.id, patch: { ownership } })
+  const setPossession = (next: PossessionState) =>
+    updateBook.mutate({ id: book.id, patch: possessionPatch(next) })
   const memberIds = new Set(listIds ?? [])
   const tbrs = (lists ?? []).filter((l) => l.kind === 'tbr')
   const collections = (lists ?? []).filter((l) => l.kind === 'collection')
@@ -264,10 +267,10 @@ function BookDetailScreen() {
       {/* your copies (per-format ownership) */}
       <div className="mt-6">
         <OwnedCopies
-          ownership={book.ownership}
+          possession={possessionState(book)}
           owned={book.owned}
           onChange={setOwned}
-          onOwnershipChange={setOwnership}
+          onPossessionChange={setPossession}
         />
       </div>
 

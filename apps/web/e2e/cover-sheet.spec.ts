@@ -83,8 +83,8 @@ async function insertFixture(c: DevClient, title: string, coverUrl?: string): Pr
   await c.sb.from('books').delete().eq('title', title)
   const r = await c.sb
     .from('books')
-    // ownership:'owned' matters. Both columns default to 'unset', and since #68's four-state
-    // ownership the Library grid shows the DEFAULT library — what you have in hand or have read
+    // ownership:'owned' matters. Possession defaults to no claim at all, and the Library grid shows
+    // the DEFAULT library — what you have in hand or have any reading history with
     // (inDefaultLibrary) — so a bare fixture is deliberately hidden and never renders a card.
     // The placeholder-affordance test needs a book that is actually in the library.
     .insert({

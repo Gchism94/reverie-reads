@@ -1,6 +1,6 @@
 import type { Book, List, ReadEntry } from './types'
 import { norm } from './normalize'
-import { strongerOwnership } from './ownership'
+import { mergePossession } from './ownership'
 
 /** The slice of library state the merge engine reads and rewrites. */
 export interface LibraryState {
@@ -94,12 +94,11 @@ export function mergeBooks(
     ebook: all.some((b) => b.owned.ebook),
     audiobook: all.some((b) => b.owned.audiobook),
   }
-  // The strongest possession across copies wins (owned > borrowed > wishlist > unset) — a real
-  // copy never loses to a wishlist duplicate, and owning beats borrowing.
-  p.ownership = all.reduce(
-    (best, b) => strongerOwnership(best, b.ownership),
-    'unset' as Book['ownership'],
-  )
+  // Possession is five independent signals now, so there is no single "strongest" to take: each
+  // gets its own union rule (see mergePossession). The observable outcome is unchanged — a real
+  // copy never loses to a wishlist duplicate, owning still beats borrowing, and a want the merge
+  // satisfied stops being a want.
+  Object.assign(p, mergePossession(all))
 
   // First non-empty value wins for these descriptive fields.
   if (!p.series) p.series = all.map((b) => b.series).find(Boolean) ?? p.series
