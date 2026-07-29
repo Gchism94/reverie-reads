@@ -43,7 +43,7 @@ describe('ImportSummary copy', () => {
     const line = lines.find((l) => l.includes('global reading order'))
     expect(line).toBeDefined()
     expect(line).toContain('7 rows')
-    expect(line).toContain("orders a series by each book's position")
+    expect(line).toContain("series order comes from each book's position in its series")
 
     // singular, and silent when the column was never supplied
     expect(

@@ -44,8 +44,8 @@ export function summaryNotices(r: ImportExportResult): string[] {
   // Saying so is the point: a column that vanishes without a word is indistinguishable from a bug.
   if (r.ignoredGlobalOrder > 0)
     lines.push(
-      `${r.ignoredGlobalOrder} ${plural(r.ignoredGlobalOrder, 'row')} carried a global reading order — ` +
-        `Reverie orders a series by each book's position, so that column wasn't used.`,
+      `${r.ignoredGlobalOrder} ${plural(r.ignoredGlobalOrder, 'row')} carried a global reading order. ` +
+        `Reverie doesn't use that column — series order comes from each book's position in its series.`,
     )
   if (e.tropeLikeShelves.length > 0)
     lines.push(
