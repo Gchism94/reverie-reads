@@ -68,6 +68,23 @@ forgotten.
   the sign-out cache clear, which deliberately wipes local state. App-source; its
   own branch later.
 
+## Deliberately partial, and why
+
+- **Thumb-class surfaces carry borrowed/DNF to a screen reader but not to the eye.**
+  `feat/state-pills` added the state to the accessible name on SeriesStrip,
+  SeriesRoute rows, MoodRoute and TropeRoute, and deliberately drew no pill: at
+  36–48px a text pill does not read small, it covers a third to half the cover.
+  So a sighted reader browsing those surfaces still cannot tell an abandoned book
+  from a finished one, while a screen-reader user can — an inversion of the usual
+  gap, and worth closing rather than leaving as a quiet asymmetry.
+  - The **~132px grid cells are the exception and the obvious next step**:
+    MoodRoute, TropeRoute, Discover and FromYourAuthors render `aspect-[2/3]`
+    cells at roughly CoverCard scale, which already carries the real pill. Those
+    four could take `StatePill` as-is; the true thumbs (36–48px) need a different
+    register — the ghost/dot convention, not text.
+  - The genuinely small surfaces would need a non-text marker if they are ever to
+    show state visually. The spine edge-marker idiom is the nearest precedent.
+
 ## Test-infrastructure follow-ups
 
 - Trio migration (a11y/fonts/cover-sheet onto per-user accounts) — buys
