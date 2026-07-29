@@ -152,10 +152,20 @@ by whoever inherits it, so the reason stays attached.
   constant-folds and eliminates unused branches, so a string's presence or absence in the built
   output tracks the bundler's optimization, not what reaches the screen. Serve the build and read
   the DOM.
-- **A negative assertion must first wait for the moment the thing would appear.**
-  `waitFor(() => expect(...).not.toBeInTheDocument())` succeeds on its very first tick, before any
-  async work has had a chance to produce what's being denied — it fails in the safe-looking
-  direction, certifying an absence that was never actually tested.
+- **A negative assertion must first wait for the moment the thing would appear, and must be able to
+  tell absence from invisibility.** `waitFor(() => expect(...).not.toBeInTheDocument())` succeeds on
+  its very first tick, before any async work has had a chance to produce what's being denied — it
+  fails in the safe-looking direction, certifying an absence that was never actually tested. The same
+  failure shows up in pgTAP: `is()` is null-safe equality (two `NULL`s compare equal), so
+  `is(removed_at, null)` passes identically whether a row was genuinely left untouched or the row is
+  invisible to the querying role under RLS and the subquery itself returned zero rows — both collapse
+  to the same `NULL`. `fix/atomic-series-removal`'s first draft asserted as `authenticated` and got
+  four green-for-the-wrong-reason failures from exactly this. `ok(x is null)` does not have the hole:
+  moving the null check inside the expression means a hidden row's zero-row subquery never evaluates
+  it at all and the outer value stays bare `NULL`, which fails `ok()` rather than passing it — verified
+  directly against this database (`is(x, null)` passes on a nonexistent row; `ok(x is null)` fails on
+  the same row). The more durable fix beneath the assertion-shape one: assert as a role nothing
+  filters (`reset role`) and let only the action under test run as the restricted one.
 - **A test name is a promise about what is proven.** "restoring the same file twice does not
   double the assignments" described behavior the test did not assert, and two reports
   contradicted each other for a full round because of it. Name what the assertions actually

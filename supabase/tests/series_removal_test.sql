@@ -1,6 +1,7 @@
--- remove_series_entry (fix/atomic-series-removal, S3a). Four guards, in the order they were
--- specified: the owner succeeds with BOTH writes applied; a non-owner is refused with NEITHER
--- applied; a ghost removal touches no books row; and atomicity is FORCED rather than asserted.
+-- remove_series_entry (fix/atomic-series-removal, S3a). Five guards: the owner succeeds with BOTH
+-- writes applied; repeating that same call on an already-tombstoned slot is harmless; a non-owner is
+-- refused with NEITHER applied; a ghost removal touches no books row; and atomicity is FORCED rather
+-- than asserted.
 --
 -- ASSERTIONS READ AS THE SESSION ROLE, CALLS RUN AS `authenticated`. This is not tidiness — the
 -- first draft asserted as `authenticated` and RLS silently hid the rows being checked, so a
@@ -33,7 +34,7 @@
 -- and one that committed the first write independently would leave removed_at stamped.
 
 begin;
-select plan(21);
+select plan(25);
 
 -- Two readers. The on_auth_user_created trigger gives each a profile, which books.owner_id needs.
 insert into auth.users (id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
@@ -98,6 +99,28 @@ select is(
 select ok(
   (select series is null from public.books where id = 'dddddddd-0000-0000-0000-000000000001'),
   'removal clears the linked book''s series in the same call');
+
+-- ── Repeat removal: calling the RPC again on a slot it already tombstoned is harmless. A real
+--    client scenario once S3b lands — a double-tap, or a retry after a failed toast. book_id is
+--    already null from the first call, so the second call's books branch never fires: v_book comes
+--    back null, the `if v_book is not null` guard skips the books UPDATE entirely, and there is
+--    nothing left to re-clear or break. ──
+set local role authenticated;
+select set_config('request.jwt.claims',
+  '{"sub":"aaaaaaaa-1111-1111-1111-111111111111","role":"authenticated"}', true);
+select lives_ok(
+  $$ select public.remove_series_entry('eeeeeeee-0000-0000-0000-000000000001') $$,
+  'removing an already-removed slot succeeds rather than erroring');
+reset role;
+select ok(
+  (select removed_at is not null from public.series_entries where id = 'eeeeeeee-0000-0000-0000-000000000001'),
+  'the entry is still tombstoned after the repeat call');
+select ok(
+  (select book_id is null from public.series_entries where id = 'eeeeeeee-0000-0000-0000-000000000001'),
+  'book_id is still released after the repeat call');
+select ok(
+  (select series is null from public.books where id = 'dddddddd-0000-0000-0000-000000000001'),
+  'the already-cleared book is untouched by the repeat call — no re-write, no error');
 
 -- ── Guard 2: a non-owner is refused, and NEITHER write is applied ──
 set local role authenticated;
