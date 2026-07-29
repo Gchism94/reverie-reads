@@ -56,7 +56,7 @@ export function bookOwnedFormats(b: Pick<Book, 'ownership' | 'borrowed' | 'owned
 }
 
 /** The one possession word for a book, for controls and badges that must show a single answer.
- *  Precedence owned > borrowed > wishlist > unset — the order the old OWNERSHIP_RANK enforced, so
+ *  Precedence owned > borrowed > wishlist > unset — the order the four-state enum ranked in, so
  *  every surface that used to read the enum reads the same word for the same book. Lossy BY DESIGN
  *  (a book both owned and wanted reads as 'owned'); storage keeps both, this is only the label. */
 export function possessionState(
