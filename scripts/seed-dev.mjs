@@ -60,6 +60,29 @@ const num = (v) => (v === '' || v == null ? null : Number(v))
 // `source` is provenance and `ownership` is state; this maps one to the other ONLY at seed time,
 // where the provenance is all we have. An unrecognized source claims nothing rather than guessing
 // ownership — the same posture as the column default.
+//
+// ── THE FORMAT FLAGS ARE INFERRED, NOT RECORDED ─────────────────────────────────────────────────
+// data/personal_seed.json has no field naming a possessed format. Its keys are: cover, fave, first,
+// format, genres, isbn, last, position, rating, readStatus, series, seriesCount, source, spice,
+// status, subgenre, title, tropes. So owned_physical/ebook/audiobook below are DERIVED from
+// `format` x `source`, and `format` means **the format most often read** (Book.format — the reread
+// default), not the format owned. The two are usually the same and sometimes are not: a reader who
+// owns the hardcover and listened to the audiobook is flagged audiobook-only here, and the physical
+// copy they actually own vanishes.
+//
+// This inference predates the shelf model — it is where the pre-existing 190/3/20 came from. The
+// shelf-model change only extended it to the 77 borrowed rows (a borrowed book is in hand and
+// carries a format), giving 190/68/32.
+//
+// Two consequences worth carrying:
+//   · `apps/web/e2e/shelf-membership.spec.ts` computes its expected counts from THIS SAME RULE, so
+//     it validates the pipeline — seed script → DB → mapper → predicate → DOM — and NOT the premise.
+//     A wrong inference stays green there. Nothing in the suite checks the premise, because nothing
+//     can: the ground truth is not in the file.
+//   · personal_seed.json is the owner's REAL library, not a fixture. If it is ever seeded into a
+//     production account, these inferred flags stop being scaffolding and become that reader's
+//     data — an audiobook-only book they own in hardback, indistinguishable from something they
+//     entered by hand. Decide the mapping is right before that happens, not after.
 function possessionFrom(b) {
   const f = (b.format || '').toLowerCase()
   const borrowed = b.source === 'Borrowed'
