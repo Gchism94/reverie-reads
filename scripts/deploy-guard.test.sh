@@ -90,17 +90,28 @@ status="$(run auth y)"
 assert_eq   "refuses with a non-zero exit"                    "$status" "1"
 assert_has  "names it an authentication failure"              "$TMP/out" 'authentication failure'
 assert_has  "says retrying will not help"                     "$TMP/out" 'NOT a connectivity problem'
-assert_has  "shows the real error, labelled with the exit"    "$TMP/out" 'migration list'
+assert_has  "labels the error with the command's exit code"   "$TMP/out" 'exited 1:'
 assert_has  "shows the raw CLI error text"                    "$TMP/out" 'LegacyDbConfigLoginRoleStatusError'
 assert_has  "states the touch-list is unknown"                "$TMP/out" 'could not be determined'
 assert_lacks "never misreports it as offline"                 "$TMP/out" 'offline'
 assert_lacks "never reaches the prompt"                       "$TMP/out" 'Proceed with this production deploy?'
 assert_lacks "does not list local migration files"            "$TMP/out" '• 20260726010000'
-# fix #1: the error must be LABELLED, never rendered where the table belongs
-if awk '/pending local → remote/{getline; if ($0 ~ /_tag|Error/) exit 1} END{exit 0}' "$TMP/out"; then
-  ok "error never renders inside the touch-list block"
+# fix #1: the error must be LABELLED, never rendered where the table belongs.
+#
+# Deliberately not awk: `exit 1` inside a rule jumps to END, so an `END{exit 0}` silently overrides
+# it and the assertion can never fail. The first draft of this test had exactly that, passed against
+# the unfixed guard, and certified an absence it had never checked.
+hdr_line="$(grep -n 'pending local' "$TMP/out" | head -1 | cut -d: -f1)"
+if [ -z "$hdr_line" ]; then
+  bad "touch-list header missing entirely — cannot check what follows it"
 else
-  bad "error rendered as though it were the pending-migration table"
+  after_hdr="$(sed -n "$((hdr_line + 1))p" "$TMP/out")"
+  case "$after_hdr" in
+    *_tag*|*Error*|*error*)
+      bad "error rendered as though it were the pending-migration table: ${after_hdr}" ;;
+    *)
+      ok "error never renders inside the touch-list block" ;;
+  esac
 fi
 
 # ── 3. no network ────────────────────────────────────────────────────────────────────────────────
