@@ -12,6 +12,18 @@ forgotten.
 
 ## Real bugs, outstanding
 
+- **The deploy guard's `y/N` is the only real gate, and it is not the last one.**
+  After the guard confirms, `supabase db push` asks its own question — _do you
+  want to push these migrations_ — defaulting to **yes**, and it takes EOF as
+  yes. So in any non-interactive invocation (a piped confirmation, CI, a script)
+  that second prompt auto-accepts and is not a gate at all. Observed on the
+  2026-07-28 production deploy: the guard consumed the piped `y`, then the CLI's
+  own prompt hit EOF and proceeded by itself. Not dangerous today — the guard's
+  confirmation is genuine and runs first — but the touch-list is written as
+  though the guard's prompt were the final word, and it isn't. Options: pass
+  `--yes` so the second prompt is acknowledged rather than accidental, or feed
+  the CLI its own confirmation and stop depending on EOF semantics we don't
+  control. Recorded during `fix/deploy-guard`, deliberately not fixed there.
 - **`useRemoveEntry`** (`apps/web/src/data/series.ts` ~L353): two sequential
   independently-committed writes, no transaction. A failure between them leaves
   `series_entries` removed while `books.series` still names it. Needs a
