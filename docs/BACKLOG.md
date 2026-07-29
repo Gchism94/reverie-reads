@@ -70,6 +70,18 @@ forgotten.
 
 ## Deliberately partial, and why
 
+- **Logged reads do not reach any shelf or facet — the books cache carries
+  `reads: []`.** `mappers.ts` loads reads separately and never merges them into
+  the books list, so wherever `isBookRead` runs against that cache it collapses to
+  `readStatus === 'Read'`. A book with three logged reads but no `Read` status is
+  absent from the Read shelf and from the Library's Read facet, and `groupSeries`'
+  read counts are computed on the same cache. Found while mutation-testing B2: an
+  e2e fixture built specifically to exercise the `!isDnf` guard could not, because
+  the app never saw the logged read. The guard is covered in `packages/core` where
+  `reads` is populated. Not fixed here — merging reads into the list query is a
+  data-layer change with its own performance question, and it would silently move
+  every read count in the app.
+
 - **Thumb-class surfaces carry borrowed/DNF to a screen reader but not to the eye.**
   `feat/state-pills` added the state to the accessible name on SeriesStrip,
   SeriesRoute rows, MoodRoute and TropeRoute, and deliberately drew no pill: at

@@ -162,10 +162,16 @@ async function open(page: Page, format: boolean, dnf: boolean) {
     .waitFor({ timeout: 20_000 })
 }
 
-test('a DNF book with a logged read is on DNF and NOT on Read', async ({ page }) => {
-  // isBookRead() counts a logged read as finishing, so without the !isDnf guard this book lands on
-  // both shelves — while its cover wears a DNF pill, because the pill layer already ruled that the
-  // recorded status wins. Production has zero of these; this fixture is the only thing watching.
+test('with the split on, an abandoned book is on DNF and not on Read', async ({ page }) => {
+  // SCOPE, stated because the obvious reading of this fixture is wrong. The book carries a logged
+  // read, but this test does NOT prove the `!isDnf` guard: the books cache sets `reads: []`
+  // (mappers.ts — reads load separately and are never merged into the list), so on this screen
+  // isBookRead() reduces to readStatus === 'Read' and never sees the logged read at all. Removing
+  // the guard leaves this test green.
+  //
+  // The guard is covered where it is reachable — packages/core/src/shelves.test.ts, against a Book
+  // whose `reads` array is populated. What THIS test proves is the separation a reader can actually
+  // see: an abandoned book files under DNF, and the Read shelf does not claim it.
   await open(page, false, true)
 
   // The DNF shelf renders, labelled, holding exactly our book.
