@@ -47,6 +47,14 @@ if [ "\$1" = "migration" ] && [ "\$2" = "list" ]; then
       echo '{"_tag":"Error","error":{"code":"LegacyDbConfigLoginRoleStatusError","message":"unexpected login role status 403: {\"message\":\"Your account does not have the necessary privileges to access this endpoint.\"}"}}'
       exit 1 ;;
     network)
+      # verbatim from cutting this machine off from the API (HTTPS_PROXY at an unresolvable host).
+      # The CLI does NOT surface Go's "dial tcp ... no such host" — it wraps it in its own codes,
+      # on STDOUT. Guessed patterns missed this; only running it for real found it.
+      echo 'Initialising login role...' >&2
+      echo '{"_tag":"Error","error":{"code":"LegacyDbConfigLoginRoleNetworkError","message":"failed to initialise login role: TransportError"}}'
+      exit 1 ;;
+    network_go)
+      # the raw-Go shape, kept in case a future CLI stops wrapping
       echo 'failed to connect: dial tcp: lookup api.supabase.com: no such host' >&2
       exit 1 ;;
     weird)
@@ -115,14 +123,21 @@ else
 fi
 
 # ── 3. no network ────────────────────────────────────────────────────────────────────────────────
-printf '\nno network (DNS failure on stderr)\n'
+printf '\nno network (the CLI wraps it in its own error code)\n'
 status="$(run network y)"
 assert_eq   "refuses with a non-zero exit"                 "$status" "1"
 assert_has  "names it a network failure"                   "$TMP/out" 'network failure'
 assert_has  "clears the credentials of blame"              "$TMP/out" 'credentials are not implicated'
-assert_has  "shows the raw error"                          "$TMP/out" 'no such host'
+assert_has  "shows the raw error"                          "$TMP/out" 'TransportError'
 assert_lacks "does not misreport it as auth"               "$TMP/out" 'authentication failure'
+assert_lacks "not left unclassified"                       "$TMP/out" 'cause not recognised'
 assert_lacks "never reaches the prompt"                    "$TMP/out" 'Proceed with this production deploy?'
+
+printf '\nno network — raw Go transport shape (fallback patterns)\n'
+status="$(run network_go y)"
+assert_eq   "refuses with a non-zero exit"                 "$status" "1"
+assert_has  "still names it a network failure"             "$TMP/out" 'network failure'
+assert_has  "shows the raw error"                          "$TMP/out" 'no such host'
 
 # ── 4. unrecognised failure ──────────────────────────────────────────────────────────────────────
 printf '\nunrecognised failure\n'

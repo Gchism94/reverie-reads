@@ -169,9 +169,17 @@ else
     esac
   done
 
+  # Streams are captured SEPARATELY, not merged. Both are needed on failure (the CLI puts errors on
+  # stdout and progress on stderr, so a merged capture is the only way to be sure of catching the
+  # error) — but on SUCCESS only stdout is rendered, so "Initialising login role…" and friends never
+  # appear inside the table. Merging them would trade one kind of contamination for a quieter one.
+  list_err_file="$(mktemp)"
   list_out=""
   list_status=0
-  list_out="$("$SUPABASE_BIN" migration list ${list_args[@]+"${list_args[@]}"} 2>&1)" || list_status=$?
+  list_out="$("$SUPABASE_BIN" migration list ${list_args[@]+"${list_args[@]}"} 2>"$list_err_file")" \
+    || list_status=$?
+  list_err="$(cat "$list_err_file")"
+  rm -f "$list_err_file"
 
   if [ "$list_status" -ne 0 ]; then
     # Classify from the captured text. Auth first: a refusal is a definite answer FROM the service,
@@ -179,15 +187,22 @@ else
     # Patterns are deliberately specific. A bare `*403*` would match the migration timestamp
     # 20260403…, and a bare `*EOF*` matches almost anything — a misread here sends the operator
     # to fix the wrong thing.
+    #
+    # NetworkError/TransportError are the CLI's OWN wrappers, observed by cutting this machine off
+    # from the API: it does not surface Go's `dial tcp … no such host` at all, it reports
+    # `LegacyDbConfigLoginRoleNetworkError` / `TransportError`. The raw-Go patterns are kept as a
+    # fallback in case that changes, but the wrappers are what actually fires. Auth is matched first
+    # because a refusal is a definite answer from the service; note the two wrappers are
+    # distinguishable — …LoginRoleStatusError is auth, …LoginRoleNetworkError is transport.
     kind="unrecognised"
-    case "$list_out" in
+    case "${list_out}${list_err}" in
       *"status 403"*|*"status 401"*|*"403 Forbidden"*|*"401 Unauthorized"*|*[Uu]nauthorized*|\
       *[Ff]orbidden*|*"necessary privileges"*|*LoginRoleStatusError*|*"Access token not provided"*|\
       *"Invalid access token"*|*"not logged in"*|*"supabase login"*)
         kind="authentication" ;;
-      *"no such host"*|*"dial tcp"*|*"connection refused"*|*"i/o timeout"*|\
-      *"context deadline exceeded"*|*"network is unreachable"*|*"name resolution"*|\
-      *"no route to host"*|*"server misbehaving"*|*"TLS handshake"*)
+      *NetworkError*|*TransportError*|*"no such host"*|*"dial tcp"*|*"connection refused"*|\
+      *"i/o timeout"*|*"context deadline exceeded"*|*"network is unreachable"*|\
+      *"name resolution"*|*"no route to host"*|*"server misbehaving"*|*"TLS handshake"*)
         kind="network" ;;
       *"Cannot find project ref"*|*"not linked"*|*"supabase link"*)
         kind="not-linked" ;;
@@ -211,7 +226,8 @@ else
     esac
     say ""
     say "  ${dim}${SUPABASE_BIN} migration list${reset} exited ${list_status}:"
-    printf '%s\n' "$list_out" | sed 's/^/    /'
+    [ -n "$list_out" ] && { say "  ${dim}stdout:${reset}"; printf '%s\n' "$list_out" | sed 's/^/    /'; }
+    [ -n "$list_err" ] && { say "  ${dim}stderr:${reset}"; printf '%s\n' "$list_err" | sed 's/^/    /'; }
     say ""
     # Deliberately NOT listing local migration files here. A local file list is not the touch-list —
     # it is every migration ever written, which overstates the blast radius at the one moment the
