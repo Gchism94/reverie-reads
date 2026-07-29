@@ -135,11 +135,91 @@ if [ "$MODE" = "functions" ]; then
   DEPLOY_CMD=("$SUPABASE_BIN" functions deploy "${names[@]}")
 else
   say "  ${bold}database migrations${reset} (pending local → remote):"
-  # migration list is a read-only comparison; show the operator the Local/Remote table
-  if ! "$SUPABASE_BIN" migration list 2>/dev/null | sed 's/^/    /'; then
-    warn "could not read migration list (offline?) — files present locally:"
-    find supabase/migrations -maxdepth 1 -name '*.sql' -exec basename {} \; | sort | sed 's/^/    • /'
+
+  # `migration list` is a read-only comparison, and its table IS the touch-list. Three rules learned
+  # from running this against a project the CLI had no rights to (2026-07-28):
+  #
+  #  1. CAPTURE BOTH STREAMS. The CLI writes its errors to STDOUT, not stderr, so the old
+  #     `migration list 2>/dev/null | sed 's/^/    /'` indented a 403 JSON blob into the touch-list
+  #     where the pending-migration table belongs. Read it into a variable; nothing reaches the
+  #     screen until we know what it is.
+  #  2. NAME THE FAILURE. "(offline?)" is a guess, and it was wrong: the API had answered and
+  #     refused. Auth and connectivity call for opposite responses (fix credentials vs. wait and
+  #     retry), so say which one happened and show the error.
+  #  3. AN UNKNOWN TOUCH-LIST IS A REASON TO ABORT, NOT TO GUESS. The old fallback printed every
+  #     local migration file — 48 of them when 2 were pending — under a heading promising to say
+  #     EXACTLY what would be touched. Print nothing and refuse.
+  #
+  # Refusing costs nothing real: `db push` reaches the remote the same way `migration list` does
+  # (same login role, same API), so a list this command cannot read is a push that cannot run.
+  #
+  # Target flags are forwarded so the list describes the SAME database the push will touch —
+  # `--db-url`/`--linked`/`--local` retarget both commands, and a touch-list for a different
+  # database is exactly the class of lie this block exists to prevent. Other `db push` flags
+  # (`--include-all`, `--dry-run`, …) are not valid on `migration list` and are deliberately not
+  # forwarded.
+  list_args=()
+  _want_value=0
+  for a in ${PASSTHRU[@]+"${PASSTHRU[@]}"}; do
+    if [ "$_want_value" = "1" ]; then list_args+=("$a"); _want_value=0; continue; fi
+    case "$a" in
+      --linked|--local) list_args+=("$a") ;;
+      --db-url=*) list_args+=("$a") ;;
+      --db-url) list_args+=("$a"); _want_value=1 ;;
+    esac
+  done
+
+  list_out=""
+  list_status=0
+  list_out="$("$SUPABASE_BIN" migration list ${list_args[@]+"${list_args[@]}"} 2>&1)" || list_status=$?
+
+  if [ "$list_status" -ne 0 ]; then
+    # Classify from the captured text. Auth first: a refusal is a definite answer FROM the service,
+    # so it outranks a transport guess when both could match.
+    # Patterns are deliberately specific. A bare `*403*` would match the migration timestamp
+    # 20260403…, and a bare `*EOF*` matches almost anything — a misread here sends the operator
+    # to fix the wrong thing.
+    kind="unrecognised"
+    case "$list_out" in
+      *"status 403"*|*"status 401"*|*"403 Forbidden"*|*"401 Unauthorized"*|*[Uu]nauthorized*|\
+      *[Ff]orbidden*|*"necessary privileges"*|*LoginRoleStatusError*|*"Access token not provided"*|\
+      *"Invalid access token"*|*"not logged in"*|*"supabase login"*)
+        kind="authentication" ;;
+      *"no such host"*|*"dial tcp"*|*"connection refused"*|*"i/o timeout"*|\
+      *"context deadline exceeded"*|*"network is unreachable"*|*"name resolution"*|\
+      *"no route to host"*|*"server misbehaving"*|*"TLS handshake"*)
+        kind="network" ;;
+      *"Cannot find project ref"*|*"not linked"*|*"supabase link"*)
+        kind="not-linked" ;;
+    esac
+
+    say ""
+    case "$kind" in
+      authentication)
+        warn "${bold}authentication failure${reset} — the service answered and refused."
+        warn "this is NOT a connectivity problem: fix the credentials, retrying will not help."
+        warn "check ${bold}supabase login${reset} and the linked ref in supabase/.temp/project-ref." ;;
+      network)
+        warn "${bold}network failure${reset} — the service could not be reached."
+        warn "credentials are not implicated; check connectivity and retry." ;;
+      not-linked)
+        warn "${bold}project not linked${reset} — there is no remote to compare against."
+        warn "run ${bold}supabase link${reset} first." ;;
+      *)
+        warn "${bold}could not read the migration list${reset} — cause not recognised."
+        warn "the raw error is below; classify it before deploying." ;;
+    esac
+    say ""
+    say "  ${dim}${SUPABASE_BIN} migration list${reset} exited ${list_status}:"
+    printf '%s\n' "$list_out" | sed 's/^/    /'
+    say ""
+    # Deliberately NOT listing local migration files here. A local file list is not the touch-list —
+    # it is every migration ever written, which overstates the blast radius at the one moment the
+    # operator is deciding. No touch-list, no deploy.
+    die "the pending-migration list could not be determined, so what this would touch is unknown. Nothing deployed."
   fi
+
+  printf '%s\n' "$list_out" | sed 's/^/    /'
   # bash 3.2 (macOS default) aborts on a bare "${PASSTHRU[@]}" when the array is EMPTY under `set -u`
   # (fixed in bash 4.4) — and zero passthrough args is the common `pnpm deploy:migrations` invocation.
   # The `${arr[@]+"${arr[@]}"}` idiom expands to nothing when empty and to the elements otherwise, on
