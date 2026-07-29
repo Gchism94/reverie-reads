@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { createRoute, useNavigate } from '@tanstack/react-router'
-import { isBookRead, type Book } from '@reverie/core'
+import { isBookRead, stateSuffix, type Book } from '@reverie/core'
 import { rootRoute } from './RootRoute'
 import { BackLink } from '../components/BackLink'
 import { CoverImage } from '../components/CoverImage'
@@ -109,10 +109,12 @@ function MoodScreen() {
                 type="button"
                 onClick={() => toggle(b)}
                 aria-pressed={sweep ? carrying : undefined}
+                // Thumb-class: state reaches the screen reader but NOT the eye — a text pill at this
+                // size obliterates the cover (docs/BACKLOG.md records the follow-up).
                 aria-label={
                   sweep
-                    ? `${carrying ? 'Remove' : 'Add'} ${mood.name} — ${b.title}`
-                    : `Open ${b.title}`
+                    ? `${carrying ? 'Remove' : 'Add'} ${mood.name} — ${b.title}${stateSuffix(b)}`
+                    : `Open ${b.title}${stateSuffix(b)}`
                 }
                 className="relative overflow-hidden rounded-xl border text-left"
                 style={{

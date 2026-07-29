@@ -276,6 +276,42 @@ function Colophon({ kind }: { kind: SpineStyle['colophon'] }) {
   return null
 }
 
+/**
+ * A state marker on the spine's binding edge — the find-it-fast affordance for borrowed and DNF.
+ *
+ * Uses the existing absolute z-3 edge idiom (Almanac's orange index tab is the precedent), so it
+ * costs NOTHING from the title: `fitSpineTitle` budgets a fixed `reserved` height for the flow
+ * anatomy, and an absolutely-positioned marker never enters that flow.
+ *
+ * LEFT edge, because the right edge is already taken — Almanac's `manual` binding racks its index
+ * tab at `right: 0`. Vertical position is what distinguishes the two states, not colour: DNF at the
+ * head, borrowed at the tail (see the Spine doc comment). The 20px insets clear both the head/tail
+ * bands (≤8px head, ≤14px tail) and Aphelion's corner brackets (y 9–15 at either end).
+ *
+ * SUPPLEMENTARY by design. Spine bindings are per-skin gradients that no token fixture describes, so
+ * this marker is not held to a text-contrast bar and does not try to carry the information alone —
+ * the spine button's accessible name does that. The dark hairline keeps it separable on pale cloth
+ * and bright brass alike.
+ */
+function StateMarker({ at }: { at: 'head' | 'tail' }) {
+  return (
+    <span
+      aria-hidden
+      className="pointer-events-none absolute"
+      style={{
+        left: 0,
+        ...(at === 'head' ? { top: 20 } : { bottom: 20 }),
+        width: 4,
+        height: 18,
+        background: 'var(--mark-accent)',
+        borderRadius: '0 2px 2px 0',
+        boxShadow: '0 0 0 1px rgba(0, 0, 0, 0.45)',
+        zIndex: 3,
+      }}
+    />
+  )
+}
+
 /** Corner brackets (brushed archive container) — inset between the tick bands. */
 function Brackets() {
   const base: CSSProperties = {
@@ -335,17 +371,30 @@ const RADIUS: Record<SpineStyle['binding'], string> = {
 /** One book spine. `active` (the centre-of-shelf spine) widens it for legibility; sizes otherwise come
  *  from spineDims. Pass `skin` to force a skin (the shelf preview). `tint` is the book's stored
  *  dominant cover colour — mixed into the gradient endpoints when it clears the AA clamp, so shelves
- *  take on the palette of the reader's actual editions (skin default otherwise). */
+ *  take on the palette of the reader's actual editions (skin default otherwise).
+ *
+ *  `dnf` marks the HEAD and `borrowed` marks the TAIL — two positions, never two colours. DNF takes
+ *  the head for two reasons: the tail is the busier end across skins (a colophon plus a band, dip or
+ *  ink-block up to 14px), and DNF is the state with no signal anywhere else in the app, so it earns
+ *  the clearer position. Head-before-tail also matches the card (top-left read-status slot before
+ *  bottom-right possession slot) and the accessible name, so one book reads in the same order on
+ *  every surface. */
 export function Spine({
   book,
   active = false,
   skin,
   tint,
+  dnf = false,
+  borrowed = false,
 }: {
   book: SpineBook
   active?: boolean
   skin?: SkinId
   tint?: string
+  /** abandoned — marked at the HEAD (see StateMarker) */
+  dnf?: boolean
+  /** in hand but not owned — marked at the TAIL */
+  borrowed?: boolean
 }) {
   const effective = useEffectiveSkin()
   const skinId = skin ?? effective
@@ -484,6 +533,8 @@ export function Spine({
         />
       )}
       {s.binding === 'brushed' && <Brackets />}
+      {dnf && <StateMarker at="head" />}
+      {borrowed && <StateMarker at="tail" />}
       {s.binding === 'manual' && (
         // the orange index tab, racked off the right edge — "find this fast"
         <span
