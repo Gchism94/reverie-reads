@@ -150,13 +150,17 @@ test('a borrowed book carries its format onto a shelf — in hand is not the sam
   expect(count ?? 0, 'seeded borrowed ebooks').toBeGreaterThan(0)
 
   await page.goto('/shelves')
-  await expect(shelfRow(page, 'Ebook')).toBeVisible({ timeout: 20_000 })
-  const shown = Number(
-    /·\s*(\d+)/.exec((await shelfRow(page, 'Ebook').textContent()) ?? '')?.[1] ?? '0',
-  )
-  expect(shown, 'the Ebook shelf must include the borrowed ebooks').toBeGreaterThanOrEqual(
-    count ?? 0,
-  )
+  // POLL, don't read once. The shelf row renders as "📱 Ebook · 0" before the books query resolves,
+  // and that matches the locator — so a single textContent() read after toBeVisible() reliably
+  // captures 0 and fails a correct app. Waiting for the moment the number would arrive is the
+  // whole assertion.
+  await expect
+    .poll(
+      async () =>
+        Number(/·\s*(\d+)/.exec((await shelfRow(page, 'Ebook').textContent()) ?? '')?.[1] ?? '0'),
+      { timeout: 20_000, message: 'the Ebook shelf must include the borrowed ebooks' },
+    )
+    .toBeGreaterThanOrEqual(count ?? 0)
 })
 
 test('an abandoned book you never owned is still in the library', async ({ page }) => {
