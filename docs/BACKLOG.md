@@ -33,9 +33,30 @@ forgotten.
   series, so the half-committed state does not go stale, it silently **undoes the
   removal** on the next read of that page. **S3a landed the schema half** —
   `remove_series_entry` (`20260731010000`), atomic and ownership-checked, proven by
-  `supabase/tests/series_removal_test.sql`. **S3b switches the client**; until it
-  merges nothing calls the RPC and the defect is live. Rows already in this shape are
-  not healed by the fix — `docs/queries/half-committed-series-removals.sql` finds them.
+  `supabase/tests/series_removal_test.sql`. **S3b switched the client** — one
+  `supabase.rpc('remove_series_entry')`, `bookId` no longer passed, guarded by an e2e
+  request-shape assertion that carries the atomicity claim (state cannot: the old path
+  also ended correct, just not simultaneously) plus a test that builds the
+  half-committed state by hand, shows revive undoing the removal, and shows the RPC
+  path leaving nothing to revive from. **This item closes when S3b merges AND
+  `20260731010000` is deployed** — the client is useless without the RPC and merging
+  ahead of the deploy ships a frontend calling a function production does not have.
+  Rows already in this shape are not healed by the fix —
+  `docs/queries/half-committed-series-removals.sql` finds them.
+- **A book removed from its series still wears a "Series of N" pill.**
+  `seriesStatusBadge` reads `status` and `series_count` and never `series`
+  (`packages/core/src/seriesStatus.ts` ~L62), and the pill that renders it
+  (`book/BookDetailRoute.tsx` ~L256) is ungated — unlike `SeriesStrip` one line up
+  at ~L251, which correctly disappears. So the series door goes and the badge stays.
+  **Verified in the browser** on `fix/atomic-series-removal-client`: after removing a
+  linked slot, the removed book's page showed no series door and a `Series of 5` pill,
+  with `series: null, position: 2, series_count: 5, status: 'ongoing'` in the row.
+  Identical before and after S3b — neither `remove_series_entry` nor the two-write
+  path it replaced touches `status` or `series_count`, so this is not a regression.
+  `position` also survives a removal but is rendered nowhere once `series` is null, so
+  the badge is the only visible symptom. Recorded rather than fixed on the owner's
+  instruction: whether removal should also clear `status`/`series_count` is a product
+  decision, not a bug fix.
 - **Revive matches on title alone, so a removal can revive the wrong slot.** The
   revive pass (`series.ts` ~L196-208) matches a tombstone to a library book on
   `title.trim().toLowerCase()` and nothing else. Two books sharing a title in one

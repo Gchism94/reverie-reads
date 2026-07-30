@@ -179,7 +179,12 @@ const entryByTitle = async (c: Client, title: string) => {
     .eq('series_id', (s as { id: string }).id)
     .eq('title', title)
     .maybeSingle()
-  return data as { id: string; title: string; book_id: string | null; removed_at: string | null } | null
+  return data as {
+    id: string
+    title: string
+    book_id: string | null
+    removed_at: string | null
+  } | null
 }
 
 /**
