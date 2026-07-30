@@ -164,6 +164,60 @@ const bookRow = async (c: Client, title: string) =>
       .maybeSingle()
   ).data as { id: string; series: string | null; position: number | null } | null
 
+/** One entry row by title, tombstoned or not — the id is what direct-state fixtures need. */
+const entryByTitle = async (c: Client, title: string) => {
+  const { data: s } = await c.sb
+    .from('series')
+    .select('id')
+    .eq('owner_id', c.uid)
+    .eq('name', SERIES)
+    .maybeSingle()
+  if (!s) return null
+  const { data } = await c.sb
+    .from('series_entries')
+    .select('id, title, book_id, removed_at')
+    .eq('series_id', (s as { id: string }).id)
+    .eq('title', title)
+    .maybeSingle()
+  return data as {
+    id: string
+    title: string
+    book_id: string | null
+    removed_at: string | null
+  } | null
+}
+
+/**
+ * The mutating REST calls a UI action makes, as `METHOD table` strings.
+ *
+ * The atomicity claim lives HERE rather than in a read of the resulting rows, because from outside
+ * the database "both writes were one transaction" is only observable as "the client issued one call
+ * that does both". Reading state afterwards cannot distinguish the two paths — under the old
+ * two-write code both rows also end up correct, just not simultaneously, and the window is a single
+ * local round trip, so a state-based check goes flaky instead of red. Request shape is deterministic:
+ * the RPC path is one `POST rpc/remove_series_entry` and zero `PATCH books`, the two-write path is
+ * the exact inverse.
+ *
+ * GETs are dropped so the invalidation refetches that follow every removal don't enter the count.
+ */
+async function recordWrites(page: Page, action: () => Promise<void>): Promise<string[]> {
+  const seen: string[] = []
+  const onRequest = (r: { method: () => string; url: () => string }) => {
+    const method = r.method()
+    if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') return
+    const { pathname } = new URL(r.url())
+    if (!pathname.startsWith('/rest/v1/')) return
+    seen.push(`${method} ${pathname.replace('/rest/v1/', '')}`)
+  }
+  page.on('request', onRequest)
+  try {
+    await action()
+  } finally {
+    page.off('request', onRequest)
+  }
+  return seen
+}
+
 const badges = (page: Page) =>
   page.locator('ol li span.text-\\[15px\\].font-bold').allTextContents()
 const openSeries = async (page: Page) => {
@@ -195,19 +249,180 @@ test('series page: a linked book can be removed, and stays removed', async ({ pa
     await expect
       .poll(async () => (await liveEntries(c)).map((e) => e.title), { timeout: 15_000 })
       .toEqual(['Audit Alpha', 'Audit Charlie'])
-    // The book keeps existing; it just stops naming the series. useRemoveEntry writes
-    // series_entries and books.series as two SEPARATE, sequential round trips within one mutation —
-    // not one transaction — so a reader querying independently (this test's own client, not the
-    // app's own invalidation-gated view) can observe the first commit before the second lands. Poll,
-    // matching the liveEntries wait just above, rather than assuming both are visible atomically.
-    await expect
-      .poll(async () => (await bookRow(c, 'Audit Bravo'))?.series, { timeout: 15_000 })
-      .toBeFalsy()
+    // The book keeps existing; it just stops naming the series. NOT polled, deliberately: both
+    // writes land in one transaction now (remove_series_entry, 20260731010000), so by the moment the
+    // tombstone above is visible the cleared series is visible too. This assertion used to be a poll,
+    // under a comment explaining that useRemoveEntry wrote series_entries and books.series as two
+    // separate sequential round trips and a reader querying independently could catch the first
+    // commit before the second landed. That is no longer true, so the poll is gone with it.
+    //
+    // This is not the guard against regressing to two writes — it would only fail on the runs that
+    // happened to sample inside a one-round-trip window, which is flaky rather than red. The
+    // atomicity claim is carried by 'removal issues exactly one atomic RPC…' below, which is
+    // deterministic. What this line proves is the ordering the old path violated: once the tombstone
+    // is observable, the book has already stopped naming the series.
+    expect((await bookRow(c, 'Audit Bravo'))?.series).toBeFalsy()
 
     // Survives a full reload — reconciliation must not re-add it.
     await page.reload()
     await expect.poll(async () => page.locator('ol li').count(), { timeout: 20_000 }).toBe(2)
     expect(await page.locator('ol li').filter({ hasText: 'Audit Bravo' }).count()).toBe(0)
+  } finally {
+    await reset(c)
+  }
+})
+
+// ── S3b: the atomicity claim, carried by request shape — see recordWrites for why not by state ──
+test('removal issues exactly one atomic RPC and no separate books write', async ({ page }) => {
+  test.setTimeout(180_000)
+  const c = await client()
+  await reset(c)
+  await seedSeries(c)
+  await stubBackends(page)
+  try {
+    await signIn(page, c.session)
+    await openSeries(page)
+    await expect.poll(async () => page.locator('ol li').count(), { timeout: 20_000 }).toBe(3)
+
+    // This is remove_series_entry's first call over PostgREST with a real JWT — where a signature
+    // mismatch, a missing execute grant, or a PostgREST schema cache that never saw the new function
+    // would surface. The mutation throws on error, so any of those also shows up as the state
+    // assertions at the bottom failing to land.
+    const writes = await recordWrites(page, async () => {
+      await page
+        .locator('ol li')
+        .filter({ hasText: 'Audit Bravo' })
+        .getByRole('button', { name: /Remove Audit Bravo from the series/i })
+        .click()
+      await page
+        .getByRole('dialog', { name: /Remove from this series/i })
+        .getByRole('button', { name: /^Remove$/ })
+        .click()
+      await expect
+        .poll(async () => (await liveEntries(c)).some((e) => e.title === 'Audit Bravo'), {
+          timeout: 15_000,
+        })
+        .toBe(false)
+    })
+
+    expect(writes.filter((w) => w === 'POST rpc/remove_series_entry')).toHaveLength(1)
+    // The two-write path's fingerprint was a PATCH against books to null the series, plus a PATCH
+    // against series_entries for the tombstone. Both belong to the server now.
+    expect(writes.filter((w) => w.startsWith('PATCH books'))).toEqual([])
+    expect(writes.filter((w) => w.startsWith('PATCH series_entries'))).toEqual([])
+
+    // ...and both halves did land.
+    expect((await bookRow(c, 'Audit Bravo'))?.series).toBeFalsy()
+    const tomb = await entryByTitle(c, 'Audit Bravo')
+    expect(tomb?.removed_at).toBeTruthy()
+    expect(tomb?.book_id).toBeNull()
+  } finally {
+    await reset(c)
+  }
+})
+
+// ── S3b: the state the old path could leave, what it did next, and that the RPC can't produce it ──
+test('a half-committed removal revives on the next read; the RPC path never creates one', async ({
+  page,
+}) => {
+  test.setTimeout(180_000)
+  const c = await client()
+  await reset(c)
+  await seedSeries(c)
+  await stubBackends(page)
+  try {
+    await signIn(page, c.session)
+    await openSeries(page) // materialize the entries
+    await expect.poll(async () => page.locator('ol li').count(), { timeout: 20_000 }).toBe(3)
+
+    // ── Part 1: the old defect, reconstructed by hand. Tombstone the entry and leave books.series
+    //    standing — exactly what a failure between the old path's two writes left behind. Written
+    //    directly against the stack because the app can no longer produce it, which is the point.
+    const bravo = await entryByTitle(c, 'Audit Bravo')
+    expect(bravo?.id).toBeTruthy()
+    await c.sb
+      .from('series_entries')
+      .update({ removed_at: new Date().toISOString(), book_id: null, user_edited: true })
+      .eq('id', bravo!.id)
+    expect((await bookRow(c, 'Audit Bravo'))?.series).toBe(SERIES) // the uncommitted half, standing
+
+    // Opening the series page runs reconciliation, which revives any tombstone whose title matches a
+    // book still naming the series. The removal undoes ITSELF. This is the defect, demonstrated
+    // rather than described — the reason S3a existed.
+    await openSeries(page)
+    await expect
+      .poll(async () => (await liveEntries(c)).map((e) => e.title), { timeout: 20_000 })
+      .toEqual(['Audit Alpha', 'Audit Bravo', 'Audit Charlie'])
+
+    // ── Part 2: the same removal through the RPC leaves no such state, so it sticks.
+    await page
+      .locator('ol li')
+      .filter({ hasText: 'Audit Bravo' })
+      .getByRole('button', { name: /Remove Audit Bravo from the series/i })
+      .click()
+    await page
+      .getByRole('dialog', { name: /Remove from this series/i })
+      .getByRole('button', { name: /^Remove$/ })
+      .click()
+    await expect
+      .poll(async () => (await liveEntries(c)).some((e) => e.title === 'Audit Bravo'), {
+        timeout: 15_000,
+      })
+      .toBe(false)
+    // The half that makes revive possible is cleared in the same transaction as the tombstone.
+    expect((await bookRow(c, 'Audit Bravo'))?.series).toBeFalsy()
+
+    // So reconciliation has nothing to revive from, across a full reload.
+    await page.reload()
+    await expect.poll(async () => page.locator('ol li').count(), { timeout: 20_000 }).toBe(2)
+    expect(await page.locator('ol li').filter({ hasText: 'Audit Bravo' }).count()).toBe(0)
+    expect((await entryByTitle(c, 'Audit Bravo'))?.removed_at).toBeTruthy()
+  } finally {
+    await reset(c)
+  }
+})
+
+// ── S3b: repeat removal, matching the pgTAP guard, over the real authenticated HTTP path ──
+test('removing the same slot twice over HTTP is harmless', async ({ page }) => {
+  test.setTimeout(180_000)
+  const c = await client()
+  await reset(c)
+  await seedSeries(c)
+  await stubBackends(page)
+  try {
+    await signIn(page, c.session)
+    await openSeries(page)
+    await expect.poll(async () => page.locator('ol li').count(), { timeout: 20_000 }).toBe(3)
+
+    await page
+      .locator('ol li')
+      .filter({ hasText: 'Audit Bravo' })
+      .getByRole('button', { name: /Remove Audit Bravo from the series/i })
+      .click()
+    await page
+      .getByRole('dialog', { name: /Remove from this series/i })
+      .getByRole('button', { name: /^Remove$/ })
+      .click()
+    await expect
+      .poll(async () => (await liveEntries(c)).some((e) => e.title === 'Audit Bravo'), {
+        timeout: 15_000,
+      })
+      .toBe(false)
+    const after = await entryByTitle(c, 'Audit Bravo')
+
+    // The second call goes over the same authenticated HTTP path the app uses. A literal double-tap
+    // through the UI is not reachable — the confirm modal closes on click and the button carries
+    // removeEntry.isPending — so what is exercised here is the retry-after-a-failed-toast shape:
+    // the same request, same JWT, same entry, a second time.
+    const { error } = await c.sb.rpc('remove_series_entry', { p_entry: after!.id })
+    expect(error).toBeNull()
+
+    const twice = await entryByTitle(c, 'Audit Bravo')
+    expect(twice?.removed_at).toBeTruthy()
+    expect(twice?.book_id).toBeNull()
+    expect((await bookRow(c, 'Audit Bravo'))?.series).toBeFalsy()
+    // Two live slots and nothing added — the repeat neither errored nor changed anything.
+    expect((await liveEntries(c)).map((e) => e.title)).toEqual(['Audit Alpha', 'Audit Charlie'])
   } finally {
     await reset(c)
   }

@@ -495,7 +495,7 @@ function SeriesScreen() {
             <button
               type="button"
               onClick={() => {
-                removeEntry.mutate({ entryId: removing.id, bookId: removing.bookId })
+                removeEntry.mutate({ entryId: removing.id })
                 setRemoving(null)
               }}
               disabled={removeEntry.isPending}
