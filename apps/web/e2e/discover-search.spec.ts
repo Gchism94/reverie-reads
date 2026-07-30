@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { authFailure } from './support/authError'
-import { ok, okUser } from './support/ok'
+import { ok, okData, okUser } from './support/ok'
 
 // Discover search e2e (docs/task-discover-search.md): search field → results (deduped against the
 // library, "On your shelf" for owned) → add owned / add-to-shelf unowned, and the shelf picker's
@@ -220,11 +220,14 @@ test('Discover search: add a result to a shelf as unowned via the shelf chooser'
   test.setTimeout(180_000)
   const c = await client()
   await reset(c)
-  const { data: list } = await c.sb
-    .from('lists')
-    .insert({ owner_id: c.uid, name: 'Weekend TBR', kind: 'tbr' })
-    .select('id')
-    .single()
+  const list = await okData(
+    c.sb
+      .from('lists')
+      .insert({ owner_id: c.uid, name: 'Weekend TBR', kind: 'tbr' })
+      .select('id')
+      .single(),
+    'discover-search lists insert',
+  )
   const listId = (list as { id: string }).id
   await stubBackends(page)
   try {
@@ -274,11 +277,14 @@ test('Shelf picker seam: "search everywhere" finds and adds an unowned book to t
   test.setTimeout(180_000)
   const c = await client()
   await reset(c)
-  const { data: list } = await c.sb
-    .from('lists')
-    .insert({ owner_id: c.uid, name: 'Someday Shelf', kind: 'tbr' })
-    .select('id')
-    .single()
+  const list = await okData(
+    c.sb
+      .from('lists')
+      .insert({ owner_id: c.uid, name: 'Someday Shelf', kind: 'tbr' })
+      .select('id')
+      .single(),
+    'discover-search lists insert',
+  )
   const listId = (list as { id: string }).id
   await stubBackends(page)
   try {

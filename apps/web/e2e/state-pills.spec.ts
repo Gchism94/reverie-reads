@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
 import { authFailure } from './support/authError'
-import { ok, okUser } from './support/ok'
+import { ok, okData, okUser } from './support/ok'
 
 // Borrowed and DNF must be visible while browsing (docs/task-state-pills.md).
 //
@@ -197,11 +197,14 @@ test('a spine shelf carries state in the accessible name — the surface that ne
   await stub(page)
   await signIn(page, c.session)
 
-  const { data: list } = await c.sb
-    .from('lists')
-    .insert({ owner_id: c.uid, name: 'Pill Shelf', kind: 'collection', sort_order: 1 })
-    .select('id')
-    .single()
+  const list = await okData(
+    c.sb
+      .from('lists')
+      .insert({ owner_id: c.uid, name: 'Pill Shelf', kind: 'collection', sort_order: 1 })
+      .select('id')
+      .single(),
+    'state-pills lists insert',
+  )
   const { data: books } = await c.sb
     .from('books')
     .select('id, title')

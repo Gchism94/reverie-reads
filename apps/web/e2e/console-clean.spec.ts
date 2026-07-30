@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { authFailure } from './support/authError'
-import { ok, okUser } from './support/ok'
+import { ok, okData, okUser } from './support/ok'
 
 // A book page should load without complaining.
 //
@@ -71,19 +71,22 @@ test('a book page loads with no failed data requests and no console errors', asy
   await reset(c)
   // No cover_url on purpose: a hotlink to a host that isn't there would log its own resource error
   // and tell us nothing about the app. The placeholder path exercises the same page.
-  const { data } = await c.sb
-    .from('books')
-    .insert({
-      owner_id: c.uid,
-      title: 'Console Probe',
-      author_first: 'Nell',
-      author_last: 'Marrow',
-      genre: 'fantasy',
-      ownership: 'owned',
-      status: 'standalone',
-    })
-    .select('id')
-    .single()
+  const data = await okData(
+    c.sb
+      .from('books')
+      .insert({
+        owner_id: c.uid,
+        title: 'Console Probe',
+        author_first: 'Nell',
+        author_last: 'Marrow',
+        genre: 'fantasy',
+        ownership: 'owned',
+        status: 'standalone',
+      })
+      .select('id')
+      .single(),
+    'console-clean books insert',
+  )
   const id = (data as { id: string }).id
 
   const badResponses: string[] = []
