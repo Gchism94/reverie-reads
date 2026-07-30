@@ -256,6 +256,21 @@ primary book` — both reached the function body and were turned away by the che
   pre-seeds localStorage before the app's own first paint. Made more reachable by
   the sign-out cache clear, which deliberately wipes local state. App-source; its
   own branch later.
+- **`merge_books` can silently null out a reader's plan.** `plan_date` uses
+  explicit-set semantics (`case when p_fields ? 'plan_date' then ... else
+plan_date end`) while `pub_*` uses fill-if-null (`coalesce`), and
+  `mergeBooks.ts` passes `toBookRow(merged)` on a full `Book`, so the `plan_date`
+  key is always present in `p_fields` and the `case` always takes its first
+  branch. A merge that was only supposed to deduplicate two records can clear
+  reader intent that neither side asked to lose. `pub_*` cannot fail this way,
+  because `coalesce` refuses to overwrite with a present-but-equivalent value the
+  way an unconditional `case` does. To fix on the app branch that moves the
+  `plan_*` call sites off `plan_date` (`feat/plan-precision-schema`), not in a
+  migration-only PR — the RPC's field list is app-facing surface, not schema.
+  Note for that branch: `merge.ts:121` unions `pub` as a whole object keyed on
+  `y`, never per-column, so `plan_*`'s union rule should stay object-level too —
+  a per-column `coalesce` could build a date with the year from one book and the
+  month from another, which nothing today would catch.
 
 ## Deliberately partial, and why
 
