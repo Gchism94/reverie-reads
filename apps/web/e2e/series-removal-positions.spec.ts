@@ -239,6 +239,33 @@ async function insertTombstone(
   return (row as { id: string }).id
 }
 
+/** Plant a LIVE ghost slot directly — a canonical entry with no book yet. Two sharing a title is
+ *  the adoption ambiguity that `matchEntryForBook` refuses, and it is not producible through the UI
+ *  in one series without hand-editing. */
+async function insertGhost(
+  c: Client,
+  { title, author, position }: { title: string; author: string; position: number },
+): Promise<string> {
+  const row = await okData(
+    c.sb
+      .from('series_entries')
+      .insert({
+        series_id: await seriesId(c),
+        owner_id: c.uid,
+        position,
+        title,
+        author,
+        book_id: null,
+        user_edited: true,
+        removed_at: null,
+      })
+      .select('id')
+      .single(),
+    'series-removal-positions ghost insert',
+  )
+  return (row as { id: string }).id
+}
+
 /** Every entry with this title, tombstoned or not — the assertions need to see both sides. */
 const entriesByTitle = async (c: Client, title: string) => {
   const { data } = await c.sb
@@ -939,6 +966,100 @@ test('an explicit ghost add revives the author-matching tombstone, and refuses a
     expect(fresh).toHaveLength(1)
     expect(fresh[0]!.id).not.toBe(c1)
     expect(fresh[0]!.id).not.toBe(c2)
+  } finally {
+    await reset(c)
+  }
+})
+
+// ── fix/ghost-adoption-match: the INTERACTION the backlog entry named. Adoption runs before revive
+//    in the same reconciliation and consumes the book from `linked`, so an adoption that guesses can
+//    override a revive that doesn't. This is that sequence end to end, not a proxy for it.
+test('an ambiguous ghost adoption does not consume the book that revive would claim', async ({
+  page,
+}) => {
+  test.setTimeout(180_000)
+  const c = await client()
+  await reset(c)
+  await seedSeries(c)
+  await stubBackends(page)
+  try {
+    await signIn(page, c.session)
+    await openSeries(page) // materialize the three seeded entries
+    await expect.poll(async () => page.locator('ol li').count(), { timeout: 20_000 }).toBe(3)
+
+    // Two LIVE ghosts share a title and cannot be told apart — adoption must refuse.
+    const ghostA = await insertGhost(c, { title: 'Twin Ghost', author: '', position: 6 })
+    const ghostB = await insertGhost(c, { title: 'Twin Ghost', author: '', position: 7 })
+    // A tombstone with the same title whose author DOES match the book — revive's rightful claim.
+    const tomb = await insertTombstone(c, {
+      title: 'Twin Ghost',
+      author: 'Vera Quill',
+      position: 8,
+    })
+    await seedExtraBook(c, 'Twin Ghost', 'Vera', 'Quill')
+
+    await openSeries(page)
+    await expect
+      .poll(async () => (await entriesByTitle(c, 'Twin Ghost')).some((e) => e.book_id !== null), {
+        timeout: 20_000,
+      })
+      .toBe(true)
+
+    const rows = await entriesByTitle(c, 'Twin Ghost')
+    const byId = new Map(rows.map((r) => [r.id, r]))
+
+    // Neither ghost may take the book. Under the old title-only adoption, one of them would have —
+    // and `.find` took the first, so it would have been ghostA.
+    expect(byId.get(ghostA)?.book_id).toBeNull()
+    expect(byId.get(ghostB)?.book_id).toBeNull()
+
+    // ...and the tombstone gets the book instead: revived, linked, no longer removed.
+    expect(byId.get(tomb)?.removed_at).toBeNull()
+    expect(byId.get(tomb)?.book_id).toBeTruthy()
+    // The identity matters — a count-only assertion would pass on the wrong row claiming it.
+    const theBook = await bookRow(c, 'Twin Ghost')
+    expect(byId.get(tomb)?.book_id).toBe(theBook?.id)
+  } finally {
+    await reset(c)
+  }
+})
+
+// The relocated `bookId == null` guard, at the call site where it now lives. Dropping the
+// `unlinkedEntries` filter would let a second book re-point an entry that already belongs to the
+// first — orphaning that book's slot silently. A unique title makes the match unambiguous, so only
+// the filter stands between this book and someone else's entry.
+test('a book cannot claim an entry that already belongs to a different book', async ({ page }) => {
+  test.setTimeout(180_000)
+  const c = await client()
+  await reset(c)
+  await seedSeries(c)
+  await stubBackends(page)
+  try {
+    await signIn(page, c.session)
+    await openSeries(page)
+    await expect.poll(async () => page.locator('ol li').count(), { timeout: 20_000 }).toBe(3)
+
+    // 'Audit Alpha' already has its own entry, linked to its own book, from the seeding above.
+    const before = (await entriesByTitle(c, 'Audit Alpha'))[0]!
+    expect(before.book_id).toBeTruthy()
+
+    // A SECOND book with the same title joins the series — the shape a reissue or an unmerged
+    // import duplicate produces.
+    const secondId = await seedExtraBook(c, 'Audit Alpha', 'Nell', 'Marrow')
+
+    await openSeries(page)
+    await expect
+      .poll(async () => (await entriesByTitle(c, 'Audit Alpha')).length, { timeout: 20_000 })
+      .toBe(2)
+
+    const after = await entriesByTitle(c, 'Audit Alpha')
+    const original = after.find((e) => e.id === before.id)
+    // The original entry still points at the ORIGINAL book — not re-pointed at the newcomer.
+    expect(original?.book_id).toBe(before.book_id)
+    expect(original?.book_id).not.toBe(secondId)
+    // The second book got a slot of its own rather than stealing one.
+    const other = after.find((e) => e.id !== before.id)
+    expect(other?.book_id).toBe(secondId)
   } finally {
     await reset(c)
   }
