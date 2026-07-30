@@ -10,6 +10,8 @@
 import type { Book } from './types'
 import { isBookRead } from './filters'
 import { isPossessed } from './ownership'
+import { normalizeName } from './contributors'
+import { authorOf } from './normalize'
 
 export interface SeriesEntry {
   id: string
@@ -127,9 +129,84 @@ export function renumberEntries(entries: readonly SeriesEntry[]): SeriesEntry[] 
   return sortEntries(entries).map((e, i) => ({ ...e, position: i + 1 }))
 }
 
+/** One notion of title equality for every match in this module: trim + lowercase. */
+const normTitle = (t: string): string => t.trim().toLowerCase()
+
 /** Match a ghost entry to a library book (import landed the book after the ghost was seeded). */
 export const ghostMatchesBook = (e: SeriesEntry, b: Pick<Book, 'title'>): boolean =>
   e.bookId == null && e.title.trim().toLowerCase() === b.title.trim().toLowerCase()
+
+/** The tombstone fields a revive match needs. Deliberately narrow: both revive call sites read the
+ *  entry's own `author` DISPLAY STRING, not a contributor join — see `matchTombstoneForRevive`. */
+export interface RevivableTombstone {
+  id: string
+  title: string
+  author: string
+}
+
+/** What a revive attempt resolved to. `ambiguous` is a REFUSAL, not a failure to find anything —
+ *  the distinction matters to the caller, and to anyone reading a log. */
+export type ReviveMatch =
+  | { kind: 'revive'; tombstone: RevivableTombstone }
+  | { kind: 'none' }
+  | { kind: 'ambiguous'; candidates: RevivableTombstone[] }
+
+/**
+ * Which tombstone (if any) a re-added book should revive.
+ *
+ * Revive exists because a book naming the series again is the reader asking for it back, so a
+ * matching tombstone comes back rather than blocking — removal outlives a source refresh, not a
+ * deliberate re-add. The question this answers is only WHICH tombstone, when more than one could be
+ * the answer.
+ *
+ * TITLE FIRST, AUTHOR AS A DISCRIMINATOR — NEVER AS A REQUIREMENT. One title match behaves exactly
+ * as it always has, author unread. Author is consulted only to break a tie between two or more
+ * same-title tombstones — a reissue, an unmerged import duplicate, a translation. It cannot be a
+ * requirement because an empty author is a LEGITIMATE, expected state on the entry side: the manual
+ * ghost path prompts "Author (optional):" and stores '' when the reader declines, and the Hardcover
+ * path stores '' whenever the upstream contribution is missing. Requiring author equality would
+ * quietly turn an optional field into a functional one and permanently break revive for those rows.
+ *
+ * AMBIGUITY REFUSES. If two same-title tombstones cannot be told apart by author — both empty, both
+ * equal, or neither matching the book — nothing is revived. A wrong revive resurrects a slot the
+ * reader deliberately removed, in the reading order, silently; a missed revive leaves them to re-add
+ * by hand, which they can see and redo. The asymmetry is the whole argument for refusing.
+ *
+ * NORMALIZATION IS DELIBERATELY PLAIN. `normalizeName` is trim + lowercase + whitespace-collapse and
+ * nothing more, so it does NOT equate "Sarah J. Maas" with "Maas, Sarah J." or with "S. J. Maas".
+ * That is a considered limit, not an oversight: under this function a normalization failure yields
+ * zero author matches, which resolves to `ambiguous` → revive nothing → the safe direction. Adding
+ * inversion- or initial-aware fuzziness would move failures toward the WRONG match instead (two
+ * different authors sharing a surname), which is the outcome this function exists to avoid. It also
+ * keeps one notion of name equality across the repo — `bookHasAuthor`, the contributors `name_key`,
+ * and the seed script all normalize exactly this way.
+ *
+ * THE BOOK'S AUTHOR IS ITS DENORMALIZED `first`/`last` PAIR, not its contributor list, because that
+ * is where an entry's `author` came from in the first place: reconciliation writes
+ * `[author_first, author_last].join(' ')` onto the entry it creates. Comparing those two is comparing
+ * like with like; comparing a contributor name against them would mismatch on formatting for every
+ * reconciliation-created row. `set_book_contributors` keeps the denormalized pair in sync on every
+ * contributor edit, so it is not a staleness trade-off either.
+ *
+ * Callers are expected to hand `candidates` in a DETERMINISTIC order (both call sites order by
+ * `position, id`), so that a genuinely tied `revive` is at least reproducible run to run.
+ */
+export function matchTombstoneForRevive(
+  candidates: readonly RevivableTombstone[],
+  book: Pick<Book, 'title' | 'first' | 'last'>,
+): ReviveMatch {
+  const byTitle = candidates.filter((t) => normTitle(t.title) === normTitle(book.title))
+  if (byTitle.length === 0) return { kind: 'none' }
+  if (byTitle.length === 1) return { kind: 'revive', tombstone: byTitle[0]! }
+
+  const bookAuthor = normalizeName(authorOf(book))
+  // An empty book author cannot discriminate anything — every comparison would be against ''.
+  if (!bookAuthor) return { kind: 'ambiguous', candidates: byTitle }
+
+  const byAuthor = byTitle.filter((t) => normalizeName(t.author) === bookAuthor)
+  if (byAuthor.length === 1) return { kind: 'revive', tombstone: byAuthor[0]! }
+  return { kind: 'ambiguous', candidates: byTitle }
+}
 
 /** A library book waiting for its first series slot, as the reconciliation sees it. */
 export interface SeedCandidate {
@@ -202,8 +279,6 @@ export interface SourceSeriesEntry {
   title: string
   author: string
 }
-
-const normTitle = (t: string): string => t.trim().toLowerCase()
 
 /**
  * The non-overwrite merge (task §2): source data only FILLS GAPS. Unmatched catalog slots become
