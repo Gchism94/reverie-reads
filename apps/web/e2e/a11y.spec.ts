@@ -4,6 +4,7 @@ import { expect, test, type Page } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { authFailure } from './support/authError'
+import { ok, okData, okUser } from './support/ok'
 
 const SUPABASE_URL = 'http://127.0.0.1:55321'
 const ANON =
@@ -83,8 +84,13 @@ async function setupFixtures(): Promise<{
   tropeId: string
 }> {
   const sb = await signedInClient('a11y setupFixtures')
-  const uid = (await sb.auth.getUser()).data.user!.id
-  const bookId = (await sb.from('books').select('id').order('added_at').limit(1).single()).data!.id
+  const uid = (await okUser(sb.auth.getUser(), 'a11y getUser')).id
+  const bookId = (
+    await okData(
+      sb.from('books').select('id').order('added_at').limit(1).single(),
+      'a11y books read',
+    )
+  ).id
 
   // Clear any fixtures a PREVIOUS run left behind, before creating this run's.
   //
@@ -97,8 +103,8 @@ async function setupFixtures(): Promise<{
   // constraint, so they simply accumulated (4 of each, when this was found).
   await clearFixtures(sb)
 
-  const club = (
-    await sb
+  const club = await okData(
+    sb
       .from('clubs')
       .insert({
         title: 'A11y Read-along',
@@ -108,97 +114,114 @@ async function setupFixtures(): Promise<{
         created_by: uid,
       })
       .select()
-      .single()
-  ).data!
-  await sb
-    .from('club_members')
-    .insert({ club_id: club.id, user_id: uid, display_name: 'Dev', progress: 3 })
+      .single(),
+    'a11y clubs insert',
+  )
+  await ok(
+    sb
+      .from('club_members')
+      .insert({ club_id: club.id, user_id: uid, display_name: 'Dev', progress: 3 }),
+    'a11y club_members insert',
+  )
 
   // a shelf with one book, for the /shelf/$listId detail page
-  const shelf = (
-    await sb
+  const shelf = await okData(
+    sb
       .from('lists')
       .insert({ owner_id: uid, name: 'A11y Shelf', kind: 'tbr', sort_order: 999999 })
       .select()
-      .single()
-  ).data!
-  await sb
-    .from('list_items')
-    .insert({ list_id: shelf.id, book_id: bookId, owner_id: uid, position: 1000 })
+      .single(),
+    'a11y lists insert',
+  )
+  await ok(
+    sb
+      .from('list_items')
+      .insert({ list_id: shelf.id, book_id: bookId, owner_id: uid, position: 1000 }),
+    'a11y list_items insert',
+  )
 
   // a series with a linked entry + a ghost slot, for the /series/$seriesName page
-  const series = (
-    await sb
+  const series = await okData(
+    sb
       .from('series')
       .insert({ owner_id: uid, name: 'A11y Saga', status: 'ongoing' })
       .select()
-      .single()
-  ).data!
-  await sb.from('series_entries').insert([
-    {
-      series_id: series.id,
-      owner_id: uid,
-      position: 1,
-      title: 'Linked One',
-      book_id: bookId,
-      user_edited: true,
-    },
-    {
-      series_id: series.id,
-      owner_id: uid,
-      position: 2.5,
-      label: 'novella',
-      title: 'A11y Ghost Novella',
-      author: 'Ghost Writer',
-    },
-  ])
+      .single(),
+    'a11y series insert',
+  )
+  await ok(
+    sb.from('series_entries').insert([
+      {
+        series_id: series.id,
+        owner_id: uid,
+        position: 1,
+        title: 'Linked One',
+        book_id: bookId,
+        user_edited: true,
+      },
+      {
+        series_id: series.id,
+        owner_id: uid,
+        position: 2.5,
+        label: 'novella',
+        title: 'A11y Ghost Novella',
+        author: 'Ghost Writer',
+      },
+    ]),
+    'a11y series_entries insert',
+  )
 
   // a trope assignment for the /tropes pages (canonical seed row + the fixture book)
-  const trope = (
-    await sb
-      .from('tropes')
-      .select('id')
-      .is('owner_id', null)
-      .eq('name', 'Enemies to Lovers')
-      .single()
-  ).data!
-  await sb
-    .from('book_tropes')
-    .upsert(
-      { book_id: bookId, trope_id: trope.id, owner_id: uid, emphasis: 'pinned' },
-      { onConflict: 'book_id,trope_id' },
-    )
+  const trope = await okData(
+    sb.from('tropes').select('id').is('owner_id', null).eq('name', 'Enemies to Lovers').single(),
+    'a11y tropes lookup (the canonical seed row)',
+  )
+  await ok(
+    sb
+      .from('book_tropes')
+      .upsert(
+        { book_id: bookId, trope_id: trope.id, owner_id: uid, emphasis: 'pinned' },
+        { onConflict: 'book_id,trope_id' },
+      ),
+    'a11y book_tropes upsert',
+  )
 
   const listCode = 'A11YSMOKE'
-  await sb.from('shared_docs').upsert({
-    key: listCode,
-    value: { type: 'list', kind: 'list', name: 'A11y list', items: [], updatedAt: Date.now() },
-  })
-  await sb
-    .from('shared_refs')
-    .upsert(
-      { owner_id: uid, code: listCode, kind: 'list', name: 'A11y list' },
-      { onConflict: 'owner_id,code' },
-    )
+  await ok(
+    sb.from('shared_docs').upsert({
+      key: listCode,
+      value: { type: 'list', kind: 'list', name: 'A11y list', items: [], updatedAt: Date.now() },
+    }),
+    'a11y shared_docs upsert',
+  )
+  await ok(
+    sb
+      .from('shared_refs')
+      .upsert(
+        { owner_id: uid, code: listCode, kind: 'list', name: 'A11y list' },
+        { onConflict: 'owner_id,code' },
+      ),
+    'a11y shared_refs upsert',
+  )
 
   return { bookId, clubId: club.id, listCode, shelfId: shelf.id, tropeId: trope.id }
 }
 
 /** Remove every fixture row this spec creates, by its stable name — safe to run before or after. */
 async function clearFixtures(sb: SupabaseClient) {
-  await sb.from('series').delete().eq('name', 'A11y Saga')
-  await sb.from('clubs').delete().eq('title', 'A11y Read-along')
-  await sb.from('lists').delete().eq('name', 'A11y Shelf')
+  await ok(sb.from('series').delete().eq('name', 'A11y Saga'), 'a11y series delete')
+  await ok(sb.from('clubs').delete().eq('title', 'A11y Read-along'), 'a11y clubs delete')
+  await ok(sb.from('lists').delete().eq('name', 'A11y Shelf'), 'a11y lists delete')
 }
 
 async function cleanup(clubId: string, listCode: string, shelfId: string, bookId?: string) {
   const sb = await signedInClient('a11y cleanup')
-  await sb.from('clubs').delete().eq('id', clubId)
-  await sb.from('lists').delete().eq('id', shelfId)
+  await ok(sb.from('clubs').delete().eq('id', clubId), 'a11y clubs delete')
+  await ok(sb.from('lists').delete().eq('id', shelfId), 'a11y lists delete')
   if (bookId) await sb.from('book_tropes').delete().eq('book_id', bookId)
-  await sb.from('series').delete().eq('name', 'A11y Saga')
-  await sb.from('shared_docs').delete().eq('key', listCode)
-  await sb.from('shared_refs').delete().eq('code', listCode)
+  await ok(sb.from('series').delete().eq('name', 'A11y Saga'), 'a11y series delete')
+  await ok(sb.from('shared_docs').delete().eq('key', listCode), 'a11y shared_docs delete')
+  await ok(sb.from('shared_refs').delete().eq('code', listCode), 'a11y shared_refs delete')
   await setProfileSkinMode('tryst', 'system') // restore the dev profile
 }
 
@@ -206,8 +229,8 @@ async function cleanup(clubId: string, listCode: string, shelfId: string, bookId
  * (avoids racing the client-side sync — this also exercises the real persistence path). */
 async function setProfileSkinMode(skin: string, mode: string) {
   const sb = await signedInClient('a11y setProfileSkinMode')
-  const uid = (await sb.auth.getUser()).data.user!.id
-  await sb.from('profiles').update({ skin, mode }).eq('id', uid)
+  const uid = (await okUser(sb.auth.getUser(), 'a11y getUser')).id
+  await ok(sb.from('profiles').update({ skin, mode }).eq('id', uid), 'a11y profiles update')
 }
 
 /**

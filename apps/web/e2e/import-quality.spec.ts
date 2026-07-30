@@ -3,6 +3,7 @@ import { expect, test, type Page } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { authFailure } from './support/authError'
+import { ok, okUser } from './support/ok'
 
 // Import-quality e2e (docs/task-import-quality.md): a real Goodreads export goes in through the
 // REAL app (Settings → import), and we verify the fidelity fixes landed in the DB — series parsed
@@ -29,16 +30,21 @@ async function ensureTestUser(): Promise<void> {
   })
   const { data: existing } = await admin.auth.admin.listUsers()
   if (existing?.users?.some((u) => u.email === TEST_EMAIL)) return
-  const { data, error } = await admin.auth.admin.createUser({
-    email: TEST_EMAIL,
-    password: TEST_PASSWORD,
-    email_confirm: true,
-  })
-  if (error) throw error
+  const user = await okUser(
+    admin.auth.admin.createUser({
+      email: TEST_EMAIL,
+      password: TEST_PASSWORD,
+      email_confirm: true,
+    }),
+    'import-quality createUser',
+  )
   // The app expects a profiles row (skin/mode live there); create it if the trigger didn't.
-  await admin
-    .from('profiles')
-    .upsert({ id: data.user!.id, display_name: 'Import E2E', skin: 'tryst', mode: 'system' })
+  await ok(
+    admin
+      .from('profiles')
+      .upsert({ id: user.id, display_name: 'Import E2E', skin: 'tryst', mode: 'system' }),
+    'import-quality profiles upsert',
+  )
 }
 
 const FIXTURE = fileURLToPath(new URL('./fixtures/goodreads-import.csv', import.meta.url))
@@ -67,22 +73,28 @@ async function cleanup(c: DevClient) {
   const { data: books } = await c.sb.from('books').select('id').in('title', IMPORT_TITLES)
   const ids = ((books as { id: string }[]) ?? []).map((b) => b.id)
   if (ids.length) {
-    await c.sb.from('list_items').delete().in('book_id', ids)
-    await c.sb.from('reads').delete().in('book_id', ids)
-    await c.sb.from('books').delete().in('id', ids)
+    await ok(
+      c.sb.from('list_items').delete().in('book_id', ids),
+      'import-quality list_items delete',
+    )
+    await ok(c.sb.from('reads').delete().in('book_id', ids), 'import-quality reads delete')
+    await ok(c.sb.from('books').delete().in('id', ids), 'import-quality books delete')
   }
-  await c.sb
-    .from('lists')
-    .delete()
-    .eq('owner_id', c.uid)
-    .in('name', [
-      'Imported TBR',
-      'Windborne Buddy Read',
-      'Dark Romance',
-      'Fae',
-      'Enemies To Lovers',
-      'Signed Copies',
-    ])
+  await ok(
+    c.sb
+      .from('lists')
+      .delete()
+      .eq('owner_id', c.uid)
+      .in('name', [
+        'Imported TBR',
+        'Windborne Buddy Read',
+        'Dark Romance',
+        'Fae',
+        'Enemies To Lovers',
+        'Signed Copies',
+      ]),
+    'import-quality lists delete',
+  )
 }
 
 async function signIn(page: Page, session: { access_token: string; refresh_token: string }) {

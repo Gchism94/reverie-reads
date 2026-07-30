@@ -1,15 +1,25 @@
+import { supabaseFailure } from '@reverie/core'
+
 /**
  * Describe a failed test sign-in in enough detail to act on.
  *
- * The suite used to report `test sign-in failed: {}` — because `error.message` was literally the
- * two-character string "{}". Under load, GoTrue answers with an empty JSON body and auth-js hands
- * that body straight through as the message, so the one field every helper printed was the one
- * field carrying no information. `status` and `code` carried the signal and nobody was reading them.
+ * A THIN ADAPTER over `@reverie/core`'s `supabaseFailure`, which is where the reading now happens.
+ * This function stays because 18 specs call it as `(context, email, error)` and because the email is a
+ * detail only the caller knows — but the field-unpacking that used to live in this file moved to core,
+ * shared with `scripts/seed-dev.mjs` and `./ok.ts`. One implementation, three consumers; before this
+ * there were three implementations of the same idea, and the weakest of them was a bare
+ * `JSON.stringify(err)`, which prints `{}` for any real `Error` because its fields are non-enumerable.
  *
- * Not a test-only nicety: which failure this is decides what to do about it. A `status: 0` /
- * `AuthRetryableFetchError` means the request never reached the server — the saturation signature
- * that made this suite untrustworthy, and a capacity problem. A `400` with a real code means
- * credentials or config, and no amount of tuning fixes it.
+ * The original reason this needed writing, kept because it is why the shared version reads `status` and
+ * `code` at all: the suite used to report `test sign-in failed: {}` — because `error.message` was
+ * literally the two-character string "{}". Under load GoTrue answers with an empty JSON body and
+ * auth-js hands that body straight through as the message, so the one field every helper printed was
+ * the one field carrying no information.
+ *
+ * Not a test-only nicety: which failure this is decides what to do about it. An
+ * `AuthRetryableFetchError` or `status: 0` means the request never reached the server — a capacity
+ * problem, and the signature that made this suite untrustworthy. A `400` with a real code means
+ * credentials or config, and no amount of tuning fixes it. `supabaseFailure` appends that distinction.
  *
  * Playwright's testMatch only picks up `*.spec.ts`, so this file is a plain module, not a suite.
  */
@@ -17,32 +27,5 @@ export function authFailure(context: string, email: string, error: unknown): str
   if (!error) {
     return `${context}: sign-in for ${email} returned no session AND no error — the local Supabase stack may not be running`
   }
-
-  const e = error as { name?: string; message?: string; status?: number; code?: string }
-  const parts = [
-    `name=${e.name ?? '(none)'}`,
-    `status=${e.status ?? '(none)'}`,
-    `code=${e.code ?? '(none)'}`,
-    `message=${JSON.stringify(e.message ?? '(none)')}`,
-  ]
-
-  // Anything the shape above missed — auth-js has changed its error fields before, and a future
-  // rename must not silently empty this message the way `message` alone did.
-  let extra = ''
-  try {
-    const own = Object.getOwnPropertyNames(error as object).filter(
-      (k) => !['name', 'message', 'status', 'code', 'stack'].includes(k),
-    )
-    if (own.length)
-      extra = ` extra=${JSON.stringify(Object.fromEntries(own.map((k) => [k, (error as Record<string, unknown>)[k]])))}`
-  } catch {
-    /* a getter that throws must not replace the diagnosis with its own failure */
-  }
-
-  const hint =
-    e.name === 'AuthRetryableFetchError' || e.status === 0
-      ? ' — the request never reached GoTrue (network/capacity), not a credential problem'
-      : ''
-
-  return `${context}: sign-in failed for ${email} [${parts.join(' ')}]${extra}${hint}`
+  return supabaseFailure(`${context}: sign-in failed`, error, email)
 }

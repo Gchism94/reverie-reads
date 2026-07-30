@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
 import { authFailure } from './support/authError'
+import { ok, okUser } from './support/ok'
 
 // The generalized font guard (Fable 5): every typeface a designed skin depends on must actually
 // load — a silent fallback to Georgia/system-ui would pass axe and every unit test while losing the
@@ -47,17 +48,23 @@ async function ensureUser(): Promise<void> {
   const { data } = await admin.auth.admin.listUsers()
   let uid = data?.users?.find((u) => u.email === EMAIL)?.id
   if (!uid) {
-    const { data: created, error } = await admin.auth.admin.createUser({
-      email: EMAIL,
-      password: PASSWORD,
-      email_confirm: true,
-    })
-    if (error) throw error
-    uid = created.user!.id
+    uid = (
+      await okUser(
+        admin.auth.admin.createUser({
+          email: EMAIL,
+          password: PASSWORD,
+          email_confirm: true,
+        }),
+        'fonts createUser',
+      )
+    ).id
   }
-  await admin
-    .from('profiles')
-    .upsert({ id: uid, display_name: 'Fonts E2E', skin: 'tryst', mode: 'system' })
+  await ok(
+    admin
+      .from('profiles')
+      .upsert({ id: uid, display_name: 'Fonts E2E', skin: 'tryst', mode: 'system' }),
+    'fonts profiles upsert',
+  )
 }
 
 test('every designed skin typeface actually loads (no silent fallback)', async ({ page }) => {

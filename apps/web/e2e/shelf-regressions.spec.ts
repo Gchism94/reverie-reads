@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { authFailure } from './support/authError'
+import { ok, okUser } from './support/ok'
 
 // Regression guards for docs/task-shelf-regressions.md — the two capabilities that shipped at #48/#49
 // and silently broke:
@@ -44,17 +45,23 @@ async function ensureUser(): Promise<void> {
   const { data } = await admin.auth.admin.listUsers()
   let uid = data?.users?.find((u) => u.email === TEST_EMAIL)?.id
   if (!uid) {
-    const { data: created, error } = await admin.auth.admin.createUser({
-      email: TEST_EMAIL,
-      password: TEST_PASSWORD,
-      email_confirm: true,
-    })
-    if (error) throw error
-    uid = created.user!.id
+    uid = (
+      await okUser(
+        admin.auth.admin.createUser({
+          email: TEST_EMAIL,
+          password: TEST_PASSWORD,
+          email_confirm: true,
+        }),
+        'shelf-regressions createUser',
+      )
+    ).id
   }
-  await admin
-    .from('profiles')
-    .upsert({ id: uid, display_name: 'Shelf Regress E2E', skin: 'tryst', mode: 'system' })
+  await ok(
+    admin
+      .from('profiles')
+      .upsert({ id: uid, display_name: 'Shelf Regress E2E', skin: 'tryst', mode: 'system' }),
+    'shelf-regressions profiles upsert',
+  )
 }
 
 type Client = {
@@ -81,10 +88,13 @@ async function reset(c: Client) {
   const { data: books } = await c.sb.from('books').select('id').eq('owner_id', c.uid)
   const ids = ((books as { id: string }[]) ?? []).map((b) => b.id)
   if (ids.length) {
-    await c.sb.from('list_items').delete().in('book_id', ids)
-    await c.sb.from('books').delete().in('id', ids)
+    await ok(
+      c.sb.from('list_items').delete().in('book_id', ids),
+      'shelf-regressions list_items delete',
+    )
+    await ok(c.sb.from('books').delete().in('id', ids), 'shelf-regressions books delete')
   }
-  await c.sb.from('lists').delete().eq('owner_id', c.uid)
+  await ok(c.sb.from('lists').delete().eq('owner_id', c.uid), 'shelf-regressions lists delete')
 }
 
 async function signIn(page: Page, session: { access_token: string; refresh_token: string }) {
@@ -220,12 +230,15 @@ test('Shelf reorder: covers are not drag-hijackable and the keyboard fallback re
       })
       .select('id')
       .single()
-    await c.sb.from('list_items').insert({
-      list_id: listId,
-      book_id: (b as { id: string }).id,
-      owner_id: c.uid,
-      position: (i + 1) * 1000,
-    })
+    await ok(
+      c.sb.from('list_items').insert({
+        list_id: listId,
+        book_id: (b as { id: string }).id,
+        owner_id: c.uid,
+        position: (i + 1) * 1000,
+      }),
+      'shelf-regressions list_items insert',
+    )
   }
   await stubBackends(page)
   try {
@@ -298,12 +311,15 @@ async function shelfOf(c: Client, name: string, titles: string[]) {
       })
       .select('id')
       .single()
-    await c.sb.from('list_items').insert({
-      list_id: listId,
-      book_id: (b as { id: string }).id,
-      owner_id: c.uid,
-      position: (i + 1) * 1000,
-    })
+    await ok(
+      c.sb.from('list_items').insert({
+        list_id: listId,
+        book_id: (b as { id: string }).id,
+        owner_id: c.uid,
+        position: (i + 1) * 1000,
+      }),
+      'shelf-regressions list_items insert',
+    )
   }
   const order = async () => {
     const rows = await positionsFor(c.sb, listId)

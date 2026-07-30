@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 import { createClient } from '@supabase/supabase-js'
 import { authFailure } from './support/authError'
+import { ok, okData, okUser } from './support/ok'
 
 // Cover system e2e (docs/task-cover-system.md): the sheet's four paths against a STUBBED covers
 // Edge Function (deterministic, offline-safe), the lazy backfill, the edition-details sync, the
@@ -53,17 +54,23 @@ async function ensureUser(): Promise<void> {
   const { data } = await admin.auth.admin.listUsers()
   let uid = data?.users?.find((u) => u.email === EMAIL)?.id
   if (!uid) {
-    const { data: created, error } = await admin.auth.admin.createUser({
-      email: EMAIL,
-      password: PASSWORD,
-      email_confirm: true,
-    })
-    if (error) throw error
-    uid = created.user!.id
+    uid = (
+      await okUser(
+        admin.auth.admin.createUser({
+          email: EMAIL,
+          password: PASSWORD,
+          email_confirm: true,
+        }),
+        'cover-sheet createUser',
+      )
+    ).id
   }
-  await admin
-    .from('profiles')
-    .upsert({ id: uid, display_name: 'Cover Sheet E2E', skin: 'tryst', mode: 'system' })
+  await ok(
+    admin
+      .from('profiles')
+      .upsert({ id: uid, display_name: 'Cover Sheet E2E', skin: 'tryst', mode: 'system' }),
+    'cover-sheet profiles upsert',
+  )
 }
 
 // One signed-in client per test, shared by fixtures + the page hand-off — the local GoTrue
@@ -80,22 +87,25 @@ type DevClient = Awaited<ReturnType<typeof devClient>>
 // Each test owns a DISTINCT fixture title (never share/wipe across parallel tests). Pre-clean
 // handles a crashed prior run of the SAME test only.
 async function insertFixture(c: DevClient, title: string, coverUrl?: string): Promise<string> {
-  await c.sb.from('books').delete().eq('title', title)
-  const r = await c.sb
-    .from('books')
-    // ownership:'owned' matters. Possession defaults to no claim at all, and the Library grid shows
-    // the DEFAULT library — what you have in hand or have any reading history with
-    // (inDefaultLibrary) — so a bare fixture is deliberately hidden and never renders a card.
-    // The placeholder-affordance test needs a book that is actually in the library.
-    .insert({
-      owner_id: c.uid,
-      title,
-      ownership: 'owned',
-      ...(coverUrl ? { cover_url: coverUrl } : {}),
-    })
-    .select('id')
-    .single()
-  return r.data!.id
+  await ok(c.sb.from('books').delete().eq('title', title), 'cover-sheet books delete')
+  const r = await okData(
+    c.sb
+      .from('books')
+      // ownership:'owned' matters. Possession defaults to no claim at all, and the Library grid shows
+      // the DEFAULT library — what you have in hand or have any reading history with
+      // (inDefaultLibrary) — so a bare fixture is deliberately hidden and never renders a card.
+      // The placeholder-affordance test needs a book that is actually in the library.
+      .insert({
+        owner_id: c.uid,
+        title,
+        ownership: 'owned',
+        ...(coverUrl ? { cover_url: coverUrl } : {}),
+      })
+      .select('id')
+      .single(),
+    'cover-sheet books insert',
+  )
+  return r.id
 }
 
 const removeFixture = (c: DevClient, title: string) =>

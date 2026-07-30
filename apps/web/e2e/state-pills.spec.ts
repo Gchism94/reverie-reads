@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
 import { authFailure } from './support/authError'
+import { ok, okUser } from './support/ok'
 
 // Borrowed and DNF must be visible while browsing (docs/task-state-pills.md).
 //
@@ -44,17 +45,23 @@ async function client(): Promise<Client> {
   const { data } = await admin.auth.admin.listUsers()
   let uid = data?.users?.find((u) => u.email === EMAIL)?.id
   if (!uid) {
-    const { data: created, error } = await admin.auth.admin.createUser({
-      email: EMAIL,
-      password: PASSWORD,
-      email_confirm: true,
-    })
-    if (error) throw error
-    uid = created.user!.id
+    uid = (
+      await okUser(
+        admin.auth.admin.createUser({
+          email: EMAIL,
+          password: PASSWORD,
+          email_confirm: true,
+        }),
+        'state-pills createUser',
+      )
+    ).id
   }
-  await admin
-    .from('profiles')
-    .upsert({ id: uid, display_name: 'State Pills E2E', skin: 'tryst', mode: 'dark' })
+  await ok(
+    admin
+      .from('profiles')
+      .upsert({ id: uid, display_name: 'State Pills E2E', skin: 'tryst', mode: 'dark' }),
+    'state-pills profiles upsert',
+  )
   const sb = createClient(SUPABASE_URL, ANON)
   const { data: s, error } = await sb.auth.signInWithPassword({ email: EMAIL, password: PASSWORD })
   if (error || !s.session) throw new Error(authFailure('state-pills', EMAIL, error))
@@ -67,10 +74,10 @@ async function seedFixtures(c: Client): Promise<void> {
   const { data: existing } = await c.sb.from('books').select('id').eq('owner_id', c.uid)
   const ids = ((existing as { id: string }[]) ?? []).map((b) => b.id)
   if (ids.length) {
-    await c.sb.from('list_items').delete().in('book_id', ids)
-    await c.sb.from('books').delete().in('id', ids)
+    await ok(c.sb.from('list_items').delete().in('book_id', ids), 'state-pills list_items delete')
+    await ok(c.sb.from('books').delete().in('id', ids), 'state-pills books delete')
   }
-  await c.sb.from('lists').delete().eq('owner_id', c.uid)
+  await ok(c.sb.from('lists').delete().eq('owner_id', c.uid), 'state-pills lists delete')
 
   // Every row carries EVERY possession column, including the defaults. In a bulk insert PostgREST
   // takes the union of all rows' keys as the column set, so a key omitted from one row is sent as
@@ -201,13 +208,16 @@ test('a spine shelf carries state in the accessible name — the surface that ne
     .eq('owner_id', c.uid)
     .in('title', [DNF_TITLE, BORROWED_TITLE])
   const listId = (list as { id: string }).id
-  await c.sb.from('list_items').insert(
-    ((books as { id: string; title: string }[]) ?? []).map((b, i) => ({
-      list_id: listId,
-      book_id: b.id,
-      owner_id: c.uid,
-      position: i + 1,
-    })),
+  await ok(
+    c.sb.from('list_items').insert(
+      ((books as { id: string; title: string }[]) ?? []).map((b, i) => ({
+        list_id: listId,
+        book_id: b.id,
+        owner_id: c.uid,
+        position: i + 1,
+      })),
+    ),
+    'state-pills list_items insert',
   )
 
   await page.goto(`/shelf/${listId}`)
