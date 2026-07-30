@@ -24,6 +24,28 @@ forgotten.
   `--yes` so the second prompt is acknowledged rather than accidental, or feed
   the CLI its own confirmation and stop depending on EOF semantics we don't
   control. Recorded during `fix/deploy-guard`, deliberately not fixed there.
+- **Every `security definer` RPC in the repo is anon-callable, and the ownership
+  `raise` is the only thing stopping it.** Postgres grants `EXECUTE` to `PUBLIC` by
+  default, so `grant execute on function … to authenticated` is **additive, not
+  gating** — it adds nothing that PUBLIC didn't already have. Observed against the
+  local stack with the anon key: `POST /rest/v1/rpc/remove_series_entry` returns
+  `P0001 not owner of series entry` and `rpc/merge_books` returns `P0001 not owner of
+primary book` — both reached the function body and were turned away by the check
+  inside it, not by a grant. `proacl` on both reads
+  `=X/postgres | postgres=X/postgres | authenticated=X/postgres`, where the empty
+  grantee is PUBLIC.
+  **No exposure today**, and deterministically so: `security definer` runs the body,
+  `auth.uid()` is null for anon, and `owner_id = null` is never true, so the first
+  statement always refuses. The hazard is structural rather than current — it means
+  the `raise` is the entire boundary on every RPC here, and any future RPC whose
+  first statement is _not_ an ownership check inherits a function an unauthenticated
+  caller can run. The two that exist are written correctly; nothing enforces that the
+  third will be.
+  Fix is a small migration revoking `execute … from public` across both (and a
+  convention for new ones) — **its own branch**, because it should cover `merge_books`
+  in the same change and a red run there needs to mean one thing. Found during
+  `fix/atomic-series-removal-client` while testing the `pgrst_ddl_watch` schema-cache
+  reload, which is how an anon call came to be made at all.
 - **`useRemoveEntry`** (`apps/web/src/data/series.ts` ~L353): two sequential
   independently-committed writes, no transaction. A failure between them leaves
   `series_entries` removed while `books.series` still names it. The open question
