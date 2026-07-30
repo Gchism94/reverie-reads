@@ -193,7 +193,13 @@ by whoever inherits it, so the reason stays attached.
   it at all and the outer value stays bare `NULL`, which fails `ok()` rather than passing it — verified
   directly against this database (`is(x, null)` passes on a nonexistent row; `ok(x is null)` fails on
   the same row). The more durable fix beneath the assertion-shape one: assert as a role nothing
-  filters (`reset role`) and let only the action under test run as the restricted one.
+  filters (`reset role`) and let only the action under test run as the restricted one. The same hole
+  reopens comparing two things that are each supposed to exist, not just one: `feat/plan-precision-schema`
+  compared `plan_*`'s CHECK constraint definitions against `pub_*`'s, to prove the sibling columns
+  hadn't diverged. `is(a, b)` would have passed if BOTH constraints had vanished — `NULL` compares
+  equal to `NULL` — certifying a mirror between two things that no longer exist. `ok(a = b)` doesn't
+  have the hole: a missing operand makes `=` yield `NULL`, and `ok(NULL)` fails rather than passing.
+  Same rule, same mechanism, wherever an assertion needs a missing operand to fail loudly.
 - **A test name is a promise about what is proven.** "restoring the same file twice does not
   double the assignments" described behavior the test did not assert, and two reports
   contradicted each other for a full round because of it. Name what the assertions actually
