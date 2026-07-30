@@ -149,15 +149,20 @@ primary book` — both reached the function body and were turned away by the che
   `position, id` order; "first match wins" out of an unordered result meant the winner could
   differ between runs.
 - **`ghostMatchesBook` has the identical title-only weakness, one step earlier in the same
-  function.** `packages/core/src/seriesShelf.ts` ~L136: `e.bookId == null && normalized title
-equality`, and nothing more. Two LIVE ghosts sharing a title with one library book, and
-  `entries.find(...)` in `useSeriesDetail`'s adoption pass takes whichever comes first — so the
-  book links to an arbitrary one of them. Same defect class as the revive match that
-  `fix/revive-author-match` just closed, and it runs BEFORE revive in the same reconciliation,
-  consuming the book from `linked` so the revive pass never even sees it. Distinct enough to be
-  its own branch: adoption is not a revive, its failure mode is a mislinked live slot rather
-  than a resurrected removal, and `ghostMatchesBook` is already exported and unit-tested, so
-  changing its signature touches its existing tests. The fix shape is the same — reuse the
+  function — and it should be the NEXT series-integrity branch, not an unordered item.**
+  `packages/core/src/seriesShelf.ts` ~L136: `e.bookId == null && normalized title equality`, and
+  nothing more. Two LIVE ghosts sharing a title with one library book, and `entries.find(...)`
+  in `useSeriesDetail`'s adoption pass takes whichever comes first — so the book links to an
+  arbitrary one of them. Same defect class as the revive match that `fix/revive-author-match`
+  just closed, and it runs BEFORE revive in the same reconciliation, consuming the book from
+  `linked` so the revive pass never even sees it. **That ordering is why fixing revive alone
+  doesn't finish the job**: adoption is the earlier step, and an earlier step that still guesses
+  can override a later step that no longer does — a mislinked ghost adoption removes the book
+  from contention before the now-correct revive match ever runs, so the fix just landed can be
+  silently bypassed by the defect one step upstream of it. Distinct enough to be its own branch
+  regardless — adoption is not a revive, its failure mode is a mislinked live slot rather than a
+  resurrected removal, and `ghostMatchesBook` is already exported and unit-tested, so changing
+  its signature touches its existing tests. The fix shape is the same — reuse the
   author-as-discriminator rule, refusing on an unbreakable tie. Recorded rather than fixed on
   the owner's instruction; a red run should mean one thing.
 - **`useSyncBookSeries` has the same unprotected shape, inverted, and it spans two
