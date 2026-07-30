@@ -110,27 +110,61 @@ async function ownerId(): Promise<string> {
   return id
 }
 
-/** All series rows + canonical entry counts — the library Series strips' overlay. */
+/**
+ * Every series row with its entries — the library Series strips' overlay, and the /series index's
+ * whole read.
+ *
+ * WIDENED for the index (feat/series-builder), additively: the entry select carries the full row
+ * rather than three columns, and the `removed_at is null` filter is gone so tombstones can be
+ * COUNTED here instead of needing a second query. `total` and `ghosts` still mean live-only, exactly
+ * as before — `SeriesView` reads `total` and nothing else, so its behaviour is unchanged.
+ *
+ * READ-ONLY, and that is load-bearing. `useSeriesDetail` reconciles the library into `series_entries`
+ * as a side effect of reading, which is right for one series the reader opened and would be a write
+ * storm across every series on an index page load. The index renders what exists; expanding a row
+ * mounts `useSeriesDetail` for that one series, which materializes it on a deliberate gesture.
+ */
+export interface SeriesListRow {
+  series: UiSeries
+  /** live entries */
+  total: number
+  /** live entries with no linked book */
+  ghosts: number
+  /** tombstones — removed slots, invisible to every other read */
+  removed: number
+  /** live entries in reading order */
+  entries: SeriesEntry[]
+}
+
 export function useSeriesList() {
   return useQuery({
     queryKey: seriesListKey,
-    queryFn: async (): Promise<Map<string, { series: UiSeries; total: number; ghosts: number }>> => {
+    queryFn: async (): Promise<Map<string, SeriesListRow>> => {
       const [{ data: rows, error }, { data: ents, error: e2 }] = await Promise.all([
         supabase.from('series').select('*'),
-        supabase.from('series_entries').select('id, series_id, book_id').is('removed_at', null),
+        supabase.from('series_entries').select('*'),
       ])
       if (error) throw error
       if (e2) throw e2
-      const byId = new Map<string, { series: UiSeries; total: number; ghosts: number }>()
-      for (const r of (rows ?? []) as SeriesRowT[]) byId.set(r.id, { series: toUiSeries(r), total: 0, ghosts: 0 })
-      for (const e of (ents ?? []) as { series_id: string; book_id: string | null }[]) {
+      const byId = new Map<string, SeriesListRow>()
+      for (const r of (rows ?? []) as SeriesRowT[])
+        byId.set(r.id, { series: toUiSeries(r), total: 0, ghosts: 0, removed: 0, entries: [] })
+      for (const e of (ents ?? []) as SeriesEntryRowT[]) {
         const s = byId.get(e.series_id)
         if (!s) continue
+        if (e.removed_at) {
+          s.removed++
+          continue
+        }
         s.total++
         if (!e.book_id) s.ghosts++
+        s.entries.push(toEntry(e))
       }
-      const byName = new Map<string, { series: UiSeries; total: number; ghosts: number }>()
-      for (const v of byId.values()) byName.set(v.series.name.toLowerCase(), v)
+      const byName = new Map<string, SeriesListRow>()
+      for (const v of byId.values()) {
+        v.entries = sortEntries(v.entries)
+        byName.set(v.series.name.toLowerCase(), v)
+      }
       return byName
     },
   })
