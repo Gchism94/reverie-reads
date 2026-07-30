@@ -142,6 +142,34 @@ pnpm deploy:functions    # prod functions deploy — via the deploy guard
   pattern — a self-deleting account exercising the full lifecycle against prod — but that is the
   owner's checklist to run by hand, not something a Code session does on its own. Verification
   that requires a real prod account is the owner's to run, not Code's.
+- **A new RPC needs BOTH `revoke execute ... from public` and `grant execute ... to
+authenticated`** (or `to service_role`) **— the grant alone was never gating.** Postgres grants
+  `EXECUTE` to `PUBLIC` on every new function by default, so `grant execute to authenticated` is
+  additive, not a boundary. Observed live: `remove_series_entry` and `merge_books` were both
+  reachable with the anon key before `20260801010000_revoke_public_execute.sql`, returning their
+  body's own `P0001` ownership raise rather than a grant-layer refusal — meaning the `raise` was the
+  _only_ thing stopping anon, and a future RPC whose first statement isn't an ownership check would
+  inherit an anon-callable function with no protection at all. One function's boundary was already
+  weaker than that in practice: `rate_limit_consume`, granted only to `service_role`, had no
+  ownership check whatsoever and was genuinely callable by anon/authenticated with an arbitrary,
+  unvalidated `p_key` — able to exhaust or spam another user's guessable rate-limit bucket. `create
+or replace function` (same signature) **preserves** an existing revoke; only a genuine `drop
+function` + fresh `create` resets it to the PUBLIC-execute default — verified against this
+  database (a throwaway probe: revoke, then replace → unchanged; revoke, then drop+recreate → the
+  revoke is gone). No migration in this repo's history has ever dropped-and-recreated a function
+  (`merge_books`, six times, always via `create or replace`), so the convention only breaks if that
+  changes. **Guard it at the grant layer, not the body**: a pgTAP assertion of `remove_series_entry`
+  or `merge_books` refusing anon must check for SQLSTATE `42501` specifically, never a body-level
+  `P0001` — a `P0001` from that assertion means `PUBLIC` regained execute and the call reached the
+  ownership check anyway, which is the exact silent regression this rule exists to catch.
+  **One classification mistake worth keeping visible**: `is_club_member` / `club_progress` were
+  first assumed to be pure internal helpers needing no grant, since they're only called from within
+  another `security definer` function's body — true for THAT call path (which runs as the function
+  owner), but both are also called directly from inside four RLS POLICY expressions on
+  `clubs`/`club_members`/`club_comments`, which evaluate as the QUERYING role, not the owner.
+  Revoking `PUBLIC` without granting `authenticated` there broke three pgTAP files outright on the
+  first run. Caught by running the suite, not by re-reading the reasoning — a function's callers
+  include its RLS policies, not just its own migration file and its obvious call sites.
 
 ## Testing & verification discipline
 

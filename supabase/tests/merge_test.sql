@@ -2,7 +2,7 @@
 -- (no orphaned list refs, no lost reads), and a normal merge folds everything onto the primary.
 
 begin;
-select plan(11);
+select plan(12);
 
 insert into auth.users (id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
 values ('11111111-2222-3333-4444-555555555555', 'authenticated', 'authenticated', 'merger@example.com', '{}'::jsonb, '{}'::jsonb, now(), now());
@@ -44,6 +44,21 @@ select is((select count(*)::int from public.books where id = 'bbbb2222-0000-0000
 select is((select count(*)::int from public.reads where book_id = 'aaaa1111-0000-0000-0000-000000000001'), 2, 'primary now holds both reads (no read lost)');
 select is((select count(*)::int from public.list_items where list_id = 'cccc3333-0000-0000-0000-000000000003' and book_id = 'aaaa1111-0000-0000-0000-000000000001'), 1, 'list membership moved to primary');
 select is((select rating::int from public.books where id = 'aaaa1111-0000-0000-0000-000000000001'), 5, 'merged rating applied (no rating lost)');
+
+-- ── fix/rpc-execute-grants: anon has no EXECUTE on merge_books at all — refused at the GRANT
+--    layer, before the function body (and its ownership raises) ever runs. Arbitrary ids: the
+--    privilege check happens before any row lookup, so this holds whether or not they exist.
+--    Asserted on SQLSTATE 42501 specifically, never P0001 — a P0001 here would mean PUBLIC still
+--    had execute and the call reached 'cannot merge a book into itself' or an ownership raise
+--    instead, which is exactly the silent regression a future `drop function` (rather than
+--    `create or replace`) would produce. The normal-merge assertion above is the paired half of
+--    this claim: it already proves the authenticated owner still succeeds under these same grants.
+set local role anon;
+select set_config('request.jwt.claims', '', true);
+select throws_ok(
+  $$ select public.merge_books('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000001', '{}'::jsonb) $$,
+  '42501', null, 'anon has no EXECUTE on merge_books — refused before the body ever runs');
+reset role;
 
 select * from finish();
 rollback;

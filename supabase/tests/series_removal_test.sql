@@ -34,7 +34,7 @@
 -- and one that committed the first write independently would leave removed_at stamped.
 
 begin;
-select plan(25);
+select plan(26);
 
 -- Two readers. The on_auth_user_created trigger gives each a profile, which books.owner_id needs.
 insert into auth.users (id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
@@ -202,6 +202,21 @@ select is(
 select is(
   (select series from public.books where id = 'dddddddd-0000-0000-0000-000000000003'),
   'Test Series', 'the book still names the series — nothing half-applied');
+
+-- ── fix/rpc-execute-grants: anon has no EXECUTE on remove_series_entry at all — refused at the
+--    GRANT layer, before the function body (and its ownership raises) ever runs. An arbitrary,
+--    nonexistent id: the privilege check happens before any row lookup, so this holds regardless
+--    of whether it exists. Asserted on SQLSTATE 42501 specifically, never P0001 — a P0001 here
+--    would mean PUBLIC still had execute and the call reached 'not owner of series entry' instead,
+--    which is exactly the silent regression a future `drop function` (rather than
+--    `create or replace`) would produce. Guard 1 above is the paired half of this claim: it already
+--    proves the authenticated owner still succeeds under these same grants.
+set local role anon;
+select set_config('request.jwt.claims', '', true);
+select throws_ok(
+  $$ select public.remove_series_entry('00000000-0000-0000-0000-000000000000') $$,
+  '42501', null, 'anon has no EXECUTE on remove_series_entry — refused before the body ever runs');
+reset role;
 
 select * from finish();
 rollback;
