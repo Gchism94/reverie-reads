@@ -339,6 +339,7 @@ test('axe (no serious/critical): every route in tryst, a core set in 3 alternate
     ['Shelf detail', `/shelf/${shelfId}`],
     ['Indie', '/indie'],
     ['Skins', '/skins'],
+    ['Series index', '/series'],
     ['Series detail', `/series/${encodeURIComponent('A11y Saga')}`],
     ['Tropes', '/tropes'],
     ['Trope detail', `/tropes/${tropeId}`],

@@ -79,6 +79,29 @@ primary book` — both reached the function body and were turned away by the che
   the badge is the only visible symptom. Recorded rather than fixed on the owner's
   instruction: whether removal should also clear `status`/`series_count` is a product
   decision, not a bug fix.
+- **Archived tombstones are keyed on (series, position); every functional consumer keys on
+  title.** `slotKey` (`importExport.ts`) identifies a backed-up removal by series name +
+  position, and its own comment calls that "the only thing that identifies 'the same slot'".
+  But nothing else agrees: suppressing a source-refresh resurrection matches by title
+  (`mergeSourceEntries` against the tombstone's `title`), and reviving on re-add matches by
+  normalized title (`series.ts` revive pass). Position is the archive's identity and title is
+  the system's. Two consequences, both silent:
+  - **Two tombstones at one position lose one.** Reachable today: remove #2, re-add, reposition,
+    remove again. The backup exports both; restore's within-file dedupe collapses them on
+    `slotKey`, so the second is dropped without a word.
+  - **A restore into a non-empty library can drop a refusal.** If a live entry already occupies
+    the archived tombstone's position, the tombstone is skipped ("existing state wins") — so the
+    reader's removal is gone, and the next Hardcover refresh resurrects the ghost they dismissed.
+    This **compounds the restore-guardrail item** below: restoring into a non-empty library
+    already silently adds a second library, and this is the same operation quietly discarding
+    negative space too.
+    Renumber makes the second case likelier rather than causing it — it packs positions onto small
+    integers 1..n, and small-integer collisions are the common case. Measured on
+    `feat/series-builder`: renumber rewrites live entries only and never touches tombstone rows, so
+    the "renumber orphans every archived tombstone" worry is not what happens.
+    **The honest fix is keying archived tombstones on (series, normalized title)**, which closes
+    both cases at once and aligns the archive with every consumer — a v-next backup-format decision,
+    its own branch. Recorded rather than fixed on the owner's instruction.
 - **Revive matches on title alone, so a removal can revive the wrong slot.** The
   revive pass (`series.ts` ~L196-208) matches a tombstone to a library book on
   `title.trim().toLowerCase()` and nothing else. Two books sharing a title in one

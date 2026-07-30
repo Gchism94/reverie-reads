@@ -14,6 +14,7 @@ const NAV = [
   { label: 'Home', to: '/', icon: '⌂' },
   { label: 'Library', to: '/library', icon: '▦' },
   { label: 'Shelves', to: '/shelves', icon: '≣' },
+  { label: 'Series', to: '/series', icon: '◫' },
   { label: 'Tropes', to: '/tropes', icon: '❦' },
   { label: 'Planner', to: '/planner', icon: '◷' },
   { label: 'Stats', to: '/stats', icon: '◔' },
