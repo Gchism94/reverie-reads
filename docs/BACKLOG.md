@@ -24,6 +24,28 @@ forgotten.
   `--yes` so the second prompt is acknowledged rather than accidental, or feed
   the CLI its own confirmation and stop depending on EOF semantics we don't
   control. Recorded during `fix/deploy-guard`, deliberately not fixed there.
+- **Every `security definer` RPC in the repo is anon-callable, and the ownership
+  `raise` is the only thing stopping it.** Postgres grants `EXECUTE` to `PUBLIC` by
+  default, so `grant execute on function … to authenticated` is **additive, not
+  gating** — it adds nothing that PUBLIC didn't already have. Observed against the
+  local stack with the anon key: `POST /rest/v1/rpc/remove_series_entry` returns
+  `P0001 not owner of series entry` and `rpc/merge_books` returns `P0001 not owner of
+primary book` — both reached the function body and were turned away by the check
+  inside it, not by a grant. `proacl` on both reads
+  `=X/postgres | postgres=X/postgres | authenticated=X/postgres`, where the empty
+  grantee is PUBLIC.
+  **No exposure today**, and deterministically so: `security definer` runs the body,
+  `auth.uid()` is null for anon, and `owner_id = null` is never true, so the first
+  statement always refuses. The hazard is structural rather than current — it means
+  the `raise` is the entire boundary on every RPC here, and any future RPC whose
+  first statement is _not_ an ownership check inherits a function an unauthenticated
+  caller can run. The two that exist are written correctly; nothing enforces that the
+  third will be.
+  Fix is a small migration revoking `execute … from public` across both (and a
+  convention for new ones) — **its own branch**, because it should cover `merge_books`
+  in the same change and a red run there needs to mean one thing. Found during
+  `fix/atomic-series-removal-client` while testing the `pgrst_ddl_watch` schema-cache
+  reload, which is how an anon call came to be made at all.
 - **`useRemoveEntry`** (`apps/web/src/data/series.ts` ~L353): two sequential
   independently-committed writes, no transaction. A failure between them leaves
   `series_entries` removed while `books.series` still names it. The open question
@@ -33,9 +55,30 @@ forgotten.
   series, so the half-committed state does not go stale, it silently **undoes the
   removal** on the next read of that page. **S3a landed the schema half** —
   `remove_series_entry` (`20260731010000`), atomic and ownership-checked, proven by
-  `supabase/tests/series_removal_test.sql`. **S3b switches the client**; until it
-  merges nothing calls the RPC and the defect is live. Rows already in this shape are
-  not healed by the fix — `docs/queries/half-committed-series-removals.sql` finds them.
+  `supabase/tests/series_removal_test.sql`. **S3b switched the client** — one
+  `supabase.rpc('remove_series_entry')`, `bookId` no longer passed, guarded by an e2e
+  request-shape assertion that carries the atomicity claim (state cannot: the old path
+  also ended correct, just not simultaneously) plus a test that builds the
+  half-committed state by hand, shows revive undoing the removal, and shows the RPC
+  path leaving nothing to revive from. **This item closes when S3b merges AND
+  `20260731010000` is deployed** — the client is useless without the RPC and merging
+  ahead of the deploy ships a frontend calling a function production does not have.
+  Rows already in this shape are not healed by the fix —
+  `docs/queries/half-committed-series-removals.sql` finds them.
+- **A book removed from its series still wears a "Series of N" pill.**
+  `seriesStatusBadge` reads `status` and `series_count` and never `series`
+  (`packages/core/src/seriesStatus.ts` ~L62), and the pill that renders it
+  (`book/BookDetailRoute.tsx` ~L256) is ungated — unlike `SeriesStrip` one line up
+  at ~L251, which correctly disappears. So the series door goes and the badge stays.
+  **Verified in the browser** on `fix/atomic-series-removal-client`: after removing a
+  linked slot, the removed book's page showed no series door and a `Series of 5` pill,
+  with `series: null, position: 2, series_count: 5, status: 'ongoing'` in the row.
+  Identical before and after S3b — neither `remove_series_entry` nor the two-write
+  path it replaced touches `status` or `series_count`, so this is not a regression.
+  `position` also survives a removal but is rendered nowhere once `series` is null, so
+  the badge is the only visible symptom. Recorded rather than fixed on the owner's
+  instruction: whether removal should also clear `status`/`series_count` is a product
+  decision, not a bug fix.
 - **Revive matches on title alone, so a removal can revive the wrong slot.** The
   revive pass (`series.ts` ~L196-208) matches a tombstone to a library book on
   `title.trim().toLowerCase()` and nothing else. Two books sharing a title in one
