@@ -100,6 +100,20 @@ primary book` — both reached the function body and were turned away by the che
   - **10 entries** — 20 round trips, 112 ms median (min 92, max 149); ~1.2 s at 60 ms RTT, ~2.0 s at 100 ms
   - **25 entries** — 50 round trips, 302 ms median (min 235, max 375); ~3.0 s at 60 ms RTT, ~5.0 s at 100 ms
   - no optimistic UI on either, so the reader watches the whole thing
+- **`series.ts:332`, `syncBookPosition`'s single-move mirror write is swallowed, and it is
+  unretried.** `await supabase.from('books').update({ position }).eq('id', bookId)` has no error
+  check and nothing re-runs it. Unlike the app's other bare writes — all self-healing on the next
+  read — a dropped connection here leaves `books.position` diverged from the entry it is supposed
+  to mirror, silently, and five surfaces then disagree with the series page: the book page's
+  "#N of M" eyebrow, `BookDetailRail`, the edit dialog's prefill, the merge preview, and
+  `groupSeries`' cover order in Library's Series mode. Found during
+  `fix/supabase-error-surfacing`'s audit; left alone there because surfacing it (throw + toast)
+  is a behavior change needing product sign-off, not error surfacing.
+  **`feat/series-builder` made this more reachable than it was when the swallow was written**: the
+  `/series` arranger's drag is the PRIMARY interaction, so this single-move write now fires on
+  every drag and every ▲▼ nudge, not on the occasional series-page reorder the old UI offered.
+  That is a different amplification from the renumber entry above — this is the common 2-trip
+  path firing constantly, where renumber is the rare tail. Recorded, not fixed.
 - **Archived tombstones are keyed on (series, position); every functional consumer keys on
   title.** `slotKey` (`importExport.ts`) identifies a backed-up removal by series name +
   position, and its own comment calls that "the only thing that identifies 'the same slot'".
@@ -172,6 +186,40 @@ primary book` — both reached the function body and were turned away by the che
   surfacing as a bare TypeError. Plus `db:seed`'s `Seed failed: {}`. Same
   empty-body shape `authFailure()` already solves; it should become the one way
   this repo reads a Supabase error.
+- **`apps/web/e2e` is outside `tsc`'s reach** (`apps/web/tsconfig.json` includes only
+  `["src", "vite.config.ts"]`), while `noUnusedLocals: true` makes a swallowed
+  `const { error }` a compile error everywhere else — the reason every swallowed Supabase
+  result in the repo lived under `e2e/` (`fix/supabase-error-surfacing`'s audit; 104 sites).
+  **Correction to how this was first framed**: extending typecheck to `e2e` would **not** have
+  prevented the 13 `.data!`/`.user!`/`.session!` non-null-assertion derefs — `!` is permitted by
+  design under `strict: true`, so those are not type errors — nor the 83 bare write `await`s that
+  bind nothing at all, since there is no unused binding to flag. `noUnusedLocals` only catches an
+  `error` field that is destructured and then never read; it would have forced a handful of the
+  sites, not the shape most of them took. The ESLint rule scoped to `apps/web/e2e/**` (bans a
+  non-null assertion on `.data`/`.user`/`.session`) is what actually closes the deref gap;
+  nothing closes the bare-await gap except a helper everyone routes through (`e2e/support/ok.ts`)
+  and reviewing for it. Worth doing anyway — it would catch a real class of future regressions
+  typecheck already prevents in `src/` — but it is not a substitute for either guard above, and
+  its own branch: turning it on will surface whatever pre-existing type errors 19 spec files have
+  accumulated while unwatched, and a red run there needs to mean one thing.
+- **`a11y.spec.ts`'s `cleanup()` has never been able to delete its `shared_docs` row, and this now
+  blocks `e2e-a11y`.** `20260624010400_grants.sql` grants `select, insert, update` on
+  `public.shared_docs` to `anon, authenticated` — **never `delete`** — and the real app agrees:
+  `apps/web/src/data/sharedLists.ts` only selects, inserts and updates that table, matching
+  `ownedTables.ts`'s own comment that capability share docs are meant to persist rather than be
+  removed. `cleanup()`'s `sb.from('shared_docs').delete().eq('key', listCode)` was therefore
+  never grantable, on every run since sharing shipped — invisible because it was a bare,
+  unchecked `await`. `fix/supabase-error-surfacing`'s conversion of that line to `ok()` surfaced
+  it, and because `cleanup()` is a sequential `await` chain, the throw also skips the two steps
+  after it (`shared_refs` delete, `setProfileSkinMode('tryst', 'system')`) — so a run that hits
+  this never restores the dev profile's skin/mode either. Harmless in practice today only because
+  `setupFixtures`' own `upsert`s are idempotent and self-heal the leaked row on the next run.
+  **Two ways to close it, and the choice is a product one, not error-surfacing's to make**: stop
+  attempting the delete (nothing needs `shared_docs` actually removed, matching the "meant to
+  persist" comment already in the code) or add the `delete` grant if the product does want a real
+  capability-code teardown someday. Found while verifying the a11y-fixture fix on
+  `fix/supabase-error-surfacing`; recorded rather than fixed there, per that branch's own scope
+  rule — a red run should mean one thing, and this is a second, unrelated one.
 - **Restore guardrail**: restoring into a non-empty library silently adds a second
   one. Warn with real counts before it happens. Merge-routed restore stays blocked
   on field-level merge picking — trading a visible duplicate for a silent loss is

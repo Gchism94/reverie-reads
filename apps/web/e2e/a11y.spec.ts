@@ -156,6 +156,12 @@ async function setupFixtures(): Promise<{
         owner_id: uid,
         position: 1,
         title: 'Linked One',
+        // Both rows carry every NOT NULL column explicitly, even where it's just the default.
+        // PostgREST unions the two rows' keys for a bulk insert, so a column one row omits arrives
+        // as NULL for it rather than falling back to the column default — and a NOT NULL column
+        // then rejects the WHOLE batch. This bit twice (author, then user_edited) before both rows
+        // carried the same key set. See CLAUDE.md's testing discipline section.
+        author: '',
         book_id: bookId,
         user_edited: true,
       },
@@ -166,6 +172,7 @@ async function setupFixtures(): Promise<{
         label: 'novella',
         title: 'A11y Ghost Novella',
         author: 'Ghost Writer',
+        user_edited: true,
       },
     ]),
     'a11y series_entries insert',
