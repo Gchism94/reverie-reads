@@ -147,7 +147,9 @@ describe('ghost adoption — the population, and the rule it shares with revive'
   })
 
   it('does not adopt a book whose title matches nothing', () => {
-    expect(matchEntryForBook(unlinkedEntries([ghost]), bk('Another Door'))).toEqual({ kind: 'none' })
+    expect(matchEntryForBook(unlinkedEntries([ghost]), bk('Another Door'))).toEqual({
+      kind: 'none',
+    })
   })
 
   it('cannot adopt an already-linked entry, because the filter removed it from the population', () => {
@@ -164,17 +166,23 @@ describe('ghost adoption — the population, and the rule it shares with revive'
     // Adoption exists because a catalog's author string almost never matches the reader's byline.
     // Requiring author on a unique match would break the feature's normal case, not harden it.
     const seeded = entry({ id: 'g2', position: 6, title: 'Iron Flame', author: 'R. Yarros' })
-    expect(matchEntryForBook(unlinkedEntries([seeded]), bk('Iron Flame', 'Rebecca', 'Yarros'))).toEqual(
-      { kind: 'match', entry: seeded },
-    )
+    expect(
+      matchEntryForBook(unlinkedEntries([seeded]), bk('Iron Flame', 'Rebecca', 'Yarros')),
+    ).toEqual({ kind: 'match', entry: seeded })
   })
 
   it('picks the right one of two same-title ghosts by author, in both directions', () => {
     const a = entry({ id: 'g-a', position: 4, title: 'Twin', author: 'Vera Quill' })
     const b = entry({ id: 'g-b', position: 5, title: 'Twin', author: 'Nell Marrow' })
     const pool = unlinkedEntries([a, b])
-    expect(matchEntryForBook(pool, bk('Twin', 'Vera', 'Quill'))).toEqual({ kind: 'match', entry: a })
-    expect(matchEntryForBook(pool, bk('Twin', 'Nell', 'Marrow'))).toEqual({ kind: 'match', entry: b })
+    expect(matchEntryForBook(pool, bk('Twin', 'Vera', 'Quill'))).toEqual({
+      kind: 'match',
+      entry: a,
+    })
+    expect(matchEntryForBook(pool, bk('Twin', 'Nell', 'Marrow'))).toEqual({
+      kind: 'match',
+      entry: b,
+    })
   })
 
   it('ADOPTS NOTHING when two same-title ghosts cannot be told apart', () => {
@@ -335,13 +343,15 @@ describe('revive match — title first, author only to break a tie', () => {
   it('picks the right one of two same-title tombstones by author', () => {
     const yarros = tomb({ id: 't-yarros', author: 'Rebecca Yarros' })
     const maas = tomb({ id: 't-maas', author: 'Sarah J. Maas' })
-    expect(
-      matchEntryForBook([yarros, maas], book('Shared Title', 'Sarah J.', 'Maas')),
-    ).toEqual({ kind: 'match', entry: maas })
+    expect(matchEntryForBook([yarros, maas], book('Shared Title', 'Sarah J.', 'Maas'))).toEqual({
+      kind: 'match',
+      entry: maas,
+    })
     // ...and the other direction, so the test cannot pass by always choosing one side.
-    expect(
-      matchEntryForBook([yarros, maas], book('Shared Title', 'Rebecca', 'Yarros')),
-    ).toEqual({ kind: 'match', entry: yarros })
+    expect(matchEntryForBook([yarros, maas], book('Shared Title', 'Rebecca', 'Yarros'))).toEqual({
+      kind: 'match',
+      entry: yarros,
+    })
   })
 
   it('REVIVES NOTHING when two same-title tombstones both have an empty author', () => {
@@ -356,17 +366,13 @@ describe('revive match — title first, author only to break a tie', () => {
     // A genuine reissue by one author: nothing on the row can tell them apart, so refuse.
     const a = tomb({ id: 't-a', author: 'Nell Marrow' })
     const b = tomb({ id: 't-b', author: 'Nell Marrow' })
-    expect(matchEntryForBook([a, b], book('Shared Title', 'Nell', 'Marrow')).kind).toBe(
-      'ambiguous',
-    )
+    expect(matchEntryForBook([a, b], book('Shared Title', 'Nell', 'Marrow')).kind).toBe('ambiguous')
   })
 
   it('REVIVES NOTHING when neither candidate author matches the book', () => {
     const a = tomb({ id: 't-a', author: 'Rebecca Yarros' })
     const b = tomb({ id: 't-b', author: 'Sarah J. Maas' })
-    expect(matchEntryForBook([a, b], book('Shared Title', 'Nell', 'Marrow')).kind).toBe(
-      'ambiguous',
-    )
+    expect(matchEntryForBook([a, b], book('Shared Title', 'Nell', 'Marrow')).kind).toBe('ambiguous')
   })
 
   it("REVIVES NOTHING when the BOOK's author is empty and two titles tie", () => {
@@ -417,8 +423,9 @@ describe('revive match — title first, author only to break a tie', () => {
     const a = tomb({ id: 't-a', author: 'Nell Marrow' })
     const b = tomb({ id: 't-b', author: 'Someone Else' })
     const unrelated = tomb({ id: 't-c', title: 'Unrelated', author: 'Nell Marrow' })
-    expect(
-      matchEntryForBook([a, b, unrelated], book('Shared Title', 'Nell', 'Marrow')),
-    ).toEqual({ kind: 'match', entry: a })
+    expect(matchEntryForBook([a, b, unrelated], book('Shared Title', 'Nell', 'Marrow'))).toEqual({
+      kind: 'match',
+      entry: a,
+    })
   })
 })
