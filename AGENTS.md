@@ -145,7 +145,7 @@ pnpm deploy:functions    # prod functions deploy — via the deploy guard
 
 ## Testing & verification discipline
 
-Five rules, each earned by a real failure this session. A rule without its reason gets dropped
+Six rules, each earned by a real failure this session. A rule without its reason gets dropped
 by whoever inherits it, so the reason stays attached.
 
 - **Grepping a bundle for strings measures dead-code elimination, not rendering.** Vite
@@ -177,6 +177,20 @@ by whoever inherits it, so the reason stays attached.
   infrastructure includes one full e2e run** at the default worker count, fresh DB, retries 0. If
   it's red, report it red — do not re-run until it's green. Docs-only branches are exempt, and
   the report should say so explicitly rather than silently omitting the run.
+- **A bulk insert's column set is the UNION of every row's keys, not each row's own.** PostgREST
+  sends one `INSERT` for the whole array, and the column list it builds is every key any row in
+  the batch supplies — so a row that omits a key the batch is inserting gets an explicit `NULL`
+  for it, not the column's default. A `NOT NULL` column then rejects the **entire batch**, and the
+  error names the constraint, not the row or the omission that caused it. This has bitten twice:
+  `state-pills.spec.ts` documented it once (a rejected insert read as an empty grid, until the
+  swallowed error was surfaced), and `a11y.spec.ts`'s `series_entries` fixture hit it independently
+  — twice over, first on `author`, then on `user_edited` once `author` was fixed — and because the
+  insert was a bare, unchecked `await`, it had **never once succeeded**: `/series/A11y Saga` had
+  been axe-scanned as an empty series since the route's introduction (`911dd6f`), with neither the
+  linked entry nor the ghost slot ever in front of axe. `fix/supabase-error-surfacing`'s conversion
+  of that `await` into `ok()` is what surfaced it — a defect that had been invisible specifically
+  because nothing read the result. Give every row in a bulk insert every column the batch uses,
+  explicitly, even where a value is just the column default.
 
 ## Definition of done (per feature)
 

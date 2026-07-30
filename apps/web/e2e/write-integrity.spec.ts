@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { authFailure } from './support/authError'
+import { ok, okUser } from './support/ok'
 
 // Guards for the two data-integrity defects the tester reported, and for the machinery that let
 // them hide:
@@ -38,11 +39,17 @@ async function client(): Promise<Client> {
   let uid = data?.users?.find((u) => u.email === EMAIL)?.id
   if (!uid)
     uid = (
-      await admin.auth.admin.createUser({ email: EMAIL, password: PASSWORD, email_confirm: true })
-    ).data.user!.id
-  await admin
-    .from('profiles')
-    .upsert({ id: uid, display_name: 'Write Integrity', skin: 'tryst', mode: 'system' })
+      await okUser(
+        admin.auth.admin.createUser({ email: EMAIL, password: PASSWORD, email_confirm: true }),
+        'write-integrity auth createUser',
+      )
+    ).id
+  await ok(
+    admin
+      .from('profiles')
+      .upsert({ id: uid, display_name: 'Write Integrity', skin: 'tryst', mode: 'system' }),
+    'write-integrity profiles upsert',
+  )
   const sb = createClient(SUPABASE_URL, ANON)
   const { data: s, error } = await sb.auth.signInWithPassword({ email: EMAIL, password: PASSWORD })
   if (error || !s.session) throw new Error(authFailure('write-integrity', EMAIL, error))
@@ -54,9 +61,12 @@ async function reset(c: Client) {
   const { data: books } = await c.sb.from('books').select('id').eq('owner_id', c.uid)
   const ids = ((books as { id: string }[]) ?? []).map((b) => b.id)
   if (ids.length) {
-    await c.sb.from('reads').delete().in('book_id', ids)
-    await c.sb.from('list_items').delete().in('book_id', ids)
-    await c.sb.from('books').delete().in('id', ids)
+    await ok(c.sb.from('reads').delete().in('book_id', ids), 'write-integrity reads delete')
+    await ok(
+      c.sb.from('list_items').delete().in('book_id', ids),
+      'write-integrity list_items delete',
+    )
+    await ok(c.sb.from('books').delete().in('id', ids), 'write-integrity books delete')
   }
 }
 

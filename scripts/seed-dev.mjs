@@ -22,8 +22,13 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 // importer use, so the enum has exactly one mapping and this script can't drift from it again.
 // Imported straight from source: Node strips the (type-only) annotations natively — 22.18+ / 23+.
 let normalizeSeriesStatus
+let describeSupabaseError
 try {
   ;({ normalizeSeriesStatus } = await import('../packages/core/src/seriesStatus.ts'))
+  // The SAME error reader the e2e suite and its sign-in helper use. This script reaching into
+  // packages/core/src is not a new liberty — it is exactly how normalizeSeriesStatus arrives above,
+  // and it is why the duplicated copy this replaces was never actually necessary.
+  ;({ describeSupabaseError } = await import('../packages/core/src/supabaseError.ts'))
 } catch (e) {
   console.error(
     `Seed failed: could not load @reverie/core's status normalizer (${e.message ?? e}).\n` +
@@ -226,36 +231,8 @@ async function main() {
   )
 }
 
-/**
- * Describe a thrown Supabase error usefully.
- *
- * `e.message ?? e` printed `Seed failed: {}` — Supabase's error objects can carry an empty message,
- * and the fallback then stringifies an object whose useful fields (status, code, hint, details) are
- * exactly the ones a bare `%o` drops. Same empty-body shape `apps/web/e2e/support/authError.ts`
- * exists to unpack; the technique is duplicated rather than imported because that module is
- * Playwright test-support and this is a root-level script — a dependency the wrong way round.
- */
-function describeError(e) {
-  if (!e) return '(no error object)'
-  if (typeof e === 'string') return e
-  const fields = ['name', 'status', 'code', 'hint', 'details']
-    .filter((k) => e[k] !== undefined && e[k] !== null && e[k] !== '')
-    .map((k) => `${k}=${JSON.stringify(e[k])}`)
-  const message = e.message ? JSON.stringify(e.message) : '(empty)'
-  let extra = ''
-  try {
-    const known = new Set(['name', 'status', 'code', 'hint', 'details', 'message', 'stack'])
-    const own = Object.getOwnPropertyNames(e).filter((k) => !known.has(k))
-    if (own.length)
-      extra = ` extra=${JSON.stringify(Object.fromEntries(own.map((k) => [k, e[k]])))}`
-  } catch {
-    /* a throwing getter must not replace the diagnosis with its own failure */
-  }
-  return `message=${message}${fields.length ? ' ' + fields.join(' ') : ''}${extra}`
-}
-
 main().catch((e) => {
-  console.error('Seed failed:', describeError(e))
+  console.error('Seed failed:', describeSupabaseError(e))
   if (e?.stack) console.error(e.stack)
   process.exit(1)
 })
