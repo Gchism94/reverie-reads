@@ -42,6 +42,7 @@ import { OwnedCopies } from './OwnedCopies'
 import { MoodPicker } from '../components/MoodPicker'
 import { useLabels } from '../skin/labels'
 import { readableWriteError } from '../lib/writeErrors'
+import { todayLocalDate } from '../lib/localDate'
 
 /** Distinct contributor names across the library, for autocomplete. */
 function useAuthorSuggestions(): string[] {
@@ -74,7 +75,9 @@ export function LogReadForm({ book, onClose }: { book: Book; onClose: () => void
   const addRead = useAddRead(book.id)
   const { data: books } = useBooks()
   const updateBook = useUpdateBook()
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
+  // Local, not UTC — see localDate.ts. West of UTC in the evening, toISOString() already reports
+  // tomorrow, and this default is what a reread finished tonight silently landed on.
+  const [date, setDate] = useState(() => todayLocalDate())
   const [format, setFormat] = useState(book.format || 'Paperback')
   const [rating, setRating] = useState(0)
   const [notes, setNotes] = useState('')

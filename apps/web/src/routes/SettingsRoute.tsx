@@ -22,6 +22,7 @@ import { BUILD_LABEL } from '../lib/updates'
 import { useSkin } from '../skin/useSkin'
 import { useSkinControls } from '../skin/controls'
 import { useAuth } from '../auth/AuthProvider'
+import { todayLocalDate } from '../lib/localDate'
 
 const YEAR = new Date().getFullYear()
 
@@ -99,7 +100,9 @@ function SettingsScreen() {
     const json = await buildBackup()
     const a = document.createElement('a')
     a.href = `data:application/json;charset=utf-8,${encodeURIComponent(json)}`
-    a.download = `reverie-backup-${new Date().toISOString().slice(0, 10)}.json`
+    // Local, not UTC — see localDate.ts. Same class as the log-a-read default: cosmetic here
+    // (a filename, not stored data), but wrong for the same reason near midnight west of UTC.
+    a.download = `reverie-backup-${todayLocalDate()}.json`
     a.click()
   }
 
