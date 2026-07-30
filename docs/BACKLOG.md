@@ -202,24 +202,28 @@ primary book` — both reached the function body and were turned away by the che
   typecheck already prevents in `src/` — but it is not a substitute for either guard above, and
   its own branch: turning it on will surface whatever pre-existing type errors 19 spec files have
   accumulated while unwatched, and a red run there needs to mean one thing.
-- **`a11y.spec.ts`'s `cleanup()` has never been able to delete its `shared_docs` row, and this now
-  blocks `e2e-a11y`.** `20260624010400_grants.sql` grants `select, insert, update` on
-  `public.shared_docs` to `anon, authenticated` — **never `delete`** — and the real app agrees:
-  `apps/web/src/data/sharedLists.ts` only selects, inserts and updates that table, matching
-  `ownedTables.ts`'s own comment that capability share docs are meant to persist rather than be
-  removed. `cleanup()`'s `sb.from('shared_docs').delete().eq('key', listCode)` was therefore
-  never grantable, on every run since sharing shipped — invisible because it was a bare,
-  unchecked `await`. `fix/supabase-error-surfacing`'s conversion of that line to `ok()` surfaced
-  it, and because `cleanup()` is a sequential `await` chain, the throw also skips the two steps
-  after it (`shared_refs` delete, `setProfileSkinMode('tryst', 'system')`) — so a run that hits
-  this never restores the dev profile's skin/mode either. Harmless in practice today only because
-  `setupFixtures`' own `upsert`s are idempotent and self-heal the leaked row on the next run.
-  **Two ways to close it, and the choice is a product one, not error-surfacing's to make**: stop
-  attempting the delete (nothing needs `shared_docs` actually removed, matching the "meant to
-  persist" comment already in the code) or add the `delete` grant if the product does want a real
-  capability-code teardown someday. Found while verifying the a11y-fixture fix on
-  `fix/supabase-error-surfacing`; recorded rather than fixed there, per that branch's own scope
-  rule — a red run should mean one thing, and this is a second, unrelated one.
+- **`cleanup()` is a sequential `await` chain, so any failing step skips every step after it —
+  including the profile restore.** `a11y.spec.ts`'s `cleanup()` runs its deletes and
+  `setProfileSkinMode('tryst', 'system')` one after another with nothing isolating them, so a
+  throw partway through (a permission error, a constraint, anything `ok()` now surfaces) leaves
+  every later step — not just the one that failed — un-run. The `shared_docs` delete below was
+  exactly this: while it threw, `shared_refs`' delete and the profile restore silently never ran
+  either. Fixed for that one case by removing the doomed step (see below), but the ordering hazard
+  itself is general and outlives that fix — any future failing step in this chain hides every
+  later one behind it, the same way. **Harmless today, and now loud rather than silent** — a
+  swallowed step used to fail quietly with the same blast radius; `ok()` just made the failure
+  visible, not the skip pattern new. Recorded rather than restructured, since making cleanup
+  resilient to a mid-chain failure (run every step regardless, collect failures) is its own small
+  change with its own trade-off (a cleanup that reports three failures instead of stopping at the
+  first) — a call for whoever next touches this fixture, not a drive-by here.
+- ~~**`a11y.spec.ts`'s `cleanup()` could never delete its `shared_docs` row.**~~ — done. Removed
+  the delete entirely rather than granting the privilege: `20260624010400_grants.sql` grants only
+  `select, insert, update` on `public.shared_docs` to `anon, authenticated`, `sharedLists.ts`
+  matches it (the app itself never deletes that table), and `ownedTables.ts` documents that
+  capability share docs persist by design. Granting `delete` to satisfy a test fixture would have
+  been a production privilege change made for the wrong reason. Nothing was lost: `setupFixtures`
+  upserts the row on the stable key `'A11YSMOKE'`, so each run overwrites it rather than leaving
+  an undeletable table to accumulate one row per run.
 - **Restore guardrail**: restoring into a non-empty library silently adds a second
   one. Warn with real counts before it happens. Merge-routed restore stays blocked
   on field-level merge picking — trading a visible duplicate for a silent loss is

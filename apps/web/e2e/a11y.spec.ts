@@ -227,7 +227,13 @@ async function cleanup(clubId: string, listCode: string, shelfId: string, bookId
   await ok(sb.from('lists').delete().eq('id', shelfId), 'a11y lists delete')
   if (bookId) await sb.from('book_tropes').delete().eq('book_id', bookId)
   await ok(sb.from('series').delete().eq('name', 'A11y Saga'), 'a11y series delete')
-  await ok(sb.from('shared_docs').delete().eq('key', listCode), 'a11y shared_docs delete')
+  // shared_docs is NEVER deleted, on purpose: 20260624010400_grants.sql grants only
+  // select/insert/update to authenticated (no delete), sharedLists.ts matches — the app itself
+  // never deletes a shared_docs row — and ownedTables.ts documents that capability share docs
+  // persist by design ("re-joining means entering the code again"). Attempting the delete here
+  // always failed (permission denied), invisible until the bare await was routed through ok().
+  // Nothing to clean up: setupFixtures upserts this row on the stable key 'A11YSMOKE', so each
+  // run overwrites it rather than accumulating a new one.
   await ok(sb.from('shared_refs').delete().eq('code', listCode), 'a11y shared_refs delete')
   await setProfileSkinMode('tryst', 'system') // restore the dev profile
 }
