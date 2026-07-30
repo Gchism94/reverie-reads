@@ -1,10 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  ghostMatchesBook,
-  matchTombstoneForRevive,
+  matchEntryForBook,
   mergeSourceEntries,
   seedSeriesPositions,
   sortEntries,
+  unlinkedEntries,
   type Book,
   type SeriesEntry,
   type SeriesStatus,
@@ -226,22 +226,38 @@ export function useSeriesDetail(name: string) {
       const removed = allRows.filter((r) => r.removed_at).map(toEntry)
       const lib = (libRows ?? []) as { id: string; title: string; author_first: string | null; author_last: string | null; position: number | null; status: string | null }[]
 
-      // 1) ghosts adopt matching library books (an import landed after the ghost was seeded)
+      // 1) ghosts adopt matching library books (an import landed after the ghost was seeded).
+      //
+      //    WHICH ghost is `matchEntryForBook`'s call — the same rule revive uses below, because it is
+      //    the same question. Adopting the wrong ghost links the book to a slot meant for a different
+      //    edition AND consumes the book from `linked`, so the corrected revive pass beneath this one
+      //    never gets a say: an earlier step that guesses can override a later step that doesn't.
+      //    An undiscriminatable tie therefore adopts nothing and lets the book fall through.
+      //
+      //    `unlinkedEntries` is load-bearing, not decoration: it is the `bookId == null` guard that
+      //    used to live inside `ghostMatchesBook`. Without it a book could claim an entry that
+      //    already belongs to a DIFFERENT book, re-pointing that entry and orphaning the first
+      //    book's slot.
       const linked = new Set(entries.filter((e) => e.bookId).map((e) => e.bookId as string))
       for (const b of lib) {
         if (linked.has(b.id)) continue
-        const ghost = entries.find((e) => ghostMatchesBook(e, b))
-        if (ghost) {
-          await supabase.from('series_entries').update({ book_id: b.id }).eq('id', ghost.id)
-          ghost.bookId = b.id
-          linked.add(b.id)
-        }
+        const match = matchEntryForBook(unlinkedEntries(entries), {
+          title: b.title,
+          first: b.author_first ?? '',
+          last: b.author_last ?? '',
+        })
+        if (match.kind !== 'match') continue
+        const ghost = entries.find((e) => e.id === match.entry.id)
+        if (!ghost) continue
+        await supabase.from('series_entries').update({ book_id: b.id }).eq('id', ghost.id)
+        ghost.bookId = b.id
+        linked.add(b.id)
       }
       // 2) every library book naming this series gets an entry. A book that names the series is the
       //    reader asking for it back, so a matching tombstone REVIVES rather than blocking — removal
       //    outlives a source refresh, not a deliberate re-add.
       //
-      //    WHICH tombstone is `matchTombstoneForRevive`'s call, not this loop's: title first, author
+      //    WHICH tombstone is `matchEntryForBook`'s call, not this loop's: title first, author
       //    only to break a tie between same-title tombstones, and nothing revived when the tie can't
       //    be broken. Reviving the wrong slot resurrects a removal the reader made deliberately, in
       //    the reading order, silently — strictly worse than a missed revive they can see and redo.
@@ -252,9 +268,9 @@ export function useSeriesDetail(name: string) {
       const available = [...removed]
       for (const b of joining) {
         const bookLike = { title: b.title, first: b.author_first ?? '', last: b.author_last ?? '' }
-        const match = matchTombstoneForRevive(available, bookLike)
-        if (match.kind !== 'revive') continue
-        const t = match.tombstone
+        const match = matchEntryForBook(available, bookLike)
+        if (match.kind !== 'match') continue
+        const t = match.entry
         const { data: back } = await supabase
           .from('series_entries')
           .update({ removed_at: null, book_id: b.id })
@@ -541,12 +557,12 @@ async function revivedTombstone(
   const candidates = (data ?? []) as { id: string; title: string; author: string }[]
   // The caller knows the author as a display string already (a Book's byline, or what the reader
   // typed for a ghost), so it arrives pre-joined rather than as first/last.
-  const match = matchTombstoneForRevive(candidates, { title, first: '', last: author })
-  if (match.kind !== 'revive') return false
+  const match = matchEntryForBook(candidates, { title, first: '', last: author })
+  if (match.kind !== 'match') return false
   const { error } = await supabase
     .from('series_entries')
     .update({ removed_at: null, book_id: bookId, position, user_edited: true })
-    .eq('id', match.tombstone.id)
+    .eq('id', match.entry.id)
   return !error
 }
 
