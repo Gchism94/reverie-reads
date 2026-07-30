@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { authFailure } from './support/authError'
+import { ok, okUser } from './support/ok'
 
 // The /series index's arranging surface (feat/series-builder). Everything below drives the real UI.
 //
@@ -37,17 +38,23 @@ async function ensureUser(): Promise<void> {
   const { data } = await admin.auth.admin.listUsers()
   let uid = data?.users?.find((u) => u.email === TEST_EMAIL)?.id
   if (!uid) {
-    const { data: created, error } = await admin.auth.admin.createUser({
-      email: TEST_EMAIL,
-      password: TEST_PASSWORD,
-      email_confirm: true,
-    })
-    if (error) throw error
-    uid = created.user!.id
+    uid = (
+      await okUser(
+        admin.auth.admin.createUser({
+          email: TEST_EMAIL,
+          password: TEST_PASSWORD,
+          email_confirm: true,
+        }),
+        'series-builder createUser',
+      )
+    ).id
   }
-  await admin
-    .from('profiles')
-    .upsert({ id: uid, display_name: 'Series Builder E2E', skin: 'tryst', mode: 'light' })
+  await ok(
+    admin
+      .from('profiles')
+      .upsert({ id: uid, display_name: 'Series Builder E2E', skin: 'tryst', mode: 'light' }),
+    'series-builder profiles upsert',
+  )
 }
 
 type Client = {
@@ -73,14 +80,17 @@ async function reset(c: Client) {
   const { data: books } = await c.sb.from('books').select('id').eq('owner_id', c.uid)
   const ids = ((books as { id: string }[]) ?? []).map((b) => b.id)
   if (ids.length) {
-    await c.sb.from('list_items').delete().in('book_id', ids)
-    await c.sb.from('books').delete().in('id', ids)
+    await ok(
+      c.sb.from('list_items').delete().in('book_id', ids),
+      'series-builder list_items delete',
+    )
+    await ok(c.sb.from('books').delete().in('id', ids), 'series-builder books delete')
   }
   const { data: ser } = await c.sb.from('series').select('id').eq('owner_id', c.uid)
   const sids = ((ser as { id: string }[]) ?? []).map((s) => s.id)
   if (sids.length) await c.sb.from('series_entries').delete().in('series_id', sids)
-  await c.sb.from('series').delete().eq('owner_id', c.uid)
-  await c.sb.from('lists').delete().eq('owner_id', c.uid)
+  await ok(c.sb.from('series').delete().eq('owner_id', c.uid), 'series-builder series delete')
+  await ok(c.sb.from('lists').delete().eq('owner_id', c.uid), 'series-builder lists delete')
 }
 
 async function signIn(page: Page, session: { access_token: string; refresh_token: string }) {

@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { expect, test, type Page } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
 import { authFailure } from './support/authError'
+import { ok } from './support/ok'
 
 // Shelf membership against the REAL seeded library (docs/task-shelf-views.md).
 //
@@ -212,7 +213,10 @@ test('an abandoned book you never owned is still in the library', async ({ page 
   const uid = data.session.user.id
 
   const title = 'Abandoned And Unowned'
-  await sb.from('books').delete().eq('owner_id', uid).eq('title', title)
+  await ok(
+    sb.from('books').delete().eq('owner_id', uid).eq('title', title),
+    'shelf-membership books delete',
+  )
   const { error: insertError } = await sb.from('books').insert({
     owner_id: uid,
     title,
@@ -235,5 +239,8 @@ test('an abandoned book you never owned is still in the library', async ({ page 
     timeout: 20_000,
   })
 
-  await sb.from('books').delete().eq('owner_id', uid).eq('title', title)
+  await ok(
+    sb.from('books').delete().eq('owner_id', uid).eq('title', title),
+    'shelf-membership books delete',
+  )
 })

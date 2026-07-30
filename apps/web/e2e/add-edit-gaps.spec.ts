@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { authFailure } from './support/authError'
+import { ok, okUser } from './support/ok'
 
 // The matrix in the #80 follow-up found the same defect class the original tester reported, sitting
 // one screen over:
@@ -36,11 +37,17 @@ async function client(): Promise<Client> {
   let uid = data?.users?.find((u) => u.email === EMAIL)?.id
   if (!uid)
     uid = (
-      await admin.auth.admin.createUser({ email: EMAIL, password: PASSWORD, email_confirm: true })
-    ).data.user!.id
-  await admin
-    .from('profiles')
-    .upsert({ id: uid, display_name: 'Add Edit Gaps', skin: 'tryst', mode: 'system' })
+      await okUser(
+        admin.auth.admin.createUser({ email: EMAIL, password: PASSWORD, email_confirm: true }),
+        'add-edit-gaps auth createUser',
+      )
+    ).id
+  await ok(
+    admin
+      .from('profiles')
+      .upsert({ id: uid, display_name: 'Add Edit Gaps', skin: 'tryst', mode: 'system' }),
+    'add-edit-gaps profiles upsert',
+  )
   const sb = createClient(SUPABASE_URL, ANON)
   const { data: s, error } = await sb.auth.signInWithPassword({ email: EMAIL, password: PASSWORD })
   if (error || !s.session) throw new Error(authFailure('add-edit-gaps', EMAIL, error))

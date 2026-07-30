@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
 import { authFailure } from './support/authError'
+import { ok, okData, okUser } from './support/ok'
 
 // Tab state belongs in the route, not in component state (fix/tab-routing).
 //
@@ -39,17 +40,23 @@ async function client(): Promise<Client> {
   const { data } = await admin.auth.admin.listUsers()
   let uid = data?.users?.find((u) => u.email === EMAIL)?.id
   if (!uid) {
-    const { data: created, error } = await admin.auth.admin.createUser({
-      email: EMAIL,
-      password: PASSWORD,
-      email_confirm: true,
-    })
-    if (error) throw error
-    uid = created.user!.id
+    uid = (
+      await okUser(
+        admin.auth.admin.createUser({
+          email: EMAIL,
+          password: PASSWORD,
+          email_confirm: true,
+        }),
+        'tab-routing createUser',
+      )
+    ).id
   }
-  await admin
-    .from('profiles')
-    .upsert({ id: uid, display_name: 'Tab Routing E2E', skin: 'tryst', mode: 'system' })
+  await ok(
+    admin
+      .from('profiles')
+      .upsert({ id: uid, display_name: 'Tab Routing E2E', skin: 'tryst', mode: 'system' }),
+    'tab-routing profiles upsert',
+  )
   const sb = createClient(SUPABASE_URL, ANON)
   const { data: s, error } = await sb.auth.signInWithPassword({ email: EMAIL, password: PASSWORD })
   if (error || !s.session) throw new Error(authFailure('tab-routing', EMAIL, error))
@@ -63,13 +70,13 @@ async function seedFixtures(c: Client): Promise<{ bookId: string; collectionId: 
   const { data: existing } = await c.sb.from('books').select('id').eq('owner_id', c.uid)
   const ids = ((existing as { id: string }[]) ?? []).map((b) => b.id)
   if (ids.length) {
-    await c.sb.from('list_items').delete().in('book_id', ids)
-    await c.sb.from('books').delete().in('id', ids)
+    await ok(c.sb.from('list_items').delete().in('book_id', ids), 'tab-routing list_items delete')
+    await ok(c.sb.from('books').delete().in('id', ids), 'tab-routing books delete')
   }
-  await c.sb.from('lists').delete().eq('owner_id', c.uid)
+  await ok(c.sb.from('lists').delete().eq('owner_id', c.uid), 'tab-routing lists delete')
 
-  const book = (
-    await c.sb
+  const book = (await okData(
+    c.sb
       .from('books')
       .insert({
         owner_id: c.uid,
@@ -81,13 +88,14 @@ async function seedFixtures(c: Client): Promise<{ bookId: string; collectionId: 
         status: 'standalone',
       })
       .select('id')
-      .single()
-  ).data as { id: string }
+      .single(),
+    'tab-routing books insert',
+  )) as { id: string }
 
   // A collection (the NON-default tab on /shelves) with the book in it, so opening it from the
   // Collections tab lands on a shelf that renders both the spines and grid views.
-  const collection = (
-    await c.sb
+  const collection = (await okData(
+    c.sb
       .from('lists')
       .insert({
         owner_id: c.uid,
@@ -96,17 +104,24 @@ async function seedFixtures(c: Client): Promise<{ bookId: string; collectionId: 
         sort_order: 1,
       })
       .select('id')
-      .single()
-  ).data as { id: string }
-  await c.sb.from('lists').insert({
-    owner_id: c.uid,
-    name: 'Tab Routing TBR',
-    kind: 'tbr',
-    sort_order: 2,
-  })
-  await c.sb
-    .from('list_items')
-    .insert({ list_id: collection.id, book_id: book.id, owner_id: c.uid, position: 1 })
+      .single(),
+    'tab-routing lists insert',
+  )) as { id: string }
+  await ok(
+    c.sb.from('lists').insert({
+      owner_id: c.uid,
+      name: 'Tab Routing TBR',
+      kind: 'tbr',
+      sort_order: 2,
+    }),
+    'tab-routing lists insert',
+  )
+  await ok(
+    c.sb
+      .from('list_items')
+      .insert({ list_id: collection.id, book_id: book.id, owner_id: c.uid, position: 1 }),
+    'tab-routing list_items insert',
+  )
 
   return { bookId: book.id, collectionId: collection.id }
 }

@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { authFailure } from './support/authError'
+import { ok, okData, okUser } from './support/ok'
 
 // Discover search e2e (docs/task-discover-search.md): search field → results (deduped against the
 // library, "On your shelf" for owned) → add owned / add-to-shelf unowned, and the shelf picker's
@@ -50,17 +51,23 @@ async function ensureUser(): Promise<void> {
   const { data } = await admin.auth.admin.listUsers()
   let uid = data?.users?.find((u) => u.email === TEST_EMAIL)?.id
   if (!uid) {
-    const { data: created, error } = await admin.auth.admin.createUser({
-      email: TEST_EMAIL,
-      password: TEST_PASSWORD,
-      email_confirm: true,
-    })
-    if (error) throw error
-    uid = created.user!.id
+    uid = (
+      await okUser(
+        admin.auth.admin.createUser({
+          email: TEST_EMAIL,
+          password: TEST_PASSWORD,
+          email_confirm: true,
+        }),
+        'discover-search createUser',
+      )
+    ).id
   }
-  await admin
-    .from('profiles')
-    .upsert({ id: uid, display_name: 'Discover E2E', skin: 'tryst', mode: 'system' })
+  await ok(
+    admin
+      .from('profiles')
+      .upsert({ id: uid, display_name: 'Discover E2E', skin: 'tryst', mode: 'system' }),
+    'discover-search profiles upsert',
+  )
 }
 
 type Client = {
@@ -89,10 +96,13 @@ async function reset(c: Client) {
   const { data: books } = await c.sb.from('books').select('id').eq('owner_id', c.uid)
   const ids = ((books as { id: string }[]) ?? []).map((b) => b.id)
   if (ids.length) {
-    await c.sb.from('list_items').delete().in('book_id', ids)
-    await c.sb.from('books').delete().in('id', ids)
+    await ok(
+      c.sb.from('list_items').delete().in('book_id', ids),
+      'discover-search list_items delete',
+    )
+    await ok(c.sb.from('books').delete().in('id', ids), 'discover-search books delete')
   }
-  await c.sb.from('lists').delete().eq('owner_id', c.uid)
+  await ok(c.sb.from('lists').delete().eq('owner_id', c.uid), 'discover-search lists delete')
 }
 
 async function signIn(page: Page, session: { access_token: string; refresh_token: string }) {
@@ -145,15 +155,21 @@ test('Discover search: results dedupe against library, add owned + add-to-shelf,
   const c = await client()
   await reset(c)
   // Seed one owned book that matches a stub result → it should show "On your shelf", not add buttons.
-  await c.sb.from('books').insert({
-    owner_id: c.uid,
-    title: 'Seeded Owned Book',
-    author_first: 'Ada',
-    author_last: 'Known',
-    isbn: '9781111111119',
-    ownership: 'owned',
-  })
-  await c.sb.from('lists').insert({ owner_id: c.uid, name: 'Weekend TBR', kind: 'tbr' })
+  await ok(
+    c.sb.from('books').insert({
+      owner_id: c.uid,
+      title: 'Seeded Owned Book',
+      author_first: 'Ada',
+      author_last: 'Known',
+      isbn: '9781111111119',
+      ownership: 'owned',
+    }),
+    'discover-search books insert',
+  )
+  await ok(
+    c.sb.from('lists').insert({ owner_id: c.uid, name: 'Weekend TBR', kind: 'tbr' }),
+    'discover-search lists insert',
+  )
   await stubBackends(page)
   try {
     await signIn(page, c.session)
@@ -204,11 +220,14 @@ test('Discover search: add a result to a shelf as unowned via the shelf chooser'
   test.setTimeout(180_000)
   const c = await client()
   await reset(c)
-  const { data: list } = await c.sb
-    .from('lists')
-    .insert({ owner_id: c.uid, name: 'Weekend TBR', kind: 'tbr' })
-    .select('id')
-    .single()
+  const list = await okData(
+    c.sb
+      .from('lists')
+      .insert({ owner_id: c.uid, name: 'Weekend TBR', kind: 'tbr' })
+      .select('id')
+      .single(),
+    'discover-search lists insert',
+  )
   const listId = (list as { id: string }).id
   await stubBackends(page)
   try {
@@ -258,11 +277,14 @@ test('Shelf picker seam: "search everywhere" finds and adds an unowned book to t
   test.setTimeout(180_000)
   const c = await client()
   await reset(c)
-  const { data: list } = await c.sb
-    .from('lists')
-    .insert({ owner_id: c.uid, name: 'Someday Shelf', kind: 'tbr' })
-    .select('id')
-    .single()
+  const list = await okData(
+    c.sb
+      .from('lists')
+      .insert({ owner_id: c.uid, name: 'Someday Shelf', kind: 'tbr' })
+      .select('id')
+      .single(),
+    'discover-search lists insert',
+  )
   const listId = (list as { id: string }).id
   await stubBackends(page)
   try {

@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
 import { authFailure } from './support/authError'
+import { ok, okUser } from './support/ok'
 
 // The shelf cases the seed and production cannot supply (docs/task-shelf-views.md).
 //
@@ -45,17 +46,23 @@ async function client(): Promise<Client> {
   const { data } = await admin.auth.admin.listUsers()
   let uid = data?.users?.find((u) => u.email === EMAIL)?.id
   if (!uid) {
-    const { data: created, error } = await admin.auth.admin.createUser({
-      email: EMAIL,
-      password: PASSWORD,
-      email_confirm: true,
-    })
-    if (error) throw error
-    uid = created.user!.id
+    uid = (
+      await okUser(
+        admin.auth.admin.createUser({
+          email: EMAIL,
+          password: PASSWORD,
+          email_confirm: true,
+        }),
+        'shelf-views createUser',
+      )
+    ).id
   }
-  await admin
-    .from('profiles')
-    .upsert({ id: uid, display_name: 'Shelf Views E2E', skin: 'tryst', mode: 'dark' })
+  await ok(
+    admin
+      .from('profiles')
+      .upsert({ id: uid, display_name: 'Shelf Views E2E', skin: 'tryst', mode: 'dark' }),
+    'shelf-views profiles upsert',
+  )
   const sb = createClient(SUPABASE_URL, ANON)
   const { data: s, error } = await sb.auth.signInWithPassword({ email: EMAIL, password: PASSWORD })
   if (error || !s.session) throw new Error(authFailure('shelf-views', EMAIL, error))
@@ -67,9 +74,9 @@ async function seedFixtures(c: Client): Promise<void> {
   const { data: existing } = await c.sb.from('books').select('id').eq('owner_id', c.uid)
   const ids = ((existing as { id: string }[]) ?? []).map((b) => b.id)
   if (ids.length) {
-    await c.sb.from('reads').delete().in('book_id', ids)
-    await c.sb.from('list_items').delete().in('book_id', ids)
-    await c.sb.from('books').delete().in('id', ids)
+    await ok(c.sb.from('reads').delete().in('book_id', ids), 'shelf-views reads delete')
+    await ok(c.sb.from('list_items').delete().in('book_id', ids), 'shelf-views list_items delete')
+    await ok(c.sb.from('books').delete().in('id', ids), 'shelf-views books delete')
   }
 
   // EVERY row carries EVERY possession column. In a bulk insert PostgREST takes the union of all
