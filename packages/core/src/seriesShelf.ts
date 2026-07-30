@@ -280,7 +280,6 @@ export interface SourceSeriesEntry {
   author: string
 }
 
-
 /**
  * The non-overwrite merge (task §2): source data only FILLS GAPS. Unmatched catalog slots become
  * ghost inserts; a hardcover-sourced, never-edited entry may follow the catalog's position;

@@ -242,8 +242,7 @@ describe('revive match — title first, author only to break a tie', () => {
   })
   // makeBook takes first/last; authorOf joins them, which is exactly what reconciliation writes
   // onto an entry's `author`, so both sides of the comparison are the same shape.
-  const book = (title: string, first = '', last = '') =>
-    makeBook({ id: 'b', title, first, last })
+  const book = (title: string, first = '', last = '') => makeBook({ id: 'b', title, first, last })
 
   it('revives on a single title match, without consulting author at all', () => {
     // The entry author is deliberately WRONG here. One candidate means author is never read, which

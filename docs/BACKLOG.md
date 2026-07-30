@@ -137,18 +137,29 @@ primary book` — both reached the function body and were turned away by the che
     **The honest fix is keying archived tombstones on (series, normalized title)**, which closes
     both cases at once and aligns the archive with every consumer — a v-next backup-format decision,
     its own branch. Recorded rather than fixed on the owner's instruction.
-- **Revive matches on title alone, so a removal can revive the wrong slot.** The
-  revive pass (`series.ts` ~L196-208) matches a tombstone to a library book on
-  `title.trim().toLowerCase()` and nothing else. Two books sharing a title in one
-  series — a reissue, an unmerged duplicate — and removing one can revive the other's
-  slot. `author` sits on the entry row unused, as does `book_id`. **Independent of
-  atomicity**: `remove_series_entry` closes the half-committed path and leaves this
-  entirely untouched, because this state needs no failure to reach. Found during
-  `fix/atomic-series-removal`, recorded rather than fixed on the owner's instruction —
-  it is the guard that would actually earn its place, unlike a `user_edited` guard,
-  which is unavailable (every tombstone has `user_edited` true — `removalPatch()` and
-  `importExport.ts`'s `tombstoneRows()` both set it unconditionally, so guarding on it
-  would disable revive entirely rather than narrow it).
+- ~~**Revive matches on title alone, so a removal can revive the wrong slot.**~~ — done
+  (`fix/revive-author-match`). `matchTombstoneForRevive` in `packages/core` now takes title
+  first and consults author only to break a tie between same-title tombstones, refusing to
+  revive anything when the tie can't be broken. Author is a discriminator and deliberately
+  NOT a requirement: an empty author is a legitimate state (the manual ghost path prompts
+  "Author (optional):"; Hardcover stores `''` when the upstream contribution is missing), so
+  requiring it would have turned an optional field into a functional one. Both revive paths
+  went through it — `useSeriesDetail`'s reconciliation and `revivedTombstone`, the latter of
+  which had never selected `author` at all. Both queries also gained a deterministic
+  `position, id` order; "first match wins" out of an unordered result meant the winner could
+  differ between runs.
+- **`ghostMatchesBook` has the identical title-only weakness, one step earlier in the same
+  function.** `packages/core/src/seriesShelf.ts` ~L136: `e.bookId == null && normalized title
+equality`, and nothing more. Two LIVE ghosts sharing a title with one library book, and
+  `entries.find(...)` in `useSeriesDetail`'s adoption pass takes whichever comes first — so the
+  book links to an arbitrary one of them. Same defect class as the revive match that
+  `fix/revive-author-match` just closed, and it runs BEFORE revive in the same reconciliation,
+  consuming the book from `linked` so the revive pass never even sees it. Distinct enough to be
+  its own branch: adoption is not a revive, its failure mode is a mislinked live slot rather
+  than a resurrected removal, and `ghostMatchesBook` is already exported and unit-tested, so
+  changing its signature touches its existing tests. The fix shape is the same — reuse the
+  author-as-discriminator rule, refusing on an unbreakable tie. Recorded rather than fixed on
+  the owner's instruction; a red run should mean one thing.
 - **`useSyncBookSeries` has the same unprotected shape, inverted, and it spans two
   mutations.** The book page's save runs `updateBook` (writes `books.series`) and then
   `syncBookSeries` (tombstones the old slot) as separate mutations in that forced order
