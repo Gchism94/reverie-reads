@@ -108,7 +108,7 @@ begin
   where bm.book_id = p_loser
   on conflict (book_id, mood_id) do nothing;
 
-  -- 3b. Does the incoming plan get to land? Only if the primary has no plan of its own in EITHER
+  -- 3d. Does the incoming plan get to land? Only if the primary has no plan of its own in EITHER
   --     representation, and the incoming side actually carries one. Read BEFORE the update, so the
   --     answer describes the stored row rather than a value the same statement is rewriting.
   select b.plan_y is null and b.plan_date is null and (p_fields ->> 'plan_y') is not null
