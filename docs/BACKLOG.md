@@ -79,6 +79,27 @@ primary book` — both reached the function body and were turned away by the che
   the badge is the only visible symptom. Recorded rather than fixed on the owner's
   instruction: whether removal should also clear `status`/`series_count` is a product
   decision, not a bug fix.
+- **`useMoveEntry`'s renumber is 2n sequential round trips, and it is not a transaction.**
+  Per entry it issues one `UPDATE series_entries` and then `syncBookPosition`'s
+  `UPDATE books`, awaited one after another — so a renumber costs **2n** requests, and a
+  connection dropped partway leaves the series **half-renumbered**, some slots on new
+  integers and the rest on old ones, with the book mirror in step for only the first half.
+  It is a **tail** event: `positionBetween` only asks for a renumber when neighbours are too
+  tight for a clean one- or two-decimal midpoint, which takes roughly **nine consecutive drops
+  into the same gap**, and the common path is the 2-trip single move. But `/series`' arranger is
+  drag-primary, so it reaches the tail sooner than the series page's older UI did.
+  **Proposed shape:** one RPC taking `(entry_id, position)[]` doing the whole renumber plus the
+  book mirror in a single transaction — 50 round trips becomes 1, and the half-renumbered state
+  becomes unconstructible rather than merely unlikely.
+  **Its own branch, with its own deploy ordering** — it is a migration, so the RPC has to be live
+  in production before any client calls it, the same S3a/S3b split this repo has now done twice.
+  Deliberately not folded into `feat/series-builder`: a red run there needs to mean one thing.
+  Measured there against the local stack (baseline round trip 11.05 ms, median of 20 selects),
+  replicating the write sequence exactly — a ghost-only series halves the trips, since there is no
+  book mirror, and that is the only mitigation present today:
+  - **10 entries** — 20 round trips, 112 ms median (min 92, max 149); ~1.2 s at 60 ms RTT, ~2.0 s at 100 ms
+  - **25 entries** — 50 round trips, 302 ms median (min 235, max 375); ~3.0 s at 60 ms RTT, ~5.0 s at 100 ms
+  - no optimistic UI on either, so the reader watches the whole thing
 - **Archived tombstones are keyed on (series, position); every functional consumer keys on
   title.** `slotKey` (`importExport.ts`) identifies a backed-up removal by series name +
   position, and its own comment calls that "the only thing that identifies 'the same slot'".
