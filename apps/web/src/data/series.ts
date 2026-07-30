@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   ghostMatchesBook,
+  matchTombstoneForRevive,
   mergeSourceEntries,
   seedSeriesPositions,
   sortEntries,
@@ -197,7 +198,17 @@ export function useSeriesDetail(name: string) {
       const seriesRow: SeriesRowT = row
 
       const [{ data: entRows, error: eErr }, { data: libRows, error: bErr }] = await Promise.all([
-        supabase.from('series_entries').select('*').eq('series_id', seriesRow.id),
+        // ORDERED, deliberately. Revive used to take the FIRST same-title tombstone out of whatever
+        // order Postgres happened to return, so with two candidates the winner could differ between
+        // runs — a bug that cannot be reproduced reliably is a bug that survives investigation.
+        // `position` is the reader's own arrangement and the only field with meaning here; `id`
+        // breaks the remaining tie so the sequence is total rather than merely mostly-stable.
+        supabase
+          .from('series_entries')
+          .select('*')
+          .eq('series_id', seriesRow.id)
+          .order('position', { ascending: true })
+          .order('id', { ascending: true }),
         // Deterministic order matters: these rows SEED the reading order, and an unordered fetch
         // made a null-position library number itself by whatever order Postgres happened to return.
         // Numbered books first (ascending), then the unnumbered ones alphabetically.
@@ -213,7 +224,6 @@ export function useSeriesDetail(name: string) {
       const allRows = (entRows ?? []) as SeriesEntryRowT[]
       let entries = allRows.filter((r) => !r.removed_at).map(toEntry)
       const removed = allRows.filter((r) => r.removed_at).map(toEntry)
-      const removedTitle = new Set(removed.map((e) => e.title.trim().toLowerCase()))
       const lib = (libRows ?? []) as { id: string; title: string; author_first: string | null; author_last: string | null; position: number | null; status: string | null }[]
 
       // 1) ghosts adopt matching library books (an import landed after the ghost was seeded)
@@ -230,11 +240,21 @@ export function useSeriesDetail(name: string) {
       // 2) every library book naming this series gets an entry. A book that names the series is the
       //    reader asking for it back, so a matching tombstone REVIVES rather than blocking — removal
       //    outlives a source refresh, not a deliberate re-add.
+      //
+      //    WHICH tombstone is `matchTombstoneForRevive`'s call, not this loop's: title first, author
+      //    only to break a tie between same-title tombstones, and nothing revived when the tie can't
+      //    be broken. Reviving the wrong slot resurrects a removal the reader made deliberately, in
+      //    the reading order, silently — strictly worse than a missed revive they can see and redo.
+      //    A tombstone this refuses stays a tombstone, so the book falls through to `fresh` below and
+      //    gets a NEW slot: the reader sees their book in the series either way.
       const joining = lib.filter((b) => !linked.has(b.id))
-      const revive = joining.filter((b) => removedTitle.has(b.title.trim().toLowerCase()))
-      for (const b of revive) {
-        const t = removed.find((e) => e.title.trim().toLowerCase() === b.title.trim().toLowerCase())
-        if (!t) continue
+      // Tombstones are consumed as they revive, so two same-title books can't both claim one slot.
+      const available = [...removed]
+      for (const b of joining) {
+        const bookLike = { title: b.title, first: b.author_first ?? '', last: b.author_last ?? '' }
+        const match = matchTombstoneForRevive(available, bookLike)
+        if (match.kind !== 'revive') continue
+        const t = match.tombstone
         const { data: back } = await supabase
           .from('series_entries')
           .update({ removed_at: null, book_id: b.id })
@@ -242,6 +262,10 @@ export function useSeriesDetail(name: string) {
           .select()
         const row = ((back ?? []) as SeriesEntryRowT[])[0]
         if (row) entries = [...entries, toEntry(row)]
+        available.splice(
+          available.findIndex((x) => x.id === t.id),
+          1,
+        )
         linked.add(b.id)
       }
       // Positions come from the core seeder, not raw books.position: imports park global-order
@@ -497,20 +521,32 @@ export function useSyncBookSeries() {
  * removal back, and reusing the row keeps it from going on suppressing source refreshes forever.
  * Returns true when it handled the add.
  */
-async function revivedTombstone(seriesId: string, title: string, position: number, bookId: string | null): Promise<boolean> {
+async function revivedTombstone(
+  seriesId: string,
+  title: string,
+  author: string,
+  position: number,
+  bookId: string | null,
+): Promise<boolean> {
   const { data } = await supabase
     .from('series_entries')
-    .select('id, title')
+    // `author` is selected because the match needs it to break a same-title tie; ordered so that a
+    // tie is at least resolved the same way twice. Both were missing before: this path picked the
+    // first tombstone out of an unordered result and never read author at all.
+    .select('id, title, author')
     .eq('series_id', seriesId)
     .not('removed_at', 'is', null)
-  const match = ((data ?? []) as { id: string; title: string }[]).find(
-    (r) => r.title.trim().toLowerCase() === title.trim().toLowerCase(),
-  )
-  if (!match) return false
+    .order('position', { ascending: true })
+    .order('id', { ascending: true })
+  const candidates = (data ?? []) as { id: string; title: string; author: string }[]
+  // The caller knows the author as a display string already (a Book's byline, or what the reader
+  // typed for a ghost), so it arrives pre-joined rather than as first/last.
+  const match = matchTombstoneForRevive(candidates, { title, first: '', last: author })
+  if (match.kind !== 'revive') return false
   const { error } = await supabase
     .from('series_entries')
     .update({ removed_at: null, book_id: bookId, position, user_edited: true })
-    .eq('id', match.id)
+    .eq('id', match.tombstone.id)
   return !error
 }
 
@@ -526,7 +562,8 @@ export function useAddSeriesEntries(name: string) {
       const rows: Record<string, unknown>[] = []
       for (const b of input.books) {
         const position = ++at
-        if (await revivedTombstone(input.seriesId, b.title, position, b.id)) continue
+        const byline = [b.first, b.last].filter(Boolean).join(' ')
+        if (await revivedTombstone(input.seriesId, b.title, byline, position, b.id)) continue
         rows.push({
           series_id: input.seriesId,
           owner_id: uid,
@@ -564,7 +601,8 @@ export function useAddGhostEntry(name: string) {
     meta: { action: 'The series' },
     mutationFn: async (input: { seriesId: string; title: string; author: string; position: number }) => {
       const uid = await ownerId()
-      if (await revivedTombstone(input.seriesId, input.title, input.position, null)) return
+      if (await revivedTombstone(input.seriesId, input.title, input.author, input.position, null))
+        return
       const { error } = await supabase.from('series_entries').insert({
         series_id: input.seriesId,
         owner_id: uid,

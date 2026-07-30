@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { authFailure } from './support/authError'
-import { ok, okUser } from './support/ok'
+import { ok, okData, okUser } from './support/ok'
 
 // Regression guards for docs/task-series-defects.md as REVISED by the #64/#65 audit. The original
 // work was verified at the DB level only, and three of its four claims did not survive an eyeball:
@@ -201,6 +201,83 @@ const entryByTitle = async (c: Client, title: string) => {
     book_id: string | null
     removed_at: string | null
   } | null
+}
+
+/** This series' row id — every direct-state fixture below needs it. */
+const seriesId = async (c: Client): Promise<string> => {
+  const s = await okData(
+    c.sb.from('series').select('id').eq('owner_id', c.uid).eq('name', SERIES).single(),
+    'series-removal-positions series id',
+  )
+  return (s as { id: string }).id
+}
+
+/** Plant a TOMBSTONE directly. Two of these sharing a title is the state the revive matcher exists
+ *  to disambiguate, and it cannot be produced through the UI — a reissue or an unmerged duplicate
+ *  gets you there in a real library, but not in a fixture. */
+async function insertTombstone(
+  c: Client,
+  { title, author, position }: { title: string; author: string; position: number },
+): Promise<string> {
+  const row = await okData(
+    c.sb
+      .from('series_entries')
+      .insert({
+        series_id: await seriesId(c),
+        owner_id: c.uid,
+        position,
+        title,
+        author,
+        book_id: null,
+        user_edited: true,
+        removed_at: new Date().toISOString(),
+      })
+      .select('id')
+      .single(),
+    'series-removal-positions tombstone insert',
+  )
+  return (row as { id: string }).id
+}
+
+/** Every entry with this title, tombstoned or not — the assertions need to see both sides. */
+const entriesByTitle = async (c: Client, title: string) => {
+  const { data } = await c.sb
+    .from('series_entries')
+    .select('id, title, author, book_id, removed_at')
+    .eq('series_id', await seriesId(c))
+    .eq('title', title)
+    .order('position', { ascending: true })
+  return (data ?? []) as {
+    id: string
+    title: string
+    author: string
+    book_id: string | null
+    removed_at: string | null
+  }[]
+}
+
+/** One extra library book in this series, so reconciliation has something to revive FROM. */
+async function seedExtraBook(c: Client, title: string, first: string, last: string) {
+  const row = await okData(
+    c.sb
+      .from('books')
+      .insert({
+        owner_id: c.uid,
+        title,
+        author_first: first,
+        author_last: last,
+        series: SERIES,
+        position: 9,
+        status: 'ongoing',
+        genre: 'fantasy',
+        ownership: 'owned',
+        cover_url: '/landing-covers/everflame.jpg',
+      })
+      .select('id')
+      .single(),
+    'series-removal-positions extra book insert',
+  )
+  return (row as { id: string }).id
 }
 
 /**
@@ -704,6 +781,164 @@ test('book-page position edits take effect immediately on the series page', asyn
         timeout: 15_000,
       })
       .not.toBe(9)
+  } finally {
+    await reset(c)
+  }
+})
+
+// ── fix/revive-author-match: WHICH tombstone a re-added book revives, when more than one could be
+//    the answer. Two same-title tombstones is a reissue, an unmerged import duplicate, or a
+//    translation; reviving the wrong one resurrects a slot the reader deliberately removed, in the
+//    reading order, silently. Author breaks the tie; an unbreakable tie revives nothing.
+test('reconciliation revives the same-title tombstone whose AUTHOR matches the book', async ({
+  page,
+}) => {
+  test.setTimeout(180_000)
+  const c = await client()
+  await reset(c)
+  await seedSeries(c)
+  await stubBackends(page)
+  try {
+    await signIn(page, c.session)
+    await openSeries(page) // materialize the three seeded entries first
+    await expect.poll(async () => page.locator('ol li').count(), { timeout: 20_000 }).toBe(3)
+
+    // Two tombstones, same title, different authors. Only one is the right answer.
+    const wrong = await insertTombstone(c, {
+      title: 'Twin Slot',
+      author: 'Wrong Author',
+      position: 7,
+    })
+    const right = await insertTombstone(c, {
+      title: 'Twin Slot',
+      author: 'Vera Quill',
+      position: 8,
+    })
+    // ...and the book the reader just added back, by the second author.
+    await seedExtraBook(c, 'Twin Slot', 'Vera', 'Quill')
+
+    await openSeries(page)
+    await expect
+      .poll(async () => (await liveEntries(c)).some((e) => e.title === 'Twin Slot'), {
+        timeout: 20_000,
+      })
+      .toBe(true)
+
+    const twins = await entriesByTitle(c, 'Twin Slot')
+    const revived = twins.filter((t) => t.removed_at === null)
+    expect(revived).toHaveLength(1)
+    // The IDENTITY is the assertion — a test that only counted revivals would pass on either choice.
+    expect(revived[0]!.id).toBe(right)
+    expect(revived[0]!.author).toBe('Vera Quill')
+    expect(twins.find((t) => t.id === wrong)?.removed_at).toBeTruthy()
+  } finally {
+    await reset(c)
+  }
+})
+
+test('reconciliation revives NOTHING when two same-title tombstones cannot be told apart', async ({
+  page,
+}) => {
+  test.setTimeout(180_000)
+  const c = await client()
+  await reset(c)
+  await seedSeries(c)
+  await stubBackends(page)
+  try {
+    await signIn(page, c.session)
+    await openSeries(page)
+    await expect.poll(async () => page.locator('ol li').count(), { timeout: 20_000 }).toBe(3)
+
+    // Both tombstones have an EMPTY author — the legitimate state a manual ghost lands in when the
+    // reader skips the optional author prompt. Nothing on either row can discriminate.
+    const a = await insertTombstone(c, { title: 'Twin Slot', author: '', position: 7 })
+    const b = await insertTombstone(c, { title: 'Twin Slot', author: '', position: 8 })
+    await seedExtraBook(c, 'Twin Slot', 'Vera', 'Quill')
+
+    await openSeries(page)
+    // The book still reaches the series — it just gets a NEW slot instead of claiming a tombstone.
+    await expect
+      .poll(async () => (await liveEntries(c)).some((e) => e.title === 'Twin Slot'), {
+        timeout: 20_000,
+      })
+      .toBe(true)
+
+    const twins = await entriesByTitle(c, 'Twin Slot')
+    // Three rows now: the two untouched tombstones plus the freshly seeded live entry.
+    expect(twins).toHaveLength(3)
+    expect(twins.find((t) => t.id === a)?.removed_at).toBeTruthy()
+    expect(twins.find((t) => t.id === b)?.removed_at).toBeTruthy()
+    const live = twins.filter((t) => t.removed_at === null)
+    expect(live).toHaveLength(1)
+    expect(live[0]!.id).not.toBe(a)
+    expect(live[0]!.id).not.toBe(b)
+    expect(live[0]!.book_id).toBeTruthy() // a real linked slot, not a resurrected ghost
+  } finally {
+    await reset(c)
+  }
+})
+
+// The OTHER revive path, and the one that matters most: revivedTombstone is reached by an explicit
+// reader gesture ("＋ One you don't have yet"), so a wrong match here attaches the reader's own add
+// to a slot they deliberately removed. Driven through the real prompts, not the data layer.
+test('an explicit ghost add revives the author-matching tombstone, and refuses an unbreakable tie', async ({
+  page,
+}) => {
+  test.setTimeout(180_000)
+  const c = await client()
+  await reset(c)
+  await seedSeries(c)
+  await stubBackends(page)
+  try {
+    await signIn(page, c.session)
+    await openSeries(page)
+    await expect.poll(async () => page.locator('ol li').count(), { timeout: 20_000 }).toBe(3)
+
+    // ── Part 1: distinguishable — the add must land on the right tombstone.
+    const wrong = await insertTombstone(c, {
+      title: 'Ghost Twin',
+      author: 'Wrong Author',
+      position: 7,
+    })
+    const right = await insertTombstone(c, {
+      title: 'Ghost Twin',
+      author: 'Vera Quill',
+      position: 8,
+    })
+
+    const prompts = ['Ghost Twin', 'Vera Quill']
+    page.on('dialog', (d) => void d.accept(prompts.shift() ?? ''))
+    await page.getByRole('button', { name: /One you don’t have yet/i }).click()
+    await expect(page.locator('ol li').filter({ hasText: 'Ghost Twin' })).toBeVisible({
+      timeout: 20_000,
+    })
+
+    const twins = await entriesByTitle(c, 'Ghost Twin')
+    const revived = twins.filter((t) => t.removed_at === null)
+    expect(revived).toHaveLength(1)
+    expect(revived[0]!.id).toBe(right)
+    expect(twins.find((t) => t.id === wrong)?.removed_at).toBeTruthy()
+    // Reusing the tombstone rather than inserting beside it is the whole point of this path.
+    expect(twins).toHaveLength(2)
+
+    // ── Part 2: indistinguishable — the add must NOT claim either tombstone.
+    const c1 = await insertTombstone(c, { title: 'Tied Twin', author: 'Same Name', position: 11 })
+    const c2 = await insertTombstone(c, { title: 'Tied Twin', author: 'Same Name', position: 12 })
+
+    prompts.push('Tied Twin', 'Same Name')
+    await page.getByRole('button', { name: /One you don’t have yet/i }).click()
+    await expect(page.locator('ol li').filter({ hasText: 'Tied Twin' })).toBeVisible({
+      timeout: 20_000,
+    })
+
+    const tied = await entriesByTitle(c, 'Tied Twin')
+    expect(tied).toHaveLength(3) // both tombstones intact + one new ghost
+    expect(tied.find((t) => t.id === c1)?.removed_at).toBeTruthy()
+    expect(tied.find((t) => t.id === c2)?.removed_at).toBeTruthy()
+    const fresh = tied.filter((t) => t.removed_at === null)
+    expect(fresh).toHaveLength(1)
+    expect(fresh[0]!.id).not.toBe(c1)
+    expect(fresh[0]!.id).not.toBe(c2)
   } finally {
     await reset(c)
   }

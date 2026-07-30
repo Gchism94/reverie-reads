@@ -11,7 +11,9 @@ import {
   renumberEntries,
   seedSeriesPositions,
   seriesProgress,
+  matchTombstoneForRevive,
   sortEntries,
+  type RevivableTombstone,
   type SeriesEntry,
 } from './seriesShelf'
 
@@ -229,5 +231,130 @@ describe('seeding positions for books joining a series', () => {
   it('keeps decimal novella slots — #2.5 is a real position', () => {
     const got = seedSeriesPositions([c('a', 1), c('novella', 2.5), c('b', 3)])
     expect(got.get('novella')).toBe(2.5)
+  })
+})
+
+describe('revive match — title first, author only to break a tie', () => {
+  const tomb = (p: Partial<RevivableTombstone> & { id: string }): RevivableTombstone => ({
+    title: 'Shared Title',
+    author: '',
+    ...p,
+  })
+  // makeBook takes first/last; authorOf joins them, which is exactly what reconciliation writes
+  // onto an entry's `author`, so both sides of the comparison are the same shape.
+  const book = (title: string, first = '', last = '') =>
+    makeBook({ id: 'b', title, first, last })
+
+  it('revives on a single title match, without consulting author at all', () => {
+    // The entry author is deliberately WRONG here. One candidate means author is never read, which
+    // is what keeps an empty or mismatched author from breaking the ordinary case.
+    const only = tomb({ id: 't1', title: 'Shared Title', author: 'Someone Entirely Else' })
+    const m = matchTombstoneForRevive([only], book('shared title', 'Nell', 'Marrow'))
+    expect(m).toEqual({ kind: 'revive', tombstone: only })
+  })
+
+  it('matches title on trim + lowercase, like every other title match here', () => {
+    const only = tomb({ id: 't1', title: '  SHARED   Title ' })
+    // Inner whitespace is NOT collapsed by normTitle — assert the real behaviour, not the hoped one.
+    expect(matchTombstoneForRevive([only], book('  SHARED   Title '))).toEqual({
+      kind: 'revive',
+      tombstone: only,
+    })
+  })
+
+  it('finds nothing when no title matches', () => {
+    expect(matchTombstoneForRevive([tomb({ id: 't1' })], book('A Different Book'))).toEqual({
+      kind: 'none',
+    })
+  })
+
+  it('picks the right one of two same-title tombstones by author', () => {
+    const yarros = tomb({ id: 't-yarros', author: 'Rebecca Yarros' })
+    const maas = tomb({ id: 't-maas', author: 'Sarah J. Maas' })
+    expect(
+      matchTombstoneForRevive([yarros, maas], book('Shared Title', 'Sarah J.', 'Maas')),
+    ).toEqual({ kind: 'revive', tombstone: maas })
+    // ...and the other direction, so the test cannot pass by always choosing one side.
+    expect(
+      matchTombstoneForRevive([yarros, maas], book('Shared Title', 'Rebecca', 'Yarros')),
+    ).toEqual({ kind: 'revive', tombstone: yarros })
+  })
+
+  it('REVIVES NOTHING when two same-title tombstones both have an empty author', () => {
+    const a = tomb({ id: 't-a', author: '' })
+    const b = tomb({ id: 't-b', author: '' })
+    const m = matchTombstoneForRevive([a, b], book('Shared Title', 'Nell', 'Marrow'))
+    expect(m.kind).toBe('ambiguous')
+    expect(m).toEqual({ kind: 'ambiguous', candidates: [a, b] })
+  })
+
+  it('REVIVES NOTHING when two same-title tombstones share the same author', () => {
+    // A genuine reissue by one author: nothing on the row can tell them apart, so refuse.
+    const a = tomb({ id: 't-a', author: 'Nell Marrow' })
+    const b = tomb({ id: 't-b', author: 'Nell Marrow' })
+    expect(matchTombstoneForRevive([a, b], book('Shared Title', 'Nell', 'Marrow')).kind).toBe(
+      'ambiguous',
+    )
+  })
+
+  it('REVIVES NOTHING when neither candidate author matches the book', () => {
+    const a = tomb({ id: 't-a', author: 'Rebecca Yarros' })
+    const b = tomb({ id: 't-b', author: 'Sarah J. Maas' })
+    expect(matchTombstoneForRevive([a, b], book('Shared Title', 'Nell', 'Marrow')).kind).toBe(
+      'ambiguous',
+    )
+  })
+
+  it("REVIVES NOTHING when the BOOK's author is empty and two titles tie", () => {
+    // An empty book author compares equal to nothing useful, so it cannot discriminate — refuse
+    // rather than let '' accidentally select the tombstone that also happens to be ''.
+    const a = tomb({ id: 't-a', author: '' })
+    const b = tomb({ id: 't-b', author: 'Nell Marrow' })
+    expect(matchTombstoneForRevive([a, b], book('Shared Title')).kind).toBe('ambiguous')
+  })
+
+  it('still revives when the title is unique even though one side has an empty author', () => {
+    // The case the empty-author-is-legitimate argument rests on: a manual ghost the reader added
+    // without typing an author must still come back when they acquire the book.
+    const ghostish = tomb({ id: 't1', title: 'Only One', author: '' })
+    expect(matchTombstoneForRevive([ghostish], book('Only One', 'Nell', 'Marrow'))).toEqual({
+      kind: 'revive',
+      tombstone: ghostish,
+    })
+    // ...and symmetrically, an empty BOOK author against a named tombstone.
+    const named = tomb({ id: 't2', title: 'Only Two', author: 'Nell Marrow' })
+    expect(matchTombstoneForRevive([named], book('Only Two'))).toEqual({
+      kind: 'revive',
+      tombstone: named,
+    })
+  })
+
+  it('discriminates on normalized author — case and whitespace cannot split one author', () => {
+    const a = tomb({ id: 't-a', author: 'nell   marrow' })
+    const b = tomb({ id: 't-b', author: 'Someone Else' })
+    expect(matchTombstoneForRevive([a, b], book('Shared Title', 'Nell', 'Marrow'))).toEqual({
+      kind: 'revive',
+      tombstone: a,
+    })
+  })
+
+  it('does NOT equate a surname-first or initial-only variant — refusing, which is the safe way to fail', () => {
+    // The documented limit of normalizeName, pinned so nobody "fixes" it into fuzzy matching by
+    // accident: neither variant matches, so the tie is unresolved and nothing revives.
+    const inverted = tomb({ id: 't-a', author: 'Maas, Sarah J.' })
+    const initials = tomb({ id: 't-b', author: 'S. J. Maas' })
+    expect(
+      matchTombstoneForRevive([inverted, initials], book('Shared Title', 'Sarah J.', 'Maas')).kind,
+    ).toBe('ambiguous')
+  })
+
+  it('ignores tombstones whose title differs when breaking a tie', () => {
+    // A third, unrelated tombstone must not become a candidate just because it exists.
+    const a = tomb({ id: 't-a', author: 'Nell Marrow' })
+    const b = tomb({ id: 't-b', author: 'Someone Else' })
+    const unrelated = tomb({ id: 't-c', title: 'Unrelated', author: 'Nell Marrow' })
+    expect(
+      matchTombstoneForRevive([a, b, unrelated], book('Shared Title', 'Nell', 'Marrow')),
+    ).toEqual({ kind: 'revive', tombstone: a })
   })
 })
