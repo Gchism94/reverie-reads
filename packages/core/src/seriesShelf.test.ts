@@ -4,16 +4,16 @@ import {
   entryAfterBook,
   mergeSourceEntries,
   entryState,
-  ghostMatchesBook,
   nextUp,
   positionBetween,
   progressLine,
   renumberEntries,
   seedSeriesPositions,
   seriesProgress,
-  matchTombstoneForRevive,
+  matchEntryForBook,
   sortEntries,
-  type RevivableTombstone,
+  unlinkedEntries,
+  type ClaimableEntry,
   type SeriesEntry,
 } from './seriesShelf'
 
@@ -127,12 +127,85 @@ describe('decimal positioning (drag-to-reorder)', () => {
   })
 })
 
-describe('ghost adoption', () => {
-  it('matches by normalized title, only for unlinked entries', () => {
-    const g = entry({ id: 'g', position: 4, title: '  The Winter Door ' })
-    expect(ghostMatchesBook(g, { title: 'the winter door' })).toBe(true)
-    expect(ghostMatchesBook({ ...g, bookId: 'x' }, { title: 'the winter door' })).toBe(false)
-    expect(ghostMatchesBook(g, { title: 'Another Door' })).toBe(false)
+describe('ghost adoption — the population, and the rule it shares with revive', () => {
+  const ghost = entry({ id: 'g', position: 4, title: '  The Winter Door ' })
+  const bk = (title: string, first = '', last = '') => makeBook({ id: 'b', title, first, last })
+
+  // This assertion used to live INSIDE ghostMatchesBook as an `e.bookId == null` clause. The matcher
+  // no longer sees bookId, so the guard moved to `unlinkedEntries` and the call site — and the
+  // coverage moved with it rather than evaporating, which is the failure mode of relocating a check.
+  it('unlinkedEntries excludes entries that already belong to a book', () => {
+    const linked = entry({ id: 'l', position: 5, title: 'Taken', bookId: 'book-1' })
+    expect(unlinkedEntries([ghost, linked]).map((e) => e.id)).toEqual(['g'])
+  })
+
+  it('adopts on a normalized title match', () => {
+    expect(matchEntryForBook(unlinkedEntries([ghost]), bk('the winter door'))).toEqual({
+      kind: 'match',
+      entry: ghost,
+    })
+  })
+
+  it('does not adopt a book whose title matches nothing', () => {
+    expect(matchEntryForBook(unlinkedEntries([ghost]), bk('Another Door'))).toEqual({
+      kind: 'none',
+    })
+  })
+
+  it('cannot adopt an already-linked entry, because the filter removed it from the population', () => {
+    const linked = entry({ id: 'l', position: 5, title: 'The Winter Door', bookId: 'book-1' })
+    expect(matchEntryForBook(unlinkedEntries([linked]), bk('The Winter Door'))).toEqual({
+      kind: 'none',
+    })
+    // ...and the same candidate UNFILTERED would have matched — so the filter is what stops it, and
+    // this is exactly what breaks if a call site forgets to apply it.
+    expect(matchEntryForBook([linked], bk('The Winter Door')).kind).toBe('match')
+  })
+
+  it('adopts a unique title match even when the authors disagree', () => {
+    // Adoption exists because a catalog's author string almost never matches the reader's byline.
+    // Requiring author on a unique match would break the feature's normal case, not harden it.
+    const seeded = entry({ id: 'g2', position: 6, title: 'Iron Flame', author: 'R. Yarros' })
+    expect(
+      matchEntryForBook(unlinkedEntries([seeded]), bk('Iron Flame', 'Rebecca', 'Yarros')),
+    ).toEqual({ kind: 'match', entry: seeded })
+  })
+
+  it('picks the right one of two same-title ghosts by author, in both directions', () => {
+    const a = entry({ id: 'g-a', position: 4, title: 'Twin', author: 'Vera Quill' })
+    const b = entry({ id: 'g-b', position: 5, title: 'Twin', author: 'Nell Marrow' })
+    const pool = unlinkedEntries([a, b])
+    expect(matchEntryForBook(pool, bk('Twin', 'Vera', 'Quill'))).toEqual({
+      kind: 'match',
+      entry: a,
+    })
+    expect(matchEntryForBook(pool, bk('Twin', 'Nell', 'Marrow'))).toEqual({
+      kind: 'match',
+      entry: b,
+    })
+  })
+
+  it('ADOPTS NOTHING when two same-title ghosts cannot be told apart', () => {
+    // The interaction that matters: refusing here hands the book to the revive pass, which can still
+    // claim it correctly. Adopting the wrong ghost would consume the book and silence revive.
+    const a = entry({ id: 'g-a', position: 4, title: 'Twin', author: '' })
+    const b = entry({ id: 'g-b', position: 5, title: 'Twin', author: '' })
+    expect(matchEntryForBook(unlinkedEntries([a, b]), bk('Twin', 'Vera', 'Quill')).kind).toBe(
+      'ambiguous',
+    )
+  })
+
+  it('adopts on a unique title even when one side has an empty author', () => {
+    const noAuthor = entry({ id: 'g3', position: 7, title: 'Solo', author: '' })
+    expect(matchEntryForBook(unlinkedEntries([noAuthor]), bk('Solo', 'Nell', 'Marrow'))).toEqual({
+      kind: 'match',
+      entry: noAuthor,
+    })
+    const named = entry({ id: 'g4', position: 8, title: 'Solo Two', author: 'Nell Marrow' })
+    expect(matchEntryForBook(unlinkedEntries([named]), bk('Solo Two'))).toEqual({
+      kind: 'match',
+      entry: named,
+    })
   })
 })
 
@@ -235,7 +308,7 @@ describe('seeding positions for books joining a series', () => {
 })
 
 describe('revive match — title first, author only to break a tie', () => {
-  const tomb = (p: Partial<RevivableTombstone> & { id: string }): RevivableTombstone => ({
+  const tomb = (p: Partial<ClaimableEntry> & { id: string }): ClaimableEntry => ({
     title: 'Shared Title',
     author: '',
     ...p,
@@ -248,21 +321,21 @@ describe('revive match — title first, author only to break a tie', () => {
     // The entry author is deliberately WRONG here. One candidate means author is never read, which
     // is what keeps an empty or mismatched author from breaking the ordinary case.
     const only = tomb({ id: 't1', title: 'Shared Title', author: 'Someone Entirely Else' })
-    const m = matchTombstoneForRevive([only], book('shared title', 'Nell', 'Marrow'))
-    expect(m).toEqual({ kind: 'revive', tombstone: only })
+    const m = matchEntryForBook([only], book('shared title', 'Nell', 'Marrow'))
+    expect(m).toEqual({ kind: 'match', entry: only })
   })
 
   it('matches title on trim + lowercase, like every other title match here', () => {
     const only = tomb({ id: 't1', title: '  SHARED   Title ' })
     // Inner whitespace is NOT collapsed by normTitle — assert the real behaviour, not the hoped one.
-    expect(matchTombstoneForRevive([only], book('  SHARED   Title '))).toEqual({
-      kind: 'revive',
-      tombstone: only,
+    expect(matchEntryForBook([only], book('  SHARED   Title '))).toEqual({
+      kind: 'match',
+      entry: only,
     })
   })
 
   it('finds nothing when no title matches', () => {
-    expect(matchTombstoneForRevive([tomb({ id: 't1' })], book('A Different Book'))).toEqual({
+    expect(matchEntryForBook([tomb({ id: 't1' })], book('A Different Book'))).toEqual({
       kind: 'none',
     })
   })
@@ -270,19 +343,21 @@ describe('revive match — title first, author only to break a tie', () => {
   it('picks the right one of two same-title tombstones by author', () => {
     const yarros = tomb({ id: 't-yarros', author: 'Rebecca Yarros' })
     const maas = tomb({ id: 't-maas', author: 'Sarah J. Maas' })
-    expect(
-      matchTombstoneForRevive([yarros, maas], book('Shared Title', 'Sarah J.', 'Maas')),
-    ).toEqual({ kind: 'revive', tombstone: maas })
+    expect(matchEntryForBook([yarros, maas], book('Shared Title', 'Sarah J.', 'Maas'))).toEqual({
+      kind: 'match',
+      entry: maas,
+    })
     // ...and the other direction, so the test cannot pass by always choosing one side.
-    expect(
-      matchTombstoneForRevive([yarros, maas], book('Shared Title', 'Rebecca', 'Yarros')),
-    ).toEqual({ kind: 'revive', tombstone: yarros })
+    expect(matchEntryForBook([yarros, maas], book('Shared Title', 'Rebecca', 'Yarros'))).toEqual({
+      kind: 'match',
+      entry: yarros,
+    })
   })
 
   it('REVIVES NOTHING when two same-title tombstones both have an empty author', () => {
     const a = tomb({ id: 't-a', author: '' })
     const b = tomb({ id: 't-b', author: '' })
-    const m = matchTombstoneForRevive([a, b], book('Shared Title', 'Nell', 'Marrow'))
+    const m = matchEntryForBook([a, b], book('Shared Title', 'Nell', 'Marrow'))
     expect(m.kind).toBe('ambiguous')
     expect(m).toEqual({ kind: 'ambiguous', candidates: [a, b] })
   })
@@ -291,17 +366,13 @@ describe('revive match — title first, author only to break a tie', () => {
     // A genuine reissue by one author: nothing on the row can tell them apart, so refuse.
     const a = tomb({ id: 't-a', author: 'Nell Marrow' })
     const b = tomb({ id: 't-b', author: 'Nell Marrow' })
-    expect(matchTombstoneForRevive([a, b], book('Shared Title', 'Nell', 'Marrow')).kind).toBe(
-      'ambiguous',
-    )
+    expect(matchEntryForBook([a, b], book('Shared Title', 'Nell', 'Marrow')).kind).toBe('ambiguous')
   })
 
   it('REVIVES NOTHING when neither candidate author matches the book', () => {
     const a = tomb({ id: 't-a', author: 'Rebecca Yarros' })
     const b = tomb({ id: 't-b', author: 'Sarah J. Maas' })
-    expect(matchTombstoneForRevive([a, b], book('Shared Title', 'Nell', 'Marrow')).kind).toBe(
-      'ambiguous',
-    )
+    expect(matchEntryForBook([a, b], book('Shared Title', 'Nell', 'Marrow')).kind).toBe('ambiguous')
   })
 
   it("REVIVES NOTHING when the BOOK's author is empty and two titles tie", () => {
@@ -309,31 +380,31 @@ describe('revive match — title first, author only to break a tie', () => {
     // rather than let '' accidentally select the tombstone that also happens to be ''.
     const a = tomb({ id: 't-a', author: '' })
     const b = tomb({ id: 't-b', author: 'Nell Marrow' })
-    expect(matchTombstoneForRevive([a, b], book('Shared Title')).kind).toBe('ambiguous')
+    expect(matchEntryForBook([a, b], book('Shared Title')).kind).toBe('ambiguous')
   })
 
   it('still revives when the title is unique even though one side has an empty author', () => {
     // The case the empty-author-is-legitimate argument rests on: a manual ghost the reader added
     // without typing an author must still come back when they acquire the book.
     const ghostish = tomb({ id: 't1', title: 'Only One', author: '' })
-    expect(matchTombstoneForRevive([ghostish], book('Only One', 'Nell', 'Marrow'))).toEqual({
-      kind: 'revive',
-      tombstone: ghostish,
+    expect(matchEntryForBook([ghostish], book('Only One', 'Nell', 'Marrow'))).toEqual({
+      kind: 'match',
+      entry: ghostish,
     })
     // ...and symmetrically, an empty BOOK author against a named tombstone.
     const named = tomb({ id: 't2', title: 'Only Two', author: 'Nell Marrow' })
-    expect(matchTombstoneForRevive([named], book('Only Two'))).toEqual({
-      kind: 'revive',
-      tombstone: named,
+    expect(matchEntryForBook([named], book('Only Two'))).toEqual({
+      kind: 'match',
+      entry: named,
     })
   })
 
   it('discriminates on normalized author — case and whitespace cannot split one author', () => {
     const a = tomb({ id: 't-a', author: 'nell   marrow' })
     const b = tomb({ id: 't-b', author: 'Someone Else' })
-    expect(matchTombstoneForRevive([a, b], book('Shared Title', 'Nell', 'Marrow'))).toEqual({
-      kind: 'revive',
-      tombstone: a,
+    expect(matchEntryForBook([a, b], book('Shared Title', 'Nell', 'Marrow'))).toEqual({
+      kind: 'match',
+      entry: a,
     })
   })
 
@@ -343,7 +414,7 @@ describe('revive match — title first, author only to break a tie', () => {
     const inverted = tomb({ id: 't-a', author: 'Maas, Sarah J.' })
     const initials = tomb({ id: 't-b', author: 'S. J. Maas' })
     expect(
-      matchTombstoneForRevive([inverted, initials], book('Shared Title', 'Sarah J.', 'Maas')).kind,
+      matchEntryForBook([inverted, initials], book('Shared Title', 'Sarah J.', 'Maas')).kind,
     ).toBe('ambiguous')
   })
 
@@ -352,8 +423,9 @@ describe('revive match — title first, author only to break a tie', () => {
     const a = tomb({ id: 't-a', author: 'Nell Marrow' })
     const b = tomb({ id: 't-b', author: 'Someone Else' })
     const unrelated = tomb({ id: 't-c', title: 'Unrelated', author: 'Nell Marrow' })
-    expect(
-      matchTombstoneForRevive([a, b, unrelated], book('Shared Title', 'Nell', 'Marrow')),
-    ).toEqual({ kind: 'revive', tombstone: a })
+    expect(matchEntryForBook([a, b, unrelated], book('Shared Title', 'Nell', 'Marrow'))).toEqual({
+      kind: 'match',
+      entry: a,
+    })
   })
 })

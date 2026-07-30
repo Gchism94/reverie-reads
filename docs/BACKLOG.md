@@ -148,23 +148,25 @@ primary book` — both reached the function body and were turned away by the che
   which had never selected `author` at all. Both queries also gained a deterministic
   `position, id` order; "first match wins" out of an unordered result meant the winner could
   differ between runs.
-- **`ghostMatchesBook` has the identical title-only weakness, one step earlier in the same
-  function — and it should be the NEXT series-integrity branch, not an unordered item.**
-  `packages/core/src/seriesShelf.ts` ~L136: `e.bookId == null && normalized title equality`, and
-  nothing more. Two LIVE ghosts sharing a title with one library book, and `entries.find(...)`
-  in `useSeriesDetail`'s adoption pass takes whichever comes first — so the book links to an
-  arbitrary one of them. Same defect class as the revive match that `fix/revive-author-match`
-  just closed, and it runs BEFORE revive in the same reconciliation, consuming the book from
-  `linked` so the revive pass never even sees it. **That ordering is why fixing revive alone
-  doesn't finish the job**: adoption is the earlier step, and an earlier step that still guesses
-  can override a later step that no longer does — a mislinked ghost adoption removes the book
-  from contention before the now-correct revive match ever runs, so the fix just landed can be
-  silently bypassed by the defect one step upstream of it. Distinct enough to be its own branch
-  regardless — adoption is not a revive, its failure mode is a mislinked live slot rather than a
-  resurrected removal, and `ghostMatchesBook` is already exported and unit-tested, so changing
-  its signature touches its existing tests. The fix shape is the same — reuse the
-  author-as-discriminator rule, refusing on an unbreakable tie. Recorded rather than fixed on
-  the owner's instruction; a red run should mean one thing.
+- ~~**`ghostMatchesBook` has the identical title-only weakness, one step earlier in the same
+  function.**~~ — done (`fix/ghost-adoption-match`), and it closes the sequence the revive fix
+  started. Adoption and revive were asking the same question — which of these candidate entries is
+  this book — so they now share one answer: `matchEntryForBook`, with `ghostMatchesBook` and
+  `matchTombstoneForRevive` both gone rather than left as two functions with one rule to drift
+  apart. Callers filter their own population (`unlinkedEntries` for adoption, tombstones for revive)
+  and decide what a refusal costs. A unique title still adopts regardless of author, deliberately:
+  adoption exists because a catalog's author string almost never matches the reader's byline, so
+  requiring author there would break the normal case rather than harden it.
+  **The ordering worry recorded here turned out not to apply**: adoption and revive read the SAME
+  entries query, which `fix/revive-author-match` had already ordered `position, id`, and the live
+  set is a `.filter()` of it — so `.find` was already deterministic, just deterministically wrong on
+  a tie. Guarded by an e2e that drives the interaction itself rather than a proxy: two same-title
+  ghosts, a same-title tombstone whose author matches, one book — neither ghost may take it and the
+  tombstone revives with `book_id` set.
+  **One thing to know if you touch this again**: the `bookId == null` check moved OUT of the matcher
+  (which sees only `{id,title,author}`) into `unlinkedEntries` at the call site. Without it a book
+  can claim an entry that already belongs to a DIFFERENT book, re-pointing it and orphaning the
+  first book's slot — mutation-verified, and held by its own e2e.
 - **`useSyncBookSeries` has the same unprotected shape, inverted, and it spans two
   mutations.** The book page's save runs `updateBook` (writes `books.series`) and then
   `syncBookSeries` (tombstones the old slot) as separate mutations in that forced order
