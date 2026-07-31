@@ -29,6 +29,11 @@ export type NumericFieldResult =
 export const PUB_YEAR: NumericFieldSpec = { label: 'Pub year', min: 1, max: 9999, integer: true }
 export const PUB_MONTH: NumericFieldSpec = { label: 'Month', min: 1, max: 12, integer: true }
 export const PUB_DAY: NumericFieldSpec = { label: 'Day', min: 1, max: 31, integer: true }
+/** Mirrors `books_plan_*_check`, which mirrors `books_pub_*_check`. Same bounds, own labels — the
+ *  error a reader reads should name the field they were typing in, not the publication date. */
+export const PLAN_YEAR: NumericFieldSpec = { label: 'Plan year', min: 1, max: 9999, integer: true }
+export const PLAN_MONTH: NumericFieldSpec = { label: 'Month', min: 1, max: 12, integer: true }
+export const PLAN_DAY: NumericFieldSpec = { label: 'Day', min: 1, max: 31, integer: true }
 export const SERIES_COUNT: NumericFieldSpec = {
   label: 'Series length',
   min: 1,

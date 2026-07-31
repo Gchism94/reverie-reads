@@ -31,7 +31,7 @@ export function makeBook(partial: Partial<Book> & { id: string; title: string })
     source: 'Owned',
     pub: { y: null, m: null, d: null },
     reads: [],
-    plan: null,
+    plan: { y: null, m: null, d: null },
     progress: 0,
     addedTs: 0,
     ...partial,

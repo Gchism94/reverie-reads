@@ -13,6 +13,11 @@ import {
   possessionState,
   type PossessionState,
   type Owned,
+  formatPartialDate,
+  parseNumericFields,
+  PLAN_DAY,
+  PLAN_MONTH,
+  PLAN_YEAR,
 } from '@reverie/core'
 import { useFilters } from '../library/filterStore'
 import { buyConfig } from '../lib/buyConfig'
@@ -27,12 +32,7 @@ import { useBookListIds, useToggleListItem } from '../data/listItems'
 import { useCreateList, useLists } from '../data/lists'
 import { Stars } from '../components/Stars'
 import { Chip } from '../components/Chip'
-import {
-  MONTHS,
-  READ_STATUS_OPTIONS,
-  readStatusLabel,
-  subgenreGradient,
-} from '../library/constants'
+import { READ_STATUS_OPTIONS, readStatusLabel, subgenreGradient } from '../library/constants'
 import { maybeChainPrompt } from '../lib/chainPrompt'
 import { EditDetails, LogReadForm, MergeDialog } from './dialogs'
 import { TropePicker } from '../components/TropePicker'
@@ -48,13 +48,6 @@ import { MoreLikeThis } from './MoreLikeThis'
 import { workKeyFor } from '../data/reviews'
 import { useProfile } from '../data/profile'
 import { BookmarkGlyph } from '../components/BookmarkGlyph'
-
-function fmtPub(p: Book['pub']): string {
-  if (p.y && p.m && p.d) return `${MONTHS[p.m - 1] ?? ''} ${p.d}, ${p.y}`
-  if (p.y && p.m) return `${MONTHS[p.m - 1] ?? ''} ${p.y}`
-  if (p.y) return `${p.y}`
-  return ''
-}
 
 function fmtDate(d: string): string {
   if (!d) return 'Date not set'
@@ -85,6 +78,90 @@ function Pill({ children, muted = false }: { children: ReactNode; muted?: boolea
     >
       {children}
     </span>
+  )
+}
+
+const planFieldClass =
+  'h-10 w-full rounded-xl border border-line px-3 text-[14px] text-ink outline-none'
+const planFieldStyle = { background: 'var(--field)' } as const
+
+/**
+ * The planned-read date, at the precision the reader actually has.
+ *
+ * Replaces an `<input type="date">`, which could only ask for a specific day — so "sometime in
+ * March" had to be entered as a day nobody chose, or not at all. Three fields, mirroring the pub
+ * date's form in the edit dialog and validated through the same `parseNumericFields` against the
+ * bounds the columns enforce. Year alone and year+month are both complete answers here.
+ *
+ * Commits on BLUR, not on every keystroke. The old single control could write on change because one
+ * gesture produced one whole value; three fields cannot, or typing "2026" into an empty year would
+ * write 2, then 20, then 202. Blur is also what makes the cross-field rule below reportable rather
+ * than flickering while a reader is still mid-entry.
+ */
+function PlanEditor({ book }: { book: Book }) {
+  const updateBook = useUpdateBook()
+  const [f, setF] = useState(() => ({
+    y: book.plan.y == null ? '' : String(book.plan.y),
+    m: book.plan.m == null ? '' : String(book.plan.m),
+    d: book.plan.d == null ? '' : String(book.plan.d),
+  }))
+  const [errors, setErrors] = useState<Record<string, string>>({})
+
+  const commit = () => {
+    const parsed = parseNumericFields({
+      planY: { raw: f.y, spec: PLAN_YEAR },
+      planM: { raw: f.m, spec: PLAN_MONTH },
+      planD: { raw: f.d, spec: PLAN_DAY },
+    })
+    if (!parsed.ok) {
+      setErrors(parsed.errors)
+      return
+    }
+    const next = { y: parsed.values.planY, m: parsed.values.planM, d: parsed.values.planD }
+    // The one cross-field rule, and the pub form has no equivalent because nothing reads pub the way
+    // `hasDate` reads a plan: a month or day with no year is stored happily by the schema but is
+    // invisible everywhere — it would not count as planned, sort, or render. Refusing it beats
+    // accepting a write that silently does nothing.
+    if (next.y == null && (next.m != null || next.d != null)) {
+      setErrors({ planY: 'A plan needs a year.' })
+      return
+    }
+    setErrors({})
+    if (next.y === book.plan.y && next.m === book.plan.m && next.d === book.plan.d) return
+    updateBook.mutate({ id: book.id, patch: { plan: next } })
+  }
+
+  const field = (k: 'y' | 'm' | 'd', label: string, errKey: string, placeholder: string) => (
+    <label className="block">
+      <span className="mb-1 block text-[11px] uppercase tracking-[0.15em] text-muted">{label}</span>
+      <input
+        value={f[k]}
+        onChange={(e) => {
+          setF((prev) => ({ ...prev, [k]: e.target.value }))
+          setErrors((prev) => (prev[errKey] ? { ...prev, [errKey]: '' } : prev))
+        }}
+        onBlur={commit}
+        placeholder={placeholder}
+        inputMode="numeric"
+        aria-label={`Planned read ${label.toLowerCase()}`}
+        aria-invalid={!!errors[errKey]}
+        className={planFieldClass}
+        style={planFieldStyle}
+      />
+      {errors[errKey] && (
+        <span className="mt-1 block text-[11.5px]" style={{ color: 'var(--accent-ink)' }}>
+          {errors[errKey]}
+        </span>
+      )}
+    </label>
+  )
+
+  return (
+    <div className="grid grid-cols-3 gap-3">
+      {field('y', 'Year', 'planY', '2026')}
+      {field('m', 'Month', 'planM', '1–12')}
+      {field('d', 'Day', 'planD', 'optional')}
+    </div>
   )
 }
 
@@ -257,7 +334,7 @@ function BookDetailScreen() {
             {(book.intensity ?? 0) > 0 && (
               <Pill>{labels.intensityGlyph.repeat(book.intensity ?? 0)}</Pill>
             )}
-            {fmtPub(book.pub) && <Pill>📅 {fmtPub(book.pub)}</Pill>}
+            {formatPartialDate(book.pub) && <Pill>📅 {formatPartialDate(book.pub)}</Pill>}
             {/* Absent when unknown — no pill at all, rather than a fabricated 0 or a guess. */}
             {book.pages != null && <Pill>{book.pages} pp</Pill>}
           </div>
@@ -498,16 +575,7 @@ function BookDetailScreen() {
 
       {/* plan */}
       <Label>Plan a read date</Label>
-      <input
-        type="date"
-        aria-label="Planned read date"
-        value={book.plan ?? ''}
-        onChange={(e) =>
-          updateBook.mutate({ id: book.id, patch: { plan: e.target.value || null } })
-        }
-        className="h-10 rounded-xl border border-line px-3 text-[14px] text-ink outline-none"
-        style={{ background: 'var(--field)' }}
-      />
+      <PlanEditor book={book} />
 
       {/* actions */}
       <div className="mt-8 flex flex-wrap gap-2">
