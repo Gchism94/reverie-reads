@@ -298,6 +298,41 @@ primary book` — both reached the function body and were turned away by the che
   can't corrupt it, since both writes carry the same payload — so this is pure
   waste (a doubled request on every slider release), not the data-loss shape
   above. Drop one of the two handlers.
+- **`useRealtimeRefetch` should cover `lists` and `books`, not just clubs and
+  shared lists.** `fix/state-pills-flake` closed the reader-facing half of a
+  stale-persisted-cache defect with `useConfirmedLookup` (below) — a route no
+  longer trusts a restored-fresh absence without asking the server once. What it
+  did NOT close is the window that produces that staleness in the first place: a
+  reader on device A adding a shelf, or editing a book, leaves device B's
+  persisted cache stale until something invalidates it, and today nothing does
+  for `lists`/`books` outside the two routes `useRealtimeRefetch` already covers
+  (`ClubRoute`, `SharedListRoute`). Subscribing `lists` and `books` to Postgres
+  changes the same way would close that gap for real multi-device use, not just
+  the single-client cache-restore case the guard handles.
+  **Complementary, not a replacement for the guard** — say so explicitly before
+  anyone reads this as "realtime makes `useConfirmedLookup` unnecessary." A page
+  can always render in the gap between a remote change and its invalidation
+  arriving over the realtime channel; the guard is what keeps that gap from
+  reading as a permanent, wrong "gone." Realtime reduces how often the cache is
+  stale; the guard bounds what staleness costs when it happens anyway. Own
+  branch — it's an actual subscription surface change, not a follow-on to a bug
+  fix, and its own measurement (connection cost, invalidation-storm risk under a
+  large library) belongs with it.
+- **`useConfirmedLookup` (`apps/web/src/hooks/useConfirmedLookup.ts`) is the
+  established pattern for a param-addressed lookup that can be loading, found, or
+  genuinely absent — use it rather than reinventing per route.** Before
+  `fix/state-pills-flake`, `ShelfRoute`/`MoodRoute`/`TropeRoute` each collapsed
+  three different situations (`undefined`) into one terminal not-found render:
+  still loading, really deleted, and present-on-the-server-but-missing-from-a-
+  stale-restored-cache — the third being durable rather than momentary, since
+  `hydrate()` preserves `dataUpdatedAt` and a snapshot inside `staleTime` never
+  refetches on its own. The hook refetches once before ever reporting `absent`,
+  and terminates on a real deletion because `isFetchedAfterMount` derives from
+  `dataUpdateCount`, which query-core increments on every successful fetch even
+  when the data didn't change — not a guess, verified against query-core's own
+  update logic. `SeriesRoute` is NOT a candidate: `useSeriesDetail` creates the
+  row when absent, so its `!detail` can only ever mean loading, and the hook
+  would be solving a problem that route doesn't have.
 
 ## Deliberately partial, and why
 
