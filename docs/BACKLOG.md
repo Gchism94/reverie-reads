@@ -12,6 +12,26 @@ forgotten.
 
 ## Real bugs, outstanding
 
+- **Production ACL verification belongs in the deploy protocol — nothing checks it
+  today.** `20260801010000` revoked EXECUTE from PUBLIC across every RPC and was
+  deployed and reported as done. Nobody read prod's `proacl` afterwards. A
+  platform-side bulk `grant ... on all routines in schema public to postgres,
+anon, authenticated, service_role` later put an explicit `anon=X` back on all
+  **17** functions in `public`, and it stayed that way for days — found only
+  because a screenshot of an unrelated series bug prompted someone to look. The
+  revoke itself never failed; it was made irrelevant by named grants layered over
+  it, which `revoke ... from public` would not have touched.
+  Two things follow. First, **deploying a grant is not the same as verifying it
+  landed and stayed**: `docs/DEPLOY.md` should require reading `proacl` after any
+  migration that touches grants, and there is a case for a periodic check rather
+  than a post-deploy one, since the change arrived with no deploy of ours. Second,
+  the mechanism is outside this repo and can recur at any time with no
+  notification — `fix/rpc-body-defense` responded by making every function refuse
+  unauthorised callers in its own body, so the ACL is defence in depth rather than
+  the boundary. Re-revoking alone would have been undone by the next platform
+  event. A verification step is still worth having: it is how we would learn the
+  grants had moved at all.
+
 - **The deploy guard's `y/N` is the only real gate, and it is not the last one.**
   After the guard confirms, `supabase db push` asks its own question — _do you
   want to push these migrations_ — defaulting to **yes**, and it takes EOF as
