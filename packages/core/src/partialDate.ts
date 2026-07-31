@@ -1,4 +1,4 @@
-import type { PartialDate, PlanDate } from './types'
+import type { PartialDate } from './types'
 
 /**
  * Month abbreviations, canonical. Lives here rather than in the web app because `formatPartialDate`
@@ -56,19 +56,4 @@ export function formatPartialDate(p: PartialDate | null | undefined): string {
   if (month && p.d != null) return `${month} ${p.d}, ${p.y}`
   if (month) return `${month} ${p.y}`
   return String(p.y)
-}
-
-/**
- * A legacy `plan_date` string → the trio.
- *
- * The app no longer WRITES `plan_date` — that dual-write is gone. This read path survives it on
- * purpose: a row last written between the trio migration deploying and the trio frontend going live
- * carries a plan in `plan_date` with an empty trio, and reading those as "no plan" would make a real
- * plan vanish from the library. It goes when a backfill migration has provably converted them.
- */
-export function planFromDateString(s: string | null | undefined): PlanDate {
-  if (!s) return emptyDate()
-  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s)
-  if (!m) return emptyDate()
-  return { y: Number(m[1]), m: Number(m[2]), d: Number(m[3]) }
 }
