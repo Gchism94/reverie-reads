@@ -61,62 +61,56 @@ function row(plan: Partial<Pick<BookRow, 'plan_y' | 'plan_m' | 'plan_d' | 'plan_
 }
 
 /** One full turn of the loop a real edit makes: domain → columns → domain. */
-function roundTrip(plan: PlanDate): { back: PlanDate; planDate: string | null | undefined } {
+function roundTrip(plan: PlanDate): PlanDate {
   const written = toBookRow({ plan })
-  const back = toBook(
+  return toBook(
     row({
       plan_y: written.plan_y ?? null,
       plan_m: written.plan_m ?? null,
       plan_d: written.plan_d ?? null,
-      plan_date: written.plan_date ?? null,
     }),
   ).plan
-  return { back, planDate: written.plan_date }
 }
 
 describe('plan round-trip through the mapper, at every precision', () => {
   it('a full day-precision plan survives write → read unchanged', () => {
-    const { back } = roundTrip({ y: 2026, m: 3, d: 14 })
+    const back = roundTrip({ y: 2026, m: 3, d: 14 })
     expect(back).toEqual({ y: 2026, m: 3, d: 14 })
   })
 
   it('a month-only plan survives, and is NOT completed with a day on the way back', () => {
-    const { back } = roundTrip({ y: 2026, m: 3, d: null })
+    const back = roundTrip({ y: 2026, m: 3, d: null })
     expect(back).toEqual({ y: 2026, m: 3, d: null })
   })
 
   it('a year-only plan survives, with month and day still null', () => {
-    const { back } = roundTrip({ y: 2026, m: null, d: null })
+    const back = roundTrip({ y: 2026, m: null, d: null })
     expect(back).toEqual({ y: 2026, m: null, d: null })
   })
 
   it('no plan round-trips as no plan', () => {
-    const { back } = roundTrip(emptyDate())
+    const back = roundTrip(emptyDate())
     expect(back).toEqual(emptyDate())
   })
 })
 
-describe('lossless-only dual-write of plan_date', () => {
-  it('a complete plan writes the equivalent plan_date, zero-padded', () => {
-    expect(roundTrip({ y: 2026, m: 3, d: 14 }).planDate).toBe('2026-03-14')
-  })
-
-  // The rule the feature exists for. A fabricating implementation writes '2026-03-01' here.
-  it('a month-only plan writes NULL to plan_date, never a fabricated first-of-month', () => {
-    expect(roundTrip({ y: 2026, m: 3, d: null }).planDate).toBeNull()
-  })
-
-  it('a year-only plan writes NULL to plan_date', () => {
-    expect(roundTrip({ y: 2026, m: null, d: null }).planDate).toBeNull()
-  })
-
-  it('clearing the plan clears plan_date too, so the two representations cannot disagree', () => {
-    expect(roundTrip(emptyDate()).planDate).toBeNull()
-  })
-
-  it('writes the trio and plan_date in ONE patch — a partial write would let them diverge', () => {
+describe('plan_date is no longer written', () => {
+  // The dual-write bought rollback safety while both representations were live. It is gone: the
+  // trio is the only thing the app maintains, which is the precondition for dropping the column.
+  it('a complete plan writes the trio and NOTHING else — no plan_date key at all', () => {
     const written = toBookRow({ plan: { y: 2026, m: 3, d: 14 } })
-    expect(Object.keys(written).sort()).toEqual(['plan_d', 'plan_date', 'plan_m', 'plan_y'])
+    expect(Object.keys(written).sort()).toEqual(['plan_d', 'plan_m', 'plan_y'])
+    expect('plan_date' in written).toBe(false)
+  })
+
+  it('a partial plan writes the trio and no plan_date either', () => {
+    expect('plan_date' in toBookRow({ plan: { y: 2026, m: 3, d: null } })).toBe(false)
+    expect('plan_date' in toBookRow({ plan: { y: 2026, m: null, d: null } })).toBe(false)
+  })
+
+  it('clearing the plan clears the trio and still leaves plan_date untouched', () => {
+    const written = toBookRow({ plan: emptyDate() })
+    expect(written).toEqual({ plan_y: null, plan_m: null, plan_d: null })
   })
 
   it('leaves every plan column alone when the patch does not mention the plan', () => {

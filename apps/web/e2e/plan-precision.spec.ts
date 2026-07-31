@@ -10,8 +10,12 @@ import { ok, okUser } from './support/ok'
 // could not express it — a reader either invented a day or set nothing — so the guard that matters
 // is not "a plan saves" but "a plan saves WITHOUT a day, and nothing downstream puts one back".
 // Three surfaces could each reintroduce one: the editor (by requiring the field), the mapper's
-// plan_date dual-write (by fabricating a first-of-month), and the render (by formatting a null day
-// as 1). This asserts the stored row and the rendered text, because those fail differently.
+// render (by formatting a null day as 1). This asserts the stored row and the rendered text,
+// because those fail differently.
+//
+// plan_date is asserted NULL in both cases now, at every precision — the dual-write is gone
+// (chore/drop-plan-date) and the column is dropped in a follow-up. These assertions are what say
+// the app has genuinely stopped writing it, which is that drop's precondition.
 
 const SUPABASE_URL = 'http://127.0.0.1:55321'
 const ANON =
@@ -150,7 +154,7 @@ test('a month-only plan persists as a month, with no day invented anywhere', asy
   }
 })
 
-test('a full-precision plan still round-trips, and dual-writes plan_date losslessly', async ({
+test('a full-precision plan still round-trips, and writes no plan_date at all', async ({
   page,
 }) => {
   test.setTimeout(180_000)
@@ -170,11 +174,11 @@ test('a full-precision plan still round-trips, and dual-writes plan_date lossles
     await planField(page, 'day').fill('14')
     await planField(page, 'day').blur()
 
-    // A complete plan is the one case a bare `date` CAN hold, so the legacy column is written —
-    // that is what keeps a rollback able to see this plan. The trio is the source of truth.
+    // A complete plan is the one case a bare `date` COULD have held, which makes it the case that
+    // would still be written if any dual-write survived. plan_date stays null.
     await expect
       .poll(async () => await planRow(c, id), { timeout: 15_000 })
-      .toMatchObject({ plan_y: 2026, plan_m: 3, plan_d: 14, plan_date: '2026-03-14' })
+      .toMatchObject({ plan_y: 2026, plan_m: 3, plan_d: 14, plan_date: null })
 
     await page.goto('/planner')
     await expect(page.getByText('📅 Mar 14, 2026')).toBeVisible({ timeout: 20_000 })

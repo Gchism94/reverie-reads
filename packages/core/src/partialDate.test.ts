@@ -1,11 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  emptyDate,
-  formatPartialDate,
-  hasDate,
-  planDateForWrite,
-  planFromDateString,
-} from './partialDate'
+import { emptyDate, formatPartialDate, hasDate, planFromDateString } from './partialDate'
 
 describe('formatPartialDate — the two diverged fmtPub copies, reconciled', () => {
   it('renders at each of the three precisions, and empty when nothing is stated', () => {
@@ -42,34 +36,8 @@ describe('formatPartialDate — the two diverged fmtPub copies, reconciled', () 
   )
 })
 
-describe('planDateForWrite — the lossless-only dual-write rule', () => {
-  it('writes a plan_date only for a complete y+m+d, zero-padded', () => {
-    expect(planDateForWrite({ y: 2026, m: 3, d: 14 })).toBe('2026-03-14')
-    expect(planDateForWrite({ y: 2027, m: 12, d: 5 })).toBe('2027-12-05')
-  })
-
-  // THE RULE, AND THE MUTATION TARGET. An implementation that fabricated the missing parts — the
-  // obvious "helpful" version, `${y}-${m ?? 1}-${d ?? 1}` — returns '2026-03-01' here and fails.
-  // That is the whole point: a rolled-back app reading plan_date cannot distinguish a fabricated
-  // first-of-month from a day the reader chose, and would render the invention as fact.
-  it('a month-only plan writes NULL, not a fabricated first-of-month', () => {
-    expect(planDateForWrite({ y: 2026, m: 3, d: null })).toBeNull()
-  })
-
-  it('a year-only plan writes NULL, not a fabricated January 1st', () => {
-    expect(planDateForWrite({ y: 2026, m: null, d: null })).toBeNull()
-  })
-
-  it('an empty plan writes NULL', () => {
-    expect(planDateForWrite(emptyDate())).toBeNull()
-    expect(planDateForWrite(null)).toBeNull()
-  })
-
-  it('a day without a month is incomplete too — no plan_date is honest about it', () => {
-    expect(planDateForWrite({ y: 2026, m: null, d: 14 })).toBeNull()
-  })
-})
-
+// The app no longer writes plan_date; this is a READ path only, kept until a backfill migration
+// proves no row carries a plan there with an empty trio. See chore/drop-plan-date's report.
 describe('planFromDateString — reading rows written before the app moved', () => {
   it('parses a stored plan_date into the trio', () => {
     expect(planFromDateString('2026-03-14')).toEqual({ y: 2026, m: 3, d: 14 })
@@ -83,10 +51,6 @@ describe('planFromDateString — reading rows written before the app moved', () 
     expect(planFromDateString(null)).toEqual(emptyDate())
     expect(planFromDateString('')).toEqual(emptyDate())
     expect(planFromDateString('not a date')).toEqual(emptyDate())
-  })
-
-  it('round-trips a full date through planDateForWrite', () => {
-    expect(planDateForWrite(planFromDateString('2026-03-14'))).toBe('2026-03-14')
   })
 })
 
