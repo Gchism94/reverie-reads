@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { findDuplicateGroups, mergeBooks, type LibraryState } from './merge'
 import { makeBook } from './book.fixture'
 import { possessionPatch, possessionState } from './ownership'
-import type { PossessionState } from './types'
+import type { PlanDate, PossessionState } from './types'
 
 const alpha = makeBook({
   id: 'a',
@@ -153,22 +153,25 @@ describe('merge unions subgenres', () => {
 })
 
 describe('plan union — one object, never assembled from parts', () => {
-  const lib = (primary: Parameters<typeof makeBook>[0], loser: Parameters<typeof makeBook>[0]) => ({
+  // Only the plan varies across these cases, so the helper takes just that — no spread over
+  // `makeBook`'s required id/title, which is what tsc objected to when this was written loosely.
+  const lib = (primaryPlan: PlanDate, loserPlan: PlanDate): LibraryState => ({
     books: [
-      makeBook({ id: 'p', title: 'T', last: 'X', ...primary }),
-      makeBook({ id: 'l', title: 'T', last: 'X', ...loser }),
+      makeBook({ id: 'p', title: 'T', last: 'X', plan: primaryPlan }),
+      makeBook({ id: 'l', title: 'T', last: 'X', plan: loserPlan }),
     ],
     tbrs: [],
     collections: [],
   })
+  const noPlan = (): PlanDate => ({ y: null, m: null, d: null })
 
   it('a primary with a plan keeps it when the loser has none', () => {
-    const merged = mergeBooks(lib({ plan: { y: 2026, m: 3, d: 14 } }, {}), 'p', ['l']).books[0]!
+    const merged = mergeBooks(lib({ y: 2026, m: 3, d: 14 }, noPlan()), 'p', ['l']).books[0]!
     expect(merged.plan).toEqual({ y: 2026, m: 3, d: 14 })
   })
 
   it('a plan-less primary adopts the loser’s whole plan', () => {
-    const merged = mergeBooks(lib({}, { plan: { y: 2027, m: 1, d: 5 } }), 'p', ['l']).books[0]!
+    const merged = mergeBooks(lib(noPlan(), { y: 2027, m: 1, d: 5 }), 'p', ['l']).books[0]!
     expect(merged.plan).toEqual({ y: 2027, m: 1, d: 5 })
   })
 
@@ -177,16 +180,14 @@ describe('plan union — one object, never assembled from parts', () => {
   // day and produce March 14th 2026 — a date neither reader ever chose, presented as the plan.
   // Matches merge_books' `take_plan`, which decides once and moves all four columns together.
   it('a year-only primary is NOT completed from the loser’s month and day', () => {
-    const merged = mergeBooks(
-      lib({ plan: { y: 2026, m: null, d: null } }, { plan: { y: 2026, m: 3, d: 14 } }),
-      'p',
-      ['l'],
-    ).books[0]!
+    const merged = mergeBooks(lib({ y: 2026, m: null, d: null }, { y: 2026, m: 3, d: 14 }), 'p', [
+      'l',
+    ]).books[0]!
     expect(merged.plan).toEqual({ y: 2026, m: null, d: null })
   })
 
   it('neither side planning leaves the merged book unplanned', () => {
-    const merged = mergeBooks(lib({}, {}), 'p', ['l']).books[0]!
+    const merged = mergeBooks(lib(noPlan(), noPlan()), 'p', ['l']).books[0]!
     expect(merged.plan).toEqual({ y: null, m: null, d: null })
   })
 
@@ -197,7 +198,7 @@ describe('plan union — one object, never assembled from parts', () => {
   // declines the write. Covered end-to-end in supabase/tests/merge_plan_test.sql; this pins the
   // client half — that core produces the null rather than inventing something to send.
   it('a stale primary with no cached plan sends an empty plan, not a guess', () => {
-    const merged = mergeBooks(lib({}, {}), 'p', ['l']).books[0]!
+    const merged = mergeBooks(lib(noPlan(), noPlan()), 'p', ['l']).books[0]!
     expect(merged.plan.y).toBeNull()
     expect(merged.plan.m).toBeNull()
     expect(merged.plan.d).toBeNull()

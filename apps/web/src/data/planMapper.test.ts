@@ -52,10 +52,12 @@ function row(plan: Partial<Pick<BookRow, 'plan_y' | 'plan_m' | 'plan_d' | 'plan_
     progress: null,
     reading_position: null,
     reading_now_hidden: false,
+    enriched_at: null,
+    tropes_suggested_at: null,
     added_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
     ...plan,
-  } as BookRow
+  }
 }
 
 /** One full turn of the loop a real edit makes: domain → columns → domain. */
