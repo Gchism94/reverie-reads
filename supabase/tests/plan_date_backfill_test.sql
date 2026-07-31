@@ -11,6 +11,13 @@
 --
 -- No role switching: table-level UPDATEs behave identically for every role, so there is no
 -- RLS-hidden-row failure mode to defend against here. Every assertion runs as the session role.
+--
+-- EVERY AGGREGATE IS SCOPED TO THIS TEST'S OWNER, and that is load-bearing rather than tidy. The
+-- update under test is table-wide, so the natural way to check "no row is left in the bad shape" is
+-- an unscoped `count(*) from public.books` — which reads the seed, and anything another test or a
+-- hand-run migration left behind, and goes red for reasons that have nothing to do with this
+-- migration. Caught exactly that way: a probe row left in the local database turned two of these
+-- assertions red while the code was correct.
 
 begin;
 select plan(13);
@@ -90,7 +97,8 @@ select is(
 -- Not "the statement matches zero rows", which would be true even if it had already done damage:
 -- the whole table is snapshotted, re-run, and compared. Any change anywhere fails this.
 create temporary table plan_snapshot as
-  select id, plan_date, plan_y, plan_m, plan_d from public.books order by id;
+  select id, plan_date, plan_y, plan_m, plan_d
+  from public.books where owner_id = 'aaaaaaaa-4444-4444-4444-444444444444' order by id;
 
 update public.books
    set plan_y = extract(year  from plan_date)::smallint,
@@ -110,14 +118,15 @@ select is(
   'running the backfill a second time changes no column of any row');
 
 select is(
-  (select count(*)::int from public.books),
+  (select count(*)::int from public.books where owner_id = 'aaaaaaaa-4444-4444-4444-444444444444'),
   (select count(*)::int from plan_snapshot),
   'and adds or removes no rows');
 
 -- ── 6. The post-check's condition ───────────────────────────────────────────────────────────────
 -- After the update, nothing built above may satisfy the abort condition.
 select is(
-  (select count(*)::int from public.books where plan_date is not null and plan_y is null),
+  (select count(*)::int from public.books
+    where owner_id = 'aaaaaaaa-4444-4444-4444-444444444444' and plan_date is not null and plan_y is null),
   0,
   'no row is left holding a plan_date with no plan_y — the migration''s own abort condition is clear');
 
@@ -140,7 +149,8 @@ select ok(
   'a partial trio with no year is NOT converted — the guard requires all three columns empty');
 
 select is(
-  (select count(*)::int from public.books where plan_date is not null and plan_y is null),
+  (select count(*)::int from public.books
+    where owner_id = 'aaaaaaaa-4444-4444-4444-444444444444' and plan_date is not null and plan_y is null),
   1,
   'and it trips the post-check, so the migration aborts rather than leaving it to be dropped silently');
 
