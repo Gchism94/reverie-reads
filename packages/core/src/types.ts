@@ -15,12 +15,28 @@ export type SeriesStatus =
   | 'interconnected_standalone'
   | 'interconnected_series'
 
-/** Flexible publish-date precision — any part may be null. */
-export interface PubDate {
+/**
+ * A date the reader may only partly know — any part may be null.
+ *
+ * Two fields carry this shape, and they are the SAME shape on purpose: the publish date (`pub_y /
+ * pub_m / pub_d`) and the planned-read date (`plan_y / plan_m / plan_d`). Aliasing both to one
+ * interface is what stops them drifting into two dialects — a change to the shape cannot reach one
+ * without the other, and `formatPartialDate` renders both.
+ */
+export interface PartialDate {
   y: number | null
   m: number | null
   d: number | null
 }
+
+/** Flexible publish-date precision — any part may be null. */
+export type PubDate = PartialDate
+
+/**
+ * Flexible planned-read precision. "Sometime in March" is `{y, m, d: null}` — a real plan, not an
+ * incomplete one. Replaces the bare `plan_date` string, which could only say a specific day.
+ */
+export type PlanDate = PartialDate
 
 /** One entry in a book's reread log. */
 export interface ReadEntry {
@@ -145,7 +161,8 @@ export interface Book {
   source: string
   pub: PubDate
   reads: ReadEntry[]
-  plan: string | null // planned "need to read" date, YYYY-MM-DD
+  /** planned "need to read" date, at whatever precision the reader actually has */
+  plan: PlanDate
   progress: number // 0..100 while Reading
   /** manual Reading Now order (spaced numeric; null = unordered, sorts by recency) */
   readingPosition?: number | null

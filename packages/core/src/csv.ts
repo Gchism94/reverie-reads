@@ -5,6 +5,7 @@ import { cleanIsbn, type Incoming } from './match'
 import { emptyOwned, possessionPatch } from './ownership'
 import { fromFirstLast } from './contributors'
 import { parseSeriesFromTitle } from './seriesTitle'
+import { emptyDate } from './partialDate'
 
 /** Quote-aware CSV parser (escaped quotes, CRLF, blank-line skipping). Ported verbatim. */
 export function parseCSV(text: string): string[][] {
@@ -390,7 +391,7 @@ export function importCsv(existing: readonly Book[], text: string): CsvImportRes
         source: 'Imported',
         pub: { y: py, m: null, d: null },
         reads: dates.map((d) => ({ date: d, format: '', rating: 0, notes: '' })),
-        plan: null,
+        plan: emptyDate(),
         progress: 0,
         addedTs: Date.now(),
       }

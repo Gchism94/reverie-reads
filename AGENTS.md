@@ -173,7 +173,7 @@ function` + fresh `create` resets it to the PUBLIC-execute default — verified 
 
 ## Testing & verification discipline
 
-Six rules, each earned by a real failure this session. A rule without its reason gets dropped
+Seven rules, each earned by a real failure this session. A rule without its reason gets dropped
 by whoever inherits it, so the reason stays attached.
 
 - **Grepping a bundle for strings measures dead-code elimination, not rendering.** Vite
@@ -207,6 +207,14 @@ by whoever inherits it, so the reason stays attached.
 - **Commit before mutation testing.** Mutation testing deliberately corrupts the tree to prove a
   guard has teeth; `git checkout` against uncommitted work has destroyed a real implementation
   once already. Verify each revert with `git status --porcelain` before the next mutant.
+- **Run the full gate before reporting, not the subset that looks relevant.** Vitest runs on
+  esbuild, which strips types without checking them, so a type-broken test file can pass `pnpm
+test` outright and only fail `tsc`. This has bitten twice, by two different tools: a broken
+  mutation-testing revert once passed `pnpm lint` clean, because ESLint parses syntax but does not
+  typecheck; and on `feat/plan-precision-app`, a test helper that spread over `makeBook`'s required
+  `id`/`title` and a fixture that was `as`-cast rather than satisfied both passed every Vitest run
+  and were only caught when `pnpm typecheck` ran. Green unit tests are not evidence the code
+  typechecks — only `/gate`'s own typecheck step is.
 - **Every completion report on a branch touching `apps/`, `packages/`, `supabase/`, or test
   infrastructure includes one full e2e run** at the default worker count, fresh DB, retries 0. If
   it's red, report it red — do not re-run until it's green. Docs-only branches are exempt, and
