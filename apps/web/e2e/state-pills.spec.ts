@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
 import { authFailure } from './support/authError'
+import { keepOfflineCacheEmpty } from './support/offlineCache'
 import { ok, okData, okUser } from './support/ok'
 
 // Borrowed and DNF must be visible while browsing (docs/task-state-pills.md).
@@ -120,13 +121,13 @@ async function seedFixtures(c: Client): Promise<void> {
 }
 
 async function signIn(page: Page, session: { access_token: string; refresh_token: string }) {
+  await keepOfflineCacheEmpty(page)
   await page.addInitScript(() => localStorage.setItem('reverie.onboarded', '1'))
   await page.goto(
     `/#access_token=${session.access_token}&refresh_token=${session.refresh_token}&expires_in=3600&token_type=bearer&type=magiclink`,
   )
   await page.getByRole('button', { name: /enter your library/i }).click({ timeout: 20_000 })
   await expect(page.getByRole('navigation')).toBeVisible({ timeout: 20_000 })
-  await page.evaluate(() => indexedDB.deleteDatabase('reverie-offline'))
 }
 
 /** A book's card: the element wrapping its cover button, which is where the pills live. The name

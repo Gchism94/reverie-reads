@@ -6,6 +6,8 @@ import { BackLink } from '../components/BackLink'
 import { CoverImage } from '../components/CoverImage'
 import { useBooks } from '../data/books'
 import { useAllBookMoods, useAssignMood, useMoods, useUnassignMood } from '../data/moods'
+import { useConfirmedLookup } from '../hooks/useConfirmedLookup'
+import { useVoice } from '../skin/labels'
 
 /**
  * A mood's own page (docs/task-mood.md §4): the payoff for assigning — the reader's other books that
@@ -16,13 +18,20 @@ function MoodScreen() {
   const { moodId } = moodRoute.useParams()
   const navigate = useNavigate()
   const { data: books } = useBooks()
-  const { data: moods } = useMoods()
+  const moodsQuery = useMoods()
+  const moods = moodsQuery.data
+  const voice = useVoice()
   const { data: assignments } = useAllBookMoods()
   const assign = useAssignMood()
   const unassign = useUnassignMood()
   const [sweep, setSweep] = useState(false)
 
-  const mood = (moods ?? []).find((m) => m.id === moodId)
+  // Absence is verified against the server before it is reported — see useConfirmedLookup.
+  const lookup = useConfirmedLookup(
+    moodsQuery,
+    (moods ?? []).find((m) => m.id === moodId),
+  )
+  const mood = lookup.status === 'found' ? lookup.value : undefined
   const carrierIds = useMemo(
     () => new Set((assignments ?? []).filter((a) => a.mood_id === moodId).map((a) => a.book_id)),
     [assignments, moodId],
@@ -31,6 +40,9 @@ function MoodScreen() {
     () => (books ?? []).filter((b) => carrierIds.has(b.id)),
     [books, carrierIds],
   )
+
+  if (lookup.status === 'loading')
+    return <p className="px-6 py-16 text-center text-muted">{voice.loading}</p>
 
   if (!mood)
     return (

@@ -4,6 +4,7 @@ import { expect, test, type Page } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { authFailure } from './support/authError'
+import { keepOfflineCacheEmpty } from './support/offlineCache'
 import { ok, okData, okUser } from './support/ok'
 
 const SUPABASE_URL = 'http://127.0.0.1:55321'
@@ -68,6 +69,7 @@ async function signIn(page: Page) {
   })
   if (error || !data.session) throw new Error(authFailure('a11y', DEV_EMAIL, error))
   const { access_token, refresh_token } = data.session
+  await keepOfflineCacheEmpty(page)
   await page.goto(
     `/#access_token=${access_token}&refresh_token=${refresh_token}&expires_in=3600&token_type=bearer&type=magiclink`,
   )
@@ -411,8 +413,8 @@ test('axe (no serious/critical): every route in tryst, a core set in 3 alternate
           },
           { skin, mode },
         )
-        // Drop the persisted query cache so the fresh profile (not a stale persisted one) loads.
-        await page.evaluate(() => indexedDB.deleteDatabase('reverie-offline'))
+        // Each goto below is a full navigation, so keepOfflineCacheEmpty's init script re-runs and
+        // this skin/mode is read fresh rather than restored from the previous pass's snapshot.
         for (const [name, path] of routes) {
           await page.goto(path)
           await page.waitForLoadState('networkidle')
