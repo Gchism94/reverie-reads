@@ -278,6 +278,26 @@ primary book` — both reached the function body and were turned away by the che
   latent per-column hazard flagged for `pub_*` (year from one book, month from
   another) was not inherited by `plan_*`. `pub_*` itself still has it, unexercised
   — its own item if it ever matters.
+- **`OwnedCopies` has the same write-clobbering shape `PlanEditor` had.**
+  `BookDetailRoute.tsx` ~L236/242 and `dialogs.tsx` ~L489/491 each format toggle
+  (physical/ebook/audiobook) sends the WHOLE `Owned` object through
+  `useUpdateBook`, unscoped at these two call sites (the hook itself now supports
+  `scopeBookId`, added in `fix/book-write-race`, but nothing routes it through
+  `OwnedCopies`'s `onChange`/`onPossessionChange` props). Fast toggling
+  physical → ebook → audio can have an earlier, less complete write land last and
+  overwrite a later one — the identical defect `PlanEditor` had before it
+  committed once and serialized on the book id. Two things here, not one: the
+  ordering hazard (fixed the same way scoping fixed it elsewhere) and a SEPARATE
+  stale-read problem — each toggle's payload is built from the `owned` **prop**,
+  which lags one render behind the store, so two fast toggles can each compute
+  their payload from the same stale snapshot regardless of write ordering.
+  Scoping the writes does not fix the stale read; they need separate fixes.
+- **`ProgressSlider` writes the same book twice on every release, guaranteed.**
+  `BookDetailRoute.tsx` ~L183-184: `onPointerUp` and `onBlur` both fire
+  `updateBook.mutate(...)` with the identical `value`. Idempotent — ordering
+  can't corrupt it, since both writes carry the same payload — so this is pure
+  waste (a doubled request on every slider release), not the data-loss shape
+  above. Drop one of the two handlers.
 
 ## Deliberately partial, and why
 

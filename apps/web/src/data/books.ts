@@ -39,9 +39,33 @@ export function useAddBook() {
 }
 
 /** Optimistic update: patch the cache immediately, roll back on error, reconcile on settle. */
-export function useUpdateBook() {
+/**
+ * Patch one book.
+ *
+ * `scopeBookId` SERIALIZES successive writes to that book, and exists because unserialized ones
+ * corrupt data rather than merely arriving out of order. Every patch here is a whole-field write —
+ * `{ plan }` sends all three plan columns, `{ owned }` sends all three format flags — so if two
+ * in-flight writes for the same book land in the wrong order, the earlier, less complete one wins
+ * and silently overwrites the later one. That is not hypothetical: `PlanEditor` produced exactly
+ * this, and a reader tabbing Year → Month → Day could lose their month and day (#116, caught by the
+ * plan-precision e2e at position 27 of 80 — load-sensitive, which is why it passed the run before).
+ *
+ * Scope lives on the mutation's OPTIONS, not on the variables — verified against query-core 5.101's
+ * `scopeFor`/`canRun`, which read `mutation.options.scope.id` and let a scoped mutation start only
+ * when no other mutation sharing that id is pending. So it cannot be derived per `mutate()` call
+ * from the book id; the caller has to declare it, which is why this is a parameter rather than
+ * something the hook works out for itself.
+ *
+ * Deliberately OPT-IN. A blanket scope would serialize genuinely independent writes: `moveReading`
+ * (HomeRoute) renumbers N books in one gesture, one write each, and those must stay parallel. Pass
+ * the id from any component that writes ONE book repeatedly; leave it off for fan-out across books.
+ * Bulk import is unaffected either way — it never uses this hook, writing through
+ * `supabase.from('books').update()` directly (`intake.ts`, `importExport.ts`).
+ */
+export function useUpdateBook(scopeBookId?: string) {
   const qc = useQueryClient()
   return useMutation({
+    ...(scopeBookId ? { scope: { id: `book:${scopeBookId}` } } : {}),
     meta: { action: 'Book details' },
     mutationFn: async ({ id, patch }: { id: string; patch: Partial<Book> }): Promise<Book> => {
       const { data, error } = await supabase
