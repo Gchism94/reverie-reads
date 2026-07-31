@@ -616,7 +616,21 @@ export async function restoreBackup(
   // Books next.
   const bookIdMap = new Map<string, string>()
   for (const b of data.books) {
-    const { id: _id, owner_id: _owner, added_at: _a, updated_at: _u, ...rest } = b
+    // plan_date is DROPPED from the row rather than restored. Same contract as `reading_orders`
+    // above, but it needs stripping rather than skipping: that was a top-level key nothing read,
+    // this is a COLUMN inside every book row, carried here by the export's `select('*')` and
+    // written straight back by the spread. Once the column is gone, passing the key would make
+    // PostgREST reject the insert and take the whole restore down with it — so an archive made
+    // before the drop must have it removed here, not merely ignored. The plan itself is carried by
+    // plan_y/plan_m/plan_d, which are in `rest` and restore normally.
+    const {
+      id: _id,
+      owner_id: _owner,
+      added_at: _a,
+      updated_at: _u,
+      plan_date: _planDate,
+      ...rest
+    } = b
     const { data: created, error } = await supabase
       .from('books')
       .insert({ ...rest, owner_id: ownerId })

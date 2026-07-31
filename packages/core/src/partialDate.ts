@@ -59,27 +59,13 @@ export function formatPartialDate(p: PartialDate | null | undefined): string {
 }
 
 /**
- * The plan as a `plan_date` value, for the dual-write that keeps a rollback safe while both
- * representations exist.
+ * A legacy `plan_date` string → the trio.
  *
- * LOSSLESS-ONLY, and that phrase means exactly one thing here: a `plan_date` is written ONLY when
- * the trio is a complete y+m+d that a bare `date` column can hold without inventing anything.
- * Every partial plan — a year and month, or a year alone — returns null.
- *
- * The alternative is fabricating the missing parts (March → `2026-03-01`), and that is the specific
- * thing this whole feature exists to stop. A rolled-back app reads `plan_date` and cannot tell a
- * fabricated first-of-month from a day the reader actually chose; it would render "March 1st" as
- * fact. Writing null loses the plan on a rollback, which is visible and recoverable. Writing a lie
- * is neither.
+ * The app no longer WRITES `plan_date` — that dual-write is gone. This read path survives it on
+ * purpose: a row last written between the trio migration deploying and the trio frontend going live
+ * carries a plan in `plan_date` with an empty trio, and reading those as "no plan" would make a real
+ * plan vanish from the library. It goes when a backfill migration has provably converted them.
  */
-export function planDateForWrite(p: PlanDate | null | undefined): string | null {
-  if (!p || p.y == null || p.m == null || p.d == null) return null
-  const mm = String(p.m).padStart(2, '0')
-  const dd = String(p.d).padStart(2, '0')
-  return `${p.y}-${mm}-${dd}`
-}
-
-/** A legacy `plan_date` string → the trio. Used to read rows written before the app moved over. */
 export function planFromDateString(s: string | null | undefined): PlanDate {
   if (!s) return emptyDate()
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s)
