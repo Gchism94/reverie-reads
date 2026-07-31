@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { authFailure } from './support/authError'
+import { keepOfflineCacheEmpty } from './support/offlineCache'
 import { ok, okUser } from './support/ok'
 
 // Edit-as-superset + the gradient source change.
@@ -61,13 +62,13 @@ async function reset(c: Client) {
 }
 
 async function signIn(page: Page, session: { access_token: string; refresh_token: string }) {
+  await keepOfflineCacheEmpty(page)
   await page.addInitScript(() => localStorage.setItem('reverie.onboarded', '1'))
   await page.goto(
     `/#access_token=${session.access_token}&refresh_token=${session.refresh_token}&expires_in=3600&token_type=bearer&type=magiclink`,
   )
   await page.getByRole('button', { name: /enter your library/i }).click({ timeout: 20_000 })
   await expect(page.getByRole('navigation')).toBeVisible({ timeout: 20_000 })
-  await page.evaluate(() => indexedDB.deleteDatabase('reverie-offline'))
 }
 
 async function stub(page: Page) {

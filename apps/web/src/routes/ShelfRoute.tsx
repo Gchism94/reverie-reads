@@ -12,6 +12,7 @@ import { BookmarkGlyph } from '../components/BookmarkGlyph'
 import { useBooks, useUpdateBook } from '../data/books'
 import { useAddListItem, useAllListItems, useRemoveListItem } from '../data/listItems'
 import { useLists, useReorderList, useUpdateList } from '../data/lists'
+import { useConfirmedLookup } from '../hooks/useConfirmedLookup'
 import { useVoice } from '../skin/labels'
 
 type ShelfView = 'spines' | 'grid'
@@ -33,7 +34,8 @@ function ShelfScreen() {
   const { listId } = shelfRoute.useParams()
   const navigate = useNavigate()
   const { data: books } = useBooks()
-  const { data: lists } = useLists()
+  const listsQuery = useLists()
+  const lists = listsQuery.data
   const { data: items } = useAllListItems()
   const reorder = useReorderList()
   const addItem = useAddListItem()
@@ -60,7 +62,13 @@ function ShelfScreen() {
   const [pickCount, setPickCount] = useState(0)
   const [dragIdx, setDragIdx] = useState<number | null>(null)
 
-  const list = (lists ?? []).find((l) => l.id === listId)
+  // Absence is verified against the server before it is reported — a restored-fresh cache can be
+  // missing a shelf that exists, and used to render "isn't here anymore" permanently.
+  const lookup = useConfirmedLookup(
+    listsQuery,
+    (lists ?? []).find((l) => l.id === listId),
+  )
+  const list = lookup.status === 'found' ? lookup.value : undefined
   const byId = useMemo(() => new Map((books ?? []).map((b) => [b.id, b])), [books])
 
   const listItems = useMemo(
@@ -76,6 +84,9 @@ function ShelfScreen() {
   )
   const maxPosition = Math.max(0, ...listItems.map((it) => it.position ?? 0))
   const memberIds = useMemo(() => new Set(shelfBooks.map((b) => b.id)), [shelfBooks])
+
+  if (lookup.status === 'loading')
+    return <p className="px-6 py-16 text-center text-muted">{voice.loading}</p>
 
   if (!list)
     return (
