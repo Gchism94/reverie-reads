@@ -162,7 +162,8 @@ export function EditDetails({
   /** modest "change cover" affordance — swaps this dialog for the cover sheet */
   onChangeCover?: () => void
 }) {
-  const updateBook = useUpdateBook()
+  // Carries OwnedCopies too, whose format toggles each write the whole `owned` object.
+  const updateBook = useUpdateBook(book.id)
   const labels = useLabels()
   const setContributors = useSetContributors()
   const syncBookSeries = useSyncBookSeries()
