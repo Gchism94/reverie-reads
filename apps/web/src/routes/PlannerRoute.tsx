@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { createRoute, useNavigate } from '@tanstack/react-router'
-import { authorOf, type Book } from '@reverie/core'
+import { authorOf, formatPartialDate, hasDate, type Book } from '@reverie/core'
 import { rootRoute } from './RootRoute'
 import { CoverImage } from '../components/CoverImage'
 import { FromYourAuthors } from '../planner/FromYourAuthors'
@@ -11,12 +11,6 @@ import { MONTHS } from '../library/constants'
 
 type Tab = 'calendar' | 'releases'
 const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-
-function fmtPub(p: Book['pub']): string {
-  if (p.y && p.m && p.d) return `${MONTHS[p.m - 1]} ${p.d}, ${p.y}`
-  if (p.y && p.m) return `${MONTHS[p.m - 1]} ${p.y}`
-  return p.y ? String(p.y) : ''
-}
 
 function Stat({ n, label }: { n: number; label: string }) {
   return (
@@ -53,8 +47,12 @@ function Calendar({ books, openBook }: { books: Book[]; openBook: (id: string) =
     }
   }
   for (const b of books) {
-    if (b.plan && +b.plan.slice(0, 4) === cal.y && +b.plan.slice(5, 7) === cal.m + 1) {
-      slot(+b.plan.slice(8, 10)).plan.push(b)
+    // A day cell needs a day. A month-only plan ("sometime in March") has none and is deliberately
+    // not placed here — it still appears in "Planned reads" below. Placing it on the 1st would
+    // fabricate the exact day this trio exists to stop fabricating. The calendar branch decides
+    // whether month-level plans get their own band; this is the minimum that is not a lie.
+    if (b.plan.y === cal.y && b.plan.m === cal.m + 1 && b.plan.d != null) {
+      slot(b.plan.d).plan.push(b)
     }
   }
 
@@ -65,10 +63,11 @@ function Calendar({ books, openBook }: { books: Book[]; openBook: (id: string) =
   const yearReads = dated.filter((r) => +(r.read_on as string).slice(0, 4) === cal.y)
   const uniqueYear = new Set(yearReads.map((r) => r.book_id)).size
   const readAllTime = books.filter((b) => b.readStatus === 'Read').length
-  const planned = books.filter((b) => b.plan).length
-  const upcoming = books
-    .filter((b) => b.plan)
-    .sort((a, b) => (a.plan ?? '').localeCompare(b.plan ?? ''))
+  const planned = books.filter((b) => hasDate(b.plan)).length
+  // Sort key, not a formatter: a missing month or day sorts before a stated one within the same
+  // year, which is where a vaguer plan belongs. Local and throwaway — the calendar branch owns this.
+  const planOrder = (b: Book) => (b.plan.y ?? 0) * 10000 + (b.plan.m ?? 0) * 100 + (b.plan.d ?? 0)
+  const upcoming = books.filter((b) => hasDate(b.plan)).sort((a, b) => planOrder(a) - planOrder(b))
 
   const prev = () => setCal((c) => (c.m === 0 ? { y: c.y - 1, m: 11 } : { y: c.y, m: c.m - 1 }))
   const next = () => setCal((c) => (c.m === 11 ? { y: c.y + 1, m: 0 } : { y: c.y, m: c.m + 1 }))
@@ -166,7 +165,7 @@ function Calendar({ books, openBook }: { books: Book[]; openBook: (id: string) =
                 style={{ background: 'var(--field)' }}
               >
                 <span className="text-[14px] font-semibold text-ink">{b.title}</span>
-                <span className="text-[12px] text-violet">📅 {b.plan}</span>
+                <span className="text-[12px] text-violet">📅 {formatPartialDate(b.plan)}</span>
               </button>
             ))}
           </div>
@@ -251,7 +250,7 @@ function Releases({ books, openBook }: { books: Book[]; openBook: (id: string) =
                 <CoverImage book={b} />
               </div>
               <div className="mt-1 truncate text-[12px] font-semibold text-ink">{b.title}</div>
-              <div className="text-[11px] text-primary">📅 {fmtPub(b.pub)}</div>
+              <div className="text-[11px] text-primary">📅 {formatPartialDate(b.pub)}</div>
             </button>
           ))}
         </div>

@@ -4,6 +4,8 @@ import {
   sortBookMoods,
   normalizeSeriesStatus,
   toFirstLast,
+  planDateForWrite,
+  planFromDateString,
   type Book,
   type Contributor,
   type List,
@@ -100,7 +102,9 @@ export function toBook(row: BookRow): Book {
     pages: row.pages,
     pub: { y: row.pub_y, m: row.pub_m, d: row.pub_d },
     reads: [],
-    plan: row.plan_date,
+    // Trio first; a row written before the app moved has only plan_date, and must still read as a
+    // plan rather than as no plan. Falls back only when the trio is genuinely empty.
+    plan: row.plan_y != null ? { y: row.plan_y, m: row.plan_m, d: row.plan_d } : planFromDateString(row.plan_date),
     progress: row.progress ?? 0,
     readingPosition: row.reading_position,
     readingNowHidden: row.reading_now_hidden ?? false,
@@ -160,7 +164,15 @@ export function toBookRow(patch: Partial<Book>): Partial<BookRow> {
     row.pub_m = patch.pub.m
     row.pub_d = patch.pub.d
   }
-  if (patch.plan !== undefined) row.plan_date = patch.plan
+  if (patch.plan !== undefined) {
+    row.plan_y = patch.plan.y
+    row.plan_m = patch.plan.m
+    row.plan_d = patch.plan.d
+    // LOSSLESS-ONLY dual-write: plan_date gets a value only when the trio is a complete y+m+d that a
+    // bare `date` can hold without inventing anything. A month-only plan writes NULL here, never a
+    // fabricated first-of-month — see planDateForWrite.
+    row.plan_date = planDateForWrite(patch.plan)
+  }
   if (patch.progress !== undefined) row.progress = patch.progress
   if (patch.readingPosition !== undefined) row.reading_position = patch.readingPosition
   if (patch.readingNowHidden !== undefined) row.reading_now_hidden = patch.readingNowHidden

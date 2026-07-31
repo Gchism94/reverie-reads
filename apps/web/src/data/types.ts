@@ -41,7 +41,10 @@ export interface BookRow {
   pub_y: number | null
   pub_m: number | null
   pub_d: number | null
-  plan_date: string | null
+  plan_date: string | null // LEGACY, dual-written losslessly; dropped once the app-side move settles
+  plan_y: number | null
+  plan_m: number | null
+  plan_d: number | null
   progress: number | null
   reading_position: number | null
   reading_now_hidden: boolean

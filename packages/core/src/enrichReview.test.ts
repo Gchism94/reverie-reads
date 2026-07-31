@@ -174,7 +174,7 @@ const book = (over: Partial<Book>): Book => ({
   source: '',
   pub: { y: null, m: null, d: null },
   reads: [],
-  plan: null,
+  plan: { y: null, m: null, d: null },
   progress: 0,
   addedTs: 0,
   ...over,

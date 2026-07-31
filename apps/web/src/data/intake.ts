@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import {
   decideIntake,
+  emptyDate,
   fromFirstLast,
   importKey,
   matchBook,
@@ -75,7 +76,7 @@ export function incomingToBook(inc: Incoming): Book {
     source: inc.source ?? 'Owned',
     pub: inc.pub ?? { y: null, m: null, d: null },
     reads: [],
-    plan: inc.plan ?? null,
+    plan: inc.plan ?? emptyDate(),
     progress: inc.progress ?? 0,
     addedTs: inc.addedTs ?? Date.now(), // Goodreads Date Added survives (shelf history order)
   }

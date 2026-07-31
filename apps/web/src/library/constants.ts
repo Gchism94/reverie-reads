@@ -185,20 +185,7 @@ export const READ_STATUSES = ['Read', 'Reading', 'Unread', 'DNF'] as const
 export const READ_STATUS_OPTIONS = ['unset', 'Read', 'Reading', 'Unread', 'DNF'] as const
 export const readStatusLabel = (s: string): string => (s === 'unset' ? 'Not set' : s)
 
-export const MONTHS = [
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'May',
-  'Jun',
-  'Jul',
-  'Aug',
-  'Sep',
-  'Oct',
-  'Nov',
-  'Dec',
-] as const
+export { MONTH_ABBR as MONTHS } from '@reverie/core'
 
 export const TROPE_GROUPS: Record<string, string[]> = {
   'Core Romance': [

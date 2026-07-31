@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { findDuplicateGroups, mergeBooks, type LibraryState } from './merge'
 import { makeBook } from './book.fixture'
 import { possessionPatch, possessionState } from './ownership'
-import type { PossessionState } from './types'
+import type { PlanDate, PossessionState } from './types'
 
 const alpha = makeBook({
   id: 'a',
@@ -149,5 +149,58 @@ describe('merge unions subgenres', () => {
     const merged = mergeBooks(state, 'p', ['l']).books[0]!
     expect(merged.subgenres).toEqual(['Epic Fantasy', 'Romantasy', 'Dark Fantasy'])
     expect(merged.subgenre).toBe('Epic Fantasy')
+  })
+})
+
+describe('plan union — one object, never assembled from parts', () => {
+  // Only the plan varies across these cases, so the helper takes just that — no spread over
+  // `makeBook`'s required id/title, which is what tsc objected to when this was written loosely.
+  const lib = (primaryPlan: PlanDate, loserPlan: PlanDate): LibraryState => ({
+    books: [
+      makeBook({ id: 'p', title: 'T', last: 'X', plan: primaryPlan }),
+      makeBook({ id: 'l', title: 'T', last: 'X', plan: loserPlan }),
+    ],
+    tbrs: [],
+    collections: [],
+  })
+  const noPlan = (): PlanDate => ({ y: null, m: null, d: null })
+
+  it('a primary with a plan keeps it when the loser has none', () => {
+    const merged = mergeBooks(lib({ y: 2026, m: 3, d: 14 }, noPlan()), 'p', ['l']).books[0]!
+    expect(merged.plan).toEqual({ y: 2026, m: 3, d: 14 })
+  })
+
+  it('a plan-less primary adopts the loser’s whole plan', () => {
+    const merged = mergeBooks(lib(noPlan(), { y: 2027, m: 1, d: 5 }), 'p', ['l']).books[0]!
+    expect(merged.plan).toEqual({ y: 2027, m: 1, d: 5 })
+  })
+
+  // THE OBJECT-LEVEL DISCRIMINATOR, and the reason this rule is not three `??`s. The primary has
+  // said "sometime in 2026" and nothing more. A per-field fill would borrow the loser's month and
+  // day and produce March 14th 2026 — a date neither reader ever chose, presented as the plan.
+  // Matches merge_books' `take_plan`, which decides once and moves all four columns together.
+  it('a year-only primary is NOT completed from the loser’s month and day', () => {
+    const merged = mergeBooks(lib({ y: 2026, m: null, d: null }, { y: 2026, m: 3, d: 14 }), 'p', [
+      'l',
+    ]).books[0]!
+    expect(merged.plan).toEqual({ y: 2026, m: null, d: null })
+  })
+
+  it('neither side planning leaves the merged book unplanned', () => {
+    const merged = mergeBooks(lib(noPlan(), noPlan()), 'p', ['l']).books[0]!
+    expect(merged.plan).toEqual({ y: null, m: null, d: null })
+  })
+
+  // The stale-cache shape, on the client side of the boundary. When the cached primary carries no
+  // plan, the union has nothing to carry forward and the payload sent to merge_books is all-null.
+  // That is CORRECT here and is precisely why the RPC cannot treat an incoming null as an
+  // instruction: `take_plan` reads the STORED row, sees a plan the client never knew about, and
+  // declines the write. Covered end-to-end in supabase/tests/merge_plan_test.sql; this pins the
+  // client half — that core produces the null rather than inventing something to send.
+  it('a stale primary with no cached plan sends an empty plan, not a guess', () => {
+    const merged = mergeBooks(lib(noPlan(), noPlan()), 'p', ['l']).books[0]!
+    expect(merged.plan.y).toBeNull()
+    expect(merged.plan.m).toBeNull()
+    expect(merged.plan.d).toBeNull()
   })
 })
