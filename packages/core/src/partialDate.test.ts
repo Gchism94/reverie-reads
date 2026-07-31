@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { emptyDate, formatPartialDate, hasDate, planFromDateString } from './partialDate'
+import { emptyDate, formatPartialDate, hasDate } from './partialDate'
 
 describe('formatPartialDate — the two diverged fmtPub copies, reconciled', () => {
   it('renders at each of the three precisions, and empty when nothing is stated', () => {
@@ -34,24 +34,6 @@ describe('formatPartialDate — the two diverged fmtPub copies, reconciled', () 
       expect(out.startsWith(' ')).toBe(false)
     },
   )
-})
-
-// The app no longer writes plan_date; this is a READ path only, kept until a backfill migration
-// proves no row carries a plan there with an empty trio. See chore/drop-plan-date's report.
-describe('planFromDateString — reading rows written before the app moved', () => {
-  it('parses a stored plan_date into the trio', () => {
-    expect(planFromDateString('2026-03-14')).toEqual({ y: 2026, m: 3, d: 14 })
-  })
-
-  it('tolerates a full timestamp, taking the date part', () => {
-    expect(planFromDateString('2026-03-14T00:00:00Z')).toEqual({ y: 2026, m: 3, d: 14 })
-  })
-
-  it('nothing in, empty date out — never a partially-filled guess', () => {
-    expect(planFromDateString(null)).toEqual(emptyDate())
-    expect(planFromDateString('')).toEqual(emptyDate())
-    expect(planFromDateString('not a date')).toEqual(emptyDate())
-  })
 })
 
 describe('hasDate', () => {

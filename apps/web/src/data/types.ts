@@ -41,7 +41,12 @@ export interface BookRow {
   pub_y: number | null
   pub_m: number | null
   pub_d: number | null
-  plan_date: string | null // LEGACY, dual-written losslessly; dropped once the app-side move settles
+  /**
+   * DROPPED from `books` in 20260805010000 — never present on a row read from the database now.
+   * Optional and still declared because archives written before that carry it, and `restoreBackup`
+   * destructures it out so it never reaches the insert (see importExport.ts).
+   */
+  plan_date?: string | null
   plan_y: number | null
   plan_m: number | null
   plan_d: number | null

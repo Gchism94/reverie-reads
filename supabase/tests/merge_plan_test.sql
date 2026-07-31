@@ -1,20 +1,30 @@
--- merge_books and the plan trio (feat/plan-precision-merge). The property under test is the one the
--- old `case when p_fields ? 'plan_date'` did not have: a merge can ADD a plan to a book that lacks
--- one, and can never REMOVE or rewrite one that a book already has.
+-- merge_books and the plan trio. The property under test is the one the pre-20260803010000
+-- `case when p_fields ? 'plan_date'` did not have: a merge can ADD a plan to a book that lacks one,
+-- and can never REMOVE or rewrite one that a book already has.
 --
--- WHY A NULL INCOMING PLAN IS THE CENTRAL CASE. Every assertion below that matters sends
--- `plan_y: null` (or omits it) while the primary has a stored plan. Under the replaced expression
--- that combination wrote null over the stored value — the key was always present, so the `case`
--- always fired. Under `take_plan` it cannot, because `take_plan` is false the moment the primary has
--- a plan. `pub_*` was always immune to this input via `coalesce`; the plan was not.
+-- WHY A NULL INCOMING PLAN IS THE CENTRAL CASE. The assertions that matter send an all-null plan
+-- while the primary has a stored one. Under the replaced expression that combination wrote null over
+-- the stored value — the key was always present, so the `case` always fired. Under `take_plan` it
+-- cannot, because `take_plan` is false the moment the primary has a plan.
+--
+-- THREE ASSERTIONS WERE DELETED WHEN `plan_date` WAS DROPPED (20260805010000), not rewritten into
+-- something weaker. They covered the second half of `take_plan`'s old condition: a row written by the
+-- pre-trio app carried a plan in `plan_date` with an empty trio, and `plan_y is null` alone would
+-- have read that as "no plan" and overwritten it. That row shape is now unconstructible — the column
+-- is gone, no writer can produce one, and 20260804010000 converted every one that existed. A test for
+-- it would have had to fabricate the very state the schema now forbids. `take_plan` is keyed on
+-- `plan_y is null` alone, and what remains here is what still has meaning: the plan unions through
+-- the trio, or it does not move at all.
 --
 -- ASSERTIONS READ AS THE SESSION ROLE, THE RPC RUNS AS `authenticated`. Same reason
 -- series_removal_test.sql gives: a books row invisible to the querying role under RLS reads
 -- identically to an unmodified one for a whole class of assertion shapes. Only the calls are
 -- role-scoped; every check runs after `reset role`, where nothing is filtered.
-
+--
+-- The ACL this migration's `create or replace` could silently have reset is guarded in
+-- merge_test.sql, which asserts anon gets SQLSTATE 42501 — grant-layer, never a body-level P0001.
 begin;
-select plan(12);
+select plan(7);
 
 insert into auth.users (id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
 values ('aaaaaaaa-5555-5555-5555-555555555555', 'authenticated', 'authenticated',
@@ -27,9 +37,9 @@ select set_config('request.jwt.claims',
 -- ── 1. A plan survives a merge whose incoming fields carry none ─────────────────────────────────
 -- The regression. Primary holds a full plan; the merge sends an all-null one, exactly as a stale
 -- client would. Nothing about the plan may change.
-insert into public.books (id, owner_id, title, plan_y, plan_m, plan_d, plan_date)
+insert into public.books (id, owner_id, title, plan_y, plan_m, plan_d)
 values ('ffffffff-0000-0000-0000-000000000001', 'aaaaaaaa-5555-5555-5555-555555555555',
-        'Keeper', 2026, 3, 14, date '2026-03-14');
+        'Keeper', 2026, 3, 14);
 insert into public.books (id, owner_id, title)
 values ('ffffffff-0000-0000-0000-000000000002', 'aaaaaaaa-5555-5555-5555-555555555555', 'Dupe');
 
@@ -37,7 +47,7 @@ select lives_ok(
   $$ select public.merge_books(
        'ffffffff-0000-0000-0000-000000000001',
        'ffffffff-0000-0000-0000-000000000002',
-       '{"title":"Keeper","plan_y":null,"plan_m":null,"plan_d":null,"plan_date":null}'::jsonb) $$,
+       '{"title":"Keeper","plan_y":null,"plan_m":null,"plan_d":null}'::jsonb) $$,
   'a merge sending an all-null plan is accepted');
 
 reset role;
@@ -46,10 +56,6 @@ select is(
      from public.books where id = 'ffffffff-0000-0000-0000-000000000001'),
   '2026-3-14',
   'the primary KEEPS its plan when the merge carries none — the defect this replaces');
-
-select ok(
-  (select plan_date = date '2026-03-14' from public.books where id = 'ffffffff-0000-0000-0000-000000000001'),
-  'plan_date is kept in step with the trio, not cleared alongside it');
 
 -- ── 2. A merge can still ADD a plan to a book that has none ─────────────────────────────────────
 -- The fix must not be "never write the plan". A blank primary still takes the incoming one.
@@ -62,7 +68,7 @@ select lives_ok(
   $$ select public.merge_books(
        'ffffffff-0000-0000-0000-000000000003',
        'ffffffff-0000-0000-0000-000000000004',
-       '{"title":"Blank Primary","plan_y":2027,"plan_m":1,"plan_d":5,"plan_date":"2027-01-05"}'::jsonb) $$,
+       '{"title":"Blank Primary","plan_y":2027,"plan_m":1,"plan_d":5}'::jsonb) $$,
   'a merge carrying a plan onto a plan-less primary is accepted');
 
 reset role;
@@ -84,7 +90,7 @@ select lives_ok(
   $$ select public.merge_books(
        'ffffffff-0000-0000-0000-000000000005',
        'ffffffff-0000-0000-0000-000000000006',
-       '{"title":"Month Primary","plan_y":2026,"plan_m":3,"plan_d":null,"plan_date":null}'::jsonb) $$,
+       '{"title":"Month Primary","plan_y":2026,"plan_m":3,"plan_d":null}'::jsonb) $$,
   'a month-only plan is accepted through the RPC');
 
 reset role;
@@ -93,40 +99,7 @@ select ok(
      from public.books where id = 'ffffffff-0000-0000-0000-000000000005'),
   'a month-only plan lands as y+m with the day still NULL — no fabricated day');
 
-select ok(
-  (select plan_date is null from public.books where id = 'ffffffff-0000-0000-0000-000000000005'),
-  'a month-only plan writes NO plan_date — a bare date cannot say "March, no day", so it says nothing');
-
--- ── 4. A legacy plan_date-only row counts as HAVING a plan ──────────────────────────────────────
--- The dual-representation window: a row written by the not-yet-updated app carries plan_date with an
--- empty trio. Keying `take_plan` on plan_y alone would read that as "no plan" and overwrite a real
--- one. This is the assertion that fails if the `plan_date is null` half of the condition is dropped.
-set local role authenticated;
-insert into public.books (id, owner_id, title, plan_date)
-values ('ffffffff-0000-0000-0000-000000000007', 'aaaaaaaa-5555-5555-5555-555555555555',
-        'Legacy Primary', date '2025-12-01');
-insert into public.books (id, owner_id, title)
-values ('ffffffff-0000-0000-0000-000000000008', 'aaaaaaaa-5555-5555-5555-555555555555', 'Legacy Dupe');
-
-select lives_ok(
-  $$ select public.merge_books(
-       'ffffffff-0000-0000-0000-000000000007',
-       'ffffffff-0000-0000-0000-000000000008',
-       '{"title":"Legacy Primary","plan_y":2030,"plan_m":6,"plan_d":9,"plan_date":"2030-06-09"}'::jsonb) $$,
-  'a merge against a legacy plan_date-only primary is accepted');
-
-reset role;
-select ok(
-  (select plan_date = date '2025-12-01' from public.books where id = 'ffffffff-0000-0000-0000-000000000007'),
-  'a legacy plan_date-only plan is NOT overwritten — plan_date alone still counts as having a plan');
-
-select is(
-  (select count(*)::int from public.books
-    where id = 'ffffffff-0000-0000-0000-000000000007' and plan_y is null and plan_m is null and plan_d is null),
-  1,
-  'and the incoming trio does not land beside it, which would leave two disagreeing plans on one row');
-
--- ── 5. The loser is still gone ──────────────────────────────────────────────────────────────────
+-- ── 4. The loser is still gone ──────────────────────────────────────────────────────────────────
 -- Cheap, but it keeps every assertion above honest: they would all pass trivially if the RPC had
 -- quietly stopped doing its actual job.
 select is(

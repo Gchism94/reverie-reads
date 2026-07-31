@@ -1,25 +1,21 @@
--- plan_y / plan_m / plan_d (feat/plan-precision-schema). Four things: the CHECKs reject an impossible
--- month and day; a plan can be carried at any of the three precisions; the backfill's expression turns
--- a plan_date into the trio and leaves everything else alone; and the trio has not DIVERGED from the
--- pub_* columns it was copied from.
+-- plan_y / plan_m / plan_d. Three things: the CHECKs reject an impossible month and day; a plan can
+-- be carried at any of the three precisions; and the trio has not DIVERGED from the pub_* columns it
+-- was copied from.
 --
 -- NO ROLE SWITCHING HERE, deliberately, and that is not the same shortcut series_removal_test.sql
--- warns about. Nothing under test is RLS-shaped: these are table CHECK constraints and a data
--- backfill, which behave identically for every role, so there is no "hidden row read as unmodified"
--- failure mode to defend against. Every assertion runs as the session role, where nothing is filtered.
+-- warns about. Nothing under test is RLS-shaped: these are table CHECK constraints, which behave
+-- identically for every role, so there is no "hidden row read as unmodified" failure mode to defend
+-- against. Every assertion runs as the session role, where nothing is filtered.
 --
--- WHAT THE BACKFILL ASSERTIONS DO AND DO NOT PROVE. The migration has already run by the time pgTAP
--- executes, so its historical UPDATE is not observable from here — and on a fresh local database there
--- were zero plan_date rows for it to touch, so asserting "the two production rows survived" against
--- this database would assert nothing at all and pass vacuously. What is proven instead is the
--- EXPRESSION: rows are constructed in the pre-migration shape (plan_date set, trio null), the
--- migration's own UPDATE is re-executed verbatim against them, and the result is checked. A drift
--- between this copy and the migration's would defeat that, which is why the sibling-divergence
--- assertions at the end exist in the same file — they fail on a schema change this file did not follow.
--- The real backfill's evidence is its RAISE NOTICE in the deploy output, not this test.
-
+-- A FOURTH SECTION USED TO LIVE HERE AND WAS DELETED, NOT WEAKENED. It re-executed
+-- 20260802010000's conversion of `plan_date` into the trio — a legacy row converts, an already-filled
+-- trio is not overwritten, a re-run changes nothing. `plan_date` was dropped in 20260805010000, so
+-- there is no column to convert out of and no pre-migration row shape to construct; keeping those
+-- assertions would have meant inventing a fiction to test against. What they proved is now historical
+-- and was proven where it actually happened: the migrations' own RAISE NOTICE on the production run,
+-- which reported zero unconverted rows. Everything that outlives the column stayed.
 begin;
-select plan(17);
+select plan(12);
 
 -- One reader. The on_auth_user_created trigger gives them a profile, which books.owner_id needs.
 insert into auth.users (id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
@@ -78,64 +74,6 @@ select is(
 select ok(
   (select plan_m = 3 and plan_d is null from public.books where id = 'eeeeeeee-0000-0000-0000-000000000002'),
   'a year+month plan keeps its month and leaves the day NULL');
-
--- ── The backfill expression ─────────────────────────────────────────────────────────────────────
--- Two rows in the pre-migration shape, matching production's two plan_date rows, plus a third row
--- that has no plan at all and must not be touched.
-insert into public.books (id, owner_id, title, plan_date)
-values
-  ('eeeeeeee-0000-0000-0000-000000000010', 'aaaaaaaa-9999-9999-9999-999999999999', 'Legacy Plan A', date '2026-03-14'),
-  ('eeeeeeee-0000-0000-0000-000000000011', 'aaaaaaaa-9999-9999-9999-999999999999', 'Legacy Plan B', date '2027-01-05');
-insert into public.books (id, owner_id, title)
-values ('eeeeeeee-0000-0000-0000-000000000012', 'aaaaaaaa-9999-9999-9999-999999999999', 'No Plan At All');
-
--- Verbatim copy of the migration's UPDATE, including its guard.
-update public.books
-   set plan_y = extract(year  from plan_date)::smallint,
-       plan_m = extract(month from plan_date)::smallint,
-       plan_d = extract(day   from plan_date)::smallint
- where plan_date is not null
-   and plan_y is null and plan_m is null and plan_d is null;
-
-select is(
-  (select plan_y::text || '-' || plan_m::text || '-' || plan_d::text
-     from public.books where id = 'eeeeeeee-0000-0000-0000-000000000010'),
-  '2026-3-14',
-  'a plan_date backfills to y+m+d — a full date loses no precision');
-
-select is(
-  (select plan_y::text || '-' || plan_m::text || '-' || plan_d::text
-     from public.books where id = 'eeeeeeee-0000-0000-0000-000000000011'),
-  '2027-1-5',
-  'a second plan_date backfills independently — single-digit month and day are not zero-padded away');
-
--- plan_date is NOT cleared by the backfill. This is the whole reason the column survives this
--- migration: the app still reads it, and this deploys first.
-select ok(
-  (select plan_date = date '2026-03-14' from public.books where id = 'eeeeeeee-0000-0000-0000-000000000010'),
-  'the backfill leaves plan_date in place — the app still reads it until a later branch drops it');
-
-select is(
-  (select count(*)::int from public.books
-    where id = 'eeeeeeee-0000-0000-0000-000000000012' and plan_y is null and plan_m is null and plan_d is null),
-  1,
-  'a book with no plan_date gets no trio — the backfill invents nothing');
-
--- Idempotence: the guard means a re-run matches nothing, so a reader's later correction to the trio
--- survives a repeated migration instead of being stamped back to the legacy date.
-update public.books set plan_y = 2030, plan_m = null, plan_d = null
- where id = 'eeeeeeee-0000-0000-0000-000000000010';
-
-update public.books
-   set plan_y = extract(year  from plan_date)::smallint,
-       plan_m = extract(month from plan_date)::smallint,
-       plan_d = extract(day   from plan_date)::smallint
- where plan_date is not null
-   and plan_y is null and plan_m is null and plan_d is null;
-
-select ok(
-  (select plan_y = 2030 and plan_m is null from public.books where id = 'eeeeeeee-0000-0000-0000-000000000010'),
-  're-running the backfill does not overwrite a trio that is already set, even a coarser one');
 
 -- ── The trio has not diverged from pub_* ────────────────────────────────────────────────────────
 -- The stated reason for copying rather than inventing. Compared by rendered constraint definition
