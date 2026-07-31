@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 import { createClient } from '@supabase/supabase-js'
 import { authFailure } from './support/authError'
+import { keepOfflineCacheEmpty } from './support/offlineCache'
 import { ok, okData, okUser } from './support/ok'
 
 // Cover system e2e (docs/task-cover-system.md): the sheet's four paths against a STUBBED covers
@@ -39,6 +40,7 @@ async function signIn(page: Page, session: { access_token: string; refresh_token
   // a reader with no books and no onboarding flag to /onboarding, which renders no <nav>. Fixtures
   // happen to be inserted before this runs today, but set the flag explicitly rather than let the
   // assertion below depend on that ordering.
+  await keepOfflineCacheEmpty(page)
   await page.addInitScript(() => localStorage.setItem('reverie.onboarded', '1'))
   await page.goto(
     `/#access_token=${access_token}&refresh_token=${refresh_token}&expires_in=3600&token_type=bearer&type=magiclink`,
@@ -110,11 +112,6 @@ async function insertFixture(c: DevClient, title: string, coverUrl?: string): Pr
 
 const removeFixture = (c: DevClient, title: string) =>
   c.sb.from('books').delete().eq('title', title)
-
-/** The persisted offline query cache hides freshly-seeded fixtures — drop it before navigating. */
-async function freshCache(page: Page) {
-  await page.evaluate(() => indexedDB.deleteDatabase('reverie-offline'))
-}
 
 /** Stub the covers Edge Function: editions list + per-path ingest responses + a non-image failure. */
 async function stubCoversFunction(page: Page) {
@@ -190,7 +187,6 @@ test('cover sheet: backfill, editions pick + detail sync, URL paste, non-image f
   await stubCoversFunction(page)
   try {
     await signIn(page, dev.session)
-    await freshCache(page)
 
     // ── lazy backfill: the hotlinked book's detail view moves the cover into storage ──
     await page.goto(`/book/${hotlinkedId}`)
@@ -262,7 +258,6 @@ test('placeholder affordance: the coverless grid card quietly invites "add a cov
   await stubCoversFunction(page)
   try {
     await signIn(page, dev.session)
-    await freshCache(page)
     await page.goto('/library')
     const add = page.getByRole('button', { name: 'Add a cover for Cover Sheet Coverless' })
     await add.scrollIntoViewIfNeeded()

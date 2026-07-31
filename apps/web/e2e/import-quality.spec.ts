@@ -3,6 +3,7 @@ import { expect, test, type Page } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { authFailure } from './support/authError'
+import { keepOfflineCacheEmpty } from './support/offlineCache'
 import { ok, okUser } from './support/ok'
 
 // Import-quality e2e (docs/task-import-quality.md): a real Goodreads export goes in through the
@@ -100,13 +101,13 @@ async function cleanup(c: DevClient) {
 async function signIn(page: Page, session: { access_token: string; refresh_token: string }) {
   // The test user's library starts empty; without this the home route redirects a "brand-new
   // reader" to /onboarding (no <nav>). The flag is honor-based localStorage — set it up front.
+  await keepOfflineCacheEmpty(page)
   await page.addInitScript(() => localStorage.setItem('reverie.onboarded', '1'))
   await page.goto(
     `/#access_token=${session.access_token}&refresh_token=${session.refresh_token}&expires_in=3600&token_type=bearer&type=magiclink`,
   )
   await page.getByRole('button', { name: /enter your library/i }).click({ timeout: 20_000 })
   await expect(page.getByRole('navigation')).toBeVisible({ timeout: 20_000 })
-  await page.evaluate(() => indexedDB.deleteDatabase('reverie-offline'))
 }
 
 /** Read one imported book back from the DB (post-merge) by title. */
@@ -266,7 +267,6 @@ test('imported no-cover books render the honest placeholder (axe green, all swep
       ['marrow', 'dark'],
     ] as const) {
       await dev.sb.from('profiles').update({ skin, mode }).eq('id', dev.uid)
-      await page.evaluate(() => indexedDB.deleteDatabase('reverie-offline'))
       await page.goto('/library')
       await page.getByText("Zephyr's Oath").first().waitFor({ timeout: 15_000 })
       await page.waitForLoadState('networkidle')
