@@ -13,9 +13,8 @@ import { ok, okUser } from './support/ok'
 // render (by formatting a null day as 1). This asserts the stored row and the rendered text,
 // because those fail differently.
 //
-// plan_date is asserted NULL in both cases now, at every precision — the dual-write is gone
-// (chore/drop-plan-date) and the column is dropped in a follow-up. These assertions are what say
-// the app has genuinely stopped writing it, which is that drop's precondition.
+// plan_date is gone entirely — the app stopped writing it (#120) and 20260805010000 dropped the
+// column. These assertions are trio-only now; there is no legacy column left to check against.
 
 const SUPABASE_URL = 'http://127.0.0.1:55321'
 const ANON =
@@ -102,12 +101,10 @@ const makeBook = async (c: Client) => {
 }
 
 const planRow = async (c: Client, id: string) =>
-  (await c.sb.from('books').select('plan_y, plan_m, plan_d, plan_date').eq('id', id).single())
-    .data as {
+  (await c.sb.from('books').select('plan_y, plan_m, plan_d').eq('id', id).single()).data as {
     plan_y: number | null
     plan_m: number | null
     plan_d: number | null
-    plan_date: string | null
   }
 
 const planField = (page: Page, label: string) => page.getByLabel(`Planned read ${label}`)
@@ -130,11 +127,11 @@ test('a month-only plan persists as a month, with no day invented anywhere', asy
     await planField(page, 'month').fill('3')
     await planField(page, 'month').blur()
 
-    // The stored row is the assertion that matters: plan_d null, and plan_date NULL rather than
-    // '2026-03-01'. A fabricating dual-write passes every visual check and fails here.
+    // The stored row is the assertion that matters: plan_d stays NULL. A month-only plan that
+    // fabricated a day would pass every visual check and fail here.
     await expect
       .poll(async () => await planRow(c, id), { timeout: 15_000 })
-      .toMatchObject({ plan_y: 2026, plan_m: 3, plan_d: null, plan_date: null })
+      .toMatchObject({ plan_y: 2026, plan_m: 3, plan_d: null })
 
     // Survives a reload as a MONTH — the fields come back from the database, not from local state.
     await page.reload()
@@ -154,9 +151,7 @@ test('a month-only plan persists as a month, with no day invented anywhere', asy
   }
 })
 
-test('a full-precision plan still round-trips, and writes no plan_date at all', async ({
-  page,
-}) => {
+test('a full-precision plan still round-trips through the trio', async ({ page }) => {
   test.setTimeout(180_000)
   const c = await client()
   await reset(c)
@@ -174,11 +169,9 @@ test('a full-precision plan still round-trips, and writes no plan_date at all', 
     await planField(page, 'day').fill('14')
     await planField(page, 'day').blur()
 
-    // A complete plan is the one case a bare `date` COULD have held, which makes it the case that
-    // would still be written if any dual-write survived. plan_date stays null.
     await expect
       .poll(async () => await planRow(c, id), { timeout: 15_000 })
-      .toMatchObject({ plan_y: 2026, plan_m: 3, plan_d: 14, plan_date: null })
+      .toMatchObject({ plan_y: 2026, plan_m: 3, plan_d: 14 })
 
     await page.goto('/planner')
     await expect(page.getByText('📅 Mar 14, 2026')).toBeVisible({ timeout: 20_000 })

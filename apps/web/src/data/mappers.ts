@@ -4,7 +4,6 @@ import {
   sortBookMoods,
   normalizeSeriesStatus,
   toFirstLast,
-  planFromDateString,
   type Book,
   type Contributor,
   type List,
@@ -101,11 +100,7 @@ export function toBook(row: BookRow): Book {
     pages: row.pages,
     pub: { y: row.pub_y, m: row.pub_m, d: row.pub_d },
     reads: [],
-    // Trio first. The fallback stays even though nothing writes plan_date anymore: a row last
-    // written during the window between the trio migration and the trio frontend carries a plan
-    // ONLY there. Removing this before a backfill proves that set is empty would silently blank
-    // those readers' plans — see the branch report.
-    plan: row.plan_y != null ? { y: row.plan_y, m: row.plan_m, d: row.plan_d } : planFromDateString(row.plan_date),
+    plan: { y: row.plan_y, m: row.plan_m, d: row.plan_d },
     progress: row.progress ?? 0,
     readingPosition: row.reading_position,
     readingNowHidden: row.reading_now_hidden ?? false,
@@ -169,8 +164,7 @@ export function toBookRow(patch: Partial<Book>): Partial<BookRow> {
     row.plan_y = patch.plan.y
     row.plan_m = patch.plan.m
     row.plan_d = patch.plan.d
-    // plan_date is NOT written. The trio is the only representation the app maintains now; the
-    // column still exists and is dropped in a follow-up, once this frontend is live and serving.
+    // plan_date is not written and no longer exists — dropped in 20260805010000.
   }
   if (patch.progress !== undefined) row.progress = patch.progress
   if (patch.readingPosition !== undefined) row.reading_position = patch.readingPosition

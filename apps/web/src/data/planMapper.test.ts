@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { emptyDate, type Book, type PlanDate } from '@reverie/core'
+import { emptyDate, type PlanDate } from '@reverie/core'
 import { toBook, toBookRow } from './mappers'
 import type { BookRow } from './types'
 
@@ -120,20 +120,12 @@ describe('plan_date is no longer written', () => {
   })
 })
 
-describe('reading a row written before the app moved to the trio', () => {
-  // The transition window runs in both directions: this app writes both, but rows already in the
-  // database from the previous version carry ONLY plan_date. Reading those as "no plan" would make
-  // every pre-existing plan vanish from the library the moment this deploys.
-  it('a legacy plan_date row with an empty trio still reads as a plan', () => {
-    expect(toBook(row({ plan_date: '2026-03-14' })).plan).toEqual({ y: 2026, m: 3, d: 14 })
-  })
-
-  it('the trio wins when both are present — it is the one that can hold a partial plan', () => {
-    const b: Book = toBook(row({ plan_y: 2027, plan_m: 6, plan_d: null, plan_date: '2026-03-14' }))
-    expect(b.plan).toEqual({ y: 2027, m: 6, d: null })
-  })
-
-  it('a row with neither reads as no plan', () => {
+describe('a row with no trio reads as no plan', () => {
+  // Two assertions used to live here about `plan_date`: that a legacy row still read as a plan, and
+  // that the trio won when both were present. Both are gone with the column (20260805010000) — a row
+  // carrying only plan_date is now unconstructible, so testing it would mean building a BookRow shape
+  // the database can no longer return. What survives is the half that still has meaning.
+  it('an empty trio is no plan — nothing else is consulted', () => {
     expect(toBook(row({})).plan).toEqual(emptyDate())
   })
 })
