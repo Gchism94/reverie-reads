@@ -12,6 +12,9 @@ import { isIngestibleCoverUrl } from '@reverie/core'
 // the network boundary, keyed per source, so every caller passes through it.
 // Per-run ceiling: even one big library can't blow the daily Google quota in a single run.
 const MAX_PER_RUN = 400
+// Consecutive all-sources-failed books before the run gives up. One is a flaky book; several in a
+// row is an outage, and continuing only spends the rest of the library's recheck windows on it.
+const FAILURE_STREAK_LIMIT = 5
 // A book with its high-value fields (cover + series position) is "complete" — recheck rarely.
 const COMPLETE_RECHECK_DAYS = 30
 // Still missing a high-value field after a check → retry sooner (sources update; a 429 may clear).
@@ -153,14 +156,24 @@ async function recordTrace(
   }
 }
 
-export type BulkStopReason = 'done' | 'user' | 'rate_limited' | 'limit'
+/**
+ * `error` is new and is the point of it: a write that failed used to `throw` out of bulkComplete,
+ * which discarded every count with it — the caller could say something broke but not how far the
+ * run got. A run that dies must still report its own progress, or "finished" and "died" produce the
+ * same shape and the reader cannot tell them apart.
+ */
+export type BulkStopReason = 'done' | 'user' | 'rate_limited' | 'limit' | 'error'
 
 export interface BulkResult {
   total: number
   scanned: number
   filled: number
   nothing: number
+  /** Books where nothing was CHECKED — every source threw, or the function was unreachable. */
+  failed: number
   stopReason: BulkStopReason
+  /** Set when stopReason is 'error' or any book failed; the reason to show the reader. */
+  errorMessage?: string
 }
 
 /**
@@ -197,7 +210,13 @@ export async function bulkComplete(
   let scanned = 0
   let filled = 0
   let nothing = 0
+  let failed = 0
   let stopReason: BulkStopReason = 'done'
+  let errorMessage: string | undefined
+  // Consecutive failures, not total: one flaky book should not stop a run, but every source failing
+  // book after book means the outage is ours or theirs and continuing just burns the library's
+  // recheck windows against a wall.
+  let consecutiveFailures = 0
 
   for (const b of candidates) {
     if (shouldStop()) {
@@ -220,13 +239,29 @@ export async function bulkComplete(
       refresh: opts?.refresh,
     })
     spans.push({ s: 'client.enrich', ms: now() - t0 })
-    if (outcome.status !== 'rate_limited')
-      for (const sp of outcome.trace?.spans ?? []) spans.push(sp)
+    // `'trace' in outcome` rather than a status check: only 'ok' and 'empty' carry timings, and
+    // narrowing on the property keeps this correct when another outcome is added.
+    if ('trace' in outcome) for (const sp of outcome.trace?.spans ?? []) spans.push(sp)
     // Paused by upstream quota — stop WITHOUT stamping this book so it's retried next run.
     if (outcome.status === 'rate_limited') {
       stopReason = 'rate_limited'
       break
     }
+    // NOTHING WAS CHECKED. Stamping enriched_at here would negative-cache the book for three days
+    // on the strength of an outage, and the run would report it as a book that was looked at and
+    // had nothing — which is what made three stalled sweeps look like completed ones.
+    if (outcome.status === 'failed') {
+      failed++
+      consecutiveFailures++
+      errorMessage ??= outcome.reason
+      if (consecutiveFailures >= FAILURE_STREAK_LIMIT) {
+        stopReason = 'error'
+        break
+      }
+      onProgress({ scanned, total, filled })
+      continue
+    }
+    consecutiveFailures = 0
     const checkedAt = new Date().toISOString()
     let didFill = false
     if (outcome.status === 'ok') {
@@ -270,13 +305,21 @@ export async function bulkComplete(
         .update({ ...toBookRow(patch), enriched_at: checkedAt })
         .eq('id', b.id)
       spans.push({ s: 'client.update', ms: now() - t2 })
-      if (ue) throw ue
+      if (ue) {
+        stopReason = 'error'
+        errorMessage = ue.message
+        break
+      }
       didFill = Object.keys(patch).length > 0
     } else {
       const t2 = now()
       const { error: ue } = await supabase.from('books').update({ enriched_at: checkedAt }).eq('id', b.id)
       spans.push({ s: 'client.update', ms: now() - t2 })
-      if (ue) throw ue
+      if (ue) {
+        stopReason = 'error'
+        errorMessage = ue.message
+        break
+      }
     }
     if (didFill) filled++
     else nothing++
@@ -290,5 +333,5 @@ export async function bulkComplete(
     onProgress({ scanned, total, filled })
   }
 
-  return { total, scanned, filled, nothing, stopReason }
+  return { total, scanned, filled, nothing, failed, stopReason, errorMessage }
 }
