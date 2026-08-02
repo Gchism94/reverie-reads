@@ -25,6 +25,7 @@ import {
 } from 'npm:@imagemagick/magick-wasm@0.0.35'
 import { envInt, rateLimit, tooMany } from '../_shared/ratelimit.ts'
 import { captureEdgeError, logEvent } from '../_shared/observe.ts'
+import { Trace, wantsTrace } from '../_shared/trace.ts'
 import { isGoogleNoCoverArt, upgradeCoverUrl } from '../_shared/coverUrl.ts'
 
 const cors = {
@@ -140,8 +141,11 @@ interface Normalized {
 }
 
 /** Resize (long edge cap), re-encode as webp, and read a dominant colour from a quantized copy. */
-async function normalizeImage(bytes: Uint8Array): Promise<Normalized> {
-  await ensureMagick()
+async function normalizeImage(bytes: Uint8Array, tr?: Trace): Promise<Normalized> {
+  // magick-wasm init is ONCE PER ISOLATE. Timed separately because a cold isolate pays seconds here
+  // and a warm one pays ~0 — and if Supabase's per-request CPU limit is killing isolates, this span
+  // is non-zero on most requests instead of the first.
+  await (tr ? tr.time('normalize.magickInit', () => ensureMagick()) : ensureMagick())
 
   const encode = (edge: number, quality: number): Uint8Array =>
     ImageMagick.read(bytes, (img) => {
@@ -155,41 +159,50 @@ async function normalizeImage(bytes: Uint8Array): Promise<Normalized> {
       return img.write(MagickFormat.WebP, (d) => d.slice())
     })
 
-  const full = encode(FULL_EDGE, 82)
-  const thumb = encode(THUMB_EDGE, 78)
+  // FOUR FULL DECODES OF THE SAME BYTES, timed one by one. Each ImageMagick.read re-decodes from
+  // scratch: full encode, thumb encode, a read whose only purpose is width/height, and the colour
+  // pass. Three of the four are avoidable — this instrumentation is what will say whether that is
+  // worth acting on or is noise against the network legs.
+  const full = tr
+    ? tr.sync('normalize.decode.full', () => encode(FULL_EDGE, 82))
+    : encode(FULL_EDGE, 82)
+  const thumb = tr
+    ? tr.sync('normalize.decode.thumb', () => encode(THUMB_EDGE, 78))
+    : encode(THUMB_EDGE, 78)
 
-  const { width, height } = ImageMagick.read(bytes, (img) => ({
-    width: img.width,
-    height: img.height,
-  }))
+  const readDims = () =>
+    ImageMagick.read(bytes, (img) => ({ width: img.width, height: img.height }))
+  const { width, height } = tr ? tr.sync('normalize.decode.dims', readDims) : readDims()
 
   // Dominant colour: quantize a small copy to a handful of colours and score the histogram by
   // count × saturation, skipping near-white/near-black — the jacket's hue, not its margins.
   let color: string | null = null
   try {
-    color = ImageMagick.read(bytes, (img) => {
-      img.resize(new MagickGeometry(64, 64))
-      const q = new QuantizeSettings()
-      q.colors = 8
-      img.quantize(q)
-      let best: { score: number; hex: string } | null = null
-      for (const [key, rawCount] of img.histogram()) {
-        const count = Number(rawCount) // magick-wasm counts arrive as BigInt
-        // histogram keys are colour strings (#RRGGBB or #RRGGBBAA at 8-bit depth)
-        const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})/i.exec(key.trim())
-        if (!m) continue
-        const [r, g, b] = [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)]
-        const mx = Math.max(r, g, b) / 255
-        const mn = Math.min(r, g, b) / 255
-        const sat = mx === 0 ? 0 : (mx - mn) / mx
-        const lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255
-        if (lum > 0.94 || lum < 0.05) continue // margins/shadows
-        const score = count * (0.35 + sat)
-        if (!best || score > best.score)
-          best = { score, hex: `#${m[1]}${m[2]}${m[3]}`.toLowerCase() }
-      }
-      return best?.hex ?? null
-    })
+    const readColor = () =>
+      ImageMagick.read(bytes, (img) => {
+        img.resize(new MagickGeometry(64, 64))
+        const q = new QuantizeSettings()
+        q.colors = 8
+        img.quantize(q)
+        let best: { score: number; hex: string } | null = null
+        for (const [key, rawCount] of img.histogram()) {
+          const count = Number(rawCount) // magick-wasm counts arrive as BigInt
+          // histogram keys are colour strings (#RRGGBB or #RRGGBBAA at 8-bit depth)
+          const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})/i.exec(key.trim())
+          if (!m) continue
+          const [r, g, b] = [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)]
+          const mx = Math.max(r, g, b) / 255
+          const mn = Math.min(r, g, b) / 255
+          const sat = mx === 0 ? 0 : (mx - mn) / mx
+          const lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255
+          if (lum > 0.94 || lum < 0.05) continue // margins/shadows
+          const score = count * (0.35 + sat)
+          if (!best || score > best.score)
+            best = { score, hex: `#${m[1]}${m[2]}${m[3]}`.toLowerCase() }
+        }
+        return best?.hex ?? null
+      })
+    color = tr ? tr.sync('normalize.decode.color', readColor) : readColor()
   } catch (e) {
     logEvent('warn', 'covers', 'color_extract_failed', { err: String(e) })
     color = null // tint is a nicety — never fail ingest over it
@@ -245,9 +258,11 @@ const INGESTIBLE_SOURCES = new Set(['hardcover', 'openlibrary', 'upload', 'camer
 const isGoogleHostedCover = (url: string): boolean =>
   /(?:books\.google\.[a-z.]+|googleusercontent\.com)\/books\/content/i.test(url || '')
 
-async function handleIngest(req: Request, uid: string): Promise<Response> {
+async function handleIngest(req: Request, uid: string, tr: Trace): Promise<Response> {
   let file: Uint8Array | null = null
   let fields: IngestFields
+  // Multipart (camera/upload) never traces: it is a reader action, not the sweep.
+  let tracing = false
 
   const contentType = req.headers.get('content-type') ?? ''
   if (contentType.includes('multipart/form-data')) {
@@ -266,6 +281,7 @@ async function handleIngest(req: Request, uid: string): Promise<Response> {
   } else {
     const body = (await req.json()) as IngestFields & { action?: string }
     fields = body
+    tracing = wantsTrace(body)
   }
 
   if (!fields.bookId || !/^[0-9a-f-]{16,64}$/i.test(fields.bookId))
@@ -301,14 +317,16 @@ async function handleIngest(req: Request, uid: string): Promise<Response> {
     sourceUrl = sourceUrl ? upgradeCoverUrl(sourceUrl, 'full') : url
     let r: Response
     try {
-      r = await fetch(url, { headers: { Accept: 'image/*' }, redirect: 'follow' })
+      r = await tr.time('covers.fetchSource', () =>
+        fetch(url, { headers: { Accept: 'image/*' }, redirect: 'follow' }),
+      )
     } catch {
       return json({ error: 'fetch_failed' }, 422)
     }
     if (!r.ok) return json({ error: 'fetch_failed', status: r.status }, 422)
     const len = Number(r.headers.get('content-length') ?? 0)
     if (len > MAX_INPUT_BYTES) return json({ error: 'too_large', maxBytes: MAX_INPUT_BYTES }, 413)
-    const buf = new Uint8Array(await r.arrayBuffer())
+    const buf = new Uint8Array(await tr.time('covers.readBody', () => r.arrayBuffer()))
     if (buf.byteLength > MAX_INPUT_BYTES)
       return json({ error: 'too_large', maxBytes: MAX_INPUT_BYTES }, 413)
     file = buf
@@ -322,7 +340,7 @@ async function handleIngest(req: Request, uid: string): Promise<Response> {
   const base = `u/${uid}/${fields.bookId}`
 
   try {
-    const n = await normalizeImage(file)
+    const n = await normalizeImage(file, tr)
     // A server-fetched Google URL that resolves to the source's fixed-size "image not available" plate
     // is NOT a cover — refuse to store it (a stored plate has no display fallback). Never applies to a
     // user upload/camera (multipart → file set, no fetchedUrl) or a real cover of any other size.
@@ -353,8 +371,10 @@ async function handleIngest(req: Request, uid: string): Promise<Response> {
     }
     const fullPath = `${base}/${rev}.webp`
     const thumbPath = `${base}/${rev}_t.webp`
-    const okFull = await putObject(fullPath, n.full, 'image/webp')
-    const okThumb = okFull && (await putObject(thumbPath, n.thumb, 'image/webp'))
+    const okFull = await tr.time('covers.putFull', () => putObject(fullPath, n.full, 'image/webp'))
+    const okThumb =
+      okFull &&
+      (await tr.time('covers.putThumb', () => putObject(thumbPath, n.thumb, 'image/webp')))
     if (!okFull) return json({ error: 'storage_failed' }, 502)
     logEvent('info', 'covers', 'ingest', {
       uid,
@@ -371,6 +391,7 @@ async function handleIngest(req: Request, uid: string): Promise<Response> {
       sourceUrl: sourceUrl ?? null,
       width: n.width,
       height: n.height,
+      ...(tracing ? { _trace: { spans: tr.spans, totalMs: tr.totalMs() } } : {}),
     })
   } catch (e) {
     // Normalization failed (exotic/corrupt encoding) but the bytes ARE a sniffed image within the
@@ -635,7 +656,11 @@ async function handleEditions(input: EditionsInput): Promise<Response> {
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
-  const rl = await rateLimit(req, 'covers', envInt('COVERS_RATE_MAX', 60), 60)
+  const tr = new Trace()
+  // Timed like enrich's: a DB round trip paid before any image work, on every ingest.
+  const rl = await tr.time('covers.ratelimit', () =>
+    rateLimit(req, 'covers', envInt('COVERS_RATE_MAX', 60), 60),
+  )
   if (!rl.allowed) return tooMany(rl.retryAfter, cors)
 
   const uid = jwtSub(req)
@@ -643,11 +668,11 @@ Deno.serve(async (req: Request) => {
 
   try {
     const contentType = req.headers.get('content-type') ?? ''
-    if (contentType.includes('multipart/form-data')) return await handleIngest(req, uid)
+    if (contentType.includes('multipart/form-data')) return await handleIngest(req, uid, tr)
 
     const body = (await req.clone().json()) as { action?: string }
     if (body.action === 'editions') return await handleEditions((await req.json()) as EditionsInput)
-    if (body.action === 'ingest') return await handleIngest(req, uid)
+    if (body.action === 'ingest') return await handleIngest(req, uid, tr)
     return json({ error: 'bad_action' }, 400)
   } catch (e) {
     captureEdgeError('covers', e)

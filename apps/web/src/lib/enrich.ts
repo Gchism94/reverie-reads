@@ -54,9 +54,15 @@ export interface EnrichResult {
   alternates?: CoverAlternate[]
 }
 
+/** Ordered per-stage wall times from the Edge Function, present only when `trace` was requested. */
+export interface ServerTrace {
+  spans: { s: string; ms: number }[]
+  totalMs: number
+}
+
 export type EnrichOutcome =
-  | { status: 'ok'; data: EnrichResult }
-  | { status: 'empty' }
+  | { status: 'ok'; data: EnrichResult; trace?: ServerTrace }
+  | { status: 'empty'; trace?: ServerTrace }
   | { status: 'rate_limited' }
 
 /**
@@ -69,6 +75,8 @@ export async function enrichBookOutcome(input: {
   isbn?: string
   /** 'fast' = one source by ISBN for an instant record; 'full' (default) = the multi-source merge. */
   mode?: 'fast' | 'full'
+  /** Ask the function to return its per-stage timings. Off by default; the response is unchanged. */
+  trace?: boolean
 }): Promise<EnrichOutcome> {
   try {
     const { data, error } = await supabase.functions.invoke('enrich', { body: input })
@@ -76,9 +84,10 @@ export async function enrichBookOutcome(input: {
       const status = (error as { context?: { status?: number } }).context?.status
       return status === 429 ? { status: 'rate_limited' } : { status: 'empty' }
     }
+    const trace = (data as { _trace?: ServerTrace })?._trace
     if (!data) return { status: 'empty' }
     if ((data as { rateLimited?: boolean }).rateLimited) return { status: 'rate_limited' }
-    return { status: 'ok', data: data as EnrichResult }
+    return { status: 'ok', data: data as EnrichResult, trace }
   } catch {
     return { status: 'empty' }
   }

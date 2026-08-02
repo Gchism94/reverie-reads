@@ -115,6 +115,14 @@ export const USER_OWNED_TABLES: OwnedTable[] = [
     owner: 'reporter_id',
     plan: { backup: false, why: 'Moderation records, not library data — they belong to the report queue, not to the reader.' },
   },
+  {
+    table: 'sweep_traces',
+    owner: 'owner_id',
+    plan: {
+      backup: false,
+      why: 'Per-stage timings from an enrichment sweep — a measurement of this deployment, not the reader’s library. Restoring them into another account or a later schema would describe a run that never happened there.',
+    },
+  },
 
   // ── refusals: the reader said NO, and that must survive too ──
   // Only the negative half of each table travels. The positive half is genuinely derived and
