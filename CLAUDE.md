@@ -233,6 +233,36 @@ test` outright and only fail `tsc`. This has bitten twice, by two different tool
   of that `await` into `ok()` is what surfaced it — a defect that had been invisible specifically
   because nothing read the result. Give every row in a bulk insert every column the batch uses,
   explicitly, even where a value is just the column default.
+- **Never call `res.json()` inside an `if (!res.ok)` branch.** The failure body is the one least
+  likely to be JSON: an HTML gateway page, an empty 429, a plain-text proxy error. The parse throws
+  _inside the failure handler_, the outer `catch` swallows it, and the status code — the only thing
+  that decides whether to retry, back off, or give up — is destroyed on the way. What reaches the
+  caller is a generic parse error indistinguishable from "the source had nothing", which is exactly
+  backwards: a 403 quota refusal and an empty result set demand opposite responses. **Read the
+  status first, then the body defensively** (`await r.json().catch(() => null)`). The same rule
+  applies to a fall-through: `enrich`'s `fetchJson` handles 429 and 5xx by status and then parses
+  everything else, so a 4xx with an HTML body still reaches `.json()` and still loses its status.
+  Branching on `.ok` is not enough — every path that reaches a parse must have already captured the
+  status.
+- **An exported symbol whose only importers are `*.test.ts` is dead code wearing tests.** Passing
+  tests on an uncalled function read as proof the feature works, and that is precisely how
+  `fetchCover` survived a PR _about_ `fetchCover`: its `?default=false` guard and ISBN-direct chain
+  were reviewed, tested, merged and reported as shipped while nothing had ever called it, and
+  `ol-covers`' budget and 3000ms gap were dead configuration guarded by five passing tests.
+  Measured on `docs/rules-and-grep-audit`: **37 exported symbols are unreachable** — no intra-file
+  use, no non-test use anywhere including `e2e/`, `scripts/` and `supabase/functions/` — of which
+  **26 carry tests**. Earlier instances (`bookshopId`, `VITE_LIBRO_AFFILIATE_ID`, `cacheCoverUrl`)
+  were each deleted only after being mistaken for working features first. **Delete it or wire it;
+  do not leave it.** Three exemptions are legitimate and should stay declared rather than inferred:
+  `*.fixture.ts` files, names ending `ForTests`, and registries that ARE the spec (`ownedTables`,
+  the contrast-test `*_TOKEN_FIELDS`) — the last of which needs a written reason, on the
+  `ownedTables` principle that an exclusion without one is the bug.
+- **Verify a deploy landed before building on it.** The claim and the act happen in different
+  places — a Code session writes the migration, the owner runs it, and nothing closes the loop — so
+  "it's deployed" is an assumption wearing the costume of a fact. Four times this session work was
+  built on a deploy that had not happened. Check `supabase migration list --linked` (the remote
+  column is the truth) or `supabase functions list` before depending on it, and say which you
+  checked. This is cheap and the alternative is a branch built on a schema that does not exist.
 
 ## Definition of done (per feature)
 
