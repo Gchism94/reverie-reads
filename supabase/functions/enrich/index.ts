@@ -26,6 +26,13 @@ import { selectBestMatch, selfIsbn13, type Confidence, type ResolveCandidate } f
 import { envInt, rateLimit, tooMany } from '../_shared/ratelimit.ts'
 import { paceSource } from '../_shared/sourcePace.ts'
 import { Trace, wantsTrace } from '../_shared/trace.ts'
+import {
+  classifyHttp,
+  dispositionOf,
+  retryAfterMs,
+  SourceBodyError,
+  SourceHttpError,
+} from '../_shared/httpClassify.ts'
 import { captureEdgeError } from '../_shared/observe.ts'
 
 /** A cover edition choice surfaced to the import review + Cover Studio (distilled E1 alternate). */
@@ -68,18 +75,44 @@ const hardcoverAuth = (): string | null => {
   return t ? `Bearer ${t}` : null
 }
 
-// One retry with backoff so a transient 429/5xx doesn't fail the whole source. Throws 'status 429'
-// on rate-limit so the caller can mark the run rate-limited (pause + resume, never burn the window).
+/**
+ * Fetch JSON, classifying by STATUS BEFORE BODY. One backoff retry for 5xx only.
+ *
+ * The body is never touched on a non-OK response. That is the fix: a 4xx used to fall through to
+ * `return await r.json()`, and Open Library answers a 404 with 29KB of text/html, so the parse threw
+ * a SyntaxError whose message carried no status at all. The caller's `String(e).includes('429')`
+ * then read a refusal as "this source had nothing" and the book was stamped as genuinely checked.
+ *
+ * A 429 is thrown immediately and never retried: it is not retryable on this timescale, and a
+ * second attempt only spends another unit of quota to be refused again.
+ */
 async function fetchJson(url: string, init?: RequestInit): Promise<unknown> {
   for (let attempt = 0; attempt < 2; attempt++) {
     const r = await fetch(url, init)
-    if (r.status === 429) throw new Error('status 429')
-    if (r.status >= 500) {
-      if (attempt === 1) throw new Error(`status ${r.status}`)
+    const disposition = classifyHttp(r.status)
+
+    if (disposition === 'rate_limited') {
+      throw new SourceHttpError(
+        r.status,
+        url,
+        retryAfterMs(r.headers.get('retry-after'), Date.now()),
+      )
+    }
+    if (disposition === 'retry') {
+      if (attempt === 1) throw new SourceHttpError(r.status, url)
       await new Promise((res) => setTimeout(res, 400 * (attempt + 1)))
       continue
     }
-    return await r.json()
+    // Non-retryable 4xx: throw WITH the status, and never read the body.
+    if (disposition === 'failed') throw new SourceHttpError(r.status, url)
+
+    // Only an OK response's body is parsed, and a malformed one is its own failure — not a
+    // silently-empty success that would stamp the book as checked.
+    try {
+      return await r.json()
+    } catch {
+      throw new SourceBodyError(r.status, url)
+    }
   }
   return null
 }
@@ -222,22 +255,33 @@ const SEARCHERS: Partial<
 async function gatherCandidates(
   input: EnrichInput,
   tr?: Trace,
-): Promise<{ candidates: ResolveCandidate[]; rateLimited: boolean }> {
+): Promise<{
+  candidates: ResolveCandidate[]
+  rateLimited: boolean
+  attempted: number
+  failed: number
+}> {
   const order: EnrichSource[] = ['hardcover', 'google', 'openlibrary']
   const enabled = new Set(enabledSources())
   const candidates: ResolveCandidate[] = []
   let rateLimited = false
+  let attempted = 0
+  let failed = 0
   for (const s of order) {
     const fn = SEARCHERS[s]
     if (!enabled.has(s) || !fn) continue
+    attempted++
     try {
       candidates.push(...(await fn(input, tr)))
     } catch (e) {
-      if (String(e).includes('429')) rateLimited = true
-      // degrade gracefully — skip this source
+      // Classified by the error's OWN status, not by string-matching its message. A network error
+      // and a 404 are both failures; only a 429 is a rate limit. Counting failures is what lets the
+      // caller tell "every source refused us" from "the sources answered and had nothing".
+      failed++
+      if (dispositionOf(e) === 'rate_limited') rateLimited = true
     }
   }
-  return { candidates, rateLimited }
+  return { candidates, rateLimited, attempted, failed }
 }
 
 /** Distill E1 alternate candidates into the cover-picker shape (only those that carry a cover). */
@@ -341,6 +385,11 @@ Deno.serve(async (req: Request) => {
     // 3) Full pass: resolve identity, then merge field-by-field across sources, cache, return complete.
     const stamped: StampedSource[] = []
     let rateLimited = false
+    // How many sources we ASKED, and how many threw. `attempted > 0 && failed === attempted` is the
+    // difference between "nobody had this book" and "nobody would talk to us" — the distinction the
+    // client needs so it does not stamp a book as checked when nothing was ever checked.
+    let attempted = 0
+    let failed = 0
     let confidence: Confidence = cleanIsbn(input.isbn ?? '') ? 'high' : 'none' // a real ISBN is exact
     let matchQuery = ''
     let alternates: CoverAlternate[] = []
@@ -350,8 +399,15 @@ Deno.serve(async (req: Request) => {
     //     SELF-RESOLVE an ISBN-13 → fetch the canonical edition + best cover by that ISBN below.
     const title = input.title
     if (!cleanIsbn(input.isbn ?? '') && title) {
-      const { candidates, rateLimited: searchRL } = await gatherCandidates(input, tr)
+      const {
+        candidates,
+        rateLimited: searchRL,
+        attempted: searchAttempted,
+        failed: searchFailed,
+      } = await gatherCandidates(input, tr)
       if (searchRL) rateLimited = true
+      attempted += searchAttempted
+      failed += searchFailed
       const r = selectBestMatch({ title, author: input.author }, candidates)
       confidence = r.confidence
       matchQuery = r.query
@@ -365,11 +421,13 @@ Deno.serve(async (req: Request) => {
 
     // 3b) Query enabled sources (by the self-resolved ISBN when we have one) to complete + best cover.
     for (const s of enabledSources()) {
+      attempted++
       try {
         const rec = await ADAPTERS[s](fetchInput, tr)
         if (rec) stamped.push({ source: s, at: new Date().toISOString(), record: rec })
       } catch (e) {
-        if (String(e).includes('429')) rateLimited = true
+        failed++
+        if (dispositionOf(e) === 'rate_limited') rateLimited = true
         // degrade gracefully — skip this source, keep going
       }
     }
@@ -394,7 +452,13 @@ Deno.serve(async (req: Request) => {
       alternates,
       ...traceOf(input, tr),
     }
-    return json(rateLimited && !sourceList ? { ...body, rateLimited: true } : body)
+    // THREE OUTCOMES, NOT TWO. `sourcesFailed` says every source we asked threw — which is not the
+    // same as an empty result and must not be recorded as one. Both flags are set only when nothing
+    // resolved: a partial record is genuinely useful and is reported as a success.
+    const allFailed = attempted > 0 && failed === attempted && !sourceList
+    if (rateLimited && !sourceList) return json({ ...body, rateLimited: true })
+    if (allFailed) return json({ ...body, sourcesFailed: true, sourcesAttempted: attempted })
+    return json(body)
   } catch (e) {
     captureEdgeError('enrich', e)
     return new Response(JSON.stringify({ error: String(e) }), {
