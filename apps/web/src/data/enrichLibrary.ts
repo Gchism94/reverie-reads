@@ -104,7 +104,8 @@ function toIncoming(e: EnrichResult, b: Book): Incoming {
 
 export interface BulkProgress {
   scanned: number
-  total: number
+  /** `null` until the candidate count is known — see `sweepProgress.ts`. Never a placeholder zero. */
+  total: number | null
   filled: number
 }
 
@@ -234,6 +235,11 @@ export async function bulkComplete(
   // book after book means the outage is ours or theirs and continuing just burns the library's
   // recheck windows against a wall.
   let consecutiveFailures = 0
+
+  // EMIT THE DENOMINATOR BEFORE THE FIRST REQUEST. It has been known since the line above, and the
+  // next emission is at the bottom of the loop — one enrich call, one possible ingest and one update
+  // away, which under server-side pacing is seconds. Withholding it is what put "0/0" on screen.
+  onProgress({ scanned: 0, total, filled: 0 })
 
   for (const b of candidates) {
     if (shouldStop()) {
