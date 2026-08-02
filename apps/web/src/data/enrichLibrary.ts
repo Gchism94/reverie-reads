@@ -2,11 +2,14 @@ import { contributorsFromAuthors, enrichmentCoverFill, mergeImport, type Book, t
 import { supabase } from '../lib/supabase'
 import { toBookRow } from './mappers'
 import { enrichBookOutcome, type EnrichResult } from '../lib/enrich'
+import { ingestCover } from '../lib/covers'
+import { isIngestibleCoverUrl } from '@reverie/core'
 
-// Pace requests so a run stays well under the source caps (Google ~1000/day, Open Library
-// 100/IP/5min — docs/SCALING.md). The enrich Edge Function tries Google first and caches per
-// ISBN/title, so repeats are cheap; this gap keeps the burst rate modest.
-const THROTTLE_MS = 220
+// PACING LIVES SERVER-SIDE NOW — supabase/functions/_shared/sourcePace.ts. It used to be a 220ms
+// sleep here, which was 4.5 req/sec under a comment quoting Open Library's 100-per-5-minutes (one
+// per THREE seconds), and it only ever paced THIS loop: `importEnrich.ts` calls bulkComplete
+// directly and anything can call the enrich function over HTTP. The gap is now on the far side of
+// the network boundary, keyed per source, so every caller passes through it.
 // Per-run ceiling: even one big library can't blow the daily Google quota in a single run.
 const MAX_PER_RUN = 400
 // A book with its high-value fields (cover + series position) is "complete" — recheck rarely.
@@ -14,8 +17,6 @@ const COMPLETE_RECHECK_DAYS = 30
 // Still missing a high-value field after a check → retry sooner (sources update; a 429 may clear).
 const PARTIAL_RETRY_DAYS = 3
 const DAY = 86_400_000
-
-const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 
 /** A book worth enriching: missing a cover, ISBN, pub year, genres, or (for a series) position. */
 export function isIncomplete(b: Book): boolean {
@@ -128,6 +129,26 @@ export async function bulkComplete(
       // Record confidence only when THIS run actually filled the cover — so a trusted user/seed cover
       // (which merge keeps) is never mislabeled by the enrichment match's confidence (E3 review signal).
       if (patch.cover && outcome.data.confidence) patch.coverConfidence = outcome.data.confidence
+
+      // EAGER INGEST. `useCoverBackfill` moves a hotlinked cover into our Storage only when a reader
+      // opens that book's detail page, so a swept library keeps hotlinks until each book is visited
+      // one by one — and a library filled in bulk is exactly the one nobody browses book by book.
+      // Doing it here means the sweep that found the cover is also the thing that makes it durable.
+      //
+      // `isIngestibleCoverUrl` is the gate, not the source label: Google covers stay hotlinks by
+      // their terms, and a Google URL can arrive wearing any label. A failed ingest is NOT fatal —
+      // the hotlink still renders and the lazy path retries on first view, so the sweep never loses
+      // a cover it just found because Storage had a bad minute.
+      if (patch.cover && isIngestibleCoverUrl(patch.cover)) {
+        const ing = await ingestCover({ bookId: b.id, source: 'openlibrary', url: patch.cover })
+        if (ing.status === 'ok') {
+          patch.cover = ing.data.cover
+          patch.coverThumb = ing.data.thumb
+          patch.coverSource = 'openlibrary'
+          if (ing.data.color) patch.coverColor = ing.data.color
+        }
+      }
+
       const { error: ue } = await supabase
         .from('books')
         .update({ ...toBookRow(patch), enriched_at: checkedAt })
@@ -142,7 +163,6 @@ export async function bulkComplete(
     else nothing++
     scanned++
     onProgress({ scanned, total, filled })
-    await sleep(THROTTLE_MS)
   }
 
   return { total, scanned, filled, nothing, stopReason }

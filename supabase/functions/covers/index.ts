@@ -228,6 +228,10 @@ interface IngestFields {
   url?: string
 }
 
+/** Smallest edge a real cover can have. A 1x1 tracking/placeholder pixel is the artifact this
+ *  excludes; the smallest genuine thumbnail any source serves is an order of magnitude above it. */
+const MIN_COVER_EDGE_PX = 50
+
 const SOURCES = new Set(['hardcover', 'google', 'openlibrary', 'upload', 'camera', 'url'])
 
 // Sources whose bytes may be STORED (docs/reverie-metadata-sourcing.md §Covers). Google Books is
@@ -322,6 +326,22 @@ async function handleIngest(req: Request, uid: string): Promise<Response> {
     // A server-fetched Google URL that resolves to the source's fixed-size "image not available" plate
     // is NOT a cover — refuse to store it (a stored plate has no display fallback). Never applies to a
     // user upload/camera (multipart → file set, no fetchedUrl) or a real cover of any other size.
+    // HOST-AGNOSTIC DIMENSION FLOOR. `isGoogleNoCoverArt` below only fires for Google hosts and only
+    // at two exact sizes, so it cannot see any other source's "no cover" artifact. Open Library's is
+    // a 43-byte 1x1 GIF89a served at HTTP 200 with no content-type — `sniffImage` accepts GIF, and
+    // nothing here checked size, so it would normalize and store as a durable cover with no display
+    // fallback. `?default=false` is the primary defence and turns that into a clean 404; this is the
+    // backstop for when it is missing, and being host-agnostic it also covers whatever the next
+    // source's placeholder turns out to be. No real cover is under 50px on either edge.
+    if (n.width < MIN_COVER_EDGE_PX || n.height < MIN_COVER_EDGE_PX) {
+      logEvent('info', 'covers', 'ingest_rejected_too_small', {
+        uid,
+        source: fields.source,
+        w: n.width,
+        h: n.height,
+      })
+      return json({ error: 'no_cover_available', reason: 'below_min_dimensions' }, 422)
+    }
     if (fetchedUrl && isGoogleNoCoverArt(fetchedUrl, n.width, n.height)) {
       logEvent('info', 'covers', 'ingest_rejected_no_image', {
         uid,

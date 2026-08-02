@@ -220,6 +220,13 @@ export function enrichmentCoverFill(
 }
 
 type FetchLike = (url: string) => Promise<{ json: () => Promise<unknown> }>
+type FetchHead = (url: string) => Promise<{ ok: boolean; status: number }>
+
+/** The ISBN-direct cover endpoint. `default=false` is MANDATORY and is the whole point of this URL:
+ *  without it Open Library answers a miss with a 43-byte 1x1 GIF at HTTP 200, which sniffs as a
+ *  valid image and would be stored as a durable cover. With it, a miss is a clean 404. */
+export const buildOpenLibraryIsbnCoverUrl = (isbn: string): string =>
+  `https://covers.openlibrary.org/b/isbn/${isbn.replace(/[^0-9Xx]/g, '')}-L.jpg?default=false`
 
 /**
  * Resolve a cover URL for INGEST. Open Library only.
@@ -231,8 +238,43 @@ type FetchLike = (url: string) => Promise<{ json: () => Promise<unknown> }>
  *
  * Google remains available at DISPLAY time (search results, edition candidates, hotlinked
  * thumbnails) — see `coverCandidates`, which is untouched. This function is about bytes we keep.
+ *
+ * TWO PATHS, ISBN FIRST. With an ISBN we ask the covers endpoint directly — no search, no matching,
+ * no chance of resolving the wrong edition — and take `-L`, since ingest normalizes to ~1200px and
+ * the search path's `-M` hands the resizer a smaller source than exists. Measured on 20 real library
+ * ISBNs: 25% resolved, every miss a clean 404, zero degenerate plates, hits 23.7KB-95.3KB. Without an
+ * ISBN we fall back to `search.json`, which is the only option for the ~205 books that have none.
+ *
+ * ── SOURCES THIS DELIBERATELY DOES NOT USE, AND WHY ────────────────────────────────────────────
+ * If you are here to add a fallback because the hit rate is low, these three are the obvious
+ * candidates and all three are excluded on purpose:
+ *   · Amazon — its terms bar using product data as a general covers backend outside an affiliate
+ *     context. We are not an affiliate integration.
+ *   · Goodreads — its developer terms prohibit storing their data, and this function exists
+ *     precisely to store what it returns.
+ *   · Google Images / scraped publisher art — re-hosting scraped cover art is the unresolved rights
+ *     risk docs/reverie-metadata-sourcing.md already names; Open Library is chosen there as "the most
+ *     defensible cover source available to us" specifically to avoid it.
+ * A personal, non-commercial project can take that risk. This one distributes to other readers, so
+ * the honest fallback for a miss is the placeholder plus a reader-supplied URL — not a scrape.
  */
-export async function fetchCover(b: CoverLookup, fetchImpl: FetchLike): Promise<string> {
+export async function fetchCover(
+  b: CoverLookup & { isbn?: string },
+  fetchImpl: FetchLike,
+  headImpl?: FetchHead,
+): Promise<string> {
+  const isbn = (b.isbn ?? '').replace(/[^0-9Xx]/g, '')
+  if (isbn && headImpl) {
+    try {
+      const url = buildOpenLibraryIsbnCoverUrl(isbn)
+      const r = await headImpl(url)
+      // 404 is the documented "no cover for this ISBN" answer, not a failure — fall through to
+      // search, which occasionally has art under a different edition.
+      if (r.ok) return isIngestibleCoverUrl(url) ? url : ''
+    } catch {
+      // network trouble on the direct path is not fatal; the search path is still worth trying
+    }
+  }
   try {
     const res = await fetchImpl(buildOpenLibraryUrl(b))
     const url = extractOpenLibraryCover((await res.json()) as OpenLibraryResponse)

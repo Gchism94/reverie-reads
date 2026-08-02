@@ -402,6 +402,18 @@ primary book` — both reached the function body and were turned away by the che
   same runs upload and open cleanly, so the mechanism is sound; likely a flush
   race on oversized captures. Another argument for splitting a11y into its own
   CI job.
+- **No Deno runtime executes in the gate, so `paceSource`'s body never runs under
+  test.** The outbound pacing enforcement lives in
+  `supabase/functions/_shared/sourcePace.ts`, and `deno` is installed neither
+  locally nor in CI — a test placed beside it would never run, which is worse than
+  none. What IS covered: the policy (budgets + `waitMsFor` arithmetic) lives in
+  `packages/core/src/sourcePace.ts` under Vitest, and `sourcePace.test.ts` reads
+  the Deno file and fails when the two tables diverge, so the copied constants
+  cannot drift silently. What is NOT covered: the in-process gap actually being
+  awaited, the `rate_limit_consume` call, and the fail-open branches — all
+  reasoned about, none executed. Wiring a Deno runner into the gate is its own
+  branch; it would also cover `_shared/coverUrl.ts` and every other function-side
+  module, which are uncovered for the same reason.
 
 ## Product queue
 
