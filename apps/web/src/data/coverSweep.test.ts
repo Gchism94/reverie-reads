@@ -113,9 +113,15 @@ describe('a miss records the attempt without writing a cover', () => {
 })
 
 describe('never overwrite an existing cover', () => {
-  // THE MUTATION TARGET. Dropping enrichmentCoverFill's fill-only guard makes this fail: the sweep
-  // would replace a cover the reader chose (or an already-ingested one) with whatever a source
-  // happened to return this run.
+  // TWO GUARDS IN SERIES, AND EACH MASKS THE OTHER — established by mutation, after two wrong
+  // guesses about which one was load-bearing:
+  //   · enrichmentCoverFill (covers.ts) runs FIRST, inside toIncoming, and blanks the offer when the
+  //     book already has a cover or the reader chose one.
+  //   · mergeImport's fill('cover') (match.ts) fills only into an empty field.
+  // Remove EITHER alone and "already has a cover" still holds — the survivor catches it. Remove BOTH
+  // and all three assertions below go red. The single point of failure is the CLEARED-cover case at
+  // the bottom: `cover` is empty there, so mergeImport would fill it and only enrichmentCoverFill
+  // says no. That one fails on its own the moment enrichmentCoverFill's guard is deleted.
   it('a book that already has a cover is never re-covered, and is never ingested again', async () => {
     enrichResult = { status: 'ok', data: { cover: OL_HOTLINK, confidence: 'high' } }
     okIngest()
@@ -126,7 +132,7 @@ describe('never overwrite an existing cover', () => {
     expect(ingestSpy, 'and must not be re-ingested, doubling the storage object').not.toHaveBeenCalled()
   })
 
-  it('a user-chosen cover is never replaced even when blank-looking sources return one', async () => {
+  it('a user-chosen cover is never replaced', async () => {
     enrichResult = { status: 'ok', data: { cover: OL_HOTLINK, confidence: 'high' } }
     okIngest()
     await run([
@@ -134,5 +140,19 @@ describe('never overwrite an existing cover', () => {
     ])
     expect(updates.at(-1)?.patch.cover_url).toBeUndefined()
     expect(ingestSpy).not.toHaveBeenCalled()
+  })
+
+  // ENRICHMENT-COVER-FILL'S OWN MUTATION TARGET. `cover` is EMPTY here, so mergeImport would fill it
+  // — only `coverUserChosen` stops the sweep re-offering art for a book whose cover the reader threw
+  // away on purpose. Delete enrichmentCoverFill's guard and this is the assertion that goes red.
+  it('a reader who CLEARED their cover is not handed a new one', async () => {
+    enrichResult = { status: 'ok', data: { cover: OL_HOTLINK, confidence: 'high' } }
+    okIngest()
+    await run([makeBook({ id: 'b1', title: 'A Book', cover: '', coverUserChosen: true })])
+
+    const patch = updates.at(-1)!.patch
+    expect(patch.cover_url, 'a deliberately cleared cover must stay cleared').toBeUndefined()
+    expect(ingestSpy, 'and nothing should be fetched into Storage for it').not.toHaveBeenCalled()
+    expect(patch.enriched_at, 'but the attempt is still recorded').toBeTruthy()
   })
 })
