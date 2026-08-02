@@ -482,47 +482,41 @@ onboarding Stages B–D.
 
 ## Open decisions
 
-- **A global `{isbn}.jpg` in a public bucket is a SHARED cover cache, not per-reader display —
-  and that is a different rights posture than `docs/reverie-metadata-sourcing.md` assumes.**
-  Confirmed live in production: 41 objects outside `u/` against 92 client-ingest objects.
-  `scheduleCoverCache` (enrich Edge Function) fetches every resolved cover a second time and stores
-  it at `covers/{isbn13}.jpg`, keyed by edition rather than by reader, in the same public bucket.
-  Its own header states the intent plainly — _"so the Nth user scanning one book reuses one stored
-  image"_ — which is redistribution of a third party's cover art to other people, not one reader
-  displaying a copy of their own book. The sourcing doc reasons entirely about _which sources_ may
-  be ingested and never about _who the stored bytes are served to_; its "Implemented posture"
-  section enumerates four ingest entry points and names the `covers` function "the authoritative
-  gate (the client is not the security boundary)". This is a fifth entry point, in a different
-  function, and it passes through no gate at all.
+- **DECIDED + REMOVED (2026-08): the global `{isbn}.jpg` cover cache is gone.** The enrich
+  function's `scheduleCoverCache` fetched every resolved cover a second time and stored it at
+  `covers/{isbn13}.jpg` — keyed by edition rather than by reader, in a public bucket — then patched
+  the cache row to point at it, so the next book to hit that key adopted the shared object and
+  skipped the client's ingest. Measured before removal: **33 books on client ingest, all complete;
+  1 book on the global path, missing both `coverThumb` and `coverColor`** — 3% of covers and 100%
+  of the degraded rows. It also had no host check (while `PRECEDENCE.cover` puts `google` second),
+  no magic-byte sniff, no `MIN_COVER_EDGE_PX` floor, no size cap and no normalization, and once
+  stored a cover carried our own host, defeating the host-matching audit in
+  `docs/reverie-metadata-sourcing.md`. Cross-reader sharing bought nothing — one library per
+  account (CLAUDE.md decision 2), one reader. If it ever becomes a goal it gets rebuilt **through**
+  the `covers` function that already gates everything, not beside it. Guarded by
+  `packages/core/src/noGlobalCoverCache.test.ts`, which reads the Deno source (no Deno test runner
+  exists) and fails if `enrich` regains any Storage write.
 
-  **Three things make the decision sharper than a naming question:**
+  **Two things the removal does NOT do, both left as owner data decisions:**
 
-  1. **It stores Google covers, which the doc says are display-only.** `PRECEDENCE.cover` is
-     `['hardcover', 'google', 'openlibrary', 'isbndb']` — Google is _second_, so `merged.cover` is
-     frequently a `books.google.com/books/content` URL. `scheduleCoverCache`'s only guard is
-     `src.includes('/storage/v1/object/public/covers/')`; there is **no host check anywhere in it
-     or in `cacheCover`**. Google bytes therefore reach our bucket by a path that refuses nothing.
-  2. **And it launders the evidence.** Once stored, the cache row's cover is PATCHed to our own
-     storage URL, so the next book to hit that cache key adopts it — and `isIngestibleCoverUrl`
-     returns false for it (it already looks like ours), so the client does not re-ingest and the
-     row is written with our host and whatever `cover_source` the merge reported. The doc's own
-     2026-07-26 audit deliberately matched on **the host in `cover_source_url`** because "counting
-     the label alone would have reported none and closed the question wrongly". A cover laundered
-     through the global cache defeats both the label _and_ the host, so that audit would report
-     clean regardless.
-  3. **It bypasses every validation the ingest pipeline has.** `cacheCover` does no magic-byte
-     sniff, no `MIN_COVER_EDGE_PX` floor, no size cap, and no normalization — it fetches and
-     uploads raw bytes. The dimension floor added in #123 exists specifically to stop a degenerate
-     placeholder becoming a durable cover; it does not cover this path.
+  1. **The 41 already-stored objects survive.** Deleting the writer does not unstore what it wrote.
+     Any of them that are Google-origin are stored copies of covers the licensing analysis permits
+     only as hotlinks, and they stay that way until deleted. Origin is recoverable only through
+     `enrichment_cache.provenance->'cover'->>'source'` — the object path is just an ISBN and the
+     book row, if any, now carries our host. Query 2 in
+     `docs/queries/global-cover-cache-audit.sql`.
+  2. **Adoption continues for up to 30 days after deploy.** Cache rows already rewritten still hold
+     a global URL in `record.cover`, and a rewritten row has a cover and an isbn13 so `isComplete`
+     is true and `isFresh` keeps it for `COMPLETE_DAYS = 30`. Every hit on such a row still hands
+     the client a stored URL that `isIngestibleCoverUrl` declines to re-ingest — so new degraded
+     rows can still appear, from `bulkComplete` and from `AddRoute`, until those rows age out or
+     are cleared. Clearing them is a one-statement data fix; not done here.
 
-  **Decision needed, not a bug to fix:** whether cross-reader cover sharing is a goal at all. It
-  currently buys nothing — v1 is one library per account (CLAUDE.md decision 2) and this
-  deployment has one reader — while costing a second fetch and a second stored object per cover,
-  and producing _worse_ rows on the cache-hit path (a book that adopts the global object gets no
-  `coverThumb` and no `coverColor`, because those are only set by the client ingest it skipped).
-  If sharing is not a goal, deleting `scheduleCoverCache` removes the duplication and closes all
-  three issues above at once. If it is, the path needs the host check, the validation and the
-  rights review it never had. Not removed pending that call.
+  **The one degraded book cannot repair itself.** `useCoverBackfill` skips it (`isStoredCoverUrl`
+  is true), and `resharpenSource` needs `coverSourceUrl` to re-fetch from — which the adoption path
+  never set, because only the ingest sets it. It keeps a working cover and permanently lacks a
+  thumb and a spine colour unless the cover is cleared and re-swept, or re-picked in Cover Studio.
+  At N=1 that is a manual fix; if the count had been larger it would need a repair pass.
 
 - **LICENSE**: a proprietary training-fork grant exists (87e0195). Review whether
   that text is right for a product repo before LLC formation. Contributor
