@@ -55,18 +55,24 @@ describe('the enrich function never persists cover bytes', () => {
   })
 
   it('still writes the cache normally — this is a removal, not a lobotomy', () => {
-    // Guards the test above from passing for the wrong reason (an empty or gutted file).
-    expect(enrichSrc).toContain('async function writeCache')
-    expect(enrichSrc).toContain('async function readCache')
+    // Guards the tests above from passing for the wrong reason (an empty or gutted file).
+    //
+    // REGEXES, NOT toContain. `toContain('async function writeCache')` is satisfied by
+    // `async function writeCacheDISABLED` — the substring is still there — so renaming the
+    // function away passed this test unchanged. Caught by mutation, not by reading it back.
+    // Requiring the open paren pins the actual declaration, and asserting the CALL SITES matters
+    // more than the declarations: a function that exists but is never invoked is the same
+    // lobotomy with extra steps.
+    expect(enrichSrc).toMatch(/async function writeCache\(/)
+    expect(enrichSrc).toMatch(/async function readCache\(/)
+    expect(enrichSrc, 'writeCache must still be called').toMatch(/\bwriteCache\(key,/)
+    expect(enrichSrc, 'readCache must still be called').toMatch(/\breadCache\(key\)/)
     expect(enrichSrc).toContain('rest/v1/enrichment_cache')
   })
 })
 
 describe('the client has no way to ask for a stored cover from enrich', () => {
-  const clientSrc = readFileSync(
-    join(__dirname, '../../../apps/web/src/lib/enrich.ts'),
-    'utf8',
-  )
+  const clientSrc = readFileSync(join(__dirname, '../../../apps/web/src/lib/enrich.ts'), 'utf8')
 
   it('cacheCoverUrl is gone — it had no callers even before the path was removed', () => {
     expect(clientSrc).not.toContain('cacheCoverUrl')
