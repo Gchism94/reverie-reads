@@ -12,6 +12,23 @@ forgotten.
 
 ## Real bugs, outstanding
 
+- **The Supabase MCP connection reaches only project `cywpkhtpxekmjvuoloem`
+  ("Steppe") — a different application, not Reverie.** Its tables are `groups`,
+  `events`, `neighborhood_requests`, `moderation_actions`; `public.books` does
+  not exist there. Discovered mid-`fix/sweep-pace-analysis`/`fix/sweep-instrumentation`
+  after `get_logs` returned only infra health-check rows and `execute_sql`
+  against `public.books` raised `42P01`. **Any prior report in this project's
+  history that claimed to have read Reverie's production database or edge-function
+  logs through the MCP connection was, without exception, reading Steppe's data
+  (usually an empty result) and reporting the emptiness as a fact about Reverie.**
+  I have not gone back to audit which specific past reports made that claim — flag
+  and re-verify by hand if one is being relied on. Until the connection is pointed
+  at the right project (or a different read path is set up), Reverie production
+  reads are the owner's to run, not Code's — see `docs/DEPLOY.md`'s existing rule
+  that write access is never Code's; this extends the same boundary to reads
+  through this particular tool, which silently produced wrong-project answers
+  rather than an error.
+
 - **Production ACL verification belongs in the deploy protocol — nothing checks it
   today.** `20260801010000` revoked EXECUTE from PUBLIC across every RPC and was
   deployed and reported as done. Nobody read prod's `proacl` afterwards. A
