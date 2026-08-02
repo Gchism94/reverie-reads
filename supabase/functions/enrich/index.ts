@@ -48,12 +48,6 @@ interface EnrichInput {
   isbn?: string
   mode?: 'fast' | 'full'
   refresh?: boolean
-  /** 'cacheCover' → materialize a single cover URL to Storage (a manual Cover Studio pick), no search */
-  action?: 'cacheCover'
-  /** the source cover URL to cache (with action 'cacheCover') */
-  cover?: string
-  /** the edition ISBN-13 the cover belongs to (cache key, for dedup) */
-  isbn13?: string
 }
 
 const cleanIsbn = (s: string) => (s || '').replace(/[^0-9Xx]/g, '').toUpperCase()
@@ -288,14 +282,6 @@ Deno.serve(async (req: Request) => {
   try {
     const input = (await req.json()) as EnrichInput
 
-    // Manual Cover Studio pick: materialize ONE chosen cover URL to Storage/CDN (owned, not a hotlink),
-    // keyed by its edition ISBN so repeats dedup. Falls back to the source URL on any failure.
-    if (input.action === 'cacheCover' && input.cover) {
-      const key = (cleanIsbn(input.isbn13 ?? '') || input.cover)
-        .replace(/[^a-z0-9]/gi, '_')
-        .slice(0, 80)
-      return json({ cover: await cacheCover(input.cover, key) })
-    }
     const mode = input.mode ?? 'full'
     const key = cacheKeyFor(input)
 
@@ -398,10 +384,6 @@ Deno.serve(async (req: Request) => {
       await tr.time('enrich.writeCache', () =>
         writeCache(key, merged, { confidence, query: matchQuery, alternates }),
       )
-    // Non-blocking cover caching: respond with the source URL immediately (no wait on the image
-    // download/upload), and cache the image to Storage + upgrade the cached row to the CDN URL in the
-    // background, so later readers serve from the CDN. Bounds per-book enrichment latency.
-    scheduleCoverCache(key, merged)
     // Flag rate-limited only when nothing resolved, so a bulk run pauses/resumes instead of
     // stamping the book checked. A partial record is still useful → not flagged.
     const body = {
@@ -473,78 +455,6 @@ function cacheKeyFor(input: EnrichInput): string {
   return isbn.length >= 10
     ? `isbn:${isbn}`
     : `ta:${norm(input.title ?? '')}|${norm(input.author ?? '')}`
-}
-
-// ── cover image caching (Storage bucket 'covers', global + CDN-served) ──
-// Keyed by work/edition like enrichment_cache, so the Nth scanner reuses one stored image.
-function coverKeyFor(r: EnrichedRecord): string {
-  const raw = r.isbn13 || r.isbn10 || r.workId || r.editionId || ''
-  return raw.replace(/[^a-z0-9]/gi, '_').slice(0, 80)
-}
-
-/**
- * Ensure the cover is stored in the 'covers' bucket and return its public CDN URL. Idempotent: if
- * the object already exists it's reused (no re-fetch). On a missing key or any fetch/upload error,
- * the original source URL is returned unchanged (the client then falls back to a placeholder).
- */
-async function cacheCover(sourceUrl: string, key: string): Promise<string> {
-  if (!DB_URL || !key || sourceUrl.includes('/storage/v1/object/public/covers/')) return sourceUrl
-  const path = `${key}.jpg`
-  // The browser-facing base. In production SUPABASE_URL is the public project URL; COVER_PUBLIC_URL
-  // can point at a CDN/custom domain instead.
-  const publicBase = Deno.env.get('COVER_PUBLIC_URL') ?? DB_URL
-  const publicUrl = `${publicBase}/storage/v1/object/public/covers/${path}`
-  try {
-    // Already cached? Reuse it.
-    const head = await fetch(publicUrl, { method: 'HEAD' })
-    if (head.ok) return publicUrl
-
-    const img = await fetch(sourceUrl)
-    if (!img.ok) return sourceUrl
-    const bytes = new Uint8Array(await img.arrayBuffer())
-    if (!bytes.length) return sourceUrl
-    const contentType = img.headers.get('content-type') ?? 'image/jpeg'
-    const up = await fetch(`${DB_URL}/storage/v1/object/covers/${path}`, {
-      method: 'POST',
-      headers: {
-        apikey: SERVICE,
-        Authorization: `Bearer ${SERVICE}`,
-        'Content-Type': contentType,
-        'x-upsert': 'true',
-      },
-      body: bytes,
-    })
-    return up.ok ? publicUrl : sourceUrl
-  } catch {
-    return sourceUrl
-  }
-}
-
-/**
- * Cache the cover image to Storage WITHOUT blocking the response. The response already carries the
- * source URL (works immediately); here we upload the image in the background and, once it's on the
- * CDN, upgrade the cached row's cover to the CDN URL so later readers stop hotlinking. Runs after the
- * response via EdgeRuntime.waitUntil; a no-op when there's nothing to cache or no DB. Best-effort.
- */
-function scheduleCoverCache(cacheKey: string, merged: EnrichedRecord): void {
-  const src = merged.cover
-  if (!DB_URL || !src || src.includes('/storage/v1/object/public/covers/')) return
-  const task = (async () => {
-    try {
-      const cdn = await cacheCover(src, coverKeyFor(merged))
-      if (cdn && cdn !== src) {
-        await fetch(`${DB_URL}/rest/v1/enrichment_cache?key=eq.${encodeURIComponent(cacheKey)}`, {
-          method: 'PATCH',
-          headers: { ...dbHeaders, Prefer: 'return=minimal' },
-          body: JSON.stringify({ record: { ...merged, cover: cdn } }),
-        })
-      }
-    } catch {
-      /* best-effort */
-    }
-  })()
-  const rt = (globalThis as { EdgeRuntime?: { waitUntil(p: Promise<unknown>): void } }).EdgeRuntime
-  if (rt?.waitUntil) rt.waitUntil(task)
 }
 
 const DAY = 86_400_000

@@ -109,19 +109,3 @@ export async function enrichBook(input: {
   const outcome = await enrichBookOutcome(input)
   return outcome.status === 'ok' ? outcome.data : null
 }
-
-/**
- * Materialize a manually-picked cover URL to Storage/CDN (Cover Studio durability) and return the
- * owned URL. Falls back to the source URL on any failure, so a pick never fails — it just may hotlink.
- */
-export async function cacheCoverUrl(input: { cover: string; isbn13?: string }): Promise<string> {
-  try {
-    const { data, error } = await supabase.functions.invoke('enrich', {
-      body: { action: 'cacheCover', cover: input.cover, isbn13: input.isbn13 },
-    })
-    if (error) return input.cover
-    return (data as { cover?: string })?.cover || input.cover
-  } catch {
-    return input.cover
-  }
-}
