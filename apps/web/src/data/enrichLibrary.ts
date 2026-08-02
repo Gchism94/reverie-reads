@@ -91,6 +91,31 @@ export interface BulkOptions {
   limit?: number
   /** Group the run's rows. Generated when absent. */
   runId?: string
+  /**
+   * Order never-checked books first. A capped run otherwise takes whatever the library array
+   * happens to hand it, which for a measurement run is a sample of unknown provenance.
+   */
+  unvisitedFirst?: boolean
+  /**
+   * Bypass the enrich function's GLOBAL enrichment_cache so the sources are actually queried.
+   *
+   * THE SWEEP HAS TWO INDEPENDENT CLOCKS and only one of them is ours. `shouldCheck` reads
+   * `books.enriched_at` — per user, per book. The Edge Function separately reads
+   * `enrichment_cache.fetched_at` — GLOBAL, keyed by ISBN or normalized title+author, fresh for
+   * 30 days (complete) or 3 (partial). A book can be due by the first clock and answered from the
+   * second with zero external calls, which is exactly what happened to the first traced run: all
+   * ten books were selected correctly and every one of them was served from cache, so the sweep's
+   * expensive path was never entered and there was nothing for the instrument to see.
+   *
+   * Selecting never-checked books does NOT fix that on its own — a book this reader has never
+   * checked can still have a fresh global cache row, written when the library was imported or by
+   * an enrichment of the same title under a different row. Bypassing the cache is the only thing
+   * that guarantees the sources are hit.
+   *
+   * A run with this set is therefore a DELIBERATE WORST CASE, not an average sweep: it measures
+   * what a book costs when nothing is cached.
+   */
+  refresh?: boolean
 }
 
 /** performance.now() where available (sub-ms, monotonic — immune to a clock step mid-sweep). */
@@ -160,7 +185,14 @@ export async function bulkComplete(
     ((rows as { id: string; enriched_at: string | null }[]) ?? []).map((r) => [r.id, r.enriched_at]),
   )
 
-  const candidates = books.filter((b) => isIncomplete(b) && shouldCheck(b, stampById.get(b.id) ?? null))
+  let candidates = books.filter((b) => isIncomplete(b) && shouldCheck(b, stampById.get(b.id) ?? null))
+  // Stable partition, never-checked first. Array#sort is stable, but a partition says the intent
+  // plainly and cannot accidentally reorder within either group.
+  if (opts?.unvisitedFirst)
+    candidates = [
+      ...candidates.filter((b) => !stampById.get(b.id)),
+      ...candidates.filter((b) => stampById.get(b.id)),
+    ]
   const total = candidates.length
   let scanned = 0
   let filled = 0
@@ -185,6 +217,7 @@ export async function bulkComplete(
       author: [b.first, b.last].filter(Boolean).join(' '),
       isbn: b.isbn || undefined,
       trace: opts?.trace,
+      refresh: opts?.refresh,
     })
     spans.push({ s: 'client.enrich', ms: now() - t0 })
     if (outcome.status !== 'rate_limited')

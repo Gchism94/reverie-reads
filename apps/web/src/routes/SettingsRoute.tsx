@@ -12,7 +12,12 @@ import { enrichImported } from '../data/importEnrich'
 import { ImportSummary } from '../components/ImportSummary'
 import { importSessionKey } from '../data/importReview'
 import { deleteAccount } from '../data/account'
-import { bulkComplete, isIncomplete, type BulkProgress } from '../data/enrichLibrary'
+import {
+  bulkComplete,
+  isIncomplete,
+  type BulkOptions,
+  type BulkProgress,
+} from '../data/enrichLibrary'
 import { resharpenCovers, resharpenSource, type ResharpenProgress } from '../data/resharpenCovers'
 import { DuplicateReview } from '../components/DuplicateReview'
 import { fileToCsvText } from '../data/xlsxAdapter'
@@ -216,7 +221,7 @@ function SettingsScreen() {
 
   // `trace` runs a SHORT, instrumented sweep: same code path, same order, capped at `limit` books,
   // writing one sweep_traces row each. It is the measurement run — not a faster or different sweep.
-  async function runComplete(opts?: { trace?: boolean; limit?: number }) {
+  async function runComplete(opts?: BulkOptions) {
     stopRef.current = false
     setCompleting(true)
     setTracing(!!opts?.trace)
@@ -224,8 +229,7 @@ function SettingsScreen() {
     const runId = crypto.randomUUID()
     try {
       const r = await bulkComplete(all, setProgress, () => stopRef.current, {
-        trace: opts?.trace,
-        limit: opts?.limit,
+        ...opts,
         runId,
       })
       const prefix =
@@ -440,9 +444,16 @@ function SettingsScreen() {
             {!completing && (
               <button
                 type="button"
-                onClick={() => void runComplete({ trace: true, limit: 10 })}
+                onClick={() =>
+                  void runComplete({
+                    trace: true,
+                    limit: 10,
+                    unvisitedFirst: true,
+                    refresh: true,
+                  })
+                }
                 disabled={!incompleteCount}
-                title="Runs the normal sweep over 10 books and records per-stage timings to sweep_traces."
+                title="Runs the sweep over 10 never-checked books, bypassing the shared enrichment cache so the sources are actually queried, and records per-stage timings to sweep_traces. Deliberately a worst case, not an average."
                 className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink disabled:opacity-50"
                 style={{ background: 'var(--field)' }}
               >

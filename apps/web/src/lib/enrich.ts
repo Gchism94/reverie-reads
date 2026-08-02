@@ -77,6 +77,8 @@ export async function enrichBookOutcome(input: {
   mode?: 'fast' | 'full'
   /** Ask the function to return its per-stage timings. Off by default; the response is unchanged. */
   trace?: boolean
+  /** Skip the global enrichment_cache and re-query the sources. Measurement runs only. */
+  refresh?: boolean
 }): Promise<EnrichOutcome> {
   try {
     const { data, error } = await supabase.functions.invoke('enrich', { body: input })

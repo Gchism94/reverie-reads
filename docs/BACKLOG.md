@@ -482,6 +482,48 @@ onboarding Stages B–D.
 
 ## Open decisions
 
+- **A global `{isbn}.jpg` in a public bucket is a SHARED cover cache, not per-reader display —
+  and that is a different rights posture than `docs/reverie-metadata-sourcing.md` assumes.**
+  Confirmed live in production: 41 objects outside `u/` against 92 client-ingest objects.
+  `scheduleCoverCache` (enrich Edge Function) fetches every resolved cover a second time and stores
+  it at `covers/{isbn13}.jpg`, keyed by edition rather than by reader, in the same public bucket.
+  Its own header states the intent plainly — _"so the Nth user scanning one book reuses one stored
+  image"_ — which is redistribution of a third party's cover art to other people, not one reader
+  displaying a copy of their own book. The sourcing doc reasons entirely about _which sources_ may
+  be ingested and never about _who the stored bytes are served to_; its "Implemented posture"
+  section enumerates four ingest entry points and names the `covers` function "the authoritative
+  gate (the client is not the security boundary)". This is a fifth entry point, in a different
+  function, and it passes through no gate at all.
+
+  **Three things make the decision sharper than a naming question:**
+
+  1. **It stores Google covers, which the doc says are display-only.** `PRECEDENCE.cover` is
+     `['hardcover', 'google', 'openlibrary', 'isbndb']` — Google is _second_, so `merged.cover` is
+     frequently a `books.google.com/books/content` URL. `scheduleCoverCache`'s only guard is
+     `src.includes('/storage/v1/object/public/covers/')`; there is **no host check anywhere in it
+     or in `cacheCover`**. Google bytes therefore reach our bucket by a path that refuses nothing.
+  2. **And it launders the evidence.** Once stored, the cache row's cover is PATCHed to our own
+     storage URL, so the next book to hit that cache key adopts it — and `isIngestibleCoverUrl`
+     returns false for it (it already looks like ours), so the client does not re-ingest and the
+     row is written with our host and whatever `cover_source` the merge reported. The doc's own
+     2026-07-26 audit deliberately matched on **the host in `cover_source_url`** because "counting
+     the label alone would have reported none and closed the question wrongly". A cover laundered
+     through the global cache defeats both the label _and_ the host, so that audit would report
+     clean regardless.
+  3. **It bypasses every validation the ingest pipeline has.** `cacheCover` does no magic-byte
+     sniff, no `MIN_COVER_EDGE_PX` floor, no size cap, and no normalization — it fetches and
+     uploads raw bytes. The dimension floor added in #123 exists specifically to stop a degenerate
+     placeholder becoming a durable cover; it does not cover this path.
+
+  **Decision needed, not a bug to fix:** whether cross-reader cover sharing is a goal at all. It
+  currently buys nothing — v1 is one library per account (AGENTS.md decision 2) and this
+  deployment has one reader — while costing a second fetch and a second stored object per cover,
+  and producing _worse_ rows on the cache-hit path (a book that adopts the global object gets no
+  `coverThumb` and no `coverColor`, because those are only set by the client ingest it skipped).
+  If sharing is not a goal, deleting `scheduleCoverCache` removes the duplication and closes all
+  three issues above at once. If it is, the path needs the host check, the validation and the
+  rights review it never had. Not removed pending that call.
+
 - **LICENSE**: a proprietary training-fork grant exists (87e0195). Review whether
   that text is right for a product repo before LLC formation. Contributor
   copyright ownership needs a CLA or work-for-hire agreement — hardens with time.
