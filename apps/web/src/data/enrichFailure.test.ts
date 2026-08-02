@@ -17,6 +17,8 @@ import type { Book } from '@reverie/core'
 const updates: { id: string; patch: Record<string, unknown> }[] = []
 let outcomes: unknown[] = []
 let outcomeIdx = 0
+/** Nth update (1-based) that should come back with an error; 0 = never. */
+let failUpdateAt = 0
 
 vi.mock('../lib/supabase', () => ({
   supabase: {
@@ -27,7 +29,11 @@ vi.mock('../lib/supabase', () => ({
       update: (patch: Record<string, unknown>) => ({
         eq: (_c: string, id: string) => {
           updates.push({ id, patch })
-          return Promise.resolve({ error: null })
+          return Promise.resolve(
+            failUpdateAt && updates.length === failUpdateAt
+              ? { error: { message: 'permission denied for table books' } }
+              : { error: null },
+          )
         },
       }),
     }),
@@ -59,6 +65,7 @@ const stamped = () => updates.filter((u) => 'enriched_at' in u.patch)
 beforeEach(() => {
   updates.length = 0
   outcomeIdx = 0
+  failUpdateAt = 0
   outcomes = [{ status: 'empty' }]
 })
 
@@ -136,6 +143,22 @@ describe('a run that breaks does not report the shape of one that finished', () 
     expect(r.failed).toBe(1)
     expect(r.scanned).toBe(3)
     expect(stamped()).toHaveLength(3)
+  })
+
+  // A WRITE THAT FAILS USED TO `throw ue`, which unwound bulkComplete and discarded every count
+  // with it: the caller could say something broke but not how far the run had got. Breaking with a
+  // reason keeps the progress, which is the difference between "died" and "died after 3 books".
+  it('a failed write stops the run WITHOUT throwing, and the counts survive', async () => {
+    outcomes = [{ status: 'empty' }]
+    failUpdateAt = 3 // let two books through, fail the third
+    const books = Array.from({ length: 6 }, (_, i) => makeBook({ id: `b${i}`, cover: '' }))
+
+    const r = await bulkComplete(books, () => {}, () => false)
+
+    expect(r.stopReason).toBe('error')
+    expect(r.errorMessage).toContain('permission denied')
+    expect(r.scanned, 'the two books that did land are still reported').toBe(2)
+    expect(r.total).toBe(6)
   })
 
   it('a clean pass still reports clean — the honest case is not collateral damage', async () => {
