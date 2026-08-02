@@ -232,16 +232,31 @@ function SettingsScreen() {
         ...opts,
         runId,
       })
+      // A RUN THAT BROKE MUST NOT READ LIKE A RUN THAT FINISHED. Three sweeps stalled and each
+      // reported the same shape as a completed one, because a stop was only ever described by a
+      // soft prefix and failures were counted as books that had nothing.
       const prefix =
-        r.stopReason === 'rate_limited'
-          ? 'Paused — the book data sources are busy; it’ll resume where it left off next time. '
-          : r.stopReason === 'limit'
-            ? 'Paused at the per-run limit — run again to continue. '
-            : r.stopReason === 'user'
-              ? 'Stopped — '
-              : ''
+        r.stopReason === 'error'
+          ? '⚠ Stopped early — '
+          : r.stopReason === 'rate_limited'
+            ? 'Paused — the book data sources are busy; it’ll resume where it left off next time. '
+            : r.stopReason === 'limit'
+              ? 'Paused at the per-run limit — run again to continue. '
+              : r.stopReason === 'user'
+                ? 'Stopped — '
+                : ''
+      // Failures are reported separately from misses and are never folded into "had nothing new":
+      // those books were not checked and were deliberately left unstamped, so they retry next run.
+      const failures = r.failed
+        ? ` · ${r.failed} couldn’t be checked (left to retry${r.errorMessage ? `: ${r.errorMessage}` : ''})`
+        : ''
+      // Only a clean, complete pass may say so without qualification.
+      const completeness =
+        r.stopReason === 'done' && !r.failed
+          ? ''
+          : ` — ${r.total - r.scanned} of ${r.total} not reached`
       setStatus(
-        `${prefix}checked ${r.scanned} of ${r.total} · filled ${r.filled} · ${r.nothing} had nothing new.` +
+        `${prefix}checked ${r.scanned} of ${r.total} · filled ${r.filled} · ${r.nothing} had nothing new${failures}${completeness}.` +
           (opts?.trace ? ` Trace run ${runId} — ${r.scanned} rows in sweep_traces.` : ''),
       )
       await qc.invalidateQueries({ queryKey: ['books'] })
