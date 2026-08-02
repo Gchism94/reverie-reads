@@ -6,20 +6,32 @@ including indie and Kindle Unlimited titles, _and_ being usable from a personal 
 
 ## Covers & backlist metadata
 
-| Source                             | Reliability /5       | Cost                                                  | How to grab data                                                                                                                                                                                        |
-| ---------------------------------- | -------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Google Books**                   | 4.5                  | Free; ~1,000 requests/day default, more on request    | `GET …/books/v1/volumes?q=isbn:X` or `intitle:"…"+inauthor:"…"`; JSON → `volumeInfo.imageLinks.thumbnail`. Optional API key                                                                             |
-| **Hardcover**                      | 4                    | Free public API; ~$5/mo Supporter adds librarian edit | GraphQL `POST https://api.hardcover.app/v1/graphql` with a free Bearer token. Books carry editions, series, release dates, genres                                                                       |
-| **ISBNdb**                         | 4 (paid)             | ~$15 / $36 / $100 / $300 per month tiers              | `GET https://api2.isbndb.com/book/{isbn}` with API-key header; ~1 req/sec; bulk up to 1,000/call on higher tiers                                                                                        |
-| **Apple / iTunes Search**          | 3.5                  | Free, no key (~20 calls/min)                          | `GET https://itunes.apple.com/search?media=ebook&term=…`; `artworkUrl100` → swap to higher res. Strong for audiobook art                                                                                |
-| **Open Library**                   | 3.5                  | Free                                                  | Search `…/search.json?title=&author=`; covers `https://covers.openlibrary.org/b/isbn/{isbn}-L.jpg`. Cover-by-ISBN limited to 100 req/IP / 5 min; search 1 req/sec (3 with a User-Agent + contact email) |
-| **LibraryThing covers**            | 3                    | Free dev key; attribution                             | `https://covers.librarything.com/devkey/{KEY}/large/isbn/{isbn}`                                                                                                                                        |
-| **Open Library bulk dumps**        | 3                    | Free                                                  | Monthly data dumps to match offline; zero runtime calls                                                                                                                                                 |
-| **BookBrainz**                     | 2                    | Free (CC0)                                            | REST/GraphQL + dumps; sparse for romance                                                                                                                                                                |
-| **WorldCat / OCLC**                | 2 practical (4 data) | Gated                                                 | Discovery/Search API needs library membership + OAuth                                                                                                                                                   |
-| **Amazon (PA-API → Creators API)** | 2 practical (5 data) | "Free" but gated                                      | Best covers, but the API is being retired, closed to new sign-ups, and requires an Associates account with qualifying sales                                                                             |
-| **Goodreads**                      | 1 practical (5 data) | n/a                                                   | Public API discontinued; only unofficial scrapers remain (against ToS)                                                                                                                                  |
-| **Bowker / Books in Print / ONIX** | 1 practical          | Enterprise                                            | Authoritative ONIX feeds via contract; overkill                                                                                                                                                         |
+| Source                      | Reliability /5 | Cost                                                  | How to grab data                                                                                                                                                                                        |
+| --------------------------- | -------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Google Books**            | 4.5            | Free; ~1,000 requests/day default, more on request    | `GET …/books/v1/volumes?q=isbn:X` or `intitle:"…"+inauthor:"…"`; JSON → `volumeInfo.imageLinks.thumbnail`. Optional API key                                                                             |
+| **Hardcover**               | 4              | Free public API; ~$5/mo Supporter adds librarian edit | GraphQL `POST https://api.hardcover.app/v1/graphql` with a free Bearer token. Books carry editions, series, release dates, genres                                                                       |
+| **ISBNdb**                  | 4 (paid)       | ~$15 / $36 / $100 / $300 per month tiers              | `GET https://api2.isbndb.com/book/{isbn}` with API-key header; ~1 req/sec; bulk up to 1,000/call on higher tiers                                                                                        |
+| **Apple / iTunes Search**   | 3.5            | Free, no key (~20 calls/min)                          | `GET https://itunes.apple.com/search?media=ebook&term=…`; `artworkUrl100` → swap to higher res. Strong for audiobook art                                                                                |
+| **Open Library**            | 3.5            | Free                                                  | Search `…/search.json?title=&author=`; covers `https://covers.openlibrary.org/b/isbn/{isbn}-L.jpg`. Cover-by-ISBN limited to 100 req/IP / 5 min; search 1 req/sec (3 with a User-Agent + contact email) |
+| **LibraryThing covers**     | 3              | Free dev key; attribution                             | `https://covers.librarything.com/devkey/{KEY}/large/isbn/{isbn}`                                                                                                                                        |
+| **Open Library bulk dumps** | 3              | Free                                                  | Monthly data dumps to match offline; zero runtime calls                                                                                                                                                 |
+
+> **Open Library cover resolution — credit.** The ISBN-direct cover endpoint
+> (`/b/isbn/{isbn}-L.jpg?default=false`) and eager batch ingest into our own Storage — rather than
+> ingesting only when a reader happens to open a book's detail page — were adapted from work shared
+> by **Annabelle** ([somnia-library](https://github.com/Annabelle0726/somnia-library)). The
+> `default=false` parameter is load-bearing: without it a miss returns a 43-byte 1×1 GIF at HTTP 200
+> that sniffs as a valid image and would be stored as a durable cover.
+>
+> Adapted, not copied wholesale. Her project also falls back to Amazon, Goodreads and image search
+> when Open Library misses; we deliberately do not — see `packages/core/src/covers.ts`'s `fetchCover`
+> for the reasoning. A personal, non-commercial library can take that rights risk; this one
+> distributes to other readers and cannot.
+> | **BookBrainz** | 2 | Free (CC0) | REST/GraphQL + dumps; sparse for romance |
+> | **WorldCat / OCLC** | 2 practical (4 data) | Gated | Discovery/Search API needs library membership + OAuth |
+> | **Amazon (PA-API → Creators API)** | 2 practical (5 data) | "Free" but gated | Best covers, but the API is being retired, closed to new sign-ups, and requires an Associates account with qualifying sales |
+> | **Goodreads** | 1 practical (5 data) | n/a | Public API discontinued; only unofficial scrapers remain (against ToS) |
+> | **Bowker / Books in Print / ONIX** | 1 practical | Enterprise | Authoritative ONIX feeds via contract; overkill |
 
 ### Caveats that hit a romance library hard
 

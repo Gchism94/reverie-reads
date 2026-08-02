@@ -24,6 +24,7 @@ import {
 } from './merge.ts'
 import { selectBestMatch, selfIsbn13, type Confidence, type ResolveCandidate } from './resolve.ts'
 import { envInt, rateLimit, tooMany } from '../_shared/ratelimit.ts'
+import { paceSource } from '../_shared/sourcePace.ts'
 import { captureEdgeError } from '../_shared/observe.ts'
 
 /** A cover edition choice surfaced to the import review + Cover Studio (distilled E1 alternate). */
@@ -92,6 +93,7 @@ async function fetchJson(url: string, init?: RequestInit): Promise<unknown> {
 //    lives in ./merge.ts normalizers; adapters only know how to query. ──
 
 async function adapterGoogle(input: EnrichInput): Promise<SourceRecord | null> {
+  if (!(await paceSource('google'))) throw new Error('status 429')
   const q = input.isbn
     ? `isbn:${cleanIsbn(input.isbn)}`
     : `intitle:${encodeURIComponent(`"${input.title}"`)}${input.author ? `+inauthor:${encodeURIComponent(`"${input.author}"`)}` : ''}`
@@ -103,6 +105,8 @@ async function adapterGoogle(input: EnrichInput): Promise<SourceRecord | null> {
 }
 
 async function adapterOpenLibrary(input: EnrichInput): Promise<SourceRecord | null> {
+  // search.json, NOT the covers endpoint — separate budgets, separate documented limits.
+  if (!(await paceSource('ol-search'))) throw new Error('status 429')
   const fields =
     'key,edition_key,title,author_name,first_publish_year,isbn,number_of_pages_median,subject,language,cover_i,series'
   const url = input.isbn
@@ -121,6 +125,7 @@ async function hardcoverSearchRecords(
   title: string | undefined,
   limit: number,
 ): Promise<SourceRecord[]> {
+  if (!(await paceSource('hardcover'))) throw new Error('status 429')
   const auth = hardcoverAuth()
   if (!auth || !title) return []
   const j = (await fetchJson('https://api.hardcover.app/v1/graphql', {
@@ -142,6 +147,7 @@ async function adapterHardcover(input: EnrichInput): Promise<SourceRecord | null
 }
 
 async function adapterIsbndb(input: EnrichInput): Promise<SourceRecord | null> {
+  if (!(await paceSource('isbndb'))) throw new Error('status 429')
   const key = Deno.env.get('ISBNDB_KEY')
   const isbn = cleanIsbn(input.isbn ?? '')
   if (!key || !isbn) return null // ISBNdb is queried by ISBN (the completeness backstop)
@@ -167,6 +173,7 @@ const ADAPTERS: Record<EnrichSource, (i: EnrichInput) => Promise<SourceRecord | 
 const SEARCH_LIMIT = 5
 
 async function searchGoogle(input: EnrichInput): Promise<ResolveCandidate[]> {
+  if (!(await paceSource('google'))) throw new Error('status 429')
   if (!input.title) return []
   const q = `intitle:${encodeURIComponent(`"${input.title}"`)}${input.author ? `+inauthor:${encodeURIComponent(`"${input.author}"`)}` : ''}`
   const j = (await fetchJson(
@@ -179,6 +186,7 @@ async function searchGoogle(input: EnrichInput): Promise<ResolveCandidate[]> {
 
 async function searchOpenLibrary(input: EnrichInput): Promise<ResolveCandidate[]> {
   if (!input.title) return []
+  if (!(await paceSource('ol-search'))) throw new Error('status 429')
   const fields =
     'key,edition_key,title,author_name,first_publish_year,isbn,number_of_pages_median,subject,language,cover_i,series'
   const url = `https://openlibrary.org/search.json?title=${encodeURIComponent(input.title)}&author=${encodeURIComponent(input.author ?? '')}&fields=${fields}&limit=${SEARCH_LIMIT}`
@@ -287,18 +295,33 @@ Deno.serve(async (req: Request) => {
       const order = enabledSources()
       let rec: SourceRecord | null = null
       let used: EnrichSource | null = null
+      // CONTINUE WHEN A RECORD CARRIES NO COVER. `if (rec) break` was the bug: Open Library's
+      // search.json returns a bibliographic record for most books whether or not a cover image
+      // exists (`cover_i` is simply absent), so the loop took OL's record, broke, and never asked
+      // Google — reporting a successful enrichment with no cover. Fast mode's whole job is to put a
+      // cover on screen quickly, so a record without one is not a reason to stop looking. The last
+      // record is still kept as a fallback: bibliographic data beats nothing when no source has art.
+      let fallback: { rec: SourceRecord; used: EnrichSource } | null = null
       for (const s of order.includes('openlibrary')
         ? (['openlibrary', 'google'] as EnrichSource[])
         : order) {
+        let candidate: SourceRecord | null = null
         try {
-          rec = await ADAPTERS[s](input)
+          candidate = await ADAPTERS[s](input)
         } catch {
-          rec = null
+          candidate = null
         }
-        if (rec) {
+        if (!candidate) continue
+        if (candidate.cover) {
+          rec = candidate
           used = s
           break
         }
+        fallback ??= { rec: candidate, used: s }
+      }
+      if (!rec && fallback) {
+        rec = fallback.rec
+        used = fallback.used
       }
       if (!rec || !used) return json(toResponse(emptyMerged(input)))
       const merged = mergeRecords([{ source: used, at: new Date().toISOString(), record: rec }])

@@ -9,6 +9,7 @@ export const APP_NAME = 'Reverie'
 
 export * from './types'
 export * from './partialDate'
+export * from './sourcePace'
 export * from './normalize'
 export * from './id'
 export * from './spoiler'
