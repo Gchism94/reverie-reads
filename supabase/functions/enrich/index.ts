@@ -25,6 +25,7 @@ import {
 import { selectBestMatch, selfIsbn13, type Confidence, type ResolveCandidate } from './resolve.ts'
 import { envInt, rateLimit, tooMany } from '../_shared/ratelimit.ts'
 import { paceSource } from '../_shared/sourcePace.ts'
+import { Trace, wantsTrace } from '../_shared/trace.ts'
 import { captureEdgeError } from '../_shared/observe.ts'
 
 /** A cover edition choice surfaced to the import review + Cover Studio (distilled E1 alternate). */
@@ -89,30 +90,36 @@ async function fetchJson(url: string, init?: RequestInit): Promise<unknown> {
   return null
 }
 
+/** Time a stage when tracing, run it untouched when not — one helper so no call site branches. */
+const time = <T>(tr: Trace | undefined, stage: string, fn: () => Promise<T>): Promise<T> =>
+  tr ? tr.time(stage, fn) : fn()
+
 // ── Source adapters: fetch one source, return a normalized SourceRecord (or null). Pure parsing
 //    lives in ./merge.ts normalizers; adapters only know how to query. ──
 
-async function adapterGoogle(input: EnrichInput): Promise<SourceRecord | null> {
-  if (!(await paceSource('google'))) throw new Error('status 429')
+async function adapterGoogle(input: EnrichInput, tr?: Trace): Promise<SourceRecord | null> {
+  if (!(await paceSource('google', tr))) throw new Error('status 429')
   const q = input.isbn
     ? `isbn:${cleanIsbn(input.isbn)}`
     : `intitle:${encodeURIComponent(`"${input.title}"`)}${input.author ? `+inauthor:${encodeURIComponent(`"${input.author}"`)}` : ''}`
-  const j = (await fetchJson(
-    `https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=1${googleKey()}`,
+  const j = (await time(tr, 'fetch.google.adapter', () =>
+    fetchJson(`https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=1${googleKey()}`),
   )) as { items?: unknown[] }
   const item = j?.items?.[0]
   return item ? normalizeGoogle(item) : null
 }
 
-async function adapterOpenLibrary(input: EnrichInput): Promise<SourceRecord | null> {
+async function adapterOpenLibrary(input: EnrichInput, tr?: Trace): Promise<SourceRecord | null> {
   // search.json, NOT the covers endpoint — separate budgets, separate documented limits.
-  if (!(await paceSource('ol-search'))) throw new Error('status 429')
+  if (!(await paceSource('ol-search', tr))) throw new Error('status 429')
   const fields =
     'key,edition_key,title,author_name,first_publish_year,isbn,number_of_pages_median,subject,language,cover_i,series'
   const url = input.isbn
     ? `https://openlibrary.org/search.json?q=isbn:${cleanIsbn(input.isbn)}&fields=${fields}&limit=1`
     : `https://openlibrary.org/search.json?title=${encodeURIComponent(input.title ?? '')}&author=${encodeURIComponent(input.author ?? '')}&fields=${fields}&limit=1`
-  const j = (await fetchJson(url, { headers: { 'User-Agent': UA } })) as { docs?: unknown[] }
+  const j = (await time(tr, 'fetch.ol-search.adapter', () =>
+    fetchJson(url, { headers: { 'User-Agent': UA } }),
+  )) as { docs?: unknown[] }
   const doc = j?.docs?.[0]
   return doc ? normalizeOpenLibrary(doc) : null
 }
@@ -124,84 +131,94 @@ async function adapterOpenLibrary(input: EnrichInput): Promise<SourceRecord | nu
 async function hardcoverSearchRecords(
   title: string | undefined,
   limit: number,
+  tr?: Trace,
 ): Promise<SourceRecord[]> {
-  if (!(await paceSource('hardcover'))) throw new Error('status 429')
+  if (!(await paceSource('hardcover', tr))) throw new Error('status 429')
   const auth = hardcoverAuth()
   if (!auth || !title) return []
-  const j = (await fetchJson('https://api.hardcover.app/v1/graphql', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: auth },
-    body: JSON.stringify({
-      query:
-        'query($q:String!,$n:Int!){ search(query:$q, query_type:"Book", per_page:$n){ results } }',
-      variables: { q: title, n: limit },
+  const j = (await time(tr, 'fetch.hardcover', () =>
+    fetchJson('https://api.hardcover.app/v1/graphql', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: auth },
+      body: JSON.stringify({
+        query:
+          'query($q:String!,$n:Int!){ search(query:$q, query_type:"Book", per_page:$n){ results } }',
+        variables: { q: title, n: limit },
+      }),
     }),
-  })) as { data?: { search?: { results?: { hits?: { document?: unknown }[] } } } }
+  )) as { data?: { search?: { results?: { hits?: { document?: unknown }[] } } } }
   const hits = j?.data?.search?.results?.hits ?? []
   return hits.map((h) => normalizeHardcoverSearch(h?.document)).filter((r) => r.title)
 }
 
-async function adapterHardcover(input: EnrichInput): Promise<SourceRecord | null> {
-  const [first] = await hardcoverSearchRecords(input.title, 1)
+async function adapterHardcover(input: EnrichInput, tr?: Trace): Promise<SourceRecord | null> {
+  const [first] = await hardcoverSearchRecords(input.title, 1, tr)
   return first ?? null
 }
 
-async function adapterIsbndb(input: EnrichInput): Promise<SourceRecord | null> {
-  if (!(await paceSource('isbndb'))) throw new Error('status 429')
+async function adapterIsbndb(input: EnrichInput, tr?: Trace): Promise<SourceRecord | null> {
+  if (!(await paceSource('isbndb', tr))) throw new Error('status 429')
   const key = Deno.env.get('ISBNDB_KEY')
   const isbn = cleanIsbn(input.isbn ?? '')
   if (!key || !isbn) return null // ISBNdb is queried by ISBN (the completeness backstop)
-  const j = (await fetchJson(`https://api2.isbndb.com/book/${isbn}`, {
-    headers: { Authorization: key },
-  })) as {
+  const j = (await time(tr, 'fetch.isbndb', () =>
+    fetchJson(`https://api2.isbndb.com/book/${isbn}`, { headers: { Authorization: key } }),
+  )) as {
     book?: unknown
   }
   return j?.book ? normalizeIsbndb(j) : null
 }
 
-const ADAPTERS: Record<EnrichSource, (i: EnrichInput) => Promise<SourceRecord | null>> = {
-  openlibrary: adapterOpenLibrary,
-  google: adapterGoogle,
-  hardcover: adapterHardcover,
-  isbndb: adapterIsbndb,
-  manual: async () => null,
-}
+const ADAPTERS: Record<EnrichSource, (i: EnrichInput, tr?: Trace) => Promise<SourceRecord | null>> =
+  {
+    openlibrary: adapterOpenLibrary,
+    google: adapterGoogle,
+    hardcover: adapterHardcover,
+    isbndb: adapterIsbndb,
+    manual: async () => null,
+  }
 
 // ── Search adapters: title+author → up to SEARCH_LIMIT candidates. The real catalog has NO ISBNs,
 //    so resolution starts from a title+author SEARCH (not an ISBN lookup). Parsing stays in the
 //    ./merge.ts normalizers; these only know how to query each source's search endpoint. ──
 const SEARCH_LIMIT = 5
 
-async function searchGoogle(input: EnrichInput): Promise<ResolveCandidate[]> {
-  if (!(await paceSource('google'))) throw new Error('status 429')
+async function searchGoogle(input: EnrichInput, tr?: Trace): Promise<ResolveCandidate[]> {
+  if (!(await paceSource('google', tr))) throw new Error('status 429')
   if (!input.title) return []
   const q = `intitle:${encodeURIComponent(`"${input.title}"`)}${input.author ? `+inauthor:${encodeURIComponent(`"${input.author}"`)}` : ''}`
-  const j = (await fetchJson(
-    `https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=${SEARCH_LIMIT}${googleKey()}`,
+  const j = (await time(tr, 'fetch.google.search', () =>
+    fetchJson(
+      `https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=${SEARCH_LIMIT}${googleKey()}`,
+    ),
   )) as { items?: unknown[] }
   return (j?.items ?? [])
     .map((it): ResolveCandidate => ({ source: 'google', record: normalizeGoogle(it) }))
     .filter((c) => c.record.title)
 }
 
-async function searchOpenLibrary(input: EnrichInput): Promise<ResolveCandidate[]> {
+async function searchOpenLibrary(input: EnrichInput, tr?: Trace): Promise<ResolveCandidate[]> {
   if (!input.title) return []
-  if (!(await paceSource('ol-search'))) throw new Error('status 429')
+  if (!(await paceSource('ol-search', tr))) throw new Error('status 429')
   const fields =
     'key,edition_key,title,author_name,first_publish_year,isbn,number_of_pages_median,subject,language,cover_i,series'
   const url = `https://openlibrary.org/search.json?title=${encodeURIComponent(input.title)}&author=${encodeURIComponent(input.author ?? '')}&fields=${fields}&limit=${SEARCH_LIMIT}`
-  const j = (await fetchJson(url, { headers: { 'User-Agent': UA } })) as { docs?: unknown[] }
+  const j = (await time(tr, 'fetch.ol-search.search', () =>
+    fetchJson(url, { headers: { 'User-Agent': UA } }),
+  )) as { docs?: unknown[] }
   return (j?.docs ?? [])
     .map((d): ResolveCandidate => ({ source: 'openlibrary', record: normalizeOpenLibrary(d) }))
     .filter((c) => c.record.title)
 }
 
-async function searchHardcover(input: EnrichInput): Promise<ResolveCandidate[]> {
-  const records = await hardcoverSearchRecords(input.title, SEARCH_LIMIT)
+async function searchHardcover(input: EnrichInput, tr?: Trace): Promise<ResolveCandidate[]> {
+  const records = await hardcoverSearchRecords(input.title, SEARCH_LIMIT, tr)
   return records.map((record): ResolveCandidate => ({ source: 'hardcover', record }))
 }
 
-const SEARCHERS: Partial<Record<EnrichSource, (i: EnrichInput) => Promise<ResolveCandidate[]>>> = {
+const SEARCHERS: Partial<
+  Record<EnrichSource, (i: EnrichInput, tr?: Trace) => Promise<ResolveCandidate[]>>
+> = {
   hardcover: searchHardcover,
   google: searchGoogle,
   openlibrary: searchOpenLibrary,
@@ -210,6 +227,7 @@ const SEARCHERS: Partial<Record<EnrichSource, (i: EnrichInput) => Promise<Resolv
 /** Search the enabled sources (catalog priority: Hardcover → Google → Open Library) for candidates. */
 async function gatherCandidates(
   input: EnrichInput,
+  tr?: Trace,
 ): Promise<{ candidates: ResolveCandidate[]; rateLimited: boolean }> {
   const order: EnrichSource[] = ['hardcover', 'google', 'openlibrary']
   const enabled = new Set(enabledSources())
@@ -219,7 +237,7 @@ async function gatherCandidates(
     const fn = SEARCHERS[s]
     if (!enabled.has(s) || !fn) continue
     try {
-      candidates.push(...(await fn(input)))
+      candidates.push(...(await fn(input, tr)))
     } catch (e) {
       if (String(e).includes('429')) rateLimited = true
       // degrade gracefully — skip this source
@@ -258,9 +276,14 @@ const isComplete = (r: EnrichedRecord): boolean => !!r.cover && !!r.isbn13
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
+  const tr = new Trace()
   // Per-user/IP rate limit. Generous by default (the bulk "complete missing" job legitimately runs
   // a few per second); the limit catches abusive bursts. Tune via ENRICH_RATE_MAX.
-  const rl = await rateLimit(req, 'enrich', envInt('ENRICH_RATE_MAX', 600), 60)
+  // Timed because it is a DB round trip on every request — the same cost as one paceSource call,
+  // paid before any source work begins.
+  const rl = await tr.time('enrich.ratelimit', () =>
+    rateLimit(req, 'enrich', envInt('ENRICH_RATE_MAX', 600), 60),
+  )
   if (!rl.allowed) return tooMany(rl.retryAfter, cors)
   try {
     const input = (await req.json()) as EnrichInput
@@ -278,7 +301,7 @@ Deno.serve(async (req: Request) => {
 
     // 1) Cache: a fresh hit returns immediately — ZERO external calls (the main cost lever).
     if (!input.refresh) {
-      const cached = await readCache(key)
+      const cached = await tr.time('enrich.readCache', () => readCache(key))
       if (cached && isFresh(cached)) {
         return json({
           ...toResponse(cached.record),
@@ -286,6 +309,7 @@ Deno.serve(async (req: Request) => {
           confidence: cached.confidence ?? undefined,
           query: cached.match_query ?? undefined,
           alternates: cached.alternates ?? [],
+          ...traceOf(input, tr),
         })
       }
     }
@@ -307,7 +331,7 @@ Deno.serve(async (req: Request) => {
         : order) {
         let candidate: SourceRecord | null = null
         try {
-          candidate = await ADAPTERS[s](input)
+          candidate = await ADAPTERS[s](input, tr)
         } catch {
           candidate = null
         }
@@ -325,7 +349,7 @@ Deno.serve(async (req: Request) => {
       }
       if (!rec || !used) return json(toResponse(emptyMerged(input)))
       const merged = mergeRecords([{ source: used, at: new Date().toISOString(), record: rec }])
-      return json({ ...toResponse(merged), source: used, completing: true })
+      return json({ ...toResponse(merged), source: used, completing: true, ...traceOf(input, tr) })
     }
 
     // 3) Full pass: resolve identity, then merge field-by-field across sources, cache, return complete.
@@ -340,7 +364,7 @@ Deno.serve(async (req: Request) => {
     //     SELF-RESOLVE an ISBN-13 → fetch the canonical edition + best cover by that ISBN below.
     const title = input.title
     if (!cleanIsbn(input.isbn ?? '') && title) {
-      const { candidates, rateLimited: searchRL } = await gatherCandidates(input)
+      const { candidates, rateLimited: searchRL } = await gatherCandidates(input, tr)
       if (searchRL) rateLimited = true
       const r = selectBestMatch({ title, author: input.author }, candidates)
       confidence = r.confidence
@@ -356,7 +380,7 @@ Deno.serve(async (req: Request) => {
     // 3b) Query enabled sources (by the self-resolved ISBN when we have one) to complete + best cover.
     for (const s of enabledSources()) {
       try {
-        const rec = await ADAPTERS[s](fetchInput)
+        const rec = await ADAPTERS[s](fetchInput, tr)
         if (rec) stamped.push({ source: s, at: new Date().toISOString(), record: rec })
       } catch (e) {
         if (String(e).includes('429')) rateLimited = true
@@ -370,7 +394,10 @@ Deno.serve(async (req: Request) => {
     // The book lands in the import-review "missing cover" bucket instead of showing a possibly-wrong one.
     if (confidence === 'none') merged.cover = ''
 
-    if (sourceList) await writeCache(key, merged, { confidence, query: matchQuery, alternates })
+    if (sourceList)
+      await tr.time('enrich.writeCache', () =>
+        writeCache(key, merged, { confidence, query: matchQuery, alternates }),
+      )
     // Non-blocking cover caching: respond with the source URL immediately (no wait on the image
     // download/upload), and cache the image to Storage + upgrade the cached row to the CDN URL in the
     // background, so later readers serve from the CDN. Bounds per-book enrichment latency.
@@ -383,6 +410,7 @@ Deno.serve(async (req: Request) => {
       confidence,
       query: matchQuery || undefined,
       alternates,
+      ...traceOf(input, tr),
     }
     return json(rateLimited && !sourceList ? { ...body, rateLimited: true } : body)
   } catch (e) {
@@ -393,6 +421,10 @@ Deno.serve(async (req: Request) => {
     })
   }
 })
+
+/** `_trace` only when the caller asked; otherwise the response shape is byte-for-byte unchanged. */
+const traceOf = (input: EnrichInput, tr: Trace) =>
+  wantsTrace(input) ? { _trace: { spans: tr.spans, totalMs: tr.totalMs() } } : {}
 
 const json = (body: unknown) =>
   new Response(JSON.stringify(body), { headers: { ...cors, 'Content-Type': 'application/json' } })

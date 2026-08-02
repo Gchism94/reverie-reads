@@ -64,7 +64,17 @@ const run = (books: Book[]) => bulkComplete(books, () => {}, () => false)
 
 describe('eager ingest', () => {
   it('ingests a freshly-filled Open Library hotlink and stores the OWNED url, not the hotlink', async () => {
-    enrichResult = { status: 'ok', data: { cover: OL_HOTLINK, confidence: 'high' } }
+    // The provenance block is what a real Open Library cover response carries. It used to be absent
+    // here and the test still passed, because the source label was hardcoded 'openlibrary' — the
+    // fixture could not tell a correct label from a lucky one. See coverProvenance.test.ts.
+    enrichResult = {
+      status: 'ok',
+      data: {
+        cover: OL_HOTLINK,
+        confidence: 'high',
+        provenance: { cover: { source: 'openlibrary', at: '2026-08-02T00:00:00Z' } },
+      },
+    }
     okIngest()
     await run([makeBook({ id: 'b1', title: 'A Book', cover: '' })])
 

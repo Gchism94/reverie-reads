@@ -61,6 +61,7 @@ function SettingsScreen() {
   const [imported, setImported] = useState(false)
   const [importResult, setImportResult] = useState<ImportExportResult | null>(null)
   const [completing, setCompleting] = useState(false)
+  const [tracing, setTracing] = useState(false)
   const [progress, setProgress] = useState<BulkProgress | null>(null)
   const stopRef = useRef(false)
   const [sharpening, setSharpening] = useState(false)
@@ -213,12 +214,20 @@ function SettingsScreen() {
     setStatus(`Merged ${merged} duplicate groups`)
   }
 
-  async function runComplete() {
+  // `trace` runs a SHORT, instrumented sweep: same code path, same order, capped at `limit` books,
+  // writing one sweep_traces row each. It is the measurement run — not a faster or different sweep.
+  async function runComplete(opts?: { trace?: boolean; limit?: number }) {
     stopRef.current = false
     setCompleting(true)
+    setTracing(!!opts?.trace)
     setProgress({ scanned: 0, total: 0, filled: 0 })
+    const runId = crypto.randomUUID()
     try {
-      const r = await bulkComplete(all, setProgress, () => stopRef.current)
+      const r = await bulkComplete(all, setProgress, () => stopRef.current, {
+        trace: opts?.trace,
+        limit: opts?.limit,
+        runId,
+      })
       const prefix =
         r.stopReason === 'rate_limited'
           ? 'Paused — the book data sources are busy; it’ll resume where it left off next time. '
@@ -228,13 +237,15 @@ function SettingsScreen() {
               ? 'Stopped — '
               : ''
       setStatus(
-        `${prefix}checked ${r.scanned} of ${r.total} · filled ${r.filled} · ${r.nothing} had nothing new.`,
+        `${prefix}checked ${r.scanned} of ${r.total} · filled ${r.filled} · ${r.nothing} had nothing new.` +
+          (opts?.trace ? ` Trace run ${runId} — ${r.scanned} rows in sweep_traces.` : ''),
       )
       await qc.invalidateQueries({ queryKey: ['books'] })
     } catch (e) {
       setStatus(`Couldn’t finish completing details: ${(e as Error).message}`)
     }
     setCompleting(false)
+    setTracing(false)
     setProgress(null)
   }
 
@@ -412,6 +423,7 @@ function SettingsScreen() {
                 style={{ background: 'var(--field)' }}
               >
                 ⏹ Stop{progress ? ` (${progress.scanned}/${progress.total})` : ''}
+                {tracing ? ' · tracing' : ''}
               </button>
             ) : (
               <button
@@ -423,6 +435,18 @@ function SettingsScreen() {
               >
                 ✨ Complete missing covers &amp; info
                 {incompleteCount ? ` (${incompleteCount})` : ''}
+              </button>
+            )}
+            {!completing && (
+              <button
+                type="button"
+                onClick={() => void runComplete({ trace: true, limit: 10 })}
+                disabled={!incompleteCount}
+                title="Runs the normal sweep over 10 books and records per-stage timings to sweep_traces."
+                className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink disabled:opacity-50"
+                style={{ background: 'var(--field)' }}
+              >
+                ⏱ Trace 10 books
               </button>
             )}
             {sharpening ? (

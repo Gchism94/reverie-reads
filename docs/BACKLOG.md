@@ -12,6 +12,23 @@ forgotten.
 
 ## Real bugs, outstanding
 
+- **The Supabase MCP connection reaches only project `cywpkhtpxekmjvuoloem`
+  ("Steppe") — a different application, not Reverie.** Its tables are `groups`,
+  `events`, `neighborhood_requests`, `moderation_actions`; `public.books` does
+  not exist there. Discovered mid-`fix/sweep-pace-analysis`/`fix/sweep-instrumentation`
+  after `get_logs` returned only infra health-check rows and `execute_sql`
+  against `public.books` raised `42P01`. **Any prior report in this project's
+  history that claimed to have read Reverie's production database or edge-function
+  logs through the MCP connection was, without exception, reading Steppe's data
+  (usually an empty result) and reporting the emptiness as a fact about Reverie.**
+  I have not gone back to audit which specific past reports made that claim — flag
+  and re-verify by hand if one is being relied on. Until the connection is pointed
+  at the right project (or a different read path is set up), Reverie production
+  reads are the owner's to run, not Code's — see `docs/DEPLOY.md`'s existing rule
+  that write access is never Code's; this extends the same boundary to reads
+  through this particular tool, which silently produced wrong-project answers
+  rather than an error.
+
 - **Production ACL verification belongs in the deploy protocol — nothing checks it
   today.** `20260801010000` revoked EXECUTE from PUBLIC across every RPC and was
   deployed and reported as done. Nobody read prod's `proacl` afterwards. A
@@ -414,6 +431,30 @@ primary book` — both reached the function body and were turned away by the che
   reasoned about, none executed. Wiring a Deno runner into the gate is its own
   branch; it would also cover `_shared/coverUrl.ts` and every other function-side
   module, which are uncovered for the same reason.
+
+- **`fetchCover` is still callerless after #123 — the ISBN-direct cover path is not live.**
+  `git log -S"fetchCover(" --all -- apps/ supabase/` returns no commit, ever: its only references
+  are its definition and two test files. So `buildOpenLibraryIsbnCoverUrl`, the `?default=false`
+  guard that turns Open Library's 43-byte 1x1 blank plate into a clean 404, and the whole
+  ISBN-direct chain are **not on any live path**. `ol-covers`' budget (100/300s, 3000ms gap) is
+  dead configuration for the same reason — `paceSource('ol-covers')` has zero call sites — yet five
+  tests in `packages/core/src/sourcePace.test.ts` assert its numbers and one asserts its key differs
+  from `ol-search`. The tests pass and guard nothing reachable. Covers on the sweep's actual path
+  come from the enrich merge (OL search's `cover_i`, Google `imageLinks`, Hardcover), which is why
+  the observed 75% hit rate does not contradict the 25% measured for ISBN-direct — different
+  mechanism. **Third instance of tested-but-uncalled code**, after `bookshopId` and
+  `VITE_LIBRO_AFFILIATE_ID`. Decide per case: wire it, or delete it and its tests. The pattern
+  itself is worth a lint rule — an exported symbol whose only importers are `*.test.ts`.
+- **`normalizeImage` decodes the same bytes four times where one would do.** Each
+  `ImageMagick.read` re-decodes from scratch: the full-size webp encode, the thumb encode, a read
+  whose _only_ purpose is `width`/`height`, and the dominant-colour pass. The dimensions are
+  already available inside the first read, and the colour pass could work from the decoded image
+  rather than the source bytes. Measured locally (81KB source): 94/47/4/90ms cold, 59/38/4/12ms
+  warm — so ~3 of 4 decodes are avoidable. It stays cheap **only because Open Library covers are
+  ~384x500, comfortably under `FULL_EDGE = 1600`, so the resize never fires**. A source that
+  actually serves large art (a camera upload at full resolution, or a future higher-res cover
+  source) pays all four decodes on a big image, in a wasm sandbox, against Supabase's per-request
+  CPU limit. Do not treat the current cost as the ceiling.
 
 ## Product queue
 

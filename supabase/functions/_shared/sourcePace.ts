@@ -31,6 +31,8 @@
 // Fails OPEN on limiter error, like `rateLimit` — a limiter hiccup must never be the thing that
 // stops a reader's library from filling in.
 
+import type { Trace } from './trace.ts'
+
 const DB_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const SERVICE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 
@@ -68,19 +70,26 @@ export const sourceBudgetKey = (source: PacedSource): string => `source:${source
  * Returns false when the budget is exhausted — the caller should treat that as rate-limited and
  * stop, exactly as it already treats an upstream 429.
  */
-export async function paceSource(source: PacedSource): Promise<boolean> {
+export async function paceSource(source: PacedSource, trace?: Trace): Promise<boolean> {
   const b = BUDGETS[source]
 
-  // 1. In-process spacing.
+  // 1. In-process spacing. Timed SEPARATELY from the budget round trip below: these are the two
+  //    mechanisms this module deliberately runs, and "the sweep is slow because of pacing" is only
+  //    answerable if you can see which of them the time went to. A wait of 0 is itself the finding
+  //    when the HTTP call before it already exceeded the gap.
+  const t0 = performance.now()
   const last = lastCallAt.get(source)
   if (last !== undefined) {
     const wait = b.gapMs - (Date.now() - last)
     if (wait > 0) await sleep(wait)
   }
   lastCallAt.set(source, Date.now())
+  trace?.mark(`pace.${source}.wait`, performance.now() - t0)
 
-  // 2. Distributed budget.
+  // 2. Distributed budget — one HTTP round trip to PostgREST per call, which is a cost in its own
+  //    right and is NOT pacing. Six of these per book was invisible before it was timed.
   if (!DB_URL || !SERVICE) return true // fail open
+  const t1 = performance.now()
   try {
     const r = await fetch(`${DB_URL}/rest/v1/rpc/rate_limit_consume`, {
       method: 'POST',
@@ -99,6 +108,10 @@ export async function paceSource(source: PacedSource): Promise<boolean> {
     return !!((await r.json()) as { allowed?: boolean }).allowed
   } catch {
     return true // fail open
+  } finally {
+    // `finally`, so a fail-open path still reports what the round trip cost — a limiter that is slow
+    // AND erroring is the case most worth seeing, and an early `return` would skip the mark.
+    trace?.mark(`pace.${source}.rpc`, performance.now() - t1)
   }
 }
 
