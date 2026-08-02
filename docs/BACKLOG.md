@@ -400,6 +400,116 @@ primary book` — both reached the function body and were turned away by the che
   - The genuinely small surfaces would need a non-text marker if they are ever to
     show state visually. The spine edge-marker idiom is the nearest precedent.
 
+## Grep audit, 2026-08 (`docs/rules-and-grep-audit`) — recorded, not fixed
+
+Four sweeps behind the three rules added to CLAUDE.md that session. Nothing here was changed.
+
+- **`VITE_` env vars are all public — seven beyond the Supabase pair, and one is a real key.**
+  Vite inlines every `VITE_`-prefixed var into the client bundle at build time, so each is readable
+  by anyone with devtools. The full set and what each gates:
+
+  | var                              | gates                                                                               | exposure                                                                                                                                                                                                                                               |
+  | -------------------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+  | `VITE_GOOGLE_BOOKS_KEY`          | `volumesUrl()` in `lib/googleBooks.ts` — appends `&key=` to every Google Books call | **an API key.** Documented in-file as an accepted decision ("free, referrer-restricted, client-safe for this read-only API"). The referrer restriction is the entire control; if it is ever removed or misconfigured the key is a free quota donation. |
+  | `VITE_SENTRY_DSN`                | `lib/sentry.ts` init                                                                | Public **by design** (browser SDKs ship DSNs), but it lets anyone POST events into the project — a quota/noise vector, not a data leak.                                                                                                                |
+  | `VITE_BOOKSHOP_AFFILIATE_ID`     | `lib/buyConfig.ts` → outbound buy links                                             | Public by nature; it appears in the outbound URL anyway. No action.                                                                                                                                                                                    |
+  | `VITE_BUY_ATTRIBUTION_MODE`      | `lib/buyConfig.ts`; flipping it to `affiliate` changes public revenue copy          | Not secret, but it is the flag `revenueClaims.test.ts` exists to stop from publishing a false claim.                                                                                                                                                   |
+  | `VITE_SOCIAL_AUTH_ENABLED`       | `AuthScreen.tsx` — shows OAuth buttons                                              | Not secret.                                                                                                                                                                                                                                            |
+  | `VITE_BUILD_ID` / `VITE_RELEASE` | update watcher; Sentry release tag                                                  | Not secret; both injected by `vite.config.ts`.                                                                                                                                                                                                         |
+
+  Only `VITE_GOOGLE_BOOKS_KEY` is a credential. Worth a scheduled check that its referrer
+  restriction is still in place, since nothing in the repo can assert that.
+
+- **`res.json()` in failure branches: one instance, already guarded.** `lib/covers.ts:88` parses
+  the error body but wraps it `.catch(() => null)`, which is the correct shape. The unguarded case
+  the rule targets is the _fall-through_ in `supabase/functions/enrich/index.ts`'s `fetchJson`: it
+  handles 429 and 5xx by status and then `return await r.json()` for everything else, so a 400/403/
+  404 with an HTML body throws inside the parse. The caller's catch only recognises `'429'` in the
+  message, so a quota refusal degrades to "this source had nothing" — indistinguishable from an
+  empty result, and it stamps `enriched_at` as though the book were checked.
+
+- **A flat 600ms retry on a 429, in `supabase/functions/geo/index.ts`.** `fetchUpstream` retries
+  `429 || >= 500` with a fixed 600ms sleep and ignores `Retry-After` entirely. A limiter asking for
+  60s gets asked again in 0.6s, which cannot succeed — it spends a second request of quota and then
+  throws anyway. **The two retry loops in the codebase disagree about the same status**: `enrich`'s
+  `fetchJson` throws immediately on 429 (correct — a 429 is not retryable on that timescale) while
+  `geo` retries it. One of them is wrong and it is `geo`. Nominatim, its upstream, publishes an
+  absolute 1 req/sec policy; a 600ms retry is below it by construction.
+
+- **37 exported symbols are unreachable; 26 of them carry tests.** Method: no reference inside the
+  defining file beyond its own declaration, and none in `apps/web/src`, `packages/core/src`,
+  `apps/web/e2e`, `scripts/` or `supabase/functions/`. Eight are _legitimately_ test-only —
+  `*.fixture.ts` (`makeBook`, `FABLE5`, `WHITE_MARK_IN_DARK`), the `ForTests` seam
+  (`resetUnreadableReportForTests`), and registries that are themselves the spec
+  (`BACKED_UP_TABLES`, `STATE_PILL_TOKEN_FIELDS`, `SERIES_ARRANGER_TOKEN_FIELDS`,
+  `resolvePlaceholderColors`, `gradientMatrix`). The remaining ~18 with tests are the actionable
+  set, including `fetchCover`, `waitMsFor`, `parseCsvIncoming`, `visibleComments`, `coverKey`,
+  `extractGoogleCover`, `buildGoogleBooksUrl` and `renumberEntries`. A further 11 have no test at
+  all — notably **`useAddBook`** (`data/books.ts`), an entire unused mutation hook, plus
+  `ALL_TROPES`, `SUBGENRES`, `OWNERSHIP_VALUES`, `CANONICAL_MOOD_NAMES`, `moodMatches`,
+  `bookMoodNames`, `NEUTRAL_VOICE`, `clearWriteErrors`, `nextSortOrder`, `toList`.
+
+  **Two of these are worth a second look beyond deletion**, because being dead is itself the
+  finding: `parseCsvIncoming` is unreachable while CSV import is a headline feature, and
+  `visibleComments` is unreachable while the spoiler gate is a CLAUDE.md-named core rule. Confirm
+  the live path supersedes them before deleting either.
+
+### The enforcement rule, shaped before committing to it
+
+`import/no-unused-modules` with `unusedExports: true` is the obvious ESLint answer and is the
+**wrong tool here**: `packages/core/src/index.ts` re-exports via `export * from` on 49 lines, and
+that rule treats a barrel as a consumer, so it would report approximately nothing while appearing
+to pass. Verified by inspection of the barrel, not assumed.
+
+**Recommendation: `knip`, as its own gate step, not an ESLint rule.** It resolves `export *`
+barrels, and it has a first-class notion of "exported but only used in tests" (`includeEntryExports`
+
+- test-file classification) which is the exact predicate wanted. Shape:
+
+```jsonc
+// knip.json
+{
+  "workspaces": {
+    "packages/core": { "entry": ["src/index.ts"], "project": ["src/**/*.ts"] },
+    "apps/web": { "entry": ["src/main.tsx", "e2e/**/*.spec.ts"], "project": ["src/**/*.{ts,tsx}"] },
+  },
+  "ignore": ["**/*.fixture.ts"],
+  "ignoreExportsUsedInFile": true, // intra-file use counts as live
+}
+```
+
+The eight legitimate exemptions become explicit: `*.fixture.ts` by glob, `ForTests` by a small
+`ignoreExportsMatching` pattern, and each spec-as-data registry by a listed entry **with a comment
+giving the reason** — the `ownedTables` principle that an exclusion without a reason is the bug.
+Expect a large first run; that is the point, and it should land as its own branch with the initial
+list triaged rather than blanket-ignored.
+
+## Known-flaky, with a prior
+
+- **`discover-search.spec.ts:275` — "Shelf picker seam: search everywhere finds and adds an unowned
+  book to this shelf".** Failed once in CI on PR #126 (run `30762811683`), passed on re-run with
+  **no code change**; the same commit had passed 83/83 locally. Failure was the `expect.poll` on
+  `list_items` timing out at 15s — expected 1, received 0 — after the `＋ Add` click.
+
+  **Recording the process breach too, so it has a prior of its own:** the re-run violated the
+  standing "never re-run until green" rule. It happened after reporting the failure red and asking,
+  and the owner chose the re-run over investigation — but the rule exists because a green re-run is
+  what turns a real defect into "just a flake", and this entry is what stops the next occurrence
+  being read that way. **A second failure here is a defect, not a flake.**
+
+  **The stale-offline-cache hypothesis is disproven, with evidence.** `discover-search.spec.ts`
+  _does_ use `keepOfflineCacheEmpty`, called inside its own `signIn` helper (line 110) before
+  `page.goto` — so the `fix/state-pills-flake` idiom reached this spec, in the correct
+  `addInitScript` shape that deletes the IndexedDB before the app boots. It is not the
+  self-inflicted stale cache.
+
+  What to check on the next occurrence, in order: (1) the click targets
+  `getByRole('button', { name: '＋ Add' }).first()` while `STUB_RESULTS` holds **two** entries —
+  if library-dedupe has not settled, `.first()` may not be the Wildfire Vow row, and the poll would
+  then correctly never see it; (2) `stubBackends` deliberately fails the covers ingest with a 422,
+  so the add path's error branch is on the critical path to the insert; (3) CI runs single-worker
+  on a shared runner, where 15s is a much thinner margin than locally.
+
 ## Test-infrastructure follow-ups
 
 - Trio migration (a11y/fonts/cover-sheet onto per-user accounts) — buys
