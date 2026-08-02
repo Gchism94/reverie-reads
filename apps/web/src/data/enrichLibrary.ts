@@ -1,4 +1,4 @@
-import { contributorsFromAuthors, enrichmentCoverFill, mergeImport, type Book, type Incoming } from '@reverie/core'
+import { contributorsFromAuthors, enrichmentCoverFill, mergeImport, type Book, type CoverSource, type Incoming } from '@reverie/core'
 import { supabase } from '../lib/supabase'
 import { toBookRow } from './mappers'
 import { enrichBookOutcome, type EnrichResult } from '../lib/enrich'
@@ -40,6 +40,23 @@ function shouldCheck(b: Book, enrichedAt: string | null): boolean {
   return Date.parse(enrichedAt) < Date.now() - window * DAY
 }
 
+/**
+ * WHERE THE COVER ACTUALLY CAME FROM. This used to be hardcoded `'openlibrary'` on every ingest,
+ * which was a lie whenever the merge took its cover from Hardcover — the stored row then claimed an
+ * origin the image never had, and `resharpenSource` reads `coverSource` to decide what it may
+ * re-fetch, so the lie propagates into a later sweep's decisions.
+ *
+ * `provenance` is per FIELD, so `provenance.cover.source` is the one true answer. The other two
+ * enrich sources cannot appear here: `google` covers never reach ingest (`isIngestibleCoverUrl`
+ * rejects the host before this is called) and `isbndb`/`manual` are not ingestible labels — so
+ * anything unexpected falls back to `'url'`, which is honest ("a direct image URL") rather than
+ * naming a source we did not hear it from.
+ */
+function coverOriginOf(e: EnrichResult): CoverSource {
+  const s = e.provenance?.cover?.source
+  return s === 'openlibrary' || s === 'hardcover' || s === 'google' ? s : 'url'
+}
+
 /** Map an enrichment record to an Incoming so mergeImport fills only the existing book's blanks.
  *  genre is the mapped primary genre (the C1 fill); mergeImport fills it only when blank, so the
  *  romance seed (genre='romance') is never overwritten. */
@@ -67,6 +84,50 @@ export interface BulkProgress {
   filled: number
 }
 
+export interface BulkOptions {
+  /** Request per-stage timings and persist one `sweep_traces` row per book. */
+  trace?: boolean
+  /** Cap this run below MAX_PER_RUN — a 10-book measurement run, not a full sweep. */
+  limit?: number
+  /** Group the run's rows. Generated when absent. */
+  runId?: string
+}
+
+/** performance.now() where available (sub-ms, monotonic — immune to a clock step mid-sweep). */
+const now = (): number =>
+  typeof performance !== 'undefined' ? performance.now() : Date.now()
+
+/**
+ * Persist one trace row. Best-effort by construction: a failed insert is swallowed, because the
+ * alternative is a measurement run that dies partway and destroys the data it already gathered.
+ */
+async function recordTrace(
+  runId: string,
+  b: Book,
+  spans: { s: string; ms: number }[],
+  totalMs: number,
+  outcome: string,
+  coverSource: string,
+): Promise<void> {
+  try {
+    const { data: auth } = await supabase.auth.getUser()
+    const ownerId = auth?.user?.id
+    if (!ownerId) return
+    await supabase.from('sweep_traces').insert({
+      owner_id: ownerId,
+      run_id: runId,
+      book_id: b.id,
+      book_title: b.title,
+      spans,
+      total_ms: Math.round(totalMs * 10) / 10,
+      outcome,
+      cover_source: coverSource,
+    })
+  } catch {
+    /* never let instrumentation break the sweep */
+  }
+}
+
 export type BulkStopReason = 'done' | 'user' | 'rate_limited' | 'limit'
 
 export interface BulkResult {
@@ -89,7 +150,10 @@ export async function bulkComplete(
   books: Book[],
   onProgress: (p: BulkProgress) => void,
   shouldStop: () => boolean,
+  opts?: BulkOptions,
 ): Promise<BulkResult> {
+  const runId = opts?.runId ?? crypto.randomUUID()
+  const ceiling = Math.min(opts?.limit ?? MAX_PER_RUN, MAX_PER_RUN)
   const { data: rows, error } = await supabase.from('books').select('id, enriched_at')
   if (error) throw error
   const stampById = new Map(
@@ -108,15 +172,23 @@ export async function bulkComplete(
       stopReason = 'user'
       break
     }
-    if (scanned >= MAX_PER_RUN) {
+    if (scanned >= ceiling) {
       stopReason = 'limit'
       break
     }
+    const spans: { s: string; ms: number }[] = []
+    const bookT0 = now()
+    let coverSource = ''
+    const t0 = now()
     const outcome = await enrichBookOutcome({
       title: b.title,
       author: [b.first, b.last].filter(Boolean).join(' '),
       isbn: b.isbn || undefined,
+      trace: opts?.trace,
     })
+    spans.push({ s: 'client.enrich', ms: now() - t0 })
+    if (outcome.status !== 'rate_limited')
+      for (const sp of outcome.trace?.spans ?? []) spans.push(sp)
     // Paused by upstream quota — stop WITHOUT stamping this book so it's retried next run.
     if (outcome.status === 'rate_limited') {
       stopReason = 'rate_limited'
@@ -140,28 +212,48 @@ export async function bulkComplete(
       // the hotlink still renders and the lazy path retries on first view, so the sweep never loses
       // a cover it just found because Storage had a bad minute.
       if (patch.cover && isIngestibleCoverUrl(patch.cover)) {
-        const ing = await ingestCover({ bookId: b.id, source: 'openlibrary', url: patch.cover })
+        const origin = coverOriginOf(outcome.data)
+        const t1 = now()
+        const ing = await ingestCover({
+          bookId: b.id,
+          source: origin,
+          url: patch.cover,
+          trace: opts?.trace,
+        })
+        spans.push({ s: 'client.covers', ms: now() - t1 })
         if (ing.status === 'ok') {
+          for (const sp of ing.data._trace?.spans ?? []) spans.push(sp)
           patch.cover = ing.data.cover
           patch.coverThumb = ing.data.thumb
-          patch.coverSource = 'openlibrary'
+          patch.coverSource = origin
           if (ing.data.color) patch.coverColor = ing.data.color
         }
+        coverSource = origin
       }
 
+      const t2 = now()
       const { error: ue } = await supabase
         .from('books')
         .update({ ...toBookRow(patch), enriched_at: checkedAt })
         .eq('id', b.id)
+      spans.push({ s: 'client.update', ms: now() - t2 })
       if (ue) throw ue
       didFill = Object.keys(patch).length > 0
     } else {
+      const t2 = now()
       const { error: ue } = await supabase.from('books').update({ enriched_at: checkedAt }).eq('id', b.id)
+      spans.push({ s: 'client.update', ms: now() - t2 })
       if (ue) throw ue
     }
     if (didFill) filled++
     else nothing++
     scanned++
+    // The trace row is written LAST and never throws: a measurement must not be able to fail the
+    // thing it is measuring. `bookT0` spans the whole iteration, so `total_ms` includes the gaps
+    // BETWEEN the timed stages — if the spans don't add up to it, the missing time is real and is
+    // exactly what this exercise is looking for.
+    if (opts?.trace)
+      await recordTrace(runId, b, spans, now() - bookT0, outcome.status, coverSource)
     onProgress({ scanned, total, filled })
   }
 
