@@ -27,17 +27,24 @@ export interface SourceBudget {
 }
 
 /**
- * From each source's own documentation:
+ * From each source's own documentation (verified live, 2026-08-03):
  *
- *   ol-covers  "Currently only 100 requests/IP are allowed for every 5 minutes."
- *   ol-search  1 req/sec, 3/sec with a User-Agent + contact address (which we send).
+ *   ol-search  1 req/s anonymous; 3 req/s with a User-Agent carrying the app name AND a contact
+ *              email. `_shared/olIdentity.ts` now sends exactly that on every OL call (guard:
+ *              olIdentity.test.ts), so this is the identified tier: 3/s → 180/60s, gap 334ms
+ *              (1000/3 rounded UP — sustained ≤ 2.99/s, never over the documented 3).
+ *              An earlier comment here claimed the contact "which we send" while the actual UA
+ *              carried no contact at all and the budget sat at the anonymous 1/s — the header and
+ *              this table must tell the same story, which is why the guard covers both.
+ *   ol-covers  "Currently only 100 requests/IP are allowed for every 5 minutes" (ISBN-keyed
+ *              lookups; per-IP, NO User-Agent tier exists for this host) — deliberately NOT 3x'd.
  *
  * The two Open Library entries are SEPARATE on purpose: they are different endpoints with different
  * documented limits, and budgeting them together lets search traffic spend the covers allowance.
  */
 export const SOURCE_BUDGETS: Readonly<Record<PacedSource, SourceBudget>> = {
   'ol-covers': { max: 100, windowSecs: 300, gapMs: 3000 },
-  'ol-search': { max: 60, windowSecs: 60, gapMs: 1000 },
+  'ol-search': { max: 180, windowSecs: 60, gapMs: 334 },
   google: { max: 100, windowSecs: 60, gapMs: 200 },
   hardcover: { max: 60, windowSecs: 60, gapMs: 1000 },
   isbndb: { max: 60, windowSecs: 60, gapMs: 1000 },
