@@ -217,22 +217,77 @@ describe('source merge — fills gaps, never overwrites', () => {
   ]
   const src = [
     { position: 5, title: 'Book One', author: 'A' }, // user-edited — must not move
-    { position: 6, title: 'book two ', author: 'A' }, // manual entry — must not move
+    { position: 6, title: 'book two ', author: 'A' }, // manual + UNEDITED — a seeded row, may move
     { position: 3, title: 'Book Three', author: 'A' }, // hardcover + untouched — may follow catalog
     { position: 4, title: 'Book Four', author: 'A' }, // new canonical slot — ghost insert
     { position: 0, title: '', author: '' }, // catalog noise
   ]
 
-  it('inserts only the unknown slot, moves only the never-edited hardcover row', () => {
+  // THIS EXPECTATION CHANGED, deliberately (fix/series-seed-provenance). It used to read "moves
+  // only the never-edited HARDCOVER row" and assert `moves` held `hc` alone, which pinned the
+  // `source === 'hardcover'` half of the gate as intended behaviour. It was not: reconciliation
+  // seeds `source: 'manual'` rows, so that clause is exactly what made a seeded entry uncorrectable
+  // — and it would have silently absorbed the seeding fix, leaving the suite green on a no-op.
+  it('inserts the unknown slot and moves every never-edited row, whatever its source', () => {
     const { inserts, moves } = mergeSourceEntries(existing, src)
     expect(inserts).toEqual([{ position: 4, title: 'Book Four', author: 'A' }])
-    expect(moves).toEqual([{ id: 'hc', position: 3 }])
+    expect(moves).toEqual([
+      { id: 'manual', position: 6 },
+      { id: 'hc', position: 3 },
+    ])
   })
 
   it('deletes nothing by construction — a slot the catalog dropped simply stays', () => {
     const { inserts, moves } = mergeSourceEntries(existing, [])
     expect(inserts).toEqual([])
     expect(moves).toEqual([])
+  })
+
+  // ── THE TWO DIRECTIONS, stated as one pair over one fixture ──────────────────────────────────
+  // The whole point of the change is that these two rows are told apart. They are identical in
+  // every field a reader can see — same series, same source, both linked to a book — and differ
+  // only in whether a reader ever placed them.
+  describe('a seeded row is correctable; a reader-placed row is not', () => {
+    const seeded = entry({
+      id: 'seeded',
+      position: 7,
+      title: 'Same Shape',
+      source: 'manual',
+      bookId: 'book-1',
+      userEdited: false,
+    })
+    const placed = entry({
+      id: 'placed',
+      position: 7,
+      title: 'Same Shape Two',
+      source: 'manual',
+      bookId: 'book-2',
+      userEdited: true,
+    })
+    const catalog = [
+      { position: 2, title: 'Same Shape', author: 'A' },
+      { position: 3, title: 'Same Shape Two', author: 'A' },
+    ]
+
+    it('moves the seeded one', () => {
+      const { moves } = mergeSourceEntries([seeded, placed], catalog)
+      expect(moves).toContainEqual({ id: 'seeded', position: 2 })
+    })
+
+    it('and leaves the reader-placed one exactly where the reader put it', () => {
+      const { moves } = mergeSourceEntries([seeded, placed], catalog)
+      expect(moves.map((m) => m.id)).not.toContain('placed')
+    })
+
+    // The regression this branch exists to prevent, pinned as its own case: a seeded row carrying
+    // the PRE-FIX flag is indistinguishable from a reader-placed one and stays stuck. If a future
+    // change reintroduces `user_edited: true` at seed time, this is what still passes — which is
+    // why the seeding call site has its own test in apps/web rather than relying on this file.
+    it('cannot rescue a seeded row that was already written user_edited (the pre-fix state)', () => {
+      const legacy = { ...seeded, userEdited: true }
+      const { moves } = mergeSourceEntries([legacy], catalog)
+      expect(moves).toEqual([])
+    })
   })
 })
 

@@ -25,7 +25,16 @@ export interface SeriesEntry {
   /** null = ghost slot (a canonical entry the reader doesn't have) */
   bookId: string | null
   source: 'manual' | 'hardcover'
-  /** source refreshes never touch a user-edited entry — manual order always wins */
+  /**
+   * A READER GESTURE placed this row — a drag, a hand-typed position, a manual add, a removal.
+   * Source refreshes never touch it; manual order always wins.
+   *
+   * It does NOT mean "this row exists because of the reader". Reconciliation seeds an entry for
+   * every library book naming the series, and those positions come from `seedSeriesPositions`, a
+   * heuristic over `books.position` — machine output, not an arrangement. Seeding wrote `true` here
+   * from ab9e1fe until fix/series-seed-provenance, which made every seeded row permanently immune
+   * to source correction: opening a series page was enough to pin it forever.
+   */
   userEdited: boolean
 }
 
@@ -298,8 +307,27 @@ export interface SourceSeriesEntry {
 
 /**
  * The non-overwrite merge (task §2): source data only FILLS GAPS. Unmatched catalog slots become
- * ghost inserts; a hardcover-sourced, never-edited entry may follow the catalog's position;
- * user-edited rows and manually-created rows are untouched; nothing is ever deleted.
+ * ghost inserts; a never-edited entry may follow the catalog's position; user-edited rows are
+ * untouched; nothing is ever deleted.
+ *
+ * ── THE GATE IS `!userEdited` ALONE, and used to also require `source === 'hardcover'` ──────────
+ * That second clause looked like provenance hygiene — "only a row the catalog created may be
+ * repositioned by the catalog" — but the question the merge is actually asking is about the
+ * POSITION, not the row: is this number something the reader authored? `userEdited` answers that
+ * on its own. `source` answers a different question and answering it here made the merge unable to
+ * correct exactly the rows that most need correcting.
+ *
+ * Concretely: reconciliation seeds `source: 'manual'` entries for library books, so requiring
+ * `'hardcover'` meant a seeded row could never move no matter what `userEdited` said. Flipping
+ * seeding to `user_edited: false` (fix/series-seed-provenance) would have changed NOTHING while
+ * this clause stood — the row would have passed the first test and failed the second. Both halves
+ * had to go together, and `packages/core/src/seriesShelf.test.ts` pinned the old rule explicitly
+ * ("manual entry — must not move"), so the no-op would have shipped green.
+ *
+ * Nothing a reader creates is newly exposed by dropping it: every reader gesture writes
+ * `user_edited: true` (see the audit in the PR), so `!userEdited` still protects picker adds, ghost
+ * adds, drags, hand-set positions and tombstones. The only rows this newly admits are the seeded
+ * ones, which is the point.
  */
 export function mergeSourceEntries(
   existing: readonly SeriesEntry[],
@@ -314,12 +342,7 @@ export function mergeSourceEntries(
       inserts.push(s)
       continue
     }
-    if (
-      !match.userEdited &&
-      match.source === 'hardcover' &&
-      s.position > 0 &&
-      match.position !== s.position
-    ) {
+    if (!match.userEdited && s.position > 0 && match.position !== s.position) {
       moves.push({ id: match.id, position: s.position })
     }
   }
