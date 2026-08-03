@@ -140,3 +140,123 @@ Reading the two raw counts against the kit counts: shape decisions live in Tailw
 `.skin-card` + 19 `.skin-panel`), and interactive elements bypass the Button component ~38:1
 (270 raw buttons vs 7 uses in 1 file) — though 33 of those raw sites reclaim the skin voice via
 `.skin-control` classes.
+
+## Addendum — skin-hook coverage on high-traffic surfaces
+
+Appended 2026-08-03, same audit terms. The blast-radius counts raised the reachability question:
+with the Button component at 7 uses against 270 raw `<button>` elements, a component-layer redesign
+is unavailable — so what matters is whether the raw elements are reachable by the cascade.
+
+### The hook taxonomy, established first
+
+Every `[data-skin]` class-targeting rule in the entire stylesheet set, with rule counts:
+`.rv-chrome` (19 rules) · `.skin-btn-secondary` (17) · `.skin-btn-primary` (12) · `.skin-btn-icon`
+(9) · `.skin-field` (8) · `.rv-sky-star` (1). **That is the complete list.** The other seven
+defined hooks — `.rv-modal`, `.rv-skin-texture`, `.skin-control`, `.skin-card`, `.skin-panel`,
+`.skin-label`, `.skin-numeral`, `.skin-plate` — are token-fed but no `[data-skin]` rule targets any
+of them today. So within bucket A, "hook present and styled" applies to the six above;
+`.rv-modal`/`.rv-skin-texture` are the two rv-family hooks that exist **untargeted**.
+
+Bucket precedence where a site carries several classes: A > B > C.
+
+### Raw `<button>` — 270 sites: A = 4 · B = 27 · C = 239
+
+**A (4, every one targeted-and-styled, all `.skin-btn-*`):**
+[ShelfRoute.tsx:200](../../apps/web/src/routes/ShelfRoute.tsx#L200) (primary) ·
+[HomeRoute.tsx:187](../../apps/web/src/routes/HomeRoute.tsx#L187) (primary) ·
+HomeRoute.tsx:194 (secondary) · HomeRoute.tsx:452 (primary). No raw button carries an
+untargeted A-hook.
+
+**B (27 — `.skin-control`/`.skin-card`/`.skin-panel`; the cascade can reach these tomorrow by
+adding `[data-skin] .skin-control {…}` rules, which today do not exist):**
+library/Toolbar.tsx:110 · components/LibraryPicker.tsx:63 · components/AppShell.tsx:198 ·
+components/Chip.tsx:16 · components/ThemeToggle.tsx:17, 31 · components/ExternalSearchSheet.tsx:71 ·
+components/Button.tsx:30 · components/TropeChip.tsx:57 (className variable resolves to
+`skin-control …`, [TropeChip.tsx:20](../../apps/web/src/components/TropeChip.tsx#L20)) ·
+book/OwnedCopies.tsx:58 · routes/PlannerRoute.tsx:160 · routes/LabRoute.tsx:141 ·
+routes/MatchRoute.tsx:269, 318 · routes/DiscoverRoute.tsx:93, 140, 167, 176, 379 ·
+routes/AddRoute.tsx:554, 589, 915 · routes/ClubsRoute.tsx:274, 332 · routes/HomeRoute.tsx:462 ·
+routes/OnboardingRoute.tsx:261, 358. (Two component-level entries — Chip.tsx:16, Button.tsx:30 —
+multiply through their 24 and 7 uses.)
+
+**C (239, including two resolved indirects):** [MoodChip.tsx:57](../../apps/web/src/components/MoodChip.tsx#L57)
+— its className variable is `rounded-full border … italic` with **no kit class at all**
+(MoodChip.tsx:25-26), a fact the report-1 table's chips row did not surface: the mood chip is
+off-kit entirely. And [BackLink.tsx:28](../../apps/web/src/components/BackLink.tsx#L28), whose
+className is caller-supplied — all sampled callers pass bare utilities (`text-[13px] text-muted
+hover:text-ink` etc.), so its 13 uses are C in practice.
+
+**How C clusters** (top 12 of 239; the head is broad, not narrow):
+
+| File | C-buttons |
+|---|---|
+| routes/SettingsRoute.tsx | 17 |
+| routes/ShelvesRoute.tsx | 15 |
+| routes/AddRoute.tsx | 15 |
+| routes/SeriesRoute.tsx | 14 |
+| book/BookDetailRoute.tsx | 12 |
+| routes/HomeRoute.tsx | 12 |
+| book/dialogs.tsx | 10 |
+| components/CoverSheet.tsx | 9 |
+| auth/AuthScreen.tsx | 8 |
+| routes/ClubsRoute.tsx | 8 |
+| components/DuplicateReview.tsx | 7 |
+| routes/PlannerRoute.tsx | 7 |
+
+Top 12 files hold 134 of 239 (56%); the remaining 105 spread across ~40 files at 1–6 each. As a
+consolidation-shape fact: this is neither one PR nor fifty — a dozen route-sized passes cover the
+majority, with a long thin tail.
+
+### Cards — 27 shipped `skin-card` sites: A = 0 · B = 27 · C = 0
+
+Every shipped card call site carries the kit class and nothing per-skin: CoverCard.tsx:75 ·
+LibraryPicker.tsx:54, 67 · SearchResults.tsx:72 · ExternalSearchSheet.tsx:41 ·
+PlannerRoute.tsx:164, 265 · MatchRoute.tsx:315 · ClubsRoute.tsx:16 · DiscoverRoute.tsx:143, 219,
+227, 307, 374, 391 · ShelvesRoute.tsx:111 · OnboardingRoute.tsx:266, 362 · AddRoute.tsx:291, 604,
+727, 896, 919 · SettingsRoute.tsx:43, 541, 579 (+ lab). No `[data-skin] .skin-card` rule exists,
+so cards are uniformly one rule away from per-skin reach — hook present on 100% of sites,
+targeted by 0 rules. (Card-shaped surfaces styled with raw `rounded-*` instead of `.skin-card`
+are outside this count and inside the 369-literal figure in §5.)
+
+### Dialogs — 20 `<Modal>` sites: 19 funnel to one A-hook (untargeted) · 1 bypass (C)
+
+All `<Modal>` call sites (20 across 14 files, including JustFinishedSheet.tsx:149 and
+CoverSheet.tsx:101, 114, which wrap Modal rather than bypassing it) render through the single
+panel div carrying `.rv-modal` ([Modal.tsx:45](../../apps/web/src/components/Modal.tsx#L45) region;
+class defined [skin-kit.css:608-615](../../apps/web/src/styles/skin-kit.css#L608)). Classification:
+**hook present, targeted by zero `[data-skin]` rules** — the radius comes from `--radius-panel`
+(M3) above 640px and the hardcoded 24px sheet below it. One reachable point for all nineteen.
+
+**The bypass:** the Library desktop detail drawer,
+[LibraryRoute.tsx:91-96](../../apps/web/src/routes/LibraryRoute.tsx#L91) — `role="dialog"
+aria-modal="true"` on a bare `fixed inset-0 z-40` with raw utilities and inline tokens; no
+`.rv-modal`, no kit class. Bucket C, and the only dialog surface the cascade cannot currently
+reach. (AppShell's mobile More sheet, report 1 §1, is nav-owned and likewise bare.)
+
+### Correction 1 (applied): the stale `SKIN_STRUCTURE` comment
+
+[skinStructure.ts:158](../../packages/core/src/skinStructure.ts#L158) claimed seven skins still
+inherit `NEUTRAL_STRUCTURE`; all nine rows are complete (report 2 §1). Comment corrected on this
+branch — comment-only, no behavior.
+
+### Correction 2 (verified, not fixed): authored-but-unmounted token axes
+
+`--ambient-texture` is **not** the only one. Census method: every token defined in tokens.css,
+searched for `var(--…)` consumers in shipped `.tsx`/`.ts` (lab excluded), all other stylesheets,
+`packages/core` non-test source, and tokens.css value-side composition. Zero-shipped-consumer
+results:
+
+| Token | Authored | Where its only references live |
+|---|---|---|
+| `--ambient-texture` + `-size/-opacity/-blend/-mask` | per skin (10-18 defs) | `.rv-skin-texture` (skin-kit.css:57-68) — mounted only in [LabRoute.tsx:185](../../apps/web/src/routes/LabRoute.tsx#L185) |
+| `--grain-opacity` | per skin ×18 | composed into `--ambient-texture-opacity` (tokens.css:141 …387) — transitively lab-only via the row above |
+| `--card-2` | per skin ×18 | LabRoute.tsx:48 + LabStructureRoute.tsx:53 only — **and** `skinCharacter.contrast.test.ts` asserts ink-on-card-2 pairs, i.e. a tested-but-unmounted surface, the token-form instance of the tested-but-uncalled pattern CLAUDE.md tracks |
+| `--bg2` | once (shared block) | none anywhere |
+| `--font-body` | once | none anywhere |
+| `--primary-solid` | once | none anywhere |
+| `--tertiary` | once | none anywhere — SkinDivider's "tertiary (gold) tone" comment resolves to `var(--gold)` ([SkinDivider.tsx:94](../../apps/web/src/components/SkinDivider.tsx#L94)), not this token |
+
+Two classes inside the finding: the four once-defined shared-block strays (`--bg2`, `--font-body`,
+`--primary-solid`, `--tertiary`) versus the per-skin-authored families (`--ambient-texture`×5 +
+`--grain-opacity`, `--card-2`) that all nine skins fill and nothing ships — the latter being the
+defect class now under tracking.
