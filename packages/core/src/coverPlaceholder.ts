@@ -11,13 +11,39 @@ import { mixSrgb } from './adaptive'
 export const PLACEHOLDER_ACCENTS = ['--accent-fill', '--violet', '--blue', '--gold'] as const
 export type PlaceholderAccent = (typeof PLACEHOLDER_ACCENTS)[number]
 
+/** An accent recipe: one token, or a fixed 50/50 blend of two. Blends stay INSIDE the skin's own
+ *  palette (both endpoints are skin tokens) while widening the per-book variety. */
+export interface AccentRecipe {
+  a: PlaceholderAccent
+  b?: PlaceholderAccent
+}
+
+/** Fraction of `a` in a two-token blend — one constant shared by the CSS and the contrast test. */
+export const PLACEHOLDER_BLEND = 0.5
+
+/**
+ * The discrete accent space: 4 pure tokens + the 6 pairwise 50/50 blends = 10 recipes.
+ *
+ * WHY 10 AND WHY DISCRETE (feat/discover-phase-a). Four accents meant two same-series books
+ * collided 1-in-4, and same-series is exactly where placeholders cluster — after the series
+ * backfill, an ACOTAR shelf full of identical plates. A continuous hue rotation would distinguish
+ * more but cannot be PROVEN: the contrast test enumerates skin × mode × accent from the SKINS
+ * registry, and a continuum has no enumeration. Ten fixed recipes keep the exhaustive-proof
+ * machinery intact — every one is asserted ≥ AA in every skin, both modes, like the original four.
+ */
+export const PLACEHOLDER_ACCENT_RECIPES: readonly AccentRecipe[] = [
+  ...PLACEHOLDER_ACCENTS.map((a) => ({ a })),
+  ...PLACEHOLDER_ACCENTS.flatMap((a, i) => PLACEHOLDER_ACCENTS.slice(i + 1).map((b) => ({ a, b }))),
+]
+
 export interface PlaceholderSpec {
   title: string
   author: string
-  /** 1–2 character monogram drawn large (the typographic focal point) */
+  /** 1–2 character monogram drawn large — THE distinguishing mark at spine widths, where the
+   *  title truncates to a shared prefix ("A Court of…" five times over) */
   initials: string
-  /** which accent CSS variable to tint with — deterministic per book, from the skin's own palette */
-  accentVar: PlaceholderAccent
+  /** which accent recipe to tint with — deterministic per book, from the skin's own palette */
+  accent: AccentRecipe
 }
 
 /** Stable non-negative hash of a string (deterministic accent selection). */
@@ -42,7 +68,12 @@ export function monogram(title: string): string {
   return letters || '✦'
 }
 
-/** Derive the deterministic placeholder spec for a book (title + optional split author name). */
+/** Derive the deterministic placeholder spec for a book (title + optional split author name).
+ *
+ *  The hash keys on `title|author` — content, not id, so the same book shows the same accent on
+ *  every surface including pre-add Discover hits that have no id yet; author folded in so two
+ *  same-titled books by different authors stop sharing a plate. (Same-series books share the
+ *  author, so THEIR separation comes from the title tail + the 10-recipe space + the monogram.) */
 export function placeholderSpec(book: {
   title?: string
   first?: string
@@ -50,10 +81,11 @@ export function placeholderSpec(book: {
 }): PlaceholderSpec {
   const title = String(book.title ?? '')
   const author = [book.first, book.last].filter(Boolean).join(' ').trim()
-  const accentVar = PLACEHOLDER_ACCENTS[
-    hash(title || author || '∅') % PLACEHOLDER_ACCENTS.length
-  ] as PlaceholderAccent
-  return { title, author, initials: monogram(title), accentVar }
+  const key = `${title}|${author}`
+  const accent = PLACEHOLDER_ACCENT_RECIPES[
+    hash(key === '|' ? '∅' : key) % PLACEHOLDER_ACCENT_RECIPES.length
+  ] as AccentRecipe
+  return { title, author, initials: monogram(title), accent }
 }
 
 // ── Contrast-safe colour recipe ────────────────────────────────────────────────────────────────
@@ -77,15 +109,28 @@ export const PLACEHOLDER_BG_MIX = 0.1
 /** Accent fraction in the glyph colour (rest is `--ink`). Accent character, ink-anchored for contrast. */
 export const PLACEHOLDER_FG_MIX = 0.28 // 0.3 grazed 4.496:1 on Hearth's toasted linen (verdict 1b)
 
-/** The placeholder's CSS colours for a chosen accent var — `color-mix` over live skin tokens, so it
- *  re-themes for free. The component spreads this onto the surface (bg) and glyph (color). */
-export function placeholderColorVars(accentVar: PlaceholderAccent): {
+/** The CSS expression for an accent recipe — a bare token var, or a 50/50 `color-mix` of two.
+ *  Nesting this inside the recipe mixes below is valid CSS (`color-mix` accepts any color value). */
+export const accentCss = (r: AccentRecipe): string =>
+  r.b ? `color-mix(in srgb, var(${r.a}) ${PLACEHOLDER_BLEND * 100}%, var(${r.b}))` : `var(${r.a})`
+
+/** The same recipe resolved to a concrete hex, given the skin/mode's token values — what the
+ *  contrast test feeds {@link resolvePlaceholderColors}. Mirrors {@link accentCss} exactly. */
+export const resolveAccentRecipe = (
+  r: AccentRecipe,
+  tokens: Record<PlaceholderAccent, string>,
+): string => (r.b ? mixSrgb(tokens[r.a], tokens[r.b], PLACEHOLDER_BLEND) : tokens[r.a])
+
+/** The placeholder's CSS colours for a chosen accent recipe — `color-mix` over live skin tokens, so
+ *  it re-themes for free. The component spreads this onto the surface (bg) and glyph (color). */
+export function placeholderColorVars(accent: AccentRecipe): {
   background: string
   color: string
 } {
+  const a = accentCss(accent)
   return {
-    background: `color-mix(in srgb, var(${accentVar}) ${PLACEHOLDER_BG_MIX * 100}%, var(--card-solid))`,
-    color: `color-mix(in srgb, var(${accentVar}) ${PLACEHOLDER_FG_MIX * 100}%, var(--ink))`,
+    background: `color-mix(in srgb, ${a} ${PLACEHOLDER_BG_MIX * 100}%, var(--card-solid))`,
+    color: `color-mix(in srgb, ${a} ${PLACEHOLDER_FG_MIX * 100}%, var(--ink))`,
   }
 }
 

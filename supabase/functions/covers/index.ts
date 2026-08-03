@@ -27,6 +27,7 @@ import { envInt, rateLimit, tooMany } from '../_shared/ratelimit.ts'
 import { captureEdgeError, logEvent } from '../_shared/observe.ts'
 import { Trace, wantsTrace } from '../_shared/trace.ts'
 import { isGoogleNoCoverArt, upgradeCoverUrl } from '../_shared/coverUrl.ts'
+import { olHeaders } from '../_shared/olIdentity.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -317,8 +318,11 @@ async function handleIngest(req: Request, uid: string, tr: Trace): Promise<Respo
     sourceUrl = sourceUrl ? upgradeCoverUrl(sourceUrl, 'full') : url
     let r: Response
     try {
+      // olHeaders on EVERY source fetch, not just OL hosts: this URL is reader-supplied and can be
+      // covers.openlibrary.org, and identifying our traffic to the other hosts costs nothing. One
+      // anonymous OL request from this call site would re-classify the whole IP's tier.
       r = await tr.time('covers.fetchSource', () =>
-        fetch(url, { headers: { Accept: 'image/*' }, redirect: 'follow' }),
+        fetch(url, { headers: olHeaders({ Accept: 'image/*' }), redirect: 'follow' }),
       )
     } catch {
       return json({ error: 'fetch_failed' }, 422)
