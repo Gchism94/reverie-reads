@@ -556,6 +556,18 @@ list triaged rather than blanket-ignored.
   so the add path's error branch is on the critical path to the insert; (3) CI runs single-worker
   on a shared runner, where 15s is a much thinner margin than locally.
 
+  **Second occurrence, a different test in the same file — `discover-search.spec.ts:218` ("add a
+  result to a shelf as unowned via the shelf chooser"), local standing e2e run on
+  `fix/series-backfill`'s intake-fix commit.** Same shape exactly: `.first().click()` (this time on
+  `'＋ Shelf'`, not `'＋ Add'`), then the identical `expect.poll` on `list_items` for the same
+  `Wildfire Vow` book, same 15s timeout. Reported red, not re-run. That branch's diff is
+  `packages/core/src/importMap.ts` (CSV/XLSX intake) — nothing touching Discover, shelf pickers, or
+  `list_items` — so this is not attributable to that change either, same reasoning as the a11y
+  timeout entry above. Two different tests in this one spec file, both failing on the same
+  `Wildfire Vow` poll, is stronger evidence for hypothesis (1) than either occurrence alone: both
+  tests click a `.first()` button while `STUB_RESULTS` holds two entries, and both then poll for
+  exactly the book that ordering ambiguity would drop. Worth checking first on the next look.
+
 ## Test-infrastructure follow-ups
 
 - Trio migration (a11y/fonts/cover-sheet onto per-user accounts) — buys
