@@ -92,3 +92,57 @@ the deliberate failure with confirmation the trace uploaded, the required-check
 names, and the standing full e2e run.
 
 No merge without my word.
+
+## ci/throughput (follow-up, off `main` after this task merged)
+
+Two stages landed, a third was measured and cancelled rather than deferred.
+
+**Stage 1 — remove the dead `db:seed` step.** Verified dead, not assumed:
+`test/trio-migration` ran the full suite against a database with zero users and
+no `db:seed` at all — 49/49. Nothing has read `dev@reverie.local` since that
+migration; `a11y` seeds its own user directly from the spec. Merged as `913ba22`.
+
+**Stage 2 — split `a11y` into its own parallel job.** Two Playwright projects
+(`a11y`, `rest`), two CI jobs, each its own runner/Supabase stack/database.
+Measured on one real run (job start/end and per-step timestamps from the Actions
+API, not estimated):
+
+|                            | setup | test  | total |
+| -------------------------- | ----- | ----- | ----- |
+| before (single job)        | 2m19s | 6m29s | 8m53s |
+| `e2e` (rest, 47 tests)     | 2m02s | 3m07s | 5m20s |
+| `e2e-a11y` (a11y, 2 tests) | 1m54s | 4m42s | 6m39s |
+
+Wall clock, PR open → both green: **6m53s**, vs. the 9m47s five-run baseline
+from `test/trio-migration` — **−29.6%**. Billed minutes (GitHub's per-job,
+rounded-up-to-the-minute unit): 10min → 6+7=13min — **+30%**. `e2e-a11y` is a
+new check, not yet in the required-checks list — a red a11y job does not
+currently block merge until the ruleset is updated (owner's call). Merged as
+`de7e712`.
+
+**Stage 3 — raise `E2E_WORKERS` — measured, then cancelled, not deferred.**
+Stage 2's own numbers eliminate the premise before the experiment runs:
+
+- `e2e` (rest) finishes in 5m20s against `e2e-a11y`'s 6m39s — ~79s of slack
+  already. Raising `e2e`'s worker count cannot shorten the PR's wall clock,
+  because `e2e-a11y` is now the long pole and workers=1→N on the OTHER job
+  doesn't touch it.
+- `a11y` itself is two tests in one file under `test.describe.configure({ mode:
+'serial' })` — the sweep and the unauthenticated-landing test are forced
+  sequential by the file itself, not by `E2E_WORKERS`. Raising workers can't
+  parallelize a file that has told Playwright not to.
+
+Both jobs are single-file-dominated at this point, so there is no remaining
+axis `E2E_WORKERS` can act on. `E2E_WORKERS` stays at **1**. Not "revisit
+later" — the specific thing stage 3 would have measured no longer exists to
+measure, until one of the two constraints above changes.
+
+**Recorded, not proposed:** if wall clock matters again, the next lever is
+sharding the `a11y` sweep itself, not raising worker count. It's a `for (skin of
+SKINS) for (mode of MODES)` double loop — 4 × 2 = 8 blocks — that could split
+across `shardIndex`/`shardTotal` or several explicit jobs, each scanning a
+subset of skin×mode combinations against its own Supabase stack. That's a
+different, larger change (the sweep's fixtures and cleanup are currently written
+assuming one run owns the whole matrix) and is not scoped, designed, or
+estimated here — just named as the lever that would actually move `e2e-a11y`'s
+6m39s, since neither `E2E_WORKERS` nor the job split it already got can.
