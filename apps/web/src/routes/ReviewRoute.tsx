@@ -166,7 +166,6 @@ function ReviewScreen() {
         <Stat label="Merged" value={summary.merged} />
         <Stat label="In series" value={summary.inSeries} />
         <Stat label="Standalone" value={summary.standalones} />
-        <Stat label="Orders" value={summary.readingOrdersBuilt} />
       </div>
 
       {genreChips.length > 0 && (

@@ -1,6 +1,7 @@
 import type { Book, List, ReadEntry } from './types'
 import { norm } from './normalize'
-import { strongerOwnership } from './ownership'
+import { mergePossession } from './ownership'
+import { hasDate } from './partialDate'
 
 /** The slice of library state the merge engine reads and rewrites. */
 export interface LibraryState {
@@ -94,12 +95,11 @@ export function mergeBooks(
     ebook: all.some((b) => b.owned.ebook),
     audiobook: all.some((b) => b.owned.audiobook),
   }
-  // The strongest possession across copies wins (owned > borrowed > wishlist > unset) — a real
-  // copy never loses to a wishlist duplicate, and owning beats borrowing.
-  p.ownership = all.reduce(
-    (best, b) => strongerOwnership(best, b.ownership),
-    'unset' as Book['ownership'],
-  )
+  // Possession is five independent signals now, so there is no single "strongest" to take: every
+  // flag unions (see mergePossession). A real copy never loses to a wishlist duplicate, and nothing
+  // a duplicate asserted is dropped — deduplicating two rows is not evidence about what the reader
+  // has or wants, so the merge only ever adds.
+  Object.assign(p, mergePossession(all))
 
   // First non-empty value wins for these descriptive fields.
   if (!p.series) p.series = all.map((b) => b.series).find(Boolean) ?? p.series
@@ -123,7 +123,14 @@ export function mergeBooks(
     const pp = all.map((b) => b.pub).find((v) => v && v.y)
     if (pp) p.pub = pp
   }
-  if (!p.plan) p.plan = all.map((b) => b.plan).find(Boolean) ?? null
+  // The plan unions as ONE OBJECT keyed on the year, exactly like `pub` two lines up and exactly
+  // like merge_books' `take_plan` — take some other book's whole plan, or leave the primary's
+  // alone. Never assembled from parts: a per-field fill could take the year from one book and the
+  // month from another and produce a date neither reader ever chose.
+  if (!hasDate(p.plan)) {
+    const pl = all.map((b) => b.plan).find((v) => hasDate(v))
+    if (pl) p.plan = pl
+  }
 
   const statuses = all.map((b) => b.readStatus)
   p.readStatus =

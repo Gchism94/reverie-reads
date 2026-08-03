@@ -1,12 +1,9 @@
 import {
   countTruncatedIsbns,
-  detectUniverses,
   parseCSV,
   parseImport,
-  universeInputFromRow,
   type ImportedRow,
   type ImportItemOutcome,
-  type UniverseOrder,
 } from '@reverie/core'
 import { supabase } from '../lib/supabase'
 import { applyIncoming, type ReviewCandidate } from './intake'
@@ -45,10 +42,14 @@ export interface ImportExportResult {
   review: ReviewCandidate[]
   /** rows that resolved to a book (added or merged) — fuel for I3 reading-order creation */
   ingested: IngestedRow[]
-  /** connected-universe reading orders created/refreshed from the import */
-  readingOrders: number
+  /** rows that carried a "global order" column, which nothing consumes any more.
+   *
+   *  Reading orders were dropped (chore/drop-reading-orders) and series position is now the single
+   *  ordering mechanism — but the reader still typed that column, so the summary says it went
+   *  unused rather than discarding it in silence. */
+  ignoredGlobalOrder: number
   /** per-resolved-book signals for the import-review read-model (E3); join with the post-enrichment
-   *  books via buildReviewModelFromImport(outcomes, books, { readingOrdersBuilt: readingOrders }) */
+   *  books via buildReviewModelFromImport(outcomes, books) */
   outcomes: ImportItemOutcome[]
   /** read-only notice signal: ISBNs that look like they lost a leading digit (a zero destroyed on
    *  data entry, before the file existed). Books still imported; these just may not match. */
@@ -59,49 +60,6 @@ export interface ImportExportResult {
   bookIds: string[]
 }
 
-/**
- * Create (or refresh, idempotently) a reading order per detected universe. Each item references the
- * ingested book at its exact global-order position — an OVERLAY, leaving the book's own series +
- * position untouched. Re-import reuses the same-named order and replaces its items, so it never
- * multiplies. Owner-scoped via RLS (the user writes their own rows).
- */
-async function persistUniverseOrders(orders: UniverseOrder[], ownerId: string): Promise<number> {
-  let count = 0
-  for (const o of orders) {
-    const { data: existing } = await supabase
-      .from('reading_orders')
-      .select('id')
-      .eq('owner_id', ownerId)
-      .eq('name', o.name)
-      .maybeSingle()
-    let orderId = (existing as { id: string } | null)?.id
-    if (orderId) {
-      await supabase.from('reading_order_items').delete().eq('reading_order_id', orderId).eq('owner_id', ownerId)
-    } else {
-      const { data: created, error } = await supabase
-        .from('reading_orders')
-        .insert({ owner_id: ownerId, name: o.name, description: 'Imported from a connected-series universe.' })
-        .select('id')
-        .single()
-      if (error) throw error
-      orderId = (created as { id: string }).id
-    }
-    const items = o.items.map((it) => ({
-      reading_order_id: orderId,
-      owner_id: ownerId,
-      position: it.position,
-      book_id: it.ref,
-      series: null,
-      note: null,
-    }))
-    if (items.length) {
-      const { error } = await supabase.from('reading_order_items').insert(items)
-      if (error) throw error
-    }
-    count++
-  }
-  return count
-}
 
 /**
  * Import a real library export (Phase-7 populate path). Detects the column shape; Library/Chism go
@@ -130,7 +88,7 @@ export async function importDetectedExport(
       merged: r.merged,
       review: r.review,
       ingested: [],
-      readingOrders: 0,
+      ignoredGlobalOrder: 0,
       outcomes: r.outcomes,
       truncatedIsbns,
       extras: r.extras,
@@ -170,9 +128,10 @@ export async function importDetectedExport(
     }
   }
 
-  // I3: connected-series universes (global order) → reading orders, overlaid on the ingested books.
-  const universes = detectUniverses(ingested.map(({ row, bookId }) => universeInputFromRow(row, bookId)))
-  const readingOrders = await persistUniverseOrders(universes, ownerId)
+  // The "global order" column is still parsed, but nothing acts on it: reading orders are gone and
+  // series position is the one ordering mechanism. Count what the reader supplied so the summary can
+  // say so — a column that silently vanishes is worse than one we admit we ignored.
+  const ignoredGlobalOrder = ingested.filter(({ row }) => row.globalOrder != null).length
 
   return {
     profile: profile.name,
@@ -180,7 +139,7 @@ export async function importDetectedExport(
     merged,
     review,
     ingested,
-    readingOrders,
+    ignoredGlobalOrder,
     outcomes,
     truncatedIsbns,
     extras: EMPTY_EXTRAS,

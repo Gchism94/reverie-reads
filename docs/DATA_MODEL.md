@@ -83,9 +83,11 @@ comments. Reproduced here with the parts that most often get guessed wrong calle
   pages: number | null,        // null = UNKNOWN → renders blank, never a fabricated 0
   fave: boolean,
 
-  // --- possession (FOUR states — see below) ---
-  ownership: 'owned' | 'borrowed' | 'wishlist' | 'unset',
-  owned: {                     // WHICH formats, for a possessed book
+  // --- possession (FIVE independent flags — see below) ---
+  ownership: 'owned' | 'unowned',   // do you own a copy? default 'unowned'
+  borrowed: boolean,                // have one on loan — independent of ownership
+  wishlist: boolean,                // want one — independent of both
+  owned: {                     // WHICH formats, for a book in hand
     physical: false | 'paperback' | 'hardcover' | true,
     ebook: boolean,
     audiobook: boolean
@@ -106,28 +108,55 @@ comments. Reproduced here with the parts that most often get guessed wrong calle
 }
 ```
 
-#### Possession is four states, and `owned` does not decide it
+#### Possession is five independent flags
 
-`ownership` is the answer to _how do you have this book_; `owned` is the answer to _which
-formats_. They are separate fields and the first one governs.
+`ownership` answers one question — _do you own a copy_ — and nothing else. Borrowed and
+wishlist are **flags beside it, not values inside it**, because they co-occur with ownership
+and with each other. `owned` answers _which formats_.
 
-| `ownership` | meaning                                                                                                                                      |
-| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `owned`     | the reader owns a copy — per-format detail in `owned`                                                                                        |
-| `borrowed`  | in the reader's hands but not owned (library loan, a friend's copy). **Counts as possessed:** carries a format, stays in the default library |
-| `wishlist`  | a book the reader _wants_ — the old `unowned` TBR state, renamed for precision                                                               |
-| `unset`     | **the default for a newly added book.** Cataloguing must not force a possession category                                                     |
+| field                             | meaning                                                                                                            |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `ownership`                       | `'owned'` = the reader owns a copy; `'unowned'` = they do not. **Default `'unowned'`** — a bare add claims nothing |
+| `borrowed`                        | has a copy on loan (library, a friend). **In hand:** carries a format, stays in the default library                |
+| `wishlist`                        | wants a copy. An owned book can still be wanted in another edition                                                 |
+| `owned.physical`                  | `false` \| `'paperback'` \| `'hardcover'` \| `true` — which physical copy, if any                                  |
+| `owned.ebook` / `owned.audiobook` | boolean, same idea                                                                                                 |
 
-> **`all-false = wishlist` is wrong and was never true after ownership-v2.** A wishlist book
-> carries whatever latent format flags it happens to have; no surface reads them. Ask
-> `ownership`, or use `bookOwnedFormats` — never infer possession from the `owned` booleans.
+**All combinations are legal and the schema constrains none of them.** "Owned in paperback,
+borrowed the audio, still want the special edition" is a real reader state.
+
+Two derived helpers, neither of them stored:
+
+- `possessionState(book)` → the one WORD a control or badge shows: `owned` > `borrowed` >
+  `wishlist` > `unset`, in that precedence. Lossy by design (an owned-and-wanted book reads
+  `owned`); storage keeps both. `possessionPatch(word)` is the inverse a four-state control
+  writes — picking a word is exclusive, so it clears the others.
+- `isPossessed(book)` = `ownership === 'owned' || borrowed` — **in hand**. This is the gate for
+  format detail and the default library.
+
+> **Never infer possession from the `owned` booleans.** `all-false = wishlist` was the pre-#68
+> model and has been wrong ever since. A not-in-hand book carries whatever latent format flags
+> it happens to have and no surface reads them — `bookOwnedFormats` **suppresses, never clears**,
+> so drop → re-acquire loses nothing.
 >
-> Possession never gates reading history: a book you have read is in your library whatever
-> `ownership` says.
+> Possession never gates reading history: a book you have read — or abandoned — is in your
+> library whatever these flags say.
 
 The **Owned · Physical / Ebook / Audiobook** shelves are _smart shelves_ derived from
-`ownership` + `owned`, not manual lists. Ownership is independent of `reads[].format` — you
+`isPossessed` + `owned`, not manual lists. Ownership is independent of `reads[].format` — you
 can read a borrowed copy you don't own.
+
+#### Library scope: two predicates that disagree on DNF, deliberately
+
+- `isBookRead(b)` — `readStatus === 'Read'` or any logged read. Feeds series progress, the taste
+  profile, stats and the matcher. **DNF is not read**, and must stay that way: an abandoned book
+  would otherwise overstate a series' completion and teach the recommender from a bail-out.
+- `hasReadingHistory(b)` — `isBookRead(b) || readStatus === 'DNF'`. Feeds **visibility only**.
+- `inDefaultLibrary(b)` = `isPossessed(b) || hasReadingHistory(b)`.
+
+A DNF book you never owned used to be invisible: not in hand, not read, so outside the default
+scope and reachable only through the wishlist chip — a book the reader definitely handled, hidden
+by a predicate meant to hide books they had not.
 
 #### Ratings
 
@@ -187,8 +216,10 @@ books               (id pk, owner_id fk→profiles, title,
                      cover_color, cover_confidence,
                      isbn, pages integer,             -- books_pages_check: null or 1..20000
                      fave bool,
-                     ownership text not null default 'unset',
-                                          -- books_ownership_check: owned|borrowed|wishlist|unset
+                     ownership text not null default 'unowned',
+                                          -- books_ownership_check: owned|unowned
+                     borrowed boolean not null default false,
+                     wishlist boolean not null default false,
                      owned_physical text, -- null | 'paperback' | 'hardcover' | 'yes'
                      owned_ebook bool, owned_audiobook bool,
                      format, rating numeric(2,1),

@@ -3,6 +3,9 @@ import {
   activeFilterCount,
   defaultFilters,
   groupSeries,
+  hasReadingHistory,
+  inDefaultLibrary,
+  isBookRead,
   matchesFilters,
   seriesLenBucket,
   sortBooks,
@@ -113,48 +116,85 @@ describe('activeFilterCount', () => {
   })
 })
 
-describe('ownership scoping — default library = have or have read (task-ownership-v2)', () => {
+describe('library scope — have it, or have opened it (task-shelf-model)', () => {
   const owned = makeBook({ id: 'o', title: 'Owned One' })
   const borrowed = makeBook({
     id: 'b',
     title: 'Borrowed One',
-    ownership: 'borrowed',
+    ownership: 'unowned',
+    borrowed: true,
     readStatus: 'unset',
   })
   const wished = makeBook({
     id: 'w',
     title: 'Wished One',
-    ownership: 'wishlist',
+    ownership: 'unowned',
+    wishlist: true,
     readStatus: 'unset',
   })
-  const unset = makeBook({
+  const bare = makeBook({
     id: 'u',
     title: 'Uncatalogued',
-    ownership: 'unset',
+    ownership: 'unowned',
     readStatus: 'unset',
   })
   // the reading-history hole: read it, don't own it, never marked it borrowed
   const readNotOwned = makeBook({
     id: 'r',
     title: 'Read Not Owned',
-    ownership: 'wishlist',
+    ownership: 'unowned',
+    wishlist: true,
     readStatus: 'Read',
   })
+  // the SECOND reading-history hole, which the four-state model left open: started it, gave up,
+  // never possessed it. Not read, so isBookRead says no — but the reader definitely handled it.
+  const dnfNotOwned = makeBook({
+    id: 'd',
+    title: 'Abandoned',
+    ownership: 'unowned',
+    readStatus: 'DNF',
+  })
 
-  it('default grid shows owned, borrowed, and anything read — hides wishlist/unset you have not read', () => {
+  it('default grid shows books in hand and books with any reading history, DNF included', () => {
     const f = defaultFilters()
     expect(matchesFilters(owned, f)).toBe(true)
     expect(matchesFilters(borrowed, f)).toBe(true) // in hand, though not owned
     expect(matchesFilters(readNotOwned, f)).toBe(true) // reading history never hidden by possession
+    expect(matchesFilters(dnfNotOwned, f)).toBe(true) // abandoned is still handled
     expect(matchesFilters(wished, f)).toBe(false)
-    expect(matchesFilters(unset, f)).toBe(false)
+    expect(matchesFilters(bare, f)).toBe(false)
   })
 
-  it('the wishlist flag lets the hidden remainder (wishlist + unset) in', () => {
+  it('an abandoned book is VISIBLE but is still not Read — the two predicates disagree by design', () => {
+    // hasReadingHistory admits DNF so the book stops being invisible; isBookRead must not, or a
+    // series would report progress the reader never made and the taste profile would learn from a
+    // book they bailed on.
+    expect(inDefaultLibrary(dnfNotOwned)).toBe(true)
+    expect(isBookRead(dnfNotOwned)).toBe(false)
+    expect(hasReadingHistory(dnfNotOwned)).toBe(true)
+    // and it does not leak into the Read facet
+    expect(matchesFilters(dnfNotOwned, { ...defaultFilters(), read: 'Read' })).toBe(false)
+    expect(matchesFilters(dnfNotOwned, { ...defaultFilters(), read: 'DNF' })).toBe(true)
+  })
+
+  it('possession is read through the flags, not a single enum slot', () => {
+    // A book both owned and wanted is in the default library on the strength of owning it — the
+    // want no longer competes for the same field.
+    const ownedAndWanted = makeBook({
+      id: 'ow',
+      title: 'Owned And Wanted',
+      ownership: 'owned',
+      wishlist: true,
+      readStatus: 'unset',
+    })
+    expect(matchesFilters(ownedAndWanted, defaultFilters())).toBe(true)
+  })
+
+  it('the wishlist flag lets the hidden remainder in', () => {
     const f = { ...defaultFilters(), wishlist: true }
     expect(matchesFilters(owned, f)).toBe(true)
     expect(matchesFilters(wished, f)).toBe(true)
-    expect(matchesFilters(unset, f)).toBe(true)
+    expect(matchesFilters(bare, f)).toBe(true)
   })
 
   it('counts as an active filter', () => {

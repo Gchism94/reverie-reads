@@ -12,7 +12,12 @@ import { enrichImported } from '../data/importEnrich'
 import { ImportSummary } from '../components/ImportSummary'
 import { importSessionKey } from '../data/importReview'
 import { deleteAccount } from '../data/account'
-import { bulkComplete, isIncomplete, type BulkProgress } from '../data/enrichLibrary'
+import {
+  bulkComplete,
+  isIncomplete,
+  type BulkOptions,
+  type BulkProgress,
+} from '../data/enrichLibrary'
 import { resharpenCovers, resharpenSource, type ResharpenProgress } from '../data/resharpenCovers'
 import { DuplicateReview } from '../components/DuplicateReview'
 import { fileToCsvText } from '../data/xlsxAdapter'
@@ -22,6 +27,7 @@ import { BUILD_LABEL } from '../lib/updates'
 import { useSkin } from '../skin/useSkin'
 import { useSkinControls } from '../skin/controls'
 import { useAuth } from '../auth/AuthProvider'
+import { todayLocalDate } from '../lib/localDate'
 
 const YEAR = new Date().getFullYear()
 
@@ -60,6 +66,7 @@ function SettingsScreen() {
   const [imported, setImported] = useState(false)
   const [importResult, setImportResult] = useState<ImportExportResult | null>(null)
   const [completing, setCompleting] = useState(false)
+  const [tracing, setTracing] = useState(false)
   const [progress, setProgress] = useState<BulkProgress | null>(null)
   const stopRef = useRef(false)
   const [sharpening, setSharpening] = useState(false)
@@ -99,7 +106,9 @@ function SettingsScreen() {
     const json = await buildBackup()
     const a = document.createElement('a')
     a.href = `data:application/json;charset=utf-8,${encodeURIComponent(json)}`
-    a.download = `reverie-backup-${new Date().toISOString().slice(0, 10)}.json`
+    // Local, not UTC — see localDate.ts. Same class as the log-a-read default: cosmetic here
+    // (a filename, not stored data), but wrong for the same reason near midnight west of UTC.
+    a.download = `reverie-backup-${todayLocalDate()}.json`
     a.click()
   }
 
@@ -210,28 +219,52 @@ function SettingsScreen() {
     setStatus(`Merged ${merged} duplicate groups`)
   }
 
-  async function runComplete() {
+  // `trace` runs a SHORT, instrumented sweep: same code path, same order, capped at `limit` books,
+  // writing one sweep_traces row each. It is the measurement run — not a faster or different sweep.
+  async function runComplete(opts?: BulkOptions) {
     stopRef.current = false
     setCompleting(true)
+    setTracing(!!opts?.trace)
     setProgress({ scanned: 0, total: 0, filled: 0 })
+    const runId = crypto.randomUUID()
     try {
-      const r = await bulkComplete(all, setProgress, () => stopRef.current)
+      const r = await bulkComplete(all, setProgress, () => stopRef.current, {
+        ...opts,
+        runId,
+      })
+      // A RUN THAT BROKE MUST NOT READ LIKE A RUN THAT FINISHED. Three sweeps stalled and each
+      // reported the same shape as a completed one, because a stop was only ever described by a
+      // soft prefix and failures were counted as books that had nothing.
       const prefix =
-        r.stopReason === 'rate_limited'
-          ? 'Paused — the book data sources are busy; it’ll resume where it left off next time. '
-          : r.stopReason === 'limit'
-            ? 'Paused at the per-run limit — run again to continue. '
-            : r.stopReason === 'user'
-              ? 'Stopped — '
-              : ''
+        r.stopReason === 'error'
+          ? '⚠ Stopped early — '
+          : r.stopReason === 'rate_limited'
+            ? 'Paused — the book data sources are busy; it’ll resume where it left off next time. '
+            : r.stopReason === 'limit'
+              ? 'Paused at the per-run limit — run again to continue. '
+              : r.stopReason === 'user'
+                ? 'Stopped — '
+                : ''
+      // Failures are reported separately from misses and are never folded into "had nothing new":
+      // those books were not checked and were deliberately left unstamped, so they retry next run.
+      const failures = r.failed
+        ? ` · ${r.failed} couldn’t be checked (left to retry${r.errorMessage ? `: ${r.errorMessage}` : ''})`
+        : ''
+      // Only a clean, complete pass may say so without qualification.
+      const completeness =
+        r.stopReason === 'done' && !r.failed
+          ? ''
+          : ` — ${r.total - r.scanned} of ${r.total} not reached`
       setStatus(
-        `${prefix}checked ${r.scanned} of ${r.total} · filled ${r.filled} · ${r.nothing} had nothing new.`,
+        `${prefix}checked ${r.scanned} of ${r.total} · filled ${r.filled} · ${r.nothing} had nothing new${failures}${completeness}.` +
+          (opts?.trace ? ` Trace run ${runId} — ${r.scanned} rows in sweep_traces.` : ''),
       )
       await qc.invalidateQueries({ queryKey: ['books'] })
     } catch (e) {
       setStatus(`Couldn’t finish completing details: ${(e as Error).message}`)
     }
     setCompleting(false)
+    setTracing(false)
     setProgress(null)
   }
 
@@ -409,6 +442,7 @@ function SettingsScreen() {
                 style={{ background: 'var(--field)' }}
               >
                 ⏹ Stop{progress ? ` (${progress.scanned}/${progress.total})` : ''}
+                {tracing ? ' · tracing' : ''}
               </button>
             ) : (
               <button
@@ -420,6 +454,25 @@ function SettingsScreen() {
               >
                 ✨ Complete missing covers &amp; info
                 {incompleteCount ? ` (${incompleteCount})` : ''}
+              </button>
+            )}
+            {!completing && (
+              <button
+                type="button"
+                onClick={() =>
+                  void runComplete({
+                    trace: true,
+                    limit: 10,
+                    unvisitedFirst: true,
+                    refresh: true,
+                  })
+                }
+                disabled={!incompleteCount}
+                title="Runs the sweep over 10 never-checked books, bypassing the shared enrichment cache so the sources are actually queried, and records per-stage timings to sweep_traces. Deliberately a worst case, not an average."
+                className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink disabled:opacity-50"
+                style={{ background: 'var(--field)' }}
+              >
+                ⏱ Trace 10 books
               </button>
             )}
             {sharpening ? (
@@ -611,10 +664,7 @@ function SettingsScreen() {
                   setReview(r.review)
                   setImportResult(r)
                   // Stash the per-book outcomes so the Import review screen can build its read-model.
-                  qc.setQueryData(importSessionKey, {
-                    outcomes: r.outcomes,
-                    readingOrders: r.readingOrders,
-                  })
+                  qc.setQueryData(importSessionKey, { outcomes: r.outcomes })
                   setImported(true)
                   setStatus(null) // the summary panel below now speaks for the import
                   // Cover handoff: backfill missing covers for the imported books in the background (§3).

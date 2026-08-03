@@ -24,6 +24,8 @@ export interface IngestResult {
   sourceUrl: string | null
   /** normalization fell back to storing the original bytes (no thumb/colour) */
   degraded?: boolean
+  /** per-stage wall times, present only when `trace: true` was requested */
+  _trace?: { spans: { s: string; ms: number }[]; totalMs: number }
 }
 
 export type IngestOutcome = { status: 'ok'; data: IngestResult } | { status: 'error'; code: string }
@@ -56,6 +58,8 @@ export async function ingestCover(input: {
   file?: Blob
   url?: string
   sourceUrl?: string
+  /** Ask the function to return its per-stage timings (URL ingests only). */
+  trace?: boolean
 }): Promise<IngestOutcome> {
   try {
     let body: FormData | Record<string, unknown>
@@ -73,6 +77,7 @@ export async function ingestCover(input: {
         source: input.source,
         url: input.url,
         sourceUrl: input.sourceUrl,
+        ...(input.trace ? { trace: true } : {}),
       }
     }
     const { data, error } = await supabase.functions.invoke('covers', { body })

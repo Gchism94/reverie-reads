@@ -22,8 +22,13 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 // importer use, so the enum has exactly one mapping and this script can't drift from it again.
 // Imported straight from source: Node strips the (type-only) annotations natively — 22.18+ / 23+.
 let normalizeSeriesStatus
+let describeSupabaseError
 try {
   ;({ normalizeSeriesStatus } = await import('../packages/core/src/seriesStatus.ts'))
+  // The SAME error reader the e2e suite and its sign-in helper use. This script reaching into
+  // packages/core/src is not a new liberty — it is exactly how normalizeSeriesStatus arrives above,
+  // and it is why the duplicated copy this replaces was never actually necessary.
+  ;({ describeSupabaseError } = await import('../packages/core/src/supabaseError.ts'))
 } catch (e) {
   console.error(
     `Seed failed: could not load @reverie/core's status normalizer (${e.message ?? e}).\n` +
@@ -47,12 +52,51 @@ const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
 
 const num = (v) => (v === '' || v == null ? null : Number(v))
 
-// Derive per-format ownership from the seed's single format + source ("Owned" vs "Borrowed").
-function ownedFrom(b) {
+// Derive possession from the seed's `source` provenance + its single `format` string.
+//
+// Two bugs this replaces, both of which made the seeded library misrepresent the model:
+//   1. `ownership` was never written at all, so every seeded book took the column default. Post
+//      ownership-v2 that default was 'unset' — 290 books, none of them possessed, and all three
+//      Owned·format shelves empty on a library of 290 real books.
+//   2. Format flags were set only for source='Owned', so the 77 borrowed books recorded no format
+//      even though a borrowed book is in hand and carries one (bookOwnedFormats gates on in-hand,
+//      not on owned).
+//
+// `source` is provenance and `ownership` is state; this maps one to the other ONLY at seed time,
+// where the provenance is all we have. An unrecognized source claims nothing rather than guessing
+// ownership — the same posture as the column default.
+//
+// ── THE FORMAT FLAGS ARE INFERRED, NOT RECORDED ─────────────────────────────────────────────────
+// data/personal_seed.json has no field naming a possessed format. Its keys are: cover, fave, first,
+// format, genres, isbn, last, position, rating, readStatus, series, seriesCount, source, spice,
+// status, subgenre, title, tropes. So owned_physical/ebook/audiobook below are DERIVED from
+// `format` x `source`, and `format` means **the format most often read** (Book.format — the reread
+// default), not the format owned. The two are usually the same and sometimes are not: a reader who
+// owns the hardcover and listened to the audiobook is flagged audiobook-only here, and the physical
+// copy they actually own vanishes.
+//
+// This inference predates the shelf model — it is where the pre-existing 190/3/20 came from. The
+// shelf-model change only extended it to the 77 borrowed rows (a borrowed book is in hand and
+// carries a format), giving 190/68/32.
+//
+// Two consequences worth carrying:
+//   · `apps/web/e2e/shelf-membership.spec.ts` computes its expected counts from THIS SAME RULE, so
+//     it validates the pipeline — seed script → DB → mapper → predicate → DOM — and NOT the premise.
+//     A wrong inference stays green there. Nothing in the suite checks the premise, because nothing
+//     can: the ground truth is not in the file.
+//   · personal_seed.json is the owner's REAL library, not a fixture. If it is ever seeded into a
+//     production account, these inferred flags stop being scaffolding and become that reader's
+//     data — an audiobook-only book they own in hardback, indistinguishable from something they
+//     entered by hand. Decide the mapping is right before that happens, not after.
+function possessionFrom(b) {
   const f = (b.format || '').toLowerCase()
-  const owned = b.source === 'Owned'
+  const borrowed = b.source === 'Borrowed'
+  const inHand = borrowed || b.source === 'Owned'
   return {
-    owned_physical: owned
+    ownership: b.source === 'Owned' ? 'owned' : 'unowned',
+    borrowed,
+    wishlist: false, // the seed carries no wanting signal — see docs/task-shelf-model.md
+    owned_physical: inHand
       ? f.includes('hardcover')
         ? 'hardcover'
         : f.includes('paperback') || f.includes('special')
@@ -61,15 +105,15 @@ function ownedFrom(b) {
             ? 'paperback'
             : null
       : null,
-    owned_ebook: owned && (f.includes('ebook') || f.includes('kindle')),
-    owned_audiobook: owned && f.includes('audio'),
+    owned_ebook: inHand && (f.includes('ebook') || f.includes('kindle')),
+    owned_audiobook: inHand && f.includes('audio'),
   }
 }
 
 function toRow(b, ownerId) {
   return {
     owner_id: ownerId,
-    ...ownedFrom(b),
+    ...possessionFrom(b),
     title: b.title,
     author_first: b.first || null,
     author_last: b.last || null,
@@ -187,36 +231,8 @@ async function main() {
   )
 }
 
-/**
- * Describe a thrown Supabase error usefully.
- *
- * `e.message ?? e` printed `Seed failed: {}` — Supabase's error objects can carry an empty message,
- * and the fallback then stringifies an object whose useful fields (status, code, hint, details) are
- * exactly the ones a bare `%o` drops. Same empty-body shape `apps/web/e2e/support/authError.ts`
- * exists to unpack; the technique is duplicated rather than imported because that module is
- * Playwright test-support and this is a root-level script — a dependency the wrong way round.
- */
-function describeError(e) {
-  if (!e) return '(no error object)'
-  if (typeof e === 'string') return e
-  const fields = ['name', 'status', 'code', 'hint', 'details']
-    .filter((k) => e[k] !== undefined && e[k] !== null && e[k] !== '')
-    .map((k) => `${k}=${JSON.stringify(e[k])}`)
-  const message = e.message ? JSON.stringify(e.message) : '(empty)'
-  let extra = ''
-  try {
-    const known = new Set(['name', 'status', 'code', 'hint', 'details', 'message', 'stack'])
-    const own = Object.getOwnPropertyNames(e).filter((k) => !known.has(k))
-    if (own.length)
-      extra = ` extra=${JSON.stringify(Object.fromEntries(own.map((k) => [k, e[k]])))}`
-  } catch {
-    /* a throwing getter must not replace the diagnosis with its own failure */
-  }
-  return `message=${message}${fields.length ? ' ' + fields.join(' ') : ''}${extra}`
-}
-
 main().catch((e) => {
-  console.error('Seed failed:', describeError(e))
+  console.error('Seed failed:', describeSupabaseError(e))
   if (e?.stack) console.error(e.stack)
   process.exit(1)
 })

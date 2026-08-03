@@ -30,23 +30,19 @@ const base: ReviewItemInput = {
 const mk = (over: Partial<ReviewItemInput>): ReviewItemInput => ({ ...base, ...over })
 
 describe('buildReviewModel — summary', () => {
-  it('tallies totals, dispositions, series split, reading orders, and genre breakdown', () => {
-    const m = buildReviewModel(
-      [
-        mk({ ref: '1', disposition: 'added', inSeries: true, genre: 'Romance' }),
-        mk({ ref: '2', disposition: 'added', inSeries: true, genre: 'Fantasy' }),
-        mk({ ref: '3', disposition: 'merged', inSeries: false, genre: 'Romance' }),
-        mk({ ref: '4', disposition: 'added', inSeries: false, genre: null }), // unresolved → ∅
-      ],
-      { readingOrdersBuilt: 2 },
-    )
+  it('tallies totals, dispositions, series split, and genre breakdown', () => {
+    const m = buildReviewModel([
+      mk({ ref: '1', disposition: 'added', inSeries: true, genre: 'Romance' }),
+      mk({ ref: '2', disposition: 'added', inSeries: true, genre: 'Fantasy' }),
+      mk({ ref: '3', disposition: 'merged', inSeries: false, genre: 'Romance' }),
+      mk({ ref: '4', disposition: 'added', inSeries: false, genre: null }), // unresolved → ∅
+    ])
     expect(m.summary).toMatchObject({
       total: 4,
       added: 3,
       merged: 1,
       inSeries: 2,
       standalones: 2,
-      readingOrdersBuilt: 2,
     })
     expect(m.summary.genres).toEqual({ Romance: 2, Fantasy: 1, '∅': 1 })
   })
@@ -169,6 +165,8 @@ const book = (over: Partial<Book>): Book => ({
   isbn: '',
   fave: false,
   ownership: 'owned',
+  borrowed: false,
+  wishlist: false,
   owned: { physical: false, ebook: false, audiobook: false },
   format: '',
   rating: 0,
@@ -176,7 +174,7 @@ const book = (over: Partial<Book>): Book => ({
   source: '',
   pub: { y: null, m: null, d: null },
   reads: [],
-  plan: null,
+  plan: { y: null, m: null, d: null },
   progress: 0,
   addedTs: 0,
   ...over,
@@ -203,14 +201,13 @@ describe('buildReviewModelFromImport — joins import outcomes with post-enrichm
       { bookId: '3', disposition: 'added' },
       { bookId: '4', disposition: 'added' },
     ]
-    const m = buildReviewModelFromImport(outcomes, books, { readingOrdersBuilt: 1 })
+    const m = buildReviewModelFromImport(outcomes, books)
     expect(m.summary).toMatchObject({
       total: 4,
       added: 4,
       merged: 0,
       inSeries: 1,
       standalones: 3,
-      readingOrdersBuilt: 1,
     })
     expect(m.needsLook.missingCover.map((i) => i.ref)).toEqual(['3'])
     expect(m.needsLook.lowConfidenceCover.map((i) => i.ref)).toEqual(['2'])

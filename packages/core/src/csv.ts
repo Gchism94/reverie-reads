@@ -2,9 +2,10 @@ import type { Book, ReadStatus } from './types'
 import { norm } from './normalize'
 import { uid } from './id'
 import { cleanIsbn, type Incoming } from './match'
-import { emptyOwned } from './ownership'
+import { emptyOwned, possessionPatch } from './ownership'
 import { fromFirstLast } from './contributors'
 import { parseSeriesFromTitle } from './seriesTitle'
+import { emptyDate } from './partialDate'
 
 /** Quote-aware CSV parser (escaped quotes, CRLF, blank-line skipping). Ported verbatim. */
 export function parseCSV(text: string): string[][] {
@@ -210,14 +211,17 @@ export function parseCsvRows(text: string): CsvParsedRow[] {
       reads,
       pub: { y: py, m: null, d: null },
       source: 'Imported',
-      // Goodreads shelf → ownership: `to-read` is a wishlist; a `borrowed`/`loan` shelf is
-      // borrowed; read / currently-reading rows are books that passed through the reader's hands
-      // (owned). (docs/task-ownership-v2.md — the four-state model.)
-      ownership: /to-read|to read/.test(shelf)
-        ? 'wishlist'
-        : /borrow|on loan|library loan/.test(shelf)
-          ? 'borrowed'
-          : 'owned',
+      // Goodreads shelf → possession: `to-read` is a want; a `borrowed`/`loan` shelf is borrowed;
+      // read / currently-reading rows are books that passed through the reader's hands (owned).
+      // One shelf yields one word, so the four-state adapter is the right shape here — it expands
+      // to the flags the model stores (docs/task-shelf-model.md).
+      ...possessionPatch(
+        /to-read|to read/.test(shelf)
+          ? 'wishlist'
+          : /borrow|on loan|library loan/.test(shelf)
+            ? 'borrowed'
+            : 'owned',
+      ),
       owned: emptyOwned(),
     }
     if (series) {
@@ -371,13 +375,15 @@ export function importCsv(existing: readonly Book[], text: string): CsvImportRes
         pages: null,
         isbn: '',
         fave: false,
-        // Goodreads shelf → ownership (same rule as parseCsvRows): to-read = wishlist, a
+        // Goodreads shelf → possession (same rule as parseCsvRows): to-read = wishlist, a
         // borrow/loan shelf = borrowed, otherwise owned.
-        ownership: /to-read|to read/.test(shelf)
-          ? 'wishlist'
-          : /borrow|on loan|library loan/.test(shelf)
-            ? 'borrowed'
-            : 'owned',
+        ...possessionPatch(
+          /to-read|to read/.test(shelf)
+            ? 'wishlist'
+            : /borrow|on loan|library loan/.test(shelf)
+              ? 'borrowed'
+              : 'owned',
+        ),
         owned: { physical: false, ebook: false, audiobook: false },
         format: '',
         rating,
@@ -385,7 +391,7 @@ export function importCsv(existing: readonly Book[], text: string): CsvImportRes
         source: 'Imported',
         pub: { y: py, m: null, d: null },
         reads: dates.map((d) => ({ date: d, format: '', rating: 0, notes: '' })),
-        plan: null,
+        plan: emptyDate(),
         progress: 0,
         addedTs: Date.now(),
       }

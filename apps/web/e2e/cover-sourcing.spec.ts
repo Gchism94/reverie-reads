@@ -1,6 +1,8 @@
 import { expect, test, type Page } from '@playwright/test'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { authFailure } from './support/authError'
+import { keepOfflineCacheEmpty } from './support/offlineCache'
+import { ok, okUser } from './support/ok'
 
 // Cover sourcing posture (docs/reverie-metadata-sourcing.md §Covers).
 //
@@ -39,11 +41,17 @@ async function client(): Promise<Client> {
   let uid = data?.users?.find((u) => u.email === EMAIL)?.id
   if (!uid)
     uid = (
-      await admin.auth.admin.createUser({ email: EMAIL, password: PASSWORD, email_confirm: true })
-    ).data.user!.id
-  await admin
-    .from('profiles')
-    .upsert({ id: uid, display_name: 'Cover Sourcing', skin: 'tryst', mode: 'system' })
+      await okUser(
+        admin.auth.admin.createUser({ email: EMAIL, password: PASSWORD, email_confirm: true }),
+        'cover-sourcing auth createUser',
+      )
+    ).id
+  await ok(
+    admin
+      .from('profiles')
+      .upsert({ id: uid, display_name: 'Cover Sourcing', skin: 'tryst', mode: 'system' }),
+    'cover-sourcing profiles upsert',
+  )
   const sb = createClient(SUPABASE_URL, ANON)
   const { data: s, error } = await sb.auth.signInWithPassword({ email: EMAIL, password: PASSWORD })
   if (error || !s.session) throw new Error(authFailure('cover-sourcing', EMAIL, error))
@@ -58,13 +66,13 @@ async function reset(c: Client) {
 }
 
 async function signIn(page: Page, session: { access_token: string; refresh_token: string }) {
+  await keepOfflineCacheEmpty(page)
   await page.addInitScript(() => localStorage.setItem('reverie.onboarded', '1'))
   await page.goto(
     `/#access_token=${session.access_token}&refresh_token=${session.refresh_token}&expires_in=3600&token_type=bearer&type=magiclink`,
   )
   await page.getByRole('button', { name: /enter your library/i }).click({ timeout: 20_000 })
   await expect(page.getByRole('navigation')).toBeVisible({ timeout: 20_000 })
-  await page.evaluate(() => indexedDB.deleteDatabase('reverie-offline'))
 }
 
 /** Count every call at the ingest pipeline, and serve stub images so nothing hits the real hosts. */

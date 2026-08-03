@@ -3,6 +3,8 @@ import { expect, test, type Page } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { authFailure } from './support/authError'
+import { keepOfflineCacheEmpty } from './support/offlineCache'
+import { ok, okUser } from './support/ok'
 
 // Import-quality e2e (docs/task-import-quality.md): a real Goodreads export goes in through the
 // REAL app (Settings → import), and we verify the fidelity fixes landed in the DB — series parsed
@@ -29,16 +31,21 @@ async function ensureTestUser(): Promise<void> {
   })
   const { data: existing } = await admin.auth.admin.listUsers()
   if (existing?.users?.some((u) => u.email === TEST_EMAIL)) return
-  const { data, error } = await admin.auth.admin.createUser({
-    email: TEST_EMAIL,
-    password: TEST_PASSWORD,
-    email_confirm: true,
-  })
-  if (error) throw error
+  const user = await okUser(
+    admin.auth.admin.createUser({
+      email: TEST_EMAIL,
+      password: TEST_PASSWORD,
+      email_confirm: true,
+    }),
+    'import-quality createUser',
+  )
   // The app expects a profiles row (skin/mode live there); create it if the trigger didn't.
-  await admin
-    .from('profiles')
-    .upsert({ id: data.user!.id, display_name: 'Import E2E', skin: 'tryst', mode: 'system' })
+  await ok(
+    admin
+      .from('profiles')
+      .upsert({ id: user.id, display_name: 'Import E2E', skin: 'tryst', mode: 'system' }),
+    'import-quality profiles upsert',
+  )
 }
 
 const FIXTURE = fileURLToPath(new URL('./fixtures/goodreads-import.csv', import.meta.url))
@@ -67,34 +74,40 @@ async function cleanup(c: DevClient) {
   const { data: books } = await c.sb.from('books').select('id').in('title', IMPORT_TITLES)
   const ids = ((books as { id: string }[]) ?? []).map((b) => b.id)
   if (ids.length) {
-    await c.sb.from('list_items').delete().in('book_id', ids)
-    await c.sb.from('reads').delete().in('book_id', ids)
-    await c.sb.from('books').delete().in('id', ids)
+    await ok(
+      c.sb.from('list_items').delete().in('book_id', ids),
+      'import-quality list_items delete',
+    )
+    await ok(c.sb.from('reads').delete().in('book_id', ids), 'import-quality reads delete')
+    await ok(c.sb.from('books').delete().in('id', ids), 'import-quality books delete')
   }
-  await c.sb
-    .from('lists')
-    .delete()
-    .eq('owner_id', c.uid)
-    .in('name', [
-      'Imported TBR',
-      'Windborne Buddy Read',
-      'Dark Romance',
-      'Fae',
-      'Enemies To Lovers',
-      'Signed Copies',
-    ])
+  await ok(
+    c.sb
+      .from('lists')
+      .delete()
+      .eq('owner_id', c.uid)
+      .in('name', [
+        'Imported TBR',
+        'Windborne Buddy Read',
+        'Dark Romance',
+        'Fae',
+        'Enemies To Lovers',
+        'Signed Copies',
+      ]),
+    'import-quality lists delete',
+  )
 }
 
 async function signIn(page: Page, session: { access_token: string; refresh_token: string }) {
   // The test user's library starts empty; without this the home route redirects a "brand-new
   // reader" to /onboarding (no <nav>). The flag is honor-based localStorage — set it up front.
+  await keepOfflineCacheEmpty(page)
   await page.addInitScript(() => localStorage.setItem('reverie.onboarded', '1'))
   await page.goto(
     `/#access_token=${session.access_token}&refresh_token=${session.refresh_token}&expires_in=3600&token_type=bearer&type=magiclink`,
   )
   await page.getByRole('button', { name: /enter your library/i }).click({ timeout: 20_000 })
   await expect(page.getByRole('navigation')).toBeVisible({ timeout: 20_000 })
-  await page.evaluate(() => indexedDB.deleteDatabase('reverie-offline'))
 }
 
 /** Read one imported book back from the DB (post-merge) by title. */
@@ -102,7 +115,7 @@ async function book(sb: SupabaseClient, title: string) {
   const { data } = await sb
     .from('books')
     .select(
-      'id, title, series, position, genre, subgenre, format, rating, ownership, read_status, pub_y, added_at',
+      'id, title, series, position, genre, subgenre, format, rating, ownership, borrowed, wishlist, read_status, pub_y, added_at',
     )
     .eq('title', title)
     .maybeSingle()
@@ -178,10 +191,10 @@ test('Goodreads import: fidelity fixes land in the DB, summary is honest, axe gr
     expect(salt.format).toBe('Paperback')
     expect(salt.genre).toBe('') // still no genre supplied → none invented
 
-    // fractional series position + to-read → unowned
+    // fractional series position + to-read → a want, not a possession claim
     const reck = (await book(sb, "Zephyr's Reckoning"))!
     expect(Number(reck.position)).toBe(2.5)
-    expect(reck.ownership).toBe('wishlist') // #68 renamed 'unowned' → 'wishlist' (four-state ownership)
+    expect(reck).toMatchObject({ ownership: 'unowned', wishlist: true, borrowed: false })
     expect(reck.read_status).toBe('Unread')
 
     // Date Read → read log row
@@ -254,7 +267,6 @@ test('imported no-cover books render the honest placeholder (axe green, all swep
       ['marrow', 'dark'],
     ] as const) {
       await dev.sb.from('profiles').update({ skin, mode }).eq('id', dev.uid)
-      await page.evaluate(() => indexedDB.deleteDatabase('reverie-offline'))
       await page.goto('/library')
       await page.getByText("Zephyr's Oath").first().waitFor({ timeout: 15_000 })
       await page.waitForLoadState('networkidle')

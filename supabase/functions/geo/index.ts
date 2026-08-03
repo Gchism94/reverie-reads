@@ -6,6 +6,13 @@
 // indie.ts) and degrades gracefully on failure. Deno Edge Function.
 
 import { envInt, rateLimit, tooMany } from '../_shared/ratelimit.ts'
+import {
+  classifyHttp,
+  MAX_RETRY_AFTER_MS,
+  retryAfterMs,
+  SourceBodyError,
+  SourceHttpError,
+} from '../_shared/httpClassify.ts'
 import { captureEdgeError } from '../_shared/observe.ts'
 
 const cors = {
@@ -45,19 +52,49 @@ interface GeoInput {
   radius?: number
 }
 
-// One backoff retry so a transient 429/5xx doesn't fail the call.
+/**
+ * One backoff retry, for TRANSIENT failures only.
+ *
+ * This used to retry a 429 after a flat 600ms, ignoring `Retry-After` entirely. Nominatim — the
+ * upstream here — publishes an absolute 1 request/second policy, so a 600ms retry is below its
+ * limit by construction: it could not succeed, and it spent a second request of a budget we had
+ * already been told we were over. It also disagreed with `enrich`'s `fetchJson`, which throws on a
+ * 429 immediately; two retry loops in one codebase contradicting each other about the same status
+ * meant one of them was wrong by definition.
+ *
+ * Now: 5xx retries with backoff, a 429 honours `Retry-After` when the header is present and is
+ * otherwise not retried at all, and no other 4xx is ever retried — no amount of waiting fixes a
+ * 400 or a 403.
+ */
 async function fetchUpstream(url: string, init?: RequestInit): Promise<unknown> {
   for (let attempt = 0; attempt < 2; attempt++) {
     const r = await fetch(url, {
       ...init,
       headers: { 'User-Agent': UA, Accept: 'application/json', ...(init?.headers ?? {}) },
     })
-    if ((r.status === 429 || r.status >= 500) && attempt === 0) {
+    const disposition = classifyHttp(r.status)
+
+    if (disposition === 'retry' && attempt === 0) {
       await new Promise((res) => setTimeout(res, 600))
       continue
     }
-    if (!r.ok) throw new Error(`upstream ${r.status}`)
-    return await r.json()
+    if (disposition === 'rate_limited') {
+      const wait = retryAfterMs(r.headers.get('retry-after'), Date.now())
+      // Only retry when the upstream itself named a wait we can afford. No header means we have no
+      // basis for a guess, and guessing is what made the old flat sleep useless.
+      if (attempt === 0 && wait !== null && wait <= MAX_RETRY_AFTER_MS) {
+        await new Promise((res) => setTimeout(res, wait))
+        continue
+      }
+      throw new SourceHttpError(r.status, url, wait)
+    }
+    // Status before body, always: a non-OK response's body is never parsed.
+    if (!r.ok) throw new SourceHttpError(r.status, url)
+    try {
+      return await r.json()
+    } catch {
+      throw new SourceBodyError(r.status, url)
+    }
   }
   return null
 }

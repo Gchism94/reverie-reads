@@ -366,7 +366,7 @@ export function followRows(
 /**
  * Serialize the WHOLE account to a JSON backup (v5): books (incl. genre/tags/intensity/owned
  * formats), per-book contributors, assigned tropes (with emphasis) and moods, reads, lists +
- * memberships, the user's reviews, reading orders + items, merge verdicts, followed/muted authors,
+ * memberships, the user's reviews, merge verdicts, followed/muted authors,
  * the reader's REFUSALS (removed series slots and dismissed trope suggestions), and the profile
  * (skin/mode + adaptive taste state + goal).
  *
@@ -380,7 +380,7 @@ export function followRows(
  */
 export async function buildBackup(): Promise<string> {
   const ownerId = await currentUserId()
-  const [books, contribs, bookTropes, bookMoods, reads, lists, items, reviews, orders, verdicts, follows, tombstones, dismissals, profile] =
+  const [books, contribs, bookTropes, bookMoods, reads, lists, items, reviews, verdicts, follows, tombstones, dismissals, profile] =
     await Promise.all([
       supabase.from('books').select('*'),
       supabase.from('books').select('id, book_authors(position, role, authors(name))'),
@@ -391,7 +391,6 @@ export async function buildBackup(): Promise<string> {
       supabase.from('lists').select('*'),
       supabase.from('list_items').select('*'),
       supabase.from('reviews').select('work_key, reviewer_name, rating, body, created_at').eq('reviewer_id', ownerId),
-      supabase.from('reading_orders').select('id, name, description, reading_order_items(position, book_id, series, note)'),
       supabase.from('merge_verdicts').select('book_id, incoming_key, verdict'),
       supabase.from('author_follows').select('author_name, state'),
       // The two refusals — see the note above. Tombstones key on the series NAME; dismissals on
@@ -407,7 +406,7 @@ export async function buildBackup(): Promise<string> {
         .eq('id', ownerId)
         .maybeSingle(),
     ])
-  for (const r of [books, contribs, bookTropes, bookMoods, reads, lists, items, reviews, orders, verdicts, follows, tombstones, dismissals])
+  for (const r of [books, contribs, bookTropes, bookMoods, reads, lists, items, reviews, verdicts, follows, tombstones, dismissals])
     if (r.error) throw r.error
 
   // Per-book contributors, keyed by (old) book id.
@@ -432,7 +431,6 @@ export async function buildBackup(): Promise<string> {
     lists: lists.data,
     list_items: items.data,
     reviews: reviews.data,
-    reading_orders: orders.data,
     merge_verdicts: verdicts.data,
     author_follows: follows.data ?? [],
     series_tombstones: seriesTombstones((tombstones.data as unknown as TombstoneJoinRow[]) ?? []),
@@ -451,7 +449,16 @@ interface BackupShape {
   lists?: { id: string; name: string; kind: string; is_priority: boolean }[]
   list_items?: { list_id: string; book_id: string; position: number | null }[]
   reviews?: { work_key: string; reviewer_name: string | null; rating: number | null; body: string }[]
-  reading_orders?: { name: string; description: string | null; reading_order_items: { position: number; book_id: string | null; series: string | null; note: string | null }[] }[]
+  /**
+   * Present in v4 and v5 archives, IGNORED on restore and never written by a current export.
+   *
+   * Reading orders were dropped (chore/drop-reading-orders); series position is the single
+   * ordering mechanism now. The key stays declared so an older archive keeps restoring everything
+   * ELSE without complaint — a reader whose backup predates the demolition should not meet an
+   * error over a subsystem that no longer exists. Deliberately not deleted from the type: the
+   * declaration is what documents that we looked at this key and chose to skip it.
+   */
+  reading_orders?: unknown
   merge_verdicts?: { book_id: string; incoming_key: string; verdict: string }[]
   author_follows?: BackupFollow[]
   /** v5+: the reader's refusals. */
@@ -609,7 +616,21 @@ export async function restoreBackup(
   // Books next.
   const bookIdMap = new Map<string, string>()
   for (const b of data.books) {
-    const { id: _id, owner_id: _owner, added_at: _a, updated_at: _u, ...rest } = b
+    // plan_date is DROPPED from the row rather than restored. Same contract as `reading_orders`
+    // above, but it needs stripping rather than skipping: that was a top-level key nothing read,
+    // this is a COLUMN inside every book row, carried here by the export's `select('*')` and
+    // written straight back by the spread. Once the column is gone, passing the key would make
+    // PostgREST reject the insert and take the whole restore down with it — so an archive made
+    // before the drop must have it removed here, not merely ignored. The plan itself is carried by
+    // plan_y/plan_m/plan_d, which are in `rest` and restore normally.
+    const {
+      id: _id,
+      owner_id: _owner,
+      added_at: _a,
+      updated_at: _u,
+      plan_date: _planDate,
+      ...rest
+    } = b
     const { data: created, error } = await supabase
       .from('books')
       .insert({ ...rest, owner_id: ownerId })
@@ -673,27 +694,9 @@ export async function restoreBackup(
     if (error) throw error
   }
 
-  // Reading orders (v4): recreate each order + its items, remapping book ids (series stay by name).
-  for (const o of data.reading_orders ?? []) {
-    const { data: created, error } = await supabase
-      .from('reading_orders')
-      .insert({ owner_id: ownerId, name: o.name, description: o.description })
-      .select('id')
-      .single()
-    if (error) throw error
-    const orderId = (created as { id: string }).id
-    const orderItems = (o.reading_order_items ?? [])
-      .map((it) => {
-        const bookId = it.book_id ? bookIdMap.get(it.book_id) : null
-        if (it.book_id && !bookId) return null // a book that didn't come across
-        return { reading_order_id: orderId, owner_id: ownerId, position: it.position, book_id: bookId ?? null, series: it.series, note: it.note }
-      })
-      .filter((it): it is NonNullable<typeof it> => it !== null)
-    if (orderItems.length) {
-      const { error: ie } = await supabase.from('reading_order_items').insert(orderItems)
-      if (ie) throw ie
-    }
-  }
+  // Reading orders are NOT restored. v4 and v5 archives may carry `reading_orders`; the tables are
+  // being dropped and the key is skipped on purpose. Skipping rather than throwing is the contract:
+  // an archive made before the demolition must still restore its books, shelves and refusals.
 
   // Merge verdicts (v4), remapped onto the new book ids.
   const verdicts = (data.merge_verdicts ?? [])
@@ -859,7 +862,7 @@ export async function importCsvToBackend(
     if (res.outcome === 'added' || res.outcome === 'merged') {
       outcomes.push({ bookId: res.bookId, disposition: res.outcome })
     }
-    if (row.incoming.ownership === 'wishlist') tbrBookIds.push(res.bookId)
+    if (row.incoming.wishlist) tbrBookIds.push(res.bookId)
     for (const shelf of row.shelves) {
       const arr = shelfBooks.get(shelf) ?? []
       arr.push(res.bookId)

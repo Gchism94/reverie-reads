@@ -10,8 +10,6 @@ const listOf = (xs: string[], max = 3): string =>
 /** The headline sentence: what the import did, in one line. */
 export function summaryHeadline(r: ImportExportResult): string {
   const parts = [`brought in ${r.added} new`, `folded ${r.merged} into what you had`]
-  if (r.readingOrders > 0)
-    parts.push(`stitched ${r.readingOrders} reading ${plural(r.readingOrders, 'order')}`)
   const joined =
     parts.length > 2
       ? `${parts.slice(0, -1).join(', ')}, and ${parts[parts.length - 1]}`
@@ -41,6 +39,13 @@ export function summaryNotices(r: ImportExportResult): string[] {
   if (r.truncatedIsbns > 0)
     lines.push(
       `${r.truncatedIsbns} ${plural(r.truncatedIsbns, 'ISBN')} may be missing a leading digit and might not match — re-export with ISBNs as text to fix.`,
+    )
+  // The reader supplied a curated cross-series sequence and we no longer have anywhere to put it.
+  // Saying so is the point: a column that vanishes without a word is indistinguishable from a bug.
+  if (r.ignoredGlobalOrder > 0)
+    lines.push(
+      `${r.ignoredGlobalOrder} ${plural(r.ignoredGlobalOrder, 'row')} carried a global reading order. ` +
+        `Reverie doesn't use that column — series order comes from each book's position in its series.`,
     )
   if (e.tropeLikeShelves.length > 0)
     lines.push(
