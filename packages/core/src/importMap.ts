@@ -7,6 +7,7 @@
 
 import type { PossessionState, PubDate, ReadStatus } from './types'
 import { parseCSV } from './csv'
+import { parseSeriesFromTitle } from './seriesTitle'
 import { cleanIsbn, type Incoming } from './match'
 import { emptyOwned, possessionPatch } from './ownership'
 import { contributorsFromAuthors, fromFirstLast } from './contributors'
@@ -243,8 +244,18 @@ export function rowToImported(row: string[], idx: Record<string, number>): Impor
     const i = idx[k]
     return i != null && i >= 0 ? (row[i] ?? '') : ''
   }
-  const title = cell('title').trim()
-  if (!title) return null
+  const rawTitle = cell('title').trim()
+  if (!rawTitle) return null
+
+  // SAME PARSER AS THE GENERIC (Goodreads/StoryGraph) PATH — parseCsvRows in csv.ts. The Library
+  // and Chism profiles carry a dedicated Series column, so their real exports don't usually need
+  // this; but nothing enforced that the Title column stays clean, and a Goodreads-shaped export
+  // that happens to also match one of these profiles' header signature (e.g. a "Global Order" or
+  // "GC Read" column bolted onto an otherwise-generic file) would have landed dirty, silently, on
+  // the one path with no series parsing. parseSeriesFromTitle is a verified no-op on a title with
+  // no trailing parenthetical, so running it unconditionally costs nothing on the common case.
+  const parsedFromTitle = parseSeriesFromTitle(rawTitle)
+  const title = parsedFromTitle.title
 
   const { first, last, contributors } = contributorsFor(cell)
   const { genre, genres, tags, intensity, unmappedGenre } = normalizeImportGenres(
@@ -252,9 +263,14 @@ export function rowToImported(row: string[], idx: Record<string, number>): Impor
     cell('tags'),
   )
 
-  const seriesName = cell('series').trim()
+  // The column is authoritative when present — a reader-maintained Series column outranks a title
+  // that happens to contain a paren. Parsed-from-title fills the gap only when the column is
+  // empty, the same never-overwrite shape the series-backfill migration uses for existing books.
+  const seriesColumn = cell('series').trim()
   const orderRaw = cell('seriesOrder').trim()
-  const position = orderRaw === '' ? '' : (num(orderRaw) ?? '')
+  const columnPosition = orderRaw === '' ? '' : (num(orderRaw) ?? '')
+  const seriesName = seriesColumn || parsedFromTitle.series
+  const position = seriesColumn ? columnPosition : parsedFromTitle.position
 
   // Reader's own metadata (Reverie template + any export that carries it): identifier, rating, read date.
   const isbn = cleanIsbn(cell('isbn'))
