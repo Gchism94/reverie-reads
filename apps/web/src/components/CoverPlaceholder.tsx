@@ -1,4 +1,10 @@
-import { accentCss, callsign, placeholderColorVars, placeholderSpec, type SkinId } from '@reverie/core'
+import {
+  accentCss,
+  callsign,
+  placeholderColorVars,
+  placeholderSpec,
+  type SkinId,
+} from '@reverie/core'
 import { useEffectiveSkin } from '../skin/labels'
 import { useStructure } from '../skin/structure'
 

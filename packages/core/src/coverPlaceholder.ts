@@ -33,9 +33,7 @@ export const PLACEHOLDER_BLEND = 0.5
  */
 export const PLACEHOLDER_ACCENT_RECIPES: readonly AccentRecipe[] = [
   ...PLACEHOLDER_ACCENTS.map((a) => ({ a })),
-  ...PLACEHOLDER_ACCENTS.flatMap((a, i) =>
-    PLACEHOLDER_ACCENTS.slice(i + 1).map((b) => ({ a, b })),
-  ),
+  ...PLACEHOLDER_ACCENTS.flatMap((a, i) => PLACEHOLDER_ACCENTS.slice(i + 1).map((b) => ({ a, b }))),
 ]
 
 export interface PlaceholderSpec {

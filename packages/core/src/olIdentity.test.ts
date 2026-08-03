@@ -142,7 +142,9 @@ describe('every openlibrary.org occurrence is registered — fetch site or decla
 
   it('covers/index.ts: the source-image fetch carries olHeaders (it can hit covers.openlibrary.org)', () => {
     const src = read('covers/index.ts')
-    expect(src).toMatch(/fetch\(url, \{ headers: olHeaders\(\{ Accept: 'image\/\*' \}\), redirect: 'follow' \}\)/)
+    expect(src).toMatch(
+      /fetch\(url, \{ headers: olHeaders\(\{ Accept: 'image\/\*' \}\), redirect: 'follow' \}\)/,
+    )
   })
 
   it('data-only registrations still exist where declared (a stale registry row is itself a failure)', () => {
