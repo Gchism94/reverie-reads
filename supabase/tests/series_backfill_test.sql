@@ -6,7 +6,7 @@
 -- the time pgTAP starts and cannot be exercised.
 
 begin;
-select plan(30);
+select plan(31);
 
 insert into auth.users (id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
 values ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 'authenticated', 'authenticated', 'sb@example.com', '{}', '{}', now(), now());
@@ -34,9 +34,12 @@ insert into public.books (id, owner_id, title, author_first, author_last, series
   -- 7. PROTECTED: Rose Hill (Silver) survives parsed
   ('b0000000-0000-0000-0000-000000000007', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
    'Silver Book (Rose Hill, #2)', 'R', 'Author', 'Rose Hill (Silver)', 2),
-  -- 8. PROTECTED: the canonical merge target is never reverted
+  -- 8. PROTECTED: the canonical merge target is never reverted. The parenthetical deliberately
+  --    prints `Hades and Persephone` — a spelling NOT in canon — because with a canon spelling the
+  --    rename produces the right name on its own and the assertion passes whether or not the
+  --    exception exists. Only an unmapped spelling makes the exception the thing being tested.
   ('b0000000-0000-0000-0000-000000000008', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
-   'Hades Book (Hades & Persephone, #1)', 'S', 'Author', 'Hades x Persephone Saga', 1),
+   'Hades Book (Hades and Persephone, #1)', 'S', 'Author', 'Hades x Persephone Saga', 1),
   -- 9. unicode: mathematical bold + a zero-width space, NO parenthetical
   ('b0000000-0000-0000-0000-000000000009', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
    E'\U0001D400 \U0001D402ourt of Bonds', 'H', 'Author', null, null),
@@ -50,22 +53,24 @@ insert into public.books (id, owner_id, title, author_first, author_last, series
    'Twin Title (ACOTAR, #7)', 'T', 'One', null, null),
   ('b0000000-0000-0000-0000-00000000000d', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
    'Twin Title', 'T', 'Two', null, null),
-  -- 12. PROTECTED (third exception, matched on the EXISTING name): the parenthetical prints the
-  --     series as `Divine Rivals`, which is book one's title, not the series.
+  -- 12. CANONICAL RENAME, not an exception. The parenthetical prints the series as `Divine Rivals`,
+  --     which is book one's title. The stored position is deliberately WRONG (99) so the assertion
+  --     can tell a landed parsed number from a frozen stored one — with a stored 2 the two
+  --     outcomes are identical and the test proves nothing.
   ('b0000000-0000-0000-0000-00000000000e', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
-   'Ruthless Vows (Divine Rivals, #2)', 'Rebecca', 'Ross', 'Letters of Enchantment', 2),
-  -- 13. PROTECTED via the SECOND key: same case, but the existing name is spelled differently, so
-  --     the `not in (...)` list does not match it and only the parsed-name clause can save it.
+   'Ruthless Vows (Divine Rivals, #2)', 'Rebecca', 'Ross', 'Letters of Enchantment', 99),
+  -- 13. The rename does not depend on how the EXISTING value is spelled: this row carries a
+  --     differently-cased variant and still ends up on the canonical name.
   ('b0000000-0000-0000-0000-00000000000f', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
    'Divine Rivals (Divine Rivals, #1)', 'Rebecca', 'Ross', 'Letters of enchantment', 1),
-  -- 14. NOT protected — parses `Divine Rivals` but carries no existing series, so there is nothing
-  --     to protect and it is backfilled. Documented, not an oversight; see the migration header.
+  -- 14. …nor on there being one at all. Under the earlier exception design this row was the
+  --     documented residual, backfilled to the wrong name `Divine Rivals`. The rename removes it.
   ('b0000000-0000-0000-0000-000000000010', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
    'Rival Probe (Divine Rivals, #4)', 'Rebecca', 'Ross', null, null),
-  -- 15. PROTECTED by the FIRST key only. Goodreads sometimes prints the series with a trailing
-  --     qualifier, so the parsed name is not the bare `Divine Rivals` the second key matches, and
-  --     only the existing-name list can save this row. Without it the two keys are never told
-  --     apart and dropping either one leaves the suite green.
+  -- 15. THE LIMIT OF THE RENAME, pinned deliberately. Canon is exact-match, so a variant parsed
+  --     spelling is neither renamed nor protected and is written as-is — overwriting a correct
+  --     existing name. This is the cost of preferring a rename to an exception, and it is a test
+  --     rather than a comment so that making canon fuzzy later has to change it on purpose.
   ('b0000000-0000-0000-0000-000000000011', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
    'Vows Variant (Divine Rivals Series, #2)', 'Rebecca', 'Ross', 'Letters of Enchantment', 2);
 
@@ -132,37 +137,41 @@ select is((select series from public.books where id = 'b0000000-0000-0000-0000-0
 select is((select position from public.books where id = 'b0000000-0000-0000-0000-000000000006'),
           3::numeric, 'and its position comes from the parenthetical, not the stale 99');
 
--- ══ 7 + 8. THE HARDCODED EXCEPTIONS — the mutation target ═════════════════════════════════════
--- Dropping the `not in (...)` guard makes these fail: parsed would flatten `Rose Hill (Silver)` to
--- `Rose Hill`, revert `Hades x Persephone Saga` to `Hades & Persephone`, and overwrite
--- `Letters of Enchantment` with book one's title.
+-- ══ 7 + 8. THE TWO HARDCODED EXCEPTIONS — the mutation target ═════════════════════════════════
+-- Dropping the `not in (...)` guard makes both of these fail: parsed would flatten `Rose Hill
+-- (Silver)` to `Rose Hill` and revert `Hades x Persephone Saga` to `Hades & Persephone`.
 select is((select series from public.books where id = 'b0000000-0000-0000-0000-000000000007'),
           'Rose Hill (Silver)', 'Rose Hill (Silver) is protected — it disambiguates two series');
 select is((select series from public.books where id = 'b0000000-0000-0000-0000-000000000008'),
           'Hades x Persephone Saga', 'the canonical merge target is never reverted by parsed');
+
+-- ══ 9. `Divine Rivals` IS RENAMED, NOT FROZEN ═════════════════════════════════════════════════
+-- Book one's title, printed as the series by the export. Handled in canon, so the name is
+-- corrected AND the parenthetical's number lands — the two things an exception could not do at once.
 select is((select series from public.books where id = 'b0000000-0000-0000-0000-00000000000e'),
           'Letters of Enchantment',
-          'Letters of Enchantment survives a parenthetical printing `Divine Rivals`');
--- The exception protects the POSITION as well, which is the cost of it: this row's #2 happens to
--- agree with the parenthetical, so the assertion states what is guaranteed (unchanged), not that
--- the parsed number landed.
+          'a parenthetical printing `Divine Rivals` is renamed to the real series');
+-- The stored 99 is wrong and gets repaired. This is the assertion the exception design could not
+-- make: it would have kept the 99 in exchange for keeping the name.
 select is((select position from public.books where id = 'b0000000-0000-0000-0000-00000000000e'),
-          2::numeric, 'and its stored position is left alone too — the exception covers both fields');
--- The SECOND key, on its own. This row's existing name is not in the hardcoded list (different
--- case), so dropping the parsed-name clause overwrites it while every other exception test stays
--- green — which is the whole reason that clause exists.
+          2::numeric, 'and the parsed position lands, replacing a wrong stored 99');
+-- The rename does not consult the existing value, so a variant spelling of it is normalised too…
 select is((select series from public.books where id = 'b0000000-0000-0000-0000-00000000000f'),
-          'Letters of enchantment',
-          'a differently-spelled existing name is still protected, by the PARSED name');
--- The FIRST key, on its own. This row's parsed name carries a trailing qualifier, so the
--- parsed-name clause cannot match it and only the existing-name list protects it.
-select is((select series from public.books where id = 'b0000000-0000-0000-0000-000000000011'),
           'Letters of Enchantment',
-          'and a variant parsed spelling is still protected, by the EXISTING name');
--- The documented residual: nothing to protect, so it is backfilled.
+          'a differently-cased existing name is normalised onto the canonical one');
+-- …and a row with no existing series at all lands on the right name rather than book one's title.
+-- Under the exception design this row was the documented residual; the rename removes it.
 select is((select series from public.books where id = 'b0000000-0000-0000-0000-000000000010'),
-          'Divine Rivals',
-          'but a row parsing Divine Rivals with NO existing series is backfilled, not skipped');
+          'Letters of Enchantment',
+          'and a row with NO existing series gets the real series, not `Divine Rivals`');
+select is((select position from public.books where id = 'b0000000-0000-0000-0000-000000000010'),
+          4::numeric, 'with its parsed position');
+-- The limit, asserted rather than described: canon is exact-match, so a variant PARSED spelling is
+-- neither renamed nor protected, and it overwrites a correct existing name. Preview categories 6
+-- and 7 are what surface this on real data before the migration is authorised.
+select is((select series from public.books where id = 'b0000000-0000-0000-0000-000000000011'),
+          'Divine Rivals Series',
+          'but a variant parsed spelling is NOT renamed — it overwrites, and the preview must be read');
 
 -- ══ 9. unicode normalized + zero-width stripped ═══════════════════════════════════════════════
 select is((select title from public.books where id = 'b0000000-0000-0000-0000-000000000009'),

@@ -40,23 +40,25 @@
 -- migration exists to repair, and keeping the stored position while replacing the series would
 -- leave it in place.
 --
--- THREE EXCEPTIONS, HARDCODED, NOT DERIVED:
+-- TWO EXCEPTIONS, HARDCODED, NOT DERIVED:
 --   · `Rose Hill (Silver)`        — disambiguates two distinct Rose Hill series; parsed would flatten them.
 --   · `Hades x Persephone Saga`   — our own canonical merge target; parsed would revert it.
---   · `Letters of Enchantment`    — the titles print `(Divine Rivals, #N)`, but Divine Rivals is
---     BOOK ONE, not the series. A book title read as a series name; existing wins.
--- A book already carrying any of the three keeps it — series AND position both, since the exception
--- is "this row's stored value is better than the parenthetical", not "only its name is".
+-- A book already carrying either keeps it — series AND position both, since an exception says "this
+-- row's stored value is better than the parenthetical", not "only its name is". That is the cost of
+-- an exception: it declines to repair a position as well as a name, so the list stays short.
 --
--- The third exception is keyed TWO ways, deliberately. `Letters of Enchantment` is matched against
--- the EXISTING value like the other two; `Divine Rivals` is ALSO matched against the PARSED value,
--- for any row that already has some series. The second key exists because the first cannot be
--- verified from here: if production stores that series under any other spelling, an existing-value
--- match alone would silently no-op and the migration would overwrite the very rows the exception was
--- added to protect. Matching the parsed name instead fires on exactly the rows the exception
--- describes, whatever they currently carry. A row parsing `Divine Rivals` with NO existing series is
--- still backfilled to `Divine Rivals` — there is nothing to protect there, and a slightly-wrong
--- series name beats none. Preview category 7 lists both sets so this is visible before it runs.
+-- `Divine Rivals` is NOT an exception — it is a canonical RENAME (see the canon table below). The
+-- titles print `(Divine Rivals, #N)`, but Divine Rivals is book one, not the series; the series is
+-- `Letters of Enchantment`. Freezing the existing value would have protected the name at the price
+-- of the number, which is the damage this migration exists to repair. Correcting the name instead
+-- lets the parsed positions land, applies whether or not the row already has a series, and needs no
+-- assumption about how production spells the existing value. It is the same category as the other
+-- hand-picked merges: a name the export got wrong, corrected on write.
+--
+-- Canon is EXACT-MATCH by design. A variant parsed spelling (`Divine Rivals Series`, say) is not
+-- renamed and is not protected either, so it would be written as-is. Preview category 6 lists every
+-- rename applied and category 7 lists every existing series replaced — read both before authorising;
+-- a variant spelling shows up there as an unexpected `REPLACED` row.
 
 create or replace function public.backfill_series_from_titles()
 returns jsonb
@@ -201,7 +203,11 @@ begin
            ('Hades X Persephone',   'Hades x Persephone Saga'),
            ('Dance with my Demons', 'Dance With My Demons'),
            ('Playing For Keeps',    'Playing for Keeps'),
-           ('Fire and Metal',       'Fire & Metal')
+           ('Fire and Metal',       'Fire & Metal'),
+           -- Book one's title, printed as the series by the export. Corrected, not frozen: a rename
+           -- fixes the name AND lets the parsed position land, where an exception would have kept
+           -- both the right name and the wrong number.
+           ('Divine Rivals',        'Letters of Enchantment')
   ),
   tgt as (
     select p.id,
@@ -213,12 +219,8 @@ begin
       and p.depth > 0
       and not p.is_range
       and not p.is_untitled
-      -- the hardcoded exceptions, compared against the EXISTING value …
-      and coalesce(p.series_name, '') not in
-            ('Rose Hill (Silver)', 'Hades x Persephone Saga', 'Letters of Enchantment')
-      -- … and, for Letters of Enchantment only, against the PARSED value too, so the exception
-      -- cannot be defeated by production spelling the existing name differently than assumed.
-      and not (p.parsed_series = 'Divine Rivals' and coalesce(btrim(p.series_name), '') <> '')
+      -- the two hardcoded exceptions, compared against the EXISTING value
+      and coalesce(p.series_name, '') not in ('Rose Hill (Silver)', 'Hades x Persephone Saga')
   )
   update public.books b
      set series = t.new_series, position = t.new_position

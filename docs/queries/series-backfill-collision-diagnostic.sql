@@ -99,7 +99,10 @@ canon(from_name, to_name) as (
          ('Hades X Persephone', 'Hades x Persephone Saga'),
          ('Dance with my Demons','Dance With My Demons'),
          ('Playing For Keeps',  'Playing for Keeps'),
-         ('Fire and Metal',     'Fire & Metal')
+         ('Fire and Metal',     'Fire & Metal'),
+         -- Book one's title, printed as the series by the export. A rename, not a protection, so
+         -- the parenthetical's position lands rather than a wrong stored one being frozen.
+         ('Divine Rivals',      'Letters of Enchantment')
 ),
 bk as (
   select p.*, (p.clean_title = 'Untitled') as is_untitled,
@@ -112,9 +115,7 @@ final as (
          ( bk.is_untitled
            or bk.is_range
            or bk.depth = 0
-           or coalesce(bk.series_name, '') in
-                ('Rose Hill (Silver)', 'Hades x Persephone Saga', 'Letters of Enchantment')
-           or (bk.parsed_series = 'Divine Rivals' and coalesce(btrim(bk.series_name), '') <> '')
+           or coalesce(bk.series_name, '') in ('Rose Hill (Silver)', 'Hades x Persephone Saga')
          ) as untouched
   from bk
 ),
@@ -125,11 +126,10 @@ state as (
          case when f.is_untitled then 'excluded (bare Untitled) — untouched'
               when f.is_range    then 'omnibus range — untouched'
               when f.depth = 0   then 'no parenthetical — untouched'
-              when coalesce(f.series_name, '') in
-                     ('Rose Hill (Silver)', 'Hades x Persephone Saga', 'Letters of Enchantment')
+              when coalesce(f.series_name, '') in ('Rose Hill (Silver)', 'Hades x Persephone Saga')
                 then 'PROTECTED (existing name) — untouched'
-              when f.parsed_series = 'Divine Rivals' and coalesce(btrim(f.series_name), '') <> ''
-                then 'PROTECTED (parsed name Divine Rivals) — untouched'
+              when f.canon_series is distinct from f.parsed_series
+                then 'RENAMED — canonical name + parsed position written'
               when coalesce(btrim(f.series_name), '') = ''
                 then 'BACKFILLED — parsed series + position written'
               else 'OVERWRITTEN — parsed series + position replace the stored ones'

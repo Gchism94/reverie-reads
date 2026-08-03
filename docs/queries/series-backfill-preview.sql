@@ -110,18 +110,20 @@ parse as (
 ),
 -- ── END verbatim ───────────────────────────────────────────────────────────────────────────────
 
--- The five hand-picked merges from the 42-row author-grouped review. Applied on WRITE only, and
+-- The hand-picked merges from the 42-row author-grouped review. Applied on WRITE only, and
 -- deliberately NOT generalised into a rule: near-misses like `Ravenhood Legacy` / `The Ravenhood`
--- are separate series. `Divine Rivals` / `Letters of Enchantment` is a book title read as a series
--- name, and it is NOT in this table: it is handled as a protection (existing wins) rather than a
--- rename, because that is the rule the owner set for it.
+-- are separate series. `Divine Rivals` -> `Letters of Enchantment` is the same category — a book
+-- title the export printed as a series name — and it is a RENAME rather than a protection, so the
+-- parenthetical's position lands instead of the wrong stored one being frozen. EXACT MATCH ONLY: a
+-- variant spelling is neither renamed nor protected, and category 7 is where that becomes visible.
 canon(from_name, to_name) as (
   values ('Adrian X Isolde',    'Adrian x Isolde'),
          ('Hades & Persephone', 'Hades x Persephone Saga'),
          ('Hades X Persephone', 'Hades x Persephone Saga'),
          ('Dance with my Demons','Dance With My Demons'),
          ('Playing For Keeps',  'Playing for Keeps'),
-         ('Fire and Metal',     'Fire & Metal')
+         ('Fire and Metal',     'Fire & Metal'),
+         ('Divine Rivals',      'Letters of Enchantment')
 ),
 -- Books only, with exclusions applied exactly as the migration will apply them.
 bk as (
@@ -150,9 +152,7 @@ protected as (
          ( bk.is_untitled
            or bk.is_range
            or bk.depth = 0
-           or coalesce(bk.series_name, '') in
-                ('Rose Hill (Silver)', 'Hades x Persephone Saga', 'Letters of Enchantment')
-           or (bk.parsed_series = 'Divine Rivals' and coalesce(btrim(bk.series_name), '') <> '')
+           or coalesce(bk.series_name, '') in ('Rose Hill (Silver)', 'Hades x Persephone Saga')
          ) as untouched
   from bk
 ),
@@ -163,11 +163,10 @@ final as (
          case when p.is_untitled then 'excluded (bare Untitled) — untouched'
               when p.is_range    then 'omnibus range — untouched'
               when p.depth = 0   then 'no parenthetical — untouched'
-              when coalesce(p.series_name, '') in
-                     ('Rose Hill (Silver)', 'Hades x Persephone Saga', 'Letters of Enchantment')
+              when coalesce(p.series_name, '') in ('Rose Hill (Silver)', 'Hades x Persephone Saga')
                 then 'PROTECTED (existing name) — untouched'
-              when p.parsed_series = 'Divine Rivals' and coalesce(btrim(p.series_name), '') <> ''
-                then 'PROTECTED (parsed name Divine Rivals) — untouched'
+              when p.canon_series is distinct from p.parsed_series
+                then 'RENAMED — canonical name + parsed position written'
               when coalesce(btrim(p.series_name), '') = ''
                 then 'BACKFILLED — parsed series + position written'
               else 'OVERWRITTEN — parsed series + position replace the stored ones'
