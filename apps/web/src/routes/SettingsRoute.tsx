@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { createRoute, Link } from '@tanstack/react-router'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { findDuplicateGroups, planTitleCleanup, richness, type Book } from '@reverie/core'
 import { rootRoute } from './RootRoute'
 import { useBooks, useUpdateBook } from '../data/books'
@@ -14,7 +14,9 @@ import { importSessionKey } from '../data/importReview'
 import { deleteAccount } from '../data/account'
 import {
   bulkComplete,
+  fetchEnrichmentStamps,
   isIncomplete,
+  sweepCandidates,
   type BulkOptions,
   type BulkProgress,
 } from '../data/enrichLibrary'
@@ -80,6 +82,17 @@ function SettingsScreen() {
 
   const autoMerge = profile?.autoMergeDuplicates ?? true
   const incompleteCount = (books ?? []).filter(isIncomplete).length
+  // THE SAME PREDICATE THE SWEEP RUNS — not a half-copy. `incompleteCount` alone once put (112) on
+  // the button while bulkComplete's own filter (isIncomplete AND outside the recheck window)
+  // selected zero, so the label promised work the action would not do. The eligible count comes
+  // from the exported `sweepCandidates` the sweep itself consumes; the stamps are one cheap
+  // id+enriched_at query, refetched after every sweep (each checked book was just restamped).
+  const { data: stamps } = useQuery({
+    queryKey: ['enrichmentStamps'],
+    queryFn: fetchEnrichmentStamps,
+  })
+  const eligibleCount = stamps ? sweepCandidates(books ?? [], stamps).length : null
+  const restingCount = eligibleCount === null ? 0 : incompleteCount - eligibleCount
   // Covers whose STORED pixels can be improved from a larger source (Google/OL) — the re-sharpen set.
   const sharpenableCount = (books ?? []).filter((b) => resharpenSource(b) !== null).length
 
@@ -172,6 +185,9 @@ function SettingsScreen() {
     setSweeping(false)
     setSweepProgress(null)
     setShowSweep(false)
+    // each rewritten title just had its enrichment stamp cleared by the DB trigger
+    // (20260811010000) — the sweep button's eligible count changes with it
+    void qc.invalidateQueries({ queryKey: ['enrichmentStamps'] })
     setStatus(`Cleaned ${done} legacy title${done === 1 ? '' : 's'}`)
   }
 
@@ -260,6 +276,8 @@ function SettingsScreen() {
           (opts?.trace ? ` Trace run ${runId} — ${r.scanned} rows in sweep_traces.` : ''),
       )
       await qc.invalidateQueries({ queryKey: ['books'] })
+      // every checked book was just restamped — the eligible count must not keep the old answer
+      await qc.invalidateQueries({ queryKey: ['enrichmentStamps'] })
     } catch (e) {
       setStatus(`Couldn’t finish completing details: ${(e as Error).message}`)
     }
@@ -448,13 +466,19 @@ function SettingsScreen() {
               <button
                 type="button"
                 onClick={() => void runComplete()}
-                disabled={!incompleteCount}
+                disabled={!eligibleCount}
                 className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink disabled:opacity-50"
                 style={{ background: 'var(--field)' }}
               >
                 ✨ Complete missing covers &amp; info
-                {incompleteCount ? ` (${incompleteCount})` : ''}
+                {eligibleCount !== null && eligibleCount > 0 ? ` (${eligibleCount})` : ''}
               </button>
+            )}
+            {!completing && restingCount > 0 && (
+              <p className="w-full text-[12px] text-muted">
+                {restingCount} incomplete book{restingCount === 1 ? '' : 's'} checked recently —
+                eligible again after the recheck window (3 days, 30 once cover and series are in).
+              </p>
             )}
             {!completing && (
               <button
@@ -467,7 +491,7 @@ function SettingsScreen() {
                     refresh: true,
                   })
                 }
-                disabled={!incompleteCount}
+                disabled={!eligibleCount}
                 title="Runs the sweep over 10 never-checked books, bypassing the shared enrichment cache so the sources are actually queried, and records per-stage timings to sweep_traces. Deliberately a worst case, not an average."
                 className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink disabled:opacity-50"
                 style={{ background: 'var(--field)' }}
