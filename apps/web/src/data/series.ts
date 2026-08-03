@@ -18,7 +18,8 @@ import { allListItemsKey } from './listItems'
  * the reading order). Series are identified by NAME app-wide (books carry a series string); the
  * row is created lazily the first time a series is opened, and RECONCILED against the library:
  * every book naming this series gets an entry, ghosts adopt matching imports. Source (Hardcover)
- * data only ever FILLS GAPS — a user_edited entry is never touched.
+ * data only ever FILLS GAPS — a user_edited entry is never touched, and `user_edited` means a
+ * READER placed the row, never that reconciliation created it.
  *
  * REMOVAL means one thing on both surfaces (book page and series page): the slot is gone and the
  * book stops naming the series. It is a SOFT delete — the row survives with `removed_at` stamped —
@@ -174,8 +175,12 @@ export function useSeriesList() {
 /**
  * The series page's query: find-or-create the row by name, reconcile the library into the
  * entries (idempotent — safe to re-run), return the detail. Library books naming this series
- * always have an entry; their arranged positions are USER data (user_edited), so source
- * refreshes can never move them.
+ * always have an entry.
+ *
+ * Seeded entries are NOT user data and are written `user_edited: false`, so a source refresh may
+ * still correct their positions. They become the reader's the moment the reader moves one. The
+ * comment here used to claim the opposite ("their arranged positions are USER data"), which is how
+ * the defect read as intentional for four months.
  */
 export function useSeriesDetail(name: string) {
   return useQuery({
@@ -299,7 +304,14 @@ export function useSeriesDetail(name: string) {
         author: [b.author_first, b.author_last].filter(Boolean).join(' '),
         book_id: b.id,
         source: 'manual',
-        user_edited: true,
+        // MACHINE SEEDING IS NOT A READER GESTURE. This wrote `true` from ab9e1fe (#77) until
+        // fix/series-seed-provenance, which made every row reconciliation ever created permanently
+        // immune to `mergeSourceEntries` — so "Fetch series data" could not correct a position on
+        // any series whose page had been opened once. These positions come from
+        // `seedSeriesPositions`, a heuristic over `books.position`; they are exactly the numbers a
+        // catalog fetch SHOULD be allowed to replace. A reader who then drags this row writes
+        // `true` through `useMoveEntry`, and from that moment the source can no longer touch it.
+        user_edited: false,
       }))
       if (inserts.length) {
         const { data: added, error: iErr } = await supabase.from('series_entries').insert(inserts).select()
@@ -691,9 +703,13 @@ export function useAcquireGhost(name: string) {
 }
 
 /**
- * Hardcover seeding — source data only fills gaps. New canonical slots arrive as ghosts;
- * an un-edited hardcover entry may take a refreshed position; user_edited rows and linked
- * library books are never moved, and nothing is ever deleted.
+ * Hardcover seeding — source data only fills gaps. New canonical slots arrive as ghosts; an
+ * un-edited entry may take a refreshed position; user_edited rows are never moved, and nothing is
+ * ever deleted.
+ *
+ * "Linked library books are never moved" was true when this was written and is no longer: a linked
+ * entry the reader has not arranged is precisely what this now corrects. What protects a row is the
+ * reader having touched it, not the row having a book attached.
  */
 export function useApplySeriesSource(name: string) {
   const invalidate = useSeriesInvalidate(name)
