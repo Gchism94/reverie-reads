@@ -12,6 +12,53 @@ forgotten.
 
 ## Real bugs, outstanding
 
+- **`enrich/index.ts:439` clears the cover on `confidence === 'none'` but leaves `series` and
+  `seriesPosition` — this is how wrong series values entered this library.** The function scores its
+  own title+author match, and on `'none'` it withholds the cover specifically because attaching the
+  wrong art is worse than attaching none. It then returns the series from that same disclaimed match
+  anyway. `toIncoming` (`enrichLibrary.ts`) maps `series: e.series, position: e.seriesPosition` into
+  the merge, and `mergeImport`'s `fill('series')` writes it into any book whose series is blank — so
+  a no-confidence match silently sets a series on a previously series-less book. `Sheik's Caravan`
+  on _Caraval_ and `Bookbound Bunny` on _Bunny_ are exactly the shape a fuzzy title match produces.
+  **The fix is one line and its own branch**: the `confidence === 'none'` guard should clear
+  `series` and `seriesPosition` alongside `cover`, on the same reasoning that already justifies
+  clearing the cover. Worth checking at the same time whether `'low'` deserves the same treatment,
+  and whether the surviving series values should carry a confidence the way `cover_confidence` does.
+
+- **There is no `series_user_chosen` column, though `cover_user_chosen` exists — the same problem
+  was solved for covers and never for series.** Nothing in `books` records whether a series value
+  came from the reader, from an import, or from an enrichment match. `books.source` is row-level,
+  and `updated_at` is maintained by a trigger on every row write — the enrichment sweep stamping
+  `enriched_at` bumps it on essentially every book, so it cannot isolate a reader edit. This is why
+  `fix/series-backfill` could not implement "parsed wins over import-set, reader-set always wins"
+  and had to fall back to "parsed wins unconditionally, with two hardcoded exceptions": the
+  provenance simply is not recorded. **Without the column this ambiguity recurs the next time
+  anything writes a series** — the backfill fixes the current data, not the next conflict. Its own
+  branch: add `series_user_chosen`, set it on the reader-facing edit paths only, and teach the
+  enrichment fill to respect it exactly as `enrichmentCoverFill` respects `coverUserChosen`.
+
+- **Reconciliation stamps machine-written series entries `user_edited: true`, which makes source
+  correction permanently impossible — and it must be fixed BEFORE the backfilled series are opened
+  at scale.** [`series.ts:302`](../apps/web/src/data/series.ts) seeds an entry for every library book
+  naming a series and writes `user_edited: true`. That flag exists to mean "a reader placed this
+  deliberately", so the Hardcover source merge will never reposition such a row — but nothing about
+  a lazily-seeded row is a reader decision. Introduced by `ab9e1fe` (#77) and unchanged since;
+  `git log -S` confirms no later commit touched it. The only path writing `false` is
+  `useApplySeriesSource` (`series.ts:726`), a different code path entirely.
+
+  **This was originally item 6 of `fix/series-backfill` and was dropped from that branch on the
+  owner's call, for the right reason: a migration resetting history to `false` would be undone the
+  moment reconciliation next ran, because the app still stamps `true`.** A reset that the app
+  re-breaks is worse than no reset — it looks done. (The item also cited "#120's deploy" as the
+  cutoff; `f398ed5` #120 is the `plan_date` work and touches nothing in series, so no such cutoff
+  exists.)
+
+  **Do it as one PR**: change `series.ts:302` to `user_edited: false` _and_ reset the historical
+  rows, so the two can't drift apart. **Urgency**: `fix/series-backfill` backfills ~235 series, and
+  reconciliation seeds entries lazily on first view — so every one of those series stamps a fresh
+  batch of immune-to-correction rows the first time someone opens its page. Landing this after the
+  backfill has been browsed means cleaning up a much larger mess than landing it before.
+
 - **The six `sameRiskAsPowerSymbol` glyphs are the same defect, unfired.**
   `apps/web/src/lib/glyphAllowlist.ts` tiers `⏹` `⏱` `⌕` `⌂` `⌘` (Misc Technical,
   U+2300–U+23FF — the exact block `⏻` came from) and `⠿` (Braille Patterns,
@@ -533,6 +580,18 @@ list triaged rather than blanket-ignored.
   then correctly never see it; (2) `stubBackends` deliberately fails the covers ingest with a 422,
   so the add path's error branch is on the critical path to the insert; (3) CI runs single-worker
   on a shared runner, where 15s is a much thinner margin than locally.
+
+  **Second occurrence, a different test in the same file — `discover-search.spec.ts:218` ("add a
+  result to a shelf as unowned via the shelf chooser"), local standing e2e run on
+  `fix/series-backfill`'s intake-fix commit.** Same shape exactly: `.first().click()` (this time on
+  `'＋ Shelf'`, not `'＋ Add'`), then the identical `expect.poll` on `list_items` for the same
+  `Wildfire Vow` book, same 15s timeout. Reported red, not re-run. That branch's diff is
+  `packages/core/src/importMap.ts` (CSV/XLSX intake) — nothing touching Discover, shelf pickers, or
+  `list_items` — so this is not attributable to that change either, same reasoning as the a11y
+  timeout entry above. Two different tests in this one spec file, both failing on the same
+  `Wildfire Vow` poll, is stronger evidence for hypothesis (1) than either occurrence alone: both
+  tests click a `.first()` button while `STUB_RESULTS` holds two entries, and both then poll for
+  exactly the book that ordering ambiguity would drop. Worth checking first on the next look.
 
 ## Test-infrastructure follow-ups
 

@@ -202,3 +202,92 @@ describe('possession on import', () => {
     expect(rows[0]!.incoming.ownership).toBe('owned')
   })
 })
+
+// A DIRTY title landing on the Chism/Library shape: only the generic (Goodreads/StoryGraph) path
+// used to call parseSeriesFromTitle. This is the gap — a Goodreads-shaped export that happens to
+// also carry a "GC Read" or "Global Order" column (bolted on, or exported by a tool that mimics
+// one of these two shapes) would route to the profile mapper and land a dirty title, live, today.
+// The reader's own real files (data/raw/Chism_Books.xlsx, Library_App_list.xlsx) are clean — this
+// guards the path, not a known-bad file.
+describe('a dirty title lands clean on every profile, not just generic', () => {
+  it('Chism shape: a title carrying "(Series, #N)" is parsed the same as the generic path', () => {
+    const csv = [
+      'Title,"Author, First","Author, Last",Series,Completed / Standalones,Genre,Tags,,GC Read,TC Read,Duplicate',
+      '"A Court of Thorns and Roses (A Court of Thorns and Roses, #1)",Sarah,Maas,,Completed,Fantasy,,,X,,',
+    ].join('\n')
+    const { profile, rows } = parseImport(csv)
+    expect(profile.name).toBe('chism')
+    expect(rows[0]!.incoming.title).toBe('A Court of Thorns and Roses')
+    expect(rows[0]!.incoming.series).toBe('A Court of Thorns and Roses')
+    expect(rows[0]!.incoming.position).toBe(1)
+  })
+
+  it('Library shape: same dirty title, same clean result', () => {
+    const csv = [
+      'Title,Author First,Author Last,Series,Series order,Series #,Global order,Series type,Genre,Tags,Release date',
+      '"Fourth Wing (The Empyrean, #1)",Rebecca,Yarros,,,,1,,Fantasy,,2023',
+    ].join('\n')
+    const { profile, rows } = parseImport(csv)
+    expect(profile.name).toBe('library')
+    expect(rows[0]!.incoming.title).toBe('Fourth Wing')
+    expect(rows[0]!.incoming.series).toBe('The Empyrean')
+    expect(rows[0]!.incoming.position).toBe(1)
+  })
+
+  it('a non-series parenthetical survives on both custom profiles — never stripped', () => {
+    const chism = parseImport(
+      [
+        'Title,"Author, First","Author, Last",Series,Completed / Standalones,Genre,Tags,,GC Read,TC Read,Duplicate',
+        'Powerless (Deluxe Edition),Lauren,Roberts,,,Fantasy,,,,,',
+      ].join('\n'),
+    ).rows
+    expect(chism[0]!.incoming.title).toBe('Powerless (Deluxe Edition)')
+    expect(chism[0]!.incoming.series).toBe('')
+
+    const library = parseImport(
+      [
+        'Title,Author First,Author Last,Series,Series order,Series #,Global order,Series type,Genre,Tags,Release date',
+        'We Are Legion (We Are Bob),Dennis,Taylor,,,,,,SciFi,,2016',
+      ].join('\n'),
+    ).rows
+    expect(library[0]!.incoming.title).toBe('We Are Legion (We Are Bob)')
+    expect(library[0]!.incoming.series).toBe('')
+  })
+
+  it('an explicit Series column always outranks a title parenthetical, on both profiles', () => {
+    // The column is reader-maintained; a title's parenthetical must never override it, even when
+    // the title also happens to carry series-shaped text.
+    const chism = parseImport(
+      [
+        'Title,"Author, First","Author, Last",Series,Completed / Standalones,Genre,Tags,,GC Read,TC Read,Duplicate',
+        '"Twisted Love (Wrong Guess, #9)",Ana,Huang,Twisted,Completed,Romance,,,X,,',
+      ].join('\n'),
+    ).rows
+    expect(chism[0]!.incoming.title).toBe('Twisted Love') // still cleaned
+    expect(chism[0]!.incoming.series).toBe('Twisted') // the COLUMN wins, not "Wrong Guess"
+
+    const library = parseImport(
+      [
+        'Title,Author First,Author Last,Series,Series order,Series #,Global order,Series type,Genre,Tags,Release date',
+        '"Deceptive Vows (Wrong Guess, #9)",Rina,Kent,Royal Elite,7,1,7,interconnected standalone,Romance,,2021',
+      ].join('\n'),
+    ).rows
+    expect(library[0]!.incoming.title).toBe('Deceptive Vows')
+    expect(library[0]!.incoming.series).toBe('Royal Elite')
+    expect(library[0]!.incoming.position).toBe(7) // the column's Series order, not the parsed #9
+  })
+
+  // THE MUTATION TARGET. Reverting rowToImported's title/series/position assembly to read the raw
+  // cells verbatim — the behaviour before this fix — must fail every case above. This is what
+  // proves the OLD behaviour was wrong, not merely that the new code happens to pass.
+  it('the existing Chism/Library fixtures are unaffected — this is additive, not a rewrite', () => {
+    // Re-assert two known-clean rows from the top-of-file fixtures still parse identically, so the
+    // mutation check below is isolated to the dirty-title behaviour, not a general regression.
+    const chism = parseImport(CHISM_CSV).rows
+    expect(chism[0]!.incoming.title).toBe('Twisted Love')
+    expect(chism[0]!.incoming.series).toBe('Twisted')
+    const library = parseImport(LIBRARY_CSV).rows
+    expect(library[0]!.incoming.title).toBe('Deceptive Vows')
+    expect(library[0]!.incoming.position).toBe(7)
+  })
+})
