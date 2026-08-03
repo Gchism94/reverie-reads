@@ -66,6 +66,16 @@ describe('every symbol glyph shipping in the app is declared somewhere', () => {
     expect(found.has('⏻'), 'the fixed glyph must not have come back').toBe(false)
   })
 
+  // THE POSITIVE CONTROL. A scanner that returned nothing would pass every assertion above
+  // vacuously — an "undeclared glyph" test with zero candidates to check is not a passing test,
+  // it's a test that never ran. This is what would have caught `isWatchedGlyph` short-circuiting
+  // to `return false`: the scan finding zero glyphs anywhere in a ~500-file source tree.
+  it('the scanner actually finds glyphs — a proven one known to be in source', () => {
+    const found = scanForWatchedGlyphs()
+    expect(found.size, 'a scan of the real source tree found nothing at all').toBeGreaterThan(20)
+    expect(found.has('→'), "'→' is used ~178 times and must be found").toBe(true)
+  })
+
   it('the sign-out control no longer renders the power symbol as text', () => {
     const shell = readFileSync(join(SRC, 'src/components/AppShell.tsx'), 'utf8')
     expect(shell).not.toContain('⏻')
