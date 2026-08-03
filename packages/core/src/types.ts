@@ -15,12 +15,28 @@ export type SeriesStatus =
   | 'interconnected_standalone'
   | 'interconnected_series'
 
-/** Flexible publish-date precision — any part may be null. */
-export interface PubDate {
+/**
+ * A date the reader may only partly know — any part may be null.
+ *
+ * Two fields carry this shape, and they are the SAME shape on purpose: the publish date (`pub_y /
+ * pub_m / pub_d`) and the planned-read date (`plan_y / plan_m / plan_d`). Aliasing both to one
+ * interface is what stops them drifting into two dialects — a change to the shape cannot reach one
+ * without the other, and `formatPartialDate` renders both.
+ */
+export interface PartialDate {
   y: number | null
   m: number | null
   d: number | null
 }
+
+/** Flexible publish-date precision — any part may be null. */
+export type PubDate = PartialDate
+
+/**
+ * Flexible planned-read precision. "Sometime in March" is `{y, m, d: null}` — a real plan, not an
+ * incomplete one. Replaces the bare `plan_date` string, which could only say a specific day.
+ */
+export type PlanDate = PartialDate
 
 /** One entry in a book's reread log. */
 export interface ReadEntry {
@@ -31,24 +47,27 @@ export interface ReadEntry {
 }
 
 /** Which formats the reader HAS (independent of the format read). `false` physical = not
- * possessed physically; a string narrows the physical copy. Meaningful when the book is
- * possessed ('owned' or 'borrowed') — a wishlist/unset book carries latent flags that no
- * surface reads (see bookOwnedFormats). */
+ * possessed physically; a string narrows the physical copy. Meaningful when the book is in hand
+ * (owned or borrowed) — a book that is neither carries latent flags that no surface reads: they are
+ * SUPPRESSED, not cleared, so drop → re-acquire loses nothing (see bookOwnedFormats). */
 export interface Owned {
   physical: false | 'paperback' | 'hardcover' | true
   ebook: boolean
   audiobook: boolean
 }
 
-/** How the reader possesses this book — four states (docs/task-ownership-v2.md):
- *  · `owned`    — the reader owns a copy (per-format detail in `owned`)
- *  · `borrowed` — in the reader's hands but not owned (library loan, a friend's copy). Counts as
- *                 possessed: it can carry a format and it stays in the default library.
- *  · `wishlist` — a book the reader WANTS (the old 'unowned' TBR state; renamed for precision)
- *  · `unset`    — no selection. Cataloguing a book must not force a possession category; this is
- *                 the default for a newly added book.
+/** Whether the reader OWNS a copy — the single claim this field makes (docs/task-shelf-model.md).
+ *  Borrowed and wishlist are no longer values here: they are independent flags on the book, because
+ *  they can co-occur with ownership and with each other ("own the paperback, borrowed the audio,
+ *  still want the special edition"). `unowned` is the default and asserts nothing beyond not owning
+ *  — it is the old 'unset' under a name that matches the narrowed question.
  *  Possession never gates reading history: a book you've read is in your library whatever this says. */
-export type BookOwnership = 'owned' | 'borrowed' | 'wishlist' | 'unset'
+export type BookOwnership = 'owned' | 'unowned'
+
+/** The four-state possession WORD, derived from ownership + the two flags for controls and badges
+ *  that must show one answer. Storage is five independent flags; this is a view of them, never a
+ *  stored column. Precedence owned > borrowed > wishlist > unset — the old OWNERSHIP_RANK order. */
+export type PossessionState = 'owned' | 'borrowed' | 'wishlist' | 'unset'
 
 /** A contributor's role on a book. Ordered, multi-contributor (docs/DATA_MODEL.md). `narrator` is
  * really audiobook-edition-scoped — kept as a role for now (edition-scoping is a later refinement). */
@@ -130,15 +149,20 @@ export interface Book {
   /** Page count for the edition in hand. null = UNKNOWN — renders blank, never a fabricated 0. */
   pages: number | null
   fave: boolean
-  ownership: BookOwnership // owned vs wishlist — presence in the library no longer implies possession
-  owned: Owned // per-format detail for an owned book (which formats)
+  ownership: BookOwnership // owns a copy? presence in the library never implies possession
+  owned: Owned // per-format detail for a book in hand (which formats)
+  /** has a borrowed copy in hand — independent of `ownership`; borrowed is not owned */
+  borrowed: boolean
+  /** wants a copy — independent of `ownership`; an owned book can still be wanted in another edition */
+  wishlist: boolean
   format: string // the format most often read (reread default)
   rating: number // 0..5 — the READER'S own rating (myRating). No aggregate exists anywhere.
   readStatus: ReadStatus
   source: string
   pub: PubDate
   reads: ReadEntry[]
-  plan: string | null // planned "need to read" date, YYYY-MM-DD
+  /** planned "need to read" date, at whatever precision the reader actually has */
+  plan: PlanDate
   progress: number // 0..100 while Reading
   /** manual Reading Now order (spaced numeric; null = unordered, sorts by recency) */
   readingPosition?: number | null

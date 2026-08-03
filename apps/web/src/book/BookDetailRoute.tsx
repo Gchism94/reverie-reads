@@ -9,8 +9,11 @@ import {
   seriesStatusBadge,
   ROLE_LABELS,
   type Book,
-  type BookOwnership,
+  possessionPatch,
+  possessionState,
+  type PossessionState,
   type Owned,
+  formatPartialDate,
 } from '@reverie/core'
 import { useFilters } from '../library/filterStore'
 import { buyConfig } from '../lib/buyConfig'
@@ -25,14 +28,10 @@ import { useBookListIds, useToggleListItem } from '../data/listItems'
 import { useCreateList, useLists } from '../data/lists'
 import { Stars } from '../components/Stars'
 import { Chip } from '../components/Chip'
-import {
-  MONTHS,
-  READ_STATUS_OPTIONS,
-  readStatusLabel,
-  subgenreGradient,
-} from '../library/constants'
+import { READ_STATUS_OPTIONS, readStatusLabel, subgenreGradient } from '../library/constants'
 import { maybeChainPrompt } from '../lib/chainPrompt'
 import { EditDetails, LogReadForm, MergeDialog } from './dialogs'
+import { PlanEditor } from './PlanEditor'
 import { TropePicker } from '../components/TropePicker'
 import { TropeChip } from '../components/TropeChip'
 import { MoodChip } from '../components/MoodChip'
@@ -46,13 +45,6 @@ import { MoreLikeThis } from './MoreLikeThis'
 import { workKeyFor } from '../data/reviews'
 import { useProfile } from '../data/profile'
 import { BookmarkGlyph } from '../components/BookmarkGlyph'
-
-function fmtPub(p: Book['pub']): string {
-  if (p.y && p.m && p.d) return `${MONTHS[p.m - 1] ?? ''} ${p.d}, ${p.y}`
-  if (p.y && p.m) return `${MONTHS[p.m - 1] ?? ''} ${p.y}`
-  if (p.y) return `${p.y}`
-  return ''
-}
 
 function fmtDate(d: string): string {
   if (!d) return 'Date not set'
@@ -87,7 +79,9 @@ function Pill({ children, muted = false }: { children: ReactNode; muted?: boolea
 }
 
 function ProgressSlider({ book }: { book: Book }) {
-  const updateBook = useUpdateBook()
+  // Fires on both onPointerUp and onBlur with the SAME value, so ordering cannot corrupt it — but
+  // it is still two concurrent writes to one book, and scoping makes the pair ordered and cheap.
+  const updateBook = useUpdateBook(book.id)
   const [value, setValue] = useState(book.progress)
   return (
     <div>
@@ -121,7 +115,11 @@ function BookDetailScreen() {
   const { data: lists } = useLists()
   const { data: profile } = useProfile()
   const labels = useLabels()
-  const updateBook = useUpdateBook()
+  // One screen, one book, many small writes — fave, rating, possession, and the per-format toggles,
+  // which each send the WHOLE `owned` object. Rapid toggling is the same clobbering shape the plan
+  // editor hit, so these serialize per book. Scoped on the route param, which is available before
+  // the book itself loads.
+  const updateBook = useUpdateBook(bookId)
   const deleteBook = useDeleteBook()
   const deleteRead = useDeleteRead(bookId)
   const toggleListItem = useToggleListItem(bookId)
@@ -155,11 +153,12 @@ function BookDetailScreen() {
   const workKey = workKeyFor(book)
   const reviewerName = profile?.displayName || 'Reader'
   const setOwned = (owned: Owned) => updateBook.mutate({ id: book.id, patch: { owned } })
-  // Four-state possession (owned / borrowed / wishlist / unset). Format flags are left alone across
+  // Four-state possession WORD over five independent flags (docs/task-shelf-model.md): picking one
+  // word is exclusive, so possessionPatch writes the whole trio. Format flags are left alone across
   // any change — dropping possession suppresses them (bookOwnedFormats gates every read), so marking
   // a book owned or borrowed again restores your copies.
-  const setOwnership = (ownership: BookOwnership) =>
-    updateBook.mutate({ id: book.id, patch: { ownership } })
+  const setPossession = (next: PossessionState) =>
+    updateBook.mutate({ id: book.id, patch: possessionPatch(next) })
   const memberIds = new Set(listIds ?? [])
   const tbrs = (lists ?? []).filter((l) => l.kind === 'tbr')
   const collections = (lists ?? []).filter((l) => l.kind === 'collection')
@@ -254,7 +253,7 @@ function BookDetailScreen() {
             {(book.intensity ?? 0) > 0 && (
               <Pill>{labels.intensityGlyph.repeat(book.intensity ?? 0)}</Pill>
             )}
-            {fmtPub(book.pub) && <Pill>📅 {fmtPub(book.pub)}</Pill>}
+            {formatPartialDate(book.pub) && <Pill>📅 {formatPartialDate(book.pub)}</Pill>}
             {/* Absent when unknown — no pill at all, rather than a fabricated 0 or a guess. */}
             {book.pages != null && <Pill>{book.pages} pp</Pill>}
           </div>
@@ -264,10 +263,10 @@ function BookDetailScreen() {
       {/* your copies (per-format ownership) */}
       <div className="mt-6">
         <OwnedCopies
-          ownership={book.ownership}
+          possession={possessionState(book)}
           owned={book.owned}
           onChange={setOwned}
-          onOwnershipChange={setOwnership}
+          onPossessionChange={setPossession}
         />
       </div>
 
@@ -495,16 +494,7 @@ function BookDetailScreen() {
 
       {/* plan */}
       <Label>Plan a read date</Label>
-      <input
-        type="date"
-        aria-label="Planned read date"
-        value={book.plan ?? ''}
-        onChange={(e) =>
-          updateBook.mutate({ id: book.id, patch: { plan: e.target.value || null } })
-        }
-        className="h-10 rounded-xl border border-line px-3 text-[14px] text-ink outline-none"
-        style={{ background: 'var(--field)' }}
-      />
+      <PlanEditor book={book} />
 
       {/* actions */}
       <div className="mt-8 flex flex-wrap gap-2">

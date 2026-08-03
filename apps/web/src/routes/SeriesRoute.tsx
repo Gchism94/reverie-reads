@@ -7,6 +7,7 @@ import {
   progressLine,
   seriesProgress,
   sortEntries,
+  stateSuffix,
   SERIES_STATUS_LABELS,
   SERIES_STATUS_VALUES,
   type Book,
@@ -353,6 +354,9 @@ function SeriesScreen() {
                   <button
                     type="button"
                     onClick={() => openBook(book.id)}
+                    // The row's visible text names the book; the suffix adds the state a thumb
+                    // cannot show. Thumb-class carries state to the screen reader only.
+                    aria-label={`Open ${book.title}${stateSuffix(book)}`}
                     className="flex min-w-0 flex-1 items-center gap-3 text-left"
                   >
                     <div
@@ -491,7 +495,7 @@ function SeriesScreen() {
             <button
               type="button"
               onClick={() => {
-                removeEntry.mutate({ entryId: removing.id, bookId: removing.bookId })
+                removeEntry.mutate({ entryId: removing.id })
                 setRemoving(null)
               }}
               disabled={removeEntry.isPending}

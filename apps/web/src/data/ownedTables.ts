@@ -44,9 +44,11 @@ export const USER_OWNED_TABLES: OwnedTable[] = [
   { table: 'list_items', owner: 'owner_id', plan: { backup: true } },
   { table: 'reviews', owner: 'reviewer_id', plan: { backup: true } },
   { table: 'merge_verdicts', owner: 'owner_id', plan: { backup: true } },
-  { table: 'reading_orders', owner: 'owner_id', plan: { backup: true } },
-  // Read through the reading_orders embed, written directly on restore.
-  { table: 'reading_order_items', owner: 'owner_id', plan: { backup: true, via: 'reading_orders' } },
+  // reading_orders / reading_order_items are gone (chore/drop-reading-orders-schema, S2 of the
+  // demolition begun in S1). They no longer exist in the schema, so they no longer belong here —
+  // the structural guard below would fail on a registry entry for a table it cannot find. The
+  // production row (1 order, 0 items) is recorded in the S2 migration's own comment, since this
+  // file is not the place to keep a fact about data instead of a fact about structure.
   { table: 'profiles', owner: 'id', plan: { backup: true } },
 
   // ── taxonomy: assignments travel by NAME, and the vocabulary rows come with them ──
@@ -112,6 +114,14 @@ export const USER_OWNED_TABLES: OwnedTable[] = [
     table: 'content_reports',
     owner: 'reporter_id',
     plan: { backup: false, why: 'Moderation records, not library data — they belong to the report queue, not to the reader.' },
+  },
+  {
+    table: 'sweep_traces',
+    owner: 'owner_id',
+    plan: {
+      backup: false,
+      why: 'Per-stage timings from an enrichment sweep — a measurement of this deployment, not the reader’s library. Restoring them into another account or a later schema would describe a run that never happened there.',
+    },
   },
 
   // ── refusals: the reader said NO, and that must survive too ──

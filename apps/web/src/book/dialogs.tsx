@@ -6,6 +6,8 @@ import {
   fromFirstLast,
   mergeBooks,
   parseNumericFields,
+  possessionPatch,
+  possessionState,
   PUB_DAY,
   PUB_MONTH,
   PAGE_COUNT,
@@ -40,6 +42,7 @@ import { OwnedCopies } from './OwnedCopies'
 import { MoodPicker } from '../components/MoodPicker'
 import { useLabels } from '../skin/labels'
 import { readableWriteError } from '../lib/writeErrors'
+import { todayLocalDate } from '../lib/localDate'
 
 /** Distinct contributor names across the library, for autocomplete. */
 function useAuthorSuggestions(): string[] {
@@ -72,7 +75,9 @@ export function LogReadForm({ book, onClose }: { book: Book; onClose: () => void
   const addRead = useAddRead(book.id)
   const { data: books } = useBooks()
   const updateBook = useUpdateBook()
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
+  // Local, not UTC — see localDate.ts. West of UTC in the evening, toISOString() already reports
+  // tomorrow, and this default is what a reread finished tonight silently landed on.
+  const [date, setDate] = useState(() => todayLocalDate())
   const [format, setFormat] = useState(book.format || 'Paperback')
   const [rating, setRating] = useState(0)
   const [notes, setNotes] = useState('')
@@ -157,7 +162,8 @@ export function EditDetails({
   /** modest "change cover" affordance — swaps this dialog for the cover sheet */
   onChangeCover?: () => void
 }) {
-  const updateBook = useUpdateBook()
+  // Carries OwnedCopies too, whose format toggles each write the whole `owned` object.
+  const updateBook = useUpdateBook(book.id)
   const labels = useLabels()
   const setContributors = useSetContributors()
   const syncBookSeries = useSyncBookSeries()
@@ -479,11 +485,11 @@ export function EditDetails({
           Your copies
         </span>
         <OwnedCopies
-          ownership={book.ownership}
+          possession={possessionState(book)}
           owned={book.owned}
           onChange={(owned) => updateBook.mutate({ id: book.id, patch: { owned } })}
-          onOwnershipChange={(ownership) =>
-            updateBook.mutate({ id: book.id, patch: { ownership } })
+          onPossessionChange={(next) =>
+            updateBook.mutate({ id: book.id, patch: possessionPatch(next) })
           }
         />
       </div>
@@ -709,7 +715,11 @@ function MergePreview({
   const moods = unionRefs(primary.moods, loser.moods)
   const tropes = unionRefs(primary.tropes, loser.tropes)
   const formats = ownedFormatList(merged.owned)
-  const ownershipChanged = merged.ownership !== primary.ownership
+  // Compare the WORD, not the column: a merge that turns "wishlist" into "owned" changes two flags
+  // and the reader needs to see that as one possession change, in the vocabulary the control uses.
+  const mergedPossession = possessionState(merged)
+  const primaryPossession = possessionState(primary)
+  const ownershipChanged = mergedPossession !== primaryPossession
   const titleDropped = loser.title.trim() !== primary.title.trim()
 
   return (
@@ -728,11 +738,11 @@ function MergePreview({
           </span>
         </DiffRow>
         <DiffRow label="Ownership" changed={ownershipChanged}>
-          {OWNERSHIP_LABELS[merged.ownership]}
+          {OWNERSHIP_LABELS[mergedPossession]}
           {ownershipChanged && (
             <span className="text-[12px] text-muted">
               {' '}
-              — was {OWNERSHIP_LABELS[primary.ownership]}, took the stronger
+              — was {OWNERSHIP_LABELS[primaryPossession]}, took the stronger
             </span>
           )}
         </DiffRow>

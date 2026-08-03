@@ -1,6 +1,8 @@
 import { expect, test, type Page } from '@playwright/test'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { authFailure } from './support/authError'
+import { keepOfflineCacheEmpty } from './support/offlineCache'
+import { ok, okData, okUser } from './support/ok'
 
 // Regression guards for docs/task-shelf-regressions.md — the two capabilities that shipped at #48/#49
 // and silently broke:
@@ -44,17 +46,23 @@ async function ensureUser(): Promise<void> {
   const { data } = await admin.auth.admin.listUsers()
   let uid = data?.users?.find((u) => u.email === TEST_EMAIL)?.id
   if (!uid) {
-    const { data: created, error } = await admin.auth.admin.createUser({
-      email: TEST_EMAIL,
-      password: TEST_PASSWORD,
-      email_confirm: true,
-    })
-    if (error) throw error
-    uid = created.user!.id
+    uid = (
+      await okUser(
+        admin.auth.admin.createUser({
+          email: TEST_EMAIL,
+          password: TEST_PASSWORD,
+          email_confirm: true,
+        }),
+        'shelf-regressions createUser',
+      )
+    ).id
   }
-  await admin
-    .from('profiles')
-    .upsert({ id: uid, display_name: 'Shelf Regress E2E', skin: 'tryst', mode: 'system' })
+  await ok(
+    admin
+      .from('profiles')
+      .upsert({ id: uid, display_name: 'Shelf Regress E2E', skin: 'tryst', mode: 'system' }),
+    'shelf-regressions profiles upsert',
+  )
 }
 
 type Client = {
@@ -81,20 +89,23 @@ async function reset(c: Client) {
   const { data: books } = await c.sb.from('books').select('id').eq('owner_id', c.uid)
   const ids = ((books as { id: string }[]) ?? []).map((b) => b.id)
   if (ids.length) {
-    await c.sb.from('list_items').delete().in('book_id', ids)
-    await c.sb.from('books').delete().in('id', ids)
+    await ok(
+      c.sb.from('list_items').delete().in('book_id', ids),
+      'shelf-regressions list_items delete',
+    )
+    await ok(c.sb.from('books').delete().in('id', ids), 'shelf-regressions books delete')
   }
-  await c.sb.from('lists').delete().eq('owner_id', c.uid)
+  await ok(c.sb.from('lists').delete().eq('owner_id', c.uid), 'shelf-regressions lists delete')
 }
 
 async function signIn(page: Page, session: { access_token: string; refresh_token: string }) {
+  await keepOfflineCacheEmpty(page)
   await page.addInitScript(() => localStorage.setItem('reverie.onboarded', '1'))
   await page.goto(
     `/#access_token=${session.access_token}&refresh_token=${session.refresh_token}&expires_in=3600&token_type=bearer&type=magiclink`,
   )
   await page.getByRole('button', { name: /enter your library/i }).click({ timeout: 20_000 })
   await expect(page.getByRole('navigation')).toBeVisible({ timeout: 20_000 })
-  await page.evaluate(() => indexedDB.deleteDatabase('reverie-offline'))
 }
 
 async function stubBackends(page: Page) {
@@ -116,11 +127,11 @@ const bookByTitle = async (sb: SupabaseClient, uid: string, title: string) =>
   (
     await sb
       .from('books')
-      .select('id, ownership')
+      .select('id, ownership, borrowed, wishlist')
       .eq('owner_id', uid)
       .eq('title', title)
       .maybeSingle()
-  ).data as { id: string; ownership: string } | null
+  ).data as { id: string; ownership: string; borrowed: boolean; wishlist: boolean } | null
 
 const positionsFor = async (sb: SupabaseClient, listId: string) =>
   ((await sb.from('list_items').select('book_id, position').eq('list_id', listId).order('position'))
@@ -136,11 +147,14 @@ test('Shelves page: "search everywhere" adds an unowned book to a shelf (regress
   test.setTimeout(180_000)
   const c = await client()
   await reset(c)
-  const { data: list } = await c.sb
-    .from('lists')
-    .insert({ owner_id: c.uid, name: 'Regress TBR', kind: 'tbr' })
-    .select('id')
-    .single()
+  const list = await okData(
+    c.sb
+      .from('lists')
+      .insert({ owner_id: c.uid, name: 'Regress TBR', kind: 'tbr' })
+      .select('id')
+      .single(),
+    'shelf-regressions lists insert',
+  )
   const listId = (list as { id: string }).id
   await stubBackends(page)
   try {
@@ -162,9 +176,10 @@ test('Shelves page: "search everywhere" adds an unowned book to a shelf (regress
     await expect(sheet.getByText('Wildfire Vow')).toBeVisible({ timeout: 15_000 })
     await sheet.getByRole('button', { name: '＋ Add', exact: true }).first().click()
 
-    // Lands on the shelf as a wishlist copy — never having opened the book's detail page.
+    // Lands on the shelf as a wanted copy — never having opened the book's detail page.
     // (#68's four-state ownership renamed 'unowned' → 'wishlist'; this guard kept asserting the old
-    // value and had been failing silently ever since.)
+    // value and had been failing silently ever since. The shelf model moves it again, from an enum
+    // value to a flag — so the assertion now names the flag rather than a word.)
     await expect
       .poll(
         async () => {
@@ -180,7 +195,11 @@ test('Shelves page: "search everywhere" adds an unowned book to a shelf (regress
         { timeout: 15_000 },
       )
       .toBe(1)
-    expect((await bookByTitle(c.sb, c.uid, 'Wildfire Vow'))?.ownership).toBe('wishlist')
+    expect(await bookByTitle(c.sb, c.uid, 'Wildfire Vow')).toMatchObject({
+      ownership: 'unowned',
+      wishlist: true,
+      borrowed: false,
+    })
     expect(page.url()).not.toContain('/book/') // proved we never visited the book page
   } finally {
     await reset(c)
@@ -194,33 +213,42 @@ test('Shelf reorder: covers are not drag-hijackable and the keyboard fallback re
   test.setTimeout(180_000)
   const c = await client()
   await reset(c)
-  const { data: list } = await c.sb
-    .from('lists')
-    .insert({ owner_id: c.uid, name: 'Order Shelf', kind: 'tbr' })
-    .select('id')
-    .single()
+  const list = await okData(
+    c.sb
+      .from('lists')
+      .insert({ owner_id: c.uid, name: 'Order Shelf', kind: 'tbr' })
+      .select('id')
+      .single(),
+    'shelf-regressions lists insert',
+  )
   const listId = (list as { id: string }).id
   // three owned books with covers (so CoverImage renders an <img>), spaced positions
   const titles = ['Alpha Book', 'Bravo Book', 'Charlie Book']
   for (let i = 0; i < titles.length; i++) {
-    const { data: b } = await c.sb
-      .from('books')
-      .insert({
+    const b = await okData(
+      c.sb
+        .from('books')
+        .insert({
+          owner_id: c.uid,
+          title: titles[i],
+          author_first: 'Test',
+          author_last: 'Author',
+          ownership: 'owned',
+          cover_url: '/landing-covers/everflame.jpg',
+        })
+        .select('id')
+        .single(),
+      'shelf-regressions books insert',
+    )
+    await ok(
+      c.sb.from('list_items').insert({
+        list_id: listId,
+        book_id: (b as { id: string }).id,
         owner_id: c.uid,
-        title: titles[i],
-        author_first: 'Test',
-        author_last: 'Author',
-        ownership: 'owned',
-        cover_url: '/landing-covers/everflame.jpg',
-      })
-      .select('id')
-      .single()
-    await c.sb.from('list_items').insert({
-      list_id: listId,
-      book_id: (b as { id: string }).id,
-      owner_id: c.uid,
-      position: (i + 1) * 1000,
-    })
+        position: (i + 1) * 1000,
+      }),
+      'shelf-regressions list_items insert',
+    )
   }
   await stubBackends(page)
   try {
@@ -274,31 +302,36 @@ test('Shelf reorder: covers are not drag-hijackable and the keyboard fallback re
 
 /** Three owned books with covers on one shelf, spaced 1000 apart. Returns [listId, orderFn]. */
 async function shelfOf(c: Client, name: string, titles: string[]) {
-  const { data: list } = await c.sb
-    .from('lists')
-    .insert({ owner_id: c.uid, name, kind: 'tbr' })
-    .select('id')
-    .single()
+  const list = await okData(
+    c.sb.from('lists').insert({ owner_id: c.uid, name, kind: 'tbr' }).select('id').single(),
+    'shelf-regressions lists insert',
+  )
   const listId = (list as { id: string }).id
   for (let i = 0; i < titles.length; i++) {
-    const { data: b } = await c.sb
-      .from('books')
-      .insert({
+    const b = await okData(
+      c.sb
+        .from('books')
+        .insert({
+          owner_id: c.uid,
+          title: titles[i],
+          author_first: 'Test',
+          author_last: 'Author',
+          ownership: 'owned',
+          cover_url: '/landing-covers/everflame.jpg',
+        })
+        .select('id')
+        .single(),
+      'shelf-regressions books insert',
+    )
+    await ok(
+      c.sb.from('list_items').insert({
+        list_id: listId,
+        book_id: (b as { id: string }).id,
         owner_id: c.uid,
-        title: titles[i],
-        author_first: 'Test',
-        author_last: 'Author',
-        ownership: 'owned',
-        cover_url: '/landing-covers/everflame.jpg',
-      })
-      .select('id')
-      .single()
-    await c.sb.from('list_items').insert({
-      list_id: listId,
-      book_id: (b as { id: string }).id,
-      owner_id: c.uid,
-      position: (i + 1) * 1000,
-    })
+        position: (i + 1) * 1000,
+      }),
+      'shelf-regressions list_items insert',
+    )
   }
   const order = async () => {
     const rows = await positionsFor(c.sb, listId)
@@ -416,9 +449,18 @@ test('Shelves page: dragging a book cover does not move the shelf — only the g
     expect(await shelfOrder()).toEqual(['Aaa Shelf', 'Bbb Shelf'])
 
     // Pre-fix the whole shelf card was draggable, so this dragged Aaa Shelf onto Bbb Shelf.
-    const covers = page.locator('[data-spine]')
-    await expect(covers).toHaveCount(2)
-    await covers.nth(0).dragTo(covers.nth(1))
+    //
+    // SCOPED to each list's own card. A page-wide `[data-spine]` used to find exactly these two
+    // books; since /shelves grew its derived shelves (Owned · Borrowed · Read · Wishlist) the same
+    // two books also appear above the lists, so the page-wide count is 4 and `nth(0)`/`nth(1)` are
+    // two spines of the SAME book on a derived shelf — which would drag nothing and pass anyway.
+    const cardFor = (name: RegExp) =>
+      page.getByRole('heading', { name }).locator('xpath=../../../..')
+    const aaaCover = cardFor(/Aaa Shelf/).locator('[data-spine]')
+    const bbbCover = cardFor(/Bbb Shelf/).locator('[data-spine]')
+    await expect(aaaCover).toHaveCount(1)
+    await expect(bbbCover).toHaveCount(1)
+    await aaaCover.first().dragTo(bbbCover.first())
     await page.waitForTimeout(2000)
     expect(await shelfOrder(), 'dragging a book must not reorder shelves').toEqual([
       'Aaa Shelf',

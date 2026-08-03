@@ -5,10 +5,11 @@
 // dedupe + connected-series steps use). The caller routes Incomings through match.ts / the merge
 // path, so re-import is idempotent.
 
-import type { Book, PubDate, ReadStatus } from './types'
+import type { PossessionState, PubDate, ReadStatus } from './types'
 import { parseCSV } from './csv'
+import { parseSeriesFromTitle } from './seriesTitle'
 import { cleanIsbn, type Incoming } from './match'
-import { emptyOwned } from './ownership'
+import { emptyOwned, possessionPatch } from './ownership'
 import { contributorsFromAuthors, fromFirstLast } from './contributors'
 import { normalizeImportGenres } from './genreNormalize'
 
@@ -71,6 +72,9 @@ export const LIBRARY_PROFILE: ColumnProfile = {
   series: ['series'],
   seriesOrder: ['series order', 'order in series'],
   seriesNumber: ['series #', 'series number', 'series no'],
+  // Still mapped, deliberately, though nothing consumes it any more: reading orders were dropped
+  // (chore/drop-reading-orders) and series position is now the single ordering mechanism. Parsing
+  // it is what lets the import SAY the column went unused instead of discarding it in silence.
   globalOrder: ['global order', 'universe order', 'read order'],
   seriesType: ['series type', 'type'],
   genre: ['genre', 'genres'],
@@ -240,8 +244,18 @@ export function rowToImported(row: string[], idx: Record<string, number>): Impor
     const i = idx[k]
     return i != null && i >= 0 ? (row[i] ?? '') : ''
   }
-  const title = cell('title').trim()
-  if (!title) return null
+  const rawTitle = cell('title').trim()
+  if (!rawTitle) return null
+
+  // SAME PARSER AS THE GENERIC (Goodreads/StoryGraph) PATH — parseCsvRows in csv.ts. The Library
+  // and Chism profiles carry a dedicated Series column, so their real exports don't usually need
+  // this; but nothing enforced that the Title column stays clean, and a Goodreads-shaped export
+  // that happens to also match one of these profiles' header signature (e.g. a "Global Order" or
+  // "GC Read" column bolted onto an otherwise-generic file) would have landed dirty, silently, on
+  // the one path with no series parsing. parseSeriesFromTitle is a verified no-op on a title with
+  // no trailing parenthetical, so running it unconditionally costs nothing on the common case.
+  const parsedFromTitle = parseSeriesFromTitle(rawTitle)
+  const title = parsedFromTitle.title
 
   const { first, last, contributors } = contributorsFor(cell)
   const { genre, genres, tags, intensity, unmappedGenre } = normalizeImportGenres(
@@ -249,9 +263,14 @@ export function rowToImported(row: string[], idx: Record<string, number>): Impor
     cell('tags'),
   )
 
-  const seriesName = cell('series').trim()
+  // The column is authoritative when present — a reader-maintained Series column outranks a title
+  // that happens to contain a paren. Parsed-from-title fills the gap only when the column is
+  // empty, the same never-overwrite shape the series-backfill migration uses for existing books.
+  const seriesColumn = cell('series').trim()
   const orderRaw = cell('seriesOrder').trim()
-  const position = orderRaw === '' ? '' : (num(orderRaw) ?? '')
+  const columnPosition = orderRaw === '' ? '' : (num(orderRaw) ?? '')
+  const seriesName = seriesColumn || parsedFromTitle.series
+  const position = seriesColumn ? columnPosition : parsedFromTitle.position
 
   // Reader's own metadata (Reverie template + any export that carries it): identifier, rating, read date.
   const isbn = cleanIsbn(cell('isbn'))
@@ -266,21 +285,22 @@ export function rowToImported(row: string[], idx: Record<string, number>): Impor
   // A recorded read date with no explicit status still means the book was read.
   if (readStatus === 'Unread' && reads.length) readStatus = 'Read'
 
-  // Ownership (four-state — docs/task-ownership-v2.md): an explicit Owned column wins (yes/blank =
-  // owned, borrow/loan = borrowed, no/wish = wishlist); otherwise a Goodreads-style wishlist shelf
-  // (`to-read`/`tbr`) marks the row wishlist. Plain "Unread" is NOT a wishlist signal — unread
-  // books you own are normal.
-  let ownership: Book['ownership'] = 'owned'
+  // Possession (docs/task-shelf-model.md): an explicit Owned column wins (yes/blank = owned,
+  // borrow/loan = borrowed, no/wish = wishlist); otherwise a Goodreads-style wishlist shelf
+  // (`to-read`/`tbr`) marks the row a want. Plain "Unread" is NOT a wishlist signal — unread books
+  // you own are normal. A spreadsheet cell carries one word, so it maps through the four-state
+  // adapter, which expands to the flags the model stores.
+  let possession: PossessionState = 'owned'
   const ownedCell = cell('owned').trim().toLowerCase()
   if (ownedCell) {
-    if (/borrow|loan/.test(ownedCell)) ownership = 'borrowed'
-    else if (/^(n|no|false|0|unowned|wish)/.test(ownedCell)) ownership = 'wishlist'
-    else ownership = 'owned'
+    if (/borrow|loan/.test(ownedCell)) possession = 'borrowed'
+    else if (/^(n|no|false|0|unowned|wish)/.test(ownedCell)) possession = 'wishlist'
+    else possession = 'owned'
   } else if (
     (idx.readStatus ?? -1) >= 0 &&
     /to-read|to read|wishlist|tbr/.test(cell('readStatus').toLowerCase())
   ) {
-    ownership = 'wishlist'
+    possession = 'wishlist'
   }
 
   const incoming: Incoming = {
@@ -298,7 +318,7 @@ export function rowToImported(row: string[], idx: Record<string, number>): Impor
     readStatus,
     pub: parseReleaseDate(cell('releaseDate')),
     source: 'Imported',
-    ownership,
+    ...possessionPatch(possession),
     owned: emptyOwned(),
     ...(isbn ? { isbn } : {}),
     ...(rating ? { rating } : {}),
@@ -336,111 +356,3 @@ export function parseImport(text: string, profileOverride?: ColumnProfile): Pars
 }
 
 export { BUILTIN as IMPORT_PROFILES }
-
-// ── Connected-universe detection (Import I3) ──
-// Some exports record a "global order": the human-curated sequence to read several interconnected
-// series + standalones (e.g. read a duet, then an epilogue novella, then the next series). That's a
-// reading ORDER (overlay), distinct from each book's own series + position. We group connected rows
-// into universes and lay them out in the EXACT global order — never recomputed from series position.
-
-export interface UniverseInput {
-  /** stable reference to the book (an id post-ingest, or a key in tests) */
-  ref: string
-  /** grouping key — the author owns the interconnected world */
-  author: string
-  series: string
-  /** book title — the final, deterministic tie-break when global order repeats (E2 / Flag 2) */
-  title: string
-  globalOrder: number | null
-  seriesType: string | null
-  /** "Series #" — which series within the universe; the first tie-break after global order */
-  seriesNumber: number | null
-  /** intrinsic position within its own series; the second tie-break (read book 1 before book 2) */
-  seriesOrder: number | null
-}
-
-export interface UniverseOrderItem {
-  ref: string
-  /** the exact global-order position (used verbatim as the reading_order_item position) */
-  position: number
-  series: string
-  seriesNumber: number | null
-}
-
-export interface UniverseOrder {
-  /** the reading_order name, e.g. "Royal Elite — reading order" */
-  name: string
-  items: UniverseOrderItem[]
-}
-
-/** Build a UniverseInput from an imported row + the book reference it resolved to. */
-export function universeInputFromRow(row: ImportedRow, ref: string): UniverseInput {
-  const inc = row.incoming
-  return {
-    ref,
-    author: [inc.first, inc.last].filter(Boolean).join(' ').trim().toLowerCase(),
-    series: inc.series ?? '',
-    title: inc.title,
-    globalOrder: row.globalOrder,
-    seriesType: row.seriesType,
-    seriesNumber: row.seriesNumber,
-    seriesOrder: typeof inc.position === 'number' ? inc.position : null,
-  }
-}
-
-/** Numeric compare that sorts null/undefined last (used for the tie-break ladder). */
-const byNum = (a: number | null | undefined, b: number | null | undefined): number => {
-  const x = a ?? Number.MAX_SAFE_INTEGER
-  const y = b ?? Number.MAX_SAFE_INTEGER
-  return x === y ? 0 : x < y ? -1 : 1
-}
-
-const isConnected = (r: UniverseInput): boolean =>
-  r.globalOrder != null || /interconnect/i.test(r.seriesType ?? '')
-
-/**
- * Group connected rows into reading orders. A universe = an author's books that carry a global
- * order (the curated cross-series sequence); only rows WITH a global order can be sequenced, and a
- * universe needs at least two of them. Items are sorted by the exact global order (epilogues/
- * novellas land exactly where the human placed them); the name comes from the entry-point series
- * (the lowest global order). Each book keeps its own series + position — this is an overlay.
- *
- * Tie semantics (E2 / Flag 2): real exports give SEVERAL books the SAME global order (Rina Kent has
- * 3-way ties at positions 1–9 — a whole series shares one universe slot). Tied books are ALL kept as
- * a concurrent tier at that repeated position — never collided / last-write-wins / dropped. Within a
- * tie the order is fully deterministic: series number (which series), then series order (read book 1
- * before book 2), then title. So the same export always materializes the identical sequence.
- */
-export function detectUniverses(rows: readonly UniverseInput[]): UniverseOrder[] {
-  const byAuthor = new Map<string, UniverseInput[]>()
-  for (const r of rows) {
-    if (!r.author || !isConnected(r) || r.globalOrder == null) continue
-    const g = byAuthor.get(r.author) ?? []
-    g.push(r)
-    byAuthor.set(r.author, g)
-  }
-
-  const orders: UniverseOrder[] = []
-  for (const group of byAuthor.values()) {
-    if (group.length < 2) continue // a single ordered book isn't a universe
-    const sorted = [...group].sort(
-      (a, b) =>
-        byNum(a.globalOrder, b.globalOrder) || // exact curated slot
-        byNum(a.seriesNumber, b.seriesNumber) || // ties: which series in the universe
-        byNum(a.seriesOrder, b.seriesOrder) || // then intrinsic series position
-        a.title.localeCompare(b.title), // then title — stable, deterministic
-    )
-    const entrySeries = sorted.find((r) => r.series)?.series ?? ''
-    const name = `${entrySeries || 'Reading'} — reading order`
-    orders.push({
-      name,
-      items: sorted.map((r) => ({
-        ref: r.ref,
-        position: r.globalOrder as number,
-        series: r.series,
-        seriesNumber: r.seriesNumber,
-      })),
-    })
-  }
-  return orders
-}

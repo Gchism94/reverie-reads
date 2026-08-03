@@ -27,6 +27,9 @@ export interface BookRow {
   isbn: string | null
   fave: boolean
   ownership: string
+  /** null only from a row cached before the stage-A migration — mappers fall back to the old enum */
+  borrowed: boolean | null
+  wishlist: boolean | null
   owned_physical: string | null
   owned_ebook: boolean
   owned_audiobook: boolean
@@ -38,7 +41,15 @@ export interface BookRow {
   pub_y: number | null
   pub_m: number | null
   pub_d: number | null
-  plan_date: string | null
+  /**
+   * DROPPED from `books` in 20260805010000 — never present on a row read from the database now.
+   * Optional and still declared because archives written before that carry it, and `restoreBackup`
+   * destructures it out so it never reaches the insert (see importExport.ts).
+   */
+  plan_date?: string | null
+  plan_y: number | null
+  plan_m: number | null
+  plan_d: number | null
   progress: number | null
   reading_position: number | null
   reading_now_hidden: boolean

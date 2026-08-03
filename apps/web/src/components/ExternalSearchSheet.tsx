@@ -71,7 +71,7 @@ export function ExternalSearchSheet({
               <button
                 type="button"
                 disabled={add.isPending}
-                onClick={() => add.mutate({ result: r, ownership: 'wishlist', listId })}
+                onClick={() => add.mutate({ result: r, possession: 'wishlist', listId })}
                 className="skin-control border border-line px-3 py-1 text-[12px] font-semibold text-ink disabled:opacity-50"
                 style={{ background: 'var(--chip)' }}
               >

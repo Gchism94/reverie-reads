@@ -446,6 +446,87 @@ describe('backup round trip — the data v4 dropped on the floor', () => {
     expect(db.book_tropes).toHaveLength(0)
   })
 
+  it('a v5 archive carrying reading_orders restores everything else, ignoring that key', async () => {
+    // Reading orders were dropped (chore/drop-reading-orders): the app stopped touching those
+    // tables in S1 and they go in S2. Archives made BEFORE that still carry the key, and a reader
+    // restoring one must not meet an error over a subsystem that no longer exists — the key is
+    // skipped, and nothing else is disturbed.
+    //
+    // Hand-built rather than round-tripped, precisely because buildBackup no longer emits the key:
+    // an archive produced today could not exercise this path at all.
+    const parsed = JSON.parse(await buildBackup()) as Record<string, unknown>
+    expect(parsed.reading_orders, 'a current export must not write the key at all').toBeUndefined()
+
+    parsed.reading_orders = [
+      {
+        name: 'Empyrean — reading order',
+        description: 'publication order',
+        reading_order_items: [
+          { position: 1024, book_id: 'book-a', series: null, note: null },
+          { position: 2048, book_id: 'book-b', series: null, note: 'read after B1' },
+          { position: 3072, book_id: null, series: 'Crescent City', note: null },
+        ],
+      },
+    ]
+    wipeToFreshAccount()
+
+    const result = await restoreBackup(JSON.stringify(parsed))
+
+    // Everything else lands intact…
+    expect(result.books).toBe(2)
+    expect(db.books).toHaveLength(2)
+    expect(db.reads.length).toBeGreaterThan(0)
+    expect(db.lists.length).toBeGreaterThan(0)
+    expect(db.book_tropes.length).toBeGreaterThan(0)
+    expect(db.series_entries.length).toBeGreaterThan(0) // the refusals survive too
+
+    // …and not one reading-order row is written.
+    expect(db.reading_orders, 'the dropped subsystem must not be recreated').toHaveLength(0)
+    expect(db.reading_order_items).toHaveLength(0)
+  })
+
+  it('an archive carrying plan_date restores cleanly, ignoring the key, with the trio intact', async () => {
+    // Same contract as reading_orders above, one structural step harder. That was a top-level key
+    // nothing read; plan_date is a COLUMN inside every book row, carried into the archive by the
+    // export's `select('*')` and previously written straight back by the restore spread. It has to
+    // be STRIPPED, not merely skipped.
+    //
+    // The failure this prevents lands on the NEXT branch, not this one: once the column is dropped,
+    // an insert still carrying the key makes PostgREST reject the row and takes the whole restore
+    // down with it. So the assertion is not "the plan survives" — it is "the key never reaches the
+    // insert", which is what stays true after the column is gone.
+    const parsed = JSON.parse(await buildBackup()) as { books: Record<string, unknown>[] }
+
+    // Hand-planted: a current export cannot produce this, because nothing writes plan_date anymore.
+    // The trio and the legacy column deliberately DISAGREE, so a restore that wrote plan_date back
+    // could not be mistaken for one that merely carried the trio through.
+    parsed.books = parsed.books.map((b) => ({
+      ...b,
+      plan_date: '2019-01-01',
+      plan_y: 2026,
+      plan_m: 3,
+      plan_d: null,
+    }))
+    wipeToFreshAccount()
+
+    const result = await restoreBackup(JSON.stringify(parsed))
+
+    // It restores rather than throwing — the archive predates the drop and must still be readable.
+    expect(result.books).toBe(2)
+    expect(db.books).toHaveLength(2)
+
+    // The key never reaches the insert. This is the assertion that survives the column drop, and
+    // the one a "silently write it back" implementation fails.
+    for (const b of db.books) {
+      expect(Object.keys(b), 'plan_date must be stripped before the insert').not.toContain('plan_date')
+    }
+
+    // …and the plan itself came through, from the trio, at the precision it was stored at.
+    for (const b of db.books) {
+      expect(b).toMatchObject({ plan_y: 2026, plan_m: 3, plan_d: null })
+    }
+  })
+
   it('exports v5 with the new sections keyed by book id', async () => {
     const parsed = JSON.parse(await buildBackup()) as {
       v: number

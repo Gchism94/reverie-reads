@@ -1,5 +1,11 @@
 import { Link } from '@tanstack/react-router'
-import { formatAuthors, bookOwnedFormats, seriesStatusBadge, type Book } from '@reverie/core'
+import {
+  formatAuthors,
+  bookOwnedFormats,
+  possessionState,
+  seriesStatusBadge,
+  type Book,
+} from '@reverie/core'
 import { subgenreGradient } from '../library/constants'
 import { useLabels, useVoice } from '../skin/labels'
 import { Chip } from './Chip'
@@ -38,7 +44,8 @@ export function BookDetailRail({
   const isRead = book.readStatus === 'Read' || book.reads.length > 0
   const intensity = book.intensity ?? 0
   const owned = bookOwnedFormats(book)
-  const borrowed = book.ownership === 'borrowed'
+  const possession = possessionState(book)
+  const borrowed = possession === 'borrowed'
 
   return (
     <div className="flex h-full flex-col overflow-y-auto px-4 py-5">
@@ -119,7 +126,7 @@ export function BookDetailRail({
       )}
 
       {/* Read-only here like the rest of the rail — the ownership CONTROL lives on the full page. */}
-      {book.ownership === 'wishlist' && (
+      {possession === 'wishlist' && (
         <div className="mt-4">
           <span
             className="inline-flex items-center gap-1 rounded-full border border-dashed border-line px-2.5 py-1 text-[12px] font-semibold text-muted"

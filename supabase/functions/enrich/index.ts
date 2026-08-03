@@ -24,7 +24,17 @@ import {
 } from './merge.ts'
 import { selectBestMatch, selfIsbn13, type Confidence, type ResolveCandidate } from './resolve.ts'
 import { envInt, rateLimit, tooMany } from '../_shared/ratelimit.ts'
+import { paceSource } from '../_shared/sourcePace.ts'
+import { Trace, wantsTrace } from '../_shared/trace.ts'
+import {
+  classifyHttp,
+  dispositionOf,
+  retryAfterMs,
+  SourceBodyError,
+  SourceHttpError,
+} from '../_shared/httpClassify.ts'
 import { captureEdgeError } from '../_shared/observe.ts'
+import { olHeaders } from '../_shared/olIdentity.ts'
 
 /** A cover edition choice surfaced to the import review + Cover Studio (distilled E1 alternate). */
 interface CoverAlternate {
@@ -46,17 +56,13 @@ interface EnrichInput {
   isbn?: string
   mode?: 'fast' | 'full'
   refresh?: boolean
-  /** 'cacheCover' → materialize a single cover URL to Storage (a manual Cover Studio pick), no search */
-  action?: 'cacheCover'
-  /** the source cover URL to cache (with action 'cacheCover') */
-  cover?: string
-  /** the edition ISBN-13 the cover belongs to (cache key, for dedup) */
-  isbn13?: string
 }
 
 const cleanIsbn = (s: string) => (s || '').replace(/[^0-9Xx]/g, '').toUpperCase()
 const norm = (s: string) => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '')
-const UA = 'Reverie/1.0 (personal book library; enrichment aggregator)'
+// The old local UA ('Reverie/1.0 (personal book library; enrichment aggregator)') identified the app
+// but carried NO contact address, which is the half OL's identified tier actually requires — so it
+// bought nothing. OL calls now use the shared olHeaders() (name + contact, one home, guard-tested).
 
 // Google Books API key — keyless calls share a low per-IP quota and 429 quickly; the key lifts it to
 // ~1,000/day. Appended to every Google query when configured.
@@ -72,43 +78,78 @@ const hardcoverAuth = (): string | null => {
   return t ? `Bearer ${t}` : null
 }
 
-// One retry with backoff so a transient 429/5xx doesn't fail the whole source. Throws 'status 429'
-// on rate-limit so the caller can mark the run rate-limited (pause + resume, never burn the window).
+/**
+ * Fetch JSON, classifying by STATUS BEFORE BODY. One backoff retry for 5xx only.
+ *
+ * The body is never touched on a non-OK response. That is the fix: a 4xx used to fall through to
+ * `return await r.json()`, and Open Library answers a 404 with 29KB of text/html, so the parse threw
+ * a SyntaxError whose message carried no status at all. The caller's `String(e).includes('429')`
+ * then read a refusal as "this source had nothing" and the book was stamped as genuinely checked.
+ *
+ * A 429 is thrown immediately and never retried: it is not retryable on this timescale, and a
+ * second attempt only spends another unit of quota to be refused again.
+ */
 async function fetchJson(url: string, init?: RequestInit): Promise<unknown> {
   for (let attempt = 0; attempt < 2; attempt++) {
     const r = await fetch(url, init)
-    if (r.status === 429) throw new Error('status 429')
-    if (r.status >= 500) {
-      if (attempt === 1) throw new Error(`status ${r.status}`)
+    const disposition = classifyHttp(r.status)
+
+    if (disposition === 'rate_limited') {
+      throw new SourceHttpError(
+        r.status,
+        url,
+        retryAfterMs(r.headers.get('retry-after'), Date.now()),
+      )
+    }
+    if (disposition === 'retry') {
+      if (attempt === 1) throw new SourceHttpError(r.status, url)
       await new Promise((res) => setTimeout(res, 400 * (attempt + 1)))
       continue
     }
-    return await r.json()
+    // Non-retryable 4xx: throw WITH the status, and never read the body.
+    if (disposition === 'failed') throw new SourceHttpError(r.status, url)
+
+    // Only an OK response's body is parsed, and a malformed one is its own failure — not a
+    // silently-empty success that would stamp the book as checked.
+    try {
+      return await r.json()
+    } catch {
+      throw new SourceBodyError(r.status, url)
+    }
   }
   return null
 }
 
+/** Time a stage when tracing, run it untouched when not — one helper so no call site branches. */
+const time = <T>(tr: Trace | undefined, stage: string, fn: () => Promise<T>): Promise<T> =>
+  tr ? tr.time(stage, fn) : fn()
+
 // ── Source adapters: fetch one source, return a normalized SourceRecord (or null). Pure parsing
 //    lives in ./merge.ts normalizers; adapters only know how to query. ──
 
-async function adapterGoogle(input: EnrichInput): Promise<SourceRecord | null> {
+async function adapterGoogle(input: EnrichInput, tr?: Trace): Promise<SourceRecord | null> {
+  if (!(await paceSource('google', tr))) throw new Error('status 429')
   const q = input.isbn
     ? `isbn:${cleanIsbn(input.isbn)}`
     : `intitle:${encodeURIComponent(`"${input.title}"`)}${input.author ? `+inauthor:${encodeURIComponent(`"${input.author}"`)}` : ''}`
-  const j = (await fetchJson(
-    `https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=1${googleKey()}`,
+  const j = (await time(tr, 'fetch.google.adapter', () =>
+    fetchJson(`https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=1${googleKey()}`),
   )) as { items?: unknown[] }
   const item = j?.items?.[0]
   return item ? normalizeGoogle(item) : null
 }
 
-async function adapterOpenLibrary(input: EnrichInput): Promise<SourceRecord | null> {
+async function adapterOpenLibrary(input: EnrichInput, tr?: Trace): Promise<SourceRecord | null> {
+  // search.json, NOT the covers endpoint — separate budgets, separate documented limits.
+  if (!(await paceSource('ol-search', tr))) throw new Error('status 429')
   const fields =
     'key,edition_key,title,author_name,first_publish_year,isbn,number_of_pages_median,subject,language,cover_i,series'
   const url = input.isbn
     ? `https://openlibrary.org/search.json?q=isbn:${cleanIsbn(input.isbn)}&fields=${fields}&limit=1`
     : `https://openlibrary.org/search.json?title=${encodeURIComponent(input.title ?? '')}&author=${encodeURIComponent(input.author ?? '')}&fields=${fields}&limit=1`
-  const j = (await fetchJson(url, { headers: { 'User-Agent': UA } })) as { docs?: unknown[] }
+  const j = (await time(tr, 'fetch.ol-search.adapter', () =>
+    fetchJson(url, { headers: olHeaders() }),
+  )) as { docs?: unknown[] }
   const doc = j?.docs?.[0]
   return doc ? normalizeOpenLibrary(doc) : null
 }
@@ -120,80 +161,94 @@ async function adapterOpenLibrary(input: EnrichInput): Promise<SourceRecord | nu
 async function hardcoverSearchRecords(
   title: string | undefined,
   limit: number,
+  tr?: Trace,
 ): Promise<SourceRecord[]> {
+  if (!(await paceSource('hardcover', tr))) throw new Error('status 429')
   const auth = hardcoverAuth()
   if (!auth || !title) return []
-  const j = (await fetchJson('https://api.hardcover.app/v1/graphql', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: auth },
-    body: JSON.stringify({
-      query:
-        'query($q:String!,$n:Int!){ search(query:$q, query_type:"Book", per_page:$n){ results } }',
-      variables: { q: title, n: limit },
+  const j = (await time(tr, 'fetch.hardcover', () =>
+    fetchJson('https://api.hardcover.app/v1/graphql', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: auth },
+      body: JSON.stringify({
+        query:
+          'query($q:String!,$n:Int!){ search(query:$q, query_type:"Book", per_page:$n){ results } }',
+        variables: { q: title, n: limit },
+      }),
     }),
-  })) as { data?: { search?: { results?: { hits?: { document?: unknown }[] } } } }
+  )) as { data?: { search?: { results?: { hits?: { document?: unknown }[] } } } }
   const hits = j?.data?.search?.results?.hits ?? []
   return hits.map((h) => normalizeHardcoverSearch(h?.document)).filter((r) => r.title)
 }
 
-async function adapterHardcover(input: EnrichInput): Promise<SourceRecord | null> {
-  const [first] = await hardcoverSearchRecords(input.title, 1)
+async function adapterHardcover(input: EnrichInput, tr?: Trace): Promise<SourceRecord | null> {
+  const [first] = await hardcoverSearchRecords(input.title, 1, tr)
   return first ?? null
 }
 
-async function adapterIsbndb(input: EnrichInput): Promise<SourceRecord | null> {
+async function adapterIsbndb(input: EnrichInput, tr?: Trace): Promise<SourceRecord | null> {
+  if (!(await paceSource('isbndb', tr))) throw new Error('status 429')
   const key = Deno.env.get('ISBNDB_KEY')
   const isbn = cleanIsbn(input.isbn ?? '')
   if (!key || !isbn) return null // ISBNdb is queried by ISBN (the completeness backstop)
-  const j = (await fetchJson(`https://api2.isbndb.com/book/${isbn}`, {
-    headers: { Authorization: key },
-  })) as {
+  const j = (await time(tr, 'fetch.isbndb', () =>
+    fetchJson(`https://api2.isbndb.com/book/${isbn}`, { headers: { Authorization: key } }),
+  )) as {
     book?: unknown
   }
   return j?.book ? normalizeIsbndb(j) : null
 }
 
-const ADAPTERS: Record<EnrichSource, (i: EnrichInput) => Promise<SourceRecord | null>> = {
-  openlibrary: adapterOpenLibrary,
-  google: adapterGoogle,
-  hardcover: adapterHardcover,
-  isbndb: adapterIsbndb,
-  manual: async () => null,
-}
+const ADAPTERS: Record<EnrichSource, (i: EnrichInput, tr?: Trace) => Promise<SourceRecord | null>> =
+  {
+    openlibrary: adapterOpenLibrary,
+    google: adapterGoogle,
+    hardcover: adapterHardcover,
+    isbndb: adapterIsbndb,
+    manual: async () => null,
+  }
 
 // ── Search adapters: title+author → up to SEARCH_LIMIT candidates. The real catalog has NO ISBNs,
 //    so resolution starts from a title+author SEARCH (not an ISBN lookup). Parsing stays in the
 //    ./merge.ts normalizers; these only know how to query each source's search endpoint. ──
 const SEARCH_LIMIT = 5
 
-async function searchGoogle(input: EnrichInput): Promise<ResolveCandidate[]> {
+async function searchGoogle(input: EnrichInput, tr?: Trace): Promise<ResolveCandidate[]> {
+  if (!(await paceSource('google', tr))) throw new Error('status 429')
   if (!input.title) return []
   const q = `intitle:${encodeURIComponent(`"${input.title}"`)}${input.author ? `+inauthor:${encodeURIComponent(`"${input.author}"`)}` : ''}`
-  const j = (await fetchJson(
-    `https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=${SEARCH_LIMIT}${googleKey()}`,
+  const j = (await time(tr, 'fetch.google.search', () =>
+    fetchJson(
+      `https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=${SEARCH_LIMIT}${googleKey()}`,
+    ),
   )) as { items?: unknown[] }
   return (j?.items ?? [])
     .map((it): ResolveCandidate => ({ source: 'google', record: normalizeGoogle(it) }))
     .filter((c) => c.record.title)
 }
 
-async function searchOpenLibrary(input: EnrichInput): Promise<ResolveCandidate[]> {
+async function searchOpenLibrary(input: EnrichInput, tr?: Trace): Promise<ResolveCandidate[]> {
   if (!input.title) return []
+  if (!(await paceSource('ol-search', tr))) throw new Error('status 429')
   const fields =
     'key,edition_key,title,author_name,first_publish_year,isbn,number_of_pages_median,subject,language,cover_i,series'
   const url = `https://openlibrary.org/search.json?title=${encodeURIComponent(input.title)}&author=${encodeURIComponent(input.author ?? '')}&fields=${fields}&limit=${SEARCH_LIMIT}`
-  const j = (await fetchJson(url, { headers: { 'User-Agent': UA } })) as { docs?: unknown[] }
+  const j = (await time(tr, 'fetch.ol-search.search', () =>
+    fetchJson(url, { headers: olHeaders() }),
+  )) as { docs?: unknown[] }
   return (j?.docs ?? [])
     .map((d): ResolveCandidate => ({ source: 'openlibrary', record: normalizeOpenLibrary(d) }))
     .filter((c) => c.record.title)
 }
 
-async function searchHardcover(input: EnrichInput): Promise<ResolveCandidate[]> {
-  const records = await hardcoverSearchRecords(input.title, SEARCH_LIMIT)
+async function searchHardcover(input: EnrichInput, tr?: Trace): Promise<ResolveCandidate[]> {
+  const records = await hardcoverSearchRecords(input.title, SEARCH_LIMIT, tr)
   return records.map((record): ResolveCandidate => ({ source: 'hardcover', record }))
 }
 
-const SEARCHERS: Partial<Record<EnrichSource, (i: EnrichInput) => Promise<ResolveCandidate[]>>> = {
+const SEARCHERS: Partial<
+  Record<EnrichSource, (i: EnrichInput, tr?: Trace) => Promise<ResolveCandidate[]>>
+> = {
   hardcover: searchHardcover,
   google: searchGoogle,
   openlibrary: searchOpenLibrary,
@@ -202,22 +257,34 @@ const SEARCHERS: Partial<Record<EnrichSource, (i: EnrichInput) => Promise<Resolv
 /** Search the enabled sources (catalog priority: Hardcover → Google → Open Library) for candidates. */
 async function gatherCandidates(
   input: EnrichInput,
-): Promise<{ candidates: ResolveCandidate[]; rateLimited: boolean }> {
+  tr?: Trace,
+): Promise<{
+  candidates: ResolveCandidate[]
+  rateLimited: boolean
+  attempted: number
+  failed: number
+}> {
   const order: EnrichSource[] = ['hardcover', 'google', 'openlibrary']
   const enabled = new Set(enabledSources())
   const candidates: ResolveCandidate[] = []
   let rateLimited = false
+  let attempted = 0
+  let failed = 0
   for (const s of order) {
     const fn = SEARCHERS[s]
     if (!enabled.has(s) || !fn) continue
+    attempted++
     try {
-      candidates.push(...(await fn(input)))
+      candidates.push(...(await fn(input, tr)))
     } catch (e) {
-      if (String(e).includes('429')) rateLimited = true
-      // degrade gracefully — skip this source
+      // Classified by the error's OWN status, not by string-matching its message. A network error
+      // and a 404 are both failures; only a 429 is a rate limit. Counting failures is what lets the
+      // caller tell "every source refused us" from "the sources answered and had nothing".
+      failed++
+      if (dispositionOf(e) === 'rate_limited') rateLimited = true
     }
   }
-  return { candidates, rateLimited }
+  return { candidates, rateLimited, attempted, failed }
 }
 
 /** Distill E1 alternate candidates into the cover-picker shape (only those that carry a cover). */
@@ -250,27 +317,24 @@ const isComplete = (r: EnrichedRecord): boolean => !!r.cover && !!r.isbn13
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
+  const tr = new Trace()
   // Per-user/IP rate limit. Generous by default (the bulk "complete missing" job legitimately runs
   // a few per second); the limit catches abusive bursts. Tune via ENRICH_RATE_MAX.
-  const rl = await rateLimit(req, 'enrich', envInt('ENRICH_RATE_MAX', 600), 60)
+  // Timed because it is a DB round trip on every request — the same cost as one paceSource call,
+  // paid before any source work begins.
+  const rl = await tr.time('enrich.ratelimit', () =>
+    rateLimit(req, 'enrich', envInt('ENRICH_RATE_MAX', 600), 60),
+  )
   if (!rl.allowed) return tooMany(rl.retryAfter, cors)
   try {
     const input = (await req.json()) as EnrichInput
 
-    // Manual Cover Studio pick: materialize ONE chosen cover URL to Storage/CDN (owned, not a hotlink),
-    // keyed by its edition ISBN so repeats dedup. Falls back to the source URL on any failure.
-    if (input.action === 'cacheCover' && input.cover) {
-      const key = (cleanIsbn(input.isbn13 ?? '') || input.cover)
-        .replace(/[^a-z0-9]/gi, '_')
-        .slice(0, 80)
-      return json({ cover: await cacheCover(input.cover, key) })
-    }
     const mode = input.mode ?? 'full'
     const key = cacheKeyFor(input)
 
     // 1) Cache: a fresh hit returns immediately — ZERO external calls (the main cost lever).
     if (!input.refresh) {
-      const cached = await readCache(key)
+      const cached = await tr.time('enrich.readCache', () => readCache(key))
       if (cached && isFresh(cached)) {
         return json({
           ...toResponse(cached.record),
@@ -278,6 +342,7 @@ Deno.serve(async (req: Request) => {
           confidence: cached.confidence ?? undefined,
           query: cached.match_query ?? undefined,
           alternates: cached.alternates ?? [],
+          ...traceOf(input, tr),
         })
       }
     }
@@ -287,27 +352,47 @@ Deno.serve(async (req: Request) => {
       const order = enabledSources()
       let rec: SourceRecord | null = null
       let used: EnrichSource | null = null
+      // CONTINUE WHEN A RECORD CARRIES NO COVER. `if (rec) break` was the bug: Open Library's
+      // search.json returns a bibliographic record for most books whether or not a cover image
+      // exists (`cover_i` is simply absent), so the loop took OL's record, broke, and never asked
+      // Google — reporting a successful enrichment with no cover. Fast mode's whole job is to put a
+      // cover on screen quickly, so a record without one is not a reason to stop looking. The last
+      // record is still kept as a fallback: bibliographic data beats nothing when no source has art.
+      let fallback: { rec: SourceRecord; used: EnrichSource } | null = null
       for (const s of order.includes('openlibrary')
         ? (['openlibrary', 'google'] as EnrichSource[])
         : order) {
+        let candidate: SourceRecord | null = null
         try {
-          rec = await ADAPTERS[s](input)
+          candidate = await ADAPTERS[s](input, tr)
         } catch {
-          rec = null
+          candidate = null
         }
-        if (rec) {
+        if (!candidate) continue
+        if (candidate.cover) {
+          rec = candidate
           used = s
           break
         }
+        fallback ??= { rec: candidate, used: s }
+      }
+      if (!rec && fallback) {
+        rec = fallback.rec
+        used = fallback.used
       }
       if (!rec || !used) return json(toResponse(emptyMerged(input)))
       const merged = mergeRecords([{ source: used, at: new Date().toISOString(), record: rec }])
-      return json({ ...toResponse(merged), source: used, completing: true })
+      return json({ ...toResponse(merged), source: used, completing: true, ...traceOf(input, tr) })
     }
 
     // 3) Full pass: resolve identity, then merge field-by-field across sources, cache, return complete.
     const stamped: StampedSource[] = []
     let rateLimited = false
+    // How many sources we ASKED, and how many threw. `attempted > 0 && failed === attempted` is the
+    // difference between "nobody had this book" and "nobody would talk to us" — the distinction the
+    // client needs so it does not stamp a book as checked when nothing was ever checked.
+    let attempted = 0
+    let failed = 0
     let confidence: Confidence = cleanIsbn(input.isbn ?? '') ? 'high' : 'none' // a real ISBN is exact
     let matchQuery = ''
     let alternates: CoverAlternate[] = []
@@ -317,8 +402,15 @@ Deno.serve(async (req: Request) => {
     //     SELF-RESOLVE an ISBN-13 → fetch the canonical edition + best cover by that ISBN below.
     const title = input.title
     if (!cleanIsbn(input.isbn ?? '') && title) {
-      const { candidates, rateLimited: searchRL } = await gatherCandidates(input)
+      const {
+        candidates,
+        rateLimited: searchRL,
+        attempted: searchAttempted,
+        failed: searchFailed,
+      } = await gatherCandidates(input, tr)
       if (searchRL) rateLimited = true
+      attempted += searchAttempted
+      failed += searchFailed
       const r = selectBestMatch({ title, author: input.author }, candidates)
       confidence = r.confidence
       matchQuery = r.query
@@ -332,11 +424,13 @@ Deno.serve(async (req: Request) => {
 
     // 3b) Query enabled sources (by the self-resolved ISBN when we have one) to complete + best cover.
     for (const s of enabledSources()) {
+      attempted++
       try {
-        const rec = await ADAPTERS[s](fetchInput)
+        const rec = await ADAPTERS[s](fetchInput, tr)
         if (rec) stamped.push({ source: s, at: new Date().toISOString(), record: rec })
       } catch (e) {
-        if (String(e).includes('429')) rateLimited = true
+        failed++
+        if (dispositionOf(e) === 'rate_limited') rateLimited = true
         // degrade gracefully — skip this source, keep going
       }
     }
@@ -347,11 +441,10 @@ Deno.serve(async (req: Request) => {
     // The book lands in the import-review "missing cover" bucket instead of showing a possibly-wrong one.
     if (confidence === 'none') merged.cover = ''
 
-    if (sourceList) await writeCache(key, merged, { confidence, query: matchQuery, alternates })
-    // Non-blocking cover caching: respond with the source URL immediately (no wait on the image
-    // download/upload), and cache the image to Storage + upgrade the cached row to the CDN URL in the
-    // background, so later readers serve from the CDN. Bounds per-book enrichment latency.
-    scheduleCoverCache(key, merged)
+    if (sourceList)
+      await tr.time('enrich.writeCache', () =>
+        writeCache(key, merged, { confidence, query: matchQuery, alternates }),
+      )
     // Flag rate-limited only when nothing resolved, so a bulk run pauses/resumes instead of
     // stamping the book checked. A partial record is still useful → not flagged.
     const body = {
@@ -360,8 +453,15 @@ Deno.serve(async (req: Request) => {
       confidence,
       query: matchQuery || undefined,
       alternates,
+      ...traceOf(input, tr),
     }
-    return json(rateLimited && !sourceList ? { ...body, rateLimited: true } : body)
+    // THREE OUTCOMES, NOT TWO. `sourcesFailed` says every source we asked threw — which is not the
+    // same as an empty result and must not be recorded as one. Both flags are set only when nothing
+    // resolved: a partial record is genuinely useful and is reported as a success.
+    const allFailed = attempted > 0 && failed === attempted && !sourceList
+    if (rateLimited && !sourceList) return json({ ...body, rateLimited: true })
+    if (allFailed) return json({ ...body, sourcesFailed: true, sourcesAttempted: attempted })
+    return json(body)
   } catch (e) {
     captureEdgeError('enrich', e)
     return new Response(JSON.stringify({ error: String(e) }), {
@@ -370,6 +470,10 @@ Deno.serve(async (req: Request) => {
     })
   }
 })
+
+/** `_trace` only when the caller asked; otherwise the response shape is byte-for-byte unchanged. */
+const traceOf = (input: EnrichInput, tr: Trace) =>
+  wantsTrace(input) ? { _trace: { spans: tr.spans, totalMs: tr.totalMs() } } : {}
 
 const json = (body: unknown) =>
   new Response(JSON.stringify(body), { headers: { ...cors, 'Content-Type': 'application/json' } })
@@ -418,78 +522,6 @@ function cacheKeyFor(input: EnrichInput): string {
   return isbn.length >= 10
     ? `isbn:${isbn}`
     : `ta:${norm(input.title ?? '')}|${norm(input.author ?? '')}`
-}
-
-// ── cover image caching (Storage bucket 'covers', global + CDN-served) ──
-// Keyed by work/edition like enrichment_cache, so the Nth scanner reuses one stored image.
-function coverKeyFor(r: EnrichedRecord): string {
-  const raw = r.isbn13 || r.isbn10 || r.workId || r.editionId || ''
-  return raw.replace(/[^a-z0-9]/gi, '_').slice(0, 80)
-}
-
-/**
- * Ensure the cover is stored in the 'covers' bucket and return its public CDN URL. Idempotent: if
- * the object already exists it's reused (no re-fetch). On a missing key or any fetch/upload error,
- * the original source URL is returned unchanged (the client then falls back to a placeholder).
- */
-async function cacheCover(sourceUrl: string, key: string): Promise<string> {
-  if (!DB_URL || !key || sourceUrl.includes('/storage/v1/object/public/covers/')) return sourceUrl
-  const path = `${key}.jpg`
-  // The browser-facing base. In production SUPABASE_URL is the public project URL; COVER_PUBLIC_URL
-  // can point at a CDN/custom domain instead.
-  const publicBase = Deno.env.get('COVER_PUBLIC_URL') ?? DB_URL
-  const publicUrl = `${publicBase}/storage/v1/object/public/covers/${path}`
-  try {
-    // Already cached? Reuse it.
-    const head = await fetch(publicUrl, { method: 'HEAD' })
-    if (head.ok) return publicUrl
-
-    const img = await fetch(sourceUrl)
-    if (!img.ok) return sourceUrl
-    const bytes = new Uint8Array(await img.arrayBuffer())
-    if (!bytes.length) return sourceUrl
-    const contentType = img.headers.get('content-type') ?? 'image/jpeg'
-    const up = await fetch(`${DB_URL}/storage/v1/object/covers/${path}`, {
-      method: 'POST',
-      headers: {
-        apikey: SERVICE,
-        Authorization: `Bearer ${SERVICE}`,
-        'Content-Type': contentType,
-        'x-upsert': 'true',
-      },
-      body: bytes,
-    })
-    return up.ok ? publicUrl : sourceUrl
-  } catch {
-    return sourceUrl
-  }
-}
-
-/**
- * Cache the cover image to Storage WITHOUT blocking the response. The response already carries the
- * source URL (works immediately); here we upload the image in the background and, once it's on the
- * CDN, upgrade the cached row's cover to the CDN URL so later readers stop hotlinking. Runs after the
- * response via EdgeRuntime.waitUntil; a no-op when there's nothing to cache or no DB. Best-effort.
- */
-function scheduleCoverCache(cacheKey: string, merged: EnrichedRecord): void {
-  const src = merged.cover
-  if (!DB_URL || !src || src.includes('/storage/v1/object/public/covers/')) return
-  const task = (async () => {
-    try {
-      const cdn = await cacheCover(src, coverKeyFor(merged))
-      if (cdn && cdn !== src) {
-        await fetch(`${DB_URL}/rest/v1/enrichment_cache?key=eq.${encodeURIComponent(cacheKey)}`, {
-          method: 'PATCH',
-          headers: { ...dbHeaders, Prefer: 'return=minimal' },
-          body: JSON.stringify({ record: { ...merged, cover: cdn } }),
-        })
-      }
-    } catch {
-      /* best-effort */
-    }
-  })()
-  const rt = (globalThis as { EdgeRuntime?: { waitUntil(p: Promise<unknown>): void } }).EdgeRuntime
-  if (rt?.waitUntil) rt.waitUntil(task)
 }
 
 const DAY = 86_400_000

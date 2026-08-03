@@ -22,8 +22,8 @@ export interface LibraryFilters {
   intensity: number[]
   /** filter to books where any contributor matches this name ('' = off) */
   author: string
-  /** include books outside the default scope — wishlist + unset books you don't have and haven't
-   *  read. Off by default: the grid is what you have in hand or have read (see inDefaultLibrary). */
+  /** include books outside the default scope — books you neither have in hand nor ever opened.
+   *  Off by default: the grid is what you have or have engaged with (see inDefaultLibrary). */
   wishlist: boolean
   sort: LibrarySort
 }
@@ -51,14 +51,27 @@ export function bookHasAuthor(b: Book, name: string): boolean {
   return normalizeName(authorOf(b)) === key // back-compat for not-yet-joined books
 }
 
-/** A book counts as "read" if marked Read or it has any logged reads. */
+/** A book counts as "read" if marked Read or it has any logged reads.
+ *
+ *  DNF is deliberately NOT read, and this predicate must stay that way: it feeds series progress,
+ *  the taste profile, the reading stats and the matcher, where counting an abandoned book as read
+ *  would overstate a series' completion and teach the recommender from a book the reader bailed on.
+ *  Library VISIBILITY is a different question — see hasReadingHistory. */
 export const isBookRead = (b: Book): boolean => b.readStatus === 'Read' || b.reads.length > 0
 
-/** The default library scope (docs/task-ownership-v2.md): anything you have in hand (owned or
- *  borrowed) OR have read. Reading history is never hidden by possession — a book you read from
- *  the library stays in your library. Wishlist and unset-unread books fall outside; the wishlist
- *  chip lets them back in. */
-export const inDefaultLibrary = (b: Book): boolean => isPossessed(b) || isBookRead(b)
+/** Has the reader engaged with this book at all — finished it, or started and abandoned it.
+ *
+ *  Split from isBookRead because the two questions diverge on exactly one status. A DNF book you
+ *  never owned was invisible: not possessed, not read, so outside the default library and reachable
+ *  only through the wishlist chip. That is a book the reader definitely handled, hidden by a
+ *  predicate meant to hide books they had not. Visibility says yes; "read" still says no. */
+export const hasReadingHistory = (b: Book): boolean => isBookRead(b) || b.readStatus === 'DNF'
+
+/** The default library scope (docs/task-shelf-model.md): anything you have in hand (owned or
+ *  borrowed) OR have any reading history with, DNF included. Reading history is never hidden by
+ *  possession — a book you read from the library stays in your library. Books you neither had nor
+ *  opened fall outside; the wishlist chip lets them back in. */
+export const inDefaultLibrary = (b: Book): boolean => isPossessed(b) || hasReadingHistory(b)
 
 const positionOf = (b: Book, fallback = 0): number =>
   typeof b.position === 'number' ? b.position : Number(b.position) || fallback
@@ -73,8 +86,8 @@ export function seriesLenBucket(b: Book): SeriesLenBucket {
 
 /** The prototype's library predicate, ported verbatim. */
 export function matchesFilters(b: Book, f: LibraryFilters): boolean {
-  // Collection scoping first: the grid is what you HAVE or have READ, unless the wishlist chip
-  // lets the rest (wishlist + unset-unread books) in.
+  // Collection scoping first: the grid is what you HAVE or have opened, unless the wishlist chip
+  // lets the rest (books neither in hand nor ever started) in.
   if (!f.wishlist && !inDefaultLibrary(b)) return false
   if (f.sub !== 'All' && !bookSubgenres(b).includes(f.sub)) return false
   if (f.tags.length) {

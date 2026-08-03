@@ -26,6 +26,29 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
+    // The e2e suite reads Supabase results ONLY through ./support/ok — and this rule is what keeps
+    // that true, because nothing else can. `tsc` never looks at this directory (apps/web/tsconfig.json
+    // includes only ["src", "vite.config.ts"]), so `noUnusedLocals` — which makes a swallowed
+    // `const { error }` a compile error in src/ — does not apply here at all. That asymmetry, not
+    // discipline, is why every swallowed Supabase error in the repo lived under e2e/.
+    //
+    // Scoped to non-null assertions on a RESULT field rather than banning `!` outright: `rows[0]!` and
+    // `reads[0]!` after an explicit length check are idiomatic under noUncheckedIndexedAccess and have
+    // nothing to do with error handling. Banning those too would have meant 14 unrelated edits and a
+    // rule people would reach for an eslint-disable to get around.
+    files: ['apps/web/e2e/**/*.ts'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'TSNonNullExpression > MemberExpression[property.name=/^(data|user|session)$/]',
+          message:
+            'Read Supabase results through ok() / okData() / okUser() from ./support/ok. A non-null assertion on .data/.user/.session turns a failed call into a bare TypeError pointing at the read instead of the call.',
+        },
+      ],
+    },
+  },
+  {
     files: ['**/*.{ts,tsx}'],
     languageOptions: {
       ecmaVersion: 2022,

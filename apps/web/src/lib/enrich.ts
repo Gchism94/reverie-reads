@@ -54,10 +54,27 @@ export interface EnrichResult {
   alternates?: CoverAlternate[]
 }
 
+/** Ordered per-stage wall times from the Edge Function, present only when `trace` was requested. */
+export interface ServerTrace {
+  spans: { s: string; ms: number }[]
+  totalMs: number
+}
+
+/**
+ * FOUR OUTCOMES, AND THE DIFFERENCE BETWEEN TWO OF THEM IS THE WHOLE POINT.
+ *
+ * `empty` means the sources answered and had nothing — a real answer, worth recording, so the book
+ * is stamped `enriched_at` and rests inside its recheck window.
+ *
+ * `failed` means nothing was ever checked: every source we asked threw, or the function itself was
+ * unreachable. Recording that as a miss negative-caches a book for three days on the strength of an
+ * outage. These used to be the same value.
+ */
 export type EnrichOutcome =
-  | { status: 'ok'; data: EnrichResult }
-  | { status: 'empty' }
+  | { status: 'ok'; data: EnrichResult; trace?: ServerTrace }
+  | { status: 'empty'; trace?: ServerTrace }
   | { status: 'rate_limited' }
+  | { status: 'failed'; reason: string }
 
 /**
  * Ask the enrichment Edge Function for a record, surfacing whether the upstream sources were
@@ -69,18 +86,35 @@ export async function enrichBookOutcome(input: {
   isbn?: string
   /** 'fast' = one source by ISBN for an instant record; 'full' (default) = the multi-source merge. */
   mode?: 'fast' | 'full'
+  /** Ask the function to return its per-stage timings. Off by default; the response is unchanged. */
+  trace?: boolean
+  /** Skip the global enrichment_cache and re-query the sources. Measurement runs only. */
+  refresh?: boolean
 }): Promise<EnrichOutcome> {
   try {
     const { data, error } = await supabase.functions.invoke('enrich', { body: input })
     if (error) {
+      // The function itself refused or fell over. Nothing was checked, so nothing may be recorded
+      // as checked — this used to return 'empty' for every status except 429.
       const status = (error as { context?: { status?: number } }).context?.status
-      return status === 429 ? { status: 'rate_limited' } : { status: 'empty' }
+      if (status === 429) return { status: 'rate_limited' }
+      return { status: 'failed', reason: status ? `enrich ${status}` : 'enrich unreachable' }
     }
-    if (!data) return { status: 'empty' }
-    if ((data as { rateLimited?: boolean }).rateLimited) return { status: 'rate_limited' }
-    return { status: 'ok', data: data as EnrichResult }
-  } catch {
-    return { status: 'empty' }
+    const trace = (data as { _trace?: ServerTrace })?._trace
+    if (!data) return { status: 'failed', reason: 'enrich returned no body' }
+    const flags = data as {
+      rateLimited?: boolean
+      sourcesFailed?: boolean
+      sourcesAttempted?: number
+    }
+    if (flags.rateLimited) return { status: 'rate_limited' }
+    // Every source we asked threw. An outage is not a miss.
+    if (flags.sourcesFailed)
+      return { status: 'failed', reason: `all ${flags.sourcesAttempted ?? 0} sources failed` }
+    return { status: 'ok', data: data as EnrichResult, trace }
+  } catch (e) {
+    // A thrown invoke is a transport failure — offline, DNS, abort. Never an empty result.
+    return { status: 'failed', reason: (e as Error)?.message || 'enrich threw' }
   }
 }
 
@@ -97,20 +131,4 @@ export async function enrichBook(input: {
 }): Promise<EnrichResult | null> {
   const outcome = await enrichBookOutcome(input)
   return outcome.status === 'ok' ? outcome.data : null
-}
-
-/**
- * Materialize a manually-picked cover URL to Storage/CDN (Cover Studio durability) and return the
- * owned URL. Falls back to the source URL on any failure, so a pick never fails — it just may hotlink.
- */
-export async function cacheCoverUrl(input: { cover: string; isbn13?: string }): Promise<string> {
-  try {
-    const { data, error } = await supabase.functions.invoke('enrich', {
-      body: { action: 'cacheCover', cover: input.cover, isbn13: input.isbn13 },
-    })
-    if (error) return input.cover
-    return (data as { cover?: string })?.cover || input.cover
-  } catch {
-    return input.cover
-  }
 }

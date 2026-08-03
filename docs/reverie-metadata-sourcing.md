@@ -188,6 +188,17 @@ One rule, expressed once in `packages/core/src/covers.ts` and read by every call
 - **Ingest chain prefers Open Library.** `fetchCover` resolves from Open Library only; a miss
   returns empty rather than falling back to Google, because whatever it returns is persisted.
   The enrich Edge Function already ordered `openlibrary,google`.
+- **There was a fifth ingest path, and it gated nothing — removed 2026-08.** The enrich Edge
+  Function's `scheduleCoverCache` stored every resolved cover to a global `covers/{isbn}.jpg`,
+  with no host check at all, while `PRECEDENCE.cover` puts `google` **second**. So the rule below
+  held at the four entry points this section enumerated and was bypassed entirely at a fifth one
+  in another function. Worse for the audit further down: a cover stored that way carried **our**
+  host, so matching on the host in `cover_source_url` — the very refinement that section adopted
+  because label-matching alone closes the question wrongly — would also have reported clean.
+  The path is gone; the objects it already wrote are a separate data decision (see BACKLOG).
+  The lesson is the one this section already implies but did not enforce: "the `covers` function
+  is the authoritative gate" is only true if no other function can write cover bytes, and nothing
+  was checking that. `packages/core/src/noGlobalCoverCache.test.ts` now does.
 - **Google is display-time only.** It is refused at four ingest entry points — the lazy
   backfill, the re-sharpen sweep, the cover sheet, and the `covers` Edge Function, which is
   the authoritative gate (the client is not the security boundary). Refusal is by **host** as

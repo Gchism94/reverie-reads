@@ -8,12 +8,14 @@ import { useSkinSync } from '../skin/controls'
 import { SkinDivider } from './SkinDivider'
 import { SkinEvolveReveal } from './SkinEvolveReveal'
 import { ThemeToggle } from './ThemeToggle'
+import { PowerGlyph } from './PowerGlyph'
 
 // Primary navigation. Glyph icons (token-coloured, no raster) echo the desktop design's rail.
 const NAV = [
   { label: 'Home', to: '/', icon: '⌂' },
   { label: 'Library', to: '/library', icon: '▦' },
   { label: 'Shelves', to: '/shelves', icon: '≣' },
+  { label: 'Series', to: '/series', icon: '◫' },
   { label: 'Tropes', to: '/tropes', icon: '❦' },
   { label: 'Planner', to: '/planner', icon: '◷' },
   { label: 'Stats', to: '/stats', icon: '◔' },
@@ -203,8 +205,8 @@ function Sidebar() {
             }`}
             style={{ background: 'color-mix(in srgb, var(--card) 70%, transparent)' }}
           >
-            <span aria-hidden className={collapsed ? '' : 'hidden'}>
-              ⏻
+            <span className={collapsed ? '' : 'hidden'}>
+              <PowerGlyph />
             </span>
             <span className={collapsed ? 'hidden' : ''}>Sign out</span>
           </button>
@@ -343,7 +345,7 @@ function MobileTabBar() {
               onClick={() => void signOut()}
               className="flex w-full items-center justify-center gap-2 rounded-xl px-2 py-2.5 text-[13px] font-semibold text-muted"
             >
-              <span aria-hidden>⏻</span> Sign out
+              <PowerGlyph /> Sign out
             </button>
           </div>
         </div>

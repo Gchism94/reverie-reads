@@ -19,38 +19,58 @@ interface Fk {
   action: string
 }
 
-/** table → its outbound foreign keys, parsed from the accumulated migrations. */
+/**
+ * table → its outbound foreign keys, parsed from the accumulated migrations.
+ *
+ * Migrations are read in FILENAME ORDER (timestamps) and applied as a log: a `create table` adds
+ * the table, a `drop table` removes it. This matters — the migrations directory is never edited
+ * after the fact, so a table's lifetime is only visible by replaying the whole sequence in order.
+ * Reading files unordered, or only scanning for `create table` and ignoring drops, would leave a
+ * dropped table's schema-era entry behind forever: the registry guards below would then either
+ * refuse to let it be de-registered (still "found" in the schema) or, worse, silently pass a
+ * registry entry for a table that no longer exists in the real database.
+ */
 function parseSchema(): Map<string, Fk[]> {
-  const sql = readdirSync(MIGRATIONS)
+  const files = readdirSync(MIGRATIONS)
     .filter((f) => f.endsWith('.sql'))
     .sort()
-    .map((f) => readFileSync(join(MIGRATIONS, f), 'utf8'))
-    .join('\n')
 
   const tables = new Map<string, Fk[]>()
   const create = /create\s+table\s+(?:if\s+not\s+exists\s+)?(?:public\.)?(\w+)\s*\(/gi
-  for (let m = create.exec(sql); m; m = create.exec(sql)) {
-    const name = m[1]!
-    // Walk to the matching close paren so nested parens (checks, defaults) don't end the block early.
-    let depth = 0
-    let end = m.index
-    for (let i = m.index + m[0].length - 1; i < sql.length; i++) {
-      if (sql[i] === '(') depth++
-      else if (sql[i] === ')') {
-        depth--
-        if (depth === 0) {
-          end = i
-          break
+  const drop = /drop\s+table\s+(?:if\s+exists\s+)?(?:public\.)?(\w+)/gi
+
+  for (const f of files) {
+    const sql = readFileSync(join(MIGRATIONS, f), 'utf8')
+
+    for (let m = create.exec(sql); m; m = create.exec(sql)) {
+      const name = m[1]!
+      // Walk to the matching close paren so nested parens (checks, defaults) don't end the block early.
+      let depth = 0
+      let end = m.index
+      for (let i = m.index + m[0].length - 1; i < sql.length; i++) {
+        if (sql[i] === '(') depth++
+        else if (sql[i] === ')') {
+          depth--
+          if (depth === 0) {
+            end = i
+            break
+          }
         }
       }
+      const body = sql.slice(m.index + m[0].length, end)
+      const fks: Fk[] = []
+      const ref = /references\s+(?:(?:auth|public)\.)?(\w+)\s*\(\s*\w+\s*\)\s*((?:on\s+delete\s+(?:cascade|restrict|no\s+action|set\s+null|set\s+default))?)/gi
+      for (let r = ref.exec(body); r; r = ref.exec(body)) {
+        fks.push({ target: r[1]!, action: (r[2] ?? '').replace(/\s+/g, ' ').trim().toLowerCase() })
+      }
+      tables.set(name, fks)
     }
-    const body = sql.slice(m.index + m[0].length, end)
-    const fks: Fk[] = []
-    const ref = /references\s+(?:(?:auth|public)\.)?(\w+)\s*\(\s*\w+\s*\)\s*((?:on\s+delete\s+(?:cascade|restrict|no\s+action|set\s+null|set\s+default))?)/gi
-    for (let r = ref.exec(body); r; r = ref.exec(body)) {
-      fks.push({ target: r[1]!, action: (r[2] ?? '').replace(/\s+/g, ' ').trim().toLowerCase() })
+    create.lastIndex = 0
+
+    for (let m = drop.exec(sql); m; m = drop.exec(sql)) {
+      tables.delete(m[1]!)
     }
-    tables.set(name, fks)
+    drop.lastIndex = 0
   }
   return tables
 }
@@ -94,6 +114,16 @@ describe('schema parse (the guard is only as good as this)', () => {
     expect(schema.get('book_tropes')).toContainEqual({ target: 'users', action: 'on delete cascade' })
     // A non-cascading FK must be read as such, or the cascade assertion below proves nothing.
     expect(schema.get('series_entries')).toContainEqual({ target: 'books', action: 'on delete set null' })
+  })
+
+  it('a table created in one migration and dropped in a later one is gone from the parse', () => {
+    // reading_orders / reading_order_items: created 20260626180000, dropped
+    // 20260730010000 (chore/drop-reading-orders-schema). Before the parser learned to replay
+    // migrations in order and honour DROP TABLE, this table's CREATE-era entry would live in the
+    // parse forever — the exact bug that would have made deleting these two ownedTables.ts rows
+    // fail the "no unregistered owned table" guard below instead of passing it.
+    expect(schema.has('reading_orders')).toBe(false)
+    expect(schema.has('reading_order_items')).toBe(false)
   })
 })
 

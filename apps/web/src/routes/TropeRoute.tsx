@@ -1,13 +1,21 @@
 import { useMemo, useState } from 'react'
 import { createRoute, useNavigate } from '@tanstack/react-router'
-import { FACET_LABELS, isBookRead, isOwnedBook, tropeKin, type Book } from '@reverie/core'
+import {
+  FACET_LABELS,
+  isBookRead,
+  isOwnedBook,
+  stateSuffix,
+  tropeKin,
+  type Book,
+} from '@reverie/core'
 import { rootRoute } from './RootRoute'
 import { BackLink } from '../components/BackLink'
 import { CoverImage } from '../components/CoverImage'
 import { TropeChip } from '../components/TropeChip'
 import { useBooks } from '../data/books'
 import { useAllBookTropes, useAssignTrope, useTropes, useUnassignTrope } from '../data/tropes'
-import { useLabels } from '../skin/labels'
+import { useLabels, useVoice } from '../skin/labels'
+import { useConfirmedLookup } from '../hooks/useConfirmedLookup'
 
 /**
  * A trope's own page (docs/task-trope-system.md §5): your shelf of books carrying it, your
@@ -19,13 +27,20 @@ function TropeScreen() {
   const navigate = useNavigate()
   const labels = useLabels()
   const { data: books } = useBooks()
-  const { data: tropes } = useTropes()
+  const tropesQuery = useTropes()
+  const tropes = tropesQuery.data
+  const voice = useVoice()
   const { data: assignments } = useAllBookTropes()
   const assign = useAssignTrope()
   const unassign = useUnassignTrope()
   const [sweep, setSweep] = useState(false)
 
-  const trope = (tropes ?? []).find((t) => t.id === tropeId)
+  // Absence is verified against the server before it is reported — see useConfirmedLookup.
+  const lookup = useConfirmedLookup(
+    tropesQuery,
+    (tropes ?? []).find((t) => t.id === tropeId),
+  )
+  const trope = lookup.status === 'found' ? lookup.value : undefined
   const tropeById = useMemo(() => new Map((tropes ?? []).map((t) => [t.id, t])), [tropes])
 
   const carrierIds = useMemo(
@@ -46,6 +61,9 @@ function TropeScreen() {
         .filter((t): t is NonNullable<typeof t> => !!t),
     [assignments, tropeId, tropeById],
   )
+
+  if (lookup.status === 'loading')
+    return <p className="px-6 py-16 text-center text-muted">{voice.loading}</p>
 
   if (!trope)
     return (
@@ -136,7 +154,12 @@ function TropeScreen() {
                 type="button"
                 onClick={() => toggle(b)}
                 aria-pressed={sweep ? carrying : undefined}
-                aria-label={sweep ? `${carrying ? 'Untag' : 'Tag'} ${b.title}` : `Open ${b.title}`}
+                // Thumb-class: state to the screen reader only — see MoodRoute + docs/BACKLOG.md.
+                aria-label={
+                  sweep
+                    ? `${carrying ? 'Untag' : 'Tag'} ${b.title}${stateSuffix(b)}`
+                    : `Open ${b.title}${stateSuffix(b)}`
+                }
                 className="relative overflow-hidden rounded-xl border text-left"
                 style={{
                   borderColor: sweep && carrying ? 'var(--accent-ink)' : 'var(--line)',

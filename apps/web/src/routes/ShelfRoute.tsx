@@ -12,7 +12,10 @@ import { BookmarkGlyph } from '../components/BookmarkGlyph'
 import { useBooks, useUpdateBook } from '../data/books'
 import { useAddListItem, useAllListItems, useRemoveListItem } from '../data/listItems'
 import { useLists, useReorderList, useUpdateList } from '../data/lists'
+import { useConfirmedLookup } from '../hooks/useConfirmedLookup'
 import { useVoice } from '../skin/labels'
+
+type ShelfView = 'spines' | 'grid'
 
 const COVER_GRID: React.CSSProperties = {
   display: 'grid',
@@ -31,7 +34,8 @@ function ShelfScreen() {
   const { listId } = shelfRoute.useParams()
   const navigate = useNavigate()
   const { data: books } = useBooks()
-  const { data: lists } = useLists()
+  const listsQuery = useLists()
+  const lists = listsQuery.data
   const { data: items } = useAllListItems()
   const reorder = useReorderList()
   const addItem = useAddListItem()
@@ -40,14 +44,31 @@ function ShelfScreen() {
   const updateBook = useUpdateBook()
   const voice = useVoice()
 
-  const [view, setView] = useState<'spines' | 'grid'>('spines')
+  // View lives in the ROUTE — see ShelvesRoute for the full reasoning. `undefined` = the default,
+  // so /shelf/$listId stays canonical and only ?view=grid carries a param. The path param is
+  // untouched; search params are independent of it, so this survives across different shelves.
+  const { view = 'spines' } = shelfRoute.useSearch()
+  const setView = (v: ShelfView) =>
+    // replace: true — back should leave the shelf, not undo a view toggle.
+    void navigate({
+      to: '/shelf/$listId',
+      params: { listId },
+      search: v === 'spines' ? {} : { view: v },
+      replace: true,
+    })
   const [pickerOpen, setPickerOpen] = useState(false)
   const [externalSearch, setExternalSearch] = useState(false)
   // Appends within one picker session step past the stale cache max (invalidation lags picks).
   const [pickCount, setPickCount] = useState(0)
   const [dragIdx, setDragIdx] = useState<number | null>(null)
 
-  const list = (lists ?? []).find((l) => l.id === listId)
+  // Absence is verified against the server before it is reported — a restored-fresh cache can be
+  // missing a shelf that exists, and used to render "isn't here anymore" permanently.
+  const lookup = useConfirmedLookup(
+    listsQuery,
+    (lists ?? []).find((l) => l.id === listId),
+  )
+  const list = lookup.status === 'found' ? lookup.value : undefined
   const byId = useMemo(() => new Map((books ?? []).map((b) => [b.id, b])), [books])
 
   const listItems = useMemo(
@@ -63,6 +84,9 @@ function ShelfScreen() {
   )
   const maxPosition = Math.max(0, ...listItems.map((it) => it.position ?? 0))
   const memberIds = useMemo(() => new Set(shelfBooks.map((b) => b.id)), [shelfBooks])
+
+  if (lookup.status === 'loading')
+    return <p className="px-6 py-16 text-center text-muted">{voice.loading}</p>
 
   if (!list)
     return (
@@ -297,5 +321,9 @@ function ShelfScreen() {
 export const shelfRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'shelf/$listId',
+  // Fails closed — unknown values resolve to the default view rather than throwing.
+  validateSearch: (search: Record<string, unknown>): { view?: ShelfView } => ({
+    view: search.view === 'grid' ? 'grid' : undefined,
+  }),
   component: ShelfScreen,
 })

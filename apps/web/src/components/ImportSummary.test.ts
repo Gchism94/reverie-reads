@@ -8,7 +8,7 @@ const base: ImportExportResult = {
   merged: 3,
   review: [],
   ingested: [],
-  readingOrders: 0,
+  ignoredGlobalOrder: 0,
   outcomes: [],
   truncatedIsbns: 0,
   bookIds: [],
@@ -32,7 +32,24 @@ describe('ImportSummary copy', () => {
     expect(summaryHeadline(base)).toBe(
       'Detected your generic export — brought in 40 new, and folded 3 into what you had.',
     )
-    expect(summaryHeadline({ ...base, readingOrders: 2 })).toContain('stitched 2 reading orders')
+  })
+
+  it('says when a supplied global-order column went unused, rather than dropping it in silence', () => {
+    // WAS: the headline boasted "stitched 2 reading orders" — the subsystem that consumed the
+    // column. NOW the column is parsed and deliberately not acted on, so the honest thing is to
+    // say so. A reader who curated a cross-series sequence should not have to infer from an absent
+    // number that we ignored it.
+    const lines = summaryNotices({ ...base, ignoredGlobalOrder: 7 })
+    const line = lines.find((l) => l.includes('global reading order'))
+    expect(line).toBeDefined()
+    expect(line).toContain('7 rows')
+    expect(line).toContain("series order comes from each book's position in its series")
+
+    // singular, and silent when the column was never supplied
+    expect(
+      summaryNotices({ ...base, ignoredGlobalOrder: 1 }).some((l) => l.includes('1 row carried')),
+    ).toBe(true)
+    expect(summaryNotices(base).some((l) => l.includes('global reading order'))).toBe(false)
   })
 
   it('speaks to the TBR, shelves, missing covers, and unplaced notes — pluralized', () => {

@@ -23,6 +23,10 @@ export interface Profile {
   /** Last evolving-skin suggestion the reader dismissed ("Not now"); the cron won't re-surface the
    *  same shift until taste moves materially past it. */
   adaptiveDismissed: AdaptivePending | null
+  /** Split the Owned shelf by format (physical / ebook / audiobook + unmarked). Default off. */
+  shelfBreakdownFormat: boolean
+  /** Give DNF its own shelf instead of showing those books within Read. Default off. */
+  shelfBreakdownDnf: boolean
 }
 
 interface ProfileRow {
@@ -40,6 +44,8 @@ interface ProfileRow {
   adaptive_locked: boolean | null
   adaptive_pending: AdaptivePending | null
   adaptive_dismissed: AdaptivePending | null
+  shelf_breakdown_format: boolean | null
+  shelf_breakdown_dnf: boolean | null
 }
 
 export const profileKey = ['profile'] as const
@@ -59,6 +65,10 @@ const toProfile = (row: ProfileRow): Profile => ({
   adaptiveLocked: row.adaptive_locked ?? false,
   adaptivePending: row.adaptive_pending ?? null,
   adaptiveDismissed: row.adaptive_dismissed ?? null,
+  // `?? false` mirrors the column defaults, and covers a row cached before the B1 migration —
+  // the same posture as autoMergeDuplicates' `?? true`.
+  shelfBreakdownFormat: row.shelf_breakdown_format ?? false,
+  shelfBreakdownDnf: row.shelf_breakdown_dnf ?? false,
 })
 
 /** The signed-in user's own profile (RLS returns only their row). */
@@ -68,7 +78,7 @@ export function useProfile() {
     queryFn: async (): Promise<Profile | null> => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, display_name, goal_year, goal_target, auto_merge_duplicates, default_store_id, default_store_name, default_store_website, skin, mode, adaptive_skin, adaptive_locked, adaptive_pending, adaptive_dismissed')
+        .select('id, display_name, goal_year, goal_target, auto_merge_duplicates, default_store_id, default_store_name, default_store_website, skin, mode, adaptive_skin, adaptive_locked, adaptive_pending, adaptive_dismissed, shelf_breakdown_format, shelf_breakdown_dnf')
         .limit(1)
         .maybeSingle()
       if (error) throw error
@@ -93,6 +103,8 @@ export function useUpdateProfile() {
       adaptiveLocked?: boolean
       adaptivePending?: AdaptivePending | null
       adaptiveDismissed?: AdaptivePending | null
+      shelfBreakdownFormat?: boolean
+      shelfBreakdownDnf?: boolean
     }): Promise<void> => {
       const { data: auth } = await supabase.auth.getUser()
       const id = auth.user?.id
@@ -108,6 +120,9 @@ export function useUpdateProfile() {
       if (patch.adaptiveLocked !== undefined) row.adaptive_locked = patch.adaptiveLocked
       if (patch.adaptivePending !== undefined) row.adaptive_pending = patch.adaptivePending
       if (patch.adaptiveDismissed !== undefined) row.adaptive_dismissed = patch.adaptiveDismissed
+      if (patch.shelfBreakdownFormat !== undefined)
+        row.shelf_breakdown_format = patch.shelfBreakdownFormat
+      if (patch.shelfBreakdownDnf !== undefined) row.shelf_breakdown_dnf = patch.shelfBreakdownDnf
       if (patch.defaultStore !== undefined) {
         row.default_store_id = patch.defaultStore?.id ?? null
         row.default_store_name = patch.defaultStore?.name ?? null

@@ -1,6 +1,8 @@
 import { expect, test, type Page } from '@playwright/test'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { authFailure } from './support/authError'
+import { keepOfflineCacheEmpty } from './support/offlineCache'
+import { ok, okData, okUser } from './support/ok'
 
 // A book page should load without complaining.
 //
@@ -31,11 +33,17 @@ async function client(): Promise<Client> {
   let uid = data?.users?.find((u) => u.email === EMAIL)?.id
   if (!uid)
     uid = (
-      await admin.auth.admin.createUser({ email: EMAIL, password: PASSWORD, email_confirm: true })
-    ).data.user!.id
-  await admin
-    .from('profiles')
-    .upsert({ id: uid, display_name: 'Console Clean', skin: 'tryst', mode: 'system' })
+      await okUser(
+        admin.auth.admin.createUser({ email: EMAIL, password: PASSWORD, email_confirm: true }),
+        'console-clean auth createUser',
+      )
+    ).id
+  await ok(
+    admin
+      .from('profiles')
+      .upsert({ id: uid, display_name: 'Console Clean', skin: 'tryst', mode: 'system' }),
+    'console-clean profiles upsert',
+  )
   const sb = createClient(SUPABASE_URL, ANON)
   const { data: s, error } = await sb.auth.signInWithPassword({ email: EMAIL, password: PASSWORD })
   if (error || !s.session) throw new Error(authFailure('console-clean', EMAIL, error))
@@ -49,13 +57,13 @@ async function reset(c: Client) {
 }
 
 async function signIn(page: Page, session: { access_token: string; refresh_token: string }) {
+  await keepOfflineCacheEmpty(page)
   await page.addInitScript(() => localStorage.setItem('reverie.onboarded', '1'))
   await page.goto(
     `/#access_token=${session.access_token}&refresh_token=${session.refresh_token}&expires_in=3600&token_type=bearer&type=magiclink`,
   )
   await page.getByRole('button', { name: /enter your library/i }).click({ timeout: 20_000 })
   await expect(page.getByRole('navigation')).toBeVisible({ timeout: 20_000 })
-  await page.evaluate(() => indexedDB.deleteDatabase('reverie-offline'))
 }
 
 test('a book page loads with no failed data requests and no console errors', async ({ page }) => {
@@ -64,19 +72,22 @@ test('a book page loads with no failed data requests and no console errors', asy
   await reset(c)
   // No cover_url on purpose: a hotlink to a host that isn't there would log its own resource error
   // and tell us nothing about the app. The placeholder path exercises the same page.
-  const { data } = await c.sb
-    .from('books')
-    .insert({
-      owner_id: c.uid,
-      title: 'Console Probe',
-      author_first: 'Nell',
-      author_last: 'Marrow',
-      genre: 'fantasy',
-      ownership: 'owned',
-      status: 'standalone',
-    })
-    .select('id')
-    .single()
+  const data = await okData(
+    c.sb
+      .from('books')
+      .insert({
+        owner_id: c.uid,
+        title: 'Console Probe',
+        author_first: 'Nell',
+        author_last: 'Marrow',
+        genre: 'fantasy',
+        ownership: 'owned',
+        status: 'standalone',
+      })
+      .select('id')
+      .single(),
+    'console-clean books insert',
+  )
   const id = (data as { id: string }).id
 
   const badResponses: string[] = []

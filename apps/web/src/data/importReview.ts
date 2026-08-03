@@ -7,7 +7,6 @@ import { useBrokenCoverIds } from './brokenCovers'
  *  review screen can rebuild the model against the current (post-enrichment) books. */
 export interface ImportSession {
   outcomes: ImportItemOutcome[]
-  readingOrders: number
 }
 
 export const importSessionKey = ['importSession'] as const
@@ -23,8 +22,5 @@ export function useImportReviewModel(): ReviewModel | null {
   const { data: books } = useBooks()
   const brokenRefs = useBrokenCoverIds()
   if (!session || !session.outcomes.length) return null
-  return buildReviewModelFromImport(session.outcomes, books ?? [], {
-    readingOrdersBuilt: session.readingOrders,
-    brokenRefs,
-  })
+  return buildReviewModelFromImport(session.outcomes, books ?? [], { brokenRefs })
 }
