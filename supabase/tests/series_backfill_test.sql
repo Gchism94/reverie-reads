@@ -6,7 +6,7 @@
 -- the time pgTAP starts and cannot be exercised.
 
 begin;
-select plan(31);
+select plan(36);
 
 insert into auth.users (id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
 values ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 'authenticated', 'authenticated', 'sb@example.com', '{}', '{}', now(), now());
@@ -72,7 +72,17 @@ insert into public.books (id, owner_id, title, author_first, author_last, series
   --     existing name. This is the cost of preferring a rename to an exception, and it is a test
   --     rather than a comment so that making canon fuzzy later has to change it on purpose.
   ('b0000000-0000-0000-0000-000000000011', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
-   'Vows Variant (Divine Rivals Series, #2)', 'Rebecca', 'Ross', 'Letters of Enchantment', 2);
+   'Vows Variant (Divine Rivals Series, #2)', 'Rebecca', 'Ross', 'Letters of Enchantment', 2),
+  -- 16. NO PARENTHETICAL AT ALL — depth stays 0, `tgt`'s `p.depth > 0` guard excludes it, and it
+  --     must come out of the migration with its title, series AND position bit-for-bit unchanged.
+  --     This is the largest population in the real library (most titles are already clean) and the
+  --     one PARSED-WINS created a real erasure risk for: `tgt`'s `new_series` is
+  --     `coalesce(c.to_name, p.parsed_series)`, and for a depth-0 row `parsed_series` is NULL — so
+  --     without the `depth > 0` guard this row's real series would be overwritten with NULL, not
+  --     left alone. A book with NO existing series would hide the bug (NULL -> NULL looks fine);
+  --     this one has one, so the guard's absence is visible.
+  ('b0000000-0000-0000-0000-000000000012', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
+   'A Clean Standalone Title', 'D', 'Author', 'Some Standalone Series', 5);
 
 insert into public.series (id, owner_id, name) values
   ('50000000-0000-0000-0000-000000000001', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 'ACOTAR'),
@@ -179,6 +189,18 @@ select is((select title from public.books where id = 'b0000000-0000-0000-0000-00
 select is((select title from public.books where id = 'b0000000-0000-0000-0000-00000000000a'),
           'A Court of Silver Flames', 'a zero-width space is stripped');
 
+-- ══ 11. NO PARENTHETICAL — depth 0 is untouched on ALL THREE fields, explicitly ═══════════════
+-- Every other assertion in this file exercises a row that HAD a parenthetical. Nothing so far pins
+-- down the opposite and largest case: a title with none. `is()`, not `ok(... is null)` — this row's
+-- existing series/position are non-null, so a real value must survive, not merely stay NULL.
+select is((select title from public.books where id = 'b0000000-0000-0000-0000-000000000012'),
+          'A Clean Standalone Title', 'a title with no parenthetical is not touched');
+select is((select series from public.books where id = 'b0000000-0000-0000-0000-000000000012'),
+          'Some Standalone Series',
+          'and its EXISTING series survives — parsed-wins has nothing to win, there is no parenthetical');
+select is((select position from public.books where id = 'b0000000-0000-0000-0000-000000000012'),
+          5::numeric, 'and its existing position survives too');
+
 -- ══ 10. series_entries titles + omnibus tombstone + orphan adoption ═══════════════════════════
 select is((select title from public.series_entries where id = 'e0000000-0000-0000-0000-000000000002'),
           'A Court of Thorns and Roses', 'a dirty entry title is cleaned too');
@@ -232,6 +254,110 @@ select isnt(
    ) diff),
   0,
   'positive control: the same diff DOES see the first run''s changes'
+);
+
+-- ══ PREDICATE PARITY — preview.sql must agree with the migration, and this is what checks it ═══
+-- docs/queries/series-backfill-preview.sql and series-backfill-collision-diagnostic.sql do not
+-- share this write rule with the migration BY CONSTRUCTION — it is COPIED into all three, and
+-- necessarily so: the preview and diagnostic exist specifically to be run BEFORE this migration is
+-- ever applied to a database, so they cannot depend on a function this migration creates; and a
+-- migration must be a self-contained, immutable SQL artifact, so it cannot \i an external file at
+-- apply time. Three independent copies is the only shape available.
+--
+-- That predicate has been wrong TWICE already on this branch — once as stale never-overwrite logic
+-- left in preview.sql after the write rule changed to parsed-wins, once as a frozen exception where
+-- the migration had already moved to a canonical rename — and neither drift was caught by anything
+-- that runs. This is meant to be that check.
+--
+-- What it is NOT: this cannot literally execute docs/queries/series-backfill-preview.sql. Verified
+-- empirically — a `\ir ../../docs/queries/series-backfill-preview.sql` from a file under
+-- supabase/tests/ resolves fine under a bare `psql`, but fails "No such file or directory" under
+-- `supabase test db`'s own runner, whose working environment does not expose paths outside
+-- `supabase/`. So this RE-STATES preview.sql's canon table, exception list and write-branch logic —
+-- a fourth copy, kept as close to preview.sql's own CTE names and structure as possible — against
+-- the parsed values already established for the fixtures above (each one documented at its insert),
+-- and diffs the row set it predicts against what the migration ACTUALLY wrote. A change to the write
+-- rule landed in the migration without a matching change here — or in preview.sql — is a real,
+-- undetected drift; this cannot promise the SECOND half of that (this copy and preview.sql itself
+-- silently diverging), only that this copy and the MIGRATION cannot silently diverge unnoticed.
+create temp table _predicted_parse
+  (id uuid, series_name text, position numeric,
+   parsed_series text, parsed_position numeric, depth int, is_range boolean, is_untitled boolean);
+insert into _predicted_parse values
+  ('b0000000-0000-0000-0000-000000000001', null, null, 'Boys of Tommen', 1, 1, false, false),
+  ('b0000000-0000-0000-0000-000000000002', null, null, null, null, 0, false, false),
+  ('b0000000-0000-0000-0000-000000000003', null, null, 'Phantom Series', 2, 1, false, true),
+  ('b0000000-0000-0000-0000-000000000004', null, null, 'Probe Saga', null, 1, true, false),
+  ('b0000000-0000-0000-0000-000000000005', null, null, 'Fire and Metal', 2, 1, false, false),
+  ('b0000000-0000-0000-0000-000000000006', 'Zodiac-Academy', 99, 'Zodiac Academy', 3, 1, false, false),
+  ('b0000000-0000-0000-0000-000000000007', 'Rose Hill (Silver)', 2, 'Rose Hill', 2, 1, false, false),
+  ('b0000000-0000-0000-0000-000000000008', 'Hades x Persephone Saga', 1, 'Hades and Persephone', 1, 1, false, false),
+  ('b0000000-0000-0000-0000-000000000009', null, null, null, null, 0, false, false),
+  ('b0000000-0000-0000-0000-00000000000a', null, null, null, null, 0, false, false),
+  ('b0000000-0000-0000-0000-00000000000b', null, null, 'ACOTAR', 2, 1, false, false),
+  ('b0000000-0000-0000-0000-00000000000c', null, null, 'ACOTAR', 7, 1, false, false),
+  ('b0000000-0000-0000-0000-00000000000d', null, null, null, null, 0, false, false),
+  ('b0000000-0000-0000-0000-00000000000e', 'Letters of Enchantment', 99, 'Divine Rivals', 2, 1, false, false),
+  ('b0000000-0000-0000-0000-00000000000f', 'Letters of enchantment', 1, 'Divine Rivals', 1, 1, false, false),
+  ('b0000000-0000-0000-0000-000000000010', null, null, 'Divine Rivals', 4, 1, false, false),
+  ('b0000000-0000-0000-0000-000000000011', 'Letters of Enchantment', 2, 'Divine Rivals Series', 2, 1, false, false),
+  ('b0000000-0000-0000-0000-000000000012', 'Some Standalone Series', 5, null, null, 0, false, false);
+
+-- The canon table, verbatim from the migration and from preview.sql's own copy.
+with canon(from_name, to_name) as (
+  values ('Adrian X Isolde',      'Adrian x Isolde'),
+         ('Hades & Persephone',   'Hades x Persephone Saga'),
+         ('Hades X Persephone',   'Hades x Persephone Saga'),
+         ('Dance with my Demons', 'Dance With My Demons'),
+         ('Playing For Keeps',    'Playing for Keeps'),
+         ('Fire and Metal',       'Fire & Metal'),
+         ('Divine Rivals',        'Letters of Enchantment')
+),
+bk as (
+  select pp.*, coalesce(c.to_name, pp.parsed_series) as canon_series
+  from _predicted_parse pp
+  left join canon c on c.from_name = pp.parsed_series
+),
+protected as (
+  select bk.*,
+         ( bk.is_untitled or bk.is_range or bk.depth = 0
+           or coalesce(bk.series_name, '') in ('Rose Hill (Silver)', 'Hades x Persephone Saga')
+         ) as untouched
+  from bk
+),
+predicted as (
+  select p.id,
+         case when p.untouched then p.series_name else p.canon_series end    as predicted_series,
+         case when p.untouched then p.position    else p.parsed_position end as predicted_position
+  from protected p
+)
+select is(
+  (select count(*)::int from (
+     (select predicted.id, predicted_series, predicted_position from predicted
+      join public.books b on b.id = predicted.id
+      where b.series is distinct from predicted_series or b.position is distinct from predicted_position)
+   ) diff),
+  0,
+  'preview.sql''s predicate, re-stated, predicts EXACTLY what the migration wrote — no drift'
+);
+
+-- Positive control: the diff above must be able to SEE a divergence, not just report zero because it
+-- compares nothing. Re-run it against the OLD never-overwrite rule (parsed only where series was
+-- null) — the first bug this branch had — and confirm it disagrees on fixture 6, which the new rule
+-- overwrites and the old rule would not have touched.
+with old_rule_predicted as (
+  select pp.id,
+         case when pp.series_name is not null then pp.series_name else pp.parsed_series end as predicted_series
+  from _predicted_parse pp
+)
+select isnt(
+  (select count(*)::int from (
+     select orp.id from old_rule_predicted orp
+     join public.books b on b.id = orp.id
+     where b.series is distinct from orp.predicted_series
+   ) diff),
+  0,
+  'positive control: the diff DOES flag a divergence — the old never-overwrite rule disagrees with what actually shipped'
 );
 
 select * from finish();

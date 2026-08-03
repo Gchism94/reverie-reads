@@ -216,6 +216,13 @@ begin
     from _sbt_parse p
     left join canon c on c.from_name = p.parsed_series
     where p.tbl = 'books'
+      -- `depth > 0` is not just "leave a clean-titled book alone" — it is what makes a SECOND run
+      -- idempotent at all. Step 1 above already stripped this run's parenthetical from the title, so
+      -- on re-entry every book this run just backfilled reparses at depth 0 with a NULL
+      -- parsed_series. Without this guard, `new_series` would be
+      -- `coalesce(c.to_name, p.parsed_series)` = NULL, and a second run would erase every series it
+      -- just wrote on the first. Verified by mutation: dropping this clause leaves the FIRST run
+      -- looking fine and fails idempotence specifically, wiping every successfully backfilled row.
       and p.depth > 0
       and not p.is_range
       and not p.is_untitled
