@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { contrastRatio, parseColor } from './adaptive'
 import {
-  PLACEHOLDER_ACCENTS,
+  PLACEHOLDER_ACCENT_RECIPES,
+  resolveAccentRecipe,
   resolvePlaceholderColors,
   type PlaceholderAccent,
 } from './coverPlaceholder'
@@ -182,10 +183,14 @@ describe('cover placeholder contrast (every skin × mode × accent ≥ AA)', () 
         expect(tokens, `add a SKIN_TOKENS row for ${skin}/${mode} (see tokens.css)`).toBeDefined()
       })
 
-      for (const accent of PLACEHOLDER_ACCENTS) {
-        it(`${skin}/${mode} · ${accent} glyph clears ${AA_NORMAL}:1`, () => {
+      // ALL TEN recipes — the 4 pure accents plus the 6 pairwise blends (feat/discover-phase-a).
+      // The blend endpoints are both skin tokens, so this stays an exhaustive enumeration, not a
+      // sample: every accent a placeholder can ever paint is asserted here, per skin, per mode.
+      for (const recipe of PLACEHOLDER_ACCENT_RECIPES) {
+        const name = recipe.b ? `${recipe.a}+${recipe.b}` : recipe.a
+        it(`${skin}/${mode} · ${name} glyph clears ${AA_NORMAL}:1`, () => {
           const { background, color } = resolvePlaceholderColors({
-            accent: tokens[accent],
+            accent: resolveAccentRecipe(recipe, tokens),
             ink: tokens.ink,
             cardSolid: tokens.cardSolid,
           })
@@ -195,7 +200,7 @@ describe('cover placeholder contrast (every skin × mode × accent ≥ AA)', () 
           const ratio = contrastRatio(fg!, bg!)
           expect(
             ratio,
-            `${skin}/${mode} ${accent}: ${color} on ${background} = ${ratio.toFixed(2)}:1`,
+            `${skin}/${mode} ${name}: ${color} on ${background} = ${ratio.toFixed(2)}:1`,
           ).toBeGreaterThanOrEqual(AA_NORMAL)
         })
       }

@@ -34,6 +34,7 @@ import {
   SourceHttpError,
 } from '../_shared/httpClassify.ts'
 import { captureEdgeError } from '../_shared/observe.ts'
+import { olHeaders } from '../_shared/olIdentity.ts'
 
 /** A cover edition choice surfaced to the import review + Cover Studio (distilled E1 alternate). */
 interface CoverAlternate {
@@ -59,7 +60,9 @@ interface EnrichInput {
 
 const cleanIsbn = (s: string) => (s || '').replace(/[^0-9Xx]/g, '').toUpperCase()
 const norm = (s: string) => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '')
-const UA = 'Reverie/1.0 (personal book library; enrichment aggregator)'
+// The old local UA ('Reverie/1.0 (personal book library; enrichment aggregator)') identified the app
+// but carried NO contact address, which is the half OL's identified tier actually requires — so it
+// bought nothing. OL calls now use the shared olHeaders() (name + contact, one home, guard-tested).
 
 // Google Books API key — keyless calls share a low per-IP quota and 429 quickly; the key lifts it to
 // ~1,000/day. Appended to every Google query when configured.
@@ -145,7 +148,7 @@ async function adapterOpenLibrary(input: EnrichInput, tr?: Trace): Promise<Sourc
     ? `https://openlibrary.org/search.json?q=isbn:${cleanIsbn(input.isbn)}&fields=${fields}&limit=1`
     : `https://openlibrary.org/search.json?title=${encodeURIComponent(input.title ?? '')}&author=${encodeURIComponent(input.author ?? '')}&fields=${fields}&limit=1`
   const j = (await time(tr, 'fetch.ol-search.adapter', () =>
-    fetchJson(url, { headers: { 'User-Agent': UA } }),
+    fetchJson(url, { headers: olHeaders() }),
   )) as { docs?: unknown[] }
   const doc = j?.docs?.[0]
   return doc ? normalizeOpenLibrary(doc) : null
@@ -231,7 +234,7 @@ async function searchOpenLibrary(input: EnrichInput, tr?: Trace): Promise<Resolv
     'key,edition_key,title,author_name,first_publish_year,isbn,number_of_pages_median,subject,language,cover_i,series'
   const url = `https://openlibrary.org/search.json?title=${encodeURIComponent(input.title)}&author=${encodeURIComponent(input.author ?? '')}&fields=${fields}&limit=${SEARCH_LIMIT}`
   const j = (await time(tr, 'fetch.ol-search.search', () =>
-    fetchJson(url, { headers: { 'User-Agent': UA } }),
+    fetchJson(url, { headers: olHeaders() }),
   )) as { docs?: unknown[] }
   return (j?.docs ?? [])
     .map((d): ResolveCandidate => ({ source: 'openlibrary', record: normalizeOpenLibrary(d) }))

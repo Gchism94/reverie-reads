@@ -18,10 +18,24 @@ describe('the documented limits are what we encode', () => {
   })
 
   it('Open Library search is budgeted SEPARATELY — a different endpoint with a different limit', () => {
-    expect(SOURCE_BUDGETS['ol-search']).toEqual({ max: 60, windowSecs: 60, gapMs: 1000 })
+    // The IDENTIFIED tier (feat/discover-phase-a): 3 req/s for a User-Agent carrying app name +
+    // contact email, which _shared/olIdentity.ts now sends on every OL call (olIdentity.test.ts is
+    // the guard tying this budget to that header — this number is only lawful while the header
+    // ships). 3/s → 180 per 60s window; gap 334ms = 1000/3 rounded UP, so the sustained in-process
+    // rate is ≤ 2.994/s and can never exceed the documented 3.
+    expect(SOURCE_BUDGETS['ol-search']).toEqual({ max: 180, windowSecs: 60, gapMs: 334 })
+    expect(SOURCE_BUDGETS['ol-search'].gapMs).toBeGreaterThanOrEqual(Math.ceil(1000 / 3))
     // Sharing one budget would let search traffic spend the covers allowance, which is the bug
     // that made "we're within the limit" untrue while both were called from the same sweep.
     expect(sourceBudgetKey('ol-covers')).not.toBe(sourceBudgetKey('ol-search'))
+  })
+
+  it('Open Library covers is NOT retuned to the identified tier — its doc has no such tier', () => {
+    // covers.openlibrary.org's limit is per-IP ("100 requests/IP ... every 5 minutes") with no
+    // User-Agent provision at all, so tripling it alongside ol-search would program the budget
+    // ABOVE the source's own documented cap. This assertion exists so the covers budget cannot be
+    // swept along by a future retune of the search tier without meeting this stated reason.
+    expect(SOURCE_BUDGETS['ol-covers']).toEqual({ max: 100, windowSecs: 300, gapMs: 3000 })
   })
 
   it('every budget is a real cap: positive, and a gap that cannot be zero for a rate-limited source', () => {
