@@ -12,6 +12,30 @@ forgotten.
 
 ## Real bugs, outstanding
 
+- **The six `sameRiskAsPowerSymbol` glyphs are the same defect, unfired.**
+  `apps/web/src/lib/glyphAllowlist.ts` tiers `⏹` `⏱` `⌕` `⌂` `⌘` (Misc Technical,
+  U+2300–U+23FF — the exact block `⏻` came from) and `⠿` (Braille Patterns,
+  U+2800–U+28FF) as flagged, not fixed. No skin's custom font covers either
+  block — verified against Hanken Grotesk's own `unicode-range` descriptors,
+  which stop around U+206F — so all six already fall through to the OS on every
+  skin, same as the sign-out button did. `⠿` is the `SeriesArranger` drag
+  handle; the other five are `SettingsRoute`'s sweep Stop/trace buttons,
+  `DiscoverRoute`'s search affordance, and `AppShell`'s nav icons. **Convert all
+  six to inline SVG in a follow-up branch, matching `PowerGlyph`'s pattern,
+  rather than waiting to spot each on a real device one at a time.**
+
+- **`a11y.spec.ts:309` timed out once on `fix/signout-glyph-tofu`'s standing e2e
+  run — `page.waitForLoadState` exceeded 600000ms, not an axe violation.**
+  One run, not re-run (the standing-rule reason: a green re-run would launder a
+  real defect into "just a flake," so a single red run is reported as red and
+  left for a second occurrence to confirm). The diff on that branch was two new
+  files (`PowerGlyph.tsx`, `glyphAllowlist.ts`/`.test.ts`) plus a JSX swap in two
+  sign-out buttons — nothing touching routing, navigation, or load timing, so
+  there's no mechanism in the diff that plausibly explains a page load stalling
+  for ten minutes. Recorded so a recurrence has a prior to compare against,
+  same reasoning as the `discover-search.spec.ts:275` entry under
+  "Known-flaky, with a prior": a second failure here is a defect, not a flake.
+
 - **The Supabase MCP connection reaches only project `cywpkhtpxekmjvuoloem`
   ("Steppe") — a different application, not Reverie.** Its tables are `groups`,
   `events`, `neighborhood_requests`, `moderation_actions`; `public.books` does
