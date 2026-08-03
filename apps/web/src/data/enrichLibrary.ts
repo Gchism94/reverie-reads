@@ -44,6 +44,27 @@ function shouldCheck(b: Book, enrichedAt: string | null): boolean {
 }
 
 /**
+ * THE candidate predicate — one home, consumed by both the sweep (`bulkComplete`) and the Settings
+ * button's count. It used to exist twice in half-copies: the button counted `isIncomplete` alone
+ * while the sweep additionally required `shouldCheck`, so the button could promise (112) and the
+ * sweep truthfully answer "checked 0 of 0" — every one of the 112 sat inside its recheck window.
+ * A control whose label and action use different predicates is the same defect as a test name that
+ * overclaims. `sweepEligibility.test.ts` pins both consumers to this function by source scan.
+ */
+export function sweepCandidates(books: Book[], stampById: Map<string, string | null>): Book[] {
+  return books.filter((b) => isIncomplete(b) && shouldCheck(b, stampById.get(b.id) ?? null))
+}
+
+/** The stamp map `sweepCandidates` needs — fetched once, shared by the button and the sweep. */
+export async function fetchEnrichmentStamps(): Promise<Map<string, string | null>> {
+  const { data, error } = await supabase.from('books').select('id, enriched_at')
+  if (error) throw error
+  return new Map(
+    ((data as { id: string; enriched_at: string | null }[]) ?? []).map((r) => [r.id, r.enriched_at]),
+  )
+}
+
+/**
  * WHERE THE COVER ACTUALLY CAME FROM. This used to be hardcoded `'openlibrary'` on every ingest,
  * which was a lie whenever the merge took its cover from Hardcover — the stored row then claimed an
  * origin the image never had, and `resharpenSource` reads `coverSource` to decide what it may
@@ -192,13 +213,9 @@ export async function bulkComplete(
 ): Promise<BulkResult> {
   const runId = opts?.runId ?? crypto.randomUUID()
   const ceiling = Math.min(opts?.limit ?? MAX_PER_RUN, MAX_PER_RUN)
-  const { data: rows, error } = await supabase.from('books').select('id, enriched_at')
-  if (error) throw error
-  const stampById = new Map(
-    ((rows as { id: string; enriched_at: string | null }[]) ?? []).map((r) => [r.id, r.enriched_at]),
-  )
+  const stampById = await fetchEnrichmentStamps()
 
-  let candidates = books.filter((b) => isIncomplete(b) && shouldCheck(b, stampById.get(b.id) ?? null))
+  let candidates = sweepCandidates(books, stampById)
   // Stable partition, never-checked first. Array#sort is stable, but a partition says the intent
   // plainly and cannot accidentally reorder within either group.
   if (opts?.unvisitedFirst)
