@@ -1,4 +1,4 @@
-import { callsign, placeholderColorVars, placeholderSpec, type SkinId } from '@reverie/core'
+import { accentCss, callsign, placeholderColorVars, placeholderSpec, type SkinId } from '@reverie/core'
 import { useEffectiveSkin } from '../skin/labels'
 import { useStructure } from '../skin/structure'
 
@@ -22,7 +22,7 @@ import { useStructure } from '../skin/structure'
  *                      whose designed plate hasn't landed yet.
  * All values are tokens (--ph-*), per skin × mode — AA guarded by the registry-keyed contrast test.
  */
-export function CoverPlaceholder({
+function PlaceholderPlate({
   book,
   className,
   skin,
@@ -37,7 +37,7 @@ export function CoverPlaceholder({
   const active = useEffectiveSkin()
   const variant = useStructure(skin).placeholder
   const skinId = skin ?? active
-  const { title, author, accentVar } = placeholderSpec(book)
+  const { title, author, accent } = placeholderSpec(book)
   const label = `${title || 'Untitled'}${author ? ` by ${author}` : ''} — placeholder cover`
   const oneWord = !!title && !title.includes(' ')
 
@@ -1187,7 +1187,7 @@ export function CoverPlaceholder({
   }
 
   // 'plain' — the neutral accent-mixed title/author plate (AA by construction; see @reverie/core)
-  const colors = placeholderColorVars(accentVar)
+  const colors = placeholderColorVars(accent)
   return (
     <div
       role="img"
@@ -1245,6 +1245,94 @@ export function CoverPlaceholder({
           {author}
         </span>
       )}
+    </div>
+  )
+}
+
+/**
+ * The public placeholder: the skin's designed plate at card sizes, a MONOGRAM plate at spine sizes.
+ *
+ * WHY TWO MODES (feat/discover-phase-a). At ≤64px the designed plates all collapse to the same
+ * thing: a truncated shared prefix — five ACOTAR books rendering "Cou of… / SARA" five times over,
+ * visually identical. The distinguishing signal that survives 36px is not typeset title text, it is
+ * the monogram `placeholderSpec` has computed since the plates shipped and nothing ever rendered
+ * ("CM" / "CT" / "CW"…), plus the per-book accent tint — now 10 recipes instead of 4, so
+ * same-series neighbours rarely share one. 64px splits the app's real surfaces cleanly: every
+ * strip/row thumb is ≤56px (w-6…w-14), every card ≥80px.
+ *
+ * Both blocks render; `.ph-plate-wide` / `.ph-plate-narrow` (globals.css) toggle on a container
+ * query against THIS wrapper — CSS-only, no resize observer, no layout thrash. A browser without
+ * container queries keeps the plates at every size (the narrow block's base style is display:none),
+ * which is exactly today's behaviour. The wrapper owns role/aria-label; both visual blocks are
+ * aria-hidden, so what a screen reader announces is unchanged at every width — the monogram is a
+ * visual differentiator, never the accessible name.
+ */
+export function CoverPlaceholder({
+  book,
+  className,
+  skin,
+}: {
+  book: { id?: string; title?: string; first?: string; last?: string }
+  className?: string
+  skin?: SkinId
+}) {
+  const { title, author, initials, accent } = placeholderSpec(book)
+  const label = `${title || 'Untitled'}${author ? ` by ${author}` : ''} — placeholder cover`
+  const colors = placeholderColorVars(accent)
+  return (
+    <div
+      role="img"
+      aria-label={label}
+      className={className}
+      style={{
+        position: 'relative',
+        width: '100%',
+        height: '100%',
+        overflow: 'hidden',
+        containerType: 'inline-size',
+      }}
+    >
+      <div aria-hidden className="ph-plate-wide" style={{ position: 'absolute', inset: 0 }}>
+        <PlaceholderPlate book={book} skin={skin} />
+      </div>
+      <div
+        aria-hidden
+        className="ph-plate-narrow"
+        style={{
+          position: 'absolute',
+          inset: 0,
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: colors.background,
+        }}
+      >
+        {/* identity band: the raw accent, full strength — pure decoration (the AA-proven monogram
+            below is the content), and the hue a reader can tell apart before reading any letters */}
+        <span
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: '7%',
+            maxHeight: 5,
+            background: accentCss(accent),
+          }}
+        />
+        <span
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontWeight: 700,
+            fontSize: 'clamp(11px, 40cqw, 26px)',
+            letterSpacing: '0.03em',
+            lineHeight: 1,
+            color: colors.color,
+          }}
+        >
+          {initials}
+        </span>
+      </div>
     </div>
   )
 }

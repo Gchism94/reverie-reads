@@ -64,3 +64,20 @@
     font-size: 16px !important;
   }
 }
+
+/* CoverPlaceholder's two plates (see CoverPlaceholder.tsx). The wrapper is an inline-size
+   container; at spine widths the designed plate (whose title text truncates to a shared prefix —
+   five ACOTAR books all reading "Cou of…") yields to the monogram plate, which stays legible at
+   36px. Base state shows the designed plate everywhere, so a browser without container queries
+   simply keeps today's behaviour at every size. */
+.ph-plate-narrow {
+  display: none;
+}
+@container (max-width: 64px) {
+  .ph-plate-wide {
+    display: none;
+  }
+  .ph-plate-narrow {
+    display: flex;
+  }
+}

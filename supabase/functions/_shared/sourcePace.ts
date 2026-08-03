@@ -20,11 +20,18 @@
 //    but hammering it in a burst is exactly the "bulk download" behaviour their docs ask us not to
 //    do. The gap makes the traffic look like what it is — a library filling in slowly.
 //
-// ── The numbers, from the sources' own documentation ────────────────────────────────────────────
-//   covers.openlibrary.org   "Currently only 100 requests/IP are allowed for every 5 minutes."
-//                            → 100 / 300s, and a 3000ms floor between calls.
-//   openlibrary.org/search   1 req/sec (3/sec with a User-Agent + contact, which we send).
-//                            → 60 / 60s, and a 1000ms floor.
+// ── The numbers, from the sources' own documentation (verified live, 2026-08-03) ────────────────
+//   openlibrary.org/search   1 req/s anonymous; 3 req/s identified — "a User-Agent string with (a)
+//                            the name of your application and (b) your contact email". We now send
+//                            exactly that (_shared/olIdentity.ts, guard-tested), so the budget is
+//                            the identified tier: 3/s → 180 / 60s, and a 334ms floor (1000/3 rounded
+//                            up, so the sustained rate stays ≤ 2.99/s — never over the documented 3).
+//   covers.openlibrary.org   "Currently only 100 requests/IP are allowed for every 5 minutes" — for
+//                            lookups by ISBN/OCLC/etc. DELIBERATELY NOT retuned to the identified
+//                            tier: the covers doc's limit is per-IP with no User-Agent tier at all,
+//                            so 3x-ing this budget would program it above the source's own cap.
+//                            (CoverID lookups — our `/b/id/{cover_i}` URLs — are documented as not
+//                            rate-limited, so 100/300s is conservative posture, kept as-is.)
 // These are DIFFERENT endpoints with DIFFERENT limits and are budgeted separately; treating them as
 // one source is how the covers budget gets spent by search traffic.
 //
@@ -51,7 +58,7 @@ interface Budget {
 // ever diverge. Change them there and here, or the gate catches it.
 const BUDGETS: Record<PacedSource, Budget> = {
   'ol-covers': { max: 100, windowSecs: 300, gapMs: 3000 },
-  'ol-search': { max: 60, windowSecs: 60, gapMs: 1000 },
+  'ol-search': { max: 180, windowSecs: 60, gapMs: 334 },
   google: { max: 100, windowSecs: 60, gapMs: 200 },
   hardcover: { max: 60, windowSecs: 60, gapMs: 1000 },
   isbndb: { max: 60, windowSecs: 60, gapMs: 1000 },
