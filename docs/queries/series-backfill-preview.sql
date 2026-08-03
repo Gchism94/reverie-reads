@@ -31,10 +31,16 @@
 --   asks for NFKC + zero-width removal and says nothing about collapsing whitespace, so this
 --   migration will not collapse it. If category 8 is non-empty, that is a decision to make before
 --   authorising, not after.
--- · Category 9 counts books whose `series` is the EMPTY STRING rather than NULL. The spec says
---   backfill "ONLY where books.series is currently null"; an empty string is functionally
---   series-less but would be skipped by a literal `is null`. If category 9 is non-zero, say which
---   reading you want.
+-- · Category 9 counts books whose `series` is the EMPTY STRING rather than NULL. Under the ORIGINAL
+--   never-overwrite spec this mattered a great deal — "only where series is null" would have
+--   skipped them. Under PARSED WINS it no longer changes any outcome: empty, NULL and wrong are all
+--   overwritten alike. Kept as a data-shape report, no longer a decision.
+--
+-- ── THE RULE THIS FILE ENCODES CHANGED, 2026-08 ────────────────────────────────────────────────
+-- The owner replaced never-overwrite with PARSED WINS UNCONDITIONALLY, on both series and position,
+-- with three hardcoded exceptions. The `final` CTE below is the migration's `tgt` clause for
+-- clause. If you are comparing this against an earlier run of the same file, the numbers are not
+-- comparable: categories 2 and 7 and Q4a all mean something different now.
 
 with recursive
 -- Normalized source. `raw` keeps the original for before/after display; `title` is what the parser
@@ -106,7 +112,9 @@ parse as (
 
 -- The five hand-picked merges from the 42-row author-grouped review. Applied on WRITE only, and
 -- deliberately NOT generalised into a rule: near-misses like `Ravenhood Legacy` / `The Ravenhood`
--- are separate series, and `Divine Rivals` / `Letters of Enchantment` is a book title read as one.
+-- are separate series. `Divine Rivals` / `Letters of Enchantment` is a book title read as a series
+-- name, and it is NOT in this table: it is handled as a protection (existing wins) rather than a
+-- rename, because that is the rule the owner set for it.
 canon(from_name, to_name) as (
   values ('Adrian X Isolde',    'Adrian x Isolde'),
          ('Hades & Persephone', 'Hades x Persephone Saga'),
@@ -125,22 +133,46 @@ bk as (
   where p.tbl = 'books'
 ),
 -- The post-migration state of every book: what series and position it would END UP with.
--- `series is null` is the never-overwrite rule, verbatim.
-final as (
+--
+-- ── THIS IS THE PARSED-WINS RULE, not the never-overwrite one ──────────────────────────────────
+-- An earlier version of this file encoded `when series_name is null then parsed else existing` —
+-- the never-overwrite rule the owner replaced. Left as it was, every category below would have
+-- described a migration that no longer exists, and the collision report in particular would have
+-- said "EXISTING kept, migration writes nothing" about rows the migration now rewrites. The
+-- predicate below is the `tgt` CTE of 20260809010000_series_backfill.sql, clause for clause.
+--
+-- Note the `depth > 0` guard, which the never-overwrite version did not need: at depth 0 there is
+-- no parenthetical and `parsed_series` is NULL, so under never-overwrite it could only ever have
+-- written NULL into a NULL. Under parsed-wins, without this guard, every book with an existing
+-- series and a clean title would be blanked.
+protected as (
   select bk.*,
-         case
-           when bk.is_untitled then bk.series_name          -- excluded: untouched
-           when bk.is_range   then bk.series_name           -- omnibus: no series written
-           when bk.series_name is null then bk.canon_series -- backfilled
-           else bk.series_name                              -- existing series never overwritten
-         end as final_series,
-         case
-           when bk.is_untitled then bk.position
-           when bk.is_range   then bk.position
-           when bk.series_name is null then bk.parsed_position
-           else bk.position
-         end as final_position
+         ( bk.is_untitled
+           or bk.is_range
+           or bk.depth = 0
+           or coalesce(bk.series_name, '') in
+                ('Rose Hill (Silver)', 'Hades x Persephone Saga', 'Letters of Enchantment')
+           or (bk.parsed_series = 'Divine Rivals' and coalesce(btrim(bk.series_name), '') <> '')
+         ) as untouched
   from bk
+),
+final as (
+  select p.*,
+         case when p.untouched then p.series_name else p.canon_series end     as final_series,
+         case when p.untouched then p.position    else p.parsed_position end  as final_position,
+         case when p.is_untitled then 'excluded (bare Untitled) — untouched'
+              when p.is_range    then 'omnibus range — untouched'
+              when p.depth = 0   then 'no parenthetical — untouched'
+              when coalesce(p.series_name, '') in
+                     ('Rose Hill (Silver)', 'Hades x Persephone Saga', 'Letters of Enchantment')
+                then 'PROTECTED (existing name) — untouched'
+              when p.parsed_series = 'Divine Rivals' and coalesce(btrim(p.series_name), '') <> ''
+                then 'PROTECTED (parsed name Divine Rivals) — untouched'
+              when coalesce(btrim(p.series_name), '') = ''
+                then 'BACKFILLED — parsed series + position written'
+              else 'OVERWRITTEN — parsed series + position replace the stored ones'
+         end as write_branch
+  from protected p
 ),
 -- Per-owner single-book counts. EVERY aggregate below is owner-scoped: `series_entries`, `books`
 -- and the series page are all owner-scoped by RLS, and `positionsAreInSeriesIndices` runs over one
@@ -195,9 +227,15 @@ union all
 -- positionsAreInSeriesIndices returns false on ANY duplicate within one reader's candidate set,
 -- which renumbers the WHOLE series 1..n and discards the parsed numbers. One collision poisons a
 -- series — which is why this is wanted before authorising, not after.
+-- Under PARSED-WINS this reads differently than it did under never-overwrite. A collision now means
+-- two books whose PARENTHETICALS print the same number in the same series — a genuine duplicate
+-- (two editions of one book, or a mis-printed export), not a stale stored value the migration
+-- declined to touch. detail_b names the branch behind each side, so a collision involving an
+-- exception row is distinguishable from one made entirely of parsed numbers.
 select 'Q4a. DUPLICATE position', owner_id::text, 'books', null, final_series,
        final_position::text, count(*)::text,
-       string_agg(clean_title, ' | ' order by clean_title), null,
+       string_agg(clean_title, ' | ' order by clean_title),
+       string_agg(distinct write_branch, ' + '),
        'collision — this series would be fully renumbered, parsed positions discarded'
 from final
 where nullif(btrim(final_series),'') is not null and final_position is not null
@@ -228,9 +266,24 @@ where p.depth > 0
 
 union all
 -- ══ 2. STORED POSITION DISAGREES WITH THE TITLE'S ══════════════════════════════════════════════
-select '2. position disagrees', owner_id::text, tbl, id, series_name,
+-- BOOKS arm. Under parsed-wins this is the material change and it did not exist before: the
+-- migration replaces books.position as well as books.series, so every row here has its stored
+-- number overwritten by the parenthetical's. `write_branch` says which rows are exempt.
+select '2. position disagrees', owner_id::text, 'books', id, series_name,
+       position::text, parsed_position::text, clean_title, null,
+       write_branch
+from final
+where depth > 0 and parsed_position is not null
+  and position is distinct from parsed_position
+
+union all
+-- ENTRIES arm. Reported only — this migration writes NO series_entries positions. It cleans their
+-- titles, tombstones ranges and adopts orphans, nothing else. Kept visible because the series page
+-- reconciles entries against books, so a book whose position moves will move its entry next view.
+select '2. position disagrees', owner_id::text, 'series_entries', id, series_name,
        position::text, parsed_position::text, null, user_edited::text,
-       case when user_edited then 'reader-placed — NOT touched' else 'recoverable' end
+       case when user_edited then 'reader-placed — NOT touched by anything here'
+            else 'entry position is NOT written by this migration — reported only' end
 from parse
 where tbl = 'series_entries' and depth > 0 and parsed_position is not null
   and position is distinct from parsed_position
@@ -273,14 +326,19 @@ from bk
 where canon_series is distinct from parsed_series
 
 union all
--- ══ 7. BACKFILL SKIPPED — BOOK ALREADY HAS A SERIES ════════════════════════════════════════════
--- The never-overwrite rule, made visible: these parse to a series but keep the one they have.
-select '7. existing series kept', owner_id::text, 'books', id, series_name,
-       series_name, parsed_series, clean_title, null,
-       case when lower(btrim(series_name)) = lower(btrim(coalesce(canon_series,'')))
-            then 'same name — no visible change'
-            else 'DIFFERS from parsed — existing wins, by rule' end
-from bk
+-- ══ 7. BOOK ALREADY HAS A SERIES — WHAT PARSED-WINS DOES TO IT ═════════════════════════════════
+-- This category used to be titled "existing series kept" and described the never-overwrite rule.
+-- It now shows the opposite: every row here is REWRITTEN unless one of the three exceptions covers
+-- it. Read this list before authorising — it is the whole blast radius of the rule change.
+select '7. existing series ' ||
+       case when write_branch like 'PROTECTED%' then 'PROTECTED' else 'REPLACED' end,
+       owner_id::text, 'books', id, series_name,
+       series_name, final_series, clean_title, parsed_series,
+       case when write_branch like 'PROTECTED%' then write_branch
+            when lower(btrim(series_name)) = lower(btrim(coalesce(final_series,'')))
+              then 'same name — series unchanged, but the POSITION is still rewritten'
+            else 'DIFFERS — parsed replaces the stored series AND position' end
+from final
 where depth > 0 and nullif(btrim(series_name),'') is not null and parsed_series is not null
 
 union all

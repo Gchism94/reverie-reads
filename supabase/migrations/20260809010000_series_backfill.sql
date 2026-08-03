@@ -35,10 +35,28 @@
 -- contest is not "parsed vs the reader" — it is the reader's own export data versus a match the
 -- enricher itself scored as worthless. Recorded in docs/BACKLOG.md as its own fix.
 --
--- TWO EXCEPTIONS, HARDCODED, NOT DERIVED:
+-- PARSED WINS ON BOTH FIELDS, series AND position. The parenthetical is the authority for the
+-- number as much as the name: two Empyrean books both sitting at #1 is the exact damage this
+-- migration exists to repair, and keeping the stored position while replacing the series would
+-- leave it in place.
+--
+-- THREE EXCEPTIONS, HARDCODED, NOT DERIVED:
 --   · `Rose Hill (Silver)`        — disambiguates two distinct Rose Hill series; parsed would flatten them.
 --   · `Hades x Persephone Saga`   — our own canonical merge target; parsed would revert it.
--- A book already carrying either keeps it. Everything else takes parsed.
+--   · `Letters of Enchantment`    — the titles print `(Divine Rivals, #N)`, but Divine Rivals is
+--     BOOK ONE, not the series. A book title read as a series name; existing wins.
+-- A book already carrying any of the three keeps it — series AND position both, since the exception
+-- is "this row's stored value is better than the parenthetical", not "only its name is".
+--
+-- The third exception is keyed TWO ways, deliberately. `Letters of Enchantment` is matched against
+-- the EXISTING value like the other two; `Divine Rivals` is ALSO matched against the PARSED value,
+-- for any row that already has some series. The second key exists because the first cannot be
+-- verified from here: if production stores that series under any other spelling, an existing-value
+-- match alone would silently no-op and the migration would overwrite the very rows the exception was
+-- added to protect. Matching the parsed name instead fires on exactly the rows the exception
+-- describes, whatever they currently carry. A row parsing `Divine Rivals` with NO existing series is
+-- still backfilled to `Divine Rivals` — there is nothing to protect there, and a slightly-wrong
+-- series name beats none. Preview category 7 lists both sets so this is visible before it runs.
 
 create or replace function public.backfill_series_from_titles()
 returns jsonb
@@ -175,7 +193,7 @@ begin
      and e.title is distinct from p.clean_title;
   get diagnostics n_entry_title = row_count;
 
-  -- ── 3. Series + position. PARSED WINS, except the two protected names. Omnibus ranges write
+  -- ── 3. Series + position. PARSED WINS on BOTH, except the protected names. Omnibus ranges write
   --       nothing (a range is not a slot in a reading order); `Untitled` writes nothing.
   with canon(from_name, to_name) as (
     values ('Adrian X Isolde',      'Adrian x Isolde'),
@@ -195,8 +213,12 @@ begin
       and p.depth > 0
       and not p.is_range
       and not p.is_untitled
-      -- the two hardcoded exceptions, compared against the EXISTING value
-      and coalesce(p.series_name, '') not in ('Rose Hill (Silver)', 'Hades x Persephone Saga')
+      -- the hardcoded exceptions, compared against the EXISTING value …
+      and coalesce(p.series_name, '') not in
+            ('Rose Hill (Silver)', 'Hades x Persephone Saga', 'Letters of Enchantment')
+      -- … and, for Letters of Enchantment only, against the PARSED value too, so the exception
+      -- cannot be defeated by production spelling the existing name differently than assumed.
+      and not (p.parsed_series = 'Divine Rivals' and coalesce(btrim(p.series_name), '') <> '')
   )
   update public.books b
      set series = t.new_series, position = t.new_position

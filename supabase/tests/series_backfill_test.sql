@@ -6,7 +6,7 @@
 -- the time pgTAP starts and cannot be exercised.
 
 begin;
-select plan(25);
+select plan(30);
 
 insert into auth.users (id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
 values ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 'authenticated', 'authenticated', 'sb@example.com', '{}', '{}', now(), now());
@@ -49,7 +49,25 @@ insert into public.books (id, owner_id, title, author_first, author_last, series
   ('b0000000-0000-0000-0000-00000000000c', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
    'Twin Title (ACOTAR, #7)', 'T', 'One', null, null),
   ('b0000000-0000-0000-0000-00000000000d', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
-   'Twin Title', 'T', 'Two', null, null);
+   'Twin Title', 'T', 'Two', null, null),
+  -- 12. PROTECTED (third exception, matched on the EXISTING name): the parenthetical prints the
+  --     series as `Divine Rivals`, which is book one's title, not the series.
+  ('b0000000-0000-0000-0000-00000000000e', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
+   'Ruthless Vows (Divine Rivals, #2)', 'Rebecca', 'Ross', 'Letters of Enchantment', 2),
+  -- 13. PROTECTED via the SECOND key: same case, but the existing name is spelled differently, so
+  --     the `not in (...)` list does not match it and only the parsed-name clause can save it.
+  ('b0000000-0000-0000-0000-00000000000f', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
+   'Divine Rivals (Divine Rivals, #1)', 'Rebecca', 'Ross', 'Letters of enchantment', 1),
+  -- 14. NOT protected — parses `Divine Rivals` but carries no existing series, so there is nothing
+  --     to protect and it is backfilled. Documented, not an oversight; see the migration header.
+  ('b0000000-0000-0000-0000-000000000010', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
+   'Rival Probe (Divine Rivals, #4)', 'Rebecca', 'Ross', null, null),
+  -- 15. PROTECTED by the FIRST key only. Goodreads sometimes prints the series with a trailing
+  --     qualifier, so the parsed name is not the bare `Divine Rivals` the second key matches, and
+  --     only the existing-name list can save this row. Without it the two keys are never told
+  --     apart and dropping either one leaves the suite green.
+  ('b0000000-0000-0000-0000-000000000011', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
+   'Vows Variant (Divine Rivals Series, #2)', 'Rebecca', 'Ross', 'Letters of Enchantment', 2);
 
 insert into public.series (id, owner_id, name) values
   ('50000000-0000-0000-0000-000000000001', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 'ACOTAR'),
@@ -114,13 +132,37 @@ select is((select series from public.books where id = 'b0000000-0000-0000-0000-0
 select is((select position from public.books where id = 'b0000000-0000-0000-0000-000000000006'),
           3::numeric, 'and its position comes from the parenthetical, not the stale 99');
 
--- ══ 7 + 8. THE TWO HARDCODED EXCEPTIONS — the mutation target ═════════════════════════════════
--- Dropping the `not in (...)` guard makes both of these fail: parsed would flatten `Rose Hill
--- (Silver)` to `Rose Hill` and revert `Hades x Persephone Saga` to `Hades & Persephone`.
+-- ══ 7 + 8. THE HARDCODED EXCEPTIONS — the mutation target ═════════════════════════════════════
+-- Dropping the `not in (...)` guard makes these fail: parsed would flatten `Rose Hill (Silver)` to
+-- `Rose Hill`, revert `Hades x Persephone Saga` to `Hades & Persephone`, and overwrite
+-- `Letters of Enchantment` with book one's title.
 select is((select series from public.books where id = 'b0000000-0000-0000-0000-000000000007'),
           'Rose Hill (Silver)', 'Rose Hill (Silver) is protected — it disambiguates two series');
 select is((select series from public.books where id = 'b0000000-0000-0000-0000-000000000008'),
           'Hades x Persephone Saga', 'the canonical merge target is never reverted by parsed');
+select is((select series from public.books where id = 'b0000000-0000-0000-0000-00000000000e'),
+          'Letters of Enchantment',
+          'Letters of Enchantment survives a parenthetical printing `Divine Rivals`');
+-- The exception protects the POSITION as well, which is the cost of it: this row's #2 happens to
+-- agree with the parenthetical, so the assertion states what is guaranteed (unchanged), not that
+-- the parsed number landed.
+select is((select position from public.books where id = 'b0000000-0000-0000-0000-00000000000e'),
+          2::numeric, 'and its stored position is left alone too — the exception covers both fields');
+-- The SECOND key, on its own. This row's existing name is not in the hardcoded list (different
+-- case), so dropping the parsed-name clause overwrites it while every other exception test stays
+-- green — which is the whole reason that clause exists.
+select is((select series from public.books where id = 'b0000000-0000-0000-0000-00000000000f'),
+          'Letters of enchantment',
+          'a differently-spelled existing name is still protected, by the PARSED name');
+-- The FIRST key, on its own. This row's parsed name carries a trailing qualifier, so the
+-- parsed-name clause cannot match it and only the existing-name list protects it.
+select is((select series from public.books where id = 'b0000000-0000-0000-0000-000000000011'),
+          'Letters of Enchantment',
+          'and a variant parsed spelling is still protected, by the EXISTING name');
+-- The documented residual: nothing to protect, so it is backfilled.
+select is((select series from public.books where id = 'b0000000-0000-0000-0000-000000000010'),
+          'Divine Rivals',
+          'but a row parsing Divine Rivals with NO existing series is backfilled, not skipped');
 
 -- ══ 9. unicode normalized + zero-width stripped ═══════════════════════════════════════════════
 select is((select title from public.books where id = 'b0000000-0000-0000-0000-000000000009'),
