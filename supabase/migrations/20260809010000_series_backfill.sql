@@ -129,6 +129,18 @@ begin
   -- A row that consumed a parenthetical but yielded no series, or would end up with an empty title,
   -- or (not being a range) yielded no position, is a parse this migration does not understand.
   -- Skipping it silently is how a repair damages the rows it was supposed to leave alone.
+  --
+  -- HONEST LIMITATION: as written this is DEFENCE IN DEPTH THAT CANNOT CURRENTLY FIRE, and a
+  -- mutation check proved it — turning the `raise exception` below into a no-op left every test
+  -- green. That is not a weak test; the three conditions are unreachable given the peel's own
+  -- admission criteria, which already guarantee each one before a parenthetical is ever consumed:
+  --   · the peel requires `match[1] <> ''`, so `clean_title` is never empty;
+  --   · it requires EVERY ';' part to match the ref regex, whose `(.+?)` needs >= 1 char, so
+  --     `parsed_series` is never empty;
+  --   · that same regex requires `#N`, `Book N`, or a range, so a non-range always yields a number.
+  -- It is kept because it is the invariant those criteria are relied on for: if the peel is ever
+  -- loosened, this is what turns a silent mis-parse into a refusal. It should NOT be described as a
+  -- verified guard, because nothing can currently exercise it.
   select string_agg(format('  %s %s: %L', tbl, id, raw_original), E'\n' order by tbl, id)
     into v_bad
   from _sbt_parse

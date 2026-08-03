@@ -6,7 +6,7 @@
 -- the time pgTAP starts and cannot be exercised.
 
 begin;
-select plan(24);
+select plan(25);
 
 insert into auth.users (id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
 values ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 'authenticated', 'authenticated', 'sb@example.com', '{}', '{}', now(), now());
@@ -44,7 +44,12 @@ insert into public.books (id, owner_id, title, author_first, author_last, series
    E'A ​Court of Silver Flames', 'I', 'Author', null, null),
   -- 10. the book an orphan ghost will adopt (its own title is dirty too)
   ('b0000000-0000-0000-0000-00000000000b', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
-   'A Court of Mist and Fury (ACOTAR, #2)', 'Sarah', 'Maas', null, null);
+   'A Court of Mist and Fury (ACOTAR, #2)', 'Sarah', 'Maas', null, null),
+  -- 11. TWO books cleaning to the SAME title — an ambiguous ghost must adopt NEITHER
+  ('b0000000-0000-0000-0000-00000000000c', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
+   'Twin Title (ACOTAR, #7)', 'T', 'One', null, null),
+  ('b0000000-0000-0000-0000-00000000000d', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
+   'Twin Title', 'T', 'Two', null, null);
 
 insert into public.series (id, owner_id, name) values
   ('50000000-0000-0000-0000-000000000001', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 'ACOTAR'),
@@ -59,7 +64,10 @@ insert into public.series_entries (id, owner_id, series_id, position, title, aut
    '50000000-0000-0000-0000-000000000001', 1, 'A Court of Thorns and Roses (ACOTAR, #1)', 'Sarah Maas', null, 'hardcover', false),
   -- an omnibus ENTRY — tombstoned, not deleted
   ('e0000000-0000-0000-0000-000000000003', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
-   '50000000-0000-0000-0000-000000000002', 1, 'Omnibus Tale (Probe Saga, #1-3)', 'C Author', null, 'hardcover', false);
+   '50000000-0000-0000-0000-000000000002', 1, 'Omnibus Tale (Probe Saga, #1-3)', 'C Author', null, 'hardcover', false),
+  -- an AMBIGUOUS ghost: its cleaned title matches two books, so it must adopt neither
+  ('e0000000-0000-0000-0000-000000000004', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
+   '50000000-0000-0000-0000-000000000001', 7, 'Twin Title', 'T One', null, 'hardcover', false);
 
 -- Snapshot BEFORE the first run, so idempotence can be a real diff later.
 create temp table _snap_none as
@@ -134,6 +142,13 @@ select is((select count(*)::int from public.series_entries where id = 'e0000000-
 select is((select book_id from public.series_entries where id = 'e0000000-0000-0000-0000-000000000001'),
           'b0000000-0000-0000-0000-00000000000b'::uuid,
           'the orphan ghost adopts the book whose CLEANED title matches it');
+
+-- matchEntryForBook's rule: nothing is revived when the tie cannot be broken. Reviving the WRONG
+-- slot resurrects a removal the reader made deliberately, which is worse than a missed revive they
+-- can see and redo. `ok(... is null)` not `is(..., null)`: a vanished row's zero-row subquery would
+-- make `is()` pass by comparing NULL to NULL.
+select ok((select book_id from public.series_entries where id = 'e0000000-0000-0000-0000-000000000004') is null,
+          'an AMBIGUOUS ghost adopts nothing — two books share its cleaned title');
 
 -- ══ IDEMPOTENCE — a whole-table snapshot diff, not "matched zero rows" ════════════════════════
 -- "The second run updated 0 rows" would also be true of a run that silently did nothing at all.
