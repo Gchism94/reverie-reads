@@ -155,8 +155,12 @@ export const NEUTRAL_STRUCTURE: SkinStructure = {
   placeholder: 'plain',
 }
 
-// Tryst + Aphelion: structures extracted from the /lab/skins specimen + decoded export. The other
-// seven inherit NEUTRAL_STRUCTURE until their stage (fill this table to give a skin bones).
+// ALL NINE skins carry complete rows: Tryst + Aphelion extracted from the /lab/skins specimen +
+// decoded export; Grimoire/Marrow/Gaslight filled by Fable 5 chunk 2 and Marginalia/Hearth/
+// Almanac/Firstlight by chunk 3 (see the inline notes below). NEUTRAL_STRUCTURE above remains the
+// safety default for a FUTURE tenth skin, not a description of any current one — an earlier
+// version of this comment claimed seven skins still inherited it, long after they didn't
+// (corrected by the audit/skin-design-language sweep, which found every row filled).
 export const SKIN_STRUCTURE: Record<SkinId, SkinStructure> = {
   tryst: {
     sectionRule: 'fleuron',
