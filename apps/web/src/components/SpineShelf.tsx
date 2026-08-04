@@ -83,7 +83,8 @@ export function SpineShelf({
     if (!el) return
     let raf = 0
     const naturalContent =
-      books.reduce((w, b) => w + spineNaturalWidth(b.id), 0) + SLOT_GAP * Math.max(0, books.length - 1)
+      books.reduce((w, b) => w + spineNaturalWidth(b.id), 0) +
+      SLOT_GAP * Math.max(0, books.length - 1)
     const update = () => {
       const r = el.getBoundingClientRect()
       // THE SLIDING ANCHOR (docs/audits/spine-overlay-clamp.md §4/§6). A fixed centre anchor has a

@@ -24,9 +24,12 @@ import { ok, okUser } from './support/ok'
 //     enter a sibling's slot.
 //
 // Environment honesty: this proves reachability under synthetic input — coordinates, hit-testing,
-// and pick arithmetic. It does not prove the *feel* of the sliding anchor under a real finger,
-// and it cannot test whether iOS fires pointerleave after tap-release (Chromium does not); both
-// are device checks, named in the branch report.
+// and pick arithmetic. It does not prove the *feel* of the sliding anchor under a real finger.
+// One earlier belief was falsified while building this: Chromium's touch emulation DOES fire a
+// full pointerleave chain after tap-release (an instrumented probe logged it reaching the track),
+// which is why onPointerLeave's clear is now mouse-only — tap-to-OPEN was racing the leave's
+// state flush against the tap's trailing click. iOS's exact ordering is still a device check,
+// named in the branch report, but the fix makes the answer non-load-bearing.
 
 const SUPABASE_URL = 'http://127.0.0.1:55321'
 const ANON =
@@ -102,7 +105,12 @@ async function setup(): Promise<Ctx> {
     const bookIds = ids.slice(0, count)
     await ok(
       admin.from('list_items').insert(
-        bookIds.map((id, i) => ({ list_id: listId, book_id: id, owner_id: uid, position: i + 1 })),
+        bookIds.map((id, i) => ({
+          list_id: listId,
+          book_id: id,
+          owner_id: uid,
+          position: i + 1,
+        })),
       ),
       'reachability list_items insert',
     )
@@ -123,7 +131,9 @@ async function signInOnce(page: Page) {
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
     'base64',
   )
-  await page.route('**covers.reach.test**', (r) => r.fulfill({ body: png, contentType: 'image/png' }))
+  await page.route('**covers.reach.test**', (r) =>
+    r.fulfill({ body: png, contentType: 'image/png' }),
+  )
   for (const p of ['search', 'enrich', 'embed', 'releases', 'series', 'covers'])
     await page.route(`**/functions/v1/${p}**`, (r) => r.fulfill({ json: {} }))
   await page.goto(
@@ -288,6 +298,7 @@ test('spread geometry: fits-without-scroll shelves hold slot pitch >= REVEAL_W',
       )
       return lefts.slice(1).map((l, i) => l - lefts[i]!)
     })
-    for (const p of pitches) expect(p, 'non-scrolling spread 6-shelf pitch').toBeGreaterThanOrEqual(REVEAL_W)
+    for (const p of pitches)
+      expect(p, 'non-scrolling spread 6-shelf pitch').toBeGreaterThanOrEqual(REVEAL_W)
   }
 })
