@@ -67,8 +67,12 @@ for _, r in df.iterrows():
         "spice": ov.get("spice", 0),
         "tags": tags,
         "duplicate": bool(clean(r.get("Duplicate"))),
-        "readBy": {"GC": bool(clean(r.get("GC Read"))), "TC": bool(clean(r.get("TC Read")))},
+        # "TC" (a second reader's read-status column) dropped from the source and from this
+        # schema together (pre-public audit) — readBy itself has no consumer anywhere downstream
+        # (verified: grep for "readBy" outside this file returns nothing), so this is dead output
+        # kept only because deleting the field outright is a separate, unrequested change.
+        "readBy": {"GC": bool(clean(r.get("GC Read")))},
     })
 
-json.dump(out, open(OUT, "w"), ensure_ascii=False)
+json.dump(out, open(OUT, "w"), ensure_ascii=False, indent=1)
 print(f"{len(out)} romance books -> {OUT}")
