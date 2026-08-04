@@ -1,5 +1,6 @@
 import { type CSSProperties } from 'react'
 import { callsign, fitSpineTitle, spineDims, type SkinId, type SpineStyle } from '@reverie/core'
+import { spineNaturalWidth } from './spineMetrics'
 import { useEffectiveSkin } from '../skin/labels'
 import { useSpineTintStyle } from '../skin/spineTint'
 import { useStructure } from '../skin/structure'
@@ -22,8 +23,7 @@ import { useStructure } from '../skin/structure'
 
 type SpineBook = { id: string; title: string; first?: string; last?: string }
 
-const WIDTH = [26, 48] as const // px range for thickness (page-count proxy)
-const HEIGHT = [150, 184] as const // px range for trim (proxy)
+const HEIGHT = [150, 184] as const // px range for trim (proxy); width range lives in spineMetrics
 
 function authorLabel(b: SpineBook): string {
   const a = `${b.first ? `${b.first[0]}. ` : ''}${b.last ?? ''}`.trim()
@@ -404,8 +404,8 @@ export function Spine({
   const tintStyle = useSpineTintStyle(
     s.binding === 'plain' || s.binding === 'sky' ? undefined : tint,
   )
-  const { thickness, trim } = spineDims(book.id)
-  const width = active ? 120 : Math.round(WIDTH[0] + thickness * (WIDTH[1] - WIDTH[0]))
+  const { trim } = spineDims(book.id)
+  const width = active ? 120 : spineNaturalWidth(book.id)
   const height = Math.round(HEIGHT[0] + trim * (HEIGHT[1] - HEIGHT[0]))
   const author = authorLabel(book)
   // display-serif spines set the title in --font-display (gilt/graphite/linen/sky warm type)

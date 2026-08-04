@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { isBorrowedBook, isDnf, isPossessed, stateSuffix, type Book } from '@reverie/core'
 import { Spine } from './Spine'
+import { spineNaturalWidth } from './spineMetrics'
 import { CoverImage } from './CoverImage'
 import { StatePill } from './StatePill'
 
@@ -16,6 +17,15 @@ import { StatePill } from './StatePill'
  */
 /** The revealed presentation is always 120px wide — the cover div and the active Spine agree. */
 const REVEAL_W = 120
+/** The flex gap between slots (`gap-1.5`). Kept in one place because SPREAD_SLOT_W depends on it. */
+const SLOT_GAP = 6
+/** Slot width on a SPREAD shelf: slot + gap = exactly REVEAL_W, so one book's revealed cover can
+ *  never enter a sibling's slot. docs/audits/spine-overlay-clamp.md §3: on a 2-book shelf the
+ *  120px reveal buried the sibling's entire slot, and because the overlay is the revealed book's
+ *  tap target, the buried book had NO touch path at all. Spreading only happens on shelves whose
+ *  natural content already fits without scrolling (see the effect below), so no density is lost —
+ *  it spends width that was empty. */
+const SPREAD_SLOT_W = REVEAL_W - SLOT_GAP
 
 export function SpineShelf({
   books,
@@ -59,13 +69,36 @@ export function SpineShelf({
     onReorder(ids)
   }
 
+  // SPREAD: on a shelf whose natural content fits without scrolling, space the slots out so a
+  // revealed cover cannot bury a sibling (audit §3 — the buried book had no touch path). Natural
+  // width is COMPUTED from the same hash the spines render from, never measured, so spreading
+  // can't feed back into its own condition. The sum deliberately EXCLUDES the add-cap and the
+  // reorder arrows: underestimating natural content can only spread a shelf that barely scrolls
+  // (harmless — the sliding anchor reaches everything on a scrolling shelf), while overestimating
+  // would leave a fits-shelf buried, which is the defect.
+  const [spread, setSpread] = useState(false)
+
   useEffect(() => {
     const el = ref.current
     if (!el) return
     let raf = 0
+    const naturalContent =
+      books.reduce((w, b) => w + spineNaturalWidth(b.id), 0) +
+      SLOT_GAP * Math.max(0, books.length - 1)
     const update = () => {
       const r = el.getBoundingClientRect()
-      const cx = r.left + r.width / 2
+      // THE SLIDING ANCHOR (docs/audits/spine-overlay-clamp.md §4/§6). A fixed centre anchor has a
+      // dead zone: it can never sit closer than clientWidth/2 to either content edge, so the
+      // first/last ~3 books were never scroll-pickable on any version of this component. Mapping
+      // scroll progress across the viewport instead — anchor at the LEFT edge at scrollLeft 0,
+      // the RIGHT edge at max, linear between — gives every slot a scroll position that picks it:
+      // the anchor's content-space range becomes [0, scrollWidth], a superset of every slot
+      // centre. Progress is clamped for iOS rubber-band overscroll (scrollLeft exceeds [0, max]
+      // during the bounce; the terminal pick should hold, not invert). A shelf that cannot scroll
+      // (maxScroll 0) keeps the centre anchor — same behavior as before.
+      const maxScroll = el.scrollWidth - el.clientWidth
+      const progress = maxScroll > 0 ? Math.min(1, Math.max(0, el.scrollLeft / maxScroll)) : 0.5
+      const cx = r.left + progress * r.width
       let best: string | null = null
       let bd = Infinity
       el.querySelectorAll<HTMLElement>('[data-spine]').forEach((s) => {
@@ -82,14 +115,22 @@ export function SpineShelf({
       cancelAnimationFrame(raf)
       raf = requestAnimationFrame(update)
     }
+    const recompute = () => {
+      setSpread(books.length > 0 && naturalContent <= el.clientWidth)
+      update()
+    }
     el.addEventListener('scroll', onScroll, { passive: true })
-    update()
+    window.addEventListener('resize', recompute)
+    recompute()
     setPointerId(null)
     return () => {
       el.removeEventListener('scroll', onScroll)
+      window.removeEventListener('resize', recompute)
       cancelAnimationFrame(raf)
     }
-  }, [books])
+    // `spread` is a dep so the pick re-runs against post-spread geometry (spreading changes slot
+    // offsets and may introduce scroll range). It converges: spread depends only on books+viewport.
+  }, [books, spread])
 
   const shownId = pointerId ?? activeId
 
@@ -132,7 +173,16 @@ export function SpineShelf({
       ref={ref}
       className="relative isolate flex min-h-[204px] items-end gap-1.5 overflow-x-auto pb-4 pt-4"
       style={{ scrollbarWidth: 'none' }}
-      onPointerLeave={() => setPointerId(null)}
+      // MOUSE-ONLY, matching onPointerEnter's condition below. Touch pointers are transient: the
+      // browser fires a full pointerleave chain after EVERY tap-release (measured in Chromium's
+      // emulation; iOS documents the same), so an unconditional clear races the tap's trailing
+      // click — tap-to-reveal survived only because its click re-set pointerId after the leave,
+      // and tap-to-OPEN was a coin flip between opening and silently re-revealing, depending on
+      // which state flush won. A touch reveal is dismissed by what touch actually does next
+      // (another tap, or a scroll re-pick), not by the phantom leave of a finger that lifted.
+      onPointerLeave={(e) => {
+        if (e.pointerType === 'mouse') setPointerId(null)
+      }}
     >
       {books.map((b, i) => {
         const shown = b.id === shownId
@@ -141,7 +191,11 @@ export function SpineShelf({
         // dim (--ghost-opacity); the title stays in the aria-label.
         const unowned = !isPossessed(b)
         return (
-          <div key={b.id} className="flex flex-none flex-col items-center self-end">
+          <div
+            key={b.id}
+            className="flex flex-none flex-col items-center self-end"
+            style={spread ? { minWidth: SPREAD_SLOT_W } : undefined}
+          >
             <button
               data-spine={b.id}
               draggable={!!onReorder}
@@ -169,7 +223,12 @@ export function SpineShelf({
               aria-label={
                 shown ? `Open ${b.title}${stateSuffix(b)}` : `Reveal ${b.title}${stateSuffix(b)}`
               }
-              className="flex-none self-end"
+              // No `self-end` here: inside the slot's flex-COLUMN that is the horizontal axis, and
+              // it right-aligned the spine within a SPREAD slot (harmless before spreading, when
+              // slot width == button width) — pushing the reveal's anchor into the sibling's slot.
+              // The slot's own items-center centres the spine; the slot div carries the vertical
+              // self-end against the track.
+              className="flex-none"
               style={dragIdx === i ? { opacity: 0.4 } : undefined}
             >
               {/* The seated spine ALWAYS renders here, at its natural width, holding its slot —
