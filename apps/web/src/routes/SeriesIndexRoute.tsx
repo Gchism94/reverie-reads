@@ -137,7 +137,7 @@ function SeriesIndexScreen() {
   )
 
   return (
-    <section className="mx-auto max-w-3xl px-4 py-6 sm:px-6">
+    <section className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6">
       <header>
         <h1
           className="text-[26px] italic leading-tight text-ink"

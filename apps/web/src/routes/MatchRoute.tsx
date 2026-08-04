@@ -241,7 +241,7 @@ function MatchScreen() {
     const q = QUIZ[step]
     if (!q) return null
     return (
-      <section className="mx-auto max-w-xl px-4 py-10 sm:px-6">
+      <section className="mx-auto w-full max-w-xl px-4 py-10 sm:px-6">
         <div
           className="rounded-3xl border border-line p-6"
           style={{ background: 'var(--card)', boxShadow: 'var(--shadow)' }}

@@ -122,7 +122,7 @@ function ReviewScreen() {
 
   if (!model) {
     return (
-      <section className="mx-auto max-w-2xl px-4 py-10 text-center sm:px-6">
+      <section className="mx-auto w-full max-w-2xl px-4 py-10 text-center sm:px-6">
         <h1
           className="text-[22px] italic text-ink"
           style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
@@ -148,7 +148,7 @@ function ReviewScreen() {
   const genreChips = Object.entries(summary.genres).sort((a, b) => b[1] - a[1])
 
   return (
-    <section className="mx-auto max-w-3xl px-4 py-6 sm:px-6">
+    <section className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6">
       <h1
         className="text-[22px] italic text-ink"
         style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
