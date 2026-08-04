@@ -10,6 +10,22 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Full-history secret scan — FAILS the build on any leak (pre-public audit follow-up). gitleaks
+  # auto-loads .gitleaks.toml from the checkout root; the allowlist there names exactly the four
+  # audited-safe values, each with its reason, so a fifth committed credential goes red. fetch-depth
+  # 0 makes this scan every commit reachable from the ref, not just the tip.
+  secrets:
+    name: secrets
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   gate:
     name: gate
     runs-on: ubuntu-latest
