@@ -170,6 +170,26 @@ const track = (page: Page) =>
 const trackWidth = (page: Page) => track(page).evaluate((el) => el.scrollWidth)
 const revealedId = (page: Page) => page.locator('[data-spine-reveal]').getAttribute('data-spine-reveal')
 
+/** REVEAL_W from SpineShelf.tsx — the overlay's fixed rendered width, duplicated here rather than
+ *  imported so this assertion doesn't silently stop checking anything if the component's constant
+ *  is ever renamed or inlined; a mismatch shows up as a failing width check instead. */
+const REVEAL_W = 120
+
+/** Direct geometry check for the clamp itself (audit point 5's edge rule), not just its side
+ *  effect on scrollWidth: the reveal is positioned via inline `style.left` in the track's own
+ *  content coordinates, so it must always land inside [0, scrollWidth - REVEAL_W]. This is what
+ *  actually kills an unclamped-overlay mutant — this fixture's shelf always trails a "+" add-book
+ *  slot (every real /shelf/:id mount passes onAdd), which happens to leave enough buffer that an
+ *  unclamped overlay near the LAST book doesn't always grow scrollWidth measurably; the clamp's
+ *  own geometry does not have that blind spot. */
+async function assertOverlayClamped(page: Page, label: string) {
+  const reveal = page.locator('[data-spine-reveal]')
+  const left = await reveal.evaluate((el) => parseFloat((el as HTMLElement).style.left))
+  const width = await trackWidth(page)
+  expect(left, `${label}: overlay left >= 0`).toBeGreaterThanOrEqual(0)
+  expect(left, `${label}: overlay right edge <= track width`).toBeLessThanOrEqual(width - REVEAL_W)
+}
+
 test('track width is invariant across pick transitions — scroll-driven, tap-driven, both ends, coverless', async ({
   page,
 }) => {
@@ -184,6 +204,7 @@ test('track width is invariant across pick transitions — scroll-driven, tap-dr
   await expect(page.locator(`[data-spine]`)).toHaveCount(COUNT, { timeout: 20_000 })
   await expect(page.locator('[data-spine-reveal]')).toHaveCount(1)
   const baseline = await trackWidth(page)
+  await assertOverlayClamped(page, 'baseline')
 
   // The track must actually overflow this viewport, or every assertion below is vacuous
   // (scrollWidth clamps to clientWidth when nothing overflows). Guard the guard.
@@ -202,6 +223,7 @@ test('track width is invariant across pick transitions — scroll-driven, tap-dr
       .not.toBe(prev)
     prev = await revealedId(page)
     expect(await trackWidth(page), `width after scroll to ${fraction}`).toBe(baseline)
+    await assertOverlayClamped(page, `scroll to ${fraction}`)
   }
 
   // ── Tap-driven picks, one of them coverless. Pre-fix these are (among) where the mutation
@@ -229,7 +251,17 @@ test('track width is invariant across pick transitions — scroll-driven, tap-dr
   // same point — the signature of a scale mismatch sampling near-but-wrong pixels, not a stable
   // z-index conflict. `dispatchEvent` fires the same DOM click the button's own `onClick` handles,
   // without depending on that broken coordinate mapping.
-  for (const title of ['Invariant Probe 03', 'Invariant Probe 20', 'Invariant Probe 36']) {
+  // Probe 01 (the true first book, left content edge) is included specifically to exercise the
+  // LEFT clamp — Probe 03's unclamped position was already inside bounds in this fixture (the
+  // trailing "+" add-book slot leaves just enough buffer at the RIGHT edge that Probe 36 alone
+  // doesn't always expose an unclamped right edge either; Probe 01's centred position is
+  // arithmetically negative regardless of trailing content, so it always needs the left clamp).
+  for (const title of [
+    'Invariant Probe 03',
+    'Invariant Probe 20',
+    'Invariant Probe 36',
+    'Invariant Probe 01',
+  ]) {
     const spine = page.locator(`[data-spine][title="${title}"]`)
     const id = await spine.getAttribute('data-spine')
     await track(page).evaluate((el, spineId) => {
@@ -246,6 +278,41 @@ test('track width is invariant across pick transitions — scroll-driven, tap-dr
     )
     await expect(page.locator(`[data-spine-reveal="${id}"]`)).toBeVisible()
     expect(await trackWidth(page), `width with ${title} revealed`).toBe(baseline)
+    await assertOverlayClamped(page, title)
+
+    // ── Audit point 5, checked directly (not just via the width side effect): the overlay must
+    // anchor to the PICKED SLOT, not the scroll container's centre. Book 20 is unclamped (a
+    // middle pick) and was tap-revealed while off-centre, so its slot's own midpoint and the
+    // container's current visual centre are two genuinely different numbers — a container-centre
+    // anchor would land near the LATTER, not the former, and this catches that directly.
+    if (title === 'Invariant Probe 20') {
+      const geometry = await track(page).evaluate((el, spineId) => {
+        const slot = el.querySelector<HTMLElement>(`[data-spine="${spineId}"]`)!
+        const reveal = el.querySelector<HTMLElement>('[data-spine-reveal]')!
+        return {
+          slotCentre: slot.offsetLeft + slot.offsetWidth / 2,
+          containerCentre: el.scrollLeft + el.clientWidth / 2,
+          revealLeft: parseFloat(reveal.style.left),
+        }
+      }, id)
+      const revealCentre = geometry.revealLeft + REVEAL_W / 2
+      // The two candidate anchors must actually differ, or this run proves nothing.
+      expect(
+        Math.abs(geometry.slotCentre - geometry.containerCentre),
+        'slot and container centre must differ for this check to mean anything',
+      ).toBeGreaterThan(REVEAL_W)
+      // Tolerance 2px: the component rounds `left` to a whole pixel, and DPR-3 subpixel layout
+      // measurements routinely land on a .5 — a stricter check would fail on that rounding, not on
+      // a real defect.
+      expect(
+        Math.abs(revealCentre - geometry.slotCentre),
+        'overlay anchors to the SLOT centre',
+      ).toBeLessThanOrEqual(2)
+      expect(
+        Math.abs(revealCentre - geometry.containerCentre),
+        'overlay must NOT anchor to the container centre',
+      ).toBeGreaterThan(REVEAL_W / 2)
+    }
   }
 
   // ── The revealed cover is the tap target (audit requirement: once revealed, the cover, not the
