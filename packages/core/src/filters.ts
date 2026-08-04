@@ -4,6 +4,7 @@ import { bookTropeNames } from './tropes'
 import { authorOf } from './normalize'
 import { normalizeName } from './contributors'
 import { isPossessed } from './ownership'
+import { claimedSeriesLength } from './seriesIndex'
 
 export type LibrarySort = 'az' | 'author' | 'rating' | 'intensity' | 'recent' | 'series'
 export type SeriesLenBucket = 'Any' | '1' | '2' | '3' | '4' | '5+' | 'Unknown'
@@ -193,7 +194,10 @@ export function groupSeries(books: readonly Book[]): SeriesGroup[] {
   return [...groups.entries()]
     .map(([name, bs]) => {
       const sorted = [...bs].sort((a, b) => positionOf(a, 99) - positionOf(b, 99))
-      const total = sorted.find((b) => b.seriesCount != null)?.seriesCount ?? null
+      // Same order-dependent read as SeriesIndexRoute carried, and the doc named only that one:
+      // both surfaces have to change together or the Library Series view and the Series index
+      // disagree about the same series. See claimedSeriesLength for why MAX.
+      const total = claimedSeriesLength(sorted)
       return {
         name,
         books: sorted,
