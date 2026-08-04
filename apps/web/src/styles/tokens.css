@@ -1698,6 +1698,20 @@
   }
 }
 
+/* The spine-shelf reveal's 8px rise. A `from`-only keyframe: it animates INTO the element's own
+   translateY(-8px), so the lift reads exactly as the old transition did — but the reveal is now an
+   out-of-flow overlay that mounts per pick, and a mounting element never fires a transition, only
+   an animation. Reduced motion is handled at the call site (Tailwind motion-reduce:animate-none) —
+   this is a one-shot reveal, not ambient character motion, so it doesn't ride .rv-anim. */
+@keyframes rv-spine-lift {
+  from {
+    transform: translateY(0);
+  }
+}
+.rv-spine-lift {
+  animation: rv-spine-lift 300ms ease;
+}
+
 /* Respect reduced motion: hold the sky AND all per-skin character motion perfectly still. */
 @media (prefers-reduced-motion: reduce) {
   .rv-anim {
