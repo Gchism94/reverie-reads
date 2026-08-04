@@ -123,11 +123,7 @@ async function seedFixtures(c: Client): Promise<{
   }))
   const { error: insertError } = await c.sb.from('books').insert(rows)
   if (insertError) throw new Error(`route-viewport seed failed: ${JSON.stringify(insertError)}`)
-  const { data: books } = await c.sb
-    .from('books')
-    .select('id')
-    .eq('owner_id', c.uid)
-    .order('title')
+  const { data: books } = await c.sb.from('books').select('id').eq('owner_id', c.uid).order('title')
   const bookIds = ((books as { id: string }[]) ?? []).map((b) => b.id)
 
   const { data: list, error: listError } = await c.sb
@@ -135,11 +131,17 @@ async function seedFixtures(c: Client): Promise<{
     .insert({ owner_id: c.uid, name: 'Width Shelf', kind: 'collection', sort_order: 1 })
     .select('id')
     .single()
-  if (listError || !list) throw new Error(`route-viewport list failed: ${JSON.stringify(listError)}`)
+  if (listError || !list)
+    throw new Error(`route-viewport list failed: ${JSON.stringify(listError)}`)
   const listId = (list as { id: string }).id
   await ok(
     c.sb.from('list_items').insert(
-      bookIds.map((id, i) => ({ list_id: listId, book_id: id, owner_id: c.uid, position: i + 1 })),
+      bookIds.map((id, i) => ({
+        list_id: listId,
+        book_id: id,
+        owner_id: c.uid,
+        position: i + 1,
+      })),
     ),
     'route-viewport list_items insert',
   )
@@ -149,12 +151,13 @@ async function seedFixtures(c: Client): Promise<{
     .insert({ owner_id: c.uid, name: 'Width Probe Mood' })
     .select('id')
     .single()
-  if (moodError || !mood) throw new Error(`route-viewport mood failed: ${JSON.stringify(moodError)}`)
+  if (moodError || !mood)
+    throw new Error(`route-viewport mood failed: ${JSON.stringify(moodError)}`)
   const moodId = (mood as { id: string }).id
   await ok(
-    c.sb.from('book_moods').insert(
-      bookIds.slice(0, 3).map((id) => ({ book_id: id, mood_id: moodId, owner_id: c.uid })),
-    ),
+    c.sb
+      .from('book_moods')
+      .insert(bookIds.slice(0, 3).map((id) => ({ book_id: id, mood_id: moodId, owner_id: c.uid }))),
     'route-viewport book_moods insert',
   )
 
@@ -163,7 +166,8 @@ async function seedFixtures(c: Client): Promise<{
     .insert({ title: 'Width Probe Club', unit_type: 'chapter', unit_count: 30, created_by: c.uid })
     .select('id')
     .single()
-  if (clubError || !clubRow) throw new Error(`route-viewport club failed: ${JSON.stringify(clubError)}`)
+  if (clubError || !clubRow)
+    throw new Error(`route-viewport club failed: ${JSON.stringify(clubError)}`)
   const clubId = (clubRow as { id: string }).id
   await ok(
     c.admin
@@ -282,7 +286,10 @@ test('every route lays out at the viewport — no page-level horizontal overflow
   await page.goto('/tropes')
   await page.waitForTimeout(600)
   const tropeHref = await page.locator('a[href^="/tropes/"]').first().getAttribute('href')
-  expect(tropeHref, 'a trope link must exist on /tropes — coverage would silently shrink').not.toBeNull()
+  expect(
+    tropeHref,
+    'a trope link must exist on /tropes — coverage would silently shrink',
+  ).not.toBeNull()
   await page.goto(tropeHref!)
   await page.waitForTimeout(900)
   await assertNoViewportOverflow(page, `${tropeHref} (trope detail)`)
@@ -335,7 +342,10 @@ test('the Add cover rail — the other wide-max-content state — stays inside t
   // …and the rail itself actually scrolls (its overflow engages against the section), which is
   // the user-visible half of the fix: pre-fix the section widened instead and the rail never
   // scrolled — the page did.
-  const rail = page.getByRole('button', { name: /Use the openlibrary cover/i }).first().locator('xpath=..')
+  const rail = page
+    .getByRole('button', { name: /Use the openlibrary cover/i })
+    .first()
+    .locator('xpath=..')
   const railGeom = await rail.evaluate((el) => ({
     scrollWidth: el.scrollWidth,
     clientWidth: el.clientWidth,
