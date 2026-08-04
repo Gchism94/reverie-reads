@@ -166,7 +166,7 @@ function BookDetailScreen() {
   const seriesBadge = seriesStatusBadge(book)
 
   return (
-    <section className="mx-auto max-w-3xl px-4 py-6 sm:px-6">
+    <section className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6">
       <BackLink fallback="/library" className="text-[13px] text-muted hover:text-ink">
         ← Library
       </BackLink>

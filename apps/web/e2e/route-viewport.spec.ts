@@ -213,12 +213,14 @@ async function stub(page: Page) {
 
 /** The invariant, on whatever page is currently loaded.
  *
- *  Both checks carry the SAME +1px tolerance: /book/:id measurably overflows by exactly 1px today
- *  (sub-pixel DPR-3 rounding — the offenders are `inset-0` mirrors of a 391px positioned
- *  ancestor), which is three orders of magnitude below the defect class this suite guards
- *  (§3's failures measured 525-634px of page overflow) and environment-sensitive enough that a
- *  0-tolerance guard would flake on rounding, not regressions. A real constraint regression blows
- *  far past 1px on the fixtures below. */
+ *  Both checks carry a +1px tolerance as sub-pixel rounding headroom. No known overflow remains:
+ *  an earlier +1 was excused as "DPR rounding" on /book/:id, and this guard's own first CI run
+ *  falsified that — the same route overflowed 6px on the Linux runner's fonts, which is the
+ *  signature of TEXT-sized layout, not rounding. The real cause was an 18th constraint site the
+ *  routes-only blast-radius grep missed (BookDetailRoute lives in src/book/, not src/routes/),
+ *  its content max-content sitting 0.7px past the viewport locally and 6px past it on CI. Fixed
+ *  like the other 17; the tolerance stays only for genuine fractional-px measurement noise, and a
+ *  real constraint regression blows hundreds of px past it on the fixtures below. */
 async function assertNoViewportOverflow(page: Page, label: string) {
   const d = await page.evaluate(() => ({
     scrollWidth: document.documentElement.scrollWidth,
