@@ -244,3 +244,71 @@ jobs:
           name: playwright-traces-a11y
           path: apps/web/test-results/
           retention-days: 7
+
+  # Third parallel runner, same reasoning as the a11y split above: measured locally at ~2.5m
+  # (workers=1, 72 tests), which is shorter than e2e-a11y's own ~3-4m — so on its own runner this
+  # does not become the pipeline's critical path, it rides alongside it. NOT added to the required
+  # checks (same as e2e-a11y at introduction) — that's a branch-protection ruleset change, the
+  # owner's to make once this project has run for real on a few PRs.
+  e2e-mobile:
+    name: e2e-mobile
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      VITE_SUPABASE_URL: http://127.0.0.1:55321
+      VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
+      E2E_WORKERS: 1
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.9.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Get installed Playwright version
+        id: playwright-version
+        run: |
+          version="$(pnpm --filter @reverie/web exec playwright --version | sed 's/^Version //')"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ steps.playwright-version.outputs.version }}
+
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm --filter @reverie/web exec playwright install --with-deps chromium
+
+      - name: Install Playwright OS dependencies (cache hit — browsers already present)
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: pnpm --filter @reverie/web exec playwright install-deps chromium
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.0
+
+      - name: Start Supabase
+        run: supabase start -x studio,vector,edge-runtime,imgproxy
+
+      - name: e2e (mobile)
+        run: pnpm --filter @reverie/web e2e --project=mobile
+
+      - name: Upload Playwright traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces-mobile
+          path: apps/web/test-results/
+          retention-days: 7
