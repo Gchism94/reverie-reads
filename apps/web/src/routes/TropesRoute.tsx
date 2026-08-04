@@ -29,7 +29,7 @@ function TropesScreen() {
     .sort((a, b) => (usage.get(b.id) ?? 0) - (usage.get(a.id) ?? 0) || a.name.localeCompare(b.name))
 
   return (
-    <section className="mx-auto max-w-3xl px-4 py-6 sm:px-6">
+    <section className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6">
       <h1
         className="text-[26px] italic leading-tight text-ink"
         style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
