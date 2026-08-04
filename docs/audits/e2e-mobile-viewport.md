@@ -29,14 +29,14 @@ project and reports what running the existing suite through it actually finds.
 
 ## 2. Which existing specs run on both projects
 
-**Criterion:** run a spec on `mobile` unless its own assertions are *about* a desktop-only pointer
+**Criterion:** run a spec on `mobile` unless its own assertions are _about_ a desktop-only pointer
 mechanic. Everything else — forms, CRUD, imports, routing, offline cache, cover sourcing — drives
 the app through the same `click`/`fill`/`goto` primitives regardless of viewport, and a regression
 there is a real regression on a phone. Two files fail that test and stay desktop-only:
 
-| File | Why excluded |
-|---|---|
-| `series-builder.spec.ts` | Its drag test drives `page.mouse.move/down/up` directly — a literal desktop mouse gesture, not `SeriesArranger`'s touch-capable dnd-kit `PointerSensor` exercised through touch input. Passing here would prove the mouse path works, which is already proven; it says nothing about touch. |
+| File                        | Why excluded                                                                                                                                                                                                                                                                                                   |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `series-builder.spec.ts`    | Its drag test drives `page.mouse.move/down/up` directly — a literal desktop mouse gesture, not `SeriesArranger`'s touch-capable dnd-kit `PointerSensor` exercised through touch input. Passing here would prove the mouse path works, which is already proven; it says nothing about touch.                    |
 | `shelf-regressions.spec.ts` | Its drag-hijack guards (`draggable={false}` on cover `<img>`s, `dragTo` reorders) are about `SpineShelf`, whose mobile behavior is the subject of `docs/audits/mobile-shelf-interaction.md` and reserved for `fix/spine-shelf-overlay`. This branch was explicitly told not to add or modify shelf assertions. |
 
 Both files were still **run once** against the mobile viewport as a one-off probe (§4) to see
@@ -54,11 +54,11 @@ above and `a11y.spec.ts` itself.
 
 Measured locally, fresh DB (`db:reset && db:seed`) once, `E2E_WORKERS` unset (default 1), retries 0:
 
-| Project | Tests | Time |
-|---|---|---|
-| `mobile` (permanent) | 72 | **2m 32s** |
-| `series-builder` + `shelf-regressions` at mobile viewport (probe only, not permanent) | 9 | 32s |
-| `a11y.spec.ts` at mobile viewport (probe only, not permanent) | 2 | 3m 17s |
+| Project                                                                               | Tests | Time       |
+| ------------------------------------------------------------------------------------- | ----- | ---------- |
+| `mobile` (permanent)                                                                  | 72    | **2m 32s** |
+| `series-builder` + `shelf-regressions` at mobile viewport (probe only, not permanent) | 9     | 32s        |
+| `a11y.spec.ts` at mobile viewport (probe only, not permanent)                         | 2     | 3m 17s     |
 
 For reference, `playwright.config.ts`'s own historical measurements at workers=1 (desktop):
 `rest` ≈ 1.9m, `a11y` ≈ 4.4m, total ≈ 6.3m.
@@ -87,7 +87,7 @@ zero from this method.
 **Why, and why that's not evidence of mobile-safety.** This is the same limit
 `docs/audits/mobile-shelf-interaction.md` already named for defect A: headless Chromium does not
 run real momentum-physics touch scrolling, and — the finding this run adds — it doesn't
-meaningfully change *any* interaction under `isMobile`/`hasTouch` emulation. `page.click()`,
+meaningfully change _any_ interaction under `isMobile`/`hasTouch` emulation. `page.click()`,
 `page.fill()`, and `locator.dragTo()` all dispatch through Chromium's synthetic input layer
 regardless of those flags; a real iPhone's touch event model, momentum curves, and 300ms-tap
 history don't exist in this environment to diverge from. Concretely: `shelf-regressions.spec.ts`'s
@@ -98,7 +98,7 @@ programmatic `scrollLeft` assignment reaches both ends fine while the real gestu
 viewport change alone doesn't reach either known defect; both needed hands-on-device confirmation
 to be caught at all.
 
-**What this run is actually evidence of:** the *other* class of mobile defect — layout that
+**What this run is actually evidence of:** the _other_ class of mobile defect — layout that
 reflows badly at 390px, elements that end up off-screen or overlapping, forms that become
 unusable at a narrow width, navigation that breaks under `isMobile`'s UA/touch flags — is not
 present in the 21 non-excluded spec files' current assertions. That's a real, if narrower, result:
