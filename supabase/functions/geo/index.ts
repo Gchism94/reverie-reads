@@ -20,9 +20,12 @@ const cors = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// A contact User-Agent is mandatory under the OSM/Nominatim usage policy. Owner: set a real
-// contact via the GEO_CONTACT env (e.g. an email or site) before public launch.
-const CONTACT = Deno.env.get('GEO_CONTACT') ?? 'https://reverie.app'
+// A contact User-Agent is mandatory under the OSM/Nominatim usage policy. The fallback must be a
+// domain WE control — it used to be reverie.app, which is not ours, so our contact-of-record with
+// Nominatim pointed at a stranger (the same defect class as the contact-less OL header fixed in
+// #134: an identification claim that identifies nothing we answer for). GEO_CONTACT still
+// overrides for a richer value (an email).
+const CONTACT = Deno.env.get('GEO_CONTACT') ?? 'https://reveriereads.app'
 const UA = `Reverie/1.0 (indie bookstore finder; ${CONTACT})`
 const OVERPASS = 'https://overpass-api.de/api/interpreter'
 const NOMINATIM = 'https://nominatim.openstreetmap.org'

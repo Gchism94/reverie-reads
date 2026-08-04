@@ -1,0 +1,29 @@
+# Secret-scan config for the `secrets` CI job. Extends gitleaks' default ruleset; the allowlist
+# below names EXACTLY the four values the pre-public audit (docs/audits/pre-public-secrets.md,
+# 2026-08-03) proved safe — nothing else is exempted, so a fifth committed credential fails the
+# build on day one. Every entry states why it is safe; an exclusion without a written reason is
+# the bug (AGENTS.md, the ownedTables principle).
+
+title = "Reverie secret scan"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Pre-public audit: the four committed values proven demo or public-by-design"
+regexes = [
+  # 1. The Supabase CLI's well-known LOCAL DEMO anon JWT (payload iss=supabase-demo, role=anon) —
+  #    identical on every machine that runs `supabase start`; grants nothing outside a local dev
+  #    stack. Matched by its signature segment, which is unique to this exact token.
+  '''CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0''',
+  # 2. The CLI's demo SERVICE-ROLE JWT (iss=supabase-demo, role=service_role) — same provenance,
+  #    same reasoning: it opens only the finder's own local stack.
+  '''EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU''',
+  # 3. The local stack's connection string — localhost + the CLI's fixed demo password. Anchored to
+  #    127.0.0.1 so a REAL postgres URL with a password still fails the scan.
+  '''postgres(ql)?://postgres:postgres@127\.0\.0\.1''',
+  # 4. The production PUBLISHABLE key in .env.example — publishable keys ship in the client bundle
+  #    to every browser by design; RLS is the security boundary (Supabase's own model). The secret
+  #    key (sb_secret_*) has no allowlist entry and never will.
+  '''sb_publishable_kp8TvVCeARWRqqk4z0a0CA_35y5KZgQ''',
+]
