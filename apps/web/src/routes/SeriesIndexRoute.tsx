@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { createRoute } from '@tanstack/react-router'
 import { Link } from '@tanstack/react-router'
 import {
+  claimedSeriesLength,
   displayTotal,
   groupSeriesByAuthor,
   isBookRead,
@@ -57,7 +58,7 @@ function SeriesRow({
   const progress = entries.length
     ? seriesProgress(entries, byId)
     : { read: books.filter(isBookRead).length, total: books.length, toGet: 0 }
-  const seriesCount = books.find((b) => b.seriesCount != null)?.seriesCount ?? null
+  const seriesCount = claimedSeriesLength(books)
   const total = displayTotal(seriesCount, entries.length || null, books.length)
 
   return (
