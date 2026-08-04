@@ -39,3 +39,11 @@ data/raw/library_connected_series.csv
 # The README and any handoff/review .md stay tracked.
 design/from-claude-design/**/*.html
 design/from-claude-design/**/*.dc.html
+
+# Keys and certificates — no legitimate tracked file has these shapes (pre-public audit §3)
+*.pem
+*.key
+*.p12
+
+# Vercel CLI project linkage (org/project ids) — never tracked
+.vercel/
