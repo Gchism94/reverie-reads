@@ -56,14 +56,45 @@ export default defineConfig({
     // flake, not to absorb it — so the trace has to be kept on the first (only) attempt.
     trace: 'retain-on-failure',
   },
-  // Two projects, not one, so CI can run a11y on its own runner in parallel with everything else
-  // (ci/throughput stage 2) — a11y alone is ~55-58% of the suite's wall clock. `pnpm e2e` with no
-  // --project flag still runs BOTH, in this same process, so local behavior is unchanged; CI passes
-  // --project explicitly per job. `testIgnore` on `rest` rather than an enumerated file list, so a
-  // new spec added later lands in `rest` automatically instead of silently running nowhere.
+  // Three projects. `pnpm e2e` with no --project flag runs ALL THREE, in this same process, so
+  // local behavior needs no flag; CI passes --project explicitly per job. `testIgnore` on `rest`
+  // rather than an enumerated file list, so a new spec added later lands in `rest` automatically
+  // instead of silently running nowhere.
+  //
+  // `mobile` re-runs a CURATED SUBSET of `rest` at a touch viewport — not everything, and not a
+  // blanket duplicate. Criterion: run a spec on mobile unless its assertions are themselves ABOUT
+  // a desktop-only pointer mechanic — mouse-drag reorder (series-builder.spec.ts uses raw
+  // page.mouse.move/down/up, which is a real desktop gesture, not dnd-kit's touch-capable
+  // PointerSensor exercised through touch input) or native HTML5 <img draggable> drag-hijack
+  // prevention (shelf-regressions.spec.ts) — both of which land on SpineShelf, whose mobile
+  // behavior is under active investigation on a separate branch
+  // (docs/audits/mobile-shelf-interaction.md → fix/spine-shelf-overlay) and is explicitly not to
+  // be touched here. Everything else — forms, CRUD, imports, routing, offline cache, cover
+  // sourcing — exercises the same click/fill/navigate primitives on both viewport sizes and is a
+  // real mobile regression surface, so it runs on both. `a11y` stays desktop-only: it already
+  // sweeps four skins × both modes and adding a viewport axis belongs to a decision about a11y's
+  // own scope, not this one.
+  //
+  // Descriptor: iPhone-class touch (isMobile, hasTouch, iPhone 13's UA/DPR), but with the VIEWPORT
+  // pinned to 390×844 (not iPhone 13's stock 390×664, which subtracts Safari's own chrome) so it
+  // matches the exact size the mobile-shelf-interaction audit measured against — and with
+  // `defaultBrowserType` forced back to 'chromium'. `devices['iPhone 13']` sets it to 'webkit',
+  // and Playwright's browserName fixture reads that field directly — spreading the device as-is
+  // would silently add WebKit as a second browser engine, which CI does not install
+  // (`playwright install --with-deps chromium` only, ci.yml:149/224) and which this branch is not
+  // the place to decide to add.
   projects: [
     { name: 'a11y', testMatch: /a11y\.spec\.ts$/, use: { ...devices['Desktop Chrome'] } },
     { name: 'rest', testIgnore: /a11y\.spec\.ts$/, use: { ...devices['Desktop Chrome'] } },
+    {
+      name: 'mobile',
+      testIgnore: /a11y\.spec\.ts$|series-builder\.spec\.ts$|shelf-regressions\.spec\.ts$/,
+      use: {
+        ...devices['iPhone 13'],
+        viewport: { width: 390, height: 844 },
+        defaultBrowserType: 'chromium',
+      },
+    },
   ],
   webServer: {
     // Runs from this config's dir (apps/web), so `pnpm dev` boots @reverie/web with its own
