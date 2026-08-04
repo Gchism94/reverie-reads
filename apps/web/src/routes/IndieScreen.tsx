@@ -248,7 +248,7 @@ export default function IndieScreen() {
   }
 
   return (
-    <section className="mx-auto max-w-3xl px-4 py-6 sm:px-6">
+    <section className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6">
       <h1
         className="text-[22px] italic text-ink"
         style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
