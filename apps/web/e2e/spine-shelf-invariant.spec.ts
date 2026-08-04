@@ -165,10 +165,14 @@ async function stub(page: Page) {
 
 /** The shelf's scroll container — the overflow-x element wrapping the spines. */
 const track = (page: Page) =>
-  page.locator('[data-spine]').first().locator('xpath=ancestor::div[contains(@class,"overflow-x-auto")]')
+  page
+    .locator('[data-spine]')
+    .first()
+    .locator('xpath=ancestor::div[contains(@class,"overflow-x-auto")]')
 
 const trackWidth = (page: Page) => track(page).evaluate((el) => el.scrollWidth)
-const revealedId = (page: Page) => page.locator('[data-spine-reveal]').getAttribute('data-spine-reveal')
+const revealedId = (page: Page) =>
+  page.locator('[data-spine-reveal]').getAttribute('data-spine-reveal')
 
 /** REVEAL_W from SpineShelf.tsx — the overlay's fixed rendered width, duplicated here rather than
  *  imported so this assertion doesn't silently stop checking anything if the component's constant
@@ -273,9 +277,9 @@ test('track width is invariant across pick transitions — scroll-driven, tap-dr
       .poll(async () => revealedId(page), { message: `${title} settling off-centre` })
       .not.toBe(id)
     await spine.dispatchEvent('click') // not yet shown → reveals (does not open)
-    await expect.poll(async () => revealedId(page), { message: `${title} should now be revealed` }).toBe(
-      id,
-    )
+    await expect
+      .poll(async () => revealedId(page), { message: `${title} should now be revealed` })
+      .toBe(id)
     await expect(page.locator(`[data-spine-reveal="${id}"]`)).toBeVisible()
     expect(await trackWidth(page), `width with ${title} revealed`).toBe(baseline)
     await assertOverlayClamped(page, title)
