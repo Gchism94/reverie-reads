@@ -209,3 +209,67 @@ export function displayTotal(
   const canonical = entryCount != null && entryCount > ownedCount ? entryCount : null
   return canonical ?? seriesCountFromBooks
 }
+
+/**
+ * The near-match key for a series NAME — the Tier 1 prevention index (fix/series-consolidation).
+ *
+ * ── What it collapses, and the discriminating fact behind the rule ─────────────────────────────
+ * Phase 1's audit found eleven candidate duplicate sets in production, and the signal quality was
+ * wildly uneven: ONE initialism link was real (ACOTAR ↔ A Court of Thorns and Roses) while NINE of
+ * TEN prefix links were noise — Legend / The Legendborn Cycle / The Legends of Thezmarr are three
+ * unrelated series, and Sinners ↔ Sinners and Saints, Mountain Men ↔ Mountain Men Matchmaker,
+ * Fifty Shades ↔ Fifty Shades as Told by Christian are SIBLING series in a shared universe (the
+ * last is the same events from another POV). A rule that treated prefix as evidence would have
+ * flattened real distinctions the reader made, so this key is deliberately narrow: it collapses
+ * only what is the SAME NAME written differently.
+ *
+ *   lowercase · strip ONE leading article · strip a trailing "series" · drop non-alphanumerics
+ *
+ * `Series` is stripped and `Saga`/`Cycle`/`Trilogy`/`Chronicles` are NOT, because "Series" is a
+ * generic descriptor readers append inconsistently ("The Freckled Fate Series" is just how someone
+ * wrote the name) while the others are usually part of the real title — The Legendborn Cycle,
+ * Sinners and Saints. Stripping "Saga" would collapse The Kindred's Curse ↔ The Kindred's Curse
+ * Saga, a pair nobody has adjudicated.
+ *
+ * NOT an initialism matcher, deliberately. `acotar` and `courtofthornsandroses` do not collapse
+ * here — that pair is Tier 3 (a queued, dismissible proposal), because an initialism is a judgment
+ * about identity and this function is consumed by an AUTOMATIC path. Refusing to create a
+ * duplicate destroys nothing; auto-merging two names a reader may consider distinct does.
+ */
+export function seriesNameKey(name: string): string {
+  const trimmed = String(name ?? '')
+    .toLowerCase()
+    .trim()
+  // ONE leading article only: "The The Hunger Games" is a real (if odd) name, not two articles.
+  const noArticle = trimmed.replace(/^(?:the|an?)\s+/, '')
+  // Trailing "series" only — never "saga"/"cycle"/"trilogy"; see the note above.
+  const noSuffix = noArticle.replace(/\s+series$/, '')
+  return noSuffix.replace(/[^a-z0-9]+/g, '')
+}
+
+/**
+ * The series length claimed by a set of member books — MAX, not first-non-null.
+ *
+ * Both display sites used `find(b => b.seriesCount != null)`, which is ORDER-DEPENDENT: the answer
+ * came from whichever member the array happened to hand over first, so the number could change
+ * between page loads with no write occurring. A Court of Thorns and Roses has three members
+ * carrying counts with a max of 7 and displayed "6 in all".
+ *
+ * MAX rather than merely a stable pick (first-by-id would also be deterministic, and wrong): a
+ * series length is a claim about the WHOLE series, so a member claiming 7 knows about a book the
+ * member claiming 6 does not. Max is also monotonic under the fill-only merges in match.ts/merge.ts
+ * — a book that learns a longer length can only raise it, never lower it — so the displayed total
+ * cannot regress as the library fills in. Members disagree because `seriesCount` is a SERIES fact
+ * stored N times on member books; deriving it away entirely is the real fix and is out of this PR's
+ * scope (see the Phase 1 report).
+ */
+export function claimedSeriesLength(
+  books: readonly { seriesCount?: number | null }[],
+): number | null {
+  let max: number | null = null
+  for (const b of books) {
+    const c = b.seriesCount
+    if (c != null && (max === null || c > max)) max = c
+  }
+  return max
+}

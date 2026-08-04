@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   matchEntryForBook,
+  seriesNameKey,
   mergeSourceEntries,
   seedSeriesPositions,
   sortEntries,
@@ -192,15 +193,47 @@ export function useSeriesDetail(name: string) {
       if (error) throw error
       let row = (rows as SeriesRowT[])[0]
       if (!row) {
-        const { data: created, error: cErr } = await supabase
-          .from('series')
-          .insert({ owner_id: uid, name })
-          .select()
-          .single()
-        if (cErr) throw cErr
-        row = created as SeriesRowT
+        // ── TIER 1 PREVENTION (fix/series-consolidation) ────────────────────────────────────────
+        // Before minting a row, look for one whose NORMALIZED name already matches. Lazy
+        // find-or-create with an exact-name lookup is what generates duplicates: the series
+        // backfill rewrote `books.series` to long parsed forms, so opening a page under the old
+        // short name found nothing and minted a permanent second record. The ACOTAR row was born
+        // that way, minutes before the screenshots that reported it.
+        //
+        // REFUSING TO CREATE DESTROYS NOTHING, which is the whole reason this half is safe to
+        // automate while merging is not. This branch cannot merge, rename or delete: it only
+        // decides whether an INSERT happens, and every row that already exists is untouched.
+        //
+        // `seriesNameKey` collapses only the same name written differently (case, punctuation, a
+        // leading article, a trailing "Series"). It deliberately does NOT match initialisms —
+        // ACOTAR is not prevented here — because that is an identity judgment and belongs in a
+        // queued proposal, not an automatic path (see the key's own note).
+        const { data: allRows, error: aErr } = await supabase.from('series').select('*')
+        if (aErr) throw aErr
+        const key = seriesNameKey(name)
+        row = ((allRows ?? []) as SeriesRowT[]).find((r) => seriesNameKey(r.name) === key) as
+          | SeriesRowT
+          | undefined
+        if (!row) {
+          const { data: created, error: cErr } = await supabase
+            .from('series')
+            .insert({ owner_id: uid, name })
+            .select()
+            .single()
+          if (cErr) throw cErr
+          row = created as SeriesRowT
+        }
       }
       const seriesRow: SeriesRowT = row
+      // The books this page reconciles are the ones naming the SURVIVING row, not the name in the
+      // URL. When the guard above returned a near-match, those differ — and keying off the URL name
+      // would seed the other name's books as entries INTO this record, which is a membership merge
+      // performed silently by a page view. Merging is PR 2's job and has to preserve ghosts,
+      // tombstones and positions deliberately; this PR reads what the row already owns and writes
+      // no cross-name membership. A reader who opens the variant name therefore sees the surviving
+      // series page, and books still filed under the variant name stay visible in the Library's
+      // Series view until that merge lands.
+      const reconcileName = seriesRow.name
 
       const [{ data: entRows, error: eErr }, { data: libRows, error: bErr }] = await Promise.all([
         // ORDERED, deliberately. Revive used to take the FIRST same-title tombstone out of whatever
@@ -220,7 +253,7 @@ export function useSeriesDetail(name: string) {
         supabase
           .from('books')
           .select('id, title, author_first, author_last, position, status')
-          .eq('series', name)
+          .eq('series', reconcileName)
           .order('position', { ascending: true, nullsFirst: false })
           .order('title', { ascending: true }),
       ])
