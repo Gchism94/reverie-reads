@@ -712,7 +712,6 @@ test('stickiness: a settled pick holds through a sub-deadband nudge, then releas
   await gotoShelf(page, big.listId, 36)
 
   const result = await track(page).evaluate(async (el) => {
-    const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
     const centroid = () => {
       let num = 0
       let den = 0
@@ -725,10 +724,31 @@ test('stickiness: a settled pick holds through a sub-deadband nudge, then releas
       }
       return den > 0 ? num / den : null
     }
+    // A fixed wait is not a reliable proxy for "settled" — CI's frame scheduling runs slower and
+    // more irregularly than a local machine, so a margin that is generous locally can still land
+    // mid-ease under load (CI failure on first push: a 6.7px nudge read as a 19.9px jump, because
+    // "before" was sampled while settle()'s 160ms ease was still in flight, not after it — the
+    // nudge then interrupted THAT animation rather than a genuinely held wave). Poll until the
+    // centroid stops moving for several consecutive frames instead of trusting a clock.
+    const settleForReal = async (maxMs: number) => {
+      const t0 = performance.now()
+      let last = centroid()
+      let stable = 0
+      while (performance.now() - t0 < maxMs) {
+        await new Promise((r) => requestAnimationFrame(r))
+        const now = centroid()
+        if (last != null && now != null && Math.abs(now - last) < 0.05) {
+          if (++stable >= 6) return now
+        } else {
+          stable = 0
+        }
+        last = now
+      }
+      return last
+    }
     el.scrollLeft = Math.round((el.scrollWidth - el.clientWidth) / 2)
-    await wait(500) // past the 140ms idle + 160ms settle — genuinely at rest
+    const before = await settleForReal(3000)
     const pickedBefore = el.querySelector<HTMLElement>('[data-spine-picked]')!.dataset.spine
-    const before = centroid()
 
     const spines = [...el.querySelectorAll<HTMLElement>('[data-spine]')]
     const idx = spines.findIndex((s) => s.dataset.spine === pickedBefore)
