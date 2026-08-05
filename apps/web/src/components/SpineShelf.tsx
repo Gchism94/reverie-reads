@@ -46,6 +46,12 @@ const SLACK = 96
 const SIGMA = 28
 /** The picked item's lift, folded into the same transform (translateY · t). */
 const LIFT = 8
+/** STICKINESS (polish/spine-pick-feel): once the wave has settled on a slot, the centre holds
+ *  there until the anchor has moved this fraction of the LOCAL slot pitch toward a neighbour —
+ *  a fraction of the actual on-screen pitch (hash-varied spine widths), never a fixed px value,
+ *  so small thumb drift no longer visibly deflates a settled pick. Applies only right after a
+ *  settle; once released it tracks 1:1 for the rest of the gesture (see the update() comment). */
+const DEADBAND_FRACTION = 0.4
 
 type SlotNodes = { art: HTMLElement; cover: HTMLElement }
 
@@ -240,6 +246,11 @@ export function SpineShelf({
   const waveCxRef = useRef(0)
   const settleRafRef = useRef(0)
   const idleTimerRef = useRef(0)
+  /** STICKINESS (polish/spine-pick-feel): true whenever the wave is resting exactly on a settled
+   *  slot centre — set by settle() the instant it arrives (every one of its three paths), cleared
+   *  by update() the moment a scroll carries the anchor past the deadband. See update()'s comment
+   *  for why this cannot live inside renderWave itself. */
+  const stuckRef = useRef(true)
 
   /** The continuous sliding anchor, in track content coordinates. */
   const anchorCx = (el: HTMLElement): number => {
@@ -262,11 +273,13 @@ export function SpineShelf({
     cancelAnimationFrame(settleRafRef.current)
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       renderWaveRef.current(target)
+      stuckRef.current = true
       return
     }
     const from = waveCxRef.current
     if (Math.abs(target - from) < 0.5) {
       renderWaveRef.current(target)
+      stuckRef.current = true
       return
     }
     const t0 = performance.now()
@@ -276,6 +289,9 @@ export function SpineShelf({
       const eased = 1 - Math.pow(1 - u, 3)
       renderWaveRef.current(from + (target - from) * eased)
       if (u < 1) settleRafRef.current = requestAnimationFrame(step)
+      // Arrived: re-arm the deadband around THIS slot. Only on the final frame — every
+      // intermediate frame of the ease must render at its own value undisturbed.
+      else stuckRef.current = true
     }
     settleRafRef.current = requestAnimationFrame(step)
   }
@@ -292,21 +308,66 @@ export function SpineShelf({
       // the first/last ~3 books were never scroll-pickable. All distances are OFFSET geometry —
       // transform-independent — so the magnification wave cannot oscillate its own pick.
       const cx = anchorCx(el)
+      const slots = el.querySelectorAll<HTMLElement>('[data-spine]')
+      const centreOf = new Map<string, number>()
+      let firstCentre = Infinity
+      let lastCentre = -Infinity
       let best: string | null = null
       let bd = Infinity
-      el.querySelectorAll<HTMLElement>('[data-spine]').forEach((s) => {
-        const d = Math.abs(s.offsetLeft + s.offsetWidth / 2 - cx)
+      slots.forEach((s) => {
+        const id = s.dataset.spine
+        const c = s.offsetLeft + s.offsetWidth / 2
+        if (id) centreOf.set(id, c)
+        if (c < firstCentre) firstCentre = c
+        if (c > lastCentre) lastCentre = c
+        const d = Math.abs(c - cx)
         if (d < bd) {
           bd = d
-          best = s.dataset.spine ?? null
+          best = id ?? null
         }
       })
       setActiveId(best)
+      // The same clamp renderWave applies internally (its terminal-slot centres) — computed here
+      // too because the STICKINESS decision below must compare against what will actually render,
+      // not the raw anchor a rubber-band overscroll can push outside the content.
+      const clamped = Math.min(Math.max(cx, firstCentre), lastCentre)
+
+      // STICKINESS (polish/spine-pick-feel): once settle() has parked the wave exactly on a slot
+      // centre, small thumb drift used to deflate the pick immediately, because the MOTION regime
+      // below has always fed the wave the raw anchor every frame with no dead zone. Now, WHILE
+      // stuck, the wave holds at the settled slot's centre until the anchor has moved this frame's
+      // local DEADBAND_FRACTION of slot pitch away from it — pitch measured to the nearer real
+      // neighbour, never a fixed px value, so it tracks hash-varied spine widths. The moment that
+      // threshold is crossed, stuckRef drops and every later frame in this gesture falls straight
+      // through to the plain `renderWaveRef.current(clamped)` below — full 1:1 tracking, identical
+      // to pre-stickiness behaviour, for the rest of the motion. This is why a GENUINE scroll never
+      // sees the dead zone twice: the guard's continuous sweep starts from a settled pause (stuck),
+      // crosses the deadband on its very first sampled step, and is fully released well before the
+      // window that assertion measures — the 12px tracking bound holds because stickiness is a
+      // one-shot latch at the START of a gesture, not a per-frame filter during it.
+      let renderCx = clamped
+      const heldId = shownIdRef.current
+      const heldCentre = heldId ? centreOf.get(heldId) : undefined
+      if (stuckRef.current && heldCentre != null) {
+        const idx = Array.from(slots).findIndex((s) => s.dataset.spine === heldId)
+        const left = idx > 0 ? centreOf.get(slots[idx - 1]!.dataset.spine ?? '') : undefined
+        const right =
+          idx < slots.length - 1 ? centreOf.get(slots[idx + 1]!.dataset.spine ?? '') : undefined
+        const gaps = [left, right]
+          .filter((c): c is number => c != null)
+          .map((c) => Math.abs(c - heldCentre))
+        const pitch = gaps.length ? Math.min(...gaps) : 0
+        const deadband = DEADBAND_FRACTION * pitch
+        if (Math.abs(clamped - heldCentre) < deadband) renderCx = heldCentre
+        else stuckRef.current = false
+      }
+
       // MOTION REGIME: the wave follows the continuous anchor in the SAME frame the scroll was
       // sampled — not the pick, which lives a React render away (the stale-pick path measured
-      // 18-25ms scroll-to-write and a wave frozen 156px behind a fling).
+      // 18-25ms scroll-to-write and a wave frozen 156px behind a fling) — unless stickiness above
+      // is holding it at the settled centre.
       cancelAnimationFrame(settleRafRef.current)
-      renderWaveRef.current(cx)
+      renderWaveRef.current(renderCx)
       // REST REGIME, armed per scroll burst: when no scroll event lands for 140ms the gesture is
       // over, and the wave eases onto the picked slot so the settled state ends fully open.
       window.clearTimeout(idleTimerRef.current)
@@ -425,16 +486,27 @@ export function SpineShelf({
                     borrowed={isBorrowedBook(b)}
                   />
                 </span>
+                {/* skin-card (--radius-card): the SAME token CoverCard uses for a real cover of
+                  this shape — reads truer than --mark-radius, which is the small chip/badge
+                  silhouette, not a card-sized surface (Marrow cuts corners on both; softer skins
+                  differ meaningfully — --radius-card 12 vs --mark-radius 3). The box-shadow ring
+                  sits OUTSIDE this box (never inset, so it can never crop the art) and follows
+                  the same radius automatically. Its colour is --pick-ring (polish/spine-pick-feel:
+                  each skin's own frame/ornament material where that material is legible against
+                  the shelf background, else --primary — see the token's comment in tokens.css)
+                  and it needs no separate fade: this whole span's opacity already carries the
+                  spine→cover cross-fade, and box-shadow fades with its element like any paint. */}
                 <span
                   data-mag-cover
                   aria-hidden
-                  className="pointer-events-none absolute bottom-0 left-1/2 overflow-hidden rounded-[3px] border border-line"
+                  className="pointer-events-none absolute bottom-0 left-1/2 skin-card overflow-hidden border border-line"
                   style={{
                     width: MAG_W,
                     height: MAG_H,
                     opacity: 0,
                     transformOrigin: '50% 100%',
                     transform: 'translateX(-50%) scale(0.2)',
+                    boxShadow: '0 0 0 2px var(--pick-ring)',
                   }}
                 >
                   <CoverImage book={b} thumb />
