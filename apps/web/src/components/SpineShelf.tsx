@@ -241,6 +241,13 @@ export function SpineShelf({
   /** Pending hover-intent timer (see HOVER_INTENT_MS). */
   const hoverTimerRef = useRef(0)
   useEffect(() => () => window.clearTimeout(hoverTimerRef.current), [])
+  /** True while settleScroll's own smooth glide is emitting scroll events. Its writes are the
+   *  component's, not the user's — they must never dismiss a pointer pin (a hover pick landing
+   *  while the glide's tail is still emitting was getting cleared by the pin's scroll-dismissal
+   *  rule on slow CI runners). Cleared on arrival at the settle target, or instantly by any real
+   *  user input (which also cancels the native smooth scroll itself). */
+  const settlingRef = useRef(false)
+  const settleTargetRef = useRef(0)
   /** When the pointer pin was set — scroll clears the pin only after a grace period, because a
    *  keyboard focus on an off-screen spine triggers the browser's own scroll-into-view, and that
    *  programmatic scroll must not immediately dismiss the pick it belongs to. */
@@ -284,6 +291,8 @@ export function SpineShelf({
     const target = Math.min(maxScroll, Math.max(0, bestCentre - W))
     if (Math.abs(target - el.scrollLeft) < 1) return
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    settlingRef.current = !reduced
+    settleTargetRef.current = target
     el.scrollTo({ left: target, behavior: reduced ? 'auto' : 'smooth' })
   }
   const settleScrollRef = useRef(settleScroll)
@@ -313,9 +322,16 @@ export function SpineShelf({
         }
       })
       setActiveId(best)
-      // A real scroll dismisses a pointer pin (the window takes over) — except within the grace
-      // period after a pin, when the scroll is the browser's own focus-scroll for that pin.
-      if (pointerIdRef.current != null && performance.now() - pinnedAtRef.current > 400)
+      if (settlingRef.current && Math.abs(el.scrollLeft - settleTargetRef.current) < 2)
+        settlingRef.current = false
+      // A real USER scroll dismisses a pointer pin (the window takes over) — but not the
+      // settle-glide's own writes (settlingRef), and not within the grace period after a pin
+      // (the browser's own focus-scroll for that pin).
+      if (
+        !settlingRef.current &&
+        pointerIdRef.current != null &&
+        performance.now() - pinnedAtRef.current > 400
+      )
         setPointerId(null)
       // The wave follows the window in the SAME frame the scroll was sampled — no React
       // round-trip (the #146 bar), and no second regime: this is the only place scroll-driven
@@ -331,12 +347,21 @@ export function SpineShelf({
       raf = requestAnimationFrame(update)
     }
     el.addEventListener('scroll', onScroll, { passive: true })
+    const onUserInput = () => {
+      settlingRef.current = false
+    }
+    el.addEventListener('wheel', onUserInput, { passive: true })
+    el.addEventListener('touchstart', onUserInput, { passive: true })
+    el.addEventListener('pointerdown', onUserInput, { passive: true })
     // Initial mount: the first book sits in the window by construction — render and pick it.
     renderWaveRef.current(el.scrollLeft + windowW(el))
     update()
     setPointerId(null)
     return () => {
       el.removeEventListener('scroll', onScroll)
+      el.removeEventListener('wheel', onUserInput)
+      el.removeEventListener('touchstart', onUserInput)
+      el.removeEventListener('pointerdown', onUserInput)
       cancelAnimationFrame(raf)
       window.clearTimeout(idleTimerRef.current)
     }

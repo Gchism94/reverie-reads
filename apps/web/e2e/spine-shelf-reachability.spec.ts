@@ -531,7 +531,29 @@ test('cover aspect: the rendered cover box keeps the cover ratio at every visibl
     `stretchiest mid-glide cover ratio ${glide.max.toFixed(4)} vs intrinsic ${INTRINSIC.toFixed(4)}`,
   ).toBeLessThanOrEqual(0.01)
 
-  // Settled after a POINTER pick (the other settle path): same exact box.
+  // Settled after a POINTER pick (the other settle path): same exact box. Wait for scroll
+  // QUIESCENCE first — the settle-glide's smooth tail can still be moving boxes on a slow
+  // runner, and a hover landing on drifting geometry can re-target the intent timer to whatever
+  // slid under the cursor (the CI-only failure that added this wait).
+  await track(page).evaluate(async (el) => {
+    // First outlast the idle window (140ms) plus glide start — a short stability check can pass
+    // entirely INSIDE the pre-settle gap and declare calm right before the glide moves the pick
+    // (the 1-in-6 local flake that hardened this: the pick shifted onto the about-to-be-tapped
+    // target and the tap OPENED it instead of picking it).
+    await new Promise((r) => setTimeout(r, 400))
+    let last = el.scrollLeft
+    let stable = 0
+    const t0 = performance.now()
+    while (performance.now() - t0 < 4000) {
+      await new Promise((r) => requestAnimationFrame(r))
+      if (el.scrollLeft === last) {
+        if (++stable >= 15) return
+      } else {
+        stable = 0
+      }
+      last = el.scrollLeft
+    }
+  })
   const targetId = await track(page).evaluate((el) => {
     const spines = [...el.querySelectorAll<HTMLElement>('[data-spine]')]
     const picked = el.querySelector<HTMLElement>('[data-spine-picked]')!
@@ -576,9 +598,35 @@ test('containment: the revealed box stays inside the track — horizontally AND 
   await signInOnce(page)
   const TOL = 1.5 // sub-pixel transform rounding
   const RING = 2
+  // Duplicated from SpineShelf deliberately (matching MAG_W/MAG_H above): a silent shrink of the
+  // reserved headroom should fail here.
+  const REVEAL_HEADROOM = 186 // MAG_H(176) + LIFT(8) + RING_W(2)
+  const TRACK_PAD_BOTTOM = 16 // pb-4
+  const REORDER_ROW_H = 17 // arrows row; /shelf/:id always passes onReorder
 
   for (const shelf of c.shelves) {
     await gotoShelf(page, shelf.listId, shelf.count)
+    // STRUCTURAL floor, seed-independent: the gBCR cover-top clauses below only catch a shrunk
+    // headroom when the seed happens to deal a spine short enough to expose it — fixture spine
+    // heights hash from server-generated UUIDs, so they vary per DB seed. On the seed this arc
+    // shipped against, the 1-book fixture's spine alone exceeded the floor and the
+    // headroom-removal mutant PASSED — the exact "green by luck" failure this suite's own
+    // comments keep warning about, caught only because a later re-verification pass happened to
+    // land on a different seed.
+    //
+    // A first draft of this clause asserted the track's RENDERED clientHeight against the floor
+    // — still seed-dependent, one level removed: clientHeight only falls short of the floor
+    // when minHeight is both absent AND content alone doesn't happen to reach it, so the mutant
+    // passed on this test run's mobile worker (mobile and rest each call setup() independently,
+    // in separate processes, so they seed different random book UUIDs and can land on different
+    // spine heights within the SAME run) while correctly failing on rest. Reading the authored
+    // CSS property directly instead of the ambient rendered size decouples the assertion from
+    // content entirely — it is the reservation existing, not a height that happened to suffice.
+    const minH = await track(page).evaluate((el) => parseFloat(getComputedStyle(el).minHeight))
+    expect(
+      minH,
+      `${shelf.count}-book: track minHeight (CSS) is ${minH}, short of the reserved headroom floor`,
+    ).toBeGreaterThanOrEqual(REVEAL_HEADROOM + TRACK_PAD_BOTTOM + REORDER_ROW_H)
     const maxScroll = await track(page).evaluate((el) => el.scrollWidth - el.clientWidth)
     const restOffsets = [...new Set([0, Math.round(maxScroll / 2), maxScroll])]
     for (const x of restOffsets) {
