@@ -360,11 +360,21 @@ test('magnified geometry: cover scale at the pick, rest density elsewhere, neigh
     const iPicked = spines.indexOf(picked)
     const far = spines[iPicked >= 18 ? iPicked - 10 : iPicked + 10]!
     const neighbour = spines[iPicked + 1] ?? spines[iPicked - 1]!
+    const trackRect = el.getBoundingClientRect()
+    // visual-vs-natural centre shift of the two immediate neighbours, sign included
+    const shift = (sp: HTMLElement) => {
+      const r = sp.getBoundingClientRect()
+      const visualCentre = r.left + r.width / 2
+      const naturalCentre = trackRect.left - el.scrollLeft + sp.offsetLeft + sp.offsetWidth / 2
+      return Math.round(visualCentre - naturalCentre)
+    }
     return {
       pickedVisualW: Math.round(picked.getBoundingClientRect().width),
       farVisualW: far.getBoundingClientRect().width,
       farNaturalW: far.offsetWidth,
       neighbourId: neighbour.dataset.spine!,
+      leftShift: iPicked > 0 ? shift(spines[iPicked - 1]!) : null,
+      rightShift: iPicked < spines.length - 1 ? shift(spines[iPicked + 1]!) : null,
     }
   })
   // The picked spine reaches cover scale (rounding tolerance 2px)…
@@ -377,6 +387,24 @@ test('magnified geometry: cover scale at the pick, rest density elsewhere, neigh
     Math.abs(geom.farVisualW - geom.farNaturalW),
     `rest width ${geom.farVisualW} vs natural ${geom.farNaturalW}`,
   ).toBeLessThanOrEqual(1)
+  // …displacement SPLITS around the pick: the left neighbour moves LEFT and the right neighbour
+  // moves RIGHT. This is asserted directly rather than via scrollWidth because the reserved slack
+  // is deliberately generous (96px) — generous enough that even a fully one-sided push can hide
+  // inside it, which a mutant run proved: naive rightward displacement SURVIVED the invariance
+  // assertion. Symmetry is the property; this is its direct observation.
+  expect(geom.leftShift, `left neighbour shift ${geom.leftShift}`).toBeLessThanOrEqual(-4)
+  expect(geom.rightShift, `right neighbour shift ${geom.rightShift}`).toBeGreaterThanOrEqual(4)
+  // The discriminator is SHARE, not pixel symmetry: hash-varied spine widths make the halves
+  // genuinely unequal (measured sums −28 and −58 across the two projects' fixtures), but under a
+  // correct split BOTH sides carry a meaningful fraction of the displacement, while the
+  // naive-rightward-push mutant sends ~93% of it one way (measured −8 / +105, ratio 0.076).
+  const lo = Math.min(Math.abs(geom.leftShift!), Math.abs(geom.rightShift!))
+  const hi = Math.max(Math.abs(geom.leftShift!), Math.abs(geom.rightShift!))
+  expect(
+    lo / hi,
+    `displacement must SPLIT to both sides (left ${geom.leftShift}, right ${geom.rightShift})`,
+  ).toBeGreaterThanOrEqual(0.25)
+
   // …and the displaced immediate neighbour is tappable where it visibly is, opening the NEIGHBOUR
   // (displacement, not burial — the defect class of mechanism two).
   const neighbourId = geom.neighbourId
