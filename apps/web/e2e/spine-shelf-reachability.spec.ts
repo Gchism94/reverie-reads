@@ -712,6 +712,11 @@ test('stickiness: a settled pick holds through a sub-deadband nudge, then releas
   await gotoShelf(page, big.listId, 36)
 
   const result = await track(page).evaluate(async (el) => {
+    // Every spine title is set in a per-skin webfont — a late font swap changes glyph metrics and
+    // therefore spine (and pitch, and the anchor's amplification factor) width mid-test. Under load
+    // this can land between measuring the correction factor and applying the nudge, staling both;
+    // wait for fonts up front so every geometry read below is against the FINAL layout.
+    await document.fonts.ready
     const centroid = () => {
       let num = 0
       let den = 0
@@ -726,10 +731,8 @@ test('stickiness: a settled pick holds through a sub-deadband nudge, then releas
     }
     // A fixed wait is not a reliable proxy for "settled" — CI's frame scheduling runs slower and
     // more irregularly than a local machine, so a margin that is generous locally can still land
-    // mid-ease under load (CI failure on first push: a 6.7px nudge read as a 19.9px jump, because
-    // "before" was sampled while settle()'s 160ms ease was still in flight, not after it — the
-    // nudge then interrupted THAT animation rather than a genuinely held wave). Poll until the
-    // centroid stops moving for several consecutive frames instead of trusting a clock.
+    // mid-ease under load. Poll until the centroid stops moving for several consecutive frames
+    // instead of trusting a clock.
     const settleForReal = async (maxMs: number) => {
       const t0 = performance.now()
       let last = centroid()
@@ -747,7 +750,7 @@ test('stickiness: a settled pick holds through a sub-deadband nudge, then releas
       return last
     }
     el.scrollLeft = Math.round((el.scrollWidth - el.clientWidth) / 2)
-    const before = await settleForReal(3000)
+    await settleForReal(3000)
     const pickedBefore = el.querySelector<HTMLElement>('[data-spine-picked]')!.dataset.spine
 
     const spines = [...el.querySelectorAll<HTMLElement>('[data-spine]')]
@@ -757,33 +760,88 @@ test('stickiness: a settled pick holds through a sub-deadband nudge, then releas
       idx > 0 ? Math.abs(centreAt(idx) - centreAt(idx - 1)) : Infinity,
       idx < spines.length - 1 ? Math.abs(centreAt(idx + 1) - centreAt(idx)) : Infinity,
     )
+    // THE SLIDING ANCHOR amplifies scrollLeft deltas into cx deltas by 1 + clientWidth/maxScroll —
+    // deliberately (docs/audits/spine-overlay-clamp.md §4/§6), so the anchor can still reach the
+    // terminal picks despite a clientWidth/2 margin. A caller that moves scrollLeft by X does NOT
+    // move the anchor by X — a scrollLeft nudge meant to land at 15% of pitch in cx space landed at
+    // 37-55% instead here (root cause of two false CI reds: the deadband correctly released a nudge
+    // that LOOKED like 15% in scrollLeft terms but was well past 40% once the anchor amplified it —
+    // a test bug, not a component bug, confirmed by instrumenting stuckRef directly and tracing the
+    // actual cx delta against the intended one). Divide the intended cx-space nudge by the same
+    // factor renderCx's anchor uses, so the delta that actually reaches cx is the one asserted on.
+    const maxScroll = el.scrollWidth - el.clientWidth
+    const ampFactor = maxScroll > 0 ? 1 + el.clientWidth / maxScroll : 1
+    const scrollNudgeFor = (cxFraction: number) => Math.round((pitch * cxFraction) / ampFactor)
+
+    // THE PROBE: exact `transform` strings of the picked slot and its two neighbours each side —
+    // the terms most sensitive to a real cx change (near the Gaussian's peak the picked slot's OWN
+    // transform barely moves with cx; the steeper flanks a slot or two out are where a released
+    // wave shows up first). renderWave's writes are deterministic .toFixed() strings from cx with
+    // no intermediate animation in the motion regime, so held vs moved is a byte-exact comparison —
+    // immune to the aggregate centroid estimator's cross-element weighting noise, which is what
+    // produced two false CI reds (a ~20px "shift" on an untouched wave, on two different runners)
+    // even after the settle-polling fix above: the centroid sums over all 36 elements, so noise
+    // anywhere in that sum reads as motion; a fingerprint of the exact literal style strings has
+    // nothing left to be noisy about.
+    const fingerprint = () =>
+      [idx - 2, idx - 1, idx, idx + 1, idx + 2]
+        .filter((i) => i >= 0 && i < spines.length)
+        .map((i) => spines[i]!.style.transform)
+        .join('|')
+    const before = fingerprint()
+
+    // A nudge at 15% of pitch — comfortably inside the 40% deadband. Poll (short cap, well under
+    // the 140ms idle timeout that would legitimately start a fresh settle) for the fingerprint to
+    // stabilise post-nudge, rather than trusting a fixed frame count — the write is synchronous
+    // within the one rAF the scroll event schedules, so this converges in 1-2 frames regardless of
+    // how slow or bursty the runner's frame scheduling is.
+    const stabiliseFingerprint = async (maxMs: number) => {
+      const t0 = performance.now()
+      let last = fingerprint()
+      let stable = 0
+      while (performance.now() - t0 < maxMs) {
+        await new Promise((r) => requestAnimationFrame(r))
+        const now = fingerprint()
+        if (now === last) {
+          if (++stable >= 3) return now
+        } else {
+          stable = 0
+        }
+        last = now
+      }
+      return last
+    }
+    // Both nudges are ABSOLUTE offsets from this one fixed base — never additive on top of each
+    // other — so the second nudge's displacement is exactly what its own fraction says, with no
+    // cumulative drift from the first (an earlier draft added them, landing the "released" step at
+    // 0.65 of pitch instead of the intended 0.5 — close enough to the pick's own 0.5-pitch flip
+    // boundary to occasionally read confusingly).
+    const baseScrollLeft = el.scrollLeft
 
     // A nudge at 15% of pitch — comfortably inside the 40% deadband.
-    el.scrollLeft += Math.round(pitch * 0.15)
-    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
+    el.scrollLeft = baseScrollLeft + scrollNudgeFor(0.15)
+    const during = await stabiliseFingerprint(100)
     const pickedDuring = el.querySelector<HTMLElement>('[data-spine-picked]')!.dataset.spine
-    const during = centroid()
 
-    // Then well past the deadband — the wave must resume tracking (this is not a permanent latch).
-    el.scrollLeft += Math.round(pitch * 0.5)
-    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
-    const released = centroid()
+    // Then two full pitches out — unambiguously past both the deadband and the pick's own flip
+    // boundary, proving stickiness is a one-shot latch, not a permanent one.
+    el.scrollLeft = baseScrollLeft + scrollNudgeFor(2)
+    const released = await stabiliseFingerprint(100)
 
-    return { pickedBefore, pickedDuring, before, during, released, pitch }
+    return { pickedBefore, pickedDuring, before, during, released, pitch, ampFactor }
   })
 
-  expect(result.before).not.toBeNull()
   expect(result.pickedDuring, 'the pick itself must not change under a sub-deadband nudge').toBe(
     result.pickedBefore,
   )
   expect(
-    Math.abs(result.during! - result.before!),
-    `wave centre must hold under a sub-deadband nudge (before ${result.before}, during ${result.during}, pitch ${result.pitch})`,
-  ).toBeLessThanOrEqual(1.5)
+    result.during,
+    `wave transforms must be byte-identical under a sub-deadband nudge (pitch ${result.pitch}, anchor amplification ${result.ampFactor.toFixed(2)}×)`,
+  ).toBe(result.before)
   expect(
-    Math.abs(result.released! - result.before!),
-    `wave centre must resume tracking once the deadband is exceeded (before ${result.before}, released ${result.released})`,
-  ).toBeGreaterThan(6)
+    result.released,
+    `wave transforms must change once the deadband is exceeded (pitch ${result.pitch}, anchor amplification ${result.ampFactor.toFixed(2)}×)`,
+  ).not.toBe(result.before)
 })
 
 // polish/spine-pick-feel. The full 9×2 legibility sweep lives in
