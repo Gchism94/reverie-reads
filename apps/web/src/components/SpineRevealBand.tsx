@@ -1,4 +1,4 @@
-import { useEffect, useRef, useSyncExternalStore, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useSyncExternalStore, type ReactNode } from 'react'
 import { isBorrowedBook, isDnf, isPossessed, stateSuffix } from '@reverie/core'
 import { CoverImage } from './CoverImage'
 import { StatePill } from './StatePill'
@@ -61,6 +61,33 @@ function SpineRevealBand({ store }: { store: SpineRevealStore }) {
   const bandRef = useRef<HTMLDivElement>(null)
   const caretRef = useRef<HTMLSpanElement>(null)
 
+  // A bottom-pinned bar has the exact mirror of the `scroll-margin-top` trap a top-pinned one has:
+  // anything scrolled into view — keyboard focus, `scrollIntoView`, a drag target — can land in the
+  // strip the band covers. The task chose bottom placement partly to avoid that trap; it does not.
+  // Publishing the band's real height (measured, so it cannot drift from BAND_H) lets one global
+  // rule in globals.css give scrolled-to content the clearance it needs.
+  useLayoutEffect(() => {
+    const el = bandRef.current
+    const root = document.documentElement
+    if (!el) {
+      root.style.removeProperty('--rv-band-clearance')
+      return
+    }
+    const apply = () => {
+      const offset = window.innerWidth >= 1024 ? 0 : 72
+      root.style.setProperty(
+        '--rv-band-clearance',
+        `${Math.round(el.getBoundingClientRect().height) + offset}px`,
+      )
+    }
+    apply()
+    window.addEventListener('resize', apply)
+    return () => {
+      window.removeEventListener('resize', apply)
+      root.style.removeProperty('--rv-band-clearance')
+    }
+  })
+
   // The caret moves every scroll frame; the book changes ~15 times a fling. Routing the caret
   // through React would re-render the band at frame rate to move a 7px diamond, so it is applied
   // straight to the node's transform and never touches state.
@@ -94,10 +121,13 @@ function SpineRevealBand({ store }: { store: SpineRevealStore }) {
       ref={bandRef}
       data-spine-reveal-band
       data-band-owner={snap.railId ?? undefined}
-      className="sticky z-[2] -mx-4 mt-2 sm:-mx-6"
+      // The bottom offset clears the mobile tab bar, which AppShell reserves 72px for — and must
+      // go to 0 on lg, where that bar is `lg:hidden`. It is a CLASS rather than an inline style
+      // precisely so it can be responsive: as an inline style the band floated 72px above the
+      // desktop viewport bottom, over a nav that was not there.
+      className="sticky bottom-[calc(72px+env(safe-area-inset-bottom))] z-[2] -mx-4 mt-2 sm:-mx-6 lg:bottom-0"
       style={{
         height: BAND_H,
-        bottom: 'calc(72px + env(safe-area-inset-bottom))',
         background: 'var(--card-solid)',
         borderTop: '1px solid var(--line)',
       }}
