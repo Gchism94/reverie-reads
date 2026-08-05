@@ -226,10 +226,16 @@ test('a spine shelf carries state in the accessible name — the surface that ne
 
   await page.goto(`/shelf/${listId}`)
   // Spines read "Open …" once revealed and "Reveal …" otherwise; either way the state rides along.
+  //
+  // SCOPED to `[data-spine]` because this test's name is a promise about the SPINE surface. Since
+  // the shared reveal band landed, the picked book also has a cover button in the band carrying the
+  // same accessible name — a deliberate duplicate (the sticky-bar-repeats-the-CTA pattern), and the
+  // reason an unscoped getByRole now resolves to two elements. Scoping asserts what the name says
+  // rather than whichever control happens to be unique.
   await expect(
-    page.getByRole('button', { name: new RegExp(`${DNF_TITLE}, did not finish`) }),
+    page.locator(`[data-spine][aria-label*="${DNF_TITLE}, did not finish"]`),
   ).toBeVisible({ timeout: 20_000 })
   await expect(
-    page.getByRole('button', { name: new RegExp(`${BORROWED_TITLE}, borrowed`) }),
+    page.locator(`[data-spine][aria-label*="${BORROWED_TITLE}, borrowed"]`),
   ).toBeVisible()
 })
