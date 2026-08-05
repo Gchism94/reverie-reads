@@ -69,6 +69,14 @@
     --ink
   ); /* accent-tinted TEXT colour that clears AA on the plate (eyebrows); per-mode below */
   --ornament-frame: transparent; /* inset hairline frame colour on plates (Tryst gilt double-rule) */
+  /* Picked-cover accent ring (polish/spine-pick-feel). --ornament-frame is authored as a plate
+     INSET hairline, translucent by design (color-mix(…, transparent)) — legible on the opaque
+     surfaces it was built for, but composited over the raw shelf background it measures below
+     3:1 in 15 of 18 skin×mode combinations (as low as 1.15:1). Default to the solid, AA-checked
+     --primary, which clears 3:1 everywhere with wide margin; the three combinations below where
+     --ornament-frame itself clears 3:1 against the shelf background override back to it, so the
+     ring uses each skin's own frame material wherever that material is actually legible. */
+  --pick-ring: var(--primary);
   --mark-accent: var(
     --accent
   ); /* card-mark glyph accent (skin signature; AA-resolved per surface in JS) */
@@ -698,6 +706,10 @@
   --ph-c: #08111f;
   --ph-ink: #dff4fb;
   --ph-muted: rgba(189, 243, 250, 0.72);
+  /* --ornament-frame (--primary at 55%) measures 3.86:1 over --bg0 here — one of three
+     skin×mode combinations where the plate hairline is legible enough to stand alone as a ring
+     (polish/spine-pick-feel; see the base --pick-ring comment). */
+  --pick-ring: var(--ornament-frame);
 }
 
 [data-skin='aphelion'][data-mode='light'] {
@@ -1181,6 +1193,10 @@
   --font-display: 'Bitter', Georgia, serif;
   --font-sans: 'Varela Round', system-ui, sans-serif;
   --font-mono: 'Varela Round', system-ui, sans-serif;
+  /* --ornament-frame (--thread at 50%) measures 4.19:1 over --bg0 here — one of three
+     skin×mode combinations where the plate hairline is legible enough to stand alone as a ring
+     (polish/spine-pick-feel; see the base --pick-ring comment). */
+  --pick-ring: var(--ornament-frame);
 }
 
 /* Hearth material values (chunk 3) — the jam-lid CTA (ringed like a preserve label), oat-linen
@@ -1428,6 +1444,10 @@
   --font-display: 'Baloo 2', system-ui, sans-serif;
   --font-sans: 'Karla', system-ui, sans-serif;
   --font-mono: 'Karla', system-ui, sans-serif;
+  /* --ornament-frame (flat white, 35%) measures 3.23:1 over --bg0 here — one of three
+     skin×mode combinations where the plate hairline is legible enough to stand alone as a ring
+     (polish/spine-pick-feel; see the base --pick-ring comment). */
+  --pick-ring: var(--ornament-frame);
 }
 
 /* Bloom material values (chunk 3) — the gel-pill CTA, the sky spine (dawn at the tail), the

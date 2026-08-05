@@ -16,6 +16,12 @@ export type Tok = {
   accentInk: string
   /** --mark-accent (= --accent): card-mark glyph; only painted over a DARK scrim (dark mode / covers) */
   markAccent: string
+  /** --pick-ring (polish/spine-pick-feel), composited over bg0 the way the browser actually paints
+   *  a translucent box-shadow: --ornament-frame is authored as a plate-inset hairline, translucent
+   *  by design, so most skins fail 3:1 measured directly against the raw shelf background — the
+   *  token falls back to solid --primary there and keeps --ornament-frame only where it clears on
+   *  its own (aphelion/dark, hearth/dark, bloom/dark; see tokens.css's --pick-ring comments). */
+  pickRing: string
 }
 
 export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
@@ -28,6 +34,7 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
     onPrimary: '#ffffff',
     accentInk: '#f0b14e',
     markAccent: '#f0b14e',
+    pickRing: '#e0517d',
   },
   'tryst/light': {
     bg0: '#f8eee4',
@@ -38,6 +45,7 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
     onPrimary: '#ffffff',
     accentInk: '#8a5717',
     markAccent: '#8a5717',
+    pickRing: '#b83b64',
   },
   'grimoire/dark': {
     bg0: '#0c0f0b',
@@ -48,6 +56,7 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
     onPrimary: '#08110b',
     accentInk: '#d4af37',
     markAccent: '#d4af37',
+    pickRing: '#3aa97e',
   },
   'grimoire/light': {
     bg0: '#f1e7cf',
@@ -58,6 +67,7 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
     onPrimary: '#ffffff',
     accentInk: '#6e5518',
     markAccent: '#8a6a2f',
+    pickRing: '#1a6e4c',
   },
   'aphelion/dark': {
     bg0: '#05070d',
@@ -68,6 +78,7 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
     onPrimary: '#02080a',
     accentInk: '#4fd1e0',
     markAccent: '#4fd1e0',
+    pickRing: '#2e7681',
   },
   'aphelion/light': {
     bg0: '#eef3fb',
@@ -78,6 +89,7 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
     onPrimary: '#ffffff',
     accentInk: '#0a6e80',
     markAccent: '#0a6e80',
+    pickRing: '#0a6e80',
   },
   'marrow/dark': {
     bg0: '#17181c',
@@ -88,6 +100,7 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
     onPrimary: '#ffffff',
     accentInk: '#d67878',
     markAccent: '#d67878',
+    pickRing: '#d06a6a',
   },
   'marrow/light': {
     bg0: '#ece8e0',
@@ -98,6 +111,7 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
     onPrimary: '#ffffff',
     accentInk: '#8a3232',
     markAccent: '#8a3232',
+    pickRing: '#8a3232',
   },
   'umbra/dark': {
     bg0: '#101216',
@@ -108,6 +122,7 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
     onPrimary: '#23201a',
     accentInk: '#d9a441',
     markAccent: '#d9a441',
+    pickRing: '#d9a441',
   },
   'umbra/light': {
     bg0: '#edeae2',
@@ -118,6 +133,7 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
     onPrimary: '#fbf6e8',
     accentInk: '#7a5d1b',
     markAccent: '#8a6a1f',
+    pickRing: '#7a5d1b',
   },
   // Fable 5 chunk 3 — Marginalia ("folio"): the page never inverts, so BOTH modes are ink-on-bond;
   // dark mode dims the page and darkens the desk (the vignette). Marks over a placeholder paint
@@ -133,6 +149,7 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
     onPrimary: '#fbf1ea',
     accentInk: '#86271f',
     markAccent: '#86271f',
+    pickRing: '#86271f',
   },
   'folio/light': {
     bg0: '#e7e4da',
@@ -143,6 +160,7 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
     onPrimary: '#fbf1ea',
     accentInk: '#9c2f25',
     markAccent: '#9c2f25',
+    pickRing: '#b1362b',
   },
   'hearth/dark': {
     bg0: '#1d1309',
@@ -153,6 +171,7 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
     onPrimary: '#fdf3ea',
     accentInk: '#f0a8b4',
     markAccent: '#f0a8b4',
+    pickRing: '#827864',
   },
   'hearth/light': {
     bg0: '#e9d7b4',
@@ -163,6 +182,7 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
     onPrimary: '#fdf3ea',
     accentInk: '#96303f',
     markAccent: '#96303f',
+    pickRing: '#9c3243',
   },
   // Almanac: light-lead buff; dark is the tent at night — ink-block surfaces with band-ink type.
   // Its buff placeholder also stays light at night → white marks (--mark-on-ph override).
@@ -175,6 +195,7 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
     onPrimary: '#d9cda6',
     accentInk: '#e08a3c',
     markAccent: '#e08a3c',
+    pickRing: '#cf6b26',
   },
   'almanac/light': {
     bg0: '#e4dcc2',
@@ -185,6 +206,7 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
     onPrimary: '#eadfbe',
     accentInk: '#8a4413',
     markAccent: '#8a4413',
+    pickRing: '#8f400f',
   },
   // Firstlight ("bloom"): the sky is the screen; generic panels are deep-sky, stickers live on --paper.
   'bloom/dark': {
@@ -196,6 +218,7 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
     onPrimary: '#ffffff',
     accentInk: '#9f8cf0',
     markAccent: '#f5b85a',
+    pickRing: '#666875',
   },
   'bloom/light': {
     bg0: '#d5d4ea',
@@ -206,6 +229,7 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
     onPrimary: '#ffffff',
     accentInk: '#5a46b4',
     markAccent: '#5a46b4',
+    pickRing: '#5a46b4',
   },
 }
 

@@ -695,3 +695,234 @@ test('tracking: in motion the wave glides with the continuous anchor, never step
     `wave centre must track the anchor while in motion (p50 ${result.p50}px, max ${result.max}px)`,
   ).toBeLessThanOrEqual(12)
 })
+
+test('stickiness: a settled pick holds through a sub-deadband nudge, then releases past it', async ({
+  page,
+}) => {
+  // polish/spine-pick-feel. Small thumb drift on a settled pick used to deflate the wave
+  // immediately — the motion regime fed the raw anchor every frame with no dead zone. Now the
+  // wave HOLDS at the settled slot's centre until the anchor has moved DEADBAND_FRACTION (0.4) of
+  // the LOCAL slot pitch away from it, then falls straight through to ordinary 1:1 tracking for
+  // the rest of the gesture — this is why the "tracking" test above, which starts its sweep from
+  // a big jump well past any deadband, is untouched by this feature (see its own comment).
+  test.setTimeout(60_000)
+  const c = await setup()
+  const big = c.shelves.find((s) => s.count === 36)!
+  await signInOnce(page)
+  await gotoShelf(page, big.listId, 36)
+
+  const result = await track(page).evaluate(async (el) => {
+    const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
+    const centroid = () => {
+      let num = 0
+      let den = 0
+      for (const s of el.querySelectorAll<HTMLElement>('[data-spine]')) {
+        const excess = s.getBoundingClientRect().width - s.offsetWidth
+        if (excess > 2) {
+          num += excess * (s.offsetLeft + s.offsetWidth / 2)
+          den += excess
+        }
+      }
+      return den > 0 ? num / den : null
+    }
+    el.scrollLeft = Math.round((el.scrollWidth - el.clientWidth) / 2)
+    await wait(500) // past the 140ms idle + 160ms settle — genuinely at rest
+    const pickedBefore = el.querySelector<HTMLElement>('[data-spine-picked]')!.dataset.spine
+    const before = centroid()
+
+    const spines = [...el.querySelectorAll<HTMLElement>('[data-spine]')]
+    const idx = spines.findIndex((s) => s.dataset.spine === pickedBefore)
+    const centreAt = (i: number) => spines[i]!.offsetLeft + spines[i]!.offsetWidth / 2
+    const pitch = Math.min(
+      idx > 0 ? Math.abs(centreAt(idx) - centreAt(idx - 1)) : Infinity,
+      idx < spines.length - 1 ? Math.abs(centreAt(idx + 1) - centreAt(idx)) : Infinity,
+    )
+
+    // A nudge at 15% of pitch — comfortably inside the 40% deadband.
+    el.scrollLeft += Math.round(pitch * 0.15)
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
+    const pickedDuring = el.querySelector<HTMLElement>('[data-spine-picked]')!.dataset.spine
+    const during = centroid()
+
+    // Then well past the deadband — the wave must resume tracking (this is not a permanent latch).
+    el.scrollLeft += Math.round(pitch * 0.5)
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
+    const released = centroid()
+
+    return { pickedBefore, pickedDuring, before, during, released, pitch }
+  })
+
+  expect(result.before).not.toBeNull()
+  expect(result.pickedDuring, 'the pick itself must not change under a sub-deadband nudge').toBe(
+    result.pickedBefore,
+  )
+  expect(
+    Math.abs(result.during! - result.before!),
+    `wave centre must hold under a sub-deadband nudge (before ${result.before}, during ${result.during}, pitch ${result.pitch})`,
+  ).toBeLessThanOrEqual(1.5)
+  expect(
+    Math.abs(result.released! - result.before!),
+    `wave centre must resume tracking once the deadband is exceeded (before ${result.before}, released ${result.released})`,
+  ).toBeGreaterThan(6)
+})
+
+// polish/spine-pick-feel. The full 9×2 legibility sweep lives in
+// packages/core/src/spinePickRing.contrast.test.ts (keyed off the SKINS registry); the two tests
+// below spot-check that the REPRESENTATIVE cases actually reach the DOM as the right material:
+// aphelion/dark uses its own --ornament-frame (translucent, clears 3:1 on its own), tryst/dark
+// falls back to solid --primary (--ornament-frame alone measures 1.86:1 there — illegible). Each
+// gets its own list (and its own fresh `page`, per Playwright's default) — a single test signing
+// in twice on ONE page hit exactly the class of bug this suite exists to catch: the second
+// `page.goto` of a hash-only auth URL to an already-loaded SPA is a same-document navigation the
+// app's mount-time hash handler never re-fires for, so the second sign-in silently never took.
+type RingCtx = { uid: string; listId: string }
+let ringCtx: RingCtx | null = null
+async function setupRing(): Promise<RingCtx> {
+  if (ringCtx) return ringCtx
+  const admin = createClient(SUPABASE_URL, SERVICE, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  })
+  const EMAIL2 = 'spine-ring-e2e@reverie.local'
+  const PASSWORD2 = 'spine-ring-e2e-password'
+  const { data } = await admin.auth.admin.listUsers()
+  let uid = data?.users?.find((u) => u.email === EMAIL2)?.id
+  if (!uid) {
+    uid = (
+      await okUser(
+        admin.auth.admin.createUser({ email: EMAIL2, password: PASSWORD2, email_confirm: true }),
+        'ring createUser',
+      )
+    ).id
+  }
+  await ok(admin.from('list_items').delete().eq('owner_id', uid), 'ring items delete')
+  await ok(admin.from('lists').delete().eq('owner_id', uid), 'ring lists delete')
+  await ok(admin.from('books').delete().eq('owner_id', uid), 'ring books delete')
+  const rows = Array.from({ length: 2 }, (_, i) => ({
+    owner_id: uid,
+    title: `Ring Probe ${i + 1}`,
+    author_first: 'Nell',
+    author_last: 'Marrow',
+    genre: 'fantasy',
+    status: 'standalone',
+    ownership: 'owned',
+    borrowed: false,
+    wishlist: false,
+    read_status: 'Read',
+    cover_url: `https://covers.reach.test/ring-${i + 1}.jpg`,
+  }))
+  const { error: insertError } = await admin.from('books').insert(rows)
+  if (insertError) throw new Error(`ring seed failed: ${JSON.stringify(insertError)}`)
+  const { data: books } = await admin.from('books').select('id').eq('owner_id', uid).order('title')
+  const bookIds = (books as { id: string }[]).map((b) => b.id)
+  const { data: list, error: listError } = await admin
+    .from('lists')
+    .insert({ owner_id: uid, name: 'Ring Probe', kind: 'collection', sort_order: 1 })
+    .select('id')
+    .single()
+  if (listError || !list) throw new Error(`ring list: ${JSON.stringify(listError)}`)
+  const listId = (list as { id: string }).id
+  await ok(
+    admin
+      .from('list_items')
+      .insert(
+        bookIds.map((id, i) => ({ list_id: listId, book_id: id, owner_id: uid, position: i + 1 })),
+      ),
+    'ring list_items insert',
+  )
+  ringCtx = { uid, listId }
+  return ringCtx
+}
+
+async function readRingRgb(page: Page, skin: string, mode: string) {
+  const { uid, listId } = await setupRing()
+  const admin = createClient(SUPABASE_URL, SERVICE, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  })
+  await ok(
+    admin.from('profiles').upsert({ id: uid, display_name: 'Ring E2E', skin, mode }),
+    `ring profile upsert (${skin}/${mode})`,
+  )
+  const sb = createClient(SUPABASE_URL, ANON)
+  const { data: s, error } = await sb.auth.signInWithPassword({
+    email: 'spine-ring-e2e@reverie.local',
+    password: 'spine-ring-e2e-password',
+  })
+  if (error || !s.session)
+    throw new Error(authFailure('ring', 'spine-ring-e2e@reverie.local', error))
+
+  const png = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+    'base64',
+  )
+  await keepOfflineCacheEmpty(page)
+  await page.addInitScript(() => localStorage.setItem('reverie.onboarded', '1'))
+  await page.route('**covers.reach.test**', (r) =>
+    r.fulfill({ body: png, contentType: 'image/png' }),
+  )
+  for (const p of ['search', 'enrich', 'embed', 'releases', 'series', 'covers'])
+    await page.route(`**/functions/v1/${p}**`, (r) => r.fulfill({ json: {} }))
+  await page.goto(
+    `/#access_token=${s.session.access_token}&refresh_token=${s.session.refresh_token}&expires_in=3600&token_type=bearer&type=magiclink`,
+  )
+  await page.getByRole('button', { name: /enter your library/i }).click({ timeout: 20_000 })
+  await page.goto(`/shelf/${listId}`)
+  await expect(page.locator('[data-spine]')).toHaveCount(2, { timeout: 20_000 })
+  await page.waitForTimeout(500)
+  await page.mouse.move(2, 2)
+  await page.waitForTimeout(120)
+  await track(page).evaluate((el) => {
+    el.scrollLeft = Math.round((el.scrollWidth - el.clientWidth) / 2)
+  })
+  await page.waitForTimeout(500) // past idle + settle
+  return track(page).evaluate(() => {
+    const cover = document.querySelector<HTMLElement>('[data-spine-picked] [data-mag-cover]')!
+    const boxShadow = getComputedStyle(cover).boxShadow
+    // Chromium serialises the same colour as `color(srgb r g b / a)` or `rgba(r, g, b, a)`
+    // depending on context — parse both so the assertion holds across projects.
+    const wide = boxShadow.match(/^color\(srgb ([\d.]+) ([\d.]+) ([\d.]+)(?: \/ ([\d.]+))?\)/)
+    if (wide) {
+      return {
+        r: Math.round(Number(wide[1]) * 255),
+        g: Math.round(Number(wide[2]) * 255),
+        b: Math.round(Number(wide[3]) * 255),
+        a: wide[4] != null ? Number(wide[4]) : 1,
+        raw: boxShadow,
+      }
+    }
+    const std = boxShadow.match(/^rgba?\(([\d.]+),\s*([\d.]+),\s*([\d.]+)(?:,\s*([\d.]+))?\)/)
+    if (std) {
+      return {
+        r: Number(std[1]),
+        g: Number(std[2]),
+        b: Number(std[3]),
+        a: std[4] != null ? Number(std[4]) : 1,
+        raw: boxShadow,
+      }
+    }
+    return { r: -1, g: -1, b: -1, a: -1, raw: boxShadow }
+  })
+}
+
+test('picked-cover ring: aphelion/dark uses its own --ornament-frame (55% of --primary, translucent)', async ({
+  page,
+}) => {
+  test.setTimeout(60_000)
+  const aphelion = await readRingRgb(page, 'aphelion', 'dark')
+  expect(aphelion.raw, 'aphelion/dark ring').toContain('2px')
+  expect(Math.abs(aphelion.r - 79)).toBeLessThanOrEqual(2)
+  expect(Math.abs(aphelion.g - 209)).toBeLessThanOrEqual(2)
+  expect(Math.abs(aphelion.b - 224)).toBeLessThanOrEqual(2)
+  expect(Math.abs(aphelion.a - 0.55)).toBeLessThanOrEqual(0.02)
+})
+
+test('picked-cover ring: tryst/dark falls back to solid --primary (--ornament-frame alone is 1.86:1 there)', async ({
+  page,
+}) => {
+  test.setTimeout(60_000)
+  const tryst = await readRingRgb(page, 'tryst', 'dark')
+  expect(tryst.raw, 'tryst/dark ring').toContain('2px')
+  expect(Math.abs(tryst.r - 224)).toBeLessThanOrEqual(2)
+  expect(Math.abs(tryst.g - 81)).toBeLessThanOrEqual(2)
+  expect(Math.abs(tryst.b - 125)).toBeLessThanOrEqual(2)
+  expect(tryst.a).toBeGreaterThanOrEqual(0.98) // solid, not translucent
+})
