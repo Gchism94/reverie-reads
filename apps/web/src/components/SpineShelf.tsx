@@ -146,12 +146,16 @@ export function SpineShelf({
     const sx = new Array<number>(n)
     const sy = new Array<number>(n)
     const added = new Array<number>(n)
+    const widths = new Array<number>(n)
+    const centres = new Array<number>(n)
     let total = 0
     for (let i = 0; i < n; i++) {
       const s = slots[i]!
       const w = s.offsetWidth
       const h = s.offsetHeight
       const centre = s.offsetLeft + w / 2
+      widths[i] = w
+      centres[i] = centre
       const d = centre - cx
       let ti = Math.exp(-(d * d) / (2 * SIGMA * SIGMA))
       if (reduced) ti = s.dataset.spine === shownIdRef.current ? 1 : 0
@@ -161,6 +165,11 @@ export function SpineShelf({
       added[i] = w * (sx[i]! - 1)
       total += added[i]!
     }
+    // The VISIBLE track region, in the same content coordinates as the centres. scrollLeft and
+    // clientWidth are layout-space reads — paint transforms cannot move them — so the hard block
+    // below cannot feed back into its own inputs any more than the offset reads can.
+    const visLeft = el.scrollLeft
+    const visRight = el.scrollLeft + el.clientWidth
 
     // Pass 2: displacement — each slot shifts by (width added before it + half its own) minus half
     // the total, so growth splits symmetrically around the wave: left neighbours end near
@@ -170,10 +179,32 @@ export function SpineShelf({
     for (let i = 0; i < n; i++) {
       const s = slots[i]!
       const nodes = nodesFor(s)
-      const dx = cum + added[i]! / 2 - total / 2
+      let dx = cum + added[i]! / 2 - total / 2
       cum += added[i]!
       if (!nodes) continue
       const ti = t[i]!
+      // THE HARD BLOCK (fix/spine-magnify-geometry, defect 2): the transformed box's edges are
+      // clamped to the track's VISIBLE region — viewport space, the space the device renders —
+      // not merely to the content bounds the slack arithmetic guarantees. Measured on device and
+      // reproduced in the lab: with the wave pinned to the first slot (the #146 terminal clamp),
+      // every rest position with scrollLeft in (55, ~150) put the magnified box's left edge
+      // BEHIND the viewport's left edge — inside the content, outside the visible region — and
+      // the old guard only ever measured scrollLeft 0, the one offset where the two spaces
+      // coincide.
+      //
+      // The correction is weighted by magnification, full above t = 0.3 and zero below t = 0.1:
+      // a magnifying box is the reveal and must be fully on-screen (the slot nearest the wave's
+      // centre is always at t ≥ 0.73, so the most-magnified box always gets the FULL correction,
+      // uncapped — a first draft capped the shove at the slot's own added width and left a
+      // measured −7px residual when displacement, not growth, carried the box off-screen), while
+      // a rest spine (t → 0) keeps weight zero — scrolling or displacing shelf furniture out of
+      // view is the mechanism working, not wave overflow, and the block must not drag it back.
+      const halfW = (widths[i]! * sx[i]!) / 2
+      const boxLeft = centres[i]! + dx - halfW
+      const boxRight = centres[i]! + dx + halfW
+      const wClamp = Math.min(1, Math.max(0, (ti - 0.1) / 0.2))
+      if (boxLeft < visLeft) dx += (visLeft - boxLeft) * wClamp
+      else if (boxRight > visRight) dx -= (boxRight - visRight) * wClamp
       // The transform goes on the BUTTON itself, not an inner wrapper. getBoundingClientRect does
       // not include descendants, so a wrapper-level transform left the button's reported box at
       // its layout position while its visuals moved aside — and everything that aims at the box
@@ -182,11 +213,25 @@ export function SpineShelf({
       // visuals in agreement; hit-testing follows the transformed box (CSS Transforms L1).
       s.style.transform = `translate(${dx.toFixed(2)}px, ${(-LIFT * ti).toFixed(2)}px) scale(${sx[i]!.toFixed(4)}, ${sy[i]!.toFixed(4)})`
       s.style.zIndex = String(1 + Math.round(ti * 8))
-      // Cross-fade spine → cover across the top half of the magnification, so the distorted
-      // mid-transition cover is never prominent.
+      // Cross-fade spine → cover across the top half of the magnification. The BUTTON's scale is
+      // non-uniform by necessity (spine ratio → cover ratio), so each child COUNTER-SCALES to a
+      // uniform net factor — the bitmap-bearing boxes never distort; the transition is carried by
+      // the cross-fade and the container geometry (fix/spine-magnify-geometry, defect 1: covers
+      // measured squat down to ratio 0.45 vs 0.68 intrinsic mid-glide, with object-cover then
+      // cropping mid-image into the wrong-ratio box).
       const fade = Math.min(1, Math.max(0, ti * 2 - 1))
       nodes.art.style.opacity = String(1 - fade)
       nodes.cover.style.opacity = String(fade)
+      // Spine art: net uniform scale sy — it tracks the box's height (the shelf line) and keeps
+      // the spine texture's own ratio at every wave position.
+      nodes.art.style.transform = `scale(${(sy[i]! / sx[i]!).toFixed(4)}, 1)`
+      // Cover: a fixed 120×176 layout box (bottom-centre anchored), net-scaled uniformly so its
+      // rendered width always equals the button's rendered box width — the cover inflates with
+      // the box, at the cover's own ratio, and lands at exactly MAG_W×MAG_H when t = 1 where the
+      // box IS 120×176. cu is the net factor; dividing out the button's (sx, sy) yields the
+      // child transform.
+      const cu = (widths[i]! * sx[i]!) / MAG_W
+      nodes.cover.style.transform = `translateX(-50%) scale(${(cu / sx[i]!).toFixed(4)}, ${(cu / sy[i]!).toFixed(4)})`
     }
   }
   const renderWaveRef = useRef(renderWave)
@@ -363,14 +408,15 @@ export function SpineShelf({
               {/* The magnification target is the BUTTON (see the choreography's comment on why —
                 boxes, focus rings and visuals must agree). Its LAYOUT box is the natural spine
                 size and never changes; the choreography writes transform/z-index imperatively.
-                The cover fills the same box — distorted at rest, where it is invisible
-                (opacity 0), and exactly 120×176 at full magnification, where the cross-fade
-                completes. */}
+                The cover is NOT inset-0: it is a fixed 120×176 box — the cover's own ratio —
+                bottom-centre anchored and counter-scaled per frame so the bitmap never renders
+                at any other ratio (defect 1 of fix/spine-magnify-geometry). Its initial
+                transform keeps it far inside the slack until the first choreography write. */}
               <span
                 className="relative block"
                 style={unowned ? { opacity: 'var(--ghost-opacity)' } : undefined}
               >
-                <span data-mag-art className="block">
+                <span data-mag-art className="block" style={{ transformOrigin: '50% 100%' }}>
                   <Spine
                     book={b}
                     active={false}
@@ -382,8 +428,14 @@ export function SpineShelf({
                 <span
                   data-mag-cover
                   aria-hidden
-                  className="pointer-events-none absolute inset-0 overflow-hidden rounded-[3px] border border-line"
-                  style={{ opacity: 0 }}
+                  className="pointer-events-none absolute bottom-0 left-1/2 overflow-hidden rounded-[3px] border border-line"
+                  style={{
+                    width: MAG_W,
+                    height: MAG_H,
+                    opacity: 0,
+                    transformOrigin: '50% 100%',
+                    transform: 'translateX(-50%) scale(0.2)',
+                  }}
                 >
                   <CoverImage book={b} thumb />
                   {isDnf(b) && <StatePill kind="dnf" className="absolute left-1 top-1" />}
