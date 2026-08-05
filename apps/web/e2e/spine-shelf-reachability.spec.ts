@@ -695,3 +695,312 @@ test('tracking: in motion the wave glides with the continuous anchor, never step
     `wave centre must track the anchor while in motion (p50 ${result.p50}px, max ${result.max}px)`,
   ).toBeLessThanOrEqual(12)
 })
+
+test('stickiness: a settled pick holds through a sub-deadband nudge, then releases past it', async ({
+  page,
+}) => {
+  // polish/spine-pick-feel. Small thumb drift on a settled pick used to deflate the wave
+  // immediately — the motion regime fed the raw anchor every frame with no dead zone. Now the
+  // wave HOLDS at the settled slot's centre until the anchor has moved DEADBAND_FRACTION (0.4) of
+  // the LOCAL slot pitch away from it, then falls straight through to ordinary 1:1 tracking for
+  // the rest of the gesture — this is why the "tracking" test above, which starts its sweep from
+  // a big jump well past any deadband, is untouched by this feature (see its own comment).
+  test.setTimeout(60_000)
+  const c = await setup()
+  const big = c.shelves.find((s) => s.count === 36)!
+  await signInOnce(page)
+  await gotoShelf(page, big.listId, 36)
+
+  const result = await track(page).evaluate(async (el) => {
+    // Every spine title is set in a per-skin webfont — a late font swap changes glyph metrics and
+    // therefore spine (and pitch, and the anchor's amplification factor) width mid-test. Under load
+    // this can land between measuring the correction factor and applying the nudge, staling both;
+    // wait for fonts up front so every geometry read below is against the FINAL layout.
+    await document.fonts.ready
+    const centroid = () => {
+      let num = 0
+      let den = 0
+      for (const s of el.querySelectorAll<HTMLElement>('[data-spine]')) {
+        const excess = s.getBoundingClientRect().width - s.offsetWidth
+        if (excess > 2) {
+          num += excess * (s.offsetLeft + s.offsetWidth / 2)
+          den += excess
+        }
+      }
+      return den > 0 ? num / den : null
+    }
+    // A fixed wait is not a reliable proxy for "settled" — CI's frame scheduling runs slower and
+    // more irregularly than a local machine, so a margin that is generous locally can still land
+    // mid-ease under load. Poll until the centroid stops moving for several consecutive frames
+    // instead of trusting a clock.
+    const settleForReal = async (maxMs: number) => {
+      const t0 = performance.now()
+      let last = centroid()
+      let stable = 0
+      while (performance.now() - t0 < maxMs) {
+        await new Promise((r) => requestAnimationFrame(r))
+        const now = centroid()
+        if (last != null && now != null && Math.abs(now - last) < 0.05) {
+          if (++stable >= 6) return now
+        } else {
+          stable = 0
+        }
+        last = now
+      }
+      return last
+    }
+    el.scrollLeft = Math.round((el.scrollWidth - el.clientWidth) / 2)
+    await settleForReal(3000)
+    const pickedBefore = el.querySelector<HTMLElement>('[data-spine-picked]')!.dataset.spine
+
+    const spines = [...el.querySelectorAll<HTMLElement>('[data-spine]')]
+    const idx = spines.findIndex((s) => s.dataset.spine === pickedBefore)
+    const centreAt = (i: number) => spines[i]!.offsetLeft + spines[i]!.offsetWidth / 2
+    const pitch = Math.min(
+      idx > 0 ? Math.abs(centreAt(idx) - centreAt(idx - 1)) : Infinity,
+      idx < spines.length - 1 ? Math.abs(centreAt(idx + 1) - centreAt(idx)) : Infinity,
+    )
+    // THE SLIDING ANCHOR amplifies scrollLeft deltas into cx deltas by 1 + clientWidth/maxScroll —
+    // deliberately (docs/audits/spine-overlay-clamp.md §4/§6), so the anchor can still reach the
+    // terminal picks despite a clientWidth/2 margin. A caller that moves scrollLeft by X does NOT
+    // move the anchor by X — a scrollLeft nudge meant to land at 15% of pitch in cx space landed at
+    // 37-55% instead here (root cause of two false CI reds: the deadband correctly released a nudge
+    // that LOOKED like 15% in scrollLeft terms but was well past 40% once the anchor amplified it —
+    // a test bug, not a component bug, confirmed by instrumenting stuckRef directly and tracing the
+    // actual cx delta against the intended one). Divide the intended cx-space nudge by the same
+    // factor renderCx's anchor uses, so the delta that actually reaches cx is the one asserted on.
+    const maxScroll = el.scrollWidth - el.clientWidth
+    const ampFactor = maxScroll > 0 ? 1 + el.clientWidth / maxScroll : 1
+    const scrollNudgeFor = (cxFraction: number) => Math.round((pitch * cxFraction) / ampFactor)
+
+    // THE PROBE: exact `transform` strings of the picked slot and its two neighbours each side —
+    // the terms most sensitive to a real cx change (near the Gaussian's peak the picked slot's OWN
+    // transform barely moves with cx; the steeper flanks a slot or two out are where a released
+    // wave shows up first). renderWave's writes are deterministic .toFixed() strings from cx with
+    // no intermediate animation in the motion regime, so held vs moved is a byte-exact comparison —
+    // immune to the aggregate centroid estimator's cross-element weighting noise, which is what
+    // produced two false CI reds (a ~20px "shift" on an untouched wave, on two different runners)
+    // even after the settle-polling fix above: the centroid sums over all 36 elements, so noise
+    // anywhere in that sum reads as motion; a fingerprint of the exact literal style strings has
+    // nothing left to be noisy about.
+    const fingerprint = () =>
+      [idx - 2, idx - 1, idx, idx + 1, idx + 2]
+        .filter((i) => i >= 0 && i < spines.length)
+        .map((i) => spines[i]!.style.transform)
+        .join('|')
+    const before = fingerprint()
+
+    // A nudge at 15% of pitch — comfortably inside the 40% deadband. Poll (short cap, well under
+    // the 140ms idle timeout that would legitimately start a fresh settle) for the fingerprint to
+    // stabilise post-nudge, rather than trusting a fixed frame count — the write is synchronous
+    // within the one rAF the scroll event schedules, so this converges in 1-2 frames regardless of
+    // how slow or bursty the runner's frame scheduling is.
+    const stabiliseFingerprint = async (maxMs: number) => {
+      const t0 = performance.now()
+      let last = fingerprint()
+      let stable = 0
+      while (performance.now() - t0 < maxMs) {
+        await new Promise((r) => requestAnimationFrame(r))
+        const now = fingerprint()
+        if (now === last) {
+          if (++stable >= 3) return now
+        } else {
+          stable = 0
+        }
+        last = now
+      }
+      return last
+    }
+    // Both nudges are ABSOLUTE offsets from this one fixed base — never additive on top of each
+    // other — so the second nudge's displacement is exactly what its own fraction says, with no
+    // cumulative drift from the first (an earlier draft added them, landing the "released" step at
+    // 0.65 of pitch instead of the intended 0.5 — close enough to the pick's own 0.5-pitch flip
+    // boundary to occasionally read confusingly).
+    const baseScrollLeft = el.scrollLeft
+
+    // A nudge at 15% of pitch — comfortably inside the 40% deadband.
+    el.scrollLeft = baseScrollLeft + scrollNudgeFor(0.15)
+    const during = await stabiliseFingerprint(100)
+    const pickedDuring = el.querySelector<HTMLElement>('[data-spine-picked]')!.dataset.spine
+
+    // Then two full pitches out — unambiguously past both the deadband and the pick's own flip
+    // boundary, proving stickiness is a one-shot latch, not a permanent one.
+    el.scrollLeft = baseScrollLeft + scrollNudgeFor(2)
+    const released = await stabiliseFingerprint(100)
+
+    return { pickedBefore, pickedDuring, before, during, released, pitch, ampFactor }
+  })
+
+  expect(result.pickedDuring, 'the pick itself must not change under a sub-deadband nudge').toBe(
+    result.pickedBefore,
+  )
+  expect(
+    result.during,
+    `wave transforms must be byte-identical under a sub-deadband nudge (pitch ${result.pitch}, anchor amplification ${result.ampFactor.toFixed(2)}×)`,
+  ).toBe(result.before)
+  expect(
+    result.released,
+    `wave transforms must change once the deadband is exceeded (pitch ${result.pitch}, anchor amplification ${result.ampFactor.toFixed(2)}×)`,
+  ).not.toBe(result.before)
+})
+
+// polish/spine-pick-feel. The full 9×2 legibility sweep lives in
+// packages/core/src/spinePickRing.contrast.test.ts (keyed off the SKINS registry); the two tests
+// below spot-check that the REPRESENTATIVE cases actually reach the DOM as the right material:
+// aphelion/dark uses its own --ornament-frame (translucent, clears 3:1 on its own), tryst/dark
+// falls back to solid --primary (--ornament-frame alone measures 1.86:1 there — illegible). Each
+// gets its own list (and its own fresh `page`, per Playwright's default) — a single test signing
+// in twice on ONE page hit exactly the class of bug this suite exists to catch: the second
+// `page.goto` of a hash-only auth URL to an already-loaded SPA is a same-document navigation the
+// app's mount-time hash handler never re-fires for, so the second sign-in silently never took.
+type RingCtx = { uid: string; listId: string }
+let ringCtx: RingCtx | null = null
+async function setupRing(): Promise<RingCtx> {
+  if (ringCtx) return ringCtx
+  const admin = createClient(SUPABASE_URL, SERVICE, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  })
+  const EMAIL2 = 'spine-ring-e2e@reverie.local'
+  const PASSWORD2 = 'spine-ring-e2e-password'
+  const { data } = await admin.auth.admin.listUsers()
+  let uid = data?.users?.find((u) => u.email === EMAIL2)?.id
+  if (!uid) {
+    uid = (
+      await okUser(
+        admin.auth.admin.createUser({ email: EMAIL2, password: PASSWORD2, email_confirm: true }),
+        'ring createUser',
+      )
+    ).id
+  }
+  await ok(admin.from('list_items').delete().eq('owner_id', uid), 'ring items delete')
+  await ok(admin.from('lists').delete().eq('owner_id', uid), 'ring lists delete')
+  await ok(admin.from('books').delete().eq('owner_id', uid), 'ring books delete')
+  const rows = Array.from({ length: 2 }, (_, i) => ({
+    owner_id: uid,
+    title: `Ring Probe ${i + 1}`,
+    author_first: 'Nell',
+    author_last: 'Marrow',
+    genre: 'fantasy',
+    status: 'standalone',
+    ownership: 'owned',
+    borrowed: false,
+    wishlist: false,
+    read_status: 'Read',
+    cover_url: `https://covers.reach.test/ring-${i + 1}.jpg`,
+  }))
+  const { error: insertError } = await admin.from('books').insert(rows)
+  if (insertError) throw new Error(`ring seed failed: ${JSON.stringify(insertError)}`)
+  const { data: books } = await admin.from('books').select('id').eq('owner_id', uid).order('title')
+  const bookIds = (books as { id: string }[]).map((b) => b.id)
+  const { data: list, error: listError } = await admin
+    .from('lists')
+    .insert({ owner_id: uid, name: 'Ring Probe', kind: 'collection', sort_order: 1 })
+    .select('id')
+    .single()
+  if (listError || !list) throw new Error(`ring list: ${JSON.stringify(listError)}`)
+  const listId = (list as { id: string }).id
+  await ok(
+    admin
+      .from('list_items')
+      .insert(
+        bookIds.map((id, i) => ({ list_id: listId, book_id: id, owner_id: uid, position: i + 1 })),
+      ),
+    'ring list_items insert',
+  )
+  ringCtx = { uid, listId }
+  return ringCtx
+}
+
+async function readRingRgb(page: Page, skin: string, mode: string) {
+  const { uid, listId } = await setupRing()
+  const admin = createClient(SUPABASE_URL, SERVICE, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  })
+  await ok(
+    admin.from('profiles').upsert({ id: uid, display_name: 'Ring E2E', skin, mode }),
+    `ring profile upsert (${skin}/${mode})`,
+  )
+  const sb = createClient(SUPABASE_URL, ANON)
+  const { data: s, error } = await sb.auth.signInWithPassword({
+    email: 'spine-ring-e2e@reverie.local',
+    password: 'spine-ring-e2e-password',
+  })
+  if (error || !s.session)
+    throw new Error(authFailure('ring', 'spine-ring-e2e@reverie.local', error))
+
+  const png = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+    'base64',
+  )
+  await keepOfflineCacheEmpty(page)
+  await page.addInitScript(() => localStorage.setItem('reverie.onboarded', '1'))
+  await page.route('**covers.reach.test**', (r) =>
+    r.fulfill({ body: png, contentType: 'image/png' }),
+  )
+  for (const p of ['search', 'enrich', 'embed', 'releases', 'series', 'covers'])
+    await page.route(`**/functions/v1/${p}**`, (r) => r.fulfill({ json: {} }))
+  await page.goto(
+    `/#access_token=${s.session.access_token}&refresh_token=${s.session.refresh_token}&expires_in=3600&token_type=bearer&type=magiclink`,
+  )
+  await page.getByRole('button', { name: /enter your library/i }).click({ timeout: 20_000 })
+  await page.goto(`/shelf/${listId}`)
+  await expect(page.locator('[data-spine]')).toHaveCount(2, { timeout: 20_000 })
+  await page.waitForTimeout(500)
+  await page.mouse.move(2, 2)
+  await page.waitForTimeout(120)
+  await track(page).evaluate((el) => {
+    el.scrollLeft = Math.round((el.scrollWidth - el.clientWidth) / 2)
+  })
+  await page.waitForTimeout(500) // past idle + settle
+  return track(page).evaluate(() => {
+    const cover = document.querySelector<HTMLElement>('[data-spine-picked] [data-mag-cover]')!
+    const boxShadow = getComputedStyle(cover).boxShadow
+    // Chromium serialises the same colour as `color(srgb r g b / a)` or `rgba(r, g, b, a)`
+    // depending on context — parse both so the assertion holds across projects.
+    const wide = boxShadow.match(/^color\(srgb ([\d.]+) ([\d.]+) ([\d.]+)(?: \/ ([\d.]+))?\)/)
+    if (wide) {
+      return {
+        r: Math.round(Number(wide[1]) * 255),
+        g: Math.round(Number(wide[2]) * 255),
+        b: Math.round(Number(wide[3]) * 255),
+        a: wide[4] != null ? Number(wide[4]) : 1,
+        raw: boxShadow,
+      }
+    }
+    const std = boxShadow.match(/^rgba?\(([\d.]+),\s*([\d.]+),\s*([\d.]+)(?:,\s*([\d.]+))?\)/)
+    if (std) {
+      return {
+        r: Number(std[1]),
+        g: Number(std[2]),
+        b: Number(std[3]),
+        a: std[4] != null ? Number(std[4]) : 1,
+        raw: boxShadow,
+      }
+    }
+    return { r: -1, g: -1, b: -1, a: -1, raw: boxShadow }
+  })
+}
+
+test('picked-cover ring: aphelion/dark uses its own --ornament-frame (55% of --primary, translucent)', async ({
+  page,
+}) => {
+  test.setTimeout(60_000)
+  const aphelion = await readRingRgb(page, 'aphelion', 'dark')
+  expect(aphelion.raw, 'aphelion/dark ring').toContain('2px')
+  expect(Math.abs(aphelion.r - 79)).toBeLessThanOrEqual(2)
+  expect(Math.abs(aphelion.g - 209)).toBeLessThanOrEqual(2)
+  expect(Math.abs(aphelion.b - 224)).toBeLessThanOrEqual(2)
+  expect(Math.abs(aphelion.a - 0.55)).toBeLessThanOrEqual(0.02)
+})
+
+test('picked-cover ring: tryst/dark falls back to solid --primary (--ornament-frame alone is 1.86:1 there)', async ({
+  page,
+}) => {
+  test.setTimeout(60_000)
+  const tryst = await readRingRgb(page, 'tryst', 'dark')
+  expect(tryst.raw, 'tryst/dark ring').toContain('2px')
+  expect(Math.abs(tryst.r - 224)).toBeLessThanOrEqual(2)
+  expect(Math.abs(tryst.g - 81)).toBeLessThanOrEqual(2)
+  expect(Math.abs(tryst.b - 125)).toBeLessThanOrEqual(2)
+  expect(tryst.a).toBeGreaterThanOrEqual(0.98) // solid, not translucent
+})
