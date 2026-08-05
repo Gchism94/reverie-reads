@@ -39,6 +39,7 @@ const EMAIL = 'spine-reachability-e2e@reverie.local'
 const PASSWORD = 'spine-reachability-e2e-password'
 // Duplicated from SpineShelf deliberately — a silent change to the magnified size should fail here.
 const MAG_W = 120
+const MAG_H = 176
 
 test.describe.configure({ mode: 'serial' })
 
@@ -465,6 +466,169 @@ test('reduced motion: the wave is binary — picked at full scale, the rest exac
   expect(Math.abs(state.pickedW - MAG_W)).toBeLessThanOrEqual(2)
   // The IMMEDIATE neighbour — mid-wave under normal motion — must be exactly at rest.
   expect(Math.abs(state.neighbourVisualW - state.neighbourNaturalW)).toBeLessThanOrEqual(1)
+})
+
+test('cover aspect: the rendered cover box keeps the cover ratio at every visible wave position', async ({
+  page,
+}) => {
+  // fix/spine-magnify-geometry, defect 1. The button's scale is non-uniform by necessity (spine
+  // ratio → cover ratio), and the first implementation let the cover inherit it: every visible
+  // wave position except exactly t=1 rendered the bitmap squat (measured 0.45 vs 0.68 intrinsic
+  // mid-glide) with object-cover then cropping mid-image into the wrong-ratio box. The invariant:
+  // the cover's rendered box holds the 120:176 cover ratio within 1% WHENEVER it is visible —
+  // rest, mid-glide, settled — because object-cover renders the bitmap undistorted exactly when
+  // its box is at the intended ratio.
+  test.setTimeout(120_000)
+  const c = await setup()
+  const big = c.shelves.find((s) => s.count === 36)!
+  await signInOnce(page)
+  await gotoShelf(page, big.listId, 36)
+  const INTRINSIC = MAG_W / MAG_H
+
+  // Settled at an interior pick: exactly full cover size, exact ratio.
+  await track(page).evaluate((el) => {
+    el.scrollLeft = Math.round((el.scrollWidth - el.clientWidth) / 2)
+  })
+  await page.waitForTimeout(450)
+  const settled = await track(page).evaluate((el) => {
+    const cover = el.querySelector<HTMLElement>('[data-spine-picked] [data-mag-cover]')!
+    const r = cover.getBoundingClientRect()
+    return { w: r.width, h: r.height, opacity: getComputedStyle(cover).opacity }
+  })
+  expect(Number(settled.opacity)).toBeGreaterThan(0.95)
+  expect(Math.abs(settled.w - MAG_W), `settled cover width ${settled.w}`).toBeLessThanOrEqual(2)
+  expect(Math.abs(settled.h - MAG_H), `settled cover height ${settled.h}`).toBeLessThanOrEqual(2)
+
+  // Mid-glide: every cover that is at all visible, on every sampled frame of a scripted drag.
+  const glide = await track(page).evaluate(async (el) => {
+    const ratios: number[] = []
+    const max = el.scrollWidth - el.clientWidth
+    for (let x = Math.round(max * 0.25); x <= Math.round(max * 0.6); x += 6) {
+      el.scrollLeft = x
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
+      for (const cov of el.querySelectorAll<HTMLElement>('[data-mag-cover]')) {
+        if (parseFloat(getComputedStyle(cov).opacity) > 0.05) {
+          const r2 = cov.getBoundingClientRect()
+          if (r2.height > 0) ratios.push(r2.width / r2.height)
+        }
+      }
+    }
+    return { n: ratios.length, min: Math.min(...ratios), max: Math.max(...ratios) }
+  })
+  expect(glide.n).toBeGreaterThan(30)
+  expect(
+    Math.abs(glide.min / INTRINSIC - 1),
+    `squattest mid-glide cover ratio ${glide.min.toFixed(4)} vs intrinsic ${INTRINSIC.toFixed(4)}`,
+  ).toBeLessThanOrEqual(0.01)
+  expect(
+    Math.abs(glide.max / INTRINSIC - 1),
+    `stretchiest mid-glide cover ratio ${glide.max.toFixed(4)} vs intrinsic ${INTRINSIC.toFixed(4)}`,
+  ).toBeLessThanOrEqual(0.01)
+
+  // Settled after a POINTER pick (the other settle path): same exact box.
+  const targetId = await track(page).evaluate((el) => {
+    const spines = [...el.querySelectorAll<HTMLElement>('[data-spine]')]
+    const picked = el.querySelector<HTMLElement>('[data-spine-picked]')!
+    const i = spines.indexOf(picked)
+    return spines[i >= 18 ? i - 3 : i + 3]!.dataset.spine!
+  })
+  const spine = page.locator(`[data-spine="${targetId}"]`)
+  if (test.info().project.use.hasTouch) await spine.tap({ timeout: 5_000 })
+  else await spine.hover({ timeout: 5_000 })
+  await page.waitForTimeout(450)
+  await expect.poll(async () => pickedId(page)).toBe(targetId)
+  const tapped = await track(page).evaluate((el) => {
+    const cover = el.querySelector<HTMLElement>('[data-spine-picked] [data-mag-cover]')!
+    const r = cover.getBoundingClientRect()
+    return { w: r.width, h: r.height }
+  })
+  expect(Math.abs(tapped.w - MAG_W), `pointer-picked cover width ${tapped.w}`).toBeLessThanOrEqual(
+    2,
+  )
+  expect(Math.abs(tapped.h - MAG_H), `pointer-picked cover height ${tapped.h}`).toBeLessThanOrEqual(
+    2,
+  )
+})
+
+test('terminal visibility: the magnified box stays inside the VISIBLE track region near both terminals', async ({
+  page,
+}) => {
+  // fix/spine-magnify-geometry, defect 2 — and the green-while-broken lesson: the symmetric
+  // terminal assertion above measures at scrollLeft 0 and scrollLeft max, the ONLY two offsets
+  // where content space and viewport space coincide. The device clip lived at scrollLeft 55–150:
+  // the wave (pinned to the first slot by the #146 terminal clamp) held the magnified box at
+  // content x≈55 while the viewport's left edge scrolled past it — inside the content bounds the
+  // slack guarantees, outside the region the device renders. Everything here is therefore
+  // asserted in VIEWPORT space (getBoundingClientRect, against the track's own client rect) —
+  // the space the screen shows — at rest positions strictly between the exact terminals, and on
+  // every sampled frame of a mid-glide drag through both terminal regions.
+  test.setTimeout(120_000)
+  const c = await setup()
+  const big = c.shelves.find((s) => s.count === 36)!
+  await signInOnce(page)
+  await gotoShelf(page, big.listId, 36)
+  const TOL = 1.5 // sub-pixel transform rounding
+
+  const maxScroll = await track(page).evaluate((el) => el.scrollWidth - el.clientWidth)
+  const restOffsets = [0, 40, 80, 120, maxScroll - 120, maxScroll - 80, maxScroll - 40, maxScroll]
+  for (const x of restOffsets) {
+    await track(page).evaluate((el, sl) => (el.scrollLeft = sl), x)
+    await page.waitForTimeout(450) // past the 140ms idle + 160ms settle
+    const box = await track(page).evaluate((el) => {
+      const picked = el.querySelector<HTMLElement>('[data-spine-picked]')!
+      const pr = picked.getBoundingClientRect()
+      const tr = el.getBoundingClientRect()
+      return { left: pr.left - tr.left, right: pr.right - tr.right, w: pr.width }
+    })
+    expect(
+      box.left,
+      `at rest scrollLeft ${x}: picked box left edge ${box.left.toFixed(1)}px past the visible left edge`,
+    ).toBeGreaterThanOrEqual(-TOL)
+    expect(
+      box.right,
+      `at rest scrollLeft ${x}: picked box right edge ${box.right.toFixed(1)}px past the visible right edge`,
+    ).toBeLessThanOrEqual(TOL)
+  }
+
+  // Mid-glide through both terminal regions: on every sampled frame the MOST-magnified box (the
+  // one pressing hardest on the edge) stays inside the visible region.
+  const glide = await track(page).evaluate(async (el, tol) => {
+    const violations: string[] = []
+    let n = 0
+    const max = el.scrollWidth - el.clientWidth
+    const ranges: [number, number][] = [
+      [0, Math.min(240, max)],
+      [Math.max(0, max - 240), max],
+    ]
+    for (const [from, to] of ranges) {
+      for (let x = from; x <= to; x += 6) {
+        el.scrollLeft = x
+        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
+        const tr = el.getBoundingClientRect()
+        let best: HTMLElement | null = null
+        let bestExcess = 2
+        for (const s of el.querySelectorAll<HTMLElement>('[data-spine]')) {
+          const excess = s.getBoundingClientRect().width - s.offsetWidth
+          if (excess > bestExcess) {
+            bestExcess = excess
+            best = s
+          }
+        }
+        if (!best) continue
+        n++
+        const r = best.getBoundingClientRect()
+        if (r.left - tr.left < -tol) violations.push(`x=${x} left ${(r.left - tr.left).toFixed(1)}`)
+        if (r.right - tr.right > tol)
+          violations.push(`x=${x} right ${(r.right - tr.right).toFixed(1)}`)
+      }
+    }
+    return { n, violations }
+  }, TOL)
+  expect(glide.n).toBeGreaterThan(30)
+  expect(
+    glide.violations,
+    `mid-glide magnified box left the visible region (${glide.violations.length} frames)`,
+  ).toEqual([])
 })
 
 test('tracking: in motion the wave glides with the continuous anchor, never stepping', async ({
