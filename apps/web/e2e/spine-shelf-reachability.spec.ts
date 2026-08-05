@@ -262,14 +262,34 @@ test('per-frame invariance: scrollWidth and scrollHeight never move — sweep, f
   const extremes = await harvestSampler(page)
   expect(extremes.widths, `extreme widths: ${extremes.widths.join()}`).toHaveLength(1)
 
-  // And the magnified terminal item must sit fully INSIDE the track's box — the slack absorbing
-  // it is the mechanism, this is the observable.
-  const overhang = await track(page).evaluate((el) => {
+  // BOTH magnified terminals must sit fully INSIDE the track's box — the slack absorbing them is
+  // the mechanism, this is the observable, and it is asserted SYMMETRICALLY. The first version of
+  // this assertion measured only the RIGHT terminal, which is exactly how the left terminal
+  // shipped able to clip on device (fix/spine-magnify-tracking): the START edge trims overhang
+  // instead of extending scrollWidth, so the invariance sampler is structurally blind there and
+  // only a direct geometric check can see it.
+  await track(page).evaluate((el) => (el.scrollLeft = 0))
+  await expect.poll(async () => pickedId(page)).toBe(big.bookIds[0])
+  await page.waitForTimeout(300) // let the settle animation finish before measuring
+  const leftOverhang = await track(page).evaluate((el) => {
+    const first = el.querySelector<HTMLElement>('[data-spine]')!
+    return Math.round(first.getBoundingClientRect().left - el.getBoundingClientRect().left)
+  })
+  expect(
+    leftOverhang,
+    'magnified LEFT terminal must not cross the start edge',
+  ).toBeGreaterThanOrEqual(0)
+  await track(page).evaluate((el) => (el.scrollLeft = el.scrollWidth))
+  await expect.poll(async () => pickedId(page)).toBe(big.bookIds[35])
+  await page.waitForTimeout(300)
+  const rightOverhang = await track(page).evaluate((el) => {
     const spines = el.querySelectorAll<HTMLElement>('[data-spine]')
     const last = spines[spines.length - 1]!
     return Math.round(last.getBoundingClientRect().right - el.getBoundingClientRect().right)
   })
-  expect(overhang, 'magnified terminal item must not cross the end edge').toBeLessThanOrEqual(0)
+  expect(rightOverhang, 'magnified RIGHT terminal must not cross the end edge').toBeLessThanOrEqual(
+    0,
+  )
 })
 
 test('scroll reach: sweeping picks EVERY book, and the extremes pick the terminals', async ({
@@ -395,15 +415,16 @@ test('magnified geometry: cover scale at the pick, rest density elsewhere, neigh
   expect(geom.leftShift, `left neighbour shift ${geom.leftShift}`).toBeLessThanOrEqual(-4)
   expect(geom.rightShift, `right neighbour shift ${geom.rightShift}`).toBeGreaterThanOrEqual(4)
   // The discriminator is SHARE, not pixel symmetry: hash-varied spine widths make the halves
-  // genuinely unequal (measured sums −28 and −58 across the two projects' fixtures), but under a
-  // correct split BOTH sides carry a meaningful fraction of the displacement, while the
-  // naive-rightward-push mutant sends ~93% of it one way (measured −8 / +105, ratio 0.076).
+  // genuinely unequal (clean ratios observed across projects/seeds: 0.58, 0.29, 0.24), but under
+  // a correct split BOTH sides carry a real fraction of the displacement, while the
+  // naive-rightward-push mutant sends ~93% one way (measured ratios 0.076-0.09). The 0.15 bound
+  // sits between the two regimes with margin on both sides.
   const lo = Math.min(Math.abs(geom.leftShift!), Math.abs(geom.rightShift!))
   const hi = Math.max(Math.abs(geom.leftShift!), Math.abs(geom.rightShift!))
   expect(
     lo / hi,
     `displacement must SPLIT to both sides (left ${geom.leftShift}, right ${geom.rightShift})`,
-  ).toBeGreaterThanOrEqual(0.25)
+  ).toBeGreaterThanOrEqual(0.15)
 
   // …and the displaced immediate neighbour is tappable where it visibly is, opening the NEIGHBOUR
   // (displacement, not burial — the defect class of mechanism two).
@@ -444,4 +465,69 @@ test('reduced motion: the wave is binary — picked at full scale, the rest exac
   expect(Math.abs(state.pickedW - MAG_W)).toBeLessThanOrEqual(2)
   // The IMMEDIATE neighbour — mid-wave under normal motion — must be exactly at rest.
   expect(Math.abs(state.neighbourVisualW - state.neighbourNaturalW)).toBeLessThanOrEqual(1)
+})
+
+test('tracking: in motion the wave glides with the continuous anchor, never stepping', async ({
+  page,
+}) => {
+  // The assertion that would have caught the stepping (fix/spine-magnify-tracking). Under the old
+  // always-on-the-pick centring the wave's centre sat a measured CONSTANT 156px from the anchor
+  // throughout a fling, and stepped slot-to-slot on a drag (p90 deviation 49px, max 147). In the
+  // motion regime the wave follows the continuous anchor in the same frame, so its centroid must
+  // stay within a tight band of the CLAMPED anchor on every sampled mid-motion frame. The 12px
+  // bound is far below half a slot pitch (16-27px), so per-slot stepping cannot pass it.
+  test.setTimeout(120_000)
+  const c = await setup()
+  const big = c.shelves.find((s) => s.count === 36)!
+  await signInOnce(page)
+  await gotoShelf(page, big.listId, 36)
+
+  const result = await track(page).evaluate(async (el) => {
+    const spines = [...el.querySelectorAll<HTMLElement>('[data-spine]')]
+    const firstCentre = spines[0]!.offsetLeft + spines[0]!.offsetWidth / 2
+    const lastEl = spines[spines.length - 1]!
+    const lastCentre = lastEl.offsetLeft + lastEl.offsetWidth / 2
+    const devs: number[] = []
+    // Continuous scripted drag across the middle half of the track, sampling every frame WHILE
+    // scrolling (the motion regime — the settle animation only runs 140ms after the last event).
+    // Samples taken after a STALLED iteration are excluded: if the event loop hiccuped past the
+    // idle window, the settle regime legitimately cut in and the frame measures the wrong regime —
+    // that is scheduling noise, not stepping (it flaked exactly once on clean code under load).
+    const max = el.scrollWidth - el.clientWidth
+    let prev = performance.now()
+    for (let x = Math.round(max * 0.2); x <= Math.round(max * 0.8); x += 5) {
+      el.scrollLeft = x
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
+      const now = performance.now()
+      const stalled = now - prev > 100
+      prev = now
+      if (stalled) continue
+      const maxScroll = el.scrollWidth - el.clientWidth
+      const progress = maxScroll > 0 ? Math.min(1, Math.max(0, el.scrollLeft / maxScroll)) : 0.5
+      const anchor = el.scrollLeft + progress * el.clientWidth
+      const clamped = Math.min(Math.max(anchor, firstCentre), lastCentre)
+      // wave centroid from visual-width excess — the same estimator the audits used
+      let num = 0
+      let den = 0
+      for (const s of spines) {
+        const excess = s.getBoundingClientRect().width - s.offsetWidth
+        if (excess > 2) {
+          num += excess * (s.offsetLeft + s.offsetWidth / 2)
+          den += excess
+        }
+      }
+      if (den > 0) devs.push(Math.abs(num / den - clamped))
+    }
+    devs.sort((a, b) => a - b)
+    return {
+      n: devs.length,
+      p50: Math.round(devs[Math.floor(devs.length * 0.5)]!),
+      max: Math.round(devs[devs.length - 1]!),
+    }
+  })
+  expect(result.n).toBeGreaterThan(50)
+  expect(
+    result.max,
+    `wave centre must track the anchor while in motion (p50 ${result.p50}px, max ${result.max}px)`,
+  ).toBeLessThanOrEqual(12)
 })
