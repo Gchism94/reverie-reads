@@ -362,17 +362,29 @@ test('shared band: stays in the viewport for a lower rail, holds its cover when 
   await signInOnce(page)
   const { left, right } = await multiRail(page, c)
 
-  // Work the LOWER of the two rails after scrolling the page: the band must be on screen to serve
-  // it. Without sticky positioning the band sits at the document's end, far below the fold.
+  // VISIBILITY. Work the rail at the TOP of the document — the one furthest from the band's flow
+  // position, which is after every rail. A non-sticky band would sit thousands of px below here.
+  // (Testing this on a rail NEAR the band proves nothing: the band would be on screen anyway,
+  // which is exactly how the first version of this assertion let a no-sticky mutant survive.)
+  await page.evaluate(() => window.scrollTo(0, 0))
+  await page.waitForTimeout(300)
+  const topRail = page.locator('[data-rail]').first()
+  await topRail.evaluate((el) => (el.scrollLeft = el.scrollWidth))
+  await page.waitForTimeout(400)
+  const bandBox = await page.locator('[data-spine-reveal-band]').evaluate((el) => {
+    const r = el.getBoundingClientRect()
+    return { top: Math.round(r.top), bottom: Math.round(r.bottom), vh: window.innerHeight }
+  })
+  expect(
+    bandBox.top < bandBox.vh && bandBox.bottom > 0,
+    `the band must be on screen while the top rail is worked (${JSON.stringify(bandBox)})`,
+  ).toBe(true)
+
+  // Now the handoff case: give the band to a rail far down the page, then leave.
   await right.rail.scrollIntoViewIfNeeded()
   await page.waitForTimeout(400)
   await right.rail.evaluate((el) => (el.scrollLeft = el.scrollWidth))
   await expect.poll(async () => bandOwner(page)).toBe(right.attr)
-  const onScreen = await page.locator('[data-spine-reveal-band]').evaluate((el) => {
-    const r = el.getBoundingClientRect()
-    return r.top < window.innerHeight && r.bottom > 0
-  })
-  expect(onScreen, 'the band must be visible while a lower rail is being scrolled').toBe(true)
 
   const held = await revealedId(page)
   const caretOpacity = () =>
