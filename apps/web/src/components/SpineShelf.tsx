@@ -104,20 +104,30 @@ export function SpineShelf({
   }
 
   /**
-   * THE CHOREOGRAPHY. Everything READS offset* geometry — layout space, which transforms cannot
+   * THE WAVE RENDERER. Everything READS offset* geometry — layout space, which transforms cannot
    * touch — so the wave can never perturb its own inputs. Everything WRITES transforms and
    * opacities — paint space, which layout cannot see — so the wave can never perturb scrollWidth
    * either, provided every transformed box stays inside the slack (the guard's job to prove).
    *
-   * Magnification centre: the PICKED slot's centre when the pick is pointer-pinned (tap, hover or
-   * focus picked an off-anchor spine), else the sliding anchor itself — the wave tracks the finger
-   * during a scroll and the tapped book when tapped.
+   * The centre `cx` is EXPLICIT, in track content coordinates, because the wave has two regimes
+   * (fix/spine-magnify-tracking — device: "the scroll doesn't keep up", measured as a constant
+   * 156px centre-to-anchor gap during a fling under the old always-on-the-pick centring):
+   *   · IN MOTION the caller passes the continuous sliding anchor, so the wave glides 1:1 with
+   *     the finger inside the same rAF that sampled the scroll — no React round-trip, no stale
+   *     pick (the old path read the pick ref one render early: measured 18-25ms scroll-to-write).
+   *   · AT REST the caller eases the centre onto the picked slot's centre, so every settled state
+   *     still ends with the picked book fully open (t = 1, cross-fade complete) — glide while
+   *     moving, pop when settled.
+   * `cx` is CLAMPED to the terminal slot centres: the anchor formula yields values outside the
+   * content during iOS rubber-band overscroll (scrollLeft < 0 → cx < 0), and a wave centred past
+   * a terminal pushes that terminal's magnified box over the trimmed START edge — the
+   * deterministic left-terminal clip observed on device. Beyond the terminals the wave has
+   * nothing to say.
    *
    * prefers-reduced-motion: the falloff wave is replaced by a binary state — the picked item at
-   * full magnification, everything else exactly at rest, values snapping only when the pick
-   * changes. No intermediate scale/translate wave ever plays.
+   * full magnification, everything else exactly at rest. No intermediate scale/translate wave.
    */
-  const choreograph = (): void => {
+  const renderWave = (cxRaw: number): void => {
     const el = ref.current
     if (!el) return
     const slots = el.querySelectorAll<HTMLElement>('[data-spine]')
@@ -125,21 +135,11 @@ export function SpineShelf({
     if (n === 0) return
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-    // The wave centres on the PICKED slot's own centre — not on the raw anchor. The anchor
-    // CHOOSES the pick (nearest slot), but it can sit up to half a pitch from that slot's centre,
-    // and a wave centred there leaves the picked book at ~70-90% magnification with a half-faded
-    // cover after every scroll settles. Centring on the pick means the picked book is always
-    // fully open (t = 1 exactly, cross-fade complete) and neighbours fall off from IT; during a
-    // scroll the wave's centre steps slot-to-slot as the pick hands over, which is the flip-book
-    // reveal — each book pops open in turn — rather than a glide where nothing is ever fully open.
-    const maxScroll = el.scrollWidth - el.clientWidth
-    const progress = maxScroll > 0 ? Math.min(1, Math.max(0, el.scrollLeft / maxScroll)) : 0.5
-    let cx = el.scrollLeft + progress * el.clientWidth
-    const picked = shownIdRef.current
-    if (picked) {
-      const pickedSlot = el.querySelector<HTMLElement>(`[data-spine="${CSS.escape(picked)}"]`)
-      if (pickedSlot) cx = pickedSlot.offsetLeft + pickedSlot.offsetWidth / 2
-    }
+    const firstCentre = slots[0]!.offsetLeft + slots[0]!.offsetWidth / 2
+    const lastSlot = slots[n - 1]!
+    const lastCentre = lastSlot.offsetLeft + lastSlot.offsetWidth / 2
+    const cx = Math.min(Math.max(cxRaw, firstCentre), lastCentre)
+    waveCxRef.current = cx
 
     // Pass 1: magnification factor and the width each slot's scale visually adds.
     const t = new Array<number>(n)
@@ -189,8 +189,53 @@ export function SpineShelf({
       nodes.cover.style.opacity = String(fade)
     }
   }
-  const choreographRef = useRef(choreograph)
-  choreographRef.current = choreograph
+  const renderWaveRef = useRef(renderWave)
+  renderWaveRef.current = renderWave
+  /** Where the wave currently renders (clamped), for the settle animation's starting point. */
+  const waveCxRef = useRef(0)
+  const settleRafRef = useRef(0)
+  const idleTimerRef = useRef(0)
+
+  /** The continuous sliding anchor, in track content coordinates. */
+  const anchorCx = (el: HTMLElement): number => {
+    const maxScroll = el.scrollWidth - el.clientWidth
+    const progress = maxScroll > 0 ? Math.min(1, Math.max(0, el.scrollLeft / maxScroll)) : 0.5
+    return el.scrollLeft + progress * el.clientWidth
+  }
+
+  /** Ease the wave's centre onto the picked slot — the REST regime. ~160ms cubic ease-out. This
+   *  is the one time constant in the pipeline, and it runs only when scrolling has already
+   *  stopped, so no fling can outrun it; the MOTION regime writes directly, same-frame. Under
+   *  prefers-reduced-motion it snaps. */
+  const settle = (): void => {
+    const el = ref.current
+    const id = shownIdRef.current
+    if (!el || !id) return
+    const slot = el.querySelector<HTMLElement>(`[data-spine="${CSS.escape(id)}"]`)
+    if (!slot) return
+    const target = slot.offsetLeft + slot.offsetWidth / 2
+    cancelAnimationFrame(settleRafRef.current)
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      renderWaveRef.current(target)
+      return
+    }
+    const from = waveCxRef.current
+    if (Math.abs(target - from) < 0.5) {
+      renderWaveRef.current(target)
+      return
+    }
+    const t0 = performance.now()
+    const DURATION = 160
+    const step = (now: number) => {
+      const u = Math.min(1, (now - t0) / DURATION)
+      const eased = 1 - Math.pow(1 - u, 3)
+      renderWaveRef.current(from + (target - from) * eased)
+      if (u < 1) settleRafRef.current = requestAnimationFrame(step)
+    }
+    settleRafRef.current = requestAnimationFrame(step)
+  }
+  const settleRef = useRef(settle)
+  settleRef.current = settle
 
   useEffect(() => {
     const el = ref.current
@@ -199,13 +244,9 @@ export function SpineShelf({
     const update = () => {
       // THE SLIDING ANCHOR (docs/audits/spine-overlay-clamp.md §4/§6), carried over unchanged — a
       // fixed centre anchor can never sit closer than clientWidth/2 to either content edge, so
-      // the first/last ~3 books were never scroll-pickable. Progress maps the anchor across the
-      // viewport: left edge at scrollLeft 0, right edge at max, clamped for iOS rubber-band
-      // overscroll. All distances are OFFSET geometry — transform-independent — so the
-      // magnification wave cannot oscillate its own pick.
-      const maxScroll = el.scrollWidth - el.clientWidth
-      const progress = maxScroll > 0 ? Math.min(1, Math.max(0, el.scrollLeft / maxScroll)) : 0.5
-      const cx = el.scrollLeft + progress * el.clientWidth
+      // the first/last ~3 books were never scroll-pickable. All distances are OFFSET geometry —
+      // transform-independent — so the magnification wave cannot oscillate its own pick.
+      const cx = anchorCx(el)
       let best: string | null = null
       let bd = Infinity
       el.querySelectorAll<HTMLElement>('[data-spine]').forEach((s) => {
@@ -216,31 +257,49 @@ export function SpineShelf({
         }
       })
       setActiveId(best)
-      choreographRef.current()
+      // MOTION REGIME: the wave follows the continuous anchor in the SAME frame the scroll was
+      // sampled — not the pick, which lives a React render away (the stale-pick path measured
+      // 18-25ms scroll-to-write and a wave frozen 156px behind a fling).
+      cancelAnimationFrame(settleRafRef.current)
+      renderWaveRef.current(cx)
+      // REST REGIME, armed per scroll burst: when no scroll event lands for 140ms the gesture is
+      // over, and the wave eases onto the picked slot so the settled state ends fully open.
+      window.clearTimeout(idleTimerRef.current)
+      idleTimerRef.current = window.setTimeout(() => settleRef.current(), 140)
     }
     const onScroll = () => {
       cancelAnimationFrame(raf)
       raf = requestAnimationFrame(update)
     }
     el.addEventListener('scroll', onScroll, { passive: true })
+    // Initial mount: render at the anchor once so the row is never bare, then settle onto the
+    // initial pick.
+    renderWaveRef.current(anchorCx(el))
     update()
     setPointerId(null)
     return () => {
       el.removeEventListener('scroll', onScroll)
       cancelAnimationFrame(raf)
+      cancelAnimationFrame(settleRafRef.current)
+      window.clearTimeout(idleTimerRef.current)
     }
   }, [books])
 
-  // Pointer picks move the wave's centre without a scroll event; re-choreograph in the same frame
-  // the pick's aria flips, so the magnified state and the accessible state agree.
+  // Pointer picks (hover, tap, :focus-visible) move the pick without a scroll event — settle the
+  // wave onto the new pick in the same frame its aria flips, so the magnified state and the
+  // accessible state agree.
   useLayoutEffect(() => {
-    choreographRef.current()
+    settleRef.current()
   }, [shownId, books])
 
   return (
     <div
       ref={ref}
-      className="flex items-end gap-1.5 overflow-x-auto pb-4 pt-4"
+      // `relative` so the track is its slots' offsetParent: every offsetLeft in the pick and wave
+      // arithmetic is then in the SAME track-content coordinate space as scrollLeft. Without it,
+      // offsets were measured from <main> — a systematic ~16px (section padding) frame mismatch
+      // between slot centres and the anchor, found while measuring the tracking defect.
+      className="relative flex items-end gap-1.5 overflow-x-auto pb-4 pt-4"
       style={{ scrollbarWidth: 'none' }}
       // MOUSE-ONLY, matching onPointerEnter's condition below. Touch pointers are transient: the
       // browser fires a full pointerleave chain after EVERY tap-release (measured in Chromium's
