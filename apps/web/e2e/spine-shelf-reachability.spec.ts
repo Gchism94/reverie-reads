@@ -4,39 +4,31 @@ import { authFailure } from './support/authError'
 import { keepOfflineCacheEmpty } from './support/offlineCache'
 import { ok, okUser } from './support/ok'
 
-// THE NEW ASSERTION CLASS — REACHABILITY: every book on a shelf has some gesture path to being
-// revealed AND opened. docs/audits/spine-overlay-clamp.md's key finding was that three audits in
-// a row measured whether SCROLLING covers the track (it does) while nobody measured whether the
-// PICK covers the shelf (it didn't): the fixed centre anchor could never sit closer than
-// clientWidth/2 to either content edge, so the first/last ~3 books of every scrolling shelf were
-// permanently un-pickable — and on tiny shelves the 120px reveal buried its sibling's entire tap
-// target, leaving that book with NO touch path at all. Both defects are now structurally
-// impossible: the sliding anchor reaches every slot, and the reveal has left the row entirely for
-// the page's shared band (docs/tasks/task-spine-reveal-band.md), so nothing can bury a spine.
+// REACHABILITY + INVARIANCE for the in-row magnification shelf (fix/spine-inrow-magnify).
+//
+// The failure history this suite guards, in one paragraph: the reveal's first mechanism (in-flow
+// swap) mutated scrollWidth mid-gesture so momentum computed against a moving track; the second
+// (absolute overlay) buried siblings' tap targets by construction; the third (shared sticky band)
+// was rejected on device for divorcing the reveal from the shelf. The fourth — dock-style
+// transform choreography with RESERVED SLACK — is only sound if two things hold forever: layout
+// never moves (per-frame scrollWidth constancy, because in Blink/WebKit a transformed box crossing
+// the END edge extends scrollable overflow, CSSWG #9458), and nothing is ever buried (displaced
+// neighbours stay tappable where they visibly are). Those are exactly the assertions here.
 //
 // What is asserted, per shelf size {1, 2, 3, 6, 36}:
-//   · SCROLL REACH (scrolling shelves): sweeping scrollLeft 0→max makes EVERY book the pick at
-//     some position, and the exact extremes pick the exact terminal books.
-//   · TAP REACH (all shelves): every spine is genuinely hittable — real coordinate clicks, which
-//     hit-test like a finger and FAIL on a buried target (dispatchEvent would pass through an
-//     occluder and prove nothing) — and the reveal it produces can then be opened.
-//   · TRACK WIDTH (folded in from the deleted invariant guard): the track's scrollWidth does not
-//     change across pick transitions. That invariant is now true by construction rather than by
-//     design — nothing is rendered in the track per pick at all — but it is the property whose
-//     violation started this whole arc, so it keeps an assertion.
-//   · SHARED BAND OWNERSHIP (multi-rail /shelves): the one band on the page follows the
-//     last-touched rail, holds its cover when that rail leaves the viewport, and never changes
-//     height. Every pre-existing fixture here is a SINGLE-rail page, where shared and per-rail
-//     rendering are indistinguishable — so an ownership bug was invisible to this entire suite
-//     until the multi-rail fixture below.
-//
-// Environment honesty: this proves reachability under synthetic input — coordinates, hit-testing,
-// and pick arithmetic. It does not prove the *feel* of the sliding anchor under a real finger.
-// One earlier belief was falsified while building this: Chromium's touch emulation DOES fire a
-// full pointerleave chain after tap-release (an instrumented probe logged it reaching the track),
-// which is why onPointerLeave's clear is now mouse-only — tap-to-OPEN was racing the leave's
-// state flush against the tap's trailing click. iOS's exact ordering is still a device check,
-// named in the branch report, but the fix makes the answer non-load-bearing.
+//   · PER-FRAME INVARIANCE (the load-bearing one): scrollWidth and scrollHeight sampled every
+//     animation frame across a scripted end-to-end sweep AND a real-momentum CDP fling AND pick
+//     transitions at both extremes — a single value each, to the pixel.
+//   · SCROLL REACH: sweeping scrollLeft 0→max makes EVERY book the pick, and the exact extremes
+//     pick the exact terminal books (the sliding anchor, carried through all three mechanisms).
+//   · TAP REACH: every spine is hittable by REAL coordinate taps (which fail on a buried target —
+//     dispatchEvent passes through occluders and proves nothing) and opens its own book.
+//   · MAGNIFIED GEOMETRY: the picked spine's transformed box reaches cover scale; a spine far
+//     from the anchor rests within ±1px of its natural width (density: the shelf still reads as
+//     a shelf); the displaced immediate neighbour of a magnified pick is tappable and opens the
+//     NEIGHBOUR.
+//   · REDUCED MOTION: under prefers-reduced-motion the wave is binary — picked at full scale,
+//     everything else exactly at rest.
 
 const SUPABASE_URL = 'http://127.0.0.1:55321'
 const ANON =
@@ -45,6 +37,8 @@ const SERVICE =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU'
 const EMAIL = 'spine-reachability-e2e@reverie.local'
 const PASSWORD = 'spine-reachability-e2e-password'
+// Duplicated from SpineShelf deliberately — a silent change to the magnified size should fail here.
+const MAG_W = 120
 
 test.describe.configure({ mode: 'serial' })
 
@@ -79,7 +73,7 @@ async function setup(): Promise<Ctx> {
   await ok(admin.from('lists').delete().eq('owner_id', uid), 'reachability lists delete')
   await ok(admin.from('books').delete().eq('owner_id', uid), 'reachability books delete')
 
-  const rows = Array.from({ length: 80 }, (_, i) => ({
+  const rows = Array.from({ length: 36 }, (_, i) => ({
     owner_id: uid,
     title: `Reach Probe ${String(i + 1).padStart(2, '0')}`,
     author_first: 'Nell',
@@ -99,18 +93,8 @@ async function setup(): Promise<Ctx> {
 
   const shelves: Ctx['shelves'] = []
   let sort = 0
-  // 1/2/3/6/36 are the single-page reachability fixtures. LEFT and RIGHT are DISJOINT slices, used
-  // only by the multi-rail ownership tests: with overlapping rails a band showing "the right book"
-  // proves nothing, because both rails can legitimately pick the same title.
-  // 40 books each, so both rails OVERFLOW at the desktop project's 1280px too — a rail that fits
-  // its viewport has zero scroll range, fires no scroll event, and cannot claim the band, which
-  // would make this suite silently untested on `rest` rather than failing.
-  const slices: Record<string, [number, number]> = {
-    'Reach Left': [0, 40],
-    'Reach Right': [40, 80],
-  }
-  for (const count of [1, 2, 3, 6, 36, 'Reach Left', 'Reach Right'] as const) {
-    const name = typeof count === 'number' ? `Reach ${count}` : count
+  for (const count of [1, 2, 3, 6, 36]) {
+    const name = `Reach ${count}`
     const { data: list, error: listError } = await admin
       .from('lists')
       .insert({ owner_id: uid, name, kind: 'collection', sort_order: ++sort })
@@ -118,8 +102,7 @@ async function setup(): Promise<Ctx> {
       .single()
     if (listError || !list) throw new Error(`reachability list: ${JSON.stringify(listError)}`)
     const listId = (list as { id: string }).id
-    const slice = typeof count === 'number' ? ([0, count] as const) : slices[count]!
-    const bookIds = ids.slice(slice[0], slice[1])
+    const bookIds = ids.slice(0, count)
     await ok(
       admin.from('list_items').insert(
         bookIds.map((id, i) => ({
@@ -131,7 +114,7 @@ async function setup(): Promise<Ctx> {
       ),
       'reachability list_items insert',
     )
-    shelves.push({ name, listId, count: bookIds.length, bookIds })
+    shelves.push({ name, listId, count, bookIds })
   }
   const sb = createClient(SUPABASE_URL, ANON)
   const { data: s, error } = await sb.auth.signInWithPassword({ email: EMAIL, password: PASSWORD })
@@ -164,10 +147,8 @@ async function gotoShelf(page: Page, listId: string, count: number) {
   await page.goto(`/shelf/${listId}`)
   await expect(page.locator('[data-spine]')).toHaveCount(count, { timeout: 20_000 })
   await page.waitForTimeout(500)
-  // Park the cursor off the shelf. Playwright's click leaves the mouse hovering where it last
-  // clicked, and a hover PINS the reveal (onPointerEnter, mouse → pointerId) — by design for real
-  // mouse users, but here it would freeze the reveal against every scroll-driven assertion that
-  // follows. This is test hygiene, not a workaround for a defect.
+  // Park the cursor off the shelf: a hover PINS the pick (onPointerEnter, mouse), by design for
+  // real mouse users, and Playwright's click leaves the mouse where it last clicked.
   await page.mouse.move(2, 2)
   await page.waitForTimeout(120)
 }
@@ -178,10 +159,120 @@ const track = (page: Page) =>
     .first()
     .locator('xpath=ancestor::div[contains(@class,"overflow-x-auto")]')
 
-const revealedId = (page: Page) =>
-  page.locator('[data-spine-reveal]').getAttribute('data-spine-reveal')
+const pickedId = (page: Page) => page.locator('[data-spine-picked]').getAttribute('data-spine')
 
-test('scroll reach: sweeping the 36-book shelf picks EVERY book, and the extremes pick the terminals', async ({
+/** Arm a per-animation-frame sampler of the track's scrollWidth/scrollHeight. */
+async function armSampler(page: Page) {
+  await page.evaluate(() => {
+    const el = [...document.querySelectorAll<HTMLElement>('div')].find(
+      (d) => getComputedStyle(d).overflowX === 'auto' && d.querySelector('[data-spine]'),
+    )!
+    const w = window as unknown as { __frames: [number, number][]; __stop: boolean }
+    w.__frames = []
+    w.__stop = false
+    const tick = () => {
+      if (w.__stop) return
+      w.__frames.push([el.scrollWidth, el.scrollHeight])
+      requestAnimationFrame(tick)
+    }
+    requestAnimationFrame(tick)
+  })
+}
+
+async function harvestSampler(page: Page) {
+  return page.evaluate(() => {
+    const w = window as unknown as { __frames: [number, number][]; __stop: boolean }
+    w.__stop = true
+    return {
+      frames: w.__frames.length,
+      widths: [...new Set(w.__frames.map((f) => f[0]))],
+      heights: [...new Set(w.__frames.map((f) => f[1]))],
+    }
+  })
+}
+
+test('per-frame invariance: scrollWidth and scrollHeight never move — sweep, fling, extremes', async ({
+  page,
+}) => {
+  test.setTimeout(180_000)
+  const c = await setup()
+  const big = c.shelves.find((s) => s.count === 36)!
+  await signInOnce(page)
+  await gotoShelf(page, big.listId, 36)
+
+  // Scripted end-to-end sweep and back, sampling every frame. The magnification wave crosses
+  // every slot boundary twice; any transformed box escaping the reserved slack shows up as a
+  // second width value.
+  await armSampler(page)
+  await track(page).evaluate(async (el) => {
+    const max = el.scrollWidth - el.clientWidth
+    for (let x = 0; x <= max; x += 6) {
+      el.scrollLeft = x
+      await new Promise((r) => requestAnimationFrame(r))
+    }
+    for (let x = max; x >= 0; x -= 6) {
+      el.scrollLeft = x
+      await new Promise((r) => requestAnimationFrame(r))
+    }
+  })
+  const sweep = await harvestSampler(page)
+  expect(sweep.frames).toBeGreaterThan(100)
+  expect(sweep.widths, `sweep widths: ${sweep.widths.join()}`).toHaveLength(1)
+  expect(sweep.heights, `sweep heights: ${sweep.heights.join()}`).toHaveLength(1)
+
+  // A real-momentum fling (the gesture-audit method): CDP synthesizes the touch drag and the
+  // compositor continues with momentum. This is the exact gesture class the first mechanism broke.
+  const y = await track(page).evaluate((el) => {
+    const r = el.getBoundingClientRect()
+    return Math.round(r.y + r.height / 2)
+  })
+  const cdp = await page.context().newCDPSession(page)
+  await armSampler(page)
+  await cdp.send('Input.synthesizeScrollGesture', {
+    x: 200,
+    y,
+    xDistance: -300,
+    yDistance: 0,
+    speed: 2500,
+    preventFling: false,
+    gestureSourceType: 'touch',
+  })
+  await page.waitForTimeout(1500)
+  await cdp.send('Input.synthesizeScrollGesture', {
+    x: 200,
+    y,
+    xDistance: 300,
+    yDistance: 0,
+    speed: 2500,
+    preventFling: false,
+    gestureSourceType: 'touch',
+  })
+  await page.waitForTimeout(1500)
+  const fling = await harvestSampler(page)
+  expect(fling.frames).toBeGreaterThan(50)
+  expect(fling.widths, `fling widths: ${fling.widths.join()}`).toHaveLength(1)
+  expect(fling.widths[0], 'fling and sweep must see the same track').toBe(sweep.widths[0])
+
+  // Pick transitions at both extremes — where the magnified boxes press hardest on the edges.
+  await armSampler(page)
+  await track(page).evaluate((el) => (el.scrollLeft = 0))
+  await expect.poll(async () => pickedId(page)).toBe(big.bookIds[0])
+  await track(page).evaluate((el) => (el.scrollLeft = el.scrollWidth))
+  await expect.poll(async () => pickedId(page)).toBe(big.bookIds[35])
+  const extremes = await harvestSampler(page)
+  expect(extremes.widths, `extreme widths: ${extremes.widths.join()}`).toHaveLength(1)
+
+  // And the magnified terminal item must sit fully INSIDE the track's box — the slack absorbing
+  // it is the mechanism, this is the observable.
+  const overhang = await track(page).evaluate((el) => {
+    const spines = el.querySelectorAll<HTMLElement>('[data-spine]')
+    const last = spines[spines.length - 1]!
+    return Math.round(last.getBoundingClientRect().right - el.getBoundingClientRect().right)
+  })
+  expect(overhang, 'magnified terminal item must not cross the end edge').toBeLessThanOrEqual(0)
+})
+
+test('scroll reach: sweeping picks EVERY book, and the extremes pick the terminals', async ({
   page,
 }) => {
   test.setTimeout(120_000)
@@ -190,15 +281,11 @@ test('scroll reach: sweeping the 36-book shelf picks EVERY book, and the extreme
   await signInOnce(page)
   await gotoShelf(page, big.listId, 36)
 
-  // Exact extremes first: scrollLeft 0 must pick the FIRST book, max the LAST — the two positions
-  // the old centre anchor could never satisfy (it picked index 3 and 32; audit §4).
   await track(page).evaluate((el) => (el.scrollLeft = 0))
-  await expect.poll(async () => revealedId(page)).toBe(big.bookIds[0])
+  await expect.poll(async () => pickedId(page)).toBe(big.bookIds[0])
   await track(page).evaluate((el) => (el.scrollLeft = el.scrollWidth))
-  await expect.poll(async () => revealedId(page)).toBe(big.bookIds[35])
+  await expect.poll(async () => pickedId(page)).toBe(big.bookIds[35])
 
-  // Full sweep: fine steps across [0, max]; every book id must appear as the pick. Step count is
-  // generous (3x the book count) so a book whose pick-window is a few px cannot be stepped over.
   const seen = await track(page).evaluate(async (el) => {
     const out = new Set<string>()
     const max = el.scrollWidth - el.clientWidth
@@ -206,7 +293,7 @@ test('scroll reach: sweeping the 36-book shelf picks EVERY book, and the extreme
     for (let i = 0; i <= steps; i++) {
       el.scrollLeft = Math.round((max * i) / steps)
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
-      const id = document.querySelector<HTMLElement>('[data-spine-reveal]')?.dataset.spineReveal
+      const id = el.querySelector<HTMLElement>('[data-spine-picked]')?.dataset.spine
       if (id) out.add(id)
     }
     return [...out]
@@ -214,10 +301,11 @@ test('scroll reach: sweeping the 36-book shelf picks EVERY book, and the extreme
   const missing = big.bookIds.filter((id) => !seen.includes(id))
   expect(missing, `books never scroll-picked (count ${missing.length})`).toEqual([])
 
-  // The scroll-picked terminal book OPENS from its reveal — reach means revealed AND openable.
+  // The scroll-picked terminal book OPENS from its magnified state — reach means picked AND
+  // openable. The picked button IS the tap target now (one element per book).
   await track(page).evaluate((el) => (el.scrollLeft = el.scrollWidth))
-  await expect.poll(async () => revealedId(page)).toBe(big.bookIds[35])
-  await page.locator('[data-spine-reveal]').click()
+  await expect.poll(async () => pickedId(page)).toBe(big.bookIds[35])
+  await page.locator('[data-spine-picked]').click({ timeout: 5_000 })
   await expect(page).toHaveURL(new RegExp(`/book/${big.bookIds[35]}`))
 })
 
@@ -228,15 +316,13 @@ test('tap reach: on every tiny shelf, EVERY spine is hittable and its book opens
   const c = await setup()
   await signInOnce(page)
 
-  // On the mobile project a real tap() (no hover) exercises the touch path: first tap reveals,
-  // second opens. On desktop, click() hovers first — the hover itself reveals, so one click can
-  // open directly. Both are legitimate gesture paths; the branch below accepts whichever ran and
-  // pins the destination either way. What both share, and what the mutant must break: the
-  // interaction is a REAL coordinate hit-test, so a buried spine (a sibling's reveal painted over
-  // its whole tap target) throws on interception — exactly the reachability failure this guard
-  // exists to catch. Short timeouts keep a mutant run's failure fast.
+  // Real coordinate taps/clicks hit-test like a finger: a buried spine throws on interception,
+  // which is exactly the reachability failure this exists to catch (and exactly what the
+  // wrapper-transform draft of this mechanism DID fail before the transform moved to the button —
+  // the button's reported box disagreed with its visuals, and the runner aimed at a spot the
+  // magnified neighbour painted over). Short timeouts keep a mutant run's failure fast.
   const hasTouch = !!test.info().project.use.hasTouch
-  for (const shelf of c.shelves.filter((s) => /^Reach \d+$/.test(s.name) && s.count <= 6)) {
+  for (const shelf of c.shelves.filter((s) => s.count <= 6)) {
     for (const bookId of shelf.bookIds) {
       await gotoShelf(page, shelf.listId, shelf.count)
       const spine = page.locator(`[data-spine="${bookId}"]`)
@@ -244,181 +330,118 @@ test('tap reach: on every tiny shelf, EVERY spine is hittable and its book opens
       else await spine.click({ timeout: 5_000 })
       await page.waitForTimeout(200)
       if (!/\/book\//.test(page.url())) {
-        await expect.poll(async () => revealedId(page)).toBe(bookId)
-        const overlay = page.locator('[data-spine-reveal]')
-        if (hasTouch) await overlay.tap({ timeout: 5_000 })
-        else await overlay.click({ timeout: 5_000 })
+        await expect.poll(async () => pickedId(page)).toBe(bookId)
+        // Second activation of the SAME element opens — one element per book again.
+        if (hasTouch) await spine.tap({ timeout: 5_000 })
+        else await spine.click({ timeout: 5_000 })
       }
       await expect(page).toHaveURL(new RegExp(`/book/${bookId}`), { timeout: 10_000 })
     }
   }
 })
 
-test('track width does not change across pick transitions', async ({ page }) => {
-  // Folded in from the deleted spine-shelf-invariant.spec.ts. That file's other assertions —
-  // clamp bounds, slot-vs-container anchoring — described machinery this branch removed, and a
-  // guard that passes because it tests nothing is the failure mode this arc exists to name. The
-  // width invariant itself survives: it is what the original defect violated (the in-flow reveal
-  // breathed the track 70-80px mid-gesture, docs/audits/mobile-shelf-interaction.md), and it is
-  // now true by construction because nothing renders in the track per pick at all.
+test('magnified geometry: cover scale at the pick, rest density elsewhere, neighbours tappable', async ({
+  page,
+}) => {
   test.setTimeout(120_000)
   const c = await setup()
-  const big = c.shelves.find((s) => s.name === 'Reach 36')!
+  const big = c.shelves.find((s) => s.count === 36)!
   await signInOnce(page)
   await gotoShelf(page, big.listId, 36)
 
-  const widths = await track(page).evaluate(async (el) => {
-    const out: number[] = []
-    const max = el.scrollWidth - el.clientWidth
-    for (let i = 0; i <= 24; i++) {
-      el.scrollLeft = Math.round((max * i) / 24)
-      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
-      out.push(el.scrollWidth)
+  // Anchor mid-track so the wave is fully interior.
+  await track(page).evaluate((el) => {
+    el.scrollLeft = Math.round((el.scrollWidth - el.clientWidth) / 2)
+  })
+  await page.waitForTimeout(400)
+  const geom = await track(page).evaluate((el) => {
+    const picked = el.querySelector<HTMLElement>('[data-spine-picked]')!
+    const spines = [...el.querySelectorAll<HTMLElement>('[data-spine]')]
+    const iPicked = spines.indexOf(picked)
+    const far = spines[iPicked >= 18 ? iPicked - 10 : iPicked + 10]!
+    const neighbour = spines[iPicked + 1] ?? spines[iPicked - 1]!
+    const trackRect = el.getBoundingClientRect()
+    // visual-vs-natural centre shift of the two immediate neighbours, sign included
+    const shift = (sp: HTMLElement) => {
+      const r = sp.getBoundingClientRect()
+      const visualCentre = r.left + r.width / 2
+      const naturalCentre = trackRect.left - el.scrollLeft + sp.offsetLeft + sp.offsetWidth / 2
+      return Math.round(visualCentre - naturalCentre)
     }
-    return out
+    return {
+      pickedVisualW: Math.round(picked.getBoundingClientRect().width),
+      farVisualW: far.getBoundingClientRect().width,
+      farNaturalW: far.offsetWidth,
+      neighbourId: neighbour.dataset.spine!,
+      leftShift: iPicked > 0 ? shift(spines[iPicked - 1]!) : null,
+      rightShift: iPicked < spines.length - 1 ? shift(spines[iPicked + 1]!) : null,
+    }
   })
+  // The picked spine reaches cover scale (rounding tolerance 2px)…
   expect(
-    new Set(widths).size,
-    `track width moved across picks: ${[...new Set(widths)].join()}`,
-  ).toBe(1)
-})
+    Math.abs(geom.pickedVisualW - MAG_W),
+    `picked width ${geom.pickedVisualW}`,
+  ).toBeLessThanOrEqual(2)
+  // …a spine 10 slots away rests at natural width ±1px (density holds)…
+  expect(
+    Math.abs(geom.farVisualW - geom.farNaturalW),
+    `rest width ${geom.farVisualW} vs natural ${geom.farNaturalW}`,
+  ).toBeLessThanOrEqual(1)
+  // …displacement SPLITS around the pick: the left neighbour moves LEFT and the right neighbour
+  // moves RIGHT. This is asserted directly rather than via scrollWidth because the reserved slack
+  // is deliberately generous (96px) — generous enough that even a fully one-sided push can hide
+  // inside it, which a mutant run proved: naive rightward displacement SURVIVED the invariance
+  // assertion. Symmetry is the property; this is its direct observation.
+  expect(geom.leftShift, `left neighbour shift ${geom.leftShift}`).toBeLessThanOrEqual(-4)
+  expect(geom.rightShift, `right neighbour shift ${geom.rightShift}`).toBeGreaterThanOrEqual(4)
+  // The discriminator is SHARE, not pixel symmetry: hash-varied spine widths make the halves
+  // genuinely unequal (measured sums −28 and −58 across the two projects' fixtures), but under a
+  // correct split BOTH sides carry a meaningful fraction of the displacement, while the
+  // naive-rightward-push mutant sends ~93% of it one way (measured −8 / +105, ratio 0.076).
+  const lo = Math.min(Math.abs(geom.leftShift!), Math.abs(geom.rightShift!))
+  const hi = Math.max(Math.abs(geom.leftShift!), Math.abs(geom.rightShift!))
+  expect(
+    lo / hi,
+    `displacement must SPLIT to both sides (left ${geom.leftShift}, right ${geom.rightShift})`,
+  ).toBeGreaterThanOrEqual(0.25)
 
-/** The two disjoint collection rails on /shelves, as { railAttr, bookIds } pairs. */
-async function multiRail(page: Page, c: Ctx) {
-  await page.goto('/shelves')
-  await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 20_000 })
-  // Collections are behind a disclosure that APPENDS its rails to the same document.
-  const disclosure = page.getByRole('button', { name: /^Collections$/i })
-  if (await disclosure.count()) await disclosure.first().click()
-  await page.waitForTimeout(1200)
-  await page.mouse.move(2, 2)
-  await page.waitForTimeout(150)
-
-  // Match a rail by its EXACT spine set, not by "contains book X": /shelves stacks the derived
-  // rails above the collections and every fixture collection is a slice of the same 36 books, so
-  // any single book appears in half a dozen rails. The disjoint 12-book slices are unique as sets.
-  const pick = async (name: string) => {
-    const shelf = c.shelves.find((s) => s.name === name)!
-    const attr = await page.evaluate((want: string[]) => {
-      const rails = [...document.querySelectorAll<HTMLElement>('[data-rail]')]
-      const target = rails.find((r) => {
-        const ids = [...r.querySelectorAll<HTMLElement>('[data-spine]')].map((s) => s.dataset.spine)
-        return ids.length === want.length && want.every((w) => ids.includes(w))
-      })
-      return target?.dataset.rail ?? null
-    }, shelf.bookIds)
-    if (!attr) throw new Error(`no rail on /shelves holds exactly the books of "${name}"`)
-    return { attr, books: shelf.bookIds, rail: page.locator(`[data-rail="${attr}"]`) }
+  // …and the displaced immediate neighbour is tappable where it visibly is, opening the NEIGHBOUR
+  // (displacement, not burial — the defect class of mechanism two).
+  const neighbourId = geom.neighbourId
+  const spine = page.locator(`[data-spine="${neighbourId}"]`)
+  await spine.click({ timeout: 5_000 })
+  await page.waitForTimeout(200)
+  if (!/\/book\//.test(page.url())) {
+    await expect.poll(async () => pickedId(page)).toBe(neighbourId)
+    await spine.click({ timeout: 5_000 })
   }
-  return { left: await pick('Reach Left'), right: await pick('Reach Right') }
-}
-
-const bandOwner = (page: Page) =>
-  page.locator('[data-spine-reveal-band]').getAttribute('data-band-owner')
-const bandHeight = (page: Page) =>
-  page
-    .locator('[data-spine-reveal-band]')
-    .evaluate((el) => Math.round(el.getBoundingClientRect().height))
-
-test('shared band: one per page, owned by the last-touched rail, constant height', async ({
-  page,
-}) => {
-  test.setTimeout(180_000)
-  const c = await setup()
-  await signInOnce(page)
-  const { left, right } = await multiRail(page, c)
-
-  // ONE band for the whole page. Per-rail rendering — the shape this branch replaced — puts one
-  // band under every rail, and this is the assertion that catches it.
-  await expect(page.locator('[data-spine-reveal-band]')).toHaveCount(1)
-  const h0 = await bandHeight(page)
-
-  // Rail A: scrolling it hands it the band, and the cover is one of ITS books. The two rails hold
-  // disjoint books, so "a book from the right set" cannot be satisfied by the wrong rail.
-  await left.rail.evaluate((el) => (el.scrollLeft = el.scrollWidth))
-  await expect
-    .poll(async () => bandOwner(page), { message: 'rail A must own the band' })
-    .toBe(left.attr)
-  expect(left.books, 'band shows a book from rail A').toContain(await revealedId(page))
-  const h1 = await bandHeight(page)
-
-  // Rail B: last-touched-wins hands the band over.
-  await right.rail.evaluate((el) => (el.scrollLeft = el.scrollWidth))
-  await expect
-    .poll(async () => bandOwner(page), { message: 'rail B must own the band' })
-    .toBe(right.attr)
-  expect(right.books, 'band shows a book from rail B').toContain(await revealedId(page))
-  const h2 = await bandHeight(page)
-
-  expect([h0, h1, h2], 'band height must not move across ownership changes').toEqual([h0, h0, h0])
-  await expect(page.locator('[data-spine-reveal-band]')).toHaveCount(1)
+  await expect(page).toHaveURL(new RegExp(`/book/${neighbourId}`), { timeout: 10_000 })
 })
 
-test('shared band: stays in the viewport for a lower rail, holds its cover when its rail leaves, withdraws the caret', async ({
+test('reduced motion: the wave is binary — picked at full scale, the rest exactly at rest', async ({
   page,
 }) => {
-  test.setTimeout(180_000)
   const c = await setup()
+  const big = c.shelves.find((s) => s.count === 36)!
+  await page.emulateMedia({ reducedMotion: 'reduce' })
   await signInOnce(page)
-  const { left, right } = await multiRail(page, c)
-
-  // VISIBILITY. Work the rail at the TOP of the document — the one furthest from the band's flow
-  // position, which is after every rail. A non-sticky band would sit thousands of px below here.
-  // (Testing this on a rail NEAR the band proves nothing: the band would be on screen anyway,
-  // which is exactly how the first version of this assertion let a no-sticky mutant survive.)
-  await page.evaluate(() => window.scrollTo(0, 0))
-  await page.waitForTimeout(300)
-  const topRail = page.locator('[data-rail]').first()
-  await topRail.evaluate((el) => (el.scrollLeft = el.scrollWidth))
-  await page.waitForTimeout(400)
-  const bandBox = await page.locator('[data-spine-reveal-band]').evaluate((el) => {
-    const r = el.getBoundingClientRect()
-    return { top: Math.round(r.top), bottom: Math.round(r.bottom), vh: window.innerHeight }
+  await gotoShelf(page, big.listId, 36)
+  await track(page).evaluate((el) => {
+    el.scrollLeft = Math.round((el.scrollWidth - el.clientWidth) / 2)
   })
-  expect(
-    bandBox.top < bandBox.vh && bandBox.bottom > 0,
-    `the band must be on screen while the top rail is worked (${JSON.stringify(bandBox)})`,
-  ).toBe(true)
-
-  // Now the handoff case: give the band to a rail far down the page, then leave.
-  await right.rail.scrollIntoViewIfNeeded()
   await page.waitForTimeout(400)
-  await right.rail.evaluate((el) => (el.scrollLeft = el.scrollWidth))
-  await expect.poll(async () => bandOwner(page)).toBe(right.attr)
-
-  const held = await revealedId(page)
-  const caretOpacity = () =>
-    page
-      .locator('[data-spine-reveal-band] span[aria-hidden]')
-      .evaluate((el) => (el as HTMLElement).style.opacity)
-  await expect
-    .poll(caretOpacity, { message: 'caret shows while the owning rail is visible' })
-    .toBe('1')
-
-  // HANDOFF RULE (task item 4, argued in the branch report): the band HOLDS the last pick rather
-  // than handing off to a visible rail — handing off would invent a pick the reader never made and
-  // would make ordinary VERTICAL scrolling churn the band's contents. What it does drop is the
-  // caret, because the caret is the claim "this cover belongs to that spine" and that claim cannot
-  // be checked against a spine nobody can see.
-  await page.evaluate(() => window.scrollTo(0, 0))
-  await expect
-    .poll(
-      async () =>
-        page
-          .locator(`[data-rail="${await bandOwner(page)}"]`)
-          .evaluate((el) => {
-            const r = el.getBoundingClientRect()
-            return r.top < window.innerHeight && r.bottom > 0
-          })
-          .catch(() => true),
-      { message: 'the owning rail must actually leave the viewport for this to test anything' },
-    )
-    .toBe(false)
-
-  expect(await revealedId(page), 'band HOLDS the cover of the rail that left').toBe(held)
-  await expect
-    .poll(caretOpacity, { message: 'caret withdraws when its spine is off screen' })
-    .toBe('0')
-  expect(await bandOwner(page), 'ownership does not hand off').toBe(right.attr)
-  void left
+  const state = await track(page).evaluate((el) => {
+    const picked = el.querySelector<HTMLElement>('[data-spine-picked]')!
+    const spines = [...el.querySelectorAll<HTMLElement>('[data-spine]')]
+    const iPicked = spines.indexOf(picked)
+    const neighbour = spines[iPicked + 1] ?? spines[iPicked - 1]!
+    return {
+      pickedW: Math.round(picked.getBoundingClientRect().width),
+      neighbourVisualW: neighbour.getBoundingClientRect().width,
+      neighbourNaturalW: neighbour.offsetWidth,
+    }
+  })
+  expect(Math.abs(state.pickedW - MAG_W)).toBeLessThanOrEqual(2)
+  // The IMMEDIATE neighbour — mid-wave under normal motion — must be exactly at rest.
+  expect(Math.abs(state.neighbourVisualW - state.neighbourNaturalW)).toBeLessThanOrEqual(1)
 })
