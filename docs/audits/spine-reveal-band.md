@@ -173,3 +173,160 @@ rails stack per screen, which is §1's scope question wearing four different den
   band heights; the band does not exist to measure); the §3 hazards (implementation reasoning);
   §5–§6 fates (code reading of the merged branches).
 - Nothing in this audit needs a device: it is layout arithmetic and code archaeology.
+
+## Addendum — the shared band variant
+
+Measured 2026-08-05, same branch, same fixture and viewport (390×844, 60 books, 8 collections).
+Audit only; no placement or rest state chosen.
+
+### A correction to §1 before the arithmetic
+
+§1 assumed the spine row gives back up to ~16px once the reveal leaves it (the `min-h-[204px]`
+reveal headroom). **Measurement says the give-back is 0 in practice**: the row measures 216px =
+tallest spine 184 + 32px padding, so `min-h-[204px]` is not the binding constraint — content is.
+The min-height only binds on a shelf whose tallest spine is under ~172px, which the 150–184px
+hash range makes unlikely on any shelf of more than a few books. §1's tables quoted a range whose
+upper end assumed zero give-back, so **§1's stated fold counts stand unchanged** (1.3 / 1.2 / 1.1
+/ 1.0); it is the pitch that is now known to be the upper figure, not the lower. All arithmetic
+below uses give-back 0.
+
+### 1. Vertical arithmetic, shared vs per-rail
+
+Same metric as §1 — rails fully visible = `(fold − first rail top) / pitch`, fold 772px, first
+rail top 241px, rail pitch 275px (derived rails), row height 216px. A shared band inserts B once
+above the rails and leaves pitch at 275.
+
+**`/shelves`, derived group (4 rails), at the top of the page:**
+
+| cover        | B      | per-rail pitch → rails | **shared** pitch → rails |
+| ------------ | ------ | ---------------------- | ------------------------ |
+| none (today) | —      | 275 → **2.0**          | 275 → **2.0**            |
+| 82×120       | ~132px | 407 → **1.3**          | 275 → **1.5**            |
+| 96×144       | ~156px | 431 → **1.2**          | 275 → **1.4**            |
+| 120×176      | ~188px | 463 → **1.1**          | 275 → **1.2**            |
+| 132×194      | ~206px | 481 → **1.1**          | 275 → **1.2**            |
+
+**Shared improves the top-of-page count but does not restore two rails**, because B is still
+subtracted from the same 531px between the page header and the fold. The gain at the current
+cover size is 1.1 → 1.2 rails: real, and small.
+
+The comparison changes completely **once the reader scrolls past the page header** — which is
+where a 1538–3834px document is read. There the header's 241px is gone and the only question is
+what the band costs per screen:
+
+| state                  | today   | per-rail (B=188) | shared, scrolls away | shared, sticky |
+| ---------------------- | ------- | ---------------- | -------------------- | -------------- |
+| top of page            | 2.0     | 1.1              | 1.2                  | 1.2            |
+| scrolled (header gone) | **2.8** | **1.7**          | **2.8**              | **2.1**        |
+
+That table is the actual decision. Per-rail costs B on every screen forever. Shared-and-scrolling
+costs nothing once scrolled — and shows nothing (§2). Shared-and-sticky costs B once per screen
+rather than once per rail: 2.1 rails against today's 2.8, and against per-rail's 1.7.
+
+**Collections group — where N is unbounded and shared wins most.** Measured: the Collections
+disclosure is not a tab switch; expanding it _appends_ its rails to the same document. This
+fixture's 8 collections take the page from **4 rails / 1538px** to **12 rails / 3834px**, pitch
+~296px for collection rails. Band cost added to that document at B=188:
+
+| variant  | added px              | document    | growth   |
+| -------- | --------------------- | ----------- | -------- |
+| per-rail | 188 × 12 = **2256px** | 3834 → 6090 | **+59%** |
+| shared   | **188px**             | 3834 → 4022 | **+5%**  |
+
+Per-rail's cost scales with the reader's collection count without bound; shared's does not. Rails
+per screen in the collections region, scrolled: per-rail 772/484 = **1.6**; shared-scrolling
+772/296 = **2.6**; shared-sticky (772−188)/296 = **2.0**.
+
+### 2. Placement
+
+Confirmed viable first: **nothing blocks `position: sticky`.** The full ancestor chain from a rail
+to `<html>` is `overflow: visible`, with no `transform`, `filter`, or `contain` anywhere — the
+classic sticky-killers are all absent — and the window is the scroll container (`windowScrolls:
+true`, `<html>`/`<body>` overflow visible). Also confirmed: **scrolling a rail horizontally does
+not scroll the page vertically** (measured `pageMoved: false`), so a pinned band genuinely stays
+visible while a rail is being worked. Existing chrome to reconcile with: the bottom nav is
+`position: fixed`, 53px painted, `z-40` (the page reserves 72px for it, which is the 772px fold
+used throughout).
+
+| option                                      | vertical cost                                | rail below the fold, band not                                                                                                                                     | layout shift                                                                                                                                                                                                                                                                              |
+| ------------------------------------------- | -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **A. Pinned above the rails, scrolls away** | B once, top of page only                     | **The feature disappears for every rail below the first** — on a 1538–3834px document that is most of them, and it is precisely the case the band exists to serve | none — pure flow                                                                                                                                                                                                                                                                          |
+| **B. Sticky only while a rail is scrolled** | B while active                               | same as C while active                                                                                                                                            | no _layout_ shift (static↔sticky are both in flow), but a **visual jump**: enabling sticky when the page is already scrolled past the band's flow position snaps it from flow position to pinned, and disabling snaps it back. Also needs a scroll-end heuristic running at fling cadence |
+| **C. Sticky permanently**                   | B on every screen (2.1 rails vs today's 2.8) | band always present — the stated feature always works                                                                                                             | none — sticky reserves its space in flow; pinning is a paint-position change                                                                                                                                                                                                              |
+
+Three properties of C worth stating precisely, since it is the option the arithmetic favours:
+
+- **It does not change the rails' containing block.** Sticky affects only the sticky element;
+  siblings are untouched. It _does_ make the band a positioned element and a stacking context, so
+  the band's `z-index` has to be reconciled with `main`'s `z-[1]` and the nav's `z-40` — the band
+  must sit above content and below the nav.
+- **Sticky is scoped to its parent's box.** A band inside `div.mb-8` (the derived-shelves wrapper,
+  measured 1149px) unpins when that wrapper scrolls past — it would stop serving the collections
+  rails. Page-wide stickiness requires the band to be a child of `<section>` or higher, which is
+  the same structural choice that makes it shared.
+- **Accessibility hazard**: a permanently pinned band overlays whatever in-page navigation focuses
+  (skip-to-content, keyboard focus scroll). Focusable content needs `scroll-margin-top` equal to
+  the band's height, or focus lands underneath it.
+
+**Options not in the brief, added as asked:**
+
+- **D. Sticky to the bottom of the viewport, above the fixed nav.** Same arithmetic as C, and it
+  puts the cover where the thumb already is — the "appears larger above the finger" intuition, and
+  the physical direction of pulling a book toward you (spines above, cover below). Costs B + 53px
+  of permanent bottom chrome and competes with the tab bar and the iOS home indicator.
+- **E. One band per section** (derived group, collections group). Bounds N per band, and its sticky
+  scope naturally matches the section wrapper that sticky would pin within anyway. Costs B × 2 on
+  `/shelves`; degenerates to per-rail on single-rail surfaces exactly as the shared variant does.
+- **F. Reuse each rail's existing header row** rather than adding to it — recovers part of B for
+  the per-rail variant only; does not apply to shared.
+
+### 3. Rest state
+
+The height must be reserved in **every** option — a band that appears or grows on first pick is
+exactly the layout shift the design exists to prevent. So this choice is only about what fills
+already-reserved space:
+
+| rest state                                                                                                | perceived emptiness                                                                                             | note                                                                                                                                                                                                      |
+| --------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Empty**                                                                                                 | Worst: B (188px at current size) of blank above the shelves on first paint, before the reader has done anything | Honest, and reads as a hole                                                                                                                                                                               |
+| **First rail's first book**                                                                               | None                                                                                                            | Not an invention: the sliding anchor already picks a book at `scrollLeft 0` on every rail, and `activeId` is never null on a non-empty shelf — so this is rail 1's _true current pick_, not a placeholder |
+| **Other** (most-recently-opened book; a caption-only prompt with an empty cover box; the shelf's own art) | Between the two                                                                                                 | A **collapsed strip that expands on first touch is disqualified** — it is the layout shift the premise forbids                                                                                            |
+
+### 4. Ownership — last-touched wins
+
+Implementable without mount churn: the band is one permanent element at page level; each
+SpineShelf gains an `onPick(railId, bookId)` callback; the band's contents come from
+`{railId, bookId}`. Nothing mounts or unmounts — contents swap, which is the whole point.
+
+**The hazard is render churn, not mount churn.** If that state is a page-level `useState`, every
+pick change re-renders the page subtree — all 12 rails, at the measured 15 picks per fling. The
+state has to be isolated so only the band re-renders (a store the band subscribes to, or rails
+memoised against a stable callback). Naming it because "no mount churn" is easy to satisfy while
+still shipping 180 re-renders of 12 rails per fling.
+
+**Page load, nothing touched**: ownership is undefined, which is exactly §3's rest state. The
+natural default — rail 1 in document order — coincides with "first rail's first book".
+
+**A second-order question the brief did not raise, flagged not chosen**: when the owning rail
+scrolls out of view, does the band keep showing its pick (stale relative to what is on screen) or
+hand off to the nearest visible rail? Last-touched-wins says keep; "the cover of the spine you have
+scrolled to" says hand off. Invisible under placement A, unavoidable under C.
+
+### 5. Effect on the §6 survival table
+
+- **The sliding anchor still runs per-rail, unchanged.** Each rail keeps its own scroller, its own
+  `scrollLeft`, its own pick. Shared changes only where the pick is _rendered_.
+- **One structural change beyond §6**: §3 placed the band inside SpineShelf's root. Shared moves it
+  out — SpineShelf stops rendering the reveal entirely and becomes a spine row plus a pick
+  reporter. `data-spine-reveal` leaves the component; its props grow a callback.
+- **Reachability guard — survives, with a gap the shared variant introduces.** Every fixture in
+  that suite is a single-shelf `/shelf/:id` page, where shared and per-rail are structurally
+  indistinguishable, so its assertions retarget exactly as §6 described and keep working. But a
+  single-rail page cannot exercise ownership: **no existing assertion would catch the band showing
+  the wrong rail's pick.** That is a new assertion class the shared variant requires, on a
+  multi-rail `/shelves` fixture — "the band shows the last-touched rail's pick, and only that".
+- **Invariant guard**: unchanged from §6's conclusion, and if anything more clearly dead — with the
+  reveal outside the component, "track width does not change across picks" becomes true by
+  construction rather than by design.
+- **Mouse-only `pointerleave`**: still load-bearing, and it acquires the §4 ownership question — a
+  hover reveal on rail A while the band shows rail B is the same conflict as scroll ownership.
