@@ -24,7 +24,6 @@ import { useAddListItem, useAllListItems, useRemoveListItem } from '../data/list
 import { LibraryPicker } from '../components/LibraryPicker'
 import { ExternalSearchSheet } from '../components/ExternalSearchSheet'
 import { SpineShelf } from '../components/SpineShelf'
-import { SpineRevealProvider } from '../components/SpineRevealBand'
 import { Modal } from '../components/Modal'
 import { BookmarkGlyph } from '../components/BookmarkGlyph'
 import { Switch } from '../components/Switch'
@@ -395,225 +394,223 @@ function ShelvesScreen() {
 
   return (
     <section className="px-4 py-6 sm:px-6">
-      <SpineRevealProvider>
-        <h1
-          className="mb-4 text-[22px] italic text-ink"
-          style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
-        >
-          Shelves
-        </h1>
+      <h1
+        className="mb-4 text-[22px] italic text-ink"
+        style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+      >
+        Shelves
+      </h1>
 
-        <DerivedShelves
-          books={all}
-          onOpen={openBook}
-          breakdowns={breakdowns}
-          onToggle={setBreakdown}
-        />
+      <DerivedShelves
+        books={all}
+        onOpen={openBook}
+        breakdowns={breakdowns}
+        onToggle={setBreakdown}
+      />
 
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-[16px] font-semibold text-ink">Your lists</h2>
-          <div className="flex items-center gap-2">
-            <div
-              className="flex rounded-full border border-line p-1"
-              style={{ background: 'var(--card)' }}
-            >
-              {(['tbr', 'collection'] as const).map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => setTab(t)}
-                  aria-pressed={tab === t}
-                  className="rounded-full px-3 py-1.5 text-[12.5px] font-semibold"
-                  style={
-                    tab === t
-                      ? { background: 'var(--accent-fill)', color: 'var(--on-primary)' }
-                      : { color: 'var(--muted)' }
-                  }
-                >
-                  {t === 'tbr' ? 'TBRs' : 'Collections'}
-                </button>
-              ))}
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                const name = window.prompt(
-                  tab === 'tbr' ? 'Name this TBR list:' : 'Name this collection:',
-                )
-                if (name?.trim()) createList.mutate({ name: name.trim(), kind: tab })
-              }}
-              className="rounded-full px-4 py-2 text-[13px] font-semibold"
-              style={{
-                background: 'linear-gradient(135deg, var(--primary), var(--gold))',
-                color: 'var(--on-primary)',
-              }}
-            >
-              ＋ New {tab === 'tbr' ? 'TBR' : 'collection'}
-            </button>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-[16px] font-semibold text-ink">Your lists</h2>
+        <div className="flex items-center gap-2">
+          <div
+            className="flex rounded-full border border-line p-1"
+            style={{ background: 'var(--card)' }}
+          >
+            {(['tbr', 'collection'] as const).map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setTab(t)}
+                aria-pressed={tab === t}
+                className="rounded-full px-3 py-1.5 text-[12.5px] font-semibold"
+                style={
+                  tab === t
+                    ? { background: 'var(--accent-fill)', color: 'var(--on-primary)' }
+                    : { color: 'var(--muted)' }
+                }
+              >
+                {t === 'tbr' ? 'TBRs' : 'Collections'}
+              </button>
+            ))}
           </div>
-        </div>
-
-        {shown.length ? (
-          <div className="flex flex-col gap-8">
-            {shown.map((l, i) => {
-              const shelfBooks = booksFor(l.id)
-              return (
-                // The card is a drop TARGET but not a drag source: making the whole thing draggable
-                // meant dragging a book cover picked up the entire shelf instead of doing nothing.
-                // The grab handle below is the only place a shelf drag can start.
-                <div
-                  key={l.id}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={() => dropListOn(i)}
-                  style={dragListIdx === i ? { opacity: 0.4 } : undefined}
-                >
-                  <div className="mb-1 flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      {/* the shelf's name IS the door to its full page */}
-                      <button
-                        type="button"
-                        onClick={() =>
-                          void navigate({ to: '/shelf/$listId', params: { listId: l.id } })
-                        }
-                        className="block text-left"
-                      >
-                        <h2
-                          className="text-[18px] italic text-ink underline-offset-4 hover:underline"
-                          style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
-                        >
-                          {l.priority && (
-                            <span style={{ color: 'var(--accent-ink)' }}>
-                              <BookmarkGlyph size={12} />{' '}
-                            </span>
-                          )}
-                          {l.name}{' '}
-                          <span aria-hidden className="text-[13px] text-muted">
-                            ›
-                          </span>
-                        </h2>
-                      </button>
-                      <p className="text-[12px] text-muted">
-                        {shelfBooks.length} book{shelfBooks.length !== 1 ? 's' : ''}
-                        {shelfBooks.length > 1 ? ' · scroll the shelf to flip a cover' : ''}
-                      </p>
-                    </div>
-                    <div className="flex flex-none items-center gap-1.5">
-                      <button
-                        type="button"
-                        draggable
-                        onDragStart={() => setDragListIdx(i)}
-                        onDragEnd={() => setDragListIdx(null)}
-                        aria-label={`Drag to reorder ${l.name}`}
-                        title={`Drag to reorder ${l.name}`}
-                        className="cursor-grab px-1 text-[13px] leading-none text-muted"
-                      >
-                        ⠿
-                      </button>
-                      <span className="flex flex-col">
-                        <button
-                          type="button"
-                          onClick={() => moveList(i, -1)}
-                          aria-label={`Move ${l.name} up`}
-                          className="px-1 py-0.5 text-[12px] leading-none text-muted"
-                        >
-                          ▲
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => moveList(i, 1)}
-                          aria-label={`Move ${l.name} down`}
-                          className="px-1 py-0.5 text-[12px] leading-none text-muted"
-                        >
-                          ▼
-                        </button>
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setOpenListId(l.id)}
-                        className="rounded-full border border-line px-3.5 py-1.5 text-[12.5px] font-semibold text-ink"
-                        style={{ background: 'var(--card)' }}
-                      >
-                        Edit
-                      </button>
-                    </div>
-                  </div>
-                  {shelfBooks.length ? (
-                    <SpineShelf
-                      books={shelfBooks}
-                      onOpen={openBook}
-                      onAdd={() => setPickerFor(l)}
-                      addLabel={`Add a book to ${l.name}`}
-                    />
-                  ) : (
-                    <p className="skin-panel border border-line p-4 text-[13px] text-muted">
-                      No books yet —{' '}
-                      <button
-                        type="button"
-                        onClick={() => setPickerFor(l)}
-                        className="font-semibold text-primary underline-offset-2 hover:underline"
-                      >
-                        add the first
-                      </button>
-                      .
-                    </p>
-                  )}
-                </div>
+          <button
+            type="button"
+            onClick={() => {
+              const name = window.prompt(
+                tab === 'tbr' ? 'Name this TBR list:' : 'Name this collection:',
               )
-            })}
-          </div>
-        ) : (
-          <p className="skin-panel border border-line p-6 text-center text-[14px] text-muted">
-            No {tab === 'tbr' ? 'TBRs' : 'collections'} yet — hit ＋ New.
-          </p>
-        )}
-
-        {openList && (
-          <ListModal
-            list={openList}
-            books={booksFor(openList.id)}
-            onClose={() => setOpenListId(null)}
-            onOpenBook={(id) => {
-              setOpenListId(null)
-              openBook(id)
+              if (name?.trim()) createList.mutate({ name: name.trim(), kind: tab })
             }}
-          />
-        )}
-
-        {pickerFor && (
-          <LibraryPicker
-            title={`Add to ${pickerFor.name}`}
-            books={all}
-            excludeIds={new Set(booksFor(pickerFor.id).map((b) => b.id))}
-            onPick={(b) => {
-              const positions = (items ?? [])
-                .filter((it) => it.list_id === pickerFor.id)
-                .map((it) => it.position ?? 0)
-              addItem.mutate({
-                listId: pickerFor.id,
-                bookId: b.id,
-                afterPosition: Math.max(0, ...positions),
-              })
+            className="rounded-full px-4 py-2 text-[13px] font-semibold"
+            style={{
+              background: 'linear-gradient(135deg, var(--primary), var(--gold))',
+              color: 'var(--on-primary)',
             }}
-            onClose={() => setPickerFor(null)}
-            // The external-search seam — same as the shelf detail page. Without it, "search everywhere"
-            // stays disabled and a book you don't already own can't be added from the Shelves page.
-            onExternalSearch={() => {
-              const l = pickerFor
-              setPickerFor(null)
-              setExternalFor(l)
-            }}
-          />
-        )}
+          >
+            ＋ New {tab === 'tbr' ? 'TBR' : 'collection'}
+          </button>
+        </div>
+      </div>
 
-        {externalFor && (
-          <ExternalSearchSheet
-            listId={externalFor.id}
-            listName={externalFor.name}
-            books={all}
-            onClose={() => setExternalFor(null)}
-          />
-        )}
-      </SpineRevealProvider>
+      {shown.length ? (
+        <div className="flex flex-col gap-8">
+          {shown.map((l, i) => {
+            const shelfBooks = booksFor(l.id)
+            return (
+              // The card is a drop TARGET but not a drag source: making the whole thing draggable
+              // meant dragging a book cover picked up the entire shelf instead of doing nothing.
+              // The grab handle below is the only place a shelf drag can start.
+              <div
+                key={l.id}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={() => dropListOn(i)}
+                style={dragListIdx === i ? { opacity: 0.4 } : undefined}
+              >
+                <div className="mb-1 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    {/* the shelf's name IS the door to its full page */}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void navigate({ to: '/shelf/$listId', params: { listId: l.id } })
+                      }
+                      className="block text-left"
+                    >
+                      <h2
+                        className="text-[18px] italic text-ink underline-offset-4 hover:underline"
+                        style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+                      >
+                        {l.priority && (
+                          <span style={{ color: 'var(--accent-ink)' }}>
+                            <BookmarkGlyph size={12} />{' '}
+                          </span>
+                        )}
+                        {l.name}{' '}
+                        <span aria-hidden className="text-[13px] text-muted">
+                          ›
+                        </span>
+                      </h2>
+                    </button>
+                    <p className="text-[12px] text-muted">
+                      {shelfBooks.length} book{shelfBooks.length !== 1 ? 's' : ''}
+                      {shelfBooks.length > 1 ? ' · scroll the shelf to flip a cover' : ''}
+                    </p>
+                  </div>
+                  <div className="flex flex-none items-center gap-1.5">
+                    <button
+                      type="button"
+                      draggable
+                      onDragStart={() => setDragListIdx(i)}
+                      onDragEnd={() => setDragListIdx(null)}
+                      aria-label={`Drag to reorder ${l.name}`}
+                      title={`Drag to reorder ${l.name}`}
+                      className="cursor-grab px-1 text-[13px] leading-none text-muted"
+                    >
+                      ⠿
+                    </button>
+                    <span className="flex flex-col">
+                      <button
+                        type="button"
+                        onClick={() => moveList(i, -1)}
+                        aria-label={`Move ${l.name} up`}
+                        className="px-1 py-0.5 text-[12px] leading-none text-muted"
+                      >
+                        ▲
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveList(i, 1)}
+                        aria-label={`Move ${l.name} down`}
+                        className="px-1 py-0.5 text-[12px] leading-none text-muted"
+                      >
+                        ▼
+                      </button>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setOpenListId(l.id)}
+                      className="rounded-full border border-line px-3.5 py-1.5 text-[12.5px] font-semibold text-ink"
+                      style={{ background: 'var(--card)' }}
+                    >
+                      Edit
+                    </button>
+                  </div>
+                </div>
+                {shelfBooks.length ? (
+                  <SpineShelf
+                    books={shelfBooks}
+                    onOpen={openBook}
+                    onAdd={() => setPickerFor(l)}
+                    addLabel={`Add a book to ${l.name}`}
+                  />
+                ) : (
+                  <p className="skin-panel border border-line p-4 text-[13px] text-muted">
+                    No books yet —{' '}
+                    <button
+                      type="button"
+                      onClick={() => setPickerFor(l)}
+                      className="font-semibold text-primary underline-offset-2 hover:underline"
+                    >
+                      add the first
+                    </button>
+                    .
+                  </p>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      ) : (
+        <p className="skin-panel border border-line p-6 text-center text-[14px] text-muted">
+          No {tab === 'tbr' ? 'TBRs' : 'collections'} yet — hit ＋ New.
+        </p>
+      )}
+
+      {openList && (
+        <ListModal
+          list={openList}
+          books={booksFor(openList.id)}
+          onClose={() => setOpenListId(null)}
+          onOpenBook={(id) => {
+            setOpenListId(null)
+            openBook(id)
+          }}
+        />
+      )}
+
+      {pickerFor && (
+        <LibraryPicker
+          title={`Add to ${pickerFor.name}`}
+          books={all}
+          excludeIds={new Set(booksFor(pickerFor.id).map((b) => b.id))}
+          onPick={(b) => {
+            const positions = (items ?? [])
+              .filter((it) => it.list_id === pickerFor.id)
+              .map((it) => it.position ?? 0)
+            addItem.mutate({
+              listId: pickerFor.id,
+              bookId: b.id,
+              afterPosition: Math.max(0, ...positions),
+            })
+          }}
+          onClose={() => setPickerFor(null)}
+          // The external-search seam — same as the shelf detail page. Without it, "search everywhere"
+          // stays disabled and a book you don't already own can't be added from the Shelves page.
+          onExternalSearch={() => {
+            const l = pickerFor
+            setPickerFor(null)
+            setExternalFor(l)
+          }}
+        />
+      )}
+
+      {externalFor && (
+        <ExternalSearchSheet
+          listId={externalFor.id}
+          listName={externalFor.name}
+          books={all}
+          onClose={() => setExternalFor(null)}
+        />
+      )}
     </section>
   )
 }

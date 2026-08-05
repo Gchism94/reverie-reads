@@ -81,12 +81,3 @@
     display: flex;
   }
 }
-
-/* Clearance for the shared reveal band (SpineRevealBand.tsx), which pins to the bottom of the
-   viewport. Anything the browser scrolls INTO view — keyboard focus, scrollIntoView, a drag
-   target — would otherwise be able to land in the strip the band covers. This is the exact mirror
-   of the scroll-margin-top a top-pinned bar needs; measured and published by the band itself, so
-   the number cannot drift from the component's own height. */
-main :is(a, button, [tabindex], [data-rail], [data-spine]) {
-  scroll-margin-bottom: var(--rv-band-clearance, 0px);
-}
