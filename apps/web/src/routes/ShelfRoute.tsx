@@ -7,6 +7,7 @@ import { CoverCard } from '../components/CoverCard'
 import { LibraryPicker } from '../components/LibraryPicker'
 import { ExternalSearchSheet } from '../components/ExternalSearchSheet'
 import { SpineShelf } from '../components/SpineShelf'
+import { SpineRevealProvider } from '../components/SpineRevealBand'
 import { SectionHeader } from '../components/Structure'
 import { BookmarkGlyph } from '../components/BookmarkGlyph'
 import { useBooks, useUpdateBook } from '../data/books'
@@ -123,197 +124,200 @@ function ShelfScreen() {
 
   return (
     <section className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6">
-      <BackLink fallback="/shelves" className="text-[13px] text-muted hover:text-ink">
-        ← Shelves
-      </BackLink>
+      <SpineRevealProvider>
+        <BackLink fallback="/shelves" className="text-[13px] text-muted hover:text-ink">
+          ← Shelves
+        </BackLink>
 
-      <header className="mt-3 flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h1
-            className="text-[26px] italic leading-tight text-ink"
-            style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
-          >
-            {list.priority && (
-              <span style={{ color: 'var(--accent-ink)' }}>
-                <BookmarkGlyph size={15} />{' '}
-              </span>
-            )}
-            {list.name}
-          </h1>
-          <p className="mt-0.5 text-[13px] text-muted">
-            {list.description || (list.kind === 'tbr' ? 'A to-be-read shelf.' : 'A collection.')} ·{' '}
-            {shelfBooks.length} book{shelfBooks.length !== 1 ? 's' : ''}
+        <header className="mt-3 flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h1
+              className="text-[26px] italic leading-tight text-ink"
+              style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+            >
+              {list.priority && (
+                <span style={{ color: 'var(--accent-ink)' }}>
+                  <BookmarkGlyph size={15} />{' '}
+                </span>
+              )}
+              {list.name}
+            </h1>
+            <p className="mt-0.5 text-[13px] text-muted">
+              {list.description || (list.kind === 'tbr' ? 'A to-be-read shelf.' : 'A collection.')}{' '}
+              · {shelfBooks.length} book{shelfBooks.length !== 1 ? 's' : ''}
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <div
+              className="flex rounded-full border border-line p-1"
+              style={{ background: 'var(--card)' }}
+            >
+              {(
+                [
+                  ['spines', 'Shelf'],
+                  ['grid', 'Grid'],
+                ] as const
+              ).map(([v, label]) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => setView(v)}
+                  aria-pressed={view === v}
+                  className="rounded-full px-3 py-1 text-[12.5px] font-semibold"
+                  style={
+                    view === v
+                      ? { background: 'var(--accent-fill)', color: 'var(--on-primary)' }
+                      : { color: 'var(--muted)' }
+                  }
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => updateList.mutate({ id: list.id, isPriority: !list.priority })}
+              aria-pressed={list.priority}
+              className="rounded-full border border-line px-3 py-1.5 text-[12.5px] font-semibold text-ink"
+              style={{ background: 'var(--card)' }}
+            >
+              <BookmarkGlyph filled={list.priority} />{' '}
+              {list.priority ? 'Priority' : 'Make priority'}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const description = window.prompt(
+                  'Describe this shelf (shown under its name):',
+                  list.description,
+                )
+                if (description != null)
+                  updateList.mutate({ id: list.id, description: description.trim() })
+              }}
+              className="rounded-full border border-line px-3 py-1.5 text-[12.5px] font-semibold text-ink"
+              style={{ background: 'var(--card)' }}
+            >
+              Describe
+            </button>
+            <button
+              type="button"
+              onClick={() => setPickerOpen(true)}
+              className="skin-control skin-btn-primary px-3.5 py-1.5 text-[12.5px]"
+            >
+              ＋ Add books
+            </button>
+          </div>
+        </header>
+
+        <SectionHeader
+          className="mb-3 mt-6"
+          label={view === 'spines' ? 'The shelf' : 'Arrange'}
+          readout={shelfBooks.length}
+        />
+
+        {shelfBooks.length === 0 ? (
+          <p className="skin-panel border border-line p-6 text-center text-[14px] text-muted">
+            Empty shelf — add the first book. {voice.motif}
           </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <div
-            className="flex rounded-full border border-line p-1"
-            style={{ background: 'var(--card)' }}
-          >
-            {(
-              [
-                ['spines', 'Shelf'],
-                ['grid', 'Grid'],
-              ] as const
-            ).map(([v, label]) => (
-              <button
-                key={v}
-                type="button"
-                onClick={() => setView(v)}
-                aria-pressed={view === v}
-                className="rounded-full px-3 py-1 text-[12.5px] font-semibold"
-                style={
-                  view === v
-                    ? { background: 'var(--accent-fill)', color: 'var(--on-primary)' }
-                    : { color: 'var(--muted)' }
-                }
+        ) : view === 'spines' ? (
+          // The default view is arrangeable too — reorder used to exist only in Grid, which is not
+          // where a reader lands (docs/task-shelf-regressions.md, audit follow-up).
+          <SpineShelf
+            books={shelfBooks}
+            onOpen={openBook}
+            onAdd={() => setPickerOpen(true)}
+            addLabel={`Add a book to ${list.name}`}
+            onReorder={applyOrder}
+          />
+        ) : (
+          <div style={COVER_GRID}>
+            {shelfBooks.map((b, i) => (
+              <div
+                key={b.id}
+                draggable
+                onDragStart={() => setDragIdx(i)}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={() => dropOn(i)}
+                onDragEnd={() => setDragIdx(null)}
+                style={dragIdx === i ? { opacity: 0.4 } : undefined}
               >
-                {label}
-              </button>
+                <CoverCard
+                  book={b}
+                  onOpen={() => openBook(b.id)}
+                  onToggleFave={() => updateBook.mutate({ id: b.id, patch: { fave: !b.fave } })}
+                />
+                <div className="mt-1 flex items-center justify-between">
+                  <span className="flex gap-0.5">
+                    <button
+                      type="button"
+                      onClick={() => move(i, -1)}
+                      aria-label={`Move ${b.title} earlier`}
+                      className="rounded border border-line px-1.5 py-0.5 text-[12px] leading-none text-muted"
+                      style={{ background: 'var(--chip)' }}
+                    >
+                      ◀
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => move(i, 1)}
+                      aria-label={`Move ${b.title} later`}
+                      className="rounded border border-line px-1.5 py-0.5 text-[12px] leading-none text-muted"
+                      style={{ background: 'var(--chip)' }}
+                    >
+                      ▶
+                    </button>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removeItem.mutate({ listId: list.id, bookId: b.id })}
+                    aria-label={`Remove ${b.title} from ${list.name}`}
+                    className="text-[11.5px] text-muted hover:text-primary"
+                  >
+                    remove
+                  </button>
+                </div>
+              </div>
             ))}
           </div>
-          <button
-            type="button"
-            onClick={() => updateList.mutate({ id: list.id, isPriority: !list.priority })}
-            aria-pressed={list.priority}
-            className="rounded-full border border-line px-3 py-1.5 text-[12.5px] font-semibold text-ink"
-            style={{ background: 'var(--card)' }}
-          >
-            <BookmarkGlyph filled={list.priority} /> {list.priority ? 'Priority' : 'Make priority'}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              const description = window.prompt(
-                'Describe this shelf (shown under its name):',
-                list.description,
-              )
-              if (description != null)
-                updateList.mutate({ id: list.id, description: description.trim() })
+        )}
+
+        {pickerOpen && (
+          <LibraryPicker
+            title={`Add to ${list.name}`}
+            books={books ?? []}
+            excludeIds={memberIds}
+            onPick={(b) => {
+              addItem.mutate({
+                listId: list.id,
+                bookId: b.id,
+                afterPosition: maxPosition + pickCount * 1000,
+              })
+              setPickCount((c) => c + 1)
             }}
-            className="rounded-full border border-line px-3 py-1.5 text-[12.5px] font-semibold text-ink"
-            style={{ background: 'var(--card)' }}
-          >
-            Describe
-          </button>
-          <button
-            type="button"
-            onClick={() => setPickerOpen(true)}
-            className="skin-control skin-btn-primary px-3.5 py-1.5 text-[12.5px]"
-          >
-            ＋ Add books
-          </button>
-        </div>
-      </header>
+            onClose={() => {
+              setPickerOpen(false)
+              setPickCount(0)
+            }}
+            // The seam (task §3): "search everywhere" opens the same search backend as Discover,
+            // bound to this shelf — a found book lands here as an unowned copy.
+            onExternalSearch={() => {
+              setPickerOpen(false)
+              setPickCount(0)
+              setExternalSearch(true)
+            }}
+          />
+        )}
 
-      <SectionHeader
-        className="mb-3 mt-6"
-        label={view === 'spines' ? 'The shelf' : 'Arrange'}
-        readout={shelfBooks.length}
-      />
-
-      {shelfBooks.length === 0 ? (
-        <p className="skin-panel border border-line p-6 text-center text-[14px] text-muted">
-          Empty shelf — add the first book. {voice.motif}
-        </p>
-      ) : view === 'spines' ? (
-        // The default view is arrangeable too — reorder used to exist only in Grid, which is not
-        // where a reader lands (docs/task-shelf-regressions.md, audit follow-up).
-        <SpineShelf
-          books={shelfBooks}
-          onOpen={openBook}
-          onAdd={() => setPickerOpen(true)}
-          addLabel={`Add a book to ${list.name}`}
-          onReorder={applyOrder}
-        />
-      ) : (
-        <div style={COVER_GRID}>
-          {shelfBooks.map((b, i) => (
-            <div
-              key={b.id}
-              draggable
-              onDragStart={() => setDragIdx(i)}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={() => dropOn(i)}
-              onDragEnd={() => setDragIdx(null)}
-              style={dragIdx === i ? { opacity: 0.4 } : undefined}
-            >
-              <CoverCard
-                book={b}
-                onOpen={() => openBook(b.id)}
-                onToggleFave={() => updateBook.mutate({ id: b.id, patch: { fave: !b.fave } })}
-              />
-              <div className="mt-1 flex items-center justify-between">
-                <span className="flex gap-0.5">
-                  <button
-                    type="button"
-                    onClick={() => move(i, -1)}
-                    aria-label={`Move ${b.title} earlier`}
-                    className="rounded border border-line px-1.5 py-0.5 text-[12px] leading-none text-muted"
-                    style={{ background: 'var(--chip)' }}
-                  >
-                    ◀
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => move(i, 1)}
-                    aria-label={`Move ${b.title} later`}
-                    className="rounded border border-line px-1.5 py-0.5 text-[12px] leading-none text-muted"
-                    style={{ background: 'var(--chip)' }}
-                  >
-                    ▶
-                  </button>
-                </span>
-                <button
-                  type="button"
-                  onClick={() => removeItem.mutate({ listId: list.id, bookId: b.id })}
-                  aria-label={`Remove ${b.title} from ${list.name}`}
-                  className="text-[11.5px] text-muted hover:text-primary"
-                >
-                  remove
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {pickerOpen && (
-        <LibraryPicker
-          title={`Add to ${list.name}`}
-          books={books ?? []}
-          excludeIds={memberIds}
-          onPick={(b) => {
-            addItem.mutate({
-              listId: list.id,
-              bookId: b.id,
-              afterPosition: maxPosition + pickCount * 1000,
-            })
-            setPickCount((c) => c + 1)
-          }}
-          onClose={() => {
-            setPickerOpen(false)
-            setPickCount(0)
-          }}
-          // The seam (task §3): "search everywhere" opens the same search backend as Discover,
-          // bound to this shelf — a found book lands here as an unowned copy.
-          onExternalSearch={() => {
-            setPickerOpen(false)
-            setPickCount(0)
-            setExternalSearch(true)
-          }}
-        />
-      )}
-
-      {externalSearch && (
-        <ExternalSearchSheet
-          listId={list.id}
-          listName={list.name}
-          books={books ?? []}
-          onClose={() => setExternalSearch(false)}
-        />
-      )}
+        {externalSearch && (
+          <ExternalSearchSheet
+            listId={list.id}
+            listName={list.name}
+            books={books ?? []}
+            onClose={() => setExternalSearch(false)}
+          />
+        )}
+      </SpineRevealProvider>
     </section>
   )
 }
