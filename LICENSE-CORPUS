@@ -2,15 +2,25 @@ Reverie corpus license — CC0 1.0 Universal
 ==========================================
 
 SCOPE. This file licenses THE CORPUS: the book-metadata dataset published from
-this project, currently **`data/corpus_seed.json`** — 290 records of
-bibliographic fields describing books themselves (title, author name, ISBN,
-series name and ordering, genre/subject classifications, publication data).
-To the extent the project holds any rights in the selection, arrangement, or
-compilation of those fields, they are dedicated to the public domain under
-CC0 1.0 Universal, whose full text follows. If the corpus is ever published
-under a different filename or split further, this SCOPE section names the
-current file(s); the file(s) named here — not the field list above — are
-authoritative on what CC0 actually covers at any given commit.
+this project, currently two artifacts covering the same 290 books at
+different levels of detail —
+
+  - **`data/corpus_seed.json`** — the full bibliographic record (title,
+    author name, ISBN, series name and ordering, genre/subject
+    classifications, publication data).
+  - **`data/design_corpus_seed.json`** (+ **`data/design_corpus_seed.csv`**)
+    — a reduced, design-ready projection of the same bibliographic data
+    (title, author, series, subgenre, tropes, spice) meant for handing to
+    design tooling outside this repo's own build.
+
+Both are bibliographic fields describing books themselves; a reduced field
+set is still the corpus, not a different thing. To the extent the project
+holds any rights in the selection, arrangement, or compilation of those
+fields, they are dedicated to the public domain under CC0 1.0 Universal,
+whose full text follows. If the corpus is ever published under different
+filenames or split further, this SCOPE section names the current file(s);
+the file(s) named here — not the field lists above — are authoritative on
+what CC0 actually covers at any given commit.
 
 THE CORPUS DOES NOT INCLUDE:
 
@@ -18,9 +28,11 @@ THE CORPUS DOES NOT INCLUDE:
      Affero General Public License v3.0 (see LICENSE).
   2. READER DATA — shelves, ratings, favourites, reading statuses and history,
      taste vectors, moods, notes, reviews, goals, and reading statistics.
-     Currently `data/reader_seed.json`. Reader data is not published, is not
-     licensed by this file or any other file in this repository, and is out
-     of scope for both the corpus dedication and the code license.
+     Currently `data/reader_seed.json` and `data/design_reader_seed.json`
+     (+ `.csv`) — the reader-data half of each corpus artifact above, split
+     out for the same reason. Reader data is not published, is not licensed
+     by this file or any other file in this repository, and is out of scope
+     for both the corpus dedication and the code license.
   3. Book cover images and third-party bibliographic records, which remain the
      property of their rights holders and are governed by their own terms
      (see NOTICES.md). CC0 applies only to rights the project itself holds.
@@ -30,15 +42,20 @@ THE CORPUS DOES NOT INCLUDE:
      reader.
 
 RESIDUAL AMBIGUITY, named rather than implied away: this SCOPE section
-describes `data/corpus_seed.json` and `data/reader_seed.json` as they exist
-at the commit that introduced them, split by field-kind at that time. Nothing
-in the filesystem enforces that a future edit to either file keeps obeying
-that split — a contributor could add a reader-data field to corpus_seed.json,
-or a bibliographic field to reader_seed.json, without this file objecting.
+describes the corpus/reader-data file pairs as they exist at the commits
+that introduced them, split by field-kind at that time. Nothing in the
+filesystem enforces that a future edit to any of these files keeps obeying
+that split — a contributor could add a reader-data field to a corpus file,
+or a bibliographic field to a reader-data file, without this file objecting.
 That risk is exactly why field-kind scoping inside a single mixed file was
-rejected in favor of two files in the first place; splitting the files
+rejected in favor of separate files in the first place; splitting the files
 narrows the risk to "does this file's *content* still match its *name*" but
-does not eliminate the need for a human to keep it that way.
+does not eliminate the need for a human to keep it that way. It also does
+not, by itself, guarantee that some THIRD file introduced later doesn't
+reintroduce the same blend under a name this SCOPE section hasn't yet been
+updated to mention — `data/design_corpus_seed.json` was exactly that file
+for one release cycle (found during `chore/pre-public-licensing`, resolved
+in `chore/split-design-seed`) before this section was updated to name it.
 
 ----------------------------------------------------------------------------
 
