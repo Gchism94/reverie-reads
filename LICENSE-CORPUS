@@ -2,27 +2,43 @@ Reverie corpus license — CC0 1.0 Universal
 ==========================================
 
 SCOPE. This file licenses THE CORPUS: the book-metadata dataset published from
-this project — bibliographic fields describing books themselves (titles,
-author names, ISBNs and other identifiers, series names and ordering,
-publication data, genre/subject classifications), in whatever files or exports
-they are published. To the extent the project holds any rights in the
-selection, arrangement, or compilation of those fields, they are dedicated to
-the public domain under CC0 1.0 Universal, whose full text follows.
+this project, currently **`data/corpus_seed.json`** — 290 records of
+bibliographic fields describing books themselves (title, author name, ISBN,
+series name and ordering, genre/subject classifications, publication data).
+To the extent the project holds any rights in the selection, arrangement, or
+compilation of those fields, they are dedicated to the public domain under
+CC0 1.0 Universal, whose full text follows. If the corpus is ever published
+under a different filename or split further, this SCOPE section names the
+current file(s); the file(s) named here — not the field list above — are
+authoritative on what CC0 actually covers at any given commit.
 
 THE CORPUS DOES NOT INCLUDE:
 
   1. The application source code, which is licensed separately under the GNU
      Affero General Public License v3.0 (see LICENSE).
   2. READER DATA — shelves, ratings, favourites, reading statuses and history,
-     taste vectors, moods, spice/intensity ratings, notes, reviews, goals, and
-     reading statistics. Reader data is not published, is not licensed by this
-     file or any other file in this repository, and is out of scope for both
-     the corpus dedication and the code license. Where a file in this
-     repository happens to contain both bibliographic fields and reader-data
-     fields, only the bibliographic fields are part of the corpus.
+     taste vectors, moods, notes, reviews, goals, and reading statistics.
+     Currently `data/reader_seed.json`. Reader data is not published, is not
+     licensed by this file or any other file in this repository, and is out
+     of scope for both the corpus dedication and the code license.
   3. Book cover images and third-party bibliographic records, which remain the
-     property of their rights holders and are governed by their own terms (see
-     NOTICES.md). CC0 applies only to rights the project itself holds.
+     property of their rights holders and are governed by their own terms
+     (see NOTICES.md). CC0 applies only to rights the project itself holds.
+     `data/reader_seed.json`'s `cover` field is a third-party CDN URL, not
+     bibliographic content this project holds rights in — it is grouped with
+     reader data above for that reason, not because it originated with a
+     reader.
+
+RESIDUAL AMBIGUITY, named rather than implied away: this SCOPE section
+describes `data/corpus_seed.json` and `data/reader_seed.json` as they exist
+at the commit that introduced them, split by field-kind at that time. Nothing
+in the filesystem enforces that a future edit to either file keeps obeying
+that split — a contributor could add a reader-data field to corpus_seed.json,
+or a bibliographic field to reader_seed.json, without this file objecting.
+That risk is exactly why field-kind scoping inside a single mixed file was
+rejected in favor of two files in the first place; splitting the files
+narrows the risk to "does this file's *content* still match its *name*" but
+does not eliminate the need for a human to keep it that way.
 
 ----------------------------------------------------------------------------
 
