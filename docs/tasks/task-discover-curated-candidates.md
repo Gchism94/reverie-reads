@@ -19,17 +19,17 @@ it is worse, because flagship trad frontlist is equally invisible.
 
 Measured 2020+ share of the live query pool, by category:
 
-| Category | Pool % 2020+ |
-|---|---:|
-| Romance | 0.0% |
-| Fantasy | 0.0% |
-| Science fiction | 0.0% |
-| Mystery | 0.0% |
-| Horror | 11.8% |
-| Literary | 11.8% |
-| Nonfiction | 15.0% |
-| Young adult | 42.1% |
-| Cozy | 89.5% |
+| Category        | Pool % 2020+ |
+| --------------- | -----------: |
+| Romance         |         0.0% |
+| Fantasy         |         0.0% |
+| Science fiction |         0.0% |
+| Mystery         |         0.0% |
+| Horror          |        11.8% |
+| Literary        |        11.8% |
+| Nonfiction      |        15.0% |
+| Young adult     |        42.1% |
+| Cozy            |        89.5% |
 
 The two healthy categories (Cozy, YA) carry real Google subject strings
 (`cozy mysteries`, `Young Adult Fiction`) — proof of the mechanism, not a
