@@ -4,16 +4,22 @@ import { authFailure } from './support/authError'
 import { keepOfflineCacheEmpty } from './support/offlineCache'
 import { ok, okUser } from './support/ok'
 
-// REACHABILITY + INVARIANCE for the in-row magnification shelf (fix/spine-inrow-magnify).
+// REACHABILITY + INVARIANCE for the in-row magnification shelf, FIXED-WINDOW era
+// (fix/spine-reveal-window).
 //
 // The failure history this suite guards, in one paragraph: the reveal's first mechanism (in-flow
 // swap) mutated scrollWidth mid-gesture so momentum computed against a moving track; the second
 // (absolute overlay) buried siblings' tap targets by construction; the third (shared sticky band)
 // was rejected on device for divorcing the reveal from the shelf. The fourth — dock-style
-// transform choreography with RESERVED SLACK — is only sound if two things hold forever: layout
-// never moves (per-frame scrollWidth constancy, because in Blink/WebKit a transformed box crossing
-// the END edge extends scrollable overflow, CSSWG #9458), and nothing is ever buried (displaced
-// neighbours stay tappable where they visibly are). Those are exactly the assertions here.
+// transform choreography with RESERVED SLACK — is sound, and its first form drove the wave with a
+// TRAVELLING centre (the sliding anchor), which reached the terminals where there was no room and
+// accreted a clamp (#146), a hard block (#147) and a hysteresis (#148) to behave there. The fifth
+// form replaces the centre with a FIXED REVEAL WINDOW — one on-screen position books scroll
+// through; magnification is a pure function of distance from it — and deletes all three
+// compensators. Still only sound if two things hold forever: layout never moves (per-frame
+// scrollWidth constancy, because in Blink/WebKit a transformed box crossing the END edge extends
+// scrollable overflow, CSSWG #9458), and nothing is ever buried (displaced neighbours stay
+// tappable where they visibly are). Those are exactly the assertions here.
 //
 // What is asserted, per shelf size {1, 2, 3, 6, 36}:
 //   · PER-FRAME INVARIANCE (the load-bearing one): scrollWidth and scrollHeight sampled every
@@ -525,7 +531,29 @@ test('cover aspect: the rendered cover box keeps the cover ratio at every visibl
     `stretchiest mid-glide cover ratio ${glide.max.toFixed(4)} vs intrinsic ${INTRINSIC.toFixed(4)}`,
   ).toBeLessThanOrEqual(0.01)
 
-  // Settled after a POINTER pick (the other settle path): same exact box.
+  // Settled after a POINTER pick (the other settle path): same exact box. Wait for scroll
+  // QUIESCENCE first — the settle-glide's smooth tail can still be moving boxes on a slow
+  // runner, and a hover landing on drifting geometry can re-target the intent timer to whatever
+  // slid under the cursor (the CI-only failure that added this wait).
+  await track(page).evaluate(async (el) => {
+    // First outlast the idle window (140ms) plus glide start — a short stability check can pass
+    // entirely INSIDE the pre-settle gap and declare calm right before the glide moves the pick
+    // (the 1-in-6 local flake that hardened this: the pick shifted onto the about-to-be-tapped
+    // target and the tap OPENED it instead of picking it).
+    await new Promise((r) => setTimeout(r, 400))
+    let last = el.scrollLeft
+    let stable = 0
+    const t0 = performance.now()
+    while (performance.now() - t0 < 4000) {
+      await new Promise((r) => requestAnimationFrame(r))
+      if (el.scrollLeft === last) {
+        if (++stable >= 15) return
+      } else {
+        stable = 0
+      }
+      last = el.scrollLeft
+    }
+  })
   const targetId = await track(page).evaluate((el) => {
     const spines = [...el.querySelectorAll<HTMLElement>('[data-spine]')]
     const picked = el.querySelector<HTMLElement>('[data-spine-picked]')!
@@ -550,96 +578,147 @@ test('cover aspect: the rendered cover box keeps the cover ratio at every visibl
   )
 })
 
-test('terminal visibility: the magnified box stays inside the VISIBLE track region near both terminals', async ({
+test('containment: the revealed box stays inside the track — horizontally AND vertically', async ({
   page,
 }) => {
-  // fix/spine-magnify-geometry, defect 2 — and the green-while-broken lesson: the symmetric
-  // terminal assertion above measures at scrollLeft 0 and scrollLeft max, the ONLY two offsets
-  // where content space and viewport space coincide. The device clip lived at scrollLeft 55–150:
-  // the wave (pinned to the first slot by the #146 terminal clamp) held the magnified box at
-  // content x≈55 while the viewport's left edge scrolled past it — inside the content bounds the
-  // slack guarantees, outside the region the device renders. Everything here is therefore
-  // asserted in VIEWPORT space (getBoundingClientRect, against the track's own client rect) —
-  // the space the screen shows — at rest positions strictly between the exact terminals, and on
-  // every sampled frame of a mid-glide drag through both terminal regions.
-  test.setTimeout(120_000)
+  // fix/spine-reveal-window. Horizontal: the window sits MAG_W/2 + ring inside the viewport by
+  // the slack arithmetic, so the revealed box is fully visible BY CONSTRUCTION — this assertion
+  // is the proof the construction holds, in VIEWPORT space (gBCR against the track's client
+  // rect), at rest and on every sampled mid-glide frame.
+  //
+  // Vertical — and the green-while-broken lesson this clause exists to record: EVERY invariance
+  // assertion in this arc measured scrollWidth only. Nothing ever asserted the vertical box,
+  // which is exactly how vertical clipping shipped green — the 1- and 2-book fixtures clipped
+  // 11px and 8px of revealed cover + ring at rest, at the track's top clip edge, from the day
+  // the in-row reveal merged. The track now reserves REVEAL_HEADROOM as a minHeight floor; this
+  // asserts the revealed box's top edge INCLUDING its ring sits inside the track's box, same
+  // viewport space, rest and mid-glide, on EVERY fixture.
+  test.setTimeout(180_000)
   const c = await setup()
-  const big = c.shelves.find((s) => s.count === 36)!
   await signInOnce(page)
-  await gotoShelf(page, big.listId, 36)
   const TOL = 1.5 // sub-pixel transform rounding
+  const RING = 2
+  // Duplicated from SpineShelf deliberately (matching MAG_W/MAG_H above): a silent shrink of the
+  // reserved headroom should fail here.
+  const REVEAL_HEADROOM = 186 // MAG_H(176) + LIFT(8) + RING_W(2)
+  const TRACK_PAD_BOTTOM = 16 // pb-4
+  const REORDER_ROW_H = 17 // arrows row; /shelf/:id always passes onReorder
 
-  const maxScroll = await track(page).evaluate((el) => el.scrollWidth - el.clientWidth)
-  const restOffsets = [0, 40, 80, 120, maxScroll - 120, maxScroll - 80, maxScroll - 40, maxScroll]
-  for (const x of restOffsets) {
-    await track(page).evaluate((el, sl) => (el.scrollLeft = sl), x)
-    await page.waitForTimeout(450) // past the 140ms idle + 160ms settle
-    const box = await track(page).evaluate((el) => {
-      const picked = el.querySelector<HTMLElement>('[data-spine-picked]')!
-      const pr = picked.getBoundingClientRect()
-      const tr = el.getBoundingClientRect()
-      return { left: pr.left - tr.left, right: pr.right - tr.right, w: pr.width }
-    })
+  for (const shelf of c.shelves) {
+    await gotoShelf(page, shelf.listId, shelf.count)
+    // STRUCTURAL floor, seed-independent: the gBCR cover-top clauses below only catch a shrunk
+    // headroom when the seed happens to deal a spine short enough to expose it — fixture spine
+    // heights hash from server-generated UUIDs, so they vary per DB seed. On the seed this arc
+    // shipped against, the 1-book fixture's spine alone exceeded the floor and the
+    // headroom-removal mutant PASSED — the exact "green by luck" failure this suite's own
+    // comments keep warning about, caught only because a later re-verification pass happened to
+    // land on a different seed.
+    //
+    // A first draft of this clause asserted the track's RENDERED clientHeight against the floor
+    // — still seed-dependent, one level removed: clientHeight only falls short of the floor
+    // when minHeight is both absent AND content alone doesn't happen to reach it, so the mutant
+    // passed on this test run's mobile worker (mobile and rest each call setup() independently,
+    // in separate processes, so they seed different random book UUIDs and can land on different
+    // spine heights within the SAME run) while correctly failing on rest. Reading the authored
+    // CSS property directly instead of the ambient rendered size decouples the assertion from
+    // content entirely — it is the reservation existing, not a height that happened to suffice.
+    const minH = await track(page).evaluate((el) => parseFloat(getComputedStyle(el).minHeight))
     expect(
-      box.left,
-      `at rest scrollLeft ${x}: picked box left edge ${box.left.toFixed(1)}px past the visible left edge`,
-    ).toBeGreaterThanOrEqual(-TOL)
-    expect(
-      box.right,
-      `at rest scrollLeft ${x}: picked box right edge ${box.right.toFixed(1)}px past the visible right edge`,
-    ).toBeLessThanOrEqual(TOL)
+      minH,
+      `${shelf.count}-book: track minHeight (CSS) is ${minH}, short of the reserved headroom floor`,
+    ).toBeGreaterThanOrEqual(REVEAL_HEADROOM + TRACK_PAD_BOTTOM + REORDER_ROW_H)
+    const maxScroll = await track(page).evaluate((el) => el.scrollWidth - el.clientWidth)
+    const restOffsets = [...new Set([0, Math.round(maxScroll / 2), maxScroll])]
+    for (const x of restOffsets) {
+      await track(page).evaluate((el, sl) => (el.scrollLeft = sl), x)
+      await page.waitForTimeout(600) // past the idle timeout + the settle-scroll's smooth glide
+      const box = await track(page).evaluate((el) => {
+        const picked = el.querySelector<HTMLElement>('[data-spine-picked]')!
+        const pr = picked.getBoundingClientRect()
+        const cover = picked.querySelector<HTMLElement>('[data-mag-cover]')!
+        const cr = cover.getBoundingClientRect()
+        const tr = el.getBoundingClientRect()
+        return {
+          left: pr.left - tr.left,
+          right: pr.right - tr.right,
+          coverTop: cr.top - tr.top,
+        }
+      })
+      expect(
+        box.left,
+        `${shelf.count}-book at rest scrollLeft ${x}: box left ${box.left.toFixed(1)}px past the visible left edge`,
+      ).toBeGreaterThanOrEqual(-TOL)
+      expect(
+        box.right,
+        `${shelf.count}-book at rest scrollLeft ${x}: box right ${box.right.toFixed(1)}px past the visible right edge`,
+      ).toBeLessThanOrEqual(TOL)
+      expect(
+        box.coverTop - RING,
+        `${shelf.count}-book at rest scrollLeft ${x}: cover top incl. ring ${(box.coverTop - RING).toFixed(1)}px above the track's top edge`,
+      ).toBeGreaterThanOrEqual(-TOL)
+    }
   }
 
-  // Mid-glide through both terminal regions: on every sampled frame the MOST-magnified box (the
-  // one pressing hardest on the edge) stays inside the visible region.
-  const glide = await track(page).evaluate(async (el, tol) => {
-    const violations: string[] = []
-    let n = 0
-    const max = el.scrollWidth - el.clientWidth
-    const ranges: [number, number][] = [
-      [0, Math.min(240, max)],
-      [Math.max(0, max - 240), max],
-    ]
-    for (const [from, to] of ranges) {
-      for (let x = from; x <= to; x += 6) {
-        el.scrollLeft = x
-        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
-        const tr = el.getBoundingClientRect()
-        let best: HTMLElement | null = null
-        let bestExcess = 2
-        for (const s of el.querySelectorAll<HTMLElement>('[data-spine]')) {
-          const excess = s.getBoundingClientRect().width - s.offsetWidth
-          if (excess > bestExcess) {
-            bestExcess = excess
-            best = s
+  // Mid-glide on the big fixture, through both terminal regions and the middle: on every sampled
+  // frame the MOST-magnified box stays inside the track, both axes.
+  const big = c.shelves.find((s) => s.count === 36)!
+  await gotoShelf(page, big.listId, 36)
+  const glide = await track(page).evaluate(
+    async (el, { tol, ring }) => {
+      const violations: string[] = []
+      let n = 0
+      const max = el.scrollWidth - el.clientWidth
+      const ranges: [number, number][] = [
+        [0, Math.min(240, max)],
+        [Math.max(0, Math.round(max / 2) - 120), Math.min(max, Math.round(max / 2) + 120)],
+        [Math.max(0, max - 240), max],
+      ]
+      for (const [from, to] of ranges) {
+        for (let x = from; x <= to; x += 6) {
+          el.scrollLeft = x
+          await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
+          const tr = el.getBoundingClientRect()
+          let bestSlot: HTMLElement | null = null
+          let bestExcess = 2
+          for (const s of el.querySelectorAll<HTMLElement>('[data-spine]')) {
+            const excess = s.getBoundingClientRect().width - s.offsetWidth
+            if (excess > bestExcess) {
+              bestExcess = excess
+              bestSlot = s
+            }
           }
+          if (!bestSlot) continue
+          n++
+          const r = bestSlot.getBoundingClientRect()
+          const cover = bestSlot.querySelector<HTMLElement>('[data-mag-cover]')!
+          const cr = cover.getBoundingClientRect()
+          if (r.left - tr.left < -tol)
+            violations.push(`x=${x} left ${(r.left - tr.left).toFixed(1)}`)
+          if (r.right - tr.right > tol)
+            violations.push(`x=${x} right ${(r.right - tr.right).toFixed(1)}`)
+          if (cr.top - ring - tr.top < -tol)
+            violations.push(`x=${x} top ${(cr.top - ring - tr.top).toFixed(1)}`)
         }
-        if (!best) continue
-        n++
-        const r = best.getBoundingClientRect()
-        if (r.left - tr.left < -tol) violations.push(`x=${x} left ${(r.left - tr.left).toFixed(1)}`)
-        if (r.right - tr.right > tol)
-          violations.push(`x=${x} right ${(r.right - tr.right).toFixed(1)}`)
       }
-    }
-    return { n, violations }
-  }, TOL)
-  expect(glide.n).toBeGreaterThan(30)
+      return { n, violations }
+    },
+    { tol: TOL, ring: RING },
+  )
+  expect(glide.n).toBeGreaterThan(60)
   expect(
     glide.violations,
-    `mid-glide magnified box left the visible region (${glide.violations.length} frames)`,
+    `mid-glide revealed box left the track (${glide.violations.length} frames)`,
   ).toEqual([])
 })
 
-test('tracking: in motion the wave glides with the continuous anchor, never stepping', async ({
-  page,
-}) => {
-  // The assertion that would have caught the stepping (fix/spine-magnify-tracking). Under the old
-  // always-on-the-pick centring the wave's centre sat a measured CONSTANT 156px from the anchor
-  // throughout a fling, and stepped slot-to-slot on a drag (p90 deviation 49px, max 147). In the
-  // motion regime the wave follows the continuous anchor in the same frame, so its centroid must
-  // stay within a tight band of the CLAMPED anchor on every sampled mid-motion frame. The 12px
-  // bound is far below half a slot pitch (16-27px), so per-slot stepping cannot pass it.
+test('tracking: in motion the wave glides with the WINDOW, never stepping', async ({ page }) => {
+  // Retargeted from the travelling-anchor era (fix/spine-magnify-tracking): the wave's centroid
+  // must stay within a tight band of the window's content position (scrollLeft + windowW) on
+  // every sampled mid-motion frame. With a fixed window this is near-tautological — the scroll
+  // rAF writes the wave at exactly that position — so what this actually guards is the WRITE
+  // PATH staying same-frame and single-regime: any second regime, easing, or per-slot stepping
+  // reintroduced between scroll and wave shows up as deviation. The 12px bound is far below half
+  // a slot pitch (16-27px), so per-slot stepping cannot pass it.
   test.setTimeout(120_000)
   const c = await setup()
   const big = c.shelves.find((s) => s.count === 36)!
@@ -648,15 +727,9 @@ test('tracking: in motion the wave glides with the continuous anchor, never step
 
   const result = await track(page).evaluate(async (el) => {
     const spines = [...el.querySelectorAll<HTMLElement>('[data-spine]')]
-    const firstCentre = spines[0]!.offsetLeft + spines[0]!.offsetWidth / 2
-    const lastEl = spines[spines.length - 1]!
-    const lastCentre = lastEl.offsetLeft + lastEl.offsetWidth / 2
+    const first = spines[0]!
+    const windowW = first.offsetLeft + first.offsetWidth / 2
     const devs: number[] = []
-    // Continuous scripted drag across the middle half of the track, sampling every frame WHILE
-    // scrolling (the motion regime — the settle animation only runs 140ms after the last event).
-    // Samples taken after a STALLED iteration are excluded: if the event loop hiccuped past the
-    // idle window, the settle regime legitimately cut in and the frame measures the wrong regime —
-    // that is scheduling noise, not stepping (it flaked exactly once on clean code under load).
     const max = el.scrollWidth - el.clientWidth
     let prev = performance.now()
     for (let x = Math.round(max * 0.2); x <= Math.round(max * 0.8); x += 5) {
@@ -666,11 +739,7 @@ test('tracking: in motion the wave glides with the continuous anchor, never step
       const stalled = now - prev > 100
       prev = now
       if (stalled) continue
-      const maxScroll = el.scrollWidth - el.clientWidth
-      const progress = maxScroll > 0 ? Math.min(1, Math.max(0, el.scrollLeft / maxScroll)) : 0.5
-      const anchor = el.scrollLeft + progress * el.clientWidth
-      const clamped = Math.min(Math.max(anchor, firstCentre), lastCentre)
-      // wave centroid from visual-width excess — the same estimator the audits used
+      const expected = el.scrollLeft + windowW
       let num = 0
       let den = 0
       for (const s of spines) {
@@ -680,7 +749,7 @@ test('tracking: in motion the wave glides with the continuous anchor, never step
           den += excess
         }
       }
-      if (den > 0) devs.push(Math.abs(num / den - clamped))
+      if (den > 0) devs.push(Math.abs(num / den - expected))
     }
     devs.sort((a, b) => a - b)
     return {
@@ -692,156 +761,122 @@ test('tracking: in motion the wave glides with the continuous anchor, never step
   expect(result.n).toBeGreaterThan(50)
   expect(
     result.max,
-    `wave centre must track the anchor while in motion (p50 ${result.p50}px, max ${result.max}px)`,
+    `wave centroid must track the window while in motion (p50 ${result.p50}px, max ${result.max}px)`,
   ).toBeLessThanOrEqual(12)
 })
 
-test('stickiness: a settled pick holds through a sub-deadband nudge, then releases past it', async ({
+test('occupancy: every book reaches full magnification at its own window position', async ({
   page,
 }) => {
-  // polish/spine-pick-feel. Small thumb drift on a settled pick used to deflate the wave
-  // immediately — the motion regime fed the raw anchor every frame with no dead zone. Now the
-  // wave HOLDS at the settled slot's centre until the anchor has moved DEADBAND_FRACTION (0.4) of
-  // the LOCAL slot pitch away from it, then falls straight through to ordinary 1:1 tracking for
-  // the rest of the gesture — this is why the "tracking" test above, which starts its sweep from
-  // a big jump well past any deadband, is untouched by this feature (see its own comment).
-  test.setTimeout(60_000)
+  // fix/spine-reveal-window. The window's contract: at scrollLeft 0 the FIRST book is revealed;
+  // at max, the LAST; and every book between is fully revealed at exactly
+  // scrollLeft = (its centre − windowW) — magnification is a pure function of scroll position,
+  // and this asserts the function, book by book, on the layout the reader actually gets. This is
+  // the reachability descendant of docs/audits/spine-overlay-clamp.md §4's dead zone (first/last
+  // ~3 books never scroll-pickable under a fixed viewport-CENTRE anchor): the window solves the
+  // same problem with slack arithmetic instead of a progress mapping, and this test is what the
+  // travelling-centre mutant must fail.
+  test.setTimeout(120_000)
   const c = await setup()
   const big = c.shelves.find((s) => s.count === 36)!
   await signInOnce(page)
   await gotoShelf(page, big.listId, 36)
 
-  const result = await track(page).evaluate(async (el) => {
-    // Every spine title is set in a per-skin webfont — a late font swap changes glyph metrics and
-    // therefore spine (and pitch, and the anchor's amplification factor) width mid-test. Under load
-    // this can land between measuring the correction factor and applying the nudge, staling both;
-    // wait for fonts up front so every geometry read below is against the FINAL layout.
-    await document.fonts.ready
-    const centroid = () => {
-      let num = 0
-      let den = 0
-      for (const s of el.querySelectorAll<HTMLElement>('[data-spine]')) {
-        const excess = s.getBoundingClientRect().width - s.offsetWidth
-        if (excess > 2) {
-          num += excess * (s.offsetLeft + s.offsetWidth / 2)
-          den += excess
-        }
-      }
-      return den > 0 ? num / den : null
-    }
-    // A fixed wait is not a reliable proxy for "settled" — CI's frame scheduling runs slower and
-    // more irregularly than a local machine, so a margin that is generous locally can still land
-    // mid-ease under load. Poll until the centroid stops moving for several consecutive frames
-    // instead of trusting a clock.
-    const settleForReal = async (maxMs: number) => {
-      const t0 = performance.now()
-      let last = centroid()
-      let stable = 0
-      while (performance.now() - t0 < maxMs) {
-        await new Promise((r) => requestAnimationFrame(r))
-        const now = centroid()
-        if (last != null && now != null && Math.abs(now - last) < 0.05) {
-          if (++stable >= 6) return now
-        } else {
-          stable = 0
-        }
-        last = now
-      }
-      return last
-    }
-    el.scrollLeft = Math.round((el.scrollWidth - el.clientWidth) / 2)
-    await settleForReal(3000)
-    const pickedBefore = el.querySelector<HTMLElement>('[data-spine-picked]')!.dataset.spine
-
+  const result = await track(page).evaluate(async (el, magW) => {
     const spines = [...el.querySelectorAll<HTMLElement>('[data-spine]')]
-    const idx = spines.findIndex((s) => s.dataset.spine === pickedBefore)
-    const centreAt = (i: number) => spines[i]!.offsetLeft + spines[i]!.offsetWidth / 2
-    const pitch = Math.min(
-      idx > 0 ? Math.abs(centreAt(idx) - centreAt(idx - 1)) : Infinity,
-      idx < spines.length - 1 ? Math.abs(centreAt(idx + 1) - centreAt(idx)) : Infinity,
-    )
-    // THE SLIDING ANCHOR amplifies scrollLeft deltas into cx deltas by 1 + clientWidth/maxScroll —
-    // deliberately (docs/audits/spine-overlay-clamp.md §4/§6), so the anchor can still reach the
-    // terminal picks despite a clientWidth/2 margin. A caller that moves scrollLeft by X does NOT
-    // move the anchor by X — a scrollLeft nudge meant to land at 15% of pitch in cx space landed at
-    // 37-55% instead here (root cause of two false CI reds: the deadband correctly released a nudge
-    // that LOOKED like 15% in scrollLeft terms but was well past 40% once the anchor amplified it —
-    // a test bug, not a component bug, confirmed by instrumenting stuckRef directly and tracing the
-    // actual cx delta against the intended one). Divide the intended cx-space nudge by the same
-    // factor renderCx's anchor uses, so the delta that actually reaches cx is the one asserted on.
-    const maxScroll = el.scrollWidth - el.clientWidth
-    const ampFactor = maxScroll > 0 ? 1 + el.clientWidth / maxScroll : 1
-    const scrollNudgeFor = (cxFraction: number) => Math.round((pitch * cxFraction) / ampFactor)
-
-    // THE PROBE: exact `transform` strings of the picked slot and its two neighbours each side —
-    // the terms most sensitive to a real cx change (near the Gaussian's peak the picked slot's OWN
-    // transform barely moves with cx; the steeper flanks a slot or two out are where a released
-    // wave shows up first). renderWave's writes are deterministic .toFixed() strings from cx with
-    // no intermediate animation in the motion regime, so held vs moved is a byte-exact comparison —
-    // immune to the aggregate centroid estimator's cross-element weighting noise, which is what
-    // produced two false CI reds (a ~20px "shift" on an untouched wave, on two different runners)
-    // even after the settle-polling fix above: the centroid sums over all 36 elements, so noise
-    // anywhere in that sum reads as motion; a fingerprint of the exact literal style strings has
-    // nothing left to be noisy about.
-    const fingerprint = () =>
-      [idx - 2, idx - 1, idx, idx + 1, idx + 2]
-        .filter((i) => i >= 0 && i < spines.length)
-        .map((i) => spines[i]!.style.transform)
-        .join('|')
-    const before = fingerprint()
-
-    // A nudge at 15% of pitch — comfortably inside the 40% deadband. Poll (short cap, well under
-    // the 140ms idle timeout that would legitimately start a fresh settle) for the fingerprint to
-    // stabilise post-nudge, rather than trusting a fixed frame count — the write is synchronous
-    // within the one rAF the scroll event schedules, so this converges in 1-2 frames regardless of
-    // how slow or bursty the runner's frame scheduling is.
-    const stabiliseFingerprint = async (maxMs: number) => {
-      const t0 = performance.now()
-      let last = fingerprint()
-      let stable = 0
-      while (performance.now() - t0 < maxMs) {
-        await new Promise((r) => requestAnimationFrame(r))
-        const now = fingerprint()
-        if (now === last) {
-          if (++stable >= 3) return now
-        } else {
-          stable = 0
-        }
-        last = now
-      }
-      return last
+    const first = spines[0]!
+    const windowW = first.offsetLeft + first.offsetWidth / 2
+    const max = el.scrollWidth - el.clientWidth
+    const misses: string[] = []
+    for (let i = 0; i < spines.length; i++) {
+      const s = spines[i]!
+      const target = Math.min(max, Math.max(0, s.offsetLeft + s.offsetWidth / 2 - windowW))
+      el.scrollLeft = target
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
+      const picked = el.querySelector<HTMLElement>('[data-spine-picked]')
+      const w = s.getBoundingClientRect().width
+      if (picked !== s) misses.push(`book ${i}: picked ${picked?.dataset.spine} not this one`)
+      else if (Math.abs(w - magW) > 2)
+        misses.push(`book ${i}: width ${w.toFixed(1)} at its window position`)
     }
-    // Both nudges are ABSOLUTE offsets from this one fixed base — never additive on top of each
-    // other — so the second nudge's displacement is exactly what its own fraction says, with no
-    // cumulative drift from the first (an earlier draft added them, landing the "released" step at
-    // 0.65 of pitch instead of the intended 0.5 — close enough to the pick's own 0.5-pitch flip
-    // boundary to occasionally read confusingly).
-    const baseScrollLeft = el.scrollLeft
+    // the exact extremes seat the exact terminals
+    el.scrollLeft = 0
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
+    if (el.querySelector('[data-spine-picked]') !== spines[0])
+      misses.push('scrollLeft 0 did not reveal the first book')
+    el.scrollLeft = max
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
+    if (el.querySelector('[data-spine-picked]') !== spines[spines.length - 1])
+      misses.push('scrollLeft max did not reveal the last book')
+    return { n: spines.length, misses }
+  }, MAG_W)
+  expect(result.n).toBe(36)
+  expect(result.misses, `occupancy misses (${result.misses.length})`).toEqual([])
+})
 
-    // A nudge at 15% of pitch — comfortably inside the 40% deadband.
-    el.scrollLeft = baseScrollLeft + scrollNudgeFor(0.15)
-    const during = await stabiliseFingerprint(100)
-    const pickedDuring = el.querySelector<HTMLElement>('[data-spine-picked]')!.dataset.spine
+test('terminal rest: first book at 0, last at max, fully visible, zero neighbour overlap — every fixture', async ({
+  page,
+}) => {
+  // fix/spine-reveal-window. The travelling centre needed #147's hard block to shove terminal
+  // overflow back on-screen, and the block's shove was what overlapped the pick into its
+  // neighbour (~60px, the accepted trade of that era). The window has room on both sides by the
+  // slack arithmetic, the block is DELETED, and overlap is zero by construction — displacement
+  // always splits AWAY from the revealed book. This asserts that construction at both terminals
+  // of every fixture: right book picked, box fully inside the viewport, zero intersection with
+  // either neighbour. The trailing-slack mutant (slack below the window's requirement) must fail
+  // the at-max clause — the last book stops short of the window and is never revealed.
+  test.setTimeout(180_000)
+  const c = await setup()
+  await signInOnce(page)
 
-    // Then two full pitches out — unambiguously past both the deadband and the pick's own flip
-    // boundary, proving stickiness is a one-shot latch, not a permanent one.
-    el.scrollLeft = baseScrollLeft + scrollNudgeFor(2)
-    const released = await stabiliseFingerprint(100)
-
-    return { pickedBefore, pickedDuring, before, during, released, pitch, ampFactor }
-  })
-
-  expect(result.pickedDuring, 'the pick itself must not change under a sub-deadband nudge').toBe(
-    result.pickedBefore,
-  )
-  expect(
-    result.during,
-    `wave transforms must be byte-identical under a sub-deadband nudge (pitch ${result.pitch}, anchor amplification ${result.ampFactor.toFixed(2)}×)`,
-  ).toBe(result.before)
-  expect(
-    result.released,
-    `wave transforms must change once the deadband is exceeded (pitch ${result.pitch}, anchor amplification ${result.ampFactor.toFixed(2)}×)`,
-  ).not.toBe(result.before)
+  for (const shelf of c.shelves) {
+    await gotoShelf(page, shelf.listId, shelf.count)
+    for (const end of ['start', 'end'] as const) {
+      const r = await track(page).evaluate(async (el, whichEnd) => {
+        const wait = (ms: number) => new Promise((res) => setTimeout(res, ms))
+        const max = el.scrollWidth - el.clientWidth
+        el.scrollLeft = whichEnd === 'start' ? 0 : max
+        await wait(600) // idle + settle-scroll glide
+        const spines = [...el.querySelectorAll<HTMLElement>('[data-spine]')]
+        const picked = el.querySelector<HTMLElement>('[data-spine-picked]')!
+        const idx = spines.indexOf(picked)
+        const pr = picked.getBoundingClientRect()
+        const tr = el.getBoundingClientRect()
+        const overlapWith = (nb: HTMLElement | undefined) => {
+          if (!nb) return 0
+          const nr = nb.getBoundingClientRect()
+          return Math.max(0, Math.min(pr.right, nr.right) - Math.max(pr.left, nr.left))
+        }
+        return {
+          idx,
+          expectedIdx: whichEnd === 'start' ? 0 : spines.length - 1,
+          left: pr.left - tr.left,
+          right: pr.right - tr.right,
+          overlapLeft: overlapWith(spines[idx - 1]),
+          overlapRight: overlapWith(spines[idx + 1]),
+        }
+      }, end)
+      expect(r.idx, `${shelf.count}-book at ${end}: wrong book seated in the window`).toBe(
+        r.expectedIdx,
+      )
+      expect(
+        r.left,
+        `${shelf.count}-book at ${end}: box left ${r.left.toFixed(1)}`,
+      ).toBeGreaterThanOrEqual(-1.5)
+      expect(
+        r.right,
+        `${shelf.count}-book at ${end}: box right ${r.right.toFixed(1)}`,
+      ).toBeLessThanOrEqual(1.5)
+      expect(
+        r.overlapLeft,
+        `${shelf.count}-book at ${end}: overlaps left neighbour ${r.overlapLeft.toFixed(1)}px`,
+      ).toBeLessThanOrEqual(0.5)
+      expect(
+        r.overlapRight,
+        `${shelf.count}-book at ${end}: overlaps right neighbour ${r.overlapRight.toFixed(1)}px`,
+      ).toBeLessThanOrEqual(0.5)
+    }
+  }
 })
 
 // polish/spine-pick-feel. The full 9×2 legibility sweep lives in

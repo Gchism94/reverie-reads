@@ -6,9 +6,16 @@ import { StatePill } from './StatePill'
 
 /**
  * A horizontal shelf of book spines — each a real per-skin Spine (gilt-bound Tryst · brushed-metal
- * Aphelion), sized book-to-book. The spine nearest the sliding pick anchor magnifies IN THE ROW,
- * dock-style: it scales toward cover size while its neighbours are DISPLACED ASIDE — moved, not
- * covered. docs/research/in-row-expansion.md is the feasibility basis; the two audits it cites are
+ * Aphelion), sized book-to-book, with a FIXED REVEAL WINDOW (fix/spine-reveal-window): one
+ * position on screen — where the first book sits at rest — where magnification always happens.
+ * Books scroll THROUGH it; whatever spine passes under it blooms into its cover and contracts as
+ * the next arrives. The window never moves. A book's magnification is a pure function of its
+ * distance from the window, evaluated per frame from live scroll position — inherently
+ * continuous, no stepping, no lag, no stale pick, because there is no travelling centre left to
+ * go stale. (The travelling anchor this replaces was the source of every remaining defect: it
+ * reached the terminals where there was no room, so #146 clamped it, #147 shoved its overflow
+ * back on-screen, and #148 dampened its thumb-drift jitter. All three died with it.)
+ * docs/research/in-row-expansion.md is the feasibility basis; the audits it cites are
  * the failure history this mechanism must not repeat:
  *
  *  · NOT the in-flow swap (attempt 1): that mutated scrollWidth mid-gesture, so momentum computed
@@ -35,23 +42,44 @@ import { StatePill } from './StatePill'
 /** Magnified (cover) size — the same 120×176 every reveal in this app has used. */
 const MAG_W = 120
 const MAG_H = 176
-/** Reserved slack at each end of the track. Must exceed the peak transformed overhang at the end
- *  edge (≈ (MAG_W − minSpine)/2 ≈ 47px plus neighbour falloff spill); the guard instruments
- *  scrollWidth per frame to prove this size holds. Static, rendered from the first frame, and
- *  never mutated — that is the entire momentum contract. */
-const SLACK = 96
+/** LEADING reserved slack. Sized so the window (the first slot's centre, at LEAD_SLACK + gap +
+ *  w0/2 ≈ 118-125px) has room for the magnified box's left half plus ring (MAG_W/2 + RING_W ≈
+ *  62px) inside the viewport at rest — measured margin ~57px at the narrowest fixture. Static,
+ *  rendered from the first frame, never mutated: that is the momentum contract (scrollWidth is a
+ *  constant every fling computes against). The TRAILING slack is the responsive spacer below —
+ *  sized per layout so the LAST book's centre reaches the window at scrollLeft max, exactly. */
+const LEAD_SLACK = 96
 /** Gaussian falloff width (px, content space). At slot pitch ~44px the immediate neighbour sits
  *  at t≈0.29 and the next at t≈0.007 — only the 1–3 items nearest the anchor deviate
  *  meaningfully, which is the density constraint (~10 spines per screen at rest). */
 const SIGMA = 28
 /** The picked item's lift, folded into the same transform (translateY · t). */
 const LIFT = 8
-/** STICKINESS (polish/spine-pick-feel): once the wave has settled on a slot, the centre holds
- *  there until the anchor has moved this fraction of the LOCAL slot pitch toward a neighbour —
- *  a fraction of the actual on-screen pitch (hash-varied spine widths), never a fixed px value,
- *  so small thumb drift no longer visibly deflates a settled pick. Applies only right after a
- *  settle; once released it tracks 1:1 for the rest of the gesture (see the update() comment). */
-const DEADBAND_FRACTION = 0.4
+/** The picked-cover accent ring's width (the box-shadow spread in the JSX below). */
+const RING_W = 2
+/** HOVER INTENT (fix/spine-reveal-window): a mouse hover arms the pointer pin after this delay
+ *  instead of instantly. An instant hover-pin bloomed whatever the cursor CROSSED on its way to
+ *  a target, and the bloom's displacement reshuffled the shelf under the approaching cursor —
+ *  measured as seven oscillating pointerenter events on one approach, a drag that started on the
+ *  crossed spine instead of the aimed-at one, and Playwright's dragTo hanging on a source whose
+ *  box never stabilised. With intent, transit never pins — only dwell does — so boxes hold still
+ *  for anything aiming at them. Click/tap/focus picks stay instant. */
+const HOVER_INTENT_MS = 80
+/** VERTICAL HEADROOM (fix/spine-reveal-window): the revealed cover's peak extent above the spine
+ *  baseline is a CONSTANT — MAG_H + LIFT + RING_W = 186px — yet the row's height was
+ *  content-derived (tallest spine + padding), so shelves whose tallest spine fell short clipped
+ *  the revealed cover's top at the track's clip edge. Measured before this fix: the 1- and 2-book
+ *  fixtures clipped 11px and 8px of cover+ring AT REST. Every invariance assertion in this arc
+ *  measured scrollWidth only; nothing ever asserted the vertical box — which is how that shipped
+ *  green. The track's minHeight reserves the peak exactly: headroom + bottom padding (pb-4 =
+ *  16px) + the reorder-arrows row where present. Cost, measured against the spine-reveal-band
+ *  audit's budget table: 0px on every rail whose tallest spine ≥ ~154px (all four measured
+ *  /shelves rails and shelf detail pay nothing); only short-spined shelves grow, ≤ ~19px. */
+const REVEAL_HEADROOM = MAG_H + LIFT + RING_W
+/** pb-4 on the track, in px — part of the minHeight arithmetic above. */
+const TRACK_PAD_BOTTOM = 16
+/** The reorder-arrows row under each spine on arrangeable shelves (13px buttons + 4px mt-1). */
+const REORDER_ROW_H = 17
 
 type SlotNodes = { art: HTMLElement; cover: HTMLElement }
 
@@ -115,20 +143,19 @@ export function SpineShelf({
    * opacities — paint space, which layout cannot see — so the wave can never perturb scrollWidth
    * either, provided every transformed box stays inside the slack (the guard's job to prove).
    *
-   * The centre `cx` is EXPLICIT, in track content coordinates, because the wave has two regimes
-   * (fix/spine-magnify-tracking — device: "the scroll doesn't keep up", measured as a constant
-   * 156px centre-to-anchor gap during a fling under the old always-on-the-pick centring):
-   *   · IN MOTION the caller passes the continuous sliding anchor, so the wave glides 1:1 with
-   *     the finger inside the same rAF that sampled the scroll — no React round-trip, no stale
-   *     pick (the old path read the pick ref one render early: measured 18-25ms scroll-to-write).
-   *   · AT REST the caller eases the centre onto the picked slot's centre, so every settled state
-   *     still ends with the picked book fully open (t = 1, cross-fade complete) — glide while
-   *     moving, pop when settled.
-   * `cx` is CLAMPED to the terminal slot centres: the anchor formula yields values outside the
-   * content during iOS rubber-band overscroll (scrollLeft < 0 → cx < 0), and a wave centred past
-   * a terminal pushes that terminal's magnified box over the trimmed START edge — the
-   * deterministic left-terminal clip observed on device. Beyond the terminals the wave has
-   * nothing to say.
+   * The centre `cx` is EXPLICIT, in track content coordinates. Two callers only:
+   *   · the scroll rAF passes the WINDOW's content position (scrollLeft + windowW) — same-frame,
+   *     no React round-trip (the #146 bar: p50 0.6ms scroll-to-write), continuous by definition;
+   *   · a pointer/keyboard pick passes the pinned slot's own centre, so a hovered or tapped spine
+   *     blooms in place without moving the shelf.
+   * No clamp: the window's content position can only leave [firstCentre, lastCentre] during
+   * rubber-band overscroll, where every t shrinks toward rest and no box approaches either
+   * content edge — the #146 clamp existed because the travelling anchor degenerated to
+   * cx = scrollLeft there and pushed the first box past the trimmed start edge; a window at
+   * scrollLeft + ~120px cannot. No hard block either: the window sits ≥ MAG_W/2 + RING_W inside
+   * the viewport by the slack arithmetic, so the revealed box is fully visible by construction —
+   * the #147 block existed to shove a terminal-pinned wave's overflow back on-screen, and there
+   * is no terminal-pinned wave left.
    *
    * prefers-reduced-motion: the falloff wave is replaced by a binary state — the picked item at
    * full magnification, everything else exactly at rest. No intermediate scale/translate wave.
@@ -140,12 +167,7 @@ export function SpineShelf({
     const n = slots.length
     if (n === 0) return
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-
-    const firstCentre = slots[0]!.offsetLeft + slots[0]!.offsetWidth / 2
-    const lastSlot = slots[n - 1]!
-    const lastCentre = lastSlot.offsetLeft + lastSlot.offsetWidth / 2
-    const cx = Math.min(Math.max(cxRaw, firstCentre), lastCentre)
-    waveCxRef.current = cx
+    const cx = cxRaw
 
     // Pass 1: magnification factor and the width each slot's scale visually adds.
     const t = new Array<number>(n)
@@ -153,7 +175,6 @@ export function SpineShelf({
     const sy = new Array<number>(n)
     const added = new Array<number>(n)
     const widths = new Array<number>(n)
-    const centres = new Array<number>(n)
     let total = 0
     for (let i = 0; i < n; i++) {
       const s = slots[i]!
@@ -161,7 +182,6 @@ export function SpineShelf({
       const h = s.offsetHeight
       const centre = s.offsetLeft + w / 2
       widths[i] = w
-      centres[i] = centre
       const d = centre - cx
       let ti = Math.exp(-(d * d) / (2 * SIGMA * SIGMA))
       if (reduced) ti = s.dataset.spine === shownIdRef.current ? 1 : 0
@@ -171,12 +191,6 @@ export function SpineShelf({
       added[i] = w * (sx[i]! - 1)
       total += added[i]!
     }
-    // The VISIBLE track region, in the same content coordinates as the centres. scrollLeft and
-    // clientWidth are layout-space reads — paint transforms cannot move them — so the hard block
-    // below cannot feed back into its own inputs any more than the offset reads can.
-    const visLeft = el.scrollLeft
-    const visRight = el.scrollLeft + el.clientWidth
-
     // Pass 2: displacement — each slot shifts by (width added before it + half its own) minus half
     // the total, so growth splits symmetrically around the wave: left neighbours end near
     // −total/2, right neighbours near +total/2, the wave's centre near 0. The slack absorbs the
@@ -185,32 +199,10 @@ export function SpineShelf({
     for (let i = 0; i < n; i++) {
       const s = slots[i]!
       const nodes = nodesFor(s)
-      let dx = cum + added[i]! / 2 - total / 2
+      const dx = cum + added[i]! / 2 - total / 2
       cum += added[i]!
       if (!nodes) continue
       const ti = t[i]!
-      // THE HARD BLOCK (fix/spine-magnify-geometry, defect 2): the transformed box's edges are
-      // clamped to the track's VISIBLE region — viewport space, the space the device renders —
-      // not merely to the content bounds the slack arithmetic guarantees. Measured on device and
-      // reproduced in the lab: with the wave pinned to the first slot (the #146 terminal clamp),
-      // every rest position with scrollLeft in (55, ~150) put the magnified box's left edge
-      // BEHIND the viewport's left edge — inside the content, outside the visible region — and
-      // the old guard only ever measured scrollLeft 0, the one offset where the two spaces
-      // coincide.
-      //
-      // The correction is weighted by magnification, full above t = 0.3 and zero below t = 0.1:
-      // a magnifying box is the reveal and must be fully on-screen (the slot nearest the wave's
-      // centre is always at t ≥ 0.73, so the most-magnified box always gets the FULL correction,
-      // uncapped — a first draft capped the shove at the slot's own added width and left a
-      // measured −7px residual when displacement, not growth, carried the box off-screen), while
-      // a rest spine (t → 0) keeps weight zero — scrolling or displacing shelf furniture out of
-      // view is the mechanism working, not wave overflow, and the block must not drag it back.
-      const halfW = (widths[i]! * sx[i]!) / 2
-      const boxLeft = centres[i]! + dx - halfW
-      const boxRight = centres[i]! + dx + halfW
-      const wClamp = Math.min(1, Math.max(0, (ti - 0.1) / 0.2))
-      if (boxLeft < visLeft) dx += (visLeft - boxLeft) * wClamp
-      else if (boxRight > visRight) dx -= (boxRight - visRight) * wClamp
       // The transform goes on the BUTTON itself, not an inner wrapper. getBoundingClientRect does
       // not include descendants, so a wrapper-level transform left the button's reported box at
       // its layout position while its visuals moved aside — and everything that aims at the box
@@ -242,161 +234,195 @@ export function SpineShelf({
   }
   const renderWaveRef = useRef(renderWave)
   renderWaveRef.current = renderWave
-  /** Where the wave currently renders (clamped), for the settle animation's starting point. */
-  const waveCxRef = useRef(0)
-  const settleRafRef = useRef(0)
   const idleTimerRef = useRef(0)
-  /** STICKINESS (polish/spine-pick-feel): true whenever the wave is resting exactly on a settled
-   *  slot centre — set by settle() the instant it arrives (every one of its three paths), cleared
-   *  by update() the moment a scroll carries the anchor past the deadband. See update()'s comment
-   *  for why this cannot live inside renderWave itself. */
-  const stuckRef = useRef(true)
+  /** Mirror of pointerId for the scroll handler (it lives in a [books]-keyed effect). */
+  const pointerIdRef = useRef<string | null>(null)
+  pointerIdRef.current = pointerId
+  /** Pending hover-intent timer (see HOVER_INTENT_MS). */
+  const hoverTimerRef = useRef(0)
+  useEffect(() => () => window.clearTimeout(hoverTimerRef.current), [])
+  /** True while settleScroll's own smooth glide is emitting scroll events. Its writes are the
+   *  component's, not the user's — they must never dismiss a pointer pin (a hover pick landing
+   *  while the glide's tail is still emitting was getting cleared by the pin's scroll-dismissal
+   *  rule on slow CI runners). Cleared on arrival at the settle target, or instantly by any real
+   *  user input (which also cancels the native smooth scroll itself). */
+  const settlingRef = useRef(false)
+  const settleTargetRef = useRef(0)
+  /** When the pointer pin was set — scroll clears the pin only after a grace period, because a
+   *  keyboard focus on an off-screen spine triggers the browser's own scroll-into-view, and that
+   *  programmatic scroll must not immediately dismiss the pick it belongs to. */
+  const pinnedAtRef = useRef(0)
+  useEffect(() => {
+    if (pointerId != null) pinnedAtRef.current = performance.now()
+  }, [pointerId])
 
-  /** The continuous sliding anchor, in track content coordinates. */
-  const anchorCx = (el: HTMLElement): number => {
-    const maxScroll = el.scrollWidth - el.clientWidth
-    const progress = maxScroll > 0 ? Math.min(1, Math.max(0, el.scrollLeft / maxScroll)) : 0.5
-    return el.scrollLeft + progress * el.clientWidth
+  /** THE WINDOW: the fixed on-screen offset where reveals happen — the first slot's centre at
+   *  scrollLeft 0 (LEAD_SLACK + gap + w0/2), so the resting appearance matches what every reader
+   *  already knows. Offset geometry, so the wave cannot perturb it. */
+  const windowW = (el: HTMLElement): number => {
+    const first = el.querySelector<HTMLElement>('[data-spine]')
+    return first ? first.offsetLeft + first.offsetWidth / 2 : 0
   }
 
-  /** Ease the wave's centre onto the picked slot — the REST regime. ~160ms cubic ease-out. This
-   *  is the one time constant in the pipeline, and it runs only when scrolling has already
-   *  stopped, so no fling can outrun it; the MOTION regime writes directly, same-frame. Under
-   *  prefers-reduced-motion it snaps. */
-  const settle = (): void => {
+  /** Auto-centre after a gesture ends: scroll the nearest slot into the window so every settled
+   *  state ends with a book fully open (t = 1) — the settled-state guarantee that used to come
+   *  from easing the WAVE onto the pick now comes from easing the SCROLL onto the slot, which
+   *  keeps the single invariant intact: magnification is a pure function of scroll position.
+   *  Native smooth scrolling (cancelled automatically by user input, snapped under
+   *  prefers-reduced-motion); its own scroll events re-arm the idle timer, and the re-fire
+   *  no-ops once the target is reached. */
+  const settleScroll = (): void => {
     const el = ref.current
-    const id = shownIdRef.current
-    if (!el || !id) return
-    const slot = el.querySelector<HTMLElement>(`[data-spine="${CSS.escape(id)}"]`)
-    if (!slot) return
-    const target = slot.offsetLeft + slot.offsetWidth / 2
-    cancelAnimationFrame(settleRafRef.current)
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      renderWaveRef.current(target)
-      stuckRef.current = true
-      return
-    }
-    const from = waveCxRef.current
-    if (Math.abs(target - from) < 0.5) {
-      renderWaveRef.current(target)
-      stuckRef.current = true
-      return
-    }
-    const t0 = performance.now()
-    const DURATION = 160
-    const step = (now: number) => {
-      const u = Math.min(1, (now - t0) / DURATION)
-      const eased = 1 - Math.pow(1 - u, 3)
-      renderWaveRef.current(from + (target - from) * eased)
-      if (u < 1) settleRafRef.current = requestAnimationFrame(step)
-      // Arrived: re-arm the deadband around THIS slot. Only on the final frame — every
-      // intermediate frame of the ease must render at its own value undisturbed.
-      else stuckRef.current = true
-    }
-    settleRafRef.current = requestAnimationFrame(step)
+    if (!el || pointerIdRef.current != null) return
+    const W = windowW(el)
+    const cx = el.scrollLeft + W
+    let bestCentre: number | null = null
+    let bd = Infinity
+    el.querySelectorAll<HTMLElement>('[data-spine]').forEach((s) => {
+      const c = s.offsetLeft + s.offsetWidth / 2
+      const d = Math.abs(c - cx)
+      if (d < bd) {
+        bd = d
+        bestCentre = c
+      }
+    })
+    if (bestCentre == null) return
+    const maxScroll = el.scrollWidth - el.clientWidth
+    const target = Math.min(maxScroll, Math.max(0, bestCentre - W))
+    if (Math.abs(target - el.scrollLeft) < 1) return
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    settlingRef.current = !reduced
+    settleTargetRef.current = target
+    el.scrollTo({ left: target, behavior: reduced ? 'auto' : 'smooth' })
   }
-  const settleRef = useRef(settle)
-  settleRef.current = settle
+  const settleScrollRef = useRef(settleScroll)
+  settleScrollRef.current = settleScroll
 
   useEffect(() => {
     const el = ref.current
     if (!el) return
     let raf = 0
     const update = () => {
-      // THE SLIDING ANCHOR (docs/audits/spine-overlay-clamp.md §4/§6), carried over unchanged — a
-      // fixed centre anchor can never sit closer than clientWidth/2 to either content edge, so
-      // the first/last ~3 books were never scroll-pickable. All distances are OFFSET geometry —
-      // transform-independent — so the magnification wave cannot oscillate its own pick.
-      const cx = anchorCx(el)
-      const slots = el.querySelectorAll<HTMLElement>('[data-spine]')
-      const centreOf = new Map<string, number>()
-      let firstCentre = Infinity
-      let lastCentre = -Infinity
+      // THE WINDOW replaces the sliding anchor (docs/audits/spine-overlay-clamp.md §4/§6): the
+      // anchor existed so scrolling could pick the terminal books past a fixed viewport-CENTRE
+      // anchor's dead zone. The window solves the same reachability differently — the trailing
+      // slack is sized so the LAST book's centre reaches the window at scrollLeft max exactly,
+      // and the leading slack puts the FIRST book in it at 0 — so every book scrolls through it
+      // with no progress mapping, no amplification factor, and no terminal it can't reach. All
+      // distances are OFFSET geometry — transform-independent — so the magnification wave cannot
+      // oscillate its own pick.
+      const cx = el.scrollLeft + windowW(el)
       let best: string | null = null
       let bd = Infinity
-      slots.forEach((s) => {
-        const id = s.dataset.spine
-        const c = s.offsetLeft + s.offsetWidth / 2
-        if (id) centreOf.set(id, c)
-        if (c < firstCentre) firstCentre = c
-        if (c > lastCentre) lastCentre = c
-        const d = Math.abs(c - cx)
+      el.querySelectorAll<HTMLElement>('[data-spine]').forEach((s) => {
+        const d = Math.abs(s.offsetLeft + s.offsetWidth / 2 - cx)
         if (d < bd) {
           bd = d
-          best = id ?? null
+          best = s.dataset.spine ?? null
         }
       })
       setActiveId(best)
-      // The same clamp renderWave applies internally (its terminal-slot centres) — computed here
-      // too because the STICKINESS decision below must compare against what will actually render,
-      // not the raw anchor a rubber-band overscroll can push outside the content.
-      const clamped = Math.min(Math.max(cx, firstCentre), lastCentre)
-
-      // STICKINESS (polish/spine-pick-feel): once settle() has parked the wave exactly on a slot
-      // centre, small thumb drift used to deflate the pick immediately, because the MOTION regime
-      // below has always fed the wave the raw anchor every frame with no dead zone. Now, WHILE
-      // stuck, the wave holds at the settled slot's centre until the anchor has moved this frame's
-      // local DEADBAND_FRACTION of slot pitch away from it — pitch measured to the nearer real
-      // neighbour, never a fixed px value, so it tracks hash-varied spine widths. The moment that
-      // threshold is crossed, stuckRef drops and every later frame in this gesture falls straight
-      // through to the plain `renderWaveRef.current(clamped)` below — full 1:1 tracking, identical
-      // to pre-stickiness behaviour, for the rest of the motion. This is why a GENUINE scroll never
-      // sees the dead zone twice: the guard's continuous sweep starts from a settled pause (stuck),
-      // crosses the deadband on its very first sampled step, and is fully released well before the
-      // window that assertion measures — the 12px tracking bound holds because stickiness is a
-      // one-shot latch at the START of a gesture, not a per-frame filter during it.
-      let renderCx = clamped
-      const heldId = shownIdRef.current
-      const heldCentre = heldId ? centreOf.get(heldId) : undefined
-      if (stuckRef.current && heldCentre != null) {
-        const idx = Array.from(slots).findIndex((s) => s.dataset.spine === heldId)
-        const left = idx > 0 ? centreOf.get(slots[idx - 1]!.dataset.spine ?? '') : undefined
-        const right =
-          idx < slots.length - 1 ? centreOf.get(slots[idx + 1]!.dataset.spine ?? '') : undefined
-        const gaps = [left, right]
-          .filter((c): c is number => c != null)
-          .map((c) => Math.abs(c - heldCentre))
-        const pitch = gaps.length ? Math.min(...gaps) : 0
-        const deadband = DEADBAND_FRACTION * pitch
-        if (Math.abs(clamped - heldCentre) < deadband) renderCx = heldCentre
-        else stuckRef.current = false
-      }
-
-      // MOTION REGIME: the wave follows the continuous anchor in the SAME frame the scroll was
-      // sampled — not the pick, which lives a React render away (the stale-pick path measured
-      // 18-25ms scroll-to-write and a wave frozen 156px behind a fling) — unless stickiness above
-      // is holding it at the settled centre.
-      cancelAnimationFrame(settleRafRef.current)
-      renderWaveRef.current(renderCx)
-      // REST REGIME, armed per scroll burst: when no scroll event lands for 140ms the gesture is
-      // over, and the wave eases onto the picked slot so the settled state ends fully open.
+      if (settlingRef.current && Math.abs(el.scrollLeft - settleTargetRef.current) < 2)
+        settlingRef.current = false
+      // A real USER scroll dismisses a pointer pin (the window takes over) — but not the
+      // settle-glide's own writes (settlingRef), and not within the grace period after a pin
+      // (the browser's own focus-scroll for that pin).
+      if (
+        !settlingRef.current &&
+        pointerIdRef.current != null &&
+        performance.now() - pinnedAtRef.current > 400
+      )
+        setPointerId(null)
+      // The wave follows the window in the SAME frame the scroll was sampled — no React
+      // round-trip (the #146 bar), and no second regime: this is the only place scroll-driven
+      // magnification is ever computed. A live pointer pin keeps its in-place bloom instead.
+      if (pointerIdRef.current == null) renderWaveRef.current(cx)
+      // When no scroll event lands for 140ms the gesture is over; ease the SCROLL so the nearest
+      // book centres in the window and the settled state ends fully open.
       window.clearTimeout(idleTimerRef.current)
-      idleTimerRef.current = window.setTimeout(() => settleRef.current(), 140)
+      idleTimerRef.current = window.setTimeout(() => settleScrollRef.current(), 140)
     }
     const onScroll = () => {
       cancelAnimationFrame(raf)
       raf = requestAnimationFrame(update)
     }
     el.addEventListener('scroll', onScroll, { passive: true })
-    // Initial mount: render at the anchor once so the row is never bare, then settle onto the
-    // initial pick.
-    renderWaveRef.current(anchorCx(el))
+    const onUserInput = () => {
+      settlingRef.current = false
+    }
+    el.addEventListener('wheel', onUserInput, { passive: true })
+    el.addEventListener('touchstart', onUserInput, { passive: true })
+    el.addEventListener('pointerdown', onUserInput, { passive: true })
+    // Initial mount: the first book sits in the window by construction — render and pick it.
+    renderWaveRef.current(el.scrollLeft + windowW(el))
     update()
     setPointerId(null)
     return () => {
       el.removeEventListener('scroll', onScroll)
+      el.removeEventListener('wheel', onUserInput)
+      el.removeEventListener('touchstart', onUserInput)
+      el.removeEventListener('pointerdown', onUserInput)
       cancelAnimationFrame(raf)
-      cancelAnimationFrame(settleRafRef.current)
       window.clearTimeout(idleTimerRef.current)
     }
   }, [books])
 
-  // Pointer picks (hover, tap, :focus-visible) move the pick without a scroll event — settle the
-  // wave onto the new pick in the same frame its aria flips, so the magnified state and the
-  // accessible state agree.
+  // THE TRAILING SLACK, responsive: sized so the LAST book's centre reaches the window at
+  // scrollLeft max, exactly — trail = clientWidth − window − wLast/2 − gap, which makes
+  // maxScroll + window = lastCentre by construction (and makes a 1-book shelf's scrollWidth
+  // exactly clientWidth: nothing to scroll, the sole book already in the window). Measured at
+  // mount and on container resize — both OUTSIDE any gesture, so scrollWidth remains the
+  // constant every fling computes against (the momentum contract; the per-frame invariance
+  // guard proves it). Until the first measurement it renders at LEAD_SLACK, one layout pass.
+  const [trailSlack, setTrailSlack] = useState<number | null>(null)
   useLayoutEffect(() => {
-    settleRef.current()
-  }, [shownId, books])
+    const el = ref.current
+    if (!el) return
+    const measure = () => {
+      const slots = el.querySelectorAll<HTMLElement>('[data-spine]')
+      const spacer = el.querySelector<HTMLElement>('[data-trail-slack]')
+      if (slots.length === 0 || !spacer) return
+      const last = slots[slots.length - 1]!
+      const lastCentre = last.offsetLeft + last.offsetWidth / 2
+      // Solve against the ACTUAL content end rather than assuming the last book is the last
+      // child — the add-book end-cap (and any future trailing content) sits between the last
+      // spine and this spacer, and a formula that ignored it left maxScroll ~42px past the
+      // window's last-book position (caught by the diagnosis probe, not by review). We want
+      // scrollWidth = lastCentre + (clientWidth − window), i.e. maxScroll + window = lastCentre.
+      // The content-so-far is the spacer's own offsetLeft — NEVER scrollWidth − spacerWidth,
+      // because scrollWidth is floored at clientWidth: on a desktop viewport a tiny shelf's
+      // content is narrower than the track, the floored value overstates it, and the solve
+      // converges ~590px short — measured as maxScroll 0 on the 2-book fixture at 976px, the
+      // last book permanently unable to reach the window (caught by the terminal-rest guard on
+      // the rest project; the mobile project's narrower viewport never hits the floor).
+      const trail = Math.max(
+        0,
+        Math.round(lastCentre + el.clientWidth - windowW(el) - spacer.offsetLeft),
+      )
+      setTrailSlack((prev) => (prev === trail ? prev : trail))
+    }
+    measure()
+    // jsdom (the unit-test DOM) has no ResizeObserver; every target browser does. The initial
+    // measure above is unconditional — only the resize RE-measure is feature-gated.
+    if (typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [books])
+
+  // Pointer picks (hover, tap, :focus-visible) bloom IN PLACE — the wave renders around the
+  // pinned slot's own centre in the same frame its aria flips, so the magnified state and the
+  // accessible state agree; when the pin clears, the wave returns to the window.
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    if (pointerId != null) {
+      const slot = el.querySelector<HTMLElement>(`[data-spine="${CSS.escape(pointerId)}"]`)
+      if (slot) renderWaveRef.current(slot.offsetLeft + slot.offsetWidth / 2)
+    } else {
+      renderWaveRef.current(el.scrollLeft + windowW(el))
+    }
+  }, [pointerId, books])
 
   return (
     <div
@@ -406,7 +432,13 @@ export function SpineShelf({
       // offsets were measured from <main> — a systematic ~16px (section padding) frame mismatch
       // between slot centres and the anchor, found while measuring the tracking defect.
       className="relative flex items-end gap-1.5 overflow-x-auto pb-4 pt-4"
-      style={{ scrollbarWidth: 'none' }}
+      // minHeight reserves the revealed cover's constant peak extent (see REVEAL_HEADROOM's
+      // comment) — the floor, not the height: shelves whose spines already exceed it are
+      // untouched.
+      style={{
+        scrollbarWidth: 'none',
+        minHeight: REVEAL_HEADROOM + TRACK_PAD_BOTTOM + (onReorder ? REORDER_ROW_H : 0),
+      }}
       // MOUSE-ONLY, matching onPointerEnter's condition below. Touch pointers are transient: the
       // browser fires a full pointerleave chain after EVERY tap-release (measured in Chromium's
       // emulation; iOS documents the same), so an unconditional clear races the tap's trailing
@@ -415,14 +447,15 @@ export function SpineShelf({
       // dismissed by what touch does next (another tap, or a scroll re-pick), not by the phantom
       // leave of a finger that lifted.
       onPointerLeave={(e) => {
-        if (e.pointerType === 'mouse') setPointerId(null)
+        if (e.pointerType !== 'mouse') return
+        window.clearTimeout(hoverTimerRef.current)
+        setPointerId(null)
       }}
     >
-      {/* RESERVED SLACK, leading. Static from the first frame. The leading spacer is for visual
-        completeness (start-edge overhang is trimmed, not counted toward scrollWidth); the
-        trailing twin is the momentum contract (end-edge overhang would extend it). Never
-        conditional, never resized. */}
-      <div aria-hidden className="flex-none self-end" style={{ width: SLACK }} />
+      {/* RESERVED SLACK, leading. Static from the first frame; puts the window (the first slot's
+        centre) far enough inside the viewport that the revealed box and its ring fit at rest
+        with no clamping — see LEAD_SLACK's comment. */}
+      <div aria-hidden className="flex-none self-end" style={{ width: LEAD_SLACK }} />
       {books.map((b, i) => {
         const shown = b.id === shownId
         // Spines you don't have in hand (wishlist / unset) sit ghosted on the shelf — a TBR shelf
@@ -435,7 +468,10 @@ export function SpineShelf({
               data-spine={b.id}
               data-spine-picked={shown ? '' : undefined}
               draggable={!!onReorder}
-              onDragStart={() => setDragIdx(i)}
+              onDragStart={() => {
+                window.clearTimeout(hoverTimerRef.current)
+                setDragIdx(i)
+              }}
               onDragOver={(e) => onReorder && e.preventDefault()}
               onDrop={() => {
                 if (dragIdx != null) place(dragIdx, i)
@@ -447,7 +483,9 @@ export function SpineShelf({
               // gets tap-to-pick then tap-to-open; keyboard picks on focus, Enter opens.
               onClick={() => (shown ? onOpen(b.id) : setPointerId(b.id))}
               onPointerEnter={(e) => {
-                if (e.pointerType === 'mouse') setPointerId(b.id)
+                if (e.pointerType !== 'mouse') return
+                window.clearTimeout(hoverTimerRef.current)
+                hoverTimerRef.current = window.setTimeout(() => setPointerId(b.id), HOVER_INTENT_MS)
               }}
               onFocus={(e) => {
                 if (e.target.matches(':focus-visible')) setPointerId(b.id)
@@ -506,7 +544,7 @@ export function SpineShelf({
                     opacity: 0,
                     transformOrigin: '50% 100%',
                     transform: 'translateX(-50%) scale(0.2)',
-                    boxShadow: '0 0 0 2px var(--pick-ring)',
+                    boxShadow: `0 0 0 ${RING_W}px var(--pick-ring)`,
                   }}
                 >
                   <CoverImage book={b} thumb />
@@ -562,8 +600,16 @@ export function SpineShelf({
           </span>
         </button>
       )}
-      {/* RESERVED SLACK, trailing — the load-bearing half (see the leading spacer's comment). */}
-      <div aria-hidden className="flex-none self-end" style={{ width: SLACK }} />
+      {/* RESERVED SLACK, trailing — responsive (see the trailSlack effect): sized so the last
+        book's centre reaches the window at scrollLeft max, exactly. Also the momentum-contract
+        half: end-edge transformed overhang would extend scrollWidth (CSSWG #9458), and every
+        rightward displacement lands inside this spacer. */}
+      <div
+        aria-hidden
+        data-trail-slack
+        className="flex-none self-end"
+        style={{ width: trailSlack ?? LEAD_SLACK }}
+      />
     </div>
   )
 }
