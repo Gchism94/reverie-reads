@@ -125,8 +125,11 @@ export const isGoogleContentCover = (url: string): boolean => GOOGLE_CONTENT_RE.
  * original), never a broken state — so an exact-size match is deliberately the tightest rule.
  */
 const GOOGLE_NO_COVER_DIMS: ReadonlyArray<readonly [number, number]> = [
-  [575, 750], // zoom=0 / zoom=2 / zoom=3 — the large plate (what our upgrades request)
+  [575, 750], // zoom=0 / zoom=2 / zoom=3 — the large plate (what our 'full' upgrades request)
   [128, 170], // zoom=1 — the small plate (the un-upgraded original for a truly cover-less book)
+  [300, 391], // zoom=2 — the plate at the size the thumb upgrade requests (discover-cover-quality
+  //             audit: byte-identical across volumes; this size postdates the original fix, which
+  //             is exactly how that fix went blind — see the staleness note below)
 ]
 export function isGoogleNoCoverArt(
   url: string,
@@ -137,6 +140,52 @@ export function isGoogleNoCoverArt(
     isGoogleContentCover(url) &&
     GOOGLE_NO_COVER_DIMS.some(([w, h]) => naturalWidth === w && naturalHeight === h)
   )
+}
+
+/**
+ * The plausible book-cover aspect band (width / height). Real covers in the
+ * discover-cover-quality audit measured 0.60–0.77, with one legitimate square-ish outlier at 1.0;
+ * the degenerate scan strips Google serves for old library-scan volumes at zoom≥2 measured ~6.25.
+ * The band is deliberately generous — a false rejection costs the real, smaller zoom=1 cover
+ * (the next candidate in the chain), never a broken state, but a band tight enough to clip a
+ * legitimately unusual cover would still be wrong. Nothing bookish is landscape past ~1.6, and
+ * nothing bookish is a 1:3 sliver.
+ */
+const COVER_ASPECT_MIN = 0.33
+const COVER_ASPECT_MAX = 1.6
+
+/**
+ * The load-time verdict on a Google-hotlinked cover render (discover-cover-quality audit): did
+ * Google serve an actual cover, or one of its two degenerate stand-ins — both HTTP 200, both
+ * real images, both invisible to onError?
+ *
+ * THE STRUCTURAL TEST IS PRIMARY, and the reasoning is recorded so it survives the next reader:
+ * an enumerated exact-size list is a stored assertion that goes stale with nothing to notice —
+ * the original no-cover fix knew the plate at 575×750 and 128×170, Google later added a 300×391
+ * variant, and the fix sailed a plate straight onto the Discover rail for months. The scan-strip
+ * class (300×48 at zoom=2, 575×92 at zoom=0 — aspect ~6:1) is therefore caught by SHAPE, not by
+ * size: any future strip dimensions Google invents still fail the aspect band. The strips are
+ * deliberately NOT added to the exact-size list — a redundant enumeration would let the
+ * structural test rot undetected (a mutant removing it would still pass).
+ *
+ * The PLATE cannot be caught structurally: it is deliberately cover-shaped (575×750 and 300×391
+ * are both ~0.77 — inside the plausible band, by design of the artwork). For that class the
+ * exact-size list is not a fast path but the only dimensional option, so it stays — now three
+ * entries, with this comment as the staleness warning the first version never had.
+ *
+ * Scoped to Google content URLs on purpose: the degenerate classes are a Google phenomenon, and
+ * a reader-chosen cover with an unusual shape must never be second-guessed by this test.
+ */
+export function isDegenerateGoogleCoverRender(
+  url: string,
+  naturalWidth: number,
+  naturalHeight: number,
+): boolean {
+  if (!isGoogleContentCover(url)) return false
+  if (isGoogleNoCoverArt(url, naturalWidth, naturalHeight)) return true
+  if (naturalWidth <= 0 || naturalHeight <= 0) return false // not loaded — onError's territory
+  const aspect = naturalWidth / naturalHeight
+  return aspect > COVER_ASPECT_MAX || aspect < COVER_ASPECT_MIN
 }
 
 /**
