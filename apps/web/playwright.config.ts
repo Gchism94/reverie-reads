@@ -39,9 +39,30 @@ const BASE_URL = `http://localhost:${PORT}`
 // rows. workers=1 dissolved that by serializing everything; it didn't fix the underlying sharing.
 //
 // The real fix — migrating a11y/fonts/cover-sheet to per-file users (test/trio-migration) — has
-// landed. That's what makes raising this back above 1 a live option, but it hasn't been measured
-// yet: this default stays 1 until a dedicated stage does that measurement on its own, rather than
-// bundling a worker-count change into whatever else happened to touch this file.
+// landed. chore/ci-throughput then did the dedicated post-trio measurement, ON THE RUNNER
+// (ubuntu-latest, full suite = all three projects sharing one worker pool, fresh DB per run,
+// retries 0, three runs per worker count):
+//
+//   workers=2   3 runs, 0 green   ~19m/run   1 failure per run, every one a timing-sensitive
+//                                            spine-shelf guard (2× the tracking guard's sample
+//                                            floor — 15 of the required >50 mid-motion frames
+//                                            survived the stall filter under load — 1× the
+//                                            cover-aspect pointer-pick). ZERO database or
+//                                            app-functional failures.
+//   workers=4   3 runs, 0 green   ~16m/run   genuine saturation: the a11y sweep exceeded its
+//                                            600s test timeout in all three runs, plus
+//                                            page.goto ERR_ABORTED — the pre-trio symptom class.
+//
+// So the trio migration DID clear the database-sharing blocker (no 25P02, no PGRST002, no
+// cross-spec row contention anywhere in six runs — the laptop's seed-saturation and
+// cover-sheet-race modes did not reproduce on the runner), but what it exposed underneath is a
+// different ceiling: the spine-shelf feel guards measure per-frame timing, and a loaded worker
+// pool starves their samplers before it breaks the app. workers=4 additionally saturates the
+// runner outright. The default therefore STAYS 1 — not because parallel workers corrupt shared
+// state any more, but because the suite's own instruments stop being able to measure under load,
+// and a guard that can't reach its sample floor is a guard that can't certify anything.
+// Raising this again means first making those samplers load-tolerant (or per-project measurement
+// on dedicated runners, the untested lighter shape) — its own stage, measured on its own.
 const WORKERS = Number(process.env.E2E_WORKERS ?? 1)
 
 export default defineConfig({
