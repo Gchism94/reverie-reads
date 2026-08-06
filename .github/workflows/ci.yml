@@ -1,8 +1,18 @@
 name: CI
 
 on:
+  # push is intentionally scoped to main only. Prior to this, push+pull_request both fired on
+  # every commit to a branch with an open PR, doubling every CI run for the same commit — the
+  # concurrency group below can't dedupe them (github.ref differs: refs/heads/<branch> for push
+  # vs refs/pull/<n>/merge for pull_request), so both proceeded independently. That doubling is
+  # what exhausted this (personal-account) repo's concurrent-job ceiling during a burst of PR
+  # activity, producing GitHub-side "Set up job" stalls/failures unrelated to any code change.
+  # The pull_request-triggered run alone already satisfies every required check; push on main
+  # stays as a post-merge sanity check. Trade-off accepted: a branch pushed before its PR opens
+  # gets no CI feedback until the PR exists — acceptable here, where that gap is normally well
+  # under an hour.
   push:
-    branches: ['**']
+    branches: [main]
   pull_request:
 
 concurrency:
