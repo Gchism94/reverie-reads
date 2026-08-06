@@ -202,6 +202,79 @@ describe('library scope — have it, or have opened it (task-shelf-model)', () =
   })
 })
 
+describe('shelf link — /shelves derived-shelf header deep link (task-shelf-headers-linkable)', () => {
+  const owned = makeBook({ id: 'o', title: 'Owned One' })
+  const borrowed = makeBook({
+    id: 'b',
+    title: 'Borrowed One',
+    ownership: 'unowned',
+    borrowed: true,
+    readStatus: 'unset',
+  })
+  const wishlistOnly = makeBook({
+    id: 'w',
+    title: 'Wished Only',
+    ownership: 'unowned',
+    wishlist: true,
+    readStatus: 'unset',
+  })
+  const read = makeBook({ id: 'r', title: 'Read One', ownership: 'unowned', readStatus: 'Read' })
+  // abandoned, never possessed — hasReadingHistory says yes, isBookRead says no (see the
+  // library-scope describe block above). The Read SHELF header's unsplit count includes it.
+  const dnfNotOwned = makeBook({
+    id: 'd',
+    title: 'Abandoned',
+    ownership: 'unowned',
+    readStatus: 'DNF',
+  })
+  const bare = makeBook({
+    id: 'u',
+    title: 'Uncatalogued',
+    ownership: 'unowned',
+    readStatus: 'unset',
+  })
+
+  it('defaults to All — no shelf scoping applied', () => {
+    expect(defaultFilters().shelf).toBe('All')
+  })
+
+  it('owned link matches isOwnedBook only — a borrowed-not-owned book is excluded', () => {
+    const f = { ...defaultFilters(), shelf: 'owned' as const }
+    expect(matchesFilters(owned, f)).toBe(true)
+    expect(matchesFilters(borrowed, f)).toBe(false)
+  })
+
+  it('borrowed link matches the borrowed flag only', () => {
+    const f = { ...defaultFilters(), shelf: 'borrowed' as const }
+    expect(matchesFilters(borrowed, f)).toBe(true)
+    expect(matchesFilters(owned, f)).toBe(false)
+  })
+
+  it('read link matches hasReadingHistory — includes DNF, unlike the read=Read facet', () => {
+    const f = { ...defaultFilters(), shelf: 'read' as const }
+    expect(matchesFilters(read, f)).toBe(true)
+    expect(matchesFilters(dnfNotOwned, f)).toBe(true)
+    expect(matchesFilters(owned, f)).toBe(false)
+  })
+
+  it('wishlist link matches isWanted directly — an unowned, unborrowed, unread book still qualifies', () => {
+    const f = { ...defaultFilters(), shelf: 'wishlist' as const }
+    expect(matchesFilters(wishlistOnly, f)).toBe(true)
+    expect(matchesFilters(bare, f)).toBe(false)
+  })
+
+  it('a shelf link bypasses the default-library scope gate entirely, not just widens it', () => {
+    // wishlist-only books are normally hidden unless the separate `wishlist` chip is on; the shelf
+    // link must show them without that chip, because /shelves filters the whole library too.
+    const f = { ...defaultFilters(), shelf: 'wishlist' as const, wishlist: false }
+    expect(matchesFilters(wishlistOnly, f)).toBe(true)
+  })
+
+  it('counts as an active filter', () => {
+    expect(activeFilterCount({ ...defaultFilters(), shelf: 'owned' })).toBe(1)
+  })
+})
+
 describe('subgenre filter over subgenres[]', () => {
   const multi = makeBook({
     id: 'm',
