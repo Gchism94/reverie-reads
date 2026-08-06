@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { createRoute, Link, useNavigate } from '@tanstack/react-router'
-import { groupSeries, inDefaultLibrary, matchesFilters, sortBooks, type Book } from '@reverie/core'
+import {
+  groupSeries,
+  inDefaultLibrary,
+  matchesFilters,
+  sortBooks,
+  type Book,
+  type LibraryShelfLink,
+} from '@reverie/core'
 import { rootRoute } from './RootRoute'
 import { useBooks, useUpdateBook } from '../data/books'
 import { useFilters } from '../library/filterStore'
@@ -130,8 +137,17 @@ function LibraryScreen() {
   const filters = useFilters((s) => s.filters)
   const mode = useFilters((s) => s.mode)
   const panelOpen = useFilters((s) => s.panelOpen)
+  const setShelf = useFilters((s) => s.setShelf)
   const updateBook = useUpdateBook()
   const navigate = useNavigate()
+  // A shelf link is a one-time arrival, not a persistent URL param: it seeds the filter store on the
+  // way in (so Owned/Borrowed/Read/Wishlist land pre-filtered) and the reader can clear it like any
+  // other facet from there — Clear all, or picking the same value off, both leave the URL alone.
+  const { shelf } = libraryRoute.useSearch()
+  useEffect(() => {
+    if (shelf) setShelf(shelf)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shelf])
   const isDesktop = useIsDesktop() // ≥ lg: select in place (rail), else navigate to the book route
   const isWide = useIsWide() // ≥ xl: rail is a docked column, else an overlay drawer on selection
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -264,8 +280,17 @@ function LibraryScreen() {
   )
 }
 
+const SHELF_LINK_VALUES: readonly LibraryShelfLink[] = ['owned', 'borrowed', 'read', 'wishlist']
+
 export const libraryRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'library',
+  // Deep link from a /shelves derived-shelf header (the AuthRoute `?mode=` pattern) — undefined
+  // means "no shelf link", so plain /library stays the canonical URL.
+  validateSearch: (search: Record<string, unknown>): { shelf?: LibraryShelfLink } => ({
+    shelf: SHELF_LINK_VALUES.includes(search.shelf as LibraryShelfLink)
+      ? (search.shelf as LibraryShelfLink)
+      : undefined,
+  }),
   component: LibraryScreen,
 })

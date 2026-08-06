@@ -3,12 +3,19 @@ import { bookSubgenres } from './genreNormalize'
 import { bookTropeNames } from './tropes'
 import { authorOf } from './normalize'
 import { normalizeName } from './contributors'
-import { isPossessed } from './ownership'
+import { isOwnedBook, isPossessed, isWanted } from './ownership'
 import { claimedSeriesLength } from './seriesIndex'
 
 export type LibrarySort = 'az' | 'author' | 'rating' | 'intensity' | 'recent' | 'series'
 export type SeriesLenBucket = 'Any' | '1' | '2' | '3' | '4' | '5+' | 'Unknown'
 export type LibraryMode = 'grid' | 'series'
+/** Mirrors the /shelves derived-shelf sections (ShelfSectionKey in shelves.ts), for the Library link
+ *  each section header carries. Kept as its own facet rather than overloading `read`/`wishlist`
+ *  because it must replicate the shelf's own predicate exactly (e.g. the Read shelf's unsplit count
+ *  includes DNF — `hasReadingHistory`, not `isBookRead`) and it must bypass the default-library scope
+ *  gate the way `deriveShelfSections` does, since it filters the whole library, not just what's
+ *  already in view. */
+export type LibraryShelfLink = 'All' | 'owned' | 'borrowed' | 'read' | 'wishlist'
 
 export interface LibraryFilters {
   q: string
@@ -26,6 +33,8 @@ export interface LibraryFilters {
   /** include books outside the default scope — books you neither have in hand nor ever opened.
    *  Off by default: the grid is what you have or have engaged with (see inDefaultLibrary). */
   wishlist: boolean
+  /** which /shelves derived-shelf section this view was opened from ('All' = none) */
+  shelf: LibraryShelfLink
   sort: LibrarySort
 }
 
@@ -41,6 +50,7 @@ export const defaultFilters = (): LibraryFilters => ({
   intensity: [],
   author: '',
   wishlist: false,
+  shelf: 'All',
   sort: 'az',
 })
 
@@ -87,9 +97,16 @@ export function seriesLenBucket(b: Book): SeriesLenBucket {
 
 /** The prototype's library predicate, ported verbatim. */
 export function matchesFilters(b: Book, f: LibraryFilters): boolean {
-  // Collection scoping first: the grid is what you HAVE or have opened, unless the wishlist chip
-  // lets the rest (books neither in hand nor ever started) in.
-  if (!f.wishlist && !inDefaultLibrary(b)) return false
+  // A shelf link replaces collection scoping rather than adding to it — it must show exactly the
+  // set /shelves showed (deriveShelfSections filters the WHOLE library, not the default-scoped
+  // view), so a wishlist-only book reached via the Wishlist shelf must not be excluded by the
+  // default-library gate below.
+  if (f.shelf !== 'All') {
+    if (f.shelf === 'owned' && !isOwnedBook(b)) return false
+    if (f.shelf === 'borrowed' && !b.borrowed) return false
+    if (f.shelf === 'read' && !hasReadingHistory(b)) return false
+    if (f.shelf === 'wishlist' && !isWanted(b)) return false
+  } else if (!f.wishlist && !inDefaultLibrary(b)) return false
   if (f.sub !== 'All' && !bookSubgenres(b).includes(f.sub)) return false
   if (f.tags.length) {
     const names = bookTropeNames(b)
@@ -171,6 +188,7 @@ export function activeFilterCount(f: LibraryFilters): number {
   if (f.intensity.length) n++
   if (f.author) n++
   if (f.wishlist) n++
+  if (f.shelf !== 'All') n++
   return n
 }
 
