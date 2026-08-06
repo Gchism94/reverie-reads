@@ -10,6 +10,69 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # PATH CLASSIFICATION for the e2e matrix (chore/ci-throughput). One rule, stated in prose
+  # because the YAML alone doesn't carry the reasoning:
+  #
+  #   A branch runs the FULL three-project e2e matrix unless EVERY changed file is documentation
+  #   (docs/** or any *.md). There is no partial matrix — no "only mobile", no "only a11y" — and
+  #   no other safe class: e2e specs, playwright config, workflows, scripts/, data/ (seed input!)
+  #   and design/ all fail closed to the full trio, because each can change what the suite tests
+  #   or how it tests it. The gate and secrets jobs are NOT part of this filter: they run on
+  #   every branch, always.
+  #
+  # FAIL CLOSED is structural, not aspirational:
+  #   - the classifier defaults docs_only=false and only flips it after successfully walking an
+  #     explicit diff — an unresolvable base (new branch, force-push, empty diff) never reaches
+  #     the flip;
+  #   - the consumers gate on `!= 'true'`, so a missing/garbled output runs everything;
+  #   - the mechanism is a JOB-level `if:` rather than workflow-level `on.paths`, deliberately:
+  #     a job skipped by `if:` reports conclusion "skipped", which branch-protection's required
+  #     checks treat as satisfied — whereas a workflow filtered out by `on.paths` reports
+  #     nothing, and a required check named `e2e` would sit "Expected" forever, blocking every
+  #     docs-only merge. The required-check names (`gate`, `e2e`) are load-bearing; see the e2e
+  #     job's own comment.
+  changes:
+    name: changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      docs_only: ${{ steps.classify.outputs.docs_only }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Classify changed paths
+        id: classify
+        run: |
+          set -euo pipefail
+          echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+          else
+            BASE="${{ github.event.before }}"
+          fi
+          # A zero SHA (new branch) or unfetchable base fails the diff; the default above stands.
+          if ! FILES=$(git diff --name-only "$BASE"...HEAD); then
+            echo "diff failed — failing closed to the full matrix"
+            exit 0
+          fi
+          if [ -z "$FILES" ]; then
+            echo "empty diff — failing closed to the full matrix"
+            exit 0
+          fi
+          while IFS= read -r f; do
+            case "$f" in
+              docs/* | *.md) ;;
+              *)
+                echo "non-docs change: $f — full matrix"
+                exit 0
+                ;;
+            esac
+          done <<< "$FILES"
+          echo "all changes are docs — e2e matrix will be skipped"
+          # Overwrite the fail-closed default set above.
+          echo "docs_only=true" >> "$GITHUB_OUTPUT"
+
   # Full-history secret scan — FAILS the build on any leak (pre-public audit follow-up). gitleaks
   # auto-loads .gitleaks.toml from the checkout root; the allowlist there names exactly the four
   # audited-safe values, each with its reason, so a fifth committed credential goes red. fetch-depth
@@ -103,7 +166,9 @@ jobs:
   # ruleset change, which is the owner's to make, not something to route around here.
   e2e:
     name: e2e
-    if: github.event_name == 'pull_request'
+    needs: [changes]
+    # `!= 'true'` (not `== 'false'`): an absent or garbled classifier output must RUN this job.
+    if: github.event_name == 'pull_request' && needs.changes.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -184,7 +249,8 @@ jobs:
 
   e2e-a11y:
     name: e2e-a11y
-    if: github.event_name == 'pull_request'
+    needs: [changes]
+    if: github.event_name == 'pull_request' && needs.changes.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -252,7 +318,8 @@ jobs:
   # owner's to make once this project has run for real on a few PRs.
   e2e-mobile:
     name: e2e-mobile
-    if: github.event_name == 'pull_request'
+    needs: [changes]
+    if: github.event_name == 'pull_request' && needs.changes.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
