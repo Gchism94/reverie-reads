@@ -1,4 +1,10 @@
-import { embeddingText, genreKey, type Book } from '@reverie/core'
+import {
+  blendCuratedPool,
+  embeddingText,
+  genreKey,
+  tierDiscoverShelf,
+  type Book,
+} from '@reverie/core'
 import { volumesUrl } from './googleBooks'
 import { supabase } from './supabase'
 
@@ -16,6 +22,9 @@ export interface DiscoverHit {
   cover: string
   isbn: string
   pub: string
+  /** provenance: true only on curated-injection hits (packages/core discoverCurated) — debuggable
+   *  in the network tab and the fn's cache rows, never rendered to the reader */
+  curated?: boolean
 }
 
 /** Google Books subject query per core genre (keys = the canonical lowercased genres). Cozy has no
@@ -142,7 +151,18 @@ export async function fetchDiscover(genre: string, signal?: AbortSignal): Promis
     const filler = await fetchPage(query, 'relevance', signal)
     hits = [...hits, ...filler]
   }
-  return dedupeHits(hits).slice(0, 12)
+  // Curated injection for the four starved categories, mirroring the fn path: blend into the pool,
+  // then rank the union by the fn's own year-tier logic so curated and live sort by ONE function.
+  // For every other genre blendCuratedPool is a passthrough and this path is byte-identical to
+  // before — the fallback's no-tiering behavior there is pre-existing, not this feature's to change.
+  const deduped = dedupeHits(hits)
+  const pool = blendCuratedPool(genreKey(genre), deduped) as DiscoverHit[]
+  if (pool.length > deduped.length && import.meta.env.DEV)
+    console.debug(
+      `[discover] ${genre}: injected ${pool.length - deduped.length} curated (fallback path)`,
+    )
+  const ranked = pool === deduped ? pool : tierDiscoverShelf(pool, new Date().getFullYear())
+  return ranked.slice(0, 12)
 }
 
 // ── Tier 2b: taste ranking (owner-approved) ──

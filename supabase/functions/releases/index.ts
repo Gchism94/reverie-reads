@@ -17,6 +17,7 @@
 
 import { captureEdgeError } from '../_shared/observe.ts'
 import { normalizeGoogle } from '../enrich/merge.ts'
+import { blendCuratedPool, tierDiscoverShelf } from './curated.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -56,6 +57,8 @@ interface Hit {
   cover: string
   isbn: string
   pub: string
+  /** provenance: present (true) only on curated-injection hits — absent on live-query hits */
+  curated?: boolean
 }
 
 const norm = (s: string): string =>
@@ -140,20 +143,22 @@ async function fetchAuthor(name: string): Promise<Hit[]> {
  *  then tiered by REAL year — last 2 years first (newest-first), the last 8 as filler, and only
  *  then anything older. Google's own orderings can't be trusted for this (edition-date noise puts
  *  1927 reprints on top of "newest", and raw relevance is dominated by decades-old staples). */
-async function fetchDiscoverShelf(query: string): Promise<Hit[]> {
+async function fetchDiscoverShelf(query: string, genre: string): Promise<Hit[]> {
   const [newest, relevant] = await Promise.all([
     googleVolumes(query, 'newest', 40),
     googleVolumes(query, 'relevance', 40),
   ])
   const quality = (h: Hit) => h.title && h.cover && h.authors.length > 0
   const all = dedupe([...newest, ...relevant].filter(quality))
-  const year = (h: Hit) => Number(h.pub.slice(0, 4)) || 0
-  const thisYear = new Date().getFullYear()
-  const byDate = (a: Hit, b: Hit) => b.pub.localeCompare(a.pub)
-  const fresh = all.filter((h) => year(h) >= thisYear - 2).sort(byDate)
-  const recent = all.filter((h) => year(h) < thisYear - 2 && year(h) >= thisYear - 8).sort(byDate)
-  const rest = all.filter((h) => year(h) < thisYear - 8)
-  return [...fresh, ...recent, ...rest].slice(0, 12)
+  // Curated injection for the four starved categories (docs/tasks/task-discover-curated-candidates.md)
+  // — additional candidates into the pool BEFORE ranking; a passthrough for every other genre. The
+  // tiering below is the same function that always ranked this shelf, now shared with the client
+  // fallback via the core module this file mirrors.
+  const pool = blendCuratedPool(genre, all)
+  const injected = pool.length - all.length
+  if (injected > 0)
+    console.log(`[discover] ${genre}: injected ${injected} curated of ${pool.length} pool`)
+  return tierDiscoverShelf(pool as Hit[], new Date().getFullYear()).slice(0, 12)
 }
 
 Deno.serve(async (req: Request) => {
@@ -215,7 +220,7 @@ Deno.serve(async (req: Request) => {
       const key = `discover:${genre}`
       const cached = (await cacheGet(key)) as Hit[] | null
       if (cached) return json({ hits: cached })
-      const hits = await fetchDiscoverShelf(query)
+      const hits = await fetchDiscoverShelf(query, genre)
       await cacheSet(key, hits)
       return json({ hits })
     }
