@@ -6,7 +6,7 @@ import { CoverPlaceholder } from '../../components/CoverPlaceholder'
  *  Reverie preview. Chrome reads CSS vars exclusively, so wrapping it in a `data-skin` /
  *  `data-mode` scope RE-THEMES it live — that's how the skin showcase shows the real skins.
  *
- *  The shelves hold REAL books from the founding corpus (data/personal_seed.json) wearing their
+ *  The shelves hold REAL books from the founding corpus (data/corpus_seed.json) wearing their
  *  REAL covers — self-hosted thumbnails under public/landing-covers (no third-party image requests
  *  on the front door; the B&N CDN 403s hotlinks). In the showcase (`skin` set), a few books render
  *  the skin's placeholder plate instead — the same CoverPlaceholder component the app ships — so

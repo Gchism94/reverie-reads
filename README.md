@@ -75,16 +75,19 @@ pnpm deploy:functions     # supabase functions deploy, behind the deploy guard
 The guard refuses to run unless you're on a clean, in-sync `main` and confirm the touch
 list. Full runbook: [`docs/DEPLOY.md`](docs/DEPLOY.md).
 
-## License
+## License — three objects, three answers
 
-**Proprietary — all rights reserved.** See [`LICENSE`](LICENSE). A limited training-fork
-grant allows designated collaborators to run and modify the code locally for personal
-learning and for contributions back to this repository; no redistribution, production
-deployment, or commercial use. Contributions are accepted under that grant — see
-[`CONTRIBUTING.md`](CONTRIBUTING.md).
+**The code is [AGPL-3.0](LICENSE).** **The corpus — the published book-metadata dataset
+(titles, authors, ISBNs, series, publication data) — is [CC0](LICENSE-CORPUS): public
+domain, yours to use for anything.** **Reader data — shelves, ratings, reading history,
+taste vectors, moods, and statistics — is neither: it is never published, is not licensed
+by anything in this repository, and is out of scope for both.**
 
-Book cover images and bibliographic metadata are **third-party** and not the repository
-owner's to license — see [`NOTICES.md`](NOTICES.md).
+Contributions require signing the [CLA](CLA.md) — see
+[`CONTRIBUTING.md`](CONTRIBUTING.md). Book cover images and third-party bibliographic
+records are not the repository owner's to license — see [`NOTICES.md`](NOTICES.md).
+Premium features live in a private module outside this repository and are not covered by
+this repository's licenses.
 
 ## Build-phase docs (working notes)
 
