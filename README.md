@@ -77,11 +77,10 @@ list. Full runbook: [`docs/DEPLOY.md`](docs/DEPLOY.md).
 
 ## License — three objects, three answers
 
-**The code is [AGPL-3.0](LICENSE).** **The corpus — the published book-metadata dataset
-(titles, authors, ISBNs, series, publication data) — is [CC0](LICENSE-CORPUS): public
-domain, yours to use for anything.** **Reader data — shelves, ratings, reading history,
-taste vectors, moods, and statistics — is neither: it is never published, is not licensed
-by anything in this repository, and is out of scope for both.**
+This app's code is licensed under [AGPL-3.0](LICENSE). The book metadata corpus is
+dedicated to the public domain under [CC0](LICENSE-CORPUS) — free to use for anything.
+Your shelves, ratings, and reading history are yours: never published, never part of the
+dataset, never licensed to anyone.
 
 Contributions require signing the [CLA](CLA.md) — see
 [`CONTRIBUTING.md`](CONTRIBUTING.md). Book cover images and third-party bibliographic

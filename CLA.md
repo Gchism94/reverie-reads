@@ -10,8 +10,9 @@ contributions. This is a license, not an assignment: **you keep ownership of you
 contributions** and remain free to use them for any other purpose.
 
 This Agreement must be accepted before the Project's first outside contribution is
-merged. Accept it by [ACCEPTANCE MECHANISM — e.g. signing via the CLA-assistant bot on
-the pull request, or emailing a signed copy to CONTACT_ADDRESS].
+merged. Accept it by signing through the CLA-signing bot's comment on your pull
+request — the bot blocks merge until you have. Questions about this Agreement go to
+contact@reveriereads.app.
 
 ## 1. Definitions
 
@@ -94,8 +95,8 @@ inaccurate.
 
 ## 6. Miscellany
 
-This Agreement is governed by the laws of [GOVERNING_STATE — owner to fill in, likely
-the LLC's state of formation], excluding its conflict-of-law rules. It is the entire
+This Agreement is governed by the laws of the State of Oregon, excluding its
+conflict-of-law rules. It is the entire
 agreement between the parties concerning Contributions to the Project, and supersedes
 the training-fork contribution terms in any prior version of the Project's LICENSE for
 Contributions made after its effective date.
