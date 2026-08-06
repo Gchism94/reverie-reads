@@ -235,11 +235,13 @@ function BreakdownToggle({
 function DerivedShelves({
   books,
   onOpen,
+  onOpenSection,
   breakdowns,
   onToggle,
 }: {
   books: Book[]
   onOpen: (id: string) => void
+  onOpenSection: (key: ShelfSectionKey) => void
   breakdowns: ShelfBreakdowns
   onToggle: (which: 'format' | 'dnf', next: boolean) => void
 }) {
@@ -259,16 +261,27 @@ function DerivedShelves({
           {sections.map((section) => (
             <div key={section.key}>
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                <h3 className="text-[15px] font-semibold text-ink">
-                  {SECTION_LABEL[section.key]}{' '}
-                  {/* A split section shows no total — a total across overlapping shelves asserts a
-                      partition that does not exist. Its shelves carry their own counts. */}
-                  {!section.split && (
-                    <span className="text-[12px] font-normal text-muted">
-                      · {section.shelves[0]!.books.length}
+                {/* Same affordance as a "Your lists" header (ShelvesRoute's list-header button below):
+                    the whole heading is the link, not just the chevron — one hit target, one pattern. */}
+                <button
+                  type="button"
+                  onClick={() => onOpenSection(section.key)}
+                  className="block text-left"
+                >
+                  <h3 className="text-[15px] font-semibold text-ink underline-offset-4 hover:underline">
+                    {SECTION_LABEL[section.key]}{' '}
+                    {/* A split section shows no total — a total across overlapping shelves asserts a
+                        partition that does not exist. Its shelves carry their own counts. */}
+                    {!section.split && (
+                      <span className="text-[12px] font-normal text-muted">
+                        · {section.shelves[0]!.books.length}
+                      </span>
+                    )}{' '}
+                    <span aria-hidden className="text-[13px] text-muted">
+                      ›
                     </span>
-                  )}
-                </h3>
+                  </h3>
+                </button>
                 {section.key === 'owned' && (
                   <BreakdownToggle
                     label={COPY.formatToggle}
@@ -352,6 +365,8 @@ function ShelvesScreen() {
   const all = books ?? []
   const byId = new Map(all.map((b) => [b.id, b]))
   const openBook = (id: string) => void navigate({ to: '/book/$bookId', params: { bookId: id } })
+  const openSection = (key: ShelfSectionKey) =>
+    void navigate({ to: '/library', search: { shelf: key } })
 
   const booksFor = (listId: string): Book[] =>
     (items ?? [])
@@ -404,6 +419,7 @@ function ShelvesScreen() {
       <DerivedShelves
         books={all}
         onOpen={openBook}
+        onOpenSection={openSection}
         breakdowns={breakdowns}
         onToggle={setBreakdown}
       />
