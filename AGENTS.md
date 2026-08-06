@@ -65,7 +65,9 @@ prototype/ data/ design/ docs/ backend/   ← reference material, not shipped
   reader's own data, not published, not licensed), 290 books joined by `id` — split from the
   single `personal_seed.json` in the pre-public-licensing pass so the CC0 corpus dedication in
   `LICENSE-CORPUS` scopes to a file, not a field-kind boundary inside a mixed one. Design-ready
-  subset in `data/reverie_design_seed.json`
+  subset in `data/design_corpus_seed.json` + `data/design_reader_seed.json` (same split, same
+  reason — `data/reverie_design_seed.json` carried the identical bibliographic/reader-data
+  blend and was split the same way in `chore/split-design-seed`)
 
 ## Conventions
 
