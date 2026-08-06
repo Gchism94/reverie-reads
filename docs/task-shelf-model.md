@@ -106,7 +106,8 @@ it got a separate predicate rather than a widened `isBookRead`.
 ## Seed
 
 `source` (provenance) → possession, at seed time only, since provenance is all the seed carries.
-Only two values exist in `data/personal_seed.json`; an unrecognised source claims nothing.
+Only two values exist in `data/reader_seed.json` (the reader-data half of the seed since the
+license split); an unrecognised source claims nothing.
 
 | source × format             | rows | → possession                      |
 | --------------------------- | ---: | --------------------------------- |

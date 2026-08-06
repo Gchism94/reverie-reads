@@ -61,8 +61,11 @@ prototype/ data/ design/ docs/ backend/   ← reference material, not shipped
 - Decisions with a rationale → `docs/decisions/` (ADRs)
 - Cover/metadata/release data sources → `docs/DATA_SOURCES.md`
 - Sharing & book-club design → `docs/SHARING.md`
-- Seed data → `data/personal_seed.json` (290 real books); design-ready subset in
-  `data/reverie_design_seed.json`
+- Seed data → `data/corpus_seed.json` (bibliographic, CC0) + `data/reader_seed.json` (this
+  reader's own data, not published, not licensed), 290 books joined by `id` — split from the
+  single `personal_seed.json` in the pre-public-licensing pass so the CC0 corpus dedication in
+  `LICENSE-CORPUS` scopes to a file, not a field-kind boundary inside a mixed one. Design-ready
+  subset in `data/reverie_design_seed.json`
 
 ## Conventions
 
