@@ -149,8 +149,18 @@ describe('planTitleCleanup (legacy re-parse sweep)', () => {
   // 20260809010000_series_backfill.sql — a placeholder is excluded ENTIRELY (title, series, position).
   it('never strips a placeholder title that cleans to bare Untitled (series already set)', () => {
     const plan = planTitleCleanup([
-      makeBook({ id: '1', title: 'Untitled (The Empyrean, #4)', series: 'The Empyrean', position: 4 }),
-      makeBook({ id: '2', title: 'Untitled (The Empyrean, #5)', series: 'The Empyrean', position: 5 }),
+      makeBook({
+        id: '1',
+        title: 'Untitled (The Empyrean, #4)',
+        series: 'The Empyrean',
+        position: 4,
+      }),
+      makeBook({
+        id: '2',
+        title: 'Untitled (The Empyrean, #5)',
+        series: 'The Empyrean',
+        position: 5,
+      }),
     ])
     expect(plan).toHaveLength(0)
   })
