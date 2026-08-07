@@ -19,7 +19,8 @@ const MAX_PER_RUN = 400
 
 export interface ResharpenProgress {
   scanned: number
-  total: number
+  /** `null` until the candidate count is known — see `sweepProgress.ts`. Never a placeholder zero. */
+  total: number | null
   sharpened: number
 }
 export type ResharpenStopReason = 'done' | 'user' | 'limit'
@@ -75,6 +76,10 @@ export async function resharpenCovers(
   let scanned = 0
   let sharpened = 0
   let stopReason: ResharpenStopReason = 'done'
+
+  // Same as bulkComplete: the denominator is known here, so say it before the first ingest rather
+  // than after it, or the caller has nothing but a placeholder to render.
+  onProgress({ scanned: 0, total, sharpened: 0 })
 
   for (const { b, src } of candidates) {
     if (shouldStop()) {
