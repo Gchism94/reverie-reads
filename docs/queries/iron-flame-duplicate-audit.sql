@@ -4,12 +4,20 @@
 -- Background: two books rows for the same physical book "Iron Flame" at series/position
 -- 2 of "The Empyrean":
 --
---   38066e50-5404-49e0-8d96-71a3ce409ac7   read_status = Unread   no read log
---   1555cc10-3496-435b-a8ea-9b1f36ab62f9   read_status = Read     has a read log
+--   38066e50-5404-49e0-8d96-71a3ce409ac7   read_status = Unread   owner_id = 37e9e3a5…
+--   1555cc10-3496-435b-a8ea-9b1f36ab62f9   read_status = Read     owner_id = d4bf8f6b…
+--
+-- Distinct auth.users rows pointed at the same human (separate accounts / separate import paths
+-- that converged into a single physical title). NEITHER row has a paired `public.reads` row — all
+-- three reader-facing write paths can set `books.read_status='Read'` without writing into
+-- `public.reads`: the in-app status chip (BookDetailRoute.tsx:284-289), the "Log a read" dialog
+-- (dialogs.tsx:91-92 — this one DOES also insert a reads row), and the CSV importer
+-- (core/csv.ts:151-152). A Read-marked book with zero `public.reads` entries is structurally
+-- normal, not an anomaly. The durable reader-intent signal is `books.read_status` itself.
 --
 -- Plus the linkage bug: the single series_entries row for Iron Flame points at 38066e50
--- (the UNSET copy), not 1555cc10 (the READ copy) — so /series/The Empyrean currently
--- renders Iron Flame as unread even though the reader finished it.
+-- (the Unread copy), not 1555cc10 (the Read copy) — so /series/The Empyrean currently
+-- renders Iron Flame as Unread even though the reader finished it.
 
 -- ══ 1. BOTH BOOKS ROWS, FULL ═══════════════════════════════════════════════════════════════
 -- `*` is intentional — additive migrations have evolved the schema since core schema.

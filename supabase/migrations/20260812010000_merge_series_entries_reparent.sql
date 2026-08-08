@@ -6,11 +6,16 @@
 -- cascade silently flips every entry that pointed at the loser into a ghost with `book_id = null`.
 -- Reads, list memberships, contributors, tropes, moods are all re-parented in steps 1–3c; the
 -- linked series entry is NOT, even though its call-site is the merger. The defect is most visible
--- on a single-pair duplicate of a book the reader finished: the linked entry today points at the
--- Unread copy of two import paths, while the reader's "I read this" lives on the OTHER copy. The
--- default merge path then removes the read copy's link to the series the reader pinned it to
--- (`entryState()` on packages/core/src/seriesShelf.ts:50-57 is driven by the LINKED book row's
--- state). With this fix, the same dedupe keeps the linked entry live on whichever row survives.
+-- on a single-pair duplicate of a book the reader finished. `merge_books`' step 4 (`coalesce(
+-- p_fields ->> 'read_status', read_status)`) keeps the Read mark whichever row is p_primary; the
+-- durable reader-intent signal lives on `books.read_status`, NOT in `public.reads` — the in-app
+-- status chip (`apps/web/src/book/BookDetailRoute.tsx:284-289`), the "Log a read" dialog
+-- (`apps/web/src/book/dialogs.tsx:91-92`), and CSV import (`packages/core/src/csv.ts:151-152`) all
+-- set it; only "Log a read" also writes a `reads` row. A Read-marked book with zero
+-- `public.reads` entries is structurally normal, not an anomaly. The default pre-fix merge path
+-- then removes the linked entry's link to the series the reader pinned it to (`entryState()` on
+-- packages/core/src/seriesShelf.ts:50-57 is driven by the LINKED book row's state). With this
+-- fix, the same dedupe keeps the linked entry live on whichever row survives.
 --
 -- Rule: 1 book → 1 series entry per series. For each `series_entries` row whose `book_id` is the
 -- loser:
@@ -21,6 +26,19 @@
 -- Tombstones run BEFORE re-parents. Re-parenting without them would clash with the primary's
 -- existing entry in the partial unique index `series_entries_book_uidx (series_id, book_id)
 -- where book_id is not null`.
+--
+-- ── Cross-owner_id use is INTENTIONAL for fix/iron-flame-duplicate ───────────────────────────────
+-- That one hand-run instance had the two Iron Flame books rows owned by two distinct auth.users
+-- rows pointed at the same human (separate accounts / separate import paths that converged into a
+-- single physical title). Cross-owner_id use of `merge_books` is **structurally impossible** in a
+-- single JWT — the function's first two ownership checks are `owner_id = auth.uid()`, BOTH rows
+-- must match the JWT's `sub` claim or the function raises "not owner of …" before anything
+-- happens. For fix/iron-flame-duplicate, the loser's `books.owner_id` was re-pointed at the
+-- survivor's auth.users.id BEFORE `docs/queries/iron-flame-merge.sql` was run; that re-point is
+-- an out-of-band setup step, not part of the merge call. The durable step 3c-series below is
+-- owner-agnostic — it just re-parents any `series_entries` whose `book_id = p_loser`. The note
+-- exists so a future reader knows the cross-owner path in this incident was applied deliberately,
+-- not through drift or accident.
 --
 -- ── What this migration changes ─────────────────────────────────────────────────────────────────
 -- The body below is 20260805010000_drop_plan_date.sql's, character-for-character, with one new

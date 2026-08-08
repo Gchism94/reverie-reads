@@ -32,10 +32,20 @@
 -- script.
 --
 -- ── Setup the owner must complete before running ───────────────────────────────────────────────
--- 1. Replace OWNER_SUB_UUID with the row owner id. The audit's section 1 surfaces this on every
---    row as `owner_id` (the same value on 1555cc10 and 38066e50 — they ARE owned by the same
---    reader, otherwise merge_books raises "not owner of loser book" before anything happens).
--- 2. The OWNER_AUTH_UUID is the same value the reader logs in with — also `owner_id`.
+-- 1. The two Iron Flame rows are owned by two DIFFERENT auth.users rows pointing at the same
+--    human (separate accounts / separate import paths). The audit's section 1 surfaces `owner_id`
+--    on each row — for this incident: 38066e50 owned by 37e9e3a5…, 1555cc10 owned by d4bf8f6b….
+--    `merge_books`' first two ownership checks are `owner_id = auth.uid()` — both rows must match
+--    the JWT's `sub` claim or the function raises "not owner of …" before touching anything. So
+--    BEFORE running the merge, the owner re-points the loser's books.owner_id at the survivor's
+--    auth.users.id (the `d4bf8f6b…` value). This is an out-of-band `UPDATE public.books set
+--    owner_id = <survivor> where id = 38066e50…` the owner runs by hand, NOT part of merge_books.
+--    The same change must NOT touch reads / list_items / series_entries that already point at
+--    38066e50 — they keep that book_id and just inherit the new owner_id at the merge-cascade.
+-- 2. OWNER_AUTH_UUID is the survivor's auth.users.id (the value the owner picked in step 1). Both
+--    `set_config('request.jwt.claims', …)` calls below carry this same value — it MUST equal the
+--    new books.owner_id on both rows by the time merge_books is called. The cross-owner guard
+--    (#0) refuses to proceed if either row's owner_id still doesn't match.
 -- 3. Fill p_fields (the JSONB merge_books receives) using the audit's section 2 column-diff
 --    output. Set ONLY the keys that should change on the primary; every other field is a no-op
 --    via coalesce(). For this pair the audit's section 1 row-by-row output goes in verbatim
@@ -44,14 +54,17 @@
 --    that owns merge_books' definition (typically the supabase migration role).
 
 -- PRE-FLIGHT (no writes; run first).
+-- Expected: two rows, with the same auth.users.id on owner_id (= the survivor's id the owner
+-- re-pointed 38066e50 at out-of-band). Run as a privileged role so RLS doesn't hide the rows.
 select b.id, b.title, b.read_status, b.owner_id
 from public.books
 where id in (
   '38066e50-5404-49e0-8d96-71a3ce409ac7'::uuid,
   '1555cc10-3496-435b-a8ea-9b1f36ab62f9'::uuid
-);
--- Expected: two rows, owned by the SAME auth.users.id, Iron Flame / Empyrean / position 2.
--- If ownership differs, STOP.
+)
+order by b.id;
+-- If owner_id still differs on the two rows, the cross-owner re-point has not happened — STOP,
+-- run the out-of-band UPDATE first (see setup step 1), then come back to this pre-flight.
 
 select e.id, e.series_id, e.title, e.position, e.book_id, e.removed_at
 from public.series_entries e
@@ -79,10 +92,26 @@ reset role;
 
 do $$
 declare
+  n_owner_a int; n_owner_b int;
   n_primary int; n_loser int; n_linked int; n_already_pk int;
-  primary_id constant uuid := '1555cc10-3496-435b-a8ea-9b1f36ab62f9';
-  loser_id   constant uuid := '38066e50-5404-49e0-8d96-71a3ce409ac7';
+  primary_id     constant uuid := '1555cc10-3496-435b-a8ea-9b1f36ab62f9';
+  loser_id       constant uuid := '38066e50-5404-49e0-8d96-71a3ce409ac7';
+  -- The survivor's auth.users.id, set out-of-band by re-pointing books.owner_id on the loser.
+  -- Must match the value both `set_config('request.jwt.claims', …)` calls substitute below for
+  -- `"sub":`, so auth.uid() inside merge_books resolves to an owner both rows match.
+  current_owner  constant uuid := 'OWNER_AUTH_UUID';
 begin
+  -- Guard #0: cross-owner_id use of merge_books is structurally impossible in a single JWT
+  -- (merge_books' first two ownership checks are `owner_id = auth.uid()`); the loser's
+  -- books.owner_id MUST have been re-pointed to current_owner out-of-band. Refuse to proceed if
+  -- not, before any of the auditor's per-row shape checks below.
+  select count(*) into n_owner_a from public.books where id = primary_id and owner_id = current_owner;
+  select count(*) into n_owner_b from public.books where id = loser_id   and owner_id = current_owner;
+  if n_owner_a <> 1 or n_owner_b <> 1 then
+    raise exception 'guard #0: cross-owner merge_books requires books.owner_id = books.loser.owner_id = current_owner (%), got primary=% loser=% — re-point the loser out-of-band and re-run',
+      current_owner, n_owner_a, n_owner_b;
+  end if;
+
   select count(*) into n_primary from public.books where id = primary_id and read_status = 'Read';
   if n_primary <> 1 then raise exception 'guard #1: 1555cc10 expected read_status=Read, got %', n_primary; end if;
 
@@ -98,8 +127,8 @@ begin
    where book_id = primary_id and removed_at is null;
   if n_already_pk <> 0 then raise exception 'guard #4: 1555cc10 already has % live entries — re-parent would clash', n_already_pk; end if;
 
-  raise notice 'pre-flight OK: 1555cc10=Read, 38066e50=Unread, % linked entries on loser, 0 already on primary',
-               n_linked;
+  raise notice 'pre-flight OK: cross-owner re-point verified (owner=%), 1555cc10=Read, 38066e50=Unread, % linked entries on loser, 0 already on primary',
+               current_owner, n_linked;
 end $$;
 
 -- Step 1 (do; merge_books). Set role back to authenticated + jwt claims for auth.uid() to resolve.
