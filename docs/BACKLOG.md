@@ -555,6 +555,28 @@ giving the reason** — the `ownedTables` principle that an exclusion without a 
 Expect a large first run; that is the point, and it should land as its own branch with the initial
 list triaged rather than blanket-ignored.
 
+## Pre-public tracked-data decisions, 2026-08 (`docs/audits/pre-public-secrets.md`) — recorded, not fixed
+
+Sweep from the `docs/claude-md-rules-pass` CLAUDE.md rules pass. The audit named these; most of its
+gaps are since **closed** (`.gitignore` gained `*.pem`/`*.key`/`*.p12`/`.vercel/` at lines 44-49;
+gitleaks runs in CI at `.github/workflows/ci.yml:76-88` and fails the build on any leak; the geo
+function's unowned-domain fallback was corrected to `reveriereads.app`). Two are still **open** and
+are the owner's call, not a Code-session fix — recorded here so they don't disappear from view before
+the repo goes public.
+
+- **`.npmrc` is tracked** (`git ls-files .npmrc` → `.npmrc`). Contents today are two harmless pnpm
+  flags, but the file is the canonical place a registry `_authToken` lands — the moment any registry
+  auth is added, the token commits silently. The audit's recommended shape is ignore-with-checked-in
+  example (`.npmrc` → `.gitignore`, `.npmrc.example` committed). Pre-public §3.
+- **`data/raw/Chism_Books.xlsx` is tracked** (`git ls-files` → `data/raw/Chism_Books.xlsx`, 272 KB,
+  since the initial commit `2378ffb`). The real library spreadsheet; its `GC Read` and **`TC Read`**
+  columns are reading records for a **second person**, not only the owner. The owner's own data is
+  theirs to publish; the second reader's column is the flagged part. Removing it from HEAD hides
+  nothing from history (the audit's premise), so the decision is publish-as-is vs. history rewrite
+  before the repo ever goes public — the one moment a rewrite still works. The derived JSON seeds
+  (`data/corpus_seed.json` + `data/reader_seed.json`, the 290-book pair) carry the same data in
+  another form and are flagged for the same decision. Pre-public §4.
+
 ## Known-flaky, with a prior
 
 - **`discover-search.spec.ts:275` — "Shelf picker seam: search everywhere finds and adds an unowned
@@ -624,6 +646,26 @@ list triaged rather than blanket-ignored.
   reasoned about, none executed. Wiring a Deno runner into the gate is its own
   branch; it would also cover `_shared/coverUrl.ts` and every other function-side
   module, which are uncovered for the same reason.
+- **`cover-sheet.spec.ts` asserts cover _source selection_, never cover _render quality_**
+  (`apps/web/e2e/cover-sheet.spec.ts:196,218,235,245`). Every assertion is
+  `toHaveAttribute('src', new RegExp(STUB.…))` — which cover the sheet _picked_ — with zero
+  `naturalWidth`/`naturalHeight` checks. The underlying `CoverImage.tsx:83` _is_ guarded by
+  `isDegenerateGoogleCoverRender(src, img.naturalWidth, img.naturalHeight)`, so a degenerate
+  render (a 1×1 tracking pixel, a blocked-image placeholder) would be caught at the component
+  layer but never asserted at the e2e layer. This is the 5761bc0-class gap (the cover-degenerate
+  audit's whole point) in its narrowest form: the test proves the right URL was selected, not
+  that a real cover painted. Filed, not fixed — the judgment call is whether e2e should
+  duplicate the component guard or trust it. The `src`-only assertions are _correct for what
+  they test_ (cover-sheet selection logic); the gap is that nothing tests the other half.
+- **`route-viewport.spec.ts` covers no signed-out surface.** The 24-route list
+  (`apps/web/e2e/route-viewport.spec.ts:250-276`) signs in first (`await signIn(page, …)`, line 248) and then walks `/`, `/library`, … `/welcome`, `/onboarding`, plus a resolved trope detail.
+  But `/welcome` and `/onboarding` redirect-or-render for a _signed-in_ reader; the genuinely
+  signed-out shell — `/auth` and its `?mode=signin|signup` variants (`AuthRoute.tsx:16-23`,
+  which redirects an authenticated reader to `/library` and renders the auth form only for the
+  unauth shell) — is unreachable from a test that has already signed in. A layout-overflow
+  regression on the auth/landing surface (the first thing a new reader sees) would not be
+  caught. Filed, not fixed — adding it means a second `test(...)` block that does _not_ call
+  `signIn` and walks the unauth routes, which is its own fixture scope.
 
 - **`fetchCover` is still callerless after #123 — the ISBN-direct cover path is not live.**
   `git log -S"fetchCover(" --all -- apps/ supabase/` returns no commit, ever: its only references
