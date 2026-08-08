@@ -359,7 +359,7 @@ argument block in the docs. Auditable one PR per series.
 
 **Durable tooling alongside the one-time fix:** the two-block audit SQL staged here is
 already reusable. A third block — _triage_, not _fix_ — that surfaces every
-user_edited=false row across the library that disagrees with Wikidata's P179 set, ranks
+`user_edited=false` row across the library that disagrees with Wikidata's P179 set, ranks
 them by series size and disagreement count, would let the owner drive a per-series
 hand-edit session without re-discovering ACOTAR-shape each time. That's a follow-up
 branch, separate from any position correction; it would be useful to have _before_ the
