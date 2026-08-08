@@ -175,11 +175,48 @@ function` + fresh `create` resets it to the PUBLIC-execute default — verified 
   Revoking `PUBLIC` without granting `authenticated` there broke three pgTAP files outright on the
   first run. Caught by running the suite, not by re-reading the reasoning — a function's callers
   include its RLS policies, not just its own migration file and its obvious call sites.
+- **A data-fix script is NOT a migration.** A one-time repair scoped to a single incident — row ids
+  that mean nothing on another database, a backfill that must not run twice — lives in `docs/queries/`
+  and is run by hand against the target, never in `supabase/migrations/`. `pnpm db:migrate` pushes
+  every file in `supabase/migrations/` on every deploy, so a repair there would either re-fire on the
+  next database (idempotent ones harmlessly, non-idempotent ones destructively) or sit in the deploy
+  path forever as dead weight. The durable _closure_ of an incident — the schema/trigger/constraint
+  that stops it recurring — _does_ belong in a migration; the incident-specific repair that produced
+  the closure does not. `fix/merge_books-series-reparent` (41290d0) is the clean separation: the
+  repair SQL for Iron Flame's mis-parented series slot sat in `docs/queries/iron-flame-merge.sql`
+  scoped to those row ids, while the step-3c-series re-parenting that makes the next merge correct went
+  into the `merge_books` body via migration. Twelve incident files already live under `docs/queries/`
+  on this pattern; do not promote one into `supabase/migrations/` because it "feels like" a migration.
+- **Irreversible DB operations are silent by default — make them loud.** `alter table … drop column`
+  on a dependency nothing tracks (no FK, no view, no function arg) **succeeds silently**: no error,
+  no warning, just a column gone. `delete from …` with no `where` empties the table the same way.
+  Any migration that drops a column, drops a constraint, or deletes rows must (a) name in a comment
+  _what_ it removes and _why_, and (b) where live data exists, do the durable guard _first_ and the
+  destructive act _second_ — never assume a later step will catch a silent drop. `drop_plan_date`
+  (658ede0) documents this directly: `plan_date` was "a string, not a tracked dependency, so
+  `alter table … drop column plan_date` SUCCEEDS SILENTLY," and the migration reorders the body to
+  write the replacement columns and backfill before the drop, so a silent failure of the drop would
+  leave the replacement in place rather than the reader with neither. The silence is the failure mode;
+  a comment and a guard ordering are the antidote.
 
 ## Testing & verification discipline
 
-Seven rules, each earned by a real failure this session. A rule without its reason gets dropped
-by whoever inherits it, so the reason stays attached.
+Eleven rules, each earned by a real failure. A rule without its reason gets dropped by whoever
+inherits it, so the reason stays attached.
+
+- **Assert the thing itself, not a proxy that would look the same if the thing were absent.** This is
+  the general form several rules below are instances of, stated once at the top so it covers cases
+  the specific ones don't reach. The canonical case: `fix/spine-shelf-overlay` (df8cfb4) guarded the
+  track-width invariant by measuring `scrollWidth` across scroll-driven **and** tap-driven
+  transitions at both content edges — **not** a `scrollLeft`-reachability test, which the
+  `mobile-shelf-interaction` audit proved "reaches the ends fine while the real gesture fails" and so
+  passes against the broken build and proves nothing. A proxy guard certifies a property adjacent to
+  the defect (the scroll position can be set; the row is `NULL`; the bundle contains the string) while
+  the defect itself (the width mutates mid-gesture; the row is invisible under RLS; the branch is dead
+  code) is invisible to it. Before writing a guard, name the defect in one sentence and ask whether
+  the assertion would fail if _that specific thing_ broke — if it would still pass, you are guarding a
+  proxy. See the negative-assertion, bundle-grep, and dead-export rules below for three instances of
+  the same failure in different domains.
 
 - **Grepping a bundle for strings measures dead-code elimination, not rendering.** Vite
   constant-folds and eliminates unused branches, so a string's presence or absence in the built
@@ -268,6 +305,36 @@ test` outright and only fail `tsc`. This has bitten twice, by two different tool
   built on a deploy that had not happened. Check `supabase migration list --linked` (the remote
   column is the truth) or `supabase functions list` before depending on it, and say which you
   checked. This is cheap and the alternative is a branch built on a schema that does not exist.
+
+## Data-integrity & sourcing discipline
+
+Two rules, both earned by the series-position-integrity audit (`audit/series-position-integrity`,
+2026-08). They govern the moment a Code session proposes a value for a stored field — a series
+ordinal, a series membership, a title canonicalization — that asserts a fact about the world rather
+than a fact about the code.
+
+- **A claim treated as ground truth must be sourced, not assumed — and that includes the owner's own
+  uncorroborated guess.** "I think this book is #3 in the series" is a hypothesis, not data; treat it
+  as such until a source confirms it. Default to **Wikidata** (`P179` part-of-series, `P1545` series
+  ordinal) over a guess: it is CC0, carries native decimal ordinals (so `3.1` vs `3.5` is expressible
+  without a custom scheme), and is auditable. Before proposing to overwrite a stored position, **paste
+  the per-title QID + `P1545` literal** into the work record so the claim is checkable, not asserted.
+  Bring splits (a book belongs to two series; an omnibus collects #1–#3) as a flagged question for the
+  owner rather than self-resolving them — a self-resolution looks the same in the diff whether it was
+  sourced or guessed, and the audit's whole point was that too many stored positions already were
+  guesses wearing the costume of data. The recurring failure this names: a series ordering that
+  "looked right" had drifted from every source, and nothing in the pipeline could tell, because the
+  value was never traceable to one.
+- **`series_entries.user_edited = true` is a hard rule: never silently overwrite a reader-set
+  position.** The flag marks a position the reader deliberately set — corrected, reordered, or
+  disambiguated against a source the backfill doesn't know about. A backfill or repair that rewrites
+  `position` while leaving `user_edited` false (or, worse, flipping it false) destroys the reader's
+  intent and is invisible in the diff because the row still "has a position." Any repair touching
+  `series_entries.position` must filter `where user_edited is distinct from true` and must not touch
+  the flag; one-shot repair functions (e.g. `20260810010000_reset_seeded_user_edited.sql`) are
+  `revoke execute from public` + `grant to service_role` and run once. This is the data-integrity twin
+  of the "assert the thing itself" testing rule: the thing to protect is the reader's set value, not
+  the column's mere non-nullness.
 
 ## Definition of done (per feature)
 
