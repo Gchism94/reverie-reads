@@ -10,6 +10,7 @@ diagnose the ACOTAR incident in detail, generalise to "every series in the libra
 propose (not implement) a fix shape.
 
 The mechanical work for the owner to run against production is staged at:
+
 - [`docs/queries/acotar-position-audit.sql`](../queries/acotar-position-audit.sql) — Phase 2.
 - [`docs/queries/series-position-integrity-audit.sql`](../queries/series-position-integrity-audit.sql) — Phase 3.
 
@@ -29,7 +30,7 @@ this Phase 1 cross-checks the Wikidata claim against a second source.
 
 ### 1a. Wikidata series entity
 
-`Q60979203` — *"A Court of Thorns and Roses"*, Wikidata description: **"novel series by
+`Q60979203` — _"A Court of Thorns and Roses"_, Wikidata description: **"novel series by
 Sarah J. Maas"** (the only match; the disambiguation by description rules out the 2015
 single-novel entry `Q101987009`, the upcoming TV-series entry `Q115010574`, and every
 "court of thorns …" string match on a non-Wikidata-scope item).
@@ -50,13 +51,13 @@ $ curl -sG 'https://www.wikidata.org/w/api.php' \
 SPARQL query: `?work wdt:P179 wd:Q60979203 . OPTIONAL { ?work p:P179/pq:P1545 ?ordinal . }
 OPTIONAL { ?work wdt:P577 ?pubDate . }`, ordered by `xsd:decimal(?ordinal)`.
 
-| Wikidata ordinal | Wikidata Q-id   | Title                          | Publication date |
-|------------------|-----------------|--------------------------------|------------------|
-| `1`              | `Q101987009`    | A Court of Thorns and Roses    | 2015             |
-| `2`              | `Q101987239`    | A Court of Mist and Fury       | 2016             |
-| `3`              | `Q101987946`    | A Court of Wings and Ruin      | 2017             |
-| **`3.1`**        | `Q101988228`    | **A Court of Frost and Starlight** | **2018**      |
-| `4`              | `Q101988654`    | A Court of Silver Flames       | 2021-02-16       |
+| Wikidata ordinal | Wikidata Q-id | Title                              | Publication date |
+| ---------------- | ------------- | ---------------------------------- | ---------------- |
+| `1`              | `Q101987009`  | A Court of Thorns and Roses        | 2015             |
+| `2`              | `Q101987239`  | A Court of Mist and Fury           | 2016             |
+| `3`              | `Q101987946`  | A Court of Wings and Ruin          | 2017             |
+| **`3.1`**        | `Q101988228`  | **A Court of Frost and Starlight** | **2018**         |
+| `4`              | `Q101988654`  | A Court of Silver Flames           | 2021-02-16       |
 
 Five works. **The decimal on the Frost novella is `3.1`, not `3.5` — this is the literal
 value Wikidata stores on P1545 with that work.** Five ordinals, five publish-date order
@@ -93,15 +94,15 @@ gap-filler for what Wikidata doesn't cover.
 
 ### 1e. Headline conflict with the owner's stated "should be" positions
 
-| Title                          | Library position (owner's report) | Wikidata | Disagreement         |
-|--------------------------------|------------------------------------|----------|----------------------|
-| A Court of Thorns and Roses    | `1`                                | `1`      | —                    |
-| A Court of Mist and Fury       | `2` (×2)                           | `2`      | —                    |
-| A Court of Wings and Ruin      | `4`                                | `3`      | library is +1        |
-| A Court of Frost and Starlight | `4`                                | `3.1`    | library is +0.9      |
-| A Court of Silver Flames       | `5.5`                              | `4`      | library is +1.5      |
-| (intruder?)                    | `2.5`                              | (none)   | no Wikidata claim    |
-| (intruder?)                    | `6`                                | (none)   | no Wikidata claim    |
+| Title                          | Library position (owner's report) | Wikidata | Disagreement      |
+| ------------------------------ | --------------------------------- | -------- | ----------------- |
+| A Court of Thorns and Roses    | `1`                               | `1`      | —                 |
+| A Court of Mist and Fury       | `2` (×2)                          | `2`      | —                 |
+| A Court of Wings and Ruin      | `4`                               | `3`      | library is +1     |
+| A Court of Frost and Starlight | `4`                               | `3.1`    | library is +0.9   |
+| A Court of Silver Flames       | `5.5`                             | `4`      | library is +1.5   |
+| (intruder?)                    | `2.5`                             | (none)   | no Wikidata claim |
+| (intruder?)                    | `6`                               | (none)   | no Wikidata claim |
 
 **Conclusions for Phase 1:**
 
@@ -117,9 +118,9 @@ gap-filler for what Wikidata doesn't cover.
    import-path duplication (Phase 2 duplicate-book hypothesis) or insert-error positions
    on parts of the deliverable (Phase 2 position-assignment hypothesis).
 3. Phase 0's "Wikidata coverage patchy" caveat was tested — Open Library confirms count
-   and titles, not ordinals — and the answer here is *"Wikidata's `3.1` is the best
+   and titles, not ordinals — and the answer here is _"Wikidata's `3.1` is the best
    number we have; one component of the owner's report disagrees, and the disagreement
-   should be flagged for the owner to confirm before any move"*. This audit does not
+   should be flagged for the owner to confirm before any move"_. This audit does not
    propose to override the owner; it surfaces the conflict.
 
 ---
@@ -149,7 +150,7 @@ Fury') within the ACOTAR series`, then surface one row per differing column with
 
 **The question Phase 2 answers here is genuine duplicate vs legitimate distinct records.**
 Per AGENTS.md's "Possession is five independent flags" section, the load-bearing
-distinction is *physical copy owned in format X*, not just the five booleans. Two
+distinction is _physical copy owned in format X_, not just the five booleans. Two
 records of Mist-and-Fury where one is owned-paperback and the other is owned-ebook are
 **two real copies** and not a merge candidate. The audit SQL surfaces the
 `owned_physical / owned_ebook / owned_audiobook / isbn / cover_url / read_status` columns
@@ -169,7 +170,7 @@ side by side: read marker, cover, isbn, owned-format flags. Same comparison as
 ### 2c. Block 3 — position-4 collision (Frost & Starlight vs Wings & Ruin)
 
 Two DIFFERENT `title` values, one `position` value, in the ACOTAR series. This is a
-different defect than (2b): not a duplicate-row, but a *position-assignment* defect.
+different defect than (2b): not a duplicate-row, but a _position-assignment_ defect.
 Block 3 surfaces both rows' shapes; if their column diff shows they are
 **two distinct editions of the same physical book** (different ISBN, different owned
 formats), the merge logic from (2b) applies on top of the position correction. If the
@@ -230,12 +231,12 @@ the same defensiveness the core engine applies; a hand-run audit mirrors it.
 
 The shape of the ACOTAR incident is now mapped:
 
-| Defect class                                 | At least one row affected in ACOTAR? | Investigation shape |
-|----------------------------------------------|---------------------------------------|---------------------|
-| (A) Duplicate `books` row in same series     | **Yes** — the Mist-and-Fury shape     | block 2, block 7    |
-| (B) Position-collision in `series_entries`   | **Yes** — Frost & Starlight vs Wings & Ruin at `position = 4` | block 3, block 7c |
-| (C) Library position outside Wikidata        | Yes — `2.5`, `5.5`, `6` rows          | block 1, block 4    |
-| (D) `user_edited = true` blocking correction | unknown until block 8 is run — must check | block 8           |
+| Defect class                                 | At least one row affected in ACOTAR?                          | Investigation shape |
+| -------------------------------------------- | ------------------------------------------------------------- | ------------------- |
+| (A) Duplicate `books` row in same series     | **Yes** — the Mist-and-Fury shape                             | block 2, block 7    |
+| (B) Position-collision in `series_entries`   | **Yes** — Frost & Starlight vs Wings & Ruin at `position = 4` | block 3, block 7c   |
+| (C) Library position outside Wikidata        | Yes — `2.5`, `5.5`, `6` rows                                  | block 1, block 4    |
+| (D) `user_edited = true` blocking correction | unknown until block 8 is run — must check                     | block 8             |
 
 Phase 2 does not select a survivor, does not write. It hands the owner live data on each
 defect type. The decision (which row to keep, where each position should land) is the
@@ -286,7 +287,7 @@ Headline counts: number of series rows, number of distinct series names (with na
 collapsing from block A), number of books with legacy `books.series` text, number of
 live `series_entries`. The question Phase 3 answers:
 
-> Does every series in the library have *some* phase-A/(B)/(C) shape, or is it
+> Does every series in the library have _some_ phase-A/(B)/(C) shape, or is it
 > concentrated on a handful of series?
 
 If the answer is "every series" — this is a backfill pipeline defect, likely a single
@@ -347,8 +348,8 @@ block C against the live database and confirms the per-series shape.**
 ### 4b. One-time audited fix vs durable tooling?
 
 Phase 3 may show many series carry defects. Per AGENTS.md: "do not propose automated
-correction without a human-reviewed guard." That guards the *process*, not the
-*scope*. The mechanical fix is the same shape for every series — three update
+correction without a human-reviewed guard." That guards the _process_, not the
+_scope_. The mechanical fix is the same shape for every series — three update
 statements keyed on a known title-id for one known title, gated on `user_edited = false`.
 
 **One-time audited fix per series (Iron-Flame-style)** is the safest scope: each
@@ -357,11 +358,11 @@ incidents-file in `docs/queries/` like the current `iron-flame-merge.sql` and th
 argument block in the docs. Auditable one PR per series.
 
 **Durable tooling alongside the one-time fix:** the two-block audit SQL staged here is
-already reusable. A third block — *triage*, not *fix* — that surfaces every
+already reusable. A third block — _triage_, not _fix_ — that surfaces every
 user_edited=false row across the library that disagrees with Wikidata's P179 set, ranks
 them by series size and disagreement count, would let the owner drive a per-series
 hand-edit session without re-discovering ACOTAR-shape each time. That's a follow-up
-branch, separate from any position correction; it would be useful to have *before* the
+branch, separate from any position correction; it would be useful to have _before_ the
 per-series PRs if Phase 3 confirms the count is high.
 
 **Recommendation (Code):** do the ACOTAR correction on its own branch (the
@@ -394,7 +395,7 @@ But:
 
 **Recommendation (Code):** deferred. Once Phase 3 returns and the per-series count is
 known, decide whether the per-incident path saturates or stays rough. The Wikidata
-client + spot-check audit shape is *not* restated here deliberately — those decisions
+client + spot-check audit shape is _not_ restated here deliberately — those decisions
 go to the docs-source ADR, not into an audit report.
 
 ### 4d. What this audit explicitly does NOT propose
