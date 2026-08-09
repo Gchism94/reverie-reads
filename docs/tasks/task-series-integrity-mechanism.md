@@ -212,14 +212,48 @@ does running ACOTAR's correction through the new RPC actually require —
   this task and unaffected by it.
 - The Mist-and-Fury book-row merge via `merge_books`, per the ownership-vs-
   membership rule above.
-- Position correction for the `user_edited=false` rows: **Frost and
-  Starlight = 3.5, Silver Flames = 5.** This is the owner's convention
-  (novellas get `.5`), NOT sourced from Wikidata (which states 3.1/4) or
-  Wikipedia (which states 4/5) — record it in the fix as an explicit owner
-  convention, attributed to neither source, per the standing sourcing
-  discipline.
-- Wings-and-Ruin's `user_edited=true` row is surfaced to the owner as a
-  discrepancy (per Block 8 above), not silently corrected.
+- Position correction. **THE FULL ORDER, stated whole so it cannot be
+  restated in pieces:**
+
+  | #   | book                           | note                    |
+  | --- | ------------------------------ | ----------------------- |
+  | 1   | A Court of Thorns and Roses    |                         |
+  | 2   | A Court of Mist and Fury       |                         |
+  | 3   | A Court of Wings and Ruin      |                         |
+  | 3.5 | A Court of Frost and Starlight | interquel novella       |
+  | _4_ | —                              | **deliberately vacant** |
+  | 5   | A Court of Silver Flames       |                         |
+
+  This is the owner's convention (novellas get `.5`, and the main sequence
+  keeps the integer it would have had), NOT sourced from Wikidata (3 / 3.1 / 4) or Wikipedia (which lands on 5 for Silver Flames only coincidentally,
+  by a plain-integer reading that does not state the convention). Attributed
+  to neither source, per the standing sourcing discipline.
+
+  **Position 4 being vacant is the load-bearing detail, and stating it is
+  what stops this drifting again.** A 2026-08-09 session turn restated this
+  ruling as a hybrid — `3.5` for Frost (this convention) but `4` for Silver
+  Flames (Wikidata's) — which is internally coherent on its own terms and is
+  exactly why it read as plausible. It is not what was ruled. The owner
+  identified it as their own restatement error and corrected it back to the
+  values above. The drift is recorded rather than quietly overwritten
+  because a stored ordinal that changes between statements, with no trace, is
+  the precise failure this task exists to close.
+
+- **Wings-and-Ruin's `user_edited = true` row (`dd33f8da`, ghost, placed
+  2026-07-15): OWNER-REVIEWED AND OVERRIDDEN, 2026-08-09.** This is a named,
+  deliberate exception to the hard `user_edited` rule and must stay findable
+  as one — not folded into the fix as routine cleanup.
+
+  The owner reviewed this specific entry and confirmed: they own the physical
+  book, the ghost is stale, and the 2026-07-15 placement is superseded now
+  that the book is owned. Block 8 had surfaced this row as a real
+  disagreement with both external sources and ruled it not to be
+  auto-corrected; that ruling stands and is not being reversed by a
+  mechanism. A human overrode their own earlier deliberate choice with new
+  information, which is what the protection is designed to REQUIRE rather
+  than prevent — it guards against silent algorithmic override, never
+  against the reader changing their mind.
+
 - Given Block D's scope, report whether Phase 4's ACOTAR work should produce
   a REUSABLE incident-file template (a parameterized version of what Iron
   Flame and Mist-and-Fury needed) rather than a one-off script — since this
