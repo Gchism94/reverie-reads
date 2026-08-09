@@ -258,7 +258,6 @@ export function EditDetails({
       pubM,
       pubD,
     } = (parsed as Extract<typeof parsed, { ok: true }>).values
-    const position = pos ?? ''
 
     setSaving(true)
     setSaveError(null)
@@ -273,8 +272,10 @@ export function EditDetails({
           isbn: f.isbn.trim(),
           intensity,
           series: f.series,
-          position,
-          seriesCount,
+          // position and seriesCount are DELIBERATELY ABSENT from this patch. Both are synced
+          // copies of series-level facts (series_entries.position, series.length), and
+          // set_series_order owns them — syncBookSeries below carries them there. Sending them
+          // here too would make the book patch a second writer racing the RPC in the same save.
           pages,
           status: f.status as SeriesStatus,
           genre: f.genre,
@@ -285,7 +286,12 @@ export function EditDetails({
         },
       })
       // Series sync stays adjacent to the book write it depends on, so the two never diverge.
-      await syncBookSeries.mutateAsync({ book, newSeries: f.series, newPosition: pos })
+      await syncBookSeries.mutateAsync({
+        book,
+        newSeries: f.series,
+        newPosition: pos,
+        newSeriesCount: seriesCount,
+      })
       // Contributors last: the most independent write, through its own RPC (it also refreshes the
       // primary first/last + byline).
       await setContributors.mutateAsync({ bookId: book.id, contributors: contribs })

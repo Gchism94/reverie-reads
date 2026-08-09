@@ -147,7 +147,30 @@ distinguish them per case, not assume one:
    removing them is a bigger blast radius (every read site changes) for a
    marginal gain, but make the case explicitly rather than defaulting.
 
-## Phase 2 — the write path. One RPC, `merge_books`-shaped.
+## Phase 2 — COMPLETE. The write path. One RPC, `merge_books`-shaped.
+
+**Status: implemented and green on this branch** (`set_series_order`, `20260814010000`). The spec
+below is unchanged; what it produced, and the three owner rulings taken along the way:
+
+- **`set_series_order(p_series, p_slots, p_origin, p_opts)`** — batch-shaped from birth, which is
+  what makes a reorder-specific variant unnecessary. It parks affected rows above
+  `greatest(max live, max requested)` before writing finals, because probing showed a
+  single-statement swap AND a whole-list renumber both fail 23505 under a non-deferrable partial
+  unique index. A deferrable partial `EXCLUDE` constraint also works and was refused.
+- **`merge_books` step 4 — option (a), derive don't merge** (owner ruling). `position` and
+  `series_count` left step 4's coalesce list; step 4b derives them from the surviving entry and its
+  series row, with `p_fields` kept as the fallback for books with no live entry.
+- **Phase 1's migration is SPLIT** (owner ruling, revising the Phase 1 "alongside or after"
+  ruling). `series.length` stays in `20260813010000`; the partial unique index moved to
+  `20260816010000` and deploys LAST, after the re-pointed app ships. Never re-merge the two files —
+  one `db push` applying both is exactly the hazard the split exists to prevent.
+- **No second RPC for insert-side position selection** (owner ruling). The RPC owns writes that
+  MOVE a live slot or set length; an insert choosing a position is a different operation the unique
+  index already protects by failing loud. The two silent-collision fallbacks were hardened instead
+  (`series_entries.position`'s `default 0` dropped; the `?? 0` seeding fallback and the source
+  insert's `: 0` both send an unplaceable book to the end of the order).
+
+## Phase 2 — the original spec. One RPC, `merge_books`-shaped.
 
 1. Design a security-definer RPC — name it, argue for the name — that is the
    ONLY path allowed to write series length or position. It writes
