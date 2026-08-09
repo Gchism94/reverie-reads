@@ -1,4 +1,4 @@
-// E3 — import/enrichment review read-model (docs/COVER_SOURCING_AND_STUDIO.md; docs/IMPORT_REAL_VALIDATION.md).
+// E3 — import/enrichment review read-model (docs/reference/COVER_SOURCING_AND_STUDIO.md; docs/archive/IMPORT_REAL_VALIDATION.md).
 // After an import + background enrichment run, the onboarding/import REVIEW screen and the Cover Studio
 // need a structured "what happened / what needs a look" payload. This builds it PURELY from per-book
 // outcomes the caller assembled during the run — a summary plus the bucketed "needs a look" items, each

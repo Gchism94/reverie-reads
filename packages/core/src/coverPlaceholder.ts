@@ -1,4 +1,4 @@
-// Cover Studio pillar #3 (docs/COVER_SOURCING_AND_STUDIO.md): a skin-themed typographic placeholder
+// Cover Studio pillar #3 (docs/reference/COVER_SOURCING_AND_STUDIO.md): a skin-themed typographic placeholder
 // for a cover-less book. The VISUAL — colours + display font — comes from the ACTIVE skin's CSS tokens
 // at render time, so it's always on-brand and re-themes for free when the skin changes. This module is
 // the PURE part: what to typeset (monogram + title + author) and which accent token to tint with,

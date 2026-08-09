@@ -37,7 +37,7 @@ import {
 const fmtPos = (n: number): string => `#${n}`
 
 /**
- * The series page IS the reading order (docs/task-series-experience.md §1) — one ordered shelf,
+ * The series page IS the reading order (docs/archive/task-series-experience.md §1) — one ordered shelf,
  * every canonical entry including ghost slots for books the reader doesn't have, the reader's
  * own state woven inline, Next Up elevated as the page's emotional center. Drag (or ▲▼) writes
  * decimal positions — between #2 and #3 lands #2.5 — and manual order always wins over source.
@@ -410,7 +410,7 @@ function SeriesScreen() {
                     </button>
                   )}
                   {/* Every slot can be removed — ghost or not. Gating this on `!book` is what left a
-                      book added from here with no way out (docs/task-series-defects.md §Removal). */}
+                      book added from here with no way out (docs/archive/task-series-defects.md §Removal). */}
                   <button
                     type="button"
                     onClick={() => setRemoving(e)}

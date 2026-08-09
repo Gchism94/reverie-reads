@@ -135,7 +135,7 @@ export function FilterPanel({ books, bare = false }: { books: Book[]; bare?: boo
           ♥ Favorites only
         </Chip>
         {/* Default grid = what you have or have read; this lets the wishlist + unset-unread ghosts
-            in alongside (docs/task-ownership-v2.md). */}
+            in alongside (docs/archive/task-ownership-v2.md). */}
         <Chip active={filters.wishlist} onClick={s.toggleWishlist}>
           ⊹ Show wishlist
         </Chip>

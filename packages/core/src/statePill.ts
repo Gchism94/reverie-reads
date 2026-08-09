@@ -1,7 +1,7 @@
 import type { Book } from './types'
 import { possessionState } from './ownership'
 
-// State pills — the two book states that must be visible while browsing (docs/task-state-pills.md).
+// State pills — the two book states that must be visible while browsing (docs/archive/task-state-pills.md).
 //
 // Borrowed and DNF are the states a reader can hold that nothing else on a browse surface reveals.
 // DNF matters most: with the shelf model's breakdown toggle off, an abandoned book sits on a shelf

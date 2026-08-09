@@ -3,7 +3,7 @@ import { contrastRatio, parseColor } from './adaptive'
 import { SKINS, type SkinId } from './skins'
 import { SKIN_TOKENS } from './skinTokens.fixture'
 
-// The four-state ownership control (docs/task-ownership-v2.md) and the borrowed badge reuse the skin
+// The four-state ownership control (docs/archive/task-ownership-v2.md) and the borrowed badge reuse the skin
 // tokens the rest of the app is measured against. The SELECTED ownership chip — the "Owned" /
 // "Borrowed" / "Wishlist" / "Not set" pill in each skin's voice — paints its label with
 // `--on-primary` on the `--accent-fill` surface. This turns "the borrowed treatment passes across

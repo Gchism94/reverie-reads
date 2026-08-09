@@ -1,7 +1,7 @@
 # AGENTS.md
 
-Context for coding agent. Read this first, then `docs/DATA_MODEL.md` before touching anything
-that stores a book. `docs/CODING_AGENT_KICKOFF.md` is the original build plan — history now,
+Context for coding agent. Read this first, then `docs/reference/DATA_MODEL.md` before touching anything
+that stores a book. `docs/archive/CODING_AGENT_KICKOFF.md` is the original build plan — history now,
 not a to-do list. Keep this file updated as the project evolves.
 
 ## What this is
@@ -53,14 +53,14 @@ prototype/ data/ design/ docs/ backend/   ← reference material, not shipped
 
 ## Where the answers live
 
-- Features to match → `docs/FEATURES.md`, `docs/REQUIREMENTS.md`
-- Architecture & API surface → `docs/ARCHITECTURE.md`
-- DB schema & object shapes → `docs/DATA_MODEL.md`
+- Features to match → `docs/reference/FEATURES.md`, `docs/reference/REQUIREMENTS.md`
+- Architecture & API surface → `docs/reference/ARCHITECTURE.md`
+- DB schema & object shapes → `docs/reference/DATA_MODEL.md`
 - Design tokens, type, motion, components → `design/DESIGN_SYSTEM.md`; the nine skins'
   token sets live in `packages/core/src/skins.ts` + `apps/web/src/styles/tokens.css`
 - Decisions with a rationale → `docs/decisions/` (ADRs)
-- Cover/metadata/release data sources → `docs/DATA_SOURCES.md`
-- Sharing & book-club design → `docs/SHARING.md`
+- Cover/metadata/release data sources → `docs/reference/DATA_SOURCES.md`
+- Sharing & book-club design → `docs/reference/SHARING.md`
 - Seed data → `data/corpus_seed.json` (bibliographic, CC0) + `data/reader_seed.json` (this
   reader's own data, not published, not licensed), 290 books joined by `id` — split from the
   single `personal_seed.json` in the pre-public-licensing pass so the CC0 corpus dedication in
@@ -134,7 +134,7 @@ pnpm deploy:functions    # prod functions deploy — via the deploy guard
 - **Never run a raw `supabase db push` / `supabase functions deploy` against prod.** Go through the
   guard (`pnpm deploy:migrations` / `pnpm deploy:functions`) — it enforces main + clean tree + in-sync
   - a `y/N`. Prod deploys happen from `main` after merge, never a feature branch (override is a loud,
-    deliberate exception). See `docs/DEPLOY.md`.
+    deliberate exception). See `docs/reference/DEPLOY.md`.
 - **Heredocs containing shell examples MUST be single-quoted** — `<<'EOF'`, not `<<EOF` — so backticks
   and `$(…)` inside are text, never evaluated. This applies to any heredoc feeding `gh pr create
 --body`, commit messages, or reports.
@@ -143,7 +143,7 @@ pnpm deploy:functions    # prod functions deploy — via the deploy guard
   `` `supabase functions deploy …` `` in a double-quoted string executes. (Codifies the 2026-07-14
   heredoc-eval incident, which deployed a function to prod from a PR-body backtick.)
 - **No writes to the production database from a Code session — ever, including throwaway
-  accounts meant for immediate deletion.** `docs/DEPLOY.md`'s smoke test uses exactly that
+  accounts meant for immediate deletion.** `docs/reference/DEPLOY.md`'s smoke test uses exactly that
   pattern — a self-deleting account exercising the full lifecycle against prod — but that is the
   owner's checklist to run by hand, not something a Code session does on its own. Verification
   that requires a real prod account is the owner's to run, not Code's.
@@ -346,7 +346,7 @@ several defects have been "fixed" in code paths no reader can reach.
 
 1. **App name — DECIDED (owner, 2026-07): Reverie is the name.** No longer a
    placeholder. Keep reading it from `APP_NAME` in `@reverie/core` (never hardcode);
-   `docs/TRADEMARK.md` stays as history.
+   `docs/reference/TRADEMARK.md` stays as history.
 2. **Household model** — v1 default: one personal library per account; sharing happens
    via shared lists + clubs (defer a true shared household library).
 3. **Spoiler gating** — v1 default: honor-based (client-side). Server-enforced via RLS

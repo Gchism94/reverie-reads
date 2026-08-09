@@ -24,7 +24,7 @@
   --tertiary: var(--gold);
   --font-body: var(--font-sans);
 
-  /* ── Character dimensions (Skin Character System — docs/SKIN_CHARACTER_CONTRACT.md) ──
+  /* ── Character dimensions (Skin Character System — docs/reference/SKIN_CHARACTER_CONTRACT.md) ──
      Neutral, accessible defaults; each skin overrides these in a mode-independent
      [data-skin='…'] block to become a PLACE, not a palette. Components CONSUME these, never
      hardcode. Tryst + Aphelion are the two designed skins (Stage 1); the rest inherit defaults

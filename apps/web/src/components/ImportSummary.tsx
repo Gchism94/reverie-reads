@@ -3,7 +3,7 @@ import { StatNumber } from './Label'
 import { summaryHeadline, summaryNotices } from './importSummaryCopy'
 import type { ImportExportResult } from '../data/importLibrary'
 
-// The post-import summary (docs/task-import-quality.md §4): reflects reality, honestly — what came
+// The post-import summary (docs/archive/task-import-quality.md §4): reflects reality, honestly — what came
 // in, what folded, where to-read rows landed, and what's still empty in bulk (covers we'll fetch).
 // Modest scope: a few stat tiles + a line of plain-language notices. Not a report engine.
 

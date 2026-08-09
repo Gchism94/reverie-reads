@@ -1,4 +1,4 @@
-// E1 — enrichment resolution core (docs/COVER_SOURCING_AND_STUDIO.md Part 1; docs/ENRICHMENT_STRATEGY.md).
+// E1 — enrichment resolution core (docs/reference/COVER_SOURCING_AND_STUDIO.md Part 1; docs/reference/ENRICHMENT_STRATEGY.md).
 // The real import files carry NO ISBNs and NO covers — only title+author(+series). This module turns a
 // title+author query plus the candidate records a source SEARCH returned into a single best match WITH
 // a confidence tier, a self-resolved ISBN-13, and the alternate candidates the Cover Studio offers as
