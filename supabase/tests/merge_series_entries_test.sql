@@ -51,8 +51,13 @@ values
   ('99999999-aaaa-1111-1111-aaaaaaaaaaaa', '77777777-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
    '66666666-7777-8888-9999-aaaaaaaaaaaa', 1, 'Primary Slot', 'A Author',
    '88888888-1111-1111-1111-111111111111'),
+  -- Loser Slot A sits at position 2, not 1: since 20260813010000_series_integrity_schema,
+  -- two live entries cannot share a position (series_entries_position_uidx). The redundancy
+  -- this test exercises is keyed on (series_id, book_id) — the re-parent would collide with
+  -- Primary's live Series A entry via series_entries_book_uidx regardless of position — so
+  -- the tombstone branch still triggers exactly as before.
   ('99999999-aaaa-2222-2222-aaaaaaaaaaaa', '77777777-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-   '66666666-7777-8888-9999-aaaaaaaaaaaa', 1, 'Loser Slot A', 'A Author',
+   '66666666-7777-8888-9999-aaaaaaaaaaaa', 2, 'Loser Slot A', 'A Author',
    '88888888-2222-2222-2222-222222222222'),
   ('99999999-bbbb-1111-1111-bbbbbbbbbbbb', '77777777-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
    '66666666-7777-8888-9999-aaaaaaaaaaaa', 1, 'Loser Slot B', 'B Author',
