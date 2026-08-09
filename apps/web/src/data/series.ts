@@ -304,14 +304,29 @@ export function useSeriesDetail(name: string) {
       const joining = lib.filter((b) => !linked.has(b.id))
       // Tombstones are consumed as they revive, so two same-title books can't both claim one slot.
       const available = [...removed]
+      // A REVIVE RE-ENTERS THE LIVE POSITION SPACE, and its stored number may no longer be free —
+      // the slot was removed, something else took position 2, and now the reader adds the book back.
+      // Before series_entries_position_uidx that made a silent duplicate; with it, an un-tombstoning
+      // UPDATE at a taken position raises 23505. This loop runs inside `useSeriesDetail`, which is a
+      // READ, so an unhandled raise there does not fail one write — it takes the whole series page
+      // down. The tombstone keeps its number when it is still free (that number is the reader's own
+      // arrangement, worth preserving) and otherwise goes to the end, the same answer every other
+      // path here gives for a book whose place is not known.
+      const taken = new Set(entries.map((e) => e.position))
+      let reviveEnd = Math.floor(Math.max(0, ...entries.map((e) => e.position)))
       for (const b of joining) {
         const bookLike = { title: b.title, first: b.author_first ?? '', last: b.author_last ?? '' }
         const match = matchEntryForBook(available, bookLike)
         if (match.kind !== 'match') continue
         const t = match.entry
+        // `matchEntryForBook` answers with the narrow {id, title, author} shape it takes, so the
+        // stored position comes back off the SeriesEntry `available` actually holds.
+        const stored = available.find((x) => x.id === t.id)?.position ?? 0
+        const position = taken.has(stored) ? ++reviveEnd : stored
+        taken.add(position)
         const { data: back } = await supabase
           .from('series_entries')
-          .update({ removed_at: null, book_id: b.id })
+          .update({ removed_at: null, book_id: b.id, position })
           .eq('id', t.id)
           .select()
         const row = ((back ?? []) as SeriesEntryRowT[])[0]
