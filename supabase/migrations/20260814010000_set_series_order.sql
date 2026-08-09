@@ -106,6 +106,23 @@ begin
   end if;
 
   if n_slots > 0 then
+    -- ── A SLOT WITHOUT A POSITION IS A CONFUSED CALLER, NOT A VALUE TO DERIVE ──────────────────
+    -- `series_entries.position` is NOT NULL, and that is a statement about what a slot IS: a live
+    -- entry occupies a place in the reading order. "In the series but nowhere in the order" is not
+    -- a state the reading order can represent, or that the series page could render — it is an
+    -- ordered list, and the book has to appear somewhere in it.
+    --
+    -- Translating a reader's CLEARED number into an ordinal is the client's job and it has a rule
+    -- for it (the end of the order, the same answer seedSeriesPositions and the source-insert path
+    -- give a book whose place is unknown). It is not something this function should guess on the
+    -- caller's behalf. Without this check the null reaches the final UPDATE and surfaces as a bare
+    -- 23502 naming the column, which reads as a schema accident rather than a refused request.
+    if exists (
+      select 1 from jsonb_array_elements(p_slots) s where (s ->> 'position') is null
+    ) then
+      raise exception 'set_series_order: a slot has no position — a live slot always occupies a place in the order';
+    end if;
+
     -- 1. Every slot must name a LIVE entry of THIS series owned by this reader.
     if exists (
       select 1
