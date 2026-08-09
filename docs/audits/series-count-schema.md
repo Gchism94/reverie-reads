@@ -4,6 +4,18 @@
 **Mode:** Read-only — migrations, types, RLS, and code only. No production data touched. Findings
 re-verified against current HEAD.
 
+> **Status note (2026-08-09, `feat/series-integrity-mechanism` Phase 2).** This audit is a record of
+> the schema as it stood when the mechanism was designed; its findings are not edited here. What has
+> since changed: `public.series` now HAS a length column (§1's gap, closed by `20260813010000`);
+> `series_entries` now has a partial unique index on `(series_id, position)` (§3's gap, closed by
+> `20260816010000`, deployed last); and the writer inventory in §4 has been re-pointed through
+> `set_series_order` (`20260814010000`), which is now the only path that writes series position or
+> series length. `syncBookPosition` — §5's named instance of the dual-write hazard — is deleted.
+> Four §4 entries deliberately did NOT change and the reasons are in the Phase 2 completion report:
+> `backfill_series_from_titles()` (an already-executed one-shot), the three `toBookRow` INSERT paths
+> and `foldIn` (unreconciled claims, no entry to disagree with), and `useUpdateEntry`'s position
+> branch (deleted as dead code rather than re-pointed).
+
 ## 1. Does `series` have a length/count column? — No. It is a missing column, not a dead one.
 
 The series-row table is named `public.series`, defined in `20260716010000_series_experience.sql:8-17`.

@@ -800,15 +800,39 @@ test('book-page position edits take effect immediately on the series page', asyn
       .toBe(0)
 
     // 3d: clearing the field must not leave the old number standing on the series side.
+    //
+    // ── CONTRACT CHANGE, feat/series-integrity-mechanism Phase 2 ────────────────────────────────
+    // This block used to assert `books.position` came back NULL while the entry moved to the end
+    // of the order. That is two surfaces disagreeing about one book — the book page showing no
+    // number while the series page shows #10 — which is precisely the defect set_series_order
+    // exists to close, codified here as an expectation.
+    //
+    // The new contract is forced by the schema rather than chosen: `series_entries.position` is
+    // NOT NULL, so a live slot is always SOMEWHERE. Clearing the field therefore means "I don't
+    // know where this goes", the slot goes to the end, and `books.position` — a synced copy, not
+    // an independent value — mirrors it. A book in a structured series no longer has an
+    // unnumbered state to be in.
+    //
+    // So the assertion is now the INVARIANT itself: the two agree, and neither is the stale 9.
+    // Asserting only "the entry is no longer 9" would pass with the mirror broken entirely.
     await setPosition(ids[1]!, 'Audit Bravo', '')
     await expect
-      .poll(async () => (await bookRow(c, 'Audit Bravo'))?.position, { timeout: 15_000 })
-      .toBeNull()
-    await expect
-      .poll(async () => (await liveEntries(c)).find((e) => e.title === 'Audit Bravo')?.position, {
-        timeout: 15_000,
-      })
-      .not.toBe(9)
+      .poll(
+        async () => {
+          const book = (await bookRow(c, 'Audit Bravo'))?.position
+          const entry = (await liveEntries(c)).find((e) => e.title === 'Audit Bravo')?.position
+          return { book, entry, agree: book != null && book === entry }
+        },
+        { timeout: 15_000 },
+      )
+      .toMatchObject({ agree: true })
+
+    const clearedEntry = (await liveEntries(c)).find((e) => e.title === 'Audit Bravo')?.position
+    const clearedBook = (await bookRow(c, 'Audit Bravo'))?.position
+    expect(clearedEntry, 'the cleared slot went to the end, not back to its old number').not.toBe(9)
+    expect(clearedBook, 'books.position mirrors the slot rather than going blank').toBe(
+      clearedEntry,
+    )
   } finally {
     await reset(c)
   }
