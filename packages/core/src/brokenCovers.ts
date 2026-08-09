@@ -1,4 +1,4 @@
-// Broken-cover telemetry aggregation (docs/COVER_SOURCING_AND_STUDIO.md, cover durability). A saved
+// Broken-cover telemetry aggregation (docs/reference/COVER_SOURCING_AND_STUDIO.md, cover durability). A saved
 // cover link can rot; the client detects it via <img> onerror. Per the doc's QUOTA caveat we must NOT
 // emit one telemetry event per broken cover (an import tail can be hundreds → burns the Sentry free
 // tier and drowns real errors) — so events are AGGREGATED into a single summary. This is the pure

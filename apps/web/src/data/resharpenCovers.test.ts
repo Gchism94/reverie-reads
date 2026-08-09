@@ -17,7 +17,7 @@ describe('resharpenSource (which covers the sweep re-fetches)', () => {
   })
 
   // Re-sharpening means FETCHING AND STORING, which is exactly what Google's terms forbid
-  // (docs/reverie-metadata-sourcing.md §Covers). A Google cover stays the hotlink it is.
+  // (docs/reference/reverie-metadata-sourcing.md §Covers). A Google cover stays the hotlink it is.
   it('skips Google entirely — display-time only, never re-fetched into Storage', () => {
     expect(resharpenSource(book({ cover: GOOGLE }))).toBeNull()
     expect(resharpenSource(book({ cover: STORAGE, coverSourceUrl: GOOGLE }))).toBeNull()

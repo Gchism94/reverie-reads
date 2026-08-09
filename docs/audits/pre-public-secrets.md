@@ -68,13 +68,13 @@ Gaps that would let a secret in tomorrow:
   committed default, every fork that copies the example reports its errors into your Sentry
   project. Yours to keep or blank.
 - **Production project ref `tzimctugmzuadrsitnpr`** appears at HEAD in `.env.example` and
-  `docs/DEPLOY.md`. Both are consistent with it being client-visible anyway; listed for
+  `docs/reference/DEPLOY.md`. Both are consistent with it being client-visible anyway; listed for
   completeness.
 - **`https://reverie.app`** is the geo function's fallback contact
   (`supabase/functions/geo/index.ts:25`) — a domain that is not obviously yours
   (`reveriereads.app` is). A stranger's domain as our Nominatim contact-of-record is a
   correctness smell, not a secret; noted, not fixed.
-- The Steppe project ref (`cywp…loem`) appears only in `docs/BACKLOG.md` as the MCP
+- The Steppe project ref (`cywp…loem`) appears only in `docs/backlog/BACKLOG.md` as the MCP
   wrong-project note — another project's identifier in our docs; harmless, owner's call.
 
 ## 5. Rotation mechanics, per finding class

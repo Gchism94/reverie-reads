@@ -4,7 +4,7 @@ import { captureMessage, summarizeBrokenCovers, type BrokenCover } from '@reveri
 // Tracks covers whose link failed to load (client <img> onerror). Two jobs:
 //  1) expose a reactive set of broken book ids so the import-review brokenCover bucket fills in;
 //  2) report to owner telemetry AGGREGATED — one debounced captureMessage per burst, never one per
-//     cover (docs/COVER_SOURCING_AND_STUDIO.md quota caveat). captureMessage routes to Sentry when a
+//     cover (docs/reference/COVER_SOURCING_AND_STUDIO.md quota caveat). captureMessage routes to Sentry when a
 //     DSN is set, else the console (H4 wrapper).
 
 const broken = new Map<string, BrokenCover>()

@@ -219,7 +219,7 @@ function ShelfScreen() {
         </p>
       ) : view === 'spines' ? (
         // The default view is arrangeable too — reorder used to exist only in Grid, which is not
-        // where a reader lands (docs/task-shelf-regressions.md, audit follow-up).
+        // where a reader lands (docs/archive/task-shelf-regressions.md, audit follow-up).
         <SpineShelf
           books={shelfBooks}
           onOpen={openBook}

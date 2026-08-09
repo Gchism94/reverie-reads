@@ -74,7 +74,7 @@ export function toBook(row: BookRow): Book {
     coverColor: row.cover_color ?? undefined,
     isbn: row.isbn ?? '',
     fave: row.fave,
-    // Two-state ownership + independent flags (docs/task-shelf-model.md). A row written before the
+    // Two-state ownership + independent flags (docs/archive/task-shelf-model.md). A row written before the
     // stage-A migration can still carry a four-state word; read it through the same mapping the
     // migration applies, so a stale cache or an un-migrated replica degrades to the right meaning
     // rather than to 'owned'. Anything unrecognized is NOT a possession claim — 'unowned'.

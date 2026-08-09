@@ -466,7 +466,7 @@ export function useUpdateEntry(name: string) {
 }
 
 /**
- * Remove a slot — the series page's ✕ (docs/task-series-defects.md §Removal, revised). The slot goes
+ * Remove a slot — the series page's ✕ (docs/archive/task-series-defects.md §Removal, revised). The slot goes
  * and, when a book was linked, that book stops naming the series so reconciliation can't re-add it.
  * The row is soft-deleted rather than dropped so a later Hardcover refresh can't resurrect what the
  * reader dismissed.
@@ -503,7 +503,7 @@ export function useRemoveEntry(name: string) {
 }
 
 /**
- * Reconcile the book page's series edits into series_entries (docs/task-series-defects.md §Positions,
+ * Reconcile the book page's series edits into series_entries (docs/archive/task-series-defects.md §Positions,
  * §Removal). updateBook writes the book row; this keeps the SERIES side in step so the two surfaces
  * never disagree:
  *   · position: write the linked entry's position (user_edited, so a source refresh can't move it) —

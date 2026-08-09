@@ -4,7 +4,7 @@ import { authFailure } from './support/authError'
 import { keepOfflineCacheEmpty } from './support/offlineCache'
 import { ok, okData, okUser } from './support/ok'
 
-// Regression guards for docs/task-series-defects.md as REVISED by the #64/#65 audit. The original
+// Regression guards for docs/archive/task-series-defects.md as REVISED by the #64/#65 audit. The original
 // work was verified at the DB level only, and three of its four claims did not survive an eyeball:
 //   · removal from the series page was unreachable for any book in the library (the ✕ was gated on
 //     `!book`), so a book added from "see the whole series" could never be taken out again;

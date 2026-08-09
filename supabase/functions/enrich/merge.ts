@@ -91,7 +91,7 @@ export interface EnrichedRecord {
   provenance: Record<string, FieldProvenance>
 }
 
-// ── Field-level precedence (docs/ENRICHMENT_STRATEGY.md Step 3) ──
+// ── Field-level precedence (docs/reference/ENRICHMENT_STRATEGY.md Step 3) ──
 // For each scalar field: the source order to prefer; first non-empty wins. Sources absent from a
 // list still can't supply that field. Union + longest-description fields are handled specially.
 const PRECEDENCE: Record<string, EnrichSource[]> = {

@@ -104,7 +104,7 @@ function possessionFrom(b) {
   return {
     ownership: b.source === 'Owned' ? 'owned' : 'unowned',
     borrowed,
-    wishlist: false, // the seed carries no wanting signal — see docs/task-shelf-model.md
+    wishlist: false, // the seed carries no wanting signal — see docs/archive/task-shelf-model.md
     owned_physical: inHand
       ? f.includes('hardcover')
         ? 'hardcover'
