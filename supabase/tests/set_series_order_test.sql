@@ -13,11 +13,21 @@
 -- mutation to check this against is deleting the park UPDATE in the function body — that must turn
 -- these green assertions red with 23505, not leave them green.
 --
--- NOTE ON ORDERING WITH THE INDEX. This file exercises behaviour that only MATTERS under
--- series_entries_position_uidx (20260816010000), which sorts after the RPC's own migration. Both
--- are applied by the time any test runs, so the assertions here run with the index present — which
--- is the point. If the index migration is ever held back locally, these tests keep passing while
--- proving much less; that is exactly the proxy this header warns about.
+-- ▌THIS FILE RUNS IN TWO CONFIGURATIONS, AND ONLY ONE OF THEM PROVES THE PARK PASS. ▌
+--
+-- series_entries_position_uidx lives on the HELD branch `chore/series-position-index`
+-- (20260816010000), because it must not reach production until the re-pointed app has shipped.
+-- So on the Phase 2 branch these tests run with NO index, and on the held branch they run with it.
+--
+-- Without the index the swap and rotation assertions still check that the final positions are
+-- correct — worth having — but they can no longer FAIL if the park pass is deleted, because
+-- nothing rejects the intermediate collision. That is the proxy this header warns about, and it is
+-- unavoidable while the index is held: it is a property of the deploy sequencing, not of the test.
+--
+-- What that means in practice: the park pass's teeth are proven on the HELD branch, and the
+-- mutation to verify it there is deleting the park UPDATE from the function body — those green
+-- assertions must turn red with 23505. Running that mutation on the Phase 2 branch proves nothing.
+-- Verified 2026-08-09 with the index present: removing the park pass failed 8 of these assertions.
 --
 -- Role shape per the standing testing rules: the RPC is CALLED as `authenticated` (the real client
 -- role, and the role its ownership raises are the boundary for), while value assertions run after

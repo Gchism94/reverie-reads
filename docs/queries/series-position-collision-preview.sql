@@ -1,8 +1,16 @@
 -- PREVIEW ONLY — every statement is a SELECT. Nothing writes.
--- Run against production BEFORE deploying 20260813010000_series_integrity_schema.sql:
+-- Run against production BEFORE deploying 20260816010000_series_position_uidx.sql:
 -- that migration's `create unique index series_entries_position_uidx (series_id, position)
 -- where removed_at is null` fails outright against any of the rows this file surfaces,
 -- so the violating set must be empty (or resolved via staged incident files) first.
+--
+-- The index was originally part of 20260813010000_series_integrity_schema.sql and moved out in
+-- Phase 2, because it and `series.length` have opposite deploy constraints (the RPC needs the
+-- column to exist BEFORE it ships; the index must not exist UNTIL the re-pointed app has). It now
+-- lives on the held branch `chore/series-position-index` and is the LAST thing deployed.
+--
+-- ALREADY RUN, 2026-08-09: exactly ONE collision in the whole library — A Court of Thorns and
+-- Roses position 4, ghost-vs-book. Re-run before the index deploys, since the library moves.
 --
 -- Three blocks:
 --   1. The violating set itself — every (series, position) holding >1 LIVE entry, with
