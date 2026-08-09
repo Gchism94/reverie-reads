@@ -52,7 +52,7 @@ export function CoverCard({
   const showsPlaceholder = !book.cover || brokenIds.has(book.id)
   const markInk = showsPlaceholder ? 'var(--mark-on-ph)' : 'var(--mark-accent)'
   const markBg = showsPlaceholder ? 'rgba(0,0,0,0.62)' : 'rgba(0,0,0,0.45)'
-  // Possession, read through the derived word (docs/task-shelf-model.md). A book NOT in hand gets
+  // Possession, read through the derived word (docs/archive/task-shelf-model.md). A book NOT in hand gets
   // the ghost: the ARTWORK dims behind --ghost-opacity and the frame goes dashed. A BORROWED book is
   // in your hands — it never dims; instead it wears a solid accent ring (distinct from the ghost).
   // Title/author below and the marks keep full contrast (AA untouched). One word, not a flag test,

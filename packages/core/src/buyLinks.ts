@@ -1,7 +1,7 @@
 import { normalizeIsbn } from './match'
 
 // Buy-link layer. Attribution is a config-driven strategy so the money routing can flip later
-// without a refactor (docs/SCALING.md):
+// without a refactor (docs/reference/SCALING.md):
 //   'store'     — DEFAULT. Route to the reader's chosen local indie; the store keeps the full
 //                 profit and the app earns nothing. Bookshop.org links are plain by-ISBN links —
 //                 Bookshop's own model already funds indies collectively. Libro.fm already pays a

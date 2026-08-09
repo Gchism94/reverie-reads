@@ -4,7 +4,7 @@ import { authFailure } from './support/authError'
 import { keepOfflineCacheEmpty } from './support/offlineCache'
 import { ok, okData, okUser } from './support/ok'
 
-// Borrowed and DNF must be visible while browsing (docs/task-state-pills.md).
+// Borrowed and DNF must be visible while browsing (docs/archive/task-state-pills.md).
 //
 // Before this branch: borrowed had a mark on cards only — translucent, measuring 1.1–2.7:1 against
 // worst-case cover art — and DNF had nothing anywhere. Neither reached an accessible name; a grep
@@ -116,7 +116,7 @@ async function seedFixtures(c: Client): Promise<void> {
     { ...base, title: PLAIN_TITLE, ownership: 'owned', read_status: 'Read' },
   ])
   // Never swallow this. A silent insert failure makes an absent pill look like a rendering bug and
-  // sends the next reader hunting in the wrong file (docs/BACKLOG.md, swallowed Supabase errors).
+  // sends the next reader hunting in the wrong file (docs/backlog/BACKLOG.md, swallowed Supabase errors).
   if (insertError) throw new Error(`state-pills seed failed: ${JSON.stringify(insertError)}`)
 }
 

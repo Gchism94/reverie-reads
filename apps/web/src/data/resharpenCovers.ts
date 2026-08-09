@@ -38,7 +38,7 @@ export function resharpenSource(b: Book): string | null {
   if (b.coverUserChosen) return null // the reader's chosen cover is sacred
   if (b.coverSource === 'camera' || b.coverSource === 'upload') return null // the reader's own image
   if (!b.cover) return null
-  // Google is display-time only (docs/reverie-metadata-sourcing.md §Covers) — re-sharpening one
+  // Google is display-time only (docs/reference/reverie-metadata-sourcing.md §Covers) — re-sharpening one
   // would mean fetching and storing it, which is the very thing its terms forbid. A Google cover
   // stays a hotlink at whatever size it renders; the sweep leaves it alone.
   // A raw hotlink we can request larger (Open Library) — ingest it durably at full res.

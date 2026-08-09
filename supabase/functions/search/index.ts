@@ -1,4 +1,4 @@
-// Discover Search Edge Function (docs/task-discover-search.md) — one search backend, two surfaces
+// Discover Search Edge Function (docs/archive/task-discover-search.md) — one search backend, two surfaces
 // (the Discover field + the shelf picker's "search everywhere" seam).
 //
 //   POST { q: string }  →  { results: SearchResult[], source?: 'cache' }

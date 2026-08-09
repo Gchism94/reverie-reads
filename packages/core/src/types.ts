@@ -1,8 +1,8 @@
 // Domain types — the client-side shapes the prototype's logic operates on
-// (docs/DATA_MODEL.md §1). Step 4 maps these to/from the relational rows in §2.
+// (docs/reference/DATA_MODEL.md §1). Step 4 maps these to/from the relational rows in §2.
 
 /** The reader's status on a book. 'unset' means *no selection* — cataloguing a book must not force
- *  a read state (docs/task-ownership-v2.md). It is the default for a newly added book. */
+ *  a read state (docs/archive/task-ownership-v2.md). It is the default for a newly added book. */
 export type ReadStatus = 'unset' | 'Unread' | 'Reading' | 'Read' | 'DNF'
 /** The SERIES' publication status (is the series still being written?) — never the reader's
  *  position in it, which is derived from read states. */
@@ -56,7 +56,7 @@ export interface Owned {
   audiobook: boolean
 }
 
-/** Whether the reader OWNS a copy — the single claim this field makes (docs/task-shelf-model.md).
+/** Whether the reader OWNS a copy — the single claim this field makes (docs/archive/task-shelf-model.md).
  *  Borrowed and wishlist are no longer values here: they are independent flags on the book, because
  *  they can co-occur with ownership and with each other ("own the paperback, borrowed the audio,
  *  still want the special edition"). `unowned` is the default and asserts nothing beyond not owning
@@ -69,7 +69,7 @@ export type BookOwnership = 'owned' | 'unowned'
  *  stored column. Precedence owned > borrowed > wishlist > unset — the old OWNERSHIP_RANK order. */
 export type PossessionState = 'owned' | 'borrowed' | 'wishlist' | 'unset'
 
-/** A contributor's role on a book. Ordered, multi-contributor (docs/DATA_MODEL.md). `narrator` is
+/** A contributor's role on a book. Ordered, multi-contributor (docs/reference/DATA_MODEL.md). `narrator` is
  * really audiobook-edition-scoped — kept as a role for now (edition-scoping is a later refinement). */
 export type ContributorRole =
   | 'author'
@@ -128,7 +128,7 @@ export interface Book {
   /** the trope join, inline: pinned/present refs (loaded with the book like contributors) */
   tropes: { id: string; name: string; emphasis: 'pinned' | 'present' }[]
   /** reader-assigned moods (join, inline) — how the book LANDED on the reader. NEVER derived:
-   *  absence is a valid, quiet state, never backfilled with a guess (docs/task-mood.md). */
+   *  absence is a valid, quiet state, never backfilled with a guess (docs/archive/task-mood.md). */
   moods: { id: string; name: string }[]
   intensity: number | null // 0..5, null = unset (the Tryst skin labels this "Spice")
   cover: string
@@ -179,7 +179,7 @@ export interface List {
   ids: string[]
 }
 
-// --- Clubs & sharing (capability-keyed documents, docs/DATA_MODEL.md §1) ---
+// --- Clubs & sharing (capability-keyed documents, docs/reference/DATA_MODEL.md §1) ---
 
 export type ClubUnitType = 'chapter' | 'page' | 'percent'
 

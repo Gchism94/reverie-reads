@@ -1,4 +1,4 @@
-// Enrichment aggregator (docs/ENRICHMENT_STRATEGY.md). SOURCE-PLUGGABLE: each adapter fetches one
+// Enrichment aggregator (docs/reference/ENRICHMENT_STRATEGY.md). SOURCE-PLUGGABLE: each adapter fetches one
 // source and normalizes to a common SourceRecord (./merge.ts, mirrored from packages/core); the
 // pure merge reconciles them FIELD BY FIELD by precedence, unions multi-value fields, takes the
 // longest description, maps a genre, and lets user-authored fields win. The merged record is cached

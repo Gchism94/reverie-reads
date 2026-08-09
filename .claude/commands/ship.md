@@ -20,7 +20,7 @@ Only through the guard — it enforces main + clean + in-sync + a `y/N`:
 - `pnpm deploy:migrations`
 - `pnpm deploy:functions`
 
-Never run `supabase db push` or `supabase functions deploy` directly. See `docs/DEPLOY.md`.
+Never run `supabase db push` or `supabase functions deploy` directly. See `docs/reference/DEPLOY.md`.
 
 ## Before
 

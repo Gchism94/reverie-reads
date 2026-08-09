@@ -106,7 +106,7 @@ jobs:
       # only. The Build step below overrides both vars specifically, because THAT step needs the
       # opposite — a non-local value, or assert-dist-clean.mjs (which enforces under CI) refuses the
       # bundle. Two different needs inside one job, solved with a step-level override rather than
-      # blurring the job-vs-job separation docs/task-ci.md item 3 actually asks for.
+      # blurring the job-vs-job separation docs/archive/task-ci.md item 3 actually asks for.
       VITE_SUPABASE_URL: http://127.0.0.1:55321
       VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
     steps:
@@ -206,7 +206,7 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ steps.playwright-version.outputs.version }}
 
-      # Deliberately NOT caching the Supabase Docker images (docs/task-ci.md item 4's audit found
+      # Deliberately NOT caching the Supabase Docker images (docs/archive/task-ci.md item 4's audit found
       # no evidence it would help, and GitHub's cache would store multiple GB and restore near the
       # pull cost anyway).
       - name: Install Playwright browsers

@@ -2,7 +2,7 @@ import { Link } from '@tanstack/react-router'
 
 /**
  * A mood chip — a READER-ASSIGNED impression, in a deliberately different visual register from the
- * structural trope chip (docs/task-mood.md §3): a soft italic pill in the display face with a small
+ * structural trope chip (docs/archive/task-mood.md §3): a soft italic pill in the display face with a small
  * accent-ink dot, "felt" rather than catalogued. Assigned paints ink-on-card with an accent-ink
  * hairline (the contrast suite pins ink-on-card ≥ AA and the accent-ink accent ≥ 3:1 graphical);
  * unassigned sits quiet in muted-on-field. Never the loud accent-fill the trope PINS use.

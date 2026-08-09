@@ -23,7 +23,7 @@ queries against `_self = (select auth.uid())` so the reader's own library is the
 ## Phase 1 — ACOTAR canonical order (Wikidata P179 + P1545)
 
 Wikidata was chosen as the primary external source per Phase 0 of
-[`docs/reverie-metadata-sourcing.md`](../reverie-metadata-sourcing.md): CC0, native decimal
+[`docs/reference/reverie-metadata-sourcing.md`](../reverie-metadata-sourcing.md): CC0, native decimal
 ordinals ("4.5") via the P1545 series-ordinal qualifier on P179 (part of series), and
 designed for cross-publisher range. Phase 0 also flagged Wikidata coverage as patchy, so
 this Phase 1 cross-checks the Wikidata claim against a second source.

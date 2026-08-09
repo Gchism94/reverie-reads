@@ -1,7 +1,7 @@
 # ADR 0005 — Google Books covers are display-only; Open Library is the ingest source
 
 **Status:** accepted · 2026-07-26
-**Context:** `fix/cover-sourcing` (#79; posture detail in `docs/reverie-metadata-sourcing.md` §Covers)
+**Context:** `fix/cover-sourcing` (#79; posture detail in `docs/reference/reverie-metadata-sourcing.md` §Covers)
 
 ## Decision
 
@@ -60,7 +60,7 @@ Audited against production on 2026-07-26; the decision was the owner's. Three ro
 this posture, all ingested by the backfill under a `url` label. They stay. Rewriting a reader's
 existing covers to placeholders to satisfy a rule adopted afterwards costs them something real and
 gains close to nothing; the gate stops the population from growing. Recorded in
-`docs/reverie-metadata-sourcing.md` §"What was already stored — audited, decided, closed", with the
+`docs/reference/reverie-metadata-sourcing.md` §"What was already stored — audited, decided, closed", with the
 query, so a future audit re-runs the same check rather than inventing one.
 
 ## Consequences
@@ -72,5 +72,5 @@ query, so a future audit re-runs the same check rather than inventing one.
   Google, so more books resolve to no cover. That is the intended outcome: the skin-tokened
   placeholder is an honest absence, and it is a designed plate rather than a gray box.
 - Adding a new cover source means adding it to `INGESTIBLE_COVER_SOURCES` _and_ justifying it here.
-- **Hardcover's ingest posture is unchanged by this ADR.** `docs/reverie-metadata-sourcing.md` flags
+- **Hardcover's ingest posture is unchanged by this ADR.** `docs/reference/reverie-metadata-sourcing.md` flags
   its licence as asserted rather than granted; that is a separate open question, not settled here.

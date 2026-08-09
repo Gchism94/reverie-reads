@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { parseImport } from './importMap'
 import { normalizeImportGenres } from './genreNormalize'
 
-// docs/IMPORT_REAL_VALIDATION.md — the two real-Library structures the original fixtures didn't
+// docs/archive/IMPORT_REAL_VALIDATION.md — the two real-Library structures the original fixtures didn't
 // cover. The real 490-row export + its 110-row connected slice aren't in the repo, so this uses a
 // representative fixture exercising both edge structures (dual-core "romantasy" genres + a universe
 // with 3-way tied global-order positions, Rina-Kent style). Mirrors
