@@ -24,7 +24,7 @@
 -- `reset role` so RLS cannot hide a row and collapse an equality into a two-NULLs false positive.
 
 begin;
-select plan(24);
+select plan(25);
 
 insert into auth.users (id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
 values ('11111111-aaaa-bbbb-cccc-000000000001', 'authenticated', 'authenticated',
@@ -229,6 +229,17 @@ select throws_ok(
         {"entry_id":"e0000000-0000-0000-0000-000000000003","position":2}]'::jsonb)$$,
   'set_series_order: two slots claim the same position',
   'two slots claiming one position are named, not left to surface as a bare index violation');
+
+-- Two DIFFERENT positions for one entry collide with nothing, so neither the position-duplicate
+-- check nor the index would catch this; without its own guard the last occurrence quietly wins and
+-- the call reports success having discarded the other instruction.
+select throws_ok(
+  $$select public.set_series_order(
+      '5e100000-0000-0000-0000-000000000001',
+      '[{"entry_id":"e0000000-0000-0000-0000-000000000001","position":11},
+        {"entry_id":"e0000000-0000-0000-0000-000000000001","position":12}]'::jsonb)$$,
+  'set_series_order: the same entry appears twice in one batch',
+  'one entry named twice in a batch RAISES — array order does not get to pick the winner');
 
 -- ── 8. The grant layer, asserted as 42501 SPECIFICALLY ──────────────────────────────────────────
 -- AGENTS.md is explicit about the shape of this one: a P0001 here would mean PUBLIC (or a
