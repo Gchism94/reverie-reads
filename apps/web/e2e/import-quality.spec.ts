@@ -6,7 +6,7 @@ import { authFailure } from './support/authError'
 import { keepOfflineCacheEmpty } from './support/offlineCache'
 import { ok, okUser } from './support/ok'
 
-// Import-quality e2e (docs/task-import-quality.md): a real Goodreads export goes in through the
+// Import-quality e2e (docs/archive/task-import-quality.md): a real Goodreads export goes in through the
 // REAL app (Settings → import), and we verify the fidelity fixes landed in the DB — series parsed
 // out of the title, honest absence (no fabricated genre/format), to-read → Imported TBR, custom
 // Bookshelves → shelves, Date Read → read log — plus the summary screen + axe. Distinct fixture

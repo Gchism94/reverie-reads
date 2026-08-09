@@ -689,7 +689,7 @@ function DiffRow({
 }
 
 /**
- * The pre-merge diff (docs/task-manual-merge.md §2). Merging is destructive and there is no undo, so
+ * The pre-merge diff (docs/archive/task-manual-merge.md §2). Merging is destructive and there is no undo, so
  * the reader sees the exact outcome first: which record survives, the four-state ownership union, the
  * format flags, and every mood/trope + read that carries over. The union comes from the SAME core
  * merge engine the RPC applies — no second merge path.

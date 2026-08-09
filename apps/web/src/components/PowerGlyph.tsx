@@ -9,7 +9,7 @@
  * Google Fonts' own `unicode-range` descriptors for Hanken Grotesk (tryst's sans, the widest of
  * the nine): its broadest Latin subset stops at U+206F plus a handful of isolated math arrows, so
  * every skin was already falling through to the OS for this glyph, tofu or not. That also means
- * per-skin coverage isn't the axis that matters here — the OS is. See docs/BACKLOG.md for the
+ * per-skin coverage isn't the axis that matters here — the OS is. See docs/backlog/BACKLOG.md for the
  * fuller glyph-coverage inventory this bug motivated.
  *
  * No character in the app's proven-safe set (⇄ ⊹ ⊘ — Arrows/Math Operators, U+21xx/22xx, the

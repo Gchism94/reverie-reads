@@ -188,9 +188,9 @@ function AddForm({
   const intake = useIntake()
   const voice = useVoice()
   // Context-sensitive default: arriving from a wanting context (Discover) assumes wishlist; a plain
-  // catalog add leaves possession UNSET rather than forcing "owned" (docs/task-ownership-v2.md).
+  // catalog add leaves possession UNSET rather than forcing "owned" (docs/archive/task-ownership-v2.md).
   // Form-session state only — never persisted as a preference. One exclusive WORD; possessionPatch
-  // expands it to the model's flags at submit (docs/task-shelf-model.md).
+  // expands it to the model's flags at submit (docs/archive/task-shelf-model.md).
   const [possession, setPossession] = useState<PossessionState>(
     defaultUnowned ? 'wishlist' : 'unset',
   )

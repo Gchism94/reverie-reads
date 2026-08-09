@@ -3,7 +3,7 @@ import { contrastRatio, parseColor } from './adaptive'
 import { SKINS, type SkinId } from './skins'
 import { SKIN_TOKENS } from './skinTokens.fixture'
 
-// The mood chip (docs/task-mood.md §3) renders in a "felt" register distinct from the trope chip:
+// The mood chip (docs/archive/task-mood.md §3) renders in a "felt" register distinct from the trope chip:
 // an assigned mood paints its label with `--ink` on the `--card` surface, ringed by an `--accent-ink`
 // hairline with a small accent-ink dot. Keyed off the SKINS registry, this pins both:
 //   • the LABEL (ink on card) clears AA normal-text (4.5:1) — it must be as legible as body copy;

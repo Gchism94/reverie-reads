@@ -5,7 +5,7 @@ import { authFailure } from './support/authError'
 import { keepOfflineCacheEmpty } from './support/offlineCache'
 import { ok, okData, okUser } from './support/ok'
 
-// Cover system e2e (docs/task-cover-system.md): the sheet's four paths against a STUBBED covers
+// Cover system e2e (docs/archive/task-cover-system.md): the sheet's four paths against a STUBBED covers
 // Edge Function (deterministic, offline-safe), the lazy backfill, the edition-details sync, the
 // graceful non-image failure, and the placeholder's "add a cover" affordance. The REAL ingest
 // pipeline (magick-wasm normalize → Storage) is exercised against the deployed function in the

@@ -153,7 +153,7 @@ function BookDetailScreen() {
   const workKey = workKeyFor(book)
   const reviewerName = profile?.displayName || 'Reader'
   const setOwned = (owned: Owned) => updateBook.mutate({ id: book.id, patch: { owned } })
-  // Four-state possession WORD over five independent flags (docs/task-shelf-model.md): picking one
+  // Four-state possession WORD over five independent flags (docs/archive/task-shelf-model.md): picking one
   // word is exclusive, so possessionPatch writes the whole trio. Format flags are left alone across
   // any change — dropping possession suppresses them (bookOwnedFormats gates every read), so marking
   // a book owned or borrowed again restores your copies.
@@ -363,7 +363,7 @@ function BookDetailScreen() {
       </div>
 
       {/* Mood — the reader's OWN impression (how it landed), its own area, apart from the descriptive
-          tropes above. Never derived: empty is a valid, quiet state (docs/task-mood.md). */}
+          tropes above. Never derived: empty is a valid, quiet state (docs/archive/task-mood.md). */}
       <Label
         action={
           <button

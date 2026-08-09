@@ -1,4 +1,4 @@
-// Canonical series data (docs/task-series-experience.md §2) — the releases fn's sibling.
+// Canonical series data (docs/archive/task-series-experience.md §2) — the releases fn's sibling.
 // One mode: { name, author? } → the canonical entry list for that series, seeded from Hardcover
 // (GraphQL, free Bearer token, 60 req/min) and cached per series daily in the shared
 // releases_cache (key `series:<norm-name>`), so one upstream lookup serves every reader.

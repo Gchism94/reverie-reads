@@ -18,7 +18,7 @@
 # The override skips the state refusals only — it still prints the touch-list and still confirms.
 #
 # Motivated by the 2026-07-14 accidental prod touches (feature-branch deploys + a heredoc evaluating
-# a deploy command in a PR body). See docs/DEPLOY.md and AGENTS.md.
+# a deploy command in a PR body). See docs/reference/DEPLOY.md and AGENTS.md.
 #
 # Testability: the Supabase binary is `${SUPABASE_BIN:-supabase}`, so tests inject a mock and no real
 # deploy fires. Confirmation reads stdin, so tests pipe `y`/`n`.
