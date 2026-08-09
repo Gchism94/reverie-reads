@@ -108,23 +108,16 @@ function SeriesScreen() {
     const nextPos = rest[to]?.position ?? null
     const moved = entries[from]!
     const { position, renumber } = positionBetween(prev, nextPos)
-    if (renumber) {
-      const order = [...rest.slice(0, to), moved, ...rest.slice(to)]
-      moveEntry.mutate({
-        entryId: moved.id,
-        position,
-        bookId: moved.bookId,
-        // bookId rides along so a linked entry's move mirrors onto books.position (the book page agrees)
-        updates: order.map((e, i) => ({
-          id: e.id,
+    // ONE call either way. `bookId` no longer rides along: set_series_order reads it from the entry
+    // row inside its own transaction, so the books.position mirror cannot be aimed at a book this
+    // component's cache is wrong about.
+    const slots = renumber
+      ? [...rest.slice(0, to), moved, ...rest.slice(to)].map((e, i) => ({
+          entryId: e.id,
           position: i + 1,
-          userEdited: e.id === moved.id ? true : e.userEdited,
-          bookId: e.bookId,
-        })),
-      })
-    } else {
-      moveEntry.mutate({ entryId: moved.id, position, bookId: moved.bookId })
-    }
+        }))
+      : [{ entryId: moved.id, position }]
+    moveEntry.mutate({ seriesId: detail.series.id, slots })
   }
 
   const editLabel = (e: SeriesEntry) => {

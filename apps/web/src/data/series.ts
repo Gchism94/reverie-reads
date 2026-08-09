@@ -304,14 +304,29 @@ export function useSeriesDetail(name: string) {
       const joining = lib.filter((b) => !linked.has(b.id))
       // Tombstones are consumed as they revive, so two same-title books can't both claim one slot.
       const available = [...removed]
+      // A REVIVE RE-ENTERS THE LIVE POSITION SPACE, and its stored number may no longer be free —
+      // the slot was removed, something else took position 2, and now the reader adds the book back.
+      // Before series_entries_position_uidx that made a silent duplicate; with it, an un-tombstoning
+      // UPDATE at a taken position raises 23505. This loop runs inside `useSeriesDetail`, which is a
+      // READ, so an unhandled raise there does not fail one write — it takes the whole series page
+      // down. The tombstone keeps its number when it is still free (that number is the reader's own
+      // arrangement, worth preserving) and otherwise goes to the end, the same answer every other
+      // path here gives for a book whose place is not known.
+      const taken = new Set(entries.map((e) => e.position))
+      let reviveEnd = Math.floor(Math.max(0, ...entries.map((e) => e.position)))
       for (const b of joining) {
         const bookLike = { title: b.title, first: b.author_first ?? '', last: b.author_last ?? '' }
         const match = matchEntryForBook(available, bookLike)
         if (match.kind !== 'match') continue
         const t = match.entry
+        // `matchEntryForBook` answers with the narrow {id, title, author} shape it takes, so the
+        // stored position comes back off the SeriesEntry `available` actually holds.
+        const stored = available.find((x) => x.id === t.id)?.position ?? 0
+        const position = taken.has(stored) ? ++reviveEnd : stored
+        taken.add(position)
         const { data: back } = await supabase
           .from('series_entries')
-          .update({ removed_at: null, book_id: b.id })
+          .update({ removed_at: null, book_id: b.id, position })
           .eq('id', t.id)
           .select()
         const row = ((back ?? []) as SeriesEntryRowT[])[0]
@@ -329,10 +344,16 @@ export function useSeriesDetail(name: string) {
         fresh.map((b) => ({ id: b.id, title: b.title, position: b.position })),
         Math.max(0, ...entries.map((e) => e.position)),
       )
+      // `?? 0` was a collision generator, flagged by the Phase 1 migration and fixed here: every
+      // book the seeder had no answer for landed on slot 0 together, so the first took it and the
+      // rest duplicated it — invisibly before Phase 2, and as a rejected insert once
+      // series_entries_position_uidx lands. A book with no known place goes to the END instead,
+      // one slot each, which is the rule the cleared-number and source-insert paths already follow.
+      let seedFallback = Math.floor(Math.max(0, ...entries.map((e) => e.position), ...seeded.values()))
       const inserts = fresh.map((b) => ({
         series_id: seriesRow.id,
         owner_id: uid,
-        position: seeded.get(b.id) ?? 0,
+        position: seeded.get(b.id) ?? ++seedFallback,
         title: b.title,
         author: [b.author_first, b.author_last].filter(Boolean).join(' '),
         book_id: b.id,
@@ -407,59 +428,105 @@ export function useUpdateSeries(name: string) {
   })
 }
 
-/** Reposition one entry (drag or ▲▼). Manual order always wins: marks the entry user-edited.
- *  When decimals got too tight the caller sends `updates` — the whole list renumbered to clean
- *  integers in its new visual order (the silent renormalize). */
-/** Mirror a linked entry's position onto its book row, so the book page's "#N in series" agrees with
- *  the series page's reading order. Ghost entries (no book_id) have nothing to sync. */
-async function syncBookPosition(bookId: string | null | undefined, position: number): Promise<void> {
-  if (!bookId) return
-  await supabase.from('books').update({ position }).eq('id', bookId)
+/**
+ * A slot write: which entry, where it lands, and optionally a new label.
+ *
+ * `bookId` is deliberately ABSENT. It used to ride along on every move so the client could mirror
+ * the position onto `books.position` itself; `set_series_order` reads it from the entry row inside
+ * the transaction instead, which is the only way the mirror can't be pointed at the wrong book by
+ * a stale cache. Nothing here needs to know a book id to move a slot.
+ */
+export interface SeriesSlot {
+  entryId: string
+  position: number
+  label?: string | null
 }
 
+interface SeriesOrderResult {
+  moved: number
+  skipped_user_edited: number
+  books_synced: number
+  length_set: boolean
+  length_books_synced: number
+}
+
+/**
+ * THE ONE WRITE PATH for series position and series length (`set_series_order`, 20260814010000).
+ *
+ * Everything that moves a slot or sets a length goes through here. Before Phase 2 this was spread
+ * across a per-row update loop, a `books.position` mirror issued as a separate statement
+ * (`syncBookPosition`), and a `books.series_count` write buried in the book patch — three writers
+ * for two facts, none of them transactional with the others. docs/audits/series-count-schema.md §5
+ * named the mirror specifically as "the dual-write-without-a-chokepoint shape".
+ *
+ * `origin` is the user_edited contract and the server enforces it, not this function: a `'source'`
+ * batch cannot move a row the reader has arranged, decided from the STORED flag rather than
+ * whatever this client's cache believes. The skipped count comes back so a refresh can say what it
+ * left alone instead of appearing to do nothing.
+ */
+async function writeSeriesOrder(input: {
+  seriesId: string
+  slots?: SeriesSlot[]
+  origin?: 'reader' | 'source'
+  length?: number | null
+  setLength?: boolean
+}): Promise<SeriesOrderResult> {
+  const { data, error } = await supabase.rpc('set_series_order', {
+    p_series: input.seriesId,
+    p_slots: (input.slots ?? []).map((s) => ({
+      entry_id: s.entryId,
+      position: s.position,
+      // Only sent when the caller means to change it — the RPC keys off key PRESENCE, so passing
+      // `label: undefined` and omitting the key are not the same thing to it.
+      ...(s.label !== undefined ? { label: s.label } : {}),
+    })),
+    p_origin: input.origin ?? 'reader',
+    p_opts: input.setLength ? { length: input.length ?? null } : {},
+  })
+  if (error) throw error
+  return data as SeriesOrderResult
+}
+
+/**
+ * Reposition entries (drag, ▲▼, or a typed number). Manual order always wins: a reader-origin
+ * write marks every slot it touches user-edited.
+ *
+ * ONE CALL, whatever the gesture. The renormalize case — the whole list renumbered to clean
+ * integers when decimals get too tight — used to be a LOOP of single-row updates, each its own
+ * transaction, and entries passing through each other's positions committed intermediate colliding
+ * states. Under `series_entries_position_uidx` that loop would fail partway and leave the reader
+ * looking at a half-applied reorder; the RPC parks the affected rows above the max and writes the
+ * finals in one transaction, so the whole arrangement lands or none of it does.
+ */
 export function useMoveEntry(name: string) {
   const invalidate = useSeriesInvalidate(name)
   return useMutation({
     meta: { action: 'The series' },
-    mutationFn: async (input: {
-      entryId: string
-      position: number
-      bookId?: string | null
-      updates?: { id: string; position: number; userEdited: boolean; bookId?: string | null }[]
-    }) => {
-      if (input.updates) {
-        for (const u of input.updates) {
-          const { error } = await supabase
-            .from('series_entries')
-            .update({ position: u.position, user_edited: u.userEdited })
-            .eq('id', u.id)
-          if (error) throw error
-          await syncBookPosition(u.bookId, u.position) // series drag → book page reflects it
-        }
-        return
-      }
-      const { error } = await supabase
-        .from('series_entries')
-        .update({ position: input.position, user_edited: true })
-        .eq('id', input.entryId)
-      if (error) throw error
-      await syncBookPosition(input.bookId, input.position)
-    },
+    mutationFn: (input: { seriesId: string; slots: SeriesSlot[] }) =>
+      writeSeriesOrder({ seriesId: input.seriesId, slots: input.slots, origin: 'reader' }),
     onSuccess: () => invalidate(),
   })
 }
 
+/**
+ * Tag a slot — "novella", "prequel". Label only.
+ *
+ * This used to take `position` and `bookId` too, and route them through `syncBookPosition`. That
+ * branch had no production caller: the only `updateEntry.mutate` in the app (SeriesRoute's
+ * `editLabel`) passes a label and nothing else, and the position path was reached solely from
+ * `seriesSeedProvenance.test.tsx`. It was an exported code path kept alive by its own test, so it
+ * is gone rather than re-pointed through the new RPC for the sake of symmetry.
+ */
 export function useUpdateEntry(name: string) {
   const invalidate = useSeriesInvalidate(name)
   return useMutation({
     meta: { action: 'The series' },
-    mutationFn: async (input: { entryId: string; label?: string | null; position?: number; bookId?: string | null }) => {
-      const patch: Record<string, unknown> = { user_edited: true }
-      if (input.label !== undefined) patch.label = input.label
-      if (input.position !== undefined) patch.position = input.position
-      const { error } = await supabase.from('series_entries').update(patch).eq('id', input.entryId)
+    mutationFn: async (input: { entryId: string; label: string | null }) => {
+      const { error } = await supabase
+        .from('series_entries')
+        .update({ label: input.label, user_edited: true })
+        .eq('id', input.entryId)
       if (error) throw error
-      if (input.position !== undefined) await syncBookPosition(input.bookId, input.position)
     },
     onSuccess: () => invalidate(),
   })
@@ -522,7 +589,17 @@ export function useSyncBookSeries() {
   const qc = useQueryClient()
   return useMutation({
     meta: { action: 'The series' },
-    mutationFn: async ({ book, newSeries, newPosition }: { book: Book; newSeries: string; newPosition: number | null }) => {
+    mutationFn: async ({
+      book,
+      newSeries,
+      newPosition,
+      newSeriesCount,
+    }: {
+      book: Book
+      newSeries: string
+      newPosition: number | null
+      newSeriesCount?: number | null
+    }) => {
       const oldSeries = (book.series ?? '').trim()
       const next = newSeries.trim()
       const seriesIdFor = async (nm: string): Promise<string | undefined> => {
@@ -538,29 +615,60 @@ export function useSyncBookSeries() {
         }
       }
 
-      // Write the position into the (possibly new) series so the book page's value takes effect.
-      if (next) {
-        const sid = await seriesIdFor(next)
-        if (sid) {
-          let position = newPosition
-          if (position == null) {
-            // Cleared: don't leave the old number standing. Send it to the end, where a book whose
-            // place in the order isn't known belongs.
-            const { data: maxRows } = await supabase
-              .from('series_entries')
-              .select('position')
-              .eq('series_id', sid)
-              .is('removed_at', null)
-              .order('position', { ascending: false })
-              .limit(1)
-            position = Math.floor(Number((maxRows ?? [])[0]?.position ?? 0)) + 1
-          }
-          await supabase
-            .from('series_entries')
-            .update({ position, user_edited: true })
-            .eq('series_id', sid)
-            .eq('book_id', book.id)
-        }
+      // The book page's number and "of N" take effect on the series side.
+      //
+      // TWO PATHS, and the split is the same unreconciled-claim line drawn everywhere else. With a
+      // series ROW and a live ENTRY, both facts belong to the series and go through the RPC, which
+      // writes the entry, mirrors books.position and fans series.length out to every member book in
+      // one transaction. With no series row or no entry yet, books.position/series_count are a claim
+      // that is not yet a copy of anything — nothing exists for them to disagree with — so they are
+      // written on the book row directly and reconciliation seeds the entry from them later.
+      const sid = next ? await seriesIdFor(next) : undefined
+      const entryId = sid
+        ? (
+            (
+              await supabase
+                .from('series_entries')
+                .select('id')
+                .eq('series_id', sid)
+                .eq('book_id', book.id)
+                .is('removed_at', null)
+                .limit(1)
+            ).data ?? []
+          )[0]?.id as string | undefined
+        : undefined
+
+      let position = newPosition
+      if (next && sid && position == null) {
+        // Cleared: don't leave the old number standing. Send it to the end, where a book whose
+        // place in the order isn't known belongs.
+        const { data: maxRows } = await supabase
+          .from('series_entries')
+          .select('position')
+          .eq('series_id', sid)
+          .is('removed_at', null)
+          .order('position', { ascending: false })
+          .limit(1)
+        position = Math.floor(Number((maxRows ?? [])[0]?.position ?? 0)) + 1
+      }
+
+      if (sid && (entryId || newSeriesCount !== undefined)) {
+        await writeSeriesOrder({
+          seriesId: sid,
+          slots: entryId && position != null ? [{ entryId, position }] : [],
+          origin: 'reader',
+          setLength: newSeriesCount !== undefined,
+          length: newSeriesCount ?? null,
+        })
+      }
+
+      // The unreconciled half: whatever the RPC could not own, the book row still carries.
+      const bookPatch: Record<string, unknown> = {}
+      if (newPosition !== undefined && !entryId) bookPatch.position = newPosition
+      if (newSeriesCount !== undefined && !sid) bookPatch.series_count = newSeriesCount
+      if (Object.keys(bookPatch).length) {
+        const { error: bErr } = await supabase.from('books').update(bookPatch).eq('id', book.id)
+        if (bErr) throw bErr
       }
       return { oldSeries, next }
     },
@@ -748,7 +856,7 @@ export function useApplySeriesSource(name: string) {
   const invalidate = useSeriesInvalidate(name)
   return useMutation({
     meta: { action: 'The series' },
-    mutationFn: async (input: { detail: SeriesDetail; author: string }): Promise<{ added: number; unavailable: boolean }> => {
+    mutationFn: async (input: { detail: SeriesDetail; author: string }): Promise<{ added: number; skipped: number; unavailable: boolean }> => {
       const uid = await ownerId()
       const { data, error } = await supabase.functions.invoke('series', {
         body: { name, author: input.author },
@@ -760,15 +868,33 @@ export function useApplySeriesSource(name: string) {
       // Tombstones join `existing` so a removed slot MATCHES and is therefore never re-inserted —
       // the whole point of keeping them. They carry user_edited, so the merge can't try to move one.
       const { inserts, moves } = mergeSourceEntries([...detail.entries, ...detail.removed], src)
-      for (const m of moves) {
-        await supabase.from('series_entries').update({ position: m.position }).eq('id', m.id)
+      // ONE batched call, `origin: 'source'`. Two things change here beyond atomicity. The moves
+      // used to go one row at a time, so a catalog reshuffle that passed entries through each
+      // other's positions committed colliding intermediates. And `mergeSourceEntries` decided the
+      // user_edited question client-side, from this component's cache; the RPC re-decides it from
+      // the STORED flag and drops any row the reader has arranged, so a stale cache can no longer
+      // talk the source into overwriting a reader's placement.
+      let skipped = 0
+      if (moves.length) {
+        const res = await writeSeriesOrder({
+          seriesId: detail.series.id,
+          slots: moves.map((m) => ({ entryId: m.id, position: m.position })),
+          origin: 'source',
+        })
+        skipped = res.skipped_user_edited
       }
+      // A source entry with no usable number goes to the END, not to 0. `position: ... : 0` parked
+      // every unnumbered arrival on the same slot, so the first one took 0 and each one after it
+      // collided with it — silently before Phase 2, and as a rejected insert once
+      // series_entries_position_uidx lands. The end of the order is where a book whose place isn't
+      // known belongs; it is the same rule the seeder and the cleared-number path already use.
+      let nextFree = Math.floor(Math.max(0, ...detail.entries.map((e) => e.position)))
       let added = 0
       for (const s of inserts) {
         const { error: iErr } = await supabase.from('series_entries').insert({
           series_id: detail.series.id,
           owner_id: uid,
-          position: s.position > 0 ? s.position : 0,
+          position: s.position > 0 ? s.position : ++nextFree,
           title: s.title,
           author: s.author,
           source: 'hardcover',
@@ -783,7 +909,7 @@ export function useApplySeriesSource(name: string) {
           ...(src.length ? { source: 'hardcover', source_ref: payload.sourceRef } : {}),
         })
         .eq('id', detail.series.id)
-      return { added, unavailable: !!payload.unavailable && !src.length }
+      return { added, skipped, unavailable: !!payload.unavailable && !src.length }
     },
     onSuccess: () => invalidate(),
   })
