@@ -42,10 +42,11 @@ import { useMoveEntry, useSeriesDetail } from '../data/series'
  *
  * POSITIONS ARE WRITTEN BY MIDPOINT INSERTION through the SAME `positionBetween` + `useMoveEntry`
  * that the series page uses. Nothing here reimplements position math and nothing here writes
- * `series_entries` directly: `useMoveEntry` mirrors a linked entry's position onto `books.position`
- * (`syncBookPosition`), and five surfaces read that mirror — the book page's "#N of M" eyebrow,
- * BookDetailRail, the edit dialog's prefill, the merge preview, and `groupSeries`' cover order in
- * Library's Series mode. Bypassing it would leave all five disagreeing with this list.
+ * `series_entries` directly: `useMoveEntry` goes through `set_series_order`, which mirrors a linked
+ * entry's position onto `books.position` in the same transaction, and five surfaces read that
+ * mirror — the book page's "#N of M" eyebrow, BookDetailRail, the edit dialog's prefill, the merge
+ * preview, and `groupSeries`' cover order in Library's Series mode. Bypassing it would leave all
+ * five disagreeing with this list.
  */
 
 /** Ghost slots ARE draggable — a ghost is a position with no book yet, and its place in the reading
@@ -204,22 +205,14 @@ export function SeriesArranger({
     const { position, renumber } = positionBetween(prev, nextPos)
     const title = moved.bookId ? (books.get(moved.bookId)?.title ?? moved.title) : moved.title
     setAnnouncement(`${title} moved to position ${to + 1} of ${entries.length} in ${name}.`)
-    if (renumber) {
-      const order = [...rest.slice(0, to), moved, ...rest.slice(to)]
-      moveEntry.mutate({
-        entryId: moved.id,
-        position,
-        bookId: moved.bookId,
-        updates: order.map((e, i) => ({
-          id: e.id,
+    if (!detail) return
+    const slots = renumber
+      ? [...rest.slice(0, to), moved, ...rest.slice(to)].map((e, i) => ({
+          entryId: e.id,
           position: i + 1,
-          userEdited: e.id === moved.id ? true : e.userEdited,
-          bookId: e.bookId,
-        })),
-      })
-    } else {
-      moveEntry.mutate({ entryId: moved.id, position, bookId: moved.bookId })
-    }
+        }))
+      : [{ entryId: moved.id, position }]
+    moveEntry.mutate({ seriesId: detail.series.id, slots })
   }
 
   /**
