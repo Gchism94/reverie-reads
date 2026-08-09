@@ -173,6 +173,18 @@ begin
       raise exception 'set_series_order: two slots claim the same position';
     end if;
 
+    -- The same entry named twice in one batch. Neither check above catches it (two DIFFERENT
+    -- positions for one entry collide with nothing), and without this the last occurrence would
+    -- quietly win both the park pass and the final write — a call that reports success having
+    -- silently discarded half of what it was asked to do. A caller that sends this is confused
+    -- about its own batch, and that is worth saying out loud rather than resolving by array order.
+    if exists (
+      select 1 from jsonb_array_elements(v_eligible) s
+      group by (s ->> 'entry_id')::uuid having count(*) > 1
+    ) then
+      raise exception 'set_series_order: the same entry appears twice in one batch';
+    end if;
+
     if exists (
       select 1
       from jsonb_array_elements(v_eligible) s
