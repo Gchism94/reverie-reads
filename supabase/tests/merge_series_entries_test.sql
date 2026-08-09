@@ -51,11 +51,13 @@ values
   ('99999999-aaaa-1111-1111-aaaaaaaaaaaa', '77777777-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
    '66666666-7777-8888-9999-aaaaaaaaaaaa', 1, 'Primary Slot', 'A Author',
    '88888888-1111-1111-1111-111111111111'),
-  -- Loser Slot A sits at position 2, not 1: since 20260813010000_series_integrity_schema,
-  -- two live entries cannot share a position (series_entries_position_uidx). The redundancy
-  -- this test exercises is keyed on (series_id, book_id) — the re-parent would collide with
-  -- Primary's live Series A entry via series_entries_book_uidx regardless of position — so
-  -- the tombstone branch still triggers exactly as before.
+  -- Loser Slot A sits at position 2, not 1, so this fixture is valid whether or not
+  -- series_entries_position_uidx exists yet. That index lives on the held branch
+  -- `chore/series-position-index` (20260816010000) and deploys after the re-pointed app, so this
+  -- suite runs BOTH with and without it — a fixture that needed the index absent would pass here
+  -- and fail once it lands. The redundancy this test exercises is keyed on (series_id, book_id)
+  -- anyway: the re-parent collides with Primary's live Series A entry via
+  -- series_entries_book_uidx regardless of position, so the tombstone branch triggers either way.
   ('99999999-aaaa-2222-2222-aaaaaaaaaaaa', '77777777-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
    '66666666-7777-8888-9999-aaaaaaaaaaaa', 2, 'Loser Slot A', 'A Author',
    '88888888-2222-2222-2222-222222222222'),
