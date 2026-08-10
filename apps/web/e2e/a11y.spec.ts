@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { expect, test, type Page } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
+import { SKIN_ORDER, type SkinId } from '@reverie/core'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { authFailure } from './support/authError'
 import { keepOfflineCacheEmpty } from './support/offlineCache'
@@ -11,10 +12,14 @@ const SUPABASE_URL = 'http://127.0.0.1:55321'
 const ANON =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0'
 // A dedicated user, not the shared dev account. This spec is the ONLY one that mutates a profile's
-// skin and mode — eight times per run — which is exactly what fonts and cover-sheet used to race.
+// skin and mode — ten times per run — which is exactly what fonts and cover-sheet used to race.
 const DEV_EMAIL = 'a11y-e2e@reverie.local'
 const DEV_PASSWORD = 'a11y-e2e-password'
-const SKINS = ['tryst', 'grimoire', 'aphelion', 'marrow'] as const
+// The skin list is DERIVED from SKIN_ORDER (imported from @reverie/core) at the sweep plan below —
+// deliberately no local skin array. The old `const SKINS = ['tryst','grimoire','aphelion','marrow']`
+// was a fossil: written when those were all the skins there were, never revisited when the registry
+// grew to nine, so five shipped skins were never once axe-scanned. A second copy of the list is
+// exactly the drift mechanism that produced that gap.
 const MODES = ['dark', 'light'] as const
 
 /**
@@ -302,14 +307,23 @@ async function assertInkSettled(page: Page, skin: string, mode: string, where: s
   ).toBe(result.expectedColor)
 }
 
-// Title states the real scope on purpose. It used to read "across all skins x both modes", which
-// overstated it twice over: the sweep runs FOUR of the nine skins, and only tryst gets every route
-// (the other three get the core set below). The exhaustive-across-all-nine layer is the
-// registry-keyed contrast tests in packages/core, not this.
-test('axe (no serious/critical): every route in tryst, a core set in 3 alternate skins — each x both modes', async ({
+// Title states the real scope on purpose — and the scope is now ALL NINE skins. Until 2026-08-10
+// this swept four (tryst/grimoire/aphelion/marrow), which was never a chosen sample: the constant
+// predated the nine-skin expansion, so umbra, folio, hearth, almanac and bloom shipped with their
+// own token sets and structural bones and were never once scanned here. Division of labour,
+// unchanged: the registry-keyed contrast tests in packages/core remain the exhaustive TOKEN-PAIR
+// layer across all nine; what this spec adds per skin is the RENDERED page — emergent pairings,
+// text over per-skin surfaces — plus, in tryst alone, the skin-invariant structural/ARIA rules,
+// which compute identically in every skin and so are checked once, on every route, in both modes,
+// rather than re-checked per skin.
+test('axe (no serious/critical): every route in tryst x both modes; a core set in all 8 other skins x one deterministic mode', async ({
   page,
 }) => {
-  test.setTimeout(600_000)
+  // 720s, raised from 600s alongside the 88 → 104-scan reallocation: +18% scans, +20% budget, so
+  // the effective headroom is unchanged. This ceiling is a real tripwire — the workers=4 probe
+  // blew exactly this timeout — and it must stay close enough to normal runtime (~6-7m on the
+  // runner) to keep firing on a starved worker pool rather than quietly absorbing one.
+  test.setTimeout(720_000)
   seedOwnLibrary() // creates this spec's user on first run, and gives it the books the sweep needs
   const { bookId, clubId, listCode, shelfId, tropeId } = await setupFixtures()
   await signIn(page)
@@ -388,67 +402,95 @@ test('axe (no serious/critical): every route in tryst, a core set in 3 alternate
     ),
   )
 
-  const failures: string[] = []
-  try {
-    for (const skin of SKINS) {
-      const routes = skin === 'tryst' ? allRoutes : coreRoutes
-      for (const mode of MODES) {
-        await setProfileSkinMode(skin, mode) // skin-sync picks this up on each fresh load
-        // Pre-seed the target BEFORE the next navigation reloads index.html's boot script, so it
-        // stamps data-skin/data-mode correctly on FIRST PAINT instead of booting 'system' — which
-        // resolves to Playwright's default light colorScheme — and letting useSkinSync flip it only
-        // after the profile query lands. That flip left .skin-control's transition (all
-        // var(--motion-duration), ~0.18s) still interpolating a control's rendered color when axe
-        // scanned, which is what actually produced the CI-only violation this guards against — a
-        // WCAG-real read of an unsettled paint, not a real defect (instrumented and confirmed via a
-        // throwaway diagnosis spec on fix/a11y-contrast-diagnosis, reported and closed unmerged).
-        // page.goto() below is a full browser navigation (confirmed by the boot
-        // script re-running), and localStorage is origin-scoped, so this write — made on the page
-        // this function is ALREADY on, from signIn()'s own navigation — survives it. This removes
-        // the race; it does not wait it out.
-        await page.evaluate(
-          ({ skin, mode }) => {
-            localStorage.setItem('reverie.skin', skin)
-            localStorage.setItem('reverie.mode', mode)
-          },
-          { skin, mode },
-        )
-        // Each goto below is a full navigation, so keepOfflineCacheEmpty's init script re-runs and
-        // this skin/mode is read fresh rather than restored from the previous pass's snapshot.
-        for (const [name, path] of routes) {
-          await page.goto(path)
-          await page.waitForLoadState('networkidle')
-          await page.locator('main').waitFor({ state: 'visible' })
-          await expect(page.locator('html')).toHaveAttribute('data-skin', skin)
-          await expect(page.locator('html')).toHaveAttribute('data-mode', mode)
-          await assertInkSettled(page, skin, mode, `${skin}/${mode} ${name}`)
+  // ── The sweep plan: every skin in the registry, derived from SKIN_ORDER so this spec can never
+  // hold a second, driftable copy of the skin list. Tryst — the default skin, whose full-route
+  // pass carries all of the skin-invariant structural/ARIA coverage — keeps both modes across
+  // every route. Every OTHER skin gets the core set in exactly ONE mode, assigned by its FIXED
+  // position in SKIN_ORDER: even index → dark, odd index → light. Position is the only input, so
+  // the same commit scans the same combinations on every run, forever — a rotation keyed to date
+  // or run count would let a contrast defect appear and disappear across re-runs of an identical
+  // tree, which is precisely the non-reproducibility this convention exists to rule out. The
+  // parity split lands 4 dark + 4 light across the eight, so both modes stay exercised beyond
+  // tryst. (Literal indices into MODES, not MODES[i % 2]: noUncheckedIndexedAccess types a
+  // computed index as possibly-undefined.)
+  type SweepPass = { skin: SkinId; mode: (typeof MODES)[number]; routes: [string, string][] }
+  const sweep = SKIN_ORDER.flatMap((skin, i): SweepPass[] =>
+    skin === 'tryst'
+      ? MODES.map((mode) => ({ skin, mode, routes: allRoutes }))
+      : [{ skin, mode: i % 2 === 0 ? MODES[0] : MODES[1], routes: coreRoutes }],
+  )
+  // One line in the CI log naming every combination this run will scan — the fossil four-skin era
+  // was invisible precisely because nothing ever said out loud what was (not) being swept.
+  console.log('a11y sweep plan: ' + sweep.map((s) => `${s.skin}/${s.mode}`).join(', '))
 
-          const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze()
-          const serious = results.violations.filter(
-            (v) => v.impact === 'serious' || v.impact === 'critical',
+  const failures: string[] = []
+  const visited = new Set<SkinId>()
+  try {
+    for (const { skin, mode, routes } of sweep) {
+      await setProfileSkinMode(skin, mode) // skin-sync picks this up on each fresh load
+      // Pre-seed the target BEFORE the next navigation reloads index.html's boot script, so it
+      // stamps data-skin/data-mode correctly on FIRST PAINT instead of booting 'system' — which
+      // resolves to Playwright's default light colorScheme — and letting useSkinSync flip it only
+      // after the profile query lands. That flip left .skin-control's transition (all
+      // var(--motion-duration), ~0.18s) still interpolating a control's rendered color when axe
+      // scanned, which is what actually produced the CI-only violation this guards against — a
+      // WCAG-real read of an unsettled paint, not a real defect (instrumented and confirmed via a
+      // throwaway diagnosis spec on fix/a11y-contrast-diagnosis, reported and closed unmerged).
+      // page.goto() below is a full browser navigation (confirmed by the boot
+      // script re-running), and localStorage is origin-scoped, so this write — made on the page
+      // this function is ALREADY on, from signIn()'s own navigation — survives it. This removes
+      // the race; it does not wait it out.
+      await page.evaluate(
+        ({ skin, mode }) => {
+          localStorage.setItem('reverie.skin', skin)
+          localStorage.setItem('reverie.mode', mode)
+        },
+        { skin, mode },
+      )
+      // Each goto below is a full navigation, so keepOfflineCacheEmpty's init script re-runs and
+      // this skin/mode is read fresh rather than restored from the previous pass's snapshot.
+      for (const [name, path] of routes) {
+        await page.goto(path)
+        await page.waitForLoadState('networkidle')
+        await page.locator('main').waitFor({ state: 'visible' })
+        await expect(page.locator('html')).toHaveAttribute('data-skin', skin)
+        await expect(page.locator('html')).toHaveAttribute('data-mode', mode)
+        await assertInkSettled(page, skin, mode, `${skin}/${mode} ${name}`)
+
+        const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze()
+        const serious = results.violations.filter(
+          (v) => v.impact === 'serious' || v.impact === 'critical',
+        )
+        for (const v of serious) {
+          const detail = v.nodes
+            .slice(0, 2)
+            .map((n) => {
+              const d = n.any?.[0]?.data as
+                | { fgColor?: string; bgColor?: string; contrastRatio?: number }
+                | undefined
+              return d?.contrastRatio != null
+                ? `${String(n.target)} fg=${d.fgColor} bg=${d.bgColor} ratio=${d.contrastRatio}`
+                : String(n.target)
+            })
+            .join(' || ')
+          failures.push(
+            `[${skin}/${mode}] ${name} (${path}): ${v.id} (${v.nodes.length}) — ${detail}`,
           )
-          for (const v of serious) {
-            const detail = v.nodes
-              .slice(0, 2)
-              .map((n) => {
-                const d = n.any?.[0]?.data as
-                  | { fgColor?: string; bgColor?: string; contrastRatio?: number }
-                  | undefined
-                return d?.contrastRatio != null
-                  ? `${String(n.target)} fg=${d.fgColor} bg=${d.bgColor} ratio=${d.contrastRatio}`
-                  : String(n.target)
-              })
-              .join(' || ')
-            failures.push(
-              `[${skin}/${mode}] ${name} (${path}): ${v.id} (${v.nodes.length}) — ${detail}`,
-            )
-          }
         }
       }
+      visited.add(skin)
     }
   } finally {
     await cleanup(clubId, listCode, shelfId, bookId)
   }
+
+  // The coverage claim, ASSERTED rather than trusted: every skin in the registry was genuinely
+  // reached (added to `visited` only after its full route pass completed). Registry-keyed like the
+  // core contrast tests — a tenth skin added to SKIN_ORDER fails HERE until the sweep covers it,
+  // instead of silently joining the five skins the four-skin era never scanned.
+  expect([...visited].sort(), 'every skin in SKIN_ORDER must be swept').toEqual(
+    [...SKIN_ORDER].sort(),
+  )
 
   if (failures.length) console.log('axe serious/critical violations:\n' + failures.join('\n'))
   expect(failures, failures.join('\n')).toHaveLength(0)
