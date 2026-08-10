@@ -389,3 +389,67 @@ jobs:
           name: playwright-traces-mobile
           path: apps/web/test-results/
           retention-days: 7
+
+  # pgTAP — the database's own guards, finally running somewhere automatic.
+  #
+  # WHY THIS EXISTS. `supabase/tests/` holds 21 files / 291 assertions covering the things nothing
+  # else can reach: RLS policies, the `revoke execute` grant boundary (SQLSTATE 42501, not a
+  # body-level P0001), `user_edited` protection, set_series_order's park-then-write pass, and the
+  # live-position uniqueness index. Until now `pnpm db:test` ran in no workflow at all, so every one
+  # of those was on the honor system — a guard that only executes when someone remembers is a guard
+  # you cannot cite. #172 made the cost concrete: its index had to be verified by hand, twice,
+  # because nothing in CI proved the constraint did what its migration claimed. e2e going green is
+  # evidence the schema did not BREAK the app; it is not evidence the constraint FIRES.
+  #
+  # WHY IT IS SHAPED NOTHING LIKE THE THREE e2e JOBS ABOVE. `db:test` is `supabase test db` — a bare
+  # CLI passthrough with no Node in the path. No pnpm install, no setup-node, no Playwright browsers,
+  # no ~/.cache/ms-playwright restore: this job is checkout + CLI + database, and it finishes in
+  # about a minute where the e2e jobs take eight to twelve. The CLI is invoked directly rather than
+  # through `pnpm db:test`, because installing pnpm and Node purely to shell out to a binary would
+  # cost more setup than the whole job. Named trade-off: if `db:test`'s definition in package.json
+  # ever changes, this line does not follow it automatically — keep the two in step by hand.
+  #
+  # THE EXCLUSION LIST IS ONE SERVICE TIGHTER THAN THE e2e JOBS', AND THE DIFFERENCE IS MEASURED.
+  # Probed against a genuinely fresh local stack on CLI 2.109.0, each claim verified by reading
+  # `docker ps` after the start rather than trusting the flag:
+  #   · `realtime`  DOES exclude, and all 21 files / 291 tests still pass without it. pgTAP talks to
+  #                 Postgres directly and never opens a realtime channel, so it is added here. This
+  #                 is the "unverified is unverified" caveat in the e2e job above being resolved for
+  #                 this job only — it says nothing about what the e2e specs need.
+  #   · `storage`   is a NO-OP on this CLI version: passing it leaves supabase_storage running
+  #                 anyway. Deliberately NOT listed, on the same principle as `analytics` above —
+  #                 a flag that does nothing should not sit in the command implying it does.
+  #   · `kong`/`rest` CANNOT be excluded. `supabase start` health-checks itself through kong
+  #                 (`HEAD /rest-admin/v1/ready` on the API port); excluding either aborts the start
+  #                 outright with a connection-refused and tears the stack back down. Measured, not
+  #                 assumed — the fully-minimal `-x everything-but-db` run failed exactly there.
+  #
+  # NOT IN THE REQUIRED-CHECKS RULESET, deliberately, and the same way `e2e-a11y` and `e2e-mobile`
+  # were introduced: it runs and reports, a red run does not block merge yet. Adding it is a
+  # branch-protection change and the owner's to make once this has run for real on a few PRs.
+  #
+  # The tests need nothing but a migrated database: every file wraps itself in `begin; … rollback;`
+  # and builds its own auth.users + fixture rows, none reads `db:seed` output or a dev account, and
+  # `supabase/seed.sql` is intentionally empty. So a fresh `supabase start` is the entire setup.
+  pgtap:
+    name: pgtap
+    needs: [changes]
+    # Same condition as the three e2e jobs — `!= 'true'` so a missing or garbled classifier output
+    # runs this rather than skipping it. Deliberately NOT a tighter supabase/**-only filter: a
+    # migration is not the only way to break these assertions (an RLS policy, a grant, or a function
+    # body reached through any path can), and a finer classifier is its own decision, not this one.
+    if: github.event_name == 'pull_request' && needs.changes.outputs.docs_only != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.0
+
+      - name: Start Supabase
+        run: supabase start -x studio,vector,edge-runtime,imgproxy,realtime
+
+      - name: pgTAP (supabase/tests)
+        run: supabase test db
