@@ -152,6 +152,15 @@
 --     (book_id null) at 2.5; the Wings ghost dd33f8da (book_id null, user_edited true); Frost
 --     ca881b76 and Silver Flames 60ca2fac somewhere above; and one tombstone, 09357eb3, the eBook
 --     Bundle at position 11.
+--
+-- ALSO READ `book_position` AGAINST `position` FOR THE TWO ROWS THIS FIX LEAVES ALONE — Thorns at
+--     1 and Mist and Fury at 2. They are deliberately outside the batch, so step 7 of
+--     set_series_order never touches their `books.position`. If either already disagrees with its
+--     entry, that drift is PRE-EXISTING: this run neither causes it nor can repair it, and the
+--     post-run audit's `all_match` will come back false for a reason that has nothing to do with
+--     this correction. Establish it HERE, before committing, so a false `all_match` afterwards is
+--     read as the known prior mismatch rather than as this fix having failed. Repairing those two
+--     rows is a separate write and a separate review.
 select 'P1. entries before' as section,
        e.id                    as entry_id,
        e.position,
@@ -267,6 +276,44 @@ where e.series_id = '2bec23ba-a016-4e97-aa60-e7dfff528fa7'::uuid
 -- Expected: ONE row — 6856062b, series string "ACOTAR" (or anything that is not the target series
 -- name), exposed_to_length_sync = false. Zero rows means the entry has been unlinked since
 -- 2026-08-09 and guard #8 will stop the run; re-read acotar-6-recheck.sql before going further.
+
+-- ══ P6. THE LENGTH SYNC'S BLAST RADIUS ON `books` — enumerated, not inferred ═════════════════════
+-- P5 answers half the question: the one book known to be out of scope is out of reach. This block
+-- answers the other half — which books ARE in reach, and exactly how many rows step 8 will write.
+-- The two are not the same question and neither implies the other.
+--
+-- Step 8 of set_series_order writes `books.series_count` by matching `books.series` against the
+-- target series' NAME, for every book of this owner. `series_entries` membership is not consulted
+-- anywhere in that statement, so "the entries this fix reorders" and "the books this fix rewrites"
+-- are different sets that merely overlap. Until this block existed the second set was never counted
+-- before the run — only displayed after it, by A2. That is the wrong order for a number that is the
+-- header's own over-reach signal: stripping guard #8b and pointing 6856062b at the target series
+-- moved `length_books_synced` from 4 to 5, which is only readable as a warning against a figure
+-- established beforehand.
+--
+-- Expected: every row is a genuine member of this series carrying the canonical name. A title that
+-- is NOT an ACOTAR book appearing here means some book names this series wrongly — a data question
+-- for task-series-consolidation.md, not something to run past. `will_change` marks the rows step 8
+-- actually writes (it skips rows already holding 5), so `n_will_change` is precisely what
+-- `length_books_synced` must come back as; step 1 now re-measures the same predicate inside the
+-- transaction and refuses on any disagreement.
+--
+-- ZERO ROWS is a legitimate answer and is not an error: it means no book of this owner names the
+-- series exactly, `n_will_change` is 0, and step 1 will require `length_books_synced = 0`. It is
+-- also worth pausing on, because the series page joins books to series by that same string.
+select 'P6. books in the length sync''s reach' as section,
+       b.id                                          as book_id,
+       b.title,
+       b.series                                      as book_series_string,
+       b.series_count                                as series_count_now,
+       (b.series_count is distinct from 5::smallint) as will_change,
+       count(*) over ()                              as n_in_reach,
+       count(*) filter (where b.series_count is distinct from 5::smallint) over () as n_will_change
+from public.books b
+join public.series s on s.owner_id = b.owner_id
+where s.id = 'aa4e251e-be7a-45bf-a66b-78bbf9406e71'::uuid
+  and b.series = s.name
+order by b.position nulls last, b.title;
 
 -- ════════════════════════════════════════════════════════════════════════════════════════════════
 -- THE FIX (writes). Run only after the pre-flight matches the expectations above.
@@ -466,6 +513,7 @@ declare
   v_series constant uuid := 'aa4e251e-be7a-45bf-a66b-78bbf9406e71';
   v_slots  jsonb;
   v_res    jsonb;
+  n_will_change int;
 begin
   select jsonb_agg(jsonb_build_object('entry_id', x.id, 'position', x.pos) order by x.pos)
     into v_slots
@@ -483,6 +531,18 @@ begin
     raise exception 'step 1: built % slots, expected 3', coalesce(jsonb_array_length(v_slots), 0);
   end if;
 
+  -- The length sync's blast radius, re-measured HERE rather than transcribed from P6 — a number
+  -- typed in from a pre-flight read minutes ago is exactly the stale-stored-value shape this whole
+  -- arc exists to close. P6 prints the same figure so the two can be compared by eye; this one is
+  -- the binding measurement, taken inside the transaction, immediately before the write. The
+  -- predicate is step 8's own, verbatim: owner, series NAME string, and value-actually-differs.
+  select count(*) into n_will_change
+    from public.books b
+    join public.series s on s.owner_id = b.owner_id
+   where s.id = v_series
+     and b.series = s.name
+     and b.series_count is distinct from 5::smallint;
+
   select public.set_series_order(v_series, v_slots, 'reader', '{"length": 5}'::jsonb) into v_res;
   raise notice 'set_series_order -> %', v_res;
 
@@ -496,6 +556,32 @@ begin
   if (v_res ->> 'length_set')::boolean is not true then
     raise exception 'step 1: length_set was not true — series.length did not get 5: %', v_res;
   end if;
+
+  -- `length_books_synced` IS asserted, and to a measured number rather than a fixed one — but be
+  -- exact about what this buys, because a guard described as more than it is becomes the next
+  -- entry in this project's defect log.
+  --
+  -- WHAT ACTUALLY CLOSES THE GENERAL CASE IS P6, NOT THIS. Step 8's reach is defined by a NAME
+  -- STRING rather than by the rows named in the batch, so the question "which books does this run
+  -- rewrite" has an answer no assertion can supply: it needs a human reading TITLES. P6 prints
+  -- them. This check is downstream of that reading, not a substitute for it.
+  --
+  -- WHAT THIS IS: a tripwire on the predicate itself. The count above deliberately restates step
+  -- 8's matching rule — owner, series NAME string, value-actually-differs, target length 5 — and
+  -- nothing between the measurement and the call can change that set (step 7 writes only
+  -- books.position; no trigger on `books` touches series or series_count). So on today's schema
+  -- this comparison is REDUNDANT WITH step 8 and will always pass. That is stated, not hidden: it
+  -- earns its place by failing on the day the two stop agreeing —
+  --   · step 8's matching rule widens (ilike, variant names, membership-based) -> synced > counted;
+  --   · the length constant in the call below drifts from the 5 this file was reviewed against
+  --     -> the two predicates select different row sets and disagree.
+  -- Both are silent today. Neither would be caught by the final check, which reads series.length
+  -- and never counts the books that followed it.
+  if (v_res ->> 'length_books_synced')::int is distinct from n_will_change then
+    raise exception 'step 1: length_books_synced=%, expected % (measured immediately before the call) — step 8 rewrote a different set of books than the pre-flight enumerated; compare against P6 and do not loosen this check: %',
+      v_res ->> 'length_books_synced', n_will_change, v_res;
+  end if;
+
   -- `books_synced` is deliberately NOT asserted to a fixed number: it counts only books whose
   -- position actually changed, so it is legitimately 0, 1 or 2 depending on how far books.position
   -- had already drifted. The post-run audit checks the resulting values instead of the delta.
@@ -598,7 +684,9 @@ order by (e.removed_at is null) desc, e.position, e.created_at;
 --     Its length sync matches books by the series NAME, so a book filed under a variant string
 --     ("ACOTAR", "A Court of Thorns and Roses Series", …) keeps whatever series_count it had. That
 --     is the name-fragmentation problem, out of scope here and not a failure of this run — but it
---     should be visible rather than discovered later.
+--     should be visible rather than discovered later. The `name_matches_series_row = true` rows are
+--     the same set P6 enumerated before the run; step 1 asserted the count that changed, so this is
+--     the after-picture of a figure that was already bounded, not the first look at it.
 with target as (
   select id, owner_id, name from public.series
   where id = 'aa4e251e-be7a-45bf-a66b-78bbf9406e71'::uuid
@@ -636,8 +724,13 @@ with target as (select 'aa4e251e-be7a-45bf-a66b-78bbf9406e71'::uuid as id),
            where e.series_id = t.id and e.removed_at is null
              and e.id::text like 'dd33f8da%' and e.position = 3 and e.book_id is null
              and e.user_edited is true)                                  as wings_ghost_at_3,
-         (select count(*) from public.series_entries e
-           where e.id::text like '4b005709%' and e.removed_at is not null) as mist_ghost_removed,
+         -- Scoped to the target series, like every other measure in this block. Unscoped it counted
+         -- "a removed entry with this prefix exists SOMEWHERE" — a proxy that a tombstone in an
+         -- unrelated series could satisfy while this series' ghost sat untouched. remove_series_entry
+         -- nulls book_id but leaves series_id, so the tombstone is still findable here.
+         (select count(*) from public.series_entries e, target t
+           where e.series_id = t.id
+             and e.id::text like '4b005709%' and e.removed_at is not null) as mist_ghost_removed,
          (select count(*) from public.series_entries e, other o
            where e.series_id = o.id and e.removed_at is null)            as other_series_live_entries,
          (select count(*) from public.series_entries e, other o
@@ -700,8 +793,16 @@ from m;
 --                                             so a FUTURE run of this file would rewrite its
 --                                             series_count. Guard #8b will refuse next time; treat
 --                                             it as a consolidation question, not a blocker here.
---   book_position_mismatches > 0 ............ a linked book's position did not follow its entry —
---                                             the exact drift set_series_order exists to prevent.
+--   book_position_mismatches > 0 ............ a linked book's position disagrees with its entry.
+--                                             READ P1 BEFORE CONCLUDING ANYTHING. Thorns (1) and
+--                                             Mist (2) are outside the batch, so step 7 never
+--                                             touched their books.position: a mismatch on either is
+--                                             PRE-EXISTING drift this run could not have caused or
+--                                             repaired, and it will hold `all_match` false on an
+--                                             otherwise correct run. A mismatch on 3.5 or 5 is a
+--                                             different animal — those rows WERE written, so it
+--                                             means the synced copy did not follow, which is the
+--                                             exact drift set_series_order exists to prevent.
 --   books_with_wrong_series_count > 0 ....... a book naming this series exactly still disagrees
 --                                             with length 5 (variant-named books are excluded by
 --                                             design; see A2).
