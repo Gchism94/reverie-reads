@@ -51,12 +51,29 @@
 --
 -- 2. THE SECOND SERIES ROW IS A REAL, DISTINCT THING — NOT this series under a variant name.
 --    2bec23ba ("ACOTAR", created 2026-08-04) carries exactly one live entry, "ACOTAR 6", a
---    legitimate ghost for the unreleased sixth book. It is NOT Wings and Ruin hiding under a
---    variant series name, which was the one reading that would have made this a series-identity
---    split (case (a)) with a completely different correct fix. **The series-record merge
---    (aa4e251e vs 2bec23ba) is real and confirmed, and is explicitly OUT OF SCOPE here** — it needs
---    task-series-consolidation.md's three-outcome decision table, not this file. Nothing below
---    touches 2bec23ba or its entry; the post-run audit asserts it was left alone.
+--    forward-looking slot for the unreleased sixth book. That entry links a REAL `books` row
+--    (`book_id = 6856062b…`, added through the acquire flow) — it is NOT a ghost. An earlier draft
+--    of this header called it one; that was loose terminology for "a slot for a book that isn't out
+--    yet", and in this schema "ghost" means `book_id IS NULL` specifically. Settled by
+--    docs/queries/acotar-6-recheck.sql against production on 2026-08-09
+--    (`acotar6_is_ghost_today = false`), which also established there was no data change to
+--    explain — the 2026-08-06 consolidation spec had it right all along.
+--    It is NOT Wings and Ruin hiding under a variant series name, which was the one reading that
+--    would have made this a series-identity split (case (a)) with a completely different correct
+--    fix. **The series-record merge (aa4e251e vs 2bec23ba) is real and confirmed, and is explicitly
+--    OUT OF SCOPE here** — it needs task-series-consolidation.md's decision table, not this file.
+--
+--    WHY THE CORRECTION CHANGES WHAT THIS FILE HAS TO CHECK. A ghost has no `books` row and is
+--    therefore structurally untouchable by anything here. A real book row is not: step 8 of
+--    `set_series_order` syncs `series_count` with
+--    `where owner_id = uid and series = v_name` — scoped by the series NAME STRING, not by
+--    `series_entries` membership. So 6856062b is protected from this fix only by its own `series`
+--    string differing from "A Court of Thorns and Roses". That is a thin guarantee and it was
+--    invisible while the row was believed to be a ghost, so guard #8 and block P5 now prove it
+--    instead of assuming it. Note what the post-run audit does and does not claim: A3's
+--    `other_series_*` columns assert the other row's ENTRY COUNTS are unchanged, which is not the
+--    same as asserting its member book is untouched — `other_book_count_unchanged` is the column
+--    that covers the book.
 --
 -- 3. NO TOMBSTONE-REVIVAL RISK. The target series carries one tombstone — 09357eb3, "A Court of
 --    Thorns and Roses eBook Bundle", position 11, removed 2026-08-03 — and `useSeriesDetail`
@@ -218,6 +235,39 @@ select 'P4. out-of-scope series row' as section,
 from public.series s
 where s.id = '2bec23ba-a016-4e97-aa60-e7dfff528fa7'::uuid;
 
+-- ══ P5. THE OUT-OF-SCOPE ROW'S MEMBER BOOK — the one thing that CAN be hit by accident ═══════════
+-- "ACOTAR 6" links a real `books` row (6856062b), so it is reachable by step 8's `series_count`
+-- sync, which matches on `books.series = <target series name>` and knows nothing about which series
+-- row an entry belongs to. `exposed_to_length_sync` is the whole question this block exists to
+-- answer, computed rather than eyeballed:
+--
+--   false -> the book's series string differs from "A Court of Thorns and Roses", the length sync
+--            cannot see it, and this fix cannot touch it. Guard #8 records its `series_count` and
+--            the final in-transaction check proves the value did not move.
+--   true  -> the length sync WOULD rewrite this book's `series_count`. Guard #8 REFUSES to run.
+--            That is not a bug to route around: a book linked to 2bec23ba but naming aa4e251e's
+--            series is the name-fragmentation problem itself, and deciding what its `series_count`
+--            should say is task-series-consolidation.md's call, not this file's. Bring it back as a
+--            question; do not loosen the guard.
+select 'P5. out-of-scope member book' as section,
+       b.id                                as book_id,
+       b.title,
+       b.series                            as book_series_string,
+       b.series_count,
+       b.position                          as book_position,
+       b.added_at,
+       s.name                              as target_series_name,
+       (b.series is not distinct from s.name) as exposed_to_length_sync
+from public.series_entries e
+join public.books b on b.id = e.book_id
+cross join public.series s
+where e.series_id = '2bec23ba-a016-4e97-aa60-e7dfff528fa7'::uuid
+  and e.removed_at is null
+  and s.id = 'aa4e251e-be7a-45bf-a66b-78bbf9406e71'::uuid;
+-- Expected: ONE row — 6856062b, series string "ACOTAR" (or anything that is not the target series
+-- name), exposed_to_length_sync = false. Zero rows means the entry has been unlinked since
+-- 2026-08-09 and guard #8 will stop the run; re-read acotar-6-recheck.sql before going further.
+
 -- ════════════════════════════════════════════════════════════════════════════════════════════════
 -- THE FIX (writes). Run only after the pre-flight matches the expectations above.
 -- Everything below is one transaction: both RPC calls land together or neither does.
@@ -234,11 +284,13 @@ declare
   v_series   constant uuid := 'aa4e251e-be7a-45bf-a66b-78bbf9406e71';
   v_other    constant uuid := '2bec23ba-a016-4e97-aa60-e7dfff528fa7';
   v_owner    uuid;
+  v_name     text;
   n          int;
   v_positions text;
 begin
-  -- #0. The series exists and has an owner to derive auth.uid() from.
-  select owner_id into v_owner from public.series where id = v_series;
+  -- #0. The series exists and has an owner to derive auth.uid() from. Its NAME is read here too —
+  --     guard #8b needs it, because the length sync matches member books on that string.
+  select owner_id, name into v_owner, v_name from public.series where id = v_series;
   if v_owner is null then
     raise exception 'guard #0: series % not found (or owner_id null) — wrong database?', v_series;
   end if;
@@ -342,7 +394,43 @@ begin
     raise exception 'guard #7: series 2bec23ba has % live entries, expected 1 — its state changed; the merge is out of scope but its shape is a premise here', n;
   end if;
 
-  raise notice 'guards OK: owner=%, 6 live + 1 tombstone, four prefixes resolved, dd33f8da still a flagged ghost, 4b005709 still a ghost, real Mist linked at 2, untouched rows at 1 and 2 only', v_owner;
+  -- #8. THE OUT-OF-SCOPE ROW'S MEMBER BOOK IS OUT OF THE LENGTH SYNC'S REACH — proven, not assumed.
+  --     Guard #7 above counts ENTRIES, and entries are not what step 8 of set_series_order writes:
+  --     it updates `books.series_count` by matching `books.series` against the target series' NAME,
+  --     with no reference to which series row the book's entry belongs to. So 2bec23ba's member book
+  --     (6856062b, a real row — see header finding 2) is reachable by this fix, and is kept out of
+  --     it by nothing but its own series string. Refuse the whole run if that string ever equals the
+  --     target's name: rewriting a book that belongs to the series this file declares out of scope
+  --     is a scope violation whether or not the resulting number would have been right, and which
+  --     number it SHOULD carry is task-series-consolidation.md's decision.
+  select count(*) into n
+    from public.series_entries e
+    join public.books b on b.id = e.book_id
+   where e.series_id = v_other and e.removed_at is null;
+  if n <> 1 then
+    raise exception 'guard #8: expected exactly 1 live linked book on series 2bec23ba, found % — as of 2026-08-09 its single entry linked 6856062b; re-run docs/queries/acotar-6-recheck.sql before proceeding', n;
+  end if;
+
+  if exists (
+    select 1
+    from public.series_entries e
+    join public.books b on b.id = e.book_id
+   where e.series_id = v_other and e.removed_at is null
+     and b.series is not distinct from v_name
+  ) then
+    raise exception 'guard #8b: series 2bec23ba''s member book names "%" — the length sync would rewrite its series_count, which is out of scope for this file; bring it to task-series-consolidation.md', v_name;
+  end if;
+
+  -- Snapshot the value the final check will compare against. A temp table, because plpgsql locals
+  -- do not survive to the next DO block, and `on commit drop` so it cannot outlive the transaction
+  -- (or leak into the owner's session if the run is rolled back).
+  create temp table acotar_other_book_before on commit drop as
+  select b.id, b.series, b.series_count
+    from public.series_entries e
+    join public.books b on b.id = e.book_id
+   where e.series_id = v_other and e.removed_at is null;
+
+  raise notice 'guards OK: owner=%, 6 live + 1 tombstone, four prefixes resolved, dd33f8da still a flagged ghost, 4b005709 still a ghost, real Mist linked at 2, untouched rows at 1 and 2 only, out-of-scope member book out of the length sync''s reach', v_owner;
 end $$;
 
 -- ── auth.uid(), derived from the series row. Never hardcoded. ───────────────────────────────────
@@ -447,6 +535,8 @@ declare
   v_series constant uuid := 'aa4e251e-be7a-45bf-a66b-78bbf9406e71';
   v_positions text;
   v_len smallint;
+  n_same int;
+  n_before int;
 begin
   select string_agg(position::text, ', ' order by position) into v_positions
     from public.series_entries
@@ -460,7 +550,21 @@ begin
     raise exception 'final check: series.length is %, expected 5 — rolling back', v_len;
   end if;
 
-  raise notice 'final check OK: positions [%], length 5. Committing.', v_positions;
+  -- The out-of-scope member book is byte-for-byte what guard #8 snapshotted. Compared as a JOIN on
+  -- the snapshot rather than a recomputed lookup, so a book that DISAPPEARED fails the row count
+  -- instead of quietly matching nothing — the same absence-vs-invisibility hole the negative
+  -- assertions elsewhere in this file are written around.
+  select count(*) into n_same
+    from acotar_other_book_before before
+    join public.books b on b.id = before.id
+   where b.series_count is not distinct from before.series_count
+     and b.series is not distinct from before.series;
+  select count(*) into n_before from acotar_other_book_before;
+  if n_same <> n_before or n_before <> 1 then
+    raise exception 'final check: series 2bec23ba''s member book changed (% of % snapshot rows still match) — this fix must not touch it; rolling back', n_same, n_before;
+  end if;
+
+  raise notice 'final check OK: positions [%], length 5, out-of-scope member book unchanged. Committing.', v_positions;
 end $$;
 
 commit;
@@ -546,7 +650,22 @@ with target as (select 'aa4e251e-be7a-45bf-a66b-78bbf9406e71'::uuid as id),
          (select count(*)
             from public.books b, target t, public.series s
            where s.id = t.id and b.owner_id = s.owner_id and b.series = s.name
-             and b.series_count is distinct from 5::smallint)            as books_with_wrong_series_count
+             and b.series_count is distinct from 5::smallint)            as books_with_wrong_series_count,
+         -- The out-of-scope member book, post-commit. Note the DIVISION OF LABOUR: the proof that
+         -- its series_count did not MOVE is the final in-transaction check, which compares against
+         -- guard #8's snapshot and rolls the whole run back on a mismatch — it has to live there,
+         -- because the snapshot is `on commit drop` and no longer exists by the time this query
+         -- runs. What these two columns do is report the value for eyeball comparison against P5's
+         -- pre-flight output, and re-assert the PRECONDITION that kept the book out of reach.
+         (select b.series_count
+            from public.series_entries e
+            join public.books b on b.id = e.book_id, other o
+           where e.series_id = o.id and e.removed_at is null)            as other_book_series_count,
+         (select count(*)
+            from public.series_entries e
+            join public.books b on b.id = e.book_id, other o, target t, public.series s
+           where e.series_id = o.id and e.removed_at is null
+             and s.id = t.id and b.series is distinct from s.name)       as other_book_out_of_reach
      )
 select 'A3. headline' as section,
        m.*,
@@ -559,7 +678,8 @@ select 'A3. headline' as section,
         and m.other_series_live_entries = 1
         and m.other_series_tombstones = 0
         and m.book_position_mismatches = 0
-        and m.books_with_wrong_series_count = 0) as all_match
+        and m.books_with_wrong_series_count = 0
+        and m.other_book_out_of_reach = 1) as all_match
 from m;
 
 -- If `all_match` is false, read the columns beside it — each one names its own failure:
@@ -572,6 +692,14 @@ from m;
 --   mist_ghost_removed <> 1 ................. step 2 did not tombstone 4b005709.
 --   other_series_* changed .................. this run touched 2bec23ba, which it must not; the
 --                                             series merge is task-series-consolidation.md's.
+--   other_book_series_count ................. compare by eye against P5's pre-flight value; they
+--                                             must be identical. (The binding proof is the final
+--                                             in-transaction check, which already rolled the run
+--                                             back if this moved — see the note in A3 itself.)
+--   other_book_out_of_reach <> 1 ............ 2bec23ba's member book now names the target series,
+--                                             so a FUTURE run of this file would rewrite its
+--                                             series_count. Guard #8b will refuse next time; treat
+--                                             it as a consolidation question, not a blocker here.
 --   book_position_mismatches > 0 ............ a linked book's position did not follow its entry —
 --                                             the exact drift set_series_order exists to prevent.
 --   books_with_wrong_series_count > 0 ....... a book naming this series exactly still disagrees
