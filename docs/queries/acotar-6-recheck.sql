@@ -1,5 +1,24 @@
 -- ACOTAR 6 — read-only re-check of ONE row, to resolve a contradiction between two dated claims.
 --
+-- ══ RESOLVED — 2026-08-09, owner ran this file against production ═══════════════════════════════
+--   book_id = 6856062b…  (NOT NULL)
+--   acotar6_is_ghost_today = false
+--
+-- THERE WAS NO DRIFT. The 2026-08-06 spec below was correct throughout: "ACOTAR 6" is a real
+-- `books` row added through the acquire flow, linked live to series 2bec23ba. The 2026-08-09
+-- "ghost" characterization was loose terminology on the owner's part — "a forward-looking slot for
+-- a book that isn't out yet" said as "ghost", which in this schema means book_id IS NULL and does
+-- not apply here. It was a wording error, not a data event.
+--
+-- So none of Block 2's drift-cause branches fired: nothing was deleted, the ON DELETE SET NULL FK
+-- never triggered, and there is no cause to record because nothing changed. Block 2 stays in the
+-- file anyway — it costs nothing to keep and the next re-check of this row will want it.
+--
+-- The file is kept rather than deleted for the same reason the question was asked: the answer is
+-- now traceable to a query and a result instead of to whichever sentence was read last. That was
+-- the whole failure mode this arc exists to close.
+-- ════════════════════════════════════════════════════════════════════════════════════════════════
+--
 -- PREVIEW ONLY — every statement is a SELECT. Nothing writes. Run against production by hand.
 -- Staged rather than run: docs/tasks/task-series-integrity-mechanism.md § Standing bars a Code
 -- session from touching the production database at all, "including read-only SELECTs". The local
