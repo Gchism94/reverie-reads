@@ -305,6 +305,17 @@ test` outright and only fail `tsc`. This has bitten twice, by two different tool
   built on a deploy that had not happened. Check `supabase migration list --linked` (the remote
   column is the truth) or `supabase functions list` before depending on it, and say which you
   checked. This is cheap and the alternative is a branch built on a schema that does not exist.
+- **Local dev DB schema can run ahead of the checked-out tree — the mirror image of the rule
+  above.** `supabase migration up` / `db:migrate` applies migrations to the local Postgres instance
+  independently of git; checking out `main` or any branch that hasn't merged a migration yet leaves
+  the local schema ahead of the code until a `db:reset`. Observed on `chore/series-position-index`
+  (2026-08-10): its pgTAP suite only meant something with the migration actually applied, so it went
+  in via the incremental path (`supabase migration up`, not a full `db:reset` — no local dev data
+  lost), and the local stack stayed at `20260816010000` after, ahead of `main`. Same command, same
+  confusable label, opposite direction: `supabase migration list --local`'s `remote` column reports
+  the LOCAL database's applied migrations, not production's. Don't read a `--local` run as evidence
+  about prod's state, and don't read your local stack's schema as evidence about what's actually
+  merged into the tree you're standing on.
 
 ## Data-integrity & sourcing discipline
 
