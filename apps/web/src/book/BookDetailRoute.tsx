@@ -512,8 +512,13 @@ function BookDetailScreen() {
             if (!window.confirm('Remove this book from your library?')) return
             deleteBook.mutate(book.id, { onSuccess: () => void navigate({ to: '/' }) })
           }}
-          className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-primary"
-          style={{ background: 'var(--card)' }}
+          // accent-ink, not primary: on this --card background, hearth/dark's --primary measures
+          // 2.24:1 (a11y sweep, 2026-08-10). There is no dedicated destructive/danger token in
+          // tokens.css — this button was leaning on --primary's reddish hue as its only color
+          // signal, with the label as the real signal. A --danger token is a queued follow-up;
+          // not designed here.
+          className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold"
+          style={{ background: 'var(--card)', color: 'var(--accent-ink)' }}
         >
           Remove book
         </button>

@@ -93,7 +93,11 @@ function SkinCard({
         style={{ borderColor: 'var(--line)', background: 'var(--card)' }}
       >
         {active ? (
-          <span className="text-[12.5px] font-semibold" style={{ color: 'var(--primary)' }}>
+          // --accent-ink, NOT --primary: primary is a fill/glyph accent tuned (at best) against
+          // --bg, never against --card — hearth/dark measured 2.24:1 here (a11y sweep, 2026-08-10).
+          // accent-ink is the registry's card-safe accent text, pinned on card-solid across all
+          // nine skins by skinCharacter.contrast.test.ts.
+          <span className="text-[12.5px] font-semibold" style={{ color: 'var(--accent-ink)' }}>
             ✓ Active skin
           </span>
         ) : (
