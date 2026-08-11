@@ -679,7 +679,10 @@ export function useAddSeriesEntries(name: string) {
       // membership implies the book carries the series name
       for (const b of input.books) {
         if (b.series !== name) {
-          const { error: bErr } = await supabase.from('books').update({ series: name }).eq('id', b.id)
+          const { error: bErr } = await supabase
+            .from('books')
+            .update({ series: name, series_user_chosen: true })
+            .eq('id', b.id)
           if (bErr) throw bErr
         }
       }
@@ -735,6 +738,7 @@ export function useAcquireGhost(name: string) {
           author_first: first || null,
           author_last: last || null,
           series: name,
+          series_user_chosen: true,
           position: input.entry.position,
           ownership: 'unowned',
           wishlist: true,
