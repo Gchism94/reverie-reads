@@ -533,3 +533,21 @@ export function mergeRecords(
 
   return out
 }
+
+/**
+ * Withhold fields the resolved match confidence doesn't back. `none` (title didn't match closely)
+ * withholds cover AND series/seriesPosition — no confident match, no attach. `low` (author
+ * conflict, unconfirmed fuzzy title, or an ambiguity downgrade) withholds series/seriesPosition
+ * ONLY: cover has three downstream safety nets (high-confidence auto-fill only, an import-review
+ * bucket for softer matches, one-tap Cover Studio correction) that make a wrong cover recoverable;
+ * series has none, so a low-confidence series claim is wrong-book risk with nothing to catch it.
+ * `medium`/`high` pass every field through unchanged. Takes the inline confidence union (not the
+ * `Confidence` type from ./resolve) to avoid a circular import — resolve.ts imports from merge.ts.
+ */
+export function withholdByConfidence<
+  T extends { cover: string; series: string; seriesPosition: number | null },
+>(record: T, confidence: 'high' | 'medium' | 'low' | 'none'): T {
+  if (confidence === 'none') return { ...record, cover: '', series: '', seriesPosition: null }
+  if (confidence === 'low') return { ...record, series: '', seriesPosition: null }
+  return record
+}

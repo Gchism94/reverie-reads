@@ -12,30 +12,21 @@ forgotten.
 
 ## Real bugs, outstanding
 
-- **`enrich/index.ts:439` clears the cover on `confidence === 'none'` but leaves `series` and
-  `seriesPosition` — this is how wrong series values entered this library.** The function scores its
-  own title+author match, and on `'none'` it withholds the cover specifically because attaching the
-  wrong art is worse than attaching none. It then returns the series from that same disclaimed match
-  anyway. `toIncoming` (`enrichLibrary.ts`) maps `series: e.series, position: e.seriesPosition` into
-  the merge, and `mergeImport`'s `fill('series')` writes it into any book whose series is blank — so
-  a no-confidence match silently sets a series on a previously series-less book. `Sheik's Caravan`
-  on _Caraval_ and `Bookbound Bunny` on _Bunny_ are exactly the shape a fuzzy title match produces.
-  **The fix is one line and its own branch**: the `confidence === 'none'` guard should clear
-  `series` and `seriesPosition` alongside `cover`, on the same reasoning that already justifies
-  clearing the cover. Worth checking at the same time whether `'low'` deserves the same treatment,
-  and whether the surviving series values should carry a confidence the way `cover_confidence` does.
+- **`merge_books` doesn't fold `series_user_chosen` when a loser's series field wins the merge.**
+  `feat/series-user-chosen` added the column and taught `sync_book_series`/`remove_series_entry` to
+  set it, but left `merge_books` untouched: the primary keeps its own flag, which is correct in the
+  common case (the primary's series was already provenance-tracked or blank). The narrow edge is a
+  loser whose reader-chosen series wins via `p_fields` — the winning value carries no flag afterward,
+  so a later enrichment sweep could treat it as fill-only and silently replace it. Folding OR logic
+  into `merge_books` (winning flag = primary's OR loser's, whichever field actually won) is its own
+  change with its own pgTAP.
 
-- **There is no `series_user_chosen` column, though `cover_user_chosen` exists — the same problem
-  was solved for covers and never for series.** Nothing in `books` records whether a series value
-  came from the reader, from an import, or from an enrichment match. `books.source` is row-level,
-  and `updated_at` is maintained by a trigger on every row write — the enrichment sweep stamping
-  `enriched_at` bumps it on essentially every book, so it cannot isolate a reader edit. This is why
-  `fix/series-backfill` could not implement "parsed wins over import-set, reader-set always wins"
-  and had to fall back to "parsed wins unconditionally, with two hardcoded exceptions": the
-  provenance simply is not recorded. **Without the column this ambiguity recurs the next time
-  anything writes a series** — the backfill fixes the current data, not the next conflict. Its own
-  branch: add `series_user_chosen`, set it on the reader-facing edit paths only, and teach the
-  enrichment fill to respect it exactly as `enrichmentCoverFill` respects `coverUserChosen`.
+- **Nothing scores confidence on a surviving `series` value the way `cover_confidence` does for
+  covers.** `feat/series-user-chosen` withholds `low`/`none`-confidence series entirely rather than
+  attaching a disclaimed one, so the immediate wrong-series risk is closed — but a `medium`-confidence
+  series that does get attached has no recorded confidence for a future review bucket to key off, the
+  way the cover pipeline's import-review "low-confidence cover" bucket does. Worth its own look if a
+  series-side review bucket becomes wanted.
 
 - **Reconciliation stamps machine-written series entries `user_edited: true`, which makes source
   correction permanently impossible — and it must be fixed BEFORE the backfilled series are opened
