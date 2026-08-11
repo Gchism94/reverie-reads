@@ -429,7 +429,16 @@ function SettingsScreen() {
                     {s.label}
                   </span>
                   {activeSkin === s.id && (
-                    <span className="text-[11px] font-semibold text-primary">active</span>
+                    // Inline --accent-ink, matching SkinGalleryRoute's badge: --primary as text on
+                    // the --field surface measured 1.98:1 in hearth/dark (a11y sweep, 2026-08-10).
+                    // No text-accent-ink Tailwind mapping exists, and a two-site fix doesn't earn
+                    // one — inline style, same as the gallery.
+                    <span
+                      className="text-[11px] font-semibold"
+                      style={{ color: 'var(--accent-ink)' }}
+                    >
+                      active
+                    </span>
                   )}
                 </div>
                 <div className="text-[11.5px] text-muted">{s.genre}</div>
