@@ -7,6 +7,7 @@ import {
   normalizeHardcoverSearch,
   normalizeIsbndb,
   normalizeOpenLibrary,
+  withholdByConfidence,
   type StampedSource,
 } from './enrich'
 import { CORE_GENRES } from './genreNormalize'
@@ -106,6 +107,34 @@ describe('mergeRecords — user-authored fields always win', () => {
   it('an empty user value does not clobber a real source value', () => {
     const merged = mergeRecords([src('google', { title: 'Good Title' })], { title: '   ' })
     expect(merged.title).toBe('Good Title')
+  })
+})
+
+describe('withholdByConfidence', () => {
+  const record = mergeRecords([
+    src('google', { series: 'Fourth Wing', seriesPosition: 1, cover: 'g.jpg' }),
+  ])
+
+  it('none strips cover, series, and seriesPosition — no confident match, no attach', () => {
+    const out = withholdByConfidence(record, 'none')
+    expect(out.cover).toBe('')
+    expect(out.series).toBe('')
+    expect(out.seriesPosition).toBeNull()
+  })
+
+  it('low strips series and seriesPosition but NOT cover — cover has downstream safety nets, series has none', () => {
+    const out = withholdByConfidence(record, 'low')
+    expect(out.cover).toBe('g.jpg')
+    expect(out.series).toBe('')
+    expect(out.seriesPosition).toBeNull()
+  })
+
+  it('medium passes cover, series, and seriesPosition through unchanged', () => {
+    expect(withholdByConfidence(record, 'medium')).toEqual(record)
+  })
+
+  it('high passes cover, series, and seriesPosition through unchanged', () => {
+    expect(withholdByConfidence(record, 'high')).toEqual(record)
   })
 })
 

@@ -112,6 +112,8 @@ export interface Book {
   series: string
   position: number | '' // fractional positions exist (e.g. 3.5); '' means unset
   seriesCount: number | null // null => length not set ("None set" filter)
+  /** the reader named/cleared this series (any gesture) — enrichment NEVER overwrites it (non-overwrite rule, mirrors coverUserChosen) */
+  seriesUserChosen?: boolean
   status: SeriesStatus
   /** Primary genre (lowercased CORE_GENRES key; drives skin + adaptive logic and picks the
    *  subgenre/trope vocabularies). '' = not chosen yet — the edit form prompts, never guesses. */

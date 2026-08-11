@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { decideIntake, importKey, isbn10to13, matchBook, mergeImport, normalizeIsbn } from './match'
+import {
+  decideIntake,
+  enrichmentSeriesFill,
+  importKey,
+  isbn10to13,
+  matchBook,
+  mergeImport,
+  normalizeIsbn,
+} from './match'
 import { makeBook } from './book.fixture'
 
 describe('ISBN normalization', () => {
@@ -86,6 +94,24 @@ describe('decideIntake', () => {
     )
     expect(decideIntake('fuzzy', o({ verdict: 'keep_separate' }))).toBe('skip')
     expect(decideIntake('title-author', o({ verdict: 'keep_separate' }))).toBe('skip')
+  })
+})
+
+describe('enrichmentSeriesFill', () => {
+  it('never overwrites a reader-chosen series', () => {
+    expect(
+      enrichmentSeriesFill({ series: 'The Empyrean', seriesUserChosen: true }, 'Different Series'),
+    ).toBe('')
+    // even after the reader clears it, their choice stands
+    expect(enrichmentSeriesFill({ series: '', seriesUserChosen: true }, 'Fourth Wing Series')).toBe(
+      '',
+    )
+  })
+
+  it('is fill-only: existing series stay, blanks fill', () => {
+    expect(enrichmentSeriesFill({ series: 'The Empyrean' }, 'Different Series')).toBe('')
+    expect(enrichmentSeriesFill({ series: '' }, 'The Empyrean')).toBe('The Empyrean')
+    expect(enrichmentSeriesFill({ series: '', seriesUserChosen: false }, '')).toBe('')
   })
 })
 
