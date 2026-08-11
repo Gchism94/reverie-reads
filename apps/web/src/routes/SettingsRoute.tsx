@@ -429,7 +429,16 @@ function SettingsScreen() {
                     {s.label}
                   </span>
                   {activeSkin === s.id && (
-                    <span className="text-[11px] font-semibold text-primary">active</span>
+                    // Inline --accent-ink, matching SkinGalleryRoute's badge: --primary as text on
+                    // the --field surface measured 1.98:1 in hearth/dark (a11y sweep, 2026-08-10).
+                    // No text-accent-ink Tailwind mapping exists, and a two-site fix doesn't earn
+                    // one — inline style, same as the gallery.
+                    <span
+                      className="text-[11px] font-semibold"
+                      style={{ color: 'var(--accent-ink)' }}
+                    >
+                      active
+                    </span>
                   )}
                 </div>
                 <div className="text-[11.5px] text-muted">{s.genre}</div>
@@ -438,7 +447,10 @@ function SettingsScreen() {
           </div>
           <p className="mt-2 text-[12px] text-muted">
             Browse and preview them in the{' '}
-            <Link to="/skins" className="text-primary underline">
+            {/* accent-ink, not primary: this link sits on the --card surface, where hearth/dark's
+                --primary measures 2.24:1 (a11y sweep, 2026-08-10). Same inline treatment as the
+                "active" badge above. */}
+            <Link to="/skins" className="underline" style={{ color: 'var(--accent-ink)' }}>
               Skin Gallery
             </Link>
             .
