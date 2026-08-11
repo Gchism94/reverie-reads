@@ -447,7 +447,10 @@ function SettingsScreen() {
           </div>
           <p className="mt-2 text-[12px] text-muted">
             Browse and preview them in the{' '}
-            <Link to="/skins" className="text-primary underline">
+            {/* accent-ink, not primary: this link sits on the --card surface, where hearth/dark's
+                --primary measures 2.24:1 (a11y sweep, 2026-08-10). Same inline treatment as the
+                "active" badge above. */}
+            <Link to="/skins" className="underline" style={{ color: 'var(--accent-ink)' }}>
               Skin Gallery
             </Link>
             .
