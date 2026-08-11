@@ -32,6 +32,23 @@ describe('ownership control contrast — selected chip legible at every skin × 
           `${skin}/${mode}: ${tokens.onPrimary} on ${tokens.accentFill} = ${ratio.toFixed(2)}:1`,
         ).toBeGreaterThanOrEqual(AA_NORMAL)
       })
+
+      // The UNSELECTED sibling — `--muted` on the browser-painted `--field`-over-card surface
+      // (fieldOnCard in the fixture, precomposited like pickRing). This is the pair no token-level
+      // test saw until the nine-skin axe sweep measured it at 3.92:1 in hearth/dark (2026-08-10):
+      // the default --field LIGHTENS a dark card toward the light muted text, and hearth's lamplit
+      // linen had the least headroom. hearth now overrides --field per-mode in tokens.css; this
+      // assertion is what keeps the composed surface from drifting under again, in ANY skin.
+      it(`${skin}/${mode} · unselected chip (muted on field-over-card) clears ${AA_NORMAL}:1`, () => {
+        const fg = parseColor(tokens.muted)
+        const bg = parseColor(tokens.fieldOnCard)
+        expect(fg && bg).toBeTruthy()
+        const ratio = contrastRatio(fg!, bg!)
+        expect(
+          ratio,
+          `${skin}/${mode}: ${tokens.muted} on ${tokens.fieldOnCard} = ${ratio.toFixed(2)}:1`,
+        ).toBeGreaterThanOrEqual(AA_NORMAL)
+      })
     }
   }
 })
