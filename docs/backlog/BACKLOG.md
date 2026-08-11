@@ -37,28 +37,6 @@ forgotten.
   branch: add `series_user_chosen`, set it on the reader-facing edit paths only, and teach the
   enrichment fill to respect it exactly as `enrichmentCoverFill` respects `coverUserChosen`.
 
-- **Reconciliation stamps machine-written series entries `user_edited: true`, which makes source
-  correction permanently impossible — and it must be fixed BEFORE the backfilled series are opened
-  at scale.** [`series.ts:302`](../apps/web/src/data/series.ts) seeds an entry for every library book
-  naming a series and writes `user_edited: true`. That flag exists to mean "a reader placed this
-  deliberately", so the Hardcover source merge will never reposition such a row — but nothing about
-  a lazily-seeded row is a reader decision. Introduced by `ab9e1fe` (#77) and unchanged since;
-  `git log -S` confirms no later commit touched it. The only path writing `false` is
-  `useApplySeriesSource` (`series.ts:726`), a different code path entirely.
-
-  **This was originally item 6 of `fix/series-backfill` and was dropped from that branch on the
-  owner's call, for the right reason: a migration resetting history to `false` would be undone the
-  moment reconciliation next ran, because the app still stamps `true`.** A reset that the app
-  re-breaks is worse than no reset — it looks done. (The item also cited "#120's deploy" as the
-  cutoff; `f398ed5` #120 is the `plan_date` work and touches nothing in series, so no such cutoff
-  exists.)
-
-  **Do it as one PR**: change `series.ts:302` to `user_edited: false` _and_ reset the historical
-  rows, so the two can't drift apart. **Urgency**: `fix/series-backfill` backfills ~235 series, and
-  reconciliation seeds entries lazily on first view — so every one of those series stamps a fresh
-  batch of immune-to-correction rows the first time someone opens its page. Landing this after the
-  backfill has been browsed means cleaning up a much larger mess than landing it before.
-
 - **The six `sameRiskAsPowerSymbol` glyphs are the same defect, unfired.**
   `apps/web/src/lib/glyphAllowlist.ts` tiers `⏹` `⏱` `⌕` `⌂` `⌘` (Misc Technical,
   U+2300–U+23FF — the exact block `⏻` came from) and `⠿` (Braille Patterns,
