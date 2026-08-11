@@ -426,13 +426,16 @@ function MatchScreen() {
               {/* the honest why — every pick can say what earned it (Tier 0) */}
               <div className="truncate text-[11px] text-muted">{why}</div>
             </button>
-            {/* feedback capture: "not tonight" floors this book for ~60 days (Tier 1) */}
+            {/* feedback capture: "not tonight" floors this book for ~60 days (Tier 1).
+                pointer-coarse:opacity-100: same touch-invisibility fix as CoverCard's fave toggle
+                (docs/audits/mobile-shelf-interaction.md Defect B) — worse here, since this button
+                has no aria-pressed fallback and was PERMANENTLY invisible on touch. */}
             <button
               type="button"
               onClick={() => dismiss(b.id)}
               aria-label={`Not tonight — hide ${b.title}`}
               title="Not tonight"
-              className="absolute right-1 top-1 h-6 w-6 rounded-full text-[11px] font-bold opacity-0 backdrop-blur transition-opacity focus-visible:opacity-100 group-hover:opacity-100"
+              className="absolute right-1 top-1 h-6 w-6 rounded-full text-[11px] font-bold opacity-0 backdrop-blur transition-opacity focus-visible:opacity-100 group-hover:opacity-100 pointer-coarse:opacity-100"
               style={{ background: 'rgba(0,0,0,0.55)', color: '#fff' }}
             >
               ✕
