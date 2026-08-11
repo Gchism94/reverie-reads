@@ -15,6 +15,7 @@ function row(plan: Partial<Pick<BookRow, 'plan_y' | 'plan_m' | 'plan_d' | 'plan_
     series: null,
     position: null,
     series_count: null,
+    series_user_chosen: false,
     status: null,
     genre: 'Fantasy',
     subgenre: null,

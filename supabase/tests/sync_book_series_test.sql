@@ -21,7 +21,7 @@
 -- one transaction).
 
 begin;
-select plan(27);
+select plan(32);
 
 insert into auth.users (id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
 values
@@ -90,6 +90,9 @@ select ok(
 select ok(
   (select series_count = 5 from public.books where id = 'dddddddd-0000-0000-0000-000000000001'),
   'series_count is NOT claimed (a series row exists — length belongs to it, not to a bare claim)');
+select ok(
+  (select series_user_chosen from public.books where id = 'dddddddd-0000-0000-0000-000000000001'),
+  'REASSIGN marks series_user_chosen — a reader-driven save, never re-offered by enrichment');
 
 -- ── Guard 2: CLEAR ──
 set local role authenticated;
@@ -107,6 +110,10 @@ select ok(
   (select series is null and position is null and series_count is null
      from public.books where id = 'dddddddd-0000-0000-0000-000000000002'),
   'series, position AND series_count all clear — the synced copies of a fact that no longer applies');
+select ok(
+  (select series_user_chosen from public.books where id = 'dddddddd-0000-0000-0000-000000000002'),
+  'CLEAR marks series_user_chosen — the gap this migration closes: without it, the next enrich '
+  || 'sweep sees a blank series it still matches and re-fills what the reader just removed');
 
 -- ── Guard 2b: a book that NEVER named a series is not a CLEAR just because the new value is empty
 --    too — position/length on it are ordinary claims, not synced copies to wipe. Caught live: the
@@ -124,6 +131,9 @@ select ok(
   (select series is null and position = 4 and series_count = 7
      from public.books where id = 'dddddddd-0000-0000-0000-000000000006'),
   'position and series_count land as CLAIMS, not wiped — this book was never in a series to leave');
+select ok(
+  (select series_user_chosen from public.books where id = 'dddddddd-0000-0000-0000-000000000006'),
+  'the "never had one" CLEAR branch marks series_user_chosen too — a reader-driven save either way');
 
 -- ── Guard 3: REASSIGN into a series with NO row at all — claim path, both fields ──
 set local role authenticated;
@@ -143,6 +153,9 @@ select ok(
   (select series = 'Brand New Series' and position = 1 and series_count = 12
      from public.books where id = 'dddddddd-0000-0000-0000-000000000003'),
   'both position and series_count are claimed directly — nothing exists yet for either to disagree with');
+select ok(
+  (select series_user_chosen from public.books where id = 'dddddddd-0000-0000-0000-000000000003'),
+  'REASSIGN into a brand-new series also marks series_user_chosen');
 
 -- ── Guard 4: UNCHANGED name — delegates through set_series_order, no retirement ──
 set local role authenticated;
@@ -164,6 +177,9 @@ select ok(
 select ok(
   (select length = 10 from public.series where id = 'cccccccc-3333-3333-3333-333333333333'),
   'series.length is set through the same delegated call');
+select ok(
+  (select series_user_chosen from public.books where id = 'dddddddd-0000-0000-0000-000000000004'),
+  'the unchanged-name save still marks series_user_chosen — the final books UPDATE runs regardless');
 
 -- ── Guard 5: a non-owner is refused, and NEITHER table is touched ──
 set local role authenticated;

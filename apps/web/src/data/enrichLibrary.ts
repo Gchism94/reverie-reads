@@ -1,4 +1,4 @@
-import { contributorsFromAuthors, enrichmentCoverFill, mergeImport, type Book, type CoverSource, type Incoming } from '@reverie/core'
+import { contributorsFromAuthors, enrichmentCoverFill, enrichmentSeriesFill, mergeImport, type Book, type CoverSource, type Incoming } from '@reverie/core'
 import { supabase } from '../lib/supabase'
 import { toBookRow } from './mappers'
 import { enrichBookOutcome, type EnrichResult } from '../lib/enrich'
@@ -85,10 +85,14 @@ function coverOriginOf(e: EnrichResult): CoverSource {
  *  genre is the mapped primary genre (the C1 fill); mergeImport fills it only when blank, so the
  *  romance seed (genre='romance') is never overwritten. */
 function toIncoming(e: EnrichResult, b: Book): Incoming {
+  // Same non-overwrite rule as cover: a reader-chosen (or reader-cleared) series is never replaced
+  // or re-offered. A bare position number is meaningless without the series name it belongs to, so
+  // it's withheld along with series rather than gated independently.
+  const series = enrichmentSeriesFill(b, e.series)
   return {
     title: b.title,
-    series: e.series,
-    position: e.seriesPosition ?? '',
+    series,
+    position: series ? (e.seriesPosition ?? '') : '',
     isbn: e.isbn13 || e.isbn || e.isbn10 || '',
     // The non-overwrite rule: a user-chosen cover is never replaced (and never re-offered after the
     // reader clears it); otherwise fill-only, same as every other field mergeImport touches.
