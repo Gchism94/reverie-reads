@@ -87,13 +87,14 @@ export default defineConfig({
   // a desktop-only pointer mechanic — mouse-drag reorder (series-builder.spec.ts uses raw
   // page.mouse.move/down/up, which is a real desktop gesture, not dnd-kit's touch-capable
   // PointerSensor exercised through touch input) or native HTML5 <img draggable> drag-hijack
-  // prevention (shelf-regressions.spec.ts) — both of which land on SpineShelf, whose mobile
-  // behavior is under active investigation on a separate branch
-  // (docs/audits/mobile-shelf-interaction.md → fix/spine-shelf-overlay) and is explicitly not to
-  // be touched here. Everything else — forms, CRUD, imports, routing, offline cache, cover
+  // prevention (shelf-regressions.spec.ts). Both land on SpineShelf, but that exclusion is about
+  // those SPECS' own desktop-only gesture, not an open defect — SpineShelf's mobile touch-scroll
+  // reachability bug (docs/audits/mobile-shelf-interaction.md Defect A) shipped (#142, #148, #149)
+  // and is guarded by spine-shelf-reachability.spec.ts's per-frame invariance test, which DOES run
+  // on `mobile`. Everything else — forms, CRUD, imports, routing, offline cache, cover
   // sourcing — exercises the same click/fill/navigate primitives on both viewport sizes and is a
   // real mobile regression surface, so it runs on both. `a11y` stays desktop-only: it already
-  // sweeps four skins × both modes and adding a viewport axis belongs to a decision about a11y's
+  // sweeps all nine skins × modes and adding a viewport axis belongs to a decision about a11y's
   // own scope, not this one.
   //
   // Descriptor: iPhone-class touch (isMobile, hasTouch, iPhone 13's UA/DPR), but with the VIEWPORT
