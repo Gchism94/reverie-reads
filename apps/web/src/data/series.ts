@@ -67,16 +67,6 @@ export interface SeriesDetail {
   removed: SeriesEntry[]
 }
 
-/**
- * The patch that retires a slot. `book_id → null` frees the (series_id, book_id) unique index for a
- * later re-add, and `user_edited` keeps the source merge from trying to reposition a tombstone.
- *
- * `remove_series_entry` (20260731010000) writes this same shape in SQL, because that path also has to
- * clear `books.series` in the same transaction. The two must stay in step: change one and change the
- * other. Only `useSyncBookSeries` still uses this TS copy — `useRemoveEntry` goes through the RPC.
- */
-const removalPatch = () => ({ removed_at: new Date().toISOString(), book_id: null, user_edited: true })
-
 const toUiSeries = (row: SeriesRowT): UiSeries => ({
   id: row.id,
   name: row.name,
@@ -571,19 +561,21 @@ export function useRemoveEntry(name: string) {
 
 /**
  * Reconcile the book page's series edits into series_entries (docs/archive/task-series-defects.md §Positions,
- * §Removal). updateBook writes the book row; this keeps the SERIES side in step so the two surfaces
- * never disagree:
- *   · position: write the linked entry's position (user_edited, so a source refresh can't move it) —
- *     the book page's "#N" takes effect on the series page. If no entry exists yet, reconciliation
- *     seeds it from the (just-written) book row, so it lands either way. Clearing the number sends the
- *     slot to the END of the order rather than leaving a stale one — the same rule the seeder uses for
- *     a book with no number at all.
- *   · series change / clear: REMOVE the old slot. #65 kept it as a ghost, which readers reported as
- *     "removal doesn't stick" — the book was still sitting in the series. Removal now means the same
- *     thing here as it does on the series page.
+ * §Removal) — ONE RPC, ATOMICALLY (`sync_book_series`, 20260817010000).
  *
- * MUST run after updateBook has SETTLED: reconciliation revives a tombstone for any book still naming
- * the series, so removing before the book row is written would immediately undo itself.
+ * This used to be two sequential, independently-committed writes issued from HERE: retire the old
+ * slot (read from `book.series`, the client's CACHED value), then a separate `writeSeriesOrder` or
+ * book-row claim for the new number/length. A failure between them left `books.series` already
+ * pointing at the new name with the OLD slot still live — and unlike a tombstoned-but-unclaimed
+ * removal, revive-on-refresh does not undo this: there is no tombstone yet for it to revive, so
+ * nothing removes the stale live entry, permanently. The RPC also closes a second, independent bug:
+ * it reads the CURRENT series from the `books` row itself, inside its own transaction, never from
+ * whatever this hook's caller happened to be holding — a stale cache could retire the wrong slot.
+ *
+ * Position and length still split the same way they always have: when a series row AND a live
+ * entry already link this book, both go through `set_series_order` (called from inside the RPC,
+ * not duplicated here); otherwise they land as a direct claim on the book row, exactly as before.
+ * The RPC decides which; this hook just passes the three raw values through.
  */
 export function useSyncBookSeries() {
   const qc = useQueryClient()
@@ -600,77 +592,13 @@ export function useSyncBookSeries() {
       newPosition: number | null
       newSeriesCount?: number | null
     }) => {
-      const oldSeries = (book.series ?? '').trim()
-      const next = newSeries.trim()
-      const seriesIdFor = async (nm: string): Promise<string | undefined> => {
-        const { data } = await supabase.from('series').select('id').eq('name', nm).limit(1)
-        return (data ?? [])[0]?.id as string | undefined
-      }
-
-      // Left the old series (name changed or cleared) — retire the slot.
-      if (oldSeries && oldSeries !== next) {
-        const sid = await seriesIdFor(oldSeries)
-        if (sid) {
-          await supabase.from('series_entries').update(removalPatch()).eq('series_id', sid).eq('book_id', book.id)
-        }
-      }
-
-      // The book page's number and "of N" take effect on the series side.
-      //
-      // TWO PATHS, and the split is the same unreconciled-claim line drawn everywhere else. With a
-      // series ROW and a live ENTRY, both facts belong to the series and go through the RPC, which
-      // writes the entry, mirrors books.position and fans series.length out to every member book in
-      // one transaction. With no series row or no entry yet, books.position/series_count are a claim
-      // that is not yet a copy of anything — nothing exists for them to disagree with — so they are
-      // written on the book row directly and reconciliation seeds the entry from them later.
-      const sid = next ? await seriesIdFor(next) : undefined
-      const entryId = sid
-        ? (
-            (
-              await supabase
-                .from('series_entries')
-                .select('id')
-                .eq('series_id', sid)
-                .eq('book_id', book.id)
-                .is('removed_at', null)
-                .limit(1)
-            ).data ?? []
-          )[0]?.id as string | undefined
-        : undefined
-
-      let position = newPosition
-      if (next && sid && position == null) {
-        // Cleared: don't leave the old number standing. Send it to the end, where a book whose
-        // place in the order isn't known belongs.
-        const { data: maxRows } = await supabase
-          .from('series_entries')
-          .select('position')
-          .eq('series_id', sid)
-          .is('removed_at', null)
-          .order('position', { ascending: false })
-          .limit(1)
-        position = Math.floor(Number((maxRows ?? [])[0]?.position ?? 0)) + 1
-      }
-
-      if (sid && (entryId || newSeriesCount !== undefined)) {
-        await writeSeriesOrder({
-          seriesId: sid,
-          slots: entryId && position != null ? [{ entryId, position }] : [],
-          origin: 'reader',
-          setLength: newSeriesCount !== undefined,
-          length: newSeriesCount ?? null,
-        })
-      }
-
-      // The unreconciled half: whatever the RPC could not own, the book row still carries.
-      const bookPatch: Record<string, unknown> = {}
-      if (newPosition !== undefined && !entryId) bookPatch.position = newPosition
-      if (newSeriesCount !== undefined && !sid) bookPatch.series_count = newSeriesCount
-      if (Object.keys(bookPatch).length) {
-        const { error: bErr } = await supabase.from('books').update(bookPatch).eq('id', book.id)
-        if (bErr) throw bErr
-      }
-      return { oldSeries, next }
+      const { error } = await supabase.rpc('sync_book_series', {
+        p_book: book.id,
+        p_new_series: newSeries,
+        p_position: newPosition,
+        p_length: newSeriesCount ?? null,
+      })
+      if (error) throw error
     },
     onSuccess: (_r, { book, newSeries }) => {
       void qc.invalidateQueries({ queryKey: seriesListKey })
