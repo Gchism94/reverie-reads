@@ -682,21 +682,6 @@ the repo goes public.
   source) pays all four decodes on a big image, in a wasm sandbox, against Supabase's per-request
   CPU limit. Do not treat the current cost as the ceiling.
 
-- **`mergeSourceEntries` emits moves without checking whether the target position is
-  occupied, and there is no uniqueness constraint on `(series_id, position)`.**
-  Latent since the merge shipped — the `!userEdited && source === 'hardcover'`
-  double-lock meant almost no row was ever movable, so a colliding move was a
-  near-impossibility in practice. `fix/series-seed-provenance` widened the gate
-  to `!userEdited` alone, which is the correct fix for the flag itself (a
-  reconciliation-seeded row is not a reader gesture and must stay correctable),
-  but it also makes every seeded, unedited, linked row in the library eligible to
-  move on a Hardcover fetch — a population that went from ~0 to most of 252
-  series after the series backfill (#130). A catalog fetch that lands two
-  distinct slots on the same position degrades no worse than `sortEntries`'
-  title tiebreak (both books show, ordered alphabetically at that number)
-  rather than data loss or a crash, but it is reachable now in a way it
-  practically was not before.
-
 ## Product queue
 
 1. **Shelf-model redesign** — largest tester-facing item. Owned physical / ebook /

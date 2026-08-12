@@ -435,6 +435,8 @@ export interface SeriesSlot {
 interface SeriesOrderResult {
   moved: number
   skipped_user_edited: number
+  /** source-origin only: moves dropped because their target position is held outside the batch */
+  skipped_collision: number
   books_synced: number
   length_set: boolean
   length_books_synced: number
@@ -788,7 +790,7 @@ export function useApplySeriesSource(name: string) {
   const invalidate = useSeriesInvalidate(name)
   return useMutation({
     meta: { action: 'The series' },
-    mutationFn: async (input: { detail: SeriesDetail; author: string }): Promise<{ added: number; skipped: number; unavailable: boolean }> => {
+    mutationFn: async (input: { detail: SeriesDetail; author: string }): Promise<{ added: number; skipped: number; skippedCollision: number; unavailable: boolean }> => {
       const uid = await ownerId()
       const { data, error } = await supabase.functions.invoke('series', {
         body: { name, author: input.author },
@@ -807,6 +809,7 @@ export function useApplySeriesSource(name: string) {
       // the STORED flag and drops any row the reader has arranged, so a stale cache can no longer
       // talk the source into overwriting a reader's placement.
       let skipped = 0
+      let skippedCollision = 0
       if (moves.length) {
         const res = await writeSeriesOrder({
           seriesId: detail.series.id,
@@ -814,6 +817,10 @@ export function useApplySeriesSource(name: string) {
           origin: 'source',
         })
         skipped = res.skipped_user_edited
+        // A catalog position already held by a slot outside the batch: that one move is dropped
+        // server-side (the occupant is never renumbered out of the way) and the rest of the refresh
+        // still applies — the whole batch no longer aborts on one collision.
+        skippedCollision = res.skipped_collision
       }
       // A source entry with no usable number goes to the END, not to 0. `position: ... : 0` parked
       // every unnumbered arrival on the same slot, so the first one took 0 and each one after it
@@ -841,7 +848,7 @@ export function useApplySeriesSource(name: string) {
           ...(src.length ? { source: 'hardcover', source_ref: payload.sourceRef } : {}),
         })
         .eq('id', detail.series.id)
-      return { added, skipped, unavailable: !!payload.unavailable && !src.length }
+      return { added, skipped, skippedCollision, unavailable: !!payload.unavailable && !src.length }
     },
     onSuccess: () => invalidate(),
   })
