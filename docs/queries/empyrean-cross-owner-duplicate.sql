@@ -1,6 +1,22 @@
 -- One-incident fix: a cross-owner ghost duplicate in "The Empyrean" left behind by the
 -- Iron Flame merge (iron-flame-merge.sql).
 --
+-- ══ ALREADY RUN — 2026-08-12 ══════════════════════════════════════════════════════════════════════
+-- The owner ran this by hand. All three PRE-FLIGHT/write guards passed and the tombstone applied:
+-- 69ceef54… now has book_id = null, user_edited = true, removed_at = 2026-08-12 16:18:05+00.
+-- a8e2ac80… (the kept entry) verified unchanged. The A3 cross-owner mismatch scan came back with
+-- 0 rows post-fix — the incident is closed. Kept here as documentation, per this repo's convention
+-- for every hand-run production fix; do not re-run against the same rows.
+--
+-- One bug worth flagging for future scripts of this shape: the original version of THE FIX below
+-- had the row-count check in a *separate* `do $$ ... $$` block after the `UPDATE`, instead of
+-- wrapping both in the same block. `GET DIAGNOSTICS ... ROW_COUNT` only reflects a statement
+-- executed inside the SAME PL/pgSQL block — it does not see a plain top-level statement that ran
+-- before the block started. That produced a false "expected exactly 1 row updated, got 0" error
+-- even though the UPDATE itself succeeded (confirmed via the POST-RUN AUDIT). Fixed below to match
+-- the pattern acotar-ebook-bundle-ownership.sql already uses correctly (UPDATE and GET DIAGNOSTICS
+-- in the same block).
+--
 -- STAGED — DO NOT RUN until the owner has reviewed the PRE-FLIGHT output below and confirmed it
 -- matches this script's guards. No Code session runs this — same discipline as iron-flame-merge.sql
 -- and acotar-ebook-bundle-ownership.sql.
@@ -152,19 +168,24 @@ end $$;
 -- Tombstone, using the same shape merge_books itself uses for a colliding redundant entry
 -- (see merge_series_entries_test.sql lines 106-116): book_id → null, user_edited → true,
 -- removed_at → now(). The row is kept, not deleted — its history stays queryable.
-update public.series_entries
-   set book_id = null,
-       user_edited = true,
-       removed_at = now()
- where id = '69ceef54-b5b5-4727-9452-4bc1cf376f20'::uuid
-   and owner_id = '37e9e3a5-ecfc-4f83-8563-d6a602108797'::uuid
-   and book_id = '1555cc10-3496-435b-a8ea-9b1f36ab62f9'::uuid
-   and removed_at is null;
-
+--
+-- UPDATE and the row-count check run in the SAME do $$ block: GET DIAGNOSTICS ROW_COUNT only sees
+-- a statement executed within its own PL/pgSQL block, not a separate top-level statement that ran
+-- before it — splitting them (as an earlier version of this file did) produces a false "0 rows
+-- updated" error even when the UPDATE succeeded.
 do $$
 declare
   n int;
 begin
+  update public.series_entries
+     set book_id = null,
+         user_edited = true,
+         removed_at = now()
+   where id = '69ceef54-b5b5-4727-9452-4bc1cf376f20'::uuid
+     and owner_id = '37e9e3a5-ecfc-4f83-8563-d6a602108797'::uuid
+     and book_id = '1555cc10-3496-435b-a8ea-9b1f36ab62f9'::uuid
+     and removed_at is null;
+
   get diagnostics n = row_count;
   if n <> 1 then
     raise exception 'expected exactly 1 row updated, got % — STOP, do not commit', n;
