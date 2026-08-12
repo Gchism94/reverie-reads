@@ -34,7 +34,7 @@
 -- `reset role` so RLS cannot hide a row and collapse an equality into a two-NULLs false positive.
 
 begin;
-select plan(27);
+select plan(37);
 
 insert into auth.users (id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
 values ('11111111-aaaa-bbbb-cccc-000000000001', 'authenticated', 'authenticated',
@@ -185,6 +185,107 @@ select is((select position::text from public.series_entries where id = 'e0000000
   '5', 'the un-arranged ghost actually moved — "moved: 1" is not the only witness');
 select is((select user_edited::text from public.series_entries where id = 'e0000000-0000-0000-0000-000000000005'),
   'false', 'a source move does NOT stamp user_edited — nothing here can raise the flag but a reader gesture');
+
+-- ── 5b. OCCUPANCY COLLISIONS (20260821010000). A source-origin move whose target position is held
+--    by a slot outside the batch is SKIPPED (and counted), the rest of the refresh applies, and the
+--    occupant is never renumbered. A reader-origin collision still raises. State at this point:
+--    e3@1, e2@2, e1@3, e5@5, e4@9 (user_edited — the reader-arranged occupant every source batch
+--    excludes). Two fresh unedited ghosts join as the movable population. ──────────────────────────
+insert into public.series_entries (id, series_id, owner_id, position, title, author, book_id, user_edited) values
+  ('e0000000-0000-0000-0000-000000000006', '5e100000-0000-0000-0000-000000000001',
+   '11111111-aaaa-bbbb-cccc-000000000001', 20, 'Ghost Twenty', 'A', null, false),
+  ('e0000000-0000-0000-0000-000000000007', '5e100000-0000-0000-0000-000000000001',
+   '11111111-aaaa-bbbb-cccc-000000000001', 21, 'Ghost TwentyOne', 'A', null, false);
+
+set local role authenticated;
+select set_config('request.jwt.claims',
+  '{"sub":"11111111-aaaa-bbbb-cccc-000000000001","role":"authenticated"}', true);
+
+-- One colliding move (e6→9, held by reader-arranged e4) + one clean move (e7→22) in ONE batch.
+-- The lives_ok is half the point: the pre-20260821 function raised here and took the clean move
+-- down with the collision.
+select lives_ok(
+  $$select public.set_series_order(
+      '5e100000-0000-0000-0000-000000000001',
+      '[{"entry_id":"e0000000-0000-0000-0000-000000000006","position":9},
+        {"entry_id":"e0000000-0000-0000-0000-000000000007","position":22}]'::jsonb,
+      'source')$$,
+  'a source batch with one colliding move LIVES — the collision no longer aborts the refresh');
+
+-- The counts, from an identical re-call (idempotent: the skip skips again, the landed move re-lands
+-- on its own position). Composite so one call answers all three — a second and third call would
+-- re-run the function's side effects for no new information.
+select is(
+  (select (r ->> 'moved') || '/' || (r ->> 'skipped_user_edited') || '/' || (r ->> 'skipped_collision')
+   from (select public.set_series_order(
+     '5e100000-0000-0000-0000-000000000001',
+     '[{"entry_id":"e0000000-0000-0000-0000-000000000006","position":9},
+       {"entry_id":"e0000000-0000-0000-0000-000000000007","position":22}]'::jsonb,
+     'source') as r) q),
+  '1/0/1', 'moved/skipped_user_edited/skipped_collision = 1/0/1 — the two skip counts do not contaminate each other');
+
+reset role;
+
+select is((select position::text from public.series_entries where id = 'e0000000-0000-0000-0000-000000000006'),
+  '20', 'the colliding move did NOT apply — the slot stays where it was');
+select is((select position::text from public.series_entries where id = 'e0000000-0000-0000-0000-000000000007'),
+  '22', 'the clean move in the same batch DID apply — the refresh survives the collision');
+select is((select position::text from public.series_entries where id = 'e0000000-0000-0000-0000-000000000004'),
+  '9', 'the occupant is untouched — never renumbered out of the way');
+
+-- THE CASCADE — the reason the filter iterates (header of 20260821010000). e6→9 collides with e4,
+-- so e6 is dropped — which means e6 STAYS at 20, so e7→20 now collides with e6. A single-pass
+-- filter keeps e7→20, parks it, and dies 23505 on the final write against live e6@20: this
+-- lives_ok is the assertion that turns red under that mutant.
+set local role authenticated;
+select set_config('request.jwt.claims',
+  '{"sub":"11111111-aaaa-bbbb-cccc-000000000001","role":"authenticated"}', true);
+
+select lives_ok(
+  $$select public.set_series_order(
+      '5e100000-0000-0000-0000-000000000001',
+      '[{"entry_id":"e0000000-0000-0000-0000-000000000006","position":9},
+        {"entry_id":"e0000000-0000-0000-0000-000000000007","position":20}]'::jsonb,
+      'source')$$,
+  'the cascade batch lives — dropping one slot re-collides the other, and BOTH are skipped');
+
+select is(
+  (select (r ->> 'moved') || '/' || (r ->> 'skipped_user_edited') || '/' || (r ->> 'skipped_collision')
+   from (select public.set_series_order(
+     '5e100000-0000-0000-0000-000000000001',
+     '[{"entry_id":"e0000000-0000-0000-0000-000000000006","position":9},
+       {"entry_id":"e0000000-0000-0000-0000-000000000007","position":20}]'::jsonb,
+     'source') as r) q),
+  '0/0/2', 'cascade counts: nothing moved, skipped_collision = 2 — the second-order collision is found');
+
+reset role;
+
+-- The whole live multiset, not just the two slots: a row a single-pass mutant left parked (or half
+-- moved) survives at a position no slot asked for, and only the multiset catches it.
+select is(
+  (select string_agg(position::text, ',' order by position)
+     from public.series_entries
+    where series_id = '5e100000-0000-0000-0000-000000000001' and removed_at is null),
+  '1,2,3,5,9,20,22', 'cascade: the live position multiset is exactly what it was — nothing moved, nothing stranded');
+
+-- A READER-origin collision still raises, unchanged: a reader batch that collides is a stale cache
+-- or a bug, and silently dropping a slot the reader believes exists is the removal-bug shape.
+set local role authenticated;
+select set_config('request.jwt.claims',
+  '{"sub":"11111111-aaaa-bbbb-cccc-000000000001","role":"authenticated"}', true);
+
+select throws_ok(
+  $$select public.set_series_order(
+      '5e100000-0000-0000-0000-000000000001',
+      '[{"entry_id":"e0000000-0000-0000-0000-000000000005","position":9}]'::jsonb,
+      'reader')$$,
+  'set_series_order: a target position is already held by a slot outside this batch',
+  'a reader-origin collision still raises by name — the skip is source-only');
+
+reset role;
+
+select is((select position::text from public.series_entries where id = 'e0000000-0000-0000-0000-000000000005'),
+  '5', 'the refused reader move touched nothing');
 
 -- ── 6. Series length and its synced copies, atomically ──────────────────────────────────────────
 set local role authenticated;
