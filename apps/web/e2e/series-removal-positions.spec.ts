@@ -1089,3 +1089,68 @@ test('a book cannot claim an entry that already belongs to a different book', as
     await reset(c)
   }
 })
+
+// ── 20260821010000: a colliding source move is SKIPPED, and the rest of the refresh still applies ──
+// The collision is built deliberately: the catalog reports Alpha at the position a READER-ARRANGED
+// entry (Bravo) already holds, and Charlie at a free one. Before the migration the whole RPC raised
+// on Alpha's collision — the mutation errored, the note read as a network failure, and Charlie's
+// perfectly good correction was lost with it. The assertions are the surviving arrangement and the
+// skip being said out loud, not merely that the call returned ok.
+test('a colliding source move skips that move only — the rest of the refresh lands', async ({
+  page,
+}) => {
+  test.setTimeout(180_000)
+  const c = await client()
+  await reset(c)
+  // Alpha@2, Bravo@3, Charlie@5 — the catalog will ask Alpha→3 (taken) and Charlie→4 (free).
+  await seedSeries(c, [2, 3, 5])
+  await stubBackends(page)
+  // Registered AFTER stubBackends, so it wins (Playwright matches newest route first): the catalog
+  // names only Alpha and Charlie, so Bravo is never in the batch — it is the OUTSIDE occupant.
+  await page.route('**/functions/v1/series**', (r) =>
+    r.fulfill({
+      json: {
+        sourceRef: 'stub',
+        entries: [
+          { position: 3, title: 'Audit Alpha', author: 'Nell Marrow' },
+          { position: 4, title: 'Audit Charlie', author: 'Nell Marrow' },
+        ],
+      },
+    }),
+  )
+  try {
+    await signIn(page, c.session)
+    await openSeries(page)
+    await expect.poll(async () => (await liveEntries(c)).length, { timeout: 20_000 }).toBe(3)
+
+    // Bravo becomes reader-arranged, directly — the state the server's user_edited filter reads.
+    // Its position (3) is exactly where the catalog wants Alpha, which is the collision.
+    const bravo = await entryByTitle(c, 'Audit Bravo')
+    await ok(
+      c.sb.from('series_entries').update({ user_edited: true }).eq('id', bravo!.id),
+      'collision test: mark Bravo reader-arranged',
+    )
+
+    await page.getByRole('button', { name: /Fetch series data/i }).click()
+
+    // The skip is reported to the reader — this note is unreachable if the RPC aborts (the error
+    // path says "Couldn't reach the catalog just now." instead).
+    await expect(page.getByText(/1 skipped — its catalog position is already taken/i)).toBeVisible({
+      timeout: 20_000,
+    })
+
+    // The surviving arrangement: Alpha's colliding move did NOT apply, Bravo was never renumbered
+    // out of the way, and Charlie's clean move in the SAME batch landed — the anti-abort witness.
+    await expect
+      .poll(async () => (await liveEntries(c)).map((e) => `${e.title}@${e.position}`), {
+        timeout: 15_000,
+      })
+      .toEqual(['Audit Alpha@2', 'Audit Bravo@3', 'Audit Charlie@4'])
+
+    // books.position mirrored for the move that landed, in the same transaction.
+    expect((await bookRow(c, 'Audit Charlie'))?.position).toBe(4)
+    expect((await bookRow(c, 'Audit Alpha'))?.position).toBe(2)
+  } finally {
+    await reset(c)
+  }
+})
