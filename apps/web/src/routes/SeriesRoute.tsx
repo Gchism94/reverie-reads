@@ -164,14 +164,29 @@ function SeriesScreen() {
             .find(Boolean) ?? '',
       },
       {
-        onSuccess: (r) =>
+        onSuccess: (r) => {
+          // Both skip kinds are said out loud, so a refresh that left things alone doesn't read as
+          // a no-op: rows the reader arranged stay put by design, and a catalog position already
+          // held by another slot drops just that move rather than the whole refresh.
+          const parts: string[] = []
+          if (r.added)
+            parts.push(
+              `${r.added} canonical ${r.added === 1 ? 'entry' : 'entries'} added from Hardcover.`,
+            )
+          if (r.skipped)
+            parts.push(`${r.skipped} left where you arranged ${r.skipped === 1 ? 'it' : 'them'}.`)
+          if (r.skippedCollision)
+            parts.push(
+              `${r.skippedCollision} skipped — ${r.skippedCollision === 1 ? 'its catalog position is' : 'their catalog positions are'} already taken.`,
+            )
           setSourceNote(
-            r.added
-              ? `${r.added} canonical ${r.added === 1 ? 'entry' : 'entries'} added from Hardcover.`
+            parts.length
+              ? parts.join(' ')
               : r.unavailable
                 ? 'No source data for this series — yours to arrange.'
                 : 'Already up to date.',
-          ),
+          )
+        },
         onError: () => setSourceNote('Couldn’t reach the catalog just now.'),
       },
     )
