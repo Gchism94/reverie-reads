@@ -28,13 +28,14 @@ type Table =
   | 'series'
   | 'series_entries'
   | 'trope_suggestions'
+  | 'series_merge_decisions'
   | 'profiles'
 type Db = Record<Table, Row[]>
 
 const TABLES: Table[] = [
   'books', 'tropes', 'moods', 'book_tropes', 'book_moods', 'author_follows', 'reads', 'lists',
   'list_items', 'reviews', 'reading_orders', 'reading_order_items', 'merge_verdicts', 'series',
-  'series_entries', 'trope_suggestions', 'profiles',
+  'series_entries', 'trope_suggestions', 'series_merge_decisions', 'profiles',
 ]
 
 const OWNER = 'user-old'
@@ -100,6 +101,7 @@ function project(table: Table, columns: string, rows: Row[]): Row[] {
 
 class Query implements PromiseLike<{ data: Row[] | Row | null; error: unknown }> {
   private filters: [string, unknown][] = []
+  private notEquals: [string, unknown][] = []
   private negated: string[] = []
   private columns = '*'
   private pending: Row[] | null = null
@@ -114,6 +116,11 @@ class Query implements PromiseLike<{ data: Row[] | Row | null; error: unknown }>
   }
   eq(col: string, val: unknown) {
     this.filters.push([col, val])
+    return this
+  }
+  /** `.neq('ruling', 'same')` — the only not-equal filter the code under test uses. */
+  neq(col: string, val: unknown) {
+    this.notEquals.push([col, val])
     return this
   }
   /** `.not('removed_at', 'is', null)` — the only negated filter the code under test uses. */
@@ -182,7 +189,10 @@ class Query implements PromiseLike<{ data: Row[] | Row | null; error: unknown }>
       this.table,
       this.columns,
       table.filter(
-        (r) => this.filters.every(([c, v]) => r[c] === v) && this.negated.every((c) => r[c] != null),
+        (r) =>
+          this.filters.every(([c, v]) => r[c] === v) &&
+          this.notEquals.every(([c, v]) => r[c] !== v) &&
+          this.negated.every((c) => r[c] != null),
       ),
     )
     return { data: single ? (hits[0] ?? null) : hits, error: null }
@@ -198,7 +208,7 @@ vi.mock('../lib/supabase', () => ({
 // Contributor persistence has its own RPC and its own tests; it is not what these assert.
 vi.mock('./contributors', () => ({ persistContributors: vi.fn(async () => {}) }))
 
-const { buildBackup, restoreBackup, seriesTombstones, dismissalsByBook } = await import('./importExport')
+const { buildBackup, restoreBackup, seriesTombstones, dismissalsByBook, seriesRulingRows } = await import('./importExport')
 const { BACKED_UP_TABLES, USER_OWNED_TABLES } = await import('./ownedTables')
 
 /** A library with two books, canonical + personal tropes, a mood, and two followed authors. */
@@ -248,6 +258,15 @@ function seedOldAccount() {
       { book_id: 'book-a', trope_id: 't-canon', owner_id: OWNER, state: 'open', source: 'hardcover' },
       // DISMISSED — the reader waved it away; must survive.
       { book_id: 'book-b', trope_id: 't-canon', owner_id: OWNER, state: 'dismissed', source: 'hardcover' },
+    ],
+    series_merge_decisions: [
+      // DISTINCT — the reader said no; must survive so the pair is never re-proposed.
+      { id: 'smd-distinct', owner_id: OWNER, name_key_a: 'fourth wing', name_key_b: 'iron flame', ruling: 'distinct', surviving_series_id: null, alias_name: null },
+      // RELATED_BUT_SEPARATE — siblings, not duplicates; also a refusal-to-merge and must travel.
+      { id: 'smd-siblings', owner_id: OWNER, name_key_a: 'mountain men', name_key_b: 'mountain men matchmaker', ruling: 'related_but_separate', surviving_series_id: null, alias_name: null },
+      // SAME — already reflected in the merged books/series_entries data; must NOT travel (its
+      // surviving_series_id can't be remapped onto the new account's regenerated series ids).
+      { id: 'smd-same', owner_id: OWNER, name_key_a: 'acotar', name_key_b: 'a court of thorns and roses', ruling: 'same', surviving_series_id: 'ser1', alias_name: 'ACOTAR' },
     ],
     profiles: [{ id: OWNER, display_name: 'Reader', skin: 'tryst' }],
   }
@@ -714,6 +733,25 @@ describe('backup round trip — the reader’s refusals', () => {
     expect(result.tombstones).toBe(0)
     expect(db.series_entries).toHaveLength(0)
   })
+
+  it('a "distinct"/"related_but_separate" series ruling survives, and a "same" ruling does not travel', async () => {
+    const parsed = JSON.parse(await buildBackup()) as {
+      series_merge_decisions: { name_key_a: string; name_key_b: string; ruling: string }[]
+    }
+    // 'same' is excluded server-side (buildBackup's .neq) — only the two refusals travel.
+    expect(parsed.series_merge_decisions).toHaveLength(2)
+    expect(parsed.series_merge_decisions.map((r) => r.ruling).sort()).toEqual(['distinct', 'related_but_separate'])
+
+    wipeToFreshAccount()
+    await restoreBackup(JSON.stringify(parsed))
+
+    expect(db.series_merge_decisions).toHaveLength(2)
+    expect(db.series_merge_decisions.every((r) => str(r, 'owner_id') === NEW_OWNER)).toBe(true)
+    const distinct = db.series_merge_decisions.find((r) => str(r, 'ruling') === 'distinct')
+    expect(distinct).toMatchObject({ name_key_a: 'fourth wing', name_key_b: 'iron flame' })
+    const siblings = db.series_merge_decisions.find((r) => str(r, 'ruling') === 'related_but_separate')
+    expect(siblings).toMatchObject({ name_key_a: 'mountain men', name_key_b: 'mountain men matchmaker' })
+  })
 })
 
 // The round-trip tests above cannot catch OVER-capture in these two shapers: the queries filter
@@ -739,5 +777,25 @@ describe('refusal shapers reject the positive half on their own', () => {
       { book_id: 'b2', state: 'dismissed', tropes: null },
     ] as unknown as Parameters<typeof dismissalsByBook>[0]
     expect(dismissalsByBook(rows)).toEqual({ b1: ['Waved Away'] })
+  })
+
+  it('seriesRulingRows drops "same" even when fed one directly, canonicalizes pair order, and dedupes', () => {
+    const rows = [
+      // 'same' must be dropped here too — buildBackup's server-side .neq is not the only guard.
+      { name_key_a: 'acotar', name_key_b: 'a court of thorns and roses', ruling: 'same' },
+      // out of alphabetical order — must come back canonicalized (a <= b)
+      { name_key_a: 'iron flame', name_key_b: 'fourth wing', ruling: 'distinct' },
+      // a duplicate of the same pair, keys reversed — a real upsert would fail on this twice in
+      // one statement, so only one row may survive
+      { name_key_a: 'fourth wing', name_key_b: 'iron flame', ruling: 'distinct' },
+      { name_key_a: 'mountain men', name_key_b: 'mountain men matchmaker', ruling: 'related_but_separate' },
+      // unkeyable — dropped rather than restored with an empty key
+      { name_key_a: '', name_key_b: 'iron flame', ruling: 'distinct' },
+    ] as unknown as Parameters<typeof seriesRulingRows>[0]
+    const out = seriesRulingRows(rows, NEW_OWNER)
+    expect(out).toEqual([
+      { owner_id: NEW_OWNER, name_key_a: 'fourth wing', name_key_b: 'iron flame', ruling: 'distinct' },
+      { owner_id: NEW_OWNER, name_key_a: 'mountain men', name_key_b: 'mountain men matchmaker', ruling: 'related_but_separate' },
+    ])
   })
 })
