@@ -2,7 +2,9 @@ import { useState, type ReactNode } from 'react'
 import { Link, createRoute, useNavigate } from '@tanstack/react-router'
 import {
   authorOf,
+  bookGenres,
   bookSubgenres,
+  CORE_GENRES,
   buildBuyLinks,
   buyDisclosure,
   isAuthorRole,
@@ -246,6 +248,9 @@ function BookDetailScreen() {
           </div>
           {book.series && <SeriesStrip book={book} />}
           <div className="mt-3 flex flex-wrap gap-1.5">
+            {bookGenres(book).map((g) => (
+              <Pill key={g}>{CORE_GENRES.find((cg) => cg.toLowerCase() === g) ?? g}</Pill>
+            ))}
             {bookSubgenres(book).map((s) => (
               <Pill key={s}>{s}</Pill>
             ))}

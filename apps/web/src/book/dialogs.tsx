@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import {
   authorOf,
+  bookGenres,
   bookSubgenres,
   CORE_GENRES,
   fromFirstLast,
@@ -188,6 +189,16 @@ export function EditDetails({
   // Subgenres are a multi-pick; the first selection leads (it colors the gradient). Picks made
   // under one genre survive a genre switch — nothing is silently dropped.
   const [subs, setSubs] = useState<string[]>(() => bookSubgenres(book))
+  // Genres are a multi-pick too, same "first pick leads" convention as subs: the <select> above
+  // stays the PRIMARY genre (it alone drives the gradient + subgenre vocabulary, unchanged);
+  // extraGenres are additional tags a book can also carry (the romantasy shape import already
+  // produces via normalizeImportGenres — this is what lets a hand-edited book match that, and
+  // what lets the reader add a second tag to any book, not just imported ones).
+  const [extraGenres, setExtraGenres] = useState<string[]>(() =>
+    bookGenres(book).filter((g) => g !== book.genre),
+  )
+  const toggleGenre = (g: string) =>
+    setExtraGenres((prev) => (prev.includes(g) ? prev.filter((x) => x !== g) : [...prev, g]))
   // Spice was settable in Add and NOWHERE else — a book's intensity could not be changed after
   // creation except by CSV import. Same control as Add, so the gesture is the one readers know.
   const [intensity, setIntensity] = useState<number>(book.intensity ?? 0)
@@ -283,6 +294,7 @@ export function EditDetails({
           pages,
           status: f.status as SeriesStatus,
           genre: f.genre,
+          genres: [f.genre, ...extraGenres.filter((g) => g !== f.genre)],
           subgenres: subs,
           subgenre: subs[0] ?? '',
           format: f.format,
@@ -441,6 +453,29 @@ export function EditDetails({
           />
         </Field>
       </div>
+      {f.genre && (
+        <div className="mt-3">
+          <span className="mb-1 block text-[11px] uppercase tracking-[0.15em] text-muted">
+            Also tag as
+          </span>
+          <div className="flex flex-wrap gap-1.5">
+            {CORE_GENRES.filter((g) => g.toLowerCase() !== f.genre).map((g) => (
+              <Chip
+                key={g}
+                active={extraGenres.includes(g.toLowerCase())}
+                onClick={() => toggleGenre(g.toLowerCase())}
+              >
+                {g}
+              </Chip>
+            ))}
+          </div>
+          {extraGenres.length > 0 && (
+            <p className="mt-1.5 text-[11px] text-muted">
+              A romantasy-shaped book — tagged under more than one genre's shelf at once.
+            </p>
+          )}
+        </div>
+      )}
       <div className="mt-3">
         <span className="mb-1 block text-[11px] uppercase tracking-[0.15em] text-muted">
           Subgenres

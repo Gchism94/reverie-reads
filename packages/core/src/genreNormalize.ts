@@ -261,3 +261,11 @@ export function inferGenreFromSubgenre(subgenre: string): string | null {
 export function bookSubgenres(b: Pick<Book, 'subgenre' | 'subgenres'>): string[] {
   return b.subgenres.length ? b.subgenres : b.subgenre ? [b.subgenre] : []
 }
+
+/** Every CORE genre a book carries (lowercased keys, e.g. 'romance'). New records store genres[];
+ *  pre-migration singles ride in `genre`. Mirrors bookSubgenres — read genres through this
+ *  everywhere a book's full genre set is filtered, tallied, or displayed, rather than reading the
+ *  single `genre` field directly and silently dropping any additional tags. */
+export function bookGenres(b: Pick<Book, 'genre' | 'genres'>): string[] {
+  return b.genres.length ? b.genres : b.genre ? [b.genre] : []
+}
