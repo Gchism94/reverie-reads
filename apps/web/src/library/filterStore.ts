@@ -14,6 +14,7 @@ interface FilterState {
   panelOpen: boolean
   setQuery: (q: string) => void
   toggleTag: (t: string) => void
+  setGenre: (g: string) => void
   setSub: (s: string) => void
   setStatus: (s: LibraryFilters['status']) => void
   setLen: (s: SeriesLenBucket) => void
@@ -44,6 +45,7 @@ export const useFilters = create<FilterState>((set) => ({
           : [...s.filters.tags, t],
       },
     })),
+  setGenre: (genre) => set((s) => ({ filters: { ...s.filters, genre } })),
   setSub: (sub) => set((s) => ({ filters: { ...s.filters, sub } })),
   setStatus: (status) => set((s) => ({ filters: { ...s.filters, status } })),
   setLen: (len) => set((s) => ({ filters: { ...s.filters, len } })),

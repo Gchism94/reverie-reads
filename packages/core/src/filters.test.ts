@@ -25,6 +25,50 @@ describe('matchesFilters', () => {
     fave: true,
   })
 
+  // The genre facet is genres[]-aware via bookGenres, which is what makes a multi-genre book
+  // reachable from either genre's facet rather than only its primary.
+  describe('genre facet', () => {
+    it('matches a single-genre book on its primary genre, and rejects another genre', () => {
+      const single = makeBook({ id: 's', title: 'Single', genre: 'romance', genres: [] })
+      expect(matchesFilters(single, { ...defaultFilters(), genre: 'romance' })).toBe(true)
+      expect(matchesFilters(single, { ...defaultFilters(), genre: 'fantasy' })).toBe(false)
+    })
+
+    it('matches a two-genre book on EITHER of its genres', () => {
+      const both = makeBook({
+        id: 'b',
+        title: 'Romantasy',
+        genre: 'romance',
+        genres: ['romance', 'fantasy'],
+      })
+      expect(matchesFilters(both, { ...defaultFilters(), genre: 'romance' })).toBe(true)
+      expect(matchesFilters(both, { ...defaultFilters(), genre: 'fantasy' })).toBe(true)
+      expect(matchesFilters(both, { ...defaultFilters(), genre: 'horror' })).toBe(false)
+    })
+
+    it('falls back to the primary genre when genres[] is empty (pre-multi-genre rows)', () => {
+      const legacy = makeBook({ id: 'l', title: 'Legacy', genre: 'mystery', genres: [] })
+      expect(matchesFilters(legacy, { ...defaultFilters(), genre: 'mystery' })).toBe(true)
+    })
+
+    it('handles a non-CORE value in genres[] without crashing or matching a real genre', () => {
+      const odd = makeBook({
+        id: 'o',
+        title: 'Odd',
+        genre: 'romance',
+        genres: ['romance', 'not-a-real-genre'],
+      })
+      expect(matchesFilters(odd, { ...defaultFilters(), genre: 'not-a-real-genre' })).toBe(true)
+      expect(matchesFilters(odd, { ...defaultFilters(), genre: 'fantasy' })).toBe(false)
+    })
+
+    it("'All' is off — every book passes regardless of genre", () => {
+      const f = makeBook({ id: 'f', title: 'F', genre: 'fantasy', genres: ['fantasy'] })
+      expect(matchesFilters(f, { ...defaultFilters(), genre: 'All' })).toBe(true)
+      expect(defaultFilters().genre).toBe('All')
+    })
+  })
+
   it('requires ALL selected tropes to be present', () => {
     expect(matchesFilters(book, { ...defaultFilters(), tags: ['Dragon Riders'] })).toBe(true)
     expect(matchesFilters(book, { ...defaultFilters(), tags: ['Dragon Riders', 'Mafia'] })).toBe(
