@@ -165,7 +165,7 @@ function LibraryScreen() {
     [books, filters],
   )
   // The default library — what you have in hand (owned or borrowed) or have read. Wishlist and
-  // unset-unread records join in only via the filter chip (docs/task-ownership-v2.md).
+  // unset-unread records join in only via the filter chip (docs/archive/task-ownership-v2.md).
   const libraryBooks = useMemo(() => (books ?? []).filter(inDefaultLibrary), [books])
 
   if (isLoading) return <Centered>{voice.loading}</Centered>

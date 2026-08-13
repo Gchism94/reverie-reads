@@ -52,7 +52,7 @@ export function CoverCard({
   const showsPlaceholder = !book.cover || brokenIds.has(book.id)
   const markInk = showsPlaceholder ? 'var(--mark-on-ph)' : 'var(--mark-accent)'
   const markBg = showsPlaceholder ? 'rgba(0,0,0,0.62)' : 'rgba(0,0,0,0.45)'
-  // Possession, read through the derived word (docs/task-shelf-model.md). A book NOT in hand gets
+  // Possession, read through the derived word (docs/archive/task-shelf-model.md). A book NOT in hand gets
   // the ghost: the ARTWORK dims behind --ghost-opacity and the frame goes dashed. A BORROWED book is
   // in your hands — it never dims; instead it wears a solid accent ring (distinct from the ghost).
   // Title/author below and the marks keep full contrast (AA untouched). One word, not a flag test,
@@ -113,7 +113,13 @@ export function CoverCard({
           aria-label={
             book.fave ? `Remove ${book.title} from favorites` : `Add ${book.title} to favorites`
           }
-          className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center text-[14px] opacity-0 backdrop-blur transition-opacity focus-visible:opacity-100 group-hover:opacity-100 aria-pressed:opacity-100"
+          // A coarse (touch) primary pointer can't hover, so `group-hover:opacity-100` never
+          // reveals this control there — an unfaved book's toggle was invisible until a stray tap
+          // or keyboard focus found it (docs/audits/mobile-shelf-interaction.md Defect B).
+          // `pointer-coarse:` is Tailwind's built-in variant for this repo's existing
+          // `@media (pointer: coarse)` idiom (globals.css:60) — a mouse/trackpad becoming primary
+          // still gets the quiet hover-reveal.
+          className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center text-[14px] opacity-0 backdrop-blur transition-opacity focus-visible:opacity-100 group-hover:opacity-100 aria-pressed:opacity-100 pointer-coarse:opacity-100"
           style={{
             background: markBg,
             color: book.fave ? markInk : '#fff',

@@ -75,7 +75,7 @@ describe('Reverie import template (generated from the core profile)', () => {
     expect(fourthWing?.incoming.readStatus).toBe('Unread')
     expect(hacienda?.incoming.readStatus).toBe('Reading')
 
-    // Possession (docs/task-manual-merge.md §3, remodelled by task-shelf-model): the template's
+    // Possession (docs/archive/task-manual-merge.md §3, remodelled by task-shelf-model): the template's
     // Owned column carries borrowed end to end — Yes → owned, blank → owned, Borrowed → borrowed,
     // No → wishlist. One spreadsheet cell is one WORD, so the assertion is on the word AND on the
     // flags it expands to: a cell reading "Borrowed" must produce borrowed=true, not ownership=owned.

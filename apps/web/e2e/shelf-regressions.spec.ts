@@ -4,7 +4,7 @@ import { authFailure } from './support/authError'
 import { keepOfflineCacheEmpty } from './support/offlineCache'
 import { ok, okData, okUser } from './support/ok'
 
-// Regression guards for docs/task-shelf-regressions.md — the two capabilities that shipped at #48/#49
+// Regression guards for docs/archive/task-shelf-regressions.md — the two capabilities that shipped at #48/#49
 // and silently broke:
 //   1. Adding a book you do NOT own to a shelf from the SHELVES page (/shelves), via that page's own
 //      picker → "search everywhere" seam. The seam was wired into the shelf DETAIL page at #55 but the

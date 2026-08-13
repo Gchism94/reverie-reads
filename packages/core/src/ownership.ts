@@ -2,7 +2,7 @@ import type { Book, BookOwnership, Owned, PossessionState } from './types'
 
 export type OwnedFormat = 'physical' | 'ebook' | 'audiobook'
 
-/** The two things `ownership` can say (docs/task-shelf-model.md). Borrowed and wishlist are flags,
+/** The two things `ownership` can say (docs/archive/task-shelf-model.md). Borrowed and wishlist are flags,
  *  not values — see POSSESSION_STATES for the derived word the controls show. */
 export const OWNERSHIP_VALUES: readonly BookOwnership[] = ['owned', 'unowned']
 

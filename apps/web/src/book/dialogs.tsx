@@ -233,8 +233,12 @@ export function EditDetails({
    * validate first (the rejection above is now impossible), then run the writes in order, stopping
    * at the first failure, and keep the dialog open so the reader can see and fix it.
    *
-   * Order is forced: useSyncBookSeries removes the old slot, and reconciliation revives a tombstone
-   * for any book still naming the series — so the book row must be written before the series sync.
+   * Order between the book write and the series sync is no longer forced by correctness — each
+   * touches a disjoint column set now (`sync_book_series` reads the OLD series off the row itself,
+   * not from anything `updateBook` wrote), so a failure between them leaves the series side
+   * untouched and consistent: a reported non-save, not the half-committed state the old two-write
+   * sequence could produce. Kept sequential anyway, by convention, adjacent to the write it's
+   * conceptually paired with.
    */
   async function save() {
     if (!f.genre || saving) return
@@ -258,7 +262,6 @@ export function EditDetails({
       pubM,
       pubD,
     } = (parsed as Extract<typeof parsed, { ok: true }>).values
-    const position = pos ?? ''
 
     setSaving(true)
     setSaveError(null)
@@ -272,9 +275,11 @@ export function EditDetails({
           title: f.title.trim(),
           isbn: f.isbn.trim(),
           intensity,
-          series: f.series,
-          position,
-          seriesCount,
+          // series, position and seriesCount are DELIBERATELY ABSENT from this patch. All three are
+          // series-level facts (books.series itself, plus its synced copies
+          // series_entries.position and series.length), and sync_book_series below owns all three
+          // atomically. Sending any of them here too would make the book patch a second writer
+          // racing the RPC in the same save — exactly the shape sync_book_series exists to close.
           pages,
           status: f.status as SeriesStatus,
           genre: f.genre,
@@ -284,8 +289,14 @@ export function EditDetails({
           pub: { y: pubY, m: pubM, d: pubD },
         },
       })
-      // Series sync stays adjacent to the book write it depends on, so the two never diverge.
-      await syncBookSeries.mutateAsync({ book, newSeries: f.series, newPosition: pos })
+      // Kept adjacent to the book write for readability, not because either depends on the other
+      // — see the save() docstring above.
+      await syncBookSeries.mutateAsync({
+        book,
+        newSeries: f.series,
+        newPosition: pos,
+        newSeriesCount: seriesCount,
+      })
       // Contributors last: the most independent write, through its own RPC (it also refreshes the
       // primary first/last + byline).
       await setContributors.mutateAsync({ bookId: book.id, contributors: contribs })
@@ -689,7 +700,7 @@ function DiffRow({
 }
 
 /**
- * The pre-merge diff (docs/task-manual-merge.md §2). Merging is destructive and there is no undo, so
+ * The pre-merge diff (docs/archive/task-manual-merge.md §2). Merging is destructive and there is no undo, so
  * the reader sees the exact outcome first: which record survives, the four-state ownership union, the
  * format flags, and every mood/trope + read that carries over. The union comes from the SAME core
  * merge engine the RPC applies — no second merge path.
