@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import rawSeed from '../../../data/personal_seed.json'
+import rawCorpus from '../../../data/corpus_seed.json'
+import rawReader from '../../../data/reader_seed.json'
 import { evaluateTasteHoldout } from './tasteEval'
 import { makeBook } from './book.fixture'
 import type { Book } from './types'
@@ -65,8 +66,11 @@ function plantedLibrary(): Book[] {
   return books
 }
 
-// ── 2 · the real 290-book seed (prototype export shape: tropes/spice) ──
-type SeedBook = {
+// ── 2 · the real 290-book seed, joined from its two halves by `id` ──
+// corpus_seed.json (bibliographic, CC0) and reader_seed.json (this reader's own data) were one
+// file (personal_seed.json) until the license split; `id` is the only thing correlating them now.
+type CorpusBook = {
+  id: string
   title: string
   series?: string
   position?: string | number
@@ -74,13 +78,19 @@ type SeedBook = {
   genres?: string[]
   tropes?: string[]
   spice?: number
+}
+type ReaderBook = {
+  id: string
   rating?: number
   readStatus?: string
   fave?: boolean
 }
-const seed: Book[] = (rawSeed as SeedBook[]).map((s, i) =>
-  makeBook({
-    id: `seed-${i}`,
+const readerById = new Map((rawReader as ReaderBook[]).map((r) => [r.id, r]))
+const seed: Book[] = (rawCorpus as CorpusBook[]).map((s) => {
+  const r = readerById.get(s.id)
+  if (!r) throw new Error(`corpus_seed.json id ${s.id} has no matching row in reader_seed.json`)
+  return makeBook({
+    id: s.id,
     title: s.title,
     series: s.series ?? '',
     position: typeof s.position === 'string' ? Number(s.position) || '' : (s.position ?? ''),
@@ -88,11 +98,11 @@ const seed: Book[] = (rawSeed as SeedBook[]).map((s, i) =>
     genres: s.genres ?? [],
     tags: s.tropes ?? [],
     intensity: s.spice ?? null,
-    rating: s.rating ?? 0,
-    readStatus: (s.readStatus as Book['readStatus']) ?? 'Unread',
-    fave: s.fave ?? false,
-  }),
-)
+    rating: r.rating ?? 0,
+    readStatus: (r.readStatus as Book['readStatus']) ?? 'Unread',
+    fave: r.fave ?? false,
+  })
+})
 
 describe('offline taste eval (tune against data, not vibes)', () => {
   it('recovers a planted preference decisively (synthetic library)', () => {

@@ -24,7 +24,7 @@
   --tertiary: var(--gold);
   --font-body: var(--font-sans);
 
-  /* ── Character dimensions (Skin Character System — docs/SKIN_CHARACTER_CONTRACT.md) ──
+  /* ── Character dimensions (Skin Character System — docs/reference/SKIN_CHARACTER_CONTRACT.md) ──
      Neutral, accessible defaults; each skin overrides these in a mode-independent
      [data-skin='…'] block to become a PLACE, not a palette. Components CONSUME these, never
      hardcode. Tryst + Aphelion are the two designed skins (Stage 1); the rest inherit defaults
@@ -69,6 +69,14 @@
     --ink
   ); /* accent-tinted TEXT colour that clears AA on the plate (eyebrows); per-mode below */
   --ornament-frame: transparent; /* inset hairline frame colour on plates (Tryst gilt double-rule) */
+  /* Picked-cover accent ring (polish/spine-pick-feel). --ornament-frame is authored as a plate
+     INSET hairline, translucent by design (color-mix(…, transparent)) — legible on the opaque
+     surfaces it was built for, but composited over the raw shelf background it measures below
+     3:1 in 15 of 18 skin×mode combinations (as low as 1.15:1). Default to the solid, AA-checked
+     --primary, which clears 3:1 everywhere with wide margin; the three combinations below where
+     --ornament-frame itself clears 3:1 against the shelf background override back to it, so the
+     ring uses each skin's own frame material wherever that material is actually legible. */
+  --pick-ring: var(--primary);
   --mark-accent: var(
     --accent
   ); /* card-mark glyph accent (skin signature; AA-resolved per surface in JS) */
@@ -698,6 +706,10 @@
   --ph-c: #08111f;
   --ph-ink: #dff4fb;
   --ph-muted: rgba(189, 243, 250, 0.72);
+  /* --ornament-frame (--primary at 55%) measures 3.86:1 over --bg0 here — one of three
+     skin×mode combinations where the plate hairline is legible enough to stand alone as a ring
+     (polish/spine-pick-feel; see the base --pick-ring comment). */
+  --pick-ring: var(--ornament-frame);
 }
 
 [data-skin='aphelion'][data-mode='light'] {
@@ -1135,6 +1147,11 @@
   --card: #dccca2; /* oat linen, toastier weave */
   --card-solid: #dccca2;
   --card-2: #e8dab4;
+  /* AA: the mirror of the dark block's --field override — the default 5% ink DARKENS this oat
+     linen toward the dark muted text (4.46:1, just under; never axe-caught only because the
+     sweep's deterministic mode for hearth is dark). Lift the field instead: 45% white over the
+     card = #ece3cc, muted 6.00:1, ink 9.75:1. Same fieldOnCard guard. */
+  --field: rgba(255, 255, 255, 0.45);
   --line: rgba(138, 116, 85, 0.45);
   --thread: #8a7455; /* cream thread reads tea-dyed in daylight */
   --shadow: 0 18px 40px rgba(110, 90, 60, 0.22);
@@ -1166,6 +1183,12 @@
   --card: #5c4829; /* the same linen, lamplit — toasted */
   --card-solid: #5c4829;
   --card-2: #705a37;
+  /* AA: the default --field (5% ink over the card) LIGHTENS this lamplit linen toward the cream
+     muted text — measured 3.92:1 on the ownership control and Settings rows (a11y sweep,
+     2026-08-10; needs 4.5). Recess the field instead, --accent-fill's own deepening idiom:
+     14% black over the card = #4f3e23, muted 5.32:1, ink 8.42:1. Guarded by
+     ownershipControl.contrast.test.ts's fieldOnCard pair. */
+  --field: rgba(0, 0, 0, 0.14);
   --line: rgba(232, 220, 192, 0.3);
   --thread: #e8dcc0;
   --shadow: 0 22px 60px rgba(0, 0, 0, 0.55);
@@ -1181,6 +1204,10 @@
   --font-display: 'Bitter', Georgia, serif;
   --font-sans: 'Varela Round', system-ui, sans-serif;
   --font-mono: 'Varela Round', system-ui, sans-serif;
+  /* --ornament-frame (--thread at 50%) measures 4.19:1 over --bg0 here — one of three
+     skin×mode combinations where the plate hairline is legible enough to stand alone as a ring
+     (polish/spine-pick-feel; see the base --pick-ring comment). */
+  --pick-ring: var(--ornament-frame);
 }
 
 /* Hearth material values (chunk 3) — the jam-lid CTA (ringed like a preserve label), oat-linen
@@ -1428,6 +1455,10 @@
   --font-display: 'Baloo 2', system-ui, sans-serif;
   --font-sans: 'Karla', system-ui, sans-serif;
   --font-mono: 'Karla', system-ui, sans-serif;
+  /* --ornament-frame (flat white, 35%) measures 3.23:1 over --bg0 here — one of three
+     skin×mode combinations where the plate hairline is legible enough to stand alone as a ring
+     (polish/spine-pick-feel; see the base --pick-ring comment). */
+  --pick-ring: var(--ornament-frame);
 }
 
 /* Bloom material values (chunk 3) — the gel-pill CTA, the sky spine (dawn at the tail), the

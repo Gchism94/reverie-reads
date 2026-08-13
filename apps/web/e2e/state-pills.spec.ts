@@ -4,7 +4,7 @@ import { authFailure } from './support/authError'
 import { keepOfflineCacheEmpty } from './support/offlineCache'
 import { ok, okData, okUser } from './support/ok'
 
-// Borrowed and DNF must be visible while browsing (docs/task-state-pills.md).
+// Borrowed and DNF must be visible while browsing (docs/archive/task-state-pills.md).
 //
 // Before this branch: borrowed had a mark on cards only — translucent, measuring 1.1–2.7:1 against
 // worst-case cover art — and DNF had nothing anywhere. Neither reached an accessible name; a grep
@@ -116,7 +116,7 @@ async function seedFixtures(c: Client): Promise<void> {
     { ...base, title: PLAIN_TITLE, ownership: 'owned', read_status: 'Read' },
   ])
   // Never swallow this. A silent insert failure makes an absent pill look like a rendering bug and
-  // sends the next reader hunting in the wrong file (docs/BACKLOG.md, swallowed Supabase errors).
+  // sends the next reader hunting in the wrong file (docs/backlog/BACKLOG.md, swallowed Supabase errors).
   if (insertError) throw new Error(`state-pills seed failed: ${JSON.stringify(insertError)}`)
 }
 
@@ -226,10 +226,16 @@ test('a spine shelf carries state in the accessible name — the surface that ne
 
   await page.goto(`/shelf/${listId}`)
   // Spines read "Open …" once revealed and "Reveal …" otherwise; either way the state rides along.
+  //
+  // SCOPED to `[data-spine]` because this test's name is a promise about the SPINE surface. Since
+  // the shared reveal band landed, the picked book also has a cover button in the band carrying the
+  // same accessible name — a deliberate duplicate (the sticky-bar-repeats-the-CTA pattern), and the
+  // reason an unscoped getByRole now resolves to two elements. Scoping asserts what the name says
+  // rather than whichever control happens to be unique.
   await expect(
-    page.getByRole('button', { name: new RegExp(`${DNF_TITLE}, did not finish`) }),
+    page.locator(`[data-spine][aria-label*="${DNF_TITLE}, did not finish"]`),
   ).toBeVisible({ timeout: 20_000 })
   await expect(
-    page.getByRole('button', { name: new RegExp(`${BORROWED_TITLE}, borrowed`) }),
+    page.locator(`[data-spine][aria-label*="${BORROWED_TITLE}, borrowed"]`),
   ).toBeVisible()
 })

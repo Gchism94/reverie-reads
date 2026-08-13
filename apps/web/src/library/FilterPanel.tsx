@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react'
-import type { Book, SeriesLenBucket } from '@reverie/core'
+import type { Book, LibraryShelfLink, SeriesLenBucket } from '@reverie/core'
 import {
   bookSubgenres,
   bookTropeNames,
@@ -13,6 +13,13 @@ import { useLabels } from '../skin/labels'
 
 const LEN_BUCKETS: SeriesLenBucket[] = ['Any', '1', '2', '3', '4', '5+', 'Unknown']
 const SPICE_LEVELS = [1, 2, 3, 4, 5]
+// Mirrors ShelvesRoute's SECTION_LABEL — same words for the same shelf, wherever it's named.
+const SHELF_LINK_LABEL: Record<Exclude<LibraryShelfLink, 'All'>, string> = {
+  owned: 'Owned',
+  borrowed: '⇄ Borrowed',
+  read: 'Read',
+  wishlist: '⊹ Wishlist',
+}
 
 function Group({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -115,12 +122,20 @@ export function FilterPanel({ books, bare = false }: { books: Book[]; bare?: boo
         ))}
       </Group>
 
+      {filters.shelf !== 'All' && (
+        <Group label="Shelf">
+          <Chip active onClick={() => s.setShelf('All')}>
+            {SHELF_LINK_LABEL[filters.shelf]} ✕
+          </Chip>
+        </Group>
+      )}
+
       <Group label="Other">
         <Chip active={filters.fave} onClick={s.toggleFave}>
           ♥ Favorites only
         </Chip>
         {/* Default grid = what you have or have read; this lets the wishlist + unset-unread ghosts
-            in alongside (docs/task-ownership-v2.md). */}
+            in alongside (docs/archive/task-ownership-v2.md). */}
         <Chip active={filters.wishlist} onClick={s.toggleWishlist}>
           ⊹ Show wishlist
         </Chip>

@@ -4,7 +4,7 @@ import { authFailure } from './support/authError'
 import { keepOfflineCacheEmpty } from './support/offlineCache'
 import { ok, okUser } from './support/ok'
 
-// Cover sourcing posture (docs/reverie-metadata-sourcing.md §Covers).
+// Cover sourcing posture (docs/reference/reverie-metadata-sourcing.md §Covers).
 //
 // Google Books' terms prohibit permanent copies and caching beyond the cache header, but the ingest
 // pipeline stored whatever it was given — and the lazy backfill quietly fed it every hotlinked cover

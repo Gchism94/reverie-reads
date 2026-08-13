@@ -17,7 +17,7 @@
  *
  * TIERS, not a flat allowlist, because most of the app's existing ~90 symbol glyphs have never
  * been checked against Android and auditing all of them by hand is its own piece of work (tracked
- * in docs/BACKLOG.md, not done here). Declaring them is still worth doing NOW: it is the
+ * in docs/backlog/BACKLOG.md, not done here). Declaring them is still worth doing NOW: it is the
  * difference between "an unverified glyph" being a known, listed thing versus a silent addition
  * nobody chose to think about — which is exactly how U+23FB got in.
  *

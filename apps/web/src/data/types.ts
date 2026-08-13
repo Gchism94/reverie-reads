@@ -10,6 +10,7 @@ export interface BookRow {
   series: string | null
   position: number | null
   series_count: number | null
+  series_user_chosen: boolean
   status: string | null
   genre: string | null
   subgenre: string | null

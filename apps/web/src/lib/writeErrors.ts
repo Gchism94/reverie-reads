@@ -55,6 +55,17 @@ export function readableWriteError(error: unknown): string {
     return 'That ownership value isn’t one of the allowed values.'
   if (/books_rating_check|reads_rating_check/.test(raw))
     return 'A rating has to be between 0 and 5.'
+  // The series-position clashes come FIRST, because the generic duplicate-key line below would
+  // otherwise swallow `series_entries_position_uidx` into "That already exists." — true, useless,
+  // and it throws away the one thing set_series_order goes out of its way to say: WHICH slot lost.
+  // A reader typing a number another book already holds is a case they can fix in one keystroke,
+  // so it earns a sentence of its own rather than the catch-all.
+  if (/a target position is already held|series_entries_position_uidx/.test(raw))
+    return 'Another book in this series is already at that number.'
+  if (/two slots claim the same position/.test(raw))
+    return 'Two books can’t share the same number in a series.'
+  if (/does not name a live entry/.test(raw))
+    return 'That slot isn’t in this series any more — reopen the series and try again.'
   if (/duplicate key|already exists|_uidx/.test(raw)) return 'That already exists.'
   if (/row-level security|permission denied|JWT|401|403/i.test(raw))
     return 'You’re signed out, or that isn’t yours to change.'

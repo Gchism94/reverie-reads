@@ -1,6 +1,6 @@
 import { coverGradient, genreKey, type LibrarySort, type PossessionState } from '@reverie/core'
 
-/** Plain, legible possession words for the CONTROLS (docs/task-ownership-legibility.md). The button
+/** Plain, legible possession words for the CONTROLS (docs/archive/task-ownership-legibility.md). The button
  *  label must say what tapping it does at a glance; the per-skin voice (SkinVoice ownIt/borrowedIt/
  *  wantIt/unsetIt) rides underneath as a flavor subtitle, never as the only signal.
  *
@@ -42,7 +42,7 @@ export const NEUTRAL_SUBGENRE = 'Other'
  *  shelves instead of a hardcoded romance subgenre — the "genre → subgenre" layer the matcher can
  *  lean on. Romance keeps the original set; the other eight genres get a modest, real taxonomy.
  *  `subgenresForGenre()` appends NEUTRAL_SUBGENRE to every genre. */
-// Broadened beyond romance so every genre has a credible, native set (docs/task-taxonomy-neutral.md).
+// Broadened beyond romance so every genre has a credible, native set (docs/archive/task-taxonomy-neutral.md).
 // Additive: every pre-existing value is preserved (existing books keep their subgenre); the
 // additions per genre are all NEW single-genre values, each mirrored into core's
 // SUBGENRE_PRIMARY_GENRE and the taxonomy_neutral migration's backfill (parity-tested).
@@ -180,7 +180,7 @@ export const READ_STATUSES = ['Read', 'Reading', 'Unread', 'DNF'] as const
 // Series statuses live in core now: SERIES_STATUS_VALUES + SERIES_STATUS_LABELS (5-value enum).
 
 // Read-status CONTROLS (book detail + add form) lead with a real "Not set" — cataloguing a book must
-// not force a read state (docs/task-ownership-v2.md). 'unset' is the default for a new book. Filters
+// not force a read state (docs/archive/task-ownership-v2.md). 'unset' is the default for a new book. Filters
 // keep the four concrete statuses (READ_STATUSES); no-selection isn't something you filter FOR.
 export const READ_STATUS_OPTIONS = ['unset', 'Read', 'Reading', 'Unread', 'DNF'] as const
 export const readStatusLabel = (s: string): string => (s === 'unset' ? 'Not set' : s)
