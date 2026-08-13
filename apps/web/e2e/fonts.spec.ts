@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Page } from './support/fixtures'
 
 // Font loading, asserted against OUR contract instead of Google's uptime.
 //
@@ -25,6 +25,16 @@ import { expect, test, type Page } from '@playwright/test'
 // file happened to download. `src: local(...)` is deliberately NOT relied on for a pass: whether
 // Georgia or DejaVu exists differs between a macOS laptop and a CI runner, and that difference is
 // exactly the kind of environmental coin-flip this rewrite exists to remove.
+
+// ── THE ONE SPEC THAT OPTS OUT OF THE SUITE-WIDE FONT STUB ──────────────────────────────────────
+// support/fixtures.ts stubs fonts.googleapis.com with an empty 200 for EVERY spec, because a
+// third-party CDN in the path of the whole suite has broken required checks twice (see that file).
+// This spec is the deliberate exception: its entire purpose is exercising the real font mechanism
+// in BOTH directions — served and dead — which it forces itself, per test, with page.route below.
+// Leaving the blanket stub on would make every assertion here vacuous: the stub declares no
+// @font-face, so "the family registered" could never be true and "the CDN is dead" would be
+// trivially true. Do not remove this line to make something else pass.
+test.use({ stubFonts: false })
 
 const GOOGLE_CSS = '**/fonts.googleapis.com/**'
 
