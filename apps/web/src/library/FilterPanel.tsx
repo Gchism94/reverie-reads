@@ -1,7 +1,9 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import type { Book, LibraryShelfLink, SeriesLenBucket } from '@reverie/core'
 import {
+  bookGenres,
   bookSubgenres,
+  CORE_GENRES,
   bookTropeNames,
   SERIES_STATUS_LABELS,
   SERIES_STATUS_VALUES,
@@ -42,6 +44,13 @@ export function FilterPanel({ books, bare = false }: { books: Book[]; bare?: boo
     () => ['All', ...[...new Set(books.flatMap((b) => bookSubgenres(b)))].sort()],
     [books],
   )
+  // Same derivation as subs, one level up: every genre any book actually carries, primary or
+  // additional. bookGenres falls back to the single `genre`, so a library with no multi-genre books
+  // yields exactly the facets it always would have.
+  const genres = useMemo(
+    () => ['All', ...[...new Set(books.flatMap((b) => bookGenres(b)))].sort()],
+    [books],
+  )
   const tags = useMemo(() => {
     const counts = new Map<string, number>()
     for (const b of books)
@@ -55,6 +64,14 @@ export function FilterPanel({ books, bare = false }: { books: Book[]; bare?: boo
       className={bare ? '' : 'mb-4 rounded-2xl border border-line p-4 backdrop-blur'}
       style={bare ? undefined : { background: 'var(--card)' }}
     >
+      <Group label="Genre">
+        {genres.map((g) => (
+          <Chip key={g} active={filters.genre === g} onClick={() => s.setGenre(g)}>
+            {g === 'All' ? g : (CORE_GENRES.find((cg) => cg.toLowerCase() === g) ?? g)}
+          </Chip>
+        ))}
+      </Group>
+
       <Group label="Subgenre">
         {subs.map((sub) => (
           <Chip key={sub} active={filters.sub === sub} onClick={() => s.setSub(sub)}>

@@ -1,5 +1,5 @@
 import type { Book, ReadStatus, SeriesStatus } from './types'
-import { bookSubgenres } from './genreNormalize'
+import { bookGenres, bookSubgenres } from './genreNormalize'
 import { bookTropeNames } from './tropes'
 import { authorOf } from './normalize'
 import { normalizeName } from './contributors'
@@ -19,6 +19,10 @@ export type LibraryShelfLink = 'All' | 'owned' | 'borrowed' | 'read' | 'wishlist
 
 export interface LibraryFilters {
   q: string
+  /** primary-or-additional genre facet ('All' = off). A book matches if ANY of its genres does —
+   *  read through bookGenres, so a multi-genre romantasy book is reachable from either shelf's
+   *  facet, and a pre-multi-genre book still matches on its single `genre`. */
+  genre: 'All' | string
   sub: 'All' | string
   tags: string[]
   status: 'All' | SeriesStatus
@@ -40,6 +44,7 @@ export interface LibraryFilters {
 
 export const defaultFilters = (): LibraryFilters => ({
   q: '',
+  genre: 'All',
   sub: 'All',
   tags: [],
   status: 'All',
@@ -107,6 +112,7 @@ export function matchesFilters(b: Book, f: LibraryFilters): boolean {
     if (f.shelf === 'read' && !hasReadingHistory(b)) return false
     if (f.shelf === 'wishlist' && !isWanted(b)) return false
   } else if (!f.wishlist && !inDefaultLibrary(b)) return false
+  if (f.genre !== 'All' && !bookGenres(b).includes(f.genre)) return false
   if (f.sub !== 'All' && !bookSubgenres(b).includes(f.sub)) return false
   if (f.tags.length) {
     const names = bookTropeNames(b)
