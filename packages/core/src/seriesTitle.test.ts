@@ -141,4 +141,34 @@ describe('planTitleCleanup (legacy re-parse sweep)', () => {
     expect(findDuplicateGroups(swept)).toHaveLength(1) // now they collide → mergeable
     expect(findDuplicateGroups(swept)[0]).toHaveLength(2)
   })
+
+  // An unreleased placeholder carries the series/position in the parenthetical because the real
+  // title is unknown. Stripping it leaves bare "Untitled" and collapses two distinct Empyrean slots
+  // (#4 and #5) onto each other. The parenthetical must never be stripped, regardless of whether
+  // the dedicated columns happen to already hold the same info. Mirrors is_untitled in
+  // 20260809010000_series_backfill.sql — a placeholder is excluded ENTIRELY (title, series, position).
+  it('never strips a placeholder title that cleans to bare Untitled (series already set)', () => {
+    const plan = planTitleCleanup([
+      makeBook({
+        id: '1',
+        title: 'Untitled (The Empyrean, #4)',
+        series: 'The Empyrean',
+        position: 4,
+      }),
+      makeBook({
+        id: '2',
+        title: 'Untitled (The Empyrean, #5)',
+        series: 'The Empyrean',
+        position: 5,
+      }),
+    ])
+    expect(plan).toHaveLength(0)
+  })
+
+  it('never strips a placeholder title that cleans to bare Untitled (series empty)', () => {
+    // Even without the columns populated, the parenthetical is the only self-describing field —
+    // collapsing it to Untitled would lose the encoded series+position with nothing to fall back on.
+    const plan = planTitleCleanup([makeBook({ id: '1', title: 'Untitled (Fae & Alchemy, #3)' })])
+    expect(plan).toHaveLength(0)
+  })
 })

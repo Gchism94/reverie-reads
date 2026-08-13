@@ -77,6 +77,11 @@ export interface TitleCleanup {
   fillsSeries: boolean
 }
 
+// Bare "Untitled" after stripping = an unreleased placeholder; removing its parenthetical would collapse distinguishable placeholders into one. Mirrors is_untitled in 20260809010000_series_backfill.sql — keep the two in step.
+function isUntitledClean(cleanTitle: string): boolean {
+  return cleanTitle === 'Untitled'
+}
+
 /**
  * Plan the legacy-title sweep over a library: one TitleCleanup per row whose title actually carries
  * series junk (the parser removed something). Pure + previewable — the caller shows these and writes
@@ -91,6 +96,7 @@ export function planTitleCleanup(
     const parsed = parseSeriesFromTitle(b.title)
     // Only rows where junk was actually stripped are candidates (empty result = don't blank a title).
     if (!parsed.title || parsed.title === (b.title ?? '').trim()) continue
+    if (isUntitledClean(parsed.title)) continue
     const hasSeries = !!(b.series && b.series.trim())
     out.push({
       id: b.id,
