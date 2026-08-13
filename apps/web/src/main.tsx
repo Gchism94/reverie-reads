@@ -101,3 +101,4 @@ createRoot(rootEl).render(
     </ErrorBoundary>
   </StrictMode>,
 )
+const __deliberateTypeError: number = 'this is a string, not a number';
