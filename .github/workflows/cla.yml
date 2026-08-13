@@ -39,6 +39,16 @@ jobs:
           # be refused there. This branch is unprotected, dedicated to the signature file, and the
           # action creates it on first sign if it doesn't already exist.
           branch: 'cla-signatures'
-          # No bot allowlist — this repo has no Dependabot or similar automation opening PRs today.
-          # Add entries here (comma-separated, wildcards allowed, e.g. 'bot*') if that changes.
+          # Owner exemption. Discovered 2026-08-13: signatures/version1/cla.json's
+          # signedContributors has been empty since this workflow was set up — nobody, including
+          # the repo owner, had ever completed the sign-comment flow. `opened` doesn't hard-gate
+          # (it just posts the prompt), so every PR showed a stale "pass" from creation; the first
+          # `synchronize`/recheck to actually run the check correctly failed everything, including
+          # PRs the owner themselves opened. Every PR here is opened by Gchism94 (personal
+          # project, no outside contributors yet) — allowlisting the owner is the fix, not asking
+          # the owner to sign a document granting themselves rights to their own repo. Comma-
+          # separated, wildcards allowed (e.g. 'bot*') — add real external contributors' usernames
+          # here too if this repo ever wants them exempted, or remove this line entirely once
+          # outside contributions are expected and should go through the real sign flow.
+          allowlist: 'Gchism94'
           lock-pullrequest-aftermerge: true
