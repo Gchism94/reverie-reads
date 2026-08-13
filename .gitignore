@@ -47,3 +47,6 @@ design/from-claude-design/**/*.dc.html
 
 # Vercel CLI project linkage (org/project ids) — never tracked
 .vercel/
+
+# git worktree checkouts — a full second working copy, never repo content
+.worktrees/
