@@ -199,6 +199,17 @@ function` + fresh `create` resets it to the PUBLIC-execute default — verified 
   leave the replacement in place rather than the reader with neither. The silence is the failure mode;
   a comment and a guard ordering are the antidote.
 
+- **Create the branch BEFORE the first edit, never after.** `git checkout -b` costs nothing at the
+  start and is the only moment it is free. Starting work on whatever branch happens to be checked
+  out — usually the last PR's — means the commit lands on that PR, and splitting it out afterward
+  costs a cherry-pick onto a fresh branch plus a `git reset --hard` on the polluted one to drop the
+  duplicate. That reset is recoverable only because the commit already exists elsewhere; it is one
+  slip away from discarding real work, and `--force`-pushing the polluted branch instead is
+  forbidden. This happened TWICE in one session: the font-spec rewrite (#207) and the suite-wide
+  font stub (#208) were both authored on #206's branch and both had to be extracted. Neither reached
+  the remote, so no PR was corrupted — but that was luck about push timing, not the process working.
+  The tell is reaching for `git checkout -b` while `git status` already shows modified files.
+
 ## Testing & verification discipline
 
 Eleven rules, each earned by a real failure. A rule without its reason gets dropped by whoever
