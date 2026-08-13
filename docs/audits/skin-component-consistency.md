@@ -34,6 +34,26 @@ Every figure in this document is the corrected, `tokens.css`-derived one. The le
 past this audit: a measurement is only as good as the provenance of its inputs, and a fixture that
 _describes itself_ as a mirror is an input worth verifying rather than trusting.
 
+**Second correction: Pattern E's two "genuine violations" were both false positives.** The audit
+reported `StatePill`'s `#8c8c8c` and `Nameplate`'s `rgba(40, 28, 12, 0.7)` as hardcoded colours
+breaking the no-hardcoded-colours rule. Reading the surrounding code rather than the grep output
+disproved both:
+
+- **`StatePill` `#8c8c8c` is prose.** It appears once, in a doc comment, describing the historical
+  composite (`rgba(0,0,0,0.45)` over white cover art) that failed AA and motivated the component.
+  The component itself is fully tokenized — `STATE_PILL_TOKENS.surface / .label / .accent`. The
+  grep counted a comment as code.
+- **`Nameplate`'s brown is correctly scoped.** It is shading on a decorative brass rivet, and
+  `PLATE` is a `Partial<Record<SkinId, PlateOrnament>>` — per-skin keyed. That rivet belongs to
+  **hearth's** entry, the warm cozy skin, and its metal already uses `var(--gold)` /
+  `var(--gold-deep)`. A warm-brown speck inside hearth's own ornament, rendered only in hearth, is
+  correct by construction — the same category as the `rgba(0,0,0,0.4)` box-shadow on the next line,
+  which the audit had already ruled defensible. Classifying them differently was inconsistent.
+
+**Pattern E therefore has zero confirmed violations**, and its ruling is retired rather than
+implemented. Both entries are kept above rather than deleted: a pattern that was proposed and
+disproved is worth more to the next reader than a pattern that silently vanished.
+
 ---
 
 ## 1. The anchor — there isn't a component, and that is the finding
@@ -89,13 +109,16 @@ Each raw button re-declares height, radius, border, background and font.
 **D — elevation is effectively unused. 19 `var(--shadow)` sites.** Cards are border-defined almost
 everywhere, which §3 shows is load-bearing rather than incidental.
 
-**E — hardcoded colours, ~110 occurrences.** Most are **defensible**: neutral alpha scrims
+**E — hardcoded colours, ~110 occurrences. DISPROVEN — see §0.** Every occurrence is
+**defensible**: neutral alpha scrims
 (`rgba(0,0,0,0.35)`) for overlays and gradients, which carry no skin identity. Two are genuine
-violations of the repo's no-hardcoded-colours rule because they bake one skin's palette into a
-shared component rendered in all nine:
+violations of the repo's no-hardcoded-colours rule — **both were later disproved (§0)**, and are
+kept here struck through so the reasoning survives:
 
-- `Nameplate.tsx` — `rgba(40, 28, 12, 0.7)`, a warm brown (Tryst's world)
-- `StatePill.tsx` — `#8c8c8c`
+- ~~`Nameplate.tsx` — `rgba(40, 28, 12, 0.7)`~~ — **not a violation.** Per-skin scoped to hearth's
+  own ornament (§0).
+- ~~`StatePill.tsx` — `#8c8c8c`~~ — **not a violation.** Prose in a doc comment; the component is
+  fully tokenized (§0).
 
 Concentrations of the defensible kind: `CoverPlaceholder` 24, `Structure` 23, `Spine` 23,
 `SpineShelf` 9, `Nameplate` 7.
@@ -261,7 +284,9 @@ Recorded as decided, so the implementation tracks don't relitigate them:
 2. **Chip radius** — **tokenize.** Runs as a parallel track; the tripwire check above cleared it.
 3. **Elevation** — **opt-in accent only.** Cards stay border-defined; `--shadow` does **not** join
    the card contract.
-4. **`Nameplate` / `StatePill` hardcoded colours** — **bugs.** Neutralise to semantic tokens.
+4. ~~**`Nameplate` / `StatePill` hardcoded colours** — **bugs.** Neutralise to semantic tokens.~~
+   **RETIRED.** The ruling was made on the audit's Pattern E finding, which §0 disproves: neither is
+   a violation. Nothing to neutralise.
 
 ---
 
@@ -275,7 +300,7 @@ Recorded as decided, so the implementation tracks don't relitigate them:
 | Control-radius guard (ESLint + source scan)       | planned — precedes the migration         |
 | Control-radius migration (124 + 5 + 9 sites)      | planned — driven by the guard's failures |
 | `Surface` primitive + surface migration           | planned                                  |
-| `Nameplate` / `StatePill` colour fix              | planned                                  |
+| ~~`Nameplate` / `StatePill` colour fix~~          | **retired** — no violation (§0)          |
 
 **Sequencing note:** the guard is built and run **before** the migration, so its failures _are_ the
 migration checklist — a live progress meter rather than a hand-maintained list, and no window in
