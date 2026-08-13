@@ -47,7 +47,7 @@ own values. Names only:
   deploy's commit SHA by a `define` in `apps/web/vite.config.ts`. Setting either in a `.env`
   has no effect — the define substitutes them at build time.
 - **Server / edge secrets** (deployment environment only — never in the repo): the Supabase
-  service-role key, `HARDCOVER_TOKEN`, and any provider API keys. See `docs/DEPLOY.md`.
+  service-role key, `HARDCOVER_TOKEN`, and any provider API keys. See `docs/reference/DEPLOY.md`.
 
 The publishable anon key is client-safe by design; the service-role key and all API keys
 are not and live only in deployment secrets.
@@ -73,18 +73,20 @@ pnpm deploy:functions     # supabase functions deploy, behind the deploy guard
 ```
 
 The guard refuses to run unless you're on a clean, in-sync `main` and confirm the touch
-list. Full runbook: [`docs/DEPLOY.md`](docs/DEPLOY.md).
+list. Full runbook: [`docs/reference/DEPLOY.md`](docs/reference/DEPLOY.md).
 
-## License
+## License — three objects, three answers
 
-**Proprietary — all rights reserved.** See [`LICENSE`](LICENSE). A limited training-fork
-grant allows designated collaborators to run and modify the code locally for personal
-learning and for contributions back to this repository; no redistribution, production
-deployment, or commercial use. Contributions are accepted under that grant — see
-[`CONTRIBUTING.md`](CONTRIBUTING.md).
+This app's code is licensed under [AGPL-3.0](LICENSE). The book metadata corpus is
+dedicated to the public domain under [CC0](LICENSE-CORPUS) — free to use for anything.
+Your shelves, ratings, and reading history are yours: never published, never part of the
+dataset, never licensed to anyone.
 
-Book cover images and bibliographic metadata are **third-party** and not the repository
-owner's to license — see [`NOTICES.md`](NOTICES.md).
+Contributions require signing the [CLA](CLA.md) — see
+[`CONTRIBUTING.md`](CONTRIBUTING.md). Book cover images and third-party bibliographic
+records are not the repository owner's to license — see [`NOTICES.md`](NOTICES.md).
+Premium features live in a private module outside this repository and are not covered by
+this repository's licenses.
 
 ## Build-phase docs (working notes)
 
@@ -92,9 +94,9 @@ owner's to license — see [`NOTICES.md`](NOTICES.md).
 > onboarding docs for a new reader of the repo.
 
 - `CLAUDE.md` — context loaded by Claude Code; the working conventions.
-- `docs/CLAUDE_CODE_KICKOFF.md` — the sequenced build plan.
+- `docs/archive/CLAUDE_CODE_KICKOFF.md` — the sequenced build plan.
 - `ROADMAP.md` — path from prototype to shipped product.
-- `docs/ARCHITECTURE.md`, `docs/DATA_MODEL.md`, `docs/FEATURES.md`,
-  `docs/REQUIREMENTS.md` — specs and object shapes.
+- `docs/reference/ARCHITECTURE.md`, `docs/reference/DATA_MODEL.md`, `docs/reference/FEATURES.md`,
+  `docs/reference/REQUIREMENTS.md` — specs and object shapes.
 - `prototype/Reverie_Library.html` — the original single-file prototype (behavior
   reference; not the code that ships).

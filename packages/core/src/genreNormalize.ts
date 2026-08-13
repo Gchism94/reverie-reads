@@ -218,7 +218,7 @@ export const SUBGENRE_PRIMARY_GENRE: Record<string, string> = {
   'ya dystopian': 'young adult',
   'coming of age': 'young adult',
   'ya contemporary': 'young adult',
-  // ── genre-neutral broadening (docs/task-taxonomy-neutral.md) — all NEW single-genre subgenres ──
+  // ── genre-neutral broadening (docs/archive/task-taxonomy-neutral.md) — all NEW single-genre subgenres ──
   'historical romance': 'romance',
   'paranormal romance': 'romance',
   'romantic comedy': 'romance',

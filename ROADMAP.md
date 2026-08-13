@@ -6,14 +6,14 @@ app at the end of each step.
 ## Phase 0 — Decide (now)
 
 - [x] Lock the name — **Reverie** (owner decision, 2026-07).
-- [ ] Confirm the stack in `docs/ARCHITECTURE.md` (React+TS+Supabase is the default).
+- [ ] Confirm the stack in `docs/reference/ARCHITECTURE.md` (React+TS+Supabase is the default).
 - [ ] Resolve the open decisions: local-first vs. REST; household model; spoiler gating
       honor-based vs. server-enforced; keep capability-code sharing alongside accounts?
 
 ## Phase 1 — Backend foundation
 
 - [ ] Stand up Supabase: Auth, Postgres, Storage, Realtime.
-- [ ] Implement the relational schema from `docs/DATA_MODEL.md` with row-level security.
+- [ ] Implement the relational schema from `docs/reference/DATA_MODEL.md` with row-level security.
 - [ ] Seed the first account from `data/personal_seed.json`.
 - [ ] Port the **CSV import** and **merge** logic into Edge Functions / typed utils.
 - [ ] Cover/metadata **enrichment** Edge Function (Google Books → Open Library → Hardcover).
@@ -40,7 +40,7 @@ app at the end of each step.
 - [ ] Releases/author-following ("coming soon from your authors").
 - [ ] Accessibility pass (focus, contrast in both themes, reduced motion).
 - [ ] Performance + offline edge cases; backup/export.
-- [x] Name (**Reverie**, 2026-07) + domain (**reveriereads.app**, 2026-07-06) — see docs/DEPLOY.md. App-store packaging still open.
+- [x] Name (**Reverie**, 2026-07) + domain (**reveriereads.app**, 2026-07-06) — see docs/reference/DEPLOY.md. App-store packaging still open.
 
 ## Backlog (from prototype roadmap)
 

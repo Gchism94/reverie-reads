@@ -225,7 +225,7 @@ export function JustFinishedSheet() {
       )}
 
       {/* Mood — the natural moment: you just closed the book feeling something. Skippable like the
-          rest of this ONE sheet; reader-assigned, never derived (docs/task-mood.md §2). */}
+          rest of this ONE sheet; reader-assigned, never derived (docs/archive/task-mood.md §2). */}
       <div className="mb-4">
         <div className="mb-1.5 text-[11px] uppercase tracking-[0.2em] text-muted">
           How did it land?

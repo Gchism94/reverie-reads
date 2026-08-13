@@ -59,7 +59,7 @@ export function parseSeriesFromTitle(raw: string): ParsedSeriesTitle {
   return { title, series: first?.series ?? '', position: first?.position ?? '', more }
 }
 
-// ── legacy re-parse sweep (docs/task-manual-merge.md §1) ──
+// ── legacy re-parse sweep (docs/archive/task-manual-merge.md §1) ──
 // Rows imported before #54 still carry the series junk in their title. Re-run the parser over the
 // existing library: clean the title, and fill series/position ONLY where the book has none — never
 // overwrite user-entered series info (the #52 non-overwrite principle). Non-series parentheticals

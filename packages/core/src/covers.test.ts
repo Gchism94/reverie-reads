@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  isDegenerateGoogleCoverRender,
   DISPLAY_ONLY_COVER_SOURCES,
   buildGoogleBooksUrl,
   buildOpenLibraryUrl,
@@ -255,5 +256,41 @@ describe('fetchCover — Open Library only, never a URL we cannot keep', () => {
     }
     await expect(fetchCover({ title: 'T', last: 'L' }, fetchImpl)).resolves.toBe('')
     expect(calls.every((u) => !u.includes('googleapis'))).toBe(true)
+  })
+})
+
+describe('isDegenerateGoogleCoverRender (discover-cover-quality audit)', () => {
+  const g = (z: number) =>
+    `https://books.google.com/books/content?id=x&printsec=frontcover&img=1&zoom=${z}&source=gbs_api`
+
+  it('rejects the scan strips STRUCTURALLY — measured sizes and invented future ones alike', () => {
+    expect(isDegenerateGoogleCoverRender(g(2), 300, 48)).toBe(true) // measured zoom=2 strip
+    expect(isDegenerateGoogleCoverRender(g(0), 575, 92)).toBe(true) // measured zoom=0 strip
+    expect(isDegenerateGoogleCoverRender(g(2), 640, 100)).toBe(true) // a strip size Google has not served yet
+    expect(isDegenerateGoogleCoverRender(g(2), 40, 400)).toBe(true) // absurd tall sliver
+  })
+
+  it('rejects every known plate size, including the 300×391 the thumb upgrade requests', () => {
+    expect(isDegenerateGoogleCoverRender(g(2), 300, 391)).toBe(true)
+    expect(isDegenerateGoogleCoverRender(g(0), 575, 750)).toBe(true)
+    expect(isDegenerateGoogleCoverRender(g(1), 128, 170)).toBe(true)
+  })
+
+  it('passes real covers across the measured band, including the square-ish outlier', () => {
+    expect(isDegenerateGoogleCoverRender(g(2), 300, 461)).toBe(false) // modern ebook thumb
+    expect(isDegenerateGoogleCoverRender(g(0), 1988, 3056)).toBe(false) // modern ebook full
+    expect(isDegenerateGoogleCoverRender(g(1), 128, 198)).toBe(false) // real zoom=1
+    expect(isDegenerateGoogleCoverRender(g(1), 128, 128)).toBe(false) // square-ish but real
+  })
+
+  it('never judges a non-Google URL — a reader-chosen unusual cover is not second-guessed', () => {
+    expect(isDegenerateGoogleCoverRender('https://example.com/wide-art.png', 300, 48)).toBe(false)
+    expect(
+      isDegenerateGoogleCoverRender('https://covers.openlibrary.org/b/id/1-L.jpg', 575, 92),
+    ).toBe(false)
+  })
+
+  it('leaves unloaded (zero-dimension) images to onError', () => {
+    expect(isDegenerateGoogleCoverRender(g(2), 0, 0)).toBe(false)
   })
 })
