@@ -1,6 +1,14 @@
 import { useState } from 'react'
 import { createRoute } from '@tanstack/react-router'
-import { authorOf, bookSubgenres, bookTropeNames, isAuthorRole, isPossessed } from '@reverie/core'
+import {
+  authorOf,
+  bookGenres,
+  bookSubgenres,
+  bookTropeNames,
+  CORE_GENRES,
+  isAuthorRole,
+  isPossessed,
+} from '@reverie/core'
 import { rootRoute } from './RootRoute'
 import { useBooks } from '../data/books'
 import { useAllReads } from '../data/reads'
@@ -112,6 +120,13 @@ function StatsScreen() {
     readBooks.flatMap((b) => bookSubgenres(b)),
     (s) => s,
   )
+  // Same semantics one level up: a romantasy book tagged Romance + Fantasy counts once under each,
+  // so these bars don't sum to the book count either. Display-cased off CORE_GENRES, since
+  // bookGenres yields the lowercased keys.
+  const genres = tally(
+    readBooks.flatMap((b) => bookGenres(b)),
+    (g) => CORE_GENRES.find((cg) => cg.toLowerCase() === g) ?? g,
+  )
   const fmts = tally(ownedAll, (b) => b.format)
   const spdist: [string, number][] = [1, 2, 3, 4, 5].map((i) => [
     labels.intensityGlyph.repeat(i),
@@ -208,6 +223,11 @@ function StatsScreen() {
         {byYear.length > 0 && (
           <Card title="Reads by year">
             <Bars entries={byYear} />
+          </Card>
+        )}
+        {genres.length > 0 && (
+          <Card title="Genres you read">
+            <Bars entries={genres} />
           </Card>
         )}
         <Card title="What you read">
