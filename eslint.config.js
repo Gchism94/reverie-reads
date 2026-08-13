@@ -3,6 +3,7 @@ import globals from 'globals'
 import tseslint from 'typescript-eslint'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
+import noHardcodedControlRadius from './eslint-rules/no-hardcoded-control-radius.js'
 
 export default tseslint.config(
   {
@@ -57,8 +58,12 @@ export default tseslint.config(
     plugins: {
       'react-hooks': reactHooks,
       'react-refresh': reactRefresh,
+      // Local rule: once a control carries the skin kit's silhouette, a hardcoded radius may never
+      // override it. Ships at `error` — it has no false positives by construction (see the rule).
+      skin: { rules: { 'no-hardcoded-control-radius': noHardcodedControlRadius } },
     },
     rules: {
+      'skin/no-hardcoded-control-radius': 'error',
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
