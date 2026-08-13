@@ -37,7 +37,7 @@ import {
 const fmtPos = (n: number): string => `#${n}`
 
 /**
- * The series page IS the reading order (docs/task-series-experience.md §1) — one ordered shelf,
+ * The series page IS the reading order (docs/archive/task-series-experience.md §1) — one ordered shelf,
  * every canonical entry including ghost slots for books the reader doesn't have, the reader's
  * own state woven inline, Next Up elevated as the page's emotional center. Drag (or ▲▼) writes
  * decimal positions — between #2 and #3 lands #2.5 — and manual order always wins over source.
@@ -108,23 +108,16 @@ function SeriesScreen() {
     const nextPos = rest[to]?.position ?? null
     const moved = entries[from]!
     const { position, renumber } = positionBetween(prev, nextPos)
-    if (renumber) {
-      const order = [...rest.slice(0, to), moved, ...rest.slice(to)]
-      moveEntry.mutate({
-        entryId: moved.id,
-        position,
-        bookId: moved.bookId,
-        // bookId rides along so a linked entry's move mirrors onto books.position (the book page agrees)
-        updates: order.map((e, i) => ({
-          id: e.id,
+    // ONE call either way. `bookId` no longer rides along: set_series_order reads it from the entry
+    // row inside its own transaction, so the books.position mirror cannot be aimed at a book this
+    // component's cache is wrong about.
+    const slots = renumber
+      ? [...rest.slice(0, to), moved, ...rest.slice(to)].map((e, i) => ({
+          entryId: e.id,
           position: i + 1,
-          userEdited: e.id === moved.id ? true : e.userEdited,
-          bookId: e.bookId,
-        })),
-      })
-    } else {
-      moveEntry.mutate({ entryId: moved.id, position, bookId: moved.bookId })
-    }
+        }))
+      : [{ entryId: moved.id, position }]
+    moveEntry.mutate({ seriesId: detail.series.id, slots })
   }
 
   const editLabel = (e: SeriesEntry) => {
@@ -171,14 +164,29 @@ function SeriesScreen() {
             .find(Boolean) ?? '',
       },
       {
-        onSuccess: (r) =>
+        onSuccess: (r) => {
+          // Both skip kinds are said out loud, so a refresh that left things alone doesn't read as
+          // a no-op: rows the reader arranged stay put by design, and a catalog position already
+          // held by another slot drops just that move rather than the whole refresh.
+          const parts: string[] = []
+          if (r.added)
+            parts.push(
+              `${r.added} canonical ${r.added === 1 ? 'entry' : 'entries'} added from Hardcover.`,
+            )
+          if (r.skipped)
+            parts.push(`${r.skipped} left where you arranged ${r.skipped === 1 ? 'it' : 'them'}.`)
+          if (r.skippedCollision)
+            parts.push(
+              `${r.skippedCollision} skipped — ${r.skippedCollision === 1 ? 'its catalog position is' : 'their catalog positions are'} already taken.`,
+            )
           setSourceNote(
-            r.added
-              ? `${r.added} canonical ${r.added === 1 ? 'entry' : 'entries'} added from Hardcover.`
+            parts.length
+              ? parts.join(' ')
               : r.unavailable
                 ? 'No source data for this series — yours to arrange.'
                 : 'Already up to date.',
-          ),
+          )
+        },
         onError: () => setSourceNote('Couldn’t reach the catalog just now.'),
       },
     )
@@ -410,7 +418,7 @@ function SeriesScreen() {
                     </button>
                   )}
                   {/* Every slot can be removed — ghost or not. Gating this on `!book` is what left a
-                      book added from here with no way out (docs/task-series-defects.md §Removal). */}
+                      book added from here with no way out (docs/archive/task-series-defects.md §Removal). */}
                   <button
                     type="button"
                     onClick={() => setRemoving(e)}

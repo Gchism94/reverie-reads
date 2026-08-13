@@ -1,4 +1,4 @@
-// Ordered, multi-contributor authorship (docs/DATA_MODEL.md). A book carries an ordered list of
+// Ordered, multi-contributor authorship (docs/reference/DATA_MODEL.md). A book carries an ordered list of
 // contributors (authors, co-authors, translators, illustrators, narrators, editors). The single
 // author_first/author_last on the book stays as the denormalized PRIMARY author (back-compat); it
 // mirrors the first author-role contributor. These helpers are pure so byline formatting, name

@@ -78,7 +78,7 @@ export const isBookRead = (b: Book): boolean => b.readStatus === 'Read' || b.rea
  *  predicate meant to hide books they had not. Visibility says yes; "read" still says no. */
 export const hasReadingHistory = (b: Book): boolean => isBookRead(b) || b.readStatus === 'DNF'
 
-/** The default library scope (docs/task-shelf-model.md): anything you have in hand (owned or
+/** The default library scope (docs/archive/task-shelf-model.md): anything you have in hand (owned or
  *  borrowed) OR have any reading history with, DNF included. Reading history is never hidden by
  *  possession — a book you read from the library stays in your library. Books you neither had nor
  *  opened fall outside; the wishlist chip lets them back in. */

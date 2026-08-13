@@ -1,7 +1,7 @@
 # ADR 0004 — Removing a book from a series is one operation, and it is a tombstone
 
 **Status:** accepted · 2026-07-25
-**Context:** `fix/series-shelf-audit` (#77; supersedes the removal half of `docs/task-series-defects.md`)
+**Context:** `fix/series-shelf-audit` (#77; supersedes the removal half of `docs/archive/task-series-defects.md`)
 
 ## Decision
 

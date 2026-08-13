@@ -43,7 +43,7 @@ build components in isolation, not to prove a feature works in context.
 - Migrations and edge-function deploys run **from `main`, after the PR merges**, through
   the guard scripts (`pnpm deploy:migrations` / `pnpm deploy:functions`) — **never from a
   feature branch mid-flight**. The guard's `--force` override is for a deliberate,
-  confirmed exception only. Full runbook: [`docs/DEPLOY.md`](docs/DEPLOY.md).
+  confirmed exception only. Full runbook: [`docs/reference/DEPLOY.md`](docs/reference/DEPLOY.md).
 
 ## Shell safety
 

@@ -7,7 +7,7 @@ import { useAllBookTropes, useTropes } from '../data/tropes'
 import { useLabels } from '../skin/labels'
 
 /**
- * The tropes index (docs/task-trope-system.md §5): your active vocabulary ordered by usage —
+ * The tropes index (docs/archive/task-trope-system.md §5): your active vocabulary ordered by usage —
  * the browsing entry point and the door to every trope page (where the per-trope sweep lives).
  * Private like everything else.
  */

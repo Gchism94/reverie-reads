@@ -1,5 +1,15 @@
 # Mobile shelf interaction audit
 
+> **Status: partial.** Defect A (§1) — the track-width mutation that broke touch-scroll
+> reachability — is **shipped**: #142 took the reveal out of layout flow (the transform/reserved-slack
+> approach; the travelling anchor this audit measured against no longer exists), refined by #148
+> (stickiness deadband, per-skin pick ring) and #149 (the fixed reveal window that replaced it —
+> "books scroll through it," `SpineShelf.tsx`). §5's "no e2e runs in a mobile viewport" is also
+> stale: `e2e-mobile` now runs `spine-shelf-reachability.spec.ts`'s per-frame invariance guard on
+> every non-docs PR. Defect B (§3) — no touch equivalent for the desktop hover-only fave-toggle in
+> `CoverCard.tsx` — is **still open**; this audit only inventoried it and proposed no fix. Read §1–2
+> and §5 as history; §3–4 as current. For current behavior, read the code.
+
 Audited 2026-08-04 on `audit/mobile-shelf-interaction` (from `main` @ `aadb71b`). Audit only — no
 fixes. Reproduction ran against the local authenticated app at a 390×844 touch viewport
 (`hasTouch`, `isMobile`), 18 seeded spines on `/shelves`, via a temporary Playwright measurement

@@ -1,4 +1,4 @@
-// Enrichment aggregator (docs/ENRICHMENT_STRATEGY.md). SOURCE-PLUGGABLE: each adapter fetches one
+// Enrichment aggregator (docs/reference/ENRICHMENT_STRATEGY.md). SOURCE-PLUGGABLE: each adapter fetches one
 // source and normalizes to a common SourceRecord (./merge.ts, mirrored from packages/core); the
 // pure merge reconciles them FIELD BY FIELD by precedence, unions multi-value fields, takes the
 // longest description, maps a genre, and lets user-authored fields win. The merged record is cached
@@ -13,6 +13,7 @@
 
 import {
   mergeRecords,
+  withholdByConfidence,
   normalizeGoogle,
   normalizeHardcoverSearch,
   normalizeIsbndb,
@@ -434,12 +435,11 @@ Deno.serve(async (req: Request) => {
         // degrade gracefully — skip this source, keep going
       }
     }
-    const merged = mergeRecords(stamped)
+    // Withhold what the match confidence doesn't back — none: cover + series; low: series only
+    // (cover has three downstream safety nets; series has none). Before writeCache, so cached
+    // records are clean too, not just this response.
+    const merged = withholdByConfidence(mergeRecords(stamped), confidence)
     const sourceList = stamped.map((s) => s.source).join('+') || null
-
-    // No confident match → don't attach a cover from the unconfirmed title search (wrong-cover risk).
-    // The book lands in the import-review "missing cover" bucket instead of showing a possibly-wrong one.
-    if (confidence === 'none') merged.cover = ''
 
     if (sourceList)
       await tr.time('enrich.writeCache', () =>

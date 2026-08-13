@@ -138,6 +138,20 @@ function mergeOwned(existing: Owned, incoming?: Owned): Owned {
 }
 
 /**
+ * Enrichment-only series gate, mirroring enrichmentCoverFill (covers.ts): withhold entirely once
+ * the reader has named or cleared the series themselves, otherwise fill-only. Scoped to the
+ * enrichment path (toIncoming) — CSV/XLSX import stays ungated via mergeImport's own `fill('series')`.
+ */
+export function enrichmentSeriesFill(
+  book: { series: string; seriesUserChosen?: boolean },
+  offered: string,
+): string {
+  if (book.seriesUserChosen) return ''
+  if (book.series) return '' // fill-only — an existing series (user, seed, or prior fill) stays
+  return offered
+}
+
+/**
  * Most-complete field values flow into the existing record; **user-authored fields always win**.
  * Single-value fields fill blanks only (existing kept when set). Multi-value fields union
  * (additive — never removes a curated trope/genre or turns off an owned flag). myRating, owned,

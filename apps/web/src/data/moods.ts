@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase'
 import { booksKey } from './books'
 
 /**
- * The mood vocabulary + assignment data layer — a READER-ASSIGNED dimension (docs/task-mood.md).
+ * The mood vocabulary + assignment data layer — a READER-ASSIGNED dimension (docs/archive/task-mood.md).
  * Canonical rows (owner_id null) come from the seed migration; personal rows are RLS-scoped to the
  * reader, optionally alias-linked to a canonical. Assignments (book_moods) ride into Book.moods via
  * the useBooks join — mutations here invalidate booksKey so chips/pages follow.

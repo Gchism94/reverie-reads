@@ -1,7 +1,7 @@
 # ADR 0003 — The per-book genre gradient is built, guarded, and deliberately not exposed
 
 **Status:** accepted · 2026-07-26
-**Context:** `feat/edit-superset` (the cover-gradient half; see also `docs/A11Y_PLACEHOLDER_CONTRAST_TASK.md`)
+**Context:** `feat/edit-superset` (the cover-gradient half; see also `docs/archive/task-a11y-placeholder-contrast.md`)
 
 ## Decision
 

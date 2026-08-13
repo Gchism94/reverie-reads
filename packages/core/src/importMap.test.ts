@@ -176,7 +176,7 @@ describe('possession on import', () => {
     const { profile, rows } = parseImport(csv)
     expect(profile.name).toBe('reverie')
     // Assert the WORD each cell produces, then the flags behind two of them — a cell reading
-    // "Borrowed" must set borrowed=true, not ownership='owned' (docs/task-shelf-model.md).
+    // "Borrowed" must set borrowed=true, not ownership='owned' (docs/archive/task-shelf-model.md).
     expect(rows.map((r) => word(r))).toEqual(['owned', 'owned', 'borrowed', 'wishlist'])
     expect(rows[2]!.incoming).toMatchObject({ ownership: 'unowned', borrowed: true })
     expect(rows[3]!.incoming).toMatchObject({ ownership: 'unowned', wishlist: true })

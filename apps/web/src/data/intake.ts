@@ -39,7 +39,7 @@ export type VerdictLookup = Map<string, DuplicateVerdict>
 export const verdictLookupKey = (bookId: string, inc: Incoming): string => `${bookId}|${importKey(inc)}`
 
 /** Build a full Book from an incoming partial. Absent source data stays absent — no fabricated
- *  genre/subgenre/format (docs/task-import-quality.md §3); the add flows pass their own explicit
+ *  genre/subgenre/format (docs/archive/task-import-quality.md §3); the add flows pass their own explicit
  *  values (AddRoute defaults genre to the skin's room), and imports leave the reader to choose. */
 export function incomingToBook(inc: Incoming): Book {
   const tags = inc.tags ?? []

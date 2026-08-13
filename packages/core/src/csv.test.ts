@@ -82,7 +82,7 @@ describe('possession from Goodreads shelves (legacy CSV path)', () => {
     ].join('\n')
     const rows = parseCsvIncoming(text)
     // The WORD each shelf yields, then the flags behind the two non-owned ones: a `borrowed` shelf
-    // must set borrowed=true rather than claiming ownership (docs/task-shelf-model.md).
+    // must set borrowed=true rather than claiming ownership (docs/archive/task-shelf-model.md).
     const word = (r: Partial<Book>) => possessionState({ ...possessionPatch('unset'), ...r })
     expect(rows.map(word)).toEqual(['owned', 'wishlist', 'borrowed'])
     expect(rows[1]).toMatchObject({ ownership: 'unowned', wishlist: true })

@@ -34,7 +34,7 @@
 -- and one that committed the first write independently would leave removed_at stamped.
 
 begin;
-select plan(26);
+select plan(29);
 
 -- Two readers. The on_auth_user_created trigger gives each a profile, which books.owner_id needs.
 insert into auth.users (id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
@@ -99,6 +99,10 @@ select is(
 select ok(
   (select series is null from public.books where id = 'dddddddd-0000-0000-0000-000000000001'),
   'removal clears the linked book''s series in the same call');
+select ok(
+  (select series_user_chosen from public.books where id = 'dddddddd-0000-0000-0000-000000000001'),
+  'removal marks series_user_chosen alongside the clear — the audit''s actual finding: without it, '
+  || 'the next enrich sweep sees a blank series it still matches and re-fills what was just removed');
 
 -- ── Repeat removal: calling the RPC again on a slot it already tombstoned is harmless. A real
 --    client scenario once S3b lands — a double-tap, or a retry after a failed toast. book_id is
@@ -121,6 +125,9 @@ select ok(
 select ok(
   (select series is null from public.books where id = 'dddddddd-0000-0000-0000-000000000001'),
   'the already-cleared book is untouched by the repeat call — no re-write, no error');
+select ok(
+  (select series_user_chosen from public.books where id = 'dddddddd-0000-0000-0000-000000000001'),
+  'series_user_chosen is still set after the repeat call — no books UPDATE fires to unset it');
 
 -- ── Guard 2: a non-owner is refused, and NEITHER write is applied ──
 set local role authenticated;
@@ -202,6 +209,9 @@ select is(
 select is(
   (select series from public.books where id = 'dddddddd-0000-0000-0000-000000000003'),
   'Test Series', 'the book still names the series — nothing half-applied');
+select is(
+  (select series_user_chosen from public.books where id = 'dddddddd-0000-0000-0000-000000000003'),
+  false, 'series_user_chosen rolled back too — the forced failure aborts the whole books UPDATE');
 
 -- ── fix/rpc-execute-grants: anon has no EXECUTE on remove_series_entry at all — refused at the
 --    GRANT layer, before the function body (and its ownership raises) ever runs. An arbitrary,
