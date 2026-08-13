@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './support/fixtures'
 
 // The signed-out front door is now the gold master-brand landing + a password/social auth screen
 // (the magic-link screen is gone). The a11y sweep's seeded signInWithPassword exercises the same
