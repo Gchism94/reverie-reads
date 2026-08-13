@@ -46,7 +46,7 @@ export type SetCoverError =
   | 'failed'
 
 /**
- * Set a book's cover. Two outcomes by design (docs/reverie-metadata-sourcing.md §Covers):
+ * Set a book's cover. Two outcomes by design (docs/reference/reverie-metadata-sourcing.md §Covers):
  *
  *  · INGEST — Open Library, upload, camera, a pasted link, Hardcover: the bytes go through the
  *    pipeline and are stored in the reader's own Storage path, with provenance.

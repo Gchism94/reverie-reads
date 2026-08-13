@@ -28,7 +28,7 @@ import {
 import { useLabels } from '../skin/labels'
 
 /**
- * The trope picker (docs/task-trope-system.md §3) — search-first across names AND aliases,
+ * The trope picker (docs/archive/task-trope-system.md §3) — search-first across names AND aliases,
  * grouped by facet, the reader's frequent tropes on top, ordering inside each facet biased by
  * the book's genre (a hint, never a gate). One gesture everywhere: tap tags, a second tap pins
  * (soft-capped warmly at three), a third removes. Inline personal creation resolves against

@@ -1,4 +1,4 @@
-// Cover system Edge Function (docs/task-cover-system.md) — two actions, one durable pipeline:
+// Cover system Edge Function (docs/archive/task-cover-system.md) — two actions, one durable pipeline:
 //
 //  · action:'editions' — alternates for the cover sheet's editions chooser. Hardcover editions
 //    (backend token, GLOBAL 60 req/min budget via rate_limit_consume) + Google Books by ISBN falling
@@ -248,7 +248,7 @@ const MIN_COVER_EDGE_PX = 50
 
 const SOURCES = new Set(['hardcover', 'google', 'openlibrary', 'upload', 'camera', 'url'])
 
-// Sources whose bytes may be STORED (docs/reverie-metadata-sourcing.md §Covers). Google Books is
+// Sources whose bytes may be STORED (docs/reference/reverie-metadata-sourcing.md §Covers). Google Books is
 // display-time only: its terms prohibit permanent copies and caching beyond the cache header, so a
 // Google image may be hotlinked at display size but never ingested. This is the authoritative gate —
 // the client refuses too, but the client is not the security boundary.

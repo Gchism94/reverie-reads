@@ -21,6 +21,7 @@ import {
   type BulkProgress,
 } from '../data/enrichLibrary'
 import { resharpenCovers, resharpenSource, type ResharpenProgress } from '../data/resharpenCovers'
+import { sweepCountText } from '../data/sweepProgress'
 import { DuplicateReview } from '../components/DuplicateReview'
 import { fileToCsvText } from '../data/xlsxAdapter'
 import type { ReviewCandidate } from '../data/intake'
@@ -241,7 +242,9 @@ function SettingsScreen() {
     stopRef.current = false
     setCompleting(true)
     setTracing(!!opts?.trace)
-    setProgress({ scanned: 0, total: 0, filled: 0 })
+    // total: null, not 0 — the count isn't known until bulkComplete's first emission, and a
+    // placeholder zero renders as "Stop (0/0)" on a run the reader has just committed minutes to.
+    setProgress({ scanned: 0, total: null, filled: 0 })
     const runId = crypto.randomUUID()
     try {
       const r = await bulkComplete(all, setProgress, () => stopRef.current, {
@@ -289,7 +292,7 @@ function SettingsScreen() {
   async function runResharpen() {
     sharpStopRef.current = false
     setSharpening(true)
-    setSharpProgress({ scanned: 0, total: 0, sharpened: 0 })
+    setSharpProgress({ scanned: 0, total: null, sharpened: 0 })
     try {
       const r = await resharpenCovers(all, setSharpProgress, () => sharpStopRef.current)
       const prefix =
@@ -426,7 +429,16 @@ function SettingsScreen() {
                     {s.label}
                   </span>
                   {activeSkin === s.id && (
-                    <span className="text-[11px] font-semibold text-primary">active</span>
+                    // Inline --accent-ink, matching SkinGalleryRoute's badge: --primary as text on
+                    // the --field surface measured 1.98:1 in hearth/dark (a11y sweep, 2026-08-10).
+                    // No text-accent-ink Tailwind mapping exists, and a two-site fix doesn't earn
+                    // one — inline style, same as the gallery.
+                    <span
+                      className="text-[11px] font-semibold"
+                      style={{ color: 'var(--accent-ink)' }}
+                    >
+                      active
+                    </span>
                   )}
                 </div>
                 <div className="text-[11.5px] text-muted">{s.genre}</div>
@@ -435,7 +447,10 @@ function SettingsScreen() {
           </div>
           <p className="mt-2 text-[12px] text-muted">
             Browse and preview them in the{' '}
-            <Link to="/skins" className="text-primary underline">
+            {/* accent-ink, not primary: this link sits on the --card surface, where hearth/dark's
+                --primary measures 2.24:1 (a11y sweep, 2026-08-10). Same inline treatment as the
+                "active" badge above. */}
+            <Link to="/skins" className="underline" style={{ color: 'var(--accent-ink)' }}>
               Skin Gallery
             </Link>
             .
@@ -459,8 +474,7 @@ function SettingsScreen() {
                 className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink"
                 style={{ background: 'var(--field)' }}
               >
-                ⏹ Stop{progress ? ` (${progress.scanned}/${progress.total})` : ''}
-                {tracing ? ' · tracing' : ''}
+                ⏹ Stop ({sweepCountText(progress)}){tracing ? ' · tracing' : ''}
               </button>
             ) : (
               <button
@@ -506,7 +520,7 @@ function SettingsScreen() {
                 className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink"
                 style={{ background: 'var(--field)' }}
               >
-                ⏹ Stop{sharpProgress ? ` (${sharpProgress.scanned}/${sharpProgress.total})` : ''}
+                ⏹ Stop ({sweepCountText(sharpProgress)})
               </button>
             ) : (
               <button
@@ -531,15 +545,14 @@ function SettingsScreen() {
           </div>
           {completing && progress && (
             <p className="mt-2 text-[12.5px] text-muted">
-              Completing details… {progress.scanned}/{progress.total} · filled {progress.filled}.
-              Sources are throttled, so this takes a moment; you can keep using the app.
+              Completing details… {sweepCountText(progress)} · filled {progress.filled}. Sources are
+              throttled, so this takes a while; you can keep using the app.
             </p>
           )}
           {sharpening && sharpProgress && (
             <p className="mt-2 text-[12.5px] text-muted">
-              Sharpening covers… {sharpProgress.scanned}/{sharpProgress.total} ·{' '}
-              {sharpProgress.sharpened} re-fetched at full resolution. Throttled; you can keep using
-              the app.
+              Sharpening covers… {sweepCountText(sharpProgress)} · {sharpProgress.sharpened}{' '}
+              re-fetched at full resolution. Throttled; you can keep using the app.
             </p>
           )}
           {showDupes && (

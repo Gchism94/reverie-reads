@@ -22,4 +22,4 @@ This reads `../data/personal_seed.json` and writes the built HTML. (Validate JS 
 
 ## Note
 This prototype is the reference for the upcoming front-end/back-end rebuild — see
-`../docs/ARCHITECTURE.md`. It is not the long-term codebase.
+`../docs/reference/ARCHITECTURE.md`. It is not the long-term codebase.

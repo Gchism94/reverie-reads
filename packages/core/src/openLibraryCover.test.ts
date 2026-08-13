@@ -5,7 +5,7 @@ import { buildOpenLibraryIsbnCoverUrl, fetchCover } from './covers'
 // guard exists to keep out.
 //
 // Cover-resolution approach adapted from work shared by Annabelle
-// (https://github.com/Annabelle0726/somnia-library) — see docs/DATA_SOURCES.md.
+// (https://github.com/Annabelle0726/somnia-library) — see docs/reference/DATA_SOURCES.md.
 
 /**
  * THE REAL ARTIFACT, not a stand-in. Captured verbatim from

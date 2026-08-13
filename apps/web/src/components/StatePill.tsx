@@ -8,7 +8,7 @@ import {
 
 /**
  * The borrowed / DNF pill — one implementation, so a card, a flipped spine and anything later can
- * never disagree about how a state looks (docs/task-state-pills.md).
+ * never disagree about how a state looks (docs/archive/task-state-pills.md).
  *
  * SOLID on `--card-solid`, never a translucent scrim. The marks this replaces sat on
  * `rgba(0,0,0,0.45)` over arbitrary cover art, which composites to #8c8c8c against white artwork —

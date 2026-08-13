@@ -1,0 +1,18 @@
+# Mirror of ci.yml's gate job "Prettier" step — `pnpm format:check`, and nothing else.
+#
+# WHY ONLY PRETTIER. Formatting is the one gate failure that is pure waste: it never indicates a
+# real defect, and CI catches it a minute and a half into a run that then has to be re-pushed and
+# re-run in full. Measured over this repo's CI history, 7 of 9 gate failures were Prettier, each
+# followed by a commit that did nothing but reformat — and because a red gate does not stop the
+# e2e jobs, each one also burned a full matrix before the fix landed.
+#
+# WHY NOT lint/typecheck/tests TOO. They are already gated in CI, they are slow enough to make a
+# push feel broken, and unlike formatting their failures are worth a human reading. A pre-push hook
+# that takes minutes gets bypassed habitually, and a hook that is always bypassed guards nothing.
+# Keep this one fast so it stays honest.
+#
+# The command is `pnpm format:check` verbatim so the hook and CI can never drift: same script, same
+# pinned prettier from the workspace, never npx.
+#
+# Escape hatch, deliberately left intact: `git push --no-verify`.
+pnpm format:check

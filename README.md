@@ -47,7 +47,7 @@ own values. Names only:
   deploy's commit SHA by a `define` in `apps/web/vite.config.ts`. Setting either in a `.env`
   has no effect — the define substitutes them at build time.
 - **Server / edge secrets** (deployment environment only — never in the repo): the Supabase
-  service-role key, `HARDCOVER_TOKEN`, and any provider API keys. See `docs/DEPLOY.md`.
+  service-role key, `HARDCOVER_TOKEN`, and any provider API keys. See `docs/reference/DEPLOY.md`.
 
 The publishable anon key is client-safe by design; the service-role key and all API keys
 are not and live only in deployment secrets.
@@ -73,15 +73,14 @@ pnpm deploy:functions     # supabase functions deploy, behind the deploy guard
 ```
 
 The guard refuses to run unless you're on a clean, in-sync `main` and confirm the touch
-list. Full runbook: [`docs/DEPLOY.md`](docs/DEPLOY.md).
+list. Full runbook: [`docs/reference/DEPLOY.md`](docs/reference/DEPLOY.md).
 
 ## License — three objects, three answers
 
-**The code is [AGPL-3.0](LICENSE).** **The corpus — the published book-metadata dataset
-(titles, authors, ISBNs, series, publication data) — is [CC0](LICENSE-CORPUS): public
-domain, yours to use for anything.** **Reader data — shelves, ratings, reading history,
-taste vectors, moods, and statistics — is neither: it is never published, is not licensed
-by anything in this repository, and is out of scope for both.**
+This app's code is licensed under [AGPL-3.0](LICENSE). The book metadata corpus is
+dedicated to the public domain under [CC0](LICENSE-CORPUS) — free to use for anything.
+Your shelves, ratings, and reading history are yours: never published, never part of the
+dataset, never licensed to anyone.
 
 Contributions require signing the [CLA](CLA.md) — see
 [`CONTRIBUTING.md`](CONTRIBUTING.md). Book cover images and third-party bibliographic
@@ -95,9 +94,9 @@ this repository's licenses.
 > onboarding docs for a new reader of the repo.
 
 - `AGENTS.md` — context loaded by coding agent; the working conventions.
-- `docs/CODING_AGENT_KICKOFF.md` — the sequenced build plan.
+- `docs/archive/CODING_AGENT_KICKOFF.md` — the sequenced build plan.
 - `ROADMAP.md` — path from prototype to shipped product.
-- `docs/ARCHITECTURE.md`, `docs/DATA_MODEL.md`, `docs/FEATURES.md`,
-  `docs/REQUIREMENTS.md` — specs and object shapes.
+- `docs/reference/ARCHITECTURE.md`, `docs/reference/DATA_MODEL.md`, `docs/reference/FEATURES.md`,
+  `docs/reference/REQUIREMENTS.md` — specs and object shapes.
 - `prototype/Reverie_Library.html` — the original single-file prototype (behavior
   reference; not the code that ships).

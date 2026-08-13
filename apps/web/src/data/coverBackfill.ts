@@ -2,13 +2,13 @@ import { useEffect } from 'react'
 import { isGoogleContentCover, isIngestibleCoverUrl, isStoredCoverUrl, type Book } from '@reverie/core'
 import { useSetCover } from './coverSheet'
 
-// Lazy backfill (docs/task-cover-system.md §3): existing external cover URLs keep working as-is,
+// Lazy backfill (docs/archive/task-cover-system.md §3): existing external cover URLs keep working as-is,
 // and are moved into owned Storage ON NEXT ACCESS of the book's detail page — no sweep job, no
 // import-time stampede. One attempt per book per session; failure leaves the external URL alone
 // (it still renders, and CoverImage's broken-link telemetry covers the rot case). Enrichment-cached
 // covers already live in Storage (bucket-root key) and are skipped by isStoredCoverUrl.
 //
-// GOOGLE IS EXCLUDED (docs/reverie-metadata-sourcing.md §Covers). This sweep was the main way
+// GOOGLE IS EXCLUDED (docs/reference/reverie-metadata-sourcing.md §Covers). This sweep was the main way
 // Google-derived images became permanent copies: enrichment leaves a hotlinked Google thumbnail on
 // the book, and opening the book's page quietly fetched it into our Storage under the source label
 // 'url'. A Google cover now simply stays a hotlink — which is what its terms allow — and renders

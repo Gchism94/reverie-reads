@@ -36,7 +36,7 @@ group by 1
 order by 2 desc;
 
 -- ── 3. Books whose stored cover came from Google via the global cache ────────────────────────
--- The audit in docs/reverie-metadata-sourcing.md matched on cover_source_url's HOST, which a
+-- The audit in docs/reference/reverie-metadata-sourcing.md matched on cover_source_url's HOST, which a
 -- laundered cover defeats. This joins back through the cache to recover the real origin.
 select b.id, b.title, b.cover_source, left(b.cover_url, 70) as cover_url,
        ec.provenance -> 'cover' ->> 'source' as true_origin

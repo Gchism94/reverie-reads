@@ -1,7 +1,7 @@
 # AGENTS.md
 
-Context for coding agent. Read this first, then `docs/DATA_MODEL.md` before touching anything
-that stores a book. `docs/CODING_AGENT_KICKOFF.md` is the original build plan — history now,
+Context for coding agent. Read this first, then `docs/reference/DATA_MODEL.md` before touching anything
+that stores a book. `docs/archive/CODING_AGENT_KICKOFF.md` is the original build plan — history now,
 not a to-do list. Keep this file updated as the project evolves.
 
 ## What this is
@@ -53,14 +53,14 @@ prototype/ data/ design/ docs/ backend/   ← reference material, not shipped
 
 ## Where the answers live
 
-- Features to match → `docs/FEATURES.md`, `docs/REQUIREMENTS.md`
-- Architecture & API surface → `docs/ARCHITECTURE.md`
-- DB schema & object shapes → `docs/DATA_MODEL.md`
+- Features to match → `docs/reference/FEATURES.md`, `docs/reference/REQUIREMENTS.md`
+- Architecture & API surface → `docs/reference/ARCHITECTURE.md`
+- DB schema & object shapes → `docs/reference/DATA_MODEL.md`
 - Design tokens, type, motion, components → `design/DESIGN_SYSTEM.md`; the nine skins'
   token sets live in `packages/core/src/skins.ts` + `apps/web/src/styles/tokens.css`
 - Decisions with a rationale → `docs/decisions/` (ADRs)
-- Cover/metadata/release data sources → `docs/DATA_SOURCES.md`
-- Sharing & book-club design → `docs/SHARING.md`
+- Cover/metadata/release data sources → `docs/reference/DATA_SOURCES.md`
+- Sharing & book-club design → `docs/reference/SHARING.md`
 - Seed data → `data/corpus_seed.json` (bibliographic, CC0) + `data/reader_seed.json` (this
   reader's own data, not published, not licensed), 290 books joined by `id` — split from the
   single `personal_seed.json` in the pre-public-licensing pass so the CC0 corpus dedication in
@@ -134,7 +134,7 @@ pnpm deploy:functions    # prod functions deploy — via the deploy guard
 - **Never run a raw `supabase db push` / `supabase functions deploy` against prod.** Go through the
   guard (`pnpm deploy:migrations` / `pnpm deploy:functions`) — it enforces main + clean tree + in-sync
   - a `y/N`. Prod deploys happen from `main` after merge, never a feature branch (override is a loud,
-    deliberate exception). See `docs/DEPLOY.md`.
+    deliberate exception). See `docs/reference/DEPLOY.md`.
 - **Heredocs containing shell examples MUST be single-quoted** — `<<'EOF'`, not `<<EOF` — so backticks
   and `$(…)` inside are text, never evaluated. This applies to any heredoc feeding `gh pr create
 --body`, commit messages, or reports.
@@ -143,7 +143,7 @@ pnpm deploy:functions    # prod functions deploy — via the deploy guard
   `` `supabase functions deploy …` `` in a double-quoted string executes. (Codifies the 2026-07-14
   heredoc-eval incident, which deployed a function to prod from a PR-body backtick.)
 - **No writes to the production database from a Code session — ever, including throwaway
-  accounts meant for immediate deletion.** `docs/DEPLOY.md`'s smoke test uses exactly that
+  accounts meant for immediate deletion.** `docs/reference/DEPLOY.md`'s smoke test uses exactly that
   pattern — a self-deleting account exercising the full lifecycle against prod — but that is the
   owner's checklist to run by hand, not something a Code session does on its own. Verification
   that requires a real prod account is the owner's to run, not Code's.
@@ -175,11 +175,48 @@ function` + fresh `create` resets it to the PUBLIC-execute default — verified 
   Revoking `PUBLIC` without granting `authenticated` there broke three pgTAP files outright on the
   first run. Caught by running the suite, not by re-reading the reasoning — a function's callers
   include its RLS policies, not just its own migration file and its obvious call sites.
+- **A data-fix script is NOT a migration.** A one-time repair scoped to a single incident — row ids
+  that mean nothing on another database, a backfill that must not run twice — lives in `docs/queries/`
+  and is run by hand against the target, never in `supabase/migrations/`. `pnpm db:migrate` pushes
+  every file in `supabase/migrations/` on every deploy, so a repair there would either re-fire on the
+  next database (idempotent ones harmlessly, non-idempotent ones destructively) or sit in the deploy
+  path forever as dead weight. The durable _closure_ of an incident — the schema/trigger/constraint
+  that stops it recurring — _does_ belong in a migration; the incident-specific repair that produced
+  the closure does not. `fix/merge_books-series-reparent` (41290d0) is the clean separation: the
+  repair SQL for Iron Flame's mis-parented series slot sat in `docs/queries/iron-flame-merge.sql`
+  scoped to those row ids, while the step-3c-series re-parenting that makes the next merge correct went
+  into the `merge_books` body via migration. Twelve incident files already live under `docs/queries/`
+  on this pattern; do not promote one into `supabase/migrations/` because it "feels like" a migration.
+- **Irreversible DB operations are silent by default — make them loud.** `alter table … drop column`
+  on a dependency nothing tracks (no FK, no view, no function arg) **succeeds silently**: no error,
+  no warning, just a column gone. `delete from …` with no `where` empties the table the same way.
+  Any migration that drops a column, drops a constraint, or deletes rows must (a) name in a comment
+  _what_ it removes and _why_, and (b) where live data exists, do the durable guard _first_ and the
+  destructive act _second_ — never assume a later step will catch a silent drop. `drop_plan_date`
+  (658ede0) documents this directly: `plan_date` was "a string, not a tracked dependency, so
+  `alter table … drop column plan_date` SUCCEEDS SILENTLY," and the migration reorders the body to
+  write the replacement columns and backfill before the drop, so a silent failure of the drop would
+  leave the replacement in place rather than the reader with neither. The silence is the failure mode;
+  a comment and a guard ordering are the antidote.
 
 ## Testing & verification discipline
 
-Seven rules, each earned by a real failure this session. A rule without its reason gets dropped
-by whoever inherits it, so the reason stays attached.
+Eleven rules, each earned by a real failure. A rule without its reason gets dropped by whoever
+inherits it, so the reason stays attached.
+
+- **Assert the thing itself, not a proxy that would look the same if the thing were absent.** This is
+  the general form several rules below are instances of, stated once at the top so it covers cases
+  the specific ones don't reach. The canonical case: `fix/spine-shelf-overlay` (df8cfb4) guarded the
+  track-width invariant by measuring `scrollWidth` across scroll-driven **and** tap-driven
+  transitions at both content edges — **not** a `scrollLeft`-reachability test, which the
+  `mobile-shelf-interaction` audit proved "reaches the ends fine while the real gesture fails" and so
+  passes against the broken build and proves nothing. A proxy guard certifies a property adjacent to
+  the defect (the scroll position can be set; the row is `NULL`; the bundle contains the string) while
+  the defect itself (the width mutates mid-gesture; the row is invisible under RLS; the branch is dead
+  code) is invisible to it. Before writing a guard, name the defect in one sentence and ask whether
+  the assertion would fail if _that specific thing_ broke — if it would still pass, you are guarding a
+  proxy. See the negative-assertion, bundle-grep, and dead-export rules below for three instances of
+  the same failure in different domains.
 
 - **Grepping a bundle for strings measures dead-code elimination, not rendering.** Vite
   constant-folds and eliminates unused branches, so a string's presence or absence in the built
@@ -268,6 +305,47 @@ test` outright and only fail `tsc`. This has bitten twice, by two different tool
   built on a deploy that had not happened. Check `supabase migration list --linked` (the remote
   column is the truth) or `supabase functions list` before depending on it, and say which you
   checked. This is cheap and the alternative is a branch built on a schema that does not exist.
+- **Local dev DB schema can run ahead of the checked-out tree — the mirror image of the rule
+  above.** `supabase migration up` / `db:migrate` applies migrations to the local Postgres instance
+  independently of git; checking out `main` or any branch that hasn't merged a migration yet leaves
+  the local schema ahead of the code until a `db:reset`. Observed on `chore/series-position-index`
+  (2026-08-10): its pgTAP suite only meant something with the migration actually applied, so it went
+  in via the incremental path (`supabase migration up`, not a full `db:reset` — no local dev data
+  lost), and the local stack stayed at `20260816010000` after, ahead of `main`. Same command, same
+  confusable label, opposite direction: `supabase migration list --local`'s `remote` column reports
+  the LOCAL database's applied migrations, not production's. Don't read a `--local` run as evidence
+  about prod's state, and don't read your local stack's schema as evidence about what's actually
+  merged into the tree you're standing on.
+
+## Data-integrity & sourcing discipline
+
+Two rules, both earned by the series-position-integrity audit (`audit/series-position-integrity`,
+2026-08). They govern the moment a Code session proposes a value for a stored field — a series
+ordinal, a series membership, a title canonicalization — that asserts a fact about the world rather
+than a fact about the code.
+
+- **A claim treated as ground truth must be sourced, not assumed — and that includes the owner's own
+  uncorroborated guess.** "I think this book is #3 in the series" is a hypothesis, not data; treat it
+  as such until a source confirms it. Default to **Wikidata** (`P179` part-of-series, `P1545` series
+  ordinal) over a guess: it is CC0, carries native decimal ordinals (so `3.1` vs `3.5` is expressible
+  without a custom scheme), and is auditable. Before proposing to overwrite a stored position, **paste
+  the per-title QID + `P1545` literal** into the work record so the claim is checkable, not asserted.
+  Bring splits (a book belongs to two series; an omnibus collects #1–#3) as a flagged question for the
+  owner rather than self-resolving them — a self-resolution looks the same in the diff whether it was
+  sourced or guessed, and the audit's whole point was that too many stored positions already were
+  guesses wearing the costume of data. The recurring failure this names: a series ordering that
+  "looked right" had drifted from every source, and nothing in the pipeline could tell, because the
+  value was never traceable to one.
+- **`series_entries.user_edited = true` is a hard rule: never silently overwrite a reader-set
+  position.** The flag marks a position the reader deliberately set — corrected, reordered, or
+  disambiguated against a source the backfill doesn't know about. A backfill or repair that rewrites
+  `position` while leaving `user_edited` false (or, worse, flipping it false) destroys the reader's
+  intent and is invisible in the diff because the row still "has a position." Any repair touching
+  `series_entries.position` must filter `where user_edited is distinct from true` and must not touch
+  the flag; one-shot repair functions (e.g. `20260810010000_reset_seeded_user_edited.sql`) are
+  `revoke execute from public` + `grant to service_role` and run once. This is the data-integrity twin
+  of the "assert the thing itself" testing rule: the thing to protect is the reader's set value, not
+  the column's mere non-nullness.
 
 ## Definition of done (per feature)
 
@@ -279,7 +357,7 @@ several defects have been "fixed" in code paths no reader can reach.
 
 1. **App name — DECIDED (owner, 2026-07): Reverie is the name.** No longer a
    placeholder. Keep reading it from `APP_NAME` in `@reverie/core` (never hardcode);
-   `docs/TRADEMARK.md` stays as history.
+   `docs/reference/TRADEMARK.md` stays as history.
 2. **Household model** — v1 default: one personal library per account; sharing happens
    via shared lists + clubs (defer a true shared household library).
 3. **Spoiler gating** — v1 default: honor-based (client-side). Server-enforced via RLS
