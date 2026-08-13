@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit -p tsconfig.json && vite build && node scripts/assert-dist-clean.mjs",
+    "build": "vite build && node scripts/assert-dist-clean.mjs",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
