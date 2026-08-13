@@ -62,7 +62,7 @@ export const isCoverSource = (s: unknown): s is CoverSource =>
   typeof s === 'string' && (COVER_SOURCES as readonly string[]).includes(s)
 
 /**
- * INGEST POSTURE (docs/reverie-metadata-sourcing.md §Covers).
+ * INGEST POSTURE (docs/reference/reverie-metadata-sourcing.md §Covers).
  *
  * Google Books' terms prohibit permanent copies and caching beyond the cache header, so a
  * Google-derived image may be HOTLINKED at display size but must never be ingested into our
@@ -302,7 +302,7 @@ export const buildOpenLibraryIsbnCoverUrl = (isbn: string): string =>
  *   · Goodreads — its developer terms prohibit storing their data, and this function exists
  *     precisely to store what it returns.
  *   · Google Images / scraped publisher art — re-hosting scraped cover art is the unresolved rights
- *     risk docs/reverie-metadata-sourcing.md already names; Open Library is chosen there as "the most
+ *     risk docs/reference/reverie-metadata-sourcing.md already names; Open Library is chosen there as "the most
  *     defensible cover source available to us" specifically to avoid it.
  * A personal, non-commercial project can take that risk. This one distributes to other readers, so
  * the honest fallback for a miss is the placeholder plus a reader-supplied URL — not a scrape.

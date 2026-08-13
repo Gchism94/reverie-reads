@@ -86,7 +86,7 @@ export const SKINS: Record<SkinId, Skin> = {
     chromeLine: 'The specimen archive',
   },
   // Stage 3 — the five remaining genres, code-first (palette + font + character derived from the
-  // genre direction in docs/SKINS.md, eyeball-gated).
+  // genre direction in docs/reference/SKINS.md, eyeball-gated).
   umbra: {
     id: 'umbra', // stored profile key — stable; the DISPLAY name is the verdict-approved rename
     label: 'Gaslight',

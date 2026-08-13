@@ -8,6 +8,12 @@ import type { SkinId } from './skins'
 export type Tok = {
   bg0: string
   cardSolid: string
+  /** --field composited over (--card composited over --bg0) — the browser-painted surface of an
+   *  unselected control / input row, following pickRing's precomposition precedent. The default
+   *  --field is color-mix(in srgb, var(--ink) 5%, transparent); tryst and hearth override it
+   *  per-mode in tokens.css (hearth's overrides are the 2026-08-10 a11y-sweep fix: the default
+   *  formula left --muted at 3.92:1 on this surface in hearth/dark). */
+  fieldOnCard: string
   ink: string
   muted: string
   accentFill: string
@@ -28,6 +34,7 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
   'tryst/dark': {
     bg0: '#0b0612',
     cardSolid: '#1d0e29',
+    fieldOnCard: '#271a33',
     ink: '#f5e9f0',
     muted: '#c2a3bd',
     accentFill: '#a3244a',
@@ -39,6 +46,7 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
   'tryst/light': {
     bg0: '#f8eee4',
     cardSolid: '#fdf8f1',
+    fieldOnCard: '#f5efeb',
     ink: '#351523',
     muted: '#7d556b',
     accentFill: '#9c2246',
@@ -50,6 +58,7 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
   'grimoire/dark': {
     bg0: '#0c0f0b',
     cardSolid: '#161b12',
+    fieldOnCard: '#21251c',
     ink: '#ece7d6',
     muted: '#a8b08c',
     accentFill: '#3aa97e',
@@ -61,6 +70,7 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
   'grimoire/light': {
     bg0: '#f1e7cf',
     cardSolid: '#f7efd9',
+    fieldOnCard: '#ede5cf',
     ink: '#2a2418',
     muted: '#6b644e',
     accentFill: '#1f7d57',
@@ -72,6 +82,7 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
   'aphelion/dark': {
     bg0: '#05070d',
     cardSolid: '#0c1220',
+    fieldOnCard: '#171d2b',
     ink: '#e6edf7',
     muted: '#8595b4',
     accentFill: '#1f8fa3',
@@ -83,6 +94,7 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
   'aphelion/light': {
     bg0: '#eef3fb',
     cardSolid: '#f7fafe',
+    fieldOnCard: '#ebeff3',
     ink: '#0e1626',
     muted: '#51607a',
     accentFill: '#0a6e80',
@@ -94,6 +106,7 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
   'marrow/dark': {
     bg0: '#17181c',
     cardSolid: '#212328',
+    fieldOnCard: '#211d1f',
     ink: '#e9e4db',
     muted: '#a8a39a',
     accentFill: '#a84545',
@@ -105,6 +118,7 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
   'marrow/light': {
     bg0: '#ece8e0',
     cardSolid: '#f4f0e8',
+    fieldOnCard: '#e9e5dd',
     ink: '#1b1815',
     muted: '#6a6358',
     accentFill: '#8a3232',
@@ -116,6 +130,7 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
   'umbra/dark': {
     bg0: '#101216',
     cardSolid: '#191c22',
+    fieldOnCard: '#202126',
     ink: '#e8e4da',
     muted: '#99a3ad',
     accentFill: '#d9a441',
@@ -127,6 +142,7 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
   'umbra/light': {
     bg0: '#edeae2',
     cardSolid: '#f6f4ee',
+    fieldOnCard: '#edeef0',
     ink: '#23201a',
     muted: '#5b656f',
     accentFill: '#8a6a1f',
@@ -143,6 +159,7 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
   'folio/dark': {
     bg0: '#c2beb1',
     cardSolid: '#d3cfc3',
+    fieldOnCard: '#cbc7bb',
     ink: '#2b2820',
     muted: '#4c483f',
     accentFill: '#b1362b',
@@ -154,6 +171,7 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
   'folio/light': {
     bg0: '#e7e4da',
     cardSolid: '#f7f5ee',
+    fieldOnCard: '#edebe4',
     ink: '#2b2820',
     muted: '#5d5950',
     accentFill: '#b1362b',
@@ -165,6 +183,7 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
   'hearth/dark': {
     bg0: '#1d1309',
     cardSolid: '#5c4829',
+    fieldOnCard: '#4f3e23',
     ink: '#f0e8d6',
     muted: '#c9b998',
     accentFill: '#b13a4e',
@@ -176,6 +195,7 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
   'hearth/light': {
     bg0: '#e9d7b4',
     cardSolid: '#dccca2',
+    fieldOnCard: '#ece3cc',
     ink: '#3d3226',
     muted: '#5c5240',
     accentFill: '#b13a4e',
@@ -189,6 +209,7 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
   'almanac/dark': {
     bg0: '#13120c',
     cardSolid: '#241f14',
+    fieldOnCard: '#2e291d',
     ink: '#e6ddc2',
     muted: '#b3a67e',
     accentFill: '#241f14',
@@ -200,6 +221,7 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
   'almanac/light': {
     bg0: '#e4dcc2',
     cardSolid: '#eadfbe',
+    fieldOnCard: '#e0d6b6',
     ink: '#2b2820',
     muted: '#5f5947',
     accentFill: '#2b2820',
@@ -212,6 +234,7 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
   'bloom/dark': {
     bg0: '#14162a',
     cardSolid: '#1f2240',
+    fieldOnCard: '#292c49',
     ink: '#eef0fa',
     muted: '#b8bcd8',
     accentFill: '#6a55c9',
@@ -223,6 +246,7 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
   'bloom/light': {
     bg0: '#d5d4ea',
     cardSolid: '#ffffff',
+    fieldOnCard: '#f4f4f5',
     ink: '#2b2a3a',
     muted: '#5a5878',
     accentFill: '#6a55c9',

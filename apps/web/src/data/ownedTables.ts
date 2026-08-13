@@ -137,6 +137,17 @@ export const USER_OWNED_TABLES: OwnedTable[] = [
     owner: 'owner_id',
     plan: { backup: true },
   },
+  {
+    table: 'series_merge_decisions',
+    owner: 'owner_id',
+    // fix/series-consolidation PR 2. Only the 'distinct' / 'related_but_separate' rows are a
+    // refusal in this sense ("no, do not propose merging these again") and travel. A 'same'
+    // ruling is excluded on purpose, not an oversight: the merge it records is already reflected
+    // in the merged books/series_entries data itself, and its surviving_series_id can't be
+    // remapped on restore — series ids are per-account and regenerated (see the `series` entry
+    // above), so there is no stable target to point a restored 'same' row at.
+    plan: { backup: true },
+  },
 ]
 
 /** Tables the backup claims to cover. */

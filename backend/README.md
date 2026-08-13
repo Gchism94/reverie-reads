@@ -9,14 +9,14 @@ The prototype's sharing backend: a single capability-keyed document table
 or club today; **not** the full relational model.
 
 ## What replaces/extends it (Phase 1)
-The relational schema in `../docs/DATA_MODEL.md` — accounts (`profiles`), `books`,
+The relational schema in `../docs/reference/DATA_MODEL.md` — accounts (`profiles`), `books`,
 `reads`, `lists`/`list_items`, `households`/`household_members`, `clubs`/`club_members`/
 `club_comments` — all under row-level security, plus:
 - **Auth** (email magic-link + OAuth).
 - **Realtime** subscriptions for live shared lists and club activity.
 - **Storage** for cached covers, CSV uploads, and backups.
 - **Edge Functions** for: cover/metadata enrichment (Google Books → Open Library →
-  Hardcover; see `../docs/DATA_SOURCES.md`), Goodreads/StoryGraph CSV import, and the
+  Hardcover; see `../docs/reference/DATA_SOURCES.md`), Goodreads/StoryGraph CSV import, and the
   merge operation.
 
 ## Decisions to make first
@@ -24,4 +24,4 @@ The relational schema in `../docs/DATA_MODEL.md` — accounts (`profiles`), `boo
 - Spoiler gating: honor-based (client) vs. server-enforced via RLS/RPC.
 - Household: one shared library vs. linked personal libraries.
 
-See `../docs/ARCHITECTURE.md` for the full picture.
+See `../docs/reference/ARCHITECTURE.md` for the full picture.

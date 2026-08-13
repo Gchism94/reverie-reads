@@ -1,6 +1,6 @@
 /* Skin Character core kit — token-consuming utility classes. Components add these instead of
    hardcoding shape / type / motion, so each skin's character flows through automatically. The
-   per-skin token VALUES live in tokens.css; the contract is docs/SKIN_CHARACTER_CONTRACT.md. */
+   per-skin token VALUES live in tokens.css; the contract is docs/reference/SKIN_CHARACTER_CONTRACT.md. */
 
 /* Control silhouette + feel (buttons, chips, selects). */
 .skin-control {

@@ -1,6 +1,6 @@
 import type { ImportExportResult } from '../data/importLibrary'
 
-// Pure copy builders for the post-import summary (docs/task-import-quality.md §4) — kept out of the
+// Pure copy builders for the post-import summary (docs/archive/task-import-quality.md §4) — kept out of the
 // component file so the phrasing is unit-tested and Fast Refresh stays happy.
 
 const plural = (n: number, one: string, many?: string) => (n === 1 ? one : (many ?? `${one}s`))

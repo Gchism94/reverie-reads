@@ -34,7 +34,7 @@ jobs:
         with:
           path-to-document: 'https://github.com/Gchism94/reverie-reads/blob/main/CLA.md'
           path-to-signatures: 'signatures/version1/cla.json'
-          # main is protected by a repository ruleset requiring PRs (docs/task-ci.md /
+          # main is protected by a repository ruleset requiring PRs (docs/archive/task-ci.md /
           # .github/workflows/ci.yml) — a direct push from this action's default GITHUB_TOKEN would
           # be refused there. This branch is unprotected, dedicated to the signature file, and the
           # action creates it on first sign if it doesn't already exist.

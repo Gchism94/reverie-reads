@@ -25,7 +25,7 @@ export interface SkinVoice {
   isbnNotice: string
   /** ownership options — semantically "I own this" / "borrowed (in hand, not owned)" / "I want to
    *  read this" (wishlist) / "not set" (no choice yet), each in the skin's register. Shown under a
-   *  neutral Ownership label so the meaning never blurs (docs/task-ownership-v2.md). */
+   *  neutral Ownership label so the meaning never blurs (docs/archive/task-ownership-v2.md). */
   ownIt: string
   borrowedIt: string
   wantIt: string

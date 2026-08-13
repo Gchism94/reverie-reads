@@ -2,7 +2,7 @@ import { buildMatchContext, scoreMatch, type Book } from '@reverie/core'
 import { describe, expect, it } from 'vitest'
 import { applyAnswer, buildQuizProfile, emptyAnswers, QUIZ, type QuizAnswers } from './quiz'
 
-// De-romancing the Match quiz (docs/task-match-deromance.md): the acceptance test that matters is
+// De-romancing the Match quiz (docs/archive/task-match-deromance.md): the acceptance test that matters is
 // that a non-romance answer against a MIXED library surfaces the non-romance genre, and a romance
 // answer still surfaces romance. We fold the real quiz options through applyAnswer, build the
 // profile the Match route builds, and score a mixed library with the real core matcher.
