@@ -326,7 +326,12 @@ function AddForm({
       genre: form.genre.trim() || skinGenre,
       subgenre: subs[0] ?? '',
       subgenres: subs,
-      genres: subs.slice(0, 1),
+      // Bug fix: this used to be `subs.slice(0, 1)` — the first SUBGENRE (e.g. 'dark romance'),
+      // not the CORE genre. genres[] must hold CORE_GENRES keys like the rest of the app expects
+      // (import's normalizeImportGenres, filters.ts's search blob, merge_books) — same value as
+      // `genre` above, just array-shaped so a second genre tag (added via Edit details) has
+      // somewhere to live without a later edit silently overwriting it back to one.
+      genres: [form.genre.trim() || skinGenre],
       // tropes are tagged in the refine step via the full picker (book_tropes needs a saved id);
       // no lightweight freeform tags here — the structured trope system is the one source of truth.
       intensity,
@@ -690,7 +695,8 @@ function BulkAdd() {
             genre: skinGenre,
             subgenre: bulkSub,
             subgenres: [bulkSub],
-            genres: [bulkSub],
+            // Same bug as single Add (see save() above): this held the subgenre, not the genre.
+            genres: [skinGenre],
             tags: [],
             intensity: null,
             owned: { physical: 'paperback', ebook: false, audiobook: false },
