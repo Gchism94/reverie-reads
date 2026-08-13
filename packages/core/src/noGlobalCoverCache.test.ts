@@ -12,7 +12,7 @@ import { describe, expect, it } from 'vitest'
 //
 // It also carried three problems the covers function does not:
 //   · no host check, while PRECEDENCE.cover puts `google` SECOND — so Google bytes, which
-//     docs/reverie-metadata-sourcing.md permits only as hotlinks, reached our bucket;
+//     docs/reference/reverie-metadata-sourcing.md permits only as hotlinks, reached our bucket;
 //   · no magic-byte sniff, no MIN_COVER_EDGE_PX floor, no size cap, no normalization;
 //   · once stored, the cover carried OUR host, which defeats the host-matching audit that doc
 //     built precisely because matching on the label alone closes the question wrongly.

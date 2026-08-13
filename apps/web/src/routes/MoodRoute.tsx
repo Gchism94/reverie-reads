@@ -10,7 +10,7 @@ import { useConfirmedLookup } from '../hooks/useConfirmedLookup'
 import { useVoice } from '../skin/labels'
 
 /**
- * A mood's own page (docs/task-mood.md §4): the payoff for assigning — the reader's other books that
+ * A mood's own page (docs/archive/task-mood.md §4): the payoff for assigning — the reader's other books that
  * landed the same way. Same shape as a trope page, lighter: no kin, no facet. Flip to sweep to tag
  * in bulk. Private and personal — never how OTHERS felt, only how this reader did.
  */
@@ -122,7 +122,7 @@ function MoodScreen() {
                 onClick={() => toggle(b)}
                 aria-pressed={sweep ? carrying : undefined}
                 // Thumb-class: state reaches the screen reader but NOT the eye — a text pill at this
-                // size obliterates the cover (docs/BACKLOG.md records the follow-up).
+                // size obliterates the cover (docs/backlog/BACKLOG.md records the follow-up).
                 aria-label={
                   sweep
                     ? `${carrying ? 'Remove' : 'Add'} ${mood.name} — ${b.title}${stateSuffix(b)}`

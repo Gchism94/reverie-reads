@@ -7,7 +7,7 @@ import { fetchSeriesEntries } from '../data/series'
 import { useBooks } from '../data/books'
 
 /**
- * The book page's series strip (docs/task-series-experience.md §4): "#3 of 7 · SeriesName" with
+ * The book page's series strip (docs/archive/task-series-experience.md §4): "#3 of 7 · SeriesName" with
  * the prev/next neighbours in READING order — ghosts included, rendered as dashed slots — and
  * the whole thing a door into the series page. Read-only: never creates series rows; before a
  * series page has ever been opened it falls back to the library's own books in that series.

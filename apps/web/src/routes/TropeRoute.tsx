@@ -18,7 +18,7 @@ import { useLabels, useVoice } from '../skin/labels'
 import { useConfirmedLookup } from '../hooks/useConfirmedLookup'
 
 /**
- * A trope's own page (docs/task-trope-system.md §5): your shelf of books carrying it, your
+ * A trope's own page (docs/archive/task-trope-system.md §5): your shelf of books carrying it, your
  * read-rate, and KIN — what you pair it with, computed from YOUR library only (nothing global).
  * The per-trope sweep lives here: flip to sweep and tap covers to tag in bulk.
  */
@@ -154,7 +154,7 @@ function TropeScreen() {
                 type="button"
                 onClick={() => toggle(b)}
                 aria-pressed={sweep ? carrying : undefined}
-                // Thumb-class: state to the screen reader only — see MoodRoute + docs/BACKLOG.md.
+                // Thumb-class: state to the screen reader only — see MoodRoute + docs/backlog/BACKLOG.md.
                 aria-label={
                   sweep
                     ? `${carrying ? 'Untag' : 'Tag'} ${b.title}${stateSuffix(b)}`

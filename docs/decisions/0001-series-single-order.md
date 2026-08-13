@@ -1,7 +1,7 @@
 # ADR 0001 — One reading order per series (alternate orders deferred)
 
 **Status:** accepted · 2026-07-13
-**Context:** `feat/series-experience` (docs/task-series-experience.md)
+**Context:** `feat/series-experience` (docs/archive/task-series-experience.md)
 
 ## Decision
 

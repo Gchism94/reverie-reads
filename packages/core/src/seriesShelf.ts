@@ -1,4 +1,4 @@
-// The series page IS the reading order (docs/task-series-experience.md). A series' canonical
+// The series page IS the reading order (docs/archive/task-series-experience.md). A series' canonical
 // entries — including books the reader doesn't have yet, rendered as GHOST SLOTS — live on the
 // series_entries relation; this module is the pure logic under that page: ordering, per-entry
 // state, Next Up, progress, and the decimal positioning used by drag-reorder.
@@ -266,7 +266,7 @@ const positionsAreInSeriesIndices = (candidates: readonly SeedCandidate[]): bool
 }
 
 /**
- * Positions for books joining a series, keyed by book id (docs/task-series-defects.md §3c).
+ * Positions for books joining a series, keyed by book id (docs/archive/task-series-defects.md §3c).
  *
  * Believable in-series indices are KEPT — including their gaps, which carry real meaning. Anything
  * else (import global-order numbers, duplicates) is renumbered to a clean 1..n that PRESERVES the

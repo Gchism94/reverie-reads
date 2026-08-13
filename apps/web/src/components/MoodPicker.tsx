@@ -4,7 +4,7 @@ import { MoodChip } from './MoodChip'
 import { useAssignMood, useCreatePersonalMood, useMoods, useUnassignMood } from '../data/moods'
 
 /**
- * The mood assignment control (docs/task-mood.md §2) — a small, quick multi-select the reader uses
+ * The mood assignment control (docs/archive/task-mood.md §2) — a small, quick multi-select the reader uses
  * wherever they record an impression (edit form, book detail, the just-finished sheet). Tap a mood
  * to assign it, tap again to remove. Inline personal creation resolves against canon first so a
  * near-match offers the canonical instead of duplicating. Reader-assigned ONLY — nothing here reads

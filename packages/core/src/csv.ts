@@ -73,7 +73,7 @@ export interface CsvParsedRow {
 /**
  * Parse a Goodreads/StoryGraph CSV into rows: an incoming book record (no matching/merging here —
  * the caller matches against the library via match.ts) plus the row extras. Field discipline
- * (docs/task-import-quality.md): series parsed OUT of the title; the `Author l-f` column preferred
+ * (docs/archive/task-import-quality.md): series parsed OUT of the title; the `Author l-f` column preferred
  * for an exact first/last split; Binding → format (never a fabricated 'Paperback'); Date Added →
  * addedTs; Read Count tops up the read log with undated entries; My Review / Private Notes land as
  * read-log notes; My Rating 0 = unrated; ISBNs survive the `="..."` Excel wrapper via cleanIsbn.
@@ -214,7 +214,7 @@ export function parseCsvRows(text: string): CsvParsedRow[] {
       // Goodreads shelf → possession: `to-read` is a want; a `borrowed`/`loan` shelf is borrowed;
       // read / currently-reading rows are books that passed through the reader's hands (owned).
       // One shelf yields one word, so the four-state adapter is the right shape here — it expands
-      // to the flags the model stores (docs/task-shelf-model.md).
+      // to the flags the model stores (docs/archive/task-shelf-model.md).
       ...possessionPatch(
         /to-read|to read/.test(shelf)
           ? 'wishlist'
@@ -352,7 +352,7 @@ export function importCsv(existing: readonly Book[], text: string): CsvImportRes
       if (changed) updated++
     } else {
       // Absent source data imports as absent — no fabricated genre/format/intensity
-      // (docs/task-import-quality.md §3). 'Imported' pseudo-genre retired; source records provenance.
+      // (docs/archive/task-import-quality.md §3). 'Imported' pseudo-genre retired; source records provenance.
       const nb: Book = {
         id: uid(),
         title: cleanTitle,

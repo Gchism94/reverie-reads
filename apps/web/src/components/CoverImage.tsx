@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { coverCandidates, isGoogleNoCoverArt } from '@reverie/core'
+import { coverCandidates, isDegenerateGoogleCoverRender } from '@reverie/core'
 import { markCoverBroken } from '../data/brokenCovers'
 import { CoverPlaceholder } from './CoverPlaceholder'
 
@@ -74,10 +74,13 @@ export function CoverImage({
       className={className}
       style={ghost ? { opacity: 'var(--ghost-opacity)' } : undefined}
       onLoad={(e) => {
-        // A Google "no image" plate loads successfully (HTTP 200) — reject it by its fixed size so the
-        // chain falls back to the real original, or to the honest placeholder when nothing's left.
+        // A degenerate Google render — the "no image" plate at any of its known sizes, or a scan
+        // STRIP whose shape no book cover has — loads successfully (HTTP 200), so onError never
+        // fires; the verdict has to come from what actually painted. Rejecting advances the
+        // candidate chain: upgraded → the un-upgraded zoom=1 original (a real cover for every
+        // broken volume the discover-cover-quality audit sampled) → the honest placeholder.
         const img = e.currentTarget
-        if (isGoogleNoCoverArt(src, img.naturalWidth, img.naturalHeight)) fail()
+        if (isDegenerateGoogleCoverRender(src, img.naturalWidth, img.naturalHeight)) fail()
       }}
       onError={fail}
     />

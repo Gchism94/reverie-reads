@@ -4,7 +4,7 @@ import type { Book } from '@reverie/core'
 // bulkComplete's cover behaviour: eager ingest, never-overwrite, and what a miss records.
 //
 // Eager batch ingest adapted from work shared by Annabelle
-// (https://github.com/Annabelle0726/somnia-library) — see docs/DATA_SOURCES.md. The lazy path
+// (https://github.com/Annabelle0726/somnia-library) — see docs/reference/DATA_SOURCES.md. The lazy path
 // (useCoverBackfill) only moves a hotlink into Storage when a reader opens that book, so a library
 // filled in bulk keeps hotlinks indefinitely — and a bulk-filled library is exactly the one nobody
 // browses one book at a time.

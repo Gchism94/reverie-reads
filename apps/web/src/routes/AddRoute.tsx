@@ -188,9 +188,9 @@ function AddForm({
   const intake = useIntake()
   const voice = useVoice()
   // Context-sensitive default: arriving from a wanting context (Discover) assumes wishlist; a plain
-  // catalog add leaves possession UNSET rather than forcing "owned" (docs/task-ownership-v2.md).
+  // catalog add leaves possession UNSET rather than forcing "owned" (docs/archive/task-ownership-v2.md).
   // Form-session state only — never persisted as a preference. One exclusive WORD; possessionPatch
-  // expands it to the model's flags at submit (docs/task-shelf-model.md).
+  // expands it to the model's flags at submit (docs/archive/task-shelf-model.md).
   const [possession, setPossession] = useState<PossessionState>(
     defaultUnowned ? 'wishlist' : 'unset',
   )
@@ -224,6 +224,9 @@ function AddForm({
   const [positionError, setPositionError] = useState<string | null>(null)
   // Track whether the user edited genre, so enrichment fills it but never overrides their choice.
   const genreEdited = useRef(false)
+  // Same tracking for series: typed -> seriesUserChosen true; left as the enrichment-prefilled
+  // value (or never touched) -> false, so a later enrich sweep can still treat it as fill-only.
+  const seriesEdited = useRef(false)
   // Distinct contributor names across the library, for the editor's autocomplete.
   const authorSuggestions = [
     ...new Set((books ?? []).flatMap((b) => b.contributors.map((c) => c.name)).filter(Boolean)),
@@ -316,6 +319,7 @@ function AddForm({
       last,
       contributors: contribs.filter((c) => c.name.trim()),
       series: form.series.trim(),
+      seriesUserChosen: seriesEdited.current,
       position: parsedPosition.value ?? '',
       seriesCount: null,
       status: form.series.trim() ? 'ongoing' : 'standalone',
@@ -437,7 +441,10 @@ function AddForm({
       <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
         <input
           value={form.series}
-          onChange={(e) => set('series', e.target.value)}
+          onChange={(e) => {
+            seriesEdited.current = true
+            set('series', e.target.value)
+          }}
           placeholder="Series"
           className={inputClass}
           style={inputStyle}

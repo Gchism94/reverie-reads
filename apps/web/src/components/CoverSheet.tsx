@@ -24,7 +24,7 @@ import {
 // publisher, never a bare image wall), or paste a direct image link. Camera + upload pass through
 // the 2:3 crop; an edition pick offers (never forces) syncing the book's edition fields.
 //
-// YOUR COPY LEADS (docs/reverie-metadata-sourcing.md §Why camera capture matters more than it
+// YOUR COPY LEADS (docs/reference/reverie-metadata-sourcing.md §Why camera capture matters more than it
 // looks). A photo of the book on your shelf is simultaneously the most defensible cover we can
 // hold — unambiguously the reader's own — and the only one that covers indie, KU, signed and
 // special editions, which no database has. It was buried under the edition list; it goes first.

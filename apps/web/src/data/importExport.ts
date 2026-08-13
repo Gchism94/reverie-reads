@@ -364,6 +364,37 @@ export function followRows(
 }
 
 /**
+ * Series-identity ruling rows to upsert, canonically ordered and re-owned to the current account.
+ *
+ * Only 'distinct' and 'related_but_separate' are refusals in the sense this backup section
+ * exists to preserve ("don't ask again" / "these are siblings, not the same series"). 'same' is
+ * excluded even if a hand-edited file includes one: the merge it records is already reflected in
+ * the merged books/series_entries data, and its surviving_series_id can't be remapped onto this
+ * account's regenerated series ids (see the ownedTables.ts entry). Deduped on the canonical pair
+ * — a single upsert statement naming the same conflict target twice fails in Postgres, and a
+ * hand-edited or twice-restored file is exactly how that could happen.
+ */
+export function seriesRulingRows(
+  rulings: readonly { name_key_a: string; name_key_b: string; ruling: string }[],
+  ownerId: string,
+): { owner_id: string; name_key_a: string; name_key_b: string; ruling: 'distinct' | 'related_but_separate' }[] {
+  const seen = new Set<string>()
+  const rows: { owner_id: string; name_key_a: string; name_key_b: string; ruling: 'distinct' | 'related_but_separate' }[] = []
+  for (const r of rulings) {
+    if (r.ruling !== 'distinct' && r.ruling !== 'related_but_separate') continue
+    const a = r.name_key_a?.trim()
+    const b = r.name_key_b?.trim()
+    if (!a || !b) continue
+    const [lo, hi] = a <= b ? [a, b] : [b, a]
+    const key = `${lo}\u0000${hi}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    rows.push({ owner_id: ownerId, name_key_a: lo, name_key_b: hi, ruling: r.ruling })
+  }
+  return rows
+}
+
+/**
  * Serialize the WHOLE account to a JSON backup (v5): books (incl. genre/tags/intensity/owned
  * formats), per-book contributors, assigned tropes (with emphasis) and moods, reads, lists +
  * memberships, the user's reviews, merge verdicts, followed/muted authors,
@@ -380,7 +411,7 @@ export function followRows(
  */
 export async function buildBackup(): Promise<string> {
   const ownerId = await currentUserId()
-  const [books, contribs, bookTropes, bookMoods, reads, lists, items, reviews, verdicts, follows, tombstones, dismissals, profile] =
+  const [books, contribs, bookTropes, bookMoods, reads, lists, items, reviews, verdicts, follows, rulings, tombstones, dismissals, profile] =
     await Promise.all([
       supabase.from('books').select('*'),
       supabase.from('books').select('id, book_authors(position, role, authors(name))'),
@@ -393,6 +424,10 @@ export async function buildBackup(): Promise<string> {
       supabase.from('reviews').select('work_key, reviewer_name, rating, body, created_at').eq('reviewer_id', ownerId),
       supabase.from('merge_verdicts').select('book_id, incoming_key, verdict'),
       supabase.from('author_follows').select('author_name, state'),
+      // Only the two refusal rulings travel — see the ownedTables.ts entry for why 'same' does
+      // not (it's already reflected in the merged books/series_entries data, and its
+      // surviving_series_id can't be remapped onto a restored account's regenerated series ids).
+      supabase.from('series_merge_decisions').select('name_key_a, name_key_b, ruling').neq('ruling', 'same'),
       // The two refusals — see the note above. Tombstones key on the series NAME; dismissals on
       // the trope name, for the same reason every other taxonomy reference does.
       supabase
@@ -406,7 +441,7 @@ export async function buildBackup(): Promise<string> {
         .eq('id', ownerId)
         .maybeSingle(),
     ])
-  for (const r of [books, contribs, bookTropes, bookMoods, reads, lists, items, reviews, verdicts, follows, tombstones, dismissals])
+  for (const r of [books, contribs, bookTropes, bookMoods, reads, lists, items, reviews, verdicts, follows, rulings, tombstones, dismissals])
     if (r.error) throw r.error
 
   // Per-book contributors, keyed by (old) book id.
@@ -433,6 +468,7 @@ export async function buildBackup(): Promise<string> {
     reviews: reviews.data,
     merge_verdicts: verdicts.data,
     author_follows: follows.data ?? [],
+    series_merge_decisions: rulings.data,
     series_tombstones: seriesTombstones((tombstones.data as unknown as TombstoneJoinRow[]) ?? []),
     trope_dismissals: dismissalsByBook((dismissals.data as unknown as DismissalJoinRow[]) ?? []),
     profile: profile.data ?? null,
@@ -461,6 +497,9 @@ interface BackupShape {
   reading_orders?: unknown
   merge_verdicts?: { book_id: string; incoming_key: string; verdict: string }[]
   author_follows?: BackupFollow[]
+  /** v5+: the reader's refusals on candidate duplicate series pairs — 'distinct' or
+   *  'related_but_separate' only. A 'same' ruling never appears here; see buildBackup. */
+  series_merge_decisions?: { name_key_a: string; name_key_b: string; ruling: string }[]
   /** v5+: the reader's refusals. */
   series_tombstones?: BackupTombstone[]
   trope_dismissals?: Record<string, string[]>
@@ -707,6 +746,19 @@ export async function restoreBackup(
     .filter((v): v is NonNullable<typeof v> => v !== null)
   if (verdicts.length) {
     const { error } = await supabase.from('merge_verdicts').upsert(verdicts, { onConflict: 'owner_id,book_id,incoming_key' })
+    if (error) throw error
+  }
+
+  // Series-identity rulings (v5+): the reader's 'no, don't merge these' / 'these are siblings'
+  // decisions, keyed purely by name so there is nothing to remap (unlike merge_verdicts's book
+  // ids). Defensively re-excludes 'same' and re-canonicalizes the pair order in case a
+  // hand-edited file violates either — the table's own check constraints would otherwise reject
+  // the row and take the whole restore down with it.
+  const rulings = seriesRulingRows(data.series_merge_decisions ?? [], ownerId)
+  if (rulings.length) {
+    const { error } = await supabase
+      .from('series_merge_decisions')
+      .upsert(rulings, { onConflict: 'owner_id,name_key_a,name_key_b' })
     if (error) throw error
   }
 

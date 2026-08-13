@@ -2,7 +2,7 @@ import type { AttributionMode, BuyConfig } from '@reverie/core'
 import type { DefaultStore } from '../data/profile'
 
 // The Bookshop affiliate id + attribution mode come from env so the money routing is a config change, not a
-// code change (docs/SCALING.md). Default mode is 'store' (app earns nothing); the ids sit unused
+// code change (docs/reference/SCALING.md). Default mode is 'store' (app earns nothing); the ids sit unused
 // until someone flips VITE_BUY_ATTRIBUTION_MODE=affiliate.
 /** The live attribution mode. Exported so the landing's revenue copy derives from the SAME value
  *  the links do — see revenueCopy() in @reverie/core. */

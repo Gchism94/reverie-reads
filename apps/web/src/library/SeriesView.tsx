@@ -7,7 +7,7 @@ const posNum = (b: Book) => (typeof b.position === 'number' ? b.position : Numbe
 const isRead = (b: Book) => b.readStatus === 'Read' || b.reads.length > 0
 
 /**
- * Library Series mode (docs/task-series-experience.md §3) — each series as a compact strip:
+ * Library Series mode (docs/archive/task-series-experience.md §3) — each series as a compact strip:
  * covers in reading order, read ticks, "X to get", the series' publication status. The strip is
  * a door: tapping opens the full series page (which owns ghosts, Next Up, and reorder).
  * Standalones stay in the Grid view — a series list stays a series list (reported call).

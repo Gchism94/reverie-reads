@@ -153,7 +153,7 @@ function BookDetailScreen() {
   const workKey = workKeyFor(book)
   const reviewerName = profile?.displayName || 'Reader'
   const setOwned = (owned: Owned) => updateBook.mutate({ id: book.id, patch: { owned } })
-  // Four-state possession WORD over five independent flags (docs/task-shelf-model.md): picking one
+  // Four-state possession WORD over five independent flags (docs/archive/task-shelf-model.md): picking one
   // word is exclusive, so possessionPatch writes the whole trio. Format flags are left alone across
   // any change — dropping possession suppresses them (bookOwnedFormats gates every read), so marking
   // a book owned or borrowed again restores your copies.
@@ -363,7 +363,7 @@ function BookDetailScreen() {
       </div>
 
       {/* Mood — the reader's OWN impression (how it landed), its own area, apart from the descriptive
-          tropes above. Never derived: empty is a valid, quiet state (docs/task-mood.md). */}
+          tropes above. Never derived: empty is a valid, quiet state (docs/archive/task-mood.md). */}
       <Label
         action={
           <button
@@ -512,8 +512,13 @@ function BookDetailScreen() {
             if (!window.confirm('Remove this book from your library?')) return
             deleteBook.mutate(book.id, { onSuccess: () => void navigate({ to: '/' }) })
           }}
-          className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-primary"
-          style={{ background: 'var(--card)' }}
+          // accent-ink, not primary: on this --card background, hearth/dark's --primary measures
+          // 2.24:1 (a11y sweep, 2026-08-10). There is no dedicated destructive/danger token in
+          // tokens.css — this button was leaning on --primary's reddish hue as its only color
+          // signal, with the label as the real signal. A --danger token is a queued follow-up;
+          // not designed here.
+          className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold"
+          style={{ background: 'var(--card)', color: 'var(--accent-ink)' }}
         >
           Remove book
         </button>

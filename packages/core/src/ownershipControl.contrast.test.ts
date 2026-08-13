@@ -3,7 +3,7 @@ import { contrastRatio, parseColor } from './adaptive'
 import { SKINS, type SkinId } from './skins'
 import { SKIN_TOKENS } from './skinTokens.fixture'
 
-// The four-state ownership control (docs/task-ownership-v2.md) and the borrowed badge reuse the skin
+// The four-state ownership control (docs/archive/task-ownership-v2.md) and the borrowed badge reuse the skin
 // tokens the rest of the app is measured against. The SELECTED ownership chip — the "Owned" /
 // "Borrowed" / "Wishlist" / "Not set" pill in each skin's voice — paints its label with
 // `--on-primary` on the `--accent-fill` surface. This turns "the borrowed treatment passes across
@@ -30,6 +30,23 @@ describe('ownership control contrast — selected chip legible at every skin × 
         expect(
           ratio,
           `${skin}/${mode}: ${tokens.onPrimary} on ${tokens.accentFill} = ${ratio.toFixed(2)}:1`,
+        ).toBeGreaterThanOrEqual(AA_NORMAL)
+      })
+
+      // The UNSELECTED sibling — `--muted` on the browser-painted `--field`-over-card surface
+      // (fieldOnCard in the fixture, precomposited like pickRing). This is the pair no token-level
+      // test saw until the nine-skin axe sweep measured it at 3.92:1 in hearth/dark (2026-08-10):
+      // the default --field LIGHTENS a dark card toward the light muted text, and hearth's lamplit
+      // linen had the least headroom. hearth now overrides --field per-mode in tokens.css; this
+      // assertion is what keeps the composed surface from drifting under again, in ANY skin.
+      it(`${skin}/${mode} · unselected chip (muted on field-over-card) clears ${AA_NORMAL}:1`, () => {
+        const fg = parseColor(tokens.muted)
+        const bg = parseColor(tokens.fieldOnCard)
+        expect(fg && bg).toBeTruthy()
+        const ratio = contrastRatio(fg!, bg!)
+        expect(
+          ratio,
+          `${skin}/${mode}: ${tokens.muted} on ${tokens.fieldOnCard} = ${ratio.toFixed(2)}:1`,
         ).toBeGreaterThanOrEqual(AA_NORMAL)
       })
     }

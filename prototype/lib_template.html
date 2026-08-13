@@ -1509,7 +1509,7 @@ function syncSetup(){
   openModal(`<button class="x" id="mx">✕</button><div class="dbody" style="padding:28px 26px">
     <h2 style="font-family:Fraunces;font-weight:600;font-size:22px;margin:0 0 6px">Sync setup</h2>
     <p class="ba" style="color:var(--muted);margin:0 0 14px">Current: <b>${esc(Shared.label())}</b></p>
-    <p style="font-size:13.5px;color:var(--ink2)">For live sharing across phones and people, create a free Supabase project, run the SQL in <code>docs/SHARING.md</code>, then paste your project URL and anon key here.</p>
+    <p style="font-size:13.5px;color:var(--ink2)">For live sharing across phones and people, create a free Supabase project, run the SQL in <code>docs/reference/SHARING.md</code>, then paste your project URL and anon key here.</p>
     <div class="field"><label>Supabase URL</label><input id="suUrl" value="${esc(c.url||"")}" placeholder="https://xxxx.supabase.co"></div>
     <div class="field"><label>Supabase anon key</label><input id="suKey" value="${esc(c.key||"")}" placeholder="eyJhbGci…"></div>
     <div style="display:flex;gap:10px"><button class="btn btn-primary" id="suSave">Save & connect</button><button class="btn btn-soft" id="suClear">Clear</button></div>
