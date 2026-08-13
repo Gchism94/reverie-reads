@@ -50,22 +50,26 @@ export function ContributorEditor({
           <option key={s} value={s} />
         ))}
       </datalist>
+      {/* Five controls in one line does not fit a phone. Below `sm` the name takes its own row and
+          the role + the three ordering/remove buttons share the next one; from `sm` up this is the
+          original single row, unchanged. The parent column carries min-w-0 (AddRoute), so this row
+          SHRINKS rather than escaping its card — this wrap is what keeps it legible once it can. */}
       {rows.map((c, i) => (
-        <div key={i} className="flex items-center gap-1.5">
+        <div key={i} className="flex flex-wrap items-center gap-1.5">
           <input
             value={c.name}
             onChange={(e) => update(i, { name: e.target.value })}
             list={listId}
             placeholder="Name"
             aria-label={`Contributor ${i + 1} name`}
-            className={`${fieldClass} min-w-0 flex-1`}
+            className={`${fieldClass} w-full min-w-0 sm:w-auto sm:flex-1`}
             style={fieldStyle}
           />
           <select
             value={c.role}
             onChange={(e) => update(i, { role: e.target.value as ContributorRole })}
             aria-label={`Contributor ${i + 1} role`}
-            className={`${fieldClass} flex-none`}
+            className={`${fieldClass} min-w-0 flex-1 sm:flex-none`}
             style={fieldStyle}
           >
             {CONTRIBUTOR_ROLES.map((r) => (

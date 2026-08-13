@@ -399,7 +399,13 @@ function AddForm({
             {enriching ? '…' : '🔎 Fetch details'}
           </button>
         </div>
-        <div className="flex-1 space-y-2">
+        {/* min-w-0 is load-bearing: a flex item defaults to min-width:auto, so without it this
+            column cannot shrink below its children's intrinsic minimum. ContributorEditor's row set
+            that floor, this column overflowed the card, and the whole PAGE gained horizontal scroll
+            (measured at a 390px viewport: scrollWidth 532 vs clientWidth 390). Never "fix" that
+            class of symptom with overflow-x:hidden — it hides the next instance instead of the
+            box being wrong. */}
+        <div className="min-w-0 flex-1 space-y-2">
           <input
             value={form.title}
             onChange={(e) => set('title', e.target.value)}
