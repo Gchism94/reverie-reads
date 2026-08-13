@@ -1,4 +1,4 @@
-// The trope system's vocabulary + pure logic (docs/task-trope-system.md). Tropes stop being a
+// The trope system's vocabulary + pure logic (docs/archive/task-trope-system.md). Tropes stop being a
 // flat tag list: every canonical trope carries a FACET (what kind of thing it names), a
 // GENRE AFFINITY (a picker-ordering hint, never a gate), and ALIASES (true synonyms only —
 // formatting shorthands live in TAG_ALIASES and compose with these at resolve time).
@@ -234,7 +234,7 @@ export const SEED_TROPES: readonly SeedTrope[] = [
   t('Moving', 'vibe', [n]),
   t('Practical', 'vibe', [n]),
 
-  // ── genre-neutral broadening (docs/task-taxonomy-neutral.md) — canonical tropes for the
+  // ── genre-neutral broadening (docs/archive/task-taxonomy-neutral.md) — canonical tropes for the
   //    non-romance genres the seed under-served. Additive; names deduped against the seed above. ──
   t('Red Herring', 'plot', [m]),
   t('Whodunit', 'plot', [m]),

@@ -146,9 +146,11 @@ async function stub(page: Page) {
 }
 
 /** The section container for a heading, so membership can be asserted per shelf rather than
- *  page-wide — a page-wide getByText would match any shelf and prove nothing about which. */
+ *  page-wide — a page-wide getByText would match any shelf and prove nothing about which.
+ *  Three levels up: heading -> the header button that makes it navigate (shelf-header-links.spec.ts)
+ *  -> the header row -> the section container holding this section's shelves. */
 const sectionFor = (page: Page, name: string | RegExp) =>
-  page.getByRole('heading', { name }).locator('xpath=../..')
+  page.getByRole('heading', { name }).locator('xpath=../../..')
 
 /** The books on a shelf, by the accessible names of its spines. */
 async function spineTitles(scope: ReturnType<typeof sectionFor>): Promise<string[]> {

@@ -1,6 +1,6 @@
 import type { MatchProfile } from '@reverie/core'
 
-// The Match quiz — a genre-neutral mood questionnaire (de-romanced, docs/task-match-deromance.md).
+// The Match quiz — a genre-neutral mood questionnaire (de-romanced, docs/archive/task-match-deromance.md).
 //
 // It was a romance-era artifact: romance-shaped options ("Sweeping fantasy & magic / Dark & intense
 // / Cozy & heartfelt"), answer weights that only mapped onto romance subgenres, and a romance-only

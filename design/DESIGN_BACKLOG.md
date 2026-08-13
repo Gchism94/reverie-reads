@@ -29,7 +29,7 @@ against them on the token system (no hardcoded colors from the mockup). All rend
 
 - Auth screens -- HANDED OFF -> design/from-design-tool/auth/HANDOFF.md (genre-neutral gold brand; sign up / log in / verify email / forgot + reset / edge states incl. rate-limited).
 
-- Cover Studio (NEW; see docs/COVER_SOURCING_AND_STUDIO.md) -- personal cover-curation surface, NOT a
+- Cover Studio (NEW; see docs/reference/COVER_SOURCING_AND_STUDIO.md) -- personal cover-curation surface, NOT a
   Hardcover clone: edition-faithful candidate picker, photograph-your-copy, skin-themed typographic
   placeholders, batch cover-triage (missing + low-confidence + broken/dead) from the import review + broken-cover signal via Sentry for now (in-app badge later), upload/URL/photo. Private + lean (own Storage/RLS).
   PROMPT WRITTEN -> design/DESIGN_PROMPT_COVER_STUDIO.md (per-book editor + batch triage [batch-first, scales] + photograph-your-copy + placeholder across skins).

@@ -10,10 +10,12 @@ import { ok } from './support/ok'
 // Shelf membership against the REAL seeded library (docs/task-shelf-views.md).
 //
 // The method is the one this file has always used, and is why it earns its keep: expectations are
-// derived from data/personal_seed.json by the documented rule, INDEPENDENTLY of the app, then
-// compared with what a reader actually sees. The two sides agree only if the whole chain works —
-// seed script → DB columns → row mapper → shelf predicates → the DOM. It exists because three
-// empty shelves once shipped unnoticed, since no test had ever asked how many books were on one.
+// derived from data/reader_seed.json (the reader-data half of the seed since the license split —
+// this test only ever needed source/format/readStatus, all of which live there) by the documented
+// rule, INDEPENDENTLY of the app, then compared with what a reader actually sees. The two sides
+// agree only if the whole chain works — seed script → DB columns → row mapper → shelf predicates →
+// the DOM. It exists because three empty shelves once shipped unnoticed, since no test had ever
+// asked how many books were on one.
 //
 // The numbers moved in B2 because the shelves did. Owned is owned-only now (isOwnedBook, not
 // isPossessed), so a borrowed ebook sits on Borrowed and NOT on Owned · Ebook — the inverse of what
@@ -47,7 +49,7 @@ function seedOwnLibrary(): void {
  */
 function expected() {
   const seed = JSON.parse(
-    readFileSync(new URL('../../../data/personal_seed.json', import.meta.url), 'utf8'),
+    readFileSync(new URL('../../../data/reader_seed.json', import.meta.url), 'utf8'),
   ) as { books?: unknown[] } | unknown[]
   const books = (Array.isArray(seed) ? seed : (seed.books ?? [])) as {
     source?: string

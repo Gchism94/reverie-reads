@@ -28,6 +28,7 @@ interface Patch {
 
 const inserted: Captured[] = []
 const patched: Patch[] = []
+const rpcCalls: { fn: string; args: Record<string, unknown> }[] = []
 let libraryBooks: Record<string, unknown>[] = []
 let entryRows: Record<string, unknown>[] = []
 
@@ -75,7 +76,10 @@ vi.mock('../lib/supabase', () => ({
         return chain(() => ({ data: [], error: null }))
       },
     }),
-    rpc: async () => ({ error: null }),
+    rpc: async (fn: string, args: Record<string, unknown>) => {
+      rpcCalls.push({ fn, args })
+      return { data: { moved: 0, skipped_user_edited: 0, books_synced: 0, length_set: false, length_books_synced: 0 }, error: null }
+    },
     functions: { invoke: async () => ({ data: null, error: null }) },
   },
 }))
@@ -98,6 +102,7 @@ const seededRow = () =>
 beforeEach(() => {
   inserted.length = 0
   patched.length = 0
+  rpcCalls.length = 0
   entryRows = []
   libraryBooks = [
     {
@@ -131,19 +136,32 @@ describe('reconciliation seeds machine rows, not reader gestures', () => {
 })
 
 describe('every reader gesture still claims the row', () => {
-  it('a drag marks the moved entry user_edited', async () => {
+  // A drag no longer stamps the flag from here — set_series_order does it server-side, from
+  // `p_origin`, so a stale client cannot talk the source into overwriting a reader's placement.
+  // What this file can still prove is that the drag path declares itself a READER gesture, which
+  // is the input the server's rule turns on. Asserting the absence of a client-side
+  // `user_edited: true` patch would be the proxy: it would pass just as well if the drag stopped
+  // writing anything at all.
+  it('a drag goes through set_series_order as a reader gesture', async () => {
     const { result } = renderHook(() => useMoveEntry('The Empyrean'), { wrapper: wrapper() })
-    result.current.mutate({ entryId: 'e1', position: 2 })
+    result.current.mutate({ seriesId: 'ser-1', slots: [{ entryId: 'e1', position: 2 }] })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    const move = patched.find((p) => p.table === 'series_entries')
-    expect(move?.patch.user_edited).toBe(true)
+    const call = rpcCalls.find((c) => c.fn === 'set_series_order')
+    expect(call).toBeDefined()
+    expect(call?.args.p_origin).toBe('reader')
+    expect(call?.args.p_slots).toEqual([{ entry_id: 'e1', position: 2 }])
+    // ...and no direct series_entries UPDATE rode alongside it. The whole point of the re-point is
+    // that this is now ONE write, not an RPC plus the old dual-write.
+    expect(patched.filter((p) => p.table === 'series_entries')).toHaveLength(0)
   })
 
-  it('a hand-set position marks it user_edited', async () => {
+  it('a label edit still claims the row user_edited', async () => {
     const { result } = renderHook(() => useUpdateEntry('The Empyrean'), { wrapper: wrapper() })
-    result.current.mutate({ entryId: 'e1', position: 4 })
+    result.current.mutate({ entryId: 'e1', label: 'novella' })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(patched.find((p) => p.table === 'series_entries')?.patch.user_edited).toBe(true)
+    const patch = patched.find((p) => p.table === 'series_entries')?.patch
+    expect(patch?.user_edited).toBe(true)
+    expect(patch?.label).toBe('novella')
   })
 
   it('a manually added ghost slot is user_edited from birth', async () => {

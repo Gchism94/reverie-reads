@@ -18,7 +18,7 @@ export interface CoverAlternate {
   author: string
 }
 
-/** Full normalized record returned by the enrichment aggregator (docs/ENRICHMENT_STRATEGY.md). */
+/** Full normalized record returned by the enrichment aggregator (docs/reference/ENRICHMENT_STRATEGY.md). */
 export interface EnrichResult {
   title: string
   authors: string[]

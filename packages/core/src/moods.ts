@@ -1,4 +1,4 @@
-// Mood — a READER-ASSIGNED dimension (docs/task-mood.md). Mood is how a book LANDED on the reader:
+// Mood — a READER-ASSIGNED dimension (docs/archive/task-mood.md). Mood is how a book LANDED on the reader:
 // subjective, personal, theirs alone. It is the inverse of the old model-derived "vibe" chip (removed
 // in #69): the reader attaches a mood because they felt it. The model may, at most, suggest — it must
 // never auto-apply, never derive, never stamp a default.
@@ -21,7 +21,7 @@ export interface SeedMood {
 /**
  * The canonical mood starter set — small and evocative, spanning the emotional registers a book can
  * leave behind (warm↔cold, calm↔intense, light↔dark), genre-neutral so it fits horror, literary,
- * romance, cozy alike. PROVISIONAL: proposed for the owner's review (docs/task-mood.md §1); the
+ * romance, cozy alike. PROVISIONAL: proposed for the owner's review (docs/archive/task-mood.md §1); the
  * reader extends it freely with personal moods regardless.
  */
 export const SEED_MOODS: readonly SeedMood[] = [

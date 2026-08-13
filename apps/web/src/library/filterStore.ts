@@ -3,6 +3,7 @@ import {
   defaultFilters,
   type LibraryFilters,
   type LibraryMode,
+  type LibraryShelfLink,
   type LibrarySort,
   type SeriesLenBucket,
 } from '@reverie/core'
@@ -23,6 +24,7 @@ interface FilterState {
   toggleWishlist: () => void
   toggleIntensity: (level: number) => void
   setSort: (s: LibrarySort) => void
+  setShelf: (s: LibraryShelfLink) => void
   setMode: (m: LibraryMode) => void
   togglePanel: () => void
   clear: () => void
@@ -60,6 +62,7 @@ export const useFilters = create<FilterState>((set) => ({
       },
     })),
   setSort: (sort) => set((s) => ({ filters: { ...s.filters, sort } })),
+  setShelf: (shelf) => set((s) => ({ filters: { ...s.filters, shelf } })),
   setMode: (mode) => set({ mode }),
   togglePanel: () => set((s) => ({ panelOpen: !s.panelOpen })),
   // Clear all facets but keep the search box and chosen sort (matches the prototype).

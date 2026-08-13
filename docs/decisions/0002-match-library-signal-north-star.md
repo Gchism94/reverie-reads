@@ -1,7 +1,7 @@
 # ADR 0002 — Match's north star is library-signal-driven, not a fixed quiz
 
 **Status:** accepted · 2026-07-21
-**Context:** `fix/match-deromance` (docs/task-match-deromance.md), following `feat/taxonomy-neutral` (#69)
+**Context:** `fix/match-deromance` (docs/archive/task-match-deromance.md), following `feat/taxonomy-neutral` (#69)
 
 ## Decision
 

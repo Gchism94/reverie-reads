@@ -285,7 +285,7 @@ export function rowToImported(row: string[], idx: Record<string, number>): Impor
   // A recorded read date with no explicit status still means the book was read.
   if (readStatus === 'Unread' && reads.length) readStatus = 'Read'
 
-  // Possession (docs/task-shelf-model.md): an explicit Owned column wins (yes/blank = owned,
+  // Possession (docs/archive/task-shelf-model.md): an explicit Owned column wins (yes/blank = owned,
   // borrow/loan = borrowed, no/wish = wishlist); otherwise a Goodreads-style wishlist shelf
   // (`to-read`/`tbr`) marks the row a want. Plain "Unread" is NOT a wishlist signal — unread books
   // you own are normal. A spreadsheet cell carries one word, so it maps through the four-state

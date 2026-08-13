@@ -1,4 +1,12 @@
-// Seed the local dev account's library from data/personal_seed.json (290 books).
+// Seed the local dev account's library from data/corpus_seed.json + data/reader_seed.json
+// (290 books, joined by `id`).
+//
+// The seed is TWO files, not one: corpus_seed.json holds the bibliographic fields (CC0,
+// LICENSE-CORPUS) and reader_seed.json holds this reader's own data — fave, format, rating,
+// readStatus, source, cover (not published, not licensed, not part of the corpus). They were
+// one file (personal_seed.json) until the split; each row's `id` is the only thing joining
+// them now, deliberately, so neither file can be reordered or edited independently and
+// silently desync the join the way two positionally-correlated arrays could.
 //
 // Creates (or reuses) a dev user, then resets and inserts their books via the service
 // role. Idempotent: re-running replaces the dev user's books. The URL and service-role
@@ -67,13 +75,13 @@ const num = (v) => (v === '' || v == null ? null : Number(v))
 // ownership — the same posture as the column default.
 //
 // ── THE FORMAT FLAGS ARE INFERRED, NOT RECORDED ─────────────────────────────────────────────────
-// data/personal_seed.json has no field naming a possessed format. Its keys are: cover, fave, first,
-// format, genres, isbn, last, position, rating, readStatus, series, seriesCount, source, spice,
-// status, subgenre, title, tropes. So owned_physical/ebook/audiobook below are DERIVED from
-// `format` x `source`, and `format` means **the format most often read** (Book.format — the reread
-// default), not the format owned. The two are usually the same and sometimes are not: a reader who
-// owns the hardcover and listened to the audiobook is flagged audiobook-only here, and the physical
-// copy they actually own vanishes.
+// Neither seed file has a field naming a possessed format. corpus_seed.json's keys are: id, first,
+// genres, isbn, last, position, series, seriesCount, spice, status, subgenre, title, tropes.
+// reader_seed.json's are: id, cover, fave, format, rating, readStatus, source. So
+// owned_physical/ebook/audiobook below are DERIVED from `format` x `source`, and `format` means
+// **the format most often read** (Book.format — the reread default), not the format owned. The two
+// are usually the same and sometimes are not: a reader who owns the hardcover and listened to the
+// audiobook is flagged audiobook-only here, and the physical copy they actually own vanishes.
 //
 // This inference predates the shelf model — it is where the pre-existing 190/3/20 came from. The
 // shelf-model change only extended it to the 77 borrowed rows (a borrowed book is in hand and
@@ -84,10 +92,11 @@ const num = (v) => (v === '' || v == null ? null : Number(v))
 //     it validates the pipeline — seed script → DB → mapper → predicate → DOM — and NOT the premise.
 //     A wrong inference stays green there. Nothing in the suite checks the premise, because nothing
 //     can: the ground truth is not in the file.
-//   · personal_seed.json is the owner's REAL library, not a fixture. If it is ever seeded into a
-//     production account, these inferred flags stop being scaffolding and become that reader's
-//     data — an audiobook-only book they own in hardback, indistinguishable from something they
-//     entered by hand. Decide the mapping is right before that happens, not after.
+//   · corpus_seed.json + reader_seed.json are the owner's REAL library, not a fixture. If it is
+//     ever seeded into a production account, these inferred flags stop being scaffolding and
+//     become that reader's data — an audiobook-only book they own in hardback, indistinguishable
+//     from something they entered by hand. Decide the mapping is right before that happens, not
+//     after.
 function possessionFrom(b) {
   const f = (b.format || '').toLowerCase()
   const borrowed = b.source === 'Borrowed'
@@ -95,7 +104,7 @@ function possessionFrom(b) {
   return {
     ownership: b.source === 'Owned' ? 'owned' : 'unowned',
     borrowed,
-    wishlist: false, // the seed carries no wanting signal — see docs/task-shelf-model.md
+    wishlist: false, // the seed carries no wanting signal — see docs/archive/task-shelf-model.md
     owned_physical: inHand
       ? f.includes('hardcover')
         ? 'hardcover'
@@ -208,9 +217,30 @@ async function seedContributors(ownerId) {
   return authors.length
 }
 
+/** Join the corpus (bibliographic) and reader (personal) halves back into one record per book,
+ *  by `id` — never by array position, so an independent edit to either file can't silently
+ *  desync the pairing. Throws loudly on any mismatch rather than seeding a partial or
+ *  wrongly-paired book. */
+function loadSeed() {
+  const corpus = JSON.parse(readFileSync(resolve(root, 'data/corpus_seed.json'), 'utf8'))
+  const reader = JSON.parse(readFileSync(resolve(root, 'data/reader_seed.json'), 'utf8'))
+  const readerById = new Map(reader.map((r) => [r.id, r]))
+  if (readerById.size !== reader.length) throw new Error('reader_seed.json has duplicate ids')
+  if (corpus.length !== reader.length) {
+    throw new Error(
+      `corpus_seed.json (${corpus.length} rows) and reader_seed.json (${reader.length} rows) are out of sync`,
+    )
+  }
+  return corpus.map((c) => {
+    const r = readerById.get(c.id)
+    if (!r) throw new Error(`corpus_seed.json id ${c.id} has no matching row in reader_seed.json`)
+    return { ...c, ...r }
+  })
+}
+
 async function main() {
   const ownerId = await ensureDevUser()
-  const seed = JSON.parse(readFileSync(resolve(root, 'data/personal_seed.json'), 'utf8'))
+  const seed = loadSeed()
 
   const del = await admin.from('books').delete().eq('owner_id', ownerId)
   if (del.error) throw del.error

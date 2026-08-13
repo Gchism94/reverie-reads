@@ -5,7 +5,7 @@ import { authFailure } from './support/authError'
 import { keepOfflineCacheEmpty } from './support/offlineCache'
 import { ok, okData, okUser } from './support/ok'
 
-// Discover search e2e (docs/task-discover-search.md): search field → results (deduped against the
+// Discover search e2e (docs/archive/task-discover-search.md): search field → results (deduped against the
 // library, "On your shelf" for owned) → add owned / add-to-shelf unowned, and the shelf picker's
 // "search everywhere" seam adding the same way. The `search` + `enrich` edge functions are STUBBED
 // so the run is deterministic and offline; the real Hardcover+Google backend is exercised in the
@@ -261,7 +261,7 @@ test('Discover search: add a result to a shelf as unowned via the shelf chooser'
       )
       .toBe(1)
     // Adding from a wanting context records a WANT, not a possession claim: under the shelf model
-    // that is the wishlist flag with ownership left unowned (docs/task-shelf-model.md).
+    // that is the wishlist flag with ownership left unowned (docs/archive/task-shelf-model.md).
     expect(await bookByTitle(c.sb, c.uid, 'Wildfire Vow')).toMatchObject({
       ownership: 'unowned',
       wishlist: true,
@@ -318,7 +318,7 @@ test('Shelf picker seam: "search everywhere" finds and adds an unowned book to t
       )
       .toBe(1)
     // Adding from a wanting context records a WANT, not a possession claim: under the shelf model
-    // that is the wishlist flag with ownership left unowned (docs/task-shelf-model.md).
+    // that is the wishlist flag with ownership left unowned (docs/archive/task-shelf-model.md).
     expect(await bookByTitle(c.sb, c.uid, 'Wildfire Vow')).toMatchObject({
       ownership: 'unowned',
       wishlist: true,

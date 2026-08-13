@@ -7,6 +7,7 @@ import {
   normalizeHardcoverSearch as coreNHS,
   normalizeIsbndb as coreNI,
   normalizeOpenLibrary as coreNOL,
+  withholdByConfidence as coreWithhold,
   type StampedSource,
 } from './enrich'
 // Same file the Deno enrich function imports (it uses './merge.ts'; Vitest/tsc resolve the
@@ -19,6 +20,7 @@ import {
   normalizeHardcoverSearch as fnNHS,
   normalizeIsbndb as fnNI,
   normalizeOpenLibrary as fnNOL,
+  withholdByConfidence as fnWithhold,
 } from '../../../supabase/functions/enrich/merge'
 import {
   matchKey as coreMatchKey,
@@ -143,6 +145,16 @@ describe('enrich mirror ↔ core parity (golden fixtures)', () => {
     // with a user override too
     const user = { title: 'My Title', at }
     expect(fnMerge(stamped, user)).toEqual(coreMerge(stamped, user))
+  })
+
+  it('withholdByConfidence is identical across all four tiers', () => {
+    const record = fnMerge([
+      { source: 'google', at: '2026-01-01T00:00:00.000Z', record: coreNG(GOOGLE) },
+      { source: 'openlibrary', at: '2026-01-01T00:00:00.000Z', record: coreNOL(OL) },
+    ])
+    for (const confidence of ['high', 'medium', 'low', 'none'] as const) {
+      expect(fnWithhold(record, confidence)).toEqual(coreWithhold(record, confidence))
+    }
   })
 })
 

@@ -4,13 +4,13 @@ import { useVoice } from '../skin/labels'
 import { OWNERSHIP_LABELS } from '../library/constants'
 
 /**
- * "Your copies" — possession lives here. A four-state control (docs/task-ownership-v2.md) sets how
+ * "Your copies" — possession lives here. A four-state control (docs/archive/task-ownership-v2.md) sets how
  * you have the book — owned / borrowed / wishlist / not set — in the active skin's voice. The
  * per-format switches describe WHICH copies a book IN HAND has, so they show for owned AND borrowed
  * (you can record the format of a book you read but don't own) and hide for wishlist/unset. Reading
  * status, shelves, ratings, and notes never depend on any of this.
  *
- * The control is four exclusive WORDS over a model of five independent flags (docs/task-shelf-model.md):
+ * The control is four exclusive WORDS over a model of five independent flags (docs/archive/task-shelf-model.md):
  * the caller derives the word with possessionState() and writes back through possessionPatch(), so
  * picking one word still clears the others — the behaviour this control has always had. A book
  * carrying a combination no single word describes (owned AND wanted) shows the strongest, and the

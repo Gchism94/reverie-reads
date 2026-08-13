@@ -76,7 +76,7 @@ function StatsScreen() {
 
   // Collection stats (the formats + series on your shelves) speak about books you HAVE IN HAND —
   // owned or borrowed — matching the format smart-shelves, which now include borrowed copies
-  // (docs/task-ownership-v2.md). Reading + taste stats (reads, ratings, faves, tags) count
+  // (docs/archive/task-ownership-v2.md). Reading + taste stats (reads, ratings, faves, tags) count
   // regardless of possession.
   const ownedAll = all.filter(isPossessed)
   const readIds = new Set([
