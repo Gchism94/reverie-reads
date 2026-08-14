@@ -548,6 +548,40 @@ the repo goes public.
 
 ## Known-flaky, with a prior
 
+- **`cover-card-touch-affordance.spec.ts:169` — "at rest the toggle is invisible; hovering the card
+  reveals it". RESOLVED — root-caused and fixed in `fix/cover-card-hover-flake`.** Recorded anyway,
+  because the failure it represents is a process one as much as a technical one.
+
+  **Three occurrences, none of them written down until the third.** It failed twice during the
+  2026-08-13 session — once in a full local run, once in CI — and both times was assessed in
+  conversation as "an unrelated flake" and moved past. On the third occurrence it blocked the merge
+  of an unrelated PR (#214, the first control-radius migration batch), which is what finally forced
+  a diagnosis. The suite runs `retries: 0` **specifically to measure flake rather than absorb it**,
+  and that measurement only pays for itself if it accumulates somewhere durable. Two correct
+  observations evaporated into a transcript. The third should not have been the first written record.
+
+  **Root cause: the test asserted a precondition it never established.** The toggle carries
+  `opacity-0 … group-hover:opacity-100` (`CoverCard.tsx`). Playwright's pointer persists across
+  navigation, and the spec's `signIn()` clicks "Enter your library" — so the mouse was left wherever
+  that button rendered, and after `goto('/library')` a cover card could land under it, firing
+  `group-hover` and revealing the control the assertion says is hidden. Whether it flaked depended
+  on where the button and the card happened to land relative to each other.
+
+  The observed values are the tell and were misread twice: `0.695799` then `0.837265`, settling at
+  `1` — an **increasing** sequence. That is the signature of a reveal in progress, not of a wrong
+  resting value. A test genuinely racing a transition would have been caught by
+  `toHaveCSS`'s own polling, which retries until timeout; this one polled and watched the element
+  finish arriving.
+
+  **Fix:** `await page.mouse.move(0, 0)` before the at-rest assertion. Deliberately not a timeout or
+  a retry — no duration makes a hovered element un-hover, so a wait would only have changed how long
+  the test took to report the same wrong answer. Mutation-proved: forcing the toggle to
+  `opacity-100` in `CoverCard.tsx` turns the fixed spec red, so the fix did not neuter the contract
+  it guards.
+
+  **A second failure here is a defect, not a flake** — and this time the precondition is explicit,
+  so a recurrence means something else moved.
+
 - **`discover-search.spec.ts:275` — "Shelf picker seam: search everywhere finds and adds an unowned
   book to this shelf".** Failed once in CI on PR #126 (run `30762811683`), passed on re-run with
   **no code change**; the same commit had passed 83/83 locally. Failure was the `expect.poll` on
