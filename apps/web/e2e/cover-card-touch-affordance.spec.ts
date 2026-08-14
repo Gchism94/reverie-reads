@@ -173,6 +173,20 @@ test.describe('CoverCard fave toggle — quiet-until-hover contract (desktop onl
     await signIn(page)
     await page.goto('/library')
 
+    // ESTABLISH "at rest" — the precondition this test asserts but never set up.
+    //
+    // Playwright's pointer persists across navigation. `signIn()` clicks "Enter your library", so
+    // the mouse is left wherever that button was, and after `goto('/library')` a cover card can
+    // land under it — firing `group-hover:opacity-100` and revealing the very control this
+    // assertion says is hidden. It flaked three times that way (BACKLOG: "Known-flaky, with a
+    // prior"), each time sampling the fade mid-flight — 0.695799, 0.837265 — and settling at 1,
+    // an INCREASING sequence, which is the signature of a reveal rather than a wrong resting value.
+    //
+    // Moving the pointer to the origin is the fix rather than a wait: no duration makes a hovered
+    // element un-hover, so a timeout or a retry here would only have changed how long the test took
+    // to report the same wrong answer.
+    await page.mouse.move(0, 0)
+
     const toggle = faveToggle(page)
     await expect(toggle).toBeVisible({ timeout: 20_000 }) // present in the DOM; opacity 0 hides it visually
     await expect(toggle).toHaveCSS('opacity', '0')
