@@ -71,7 +71,7 @@ function CreateClubModal({
                 key={u}
                 type="button"
                 onClick={() => setUnitType(u)}
-                className="flex-1 rounded-full px-3 py-1.5 text-[12.5px] font-semibold capitalize"
+                className="flex-1 skin-control px-3 py-1.5 text-[12.5px] font-semibold capitalize"
                 style={
                   unitType === u
                     ? { background: 'var(--accent-fill)', color: 'var(--on-primary)' }
@@ -118,7 +118,7 @@ function CreateClubModal({
               { onSuccess: (club) => onCreated(club.id) },
             )
           }
-          className="h-11 rounded-xl text-[14px] font-semibold disabled:opacity-50"
+          className="h-11 skin-control text-[14px] font-semibold disabled:opacity-50"
           style={{
             background: 'linear-gradient(135deg, var(--primary), var(--gold))',
             color: 'var(--on-primary)',
@@ -165,7 +165,7 @@ function CreateSharedModal({
               key={k}
               type="button"
               onClick={() => setKind(k)}
-              className="flex-1 rounded-full px-3 py-1.5 text-[12.5px] font-semibold"
+              className="flex-1 skin-control px-3 py-1.5 text-[12.5px] font-semibold"
               style={
                 kind === k
                   ? { background: 'var(--accent-fill)', color: 'var(--on-primary)' }
@@ -186,7 +186,7 @@ function CreateSharedModal({
           onClick={() =>
             createList.mutate({ name: name.trim(), kind }, { onSuccess: (code) => onCreated(code) })
           }
-          className="h-11 rounded-xl text-[14px] font-semibold disabled:opacity-50"
+          className="h-11 skin-control text-[14px] font-semibold disabled:opacity-50"
           style={{
             background: 'linear-gradient(135deg, var(--primary), var(--gold))',
             color: 'var(--on-primary)',
@@ -250,7 +250,7 @@ function ClubsScreen() {
           <button
             type="button"
             onClick={() => setDialog('club')}
-            className="rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold"
+            className="skin-control px-3.5 py-1.5 text-[12.5px] font-semibold"
             style={{
               background: 'linear-gradient(135deg, var(--primary), var(--gold))',
               color: 'var(--on-primary)',
@@ -261,7 +261,7 @@ function ClubsScreen() {
           <button
             type="button"
             onClick={joinClubByCode}
-            className="rounded-full border border-line px-3.5 py-1.5 text-[12.5px] font-semibold text-ink"
+            className="skin-control border border-line px-3.5 py-1.5 text-[12.5px] font-semibold text-ink"
             style={{ background: 'var(--card)' }}
           >
             Join by code
@@ -308,7 +308,7 @@ function ClubsScreen() {
           <button
             type="button"
             onClick={() => setDialog('shared')}
-            className="rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold"
+            className="skin-control px-3.5 py-1.5 text-[12.5px] font-semibold"
             style={{
               background: 'linear-gradient(135deg, var(--primary), var(--gold))',
               color: 'var(--on-primary)',
@@ -319,7 +319,7 @@ function ClubsScreen() {
           <button
             type="button"
             onClick={joinListByCode}
-            className="rounded-full border border-line px-3.5 py-1.5 text-[12.5px] font-semibold text-ink"
+            className="skin-control border border-line px-3.5 py-1.5 text-[12.5px] font-semibold text-ink"
             style={{ background: 'var(--card)' }}
           >
             Join by code
