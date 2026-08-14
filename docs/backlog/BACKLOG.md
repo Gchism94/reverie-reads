@@ -548,6 +548,46 @@ the repo goes public.
 
 ## Known-flaky, with a prior
 
+- **CI `Start Supabase` — `failed to bind host port … address already in use`. TWO occurrences on
+  2026-08-14, both in the `e2e` job, both re-run green.** Written down on the second, because the
+  first was noted only in conversation and evaporated — the identical loop that kept
+  `cover-card-touch-affordance` open until its third occurrence (below).
+
+  | #   | run           | branch                                                                    | port    | container                       |
+  | --- | ------------- | ------------------------------------------------------------------------- | ------- | ------------------------------- |
+  | 1   | `31816642512` | `fix/uppercase-reader-data-interim` (#224)                                | `55322` | `supabase_db_book-corpus`       |
+  | 2   | `31825085654` | `docs/ratchet-rule-and-chip-split` (#223, already merged — an orphan run) | `55324` | `supabase_inbucket_book-corpus` |
+
+  **Not flaky-in-our-code, and not the concurrency hypothesis. Two independent disproofs:**
+
+  1. **Every job is `runs-on: ubuntu-latest`** — a GitHub-hosted, single-use VM per job. Four jobs
+     start Supabase (`e2e`, `e2e-a11y`, `e2e-mobile`, `pgtap`) on fixed ports from `config.toml`
+     (55321 api / 55322 db / 55323 / 55324 inbucket), but they cannot see each other's ports because
+     they do not share a host. Concurrent jobs colliding on a fixed port set requires a shared
+     runner, and there isn't one.
+  2. **In run 2, the three sibling jobs ran the identical `supabase start` concurrently and all
+     three succeeded** — `e2e-a11y`, `e2e-mobile` and `pgtap` green, `e2e` red, same commit, same
+     command. A scheduling collision would not spare three of four.
+
+  **What it actually looks like:** a transient race inside Docker's port programming.
+  `supabase start` brings up ~8 containers near-simultaneously, and the bind failure lands on a
+  _different_ container each time (`db` then `inbucket`) — the signature of whichever container
+  loses the race, not of a port something else is holding. A specific occupied port would fail the
+  same way every time.
+
+  **Teardown is a red herring, but the fact is worth recording:** there is **no `supabase stop`
+  step anywhere in `ci.yml`**, and no `if: always()` cleanup. On ephemeral runners that leaks
+  nothing, so it cannot be the cause — but it would matter immediately if this project ever moves
+  to self-hosted runners, at which point hypothesis 1 above stops holding too.
+
+  **Re-running is legitimate here and should be labelled as such:** the container never started, so
+  no test executed. That is categorically different from re-running a red test until it goes green,
+  which is forbidden.
+
+  **If it recurs a third time**, the fix is a bounded retry around the start step
+  (`supabase stop --no-backup || true` then one retry), not a concurrency change to the workflow —
+  the evidence above already rules that out.
+
 - **`cover-card-touch-affordance.spec.ts:169` — "at rest the toggle is invisible; hovering the card
   reveals it". RESOLVED — root-caused and fixed in `fix/cover-card-hover-flake`.** Recorded anyway,
   because the failure it represents is a process one as much as a technical one.
