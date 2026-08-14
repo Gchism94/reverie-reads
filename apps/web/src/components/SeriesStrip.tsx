@@ -71,7 +71,7 @@ export function SeriesStrip({ book }: { book: Book }) {
     <Link
       to="/series/$seriesName"
       params={{ seriesName: encodeURIComponent(book.series) }}
-      className="mt-2 flex items-center gap-2.5 rounded-xl border border-line p-2 pr-3"
+      className="mt-2 flex items-center gap-2.5 skin-tile border border-line p-2 pr-3"
       style={{ background: 'var(--card)' }}
       aria-label={`Open the ${book.series} series page`}
     >

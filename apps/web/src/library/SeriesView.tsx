@@ -85,7 +85,7 @@ function SeriesCard({
     <button
       type="button"
       onClick={onOpen}
-      className="rounded-2xl border border-line p-4 text-left backdrop-blur"
+      className="skin-tile border border-line p-4 text-left backdrop-blur"
       style={{ background: 'var(--card)' }}
     >
       <div className="flex items-start justify-between gap-2">
