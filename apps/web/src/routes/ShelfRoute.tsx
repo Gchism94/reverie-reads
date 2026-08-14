@@ -162,7 +162,7 @@ function ShelfScreen() {
                 type="button"
                 onClick={() => setView(v)}
                 aria-pressed={view === v}
-                className="rounded-full px-3 py-1 text-[12.5px] font-semibold"
+                className="skin-control px-3 py-1 text-[12.5px] font-semibold"
                 style={
                   view === v
                     ? { background: 'var(--accent-fill)', color: 'var(--on-primary)' }
@@ -177,7 +177,7 @@ function ShelfScreen() {
             type="button"
             onClick={() => updateList.mutate({ id: list.id, isPriority: !list.priority })}
             aria-pressed={list.priority}
-            className="rounded-full border border-line px-3 py-1.5 text-[12.5px] font-semibold text-ink"
+            className="skin-control border border-line px-3 py-1.5 text-[12.5px] font-semibold text-ink"
             style={{ background: 'var(--card)' }}
           >
             <BookmarkGlyph filled={list.priority} /> {list.priority ? 'Priority' : 'Make priority'}
@@ -192,7 +192,7 @@ function ShelfScreen() {
               if (description != null)
                 updateList.mutate({ id: list.id, description: description.trim() })
             }}
-            className="rounded-full border border-line px-3 py-1.5 text-[12.5px] font-semibold text-ink"
+            className="skin-control border border-line px-3 py-1.5 text-[12.5px] font-semibold text-ink"
             style={{ background: 'var(--card)' }}
           >
             Describe

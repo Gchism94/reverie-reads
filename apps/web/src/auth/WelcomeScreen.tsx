@@ -36,7 +36,7 @@ function EnterButton({ label = 'Enter your library' }: { label?: string }) {
     <button
       type="button"
       onClick={() => void navigate({ to: '/', replace: true })}
-      className="mt-6 flex h-12 w-full items-center justify-center rounded-xl text-[15px] font-semibold"
+      className="skin-control mt-6 flex h-12 w-full items-center justify-center text-[15px] font-semibold"
       style={{ background: 'var(--gold)', color: 'var(--on-primary)' }}
     >
       {label}
@@ -96,7 +96,7 @@ function SetNewPassword() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="New password"
-          className="h-11 w-full rounded-xl border border-line px-3.5 text-[15px] text-ink outline-none focus:border-[color:var(--gold)]"
+          className="skin-field h-11 w-full border border-line px-3.5 text-[15px] text-ink outline-none focus:border-[color:var(--gold)]"
           style={{ background: 'var(--field)' }}
         />
         <ul className="flex flex-col gap-1">
@@ -119,7 +119,7 @@ function SetNewPassword() {
         <button
           type="submit"
           disabled={!strong || busy}
-          className="mt-1 flex h-12 items-center justify-center rounded-xl text-[15px] font-semibold disabled:opacity-50"
+          className="skin-control mt-1 flex h-12 items-center justify-center text-[15px] font-semibold disabled:opacity-50"
           style={{ background: 'var(--gold)', color: 'var(--on-primary)' }}
         >
           {busy ? 'One moment…' : 'Save new password'}
@@ -172,7 +172,7 @@ export function WelcomeScreen() {
         </p>
         <Link
           to="/auth"
-          className="mt-6 flex h-12 w-full items-center justify-center rounded-xl text-[15px] font-semibold"
+          className="skin-control mt-6 flex h-12 w-full items-center justify-center text-[15px] font-semibold"
           style={{ background: 'var(--gold)', color: 'var(--on-primary)' }}
         >
           Log in
@@ -222,7 +222,7 @@ export function WelcomeScreen() {
       {slow && (
         <Link
           to="/auth"
-          className="mt-6 flex h-12 w-full items-center justify-center rounded-xl text-[15px] font-semibold"
+          className="skin-control mt-6 flex h-12 w-full items-center justify-center text-[15px] font-semibold"
           style={{ background: 'var(--gold)', color: 'var(--on-primary)' }}
         >
           Log in

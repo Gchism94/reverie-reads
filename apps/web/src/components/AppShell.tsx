@@ -343,7 +343,7 @@ function MobileTabBar() {
             <button
               type="button"
               onClick={() => void signOut()}
-              className="flex w-full items-center justify-center gap-2 rounded-xl px-2 py-2.5 text-[13px] font-semibold text-muted"
+              className="skin-control flex w-full items-center justify-center gap-2 px-2 py-2.5 text-[13px] font-semibold text-muted"
             >
               <PowerGlyph /> Sign out
             </button>
@@ -411,7 +411,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="relative flex min-h-dvh">
       <a
         href="#main"
-        className="sr-only rounded-full px-4 py-2 text-[13px] font-semibold focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-50"
+        className="skin-control sr-only px-4 py-2 text-[13px] font-semibold focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-50"
         style={{ background: 'var(--accent-fill)', color: 'var(--on-primary)' }}
       >
         Skip to content
