@@ -54,7 +54,7 @@ function Progress({ step, total }: { step: number; total: number }) {
       {Array.from({ length: total }, (_, i) => (
         <span
           key={i}
-          className="h-1.5 rounded-full transition-all motion-reduce:transition-none"
+          className="skin-meter h-1.5 transition-all motion-reduce:transition-none"
           style={{
             width: i === step ? 22 : 7,
             background: i === step ? 'var(--accent)' : 'var(--chip-border)',
@@ -138,11 +138,11 @@ function OnboardingFlow() {
             {voice.loading}
           </p>
           <div
-            className="mx-auto mt-6 h-1.5 w-[min(320px,80%)] overflow-hidden rounded-full"
+            className="skin-meter mx-auto mt-6 h-1.5 w-[min(320px,80%)] overflow-hidden"
             style={{ background: 'var(--chip)' }}
           >
             <div
-              className="rv-anim h-full w-2/5 rounded-full"
+              className="skin-meter rv-anim h-full w-2/5"
               style={{
                 background: 'linear-gradient(90deg, transparent, var(--accent), transparent)',
                 animation: 'shim 1.4s ease-in-out infinite',

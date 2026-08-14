@@ -32,6 +32,23 @@
   transition-duration: var(--motion-duration);
 }
 
+/* A METER BAR — a progress track or the fill inside it. Radius ONLY.
+
+   This is the one kit class whose adoption CHANGES the look rather than aligning it, and it is
+   deliberately the last thing built. At `h-1.5` (6px) a `rounded-full` cap clamps to 3px, so in
+   tryst, hearth and bloom (--radius-control: 999px) nothing moves; in aphelion, grimoire, umbra and
+   almanac (2px) the caps square off, and in marrow (0px) they go fully square. That is a design
+   change — an instrument-panel read for the precision skins — not a consistency fix, which is why
+   it ships alone and behind its own review.
+
+   Radius only, and no motion, on purpose. `.skin-control` and `.skin-control-quiet` set
+   `transition-duration` without a `transition-property`, which defaults to `all` — harmless on a
+   button, but on a progress FILL it would animate every width change the data produces. This batch
+   already changes appearance once; it should not also change behaviour. */
+.skin-meter {
+  border-radius: var(--radius-control);
+}
+
 .skin-card {
   border-radius: var(--radius-card);
 }
