@@ -147,11 +147,11 @@ function ClubScreen() {
           </button>
         </div>
         <div
-          className="mt-3 h-1.5 overflow-hidden rounded-full"
+          className="skin-meter mt-3 h-1.5 overflow-hidden"
           style={{ background: 'var(--chip)' }}
         >
           <div
-            className="h-full rounded-full"
+            className="skin-meter h-full"
             style={{
               width: `${Math.min(100, Math.round((myProgress / (club.unitType === 'percent' ? 100 : club.unitCount)) * 100))}%`,
               background: 'var(--primary)',

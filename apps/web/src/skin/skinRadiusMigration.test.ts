@@ -35,7 +35,7 @@ const RADIUS = /\brounded-(?:none|sm|md|lg|xl|2xl|3xl|full)\b/
 // The ESLint rule DOES list it, because that one puts the captured name in its error message, and
 // without the alternative (ordered before `control`) it tells the reader the element carries
 // `skin-control` — a class it does not have.
-const CARRIER = /\bskin-(?:control|field|card|panel|tile)\b/
+const CARRIER = /\bskin-(?:control|field|card|panel|tile|meter)\b/
 
 /** Files whose radii are ARTWORK — SVG ornaments, star fields, spine geometry — never controls. */
 const ARTWORK_FILES = [
@@ -68,6 +68,16 @@ const ALLOW: Record<string, string> = {
   // tile heuristic's only false positives. `ownsInteractiveElement` now resolves both correctly (each
   // is a <div>), so their entries were REMOVED rather than left to rot — same rule as the h-[3px]
   // tracks above: an entry that suppresses nothing implies a waiver that is no longer doing any work.
+  // The two h-[3px] bars in SeriesRoute — the series progress track and its fill — are SKIPPED, not
+  // pending. At 3px tall, `border-radius` clamps to half the height (1.5px), and every skin's
+  // --radius-control is either >= 1.5px (999px, 3px, 2px) or 0px; the 2px and 3px skins therefore
+  // render pixel-identical to `rounded-full`, and only marrow's 0px would differ on a bar already
+  // too small to read a cap on. Measured, not assumed. Migrating them is churn, so they are listed
+  // here rather than left to look like remaining work.
+  'routes/SeriesRoute.tsx|mt-2 h-[3px] w-full overflow-hidden':
+    'the series progress TRACK at 3px — border-radius clamps to 1.5px, so this renders pixel-identical to rounded-full in every skin that is not marrow',
+  'routes/SeriesRoute.tsx|h-full rounded-full':
+    'the fill inside that same 3px track — same clamp, same pixel-identical result',
   'library/SeriesView.tsx|h-12 w-3':
     'a 3px-wide spine sliver in the series strip — rounded-sm is glyph geometry on artwork, not a control silhouette',
   // The two Landing nav links below are CONTROL-SHAPED but must not take control TYPOGRAPHY: three
@@ -164,6 +174,32 @@ function looksLikeField(lines: string[], i: number): boolean {
   return false
 }
 
+/**
+ * A METER BAR — a progress track, or the fill inside one. Neither is a control, so every other
+ * branch here misses them: no `px-*`, no `h-9..12`, no block padding, no interactive tag. They were
+ * invisible to this file for its whole life, which is why the meter-bar batch had to add sight
+ * before it could measure its own delta.
+ *
+ * A TRACK is a short, non-square, `overflow-hidden` box. A FILL is the `h-full` bar inside it,
+ * carrying no padding, text or border of its own — that last clause is what keeps `h-full` from
+ * matching every layout box in the app.
+ */
+function looksLikeMeter(line: string): boolean {
+  const w = [...line.matchAll(/\bw-([\w./[\]%-]+)/g)].map((m) => m[1])
+  const h = [...line.matchAll(/\bh-([\w./[\]%-]+)/g)].map((m) => m[1])
+  if (w.length && h.length && w.some((x) => h.includes(x))) return false // a square pip, not a bar
+  // The bracket form is bounded to SINGLE-DIGIT pixels on purpose. An unbounded `h-[\d+px]` also
+  // matches `h-[54px]`, `h-[60px]` and `h-[46px]` — the cover thumbnails in SeriesStrip, SeriesRoute
+  // and SeriesArranger, which are artwork frames and not bars at all. Measured: 14 hits before the
+  // bound, 11 after, and the 3 it dropped were exactly those thumbnails.
+  const shortBox = /\bh-(?:1|1\.5|2|2\.5|3)\b/.test(line) || /\bh-\[[1-9]px\]/.test(line)
+  if (shortBox && /\boverflow-hidden\b/.test(line)) return true
+  if (shortBox && !/\bpx-|\bp-[0-9]|\btext-|\bborder\b/.test(line)) return true
+  return (
+    /\bh-full\b/.test(line) && !/\bpx-|\bp-[0-9]|\btext-|\bborder\b|\bitems-|\bjustify-/.test(line)
+  )
+}
+
 /** A CARD-SCALED pressable: block padding or a text-left body, and no control-scale px-*. Needs an
  *  interactivity signal from the surrounding lines, because the same shape describes a plain card —
  *  ReviewsPanel's review card and AppShell's mobile sheet both matched on shape alone. */
@@ -193,7 +229,12 @@ describe('control-radius migration meter', () => {
     lines.forEach((line, i) => {
       if (!RADIUS.test(line) || CARRIER.test(line)) return
       const context = lines.slice(Math.max(0, i - 9), i + 3).join('\n')
-      if (!looksLikeControl(line) && !looksLikeTile(line, context) && !looksLikeField(lines, i))
+      if (
+        !looksLikeControl(line) &&
+        !looksLikeTile(line, context) &&
+        !looksLikeField(lines, i) &&
+        !looksLikeMeter(line)
+      )
         return
       if (
         Object.keys(ALLOW).some((k) => {
@@ -236,7 +277,11 @@ describe('control-radius migration meter', () => {
   // A first pass set BUDGET to 63, forgetting the last term. Nothing failed — a ratchet with slack
   // still passes, it just stops catching anything, and reverting a migrated control went undetected
   // until the counts were printed directly instead of being inferred from green.
-  const CHIP_BUDGET = 25
+  //    25 → 30 when `looksLikeMeter` gained sight of the progress bars (6 of the 11 it found were
+  //         already counted as chips, so the rise is +5, not +11)
+  //    30 → 28 allowlisting SeriesRoute's two h-[3px] bars, which are pixel-identical by clamp
+  //    28 → 19 migrating the nine meter bars — a delta of EXACTLY 9, measured, not derived
+  const CHIP_BUDGET = 19
 
   it(`no more than ${BUDGET} controls still use a hardcoded radius (ratchet — lower it, never raise it)`, () => {
     const byFile = findings.reduce<Record<string, number>>((a, f) => {
