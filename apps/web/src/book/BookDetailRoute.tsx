@@ -355,7 +355,7 @@ function BookDetailScreen() {
               <button
                 type="button"
                 onClick={() => setTropesExpanded((v) => !v)}
-                className="rounded-full border border-line px-2.5 py-1 text-[12px] font-semibold text-muted"
+                className="skin-control border border-line px-2.5 py-1 text-[12px] font-semibold text-muted"
                 style={{ background: 'var(--field)' }}
               >
                 {tropesExpanded ? 'fewer' : `+${book.tropes.length - 5} more`}
@@ -506,7 +506,7 @@ function BookDetailScreen() {
         <button
           type="button"
           onClick={() => setDialog('merge')}
-          className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink"
+          className="skin-control border border-line px-4 py-2 text-[13px] font-semibold text-ink"
           style={{ background: 'var(--card)' }}
         >
           Merge…
@@ -522,7 +522,7 @@ function BookDetailScreen() {
           // tokens.css — this button was leaning on --primary's reddish hue as its only color
           // signal, with the label as the real signal. A --danger token is a queued follow-up;
           // not designed here.
-          className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold"
+          className="skin-control border border-line px-4 py-2 text-[13px] font-semibold"
           style={{ background: 'var(--card)', color: 'var(--accent-ink)' }}
         >
           Remove book
@@ -576,7 +576,7 @@ function BuyAtIndie({ book }: { book: Book }) {
             href={l.url}
             target="_blank"
             rel="noreferrer"
-            className="flex items-center justify-between rounded-xl border border-line px-3 py-2 text-[13px] font-semibold text-ink"
+            className="skin-control flex items-center justify-between border border-line px-3 py-2 text-[13px] font-semibold text-ink"
             style={{ background: 'var(--field)' }}
           >
             <span>{l.label}</span>

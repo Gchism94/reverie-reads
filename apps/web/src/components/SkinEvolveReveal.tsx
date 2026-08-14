@@ -29,14 +29,14 @@ export function SkinEvolveReveal() {
         <button
           type="button"
           onClick={() => acceptPending(pending)}
-          className="rounded-full px-4 py-1.5 text-[12.5px] font-semibold"
+          className="skin-control px-4 py-1.5 text-[12.5px] font-semibold"
           style={{ background: 'var(--accent-fill)', color: 'var(--on-primary)' }}
         >
           Refresh my skin
         </button>
         <Link
           to="/skins"
-          className="rounded-full border border-line px-4 py-1.5 text-[12.5px] font-semibold text-ink"
+          className="skin-control border border-line px-4 py-1.5 text-[12.5px] font-semibold text-ink"
           style={{ background: 'var(--field)' }}
         >
           Preview
@@ -44,7 +44,7 @@ export function SkinEvolveReveal() {
         <button
           type="button"
           onClick={() => dismissPending(pending)}
-          className="rounded-full border border-line px-4 py-1.5 text-[12.5px] font-semibold text-muted"
+          className="skin-control border border-line px-4 py-1.5 text-[12.5px] font-semibold text-muted"
           style={{ background: 'var(--field)' }}
         >
           Not now
@@ -52,7 +52,7 @@ export function SkinEvolveReveal() {
         <button
           type="button"
           onClick={() => lockPending()}
-          className="rounded-full border border-line px-4 py-1.5 text-[12.5px] font-semibold text-muted"
+          className="skin-control border border-line px-4 py-1.5 text-[12.5px] font-semibold text-muted"
           style={{ background: 'var(--field)' }}
         >
           Lock my skin
