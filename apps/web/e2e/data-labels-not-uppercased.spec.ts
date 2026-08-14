@@ -283,9 +283,12 @@ test('a book title, author, genre and the reader’s own tag all render verbatim
   // innerText, so each of these sees the transform.
   await expect(page.getByText(TITLE()).first()).toHaveText(TITLE())
 
+  // TROPE is in this list deliberately: the desktop library renders FilterPanel's persistent
+  // column, where Chip.tsx draws every trope as a chip. That is how this sweep reaches the
+  // 5-call-site Chip cluster without depending on a click path that differs per viewport.
   await expectDataRenderedVerbatim(
     page,
-    [TITLE(), TAG(), `${AUTHOR_FIRST} ${AUTHOR_LAST}`],
+    [TITLE(), TAG(), TROPE(), `${AUTHOR_FIRST} ${AUTHOR_LAST}`],
     '/library',
   )
 })
