@@ -54,7 +54,7 @@ function useAuthorSuggestions(): string[] {
 }
 
 const fieldClass =
-  'h-10 w-full rounded-xl border border-line px-3 text-[14px] text-ink outline-none'
+  'h-10 w-full skin-field border border-line px-3 text-[14px] text-ink outline-none'
 const fieldStyle = { background: 'var(--field)' } as const
 
 function Field({ label, children, error }: { label: string; children: ReactNode; error?: string }) {
@@ -140,7 +140,7 @@ export function LogReadForm({ book, onClose }: { book: Book; onClose: () => void
         <button
           type="button"
           onClick={save}
-          className="mt-1 h-11 rounded-xl text-[14px] font-semibold"
+          className="mt-1 h-11 skin-control text-[14px] font-semibold"
           style={{
             background: 'linear-gradient(135deg, var(--primary), var(--gold))',
             color: 'var(--on-primary)',
@@ -646,7 +646,7 @@ export function EditDetails({
             <button
               type="button"
               onClick={() => setConfirmingLeave(false)}
-              className="h-11 flex-1 rounded-xl border border-line text-[13.5px] font-semibold text-ink"
+              className="h-11 flex-1 skin-control border border-line text-[13.5px] font-semibold text-ink"
               style={{ background: 'var(--card)' }}
             >
               Keep it in {oldSeries}
@@ -655,7 +655,7 @@ export function EditDetails({
               type="button"
               onClick={() => void save()}
               disabled={saving}
-              className="h-11 flex-1 rounded-xl text-[14px] font-semibold disabled:opacity-50"
+              className="h-11 flex-1 skin-control text-[14px] font-semibold disabled:opacity-50"
               style={{
                 background: 'linear-gradient(135deg, var(--primary), var(--gold))',
                 color: 'var(--on-primary)',
@@ -670,7 +670,7 @@ export function EditDetails({
           type="button"
           onClick={() => (leavingSeries ? setConfirmingLeave(true) : void save())}
           disabled={!f.genre || saving}
-          className="mt-4 h-11 w-full rounded-xl text-[14px] font-semibold disabled:opacity-40"
+          className="mt-4 h-11 w-full skin-control text-[14px] font-semibold disabled:opacity-40"
           style={{
             background: 'linear-gradient(135deg, var(--primary), var(--gold))',
             color: 'var(--on-primary)',
@@ -849,7 +849,7 @@ function MergePreview({
           type="button"
           onClick={onBack}
           disabled={pending}
-          className="h-11 flex-1 rounded-xl border border-line text-[13.5px] font-semibold text-ink disabled:opacity-50"
+          className="h-11 flex-1 skin-control border border-line text-[13.5px] font-semibold text-ink disabled:opacity-50"
           style={{ background: 'var(--card)' }}
         >
           Back
@@ -858,7 +858,7 @@ function MergePreview({
           type="button"
           onClick={onConfirm}
           disabled={pending}
-          className="h-11 flex-1 rounded-xl text-[14px] font-semibold disabled:opacity-50"
+          className="h-11 flex-1 skin-control text-[14px] font-semibold disabled:opacity-50"
           style={{
             background: 'linear-gradient(135deg, var(--primary), var(--gold))',
             color: 'var(--on-primary)',
@@ -921,7 +921,7 @@ export function MergeDialog({
             <button
               type="button"
               onClick={() => setLoser(b)}
-              className="flex w-full items-center justify-between gap-3 rounded-xl border border-line px-3 py-2 text-left"
+              className="flex w-full items-center justify-between gap-3 skin-control border border-line px-3 py-2 text-left"
               style={{ background: 'var(--field)' }}
             >
               <span>
