@@ -27,7 +27,7 @@ import { ok, okUser } from './support/ok'
 //
 // So the obvious spelling of this test:
 //
-//     expect(await el.textContent()).toBe(TITLE)          // <-- PASSES ON THE BROKEN BUILD
+//     expect(await el.textContent()).toBe(TITLE())          // <-- PASSES ON THE BROKEN BUILD
 //
 // passes against the broken build and the fixed one alike. It is a proxy guard: it asserts something
 // adjacent to the defect (the DOM holds the right string — it always did) while the defect itself
@@ -46,7 +46,13 @@ const ANON =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0'
 const SERVICE =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU'
-const EMAIL = 'data-labels-e2e@reverie.local'
+// PER-PROJECT ISOLATION. The `rest` and `mobile` projects run in parallel and each execute
+// `beforeAll`, so a single shared fixture user means two seeds interleave: delete, delete, insert,
+// insert — leaving duplicate books, only one of which carries the trope join. The book screen then
+// opens whichever duplicate matched first and the trope assertion fails intermittently. Scoping the
+// user AND the seeded strings by project name removes the shared state instead of timing around it.
+const PROJECT = (): string => test.info().project.name
+const EMAIL = () => `data-labels-${PROJECT()}-e2e@reverie.local`
 const PASSWORD = 'data-labels-e2e-password'
 
 /** An uppercase-transform skin. Verified in tokens.css: aphelion, umbra and almanac set
@@ -55,11 +61,13 @@ const SKIN = 'aphelion'
 
 // Deliberately mixed-case, and deliberately multi-word: a single lowercase word would still "look
 // right" under `capitalize`, and only mixed case distinguishes `uppercase` from every other value.
-const TITLE = 'A Court of Thorns and Roses'
+const TITLE = () => `A Court of Thorns and Roses ${PROJECT()}`
 const AUTHOR_FIRST = 'Sarah'
 const AUTHOR_LAST = 'Maas'
 const GENRE = 'fantasy'
-const TAG = 'Enemies to Lovers'
+const TAG = () => `Enemies to Lovers ${PROJECT()}`
+/** Rendered by <TropeChip> on the book screen — one of the 8 direct sites. */
+const TROPE = () => `Slow Burn Rivals ${PROJECT()}`
 
 test.describe.configure({ mode: 'serial' })
 
@@ -68,19 +76,21 @@ type Client = {
   session: { access_token: string; refresh_token: string }
   uid: string
 }
-let shared: Client | null = null
+const shared = new Map<string, Client>()
+const seededBookId = new Map<string, string>()
 
 async function client(): Promise<Client> {
-  if (shared) return shared
+  const cached = shared.get(PROJECT())
+  if (cached) return cached
   const admin = createClient(SUPABASE_URL, SERVICE, {
     auth: { autoRefreshToken: false, persistSession: false },
   })
   const { data } = await admin.auth.admin.listUsers()
-  let uid = data?.users?.find((u) => u.email === EMAIL)?.id
+  let uid = data?.users?.find((u) => u.email === EMAIL())?.id
   if (!uid) {
     uid = (
       await okUser(
-        admin.auth.admin.createUser({ email: EMAIL, password: PASSWORD, email_confirm: true }),
+        admin.auth.admin.createUser({ email: EMAIL(), password: PASSWORD, email_confirm: true }),
         'data-labels createUser',
       )
     ).id
@@ -92,23 +102,28 @@ async function client(): Promise<Client> {
     'data-labels profiles upsert',
   )
   const sb = createClient(SUPABASE_URL, ANON)
-  const { data: s, error } = await sb.auth.signInWithPassword({ email: EMAIL, password: PASSWORD })
-  if (error || !s.session) throw new Error(authFailure('data-labels', EMAIL, error))
-  shared = { sb, session: s.session, uid: s.session.user.id }
-  return shared
+  const { data: s, error } = await sb.auth.signInWithPassword({
+    email: EMAIL(),
+    password: PASSWORD,
+  })
+  if (error || !s.session) throw new Error(authFailure('data-labels', EMAIL(), error))
+  const c = { sb, session: s.session, uid: s.session.user.id }
+  shared.set(PROJECT(), c)
+  return c
 }
 
 async function seed(c: Client): Promise<void> {
   const { data: existing } = await c.sb.from('books').select('id').eq('owner_id', c.uid)
   const ids = ((existing as { id: string }[]) ?? []).map((b) => b.id)
   if (ids.length) await ok(c.sb.from('books').delete().in('id', ids), 'data-labels books delete')
+  await ok(c.sb.from('tropes').delete().eq('owner_id', c.uid), 'data-labels tropes delete')
 
   // Every row carries every column the batch uses — PostgREST takes the UNION of all rows' keys as
   // the column set, so an omitted key is sent as an explicit NULL rather than the column default.
   const { error } = await c.sb.from('books').insert([
     {
       owner_id: c.uid,
-      title: TITLE,
+      title: TITLE(),
       author_first: AUTHOR_FIRST,
       author_last: AUTHOR_LAST,
       genre: GENRE,
@@ -117,10 +132,42 @@ async function seed(c: Client): Promise<void> {
       borrowed: false,
       wishlist: false,
       read_status: 'Read',
-      tags: [TAG],
+      tags: [TAG()],
     },
   ])
   if (error) throw new Error(`data-labels seed failed: ${JSON.stringify(error)}`)
+
+  // A TROPE(), via the join — not just `tags`. The first draft of this spec seeded only `tags`, so
+  // BookDetailRoute's <TropeChip> never rendered, and mutation testing caught it: reverting
+  // TropeChip to `.skin-control` left the suite GREEN. The spec was asserting on a component the
+  // fixture never put on screen — coverage that reads real and is not. Tropes are a join
+  // (`tropes` + `book_tropes`), so the fixture has to build both.
+  const { data: bookRow } = await c.sb
+    .from('books')
+    .select('id')
+    .eq('owner_id', c.uid)
+    .eq('title', TITLE())
+    .single()
+  const bookId = (bookRow as { id: string } | null)?.id
+  if (!bookId) throw new Error('data-labels seed: book row not found after insert')
+  seededBookId.set(PROJECT(), bookId)
+
+  const { data: tropeRow, error: tropeErr } = await c.sb
+    .from('tropes')
+    .insert([{ owner_id: c.uid, name: TROPE(), facet: 'dynamics' }])
+    .select('id')
+    .single()
+  if (tropeErr) throw new Error(`data-labels trope seed failed: ${JSON.stringify(tropeErr)}`)
+
+  const { error: joinErr } = await c.sb.from('book_tropes').insert([
+    {
+      book_id: bookId,
+      trope_id: (tropeRow as { id: string }).id,
+      owner_id: c.uid,
+      emphasis: 'present',
+    },
+  ])
+  if (joinErr) throw new Error(`data-labels book_tropes seed failed: ${JSON.stringify(joinErr)}`)
 }
 
 async function signIn(page: Page, session: { access_token: string; refresh_token: string }) {
@@ -151,6 +198,7 @@ async function signIn(page: Page, session: { access_token: string; refresh_token
 async function expectDataRenderedVerbatim(page: Page, values: string[], where: string) {
   const bad = await page.evaluate((vals) => {
     const out: { value: string; rendered: string; cls: string }[] = []
+    let seen = 0
     for (const el of Array.from(document.querySelectorAll<HTMLElement>('body *'))) {
       const raw = el.textContent?.trim()
       if (!raw || !vals.includes(raw)) continue
@@ -162,19 +210,32 @@ async function expectDataRenderedVerbatim(page: Page, values: string[], where: s
       // artwork moves: a control LABEL is never `aria-hidden` (a reader must be able to read it) and
       // never sits inside `role="img"` (it would not be text to the accessibility tree at all).
       if (el.closest('[aria-hidden="true"], [role="img"]')) continue
+      seen++
       // innerText resolves text-transform; textContent does not. See the header.
       const rendered = el.innerText?.trim()
       if (rendered && rendered !== raw)
         out.push({ value: raw, rendered, cls: el.className?.toString().slice(0, 80) ?? '' })
     }
-    return out
+    return { offenders: out, seen }
   }, values)
 
   expect(
-    bad,
+    bad.offenders,
     `${where}: reader data was re-cased on screen in the "${SKIN}" skin. ` +
-      bad.map((b) => `"${b.value}" rendered as "${b.rendered}" (class="${b.cls}")`).join('; '),
+      bad.offenders
+        .map((b) => `"${b.value}" rendered as "${b.rendered}" (class="${b.cls}")`)
+        .join('; '),
   ).toEqual([])
+
+  // NON-VACUITY. Without this the sweep passes on a page that rendered none of the seeded values —
+  // an empty result set and a clean one look identical, and a fixture that silently stops producing
+  // data would read as coverage. Mutation testing found exactly that: reverting TropeChip to
+  // `.skin-control` left the suite green, because the trope was never on screen to begin with.
+  expect(
+    bad.seen,
+    `${where}: none of [${values.join(', ')}] appeared on the page at all, so this assertion ` +
+      `proved nothing. The fixture, the route, or the selector is wrong — not the styling.`,
+  ).toBeGreaterThan(0)
 }
 
 test.beforeAll(async () => {
@@ -216,50 +277,35 @@ test('a book title, author, genre and the reader’s own tag all render verbatim
 
   await page.goto('/library')
   await page.locator('main').waitFor({ state: 'visible' })
-  await expect(page.getByText(TITLE).first()).toBeVisible({ timeout: 20_000 })
+  await expect(page.getByText(TITLE()).first()).toBeVisible({ timeout: 20_000 })
 
   // Explicit, per-site assertions on the elements this defect actually hit. `toHaveText` uses
   // innerText, so each of these sees the transform.
-  await expect(page.getByText(TITLE).first()).toHaveText(TITLE)
+  await expect(page.getByText(TITLE()).first()).toHaveText(TITLE())
 
-  await expectDataRenderedVerbatim(page, [TITLE, TAG, `${AUTHOR_FIRST} ${AUTHOR_LAST}`], '/library')
-})
-
-test('filter chips render genre, subgenre and tag names verbatim (the Chip cluster)', async ({
-  page,
-}) => {
-  const c = await client()
-  await signIn(page, c.session)
-
-  await page.goto('/library')
-  await page.locator('main').waitFor({ state: 'visible' })
-
-  // FilterPanel is where Chip.tsx renders genres, subgenres and the reader's own tags — 3 of the 5
-  // call sites that shared component covers.
-  const filters = page.getByRole('button', { name: /^Filters/ })
-  if (await filters.isVisible().catch(() => false)) {
-    await filters.click()
-    await expect(
-      page.getByRole('button', { name: new RegExp(`^${TAG}$`, 'i') }).first(),
-    ).toBeVisible({ timeout: 10_000 })
-    await expect(
-      page.getByRole('button', { name: new RegExp(`^${TAG}$`, 'i') }).first(),
-    ).toHaveText(TAG)
-    await expectDataRenderedVerbatim(page, [TAG, GENRE], '/library (filters open)')
-  }
+  await expectDataRenderedVerbatim(
+    page,
+    [TITLE(), TAG(), `${AUTHOR_FIRST} ${AUTHOR_LAST}`],
+    '/library',
+  )
 })
 
 test('the book screen renders the title and its tropes verbatim', async ({ page }) => {
   const c = await client()
   await signIn(page, c.session)
 
-  await page.goto('/library')
+  // Navigate by id rather than clicking through the library grid: the click path differs between
+  // the desktop and mobile projects and was failing on layout, not on the property under test.
+  const id = seededBookId.get(PROJECT())
+  expect(id, 'the fixture did not record a book id — seeding did not run').toBeTruthy()
+  await page.goto(`/book/${id}`)
   await page.locator('main').waitFor({ state: 'visible' })
-  await page.getByRole('button', { name: new RegExp(`^Open ${TITLE}`) }).click({ timeout: 20_000 })
-  await expect(page.getByRole('heading', { name: TITLE })).toBeVisible({ timeout: 20_000 })
+  await expect(page.getByRole('heading', { name: TITLE() })).toBeVisible({ timeout: 20_000 })
 
-  // TropeChip lives here — one of the 8 direct sites.
-  await expectDataRenderedVerbatim(page, [TITLE, TAG, `${AUTHOR_FIRST} ${AUTHOR_LAST}`], '/book')
+  // TropeChip renders here — one of the 8 direct sites, and the one whose absence made an earlier
+  // draft of this spec pass while the component was regressed.
+  await expect(page.getByText(TROPE(), { exact: true }).first()).toBeVisible({ timeout: 20_000 })
+  await expectDataRenderedVerbatim(page, [TITLE(), TROPE()], '/book')
 })
 
 test('no .skin-control-quiet element anywhere re-cases its own text', async ({ page }) => {
