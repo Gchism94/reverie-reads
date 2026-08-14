@@ -30,11 +30,11 @@ function Bars({ entries }: { entries: [string, number][] }) {
             {label}
           </span>
           <span
-            className="h-2.5 flex-1 overflow-hidden rounded-full"
+            className="skin-meter h-2.5 flex-1 overflow-hidden"
             style={{ background: 'var(--chip)' }}
           >
             <span
-              className="block h-full rounded-full"
+              className="skin-meter block h-full"
               style={{ width: `${Math.round((n / max) * 100)}%`, background: 'var(--primary)' }}
             />
           </span>
