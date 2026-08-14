@@ -212,7 +212,7 @@ function` + fresh `create` resets it to the PUBLIC-execute default — verified 
 
 ## Testing & verification discipline
 
-Eleven rules, each earned by a real failure. A rule without its reason gets dropped by whoever
+Twelve rules, each earned by a real failure. A rule without its reason gets dropped by whoever
 inherits it, so the reason stays attached.
 
 - **Assert the thing itself, not a proxy that would look the same if the thing were absent.** This is
@@ -327,6 +327,21 @@ test` outright and only fail `tsc`. This has bitten twice, by two different tool
   the LOCAL database's applied migrations, not production's. Don't read a `--local` run as evidence
   about prod's state, and don't read your local stack's schema as evidence about what's actually
   merged into the tree you're standing on.
+
+- **A ratchet's budget must be a MEASUREMENT taken from the tree, never a calculation.** A budget that
+  is derived — "we had 112, this batch migrates 26, so it's 86" — is indistinguishable from a correct
+  one for as long as it stays green, because slack does not fail. It only stops catching things.
+  Observed on the control-radius meter (batch 4, `skinRadiusMigration.test.ts`): the derivation
+  dropped a term and set the budget to 63 when the tree measured 61. Nothing said so. The mutation
+  written to prove the guard had teeth — revert a migrated control — landed at 62, sailed under 63,
+  and **read as "this guard has no teeth"**, which is the dangerous part: that is a conclusion a
+  reviewer shrugs past and a author is tempted to explain away, when the real fault was two counts of
+  slack in the number the mutant was tested against. The gap was found only by setting the budget to
+  `-1`, letting the assertion fail, and reading the actual count out of the failure message. So:
+  **print the count, don't infer it from green.** Take the number from the tree, then write it down;
+  a budget you computed rather than observed is a guess wearing a ratchet's clothes. The same shape
+  as the negative-assertion rule above — an assertion that passes for a reason other than the one you
+  think is worse than no assertion, because it also stops anyone else from looking.
 
 ## Data-integrity & sourcing discipline
 
