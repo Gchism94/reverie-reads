@@ -69,14 +69,14 @@ export function BookDetailRail({
 
       <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5">
         <span
-          className="rounded-full px-2.5 py-1 text-[11px] font-semibold"
+          className="skin-control px-2.5 py-1 text-[11px] font-semibold"
           style={{ background: 'var(--chip)', color: 'var(--muted)' }}
         >
           {seriesStatusBadge(book)}
         </span>
         {isRead && (
           <span
-            className="rounded-full px-2.5 py-1 text-[11px] font-semibold"
+            className="skin-control px-2.5 py-1 text-[11px] font-semibold"
             style={{
               background: 'color-mix(in srgb, var(--gold) 18%, transparent)',
               color: 'var(--ink)',
@@ -87,7 +87,7 @@ export function BookDetailRail({
         )}
         {intensity > 0 && (
           <span
-            className="rounded-full px-2.5 py-1 text-[11px] font-semibold"
+            className="skin-control px-2.5 py-1 text-[11px] font-semibold"
             style={{
               background: 'color-mix(in srgb, var(--primary) 14%, transparent)',
               color: 'var(--ink)',
@@ -103,7 +103,7 @@ export function BookDetailRail({
             onClick={() => onToggleFave(book.id)}
             aria-pressed={book.fave}
             aria-label={book.fave ? 'Remove from favorites' : 'Add to favorites'}
-            className="rounded-full border border-line px-2.5 py-1 text-[12px]"
+            className="skin-control border border-line px-2.5 py-1 text-[12px]"
             style={{ background: 'var(--chip)', color: book.fave ? 'var(--gold)' : 'var(--muted)' }}
           >
             {book.fave ? '♥' : '♡'}
@@ -129,7 +129,7 @@ export function BookDetailRail({
       {possession === 'wishlist' && (
         <div className="mt-4">
           <span
-            className="inline-flex items-center gap-1 rounded-full border border-dashed border-line px-2.5 py-1 text-[12px] font-semibold text-muted"
+            className="inline-flex items-center gap-1 skin-control border border-dashed border-line px-2.5 py-1 text-[12px] font-semibold text-muted"
             style={{ background: 'var(--chip)' }}
           >
             ⊹ Wishlist — not owned yet
@@ -139,7 +139,7 @@ export function BookDetailRail({
       {borrowed && (
         <div className="mt-4">
           <span
-            className="inline-flex items-center gap-1 rounded-full border border-line px-2.5 py-1 text-[12px] font-semibold text-ink"
+            className="inline-flex items-center gap-1 skin-control border border-line px-2.5 py-1 text-[12px] font-semibold text-ink"
             style={{ background: 'var(--chip)' }}
           >
             ⇄ Borrowed — in hand, not owned
@@ -156,7 +156,7 @@ export function BookDetailRail({
             {owned.map((f) => (
               <span
                 key={f}
-                className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[12px] font-semibold text-ink"
+                className="flex items-center gap-1 skin-control px-2.5 py-1 text-[12px] font-semibold text-ink"
                 style={{ background: 'var(--chip)' }}
               >
                 <span aria-hidden>{FORMAT_ICON[f]}</span> {FORMAT_LABEL[f]}
@@ -180,7 +180,7 @@ export function BookDetailRail({
       <Link
         to="/book/$bookId"
         params={{ bookId: book.id }}
-        className={`${book.readStatus === 'Reading' ? 'mt-2' : 'mt-auto'} flex h-11 items-center justify-center rounded-full text-[13.5px] font-semibold`}
+        className={`${book.readStatus === 'Reading' ? 'mt-2' : 'mt-auto'} flex h-11 items-center justify-center skin-control text-[13.5px] font-semibold`}
         style={{
           background: 'linear-gradient(135deg, var(--primary), var(--gold))',
           color: 'var(--on-primary)',
