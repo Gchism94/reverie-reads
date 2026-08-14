@@ -133,7 +133,7 @@ export function LogReadForm({ book, onClose }: { book: Book; onClose: () => void
             onChange={(e) => setNotes(e.target.value)}
             rows={3}
             placeholder="Thoughts on this read…"
-            className="w-full rounded-xl border border-line p-3 text-[14px] text-ink outline-none"
+            className="skin-field w-full border border-line p-3 text-[14px] text-ink outline-none"
             style={fieldStyle}
           />
         </Field>

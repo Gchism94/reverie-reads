@@ -260,7 +260,7 @@ function ClubScreen() {
               onChange={(e) => setDraft(e.target.value)}
               rows={2}
               placeholder={`Comment on ${unitWord(club.unitType, club.unitLabel, myProgress)}…`}
-              className="w-full rounded-xl border border-line p-3 text-[14px] text-ink outline-none"
+              className="skin-field w-full border border-line p-3 text-[14px] text-ink outline-none"
               style={{ background: 'var(--field)' }}
             />
             <button

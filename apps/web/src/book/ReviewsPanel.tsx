@@ -130,7 +130,7 @@ export function ReviewsPanel({ workKey, reviewerName }: { workKey: string; revie
           onChange={(e) => setBody(e.target.value)}
           rows={2}
           placeholder="Your honest take…"
-          className="mt-2 w-full rounded-xl border border-line p-3 text-[14px] text-ink outline-none"
+          className="skin-field mt-2 w-full border border-line p-3 text-[14px] text-ink outline-none"
           style={{ background: 'var(--field)' }}
         />
         <button
