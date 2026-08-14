@@ -646,8 +646,10 @@ export function EditDetails({
             <button
               type="button"
               onClick={() => setConfirmingLeave(false)}
-              className="h-11 flex-1 skin-control border border-line text-[13.5px] font-semibold text-ink"
-              style={{ background: 'var(--card)' }}
+              className="h-11 flex-1 skin-control-quiet border border-line text-[13.5px] font-semibold text-ink"
+              style={{
+                background: 'var(--card)',
+              }}
             >
               Keep it in {oldSeries}
             </button>
@@ -921,8 +923,10 @@ export function MergeDialog({
             <button
               type="button"
               onClick={() => setLoser(b)}
-              className="flex w-full items-center justify-between gap-3 skin-control border border-line px-3 py-2 text-left"
-              style={{ background: 'var(--field)' }}
+              className="flex w-full items-center justify-between gap-3 skin-control-quiet border border-line px-3 py-2 text-left"
+              style={{
+                background: 'var(--field)',
+              }}
             >
               <span>
                 <span className="text-[14px] font-semibold text-ink">{b.title}</span>

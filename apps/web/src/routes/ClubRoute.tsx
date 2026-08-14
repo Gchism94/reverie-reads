@@ -100,7 +100,7 @@ function ClubScreen() {
           <div className="text-[14px] text-muted">{club.author || 'Read-along'}</div>
           <div className="mt-2 flex items-center gap-2">
             <span
-              className="rounded-lg px-2.5 py-1 font-mono text-[13px] font-bold tracking-wider"
+              className="skin-control-quiet px-2.5 py-1 font-mono text-[13px] font-bold tracking-wider"
               style={{ background: 'var(--ink)', color: 'var(--bg0)' }}
             >
               {club.joinCode}
@@ -195,7 +195,7 @@ function ClubScreen() {
               <div className="mb-1 flex items-center gap-2 text-[12px]">
                 <b className="text-ink">{nameOf(c.userId)}</b>
                 <span
-                  className="rounded-full px-2 py-0.5 text-[11px]"
+                  className="skin-control-quiet px-2 py-0.5 text-[11px]"
                   style={{ background: 'var(--chip)', color: 'var(--muted)' }}
                 >
                   {unitWord(club.unitType, club.unitLabel, c.unit)}

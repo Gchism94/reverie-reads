@@ -165,8 +165,10 @@ export function Toolbar({ filterToggleClass = '' }: { filterToggleClass?: string
       {filters.author && (
         <div className="flex flex-wrap items-center gap-2">
           <span
-            className="skin-control inline-flex items-center gap-1.5 border border-line px-3 py-1 text-[12.5px] text-ink"
-            style={{ background: 'var(--chip)' }}
+            className="skin-control-quiet inline-flex items-center gap-1.5 border border-line px-3 py-1 text-[12.5px] text-ink"
+            style={{
+              background: 'var(--chip)',
+            }}
           >
             Author: {filters.author}
             <button
