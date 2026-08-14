@@ -26,6 +26,15 @@ import { describe, expect, it } from 'vitest'
 
 const SRC = join(__dirname, '..')
 const RADIUS = /\brounded-(?:none|sm|md|lg|xl|2xl|3xl|full)\b/
+// `.skin-control-quiet` is deliberately NOT listed here, and that is not an oversight. `\b` sits
+// between the `l` and the `-`, so `skin-control` already matches inside `skin-control-quiet` — this
+// regex only ever calls `.test()`, never reads the captured name, so adding the alternative would be
+// a pure no-op dressed as a functional change. Mutation testing is what showed it: removing the
+// alternative from a version that had it changed nothing at all.
+//
+// The ESLint rule DOES list it, because that one puts the captured name in its error message, and
+// without the alternative (ordered before `control`) it tells the reader the element carries
+// `skin-control` — a class it does not have.
 const CARRIER = /\bskin-(?:control|field|card|panel|tile)\b/
 
 /** Files whose radii are ARTWORK — SVG ornaments, star fields, spine geometry — never controls. */

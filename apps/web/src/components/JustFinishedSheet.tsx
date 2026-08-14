@@ -262,10 +262,9 @@ export function JustFinishedSheet() {
             <button
               type="button"
               onClick={addNext}
-              className="skin-control border border-line px-3 py-1.5 text-[12px] font-semibold text-ink"
+              className="skin-control-quiet border border-line px-3 py-1.5 text-[12px] font-semibold text-ink"
               style={{
-                textTransform: 'none',
-                /* SKIN-UPPERCASE-INTERIM */ background: 'var(--card)',
+                background: 'var(--card)',
               }}
             >
               {linked
