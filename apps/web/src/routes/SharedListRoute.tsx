@@ -47,7 +47,10 @@ function LibraryPicker({
               type="button"
               onClick={() => onPick(b)}
               className="skin-control flex w-full items-center justify-between gap-3 border border-line px-3 py-2 text-left"
-              style={{ background: 'var(--field)' }}
+              style={{
+                textTransform: 'none',
+                /* SKIN-UPPERCASE-INTERIM */ background: 'var(--field)',
+              }}
             >
               <span>
                 <span className="text-[14px] font-semibold text-ink">{b.title}</span>
