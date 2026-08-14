@@ -30,7 +30,7 @@ import {
 // special editions, which no database has. It was buried under the edition list; it goes first.
 
 const fieldClass =
-  'h-10 w-full rounded-xl border border-line px-3 text-[14px] text-ink outline-none'
+  'skin-field h-10 w-full border border-line px-3 text-[14px] text-ink outline-none'
 const fieldStyle = { background: 'var(--field)' } as const
 
 const ERROR_COPY: Record<SetCoverError | string, string> = {
@@ -128,7 +128,7 @@ export function CoverSheet({ book, onClose }: { book: Book; onClose: () => void 
                 updateBook.mutate({ id: book.id, patch: syncPatch })
                 onClose()
               }}
-              className="mt-2 h-9 w-full rounded-xl border border-line text-[13px] font-semibold text-ink disabled:opacity-50"
+              className="skin-control mt-2 h-9 w-full border border-line text-[13px] font-semibold text-ink disabled:opacity-50"
               style={{ background: 'var(--card)' }}
             >
               Also update edition details
@@ -174,7 +174,7 @@ export function CoverSheet({ book, onClose }: { book: Book; onClose: () => void 
         type="button"
         disabled={saving}
         onClick={() => cameraRef.current?.click()}
-        className="h-12 w-full rounded-xl text-[14px] font-semibold disabled:opacity-50"
+        className="skin-control h-12 w-full text-[14px] font-semibold disabled:opacity-50"
         style={{
           background: 'linear-gradient(135deg, var(--primary), var(--gold))',
           color: 'var(--on-primary)',
@@ -186,7 +186,7 @@ export function CoverSheet({ book, onClose }: { book: Book; onClose: () => void 
         type="button"
         disabled={saving}
         onClick={() => uploadRef.current?.click()}
-        className="mt-2 h-11 w-full rounded-xl border border-line text-[13.5px] font-semibold text-ink disabled:opacity-50"
+        className="skin-control mt-2 h-11 w-full border border-line text-[13.5px] font-semibold text-ink disabled:opacity-50"
         style={{ background: 'var(--card)' }}
       >
         Upload an image
@@ -258,7 +258,7 @@ export function CoverSheet({ book, onClose }: { book: Book; onClose: () => void 
         <button
           type="submit"
           disabled={saving || !url.trim()}
-          className="h-10 flex-none rounded-xl border border-line px-4 text-[13px] font-semibold text-ink disabled:opacity-40"
+          className="skin-control h-10 flex-none border border-line px-4 text-[13px] font-semibold text-ink disabled:opacity-40"
           style={{ background: 'var(--card)' }}
         >
           Use
@@ -431,7 +431,7 @@ function CoverCrop({
           type="button"
           onClick={onCancel}
           disabled={saving}
-          className="h-11 flex-1 rounded-xl border border-line text-[13.5px] font-semibold text-ink disabled:opacity-50"
+          className="skin-control h-11 flex-1 border border-line text-[13.5px] font-semibold text-ink disabled:opacity-50"
           style={{ background: 'var(--card)' }}
         >
           Back
@@ -440,7 +440,7 @@ function CoverCrop({
           type="button"
           onClick={save}
           disabled={!img || saving}
-          className="h-11 flex-1 rounded-xl text-[14px] font-semibold disabled:opacity-50"
+          className="skin-control h-11 flex-1 text-[14px] font-semibold disabled:opacity-50"
           style={{
             background: 'linear-gradient(135deg, var(--primary), var(--gold))',
             color: 'var(--on-primary)',

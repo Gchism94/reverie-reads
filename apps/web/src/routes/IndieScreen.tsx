@@ -122,7 +122,7 @@ function ShopOnlineFallback() {
         href="https://bookshop.org"
         target="_blank"
         rel="noreferrer"
-        className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink"
+        className="skin-control border border-line px-4 py-2 text-[13px] font-semibold text-ink"
         style={{ background: 'var(--field)' }}
       >
         Print &amp; ebooks · Bookshop.org ↗
@@ -131,7 +131,7 @@ function ShopOnlineFallback() {
         href="https://libro.fm"
         target="_blank"
         rel="noreferrer"
-        className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink"
+        className="skin-control border border-line px-4 py-2 text-[13px] font-semibold text-ink"
         style={{ background: 'var(--field)' }}
       >
         Audiobooks · Libro.fm ↗
@@ -182,7 +182,7 @@ function StoreList({
               <button
                 type="button"
                 onClick={() => onSetDefault(isDefault ? null : s)}
-                className="ml-auto rounded-full border border-line px-2.5 py-1 text-[12px] font-semibold text-ink"
+                className="skin-control ml-auto border border-line px-2.5 py-1 text-[12px] font-semibold text-ink"
                 style={{ background: 'var(--field)' }}
               >
                 {isDefault ? 'Remove as my store' : 'Set as my store'}
@@ -268,7 +268,7 @@ export default function IndieScreen() {
           type="button"
           onClick={() => void detectLocation()}
           disabled={busy}
-          className="h-11 rounded-full px-5 text-[14px] font-semibold disabled:opacity-50"
+          className="skin-control h-11 px-5 text-[14px] font-semibold disabled:opacity-50"
           style={{
             background: 'linear-gradient(135deg, var(--primary), var(--gold))',
             color: 'var(--on-primary)',
@@ -287,14 +287,14 @@ export default function IndieScreen() {
             }}
             placeholder="ZIP code or city"
             aria-label="ZIP code or city"
-            className="h-11 w-full min-w-0 flex-1 rounded-full border border-line px-4 text-[14px] text-ink outline-none"
+            className="skin-field h-11 w-full min-w-0 flex-1 border border-line px-4 text-[14px] text-ink outline-none"
             style={{ background: 'var(--field)' }}
           />
           <button
             type="button"
             onClick={() => void findByQuery()}
             disabled={busy || !query.trim()}
-            className="h-11 shrink-0 rounded-full border border-line px-5 text-[14px] font-semibold text-ink disabled:opacity-50"
+            className="skin-control h-11 shrink-0 border border-line px-5 text-[14px] font-semibold text-ink disabled:opacity-50"
             style={{ background: 'var(--card)' }}
           >
             Find
