@@ -133,7 +133,7 @@ export function SeriesView({ groups }: { groups: SeriesGroup[]; allBooks: Book[]
         <button
           type="button"
           onClick={newSeries}
-          className="rounded-full border border-line px-3.5 py-1.5 text-[12.5px] font-semibold text-ink"
+          className="skin-control border border-line px-3.5 py-1.5 text-[12.5px] font-semibold text-ink"
           style={{ background: 'var(--card)' }}
         >
           ＋ New series

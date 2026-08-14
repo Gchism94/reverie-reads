@@ -45,7 +45,7 @@ function TropesScreen() {
         onChange={(e) => setQ(e.target.value)}
         placeholder="Search names and aliases…"
         aria-label={`Search ${labels.tags}`}
-        className="mt-3 h-10 w-full rounded-xl border border-line px-3 text-[14px] text-ink outline-none sm:max-w-sm"
+        className="skin-field mt-3 h-10 w-full border border-line px-3 text-[14px] text-ink outline-none sm:max-w-sm"
         style={{ background: 'var(--field)' }}
       />
 

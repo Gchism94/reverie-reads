@@ -213,7 +213,7 @@ function HomeScreen() {
             <button
               type="button"
               onClick={() => setReadingPickerOpen(true)}
-              className="mb-0.5 flex-none rounded-full border border-line px-3 py-1.5 text-[12.5px] font-semibold text-ink"
+              className="skin-control mb-0.5 flex-none border border-line px-3 py-1.5 text-[12.5px] font-semibold text-ink"
               style={{ background: 'var(--card)' }}
             >
               ＋ Add
@@ -296,7 +296,7 @@ function HomeScreen() {
                     <button
                       type="button"
                       onClick={() => setFinishing(b)}
-                      className="rounded-full px-3 py-1 text-[12px] font-semibold"
+                      className="skin-control px-3 py-1 text-[12px] font-semibold"
                       style={{ background: 'var(--chip)', color: 'var(--ink)' }}
                     >
                       Finish ✓

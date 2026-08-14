@@ -37,7 +37,7 @@ export class ErrorBoundary extends Component<Props, State> {
         <button
           type="button"
           onClick={() => location.reload()}
-          className="mt-6 h-11 rounded-full px-6 text-[14px] font-semibold"
+          className="skin-control mt-6 h-11 px-6 text-[14px] font-semibold"
           style={{
             background: 'linear-gradient(135deg, var(--primary), var(--gold))',
             color: 'var(--on-primary)',

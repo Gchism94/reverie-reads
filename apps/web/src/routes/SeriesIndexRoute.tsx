@@ -90,7 +90,7 @@ function SeriesRow({
         <Link
           to="/series/$seriesName"
           params={{ seriesName: encodeURIComponent(name) }}
-          className="flex-none rounded-lg border border-line px-2.5 py-1 text-[12px] font-semibold text-ink"
+          className="skin-control flex-none border border-line px-2.5 py-1 text-[12px] font-semibold text-ink"
           aria-label={`Open the ${name} series page`}
         >
           Open

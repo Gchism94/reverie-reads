@@ -292,16 +292,16 @@ Recorded as decided, so the implementation tracks don't relitigate them:
 
 ## 7. What this spawned
 
-| work                                              | status                                                    |
-| ------------------------------------------------- | --------------------------------------------------------- |
-| Token-fixture parity (`skinTokensParity.test.ts`) | PR #211                                                   |
-| Surface-separation + border-visibility coverage   | planned — folds in the §5 sixth finding                   |
-| `marrow/dark` token fix                           | blocked on ruling 1                                       |
-| Control-radius guard (ESLint + source scan)       | planned — precedes the migration                          |
-| Control-radius migration (batches 1–4 landed)     | in progress — meter 61 controls + 25 chips                |
-| Radius-without-typography kit class (§8)          | **needs an owner ruling** — blocks 25 chips + 2 nav links |
-| `Surface` primitive + surface migration           | planned                                                   |
-| ~~`Nameplate` / `StatePill` colour fix~~          | **retired** — no violation (§0)                           |
+| work                                              | status                                                   |
+| ------------------------------------------------- | -------------------------------------------------------- |
+| Token-fixture parity (`skinTokensParity.test.ts`) | PR #211                                                  |
+| Surface-separation + border-visibility coverage   | planned — folds in the §5 sixth finding                  |
+| `marrow/dark` token fix                           | blocked on ruling 1                                      |
+| Control-radius guard (ESLint + source scan)       | planned — precedes the migration                         |
+| Control-radius migration (batches 1–6)            | **control meter 0** — 25 chips + 7 deferred remain       |
+| Radius-without-typography kit class (§8)          | **needs an owner ruling** — blocks 25 chips + 7 controls |
+| `Surface` primitive + surface migration           | planned                                                  |
+| ~~`Nameplate` / `StatePill` colour fix~~          | **retired** — no violation (§0)                          |
 
 **Sequencing note:** the guard is built and run **before** the migration, so its failures _are_ the
 migration checklist — a live progress meter rather than a hand-maintained list, and no window in

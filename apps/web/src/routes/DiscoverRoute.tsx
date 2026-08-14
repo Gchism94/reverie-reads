@@ -318,7 +318,7 @@ function DiscoverScreen() {
               type="button"
               onClick={() => setQuery('')}
               aria-label="Clear search"
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full px-2 py-0.5 text-[13px] text-muted hover:text-ink"
+              className="skin-control absolute right-2 top-1/2 -translate-y-1/2 px-2 py-0.5 text-[13px] text-muted hover:text-ink"
             >
               ✕
             </button>

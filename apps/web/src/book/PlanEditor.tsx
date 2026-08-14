@@ -3,7 +3,7 @@ import { parseNumericFields, PLAN_DAY, PLAN_MONTH, PLAN_YEAR, type Book } from '
 import { useUpdateBook } from '../data/books'
 
 const planFieldClass =
-  'h-10 w-full rounded-xl border border-line px-3 text-[14px] text-ink outline-none'
+  'skin-field h-10 w-full border border-line px-3 text-[14px] text-ink outline-none'
 const planFieldStyle = { background: 'var(--field)' } as const
 
 /**
