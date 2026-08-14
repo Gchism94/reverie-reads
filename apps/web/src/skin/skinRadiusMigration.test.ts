@@ -137,6 +137,24 @@ function ownsInteractiveElement(lines: string[], i: number): boolean {
   return false
 }
 
+/**
+ * A FIELD, identified by tag rather than by shape. Every other branch in this file guesses from
+ * padding and height, because a <button> and a <div> look identical to a line-based scan — but
+ * `<input>`, `<textarea>` and `<select>` are unambiguous, so no guessing is needed or wanted.
+ *
+ * This branch exists because shape-guessing MISSED three textareas outright: they are block-padded
+ * (`p-3`, no `px-*`) and have no fixed height, so `looksLikeControl` skipped them and `looksLikeTile`
+ * wanted an interactivity signal it could not see. They had been invisible to the meter since it was
+ * written — the meter read 0 while three reader-facing inputs still bypassed `--radius-control`.
+ */
+function looksLikeField(lines: string[], i: number): boolean {
+  for (let j = i; j >= Math.max(0, i - 14); j--) {
+    const m = /^\s*<([A-Za-z][\w.]*)/.exec(lines[j]!)
+    if (m) return /^(?:input|textarea|select)$/.test(m[1]!)
+  }
+  return false
+}
+
 /** A CARD-SCALED pressable: block padding or a text-left body, and no control-scale px-*. Needs an
  *  interactivity signal from the surrounding lines, because the same shape describes a plain card —
  *  ReviewsPanel's review card and AppShell's mobile sheet both matched on shape alone. */
@@ -166,7 +184,8 @@ describe('control-radius migration meter', () => {
     lines.forEach((line, i) => {
       if (!RADIUS.test(line) || CARRIER.test(line)) return
       const context = lines.slice(Math.max(0, i - 9), i + 3).join('\n')
-      if (!looksLikeControl(line) && !looksLikeTile(line, context)) return
+      if (!looksLikeControl(line) && !looksLikeTile(line, context) && !looksLikeField(lines, i))
+        return
       if (
         Object.keys(ALLOW).some((k) => {
           const [f, marker] = k.split('|')
