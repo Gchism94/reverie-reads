@@ -143,7 +143,7 @@ function RefineAdded({ bookId, onDone }: { bookId: string; onDone: () => void })
           <button
             type="button"
             onClick={() => setDialog('cover')}
-            className="h-10 rounded-xl border border-line text-[13.5px] font-semibold text-ink"
+            className="h-10 skin-control border border-line text-[13.5px] font-semibold text-ink"
             style={{ background: 'var(--field)' }}
           >
             Change cover
@@ -151,7 +151,7 @@ function RefineAdded({ bookId, onDone }: { bookId: string; onDone: () => void })
           <button
             type="button"
             onClick={() => setDialog('trope')}
-            className="h-10 rounded-xl border border-line text-[13.5px] font-semibold text-ink"
+            className="h-10 skin-control border border-line text-[13.5px] font-semibold text-ink"
             style={{ background: 'var(--field)' }}
           >
             Tag {labels.tags.toLowerCase()}
@@ -162,7 +162,7 @@ function RefineAdded({ bookId, onDone }: { bookId: string; onDone: () => void })
       <button
         type="button"
         onClick={onDone}
-        className="mt-4 h-11 w-full rounded-xl text-[14px] font-semibold"
+        className="mt-4 h-11 w-full skin-control text-[14px] font-semibold"
         style={{
           background: 'linear-gradient(135deg, var(--primary), var(--gold))',
           color: 'var(--on-primary)',
@@ -393,7 +393,7 @@ function AddForm({
             type="button"
             onClick={() => void fetchDetails()}
             disabled={enriching}
-            className="mt-1.5 rounded-full border border-line px-2.5 py-1 text-[11px] font-semibold text-ink disabled:opacity-50"
+            className="mt-1.5 skin-control border border-line px-2.5 py-1 text-[11px] font-semibold text-ink disabled:opacity-50"
             style={{ background: 'var(--field)' }}
           >
             {enriching ? '…' : '🔎 Fetch details'}
@@ -630,7 +630,7 @@ function AddForm({
             <button
               type="button"
               onClick={() => void resolveDup('merge')}
-              className="rounded-full px-3 py-1.5 text-[12.5px] font-semibold text-on-primary"
+              className="skin-control px-3 py-1.5 text-[12.5px] font-semibold text-on-primary"
               style={{ background: 'var(--accent-fill)' }}
             >
               Merge into it
@@ -638,7 +638,7 @@ function AddForm({
             <button
               type="button"
               onClick={() => void resolveDup('keep_both')}
-              className="rounded-full border border-line px-3 py-1.5 text-[12.5px] font-semibold text-ink"
+              className="skin-control border border-line px-3 py-1.5 text-[12.5px] font-semibold text-ink"
               style={{ background: 'var(--card)' }}
             >
               Keep both
@@ -646,7 +646,7 @@ function AddForm({
             <button
               type="button"
               onClick={() => setDup(null)}
-              className="rounded-full px-3 py-1.5 text-[12.5px] font-semibold text-muted"
+              className="skin-control px-3 py-1.5 text-[12.5px] font-semibold text-muted"
             >
               Cancel
             </button>
@@ -657,7 +657,7 @@ function AddForm({
       <button
         type="button"
         onClick={() => void save()}
-        className="mt-4 h-11 w-full rounded-xl text-[14px] font-semibold"
+        className="mt-4 h-11 w-full skin-control text-[14px] font-semibold"
         style={{
           background: 'linear-gradient(135deg, var(--primary), var(--gold))',
           color: 'var(--on-primary)',
@@ -751,7 +751,7 @@ function BulkAdd() {
           type="button"
           onClick={() => void run()}
           disabled={busy || !text.trim()}
-          className="rounded-full px-4 py-2 text-[13px] font-semibold disabled:opacity-50"
+          className="skin-control px-4 py-2 text-[13px] font-semibold disabled:opacity-50"
           style={{
             background: 'linear-gradient(135deg, var(--primary), var(--gold))',
             color: 'var(--on-primary)',
@@ -874,13 +874,13 @@ function AddScreen() {
           }}
           placeholder="Title, author, or ISBN"
           aria-label="Search for a book"
-          className="h-11 min-w-[200px] flex-1 rounded-full border border-line px-4 text-[14px] text-ink outline-none"
+          className="h-11 min-w-[200px] flex-1 skin-field border border-line px-4 text-[14px] text-ink outline-none"
           style={{ background: 'var(--field)' }}
         />
         <button
           type="button"
           onClick={() => void runSearch()}
-          className="h-11 rounded-full px-5 text-[14px] font-semibold"
+          className="h-11 skin-control px-5 text-[14px] font-semibold"
           style={{
             background: 'linear-gradient(135deg, var(--primary), var(--gold))',
             color: 'var(--on-primary)',
@@ -891,7 +891,7 @@ function AddScreen() {
         <button
           type="button"
           onClick={streamRef.current ? stopScan : startScan}
-          className="h-11 rounded-full border border-line px-5 text-[14px] font-semibold text-ink"
+          className="h-11 skin-control border border-line px-5 text-[14px] font-semibold text-ink"
           style={{ background: 'var(--card)' }}
         >
           {streamRef.current ? 'Stop' : '📷 Scan'}
@@ -903,7 +903,7 @@ function AddScreen() {
         <button
           type="button"
           onClick={() => setPicked({ title: q.trim() })}
-          className="h-11 rounded-full border border-line px-5 text-[14px] font-semibold text-ink"
+          className="h-11 skin-control border border-line px-5 text-[14px] font-semibold text-ink"
           style={{ background: 'var(--card)' }}
         >
           Add manually
