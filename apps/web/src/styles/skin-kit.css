@@ -8,6 +8,17 @@
   font-family: var(--control-font);
   font-weight: var(--label-weight);
   text-transform: var(--control-transform);
+  /* Explicit, because the initial value of `transition-property` is `all` — and these classes set a
+     DURATION without ever setting a property, so every carrier that does not supply its own
+     transition-* utility animates EVERYTHING for 0.18s. Measured before this line existed: 187 of
+     189 carriers were bare, and on a skin switch a control animated `border-radius` (999px -> 2px)
+     and `font-weight` (600 -> 700) along with its colours. The radius one cost a real debugging
+     detour — a migrated control read as 999px in Aphelion mid-flight and looked exactly like the
+     whole radius migration being inert.
+     The list below is what a control is MEANT to animate: how it feels under a pointer. Shape, type
+     and layout are identity, not feedback, and should land instantly. */
+  transition-property:
+    color, background-color, border-color, outline-color, box-shadow, opacity, transform;
   transition-timing-function: var(--motion-ease);
   transition-duration: var(--motion-duration);
 }
@@ -28,6 +39,20 @@
    duration token would silently retime every filter chip in the app. */
 .skin-control-quiet {
   border-radius: var(--radius-control);
+  /* Same list, same reason as .skin-control above. It matters slightly more here: this class exists
+     for controls whose label is DATA, so their width changes whenever the data does — and under
+     `all` that width change animated too. */
+  /* Explicit, because the initial value of `transition-property` is `all` — and these classes set a
+     DURATION without ever setting a property, so every carrier that does not supply its own
+     transition-* utility animates EVERYTHING for 0.18s. Measured before this line existed: 187 of
+     189 carriers were bare, and on a skin switch a control animated `border-radius` (999px -> 2px)
+     and `font-weight` (600 -> 700) along with its colours. The radius one cost a real debugging
+     detour — a migrated control read as 999px in Aphelion mid-flight and looked exactly like the
+     whole radius migration being inert.
+     The list below is what a control is MEANT to animate: how it feels under a pointer. Shape, type
+     and layout are identity, not feedback, and should land instantly. */
+  transition-property:
+    color, background-color, border-color, outline-color, box-shadow, opacity, transform;
   transition-timing-function: var(--motion-ease);
   transition-duration: var(--motion-duration);
 }
@@ -45,6 +70,9 @@
    `transition-duration` without a `transition-property`, which defaults to `all` — harmless on a
    button, but on a progress FILL it would animate every width change the data produces. This batch
    already changes appearance once; it should not also change behaviour. */
+/* Same confirmation as .skin-tile: measured `transition-duration: 0s`, so nothing animates and the
+   inherited `all` is inert. Deliberate — a progress FILL under a live transition would animate every
+   width change the data produces. */
 .skin-meter {
   border-radius: var(--radius-control);
 }
@@ -65,6 +93,10 @@
    NO motion token, unlike `.skin-control`. Verified rather than inherited from the analogy: none of
    the seven card-shaped controls in the app declare a transition today, so adding one would
    introduce an animation under cover of a consistency fix. `.skin-card` sets no motion either. */
+/* No transition here, and that is now a MEASURED fact rather than an omission: computed
+   `transition-duration` on a `.skin-tile` element is `0s`, so its `transition-property: all` (the
+   initial value) animates nothing. Leave it — a tile that gains a duration would inherit the same
+   `all` trap the control classes above had to be dug out of. */
 .skin-tile {
   border-radius: var(--radius-card);
 }
