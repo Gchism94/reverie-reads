@@ -18,9 +18,8 @@ export function Chip({
       onClick={onClick}
       title={title}
       aria-pressed={onClick ? active : undefined}
-      className="skin-control border px-3 py-1.5 text-[12.5px] transition-colors motion-reduce:transition-none"
+      className="skin-control-quiet border px-3 py-1.5 text-[12.5px] transition-colors motion-reduce:transition-none"
       style={{
-        textTransform: 'none' /* SKIN-UPPERCASE-INTERIM */,
         ...(active
           ? {
               background: 'var(--accent-fill)',

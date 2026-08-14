@@ -26,7 +26,7 @@ import { describe, expect, it } from 'vitest'
 
 const SRC = join(__dirname, '..')
 const RADIUS = /\brounded-(?:none|sm|md|lg|xl|2xl|3xl|full)\b/
-const CARRIER = /\bskin-(?:control|field|card|panel|tile)\b/
+const CARRIER = /\bskin-(?:control-quiet|control|field|card|panel|tile)\b/
 
 /** Files whose radii are ARTWORK — SVG ornaments, star fields, spine geometry — never controls. */
 const ARTWORK_FILES = [

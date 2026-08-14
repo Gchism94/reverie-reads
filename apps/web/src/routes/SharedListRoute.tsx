@@ -46,10 +46,9 @@ function LibraryPicker({
             <button
               type="button"
               onClick={() => onPick(b)}
-              className="skin-control flex w-full items-center justify-between gap-3 border border-line px-3 py-2 text-left"
+              className="skin-control-quiet flex w-full items-center justify-between gap-3 border border-line px-3 py-2 text-left"
               style={{
-                textTransform: 'none',
-                /* SKIN-UPPERCASE-INTERIM */ background: 'var(--field)',
+ background: 'var(--field)',
               }}
             >
               <span>
@@ -120,7 +119,7 @@ function SharedListScreen() {
       </div>
       <div className="mt-2 flex items-center gap-2">
         <span
-          className="rounded-lg px-2.5 py-1 font-mono text-[13px] font-bold tracking-wider"
+          className="skin-control-quiet px-2.5 py-1 font-mono text-[13px] font-bold tracking-wider"
           style={{ background: 'var(--ink)', color: 'var(--bg0)' }}
         >
           {code}

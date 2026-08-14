@@ -365,7 +365,7 @@ function MatchScreen() {
           {banner.tags.map((t) => (
             <span
               key={t}
-              className="rounded-full bg-white/20 px-2.5 py-1 text-[12px] font-semibold"
+              className="skin-control-quiet bg-white/20 px-2.5 py-1 text-[12px] font-semibold"
             >
               {t}
             </span>

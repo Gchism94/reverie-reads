@@ -23,11 +23,10 @@ export function TropeChip({
 }) {
   const pinned = emphasis === 'pinned'
   const off = emphasis === 'off'
-  const className = `skin-control inline-flex items-center gap-1.5 border font-semibold ${
+  const className = `skin-control-quiet inline-flex items-center gap-1.5 border font-semibold ${
     pinned ? 'px-3.5 py-2 text-[13px]' : 'px-3 py-1.5 text-[12.5px]'
   }`
   const style = {
-    textTransform: 'none' as const /* SKIN-UPPERCASE-INTERIM */,
     ...(pinned
       ? { background: 'var(--accent-fill)', color: 'var(--on-primary)', borderColor: 'transparent' }
       : off

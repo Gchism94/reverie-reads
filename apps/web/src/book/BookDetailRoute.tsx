@@ -69,7 +69,7 @@ function Label({ children, action }: { children: ReactNode; action?: ReactNode }
 function Pill({ children, muted = false }: { children: ReactNode; muted?: boolean }) {
   return (
     <span
-      className="rounded-full px-2.5 py-1 text-[11.5px] font-semibold"
+      className="skin-control-quiet px-2.5 py-1 text-[11.5px] font-semibold"
       style={{
         background: muted ? 'var(--chip)' : 'rgba(123,63,160,0.18)',
         color: muted ? 'var(--muted)' : 'var(--ink)',

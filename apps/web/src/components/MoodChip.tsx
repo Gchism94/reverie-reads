@@ -23,7 +23,7 @@ export function MoodChip({
   title?: string
 }) {
   const className =
-    'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12.5px] italic'
+    'skin-control-quiet inline-flex items-center gap-1.5 border px-3 py-1.5 text-[12.5px] italic'
   const style = active
     ? {
         background: 'var(--card)',
