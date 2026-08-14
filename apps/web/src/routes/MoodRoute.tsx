@@ -91,7 +91,7 @@ function MoodScreen() {
           type="button"
           onClick={() => setSweep((s) => !s)}
           aria-pressed={sweep}
-          className="rounded-full border px-3.5 py-1.5 text-[12.5px] font-semibold"
+          className="skin-control border px-3.5 py-1.5 text-[12.5px] font-semibold"
           style={
             sweep
               ? {

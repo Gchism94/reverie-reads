@@ -104,7 +104,7 @@ export function LibraryPicker({
           type="button"
           disabled={!onExternalSearch}
           onClick={() => onExternalSearch?.(q)}
-          className="w-full rounded-xl border border-dashed border-line px-3 py-2.5 text-[13px] font-semibold disabled:opacity-50"
+          className="skin-control w-full border border-dashed border-line px-3 py-2.5 text-[13px] font-semibold disabled:opacity-50"
           style={{ background: 'var(--chip)', color: 'var(--muted)' }}
         >
           Can’t find it? Search everywhere{onExternalSearch ? '' : ' — coming soon'}
