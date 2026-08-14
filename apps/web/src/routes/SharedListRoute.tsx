@@ -37,7 +37,7 @@ function LibraryPicker({
         value={q}
         onChange={(e) => setQ(e.target.value)}
         placeholder="Search your library…"
-        className="h-10 w-full rounded-xl border border-line px-3 text-[14px] text-ink outline-none"
+        className="skin-field h-10 w-full border border-line px-3 text-[14px] text-ink outline-none"
         style={{ background: 'var(--field)' }}
       />
       <ul className="mt-3 flex max-h-[55dvh] flex-col gap-1.5 overflow-y-auto">
@@ -46,7 +46,7 @@ function LibraryPicker({
             <button
               type="button"
               onClick={() => onPick(b)}
-              className="flex w-full items-center justify-between gap-3 rounded-xl border border-line px-3 py-2 text-left"
+              className="skin-control flex w-full items-center justify-between gap-3 border border-line px-3 py-2 text-left"
               style={{ background: 'var(--field)' }}
             >
               <span>
@@ -164,7 +164,7 @@ function SharedListScreen() {
         <button
           type="button"
           onClick={() => setPicking(true)}
-          className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink"
+          className="skin-control border border-line px-4 py-2 text-[13px] font-semibold text-ink"
           style={{ background: 'var(--card)' }}
         >
           ＋ From my library
@@ -177,7 +177,7 @@ function SharedListScreen() {
             const author = window.prompt('Author (optional):')?.trim() ?? ''
             addItem({ title, author, cover: '' })
           }}
-          className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink"
+          className="skin-control border border-line px-4 py-2 text-[13px] font-semibold text-ink"
           style={{ background: 'var(--card)' }}
         >
           ＋ Add manually
@@ -193,7 +193,7 @@ function SharedListScreen() {
               leave.mutate(code, { onSuccess: () => void navigate({ to: '/clubs' }) })
             }
           }}
-          className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-primary"
+          className="skin-control border border-line px-4 py-2 text-[13px] font-semibold text-primary"
           style={{ background: 'var(--card)' }}
         >
           Leave
