@@ -173,7 +173,7 @@ function ReviewScreen() {
           {genreChips.map(([g, n]) => (
             <span
               key={g}
-              className="rounded-full border border-line px-2.5 py-1 text-[12px] text-ink"
+              className="skin-control-quiet border border-line px-2.5 py-1 text-[12px] text-ink"
               style={{ background: 'var(--chip)' }}
             >
               {g === '∅' ? 'Unresolved' : g} <span className="text-muted">{n}</span>

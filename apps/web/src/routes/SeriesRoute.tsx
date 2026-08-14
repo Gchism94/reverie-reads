@@ -545,10 +545,9 @@ function SeriesScreen() {
                   acquire.mutate({ entry: acquiring, genre: siblingGenre, tbrId: t.id })
                   setAcquiring(null)
                 }}
-                className="h-11 skin-control border border-line text-[14px] font-semibold text-ink"
+                className="h-11 skin-control-quiet border border-line text-[14px] font-semibold text-ink"
                 style={{
-                  textTransform: 'none',
-                  /* SKIN-UPPERCASE-INTERIM */ background: 'var(--card)',
+                  background: 'var(--card)',
                 }}
               >
                 …and onto {t.name}

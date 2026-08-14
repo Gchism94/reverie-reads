@@ -100,7 +100,7 @@ export function OwnedCopies({
                   type="button"
                   aria-pressed={physicalKind === k}
                   onClick={() => onChange({ ...owned, physical: k })}
-                  className="rounded-full border px-2.5 py-1 text-[11.5px] font-semibold capitalize"
+                  className="skin-control-quiet border px-2.5 py-1 text-[11.5px] font-semibold capitalize"
                   style={
                     physicalKind === k
                       ? {

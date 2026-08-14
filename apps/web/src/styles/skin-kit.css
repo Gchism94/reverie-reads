@@ -12,6 +12,26 @@
   transition-duration: var(--motion-duration);
 }
 
+/* A control whose LABEL IS DATA — a genre chip, an author filter, a book title inside a confirm
+   button. Identical to .skin-control except that it does NOT impose the three typography tokens.
+
+   Why it exists: --control-transform is `uppercase` in aphelion, umbra and almanac, and
+   `text-transform` is an INHERITED property, so .skin-control uppercases its own label and every
+   descendant that does not declare its own. Applied to a book title that renders
+   "A COURT OF THORNS AND ROSES" — the app editorializing content it did not write. App-authored
+   labels stay on .skin-control, where uppercase is the house style (72 hand-written
+   `uppercase tracking-[…]` labels say so); reader data belongs here.
+
+   Motion IS carried, unlike .skin-tile — and that difference is deliberate rather than inherited
+   from the analogy. .skin-tile omits motion because none of its sites declared any; these ARE the
+   pressables .skin-control governs, and Chip.tsx declares `transition-colors`, so dropping the
+   duration token would silently retime every filter chip in the app. */
+.skin-control-quiet {
+  border-radius: var(--radius-control);
+  transition-timing-function: var(--motion-ease);
+  transition-duration: var(--motion-duration);
+}
+
 .skin-card {
   border-radius: var(--radius-card);
 }
@@ -47,6 +67,7 @@
    read AND behave as a control, so every one gets a clear keyboard focus ring in the skin's accent.
    outline (not box-shadow) so it survives the controls that set their own shadows. */
 .skin-control:focus-visible,
+.skin-control-quiet:focus-visible,
 .skin-field:focus-visible,
 .skin-tile:focus-visible {
   outline: 2px solid var(--accent);

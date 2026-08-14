@@ -18,7 +18,10 @@
  */
 
 const RADIUS = /\brounded-(?:none|sm|md|lg|xl|2xl|3xl|full)\b/
-const CARRIER = /\bskin-(?:control|field|tile)\b/
+// `control-quiet` MUST precede `control` in this alternation. JS alternation is first-match, not
+// longest-match, so with `control` first, `skin-control-quiet` matches the `control` branch and the
+// error message names the wrong carrier — pointing a reader at a class the element does not have.
+const CARRIER = /\bskin-(?:control-quiet|control|field|tile)\b/
 
 /** Every string literal inside a JSX className value, template literals included. */
 function classStrings(node) {
