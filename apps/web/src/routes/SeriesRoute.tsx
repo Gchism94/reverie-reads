@@ -260,7 +260,7 @@ function SeriesScreen() {
           <button
             type="button"
             onClick={() => setPickerOpen(true)}
-            className="rounded-full border border-line px-3.5 py-1.5 text-[12.5px] font-semibold text-ink"
+            className="skin-control border border-line px-3.5 py-1.5 text-[12.5px] font-semibold text-ink"
             style={{ background: 'var(--card)' }}
           >
             ＋ Add books
@@ -268,7 +268,7 @@ function SeriesScreen() {
           <button
             type="button"
             onClick={addGhostSlot}
-            className="rounded-full border border-dashed border-line px-3.5 py-1.5 text-[12.5px] font-semibold text-muted"
+            className="skin-control border border-dashed border-line px-3.5 py-1.5 text-[12.5px] font-semibold text-muted"
             style={{ background: 'var(--chip)' }}
           >
             ＋ One you don’t have yet
@@ -277,7 +277,7 @@ function SeriesScreen() {
             type="button"
             onClick={fetchSource}
             disabled={applySource.isPending}
-            className="rounded-full border border-line px-3.5 py-1.5 text-[12.5px] font-semibold text-muted disabled:opacity-50"
+            className="skin-control border border-line px-3.5 py-1.5 text-[12.5px] font-semibold text-muted disabled:opacity-50"
             style={{ background: 'var(--card)' }}
           >
             {applySource.isPending ? 'Checking the catalog…' : '⟳ Fetch series data'}
@@ -350,7 +350,7 @@ function SeriesScreen() {
                   <span className="text-[15px] font-bold text-ink">{fmtPos(e.position)}</span>
                   {e.label && (
                     <span
-                      className="mt-0.5 rounded-full px-1.5 py-px text-[9.5px] font-semibold uppercase tracking-wide"
+                      className="mt-0.5 skin-control px-1.5 py-px text-[9.5px] font-semibold uppercase tracking-wide"
                       style={{ background: 'var(--chip)', color: 'var(--muted)' }}
                     >
                       {e.label}
@@ -411,7 +411,7 @@ function SeriesScreen() {
                     <button
                       type="button"
                       onClick={() => setAcquiring(e)}
-                      className="rounded-full px-3 py-1.5 text-[12px] font-semibold"
+                      className="skin-control px-3 py-1.5 text-[12px] font-semibold"
                       style={{ background: 'var(--accent-fill)', color: 'var(--on-primary)' }}
                     >
                       ＋ Add
@@ -495,7 +495,7 @@ function SeriesScreen() {
             <button
               type="button"
               onClick={() => setRemoving(null)}
-              className="h-11 flex-1 rounded-xl border border-line text-[13.5px] font-semibold text-ink"
+              className="h-11 flex-1 skin-control border border-line text-[13.5px] font-semibold text-ink"
               style={{ background: 'var(--card)' }}
             >
               Keep it
@@ -507,7 +507,7 @@ function SeriesScreen() {
                 setRemoving(null)
               }}
               disabled={removeEntry.isPending}
-              className="h-11 flex-1 rounded-xl text-[14px] font-semibold disabled:opacity-50"
+              className="h-11 flex-1 skin-control text-[14px] font-semibold disabled:opacity-50"
               style={{
                 background: 'linear-gradient(135deg, var(--primary), var(--gold))',
                 color: 'var(--on-primary)',
@@ -532,7 +532,7 @@ function SeriesScreen() {
                 acquire.mutate({ entry: acquiring, genre: siblingGenre })
                 setAcquiring(null)
               }}
-              className="h-11 rounded-xl text-[14px] font-semibold"
+              className="h-11 skin-control text-[14px] font-semibold"
               style={{ background: 'var(--accent-fill)', color: 'var(--on-primary)' }}
             >
               ⊹ Add to wishlist
@@ -545,7 +545,7 @@ function SeriesScreen() {
                   acquire.mutate({ entry: acquiring, genre: siblingGenre, tbrId: t.id })
                   setAcquiring(null)
                 }}
-                className="h-11 rounded-xl border border-line text-[14px] font-semibold text-ink"
+                className="h-11 skin-control border border-line text-[14px] font-semibold text-ink"
                 style={{ background: 'var(--card)' }}
               >
                 …and onto {t.name}
