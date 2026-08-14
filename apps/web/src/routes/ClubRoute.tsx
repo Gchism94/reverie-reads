@@ -272,7 +272,7 @@ function ClubScreen() {
                   { onSuccess: () => setDraft('') },
                 )
               }
-              className="mt-2 rounded-full px-4 py-2 text-[13px] font-semibold disabled:opacity-50"
+              className="skin-control mt-2 px-4 py-2 text-[13px] font-semibold disabled:opacity-50"
               style={{
                 background: 'linear-gradient(135deg, var(--primary), var(--gold))',
                 color: 'var(--on-primary)',
@@ -294,7 +294,7 @@ function ClubScreen() {
           if (window.confirm('Leave this read-along?'))
             leaveClub.mutate(clubId, { onSuccess: () => void navigate({ to: '/clubs' }) })
         }}
-        className="mt-8 rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-primary"
+        className="skin-control mt-8 border border-line px-4 py-2 text-[13px] font-semibold text-primary"
         style={{ background: 'var(--card)' }}
       >
         Leave read-along
