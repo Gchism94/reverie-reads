@@ -69,6 +69,18 @@ const ALLOW: Record<string, string> = {
     'a mobile-menu nav text link — wants the skin radius for its hover chip, but not the uppercase that `.skin-control` carries in aphelion/umbra/almanac',
   'auth/Landing.tsx|px-2 py-2 text-[14px] font-semibold text-ink':
     'the “Log in” nav link beside it — same shape, same reason; migrating it would uppercase the word in three skins',
+  // Batch 6's four. Each is interactive and control-shaped, and each renders a CONTENT word rather
+  // than a button label — the §8 gap again, from the interactive side. Two of them
+  // (OwnedCopies, PlannerRoute) already set `capitalize` explicitly on values that come from data,
+  // so `.skin-control` would not merely restyle them, it would fight a transform the author chose.
+  'book/OwnedCopies.tsx|text-[11.5px] font-semibold capitalize':
+    'the paperback/hardcover toggle — data values the author explicitly capitalized; --control-transform would override that to PAPERBACK in three skins',
+  'routes/PlannerRoute.tsx|text-[12.5px] font-semibold capitalize':
+    'the calendar/releases tab pills — same explicit `capitalize` on data values, same override',
+  'components/SearchResults.tsx|skin-label inline-block':
+    'the “On your shelf ✓” badge — a status chip that happens to be a <Link>; it already carries `.skin-label`, so it is a label, not a control',
+  'components/MoodChip.tsx|inline-flex items-center gap-1.5':
+    'a mood chip — renders the mood name in the display face, italic; uppercasing reader-facing content words is a copy change, not a radius fix',
   'components/AppShell.tsx|flex flex-col items-center gap-1.5':
     'a bottom-nav tab — the five most-seen labels in the app; uppercasing “Library” in three skins is a typography change, not a radius fix, and belongs to the §8 ruling',
 }
@@ -176,7 +188,7 @@ describe('control-radius migration meter', () => {
 
   // TARGET: 0. Lower this as batches land — it may only ever go DOWN, which is what makes it a
   // ratchet rather than a number someone edits to make the suite green.
-  const BUDGET = 21
+  const BUDGET = 0
 
   // The NON-INTERACTIVE population, split out in batch 4 and given its own ratchet rather than
   // dropped. Splitting a bucket out of a meter is the move that quietly makes a number look better,
@@ -192,6 +204,7 @@ describe('control-radius migration meter', () => {
   // The books balance, and the arithmetic is worth writing out because getting it wrong is silent:
   //   112 − 26 migrated − 23 reclassified as chips − 2 Landing nav links allowlisted = 61   (batch 4)
   //    61 − 39 migrated − 1 AppShell nav tab allowlisted = 21                                (batch 5)
+  //    21 − 17 migrated − 4 content-word controls allowlisted = 0                             (batch 6)
   // A first pass set BUDGET to 63, forgetting the last term. Nothing failed — a ratchet with slack
   // still passes, it just stops catching anything, and reverting a migrated control went undetected
   // until the counts were printed directly instead of being inferred from green.

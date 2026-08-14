@@ -31,7 +31,7 @@ export function VerifyEmail({ email }: { email?: string }) {
       <button
         type="button"
         onClick={() => void signOut()}
-        className="mt-6 h-11 rounded-full border border-line px-6 text-[14px] font-semibold text-ink"
+        className="skin-control mt-6 h-11 border border-line px-6 text-[14px] font-semibold text-ink"
         style={{ background: 'var(--field)' }}
       >
         Back to sign in

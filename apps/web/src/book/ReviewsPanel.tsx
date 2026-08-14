@@ -137,7 +137,7 @@ export function ReviewsPanel({ workKey, reviewerName }: { workKey: string; revie
           type="button"
           disabled={upsert.isPending || (!rating && !body.trim())}
           onClick={() => upsert.mutate({ rating, body: body.trim(), reviewerName })}
-          className="mt-2 rounded-full px-4 py-2 text-[13px] font-semibold disabled:opacity-50"
+          className="skin-control mt-2 px-4 py-2 text-[13px] font-semibold disabled:opacity-50"
           style={{
             background: 'linear-gradient(135deg, var(--primary), var(--gold))',
             color: 'var(--on-primary)',
