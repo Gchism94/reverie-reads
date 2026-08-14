@@ -91,14 +91,14 @@ export function MoodPicker({ book }: { book: Book }) {
           }}
           placeholder="Name your own mood…"
           aria-label="Name your own mood"
-          className="h-9 w-full rounded-xl border border-line px-3 text-[13.5px] text-ink outline-none"
+          className="skin-field h-9 w-full border border-line px-3 text-[13.5px] text-ink outline-none"
           style={{ background: 'var(--field)' }}
         />
         {q.trim() && !exactExists && (
           <button
             type="button"
             onClick={createDraft}
-            className="h-9 flex-none rounded-full border border-dashed border-line px-3 text-[12.5px] font-semibold text-ink"
+            className="skin-control h-9 flex-none border border-dashed border-line px-3 text-[12.5px] font-semibold text-ink"
             style={{ background: 'var(--chip)' }}
           >
             ＋ Add

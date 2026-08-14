@@ -195,7 +195,7 @@ export function TropePicker({ book, onClose }: { book: Book; onClose: () => void
           }}
           placeholder={`Search ${labels.tags.toLowerCase()} — names and aliases…`}
           aria-label={`Search ${labels.tags}`}
-          className="h-10 w-full rounded-xl border border-line px-3 text-[14px] text-ink outline-none"
+          className="skin-field h-10 w-full border border-line px-3 text-[14px] text-ink outline-none"
           style={{ background: 'var(--field)' }}
         />
       </div>
@@ -208,7 +208,7 @@ export function TropePicker({ book, onClose }: { book: Book; onClose: () => void
         <button
           type="button"
           onClick={createDraft}
-          className="mb-3 rounded-full border border-dashed border-line px-3.5 py-1.5 text-[12.5px] font-semibold text-ink"
+          className="skin-control mb-3 border border-dashed border-line px-3.5 py-1.5 text-[12.5px] font-semibold text-ink"
           style={{ background: 'var(--chip)' }}
         >
           ＋ Add “{q.trim()}” as your own

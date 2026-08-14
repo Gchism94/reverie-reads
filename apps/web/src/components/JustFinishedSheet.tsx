@@ -254,7 +254,7 @@ export function JustFinishedSheet() {
             <button
               type="button"
               onClick={readNow}
-              className="rounded-full px-3 py-1.5 text-[12px] font-semibold"
+              className="skin-control px-3 py-1.5 text-[12px] font-semibold"
               style={{ background: 'var(--accent-fill)', color: 'var(--on-primary)' }}
             >
               Reading now
@@ -262,7 +262,7 @@ export function JustFinishedSheet() {
             <button
               type="button"
               onClick={addNext}
-              className="rounded-full border border-line px-3 py-1.5 text-[12px] font-semibold text-ink"
+              className="skin-control border border-line px-3 py-1.5 text-[12px] font-semibold text-ink"
               style={{ background: 'var(--card)' }}
             >
               {linked
@@ -280,7 +280,7 @@ export function JustFinishedSheet() {
       <button
         type="button"
         onClick={close}
-        className="h-11 w-full rounded-xl text-[14px] font-semibold"
+        className="skin-control h-11 w-full text-[14px] font-semibold"
         style={{
           background: 'linear-gradient(135deg, var(--primary), var(--gold))',
           color: 'var(--on-primary)',
