@@ -333,3 +333,123 @@ mid-batch on a smaller sample would be the same move with less evidence behind i
 ruled on, the 25 are **counted, not excused** — they carry their own ratchet in
 `skinRadiusMigration.test.ts` (`CHIP_BUDGET`, target 0), because splitting a bucket out of a meter
 is precisely the move that quietly makes a number look better than it is.
+
+## 9. Two techniques the migration produced, worth reusing
+
+**Tag over shape: when an unambiguous signal exists, do not infer from an ambiguous one.** The meter
+guesses "is this a control?" from padding and height, because a `<button>` and a `<div>` look
+identical to a line-based scan. That guessing is unavoidable for buttons — and it silently cost
+three textareas, which are block-padded with no fixed height and so matched no shape rule. But
+`<input>`, `<textarea>` and `<select>` are not ambiguous at all: the tag _is_ the answer.
+`looksLikeField` reads it directly, and the three textareas that had been invisible since the meter
+was written appeared immediately. The general form: before writing a heuristic, check whether the
+thing you are inferring is stated somewhere exactly. Inference applied to a signal that was already
+unambiguous is pure downside — it can only lose information.
+
+**The pass-mutant: proving a `0` means "nothing left" rather than "nothing visible."** A guard that
+reports zero findings is indistinguishable from a guard that cannot see. The usual mutation — break
+the code, watch the guard fail — cannot tell them apart, because both a real zero and a blind zero
+stay green when nothing changes. The technique is to mutate _the guard's own vision_ and assert the
+mutant **passes**: remove `looksLikeField`, and the same reverted textarea stops being caught; narrow
+its tag set, and the three vanish again. A mutant that is supposed to pass sounds backwards and is
+the only thing that distinguishes the two cases. Pair it with a normal failing mutant — one shows the
+guard has teeth, the other shows the teeth are pointed at something real.
+
+**A caution learned the same day, about measuring in the browser.** Verifying the migration's actual
+effect showed a migrated control computing `999px` in Aphelion, where `--radius-control` is `2px` —
+which reads exactly like the whole migration being inert. It was not: `.skin-control` sets
+`transition-duration`, so `border-radius` **animates** on a skin change, and the measurement was
+taken mid-flight. Settled values match the tokens exactly in every skin checked (tryst `999px`,
+aphelion `2px`, marrow `0px`, almanac `2px`, bloom `999px`). Two further false leads came from the
+harness rather than the app: `cssRules` throws a `SecurityError` on a cross-origin `file://`
+stylesheet, and Vite's dev CSS is not fully enumerable through `document.styleSheets` — both make
+rule-matching look empty when it is not. **Let a transitioned property settle before reading it, and
+never trust a rule enumeration that returns nothing without first proving the enumerator can see
+anything at all.**
+
+## 10. The §8 population, split (asked for before any ruling)
+
+The 32 were classified by **what the label's text is**, not how it is styled:
+
+- **(a) DATA-BEARING** — the text comes from the reader's content or a domain data value.
+- **(b) APP-AUTHORED** — the text is a string the app chose.
+- **(c) STRUCTURAL** — the element has _no label of its own_; it is a container, row or tile whose
+  text lives in child elements.
+- **(d) GLYPH-ONLY** — the entire content is a symbol.
+
+**They are not one population. They are four, and only one of them has a correctness argument.**
+
+| class            | count  | what it is                                                      | does `--control-transform` matter?                                                 |
+| ---------------- | ------ | --------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| (a) data-bearing | **8**  | genre/trope/mood names, join codes, club unit labels, formats   | **Yes — correctness.** Uppercasing is the app editorializing data it did not write |
+| (b) app-authored | **11** | nav destinations, empty-state prose, status text, reason labels | Yes — but purely aesthetic                                                         |
+| (c) structural   | **11** | review cards, list rows, stat tiles, the mobile sheet           | **No.** No text to transform                                                       |
+| (d) glyph-only   | **2**  | a `✓` overlay on mood/trope cards                               | **No.** Case does not apply to a symbol                                            |
+
+### (a) DATA-BEARING — 8
+
+`BookDetailRoute:72` (the `Pill` component — receives genres, subgenres, series badge, intensity
+glyphs, page counts) · `ClubRoute:103` (`club.joinCode`) · `ClubRoute:198` (`unitWord()`, which
+interpolates the club's own `unitLabel`) · `MatchRoute:368` (banner trope tags) · `ReviewRoute:176`
+(genre names) · `SharedListRoute:120` (share code) · `OwnedCopies:103` (`paperback` / `hardcover`) ·
+`MoodChip:26` (mood name)
+
+### (b) APP-AUTHORED — 11
+
+`Landing:123`, `Landing:131`, `AppShell:326` (nav labels) · `PlannerRoute:315` (`calendar` /
+`releases` tab ids) · `SearchResults:40` (“On your shelf ✓”) · `DiscoverRoute:89` (“On your shelf”) ·
+`ReviewsPanel:85` and `ClubRoute:208` (“Hidden — only you can see this”) · `ReviewRoute:61`
+(`REASON_LABEL` — “No cover”, “Likely duplicate”) · `ReviewRoute:218` (empty-state prose) ·
+`SeriesView:99` (`badgeFor()` — “✓ Series done”, “length not set”)
+
+### (c) STRUCTURAL — 11
+
+`ReviewsPanel:45` · `AppShell:312` · `DuplicateReview:188` · `DuplicateReview:197` ·
+`ImportSummary:13` · `SkinEvolveReveal:20` · `ReviewRoute:22` · `ReviewRoute:100` · `ClubRoute:170` ·
+`SharedListRoute:139` · `SeriesArranger:100`
+
+### (d) GLYPH-ONLY — 2
+
+`MoodRoute:144` · `TropeRoute:176`
+
+### The `capitalize` reading does not survive
+
+The hypothesis was that `OwnedCopies` and `PlannerRoute` writing `capitalize` by hand is the codebase
+having already hit this need and solved it locally — the same tell that justified `.skin-tile`.
+Three checks, and it comes apart:
+
+1. **They fall on opposite sides of the split.** `OwnedCopies` renders `paperback` / `hardcover`, a
+   domain data value → (a). `PlannerRoute` renders `calendar` / `releases`, tab ids the app itself
+   chose → (b). One population would not straddle the line the split is drawn on.
+2. **What the `capitalize` is actually for is lowercase identifiers, not skin typography.** Both
+   render a bare lowercase literal from an `as const` tuple. `capitalize` is fixing _the identifier's
+   casing_ so it is presentable — a rendering fix that would be there with no skin system at all.
+   Reading it as protection against `--control-transform` attributes an intent the code does not
+   show. **This corrects the framing in PR #221**, which called these “the sharpest evidence” for §8;
+   the conflict is real, but the author was not defending against it.
+3. **The combination already ships, and nobody defended anything.** `ClubsRoute:74` carries
+   `.skin-control` _and_ `capitalize` together, migrated in batch 3. Measured in a browser against
+   the built CSS: `.skin-control` wins (it is unlayered; Tailwind utilities sit in `@layer
+utilities`), so **`chapter` / `page` / `percent` already render as `CHAPTER` / `PAGE` / `PERCENT`
+   in aphelion, umbra and almanac** — a data value already being uppercased in production, unnoticed.
+   That is a live instance of the (a) problem, not evidence of a local solution to it.
+
+**The genuine counter-signal points the other way.** Where the app authors a micro-label, the
+codebase already reaches for uppercase deliberately: **72 hand-written `uppercase tracking-[…]`
+labels** (`ImportSummary`'s stat captions, `DuplicateReview`'s “Kept”, `FilterPanel`'s group headers,
+`AuthScreen`'s field labels). Against that, `capitalize` appears **5 times**, and 3 of the 5 are
+lowercase-identifier fixes. So the house style is _uppercase for app-authored micro-labels_, and the
+five `capitalize` calls are not a design position — they are a casing repair.
+
+### What the split implies for the ruling (not a proposal)
+
+The four groups do not need the same answer, and one class does not need a class at all:
+
+- **(c) and (d) — 13 of 32 — have no typography to protect.** Nothing stops them taking
+  `.skin-control`'s radius today except that the class also carries type they simply do not use.
+- **(b) — 11 — is an aesthetic call**, and the 72 hand-written uppercase labels suggest the house
+  answer is already “uppercase is fine here”.
+- **(a) — 8 — is the only group with a correctness argument**, and `ClubsRoute:74` shows the app is
+  already doing the thing that argument objects to.
+
+Whether that warrants one new class, a token, or nothing is the owner's call.
