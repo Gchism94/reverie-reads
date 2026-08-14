@@ -30,7 +30,15 @@ import { describe, expect, it } from 'vitest'
 // that a ratchet's budget must be a measurement rather than a calculation.
 
 const SRC = join(__dirname, '..')
-const MARKER = 'SKIN-UPPERCASE-INTERIM'
+
+// Count the OVERRIDE ITSELF, not the marker comment beside it. A first draft counted
+// `SKIN-UPPERCASE-INTERIM`, and mutation testing killed it: Prettier reflows the comment onto the
+// NEXT property, so deleting `textTransform: 'none'` left the marker sitting on `background` and the
+// ratchet stayed green while the defect came back. That is a proxy guard in the exact sense CLAUDE.md
+// names — it certified a property adjacent to the defect (a comment exists) while the defect itself
+// (the override is gone) was invisible to it. The comment stays, but only as documentation for a
+// human reading the file; the assertion is keyed to the declaration.
+const OVERRIDE = /textTransform:\s*'none'/
 
 /**
  * The 9 override SITES, covering 13 affected call sites — `Chip.tsx` and `TropeChip.tsx` are shared
@@ -69,7 +77,7 @@ describe('interim uppercase overrides (target: 0 — deleted when .skin-control-
     readFileSync(abs, 'utf8')
       .split('\n')
       .forEach((line, i) => {
-        if (line.includes(MARKER)) found.push({ file: rel, line: i + 1 })
+        if (OVERRIDE.test(line)) found.push({ file: rel, line: i + 1 })
       })
   }
 
