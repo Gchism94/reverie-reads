@@ -69,6 +69,8 @@ const ALLOW: Record<string, string> = {
     'a mobile-menu nav text link — wants the skin radius for its hover chip, but not the uppercase that `.skin-control` carries in aphelion/umbra/almanac',
   'auth/Landing.tsx|px-2 py-2 text-[14px] font-semibold text-ink':
     'the “Log in” nav link beside it — same shape, same reason; migrating it would uppercase the word in three skins',
+  'components/AppShell.tsx|flex flex-col items-center gap-1.5':
+    'a bottom-nav tab — the five most-seen labels in the app; uppercasing “Library” in three skins is a typography change, not a radius fix, and belongs to the §8 ruling',
 }
 
 function walk(dir: string): string[] {
@@ -174,7 +176,7 @@ describe('control-radius migration meter', () => {
 
   // TARGET: 0. Lower this as batches land — it may only ever go DOWN, which is what makes it a
   // ratchet rather than a number someone edits to make the suite green.
-  const BUDGET = 61
+  const BUDGET = 21
 
   // The NON-INTERACTIVE population, split out in batch 4 and given its own ratchet rather than
   // dropped. Splitting a bucket out of a meter is the move that quietly makes a number look better,
@@ -188,7 +190,8 @@ describe('control-radius migration meter', () => {
   // sheet, which were allowlist-SUPPRESSED before and are now counted.
   //
   // The books balance, and the arithmetic is worth writing out because getting it wrong is silent:
-  //   112 − 26 migrated − 23 reclassified as chips − 2 Landing nav links allowlisted = 61.
+  //   112 − 26 migrated − 23 reclassified as chips − 2 Landing nav links allowlisted = 61   (batch 4)
+  //    61 − 39 migrated − 1 AppShell nav tab allowlisted = 21                                (batch 5)
   // A first pass set BUDGET to 63, forgetting the last term. Nothing failed — a ratchet with slack
   // still passes, it just stops catching anything, and reverting a migrated control went undetected
   // until the counts were printed directly instead of being inferred from green.

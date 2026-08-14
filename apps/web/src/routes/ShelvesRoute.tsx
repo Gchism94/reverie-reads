@@ -69,7 +69,7 @@ function ListModal({
         <button
           type="button"
           onClick={() => updateList.mutate({ id: list.id, isPriority: !list.priority })}
-          className="rounded-full border border-line px-3 py-1.5 text-[12.5px] font-semibold text-ink"
+          className="skin-control border border-line px-3 py-1.5 text-[12.5px] font-semibold text-ink"
           style={{ background: 'var(--card)' }}
         >
           <BookmarkGlyph filled={list.priority} />{' '}
@@ -81,7 +81,7 @@ function ListModal({
             const name = window.prompt('Rename:', list.name)
             if (name?.trim()) updateList.mutate({ id: list.id, name: name.trim() })
           }}
-          className="rounded-full border border-line px-3 py-1.5 text-[12.5px] font-semibold text-ink"
+          className="skin-control border border-line px-3 py-1.5 text-[12.5px] font-semibold text-ink"
           style={{ background: 'var(--card)' }}
         >
           Rename
@@ -93,7 +93,7 @@ function ListModal({
               deleteList.mutate(list.id, { onSuccess: onClose })
             }
           }}
-          className="rounded-full border border-line px-3 py-1.5 text-[12.5px] font-semibold text-primary"
+          className="skin-control border border-line px-3 py-1.5 text-[12.5px] font-semibold text-primary"
           style={{ background: 'var(--card)' }}
         >
           Delete list
@@ -437,7 +437,7 @@ function ShelvesScreen() {
                 type="button"
                 onClick={() => setTab(t)}
                 aria-pressed={tab === t}
-                className="rounded-full px-3 py-1.5 text-[12.5px] font-semibold"
+                className="skin-control px-3 py-1.5 text-[12.5px] font-semibold"
                 style={
                   tab === t
                     ? { background: 'var(--accent-fill)', color: 'var(--on-primary)' }
@@ -456,7 +456,7 @@ function ShelvesScreen() {
               )
               if (name?.trim()) createList.mutate({ name: name.trim(), kind: tab })
             }}
-            className="rounded-full px-4 py-2 text-[13px] font-semibold"
+            className="skin-control px-4 py-2 text-[13px] font-semibold"
             style={{
               background: 'linear-gradient(135deg, var(--primary), var(--gold))',
               color: 'var(--on-primary)',
@@ -544,7 +544,7 @@ function ShelvesScreen() {
                     <button
                       type="button"
                       onClick={() => setOpenListId(l.id)}
-                      className="rounded-full border border-line px-3.5 py-1.5 text-[12.5px] font-semibold text-ink"
+                      className="skin-control border border-line px-3.5 py-1.5 text-[12.5px] font-semibold text-ink"
                       style={{ background: 'var(--card)' }}
                     >
                       Edit

@@ -40,7 +40,7 @@ export function ContributorEditor({
     onChange(renumber(next))
   }
 
-  const fieldClass = 'h-9 rounded-lg border border-line px-2 text-[13px] text-ink outline-none'
+  const fieldClass = 'skin-field h-9 border border-line px-2 text-[13px] text-ink outline-none'
   const fieldStyle = { background: 'var(--field)' } as const
 
   return (
@@ -83,7 +83,7 @@ export function ContributorEditor({
             onClick={() => move(i, -1)}
             disabled={i === 0}
             aria-label={`Move ${c.name || `contributor ${i + 1}`} up`}
-            className="flex h-9 w-7 flex-none items-center justify-center rounded-lg border border-line text-ink disabled:opacity-30"
+            className="skin-control flex h-9 w-7 flex-none items-center justify-center border border-line text-ink disabled:opacity-30"
             style={fieldStyle}
           >
             ↑
@@ -93,7 +93,7 @@ export function ContributorEditor({
             onClick={() => move(i, 1)}
             disabled={i === rows.length - 1}
             aria-label={`Move ${c.name || `contributor ${i + 1}`} down`}
-            className="flex h-9 w-7 flex-none items-center justify-center rounded-lg border border-line text-ink disabled:opacity-30"
+            className="skin-control flex h-9 w-7 flex-none items-center justify-center border border-line text-ink disabled:opacity-30"
             style={fieldStyle}
           >
             ↓
@@ -102,7 +102,7 @@ export function ContributorEditor({
             type="button"
             onClick={() => remove(i)}
             aria-label={`Remove ${c.name || `contributor ${i + 1}`}`}
-            className="flex h-9 w-7 flex-none items-center justify-center rounded-lg border border-line text-muted hover:text-ink"
+            className="skin-control flex h-9 w-7 flex-none items-center justify-center border border-line text-muted hover:text-ink"
             style={fieldStyle}
           >
             ✕
@@ -112,7 +112,7 @@ export function ContributorEditor({
       <button
         type="button"
         onClick={add}
-        className="rounded-full border border-line px-3 py-1.5 text-[12.5px] font-semibold text-ink"
+        className="skin-control border border-line px-3 py-1.5 text-[12.5px] font-semibold text-ink"
         style={fieldStyle}
       >
         ＋ Add contributor

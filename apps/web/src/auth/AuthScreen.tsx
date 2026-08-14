@@ -31,7 +31,7 @@ function Field({ label, children }: { label: ReactNode; children: ReactNode }) {
 }
 
 const inputClass =
-  'h-11 w-full rounded-xl border border-line px-3.5 text-[15px] text-ink outline-none focus:border-[color:var(--gold)]'
+  'skin-field h-11 w-full border border-line px-3.5 text-[15px] text-ink outline-none focus:border-[color:var(--gold)]'
 const inputStyle = { background: 'var(--field)' } as const
 
 export function AuthScreen() {
@@ -229,7 +229,7 @@ export function AuthScreen() {
         <button
           type="submit"
           disabled={!canSubmit || busy}
-          className="mt-1 flex h-12 items-center justify-center rounded-xl text-[15px] font-semibold disabled:opacity-50"
+          className="skin-control mt-1 flex h-12 items-center justify-center text-[15px] font-semibold disabled:opacity-50"
           style={{ background: 'var(--gold)', color: 'var(--on-primary)' }}
         >
           {busy
@@ -261,7 +261,7 @@ export function AuthScreen() {
                 disabled={!SOCIAL_AUTH_ENABLED || busy}
                 aria-disabled={!SOCIAL_AUTH_ENABLED}
                 title={SOCIAL_AUTH_ENABLED ? undefined : 'Coming soon'}
-                className="flex h-11 items-center justify-center gap-2 rounded-xl border border-line text-[14px] font-semibold text-ink disabled:opacity-45"
+                className="skin-control flex h-11 items-center justify-center gap-2 border border-line text-[14px] font-semibold text-ink disabled:opacity-45"
                 style={{ background: 'var(--field)' }}
               >
                 <span
