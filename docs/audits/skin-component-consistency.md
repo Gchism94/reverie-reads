@@ -645,7 +645,16 @@ defect is invisible to the **e2e axe sweep**, which runs `tryst`, `grimoire`, `a
 uppercase lives in aphelion (covered), umbra and almanac (**not covered**), and axe would not flag
 casing regardless.
 
-### Not built
+### BUILT — ruling given, shipped
 
-No files changed by this proposal. `.skin-tile` was built after a sweep established its population
-and a check confirmed what it should carry; the same is now true here, but the ruling is the owner's.
+`.skin-control-quiet` is in `skin-kit.css` with the contents specced above, joined to the
+focus-ring selector list, and all 21 sites carry it. The interim overrides from #224 were removed as
+each site moved; `uppercaseInterim.test.ts` reached 0 and was deleted with the last one, which was
+the agreed completion signal rather than a hand-declared done.
+
+**One spec detail did not survive contact.** Only the ESLint rule needed its regex changed. `\b` sits
+between the `l` and the `-`, so `skin-control` already matched inside `skin-control-quiet` — the
+meter only calls `.test()` and never reads the captured name, making that edit a pure no-op dressed
+as a functional change. The ESLint rule DOES read the name into its message, and without the
+alternative ordered before `control` it reports a class the element does not have. Mutation testing
+is what separated them; the meter's regex is now annotated to say why it is deliberately unchanged.
