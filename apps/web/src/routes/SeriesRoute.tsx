@@ -546,7 +546,10 @@ function SeriesScreen() {
                   setAcquiring(null)
                 }}
                 className="h-11 skin-control border border-line text-[14px] font-semibold text-ink"
-                style={{ background: 'var(--card)' }}
+                style={{
+                  textTransform: 'none',
+                  /* SKIN-UPPERCASE-INTERIM */ background: 'var(--card)',
+                }}
               >
                 …and onto {t.name}
               </button>
