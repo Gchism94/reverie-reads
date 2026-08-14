@@ -119,7 +119,7 @@ export function DuplicateReview({
           type="button"
           disabled={busy || !selectedItems.length}
           onClick={() => void resolveMany(selectedItems, 'merge')}
-          className="rounded-full px-3 py-1.5 text-[12.5px] font-semibold text-on-primary disabled:opacity-40"
+          className="skin-control px-3 py-1.5 text-[12.5px] font-semibold text-on-primary disabled:opacity-40"
           style={{ background: 'var(--accent-fill)' }}
         >
           Merge
@@ -128,7 +128,7 @@ export function DuplicateReview({
           type="button"
           disabled={busy || !selectedItems.length}
           onClick={() => void resolveMany(selectedItems, 'keep_both')}
-          className="rounded-full border border-line px-3 py-1.5 text-[12.5px] font-semibold text-ink disabled:opacity-40"
+          className="skin-control border border-line px-3 py-1.5 text-[12.5px] font-semibold text-ink disabled:opacity-40"
           style={{ background: 'var(--card)' }}
         >
           Keep both
@@ -137,7 +137,7 @@ export function DuplicateReview({
           type="button"
           disabled={busy || !selectedItems.length}
           onClick={() => void resolveMany(selectedItems, 'dismiss')}
-          className="rounded-full border border-line px-3 py-1.5 text-[12.5px] font-semibold text-muted disabled:opacity-40"
+          className="skin-control border border-line px-3 py-1.5 text-[12.5px] font-semibold text-muted disabled:opacity-40"
           style={{ background: 'var(--card)' }}
         >
           Dismiss
@@ -210,7 +210,7 @@ export function DuplicateReview({
                     type="button"
                     disabled={busy}
                     onClick={() => void resolveMany([c], 'merge')}
-                    className="rounded-full px-3 py-1.5 text-[12.5px] font-semibold text-on-primary disabled:opacity-40"
+                    className="skin-control px-3 py-1.5 text-[12.5px] font-semibold text-on-primary disabled:opacity-40"
                     style={{ background: 'var(--accent-fill)' }}
                   >
                     Merge
@@ -219,7 +219,7 @@ export function DuplicateReview({
                     type="button"
                     disabled={busy}
                     onClick={() => void resolveMany([c], 'keep_both')}
-                    className="rounded-full border border-line px-3 py-1.5 text-[12.5px] font-semibold text-ink disabled:opacity-40"
+                    className="skin-control border border-line px-3 py-1.5 text-[12.5px] font-semibold text-ink disabled:opacity-40"
                     style={{ background: 'var(--field)' }}
                   >
                     Keep both
@@ -228,7 +228,7 @@ export function DuplicateReview({
                     type="button"
                     disabled={busy}
                     onClick={() => void resolveMany([c], 'always_merge')}
-                    className="rounded-full border border-line px-3 py-1.5 text-[12.5px] font-semibold text-muted disabled:opacity-40"
+                    className="skin-control border border-line px-3 py-1.5 text-[12.5px] font-semibold text-muted disabled:opacity-40"
                     style={{ background: 'var(--field)' }}
                     title="Merge now and auto-merge this pair on future imports"
                   >

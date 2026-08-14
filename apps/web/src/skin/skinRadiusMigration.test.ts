@@ -106,7 +106,7 @@ describe('control-radius migration meter', () => {
 
   // TARGET: 0. Lower this as batches land — it may only ever go DOWN, which is what makes it a
   // ratchet rather than a number someone edits to make the suite green.
-  const BUDGET = 190
+  const BUDGET = 176
 
   it(`no more than ${BUDGET} controls still use a hardcoded radius (ratchet — lower it, never raise it)`, () => {
     const byFile = findings.reduce<Record<string, number>>((a, f) => {
