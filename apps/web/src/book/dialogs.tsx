@@ -648,7 +648,7 @@ export function EditDetails({
               onClick={() => setConfirmingLeave(false)}
               className="h-11 flex-1 skin-control-quiet border border-line text-[13.5px] font-semibold text-ink"
               style={{
- background: 'var(--card)',
+                background: 'var(--card)',
               }}
             >
               Keep it in {oldSeries}
@@ -925,7 +925,7 @@ export function MergeDialog({
               onClick={() => setLoser(b)}
               className="flex w-full items-center justify-between gap-3 skin-control-quiet border border-line px-3 py-2 text-left"
               style={{
- background: 'var(--field)',
+                background: 'var(--field)',
               }}
             >
               <span>

@@ -547,7 +547,7 @@ function SeriesScreen() {
                 }}
                 className="h-11 skin-control-quiet border border-line text-[14px] font-semibold text-ink"
                 style={{
- background: 'var(--card)',
+                  background: 'var(--card)',
                 }}
               >
                 …and onto {t.name}

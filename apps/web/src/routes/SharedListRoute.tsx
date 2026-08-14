@@ -48,7 +48,7 @@ function LibraryPicker({
               onClick={() => onPick(b)}
               className="skin-control-quiet flex w-full items-center justify-between gap-3 border border-line px-3 py-2 text-left"
               style={{
- background: 'var(--field)',
+                background: 'var(--field)',
               }}
             >
               <span>

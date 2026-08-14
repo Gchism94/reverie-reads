@@ -264,7 +264,7 @@ export function JustFinishedSheet() {
               onClick={addNext}
               className="skin-control-quiet border border-line px-3 py-1.5 text-[12px] font-semibold text-ink"
               style={{
- background: 'var(--card)',
+                background: 'var(--card)',
               }}
             >
               {linked

@@ -212,7 +212,7 @@ function` + fresh `create` resets it to the PUBLIC-execute default — verified 
 
 ## Testing & verification discipline
 
-Twelve rules, each earned by a real failure. A rule without its reason gets dropped by whoever
+Thirteen rules, each earned by a real failure. A rule without its reason gets dropped by whoever
 inherits it, so the reason stays attached.
 
 - **Assert the thing itself, not a proxy that would look the same if the thing were absent.** This is
@@ -327,6 +327,27 @@ test` outright and only fail `tsc`. This has bitten twice, by two different tool
   the LOCAL database's applied migrations, not production's. Don't read a `--local` run as evidence
   about prod's state, and don't read your local stack's schema as evidence about what's actually
   merged into the tree you're standing on.
+
+- **Key a guard to the declaration, the measurement, or the rendered pixel — never to something
+  merely correlated with it.** This is the general rule the ratchet rule below is one instance of,
+  stated separately because each instance looked fine in review and each died only to mutation
+  testing. In one session three guards were written and **all three first drafts were proxies**: a
+  ratchet whose budget was _derived_ rather than measured (63 against a tree of 61, so the mutant
+  landed inside the slack and read as "this guard has no teeth"); a ratchet keyed to a **marker
+  comment**, which Prettier reflows onto the next property, so deleting the override it marked left
+  the comment — and the green — in place; and a render assertion keyed to **`textContent`**, which
+  `text-transform` never touches, so it would have passed identically against the broken build. Each
+  certified something adjacent to the defect while the defect itself stayed invisible.
+  **The CSS-invisible-to-the-DOM case deserves naming, because it is a whole family.**
+  `text-transform`, `content`, `::before`/`::after`, `visibility`, `order` and `direction` all change
+  what a person perceives while leaving the DOM byte-identical — so any assertion about what a reader
+  SEES must read rendered output (`innerText`, Playwright's `toHaveText`, a computed style, a
+  screenshot), never the node. Measured here: under `--control-transform: uppercase`, one element
+  gave `textContent = 'A Court of Thorns and Roses'` and `innerText = 'A COURT OF THORNS AND ROSES'`.
+  The test to apply before writing any guard: **name the defect in one sentence, then ask what the
+  guard would report if that exact thing were true.** If the answer is "the same thing it reports
+  now", it is keyed to a proxy — and a proxy guard is worse than none, because it also stops the next
+  person from looking.
 
 - **A ratchet's budget must be a MEASUREMENT taken from the tree, never a calculation.** A budget that
   is derived — "we had 112, this batch migrates 26, so it's 86" — is indistinguishable from a correct
