@@ -134,6 +134,19 @@ it was checked rather than accepted: `skinCharacter.contrast.test.ts` iterates
 `Object.keys(SKINS) × MODES` — **all 9 skins × both modes**, ~30 text pairs each. The four-skin
 figure belongs to the **e2e axe sweep**, a different layer. There is no text-contrast coverage gap.
 
+**A coverage gap that IS real, recorded here so a green sweep is not misread as reassurance.** The
+uppercase-on-reader-data defect (§11) is **invisible to the axe sweep**, for two independent reasons,
+either of which alone would be enough:
+
+1. **Skin coverage.** The sweep runs `tryst`, `grimoire`, `aphelion`, `marrow`. `--control-transform`
+   is `uppercase` in `aphelion`, `umbra` and `almanac` — so **two of the three affected skins are
+   never rendered by it at all**.
+2. **What axe checks.** Even in aphelion, axe audits contrast, roles, names and structure. Casing is
+   not an accessibility violation, so it would not be flagged even on a page the sweep does load.
+
+The point generalises past this defect: "the a11y sweep is green" answers a narrower question than it
+appears to, and any claim resting on it should name which skins ran and which rule would have fired.
+
 **There is a different, real gap, and it is precisely the property this work would standardise on.**
 Every pair in that test is _text on a surface_. **Nothing anywhere asserts `--card` vs `--bg`
 (surface separation) or `--line` vs `--card` (border visibility).** So the one relationship the
@@ -620,30 +633,65 @@ drop the `control-quiet` alternative from `CARRIER` → every migrated site is r
 number jumps by the batch size rather than by one, distinguishing "the class is recognised" from
 "this one site is migrated".
 
-### Guard change 3 — the one that actually matters, and it is not easy
+### Guard change 3 — a render-time assertion, and it is cheap
 
-Guards 1 and 2 keep the _radius_ honest. **Neither would have caught §11's thirteen defects**, and
-saying so plainly is more useful than shipping a guard that appears to.
+The owner proposed a different shape than either static option below, and **it is better than both**:
+the defect is observable at RENDER time, so given a known mixed-case input, assert the output still
+matches. Checked against this repo's setup — it works, with one trap that would have silently voided
+it.
 
-The defect is semantic: a `.skin-control` element whose rendered children are data. The clean
-version — flag any `.skin-control` whose children contain a JSX expression — measures **81 of 181**
-sites, and 68 of those are app-authored (`{busy ? 'Saving…' : 'Save'}`, `{FORMAT_LABEL[f]}`). An
-allowlist of 68 is the dumping ground the meter's own header warns about.
+**The trap: `textContent` is NOT transform-aware.** `text-transform` is a purely visual property; it
+does not alter the DOM text. Measured against the built CSS in aphelion:
 
-Two narrower options, neither free:
+| read via                           | value                             |
+| ---------------------------------- | --------------------------------- |
+| `textContent`                      | `A Court of Thorns and Roses`     |
+| **`innerText`**                    | **`A COURT OF THORNS AND ROSES`** |
+| `getComputedStyle().textTransform` | `uppercase`                       |
 
-1. **Ban `.skin-control` on shared polymorphic components.** `Chip.tsx` alone accounts for 5 of the
-   13, because a component that renders `{children}` cannot know whether its label is data. A rule
-   that `{children}`-rendering components must use `.skin-control-quiet` is precise, mechanical, and
-   catches the largest cluster — but only that cluster.
-2. **Flag interpolations of known entity fields** — `.title`, `.name`, `filters.*` — which catches
-   the remaining 8 by shape, at the cost of a heuristic that will need tuning.
+So the obvious spelling — `expect(el.textContent).toBe(input)` — **passes unconditionally**, against
+the broken build and the fixed one alike. It is a textbook proxy guard, and it would have shipped
+looking like coverage. `innerText` (and Playwright's `innerText()`) resolves the transform and is the
+correct reader.
 
-Recommendation: take (1) now, since it is exact and covers the worst of it, and treat (2) as its own
-proposal rather than smuggling a fuzzy heuristic in under this one. Also worth noting: this class of
-defect is invisible to the **e2e axe sweep**, which runs `tryst`, `grimoire`, `aphelion`, `marrow` —
-uppercase lives in aphelion (covered), umbra and almanac (**not covered**), and axe would not flag
-casing regardless.
+**It must be e2e, not Vitest.** jsdom does not apply the skin stylesheet and its `innerText` is not
+transform-aware, so the assertion only means something in a real browser with the real CSS. That is
+cheap here: Playwright already runs, and **aphelion is already in the e2e skin matrix**, so an
+uppercase skin costs no new browser dimension.
+
+The shape:
+
+```ts
+// in an uppercase-transform skin, a control whose label is data renders the data unchanged
+await setSkin(page, 'aphelion')
+await expect(page.getByTestId('genre-chip').first()).toHaveText(/^Fantasy$/) // innerText-based
+```
+
+Playwright's `toHaveText` uses `innerText`, so the assertion sees the transform. **Zero false
+positives** — it compares rendered output to a known input rather than guessing intent from syntax,
+which is precisely why the static scan needed 68 waivers.
+
+**Coverage, stated exactly.** This guard covers **all 13** sites — the 5-site `Chip` cluster _and_
+the 8 direct ones — because it asserts on rendered output rather than on which component declared
+what. That is the decisive advantage over the children-guard below, which does **not**.
+
+### The children-guard, and the gap it leaves — kept for the record
+
+The fallback, had the render-time check not worked: ban `.skin-control` on shared components that
+render `{children}`. Stated plainly so it does not read as coverage it never had:
+
+> It catches **5 of 13** — the `Chip.tsx` cluster only. The **8 direct sites** (`Toolbar:168`,
+> `dialogs:649`, `dialogs:924`, `JustFinishedSheet:265`, `TropeChip:26`, `TropePicker:211`,
+> `SeriesRoute:548`, `SharedListRoute:49`) name their data inline and declare no `{children}`, so
+> the rule is structurally blind to every one of them. It would have left **62% of this defect
+> uncovered** while reporting clean.
+
+The purely static alternative — flag any `.skin-control` whose children contain a JSX expression —
+measures **81 of 181** sites, 68 of them legitimate (`{busy ? 'Saving…' : 'Save'}`,
+`{FORMAT_LABEL[f]}`). An allowlist of 68 is the dumping ground the meter's own header warns about.
+
+**Recommendation: take the render-time guard.** It is the only one of the three that covers the whole
+defect, and the trap that would have neutered it is now documented above it.
 
 ### BUILT — ruling given, shipped
 
