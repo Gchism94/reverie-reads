@@ -124,7 +124,7 @@ function Calendar({ books, openBook }: { books: Book[]; openBook: (id: string) =
               type="button"
               disabled={!has}
               onClick={() => setDay(d)}
-              className="aspect-square rounded-lg border p-1 text-left disabled:cursor-default"
+              className="aspect-square skin-tile border p-1 text-left disabled:cursor-default"
               style={{
                 borderColor: today ? 'var(--gold)' : 'var(--line)',
                 background: has ? 'var(--card)' : 'transparent',

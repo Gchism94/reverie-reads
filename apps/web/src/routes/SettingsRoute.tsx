@@ -414,7 +414,7 @@ function SettingsScreen() {
                 type="button"
                 onClick={() => setSkin(s.id)}
                 aria-pressed={activeSkin === s.id}
-                className="rounded-xl border p-3 text-left"
+                className="skin-tile border p-3 text-left"
                 style={
                   activeSkin === s.id
                     ? { background: 'var(--field)', borderColor: 'var(--primary)' }

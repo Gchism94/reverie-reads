@@ -160,7 +160,7 @@ function TropeScreen() {
                     ? `${carrying ? 'Untag' : 'Tag'} ${b.title}${stateSuffix(b)}`
                     : `Open ${b.title}${stateSuffix(b)}`
                 }
-                className="relative overflow-hidden rounded-xl border text-left"
+                className="relative overflow-hidden skin-tile border text-left"
                 style={{
                   borderColor: sweep && carrying ? 'var(--accent-ink)' : 'var(--line)',
                   boxShadow: sweep && carrying ? '0 0 0 2px var(--accent-ink)' : undefined,

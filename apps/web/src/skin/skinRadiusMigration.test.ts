@@ -26,7 +26,7 @@ import { describe, expect, it } from 'vitest'
 
 const SRC = join(__dirname, '..')
 const RADIUS = /\brounded-(?:none|sm|md|lg|xl|2xl|3xl|full)\b/
-const CARRIER = /\bskin-(?:control|field|card|panel)\b/
+const CARRIER = /\bskin-(?:control|field|card|panel|tile)\b/
 
 /** Files whose radii are ARTWORK — SVG ornaments, star fields, spine geometry — never controls. */
 const ARTWORK_FILES = [
@@ -54,6 +54,15 @@ const ALLOW: Record<string, string> = {
   // excludes them (no px-*, no h-9..12), so an entry for them would suppress nothing while implying
   // it had been considered and waived. A dead allowlist entry is the dumping-ground failure in
   // miniature — found by mutation-testing this very list.
+  // The tile heuristic needs an interactivity signal from the SURROUNDING lines, so a plain card
+  // that happens to sit near a handler reads as pressable. These two are the whole false-positive
+  // set, both verified by opening the file: each is a <div>, neither is focusable, neither has a
+  // handler of its own. Tightening the window instead would start missing real tiles, which is the
+  // worse failure — a missed tile is invisible drift, a listed non-tile is two lines of prose.
+  'book/ReviewsPanel.tsx|rounded-2xl border border-line p-4':
+    'a review card — a plain <div> surface; the nearby onClick belongs to the panel’s own controls, not to this box',
+  'components/AppShell.tsx|fixed inset-x-3':
+    'the mobile “more” sheet container — a positioned <div> wrapping the nav buttons, not a pressable itself',
   'library/SeriesView.tsx|h-12 w-3':
     'a 3px-wide spine sliver in the series strip — rounded-sm is glyph geometry on artwork, not a control silhouette',
 }
@@ -66,6 +75,16 @@ function walk(dir: string): string[] {
     else if (p.endsWith('.tsx') && !p.includes('.test.')) out.push(p)
   }
   return out
+}
+
+/** A CARD-SCALED pressable: block padding or a text-left body, and no control-scale px-*. Needs an
+ *  interactivity signal from the surrounding lines, because the same shape describes a plain card —
+ *  ReviewsPanel's review card and AppShell's mobile sheet both matched on shape alone. */
+function looksLikeTile(line: string, context: string): boolean {
+  const cardScaled =
+    (/\bp-[0-9.]/.test(line) || /\btext-left\b/.test(line)) && !/\bpx-[0-9.]/.test(line)
+  if (!cardScaled) return false
+  return /<button|onClick|aria-pressed|role=["']button["']|<Link/.test(context)
 }
 
 /** Heuristic: does this line describe a CONTROL (something a reader clicks or types into)? */
@@ -82,20 +101,20 @@ describe('control-radius migration meter', () => {
   for (const abs of walk(SRC)) {
     const rel = abs.slice(SRC.length + 1)
     if (ARTWORK_FILES.includes(rel)) continue
-    readFileSync(abs, 'utf8')
-      .split('\n')
-      .forEach((line, i) => {
-        if (!RADIUS.test(line) || CARRIER.test(line)) return
-        if (!looksLikeControl(line)) return
-        if (
-          Object.keys(ALLOW).some((k) => {
-            const [f, marker] = k.split('|')
-            return rel === f && line.includes(marker!)
-          })
-        )
-          return
-        findings.push({ file: rel, line: i + 1, text: line.trim().slice(0, 90) })
-      })
+    const lines = readFileSync(abs, 'utf8').split('\n')
+    lines.forEach((line, i) => {
+      if (!RADIUS.test(line) || CARRIER.test(line)) return
+      const context = lines.slice(Math.max(0, i - 9), i + 3).join('\n')
+      if (!looksLikeControl(line) && !looksLikeTile(line, context)) return
+      if (
+        Object.keys(ALLOW).some((k) => {
+          const [f, marker] = k.split('|')
+          return rel === f && line.includes(marker!)
+        })
+      )
+        return
+      findings.push({ file: rel, line: i + 1, text: line.trim().slice(0, 90) })
+    })
   }
 
   it('every allowlist entry states why', () => {
