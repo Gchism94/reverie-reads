@@ -91,7 +91,7 @@ function Nav() {
           <Link
             to="/auth"
             search={{ mode: 'signup' }}
-            className="flex h-9 items-center rounded-full px-4 text-[13.5px] font-semibold"
+            className="skin-control flex h-9 items-center px-4 text-[13.5px] font-semibold"
             style={{ background: 'var(--gold)', color: 'var(--on-primary)' }}
           >
             Get started
@@ -135,7 +135,7 @@ function Nav() {
             <Link
               to="/auth"
               search={{ mode: 'signup' }}
-              className="mt-1 flex h-11 items-center justify-center rounded-full text-[14px] font-semibold"
+              className="skin-control mt-1 flex h-11 items-center justify-center text-[14px] font-semibold"
               style={{ background: 'var(--gold)', color: 'var(--on-primary)' }}
             >
               Get started
@@ -175,7 +175,7 @@ function Hero() {
             <Link
               to="/auth"
               search={{ mode: 'signup' }}
-              className="flex h-12 items-center rounded-full px-7 text-[15px] font-semibold"
+              className="skin-control flex h-12 items-center px-7 text-[15px] font-semibold"
               style={{
                 background: 'var(--gold)',
                 color: 'var(--on-primary)',
@@ -186,7 +186,7 @@ function Hero() {
             </Link>
             <a
               href="#skins"
-              className="flex h-12 items-center rounded-full px-6 text-[15px] font-semibold text-ink"
+              className="skin-control flex h-12 items-center px-6 text-[15px] font-semibold text-ink"
               style={{ border: '1px solid var(--line)' }}
             >
               See how it works

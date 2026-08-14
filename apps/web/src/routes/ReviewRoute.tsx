@@ -68,7 +68,7 @@ function TriageTile({
         <button
           type="button"
           onClick={() => update.mutate({ id: item.ref, patch: { coverConfidence: 'high' } })}
-          className="mt-1 w-full rounded-full px-2 py-1 text-[11px] font-semibold"
+          className="skin-control mt-1 w-full px-2 py-1 text-[11px] font-semibold"
           style={{ background: 'var(--accent-fill)', color: 'var(--on-primary)' }}
         >
           Looks right
@@ -134,7 +134,7 @@ function ReviewScreen() {
         </p>
         <Link
           to="/settings"
-          className="mt-4 inline-block rounded-full px-5 py-2 text-[14px] font-semibold"
+          className="skin-control mt-4 inline-block px-5 py-2 text-[14px] font-semibold"
           style={{ background: 'var(--accent-fill)', color: 'var(--on-primary)' }}
         >
           Go to import
