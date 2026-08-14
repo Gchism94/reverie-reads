@@ -358,7 +358,7 @@ function SettingsScreen() {
           <button
             type="button"
             onClick={saveProfile}
-            className="h-10 rounded-xl px-5 text-[14px] font-semibold"
+            className="h-10 skin-control px-5 text-[14px] font-semibold"
             style={{
               background: 'linear-gradient(135deg, var(--primary), var(--gold))',
               color: 'var(--on-primary)',
@@ -383,7 +383,7 @@ function SettingsScreen() {
                 type="button"
                 onClick={() => setMode(value)}
                 aria-pressed={activeMode === value}
-                className="flex-1 rounded-xl border px-3 py-2.5 text-[13px] font-semibold"
+                className="flex-1 skin-control border px-3 py-2.5 text-[13px] font-semibold"
                 style={
                   activeMode === value
                     ? {
@@ -462,7 +462,7 @@ function SettingsScreen() {
             <button
               type="button"
               onClick={() => setShowDupes((v) => !v)}
-              className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink"
+              className="skin-control border border-line px-4 py-2 text-[13px] font-semibold text-ink"
               style={{ background: 'var(--field)' }}
             >
               🔗 Merge duplicates{dupes.length ? ` (${dupes.length})` : ''}
@@ -471,7 +471,7 @@ function SettingsScreen() {
               <button
                 type="button"
                 onClick={() => (stopRef.current = true)}
-                className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink"
+                className="skin-control border border-line px-4 py-2 text-[13px] font-semibold text-ink"
                 style={{ background: 'var(--field)' }}
               >
                 ⏹ Stop ({sweepCountText(progress)}){tracing ? ' · tracing' : ''}
@@ -481,7 +481,7 @@ function SettingsScreen() {
                 type="button"
                 onClick={() => void runComplete()}
                 disabled={!eligibleCount}
-                className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink disabled:opacity-50"
+                className="skin-control border border-line px-4 py-2 text-[13px] font-semibold text-ink disabled:opacity-50"
                 style={{ background: 'var(--field)' }}
               >
                 ✨ Complete missing covers &amp; info
@@ -507,7 +507,7 @@ function SettingsScreen() {
                 }
                 disabled={!eligibleCount}
                 title="Runs the sweep over 10 never-checked books, bypassing the shared enrichment cache so the sources are actually queried, and records per-stage timings to sweep_traces. Deliberately a worst case, not an average."
-                className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink disabled:opacity-50"
+                className="skin-control border border-line px-4 py-2 text-[13px] font-semibold text-ink disabled:opacity-50"
                 style={{ background: 'var(--field)' }}
               >
                 ⏱ Trace 10 books
@@ -517,7 +517,7 @@ function SettingsScreen() {
               <button
                 type="button"
                 onClick={() => (sharpStopRef.current = true)}
-                className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink"
+                className="skin-control border border-line px-4 py-2 text-[13px] font-semibold text-ink"
                 style={{ background: 'var(--field)' }}
               >
                 ⏹ Stop ({sweepCountText(sharpProgress)})
@@ -527,7 +527,7 @@ function SettingsScreen() {
                 type="button"
                 onClick={() => void runResharpen()}
                 disabled={!sharpenableCount}
-                className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink disabled:opacity-50"
+                className="skin-control border border-line px-4 py-2 text-[13px] font-semibold text-ink disabled:opacity-50"
                 style={{ background: 'var(--field)' }}
               >
                 🔍 Sharpen covers{sharpenableCount ? ` (${sharpenableCount})` : ''}
@@ -537,7 +537,7 @@ function SettingsScreen() {
               type="button"
               onClick={() => setShowSweep((v) => !v)}
               disabled={!titleCleanups.length}
-              className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink disabled:opacity-50"
+              className="skin-control border border-line px-4 py-2 text-[13px] font-semibold text-ink disabled:opacity-50"
               style={{ background: 'var(--field)' }}
             >
               🧹 Clean up legacy titles{titleCleanups.length ? ` (${titleCleanups.length})` : ''}
@@ -562,7 +562,7 @@ function SettingsScreen() {
                   type="button"
                   onClick={() => void mergeAllGroups()}
                   disabled={performMerge.isPending}
-                  className="self-start rounded-full px-4 py-2 text-[13px] font-semibold disabled:opacity-50"
+                  className="self-start skin-control px-4 py-2 text-[13px] font-semibold disabled:opacity-50"
                   style={{
                     background: 'linear-gradient(135deg, var(--primary), var(--gold))',
                     color: 'var(--on-primary)',
@@ -588,7 +588,7 @@ function SettingsScreen() {
                       type="button"
                       onClick={() => void mergeGroup(g)}
                       disabled={performMerge.isPending}
-                      className="rounded-full px-3 py-1.5 text-[12.5px] font-semibold disabled:opacity-50"
+                      className="skin-control px-3 py-1.5 text-[12.5px] font-semibold disabled:opacity-50"
                       style={{ background: 'var(--accent-fill)', color: 'var(--on-primary)' }}
                     >
                       Merge these {g.length}
@@ -636,7 +636,7 @@ function SettingsScreen() {
                 type="button"
                 onClick={() => void applySweep()}
                 disabled={sweeping}
-                className="rounded-full px-4 py-2 text-[13px] font-semibold disabled:opacity-50"
+                className="skin-control px-4 py-2 text-[13px] font-semibold disabled:opacity-50"
                 style={{
                   background: 'linear-gradient(135deg, var(--primary), var(--gold))',
                   color: 'var(--on-primary)',
@@ -655,7 +655,7 @@ function SettingsScreen() {
             <button
               type="button"
               onClick={() => void exportBackup()}
-              className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink"
+              className="skin-control border border-line px-4 py-2 text-[13px] font-semibold text-ink"
               style={{ background: 'var(--field)' }}
             >
               ⬇ Export library (JSON)
@@ -663,7 +663,7 @@ function SettingsScreen() {
             <button
               type="button"
               onClick={() => restoreRef.current?.click()}
-              className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink"
+              className="skin-control border border-line px-4 py-2 text-[13px] font-semibold text-ink"
               style={{ background: 'var(--field)' }}
             >
               ⬆ Restore backup
@@ -671,7 +671,7 @@ function SettingsScreen() {
             <button
               type="button"
               onClick={() => csvRef.current?.click()}
-              className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink"
+              className="skin-control border border-line px-4 py-2 text-[13px] font-semibold text-ink"
               style={{ background: 'var(--field)' }}
             >
               📚 Import a library export (CSV or Excel)
@@ -751,7 +751,7 @@ function SettingsScreen() {
           {imported && (
             <Link
               to="/review"
-              className="mt-3 inline-flex min-h-[40px] items-center gap-1.5 rounded-full px-4 text-[14px] font-semibold"
+              className="mt-3 inline-flex min-h-[40px] items-center gap-1.5 skin-control px-4 text-[14px] font-semibold"
               style={{ background: 'var(--accent-fill)', color: 'var(--on-primary)' }}
             >
               Review import →
@@ -843,7 +843,7 @@ function SettingsScreen() {
             type="button"
             onClick={() => void runDelete()}
             disabled={deleting || deleteText.trim().toLowerCase() !== confirmText}
-            className="mt-3 h-10 rounded-xl border px-5 text-[14px] font-semibold disabled:opacity-40"
+            className="mt-3 h-10 skin-control border px-5 text-[14px] font-semibold disabled:opacity-40"
             style={{
               background: 'var(--field)',
               borderColor: 'var(--primary)',
