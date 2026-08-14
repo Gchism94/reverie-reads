@@ -40,6 +40,29 @@ import { ok, okUser } from './support/ok'
 // This is one of a family: `content`, `::before`/`::after`, `visibility`, `order`, `direction` and
 // `text-transform` all change what a person perceives while leaving the DOM identical. Any assertion
 // about what a reader SEES has to read rendered output, never the node.
+//
+// ── COVERAGE, STATED EXACTLY — 6 of the 13 call sites ───────────────────────────────────────────
+// Written out rather than implied, because a spec named after a defect reads as covering all of it.
+//
+//   COVERED, and each proved by a mutation that fails this file:
+//     * Chip.tsx — all 5 call sites (FilterPanel genres/subgenres/tropes, FromYourAuthors ×2).
+//       Reached through FilterPanel's persistent desktop column on /library.
+//     * TropeChip.tsx — the book screen's trope chips.
+//
+//   NOT COVERED — each needs a flow this fixture does not drive, and a mutation reverting any of
+//   them leaves this file GREEN:
+//     * Toolbar.tsx:168        — the author filter chip renders only while an author filter is set
+//     * dialogs.tsx:649, :924  — the leave-series and merge-candidate dialogs
+//     * JustFinishedSheet:265  — the finished-a-book sheet
+//     * TropePicker.tsx:211    — the "add your own" button, needs a search query typed
+//     * SeriesRoute.tsx:548    — the acquire dialog
+//     * SharedListRoute.tsx:49 — the shared-list search results
+//
+// The class-scoped test at the bottom sweeps four routes for ANY `.skin-control-quiet` element that
+// re-cases its own text, which reaches whatever those routes render — but it cannot catch a
+// regression BACK to `.skin-control`, since the element leaves its selector. So the seven above are
+// genuinely uncovered, not covered-by-another-angle. Extending the fixture to drive those flows is
+// the follow-up; claiming them here would be the exact failure this file's header warns about.
 
 const SUPABASE_URL = 'http://127.0.0.1:55321'
 const ANON =
