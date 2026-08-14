@@ -208,7 +208,7 @@ export function TropePicker({ book, onClose }: { book: Book; onClose: () => void
         <button
           type="button"
           onClick={createDraft}
-          className="skin-control mb-3 border border-dashed border-line px-3.5 py-1.5 text-[12.5px] font-semibold text-ink"
+          className="skin-control-quiet mb-3 border border-dashed border-line px-3.5 py-1.5 text-[12.5px] font-semibold text-ink"
           style={{ background: 'var(--chip)' }}
         >
           ＋ Add “{q.trim()}” as your own
