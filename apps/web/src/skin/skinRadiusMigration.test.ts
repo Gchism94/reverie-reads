@@ -174,7 +174,7 @@ describe('control-radius migration meter', () => {
 
   // TARGET: 0. Lower this as batches land — it may only ever go DOWN, which is what makes it a
   // ratchet rather than a number someone edits to make the suite green.
-  const BUDGET = 63
+  const BUDGET = 61
 
   // The NON-INTERACTIVE population, split out in batch 4 and given its own ratchet rather than
   // dropped. Splitting a bucket out of a meter is the move that quietly makes a number look better,
@@ -185,8 +185,13 @@ describe('control-radius migration meter', () => {
   // class — rather than being forced into `.skin-control`. TARGET: 0, same as above.
   //
   // 25 = 23 chips that were inside the old 112, plus ReviewsPanel's review card and AppShell's mobile
-  // sheet, which were allowlist-SUPPRESSED before and are now counted. The books balance exactly:
-  // 112 − 26 migrated − 23 reclassified = 63, which is the control BUDGET above.
+  // sheet, which were allowlist-SUPPRESSED before and are now counted.
+  //
+  // The books balance, and the arithmetic is worth writing out because getting it wrong is silent:
+  //   112 − 26 migrated − 23 reclassified as chips − 2 Landing nav links allowlisted = 61.
+  // A first pass set BUDGET to 63, forgetting the last term. Nothing failed — a ratchet with slack
+  // still passes, it just stops catching anything, and reverting a migrated control went undetected
+  // until the counts were printed directly instead of being inferred from green.
   const CHIP_BUDGET = 25
 
   it(`no more than ${BUDGET} controls still use a hardcoded radius (ratchet — lower it, never raise it)`, () => {
