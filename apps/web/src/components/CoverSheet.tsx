@@ -205,7 +205,7 @@ export function CoverSheet({ book, onClose }: { book: Book; onClose: () => void 
                 type="button"
                 disabled={saving}
                 onClick={() => apply({ source: e.source, url: e.cover, sourceUrl: e.cover }, e)}
-                className="flex w-full items-center gap-3 rounded-xl border border-line p-2 text-left disabled:opacity-50"
+                className="flex w-full items-center gap-3 skin-tile border border-line p-2 text-left disabled:opacity-50"
                 style={{ background: 'var(--field)' }}
               >
                 <span

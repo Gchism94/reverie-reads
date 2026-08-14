@@ -18,7 +18,7 @@
  */
 
 const RADIUS = /\brounded-(?:none|sm|md|lg|xl|2xl|3xl|full)\b/
-const CARRIER = /\bskin-(?:control|field)\b/
+const CARRIER = /\bskin-(?:control|field|tile)\b/
 
 /** Every string literal inside a JSX className value, template literals included. */
 function classStrings(node) {
@@ -50,14 +50,15 @@ export default {
     type: 'problem',
     docs: {
       description:
-        'a .skin-control/.skin-field element must take its radius from --radius-control, not a hardcoded class',
+        'a .skin-control/.skin-field/.skin-tile element must take its radius from the skin, not a hardcoded class',
     },
     schema: [],
     messages: {
       override:
         '"{{cls}}" overrides the skin silhouette on an element that already carries "{{carrier}}". ' +
-        '--radius-control is 2px in Aphelion and 999px in Tryst; the hardcoded class wins in both, ' +
-        'so the skin stops reaching this control. Remove the rounded-* class.',
+        'The skin radius tokens differ per skin (--radius-control is 2px in Aphelion and 999px in ' +
+        'Tryst; --radius-card likewise), and the hardcoded class wins over all of them, so the skin ' +
+        'stops reaching this element. Remove the rounded-* class.',
     },
   },
   create(context) {

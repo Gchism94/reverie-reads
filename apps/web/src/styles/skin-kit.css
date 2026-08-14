@@ -15,6 +15,22 @@
 .skin-card {
   border-radius: var(--radius-card);
 }
+
+/* A pressable thing at CARD scale — option tiles, calendar cells, picker rows, cover-choice rows.
+   Card radius, control affordance, and deliberately NO control typography.
+   
+   This is the same split `.skin-field` makes, one axis over. `.skin-field` is control-shape without
+   control-type, because typed text must stay as the user typed it. `.skin-tile` is card-shape
+   without control-type, because a tile wraps a block of content — a heading, a byline, a date —
+   rather than labelling itself, and `--control-transform: uppercase` would shout that content in
+   two skins while `--control-font` would set a paragraph in the display face.
+   
+   NO motion token, unlike `.skin-control`. Verified rather than inherited from the analogy: none of
+   the seven card-shaped controls in the app declare a transition today, so adding one would
+   introduce an animation under cover of a consistency fix. `.skin-card` sets no motion either. */
+.skin-tile {
+  border-radius: var(--radius-card);
+}
 .skin-panel {
   border-radius: var(--radius-panel);
 }
@@ -31,7 +47,8 @@
    read AND behave as a control, so every one gets a clear keyboard focus ring in the skin's accent.
    outline (not box-shadow) so it survives the controls that set their own shadows. */
 .skin-control:focus-visible,
-.skin-field:focus-visible {
+.skin-field:focus-visible,
+.skin-tile:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
