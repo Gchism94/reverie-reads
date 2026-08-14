@@ -292,16 +292,44 @@ Recorded as decided, so the implementation tracks don't relitigate them:
 
 ## 7. What this spawned
 
-| work                                              | status                                   |
-| ------------------------------------------------- | ---------------------------------------- |
-| Token-fixture parity (`skinTokensParity.test.ts`) | PR #211                                  |
-| Surface-separation + border-visibility coverage   | planned — folds in the §5 sixth finding  |
-| `marrow/dark` token fix                           | blocked on ruling 1                      |
-| Control-radius guard (ESLint + source scan)       | planned — precedes the migration         |
-| Control-radius migration (124 + 5 + 9 sites)      | planned — driven by the guard's failures |
-| `Surface` primitive + surface migration           | planned                                  |
-| ~~`Nameplate` / `StatePill` colour fix~~          | **retired** — no violation (§0)          |
+| work                                              | status                                                    |
+| ------------------------------------------------- | --------------------------------------------------------- |
+| Token-fixture parity (`skinTokensParity.test.ts`) | PR #211                                                   |
+| Surface-separation + border-visibility coverage   | planned — folds in the §5 sixth finding                   |
+| `marrow/dark` token fix                           | blocked on ruling 1                                       |
+| Control-radius guard (ESLint + source scan)       | planned — precedes the migration                          |
+| Control-radius migration (batches 1–4 landed)     | in progress — meter 61 controls + 25 chips                |
+| Radius-without-typography kit class (§8)          | **needs an owner ruling** — blocks 25 chips + 2 nav links |
+| `Surface` primitive + surface migration           | planned                                                   |
+| ~~`Nameplate` / `StatePill` colour fix~~          | **retired** — no violation (§0)                           |
 
 **Sequencing note:** the guard is built and run **before** the migration, so its failures _are_ the
 migration checklist — a live progress meter rather than a hand-maintained list, and no window in
 which migrated code can drift back before enforcement exists.
+
+## 8. The open kit gap: a radius without the typography (raised by batch 4)
+
+Batch 4 surfaced a population the kit has no class for. Of 39 shape-matches across its six files,
+**11 were static `<span>` / `<div>` / `<li>` / `<p>`** — status badges, mono code chips, list rows,
+empty-state boxes. Across the whole app the population is **25**.
+
+They match `looksLikeControl` because the heuristic keys off padding and height, and a badge has
+both. They are **not** false positives in the sense the tile allowlist entries were: each one really
+does hardcode a radius the skin never reaches. What makes them un-migratable today is the rider —
+`.skin-control` also sets `--control-font`, `--label-weight` and `--control-transform`, and
+**`--control-transform` is `uppercase` in three skins** (aphelion, umbra, almanac). Migrating a
+status badge would retype it; migrating Landing's `Log in` nav link would render it `LOG IN`.
+
+Two Landing nav links sit in the same gap from the interactive side — control-shaped, genuinely
+pressable, but text links whose radius exists only to shape a hover chip. They are allowlisted with
+that reason rather than migrated, so **one decision covers both groups**.
+
+**The question for the owner:** does the kit want a fourth pressable-scale class — control radius,
+no typography, no motion — or should badges keep a hardcoded radius by design?
+
+This is deliberately **not** self-resolved. `.skin-tile` was built only after a sweep established
+its population and a check confirmed what it should and shouldn't carry; inventing a second class
+mid-batch on a smaller sample would be the same move with less evidence behind it. Until it is
+ruled on, the 25 are **counted, not excused** — they carry their own ratchet in
+`skinRadiusMigration.test.ts` (`CHIP_BUDGET`, target 0), because splitting a bucket out of a meter
+is precisely the move that quietly makes a number look better than it is.
