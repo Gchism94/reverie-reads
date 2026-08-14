@@ -65,7 +65,7 @@ function SkinCard({
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <span
-            className="rounded-full border px-3 py-1 text-[12px] font-medium"
+            className="skin-control border px-3 py-1 text-[12px] font-medium"
             style={{
               background: 'var(--chip)',
               color: 'var(--ink)',
@@ -75,7 +75,7 @@ function SkinCard({
             Sample tag
           </span>
           <span
-            className="rounded-full px-3 py-1 text-[12px] font-semibold"
+            className="skin-control px-3 py-1 text-[12px] font-semibold"
             style={{ background: 'var(--accent-fill)', color: 'var(--on-primary)' }}
           >
             Primary
@@ -109,7 +109,7 @@ function SkinCard({
           type="button"
           onClick={onSelect}
           disabled={active}
-          className="rounded-full px-4 py-1.5 text-[12.5px] font-semibold disabled:opacity-50"
+          className="skin-control px-4 py-1.5 text-[12.5px] font-semibold disabled:opacity-50"
           style={{ background: 'var(--accent-fill)', color: 'var(--on-primary)' }}
         >
           {active ? 'In use' : 'Use this skin'}
@@ -166,7 +166,7 @@ function AdaptiveCard({
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <span
-            className="rounded-full border px-3 py-1 text-[12px] font-medium"
+            className="skin-control border px-3 py-1 text-[12px] font-medium"
             style={{
               background: 'var(--chip)',
               color: 'var(--ink)',
@@ -176,7 +176,7 @@ function AdaptiveCard({
             Sample tag
           </span>
           <span
-            className="rounded-full px-3 py-1 text-[12px] font-semibold"
+            className="skin-control px-3 py-1 text-[12px] font-semibold"
             style={{ background: 'var(--accent-fill)', color: 'var(--on-primary)' }}
           >
             Primary
@@ -218,7 +218,7 @@ function AdaptiveSection({ mode }: { mode: ResolvedMode }) {
           <button
             type="button"
             onClick={() => regenerate()}
-            className="rounded-full px-4 py-2 text-[13px] font-semibold"
+            className="skin-control px-4 py-2 text-[13px] font-semibold"
             style={{ background: 'var(--accent-fill)', color: 'var(--on-primary)' }}
           >
             {isActive ? 'Regenerate from my reading' : 'Generate & use this'}
@@ -227,7 +227,7 @@ function AdaptiveSection({ mode }: { mode: ResolvedMode }) {
             <button
               type="button"
               onClick={() => revert(preview.dominant)}
-              className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink"
+              className="skin-control border border-line px-4 py-2 text-[13px] font-semibold text-ink"
               style={{ background: 'var(--field)' }}
             >
               Revert to {SKINS[preview.dominant].label}
@@ -236,7 +236,7 @@ function AdaptiveSection({ mode }: { mode: ResolvedMode }) {
           <button
             type="button"
             onClick={() => setLocked(!locked)}
-            className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink"
+            className="skin-control border border-line px-4 py-2 text-[13px] font-semibold text-ink"
             style={{ background: 'var(--field)' }}
           >
             {locked ? '🔒 Locked — unlock to evolve' : '🔓 Lock this skin'}
@@ -286,7 +286,7 @@ function SkinGalleryScreen() {
             type="button"
             onClick={() => setMode(value)}
             aria-pressed={activeMode === value}
-            className="rounded-full border px-3 py-1.5 text-[12.5px] font-semibold"
+            className="skin-control border px-3 py-1.5 text-[12.5px] font-semibold"
             style={
               activeMode === value
                 ? {
