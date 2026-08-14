@@ -247,11 +247,11 @@ function MatchScreen() {
           style={{ background: 'var(--card)', boxShadow: 'var(--shadow)' }}
         >
           <div
-            className="mb-3 h-1.5 overflow-hidden rounded-full"
+            className="skin-meter mb-3 h-1.5 overflow-hidden"
             style={{ background: 'var(--chip)' }}
           >
             <div
-              className="h-full rounded-full"
+              className="skin-meter h-full"
               style={{ width: `${(step / QUIZ.length) * 100}%`, background: 'var(--primary)' }}
             />
           </div>
