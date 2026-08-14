@@ -377,7 +377,7 @@ function MatchScreen() {
         <button
           type="button"
           onClick={addTop3}
-          className="rounded-full px-4 py-2 text-[13px] font-semibold"
+          className="skin-control px-4 py-2 text-[13px] font-semibold"
           style={{
             background: 'linear-gradient(135deg, var(--primary), var(--gold))',
             color: 'var(--on-primary)',
@@ -388,7 +388,7 @@ function MatchScreen() {
         <button
           type="button"
           onClick={reset}
-          className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink"
+          className="skin-control border border-line px-4 py-2 text-[13px] font-semibold text-ink"
         >
           ↻ Retake
         </button>

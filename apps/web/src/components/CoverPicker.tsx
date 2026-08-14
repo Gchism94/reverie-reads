@@ -40,7 +40,7 @@ export function CoverPicker({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="mt-1 w-full rounded-full border border-line px-2 py-1 text-[11px] font-semibold text-ink"
+        className="skin-control mt-1 w-full border border-line px-2 py-1 text-[11px] font-semibold text-ink"
         style={{ background: 'var(--field)' }}
       >
         Choose cover

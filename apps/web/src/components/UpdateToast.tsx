@@ -26,7 +26,7 @@ export function UpdateToast() {
         <button
           type="button"
           onClick={() => void applyUpdate()}
-          className="rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold"
+          className="skin-control px-3.5 py-1.5 text-[12.5px] font-semibold"
           style={{
             background: 'linear-gradient(135deg, var(--primary), var(--gold))',
             color: 'var(--on-primary)',
