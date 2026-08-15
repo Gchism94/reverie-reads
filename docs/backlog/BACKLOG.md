@@ -125,28 +125,49 @@ anon, authenticated, service_role` later put an explicit `anon=X` back on all
   `--yes` so the second prompt is acknowledged rather than accidental, or feed
   the CLI its own confirmation and stop depending on EOF semantics we don't
   control. Recorded during `fix/deploy-guard`, deliberately not fixed there.
+- ~~**Every `security definer` RPC in the repo is anon-callable, and the ownership `raise` is the
+  only thing stopping it.**~~ **CLOSED — verified against source 2026-08-15.** Closed by `9f338d9`
+  (#110), which is the migration this entry proposes: `20260801010000_revoke_public_execute.sql`
+  revokes `execute … from public` across the RPCs. Verified by `proacl` on the local stack — both
+  functions named below now read `{postgres=X/postgres,authenticated=X/postgres}`, PUBLIC gone.
+
+  **The convention this entry asks for, stated so the next reader doesn't misread a grant as an
+  oversight: TRIGGER FUNCTIONS ARE OUT OF SCOPE.** `handle_new_user`, `set_updated_at` and
+  `bump_club_activity` still carry PUBLIC execute, deliberately. All three `return trigger`, and
+  `20260801010000`'s own commit message records the check: calling one directly raises "trigger
+  functions can only be called as triggers" — a hard Postgres restriction independent of any grant,
+  confirmed as superuser so no grant could have been the reason. They are not RPC-shaped and were
+  left alone on purpose. (Note `set_updated_at` is not even `security definer`; a `prosecdef`-filtered
+  audit query misses it, which is how docs/audits/backlog-nonseries-audit.md came to list two rather
+  than three.)
+
+  <details><summary>original entry</summary>
+
 - **Every `security definer` RPC in the repo is anon-callable, and the ownership
-  `raise` is the only thing stopping it.** Postgres grants `EXECUTE` to `PUBLIC` by
-  default, so `grant execute on function … to authenticated` is **additive, not
-  gating** — it adds nothing that PUBLIC didn't already have. Observed against the
-  local stack with the anon key: `POST /rest/v1/rpc/remove_series_entry` returns
-  `P0001 not owner of series entry` and `rpc/merge_books` returns `P0001 not owner of
+`raise` is the only thing stopping it.** Postgres grants `EXECUTE` to `PUBLIC` by
+default, so `grant execute on function … to authenticated` is **additive, not
+gating** — it adds nothing that PUBLIC didn't already have. Observed against the
+local stack with the anon key: `POST /rest/v1/rpc/remove_series_entry` returns
+`P0001 not owner of series entry` and `rpc/merge_books` returns `P0001 not owner of
 primary book` — both reached the function body and were turned away by the check
-  inside it, not by a grant. `proacl` on both reads
-  `=X/postgres | postgres=X/postgres | authenticated=X/postgres`, where the empty
-  grantee is PUBLIC.
-  **No exposure today**, and deterministically so: `security definer` runs the body,
-  `auth.uid()` is null for anon, and `owner_id = null` is never true, so the first
-  statement always refuses. The hazard is structural rather than current — it means
-  the `raise` is the entire boundary on every RPC here, and any future RPC whose
-  first statement is _not_ an ownership check inherits a function an unauthenticated
-  caller can run. The two that exist are written correctly; nothing enforces that the
-  third will be.
-  Fix is a small migration revoking `execute … from public` across both (and a
-  convention for new ones) — **its own branch**, because it should cover `merge_books`
-  in the same change and a red run there needs to mean one thing. Found during
-  `fix/atomic-series-removal-client` while testing the `pgrst_ddl_watch` schema-cache
-  reload, which is how an anon call came to be made at all.
+inside it, not by a grant. `proacl` on both reads
+`=X/postgres | postgres=X/postgres | authenticated=X/postgres`, where the empty
+grantee is PUBLIC.
+**No exposure today**, and deterministically so: `security definer` runs the body,
+`auth.uid()` is null for anon, and `owner_id = null` is never true, so the first
+statement always refuses. The hazard is structural rather than current — it means
+the `raise` is the entire boundary on every RPC here, and any future RPC whose
+first statement is _not_ an ownership check inherits a function an unauthenticated
+caller can run. The two that exist are written correctly; nothing enforces that the
+third will be.
+Fix is a small migration revoking `execute … from public` across both (and a
+convention for new ones) — **its own branch**, because it should cover `merge_books`
+in the same change and a red run there needs to mean one thing. Found during
+`fix/atomic-series-removal-client` while testing the `pgrst_ddl_watch` schema-cache
+reload, which is how an anon call came to be made at all.
+
+  </details>
+
 - ~~**`useRemoveEntry`**: two sequential independently-committed writes, no transaction.~~
   **CLOSED — verified against source 2026-08-14.** `useRemoveEntry` (`series.ts:547`) is now a
   single `supabase.rpc('remove_series_entry', { p_entry })` with `if (error) throw error`; `bookId`
@@ -357,11 +378,22 @@ primary book` — both reached the function body and were turned away by the che
   rather than having it, which is why `fix/tab-routing` deliberately left it
   alone. Moving it to the URL needs a store-vs-URL precedence decision first —
   what wins when both exist.
+- ~~**Swallowed Supabase errors**: a11y's `setupFixtures`, `cleanup`, `setProfileSkinMode`.~~
+**CLOSED — verified against source 2026-08-15.** Closed by `0e8d4ef` (#92), both halves:
+`a11y.spec.ts` routes its sign-ins through `authFailure()` (`if (error || !data.session) throw new
+Error(authFailure(context, DEV_EMAIL, error))`) and its writes through `ok`/`okData`/`okUser`; and
+`scripts/seed-dev.mjs:265` reports `describeSupabaseError(e)` rather than `Seed failed: {}`.
+
+  <details><summary>original entry</summary>
+
 - **Swallowed Supabase errors**: a11y's `setupFixtures`, `cleanup`,
   `setProfileSkinMode` discard sign-in errors then dereference `.data.user!.id`,
   surfacing as a bare TypeError. Plus `db:seed`'s `Seed failed: {}`. Same
   empty-body shape `authFailure()` already solves; it should become the one way
   this repo reads a Supabase error.
+
+  </details>
+
 - **`apps/web/e2e` is outside `tsc`'s reach** (`apps/web/tsconfig.json` includes only
   `["src", "vite.config.ts"]`), while `noUnusedLocals: true` makes a swallowed
   `const { error }` a compile error everywhere else — the reason every swallowed Supabase
@@ -476,6 +508,15 @@ primary book` — both reached the function body and were turned away by the che
   branch — it's an actual subscription surface change, not a follow-on to a bug
   fix, and its own measurement (connection cost, invalidation-storm risk under a
   large library) belongs with it.
+
+## Conventions — established patterns, not open work
+
+Entries here describe a pattern the codebase has already settled on. They are NOT defects; they
+live here so the next reader reaches for the existing answer instead of reinventing one. Moved out
+of "Real bugs, outstanding" on 2026-08-15 after docs/audits/backlog-nonseries-audit.md found the
+first of them described no bug at all, and anyone scanning that section for work kept re-reading it
+as one.
+
 - **`useConfirmedLookup` (`apps/web/src/hooks/useConfirmedLookup.ts`) is the
   established pattern for a param-addressed lookup that can be loading, found, or
   genuinely absent — use it rather than reinventing per route.** Before
