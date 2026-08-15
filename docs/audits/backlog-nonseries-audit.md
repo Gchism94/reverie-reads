@@ -41,6 +41,17 @@ _every_ `security definer` function in `public` still carrying `=X/` returns **t
 | -------------------- | ----------------------------------- | --------- | -------------------------- |
 | `bump_club_activity` | `{=X/postgres,postgres=X/postgres}` | `trigger` | no                         |
 | `handle_new_user`    | `{=X/postgres,postgres=X/postgres}` | `trigger` | no                         |
+| `set_updated_at`     | `{=X/postgres,postgres=X/postgres}` | `trigger` | no                         |
+
+> **CORRECTION (2026-08-15).** Two errors above, both mine. **(a) There are three, not two** —
+> `set_updated_at` also carries PUBLIC execute; the query filtered on `prosecdef` and that one is not
+> `security definer`, so the audit's own predicate hid it. **(b) It needs no decision.** The
+> framing below ("worth a decision on whether the convention covers trigger functions") is wrong:
+> the decision was taken and written down at the time. `20260801010000`'s commit message names all
+> three and records the check — calling one raises _"trigger functions can only be called as
+> triggers"_, a hard Postgres restriction independent of any grant, confirmed as superuser so no
+> grant could have been the reason. A deliberate exclusion, not an oversight. I had not read the
+> commit message before writing this section.
 
 **Not an exposure**: PostgREST does not expose functions returning `trigger` as RPCs, so neither is
 reachable the way `remove_series_entry` was. But the entry asks for "a convention for new ones", and
