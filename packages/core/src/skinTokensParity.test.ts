@@ -105,6 +105,9 @@ describe('skinTokens.fixture ↔ tokens.css parity (every skin × mode)', () => 
     // composite is done by the consumer. `--line` is rgba in all 18 combos and `--card` in tryst,
     // so a drift in either is invisible to any assertion that reads only opaque values.
     ['card', '--card'],
+    // --line is pinned here for the card-surface border guard. marrow/dark's value moved in
+    // Track A PR 2 (alpha 0.2 -> 0.45); this test is what makes that a one-place change rather
+    // than a fixture that can silently disagree with the stylesheet it claims to mirror.
     ['line', '--line'],
     ['ink', '--ink'],
     ['muted', '--muted'],
