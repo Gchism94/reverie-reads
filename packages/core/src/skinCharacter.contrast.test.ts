@@ -170,7 +170,11 @@ describe('skin character kit contrast (text on the kit surfaces ≥ AA, every sk
 // The rulings behind these values are recorded in docs/audits/skin-component-consistency.md, made
 // per combo against docs/audits/card-decision-aid.html rather than against a global threshold —
 // which is why almanac/light passes at a 1.0314 surface (its 1.9869 border carries it) while
-// marrow/dark does not at 1.0402 (its 1.1472 border is the weakest in the set by a wide margin).
+// marrow/dark did NOT at 1.0402, its border then being 1.1472, the weakest in the set by a wide
+// margin. RESOLVED in Track A PR 2: --line went 0.2 -> 0.45 alpha (hue unchanged), taking that
+// border to 1.4606 and putting marrow/dark on the same footing as every other weak-surface combo —
+// carried by its border. Its surface is untouched at 1.0402, deliberately: --card was left alone so
+// the text-on-card contrast that depends on it elsewhere does not move.
 const CARD_FLOORS: Record<string, { surface: number; border: number }> = {
   'tryst/light': { surface: 1.086, border: 1.5469 },
   'tryst/dark': { surface: 1.0908, border: 1.7405 },
@@ -179,7 +183,7 @@ const CARD_FLOORS: Record<string, { surface: number; border: number }> = {
   'aphelion/light': { surface: 1.0642, border: 1.3626 },
   'aphelion/dark': { surface: 1.077, border: 1.4398 },
   'marrow/light': { surface: 1.075, border: 1.5334 },
-  'marrow/dark': { surface: 1.0402, border: 1.1472 },
+  'marrow/dark': { surface: 1.0402, border: 1.4606 },
   'umbra/light': { surface: 1.1411, border: 1.4578 },
   'umbra/dark': { surface: 1.0455, border: 1.4036 },
   'folio/light': { surface: 1.1661, border: 1.6033 },
@@ -193,15 +197,19 @@ const CARD_FLOORS: Record<string, { surface: number; border: number }> = {
 }
 
 /**
- * Combos ruled NOT acceptable, kept out of the pass/fail floor above so the suite does not certify
- * them as fine — but still regression-guarded, so a known-weak combo cannot quietly get worse.
+ * Combos ruled NOT acceptable: kept out of the pass/fail floor above so the suite does not certify
+ * them as fine, while still regression-guarded so a known-weak combo cannot quietly get worse.
  *
- * TO CLOSE THIS OUT (Track A PR 2): strengthen marrow/dark's --line in tokens.css, then delete the
- * entry here. Its floors are already in CARD_FLOORS, so removing it from this list is the entire
- * change — the normal assertion picks it up automatically, and PR 2 should raise its CARD_FLOORS
- * numbers to whatever the fix measures.
+ * EMPTY, and that is the finished state — marrow/dark was the only entry and Track A PR 2 closed it
+ * (--line 0.2 -> 0.45 alpha, border 1.1472 -> 1.4606). Removing it from this list was the entire
+ * bookkeeping change: the normal per-combo assertions picked it up automatically, which is what the
+ * closing note here promised.
+ *
+ * The mechanism stays for the next one. Add a combo here when it is ruled unacceptable, keep its
+ * CARD_FLOORS row at whatever it currently measures, and the drift guard below holds the line while
+ * the real fix is designed.
  */
-const KNOWN_WEAK_COMBOS: readonly string[] = ['marrow/dark']
+const KNOWN_WEAK_COMBOS: readonly string[] = []
 
 type Rgba4 = [number, number, number, number]
 const rgba = (s: string): Rgba4 => parseColor(s)! as Rgba4

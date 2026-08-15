@@ -128,7 +128,7 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
   'marrow/dark': {
     bg0: '#17181c',
     card: '#161315',
-    line: 'rgba(158, 59, 59, 0.2)',
+    line: 'rgba(158, 59, 59, 0.45)',
     cardSolid: '#212328',
     fieldOnCard: '#211d1f',
     ink: '#e9e4db',
