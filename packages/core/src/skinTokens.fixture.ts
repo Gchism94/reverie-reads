@@ -7,6 +7,16 @@ import type { SkinId } from './skins'
 
 export type Tok = {
   bg0: string
+  /** --card AS AUTHORED, which is not always opaque — tryst's is rgba(...,0.55/0.72). Kept raw
+   *  rather than pre-composited so skinTokensParity.test.ts can pin it directly to tokens.css;
+   *  the consumer composites it over bg0 itself. NOT interchangeable with cardSolid: they diverge
+   *  in tryst (alpha) and in the three Fable 5 combos where --card-solid was deliberately lifted
+   *  away from --card (marrow/dark, umbra/light, umbra/dark). */
+  card: string
+  /** --line AS AUTHORED. Every one of the 18 is an rgba with alpha < 0.5, so a border-visibility
+   *  measurement that skips compositing it over the painted card is measuring a colour nothing
+   *  ever renders. */
+  line: string
   cardSolid: string
   /** --field composited over (--card composited over --bg0) — the browser-painted surface of an
    *  unselected control / input row, following pickRing's precomposition precedent. The default
@@ -33,6 +43,8 @@ export type Tok = {
 export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
   'tryst/dark': {
     bg0: '#0b0612',
+    card: 'rgba(42, 21, 58, 0.55)',
+    line: 'rgba(240, 177, 78, 0.26)',
     cardSolid: '#1d0e29',
     fieldOnCard: '#271a33',
     ink: '#f5e9f0',
@@ -45,6 +57,8 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
   },
   'tryst/light': {
     bg0: '#f8eee4',
+    card: 'rgba(255, 252, 250, 0.72)',
+    line: 'rgba(138, 87, 23, 0.3)',
     cardSolid: '#fdf8f1',
     fieldOnCard: '#f5efeb',
     ink: '#351523',
@@ -57,6 +71,8 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
   },
   'grimoire/dark': {
     bg0: '#0c0f0b',
+    card: '#161b12',
+    line: 'rgba(212, 175, 55, 0.18)',
     cardSolid: '#161b12',
     fieldOnCard: '#21251c',
     ink: '#ece7d6',
@@ -69,6 +85,8 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
   },
   'grimoire/light': {
     bg0: '#f1e7cf',
+    card: '#f7efd9',
+    line: 'rgba(176, 136, 40, 0.32)',
     cardSolid: '#f7efd9',
     fieldOnCard: '#ede5cf',
     ink: '#2a2418',
@@ -81,6 +99,8 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
   },
   'aphelion/dark': {
     bg0: '#05070d',
+    card: '#0c1220',
+    line: 'rgba(79, 209, 224, 0.18)',
     cardSolid: '#0c1220',
     fieldOnCard: '#171d2b',
     ink: '#e6edf7',
@@ -93,6 +113,8 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
   },
   'aphelion/light': {
     bg0: '#eef3fb',
+    card: '#f7fafe',
+    line: 'rgba(14, 143, 166, 0.26)',
     cardSolid: '#f7fafe',
     fieldOnCard: '#ebeff3',
     ink: '#0e1626',
@@ -105,6 +127,8 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
   },
   'marrow/dark': {
     bg0: '#17181c',
+    card: '#161315',
+    line: 'rgba(158, 59, 59, 0.2)',
     cardSolid: '#212328',
     fieldOnCard: '#211d1f',
     ink: '#e9e4db',
@@ -117,6 +141,8 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
   },
   'marrow/light': {
     bg0: '#ece8e0',
+    card: '#f4f0e8',
+    line: 'rgba(138, 50, 50, 0.26)',
     cardSolid: '#f4f0e8',
     fieldOnCard: '#e9e5dd',
     ink: '#1b1815',
@@ -129,6 +155,8 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
   },
   'umbra/dark': {
     bg0: '#101216',
+    card: '#15171c',
+    line: 'rgba(224, 168, 74, 0.18)',
     cardSolid: '#191c22',
     fieldOnCard: '#202126',
     ink: '#e8e4da',
@@ -141,6 +169,8 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
   },
   'umbra/light': {
     bg0: '#edeae2',
+    card: '#f8f9fb',
+    line: 'rgba(126, 90, 22, 0.26)',
     cardSolid: '#f6f4ee',
     fieldOnCard: '#edeef0',
     ink: '#23201a',
@@ -158,6 +188,8 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
   // Hearth toasted deeper — the verdict's Hearth×Folio distance, re-AA'd.
   'folio/dark': {
     bg0: '#c2beb1',
+    card: '#d3cfc3',
+    line: 'rgba(107, 103, 94, 0.42)',
     cardSolid: '#d3cfc3',
     fieldOnCard: '#cbc7bb',
     ink: '#2b2820',
@@ -170,6 +202,8 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
   },
   'folio/light': {
     bg0: '#e7e4da',
+    card: '#f7f5ee',
+    line: 'rgba(120, 115, 106, 0.38)',
     cardSolid: '#f7f5ee',
     fieldOnCard: '#edebe4',
     ink: '#2b2820',
@@ -182,6 +216,8 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
   },
   'hearth/dark': {
     bg0: '#1d1309',
+    card: '#5c4829',
+    line: 'rgba(232, 220, 192, 0.3)',
     cardSolid: '#5c4829',
     fieldOnCard: '#4f3e23',
     ink: '#f0e8d6',
@@ -194,6 +230,8 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
   },
   'hearth/light': {
     bg0: '#e9d7b4',
+    card: '#dccca2',
+    line: 'rgba(138, 116, 85, 0.45)',
     cardSolid: '#dccca2',
     fieldOnCard: '#ece3cc',
     ink: '#3d3226',
@@ -208,6 +246,8 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
   // Its buff placeholder also stays light at night → white marks (--mark-on-ph override).
   'almanac/dark': {
     bg0: '#13120c',
+    card: '#241f14',
+    line: 'rgba(179, 166, 126, 0.3)',
     cardSolid: '#241f14',
     fieldOnCard: '#2e291d',
     ink: '#e6ddc2',
@@ -220,6 +260,8 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
   },
   'almanac/light': {
     bg0: '#e4dcc2',
+    card: '#eadfbe',
+    line: 'rgba(43, 40, 32, 0.35)',
     cardSolid: '#eadfbe',
     fieldOnCard: '#e0d6b6',
     ink: '#2b2820',
@@ -233,6 +275,8 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
   // Firstlight ("bloom"): the sky is the screen; generic panels are deep-sky, stickers live on --paper.
   'bloom/dark': {
     bg0: '#14162a',
+    card: '#1f2240',
+    line: 'rgba(184, 188, 216, 0.24)',
     cardSolid: '#1f2240',
     fieldOnCard: '#292c49',
     ink: '#eef0fa',
@@ -245,6 +289,8 @@ export const SKIN_TOKENS: Record<`${SkinId}/${'dark' | 'light'}`, Tok> = {
   },
   'bloom/light': {
     bg0: '#d5d4ea',
+    card: '#ffffff',
+    line: 'rgba(106, 85, 201, 0.25)',
     cardSolid: '#ffffff',
     fieldOnCard: '#f4f4f5',
     ink: '#2b2a3a',
