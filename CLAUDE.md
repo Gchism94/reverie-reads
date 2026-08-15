@@ -268,9 +268,23 @@ inherits it, so the reason stays attached.
   double the assignments" described behavior the test did not assert, and two reports
   contradicted each other for a full round because of it. Name what the assertions actually
   check, not what you hope the surrounding code does.
-- **Commit before mutation testing.** Mutation testing deliberately corrupts the tree to prove a
-  guard has teeth; `git checkout` against uncommitted work has destroyed a real implementation
-  once already. Verify each revert with `git status --porcelain` before the next mutant.
+- **Revert mutants with `scripts/safe-revert.sh <file>`, not `git checkout --`. Commit first as
+  well — but the script is the rule, because "commit first" alone has now failed twice.** Mutation
+  testing deliberately corrupts the tree to prove a guard has teeth, and `git checkout -- <file>`
+  resets the WHOLE file to HEAD: the mutant you meant to undo and any other uncommitted work in it,
+  silently, unrecoverably. Twice destroyed real work:
+  **2026-08-14** — `git checkout -- src/routes/IndieScreen.tsx` mid-run wiped six uncommitted
+  `.skin-control` migrations, found only when a later carrier count came back 0; and **2026-08-15**
+  (`a2bdfd7`, `feat/card-surface-rulings-coverage`) — the same command destroyed the uncommitted
+  `card`/`line` fixture additions, discovered when 35 tests went red and the next mutant's anchors
+  stopped resolving.
+  This rule has existed since 2026-07-28 (#93) and being written down did not make it a reflex,
+  because the failure happens inside a fast revert loop rather than at a moment of deliberation —
+  which is why the fix is now a command that backs up unconditionally before reverting, rather than
+  a third restatement. `safe-revert.sh` copies the file's current content to
+  `/tmp/mutation-revert-backups/…` and prints the path, then reverts; it deliberately does NOT try
+  to tell a deliberate mutant from real work, since that judgment is precisely what failed both
+  times. Still verify each revert with `git status --porcelain` before the next mutant.
 - **Run the full gate before reporting, not the subset that looks relevant.** Vitest runs on
   esbuild, which strips types without checking them, so a type-broken test file can pass `pnpm
 test` outright and only fail `tsc`. This has bitten twice, by two different tools: a broken
