@@ -436,6 +436,29 @@ primary book` — both reached the function body and were turned away by the che
   latent per-column hazard flagged for `pub_*` (year from one book, month from
   another) was not inherited by `plan_*`. `pub_*` itself still has it, unexercised
   — its own item if it ever matters.
+- ~~**`OwnedCopies` has the same write-clobbering shape `PlanEditor` had.**~~ **CLOSED — both
+  halves, verified against source 2026-08-15.** The entry names two defects "not one"; neither is
+  live, and the second one's stated mechanism is wrong.
+
+  **Half 1, the unscoped writes — closed by `c5ffd04` (#117).** The entry says the hook "now supports
+  `scopeBookId` … but nothing routes it through `OwnedCopies`'s `onChange`/`onPossessionChange`
+  props". Nothing needs to: both call sites already build their handlers on a scoped hook —
+  `BookDetailRoute.tsx:86` and `dialogs.tsx:167` are each `useUpdateBook(book.id)`, and `setOwned`
+  (`:157`) / the inline `onChange` (`dialogs.tsx:535`) close over it. Scope lives on the mutation's
+  options, not on the payload, so the props were never the place it had to travel.
+
+  **Half 2, the stale read — never reachable, and the mechanism is misstated.** The claim is that the
+  `owned` prop "lags one render behind the store". It does not: `useUpdateBook`'s `onMutate` patches
+  the query cache optimistically at mutate time (`books.ts:79`), so the prop the next toggle reads
+  is already updated. Proven rather than argued, in
+  `apps/web/src/book/ownedCopiesStaleRead.test.tsx`: two fast toggles against the real hook with the
+  first write held open, asserting the second payload carries `physical: false`. Mutation-checked —
+  deleting the optimistic `setQueryData` makes that payload come back as `physical: 'paperback'`,
+  resurrecting the format the reader just cleared, which is precisely the defect described. The test
+  stays as the regression guard for the property the entry was worried about.
+
+  <details><summary>original entry</summary>
+
 - **`OwnedCopies` has the same write-clobbering shape `PlanEditor` had.**
   `BookDetailRoute.tsx` ~L236/242 and `dialogs.tsx` ~L489/491 each format toggle
   (physical/ebook/audiobook) sends the WHOLE `Owned` object through
@@ -450,6 +473,9 @@ primary book` — both reached the function body and were turned away by the che
   which lags one render behind the store, so two fast toggles can each compute
   their payload from the same stale snapshot regardless of write ordering.
   Scoping the writes does not fix the stale read; they need separate fixes.
+
+  </details>
+
 - **`ProgressSlider` writes the same book twice on every release, guaranteed.**
   `BookDetailRoute.tsx` ~L183-184: `onPointerUp` and `onBlur` both fire
   `updateBook.mutate(...)` with the identical `value`. Idempotent — ordering
