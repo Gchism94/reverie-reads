@@ -131,6 +131,17 @@ pnpm deploy:functions    # prod functions deploy — via the deploy guard
 
 ## Shell & deploy safety
 
+- **A migration that changes what a WRITE DOES TO USER DATA gets a human at the keyboard for the
+  guard's `y/N` — never a piped `y`.** (Owner rule, 2026-08-15.) The guard's confirmation is a human
+  gate; answering it from a script satisfies the letter and removes the thing it exists for. Schema
+  that only adds a column, an index, or a grant may be confirmed by whoever is running the deploy;
+  anything that alters the OUTCOME of an existing write path — a changed RPC body, a backfill, a
+  trigger — waits for a person. A Code session has no TTY, so in practice this means **a Code session
+  does not run these deploys at all**: it reports the migration as ready and holds. The precedent
+  this corrects: `enrich` was deployed earlier that day with `printf 'y\n' | pnpm deploy:functions`,
+  which was authorised and idempotent but is exactly the shape that stops being safe the moment the
+  thing being deployed can rewrite rows.
+
 - **Never run a raw `supabase db push` / `supabase functions deploy` against prod.** Go through the
   guard (`pnpm deploy:migrations` / `pnpm deploy:functions`) — it enforces main + clean tree + in-sync
   - a `y/N`. Prod deploys happen from `main` after merge, never a feature branch (override is a loud,
