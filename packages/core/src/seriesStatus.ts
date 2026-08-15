@@ -58,8 +58,42 @@ export function normalizeSeriesStatus(
   return hasSeries ? 'ongoing' : 'standalone'
 }
 
-/** The one-line series badge shared by the book page and the rail. */
-export function seriesStatusBadge(b: Pick<Book, 'status' | 'seriesCount'>): string {
+/**
+ * Statuses that ASSERT MEMBERSHIP in a series — the ones whose badge text claims this book belongs
+ * to something, optionally with a length. `standalone` and `interconnected_standalone` do not: they
+ * describe the book itself, and stay true for a book that names no series.
+ */
+const ASSERTS_SERIES_MEMBERSHIP: readonly Book['status'][] = [
+  'ongoing',
+  'completed',
+  'on_hiatus',
+  'cancelled',
+  'interconnected_series',
+]
+
+/**
+ * The one-line series badge shared by the book page and the rail.
+ *
+ * ── WHY THIS READS `series` AND NOT JUST `status` ───────────────────────────────────────────────
+ * `status` and `series_count` SURVIVE a removal — neither `remove_series_entry` nor the two-write
+ * path it replaced touches them, and whether removal should clear them is a product question the
+ * owner deliberately deferred. So a book whose series was removed keeps `status: 'ongoing'` and
+ * `series_count: 5`, and this function used to answer "Series of 5" for a book that is in no
+ * series: a claim of membership contradicted by the row it was computed from.
+ *
+ * The fix is here rather than at either place it would be easier. NOT a render gate at the call
+ * sites — that hides one symptom and leaves the other consumer (BookDetailRail) still claiming it,
+ * and leaves the function itself still willing to produce the false answer. NOT
+ * `normalizeSeriesStatus` forcing `standalone` whenever `series` is empty either — that would
+ * rewrite `book.status` app-wide, changing filters and stats to fix a badge, and it would decide
+ * the product question the owner parked.
+ *
+ * Membership-asserting statuses fall back to `Standalone` when the book names no series, which is
+ * the same answer `normalizeSeriesStatus` already gives for an unrecognised status with no series.
+ * `interconnected_standalone` is left alone: it describes the book, not a series it sits in.
+ */
+export function seriesStatusBadge(b: Pick<Book, 'status' | 'seriesCount' | 'series'>): string {
+  if (!b.series?.trim() && ASSERTS_SERIES_MEMBERSHIP.includes(b.status)) return 'Standalone'
   switch (b.status) {
     case 'completed':
       return 'Series complete'
