@@ -113,6 +113,32 @@ anon, authenticated, service_role` later put an explicit `anon=X` back on all
   event. A verification step is still worth having: it is how we would learn the
   grants had moved at all.
 
+  **CHECKED 2026-08-15 — this instance closed; the entry stays open.** The check itself was finally
+  run, read-only, by the owner in the dashboard SQL Editor. Result on the question it asked:
+  **all 14 functions `20260801010000` revoked are clean** — every one reads
+  `{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}`, with no `anon=` entry
+  and no empty-grantee `=X/` PUBLIC entry, read from raw `proacl` rather than from a derived
+  column. The 2026-07 bulk grant has not recurred on them.
+
+  **It did, however, surface drift on four OTHER functions**, which is the entry's point made
+  again: `rate_limit_consume` and `prune_rate_limits` carried an unintended `authenticated`, and
+  `backfill_series_from_titles` and `reset_seeded_user_edited` carried `anon` **and**
+  `authenticated`. Cause, in one line: those migrations wrote only `revoke ... from public`, and
+  Supabase's default privileges hand every newly-created function named grants to
+  `anon`/`authenticated`/`service_role` — which a `public` revoke does not touch. Revokes drafted
+  here, reviewed and run by the owner the same day.
+
+  **What that drift did NOT do is expose anything**, and the reason is worth recording: the two
+  rate-limit functions refuse non-`service_role` callers in their own bodies
+  (`20260806010000_rpc_body_defense.sql`), and the other two are `security definer = false`, so
+  they run as the caller under RLS. The defence-in-depth this entry describes was observed doing
+  its job in production for the first time — the ACL drifted and nothing was reachable.
+
+  **NOT struck**, because the entry's actual ask is unbuilt: this was a one-off manual check, and
+  what it asks for is a step in the deploy protocol (`docs/reference/DEPLOY.md`) plus a periodic
+  check, since the change that caused it arrived with no deploy of ours. The convention half is
+  now closed — AGENTS.md's RPC-grant rule requires revoking `anon`/`authenticated` by name.
+
 - **The deploy guard's `y/N` is the only real gate, and it is not the last one.**
   After the guard confirms, `supabase db push` asks its own question — _do you
   want to push these migrations_ — defaulting to **yes**, and it takes EOF as

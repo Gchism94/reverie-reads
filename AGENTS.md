@@ -158,8 +158,28 @@ pnpm deploy:functions    # prod functions deploy — via the deploy guard
   pattern — a self-deleting account exercising the full lifecycle against prod — but that is the
   owner's checklist to run by hand, not something a Code session does on its own. Verification
   that requires a real prod account is the owner's to run, not Code's.
-- **A new RPC needs BOTH `revoke execute ... from public` and `grant execute ... to
-authenticated`** (or `to service_role`) **— the grant alone was never gating.** Postgres grants
+- **A new RPC needs `revoke execute ... from public, anon, authenticated` and THEN the grant it
+  actually wants** (`to authenticated`, or `to service_role`) **— revoking `public` alone is not
+  enough, and the grant alone was never gating.** Revoke all three by name, then grant back
+  deliberately; the revoke costs nothing when the role never had it.
+  **Why `public` alone fails, demonstrated rather than argued.** Supabase's default privileges hand
+  every NEWLY CREATED function named grants to `anon`/`authenticated`/`service_role`, and
+  `revoke ... from public` does not touch a named grant. The 2026-08-15 production `proacl` check
+  read this off the live database:
+  · `20260809010000_series_backfill.sql` and `20260810010000_reset_seeded_user_edited.sql` revoked
+  only `from public` — both came back carrying unintended `anon` AND `authenticated`.
+  · `20260822010000_series_merge_decisions.sql` revoked `record_series_ruling` from `public` **and**
+  `anon` by name — it came back clean.
+  Same database, same platform behaviour, opposite outcomes, decided entirely by which form the
+  migration used.
+  **And the warning was already in the repo when both of them landed.**
+  `20260806010000_rpc_body_defense.sql` says it outright: _"Revoking from `anon` BY NAME, not just
+  from PUBLIC: the platform grant was a named grant, so `revoke ... from public` would not touch it.
+  That is the specific mistake to avoid repeating."_ That migration is numbered — and ran — before
+  both of the two that repeated it. A warning inside one migration does not reach the author of the
+  next one, which is why the rule lives here instead.
+
+  The original reasoning, still true: **the grant alone was never gating.** Postgres grants
   `EXECUTE` to `PUBLIC` on every new function by default, so `grant execute to authenticated` is
   additive, not a boundary. Observed live: `remove_series_entry` and `merge_books` were both
   reachable with the anon key before `20260801010000_revoke_public_execute.sql`, returning their
@@ -186,6 +206,7 @@ function` + fresh `create` resets it to the PUBLIC-execute default — verified 
   Revoking `PUBLIC` without granting `authenticated` there broke three pgTAP files outright on the
   first run. Caught by running the suite, not by re-reading the reasoning — a function's callers
   include its RLS policies, not just its own migration file and its obvious call sites.
+
 - **A data-fix script is NOT a migration.** A one-time repair scoped to a single incident — row ids
   that mean nothing on another database, a backfill that must not run twice — lives in `docs/queries/`
   and is run by hand against the target, never in `supabase/migrations/`. `pnpm db:migrate` pushes
