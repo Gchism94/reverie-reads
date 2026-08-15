@@ -47,7 +47,10 @@ forgotten.
   attaching a disclaimed one, so the immediate wrong-series risk is closed — but a `medium`-confidence
   series that does get attached has no recorded confidence for a future review bucket to key off, the
   way the cover pipeline's import-review "low-confidence cover" bucket does. Worth its own look if a
-  series-side review bucket becomes wanted.
+  series-side review bucket becomes wanted. **Not covered by series-consolidation PR 3** — that
+  queue proposes merges between two `series` ROWS on name similarity; this is per-book provenance on
+  one book's `series` FIELD from an enrichment match. Different subject, signal and surface, so
+  neither closes the other.
 
 - **The six `sameRiskAsPowerSymbol` glyphs are the same defect, unfired.**
   `apps/web/src/lib/glyphAllowlist.ts` tiers `⏹` `⏱` `⌕` `⌂` `⌘` (Misc Technical,
