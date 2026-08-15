@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { tombstoneRows } from './importExport'
 
 // A tiny in-memory stand-in for the PostgREST client. It is NOT a PostgREST implementation — it
 // understands exactly the queries importExport.ts issues, and resolves the two embedded selects
@@ -797,5 +798,54 @@ describe('refusal shapers reject the positive half on their own', () => {
       { owner_id: NEW_OWNER, name_key_a: 'fourth wing', name_key_b: 'iron flame', ruling: 'distinct' },
       { owner_id: NEW_OWNER, name_key_a: 'mountain men', name_key_b: 'mountain men matchmaker', ruling: 'related_but_separate' },
     ])
+  })
+})
+
+describe('archived tombstones are keyed on title, not on a position that moves', () => {
+  const SERIES = 'ser-1'
+  const byName = new Map([['fourth wing', SERIES]])
+  const OWNER = 'owner-1'
+  const stone = (title: string, position: number) => ({
+    series: 'Fourth Wing',
+    position,
+    title,
+    author: 'R. Yarros',
+    label: null,
+    source: 'manual',
+    removed_at: '2026-01-01T00:00:00Z',
+  })
+
+  // SYMPTOM 1 — "two tombstones at one position lose one". Reachable by: remove #2, re-add,
+  // reposition, remove again. Under the (series, position) key the second collapsed onto the first
+  // and was dropped without a word.
+  it('keeps two distinct removals that share a position', () => {
+    const rows = tombstoneRows([stone('Iron Flame', 2), stone('Onyx Storm', 2)], byName, OWNER)
+    expect(rows.map((r) => r.title)).toEqual(['Iron Flame', 'Onyx Storm'])
+  })
+
+  // SYMPTOM 2 — "a restore into a non-empty library can drop a refusal". A LIVE entry now sits at
+  // the archived tombstone's old number, so the slot read as taken and the removal was discarded —
+  // and the next source refresh resurrects the ghost the reader dismissed.
+  it('restores a removal whose old position is now held by a different live entry', () => {
+    const taken = new Set([`${SERIES}@t:some other book`])
+    const rows = tombstoneRows([stone('Iron Flame', 2)], byName, OWNER, taken)
+    expect(rows).toHaveLength(1)
+  })
+
+  it('still skips a tombstone for a title the account already holds', () => {
+    const taken = new Set([`${SERIES}@t:iron flame`])
+    expect(tombstoneRows([stone('Iron Flame', 2)], byName, OWNER, taken)).toEqual([])
+  })
+
+  it('dedupes within one file by title, whatever the position says', () => {
+    const rows = tombstoneRows([stone('Iron Flame', 2), stone('iron flame', 9)], byName, OWNER)
+    expect(rows).toHaveLength(1)
+  })
+
+  // The fallback: an untitled slot keeps position as its identity, so untitled tombstones do not
+  // all collapse onto one another — which would be this same bug in a new place.
+  it('falls back to position for untitled slots rather than collapsing them', () => {
+    const rows = tombstoneRows([stone('', 2), stone('', 3)], byName, OWNER)
+    expect(rows).toHaveLength(2)
   })
 })

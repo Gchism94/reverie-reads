@@ -269,9 +269,37 @@ export function dismissalsByBook(rows: readonly DismissalJoinRow[]): Record<stri
   return out
 }
 
-/** The natural key of a slot: which series, and where in it. `series_entries` has a synthetic uuid
- *  PK and no unique constraint, so this is the only thing that identifies "the same slot". */
-const slotKey = (seriesId: string, position: number): string => `${seriesId}@${position}`
+/**
+ * The natural key of a slot. `series_entries` has a synthetic uuid PK and no unique constraint, so
+ * the archive has to synthesise one.
+ *
+ * ── WHY TITLE AND NOT POSITION ──────────────────────────────────────────────────────────────────
+ * This used to be `${seriesId}@${position}`, and position is the one thing about a slot that MOVES.
+ * Every functional consumer already keys on title instead: `mergeSourceEntries` suppresses a
+ * source-refresh resurrection by matching the tombstone's `title`, and the revive-on-re-add pass
+ * matches via `matchEntryForBook`, which compares `normTitle` — `trim().toLowerCase()`, the same
+ * normalisation `nameKey` does here. Position was the archive's identity while title was the
+ * system's, and the two disagreeing is what produced both recorded symptoms: two tombstones at one
+ * position silently collapsing to one on restore, and a tombstone skipped because a LIVE entry had
+ * since taken its number — dropping the reader's removal so the next refresh resurrects the ghost
+ * they dismissed.
+ *
+ * ── THE EMPTY-TITLE FALLBACK ────────────────────────────────────────────────────────────────────
+ * `series_entries.title` is NOT NULL but may be the empty string, and `seriesTombstones` widens
+ * that to `?? ''` besides. Keying every untitled tombstone in a series on the same string would
+ * collapse them all to one — a fresh instance of the exact bug this change closes. So an untitled
+ * slot keeps position as its identity, which is no worse than the old behaviour for that case and
+ * strictly better for every titled one. The `t:`/`p:` prefixes keep a numeric-looking title from
+ * colliding with a position.
+ *
+ * NOT PERSISTED — this key exists only in memory during an export/restore. There is no `slot_key`
+ * column anywhere, so nothing stored needs re-keying and no migration is required; and backups
+ * written under the old scheme already carry `title`, so they restore correctly under the new one.
+ */
+const slotKey = (seriesId: string, title: string, position: number): string => {
+  const key = nameKey(title ?? '')
+  return key ? `${seriesId}@t:${key}` : `${seriesId}@p:${position}`
+}
 
 /**
  * The `series_entries` tombstone rows to insert, under the series ids resolved by name.
@@ -297,7 +325,7 @@ export function tombstoneRows(
     const seriesId = seriesIdByName.get(nameKey(t.series ?? ''))
     if (!seriesId) continue
     // Also dedupes WITHIN one file: a hand-edited backup listing the same slot twice inserts once.
-    const key = slotKey(seriesId, t.position)
+    const key = slotKey(seriesId, t.title, t.position)
     if (claimed.has(key)) continue
     claimed.add(key)
     rows.push({
@@ -537,11 +565,12 @@ async function restoreTombstones(tombstones: readonly BackupTombstone[], ownerId
   const seriesIds = [...seriesIdByName.values()]
   const { data: occupied, error: slotErr } = await supabase
     .from('series_entries')
-    .select('series_id, position')
+    .select('series_id, position, title')
   if (slotErr) throw slotErr
   const taken = new Set<string>()
-  for (const row of (occupied as { series_id: string; position: number }[]) ?? []) {
-    if (seriesIds.includes(row.series_id)) taken.add(slotKey(row.series_id, row.position))
+  for (const row of (occupied as { series_id: string; position: number; title: string }[]) ?? []) {
+    if (seriesIds.includes(row.series_id))
+      taken.add(slotKey(row.series_id, row.title, row.position))
   }
 
   const rows = tombstoneRows(tombstones, seriesIdByName, ownerId, taken)
