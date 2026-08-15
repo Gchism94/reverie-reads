@@ -58,7 +58,15 @@ const routeTree = rootRoute.addChildren([
   bookRoute,
 ])
 
-export const router = createRouter({ routeTree })
+export const router = createRouter({
+  routeTree,
+  // Wrong in BOTH directions without this, which is why it is one option rather than two: back
+  // navigation did not restore where you were, and forward navigation kept the PREVIOUS page's
+  // scroll instead of starting at the top. TanStack ships the behaviour; it was simply never turned
+  // on. Its own branch on purpose — one flag changes every route at once, so a red run means one
+  // thing.
+  scrollRestoration: true,
+})
 
 declare module '@tanstack/react-router' {
   interface Register {
