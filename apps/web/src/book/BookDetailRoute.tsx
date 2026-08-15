@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useState, type ReactNode, useRef } from 'react'
 import { Link, createRoute, useNavigate } from '@tanstack/react-router'
 import {
   authorOf,
@@ -80,11 +80,24 @@ function Pill({ children, muted = false }: { children: ReactNode; muted?: boolea
   )
 }
 
-function ProgressSlider({ book }: { book: Book }) {
-  // Fires on both onPointerUp and onBlur with the SAME value, so ordering cannot corrupt it — but
-  // it is still two concurrent writes to one book, and scoping makes the pair ordered and cheap.
+export function ProgressSlider({ book }: { book: Pick<Book, 'id' | 'progress'> }) {
   const updateBook = useUpdateBook(book.id)
   const [value, setValue] = useState(book.progress)
+  // The last value actually written. Both handlers below stay, and this is what stops them writing
+  // twice for one gesture.
+  //
+  // NOT "drop one handler", which is what the shape invites: the two cover different input methods.
+  // `onPointerUp` is the only one a drag fires, and `onBlur` is the only one a KEYBOARD user fires —
+  // arrow keys move the thumb with no pointer event at all. Dropping onBlur silently stops saving
+  // for keyboard users; dropping onPointerUp defers every save to whenever focus happens to leave,
+  // and loses it entirely if the component unmounts first. Deduping on the value keeps both entry
+  // points and still writes once.
+  const committed = useRef(book.progress)
+  const commit = () => {
+    if (value === committed.current) return
+    committed.current = value
+    updateBook.mutate({ id: book.id, patch: { progress: value } })
+  }
   return (
     <div>
       <Label>
@@ -97,8 +110,8 @@ function ProgressSlider({ book }: { book: Book }) {
         value={value}
         aria-label="Reading progress"
         onChange={(e) => setValue(Number(e.target.value))}
-        onPointerUp={() => updateBook.mutate({ id: book.id, patch: { progress: value } })}
-        onBlur={() => updateBook.mutate({ id: book.id, patch: { progress: value } })}
+        onPointerUp={commit}
+        onBlur={commit}
         className="w-full"
         style={{ accentColor: 'var(--primary)' }}
       />
