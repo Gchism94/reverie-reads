@@ -39,15 +39,23 @@ describe('series status', () => {
   })
 
   it('badges the two interconnected statuses', () => {
-    expect(seriesStatusBadge({ status: 'interconnected_standalone', seriesCount: null })).toBe(
-      'Interconnected standalone',
-    )
-    expect(seriesStatusBadge({ status: 'interconnected_series', seriesCount: 6 })).toBe(
-      'Interconnected series of 6',
-    )
-    expect(seriesStatusBadge({ status: 'interconnected_series', seriesCount: null })).toBe(
-      'Interconnected series',
-    )
+    expect(
+      seriesStatusBadge({ status: 'interconnected_standalone', seriesCount: null, series: '' }),
+    ).toBe('Interconnected standalone')
+    expect(
+      seriesStatusBadge({
+        status: 'interconnected_series',
+        seriesCount: 6,
+        series: 'Shared World',
+      }),
+    ).toBe('Interconnected series of 6')
+    expect(
+      seriesStatusBadge({
+        status: 'interconnected_series',
+        seriesCount: null,
+        series: 'Shared World',
+      }),
+    ).toBe('Interconnected series')
   })
 
   it('normalizes the pre-expansion spellings (the migration mapping)', () => {
@@ -73,13 +81,56 @@ describe('series status', () => {
   })
 
   it('badges speak the series’ publication status', () => {
-    expect(seriesStatusBadge({ status: 'standalone', seriesCount: null })).toBe('Standalone')
-    expect(seriesStatusBadge({ status: 'ongoing', seriesCount: 5 })).toBe('Series of 5')
-    expect(seriesStatusBadge({ status: 'ongoing', seriesCount: null })).toBe(
+    expect(seriesStatusBadge({ status: 'standalone', seriesCount: null, series: '' })).toBe(
+      'Standalone',
+    )
+    expect(seriesStatusBadge({ status: 'ongoing', seriesCount: 5, series: 'Fourth Wing' })).toBe(
+      'Series of 5',
+    )
+    expect(seriesStatusBadge({ status: 'ongoing', seriesCount: null, series: 'Fourth Wing' })).toBe(
       'Series · length not set',
     )
-    expect(seriesStatusBadge({ status: 'completed', seriesCount: 3 })).toBe('Series complete')
-    expect(seriesStatusBadge({ status: 'on_hiatus', seriesCount: null })).toBe('Series on hiatus')
-    expect(seriesStatusBadge({ status: 'cancelled', seriesCount: 2 })).toBe('Series cancelled')
+    expect(seriesStatusBadge({ status: 'completed', seriesCount: 3, series: 'Fourth Wing' })).toBe(
+      'Series complete',
+    )
+    expect(
+      seriesStatusBadge({ status: 'on_hiatus', seriesCount: null, series: 'Fourth Wing' }),
+    ).toBe('Series on hiatus')
+    expect(seriesStatusBadge({ status: 'cancelled', seriesCount: 2, series: 'Fourth Wing' })).toBe(
+      'Series cancelled',
+    )
+  })
+})
+
+describe('seriesStatusBadge after a series removal', () => {
+  // `status` and `series_count` SURVIVE a removal — nothing in remove_series_entry touches them,
+  // and whether it should is a parked product question. So the row a removed book leaves behind is
+  // exactly this: no series, but still `ongoing` and still counting. The badge used to answer
+  // "Series of 5" for it.
+  const removed = { status: 'ongoing', seriesCount: 5, series: '' } as const
+
+  it('does not claim membership for a book that names no series', () => {
+    expect(seriesStatusBadge(removed)).toBe('Standalone')
+  })
+
+  it('treats whitespace as no series, not as a name', () => {
+    expect(seriesStatusBadge({ ...removed, series: '   ' })).toBe('Standalone')
+  })
+
+  it.each(['completed', 'on_hiatus', 'cancelled', 'interconnected_series'] as const)(
+    'suppresses the membership claim for %s too, not just ongoing',
+    (status) => {
+      expect(seriesStatusBadge({ status, seriesCount: 5, series: '' })).toBe('Standalone')
+    },
+  )
+
+  it('still reports the series once the book names one again', () => {
+    expect(seriesStatusBadge({ ...removed, series: 'Fourth Wing' })).toBe('Series of 5')
+  })
+
+  it('leaves interconnected_standalone alone — it describes the book, not a series it sits in', () => {
+    expect(
+      seriesStatusBadge({ status: 'interconnected_standalone', seriesCount: null, series: '' }),
+    ).toBe('Interconnected standalone')
   })
 })
