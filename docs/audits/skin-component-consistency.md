@@ -293,7 +293,56 @@ card surface is unverified, and confirming it required a human doing arithmetic 
 Recorded as decided, so the implementation tracks don't relitigate them:
 
 1. **Card surface** — decided **skin by skin**, per combo, against the rendered decision aid. No
-   global threshold is set in advance. _(Rulings pending; this section updates when they land.)_
+   global threshold was set in advance, and the results show why that mattered.
+
+   **RULED, 2026-08-15: 17 of 18 fine; `marrow/dark` needs a stronger border.** Measured against
+   the real `tokens.css` via a headless run of `docs/audits/card-decision-aid.html` (committed
+   alongside this), then cross-checked visually against zoomed per-tile screenshots rather than
+   accepted on the numbers alone.
+
+   | combo           | ruling                    | surface   | border    |
+   | --------------- | ------------------------- | --------- | --------- |
+   | tryst/light     | Fine                      | 1.086     | 1.547     |
+   | tryst/dark      | Fine                      | 1.091     | 1.741     |
+   | grimoire/light  | Fine                      | 1.072     | 1.354     |
+   | grimoire/dark   | Fine                      | 1.102     | 1.420     |
+   | aphelion/light  | Fine                      | 1.064     | 1.363     |
+   | aphelion/dark   | Fine                      | 1.077     | 1.440     |
+   | marrow/light    | Fine                      | 1.075     | 1.533     |
+   | **marrow/dark** | **Needs stronger border** | **1.040** | **1.147** |
+   | umbra/light     | Fine                      | 1.141     | 1.458     |
+   | umbra/dark      | Fine                      | 1.046     | 1.404     |
+   | folio/light     | Fine                      | 1.166     | 1.603     |
+   | folio/dark      | Fine                      | 1.194     | 1.611     |
+   | hearth/light    | Fine                      | 1.124     | 1.524     |
+   | hearth/dark     | Fine                      | 2.100     | 1.933     |
+   | almanac/light   | Fine                      | 1.031     | 1.987     |
+   | almanac/dark    | Fine                      | 1.144     | 1.791     |
+   | bloom/light     | Fine                      | 1.455     | 1.427     |
+   | bloom/dark      | Fine                      | 1.155     | 1.712     |
+
+   **Why `marrow/dark` alone, when its surface is not the weakest in the set.** Both legs are weak,
+   but the border is the outlier — **1.147, lowest of any combo by a wide margin**. Its surface
+   (1.040) is close to `almanac/light`'s **1.031**, which reads fine because ITS border (1.987, the
+   strongest in the set) carries it; `umbra/dark` at 1.046 works the same way. So the pattern across
+   the whole set is that a weak surface is acceptable _when the border does the separating_, and
+   `marrow/dark` is the one combo where neither leg does.
+
+   The fix is therefore **`--line`** (alpha and/or lightness), **not `--card`** — bringing this combo
+   in line with how every other weak-surface combo already works, and leaving `--card` alone so the
+   text-on-card contrast that depends on it downstream is untouched.
+
+   **Where the fix lands: Track A PR 2**, token-only. Deliberately not folded in with the rulings —
+   it needs a visual sign-off on the actual rendered result, not a passing number.
+
+   **Coverage added with the rulings (Track A PR 1).** Nothing had ever asserted `--card` vs `--bg0`
+   or `--line` vs the card; `skinCharacter.contrast.test.ts` read only `cardSolid`, which is not a
+   stand-in (`--card` carries alpha in tryst, and `--card-solid` was deliberately lifted away from
+   `--card` in `marrow/dark`, `umbra/light`, `umbra/dark`). Both legs are now guarded for all 18 at
+   a regression floor set to today's measured value, with `marrow/dark` held in a named
+   `KNOWN_WEAK_COMBOS` list — excluded from the pass/fail floor so the suite does not certify it as
+   fine, but still guarded against drifting lower while it waits for PR 2.
+
 2. **Chip radius** — **tokenize.** Runs as a parallel track; the tripwire check above cleared it.
 3. **Elevation** — **opt-in accent only.** Cards stay border-defined; `--shadow` does **not** join
    the card contract.
