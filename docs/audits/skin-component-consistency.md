@@ -177,9 +177,17 @@ and it is why pattern D (unused elevation) is a design fact rather than an overs
 | `grimoire/light`  | 1.354     | 0.32  |
 | `aphelion/light`  | 1.363     | 0.26  |
 
-### The named blocker
+### The named blocker — RESOLVED (Track A PR 2)
 
-**`marrow/dark` — surface 1.040, border 1.147.** The only combo where _both_ legs are weak. Every
+> **Resolved 2026-08-15.** `--line` went `rgba(158, 59, 59, 0.2)` → `0.45` (alpha only, hue
+> unchanged), taking the border from **1.147 → 1.4606** and clearing the 1.35 weak-border line with
+> margin. Surface is deliberately unchanged at 1.040 — `--card` was left alone so the text-on-card
+> contrast depending on it elsewhere does not move. The paragraph below stays as written: it is the
+> reasoning that produced the fix, and it is still the correct account of why this combo was the
+> only one that needed one.
+
+**`marrow/dark` — surface 1.040, border 1.147 (both figures pre-fix).** The only combo where _both_
+legs were weak. Every
 other skin has at least one strong leg carrying the card: `almanac/light` has the weakest surface in
 the set (1.031) but the strongest border (1.987), so it holds. Standardising "card = surface +
 border" on `marrow/dark` produces a container that reads as nothing.
@@ -332,14 +340,16 @@ Recorded as decided, so the implementation tracks don't relitigate them:
    in line with how every other weak-surface combo already works, and leaving `--card` alone so the
    text-on-card contrast that depends on it downstream is untouched.
 
-   **Where the fix lands: Track A PR 2**, token-only. Deliberately not folded in with the rulings —
-   it needs a visual sign-off on the actual rendered result, not a passing number.
+   **Where the fix landed: Track A PR 2** — `--line` alpha `0.2 → 0.45`, hue unchanged, border
+   **1.1472 → 1.4606**. Token-only, kept out of the rulings PR precisely so it could get a look at
+   the rendered result rather than a passing number. `marrow/dark` is no longer in
+   `KNOWN_WEAK_COMBOS`; it now runs under the same regression floors as the other 17.
 
    **Coverage added with the rulings (Track A PR 1).** Nothing had ever asserted `--card` vs `--bg0`
    or `--line` vs the card; `skinCharacter.contrast.test.ts` read only `cardSolid`, which is not a
    stand-in (`--card` carries alpha in tryst, and `--card-solid` was deliberately lifted away from
    `--card` in `marrow/dark`, `umbra/light`, `umbra/dark`). Both legs are now guarded for all 18 at
-   a regression floor set to today's measured value, with `marrow/dark` held in a named
+   a regression floor set to today's measured value. `marrow/dark` was held (until PR 2) in a named
    `KNOWN_WEAK_COMBOS` list — excluded from the pass/fail floor so the suite does not certify it as
    fine, but still guarded against drifting lower while it waits for PR 2.
 
