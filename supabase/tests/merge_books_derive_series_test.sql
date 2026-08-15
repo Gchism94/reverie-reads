@@ -19,7 +19,7 @@
 -- equality into a two-NULLs false positive.
 
 begin;
-select plan(8);
+select plan(14);
 
 insert into auth.users (id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
 values ('3a3a3a3a-0000-0000-0000-00000000000d', 'authenticated', 'authenticated',
@@ -42,6 +42,21 @@ insert into public.books (id, owner_id, title, series, position, series_count) v
   -- Pair 3 — NO series entry anywhere: the unreconciled-claim shape, where p_fields still fills.
   ('da000000-0000-0000-0000-000000000005', '3a3a3a3a-0000-0000-0000-00000000000d', 'P3', null, null, null),
   ('da000000-0000-0000-0000-000000000006', '3a3a3a3a-0000-0000-0000-00000000000d', 'L3', null, 7, 5);
+
+-- ── Fixture for the series_user_chosen FOLD (20260824010000) ────────────────────────────────────
+-- Three pairs, one per case. Each primary starts UNFLAGGED so a fold is visible as a change, and
+-- each loser carries a DIFFERENT series name from its primary — the fold only fires when the
+-- loser's series actually replaced the primary's, so a same-name pair would not discriminate.
+insert into public.books (id, owner_id, title, series, series_user_chosen) values
+  -- (a) loser's series wins AND loser is flagged -> survivor must end up true
+  ('da000000-0000-0000-0000-00000000000a', '3a3a3a3a-0000-0000-0000-00000000000d', 'P4', 'Primary Saga', false),
+  ('da000000-0000-0000-0000-00000000000b', '3a3a3a3a-0000-0000-0000-00000000000d', 'L4', 'Reader Saga',  true),
+  -- (b) primary's OWN series survives (p_fields names it) while the loser is flagged -> untouched
+  ('da000000-0000-0000-0000-00000000000c', '3a3a3a3a-0000-0000-0000-00000000000d', 'P5', 'Kept Saga',  false),
+  ('da000000-0000-0000-0000-00000000000e', '3a3a3a3a-0000-0000-0000-00000000000d', 'L5', 'Loser Saga', true),
+  -- (c) loser's series wins but NEITHER side is flagged -> stays false
+  ('da000000-0000-0000-0000-00000000000f', '3a3a3a3a-0000-0000-0000-00000000000d', 'P6', 'Plain Saga', false),
+  ('da000000-0000-0000-0000-000000000010', '3a3a3a3a-0000-0000-0000-00000000000d', 'L6', 'Other Saga', false);
 
 insert into public.series_entries (id, series_id, owner_id, position, title, author, book_id, user_edited) values
   ('de000000-0000-0000-0000-000000000001', 'd5000000-0000-0000-0000-000000000001',
@@ -112,6 +127,50 @@ select is(
      from public.books where id = 'da000000-0000-0000-0000-000000000005'),
   '7/5',
   'with no live entry, p_fields still fills both columns — a position with no entry behind it is an unreconciled claim, not a copy of anything');
+
+-- ── 4. series_user_chosen folds ONLY when the loser's series actually won ───────────────────────
+-- The discriminating detail, and the reason these three cases exist rather than one: the fold must
+-- key on the loser's series REPLACING the primary's, not on the loser merely being flagged. Case
+-- (b) is the one that fails under a naive `flag = primary OR loser` — it would promote a survivor
+-- that kept its own series to true on the strength of a flag describing a series that lost.
+set local role authenticated;
+select set_config('request.jwt.claims',
+  '{"sub":"3a3a3a3a-0000-0000-0000-00000000000d","role":"authenticated"}', true);
+
+select lives_ok(
+  $$select public.merge_books(
+      'da000000-0000-0000-0000-00000000000a',
+      'da000000-0000-0000-0000-00000000000b',
+      '{"series":"Reader Saga"}'::jsonb)$$,
+  '(a) a merge whose p_fields hands over the loser''s series succeeds');
+
+select lives_ok(
+  $$select public.merge_books(
+      'da000000-0000-0000-0000-00000000000c',
+      'da000000-0000-0000-0000-00000000000e',
+      '{"series":"Kept Saga"}'::jsonb)$$,
+  '(b) a merge that keeps the primary''s own series succeeds');
+
+select lives_ok(
+  $$select public.merge_books(
+      'da000000-0000-0000-0000-00000000000f',
+      'da000000-0000-0000-0000-000000000010',
+      '{"series":"Other Saga"}'::jsonb)$$,
+  '(c) a merge taking the loser''s series with neither side flagged succeeds');
+
+reset role;
+
+select ok(
+  (select series_user_chosen from public.books where id = 'da000000-0000-0000-0000-00000000000a'),
+  '(a) the loser''s series won and the loser was flagged, so the survivor carries series_user_chosen');
+
+select ok(
+  (select not series_user_chosen from public.books where id = 'da000000-0000-0000-0000-00000000000c'),
+  '(b) the primary kept its OWN series, so the loser''s flag does not promote it');
+
+select ok(
+  (select not series_user_chosen from public.books where id = 'da000000-0000-0000-0000-00000000000f'),
+  '(c) neither side was flagged, so the survivor stays unflagged');
 
 select * from finish();
 rollback;
