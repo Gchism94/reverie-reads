@@ -55,8 +55,19 @@ rel="$(git ls-files --full-name -- "$target" | head -1)"
 [ -n "$rel" ] || die "could not resolve a repo-relative path for ${target}"
 
 mkdir -p "$BACKUP_DIR"
+# Second resolution is NOT enough on its own. A mutation loop reverts the same file many times in
+# quick succession, and two reverts inside one second would collide — the second silently
+# overwriting the backup of the first, which is the exact class of quiet loss this script exists to
+# prevent. (`date +%N` is not portable to macOS's BSD date, so this disambiguates by suffix instead
+# of by finer resolution.) The first test written for this script only appeared to cover it because
+# it slept a second between reverts.
 stamp="$(date +%s)"
 backup="${BACKUP_DIR}/${rel//\//-}.${stamp}"
+if [ -e "$backup" ]; then
+  n=1
+  while [ -e "${backup}-${n}" ]; do n=$((n + 1)); done
+  backup="${backup}-${n}"
+fi
 
 # THE BACKUP HAPPENS FIRST, unconditionally — before any check of whether the file is even dirty.
 # A clean file costs one cheap copy; a dirty one is the whole point.
