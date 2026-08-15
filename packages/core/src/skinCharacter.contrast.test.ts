@@ -147,3 +147,140 @@ describe('skin character kit contrast (text on the kit surfaces ≥ AA, every sk
     }
   }
 })
+
+// ── CARD SURFACE: separation and border visibility, all 18 combos ───────────────────────────────
+//
+// THE GAP THIS CLOSES. Nothing in this file measured the card as a SURFACE — every assertion above
+// is text-on-a-surface, and all of them read `cardSolid`. Two consequences:
+//   · `--card` itself was unmeasured, and it is NOT interchangeable with `--card-solid`: they
+//     diverge in tryst (where --card carries alpha) and in the three Fable 5 combos where
+//     --card-solid was deliberately lifted away from --card (marrow/dark, umbra/light, umbra/dark).
+//   · `--line` was unmeasured entirely, in all 18. Every one is an rgba with alpha ≤ 0.45, so a
+//     border that fails to separate the card from the page fails silently.
+//
+// Both legs are composited the way the browser paints them, which is the whole point: --card over
+// --bg0 first, then --line over THAT, never --line over --bg0 directly. Measuring the authored
+// colours instead would describe pixels nothing renders.
+//
+// THE NUMBERS ARE A RATCHET, NOT A STANDARD. Each floor is today's measured value truncated to four
+// decimals — not a round threshold someone chose. Improving a combo's separation can never fail
+// this; regressing one always does. Truncated rather than rounded so the floor is provably ≤ the
+// measurement it came from and cannot fail on the tree that produced it.
+//
+// The rulings behind these values are recorded in docs/audits/skin-component-consistency.md, made
+// per combo against docs/audits/card-decision-aid.html rather than against a global threshold —
+// which is why almanac/light passes at a 1.0315 surface (its 1.9870 border carries it) while
+// marrow/dark does not at 1.0402 (its 1.1473 border is the weakest in the set by a wide margin).
+const CARD_FLOORS: Record<string, { surface: number; border: number }> = {
+  'tryst/light': { surface: 1.086, border: 1.5469 },
+  'tryst/dark': { surface: 1.0908, border: 1.7405 },
+  'grimoire/light': { surface: 1.0721, border: 1.3537 },
+  'grimoire/dark': { surface: 1.1017, border: 1.4204 },
+  'aphelion/light': { surface: 1.0642, border: 1.3626 },
+  'aphelion/dark': { surface: 1.077, border: 1.4398 },
+  'marrow/light': { surface: 1.075, border: 1.5334 },
+  'marrow/dark': { surface: 1.0402, border: 1.1472 },
+  'umbra/light': { surface: 1.1411, border: 1.4578 },
+  'umbra/dark': { surface: 1.0455, border: 1.4036 },
+  'folio/light': { surface: 1.1661, border: 1.6033 },
+  'folio/dark': { surface: 1.1938, border: 1.611 },
+  'hearth/light': { surface: 1.1243, border: 1.5239 },
+  'hearth/dark': { surface: 2.1003, border: 1.9327 },
+  'almanac/light': { surface: 1.0314, border: 1.9869 },
+  'almanac/dark': { surface: 1.1443, border: 1.7913 },
+  'bloom/light': { surface: 1.4548, border: 1.4269 },
+  'bloom/dark': { surface: 1.1554, border: 1.7118 },
+}
+
+/**
+ * Combos ruled NOT acceptable, kept out of the pass/fail floor above so the suite does not certify
+ * them as fine — but still regression-guarded, so a known-weak combo cannot quietly get worse.
+ *
+ * TO CLOSE THIS OUT (Track A PR 2): strengthen marrow/dark's --line in tokens.css, then delete the
+ * entry here. Its floors are already in CARD_FLOORS, so removing it from this list is the entire
+ * change — the normal assertion picks it up automatically, and PR 2 should raise its CARD_FLOORS
+ * numbers to whatever the fix measures.
+ */
+const KNOWN_WEAK_COMBOS: readonly string[] = ['marrow/dark']
+
+type Rgba4 = [number, number, number, number]
+const rgba = (s: string): Rgba4 => parseColor(s)! as Rgba4
+/** Composite a possibly-translucent colour over a solid backdrop, in floats.
+ *  Deliberately not `mixSrgb`: that formats through `formatColor`, which quantises to 8-bit and
+ *  would make the ratios disagree with the decision aid's in the fourth decimal. */
+const over = (fg: Rgba4, bg: Rgba4): Rgba4 => [
+  fg[0] * fg[3] + bg[0] * (1 - fg[3]),
+  fg[1] * fg[3] + bg[1] * (1 - fg[3]),
+  fg[2] * fg[3] + bg[2] * (1 - fg[3]),
+  1,
+]
+
+describe('card surface separation and border visibility (every skin × mode)', () => {
+  for (const skin of Object.keys(SKINS) as SkinId[]) {
+    for (const mode of MODES) {
+      const key = `${skin}/${mode}`
+      const t = SKIN_TOKENS[`${skin}/${mode}`]
+      const floor = CARD_FLOORS[key]
+      const known = KNOWN_WEAK_COMBOS.includes(key)
+
+      it(`${key} has a recorded floor`, () => {
+        expect(floor, `add a CARD_FLOORS row for ${key}`).toBeDefined()
+      })
+
+      const measure = () => {
+        const bg = rgba(t.bg0)
+        const cardOnBg = over(rgba(t.card), bg)
+        return {
+          surface: contrastRatio(cardOnBg, bg),
+          border: contrastRatio(over(rgba(t.line), cardOnBg), cardOnBg),
+        }
+      }
+
+      if (!known) {
+        it(`${key} card separates from the page (≥ ${floor!.surface})`, () => {
+          const { surface } = measure()
+          expect(
+            surface,
+            `${key}: --card over --bg0 measured ${surface.toFixed(4)}, below the recorded ${floor!.surface}. ` +
+              `If this is a deliberate improvement elsewhere that lowered it, re-rule the combo against ` +
+              `docs/audits/card-decision-aid.html — do not just lower the floor.`,
+          ).toBeGreaterThanOrEqual(floor!.surface)
+        })
+
+        it(`${key} border is visible on the card (≥ ${floor!.border})`, () => {
+          const { border } = measure()
+          expect(
+            border,
+            `${key}: --line over the composited card measured ${border.toFixed(4)}, below the recorded ${floor!.border}.`,
+          ).toBeGreaterThanOrEqual(floor!.border)
+        })
+      } else {
+        // Ruled NOT acceptable — see KNOWN_WEAK_COMBOS. Still guarded against getting worse.
+        it(`${key} is known-weak and has not drifted lower`, () => {
+          const { surface, border } = measure()
+          expect(
+            surface,
+            `${key} is known-weak; its surface has drifted BELOW the baseline this was recorded at`,
+          ).toBeGreaterThanOrEqual(floor!.surface)
+          expect(
+            border,
+            `${key} is known-weak (Track A PR 2 fixes it); its border has drifted BELOW ${floor!.border}`,
+          ).toBeGreaterThanOrEqual(floor!.border)
+        })
+      }
+    }
+  }
+
+  it('every KNOWN_WEAK_COMBOS entry is a real combo with a recorded floor', () => {
+    for (const key of KNOWN_WEAK_COMBOS) {
+      expect(
+        CARD_FLOORS[key],
+        `${key} is listed known-weak but has no floor recorded`,
+      ).toBeDefined()
+      expect(
+        SKIN_TOKENS[key as keyof typeof SKIN_TOKENS],
+        `${key} is listed known-weak but is not a skin/mode that exists`,
+      ).toBeDefined()
+    }
+  })
+})

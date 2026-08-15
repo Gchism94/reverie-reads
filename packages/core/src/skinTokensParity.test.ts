@@ -100,6 +100,12 @@ describe('skinTokens.fixture ↔ tokens.css parity (every skin × mode)', () => 
   const DIRECT: [keyof (typeof SKIN_TOKENS)['tryst/dark'], string][] = [
     ['bg0', '--bg0'],
     ['cardSolid', '--card-solid'],
+    // Added with the card-surface guards (Track A PR 1). Both are pinned here rather than
+    // pre-composited into the fixture precisely so this test can hold them to tokens.css — the
+    // composite is done by the consumer. `--line` is rgba in all 18 combos and `--card` in tryst,
+    // so a drift in either is invisible to any assertion that reads only opaque values.
+    ['card', '--card'],
+    ['line', '--line'],
     ['ink', '--ink'],
     ['muted', '--muted'],
     ['accentFill', '--accent-fill'],
