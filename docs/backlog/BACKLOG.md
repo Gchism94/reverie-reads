@@ -12,6 +12,27 @@ forgotten.
 
 ## Real bugs, outstanding
 
+> **Series-cluster audit, 2026-08-14.** All eight series-data-integrity entries were re-verified
+> against current source, after four consecutive prompts were drafted from entries that turned out
+> to be already fixed. **Four are CLOSED** (struck through, each naming the commit that closed it,
+> original text folded into a `<details>` so the reasoning survives); **four remain OPEN and are
+> accurate as written**. The audit checked code only — where an entry's closing condition also
+> requires a production deploy, that half is called out as unverifiable from a Code session.
+>
+> | entry                                                   | state                                                                                                                  | closed by                                                 |
+> | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+> | `merge_books` doesn't fold `series_user_chosen`         | **OPEN** — latest definition is `20260815010000`, which predates the column (`20260818010000`) and mentions it 0 times | —                                                         |
+> | Nothing scores confidence on a surviving `series` value | **OPEN** — accurate; the wrong-series risk it describes as closed _is_ closed, the review-bucket gap is not            | —                                                         |
+> | `useRemoveEntry` two sequential writes                  | CLOSED                                                                                                                 | `0dfe63e` (+ deploy of `20260731010000`, unverified here) |
+> | "Series of N" pill on a removed book                    | **OPEN** — `BookDetailRoute.tsx:257` renders `<Pill>{seriesBadge}</Pill>` ungated; deferred product decision           | —                                                         |
+> | `useMoveEntry` renumber 2n round trips                  | CLOSED                                                                                                                 | `a6e1937`                                                 |
+> | `syncBookPosition` swallowed mirror write               | CLOSED                                                                                                                 | `a6e1937`                                                 |
+> | Archived tombstones keyed on (series, position)         | **OPEN** — `slotKey` is still `${seriesId}@${position}`; v-next format decision                                        | —                                                         |
+> | `useSyncBookSeries` unprotected shape, inverted         | CLOSED                                                                                                                 | `b60707d`                                                 |
+>
+> Entries outside the series cluster were **not** re-verified in this pass and may carry the same
+> drift.
+
 - **`merge_books` doesn't fold `series_user_chosen` when a loser's series field wins the merge.**
   `feat/series-user-chosen` added the column and taught `sync_book_series`/`remove_series_entry` to
   set it, but left `merge_books` untouched: the primary keeps its own flag, which is correct in the
@@ -123,6 +144,17 @@ primary book` — both reached the function body and were turned away by the che
   in the same change and a red run there needs to mean one thing. Found during
   `fix/atomic-series-removal-client` while testing the `pgrst_ddl_watch` schema-cache
   reload, which is how an anon call came to be made at all.
+- ~~**`useRemoveEntry`**: two sequential independently-committed writes, no transaction.~~
+  **CLOSED — verified against source 2026-08-14.** `useRemoveEntry` (`series.ts:547`) is now a
+  single `supabase.rpc('remove_series_entry', { p_entry })` with `if (error) throw error`; `bookId`
+  is no longer passed. Closed by `0dfe63e` (S3b, 2026-07-29). The entry's own closing condition also
+  required `20260731010000` to be deployed — that half is NOT verifiable from a Code session; run
+  `docs/queries/pending-migrations-check.sql` to confirm. Original text kept below for the reasoning
+  about revive-on-refresh, which is still the best description of why the half-committed state was
+  worse than stale.
+
+  <details><summary>original entry</summary>
+
 - **`useRemoveEntry`** (`apps/web/src/data/series.ts` ~L353): two sequential
   independently-committed writes, no transaction. A failure between them leaves
   `series_entries` removed while `books.series` still names it. The open question
@@ -142,6 +174,9 @@ primary book` — both reached the function body and were turned away by the che
   ahead of the deploy ships a frontend calling a function production does not have.
   Rows already in this shape are not healed by the fix —
   `docs/queries/half-committed-series-removals.sql` finds them.
+
+  </details>
+
 - **A book removed from its series still wears a "Series of N" pill.**
   `seriesStatusBadge` reads `status` and `series_count` and never `series`
   (`packages/core/src/seriesStatus.ts` ~L62), and the pill that renders it
@@ -156,6 +191,18 @@ primary book` — both reached the function body and were turned away by the che
   the badge is the only visible symptom. Recorded rather than fixed on the owner's
   instruction: whether removal should also clear `status`/`series_count` is a product
   decision, not a bug fix.
+- ~~**`useMoveEntry`'s renumber is 2n sequential round trips, and it is not a transaction.**~~
+  **CLOSED — verified against source 2026-08-14.** The proposed shape in this entry — "one RPC
+  taking `(entry_id, position)[]` doing the whole renumber plus the book mirror in a single
+  transaction" — is exactly what shipped: `useMoveEntry` (`series.ts:493`) makes one
+  `writeSeriesOrder` call into `set_series_order` (`20260814010000`), which parks the affected rows
+  above the max and writes the finals in one transaction. Closed by `a6e1937` (2026-08-09).
+  **One residual, not a bug:** the last sub-bullet's "no optimistic UI on either, so the reader
+  watches the whole thing" still holds — but it is now one round trip rather than 50, so the
+  measurements below describe a shape that no longer exists.
+
+  <details><summary>original entry, with the measurements</summary>
+
 - **`useMoveEntry`'s renumber is 2n sequential round trips, and it is not a transaction.**
   Per entry it issues one `UPDATE series_entries` and then `syncBookPosition`'s
   `UPDATE books`, awaited one after another — so a renumber costs **2n** requests, and a
@@ -177,6 +224,20 @@ primary book` — both reached the function body and were turned away by the che
   - **10 entries** — 20 round trips, 112 ms median (min 92, max 149); ~1.2 s at 60 ms RTT, ~2.0 s at 100 ms
   - **25 entries** — 50 round trips, 302 ms median (min 235, max 375); ~3.0 s at 60 ms RTT, ~5.0 s at 100 ms
   - no optimistic UI on either, so the reader watches the whole thing
+
+  </details>
+
+- ~~**`series.ts:332`, `syncBookPosition`'s single-move mirror write is swallowed, and it is
+  unretried.**~~ **CLOSED — verified against source 2026-08-14.** `syncBookPosition` no longer
+  exists: `grep` finds only two past-tense comments referring to it. Every position/length writer
+  was re-pointed through `writeSeriesOrder` → `set_series_order` (`20260814010000`), which
+  propagates errors (`if (error) throw error`) — closed by `a6e1937` (2026-08-09). The one
+  remaining branch that still took `position`/`bookId` was DELETED rather than re-pointed, because
+  its only caller was `seriesSeedProvenance.test.tsx` — an exported path kept alive by its own test,
+  per the dead-export rule in AGENTS.md.
+
+  <details><summary>original entry</summary>
+
 - **`series.ts:332`, `syncBookPosition`'s single-move mirror write is swallowed, and it is
   unretried.** `await supabase.from('books').update({ position }).eq('id', bookId)` has no error
   check and nothing re-runs it. Unlike the app's other bare writes — all self-healing on the next
@@ -191,6 +252,9 @@ primary book` — both reached the function body and were turned away by the che
   every drag and every ▲▼ nudge, not on the occasional series-page reorder the old UI offered.
   That is a different amplification from the renumber entry above — this is the common 2-trip
   path firing constantly, where renumber is the rare tail. Recorded, not fixed.
+
+  </details>
+
 - **Archived tombstones are keyed on (series, position); every functional consumer keys on
   title.** `slotKey` (`importExport.ts`) identifies a backed-up removal by series name +
   position, and its own comment calls that "the only thing that identifies 'the same slot'".
@@ -244,6 +308,17 @@ primary book` — both reached the function body and were turned away by the che
   (which sees only `{id,title,author}`) into `unlinkedEntries` at the call site. Without it a book
   can claim an entry that already belongs to a DIFFERENT book, re-pointing it and orphaning the
   first book's slot — mutation-verified, and held by its own e2e.
+- ~~**`useSyncBookSeries` has the same unprotected shape, inverted, and it spans two
+  tables.**~~ **CLOSED — verified against source 2026-08-14.** `useSyncBookSeries` (`series.ts:582`)
+  is now one `supabase.rpc('sync_book_series', …)` with `if (error) throw error` — atomic, and it
+  reads the current series from the `books` row INSIDE its own transaction rather than from the
+  caller's cached `book.series`, which closed a second bug (a stale cache could retire the wrong
+  slot). Closed by `b60707d` (2026-08-11). Worth keeping the "inverted" framing: this one dropped
+  the _entry_ half and left `books` authoritative, so it stranded a live slot permanently — where
+  `syncBookPosition` dropped the _books_ half and merely diverged the mirror.
+
+  <details><summary>original entry</summary>
+
 - **`useSyncBookSeries` has the same unprotected shape, inverted, and it spans two
   mutations.** The book page's save runs `updateBook` (writes `books.series`) and then
   `syncBookSeries` (tombstones the old slot) as separate mutations in that forced order
@@ -257,6 +332,9 @@ primary book` — both reached the function body and were turned away by the che
   told. `remove_series_entry` cannot fix it — the inconsistency is between two
   mutations, not two statements, so closing it means one RPC for the whole book save.
   Found during `fix/atomic-series-removal`.
+
+  </details>
+
 - **Scroll position is unmanaged app-wide.** TanStack Router ships a
   `scrollRestoration` option and it is simply unconfigured on `createRouter`. Wrong
   in both directions: back-navigation doesn't restore where you were, and forward
