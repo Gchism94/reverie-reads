@@ -169,8 +169,8 @@ describe('skin character kit contrast (text on the kit surfaces ≥ AA, every sk
 //
 // The rulings behind these values are recorded in docs/audits/skin-component-consistency.md, made
 // per combo against docs/audits/card-decision-aid.html rather than against a global threshold —
-// which is why almanac/light passes at a 1.0315 surface (its 1.9870 border carries it) while
-// marrow/dark does not at 1.0402 (its 1.1473 border is the weakest in the set by a wide margin).
+// which is why almanac/light passes at a 1.0314 surface (its 1.9869 border carries it) while
+// marrow/dark does not at 1.0402 (its 1.1472 border is the weakest in the set by a wide margin).
 const CARD_FLOORS: Record<string, { surface: number; border: number }> = {
   'tryst/light': { surface: 1.086, border: 1.5469 },
   'tryst/dark': { surface: 1.0908, border: 1.7405 },
