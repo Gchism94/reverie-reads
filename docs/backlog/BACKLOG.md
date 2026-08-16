@@ -886,6 +886,23 @@ the repo goes public.
   that a real cover painted. Filed, not fixed — the judgment call is whether e2e should
   duplicate the component guard or trust it. The `src`-only assertions are _correct for what
   they test_ (cover-sheet selection logic); the gap is that nothing tests the other half.
+- **Split the a11y sweep into per-skin jobs.** `a11y.spec.ts` runs all ten skin x mode passes inside
+  ONE Playwright test, so its `test.setTimeout` is a single budget covering the whole sweep — and one
+  slow runner spends all of it at once. Measured on CI, same suite, ~16 hours apart: 8m36s and green
+  (PR #255, 07:09Z), then 12.9m and 15.1m, both TIMED OUT at the 720s ceiling (PR #258, 22:55Z and a
+  23:10Z rerun). The branch that failed does not touch `a11y.spec.ts` at all, so the change was the
+  environment, not the test.
+  Raised to 1080s as a **stopgap** (`chore/a11y-timeout-raise`), and that is explicitly not a fix:
+  15m observed against an 18m ceiling is thin, the next runner regression eats it, and this is
+  already the second raise (600 -> 720 -> 1080). A third would be an admission that the number is
+  the wrong lever.
+  The durable shape is one test (or one CI job) per skin, so a slowdown costs one pass rather than
+  the sweep, failures name the skin that broke, and passes stay independently attributable. It is
+  real work — the spec shares `setupFixtures`, one dev profile and a serial `setProfileSkinMode`
+  across passes, so splitting means deciding whether each job re-seeds or shares, which is the same
+  fixture-isolation question the per-project user migration just worked through. Not a quick
+  dispatch.
+
 - **`route-viewport.spec.ts` covers no signed-out surface.** The 24-route list
   (`apps/web/e2e/route-viewport.spec.ts:250-276`) signs in first (`await signIn(page, …)`, line 248) and then walks `/`, `/library`, … `/welcome`, `/onboarding`, plus a resolved trope detail.
   But `/welcome` and `/onboarding` redirect-or-render for a _signed-in_ reader; the genuinely
