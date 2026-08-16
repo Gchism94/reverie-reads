@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createRoute, useNavigate } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { genreKey, SKINS, SKIN_ORDER, splitName, type Book, type TasteAnchors } from '@reverie/core'
@@ -248,9 +248,20 @@ function DiscoverScreen() {
   const genre = search.genre ?? skinGenre
   const { data: books } = useBooks()
   const owned = ownedKeys(books ?? [])
-  const [query, setQuery] = useState('')
+  // Seeded from the param, so a restored URL repopulates the box rather than only filtering.
+  const [query, setQuery] = useState(search.query ?? '')
   const debounced = useDebouncedValue(query, 400)
   const searching = debounced.trim().length >= 3
+  // Reuses the EXISTING 400ms debounce rather than starting a second timer: two timers over one
+  // input can disagree, and the URL would then describe a search the screen is not running.
+  // `genre` is spread through so writing one param never drops the other.
+  useEffect(() => {
+    void navigate({
+      to: '/discover',
+      search: { ...search, query: debounced.trim() ? debounced : undefined },
+      replace: true,
+    })
+  }, [debounced]) // eslint-disable-line react-hooks/exhaustive-deps -- `search`/`navigate` are new objects each render; depending on them re-fires this on every navigation it causes.
 
   const q = useQuery({
     queryKey: ['discover', genreKey(genre)],
@@ -431,7 +442,10 @@ export const discoverRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'discover',
   component: DiscoverScreen,
-  validateSearch: (s: Record<string, unknown>): { genre?: string } => ({
+  // Fails CLOSED for both params — a non-string (a doubled query string arrives as an array)
+  // resolves to undefined rather than throwing the screen away.
+  validateSearch: (s: Record<string, unknown>): { genre?: string; query?: string } => ({
     genre: typeof s.genre === 'string' && s.genre.trim() ? genreKey(s.genre) : undefined,
+    query: typeof s.query === 'string' && s.query.trim() ? s.query : undefined,
   }),
 })

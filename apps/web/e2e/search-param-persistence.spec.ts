@@ -281,7 +281,11 @@ test.describe('/shelves keeps the expanded shelf', () => {
     const listId = seededListId.get(PROJECT())!
 
     await page.goto('/shelves?tab=collection')
-    await page.getByText('Search Param Shelf').first().click()
+    // The control is the shelf's "Edit" button, not the shelf name — `openListId` is which shelf's
+    // EDIT SHEET is open. (BACKLOG calls it "which shelf accordion is expanded"; the code says
+    // otherwise. Noted in the PR rather than silently coded around.)
+    await expect(page.getByText('Search Param Shelf').first()).toBeVisible({ timeout: 20_000 })
+    await page.getByRole('button', { name: 'Edit' }).first().click()
     await expect.poll(() => page.url(), { timeout: 10_000 }).toContain(`openListId=${listId}`)
 
     await page.goto('/library')
