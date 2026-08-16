@@ -242,6 +242,20 @@ function` + fresh `create` resets it to the PUBLIC-execute default — verified 
   the remote, so no PR was corrupted — but that was luck about push timing, not the process working.
   The tell is reaching for `git checkout -b` while `git status` already shows modified files.
 
+- **A stacked PR that says "Merged" has not necessarily landed. Run
+  `scripts/check-pr-landed.sh <branch> [base]` before calling the thread closed.** Branching from
+  another PR's own unmerged head is fine and often correct — `main` has not caught up yet. What is
+  not automatic is the retarget: GitHub does NOT move a stacked PR's base to `main` when its parent
+  lands, so merging it afterwards merges it into a branch that has ALREADY merged once, and its
+  commits become unreachable from `main`. The PR reads "Merged", CI is green, nothing errors, and
+  the work is simply absent from the product.
+  That is the #252 incident exactly: #252 was branched correctly from #251's head, #251 merged to
+  `main`, then #252 merged into #251's _branch_ — stranding `fc834c4` where nothing on `main` could
+  reach it. It was caught by running `git merge-base --is-ancestor` on a hunch, and recovered by
+  cherry-picking onto a fresh branch off `main` (#256). A hunch is not a process; the script is.
+  It asks the only question that cannot be fooled — is this commit an ancestor of `origin/<base>` —
+  rather than believing the platform's merge status, which is the thing that misled here.
+
 ## Testing & verification discipline
 
 Thirteen rules, each earned by a real failure. A rule without its reason gets dropped by whoever
