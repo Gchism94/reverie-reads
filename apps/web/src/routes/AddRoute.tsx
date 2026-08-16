@@ -209,12 +209,22 @@ function AddForm({
     title: hit.title ?? '',
     series: '',
     position: '',
-    genre: skinGenre,
+    // NOT skinGenre. The skin still decides which genre the picker OPENS to (see `skinGenre`'s uses
+    // below) — that convenience is the reason it exists and is kept. What it must not do is get
+    // SAVED: an untouched picker meant the active skin's association was stored as though the
+    // reader had chosen it. types.ts is explicit — "'' = not chosen yet — the edit form prompts,
+    // never guesses" — and this form was guessing.
+    genre: '',
     format: 'Paperback' as string,
     readStatus: 'unset' as Book['readStatus'],
   })
   // Subgenres are a multi-pick; the first selection leads (drives the cover gradient).
-  const [subs, setSubs] = useState<string[]>([subgenresForGenre(skinGenre)[0] as string])
+  // Empty, not the skin genre's first subgenre. Pre-selecting one both stored an unchosen value and
+  // LIED in the UI — a chip rendered as active that the reader never tapped. The chip VOCABULARY
+  // still opens on the skin's genre (`subgenresForGenre(form.genre || skinGenre)` below); only the
+  // selection starts empty, so `subs` being non-empty now means exactly "the reader tapped a chip"
+  // and needs no separate edited-flag to say so.
+  const [subs, setSubs] = useState<string[]>([])
   const toggleSub = (s: string) =>
     setSubs((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]))
   const [intensity, setIntensity] = useState(0)
@@ -323,7 +333,7 @@ function AddForm({
       position: parsedPosition.value ?? '',
       seriesCount: null,
       status: form.series.trim() ? 'ongoing' : 'standalone',
-      genre: form.genre.trim() || skinGenre,
+      genre: form.genre.trim(),
       subgenre: subs[0] ?? '',
       subgenres: subs,
       // Bug fix: this used to be `subs.slice(0, 1)` — the first SUBGENRE (e.g. 'dark romance'),
@@ -331,7 +341,7 @@ function AddForm({
       // (import's normalizeImportGenres, filters.ts's search blob, merge_books) — same value as
       // `genre` above, just array-shaped so a second genre tag (added via Edit details) has
       // somewhere to live without a later edit silently overwriting it back to one.
-      genres: [form.genre.trim() || skinGenre],
+      genres: form.genre.trim() ? [form.genre.trim()] : [],
       // tropes are tagged in the refine step via the full picker (book_tropes needs a saved id);
       // no lightweight freeform tags here — the structured trope system is the one source of truth.
       intensity,
@@ -479,6 +489,10 @@ function AddForm({
           className={inputClass}
           style={inputStyle}
         >
+          {/* The unset state needs its own option, or the select renders the FIRST genre as though
+              it were chosen — swapping one silent guess for another, this time in the UI. This is
+              the "prompts" half of types.ts's "prompts, never guesses". */}
+          <option value="">Genre — not set</option>
           {form.genre && !CORE_GENRES.some((g) => g.toLowerCase() === form.genre) && (
             <option value={form.genre}>{form.genre}</option>
           )}
