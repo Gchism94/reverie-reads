@@ -395,9 +395,21 @@ reload, which is how an anon call came to be made at all.
   `/match` `vibeQ` — all `useState`, same defect class as the tab bug and the same
   fix shape (a validated search param). Not bundled with `fix/tab-routing` for the
   same reason.
-- **`/shelves` `openListId` lost alongside the tab** — which shelf accordion is
-  expanded is component state too. Same surface, same class; the tab fix landed
-  without it because the reported defect was the tab.
+- **`/shelves` `openListId` lost alongside the tab** — still open, and the entry
+  above it was wrong about what the param is. It is **not** "which shelf accordion is
+  expanded": `setOpenListId` is wired to each shelf's **Edit** button, and the id it
+  holds selects the list rendered into a `ListModal` — an edit **sheet**, dialog and
+  all. There is no accordion on this screen. Component state, lost on unmount, same
+  class as the tab bug.
+  **URL persistence was built for it and deliberately reverted** (`feat/search-param-persistence`,
+  #249): a param that survives back-navigation makes the browser back button re-open a
+  modal nobody clicked, taking focus on arrival. Restoring an expanded row would have
+  been fine; auto-reopening a dialog is worse than the lost state it fixes — and the
+  original entry only read as an easy win because its own description of the behavior
+  was wrong. Left open because the underlying defect is real (the sheet you were
+  editing vanishes on back-nav); the URL is just not the mechanism. A fix would need
+  to restore the sheet without stealing focus, or restore scroll/selection instead of
+  the dialog.
 - **`/library` filters, sort and mode live in a module-level Zustand store.**
   Survives back-navigation (the store outlives the unmount), lost on reload,
   invisible to deep-linking or sharing. That store _masks_ the back-nav symptom
