@@ -170,7 +170,8 @@ function MatchScreen() {
   // Tier 2: keep the vectors warm (sig-gated sweep, once per session) + the vibe path state
   useEnsureEmbeddings()
   const vibeSearch = useVibeSearch()
-  const [vibeQ, setVibeQ] = useState('')
+  // Seeded from the param — the vibe you RAN, restored on return.
+  const [vibeQ, setVibeQ] = useState(matchRoute.useSearch().vibeQ ?? '')
   const [vibe, setVibe] = useState<{ query: string; hits: SimilarHit[] } | null>(null)
   const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set())
 
@@ -300,6 +301,12 @@ function MatchScreen() {
                   e.preventDefault()
                   const query = vibeQ.trim()
                   if (!query || vibeSearch.isPending) return
+                  // SUBMIT-TIME, not debounced. This field is submit-triggered, so it means "the
+                  // search you ran" — putting a half-typed phrase in the URL would restore a vibe
+                  // the reader never asked for. Written alongside the mutation rather than in its
+                  // onSuccess, so the URL reflects what was asked even if the search returns
+                  // nothing (restoring the RESULTS is deliberately out of scope; only the text).
+                  void navigate({ to: '/match', search: { vibeQ: query }, replace: true })
                   vibeSearch.mutate(query, {
                     onSuccess: (hits) => {
                       if (hits.length) setVibe({ query, hits })
@@ -450,5 +457,9 @@ function MatchScreen() {
 export const matchRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'match',
+  // Fails CLOSED — a non-string resolves to undefined rather than throwing.
+  validateSearch: (search: Record<string, unknown>): { vibeQ?: string } => ({
+    vibeQ: typeof search.vibeQ === 'string' && search.vibeQ.trim() ? search.vibeQ : undefined,
+  }),
   component: MatchScreen,
 })
