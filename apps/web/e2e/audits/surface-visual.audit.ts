@@ -31,23 +31,43 @@ import { createHash } from 'node:crypto'
  * A pixel diff answers "did this change", never "is the change correct". A genuinely improved radius
  * and a regression are the same red. This narrows where to look; a person still rules.
  *
- * ── KNOWN LIMITATION — THE BASELINE IS NOT YET TRUSTWORTHY (Batch 0, unresolved) ────────────────
- * Two IDENTICAL runs, no code change between them, still report 4-6 of 62 crops as "changed", and
- * it is a DIFFERENT set each time. Measured while building this, in order:
+ * ── KNOWN LIMITATION — THE BASELINE IS NOT TRUSTWORTHY YET (Batch 0, narrowed but not closed) ──
+ * Two IDENTICAL runs still report ~4-6 of 62 crops as "changed", a different set each time. What
+ * follows is what has been RULED OUT, each with the measurement that ruled it out — so the next
+ * person starts from evidence rather than from the same four hypotheses:
  *
- *   no motion handling                        52 / 62 changed
- *   + reducedMotion + frozen animations        3 / 62
- *   + ambient star field hidden                6 / 62
- *   + settle() replacing the fixed timeout   4-6 / 62
+ *   MOTION — ruled IN, then fixed. 52/62 before `reducedMotion` + frozen animations; 3-6 after.
+ *     This was the dominant cause and it is closed.
  *
- * So the residual is neither motion nor a too-short wait — those are fixed. The varying set points
- * at per-render content (an empty-state panel populated in one capture and not the next). It is not
- * yet diagnosed.
+ *   THE AMBIENT STAR FIELD — ruled OUT. Its positions are randomised per mount, so it was the
+ *     obvious next suspect. Hiding it entirely did not reduce the residual (3 -> 6, i.e. noise).
  *
- * WHY THIS BLOCKS BATCH 1 RATHER THAN BEING A FOOTNOTE: batch 1's entire design is that its diff
- * should be EMPTY, because those 25 sites already take radius and background from tokens — a
- * non-empty diff there means `Surface` itself is wrong. A 4-6 site noise floor makes exactly that
- * signal unreadable. The instrument has to reach 0 on a no-op re-run before it can certify anything.
+ *   PER-RENDER CONTENT (an empty-state panel populated in one capture, not the next) — ruled OUT,
+ *     and this was the scope doc's own stated read. The crops carry their `outerHTML` beside the
+ *     PNG: every "changed" entry compares [PIXELS ONLY - same DOM]. Byte-identical markup.
+ *
+ *   SUB-PIXEL GEOMETRY — ruled OUT. `getBoundingClientRect` to 3 decimal places, `scrollY` and
+ *     `devicePixelRatio` are identical across runs for the varying sites (e.g. /shelves #1 at
+ *     x=272.000 y=735.750 w=984.000 h=71.000, both runs).
+ *
+ *   WEBFONT LOAD RACE — ruled IN as a real and separate defect, now guarded, but NOT the residual.
+ *     Evidence it is real: with `stubFonts: false`, 14 of 62 captures on a COLD cache raced the
+ *     download, and instability converged 5 -> 4 -> 0 across runs purely as the HTTP cache warmed.
+ *     Evidence it is not the residual: with fonts stubbed the residual is unchanged at ~5.
+ *
+ * CAVEAT ON THE FONT GUARD, stated because it would otherwise read as stronger than it is:
+ * `document.fonts.check()` returns true for a family that is not a webfont at all, so under the
+ * stub `fontsSettled()` is probably vacuous. It earns its keep only if this file is ever switched
+ * back to real fonts. It is not evidence of anything in the current configuration.
+ *
+ * WHAT REMAINS AND WHAT IT WOULD TAKE: same DOM, same geometry, same fonts, different bytes. The
+ * next step is to decode the two PNGs and localise WHICH REGION of the crop differs — that needs a
+ * PNG decoder (`pngjs` or `sharp`), which is a new dependency and therefore a decision outside this
+ * dispatch rather than a thing to quietly add.
+ *
+ * WHY THIS BLOCKS BATCH 1: batch 1's whole design is that its diff should be EMPTY, because those
+ * 25 sites already take radius and background from tokens — a non-empty diff there means `Surface`
+ * itself is wrong. A ~5-site noise floor makes precisely that signal unreadable.
  *
  * Tuning was stopped here deliberately rather than continued until the number looked acceptable.
  *
@@ -71,7 +91,24 @@ import { createHash } from 'node:crypto'
  * own animation. The app already disables that drift under `prefers-reduced-motion` (a11y
  * requirement), so this rides an existing, tested path rather than a special capture mode.
  */
-test.use({ stubFonts: false, reducedMotion: 'reduce' })
+/**
+ * FONTS ARE STUBBED HERE — and this reverses the choice the visual-overflow audit made, on purpose.
+ *
+ * That audit measured GLYPH WIDTHS, so a fallback face would have reported on a typeface no reader
+ * sees; real fonts were mandatory there. This harness measures SURFACE CHROME — radius, background,
+ * border, padding. The migration does not touch type at all, so the typeface is not the subject; it
+ * is a variable, and a variable that arrives over a third-party CDN.
+ *
+ * It was not a variable in theory. Running with real fonts, 14 of 62 captures on a COLD cache raced
+ * the download, and the instability converged 5 -> 4 -> 0 across repeated runs purely as the HTTP
+ * cache warmed. A baseline whose stability depends on cache temperature is not a baseline.
+ *
+ * The suite's default stub serves an empty stylesheet, so every --font stack falls through to its
+ * real generic fallback (guaranteed for all nine skins by fontConfig.test.ts). Text still renders,
+ * deterministically, in a face that is identical on both sides of every diff — which is all a
+ * surface diff needs it to be.
+ */
+test.use({ reducedMotion: 'reduce' })
 
 const SUPABASE_URL = 'http://127.0.0.1:55321'
 const ANON =
@@ -237,6 +274,14 @@ async function freezeMotion(page: Page) {
  */
 async function settle(page: Page) {
   await page.waitForLoadState('networkidle').catch(() => {})
+  // WAIT FOR THE FONTS, and this is the one that mattered. Diagnosed rather than guessed: every
+  // unstable crop compared IDENTICAL in DOM (outerHTML byte-for-byte) and IDENTICAL in geometry
+  // (getBoundingClientRect to 3dp, same scrollY, same DPR) while its PNG differed — e.g. /shelves'
+  // `<p>No TBRs yet — hit ＋ New.</p>` at 9443 vs 9399 bytes. Same box, same markup, different
+  // glyphs: the webfont had landed in one capture and not the other. A centred line inside a
+  // fixed-width panel does not resize when the face swaps, so the box never moves and neither the
+  // DOM-quiet nor the geometry check could see it. `document.fonts.ready` is the thing that can.
+  await page.evaluate(() => document.fonts.ready.then(() => undefined)).catch(() => {})
   await page
     .evaluate(
       () =>
@@ -255,6 +300,40 @@ async function settle(page: Page) {
         }),
     )
     .catch(() => {})
+}
+
+/**
+ * Wait until the ACTIVE SKIN's own faces are really loaded — not merely until `document.fonts.ready`
+ * resolves.
+ *
+ * `fonts.ready` settles the faces requested SO FAR. Skin fonts are requested lazily (`loadSkinFont`
+ * on skin apply), so on the first visit to a skin the request can start *after* `ready` has already
+ * resolved — the capture then races the download. That is why the residual instability shrank run
+ * over run (5 -> 4 -> 0) as the HTTP cache warmed: a cold capture raced, a warm one did not. A
+ * baseline whose stability depends on cache temperature is not a baseline.
+ *
+ * This reads the families out of the live tokens and polls `document.fonts.check` for each, so the
+ * wait is on the thing itself rather than on a duration.
+ */
+async function fontsSettled(page: Page): Promise<boolean> {
+  return page
+    .evaluate(async () => {
+      const fam = (v: string) => (v.split(',')[0] ?? '').replace(/['"]/g, '').trim()
+      const cs = getComputedStyle(document.documentElement)
+      const wanted = [
+        fam(cs.getPropertyValue('--font-display')),
+        fam(cs.getPropertyValue('--font-sans')),
+      ].filter(Boolean)
+      const ok = () => wanted.every((f) => document.fonts.check(`16px "${f}"`))
+      const deadline = performance.now() + 8000
+      while (performance.now() < deadline) {
+        await document.fonts.ready
+        if (ok()) return true
+        await new Promise((r) => setTimeout(r, 100))
+      }
+      return ok()
+    })
+    .catch(() => false)
 }
 
 async function stub(page: Page) {
@@ -305,8 +384,9 @@ test('surface visual — per-site crops across skins x modes', async ({ page }) 
 
   const dir = IS_BASELINE ? BASELINE : CURRENT
   mkdirSync(dir, { recursive: true })
-  const manifest: Record<string, { hash: string; tag: string; cls: string }> = {}
+  const manifest: Record<string, { hash: string; tag: string; cls: string; dom: string }> = {}
   const unstable: string[] = []
+  const fontRaces: string[] = []
 
   await page.setViewportSize({ width: 1280, height: 900 })
 
@@ -319,6 +399,10 @@ test('surface visual — per-site crops across skins x modes', async ({ page }) 
       for (const route of ROUTES) {
         await page.goto(route)
         await settle(page)
+        // A crop taken while the skin's face is still downloading differs from the same crop taken
+        // after it lands — same DOM, same box, different glyphs. Record it rather than silently
+        // capturing an unstable frame.
+        if (!(await fontsSettled(page))) fontRaces.push(`${route} ${skin}/${mode}`)
         await freezeMotion(page)
         await page.waitForTimeout(150)
 
@@ -347,7 +431,11 @@ test('surface visual — per-site crops across skins x modes', async ({ page }) 
           const shot2 = await loc.screenshot().catch(() => null)
           if (!shot2 || sha(shot) !== sha(shot2)) unstable.push(key)
           writeFileSync(join(dir, `${key}.png`), shot)
-          manifest[key] = { hash: sha(shot), tag: f.tag, cls: f.cls }
+          // The DOM alongside the pixels. A pixel diff says a crop changed; only the markup says
+          // WHAT changed, which is the difference between "the harness is noisy" and a named cause.
+          const html = await loc.evaluate((el) => el.outerHTML).catch(() => '')
+          writeFileSync(join(dir, `${key}.html`), html)
+          manifest[key] = { hash: sha(shot), tag: f.tag, cls: f.cls, dom: sha(Buffer.from(html)) }
         }
       }
     }
@@ -370,6 +458,17 @@ test('surface visual — per-site crops across skins x modes', async ({ page }) 
         unstable.slice(0, 8).join(', '),
     )
   }
+  if (fontRaces.length)
+    console.log(
+      `surface-visual: ${fontRaces.length} captures ran with the skin's faces NOT fully loaded — ` +
+        `those crops are unreliable. Sample: ${fontRaces.slice(0, 6).join(', ')}`,
+    )
+  expect(
+    fontRaces.length,
+    `${fontRaces.length} captures raced the webfont download. A crop taken mid-swap differs from ` +
+      `the same crop after it lands, with identical DOM and identical geometry — which is exactly ` +
+      `the residual this harness had. Do not baseline from this run.`,
+  ).toBe(0)
   expect(
     unstable.length,
     `${unstable.length} crops differ between two back-to-back captures — the harness is measuring ` +
@@ -394,7 +493,10 @@ test('surface visual — per-site crops across skins x modes', async ({ page }) 
   const removed: string[] = []
   for (const k of Object.keys(manifest)) {
     if (!(k in base)) added.push(k)
-    else if (base[k]!.hash !== manifest[k]!.hash) changed.push(k)
+    else if (base[k]!.hash !== manifest[k]!.hash)
+      changed.push(
+        `${k}${base[k]!.dom !== manifest[k]!.dom ? '  [DOM ALSO CHANGED]' : '  [PIXELS ONLY — same DOM]'}`,
+      )
   }
   for (const k of Object.keys(base)) if (!(k in manifest)) removed.push(k)
 
