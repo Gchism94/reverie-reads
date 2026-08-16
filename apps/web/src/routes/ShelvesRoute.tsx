@@ -433,8 +433,21 @@ function ShelvesScreen() {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-[16px] font-semibold text-ink">Your lists</h2>
         <div className="flex items-center gap-2">
+          {/* The GROUP's shape follows the skin, like the buttons inside it. `rounded-full` here was
+              a hardcoded 999px pill, so the wrapper stayed a pill in all nine skins while its own
+              buttons — which carry .skin-control — squared off to `--radius-control`. Measured after
+              the fix, wrapper and button now agree in every skin: tryst 999px, bloom 999px,
+              aphelion 2px, grimoire 2px, folio 3px, marrow 0px. The visible silhouette is the
+              wrapper's, so the pill is what a reader saw regardless of the buttons.
+
+              An arbitrary-value class rather than a kit class, because no existing kit member fits a
+              non-interactive grouping box: .skin-control would put control TYPOGRAPHY and motion on
+              a div, .skin-control-quiet is documented for controls whose label is data,
+              .skin-tile/.skin-panel are the card/panel radius scale rather than the control one, and
+              .skin-field adds `clip-path: var(--ctl-clip)`, which would clip the buttons it wraps.
+              A new kit class for one site would be overkill. */}
           <div
-            className="flex rounded-full border border-line p-1"
+            className="flex rounded-[var(--radius-control)] border border-line p-1"
             style={{ background: 'var(--card)' }}
           >
             {(['tbr', 'collection'] as const).map((t) => (
