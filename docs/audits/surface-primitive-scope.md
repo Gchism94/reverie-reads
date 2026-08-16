@@ -76,9 +76,53 @@ hardcoded ones are the same defect class Track B spent 231 sites clearing; foldi
 `p-5` 3, then a long tail of asymmetric one-offs (`px-3 py-2`, `py-2 pl-4 pr-2`, `px-2 py-0.5`…).
 A closed scale covers the head; the tail needs an escape hatch, not a bigger enum.
 
-**Elevation — effectively absent.** 7 of 72 mention shadow, and inspection shows they are
-`transition-shadow` on `CoverCard`, not a resting elevation. **There is no elevation system to
-model.** A `Surface` should not invent one.
+**Elevation — a real, token-driven axis on a small, coherent subset.**
+
+> **Corrected 2026-08-16.** An earlier revision of this section claimed elevation was "effectively
+> absent" and that the 7 shadow sites were `transition-shadow` on `CoverCard`. That was wrong, and
+> wrong in an instructive way: the **count** came from the 72-site analyzer, but the **explanation**
+> came from a separate grep over the 253-site `border border-line` population, where `CoverCard`
+> does appear. `CoverCard` is not among the 34 files here at all. Two different populations were
+> conflated and the mismatch was not noticed because the number looked plausible. The rule that
+> catches this is the one already in CLAUDE.md — assert the thing itself — applied to measurement:
+> a count and its explanation must come from the same query.
+
+`--shadow` is a **real per-skin × per-mode token**: 18 definitions in `tokens.css` plus one in
+`brand.css`, a different `rgba` per combination. It is applied as `boxShadow: 'var(--shadow)'` —
+17 occurrences across 13 files app-wide, and **7 of the 72** carry it on their own root:
+
+| site                              | tone           | what it is                                       |
+| --------------------------------- | -------------- | ------------------------------------------------ |
+| `components/Modal.tsx`            | `--card-solid` | the dialog panel                                 |
+| `components/AppShell.tsx`         | composite      | the mobile "more" sheet (`fixed inset-x-3 z-50`) |
+| `components/UpdateToast.tsx`      | composite      | the update toast (inside a `fixed` container)    |
+| `auth/AuthScreen.tsx`             | `--card`       | the auth card                                    |
+| `auth/WelcomeScreen.tsx`          | `--card`       | the welcome card                                 |
+| `routes/MatchRoute.tsx`           | `--card`       | the quiz card                                    |
+| `components/SkinEvolveReveal.tsx` | `--card`       | the `role="status"` reveal banner                |
+
+**No other shadow mechanism exists in the 72** — zero other `boxShadow` literals, zero Tailwind
+`shadow-*` classes. So elevation is entirely on/off against one token, which is the easiest possible
+shape to model.
+
+**What distinguishes the 7 is "lifted off the page", and it splits two ways.** Three genuinely float
+over content (modal, sheet, toast); four are the single dominant object on an otherwise empty screen
+(auth, welcome, quiz, reveal banner). Both readings want the same shadow; neither is predicted by
+layout position, which is why the first pass's overlay-vs-inline hypothesis had to be discarded —
+`SkinEvolveReveal` and `MatchRoute` are ordinary inline elements.
+
+**Elevation is NOT derivable from `tone`, but it is constrained by it.** `--card` appears on both
+sides (4 raised, 25 flat), so tone cannot predict it. The implication runs one way only: **`--field`,
+`--chip`, `--bg0` and bare never carry a shadow — 0 of 39.** Elevation belongs to the card family
+alone.
+
+**A related inconsistency this surfaced, worth fixing but not silently.** The three floating
+surfaces all need an _opaque_ background, since content passes beneath them — and they achieve it
+two different ways. `Modal` uses `--card-solid`; `AppShell`'s sheet and `UpdateToast` hand-roll
+`linear-gradient(var(--card), var(--card)), var(--bg)`, each with its own comment explaining that
+`--card` can carry alpha. Two spellings of "opaque card". Collapsing them onto `--card-solid` is
+probably right but is a **visual change**, so it is raised here rather than folded into a mechanical
+batch.
 
 **Border — not universal.** The 72 were selected on `border border-line`, but 12 kit-class carriers
 exist _without_ it (`skin-panel` 3, `skin-card` 4, `skin-tile` 5). So `border` is a real axis, and
@@ -100,6 +144,8 @@ type SurfaceProps = {
   /** Closed scale covering the measured head: 1→p-1, 2→p-3, 3→p-4, 4→p-5, 5→p-6. */
   pad?: 0 | 1 | 2 | 3 | 4 | 5 // default 2  (p-3, the most common)
   border?: boolean // default true
+  /** Lifts the surface off the page: boxShadow: var(--shadow). 7/72 sites. See below. */
+  raised?: boolean // default false
   /** The 17-combination tail — asymmetric padding etc. Escape hatch, not a second API. */
   className?: string
   /** 55 div / 8 p / 6 li / 2 details / 1 span — the element is NOT assumable. */
@@ -107,16 +153,49 @@ type SurfaceProps = {
 } & React.HTMLAttributes<HTMLElement>
 ```
 
-Three deliberate omissions, each because the data says so:
+### `raised` — why a boolean, and why not folded into `tone`
 
-- **No `elevation`/`shadow` prop.** §2: there is no resting elevation anywhere in the 72. Adding the
-  prop would invite a design decision nobody has made.
+The corrected §2 turns this from "omit the prop" into "include it", and the measured shape decides
+its form:
+
+- **A boolean, not a scale.** There is exactly one shadow token and no second step — 7 sites on
+  `var(--shadow)`, zero other `boxShadow` literals, zero `shadow-*` classes. `elevation: 0 | 1 | 2`
+  would invent two thirds of a system that does not exist — the same mistake the previous revision
+  made, in the opposite direction.
+- **Independent of `tone`, not a tone value.** The 7 span three backgrounds (`--card` x4, composite
+  x2, `--card-solid` x1), so `tone: 'raised'` cannot express them. And `--card` sits on both sides
+  of the split (4 raised, 25 flat), so tone cannot imply it either.
+- **Constrained by `tone`, and the constraint is worth encoding.** Elevation appears only on the
+  card family: `--field` / `--chip` / `--bg0` / bare are **0 for 39**. A dev-time warning when
+  `raised` meets a non-card tone costs little and documents a real invariant — cheap enough to be
+  worth it, not worth contorting the type signature over.
+- **Default `false`.** 65 of 72 are flat, so the default is the common case; and a surface that
+  silently lifts is the more surprising failure of the two.
+
+Two deliberate omissions remain:
+
 - **No `interactive` variant.** Buttons and fields have `.skin-control` / `.skin-field` already, and
   the whole reason the count fell from 181 to 72 is that they are a different primitive. A
   `Surface` that also does controls re-merges them.
 - **`pad` is a closed scale with a `className` escape hatch**, rather than an open `pad` string.
   17 combinations is a tail, and a closed enum plus an escape hatch keeps the common case honest
   without pretending the tail is systematic.
+
+### The 7 raised sites, expressed in this API
+
+```tsx
+<Surface tone="card-solid" raised radius="card" pad={3}>  {/* Modal — dialog panel         */}
+<Surface tone="card-solid" raised pad={0} className="…">  {/* AppShell mobile "more" sheet */}
+<Surface tone="card-solid" raised radius="none" …>        {/* UpdateToast — rounded-full   */}
+<Surface tone="card" raised pad={5}>                      {/* Auth / Welcome cards         */}
+<Surface tone="card" raised pad={4}>                      {/* Match quiz card              */}
+<Surface tone="card" raised pad={2}>                      {/* SkinEvolveReveal banner      */}
+```
+
+Two of those route the composite `linear-gradient(var(--card), var(--card)), var(--bg)` background
+onto `tone="card-solid"`. That is §2's inconsistency, and it is a **visual change requiring
+verification per skin x mode** — the two are not guaranteed to render identically. It belongs in
+batch 4 (the judgement-call batch) with a before/after diff, never in a mechanical one.
 
 **Open question for review:** `tone` and `radius` are currently independent, but the existing kit
 pairs them (`skin-panel` = panel radius, `skin-card` = card radius). Should `radius` default _from_
