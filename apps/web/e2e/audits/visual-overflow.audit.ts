@@ -432,7 +432,21 @@ function probeSource() {
       if (clips(ox)) {
         // Content is being CUT. Intentional when there is an ellipsis to say so; a silent
         // disappearance when there is not.
-        if (cs.textOverflow !== 'ellipsis')
+        //
+        // TWO ways to have an ellipsis, and testing only the first is what produced this audit's
+        // one false finding. `text-overflow: ellipsis` is the single-line mechanism. `-webkit-line
+        // -clamp` is the multi-line one, and it renders its own ellipsis while leaving
+        // `text-overflow` at its initial `clip` — so a clamped element reads as "cut, no ellipsis"
+        // to a `textOverflow !== 'ellipsis'` test even though the reader is plainly signalled.
+        // That is how finding 4 (`/club/:id`, 3px) got filed as a defect: measured on the live
+        // page, the element had `-webkit-line-clamp: 3`, `text-overflow: clip`, and a real
+        // scrollHeight of 96 against a clientHeight of 41 — genuinely truncated, genuinely
+        // ellipsised, and the residual 3px was the italic tail of the last glyph hanging past the
+        // box. Padding cannot absorb that (measured invariant at 3px for padding 0em, 0.6em and
+        // 1.5em — scrollWidth tracks clientWidth exactly), because the overhang sits outside the
+        // padding box, not inside it.
+        const clamped = cs.webkitLineClamp !== 'none' && cs.webkitLineClamp !== ''
+        if (cs.textOverflow !== 'ellipsis' && !clamped)
           out.push({
             kind: 'hard-clip',
             sel: sel(el),
