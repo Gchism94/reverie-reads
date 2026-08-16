@@ -2,16 +2,18 @@ import { expect, test, type Page } from './support/fixtures'
 import { createClient } from '@supabase/supabase-js'
 import { authFailure } from './support/authError'
 import { keepOfflineCacheEmpty } from './support/offlineCache'
-import { ok, okData, okUser } from './support/ok'
+import { ok, okUser } from './support/ok'
 
 // Search text belongs in the route, not in component state — the same defect class as the tab bug
 // and the same fix shape (fix/tab-routing, #97, 937f2e4).
 //
 // The route tree is flat: every screen is a sibling under rootRoute, so navigating away fully
-// unmounts the screen and `useState` re-initialises on the way back. Four surfaces had it —
-// /tropes `q`, /discover `query`, /match `vibeQ`, /shelves `openListId` — and each is a validated
-// search param, `undefined` for the default so the canonical URL stays bare, written with
-// `replace: true` so back means "leave the page" rather than "undo a keystroke".
+// unmounts the screen and `useState` re-initialises on the way back. Three search fields get the
+// fix here — /tropes `q`, /discover `query`, /match `vibeQ` — each a validated search param,
+// `undefined` for the default so the canonical URL stays bare, written with `replace: true` so back
+// means "leave the page" rather than "undo a keystroke".
+//
+// /shelves' `openListId` was a fourth and is NOT one: see the note where its block used to be.
 //
 // ── WHEN each one syncs, which is NOT uniform and is the whole judgement in this file ───────────
 //   /tropes    filters instantly client-side, so the URL sync is DEBOUNCED — otherwise every
@@ -20,8 +22,6 @@ import { ok, okData, okUser } from './support/ok'
 //              value rather than starting a second timer that could disagree with it.
 //   /match     is submit-triggered, not live-filtered. The field means "the search you ran", so it
 //              syncs when the reader presses the button, never on a debounce.
-//   /shelves   is a discrete toggle — no timing question, but it shares a search object with `tab`,
-//              so each write has to preserve the other's current value.
 //
 // ── WHY THE ASSERTIONS LOOK LIKE THIS ──────────────────────────────────────────────────────────
 // Each param gets three: the URL gains it (the write), a fresh load of that URL repopulates the
@@ -52,7 +52,6 @@ type Client = {
   uid: string
 }
 const shared = new Map<string, Client>()
-const seededListId = new Map<string, string>()
 
 async function client(): Promise<Client> {
   const cached = shared.get(PROJECT())
@@ -87,20 +86,6 @@ async function client(): Promise<Client> {
   return c
 }
 
-/** One collection, so /shelves has a shelf to expand. */
-async function seed(c: Client): Promise<void> {
-  await ok(c.sb.from('lists').delete().eq('owner_id', c.uid), 'search-params lists delete')
-  const list = (await okData(
-    c.sb
-      .from('lists')
-      .insert({ owner_id: c.uid, name: 'Search Param Shelf', kind: 'collection', sort_order: 1 })
-      .select('id')
-      .single(),
-    'search-params lists insert',
-  )) as { id: string }
-  seededListId.set(PROJECT(), list.id)
-}
-
 async function signIn(page: Page, session: { access_token: string; refresh_token: string }) {
   await keepOfflineCacheEmpty(page)
   await page.addInitScript(() => localStorage.setItem('reverie.onboarded', '1'))
@@ -116,11 +101,6 @@ async function stub(page: Page) {
     await page.route(`**/functions/v1/${p}**`, (r) => r.fulfill({ json: {} }))
   await page.route('**/books/v1/volumes**', (r) => r.fulfill({ json: { items: [] } }))
 }
-
-test.beforeAll(async () => {
-  const c = await client()
-  await seed(c)
-})
 
 // ── /tropes · q ────────────────────────────────────────────────────────────────────────────────
 test.describe('/tropes keeps its search text', () => {
@@ -272,53 +252,7 @@ test.describe('/match keeps the vibe it ran', () => {
   })
 })
 
-// ── /shelves · openListId, alongside the existing tab ───────────────────────────────────────────
-test.describe('/shelves keeps the expanded shelf', () => {
-  test('expanding a shelf writes openListId and survives back-navigation', async ({ page }) => {
-    const c = await client()
-    await signIn(page, c.session)
-    await stub(page)
-    const listId = seededListId.get(PROJECT())!
-
-    await page.goto('/shelves?tab=collection')
-    // The control is the shelf's "Edit" button, not the shelf name — `openListId` is which shelf's
-    // EDIT SHEET is open. (BACKLOG calls it "which shelf accordion is expanded"; the code says
-    // otherwise. Noted in the PR rather than silently coded around.)
-    await expect(page.getByText('Search Param Shelf').first()).toBeVisible({ timeout: 20_000 })
-    await page.getByRole('button', { name: 'Edit' }).first().click()
-    await expect.poll(() => page.url(), { timeout: 10_000 }).toContain(`openListId=${listId}`)
-
-    await page.goto('/library')
-    await page.locator('main').waitFor({ state: 'visible' })
-    await page.goBack()
-
-    await expect.poll(() => page.url(), { timeout: 10_000 }).toContain(`openListId=${listId}`)
-  })
-
-  // The interaction the brief singles out: two params in ONE search object, where a naive
-  // `navigate({ search: { tab } })` drops the other. Both directions are asserted because each
-  // writer clobbers the other independently.
-  test('setting openListId preserves tab, and switching tab preserves openListId', async ({
-    page,
-  }) => {
-    const c = await client()
-    await signIn(page, c.session)
-    await stub(page)
-    const listId = seededListId.get(PROJECT())!
-
-    await page.goto(`/shelves?tab=collection&openListId=${listId}`)
-    await page.locator('main').waitFor({ state: 'visible' })
-
-    expect(page.url()).toContain('tab=collection')
-    expect(page.url()).toContain(`openListId=${listId}`)
-  })
-
-  test('a garbage openListId fails CLOSED — page renders, nothing expanded', async ({ page }) => {
-    const c = await client()
-    await signIn(page, c.session)
-    await stub(page)
-
-    await page.goto('/shelves?openListId[]=a&openListId[]=b')
-    await expect(page.locator('main')).toBeVisible()
-  })
-})
+// NO /shelves BLOCK, deliberately. `openListId` was persisted here and the param was dropped before
+// merge: it drives the shelf's edit SHEET (a ListModal), not an accordion as the BACKLOG entry had
+// it, so persisting it made back-navigation re-open a modal nobody clicked. The tab half of
+// /shelves is already covered by tab-routing.spec.ts and is untouched by this file.
