@@ -157,12 +157,55 @@ test('the book edit dialog does not scroll sideways with contributors populated'
 
 // The rest of the app, in its default state. Cheap (one navigation each) and it means a future
 // layout change anywhere is caught by SOME test rather than none.
-const ROUTES = ['/library', '/add', '/shelves', '/discover', '/stats', '/settings', '/planner']
+//
+// /clubs was ABSENT from this list until the visual-overflow audit found it overflowing every phone
+// width (scrollWidth 450 at a 375 viewport, constant across widths — a layout floor, not a
+// text-length edge case). It is added here, and unlike the other routes it needs a fixture: an empty
+// /clubs is two empty-state paragraphs and cannot overflow whatever the layout does, so listing the
+// route without seeding a club would add a name to this array and no coverage at all.
+const ROUTES = [
+  '/library',
+  '/add',
+  '/shelves',
+  '/discover',
+  '/stats',
+  '/settings',
+  '/planner',
+  '/clubs',
+]
 test('no route scrolls sideways at a phone viewport', async ({ page }) => {
   test.setTimeout(180_000)
   const c = await client()
   await stub(page)
   await page.setViewportSize(MOBILE)
+
+  // A club with a name a person would plausibly choose. The card is the widest thing on /clubs, and
+  // a short title hides the defect entirely — see route-viewport.spec.ts's fixture, which did.
+  const admin = createClient(SUPABASE_URL, SERVICE, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  })
+  await ok(admin.from('clubs').delete().eq('created_by', c.uid), 'no-h-overflow clubs delete')
+  const { data: club, error: clubErr } = await admin
+    .from('clubs')
+    .insert({
+      title: 'The Thursday Evening Romantasy Read-Along Society',
+      unit_type: 'chapter',
+      unit_count: 30,
+      created_by: c.uid,
+    })
+    .select('id')
+    .single()
+  if (clubErr || !club) throw new Error(`no-h-overflow club failed: ${JSON.stringify(clubErr)}`)
+  await ok(
+    admin.from('club_members').insert({
+      club_id: (club as { id: string }).id,
+      user_id: c.uid,
+      display_name: 'Overflow Probe',
+      progress: 3,
+    }),
+    'no-h-overflow club_members insert',
+  )
+
   await signIn(page, c.session)
 
   for (const r of ROUTES) {

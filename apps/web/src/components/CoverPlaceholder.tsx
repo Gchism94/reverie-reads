@@ -5,8 +5,42 @@ import {
   placeholderSpec,
   type SkinId,
 } from '@reverie/core'
+import type { CSSProperties } from 'react'
 import { useEffectiveSkin } from '../skin/labels'
 import { useStructure } from '../skin/structure'
+
+/**
+ * THE AUTHOR LINE'S OVERFLOW CONTRACT — one object, spread into every designed plate's author span.
+ *
+ * What it fixes: an author name is centred inside a panel that clips. A name too wide for the panel
+ * overflowed it SYMMETRICALLY, so the clip removed characters from the START as well as the end —
+ * "WILHELMINA FEATHERSTONEHAUGH MARCHBANKS" rendered as "WILHELMINA EATHERSTONEHAUGH MARCHBANKS",
+ * with the leading F simply gone. That is worse than ugly: the plate stated a name that is not the
+ * author's, with nothing to signal anything had been dropped.
+ *
+ * Why BOTH properties, and why line-clamp alone would not have been enough. The title span in each
+ * plate already clamps, and clamping bounds HEIGHT — it does nothing for a single unbreakable word
+ * wider than the box, which is precisely this defect. `overflow-wrap: anywhere` is the half that
+ * fixes it: the word breaks onto the next line instead of spilling out of both edges. The clamp is
+ * still needed, because a name now free to wrap could otherwise grow downward into whatever sits
+ * below it — the same collision this component already showed in aphelion.
+ *
+ * Two lines, not one: one line reintroduces the clip for any name that needs to wrap, and these
+ * panels have the vertical room. Names longer than two lines end in an ellipsis, which is an honest
+ * signal in a way a silently missing first letter never was.
+ *
+ * The 'plain' plate at the bottom of this file already carried this shape and is left as it was.
+ * NOTE: the TITLE spans keep clamp-without-wrap, so a single unbreakable word longer than the panel
+ * would still clip at both ends there. No such title exists in the corpus and none was observed in
+ * the audit, so it is recorded rather than changed here.
+ */
+const AUTHOR_OVERFLOW: CSSProperties = {
+  display: '-webkit-box',
+  WebkitLineClamp: 2,
+  WebkitBoxOrient: 'vertical',
+  overflow: 'hidden',
+  overflowWrap: 'anywhere',
+}
 
 /**
  * The placeholderCover slot (Fable 5 slot 9): a coverless book gets a DESIGNED plate, never a gray
@@ -132,6 +166,7 @@ function PlaceholderPlate({
             aria-hidden
             className="uppercase"
             style={{
+              ...AUTHOR_OVERFLOW,
               fontFamily: 'var(--font-sans)',
               fontWeight: 600,
               fontSize: 'clamp(9px, 6.5cqw, 10px)',
@@ -274,6 +309,7 @@ function PlaceholderPlate({
             aria-hidden
             className="uppercase"
             style={{
+              ...AUTHOR_OVERFLOW,
               position: 'absolute',
               left: '8%',
               bottom: '8%',
@@ -432,6 +468,7 @@ function PlaceholderPlate({
               aria-hidden
               className="uppercase"
               style={{
+                ...AUTHOR_OVERFLOW,
                 marginTop: '2%',
                 fontFamily: 'var(--font-sans)',
                 fontWeight: 600,
@@ -536,6 +573,7 @@ function PlaceholderPlate({
             <span
               className="block uppercase"
               style={{
+                ...AUTHOR_OVERFLOW,
                 fontFamily: 'var(--font-sans)',
                 fontWeight: 600,
                 fontSize: 'clamp(8px, 6.5cqw, 9px)',
@@ -660,6 +698,7 @@ function PlaceholderPlate({
             <span
               className="mt-[5%] block uppercase"
               style={{
+                ...AUTHOR_OVERFLOW,
                 fontFamily: 'var(--font-mono)',
                 fontWeight: 400,
                 fontSize: 'clamp(8px, 6.5cqw, 9px)',
@@ -787,6 +826,7 @@ function PlaceholderPlate({
           <span
             aria-hidden
             style={{
+              ...AUTHOR_OVERFLOW,
               fontFamily: 'var(--font-display)',
               fontStyle: 'italic',
               fontWeight: 500,
@@ -905,6 +945,7 @@ function PlaceholderPlate({
             <span
               className="block uppercase"
               style={{
+                ...AUTHOR_OVERFLOW,
                 fontFamily: 'var(--font-sans)',
                 fontWeight: 600,
                 fontSize: 'clamp(8px, 6.5cqw, 9px)',
@@ -998,6 +1039,7 @@ function PlaceholderPlate({
             <span
               className="block uppercase"
               style={{
+                ...AUTHOR_OVERFLOW,
                 marginTop: '4%',
                 fontFamily: 'var(--font-sans)',
                 fontWeight: 600,
@@ -1148,6 +1190,7 @@ function PlaceholderPlate({
             <span
               className="mt-[5%] block uppercase"
               style={{
+                ...AUTHOR_OVERFLOW,
                 fontFamily: 'var(--font-sans)',
                 fontWeight: 700,
                 fontSize: 'clamp(8px, 6.5cqw, 9px)',
