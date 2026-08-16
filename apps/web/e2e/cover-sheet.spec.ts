@@ -1,5 +1,6 @@
 import { expect, test, type Page } from './support/fixtures'
 import AxeBuilder from '@axe-core/playwright'
+import { expectResolvedMode } from './support/mode'
 import { createClient } from '@supabase/supabase-js'
 import { authFailure } from './support/authError'
 import { keepOfflineCacheEmpty } from './support/offlineCache'
@@ -70,7 +71,12 @@ async function ensureUser(): Promise<void> {
   await ok(
     admin
       .from('profiles')
-      .upsert({ id: uid, display_name: 'Cover Sheet E2E', skin: 'tryst', mode: 'system' }),
+      // mode PINNED, not 'system': this spec runs an axe contrast scan, and 'system' resolves through
+      // prefers-color-scheme at runtime — so the scan would be asserted against whichever surface the
+      // environment produced. Observed on PR #252's gate as a real flake (color-contrast failed one
+      // run, passed the next, no code change). 'dark' matches the convention across this suite's
+      // other axe/colour specs and the app's own fallback when no light preference matches.
+      .upsert({ id: uid, display_name: 'Cover Sheet E2E', skin: 'tryst', mode: 'dark' }),
     'cover-sheet profiles upsert',
   )
 }
@@ -205,6 +211,7 @@ test('cover sheet: backfill, editions pick + detail sync, URL paste, non-image f
     await expect(sheet.getByText(/Bloom Books/)).toBeVisible()
 
     // axe on the open sheet (both entry surfaces share this dialog)
+    await expectResolvedMode(page, 'dark', 'cover-sheet open dialog')
     const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze()
     const serious = axe.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical')
     expect(
