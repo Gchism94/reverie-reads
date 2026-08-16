@@ -161,9 +161,21 @@ async function seedFixtures(c: Client): Promise<{
     'route-viewport book_moods insert',
   )
 
+  // LONG ON PURPOSE, and this fixture is the whole guard for /clubs. It used to read 'Width Probe
+  // Club' — short enough that /clubs stayed inside a phone viewport no matter how its layout
+  // behaved, so the route was swept and asserted while never once exercising the thing being
+  // asserted. The visual-overflow audit found /clubs overflowing every phone width (scrollWidth 450
+  // at 375) with a realistically-named club, and this spec was green throughout. That is exactly the
+  // "guarded only as a tripwire" case this file's own header warns about, so the tripwire is now
+  // armed: the name has to be long enough that a card which cannot shrink pushes the page wider.
   const { data: clubRow, error: clubError } = await c.admin
     .from('clubs')
-    .insert({ title: 'Width Probe Club', unit_type: 'chapter', unit_count: 30, created_by: c.uid })
+    .insert({
+      title: 'The Width Probe Read-Along Society of Extremely Long Naming',
+      unit_type: 'chapter',
+      unit_count: 30,
+      created_by: c.uid,
+    })
     .select('id')
     .single()
   if (clubError || !clubRow)

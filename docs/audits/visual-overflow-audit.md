@@ -1,7 +1,28 @@
 # Visual-misalignment audit — horizontal overflow, clipped text, controls past their box
 
-**Date:** 2026-08-15 · **Branch:** `audit/visual-overflow-sweep` · **Status:** findings only, nothing
-fixed.
+**Date:** 2026-08-15 · **Branch:** `audit/visual-overflow-sweep` · **Status:** findings 1–3 **FIXED**
+in `fix/clubs-overflow-cover-placeholder`; finding 4 open.
+
+| #   | finding                                             | status                                                  |
+| --- | --------------------------------------------------- | ------------------------------------------------------- |
+| 1   | `/clubs` page-level overflow at every phone width   | **fixed** — grid track + grid item, see below           |
+| 2   | `CoverPlaceholder` author line cut off both ends    | **fixed** — `AUTHOR_OVERFLOW` contract                  |
+| 3   | `CoverPlaceholder` title/author overlap in aphelion | **fixed as a side effect of 2** — measured, not assumed |
+| 4   | `/club/:id` 3px hard clip on the title              | **open** — out of scope, lowest priority                |
+
+**Verified after the fix, with numbers rather than "looks right":**
+
+- `page-overflow` findings across the whole re-sweep: **6 → 0**.
+- `/clubs`' only remaining findings are the two known-noise categories (the fixed sky backdrop and
+  the `sr-only` skip link) — no defect findings at any width or skin.
+- The author line's `left-escape` (content starting before its clipper — the "lost leading F"
+  signature) went from **14px worst / 1275 flagged combos → 0**. The only `left-escape` left anywhere
+  is a 2px aphelion callsign chip, unrelated and pre-existing.
+- Finding 3 measured directly at hero size, before and after, by comparing the title's bottom edge to
+  the author's top edge: **aphelion +3px overlap → −9px gap**. All five other designed plates already
+  had gaps and kept them. The author line also still fits inside its plate (`authorBelowPlate` −22px
+  at the tightest, aphelion), so the extra wrapped line did not trade a horizontal clip for a
+  vertical one.
 
 **Trigger.** A zoomed phone screenshot of `/shelves` appeared to show a shelf-header row with text
 cut at its start (`"nce ›"` with nothing before it) and a tab pill leaking a sliver of colour past
@@ -62,9 +83,33 @@ club is named `"Width Probe Club"` — short enough to stay under the floor. Thi
 whose fixture content is narrower than the viewport is guarded only as a tripwire."_ The tripwire was
 never armed for `/clubs`.
 
-**Leading hypothesis, not verified:** the card `button` is a grid item, and grid items have an
-automatic minimum size — the `min-w-0` is on the button's _child_, not on the button itself. Needs
-confirming before any fix.
+**Both gaps closed alongside the fix, and both verified RED first.** `route-viewport.spec.ts`'s
+fixture club is renamed to something long enough to reproduce, and `/clubs` is added to
+`no-horizontal-overflow.spec.ts`'s `ROUTES` **with a club row seeded** — an empty `/clubs` is two
+empty-state paragraphs and cannot overflow whatever the layout does, so adding the route without a
+fixture would have added a name to the array and no coverage at all. Against the unfixed component
+the two specs produced 3 failures (`scrollWidth 492 vs clientWidth 390`, and `layout viewport (558)
+must not exceed the screen (390)`); against the fix, 10 passed.
+
+**ROOT CAUSE — confirmed by reading the live layout, and the hypothesis above was only half of it.**
+Measured at a 375 viewport before the fix: the grid box was a correct **343px** while its computed
+`grid-template-columns` was **434.172px** — the track wider than the container holding it.
+
+Two independent causes, both required:
+
+1. **The grid had no column template.** A bare `grid` has no `grid-template-columns`, so the single
+   implicit track is `auto`-sized, and an `auto` track floors at its item's automatic minimum size.
+   Tailwind's `grid-cols-N` expands to `repeat(N, minmax(0, 1fr))` precisely to cap this; the markup
+   had `sm:grid-cols-2` for ≥640px and nothing below it.
+2. **The card `button` is a grid item with `min-width: auto`.** The `min-w-0` already in the markup
+   is on the button's _child_. The button is itself a flex container whose text column is `flex-1`
+   (basis 0), and a flex-basis-0 item contributes its **max-content** width to its container's
+   min-content size — so the button's minimum was the club title's full unwrapped width. The title
+   already had `truncate`; nothing above it could shrink, so it never got the chance.
+
+Fix: `grid-cols-1` on both grids and `min-w-0` on both card buttons (`ClubsRoute.tsx`). The shared
+lists grid below carried the identical markup and the identical defect — it went unreported only
+because the audit fixture seeded no shared lists.
 
 **Screenshot:** `page-overflow--tryst-dark-375--_clubs.png` — the card runs off the right edge, its
 rounded right border entirely off-screen.
@@ -79,23 +124,56 @@ Observed on `/shelves` in tryst/dark: **`WILHELMINA EATHERSTONEHAUGH MARCHBANKS`
 of `FEATHERSTONEHAUGH` is gone. Measured as 14px past the clipper on the right and 14px before it on
 the left, on the same element.
 
-Mechanism, `CoverPlaceholder.tsx:659-670`: the author `<span>` is `uppercase` with
-`letter-spacing: 0.1em` and no `overflow-wrap`/`word-break`, inside a `text-align: center` panel with
-`overflow: hidden`. A single unbreakable word wider than the panel overflows symmetrically.
+Mechanism: the author `<span>` is `uppercase` with wide `letter-spacing` and no
+`overflow-wrap`/`word-break`, inside a `text-align: center` panel with `overflow: hidden`. A single
+unbreakable word wider than the panel overflows symmetrically.
 
 This appears on **every route that renders a coverless book** — which, with cover fetching stubbed,
 is most of them. It is one root cause, not many findings.
 
+**Fix:** an `AUTHOR_OVERFLOW` contract spread into all **nine** designed plates' author spans (the
+tenth, `plain`, already carried the shape). It pairs `overflow-wrap: anywhere` with a 2-line clamp,
+and both halves are load-bearing: clamping bounds _height_ and does nothing for a single unbreakable
+word wider than the box, while wrapping alone would let a long name grow downward into whatever sits
+below it. Nine sites rather than the one reported, because the audit flagged three different author
+spans (`span.uppercase`, `span.block.uppercase`, `span.mt-[5%].block.uppercase`) and every designed
+plate carried the same shape.
+
+**Residual, recorded not fixed:** the TITLE spans keep clamp-without-wrap, so a single unbreakable
+word longer than the panel would still clip at both ends there. No such title exists in the corpus
+and none appeared in the audit.
+
 **Screenshots:** `hard-clip--tryst-dark-375--_shelves.png`, `bleed--marrow-light-375--_shelves.png`.
 
-### 3. `CoverPlaceholder` title and author lines overlap in aphelion
+### 3. `CoverPlaceholder` title and author lines overlap in aphelion — FIXED as a side effect
 
 Distinct from finding 2 and vertical rather than horizontal: in `aphelion/dark` the clamped title
-paints on top of the author line — `"Deliberately…"` and `"WILHELMINA"` occupy the same pixels. The
-title uses `-webkit-line-clamp: 3` with a `clamp()` font size; the author sits at `margin-top: 5%` of
-a container whose height does not account for the clamped title's actual line count.
+paints on top of the author line — `"Deliberately…"` and `"WILHELMINA"` occupy the same pixels.
 
-**Screenshot:** `bleed--aphelion-dark-375--_shelves.png`.
+**Resolved by finding 2's fix, and this was measured rather than assumed** — the audit had only
+flagged it as _likely_ the same root cause. Comparing the title's bottom edge to the author's top
+edge at hero size, with the `CoverPlaceholder` change stashed and then restored:
+
+| skin     | before           | after        |
+| -------- | ---------------- | ------------ |
+| aphelion | **+3px overlap** | **−9px gap** |
+| tryst    | −14px gap        | −13px gap    |
+| grimoire | −37px gap        | −37px gap    |
+| marrow   | −10px gap        | −10px gap    |
+| umbra    | −3px gap         | −3px gap     |
+| almanac  | −4px gap         | −4px gap     |
+
+Aphelion was the only one overlapping, and it is the only one that moved. The cause was the author
+line overflowing its box horizontally instead of wrapping, which left the block's measured height
+disagreeing with what was painted; once the name wraps and clamps, the block occupies the height it
+claims.
+
+**Measurement note worth keeping:** the first version of this check reported marrow, umbra and
+almanac as +33px overlaps. They were not. Those plates wrap title _and_ author in a label-plate
+`<span>` whose own `innerText` contains both, so the naive "first element whose text matches" picked
+the container and called its bottom the title's bottom — manufacturing an overlap that was really
+just containment. Selecting the deepest matching element cleared all three. A measurement can be
+wrong in the direction of finding a defect, not only in the direction of missing one.
 
 ### 4. `/club/:id` — a 3px hard clip on the club title
 
