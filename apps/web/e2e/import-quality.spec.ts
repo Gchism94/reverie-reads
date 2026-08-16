@@ -1,6 +1,7 @@
 import { fileURLToPath } from 'node:url'
 import { expect, test, type Page } from './support/fixtures'
 import AxeBuilder from '@axe-core/playwright'
+import { expectResolvedMode } from './support/mode'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { authFailure } from './support/authError'
 import { keepOfflineCacheEmpty } from './support/offlineCache'
@@ -25,25 +26,50 @@ const TEST_PASSWORD = 'import-e2e-password'
 // This file mutates one shared user's library + profile; run its tests one at a time.
 test.describe.configure({ mode: 'serial' })
 
+/**
+ * ── THE PROFILE UPSERT RUNS ON EVERY CALL, AND THAT RESTRUCTURING IS THE ACTUAL FIX ─────────────
+ * This used to `return` early when the user already existed, so the profile — including `mode` —
+ * was written EXACTLY ONCE, on first creation, and every later run inherited whatever the row
+ * happened to hold. Pinning the literal below without moving it out of that branch would have been
+ * inert on any database where this user already exists, which is every developer machine and every
+ * CI database that is not freshly reset. Verified: with the pin in place but still behind the early
+ * return, a deliberately reverted `'system'` seed did NOT reproduce — the row was still carrying an
+ * older value, so the test was passing for a reason unrelated to the seed.
+ *
+ * Creating the user stays conditional; asserting the profile does not.
+ *
+ * ── WHY `mode` IS PINNED AT ALL ─────────────────────────────────────────────────────────────────
+ * This spec runs an axe contrast scan, and `'system'` resolves through `prefers-color-scheme` at
+ * runtime — so the scan would be asserted against whichever surface the environment produced.
+ * Observed on PR #252's gate as a real flake: axe `color-contrast` failed one run (`#9a898f` on
+ * `#f9f4f0`, ratio 3.02) and passed the next with no code change. `'dark'` matches the convention
+ * across this suite's other axe/colour specs (12 seed `dark`, 1 seeds `light`) and the app's own
+ * fallback when no light preference matches.
+ */
 async function ensureTestUser(): Promise<void> {
   const admin = createClient(SUPABASE_URL, SERVICE, {
     auth: { autoRefreshToken: false, persistSession: false },
   })
   const { data: existing } = await admin.auth.admin.listUsers()
-  if (existing?.users?.some((u) => u.email === TEST_EMAIL)) return
-  const user = await okUser(
-    admin.auth.admin.createUser({
-      email: TEST_EMAIL,
-      password: TEST_PASSWORD,
-      email_confirm: true,
-    }),
-    'import-quality createUser',
-  )
-  // The app expects a profiles row (skin/mode live there); create it if the trigger didn't.
+  const found = existing?.users?.find((u) => u.email === TEST_EMAIL)
+  const uid =
+    found?.id ??
+    (
+      await okUser(
+        admin.auth.admin.createUser({
+          email: TEST_EMAIL,
+          password: TEST_PASSWORD,
+          email_confirm: true,
+        }),
+        'import-quality createUser',
+      )
+    ).id
+  // The app expects a profiles row (skin/mode live there); create it if the trigger didn't, and
+  // re-assert it every run so the pinned mode is a fact rather than a first-run hope.
   await ok(
     admin
       .from('profiles')
-      .upsert({ id: user.id, display_name: 'Import E2E', skin: 'tryst', mode: 'system' }),
+      .upsert({ id: uid, display_name: 'Import E2E', skin: 'tryst', mode: 'dark' }),
     'import-quality profiles upsert',
   )
 }
@@ -158,6 +184,7 @@ test('Goodreads import: fidelity fixes land in the DB, summary is honest, axe gr
     await expect(page.getByText(/Created \d+ shelves? from your Goodreads shelves/)).toBeVisible()
 
     // axe on the summary surface
+    await expectResolvedMode(page, 'dark', 'import-quality summary surface')
     const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze()
     const serious = axe.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical')
     expect(serious, serious.map((v) => v.id).join(', ')).toHaveLength(0)
@@ -276,7 +303,10 @@ test('imported no-cover books render the honest placeholder (axe green, all swep
       )
       expect(serious, `[${skin}/${mode}] ${serious.map((v) => v.id).join(', ')}`).toHaveLength(0)
     }
-    await dev.sb.from('profiles').update({ skin: 'tryst', mode: 'system' }).eq('id', dev.uid)
+    // Restore the SEEDED pin, not 'system' — leaving the profile resolving through
+    // prefers-color-scheme would hand the next run of the first test the nondeterminism this file
+    // just removed.
+    await dev.sb.from('profiles').update({ skin: 'tryst', mode: 'dark' }).eq('id', dev.uid)
   } finally {
     if (!process.env.SKIP_CLEANUP) await cleanup(dev)
   }
