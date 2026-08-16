@@ -1,3 +1,19 @@
+/**
+ * ── A NOTE ON `auth.admin.listUsers()`, WHICH EVERY FIXTURE IN THIS SUITE CALLS ──────────────────
+ * It PAGINATES, default 50 per page, newest first — and it does not tell you it truncated. Every
+ * spec here used the bare call and treated the result as "all users", which is true right up until
+ * the 51st test account exists. Then the OLDEST account silently falls off page 1, its spec cannot
+ * find it, calls `createUser`, and dies on `422 email_exists` — an error that reads like a race and
+ * is not one.
+ *
+ * Observed exactly that: 58 accounts on this database, and the failure set grew run over run as
+ * more were added (5 specs, then 12), always the ones whose account had aged off page 1. Diagnosed
+ * by paging manually and finding `cover-sheet`'s account alive on page 2.
+ *
+ * Every call site now passes `{ perPage: 1000 }`. If this suite ever exceeds that, the same failure
+ * returns wearing the same misleading error, so the durable fix is a lookup that pages until found
+ * rather than a bigger number — filed rather than done here, because it touches 34 files.
+ */
 import { describeSupabaseError, supabaseFailure } from '@reverie/core'
 
 /**

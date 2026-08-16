@@ -50,7 +50,7 @@ async function ensureTestUser(): Promise<void> {
   const admin = createClient(SUPABASE_URL, SERVICE, {
     auth: { autoRefreshToken: false, persistSession: false },
   })
-  const { data: existing } = await admin.auth.admin.listUsers()
+  const { data: existing } = await admin.auth.admin.listUsers({ perPage: 1000 })
   const found = existing?.users?.find((u) => u.email === TEST_EMAIL)
   const uid =
     found?.id ??

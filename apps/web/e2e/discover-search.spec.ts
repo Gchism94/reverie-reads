@@ -50,7 +50,7 @@ async function ensureUser(): Promise<void> {
   const admin = createClient(SUPABASE_URL, SERVICE, {
     auth: { autoRefreshToken: false, persistSession: false },
   })
-  const { data } = await admin.auth.admin.listUsers()
+  const { data } = await admin.auth.admin.listUsers({ perPage: 1000 })
   let uid = data?.users?.find((u) => u.email === TEST_EMAIL)?.id
   if (!uid) {
     uid = (
