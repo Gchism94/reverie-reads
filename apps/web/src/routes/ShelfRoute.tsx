@@ -148,7 +148,7 @@ function ShelfScreen() {
 
         <div className="flex flex-wrap items-center gap-2">
           <div
-            className="flex rounded-full border border-line p-1"
+            className="flex rounded-[var(--radius-control)] border border-line p-1"
             style={{ background: 'var(--card)' }}
           >
             {(
