@@ -1,10 +1,11 @@
-import { useMemo, useState } from 'react'
-import { createRoute } from '@tanstack/react-router'
+import { useEffect, useMemo, useState } from 'react'
+import { createRoute, useNavigate } from '@tanstack/react-router'
 import { FACET_LABELS, TROPE_FACETS, tropeMatches } from '@reverie/core'
 import { rootRoute } from './RootRoute'
 import { TropeChip } from '../components/TropeChip'
 import { useAllBookTropes, useTropes } from '../data/tropes'
 import { useLabels } from '../skin/labels'
+import { useDebouncedValue } from '../hooks/useDebouncedValue'
 
 /**
  * The tropes index (docs/archive/task-trope-system.md §5): your active vocabulary ordered by usage —
@@ -15,7 +16,21 @@ function TropesScreen() {
   const labels = useLabels()
   const { data: tropes } = useTropes()
   const { data: assignments } = useAllBookTropes()
-  const [q, setQ] = useState('')
+  const navigate = useNavigate()
+  // Local state drives the filtering so typing stays instant; the URL is a slower mirror of it.
+  // Seeded from the param on mount, which is the half that makes back-navigation work — a param
+  // that is written but never read restores nothing.
+  const [q, setQ] = useState(tropesRoute.useSearch().q ?? '')
+  // DEBOUNCED, unlike /shelves' tab: filtering here is instant client-side with no existing timer,
+  // so an un-debounced sync would fire a `replace` on every keystroke.
+  const debouncedQ = useDebouncedValue(q, 300)
+  useEffect(() => {
+    void navigate({
+      to: '/tropes',
+      search: debouncedQ.trim() ? { q: debouncedQ } : {},
+      replace: true,
+    })
+  }, [debouncedQ, navigate])
 
   const usage = useMemo(() => {
     const counts = new Map<string, number>()
@@ -96,5 +111,11 @@ function TropesScreen() {
 export const tropesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'tropes',
+  // Fails CLOSED, like ShelvesRoute's `tab` and storedUserId(): anything that is not a string
+  // resolves to undefined rather than throwing. A validateSearch that throws takes the whole
+  // screen down over a doubled query string in a shared link.
+  validateSearch: (search: Record<string, unknown>): { q?: string } => ({
+    q: typeof search.q === 'string' && search.q.trim() ? search.q : undefined,
+  }),
   component: TropesScreen,
 })

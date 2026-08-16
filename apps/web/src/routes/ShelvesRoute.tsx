@@ -353,11 +353,25 @@ function ShelvesScreen() {
   // fully unmounts this screen and useState would re-initialize on the way back — the reported
   // defect. `undefined` means the default, so /shelves stays the canonical URL and only
   // /shelves?tab=collection carries a param (the AuthRoute ?mode= pattern).
-  const { tab = 'tbr' } = shelvesRoute.useSearch()
+  const search = shelvesRoute.useSearch()
+  const { tab = 'tbr', openListId = null } = search
+  // BOTH writers below spread the current search first. Two params now share one object, and a
+  // naive `search: { tab: t }` drops the other one — switching tabs would collapse the expanded
+  // shelf, and expanding a shelf would reset the tab. Each is a separate clobber, which is why the
+  // e2e asserts both directions rather than one.
   const setTab = (t: Tab) =>
     // replace: true — back should leave the page, not undo a tab click.
-    void navigate({ to: '/shelves', search: t === 'tbr' ? {} : { tab: t }, replace: true })
-  const [openListId, setOpenListId] = useState<string | null>(null)
+    void navigate({
+      to: '/shelves',
+      search: { ...search, tab: t === 'tbr' ? undefined : t },
+      replace: true,
+    })
+  const setOpenListId = (id: string | null) =>
+    void navigate({
+      to: '/shelves',
+      search: { ...search, openListId: id ?? undefined },
+      replace: true,
+    })
   const [pickerFor, setPickerFor] = useState<UiList | null>(null)
   const [externalFor, setExternalFor] = useState<UiList | null>(null)
   const [dragListIdx, setDragListIdx] = useState<number | null>(null)
@@ -637,8 +651,15 @@ export const shelvesRoute = createRoute({
   // Fails CLOSED, like storedUserId(): anything that isn't a known tab resolves to the default
   // rather than throwing. A validateSearch that throws takes the whole screen down over a typo in
   // a shared link, which is a worse outcome than quietly showing the default tab.
-  validateSearch: (search: Record<string, unknown>): { tab?: Tab } => ({
+  validateSearch: (search: Record<string, unknown>): { tab?: Tab; openListId?: string } => ({
     tab: search.tab === 'collection' ? 'collection' : undefined,
+    // Same fail-closed shape. Not validated against the reader's actual lists here: an id for a
+    // deleted or someone else's shelf simply finds nothing at the `openList` lookup below and the
+    // accordion stays shut, which is the same outcome as no param and needs no special case.
+    openListId:
+      typeof search.openListId === 'string' && search.openListId.trim()
+        ? search.openListId
+        : undefined,
   }),
   component: ShelvesScreen,
 })
