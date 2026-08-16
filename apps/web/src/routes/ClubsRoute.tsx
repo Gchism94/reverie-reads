@@ -269,13 +269,25 @@ function ClubsScreen() {
         </div>
       </div>
       {clubs && clubs.length ? (
-        <div className="grid gap-2 sm:grid-cols-2">
+        // `grid-cols-1` is NOT redundant with `grid`, and its absence is what made this page pan
+        // sideways on every phone. A bare `grid` has no column template, so the single implicit
+        // track is `auto`-sized — and an `auto` track floors at its item's automatic minimum size.
+        // Tailwind's `grid-cols-N` expands to `repeat(N, minmax(0, 1fr))` precisely to cap that.
+        // Measured before the fix at a 375 viewport: the grid box was a correct 343px while its
+        // computed `grid-template-columns` was 434.172px — the track wider than the box holding it.
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {clubs.map((c) => (
             <button
               key={c.id}
               type="button"
               onClick={() => openClub(c.id)}
-              className="flex items-center gap-3 skin-panel border border-line p-3 text-left"
+              // `min-w-0` on the GRID ITEM, which is the half the inner `min-w-0` could never do.
+              // This button is a flex container whose text column is `flex-1` (basis 0), and a
+              // flex-basis-0 item contributes its MAX-content width to its container's min-content
+              // size — so the button's minimum was the club title's full unwrapped width, and a grid
+              // item defaults to `min-width: auto`, which refuses to shrink below it. The title
+              // already truncates; it never got the chance, because nothing above it could shrink.
+              className="flex min-w-0 items-center gap-3 skin-panel border border-line p-3 text-left"
               style={{ background: 'var(--card)' }}
             >
               <div
@@ -327,13 +339,16 @@ function ClubsScreen() {
         </div>
       </div>
       {shared && shared.length ? (
-        <div className="grid gap-2 sm:grid-cols-2">
+        // Same grid + grid-item fix as the read-alongs above. This one had not been caught in the
+        // wild only because the audit fixture seeded no shared lists — the markup is identical, so
+        // it carried the identical defect and a long list name would have found it.
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {shared.map((l) => (
             <button
               key={l.code}
               type="button"
               onClick={() => openList(l.code)}
-              className="flex items-center gap-3 skin-panel border border-line p-3 text-left"
+              className="flex min-w-0 items-center gap-3 skin-panel border border-line p-3 text-left"
               style={{ background: 'var(--card)' }}
             >
               <div className="min-w-0 flex-1">
