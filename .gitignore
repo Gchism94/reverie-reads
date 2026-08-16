@@ -50,3 +50,6 @@ design/from-claude-design/**/*.dc.html
 
 # git worktree checkouts — a full second working copy, never repo content
 .worktrees/
+
+# Discovery-audit output (screenshots + report), regenerated on each run — never committed.
+apps/web/audit-output/
