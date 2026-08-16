@@ -1,14 +1,20 @@
 # Visual-misalignment audit — horizontal overflow, clipped text, controls past their box
 
 **Date:** 2026-08-15 · **Branch:** `audit/visual-overflow-sweep` · **Status:** findings 1–3 **FIXED**
-in `fix/clubs-overflow-cover-placeholder`; finding 4 open.
+in `fix/clubs-overflow-cover-placeholder` (#251); finding 4 **closed as a false positive** in
+`fix/club-title-clip` — all four are now resolved and this thread is closed.
 
-| #   | finding                                             | status                                                  |
-| --- | --------------------------------------------------- | ------------------------------------------------------- |
-| 1   | `/clubs` page-level overflow at every phone width   | **fixed** — grid track + grid item, see below           |
-| 2   | `CoverPlaceholder` author line cut off both ends    | **fixed** — `AUTHOR_OVERFLOW` contract                  |
-| 3   | `CoverPlaceholder` title/author overlap in aphelion | **fixed as a side effect of 2** — measured, not assumed |
-| 4   | `/club/:id` 3px hard clip on the title              | **open** — out of scope, lowest priority                |
+**The audit's own hit rate, stated plainly: 3 of 4 findings were real.** The fourth was a classifier
+bug — a probe that recognised only one of the two ways to render an ellipsis. That is worth recording
+next to the findings rather than quietly deleting, because the same probe produced all four, and its
+false-positive mode is now known: it reads `-webkit-line-clamp` as "cut with no affordance".
+
+| #   | finding                                             | status                                                    |
+| --- | --------------------------------------------------- | --------------------------------------------------------- |
+| 1   | `/clubs` page-level overflow at every phone width   | **fixed** — grid track + grid item, see below             |
+| 2   | `CoverPlaceholder` author line cut off both ends    | **fixed** — `AUTHOR_OVERFLOW` contract                    |
+| 3   | `CoverPlaceholder` title/author overlap in aphelion | **fixed as a side effect of 2** — measured, not assumed   |
+| 4   | `/club/:id` 3px hard clip on the title              | **closed — NOT A DEFECT**, the probe was wrong, see below |
 
 **Verified after the fix, with numbers rather than "looks right":**
 
@@ -175,10 +181,46 @@ the container and called its bottom the title's bottom — manufacturing an over
 just containment. Selecting the deepest matching element cleared all three. A measurement can be
 wrong in the direction of finding a defect, not only in the direction of missing one.
 
-### 4. `/club/:id` — a 3px hard clip on the club title
+### 4. `/club/:id` — a 3px hard clip on the club title — CLOSED, NOT A DEFECT
 
-`span`, content 67 cut to 64, no ellipsis. Small, real, and the same _class_ as finding 2 (text cut
-with nothing to signal it) at a scale a reader may never notice. Lowest priority of the four.
+`span`, content 67 cut to 64, "no ellipsis". Investigated in `fix/club-title-clip`. **The finding
+was wrong, and the bug was in this audit's own classifier.**
+
+**What the element actually is.** Not the `<h1>` in `ClubRoute.tsx` that the JSX makes the obvious
+suspect — that measures `scrollWidth 247 = clientWidth 247`, `overflow-x: visible`,
+`white-space: normal`, and wraps rather than clipping. The clipping element is `CoverPlaceholder`'s
+**title** span inside the 80px cover thumbnail (confirmed via the plate's own
+`aria-label "… — placeholder cover"`).
+
+**Why "no ellipsis" was false.** There are two ellipsis mechanisms and the probe tested one.
+`text-overflow: ellipsis` is the single-line one. `-webkit-line-clamp` is the multi-line one, and it
+draws its own ellipsis while leaving `text-overflow` at its initial `clip`. Measured live: the
+element has `-webkit-line-clamp: 3`, `text-overflow: clip`, `scrollHeight 96` vs `clientHeight 41` —
+genuinely truncated **and** genuinely ellipsised. The reader is signalled; the probe could not see
+it. Fixed in `visual-overflow.audit.ts`: a clamped element no longer counts as `hard-clip`.
+
+**What the residual 3px is.** The italic tail of the last glyph hanging past the box. Confirmed
+against the real Fraunces face (`document.fonts.check`, asserted): `overflow-wrap: anywhere` changes
+nothing, `font-style: normal` takes it to 0, and the longest word ("Extremely", 55px) fits the 64px
+box comfortably. It is **not fixable by padding** — measured invariant at exactly 3px for padding
+`0em`, `0.6em` and `1.5em`, because `scrollWidth` tracks `clientWidth` as the box grows: the overhang
+sits outside the padding box, not inside it. No component change ships.
+
+**Two mistakes made and corrected on the way, both worth keeping.** A first diagnosis measured the
+overhang at ~3px and derived a `0.35em` padding fix — but that run had silently rendered the
+_fallback_ serif, because `stubFonts: false` removes the stub without waiting for or verifying the
+download. And a first round of in-page fix trials reported padding as working; every padded trial
+returned `scrollWidth == clientWidth` exactly, which was the tell that the numbers were stale rather
+than good news. Both were caught by re-measuring on a real reload with the font asserted loaded.
+
+**Guard shipped anyway**, because the described defect would be real if it ever happened:
+`placeholder-title-clip.spec.ts` asserts that a truncated plate title always carries an affordance
+(clamp or `text-overflow`), and asserts the fixture still truncates before asserting anything about
+it. Mutation-checked — deleting `WebkitLineClamp` from the cloth-boards plate turns it red.
+
+**Audit numbers, `/club/:id`, all 18 skin × mode combos:** `hard-clip` findings **10 → 0** (58 rows
+measured; the 10 were tryst, marrow, umbra, bloom and hearth in both modes, every one of them a
+clamped-and-ellipsised title). Eight skins were already clean.
 
 ---
 
