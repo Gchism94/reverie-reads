@@ -475,6 +475,7 @@ test.describe('axe sweep', () => {
       //   run 31994806370 (#262)   tryst 1.3m / 1.3m · core 28.0-28.6s · job 8.4m
       //   run 32000050725 (#263)   tryst 1.2m / 1.2m · core 25.5-26.2s · job 8.4m
       //   run 32001881355 (#263)   tryst 1.4m / 1.4m · core 29.6-30.6s · job 8.9m
+      //   run 32002947099 (#263)   tryst 1.3m / 1.3m · core 27.7-28.8s · job 8.3m
       // Local on the same tree: tryst 47.7s/46.2s, core 16.7-17.3s — the ~1.7x CI:local ratio this
       // file already documents, unchanged.
       //
@@ -489,9 +490,11 @@ test.describe('axe sweep', () => {
       // fails a pass that has started waiting on the network again, which is the specific
       // regression that produced this week's five red runs.
       //
-      // Worth a second look if it continues: the three runs read 25.5 -> 28.0 -> 29.6s on the core
-      // set, monotonically. Three points is not a trend and the spread is well inside the budget,
-      // but if a fourth and fifth keep climbing, that is a real signal and not variance.
+      // A climb was suspected and is RULED OUT, recorded so nobody re-opens it: the first three
+      // runs read 25.5 -> 28.0 -> 29.6s on the core set, monotonically, which looked like drift.
+      // The fourth came back at 27.7s. It is variance around ~28s, not a trend — and three
+      // consecutive points in one direction is exactly what variance looks like often enough that
+      // it is not evidence on its own.
       test.setTimeout(full ? 240_000 : 90_000)
       await preparePage(page)
       const all = routesFor(fx)
