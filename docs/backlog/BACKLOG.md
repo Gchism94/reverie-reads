@@ -886,6 +886,19 @@ the repo goes public.
   that a real cover painted. Filed, not fixed — the judgment call is whether e2e should
   duplicate the component guard or trust it. The `src`-only assertions are _correct for what
   they test_ (cover-sheet selection logic); the gap is that nothing tests the other half.
+- ~~**Split the a11y sweep into per-skin jobs.**~~ **DONE** — built in `chore/a11y-timeout-raise`
+  rather than filed, once a second timeout raise proved the number was the wrong lever.
+  The sweep was ONE test looping ten skin x mode passes, so a single `test.setTimeout` covered ~104
+  axe scans: a slow runner spent the whole budget at once and the failure named the sweep, not a
+  skin. Measured across one evening on the same unchanged spec: 8m36s green, then 12.9m, 15.1m and
+  18.5m — blowing a 720s cap, then an 1080s cap, then a 20-minute JOB cap underneath it.
+  Now one test per pass with its own budget (8m for tryst's two full-route passes, 4m for the eight
+  core passes), fixtures created once in `beforeAll` so the split does not pay setup ten times.
+  Measured after: worst pass 4.7m against its 8m budget, core passes ~18s against 4m — 12 passed in
+  11.9m. The registry coverage guarantee moved from a runtime `visited` set to a plan-level
+  assertion, which is stronger: it holds on a `--grep`'d run and fails at collection rather than
+  after ten minutes of scanning.
+
 - **`route-viewport.spec.ts` covers no signed-out surface.** The 24-route list
   (`apps/web/e2e/route-viewport.spec.ts:250-276`) signs in first (`await signIn(page, …)`, line 248) and then walks `/`, `/library`, … `/welcome`, `/onboarding`, plus a resolved trope detail.
   But `/welcome` and `/onboarding` redirect-or-render for a _signed-in_ reader; the genuinely
