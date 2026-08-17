@@ -13,7 +13,14 @@ import { BackLink } from '../components/BackLink'
 import { CoverImage } from '../components/CoverImage'
 import { TropeChip } from '../components/TropeChip'
 import { useBooks } from '../data/books'
-import { useAllBookTropes, useAssignTrope, useTropes, useUnassignTrope } from '../data/tropes'
+import {
+  useAllBookTropes,
+  useAssignTrope,
+  useDeletePersonalTrope,
+  useRenamePersonalTrope,
+  useTropes,
+  useUnassignTrope,
+} from '../data/tropes'
 import { useLabels, useVoice } from '../skin/labels'
 import { useConfirmedLookup } from '../hooks/useConfirmedLookup'
 
@@ -25,6 +32,8 @@ import { useConfirmedLookup } from '../hooks/useConfirmedLookup'
 function TropeScreen() {
   const { tropeId } = tropeRoute.useParams()
   const navigate = useNavigate()
+  const rename = useRenamePersonalTrope()
+  const deleteTrope = useDeletePersonalTrope()
   const labels = useLabels()
   const { data: books } = useBooks()
   const tropesQuery = useTropes()
@@ -111,6 +120,48 @@ function TropeScreen() {
             You own {owned}, read {read}
             {carriers.length !== owned ? ` — ${carriers.length} carrying it in all` : ''}
           </p>
+          {/* Rename and delete, PERSONAL tropes only. Canonical names are shared vocabulary — the
+              seed migration is generated from SEED_TROPES and a parity test pins the two together,
+              so a local edit would put this library out of step with the source of truth. Both
+              hooks also refuse canonical rows at the query, so this condition is the affordance
+              rather than the enforcement. */}
+          {trope.personal && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const next = window.prompt(`Rename “${trope.name}” to:`, trope.name)
+                  if (next?.trim()) rename.mutate({ id: trope.id, name: next })
+                }}
+                className="skin-control border border-line px-3 py-1.5 text-[12.5px] font-semibold text-ink"
+                style={{ background: 'var(--card)' }}
+              >
+                Rename
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  // The carrier count is already computed above for the header, so the confirm can
+                  // say what actually goes — book_tropes cascades on the trope delete, so this
+                  // removes the tag from every one of them. A tag vanishing from eleven books
+                  // deserves to say "eleven" BEFORE it happens.
+                  const n = carriers.length
+                  const scope =
+                    n === 0
+                      ? 'It is not on any books.'
+                      : `It will be removed from ${n} book${n === 1 ? '' : 's'}.`
+                  if (window.confirm(`Delete “${trope.name}”? ${scope} This cannot be undone.`))
+                    deleteTrope.mutate(trope.id, {
+                      onSuccess: () => void navigate({ to: '/tropes' }),
+                    })
+                }}
+                className="skin-control border border-line px-3 py-1.5 text-[12.5px] font-semibold text-primary"
+                style={{ background: 'var(--card)' }}
+              >
+                Delete
+              </button>
+            </div>
+          )}
           {kin.length > 0 && (
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
               <span className="text-[12px] text-muted">You pair this with</span>
