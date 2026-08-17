@@ -20,6 +20,7 @@ import {
   useAssignTrope,
   useCreatePersonalTrope,
   useFetchSuggestions,
+  useRenamePersonalTrope,
   useResolveSuggestion,
   useSuggestions,
   useTropes,
@@ -42,6 +43,7 @@ export function TropePicker({ book, onClose }: { book: Book; onClose: () => void
   const assign = useAssignTrope()
   const unassign = useUnassignTrope()
   const createPersonal = useCreatePersonalTrope()
+  const rename = useRenamePersonalTrope()
   const fetchSuggestions = useFetchSuggestions()
   const resolveSuggestion = useResolveSuggestion()
 
@@ -228,13 +230,32 @@ export function TropePicker({ book, onClose }: { book: Book; onClose: () => void
             </div>
             <div className="flex flex-wrap gap-1.5">
               {group.slice(0, q ? 40 : 16).map((t) => (
-                <TropeChip
-                  key={t.id}
-                  name={t.name}
-                  emphasis={onBook.get(t.id) ?? 'off'}
-                  onClick={() => cycle(t.id)}
-                  title={t.personal ? `${t.name} (yours)` : t.name}
-                />
+                <span key={t.id} className="inline-flex items-center gap-1">
+                  <TropeChip
+                    name={t.name}
+                    emphasis={onBook.get(t.id) ?? 'off'}
+                    onClick={() => cycle(t.id)}
+                    title={t.personal ? `${t.name} (yours)` : t.name}
+                  />
+                  {/* Rename is offered for PERSONAL tropes only. Canonical names are shared
+                      vocabulary generated from SEED_TROPES, so renaming one locally would put this
+                      library out of step with the source of truth — the hook refuses them at the
+                      query too, rather than trusting this condition to be the only guard. */}
+                  {t.personal && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next = window.prompt(`Rename “${t.name}” to:`, t.name)
+                        if (next?.trim()) rename.mutate({ id: t.id, name: next })
+                      }}
+                      aria-label={`Rename ${t.name}`}
+                      title={`Rename ${t.name}`}
+                      className="text-[11px] text-muted hover:text-primary"
+                    >
+                      ✎
+                    </button>
+                  )}
+                </span>
               ))}
             </div>
           </div>
