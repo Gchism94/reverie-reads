@@ -28,6 +28,7 @@ import { Modal } from '../components/Modal'
 import { BookmarkGlyph } from '../components/BookmarkGlyph'
 import { Switch } from '../components/Switch'
 import { useProfile, useUpdateProfile } from '../data/profile'
+import { Surface } from '../components/Surface'
 
 type Tab = 'tbr' | 'collection'
 
@@ -106,10 +107,13 @@ function ListModal({
             const b = byId.get(id)
             if (!b) return null
             return (
-              <li
+              <Surface
+                as="li"
                 key={id}
-                className="flex items-center gap-2 skin-card border border-line px-3 py-2"
-                style={{ background: 'var(--field)' }}
+                radius="card"
+                tone="field"
+                pad={0}
+                className="flex items-center gap-2 px-3 py-2"
               >
                 <span className="flex flex-col">
                   <button
@@ -152,7 +156,7 @@ function ListModal({
                 >
                   remove
                 </button>
-              </li>
+              </Surface>
             )
           })}
         </ul>
@@ -253,9 +257,15 @@ function DerivedShelves({
       <p className="mb-4 text-[12px] text-muted">{COPY.overlap}</p>
 
       {sections.length === 0 ? (
-        <p className="skin-panel border border-line p-6 text-center text-[14px] text-muted">
+        <Surface
+          as="p"
+          radius="panel"
+          tone="bare"
+          pad={5}
+          className="text-center text-[14px] text-muted"
+        >
           {COPY.groupEmpty}
-        </p>
+        </Surface>
       ) : (
         <div className="flex flex-col gap-7">
           {sections.map((section) => (
@@ -578,7 +588,13 @@ function ShelvesScreen() {
                     addLabel={`Add a book to ${l.name}`}
                   />
                 ) : (
-                  <p className="skin-panel border border-line p-4 text-[13px] text-muted">
+                  <Surface
+                    as="p"
+                    radius="panel"
+                    tone="bare"
+                    pad={3}
+                    className="text-[13px] text-muted"
+                  >
                     No books yet —{' '}
                     <button
                       type="button"
@@ -588,16 +604,22 @@ function ShelvesScreen() {
                       add the first
                     </button>
                     .
-                  </p>
+                  </Surface>
                 )}
               </div>
             )
           })}
         </div>
       ) : (
-        <p className="skin-panel border border-line p-6 text-center text-[14px] text-muted">
+        <Surface
+          as="p"
+          radius="panel"
+          tone="bare"
+          pad={5}
+          className="text-center text-[14px] text-muted"
+        >
           No {tab === 'tbr' ? 'TBRs' : 'collections'} yet — hit ＋ New.
-        </p>
+        </Surface>
       )}
 
       {openList && (
