@@ -356,7 +356,17 @@ function AddForm({
     }
     // Dedup on intake: a strong match folds into the existing record instead of duplicating.
     // With auto-merge off, a match comes back for an inline decision instead.
-    const res = await intake(book, 'add')
+    //
+    // 'review', not 'add', and the difference is only ever the FUZZY tier — decideIntake consults
+    // fuzzyMode on its last line, after `none`, the always_merge/keep_separate verdicts and the
+    // strong-match branch have each already returned. Strong-match auto-merge is untouched by this.
+    //
+    // What it fixes: a fuzzy title/author match used to fall through to a silent insert, so adding
+    // "The Hobbit" next to an existing "Hobbit, The" quietly produced a second row. The review UI
+    // for exactly this decision already existed and was already wired up below (`setDup`, and the
+    // `dup && …` block) — it was simply unreachable from single-Add, because this argument said to
+    // skip it. Import and bulk paths already ask.
+    const res = await intake(book, 'review')
     if (res.outcome === 'review' && res.review) {
       setDup(res.review)
       return
