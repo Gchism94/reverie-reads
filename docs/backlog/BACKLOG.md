@@ -886,22 +886,18 @@ the repo goes public.
   that a real cover painted. Filed, not fixed — the judgment call is whether e2e should
   duplicate the component guard or trust it. The `src`-only assertions are _correct for what
   they test_ (cover-sheet selection logic); the gap is that nothing tests the other half.
-- **Split the a11y sweep into per-skin jobs.** `a11y.spec.ts` runs all ten skin x mode passes inside
-  ONE Playwright test, so its `test.setTimeout` is a single budget covering the whole sweep — and one
-  slow runner spends all of it at once. Measured on CI, same suite, ~16 hours apart: 8m36s and green
-  (PR #255, 07:09Z), then 12.9m and 15.1m, both TIMED OUT at the 720s ceiling (PR #258, 22:55Z and a
-  23:10Z rerun). The branch that failed does not touch `a11y.spec.ts` at all, so the change was the
-  environment, not the test.
-  Raised to 1080s as a **stopgap** (`chore/a11y-timeout-raise`), and that is explicitly not a fix:
-  15m observed against an 18m ceiling is thin, the next runner regression eats it, and this is
-  already the second raise (600 -> 720 -> 1080). A third would be an admission that the number is
-  the wrong lever.
-  The durable shape is one test (or one CI job) per skin, so a slowdown costs one pass rather than
-  the sweep, failures name the skin that broke, and passes stay independently attributable. It is
-  real work — the spec shares `setupFixtures`, one dev profile and a serial `setProfileSkinMode`
-  across passes, so splitting means deciding whether each job re-seeds or shares, which is the same
-  fixture-isolation question the per-project user migration just worked through. Not a quick
-  dispatch.
+- ~~**Split the a11y sweep into per-skin jobs.**~~ **DONE** — built in `chore/a11y-timeout-raise`
+  rather than filed, once a second timeout raise proved the number was the wrong lever.
+  The sweep was ONE test looping ten skin x mode passes, so a single `test.setTimeout` covered ~104
+  axe scans: a slow runner spent the whole budget at once and the failure named the sweep, not a
+  skin. Measured across one evening on the same unchanged spec: 8m36s green, then 12.9m, 15.1m and
+  18.5m — blowing a 720s cap, then an 1080s cap, then a 20-minute JOB cap underneath it.
+  Now one test per pass with its own budget (8m for tryst's two full-route passes, 4m for the eight
+  core passes), fixtures created once in `beforeAll` so the split does not pay setup ten times.
+  Measured after: worst pass 4.7m against its 8m budget, core passes ~18s against 4m — 12 passed in
+  11.9m. The registry coverage guarantee moved from a runtime `visited` set to a plan-level
+  assertion, which is stronger: it holds on a `--grep`'d run and fails at collection rather than
+  after ten minutes of scanning.
 
 - **`route-viewport.spec.ts` covers no signed-out surface.** The 24-route list
   (`apps/web/e2e/route-viewport.spec.ts:250-276`) signs in first (`await signIn(page, …)`, line 248) and then walks `/`, `/library`, … `/welcome`, `/onboarding`, plus a resolved trope detail.
