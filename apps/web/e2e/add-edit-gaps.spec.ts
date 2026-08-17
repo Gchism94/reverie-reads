@@ -18,7 +18,14 @@ const ANON =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0'
 const SERVICE =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU'
-const EMAIL = 'add-edit-gaps-e2e@reverie.local'
+// PER-PROJECT ISOLATION. `rest` and `mobile` run this file concurrently (it is not in mobile's
+// testIgnore), and both raced one shared account: each calls listUsers(), each sees no such user,
+// each calls createUser(), and the loser gets `422 email_exists` before a single assertion runs.
+// Observed on a full-suite run as 2 failures with that exact error. Scoping the account by project
+// name removes the shared state instead of timing around it — the same fix scroll-restoration and
+// the search-param specs already carry.
+const PROJECT = (): string => test.info().project.name
+const EMAIL = () => `add-edit-gaps-${PROJECT()}-e2e@reverie.local`
 const PASSWORD = 'add-edit-gaps-e2e-password'
 
 test.describe.configure({ mode: 'serial' })
@@ -28,18 +35,19 @@ type Client = {
   session: { access_token: string; refresh_token: string }
   uid: string
 }
-let shared: Client | null = null
+const shared = new Map<string, Client>()
 async function client(): Promise<Client> {
-  if (shared) return shared
+  const cached = shared.get(PROJECT())
+  if (cached) return cached
   const admin = createClient(SUPABASE_URL, SERVICE, {
     auth: { autoRefreshToken: false, persistSession: false },
   })
-  const { data } = await admin.auth.admin.listUsers()
-  let uid = data?.users?.find((u) => u.email === EMAIL)?.id
+  const { data } = await admin.auth.admin.listUsers({ perPage: 1000 })
+  let uid = data?.users?.find((u) => u.email === EMAIL())?.id
   if (!uid)
     uid = (
       await okUser(
-        admin.auth.admin.createUser({ email: EMAIL, password: PASSWORD, email_confirm: true }),
+        admin.auth.admin.createUser({ email: EMAIL(), password: PASSWORD, email_confirm: true }),
         'add-edit-gaps auth createUser',
       )
     ).id
@@ -50,10 +58,14 @@ async function client(): Promise<Client> {
     'add-edit-gaps profiles upsert',
   )
   const sb = createClient(SUPABASE_URL, ANON)
-  const { data: s, error } = await sb.auth.signInWithPassword({ email: EMAIL, password: PASSWORD })
-  if (error || !s.session) throw new Error(authFailure('add-edit-gaps', EMAIL, error))
-  shared = { sb, session: s.session, uid: s.session.user.id }
-  return shared
+  const { data: s, error } = await sb.auth.signInWithPassword({
+    email: EMAIL(),
+    password: PASSWORD,
+  })
+  if (error || !s.session) throw new Error(authFailure('add-edit-gaps', EMAIL(), error))
+  const c = { sb, session: s.session, uid: s.session.user.id }
+  shared.set(PROJECT(), c)
+  return c
 }
 
 async function reset(c: Client) {

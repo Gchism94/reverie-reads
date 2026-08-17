@@ -60,7 +60,7 @@ async function setup(): Promise<Ctx> {
   const admin = createClient(SUPABASE_URL, SERVICE, {
     auth: { autoRefreshToken: false, persistSession: false },
   })
-  const { data } = await admin.auth.admin.listUsers()
+  const { data } = await admin.auth.admin.listUsers({ perPage: 1000 })
   let uid = data?.users?.find((u) => u.email === EMAIL)?.id
   if (!uid) {
     uid = (
@@ -897,7 +897,7 @@ async function setupRing(): Promise<RingCtx> {
   })
   const EMAIL2 = 'spine-ring-e2e@reverie.local'
   const PASSWORD2 = 'spine-ring-e2e-password'
-  const { data } = await admin.auth.admin.listUsers()
+  const { data } = await admin.auth.admin.listUsers({ perPage: 1000 })
   let uid = data?.users?.find((u) => u.email === EMAIL2)?.id
   if (!uid) {
     uid = (
