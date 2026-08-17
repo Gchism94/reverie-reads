@@ -468,23 +468,30 @@ test.describe('axe sweep', () => {
       // scans in a fraction of the time, and the old ceilings stopped being tripwires: 12m against
       // 1.3m is 9x, which absorbs almost anything rather than catching it.
       //
-      // MEASURED, not derived — read off TWO independent CI runs rather than one, because a budget
-      // taken from a single observation is the guess-wearing-a-ratchet's-clothes this repo has been
-      // bitten by before:
+      // MEASURED, not derived — read off THREE independent CI runs, because a budget taken from a
+      // single observation is the guess-wearing-a-ratchet's-clothes this repo has been bitten by
+      // before. The third run is why there are three: it came in slower than the first two and blew
+      // past the "worst observed" the first draft of this comment had written down.
       //   run 31994806370 (#262)   tryst 1.3m / 1.3m · core 28.0-28.6s · job 8.4m
       //   run 32000050725 (#263)   tryst 1.2m / 1.2m · core 25.5-26.2s · job 8.4m
+      //   run 32001881355 (#263)   tryst 1.4m / 1.4m · core 29.6-30.6s · job 8.9m
       // Local on the same tree: tryst 47.7s/46.2s, core 16.7-17.3s — the ~1.7x CI:local ratio this
       // file already documents, unchanged.
       //
-      // 240s and 90s are ~3.1x the WORST observed value across both runs (78s and 28.6s), not the
-      // median. One ratio for both budgets, so they cannot drift apart the way 12m-vs-4m did.
-      // Why 3.1x and not tighter: run-to-run spread on these passes is ~8% for tryst (72-78s) and
-      // ~12% for the core set (25.5-28.6s) — within a run they are far tighter, ±2%, but it is the
-      // BETWEEN-run number that a ceiling has to tolerate. 3.1x clears 12% with room, while the
+      // 240s and 90s are ~2.9x the WORST value across all three runs (84s and 30.6s), not the
+      // median, and one ratio for both so they cannot drift apart the way 12m-vs-4m did.
+      // Why ~2.9x and not tighter: between-run spread is 17% for tryst (72-84s) and 20% for the
+      // core set (25.5-30.6s). Within a run they are far tighter — the eight core passes land
+      // inside 1s of each other every time — but it is the BETWEEN-run number a ceiling has to
+      // tolerate, and two runs badly understated it. 2.9x clears 20% with room, while the
       // saturation events this ceiling exists to catch are far larger (workers=2 costs ~1.5x;
-      // workers=4 blew a 600s cap on a sweep whose normal was ~390s). Why not looser: 3.1x still
+      // workers=4 blew a 600s cap on a sweep whose normal was ~390s). Why not looser: 2.9x still
       // fails a pass that has started waiting on the network again, which is the specific
       // regression that produced this week's five red runs.
+      //
+      // Worth a second look if it continues: the three runs read 25.5 -> 28.0 -> 29.6s on the core
+      // set, monotonically. Three points is not a trend and the spread is well inside the budget,
+      // but if a fourth and fifth keep climbing, that is a real signal and not variance.
       test.setTimeout(full ? 240_000 : 90_000)
       await preparePage(page)
       const all = routesFor(fx)
