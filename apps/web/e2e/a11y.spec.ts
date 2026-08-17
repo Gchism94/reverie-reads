@@ -350,45 +350,10 @@ test.describe('axe sweep', () => {
   async function preparePage(page: Page) {
     await signIn(page)
 
-    // ── Every third-party IMAGE is fulfilled locally. This is the sweep's single largest cost ────
-    // The seeded library's covers are real hotlinks to 13 distinct commercial hosts
-    // (m.media-amazon.com 168 of 290 books, prodimage.images-bn.com 75, encrypted-tbn0.gstatic.com
-    // 35, then a long tail of one-offs), and discoverCurated.ts adds 35 more to
-    // covers.openlibrary.org on the Discover fallback path. That is ~200 live requests per
-    // full-route pass, and the navigation below waits for all of them twice over —
-    // `waitUntil:'load'` blocks on subresources, then `networkidle` blocks again.
-    //
-    // So a single unreachable host does not slow the sweep, it STOPS it: the request sits until
-    // Chrome's connection timeout with no per-action budget to cut it short, and the pass burns its
-    // whole allowance on one route. Measured exactly that on 2878a2e — 55 of ~200 requests dead
-    // (prodimage.images-bn.com 41/41, covers.openlibrary.org 14/14), one navigation to
-    // /series/A11y%20Saga alone consuming 407.8s of an 8m budget while every other route in the
-    // same pass navigated in ~1s.
-    //
-    // Matched by RESOURCE TYPE, not by host. A host allowlist is what the two specs that already do
-    // this (cover-sourcing, discover-curated) use, and it only ever names the host that broke last
-    // time — it would not have caught B&N, and it will not catch the 14th host. `resourceType` is
-    // the browser's own classification of what it is fetching, so it covers every current host, any
-    // future one, and query-string URLs that no extension match would catch.
-    //
-    // Registered FIRST so it matches LAST: Playwright tries handlers in reverse registration order,
-    // so the specific JSON stubs below still claim their URLs, and this only sees what they leave.
-    // Non-images fall through untouched rather than being swallowed.
-    const PNG_1X1 = Buffer.from(
-      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
-      'base64',
-    )
-    await page.route(
-      (url) =>
-        (url.protocol === 'http:' || url.protocol === 'https:') &&
-        url.hostname !== 'localhost' &&
-        url.hostname !== '127.0.0.1',
-      (route) => {
-        if (route.request().resourceType() === 'image')
-          return route.fulfill({ contentType: 'image/png', body: PNG_1X1 })
-        return route.fallback()
-      },
-    )
+    // Third-party cover images are stubbed suite-wide by `support/fixtures.ts`'s `page` fixture —
+    // this sweep's ~200 live cover requests per full-route pass are what proved the need, and the
+    // stub lived here first (#262) before the CI cost/value audit found `rest` and `mobile` had
+    // gone red from the identical class a week earlier. Do not re-add a local copy.
 
     // Discover browses an external catalog — stub it so the sweep is deterministic and offline-safe.
     // Covers point at the self-hosted landing thumbs, so the populated grid renders with zero
@@ -497,10 +462,40 @@ test.describe('axe sweep', () => {
       // the sweep no longer dies as one anonymous timeout, it names tryst/dark and tryst/light and
       // leaves the other eight passes reporting normally.
       //
-      // 12m for the full passes is ~45% headroom over the observed 8.2m. Unlike the two raises this
-      // replaced, it is scoped to the 2 tests that need it — the other 8 keep a 4m ceiling against a
-      // ~40s runtime, so the tripwire stays sharp exactly where it can still catch something.
-      test.setTimeout(full ? 720_000 : 240_000)
+      // RETIGHTENED after #262 removed the dead-host stall. 12m/4m were sized against an 8.2m tryst
+      // pass that was 8.2m only because ~200 live cover requests were being waited out, 55 of them
+      // to hosts that had stopped answering. With those stubbed the same pass does the same 104
+      // scans in a fraction of the time, and the old ceilings stopped being tripwires: 12m against
+      // 1.3m is 9x, which absorbs almost anything rather than catching it.
+      //
+      // MEASURED, not derived — read off THREE independent CI runs, because a budget taken from a
+      // single observation is the guess-wearing-a-ratchet's-clothes this repo has been bitten by
+      // before. The third run is why there are three: it came in slower than the first two and blew
+      // past the "worst observed" the first draft of this comment had written down.
+      //   run 31994806370 (#262)   tryst 1.3m / 1.3m · core 28.0-28.6s · job 8.4m
+      //   run 32000050725 (#263)   tryst 1.2m / 1.2m · core 25.5-26.2s · job 8.4m
+      //   run 32001881355 (#263)   tryst 1.4m / 1.4m · core 29.6-30.6s · job 8.9m
+      //   run 32002947099 (#263)   tryst 1.3m / 1.3m · core 27.7-28.8s · job 8.3m
+      // Local on the same tree: tryst 47.7s/46.2s, core 16.7-17.3s — the ~1.7x CI:local ratio this
+      // file already documents, unchanged.
+      //
+      // 240s and 90s are ~2.9x the WORST value across all three runs (84s and 30.6s), not the
+      // median, and one ratio for both so they cannot drift apart the way 12m-vs-4m did.
+      // Why ~2.9x and not tighter: between-run spread is 17% for tryst (72-84s) and 20% for the
+      // core set (25.5-30.6s). Within a run they are far tighter — the eight core passes land
+      // inside 1s of each other every time — but it is the BETWEEN-run number a ceiling has to
+      // tolerate, and two runs badly understated it. 2.9x clears 20% with room, while the
+      // saturation events this ceiling exists to catch are far larger (workers=2 costs ~1.5x;
+      // workers=4 blew a 600s cap on a sweep whose normal was ~390s). Why not looser: 2.9x still
+      // fails a pass that has started waiting on the network again, which is the specific
+      // regression that produced this week's five red runs.
+      //
+      // A climb was suspected and is RULED OUT, recorded so nobody re-opens it: the first three
+      // runs read 25.5 -> 28.0 -> 29.6s on the core set, monotonically, which looked like drift.
+      // The fourth came back at 27.7s. It is variance around ~28s, not a trend — and three
+      // consecutive points in one direction is exactly what variance looks like often enough that
+      // it is not evidence on its own.
+      test.setTimeout(full ? 240_000 : 90_000)
       await preparePage(page)
       const all = routesFor(fx)
       const routes = full ? all : all.filter(([name]) => CORE.includes(name))
