@@ -226,6 +226,7 @@ repo has been bitten by before:
 | CI run `31994806370` (#262) | 1.3m / 1.3m       | 28.0–28.6s  | 8.4m      |
 | CI run `32000050725` (#263) | 1.2m / 1.2m       | 25.5–26.2s  | 8.4m      |
 | CI run `32001881355` (#263) | 1.4m / 1.4m       | 29.6–30.6s  | 8.9m      |
+| CI run `32002947099` (#263) | 1.3m / 1.3m       | 27.7–28.8s  | 8.3m      |
 | local, same tree            | 47.7s / 46.2s     | 16.7–17.3s  | —         |
 
 Both new per-pass ceilings are **~2.9× the worst value across all three runs** (84s and 30.6s), not
@@ -242,9 +243,11 @@ saturation events it exists to catch are far larger (`workers=2` ≈ 1.5×; `wor
 on a sweep whose normal was ~390s) — but "worst of two" was a guess wearing a measurement's clothes,
 which is exactly the failure mode the ratchet rule names.
 
-**One thing to watch rather than conclude:** the three runs read 25.5 → 28.0 → 29.6s on the core
-set, monotonically. Three points is not a trend and the spread sits well inside the budget. If a
-fourth and fifth keep climbing, that is a real signal.
+**A suspected climb, ruled out — recorded so nobody re-opens it.** The first three runs read
+25.5 → 28.0 → 29.6s on the core set, monotonically, which looked like drift worth watching. The
+fourth came back at 27.7s. It is variance around ~28s, not a trend. Worth keeping as a small
+methodological note: three consecutive points in one direction is common enough under pure variance
+that it is not evidence on its own, and the draft that flagged it was over-reading the data.
 
 The job cap is 1.8× rather than 3.1× on purpose: it also covers fixed setup that does not scale
 with a starved worker pool, so sizing it by the same ratio would make it fire first and mask which
