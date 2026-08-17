@@ -143,6 +143,20 @@ in the test body, and Playwright matches handlers in **reverse** registration or
 fixture-level stub registered first is matched last and never displaces them. A `stubCoverImages`
 opt-out mirrors `stubFonts` for any future spec whose subject is real image delivery.
 
+**Verified on CI run `32000050725`: all seven jobs green**, `e2e` 11.8m and `e2e-mobile` 11.5m — the
+two projects that had never carried this stub before. `a11y` stayed at 8.4m with its local copy
+removed, confirming the fixture reaches it.
+
+**A local-verification detour worth recording, because it looked exactly like this change breaking
+the suite.** The first full local run after the move came back **22 failed**. It was not this
+change. Every failure was `422 email_exists` thrown from `admin.auth.admin.listUsers()` — a
+Node-side call with no `page` object in it, which a `page.route` cannot reach — and the affected
+accounts sat at rows 52/57/58/60 of 61, newest-first, past `listUsers`' default 50-per-page limit.
+The fix for that (`03cea04`, `{ perPage: 1000 }`) is **stranded on the unmerged #258** and is on
+neither `main` nor this branch. On CI, which builds a fresh database per run, the identical tree is
+green. The tell that separated the two causes in seconds rather than a bisect: the failures were all
+~150–300ms, i.e. in fixture setup, before any page load.
+
 ### 7.2 Thin `e2e-mobile` to the viewport-sensitive family — **DONE, and it overturns a prior decision**
 
 **The disagreement, stated plainly.** `docs/audits/e2e-mobile-viewport.md` §2 set the opposite
@@ -191,10 +205,56 @@ ran the full suite at a mobile viewport, which is now nothing automatic. There i
 such a defect in 17 days of history, and the prior audit found none at introduction either. That is
 the risk being accepted, and the nightly option above is the cheapest way to buy it back.
 
+**Measured after, and the audit's own estimate was wrong.** 121 tests → 26, across 7 spec files;
+`rest` untouched at 130. `e2e-mobile` on CI: **11.5m → 6.3m** (runs `32000050725` → `32000903462`,
+all seven jobs green in both). The audit predicted "~8–9 runner-minutes"; the real saving is
+**5.2m**, because ~1.9m of the job is fixed setup that does not shrink (checkout, pnpm install,
+Playwright cache, Supabase start) and the specs kept — `spine-shelf-reachability` and
+`route-viewport` — are among the slowest in the suite. The estimate is left visible rather than
+edited away: it was derived from test count, and test count is not runtime.
+
 ### 7.3 Retighten `e2e-a11y`'s tripwires — **DONE**
 
-See the commit for the numbers and their derivation, in the shape `c157c1b` set: a budget is a
-measurement taken from the tree, never a calculation.
+Per-pass `test.setTimeout` **720s/240s → 240s/90s**; job `timeout-minutes` **30 → 15**.
+
+Taken from measurement, in the shape `c157c1b` set — and from **two** independent CI runs rather
+than one, since a budget from a single observation is the guess-wearing-a-ratchet's-clothes this
+repo has been bitten by before:
+
+| source                      | tryst full passes | core passes | whole job |
+| --------------------------- | ----------------- | ----------- | --------- |
+| CI run `31994806370` (#262) | 1.3m / 1.3m       | 28.0–28.6s  | 8.4m      |
+| CI run `32000050725` (#263) | 1.2m / 1.2m       | 25.5–26.2s  | 8.4m      |
+| CI run `32001881355` (#263) | 1.4m / 1.4m       | 29.6–30.6s  | 8.9m      |
+| local, same tree            | 47.7s / 46.2s     | 16.7–17.3s  | —         |
+
+Both new per-pass ceilings are **~2.9× the worst value across all three runs** (84s and 30.6s), not
+the median, and deliberately the same ratio so the two cannot drift apart the way 12m-vs-4m did.
+
+**The measurement was corrected twice, and both corrections are the point.** The first draft
+justified the ratio against "±3.5% variance" — the _within-run_ spread across the eight core
+passes, which is not what a ceiling has to tolerate. Restating it against _between-run_ spread from
+two runs gave ~8%/~12% and a 3.1× ratio. Then the third run came in slower than either
+(tryst 1.4m, core 29.6–30.6s) and exceeded the "worst observed" both earlier drafts were written
+against, putting the real between-run spread at **17% for tryst and 20% for the core set** and the
+real ratio at 2.9×. Two runs badly understated it. The budget still clears 20% with room, and the
+saturation events it exists to catch are far larger (`workers=2` ≈ 1.5×; `workers=4` blew a 600s cap
+on a sweep whose normal was ~390s) — but "worst of two" was a guess wearing a measurement's clothes,
+which is exactly the failure mode the ratchet rule names.
+
+**One thing to watch rather than conclude:** the three runs read 25.5 → 28.0 → 29.6s on the core
+set, monotonically. Three points is not a trend and the spread sits well inside the budget. If a
+fourth and fifth keep climbing, that is a real signal.
+
+The job cap is 1.8× rather than 3.1× on purpose: it also covers fixed setup that does not scale
+with a starved worker pool, so sizing it by the same ratio would make it fire first and mask which
+pass went slow. The per-pass budgets are the sharp tripwire; the job cap is the backstop against a
+hung runner slot.
+
+**A related cap this audit did not touch:** `e2e-mobile` now runs 6.3m against a 20m
+`timeout-minutes` — 3.2× slack, the same dulled-tripwire shape §1 flags on five other jobs. It was
+left alone because §7.3's scope was `e2e-a11y`, and because one run is not yet enough measurement
+to set it. It should be retightened once `e2e-mobile` has a few runs at its new size.
 
 ### 7.4 Leave `changes`, `secrets`, `gate`, `e2e`, `pgtap` alone — **decision recorded, no action**
 
