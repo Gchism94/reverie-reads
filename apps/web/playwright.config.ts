@@ -109,8 +109,40 @@ export default defineConfig({
     { name: 'a11y', testMatch: /a11y\.spec\.ts$/, use: { ...devices['Desktop Chrome'] } },
     { name: 'rest', testIgnore: /a11y\.spec\.ts$/, use: { ...devices['Desktop Chrome'] } },
     {
+      // ── An ALLOWLIST, not a blocklist — and that inversion is a decision, recorded ─────────────
+      // This was `testIgnore: /a11y|series-builder|shelf-regressions/`, i.e. "run everything at
+      // 390×844 unless it is a desktop-only pointer mechanic", per docs/audits/e2e-mobile-viewport.md
+      // §2. That criterion made this project 32 of `rest`'s 34 spec files — 121 of 130 tests, 94% —
+      // and the second-longest job in the suite at 10.7m median.
+      //
+      // The CI cost/value audit (docs/audits/ci-suite-cost-value-audit.md §7.2) measured what that
+      // bought over 17 days: `e2e-mobile`'s ONLY unique catches were route-viewport (#140) and
+      // spine-shelf-reachability (#148, #149). Its other three reds duplicated failures `rest`
+      // caught in the SAME run. And e2e-mobile-viewport.md's own §4 found zero mobile-only failures
+      // at introduction, concluding the CRUD/import/routing/offline-cache surface is "provably
+      // viewport-agnostic today" — re-running a provably viewport-agnostic surface is redundant by
+      // that document's own finding.
+      //
+      // So the list below is every spec whose assertions actually depend on the viewport, checked
+      // against what each one asserts rather than what its name suggests. Two corrections came out
+      // of that check and are worth keeping visible: `tab-routing.spec.ts` was proposed and DROPPED
+      // (it is about route state vs useState across back-navigation — zero viewport dependence),
+      // and `shelf-header-links.spec.ts` was NOT proposed and is INCLUDED (it clicks real
+      // coordinates via boundingBox + page.mouse.click and explicitly handles a header below the
+      // viewport bottom).
+      //
+      // What this gives up, stated so it is not discovered later: a regression that manifests ONLY
+      // at 390px in a spec outside this list no longer fails the PR. There is no instance of one in
+      // 17 days of history, nor at introduction. e2e-mobile-viewport.md §3's own preferred fallback
+      // — run the full mobile matrix nightly rather than at PR time — remains the cheapest way to
+      // buy that back, and is left as the owner's call rather than taken here.
+      //
+      // `series-builder` and `shelf-regressions` stay out for the unchanged reason: their drags are
+      // literal desktop mouse gestures, so passing here would prove the mouse path works, which is
+      // already proven, and say nothing about touch.
       name: 'mobile',
-      testIgnore: /a11y\.spec\.ts$|series-builder\.spec\.ts$|shelf-regressions\.spec\.ts$/,
+      testMatch:
+        /(spine-shelf-reachability|route-viewport|no-horizontal-overflow|placeholder-title-clip|cover-card-touch-affordance|scroll-restoration|shelf-header-links)\.spec\.ts$/,
       use: {
         ...devices['iPhone 13'],
         viewport: { width: 390, height: 844 },
