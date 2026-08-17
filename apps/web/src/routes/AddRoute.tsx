@@ -36,6 +36,7 @@ import {
   subgenresForGenre,
 } from '../library/constants'
 import { CORE_GENRES } from '@reverie/core'
+import { Surface } from '../components/Surface'
 
 interface BarcodeDetectorLike {
   detect(source: CanvasImageSource): Promise<{ rawValue: string }[]>
@@ -107,13 +108,15 @@ function RefineAdded({ bookId, onDone }: { bookId: string; onDone: () => void })
 
   if (!book) {
     return (
-      <div
-        className="mt-4 skin-panel border border-line p-4 text-[13px] text-muted"
-        style={{ background: 'var(--card)' }}
+      <Surface
+        radius="panel"
+        tone="card"
+        pad={3}
+        className="mt-4 text-[13px] text-muted"
         role="status"
       >
         Saving…
-      </div>
+      </Surface>
     )
   }
 
@@ -121,7 +124,7 @@ function RefineAdded({ bookId, onDone }: { bookId: string; onDone: () => void })
   const tropeCount = book.tropes.length
 
   return (
-    <div className="mt-4 skin-panel border border-line p-4" style={{ background: 'var(--card)' }}>
+    <Surface radius="panel" tone="card" pad={3} className="mt-4">
       <h2
         className="text-[16px] italic text-ink"
         style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
@@ -172,7 +175,7 @@ function RefineAdded({ bookId, onDone }: { bookId: string; onDone: () => void })
       </button>
       {dialog === 'cover' && <CoverSheet book={book} onClose={() => setDialog(null)} />}
       {dialog === 'trope' && <TropePicker book={book} onClose={() => setDialog(null)} />}
-    </div>
+    </Surface>
   )
 }
 
@@ -392,7 +395,7 @@ function AddForm({
   if (addedId) return <RefineAdded bookId={addedId} onDone={onAdded} />
 
   return (
-    <div className="mt-4 skin-panel border border-line p-4" style={{ background: 'var(--card)' }}>
+    <Surface radius="panel" tone="card" pad={3} className="mt-4">
       <div className="flex gap-4">
         <div className="flex-none">
           <div
@@ -642,10 +645,7 @@ function AddForm({
       </div>
 
       {dup && (
-        <div
-          className="mt-4 skin-card border border-line p-3 text-[13px]"
-          style={{ background: 'var(--field)' }}
-        >
+        <Surface radius="card" tone="field" pad={2} className="mt-4 text-[13px]">
           <p className="text-ink">
             You may already have <span className="font-semibold">{dup.existingTitle}</span>
             {dup.existingAuthor ? ` · ${dup.existingAuthor}` : ''}.
@@ -675,7 +675,7 @@ function AddForm({
               Cancel
             </button>
           </div>
-        </div>
+        </Surface>
       )}
 
       <button
@@ -689,7 +689,7 @@ function AddForm({
       >
         Add to my library
       </button>
-    </div>
+    </Surface>
   )
 }
 
@@ -752,10 +752,7 @@ function BulkAdd() {
   }
 
   return (
-    <details
-      className="mt-4 skin-panel border border-line p-4"
-      style={{ background: 'var(--card)' }}
-    >
+    <Surface as="details" radius="panel" tone="card" pad={3} className="mt-4">
       <summary className="cursor-pointer text-[14px] font-semibold text-ink">
         Bulk add — paste a list
       </summary>
@@ -785,7 +782,7 @@ function BulkAdd() {
         </button>
         {status && <span className="text-[12.5px] text-muted">{status}</span>}
       </div>
-    </details>
+    </Surface>
   )
 }
 
@@ -935,12 +932,9 @@ function AddScreen() {
       </div>
 
       {scanStatus && (
-        <div
-          className="mt-3 skin-card border border-line p-3 text-[13px] text-muted"
-          style={{ background: 'var(--card)' }}
-        >
+        <Surface radius="card" tone="card" pad={2} className="mt-3 text-[13px] text-muted">
           {scanStatus}
-        </div>
+        </Surface>
       )}
       <video
         ref={videoRef}
