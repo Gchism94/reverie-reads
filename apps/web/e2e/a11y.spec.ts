@@ -447,11 +447,19 @@ test.describe('axe sweep', () => {
   // "axe sweep > umbra/dark" rather than as a sweep-wide timeout with no attribution.
   for (const { skin, mode, full } of sweep) {
     test(`${skin}/${mode} — ${full ? 'every route' : 'core set'}`, async ({ page }) => {
-      // Per-pass budgets, sized to the work: tryst walks 20 routes in each of two modes, the other
-      // eight walk 8 apiece. Both stay close enough to normal runtime to keep firing as a tripwire
-      // on a starved worker pool — which is the property the single shared timeout lost as it was
-      // raised twice to absorb a slow runner.
-      test.setTimeout(full ? 480_000 : 240_000)
+      // Per-pass budgets, sized to the work AND calibrated against CI rather than against a laptop.
+      // tryst walks 20 routes in each of two modes; the other eight walk 8 apiece.
+      //
+      // The first draft used 8m/4m, from a local run where tryst measured 4.7m. CI ran the same pass
+      // at 8.2m — the runner is ~1.75x slower — and both tryst passes timed out while all ten other
+      // tests passed. That failure is worth keeping in view, because it is what the split was FOR:
+      // the sweep no longer dies as one anonymous timeout, it names tryst/dark and tryst/light and
+      // leaves the other eight passes reporting normally.
+      //
+      // 12m for the full passes is ~45% headroom over the observed 8.2m. Unlike the two raises this
+      // replaced, it is scoped to the 2 tests that need it — the other 8 keep a 4m ceiling against a
+      // ~40s runtime, so the tripwire stays sharp exactly where it can still catch something.
+      test.setTimeout(full ? 720_000 : 240_000)
       await preparePage(page)
       const all = routesFor(fx)
       const routes = full ? all : all.filter(([name]) => CORE.includes(name))
