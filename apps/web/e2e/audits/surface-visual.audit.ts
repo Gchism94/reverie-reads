@@ -8,6 +8,7 @@ import { mkdirSync, writeFileSync, existsSync, readFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createHash } from 'node:crypto'
+import { PNG } from 'pngjs'
 
 /**
  * SURFACE MIGRATION — per-site visual baseline and diff.
@@ -31,45 +32,41 @@ import { createHash } from 'node:crypto'
  * A pixel diff answers "did this change", never "is the change correct". A genuinely improved radius
  * and a regression are the same red. This narrows where to look; a person still rules.
  *
- * ── KNOWN LIMITATION — THE BASELINE IS NOT TRUSTWORTHY YET (Batch 0, narrowed but not closed) ──
- * Two IDENTICAL runs still report ~4-6 of 62 crops as "changed", a different set each time. What
- * follows is what has been RULED OUT, each with the measurement that ruled it out — so the next
- * person starts from evidence rather than from the same four hypotheses:
+ * ── THE BASELINE IS NOW TRUSTWORTHY — what the residual was, and how it was closed ─────────────
+ * Two identical runs used to report a shifting set of crops as "changed", and four hypotheses had
+ * already been eliminated with measurements (motion — ruled IN and fixed, 52/62 -> 3-6; the star
+ * field — ruled OUT; per-render CONTENT — ruled OUT, outerHTML byte-identical on every changed crop;
+ * SUB-PIXEL GEOMETRY — ruled OUT, getBoundingClientRect identical to 3dp). Same DOM, same geometry,
+ * same fonts, different bytes. The answer was inside the pixels, and needed a decoder to see.
  *
- *   MOTION — ruled IN, then fixed. 52/62 before `reducedMotion` + frozen animations; 3-6 after.
- *     This was the dominant cause and it is closed.
+ * With `pngjs` the residual resolved into two populations, neither of which any of those four
+ * eliminations could have found:
  *
- *   THE AMBIENT STAR FIELD — ruled OUT. Its positions are randomised per mount, so it was the
- *     obvious next suspect. Hiding it entirely did not reduce the residual (3 -> 6, i.e. noise).
+ *   1. THE AMBIENT MATERIAL — the dominant cause, and now fixed. Every skin sets --ambient-texture
+ *      to an SVG feTurbulence fractalNoise filter, rasterised into .rv-skin-texture behind all
+ *      content. Chrome re-rasterises that procedural noise per run and dithers it to 8-bit with an
+ *      unstable phase. Measured over 570 crops: 41 changed, maxΔ of 1 on 40 of them; the worst case
+ *      (/shelves' empty-state panel, in ALL 18 skin x mode combinations) had 23-36% of its pixels
+ *      differing by exactly one level in an alternating even/odd column pattern — a dither matrix
+ *      shifting phase, not content moving. `freezeMotion` now hides that layer, the same way and for
+ *      the same reason it already hid the star field. 41 -> 9.
  *
- *   PER-RENDER CONTENT (an empty-state panel populated in one capture, not the next) — ruled OUT,
- *     and this was the scope doc's own stated read. The crops carry their `outerHTML` beside the
- *     PNG: every "changed" entry compares [PIXELS ONLY - same DOM]. Byte-identical markup.
+ *   2. CORNER ANTI-ALIASING — irreducible, and handled by a floor rather than a fix. The remaining 9
+ *      are the four rounded corners of /match's answer-button panel: <= 33 pixels each, maxΔ <= 2,
+ *      mid-tones between border and fill. Skia rasterising a curve the surface genuinely has. See
+ *      the note above `pixelDelta` for the floor and why both of its conditions are needed.
  *
- *   SUB-PIXEL GEOMETRY — ruled OUT. `getBoundingClientRect` to 3 decimal places, `scrollY` and
- *     `devicePixelRatio` are identical across runs for the varying sites (e.g. /shelves #1 at
- *     x=272.000 y=735.750 w=984.000 h=71.000, both runs).
+ * Result: 41 of 570 -> 0 reported changed between two identical runs, with the 9 anti-aliasing crops
+ * listed under their own heading rather than silently dropped.
  *
- *   WEBFONT LOAD RACE — ruled IN as a real and separate defect, now guarded, but NOT the residual.
- *     Evidence it is real: with `stubFonts: false`, 14 of 62 captures on a COLD cache raced the
- *     download, and instability converged 5 -> 4 -> 0 across runs purely as the HTTP cache warmed.
- *     Evidence it is not the residual: with fonts stubbed the residual is unchanged at ~5.
+ * CAVEAT ON THE FONT GUARD, unchanged and still worth stating: `document.fonts.check()` returns true
+ * for a family that is not a webfont at all, so under the stub `fontsSettled()` is probably vacuous.
+ * It earns its keep only if this file is ever switched back to real fonts.
  *
- * CAVEAT ON THE FONT GUARD, stated because it would otherwise read as stronger than it is:
- * `document.fonts.check()` returns true for a family that is not a webfont at all, so under the
- * stub `fontsSettled()` is probably vacuous. It earns its keep only if this file is ever switched
- * back to real fonts. It is not evidence of anything in the current configuration.
- *
- * WHAT REMAINS AND WHAT IT WOULD TAKE: same DOM, same geometry, same fonts, different bytes. The
- * next step is to decode the two PNGs and localise WHICH REGION of the crop differs — that needs a
- * PNG decoder (`pngjs` or `sharp`), which is a new dependency and therefore a decision outside this
- * dispatch rather than a thing to quietly add.
- *
- * WHY THIS BLOCKS BATCH 1: batch 1's whole design is that its diff should be EMPTY, because those
- * 25 sites already take radius and background from tokens — a non-empty diff there means `Surface`
- * itself is wrong. A ~5-site noise floor makes precisely that signal unreadable.
- *
- * Tuning was stopped here deliberately rather than continued until the number looked acceptable.
+ * ONE GAP LEFT OPEN DELIBERATELY: `stub()` does not stub cover images, so this harness still makes
+ * live requests to the seeded covers' 13 third-party hosts. It was NOT the residual — 0 of the 41
+ * changed crops contained an <img> at all — but it is the same exposure that took e2e-a11y red five
+ * times, and `support/fixtures.ts` gaining a suite-wide image stub closes it here for free.
  *
  * ── RUN IT ──────────────────────────────────────────────────────────────────────────────────────
  *   # on main, before any migration:
@@ -246,6 +243,30 @@ async function signIn(page: Page, session: { access_token: string; refresh_token
  * Belt and braces on top of `reducedMotion`. Anything still animating — a CSS transition mid-flight,
  * a cover fading in — moves pixels between two captures that should be identical. Killing motion
  * outright is safe for a still capture and removes a whole class of false "changed".
+ *
+ * ── AND THE AMBIENT MATERIAL, WHICH WAS THE WHOLE RESIDUAL ──────────────────────────────────────
+ * The star field below was only half the wallpaper. Every skin also sets `--ambient-texture` to an
+ * SVG `feTurbulence` fractalNoise filter (tokens.css:146, 204, 240, 264, 294, 363, 392 …),
+ * rasterised into `.rv-skin-texture` behind all content. Chrome re-rasterises that procedural noise
+ * per run and quantises it to 8-bit with a dither phase that is NOT stable between runs.
+ *
+ * MEASURED, not guessed — this is what the residual actually was, and it is the reason two prior
+ * eliminations both came back clean. Two identical runs over 570 crops reported 41 changed; decoding
+ * both PNGs of each with `pngjs` put the maximum per-channel difference at **1** on 40 of them, and
+ * 2 on the 41st. The dominant case — /shelves' "No TBRs yet" panel, changed in ALL 18 skin x mode
+ * combinations — had 23-36% of its pixels differing by exactly one level, spread over every row and
+ * every column of the crop, in an alternating even/odd column pattern. Sample from row 0: x=1,3,5
+ * differ (13,7,21 -> 13,6,21) while x=0,2,4 are byte-identical. 164 distinct colour pairs among the
+ * differing pixels, every one a single-level step. That is an ordered dither matrix shifting phase,
+ * not content moving.
+ *
+ * Which is exactly why `outerHTML` was byte-identical and `getBoundingClientRect` matched to 3dp on
+ * every "changed" crop: nothing about the content changed. It is what shows THROUGH the surface,
+ * and this harness measures surface chrome.
+ *
+ * Deliberately not a tolerance threshold. A +/-1 tolerance would have hidden this rather than named
+ * it, and would then quietly hide the next one-level defect too — an accent that lands a level off
+ * in one skin is a real regression this sweep should catch.
  */
 async function freezeMotion(page: Page) {
   await page.addStyleTag({
@@ -259,7 +280,10 @@ async function freezeMotion(page: Page) {
        itself on each load. That was the last 3 of the 62 crops still flagging as changed with no
        code change. This measures surface chrome, not the wallpaper behind it. */
     .rv-sky-star, .rv-anim { display: none !important; }
-    .pointer-events-none.fixed.inset-0.-z-10 { display: none !important; }`,
+    .pointer-events-none.fixed.inset-0.-z-10 { display: none !important; }
+    /* The ambient MATERIAL — see the note above this function for what it was doing and how it
+       was measured. Same reason as the star field: wallpaper, not surface chrome. */
+    .rv-skin-texture { display: none !important; }`,
   })
 }
 
@@ -374,6 +398,72 @@ function tagSurfaces() {
 }
 
 const sha = (b: Buffer) => createHash('sha256').update(b).digest('hex').slice(0, 16)
+
+/**
+ * ── THE NOISE FLOOR, AND WHY IT IS A FLOOR AND NOT A TOLERANCE ──────────────────────────────────
+ * Byte-equality of two PNGs is the wrong question, and chasing it to zero is chasing an asymptote.
+ * After the ambient texture was frozen (see `freezeMotion`), two identical runs over 570 crops still
+ * reported 9 changed. Decoding every one of them put the whole remainder in a single population:
+ *
+ *   · 7 of the 9 are the same surface, /match's answer-button panel, in different skins.
+ *   · The differing pixels sit at x=25-27 and x=495-502, y=388-401 and y=423-436 — the FOUR ROUNDED
+ *     CORNERS of one button, 25px inset on both sides, ~49px apart top to bottom.
+ *   · Their values are mid-tones between the border colour and the panel fill: 203,112,139 ->
+ *     202,112,139. Anti-aliased corner coverage, rounding a level differently.
+ *   · Every crop: <= 33 differing pixels, <= 0.010% of the crop, maxΔ <= 2.
+ *
+ * That is Skia rasterising a curve, and unlike the noise texture there is nothing to freeze — the
+ * corner is real geometry the surface actually has. So the instrument gets a floor instead.
+ *
+ * BOTH conditions must hold for a crop to be dismissed, and that is what makes this safe rather than
+ * a blanket tolerance:
+ *   · maxΔ <= 2  alone would hide a one-level accent shift across a whole fill — but that moves
+ *     THOUSANDS of pixels, so the pixel arm catches it.
+ *   · <= 64 px alone would hide a small but real change — but a radius, border or padding change
+ *     paints border colour over panel fill, which is a large delta, so the delta arm catches it.
+ * Only "a handful of pixels AND imperceptible" is dismissed, which is precisely anti-aliasing.
+ *
+ * 64 is ~2x the 33 actually observed, so the floor has room without swallowing a second population.
+ * Dismissed crops are PRINTED, never silently dropped — a floor nobody can see is a floor nobody can
+ * check, and if this list starts growing it is evidence, not housekeeping.
+ */
+const MAX_NOISE_DELTA = 2
+const MAX_NOISE_PIXELS = 64
+
+function pixelDelta(
+  aPath: string,
+  bPath: string,
+): { pixels: number; maxDelta: number; bbox: [number, number, number, number] } | null {
+  if (!existsSync(aPath) || !existsSync(bPath)) return null
+  const a = PNG.sync.read(readFileSync(aPath))
+  const b = PNG.sync.read(readFileSync(bPath))
+  if (a.width !== b.width || a.height !== b.height) return null // a size change is never noise
+  let pixels = 0
+  let maxDelta = 0
+  let minX = Infinity
+  let minY = Infinity
+  let maxX = -1
+  let maxY = -1
+  for (let y = 0; y < a.height; y++) {
+    for (let x = 0; x < a.width; x++) {
+      const i = (a.width * y + x) << 2
+      const d = Math.max(
+        Math.abs(a.data[i]! - b.data[i]!),
+        Math.abs(a.data[i + 1]! - b.data[i + 1]!),
+        Math.abs(a.data[i + 2]! - b.data[i + 2]!),
+        Math.abs(a.data[i + 3]! - b.data[i + 3]!),
+      )
+      if (d === 0) continue
+      pixels++
+      if (d > maxDelta) maxDelta = d
+      if (x < minX) minX = x
+      if (x > maxX) maxX = x
+      if (y < minY) minY = y
+      if (y > maxY) maxY = y
+    }
+  }
+  return { pixels, maxDelta, bbox: [minX, minY, maxX - minX + 1, maxY - minY + 1] }
+}
 
 test('surface visual — per-site crops across skins x modes', async ({ page }) => {
   test.setTimeout(45 * 60_000)
@@ -491,12 +581,25 @@ test('surface visual — per-site crops across skins x modes', async ({ page }) 
   const changed: string[] = []
   const added: string[] = []
   const removed: string[] = []
+  const belowFloor: string[] = []
   for (const k of Object.keys(manifest)) {
-    if (!(k in base)) added.push(k)
-    else if (base[k]!.hash !== manifest[k]!.hash)
-      changed.push(
-        `${k}${base[k]!.dom !== manifest[k]!.dom ? '  [DOM ALSO CHANGED]' : '  [PIXELS ONLY — same DOM]'}`,
-      )
+    if (!(k in base)) {
+      added.push(k)
+      continue
+    }
+    if (base[k]!.hash === manifest[k]!.hash) continue
+    // A hash mismatch is the QUESTION, not the answer. Decode both and ask how big the difference
+    // actually is — see the noise-floor note above `pixelDelta` for why, and for the measurements
+    // the two thresholds come from.
+    const d = pixelDelta(join(BASELINE, `${k}.png`), join(CURRENT, `${k}.png`))
+    if (d && d.maxDelta <= MAX_NOISE_DELTA && d.pixels <= MAX_NOISE_PIXELS) {
+      belowFloor.push(`${k}  (${d.pixels}px, maxΔ=${d.maxDelta}, bbox ${d.bbox.join(',')})`)
+      continue
+    }
+    const where = d ? `  ${d.pixels}px maxΔ=${d.maxDelta} bbox ${d.bbox.join(',')}` : ''
+    changed.push(
+      `${k}${base[k]!.dom !== manifest[k]!.dom ? '  [DOM ALSO CHANGED]' : '  [PIXELS ONLY — same DOM]'}${where}`,
+    )
   }
   for (const k of Object.keys(base)) if (!(k in manifest)) removed.push(k)
 
@@ -506,12 +609,17 @@ test('surface visual — per-site crops across skins x modes', async ({ page }) 
     `- baseline crops: ${Object.keys(base).length}`,
     `- current crops:  ${Object.keys(manifest).length}`,
     `- **changed: ${changed.length}**  ·  added: ${added.length}  ·  removed: ${removed.length}`,
+    `- below the noise floor (dismissed, not hidden — maxΔ<=${MAX_NOISE_DELTA} AND <=${MAX_NOISE_PIXELS}px): ${belowFloor.length}`,
     ``,
     `A pixel diff answers "did this change", never "is it correct" — every entry below needs a look.`,
     ``,
   ]
   for (const [label, list] of [
     ['changed', changed],
+    [
+      `below the noise floor — anti-aliasing, dismissed by the pixel floor (see pixelDelta's note)`,
+      belowFloor,
+    ],
     ['added (a surface exists now that did not before)', added],
     [
       'removed (a surface the baseline had is gone — check it was not dropped by accident)',
