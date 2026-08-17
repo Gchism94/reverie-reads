@@ -462,10 +462,30 @@ test.describe('axe sweep', () => {
       // the sweep no longer dies as one anonymous timeout, it names tryst/dark and tryst/light and
       // leaves the other eight passes reporting normally.
       //
-      // 12m for the full passes is ~45% headroom over the observed 8.2m. Unlike the two raises this
-      // replaced, it is scoped to the 2 tests that need it — the other 8 keep a 4m ceiling against a
-      // ~40s runtime, so the tripwire stays sharp exactly where it can still catch something.
-      test.setTimeout(full ? 720_000 : 240_000)
+      // RETIGHTENED after #262 removed the dead-host stall. 12m/4m were sized against an 8.2m tryst
+      // pass that was 8.2m only because ~200 live cover requests were being waited out, 55 of them
+      // to hosts that had stopped answering. With those stubbed the same pass does the same 104
+      // scans in a fraction of the time, and the old ceilings stopped being tripwires: 12m against
+      // 1.3m is 9x, which absorbs almost anything rather than catching it.
+      //
+      // MEASURED, not derived — read off TWO independent CI runs rather than one, because a budget
+      // taken from a single observation is the guess-wearing-a-ratchet's-clothes this repo has been
+      // bitten by before:
+      //   run 31994806370 (#262)   tryst 1.3m / 1.3m · core 28.0-28.6s · job 8.4m
+      //   run 32000050725 (#263)   tryst 1.2m / 1.2m · core 25.5-26.2s · job 8.4m
+      // Local on the same tree: tryst 47.7s/46.2s, core 16.7-17.3s — the ~1.7x CI:local ratio this
+      // file already documents, unchanged.
+      //
+      // 240s and 90s are ~3.1x the WORST observed value across both runs (78s and 28.6s), not the
+      // median. One ratio for both budgets, so they cannot drift apart the way 12m-vs-4m did.
+      // Why 3.1x and not tighter: run-to-run spread on these passes is ~8% for tryst (72-78s) and
+      // ~12% for the core set (25.5-28.6s) — within a run they are far tighter, ±2%, but it is the
+      // BETWEEN-run number that a ceiling has to tolerate. 3.1x clears 12% with room, while the
+      // saturation events this ceiling exists to catch are far larger (workers=2 costs ~1.5x;
+      // workers=4 blew a 600s cap on a sweep whose normal was ~390s). Why not looser: 3.1x still
+      // fails a pass that has started waiting on the network again, which is the specific
+      // regression that produced this week's five red runs.
+      test.setTimeout(full ? 240_000 : 90_000)
       await preparePage(page)
       const all = routesFor(fx)
       const routes = full ? all : all.filter(([name]) => CORE.includes(name))
