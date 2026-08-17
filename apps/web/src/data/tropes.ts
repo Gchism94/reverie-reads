@@ -1,5 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { resolveTrope, type Book, type TropeEmphasis, type TropeFacet } from '@reverie/core'
+import {
+  resolveTrope,
+  titleCase,
+  type Book,
+  type TropeEmphasis,
+  type TropeFacet,
+} from '@reverie/core'
 import { supabase } from '../lib/supabase'
 import { booksKey } from './books'
 
@@ -127,7 +133,15 @@ export function useCreatePersonalTrope() {
       if (!ownerId) throw new Error('Not signed in')
       const { data, error } = await supabase
         .from('tropes')
-        .insert({ owner_id: ownerId, name: input.name, facet: input.facet ?? 'vibe', canonical_id: input.canonicalId ?? null })
+        .insert({
+          owner_id: ownerId,
+          // Normalized on the way IN, so a personal trope sits in the picker looking like the
+          // canonical vocabulary beside it — the reader cannot tell which is which, and
+          // "enemies to lovers" typed in lowercase should not be the tell.
+          name: titleCase(input.name),
+          facet: input.facet ?? 'vibe',
+          canonical_id: input.canonicalId ?? null,
+        })
         .select()
         .single()
       if (error) throw error
@@ -240,5 +254,72 @@ export function useResolveSuggestion() {
       void qc.invalidateQueries({ queryKey: suggestionsKey(input.bookId) })
       if (input.accept) invalidate()
     },
+  })
+}
+
+/**
+ * Rename a personal trope.
+ *
+ * ── ONE ROW, SO EVERY BOOK FOLLOWS ──────────────────────────────────────────────────────────────
+ * `book_tropes` joins to `tropes` by id, so a rename is a single UPDATE and every book carrying the
+ * trope shows the new name immediately. There is no per-book copy to migrate, and no window where
+ * some books say one thing and some another.
+ *
+ * The new name goes through the SAME `titleCase` normalizer as creation. Skipping it here would let
+ * a rename reintroduce exactly the casing the create path exists to prevent — the reader would
+ * simply have to rename something to get "enemies to lovers" back into the vocabulary.
+ *
+ * CANONICAL TROPES ARE NOT RENAMEABLE, and that is enforced at the query rather than only in the UI:
+ * `.not('owner_id', 'is', null)` means a canonical row cannot be renamed even if a caller passes its
+ * id. Canonical names are shared vocabulary — the seed migration is generated from `SEED_TROPES`,
+ * and a parity test pins the two together, so a local rename would put the reader's library out of
+ * step with the source of truth.
+ */
+export function useRenamePersonalTrope() {
+  const invalidate = useInvalidateTropes()
+  return useMutation({
+    meta: { action: 'Tropes' },
+    mutationFn: async (input: { id: string; name: string }): Promise<void> => {
+      const name = titleCase(input.name)
+      if (!name) throw new Error('A trope needs a name')
+      const { error } = await supabase
+        .from('tropes')
+        .update({ name })
+        .eq('id', input.id)
+        .not('owner_id', 'is', null) // personal rows only — canonical vocabulary is shared
+      if (error) throw error
+    },
+    onSuccess: () => invalidate(),
+  })
+}
+
+/**
+ * Delete a personal trope.
+ *
+ * ── WHAT GOES WITH IT ───────────────────────────────────────────────────────────────────────────
+ * `book_tropes.trope_id` is `references public.tropes (id) on delete cascade`
+ * (20260717010000_trope_system.sql), so deleting the trope removes it from every book carrying it in
+ * one statement. That is the intended behaviour and not a side effect to be worked around — but it
+ * is also why the caller is expected to have shown the carrier count first. A tag that vanishes from
+ * eleven books deserves to say "eleven" before it happens, not after.
+ *
+ * Same `owner_id` guard as rename, same reason: the query itself refuses canonical rows rather than
+ * trusting the UI to have hidden the control.
+ */
+export function useDeletePersonalTrope() {
+  const invalidate = useInvalidateTropes()
+  return useMutation({
+    meta: { action: 'Tropes' },
+    mutationFn: async (id: string): Promise<void> => {
+      const { error } = await supabase
+        .from('tropes')
+        .delete()
+        .eq('id', id)
+        .not('owner_id', 'is', null) // personal rows only
+      if (error) throw error
+    },
+    // useInvalidateTropes already clears booksKey alongside bookTropesKey, which is what the books
+    // that carried this trope need — no separate books invalidation.
+    onSuccess: () => invalidate(),
   })
 }
