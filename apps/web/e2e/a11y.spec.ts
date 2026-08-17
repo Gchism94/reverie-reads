@@ -349,6 +349,47 @@ test.describe('axe sweep', () => {
   /** Everything a pass needs on its page before it can scan: sign-in, then the network stubs. */
   async function preparePage(page: Page) {
     await signIn(page)
+
+    // ── Every third-party IMAGE is fulfilled locally. This is the sweep's single largest cost ────
+    // The seeded library's covers are real hotlinks to 13 distinct commercial hosts
+    // (m.media-amazon.com 168 of 290 books, prodimage.images-bn.com 75, encrypted-tbn0.gstatic.com
+    // 35, then a long tail of one-offs), and discoverCurated.ts adds 35 more to
+    // covers.openlibrary.org on the Discover fallback path. That is ~200 live requests per
+    // full-route pass, and the navigation below waits for all of them twice over —
+    // `waitUntil:'load'` blocks on subresources, then `networkidle` blocks again.
+    //
+    // So a single unreachable host does not slow the sweep, it STOPS it: the request sits until
+    // Chrome's connection timeout with no per-action budget to cut it short, and the pass burns its
+    // whole allowance on one route. Measured exactly that on 2878a2e — 55 of ~200 requests dead
+    // (prodimage.images-bn.com 41/41, covers.openlibrary.org 14/14), one navigation to
+    // /series/A11y%20Saga alone consuming 407.8s of an 8m budget while every other route in the
+    // same pass navigated in ~1s.
+    //
+    // Matched by RESOURCE TYPE, not by host. A host allowlist is what the two specs that already do
+    // this (cover-sourcing, discover-curated) use, and it only ever names the host that broke last
+    // time — it would not have caught B&N, and it will not catch the 14th host. `resourceType` is
+    // the browser's own classification of what it is fetching, so it covers every current host, any
+    // future one, and query-string URLs that no extension match would catch.
+    //
+    // Registered FIRST so it matches LAST: Playwright tries handlers in reverse registration order,
+    // so the specific JSON stubs below still claim their URLs, and this only sees what they leave.
+    // Non-images fall through untouched rather than being swallowed.
+    const PNG_1X1 = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+      'base64',
+    )
+    await page.route(
+      (url) =>
+        (url.protocol === 'http:' || url.protocol === 'https:') &&
+        url.hostname !== 'localhost' &&
+        url.hostname !== '127.0.0.1',
+      (route) => {
+        if (route.request().resourceType() === 'image')
+          return route.fulfill({ contentType: 'image/png', body: PNG_1X1 })
+        return route.fallback()
+      },
+    )
+
     // Discover browses an external catalog — stub it so the sweep is deterministic and offline-safe.
     // Covers point at the self-hosted landing thumbs, so the populated grid renders with zero
     // third-party requests; one hit matches the seeded library shape only by accident (never).
@@ -488,8 +529,13 @@ test.describe('axe sweep', () => {
       // Each goto below is a full navigation, so keepOfflineCacheEmpty's init script re-runs and
       // this skin/mode is read fresh rather than restored from the previous pass's snapshot.
       for (const [name, path] of routes) {
-        await page.goto(path)
-        await page.waitForLoadState('networkidle')
+        // Explicit per-action budgets. Without them both calls inherit the whole-test timeout
+        // (Playwright sends `timeout: 0`), which is why one stalled cover request could consume an
+        // entire pass and report as an anonymous "test timeout" naming neither the route nor the
+        // reason. 45s is ~45x the ~1s a healthy navigation takes here, so it cannot fire on a slow
+        // runner — it fires only on a genuine stall, and names the route it fired on.
+        await page.goto(path, { timeout: 45_000 })
+        await page.waitForLoadState('networkidle', { timeout: 45_000 })
         await page.locator('main').waitFor({ state: 'visible' })
         await expect(page.locator('html')).toHaveAttribute('data-skin', skin)
         await expect(page.locator('html')).toHaveAttribute('data-mode', mode)
