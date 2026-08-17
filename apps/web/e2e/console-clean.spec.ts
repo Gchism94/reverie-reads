@@ -16,7 +16,13 @@ const ANON =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0'
 const SERVICE =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU'
-const EMAIL = 'console-clean-e2e@reverie.local'
+// PER-PROJECT ISOLATION. `rest` and `mobile` run this file concurrently, and both raced one shared
+// account: each calls listUsers(), each sees no such user, each calls createUser(), and the loser
+// gets `422 email_exists` before a single assertion runs. It only fires when the account does not
+// already exist, which is why it looked intermittent — a warm database hides it. Same fix as
+// scroll-restoration and the search-param specs.
+const PROJECT = (): string => test.info().project.name
+const EMAIL = () => `console-clean-${PROJECT()}-e2e@reverie.local`
 const PASSWORD = 'console-clean-e2e-password'
 
 type Client = {
@@ -29,12 +35,12 @@ async function client(): Promise<Client> {
   const admin = createClient(SUPABASE_URL, SERVICE, {
     auth: { autoRefreshToken: false, persistSession: false },
   })
-  const { data } = await admin.auth.admin.listUsers()
-  let uid = data?.users?.find((u) => u.email === EMAIL)?.id
+  const { data } = await admin.auth.admin.listUsers({ perPage: 1000 })
+  let uid = data?.users?.find((u) => u.email === EMAIL())?.id
   if (!uid)
     uid = (
       await okUser(
-        admin.auth.admin.createUser({ email: EMAIL, password: PASSWORD, email_confirm: true }),
+        admin.auth.admin.createUser({ email: EMAIL(), password: PASSWORD, email_confirm: true }),
         'console-clean auth createUser',
       )
     ).id
@@ -45,8 +51,11 @@ async function client(): Promise<Client> {
     'console-clean profiles upsert',
   )
   const sb = createClient(SUPABASE_URL, ANON)
-  const { data: s, error } = await sb.auth.signInWithPassword({ email: EMAIL, password: PASSWORD })
-  if (error || !s.session) throw new Error(authFailure('console-clean', EMAIL, error))
+  const { data: s, error } = await sb.auth.signInWithPassword({
+    email: EMAIL(),
+    password: PASSWORD,
+  })
+  if (error || !s.session) throw new Error(authFailure('console-clean', EMAIL(), error))
   return { sb, session: s.session, uid: s.session.user.id }
 }
 

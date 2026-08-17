@@ -124,10 +124,20 @@ two different ways. `Modal` uses `--card-solid`; `AppShell`'s sheet and `UpdateT
 probably right but is a **visual change**, so it is raised here rather than folded into a mechanical
 batch.
 
-**Border — not universal.** The 72 were selected on `border border-line`, but 12 kit-class carriers
-exist _without_ it (`skin-panel` 3, `skin-card` 4, `skin-tile` 5). So `border` is a real axis, and
-those 12 are a second population the primitive should eventually absorb — out of scope for the first
-pass, noted so the count doesn't silently grow later.
+**Border — not universal, and the borderless population is far smaller than first counted.** The 72
+were selected on `border border-line`. A first pass put the borderless kit carriers at 12
+(`skin-panel` 3, `skin-card` 4, `skin-tile` 5) from a line-grep that counted a **comment mentioning
+`.skin-tile`** as a carrier. Re-measured with the corrected opening-tag extractor:
+
+| kit          | carriers | with `border border-line` | without | interactive |
+| ------------ | -------: | ------------------------: | ------: | ----------: |
+| `skin-panel` |       18 |                        16 |       2 |           2 |
+| `skin-card`  |       26 |                        25 |       1 |          11 |
+| `skin-tile`  |        7 |                         3 |       4 | **7 (all)** |
+
+**7 borderless carriers, not 12 — and 5 of those are interactive `<button>`s.** Only 2 are
+non-interactive containers (`components/Nameplate.tsx`, `routes/LabRoute.tsx`). `border` remains a
+real axis of the API; the borderless population is not a migration target (see §7, decision 2).
 
 ---
 
@@ -243,14 +253,14 @@ Sized on the Track B precedent (25–40 sites/batch was workable there for _mech
 this is riskier per site, so batches are smaller) and the PR 5 rule that **a red run must mean one
 thing**.
 
-| batch | what                                                                                                                      | sites | why this order                                                                                                                                                                                                                                               |
-| ----: | ------------------------------------------------------------------------------------------------------------------------- | ----: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **0** | Build `Surface` + its unit tests + `surface-visual.audit.ts` + capture the `main` baseline. **Zero call sites migrated.** |     0 | The instrument must exist and be trusted before it measures anything. A batch that ships the component _and_ migrates sites cannot tell a component bug from a migration bug.                                                                                |
-| **1** | The 25 sites already on `.skin-panel`/`.skin-card`                                                                        |    25 | Most mechanical: radius and background already come from tokens, so the diff should be **empty**. A non-empty diff here means `Surface` itself is wrong — the cheapest possible place to learn that.                                                         |
-| **2** | The 18 `tone="bare"` sites (bordered, padded, no background)                                                              |    18 | Second-simplest, one tone, no background question.                                                                                                                                                                                                           |
-| **3** | The 20 sites with a **hardcoded** Tailwind radius                                                                         |    20 | The first batch that _should_ change pixels, per skin. Retires 20 Track-B-class hardcoded radii as a side effect. Must be its own batch precisely because a non-empty diff is expected here — bundling it with 1 or 2 would make their emptiness unreadable. |
-| **4** | The 9 remaining stragglers (`--card-solid`, `--bg0`, `--chip`, asymmetric padding tail)                                   |     9 | Each needs a judgement call; small batch, per-site notes.                                                                                                                                                                                                    |
-| **5** | _Optional, separate decision:_ the 12 borderless kit carriers                                                             |    12 | Outside the 72. Flagged in §2 so the scope cannot quietly grow mid-migration.                                                                                                                                                                                |
+| batch | what                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | sites | why this order                                                                                                                                                                                                                                               |
+| ----: | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **0** | Build `Surface` + its unit tests + `surface-visual.audit.ts` + capture the `main` baseline. **Zero call sites migrated.** **Status: component + 29 tests done and green. The harness captures, but two identical runs still differ on ~5 of 62 crops. Motion (52/62) and a cold-cache webfont race (14/62) were found and fixed; DOM, geometry and per-render content are ruled out by measurement. Residual not closed — see the audit script's KNOWN LIMITATION. Batch 1 is blocked on it reaching 0.** |     0 | The instrument must exist and be trusted before it measures anything. A batch that ships the component _and_ migrates sites cannot tell a component bug from a migration bug.                                                                                |
+| **1** | The 25 sites already on `.skin-panel`/`.skin-card`                                                                                                                                                                                                                                                                                                                                                                                                                                                        |    25 | Most mechanical: radius and background already come from tokens, so the diff should be **empty**. A non-empty diff here means `Surface` itself is wrong — the cheapest possible place to learn that.                                                         |
+| **2** | The 18 `tone="bare"` sites (bordered, padded, no background)                                                                                                                                                                                                                                                                                                                                                                                                                                              |    18 | Second-simplest, one tone, no background question.                                                                                                                                                                                                           |
+| **3** | The 20 sites with a **hardcoded** Tailwind radius                                                                                                                                                                                                                                                                                                                                                                                                                                                         |    20 | The first batch that _should_ change pixels, per skin. Retires 20 Track-B-class hardcoded radii as a side effect. Must be its own batch precisely because a non-empty diff is expected here — bundling it with 1 or 2 would make their emptiness unreadable. |
+| **4** | The 9 remaining stragglers (`--card-solid`, `--bg0`, `--chip`, asymmetric padding tail)                                                                                                                                                                                                                                                                                                                                                                                                                   |     9 | Each needs a judgement call; small batch, per-site notes.                                                                                                                                                                                                    |
+| **5** | _Optional, separate decision:_ the 12 borderless kit carriers                                                                                                                                                                                                                                                                                                                                                                                                                                             |    12 | Outside the 72. Flagged in §2 so the scope cannot quietly grow mid-migration.                                                                                                                                                                                |
 
 Order is deliberate: **empty-diff batches first**, so the harness earns trust on cases where any
 change is a bug, before it is used on batch 3 where change is the point.
@@ -281,8 +291,39 @@ own commit boundary within whatever batch it lands in.
 
 ---
 
-## 7. What is deliberately not decided here
+## 7. Decisions — settled 2026-08-16
 
-- Whether `radius` should default from `tone` (§3).
-- Whether the 12 borderless kit carriers join this migration or a later one (§2, batch 5).
-- Whether `Surface` absorbs `.skin-tile` (3 sites, `--radius-card`) or leaves it as a peer.
+All four open questions are closed. Scoping ends here; Batch 0 builds.
+
+**1. `radius` does NOT default from `tone`.** They stay independent props with their own flat
+defaults (`tone` → `'card'`, `radius` → `'card'`). The tone→radius pairing only holds for
+`card`/`card-solid` → `.skin-card`'s radius. There is no established kit pairing for `field` or
+`bare`, and `.skin-panel`'s sites are not defined by background at all — §2 measured 18 `skin-panel`
+carriers spanning several backgrounds. Deriving a mapping for the tones that do not have one would
+be inventing structure from a pattern that covers part of the data, which is precisely the mistake
+§2's elevation correction just fixed.
+
+**2. The 7 borderless kit carriers are CUT from the plan entirely** — not deferred, not "batch 5
+later". They carry no defect `Surface` exists to fix: they are already served correctly by their kit
+classes and have no border inconsistency. The re-measurement above makes the case stronger than when
+this was first raised — the population is 7, not 12, and **5 of the 7 are interactive buttons**, so
+absorbing them would gain **2 sites** against 7 sites of review risk. Batch 5 is removed from §5.
+
+**3. `Surface` does NOT absorb `.skin-tile` — permanent peer, not a future maybe.** `.skin-tile`
+serves card-shaped _controls_, and `Surface`'s API excludes interactivity by design (§3). The
+measurement settles it beyond the design argument: **all 7 `.skin-tile` carriers are interactive** —
+6 `<button>`, 1 `<Link>`, zero containers.
+
+> **Reconciling the count.** §7 previously said "3 sites" and §2's border breakdown said "5"; the
+> real carrier count is **7**. All three numbers came from different queries: 3 = carriers that also
+> have `border border-line`; 5 = a line-grep of carriers _without_ it, which counted a comment
+> mentioning `.skin-tile` as a carrier; 7 = actual `className` carriers via the corrected extractor.
+> **7 is the correct figure**, and the two older numbers are subsets or artifacts. Same failure mode
+> as §2's elevation error — numbers from one query, described with another — which is why the
+> extractor, not the grep, is now the tool of record for this doc.
+
+**4. The `--card-solid` vs hand-rolled-gradient inconsistency IS fixed**, not merely flagged.
+`Modal` uses `--card-solid`; `AppShell`'s mobile sheet and `UpdateToast` hand-roll
+`linear-gradient(var(--card), var(--card)), var(--bg)`. All three collapse onto `tone="card-solid"`.
+It stays in **batch 4** exactly as planned — a real visual change needing the per-skin × mode diff,
+never a mechanical batch.
