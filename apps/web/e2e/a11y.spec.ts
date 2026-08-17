@@ -316,68 +316,95 @@ async function assertInkSettled(page: Page, skin: string, mode: string, where: s
 // text over per-skin surfaces — plus, in tryst alone, the skin-invariant structural/ARIA rules,
 // which compute identically in every skin and so are checked once, on every route, in both modes,
 // rather than re-checked per skin.
-test('axe (no serious/critical): every route in tryst x both modes; a core set in all 8 other skins x one deterministic mode', async ({
-  page,
-}) => {
-  // 720s, raised from 600s alongside the 88 → 104-scan reallocation: +18% scans, +20% budget, so
-  // the effective headroom is unchanged. This ceiling is a real tripwire — the workers=4 probe
-  // blew exactly this timeout — and it must stay close enough to normal runtime (~6-7m on the
-  // runner) to keep firing on a starved worker pool rather than quietly absorbing one.
-  test.setTimeout(720_000)
-  seedOwnLibrary() // creates this spec's user on first run, and gives it the books the sweep needs
-  const { bookId, clubId, listCode, shelfId, tropeId } = await setupFixtures()
-  await signIn(page)
+/**
+ * ── ONE TEST PER SKIN PASS, NOT ONE TEST FOR THE WHOLE SWEEP ────────────────────────────────────
+ * This used to be a single test looping all ten skin x mode passes, which meant ONE
+ * `test.setTimeout` covering ~104 axe scans. That made the timeout a shared budget: a slow runner
+ * spent all of it at once, and the failure said "the sweep timed out" rather than naming a skin.
+ *
+ * It stopped being hypothetical. The same unchanged spec ran 8m36s and green, then 12.9m, 15.1m and
+ * 18.5m across one evening as the runner degraded — blowing a 720s cap, then an 1080s cap, then a
+ * 20-minute JOB cap underneath it. Two raises bought nothing, and a third would have been an
+ * admission that the number was the wrong lever.
+ *
+ * Split, each pass carries its own budget: tryst's full-route passes get 8m, the single-mode core
+ * passes 4m. A runner slow enough to blow one now costs that pass, not the sweep, and the failing
+ * test names the skin. Fixtures are created ONCE in beforeAll and cleaned once in afterAll, so the
+ * split does not pay for setup ten times.
+ *
+ * The coverage guarantee moved rather than disappearing — see the plan-level test below.
+ */
+test.describe('axe sweep', () => {
+  let fx: Awaited<ReturnType<typeof setupFixtures>>
 
-  // Discover browses an external catalog — stub it so the sweep is deterministic and offline-safe.
-  // Covers point at the self-hosted landing thumbs, so the populated grid renders with zero
-  // third-party requests; one hit matches the seeded library shape only by accident (never).
-  const vol = (title: string, author: string, cover: string, isbn: string) => ({
-    volumeInfo: {
-      title,
-      authors: [author],
-      publishedDate: '2026-01-01',
-      imageLinks: { thumbnail: cover },
-      industryIdentifiers: [{ type: 'ISBN_13', identifier: isbn }],
-    },
+  test.beforeAll(async () => {
+    seedOwnLibrary() // creates this spec's user on first run, and gives it the books the sweep needs
+    fx = await setupFixtures()
   })
-  await page.route('**/books/v1/volumes**', (route) =>
-    route.fulfill({
-      json: {
-        items: [
-          vol('Fourth Wing', 'Rebecca Yarros', '/landing-covers/everflame.jpg', '9781649374042'),
-          vol('Iron Flame', 'Rebecca Yarros', '/landing-covers/king-of-wrath.jpg', '9781649374172'),
-          vol(
-            'The Serpent and the Wings of Night',
-            'Carissa Broadbent',
-            '/landing-covers/never-king.jpg',
-            '9781250343178',
-          ),
-          vol('Divine Rivals', 'Rebecca Ross', '/landing-covers/mile-high.jpg', '9781250857439'),
-        ],
-      },
-    }),
-  )
 
-  // The embed fn (Tier 2) is a background enhancement — stub it so the sweep can't stall
-  // networkidle waits, and the run needs no local functions server.
-  await page.route('**/functions/v1/embed**', (route) =>
-    route.fulfill({ json: { embedded: 0, remaining: 0, hits: [] } }),
-  )
-  await page.route('**/functions/v1/releases**', (route) =>
-    route.fulfill({ json: { authors: {}, pending: [], hits: [] } }),
-  )
-  // Cover system: detail views lazily backfill external covers via the covers fn — stub it so the
-  // sweep never depends on a local functions server (and never mutates the seeded covers).
-  await page.route('**/functions/v1/covers**', (route) =>
-    route.fulfill({ status: 422, json: { error: 'fetch_failed' } }),
-  )
+  test.afterAll(async () => {
+    await cleanup(fx.clubId, fx.listCode, fx.shelfId, fx.bookId)
+  })
+
+  /** Everything a pass needs on its page before it can scan: sign-in, then the network stubs. */
+  async function preparePage(page: Page) {
+    await signIn(page)
+    // Discover browses an external catalog — stub it so the sweep is deterministic and offline-safe.
+    // Covers point at the self-hosted landing thumbs, so the populated grid renders with zero
+    // third-party requests; one hit matches the seeded library shape only by accident (never).
+    const vol = (title: string, author: string, cover: string, isbn: string) => ({
+      volumeInfo: {
+        title,
+        authors: [author],
+        publishedDate: '2026-01-01',
+        imageLinks: { thumbnail: cover },
+        industryIdentifiers: [{ type: 'ISBN_13', identifier: isbn }],
+      },
+    })
+    await page.route('**/books/v1/volumes**', (route) =>
+      route.fulfill({
+        json: {
+          items: [
+            vol('Fourth Wing', 'Rebecca Yarros', '/landing-covers/everflame.jpg', '9781649374042'),
+            vol(
+              'Iron Flame',
+              'Rebecca Yarros',
+              '/landing-covers/king-of-wrath.jpg',
+              '9781649374172',
+            ),
+            vol(
+              'The Serpent and the Wings of Night',
+              'Carissa Broadbent',
+              '/landing-covers/never-king.jpg',
+              '9781250343178',
+            ),
+            vol('Divine Rivals', 'Rebecca Ross', '/landing-covers/mile-high.jpg', '9781250857439'),
+          ],
+        },
+      }),
+    )
+
+    // The embed fn (Tier 2) is a background enhancement — stub it so the sweep can't stall
+    // networkidle waits, and the run needs no local functions server.
+    await page.route('**/functions/v1/embed**', (route) =>
+      route.fulfill({ json: { embedded: 0, remaining: 0, hits: [] } }),
+    )
+    await page.route('**/functions/v1/releases**', (route) =>
+      route.fulfill({ json: { authors: {}, pending: [], hits: [] } }),
+    )
+    // Cover system: detail views lazily backfill external covers via the covers fn — stub it so the
+    // sweep never depends on a local functions server (and never mutates the seeded covers).
+    await page.route('**/functions/v1/covers**', (route) =>
+      route.fulfill({ status: 422, json: { error: 'fetch_failed' } }),
+    )
+  }
 
   // Tryst (the default skin) gets full route coverage; the alternate skins sweep a core set
   // that exercises the whole token surface (palette, cards, fills, links, muted text).
-  const allRoutes: [string, string][] = [
+  const routesFor = (f: typeof fx): [string, string][] => [
     ['Home', '/'],
     ['Library', '/library'],
-    ['Book detail', `/book/${bookId}`],
+    ['Book detail', `/book/${f.bookId}`],
     ['Shelves', '/shelves'],
     ['Planner', '/planner'],
     ['Stats', '/stats'],
@@ -386,21 +413,17 @@ test('axe (no serious/critical): every route in tryst x both modes; a core set i
     ['Add', '/add'],
     ['Settings', '/settings'],
     ['Clubs', '/clubs'],
-    ['Club', `/club/${clubId}`],
-    ['SharedList', `/list/${listCode}`],
-    ['Shelf detail', `/shelf/${shelfId}`],
+    ['Club', `/club/${f.clubId}`],
+    ['SharedList', `/list/${f.listCode}`],
+    ['Shelf detail', `/shelf/${f.shelfId}`],
     ['Indie', '/indie'],
     ['Skins', '/skins'],
     ['Series index', '/series'],
     ['Series detail', `/series/${encodeURIComponent('A11y Saga')}`],
     ['Tropes', '/tropes'],
-    ['Trope detail', `/tropes/${tropeId}`],
+    ['Trope detail', `/tropes/${f.tropeId}`],
   ]
-  const coreRoutes = allRoutes.filter(([name]) =>
-    ['Home', 'Library', 'Book detail', 'Stats', 'Settings', 'Skins', 'Clubs', 'Indie'].includes(
-      name,
-    ),
-  )
+  const CORE = ['Home', 'Library', 'Book detail', 'Stats', 'Settings', 'Skins', 'Clubs', 'Indie']
 
   // ── The sweep plan: every skin in the registry, derived from SKIN_ORDER so this spec can never
   // hold a second, driftable copy of the skin list. Tryst — the default skin, whose full-route
@@ -413,20 +436,35 @@ test('axe (no serious/critical): every route in tryst x both modes; a core set i
   // parity split lands 4 dark + 4 light across the eight, so both modes stay exercised beyond
   // tryst. (Literal indices into MODES, not MODES[i % 2]: noUncheckedIndexedAccess types a
   // computed index as possibly-undefined.)
-  type SweepPass = { skin: SkinId; mode: (typeof MODES)[number]; routes: [string, string][] }
-  const sweep = SKIN_ORDER.flatMap((skin, i): SweepPass[] =>
+  type SweepPass = { skin: SkinId; mode: (typeof MODES)[number]; full: boolean }
+  const sweep: SweepPass[] = SKIN_ORDER.flatMap((skin, i): SweepPass[] =>
     skin === 'tryst'
-      ? MODES.map((mode) => ({ skin, mode, routes: allRoutes }))
-      : [{ skin, mode: i % 2 === 0 ? MODES[0] : MODES[1], routes: coreRoutes }],
+      ? MODES.map((mode) => ({ skin, mode, full: true }))
+      : [{ skin, mode: i % 2 === 0 ? MODES[0] : MODES[1], full: false }],
   )
-  // One line in the CI log naming every combination this run will scan — the fossil four-skin era
-  // was invisible precisely because nothing ever said out loud what was (not) being swept.
-  console.log('a11y sweep plan: ' + sweep.map((s) => `${s.skin}/${s.mode}`).join(', '))
 
-  const failures: string[] = []
-  const visited = new Set<SkinId>()
-  try {
-    for (const { skin, mode, routes } of sweep) {
+  // One test per pass. The name carries the skin/mode, so a failure in CI reads as
+  // "axe sweep > umbra/dark" rather than as a sweep-wide timeout with no attribution.
+  for (const { skin, mode, full } of sweep) {
+    test(`${skin}/${mode} — ${full ? 'every route' : 'core set'}`, async ({ page }) => {
+      // Per-pass budgets, sized to the work AND calibrated against CI rather than against a laptop.
+      // tryst walks 20 routes in each of two modes; the other eight walk 8 apiece.
+      //
+      // The first draft used 8m/4m, from a local run where tryst measured 4.7m. CI ran the same pass
+      // at 8.2m — the runner is ~1.75x slower — and both tryst passes timed out while all ten other
+      // tests passed. That failure is worth keeping in view, because it is what the split was FOR:
+      // the sweep no longer dies as one anonymous timeout, it names tryst/dark and tryst/light and
+      // leaves the other eight passes reporting normally.
+      //
+      // 12m for the full passes is ~45% headroom over the observed 8.2m. Unlike the two raises this
+      // replaced, it is scoped to the 2 tests that need it — the other 8 keep a 4m ceiling against a
+      // ~40s runtime, so the tripwire stays sharp exactly where it can still catch something.
+      test.setTimeout(full ? 720_000 : 240_000)
+      await preparePage(page)
+      const all = routesFor(fx)
+      const routes = full ? all : all.filter(([name]) => CORE.includes(name))
+
+      const failures: string[] = []
       await setProfileSkinMode(skin, mode) // skin-sync picks this up on each fresh load
       // Pre-seed the target BEFORE the next navigation reloads index.html's boot script, so it
       // stamps data-skin/data-mode correctly on FIRST PAINT instead of booting 'system' — which
@@ -478,22 +516,30 @@ test('axe (no serious/critical): every route in tryst x both modes; a core set i
           )
         }
       }
-      visited.add(skin)
-    }
-  } finally {
-    await cleanup(clubId, listCode, shelfId, bookId)
+      if (failures.length) console.log('axe serious/critical violations:\n' + failures.join('\n'))
+      expect(failures, failures.join('\n')).toHaveLength(0)
+    })
   }
 
-  // The coverage claim, ASSERTED rather than trusted: every skin in the registry was genuinely
-  // reached (added to `visited` only after its full route pass completed). Registry-keyed like the
-  // core contrast tests — a tenth skin added to SKIN_ORDER fails HERE until the sweep covers it,
-  // instead of silently joining the five skins the four-skin era never scanned.
-  expect([...visited].sort(), 'every skin in SKIN_ORDER must be swept').toEqual(
-    [...SKIN_ORDER].sort(),
-  )
-
-  if (failures.length) console.log('axe serious/critical violations:\n' + failures.join('\n'))
-  expect(failures, failures.join('\n')).toHaveLength(0)
+  /**
+   * The coverage claim, ASSERTED rather than trusted — and it survived the split by moving from a
+   * runtime `visited` set to the PLAN itself.
+   *
+   * With one test per pass there is no shared state to accumulate into, and a `visited` set built
+   * across independent tests would be a lie the moment one of them is skipped or filtered. Asserting
+   * on the plan is stronger anyway: it holds even on a `--grep`'d run, and it fails at collection
+   * time rather than after ten minutes of scanning.
+   *
+   * Registry-keyed exactly as before: a tenth skin added to SKIN_ORDER fails HERE until the sweep
+   * covers it, instead of silently joining the five skins the four-skin era never scanned.
+   */
+  test('the sweep plan covers every skin in the registry', () => {
+    console.log('a11y sweep plan: ' + sweep.map((s) => `${s.skin}/${s.mode}`).join(', '))
+    expect(
+      [...new Set(sweep.map((p) => p.skin))].sort(),
+      'every skin in SKIN_ORDER must be swept',
+    ).toEqual([...SKIN_ORDER].sort())
+  })
 })
 
 // The unauthenticated front door (gold master brand) — no sign-in seed needed, so it's a simpler,
