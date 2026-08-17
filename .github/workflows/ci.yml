@@ -262,19 +262,26 @@ jobs:
     needs: [changes]
     if: github.event_name == 'pull_request' && needs.changes.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
-    # 30, not the 20 the sibling e2e jobs use, and the difference is deliberate.
+    # 15 — DOWN from 30, and now BELOW the 20 the sibling e2e jobs carry.
     #
-    # This job's wall clock is setup (checkout, pnpm install, Playwright browser download, Supabase
-    # start, migrations, seed) PLUS the sweep itself, and the sweep alone now has an 18m test
-    # timeout. 20 could not contain that: the job was CANCELLED at 20m15s while the test was still
-    # inside its own budget, so raising `test.setTimeout` without raising this would have looked
-    # like the same failure for a different reason — which is exactly what happened on the first
-    # attempt at this fix.
+    # The 30 was a stopgap against what looked like a runner getting slower for an unchanged spec
+    # (8m36s -> 12.9m -> 15.1m). It was not a slower runner. #262 found the sweep was waiting out
+    # ~200 live third-party cover requests per full-route pass, 55 of them to hosts that had stopped
+    # answering, and the "growth" was the two timeout raises being measured rather than any work.
     #
-    # Both ceilings are stopgaps against a slower runner (8m36s -> 12.9m -> 15.1m for the same
-    # unchanged spec). The durable fix is the per-skin split filed in BACKLOG.md; splitting turns
-    # one 18m budget into ten small ones and makes both of these numbers shrink rather than grow.
-    timeout-minutes: 30
+    # The comment this replaces predicted the shape of the fix correctly — "splitting turns one 18m
+    # budget into ten small ones and makes both of these numbers shrink rather than grow" — so this
+    # is that prediction being cashed, one step later than expected: the split made the failure
+    # legible, the image stub made it go away.
+    #
+    # MEASURED: 8.4m for the whole job on CI run 31994806370, of which 1.1m is Supabase start and
+    # 6.6m is the sweep. 15 is ~1.8x that. Proportionally looser than the 3.1x on the per-pass
+    # budgets in a11y.spec.ts, deliberately: this ceiling also covers fixed setup (checkout, pnpm
+    # install, Playwright download, Supabase start, migrations, seed) that does not scale with a
+    # starved worker pool, so sizing it by the same ratio would make it the thing that fires first
+    # and mask which pass actually went slow. The per-pass budgets are the sharp tripwire; this one
+    # is the backstop that stops a hung job from burning a 30m runner slot.
+    timeout-minutes: 15
     env:
       VITE_SUPABASE_URL: http://127.0.0.1:55321
       VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
