@@ -1,14 +1,22 @@
 # CI suite cost-vs-value audit — what the seven jobs cost, and what they have actually caught
 
-> **Status: acted on.** Three of the four recommendations are **implemented** on
-> `chore/ci-suite-audit-followups` (stacked on `chore/a11y-timeout-raise` / #262): the third-party
-> image stub is generalised into the shared fixture (§7.1), `e2e-mobile` is thinned to the
+> **Status: acted on.** Three of the four recommendations are **implemented**: the third-party image
+> stub is generalised into the shared fixture (§7.1), `e2e-mobile` is thinned to the
 > viewport-sensitive spec family (§7.2), and `e2e-a11y`'s tripwires are retightened (§7.3).
 > Recommendation 4 — leave `changes`, `secrets`, `gate`, `e2e` and `pgtap` alone — is **a decision
 > recorded, not an action taken** (§7.4). §7.2 **overturns a documented prior decision**; the
 > disagreement and the option not taken are stated there rather than buried.
+>
+> **Delivered on `fix/ci-suite-audit-followups-recover`, off `main` — not on the branch that
+> authored it.** The original `chore/ci-suite-audit-followups` was stacked on
+> `chore/a11y-timeout-raise` (#262). #262 merged to `main` first; #263 then merged **into that
+> already-merged branch**, so its merge commit `cf8a019` was never reachable from `main` and all
+> five commits were stranded. GitHub reported #263 as "Merged" throughout. This is the #252 incident
+> repeating, in a PR whose own body named that risk and named the script that detects it — the
+> warning was written and the retarget still did not happen. See §8.
 
-Audited 2026-08-17 on `chore/ci-suite-audit-followups` (from `main` @ `1ed3d54`). Data is GitHub's
+Audited 2026-08-17, delivered on `fix/ci-suite-audit-followups-recover` (from `main` @ `b3de214`;
+originally authored from `main` @ `1ed3d54`). Data is GitHub's
 own run history via `gh run list` / `gh api .../jobs` — measured durations and conclusions, not
 estimates. **Window: 2026-07-31 → 08-17, the full retained history: 184 `pull_request` runs, 19
 red.** Per-job duration statistics come from the 55 most recent PR runs (Aug 13–17), which is the
@@ -267,3 +275,33 @@ as negligible-cost catastrophic-risk insurance whose zero-catch record is the de
 parallelism ceiling, `pgtap` as too new to judge. **`pgtap` is the one to revisit** — if it is
 still at zero real catches a month from now, that is a genuine finding rather than a null result,
 and this section is the marker to come back to.
+
+## 8. Postscript — this audit's own delivery was stranded by the bug it warned about
+
+Recorded here rather than only in a commit message, because it is the second occurrence and the
+first one already has a rule, a script, and a AGENTS.md entry.
+
+**What happened.** `chore/ci-suite-audit-followups` was branched from `chore/a11y-timeout-raise`
+(#262) because it needed #262's stub to move out of `a11y.spec.ts` — a correct reason to stack.
+#262 merged to `main` at 05:11:22Z. #263 merged at 15:03:11Z **into `chore/a11y-timeout-raise`**,
+its unchanged base, which by then had already merged to `main` separately. Merge commit `cf8a019`
+is not an ancestor of `origin/main`. GitHub showed #263 as "Merged", CI was green, nothing errored,
+and none of the five commits existed on `main`.
+
+**What that left on `main` in the meantime**, which is the part with consequences rather than
+bookkeeping: `main` kept the 720s/240s per-pass ceilings, the 30m job cap, the 121-test `mobile`
+blocklist, and — the one that matters — **no `stubCoverImages`**. #262's fix protects `a11y` only,
+so `rest` and `e2e-mobile` remained exposed to the dead-host class that produced 10 of the 19 red
+runs this audit counted. The window was ~10 hours.
+
+**What is new relative to #252.** Nothing about the mechanism. What is new is that #263's PR body
+explicitly named this risk, named `scripts/check-pr-landed.sh`, and asked for the retarget — and it
+still happened. So the gap is not knowledge and not tooling; it is that the check runs only when
+someone remembers to run it, at the one moment the PR already looks finished. The durable fix is
+therefore **not another warning**: it is either basing on `main` whenever the stack is not strictly
+required, or wiring the script into something that runs without being invoked. Filed as a question
+for the owner rather than answered here, since it is a workflow decision and not a code one.
+
+**Recovery** followed the documented remedy exactly: five commits cherry-picked with `-x` onto a
+fresh branch off `origin/main`, all applying cleanly, gate re-run green (2044 core + 361 web unit
+tests, typecheck, lint, format). The old branch was not re-merged.
