@@ -14,6 +14,7 @@ import { useAddListItem, useAllListItems, useRemoveListItem } from '../data/list
 import { useLists, useReorderList, useUpdateList } from '../data/lists'
 import { useConfirmedLookup } from '../hooks/useConfirmedLookup'
 import { useVoice } from '../skin/labels'
+import { Surface } from '../components/Surface'
 
 type ShelfView = 'spines' | 'grid'
 
@@ -214,9 +215,15 @@ function ShelfScreen() {
       />
 
       {shelfBooks.length === 0 ? (
-        <p className="skin-panel border border-line p-6 text-center text-[14px] text-muted">
+        <Surface
+          as="p"
+          radius="panel"
+          tone="bare"
+          pad={5}
+          className="text-center text-[14px] text-muted"
+        >
           Empty shelf — add the first book. {voice.motif}
-        </p>
+        </Surface>
       ) : view === 'spines' ? (
         // The default view is arrangeable too — reorder used to exist only in Grid, which is not
         // where a reader lands (docs/archive/task-shelf-regressions.md, audit follow-up).
