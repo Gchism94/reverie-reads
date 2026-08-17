@@ -24,6 +24,7 @@ import {
 } from '../lib/discover'
 import { TasteTier } from '../components/TasteTier'
 import { useTasteCalibration } from '../data/taste'
+import { Surface } from '../components/Surface'
 
 // Discover (owner-approved): browse the wider catalog by world — defaulting to the room the
 // reader is standing in — with every find one tap from Add. The nine genre chips are the same
@@ -216,18 +217,18 @@ function SearchSection({ query, books }: { query: string; books: Book[] }) {
         </div>
       )}
       {q.isError && (
-        <div className="skin-card border border-line p-6 text-center">
+        <Surface radius="card" tone="bare" pad={5} className="text-center">
           <p className="text-[14px] text-ink">Search isn’t answering right now.</p>
           <p className="mt-1 text-[12.5px] text-muted">
             Usually a rate limit — it clears on its own.
           </p>
-        </div>
+        </Surface>
       )}
       {q.isSuccess && q.data.length === 0 && (
-        <div className="skin-card border border-line p-6 text-center">
+        <Surface radius="card" tone="bare" pad={5} className="text-center">
           <p className="text-[14px] text-ink">{voice.miss}</p>
           <p className="mt-1 text-[12.5px] text-muted">Try a title, an author, or an ISBN.</p>
-        </div>
+        </Surface>
       )}
       {q.isSuccess && q.data.length > 0 && (
         <SearchResults
@@ -382,7 +383,7 @@ function DiscoverScreen() {
           )}
 
           {q.isError && (
-            <div className="skin-card border border-line p-6 text-center">
+            <Surface radius="card" tone="bare" pad={5} className="text-center">
               <p className="text-[14px] text-ink">The wider shelves aren’t answering right now.</p>
               <p className="mt-1 text-[12.5px] text-muted">
                 Usually a rate limit — it clears on its own.
@@ -395,16 +396,16 @@ function DiscoverScreen() {
               >
                 Try again
               </button>
-            </div>
+            </Surface>
           )}
 
           {q.isSuccess && q.data.length === 0 && (
-            <div className="skin-card border border-line p-6 text-center">
+            <Surface radius="card" tone="bare" pad={5} className="text-center">
               <p className="text-[14px] text-ink">{voice.miss}</p>
               <p className="mt-1 text-[12.5px] text-muted">
                 Try another genre — the smaller shelves run thin some weeks.
               </p>
-            </div>
+            </Surface>
           )}
 
           {q.isSuccess && q.data.length > 0 && (
