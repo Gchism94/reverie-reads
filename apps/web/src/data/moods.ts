@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { titleCase } from '@reverie/core'
 import { supabase } from '../lib/supabase'
 import { booksKey } from './books'
 
@@ -115,7 +116,13 @@ export function useCreatePersonalMood() {
       if (!ownerId) throw new Error('Not signed in')
       const { data, error } = await supabase
         .from('moods')
-        .insert({ owner_id: ownerId, name: input.name, canonical_id: input.canonicalId ?? null })
+        .insert({
+          owner_id: ownerId,
+          // The hand-typed counterpart to importExport's coinMoods — same normalizer, so a mood
+          // created here and one coined by an import are indistinguishable afterwards.
+          name: titleCase(input.name),
+          canonical_id: input.canonicalId ?? null,
+        })
         .select('id, owner_id, canonical_id, name')
         .single()
       if (error) throw error

@@ -621,6 +621,16 @@ async function restoreTaxonomy(
   if (coinTropes.length) {
     const { data: made, error } = await supabase
       .from('tropes')
+      // DELIBERATELY NOT titleCase'd, unlike the hand-typed creation paths.
+      //
+      // This is restoreTaxonomy — the backup RESTORE path, not foreign-data import. A restore must
+      // give the reader back what they backed up; normalizing here rewrites their own names on the
+      // way in. Caught by importExport.test.ts's round-trip suite, which went red on exactly this:
+      // a personal trope exported as "Dragons With Opinions" came back as "Dragons with Opinions",
+      // because `with` is a minor word.
+      //
+      // Normalization belongs where a human TYPES a name (useCreatePersonalTrope,
+      // useCreatePersonalMood, useRenamePersonalTrope), not where the system replays stored data.
       .insert(coinTropes.map((t) => ({ owner_id: ownerId, name: t.name, facet: t.facet })))
       .select('id, name, owner_id')
     if (error) throw error
@@ -631,6 +641,7 @@ async function restoreTaxonomy(
   if (coinMoods.length) {
     const { data: made, error } = await supabase
       .from('moods')
+      // Same reasoning as coinTropes above — a restore replays, it does not re-author.
       .insert(coinMoods.map((m) => ({ owner_id: ownerId, name: m.name })))
       .select('id, name, owner_id')
     if (error) throw error
