@@ -122,6 +122,53 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # ── STRANDED-STACK GUARD ────────────────────────────────────────────────────────────────
+      # Fails a PR whose base branch has ALREADY merged into main. That is the exact condition
+      # under which merging strands the work: GitHub reports "Merged", CI is green, nothing errors,
+      # and the commits are unreachable from main because the base they merged into had itself
+      # already merged.
+      #
+      # THREE OCCURRENCES, and the last two carried the warning in the PR body written by the same
+      # person who then hit it:
+      #   - #252 branched from #251's head; #251 merged; #252 merged into #251's branch.
+      #   - #263, same shape off #262. Its body named the risk AND named check-pr-landed.sh.
+      #   - #267, same shape off #266. Same warning, again, in its own body.
+      # The script detects it and CLAUDE.md documents it, and it happened anyway. That is the
+      # safe-revert.sh / MIN_OBSERVATIONS argument a third time: the merge button is a moment of NO
+      # DELIBERATION, and a PR-body note is read before the work, not at the click. So enforcement
+      # lives here, as a step on the one job branch protection already requires (ci.yml notes the
+      # ruleset requires exactly `gate` and `e2e`) — no new job, no ruleset change.
+      #
+      # WHY THIS TEST AND NOT "base must be main". A blunt base != main rule with an override label
+      # would have caught NONE of the three: each was a deliberate, correct-at-creation stack (the
+      # parent had not merged yet), so each would have carried the label and passed. The failure is
+      # not stacking — it is stacking and then not retargeting once the parent lands. This checks
+      # that condition directly, and leaves live stacks alone.
+      #
+      # Uses the compare API rather than git: actions/checkout leaves a shallow clone, so
+      # `merge-base --is-ancestor` would need an unshallow fetch to be trustworthy. `status` is
+      # `behind` or `identical` exactly when every commit of the base is already in main.
+      # `set -euo pipefail` makes an API failure fail the step — closed, not open.
+      #
+      # RESIDUAL GAP, stated rather than hidden: this re-evaluates only when the job runs. If a
+      # parent merges and the child is never pushed to again, the last green run stays green. The
+      # ruleset's "require branches to be up to date" setting closes that, and is the owner's call.
+      - name: Stacked-PR guard (base must not have already merged)
+        if: github.event_name == 'pull_request' && github.base_ref != 'main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE: ${{ github.base_ref }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          status=$(gh api "repos/${REPO}/compare/main...${BASE}" --jq .status)
+          echo "base '${BASE}' vs main: ${status}"
+          if [ "${status}" = "behind" ] || [ "${status}" = "identical" ]; then
+            echo "::error title=Stacked PR would be stranded::Base branch '${BASE}' has ALREADY merged into main. Merging this PR would merge it into a branch nothing on main can reach, so its commits would be lost while GitHub reports 'Merged'. Retarget this PR to 'main' (Edit > base branch), then verify with scripts/check-pr-landed.sh. Three prior occurrences: #252, #263, #267."
+            exit 1
+          fi
+          echo "Base has not merged into main yet - live stack, allowed."
+
       - uses: pnpm/action-setup@v4
         with:
           version: 11.9.0
