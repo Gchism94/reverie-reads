@@ -602,7 +602,15 @@ function BuyAtIndie({ book }: { book: Book }) {
         {!profile?.defaultStore && (
           <>
             {' '}
-            <Link to="/indie" className="text-primary">
+            {/* `underline` is load-bearing, not decoration. This link sits inside a
+                `text-muted` <p>, so WCAG 1.4.1 (axe `link-in-text-block`) requires it be
+                distinguishable from the surrounding text by something other than colour — and
+                --primary vs --muted measures BELOW 3:1 in all 18 skin x mode combinations,
+                1.01:1 (folio/dark) to 2.01:1 (hearth/dark). Colour alone can never carry it in any
+                skin. Same treatment as the three sibling inline links (SettingsRoute.tsx:454,
+                SettingsRoute.tsx:741, OnboardingRoute.tsx:382); the first of those carries a
+                comment recording the same class of defect found in 2026-08. */}
+            <Link to="/indie" className="text-primary underline underline-offset-2">
               Pick your local store
             </Link>
             .
