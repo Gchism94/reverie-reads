@@ -12,6 +12,7 @@ import { useFilters } from './filterStore'
 import { Chip } from '../components/Chip'
 import { FORMATS, READ_STATUSES } from './constants'
 import { useLabels } from '../skin/labels'
+import { Surface } from '../components/Surface'
 
 const LEN_BUCKETS: SeriesLenBucket[] = ['Any', '1', '2', '3', '4', '5+', 'Unknown']
 const SPICE_LEVELS = [1, 2, 3, 4, 5]
@@ -60,9 +61,12 @@ export function FilterPanel({ books, bare = false }: { books: Book[]; bare?: boo
   }, [books, showAllTags])
 
   return (
-    <div
-      className={bare ? '' : 'mb-4 rounded-2xl border border-line p-4 backdrop-blur'}
-      style={bare ? undefined : { background: 'var(--card)' }}
+    <Surface
+      tone={bare ? 'bare' : 'card'}
+      radius={bare ? 'none' : 'card'}
+      pad={bare ? 0 : 3}
+      border={!bare}
+      className={bare ? '' : 'mb-4 backdrop-blur'}
     >
       <Group label="Genre">
         {genres.map((g) => (
@@ -158,6 +162,6 @@ export function FilterPanel({ books, bare = false }: { books: Book[]; bare?: boo
         </Chip>
         <Chip onClick={s.clear}>Clear all</Chip>
       </Group>
-    </div>
+    </Surface>
   )
 }

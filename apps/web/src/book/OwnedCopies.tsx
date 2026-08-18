@@ -2,6 +2,7 @@ import { POSSESSION_STATES, ownedCaption, type Owned, type PossessionState } fro
 import { Switch } from '../components/Switch'
 import { useVoice } from '../skin/labels'
 import { OWNERSHIP_LABELS } from '../library/constants'
+import { Surface } from '../components/Surface'
 
 /**
  * "Your copies" — possession lives here. A four-state control (docs/archive/task-ownership-v2.md) sets how
@@ -49,7 +50,7 @@ export function OwnedCopies({
   }
 
   return (
-    <div className="rounded-2xl border border-line p-4" style={{ background: 'var(--card)' }}>
+    <Surface tone="card" radius="card" pad={3}>
       <div className="mb-2 flex items-center justify-between gap-2">
         <span className="text-[11px] uppercase tracking-[0.2em] text-muted">Your copies</span>
       </div>
@@ -139,6 +140,6 @@ export function OwnedCopies({
           </div>
         </div>
       )}
-    </div>
+    </Surface>
   )
 }
