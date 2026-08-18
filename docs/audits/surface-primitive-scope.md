@@ -353,6 +353,46 @@ border-line` + padded + non-interactive + not `.skin-control`/`.skin-field`), th
 site by its own `className` radius literal and its adjacent `style={{ background }}`. **Counts in
 this table were measured that way on 2026-08-17 against `feat/surface-batch1`.**
 
+### Verification method — the gate differs for empty-diff vs pixel-changing batches (2026-08-18)
+
+The full-surface `surface-visual.audit.ts` sweep — 570 crops, two observations, tree-locked before
+and after — is the **right and required gate for the EMPTY-DIFF batches (0, 1, 2)**, because there
+the entire claim is _nothing moved anywhere_, and only an exhaustive pixel comparison can substantiate
+"0 changed." Batches 1 and 2 earned their sign-off exactly that way ("0 pixels changed, verified
+twice"), and that must not be weakened.
+
+**The pixel-changing batches (3, 4, 5) verify differently: targeted before/after crops of the migrated
+sites in two representative skins, plus `pnpm gate` (typecheck/lint) and the component tests
+(`Surface.test.tsx`) — NOT the full 570-crop sweep.** The reasoning, earned on batch 3:
+
+- On a batch where change is _expected_ and a human rules on whether each change looks right, the full
+  deterministic sweep produces a number that the visual review overrides anyway. "17 sites changed,
+  all at the corners" is a fact the crops show directly; running the whole matrix twice to compute it
+  first is ceremony.
+- Each full run is ~an hour of **tree-locked** cost (the dev server reads source live, so no edit can
+  land until both observations finish), and on batch 3 a run **saturated the box** — `surface-visual`
+  and `visual-overflow` both went red on the _unmigrated_ tree, the documented starvation signature,
+  not a real diff. A verification step that is itself a source of false reds on a clean tree is worse
+  than a cheaper one that answers the actual question.
+- What actually needs covering on a call-site batch, and what covers it: **did `Surface` break** →
+  `Surface.test.tsx` + `gate`; **did the sites change as intended** → before/after crops of just those
+  sites, in one sharp skin (16px → 2px, the biggest change) and one soft (tryst, 12px); **did an
+  untouched site move** → near-zero risk for a scoped `className` swap, and `gate`'s typecheck plus the
+  component tests catch the ways it could.
+
+The targeted crops are cheap to produce: point a Playwright script (or a trimmed copy of the sweep's
+own capture loop, scoped via `SURFACE_SKINS`) at the routes that render the batch's sites, shoot each
+element before and after, and stitch side-by-side. Batch 3 did this in ~90 seconds per phase against a
+**persistent dev server** reused across runs — which also sidesteps the managed-server teardown
+deadlock that wedges the sweep when it is backgrounded.
+
+**The full sweep remains the gate whenever RENDERING-LAYER code changes** — `tokens.css`,
+`skin-kit.css`, `Surface.tsx` itself, or the harness — because those can move sites the batch never
+touched, which a call-site batch cannot. **And the stored baseline only needs re-capturing when
+rendering-layer code moves, not once per batch:** batches 3–5 are call-site edits, so a baseline
+captured on `main` stays valid across all of them. (Checking that baseline in as an artifact with a
+freshness guard keyed to those four paths is a good follow-up, separable from any one batch.)
+
 ## 6. What the two mutation-testing incidents mean for batch size
 
 Both prior incidents (`IndieScreen.tsx`, 6 uncommitted `.skin-control` migrations; and
