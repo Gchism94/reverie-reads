@@ -209,6 +209,15 @@ jobs:
           version="$(pnpm --filter @reverie/web exec playwright --version | sed 's/^Version //')"
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
+      # All three e2e jobs cache under the SAME key on purpose — they must run identical browsers,
+      # and a per-job key would triple the storage for three copies of one binary. They also start
+      # together, so on a branch's first run all three miss, all three download, and two lose the
+      # race to save: "Cache already exists" in two of the three logs is EXPECTED, not a defect.
+      # Cost of the miss is ~0.4m per job and only on a branch's first run; later runs on the same
+      # branch hit. It is not worth a `main`-triggered warming job — see this workflow's own `push`
+      # comment on the concurrent-job ceiling, and note that in run 32085029255 `e2e-a11y` waited
+      # 42 minutes for a runner slot while its six siblings started at once. Adding an eighth job
+      # would buy back 0.4m by making that worse.
       - name: Cache Playwright browsers
         id: playwright-cache
         uses: actions/cache@v4
@@ -221,10 +230,34 @@ jobs:
       # pull cost anyway).
       - name: Install Playwright browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'
+        # 8, against a MEASURED distribution over 80 cold installs: min 0.18m, median 0.35m,
+        # p90 0.47m — and a MAX of 3.87m. The tail is what sets this number, not the median. Both
+        # install steps carry a STEP timeout so an apt hang fails here, named, instead of eating the
+        # job budget — see the OS-deps step below for the incident that prompted it.
+        timeout-minutes: 8
         run: pnpm --filter @reverie/web exec playwright install --with-deps chromium
 
       - name: Install Playwright OS dependencies (cache hit — browsers already present)
         if: steps.playwright-cache.outputs.cache-hit == 'true'
+        # WHY A STEP TIMEOUT, measured rather than guessed. This step normally runs 0.2-0.4m. On
+        # 2026-08-18 (run 32085029255) it hung for 14.8m and the job's own 15m cap fired, which
+        # reported as `e2e-a11y` "cancelled" at the install step — indistinguishable at a glance from
+        # a concurrency cancellation, and it cost a diagnosis to tell apart. Both are apt operations
+        # against Ubuntu mirrors; neither is anything this repo controls.
+        #
+        # 8 = ~2.1x the worst install observed across 80 runs (3.87m) and comfortably below the 15m
+        # job cap, so a hang surfaces as a FAILED STEP naming itself rather than an ambiguous
+        # job-level cancellation, while a merely-slow-but-progressing install still finishes.
+        #
+        # The first draft of this said 5, "~12x the observed normal", derived from a handful of runs
+        # showing 0.3-0.5m. The very next CI run took 3.87m — 1.29x headroom, tight enough that a
+        # slower day would have turned an infra hiccup into a red build, which is worse than the
+        # ambiguity it replaces. Measuring all 80 gave the tail the small sample had hidden. Same
+        # failure this file's own history keeps repeating: a number taken from too few observations.
+        #
+        # Deliberately NOT a raise of the job's `timeout-minutes`: 15 is right (a11y runs 8.3-9.7m)
+        # and the audit that set it stands.
+        timeout-minutes: 8
         run: pnpm --filter @reverie/web exec playwright install-deps chromium
 
       - uses: supabase/setup-cli@v1
@@ -307,6 +340,15 @@ jobs:
           version="$(pnpm --filter @reverie/web exec playwright --version | sed 's/^Version //')"
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
+      # All three e2e jobs cache under the SAME key on purpose — they must run identical browsers,
+      # and a per-job key would triple the storage for three copies of one binary. They also start
+      # together, so on a branch's first run all three miss, all three download, and two lose the
+      # race to save: "Cache already exists" in two of the three logs is EXPECTED, not a defect.
+      # Cost of the miss is ~0.4m per job and only on a branch's first run; later runs on the same
+      # branch hit. It is not worth a `main`-triggered warming job — see this workflow's own `push`
+      # comment on the concurrent-job ceiling, and note that in run 32085029255 `e2e-a11y` waited
+      # 42 minutes for a runner slot while its six siblings started at once. Adding an eighth job
+      # would buy back 0.4m by making that worse.
       - name: Cache Playwright browsers
         id: playwright-cache
         uses: actions/cache@v4
@@ -316,10 +358,34 @@ jobs:
 
       - name: Install Playwright browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'
+        # 8, against a MEASURED distribution over 80 cold installs: min 0.18m, median 0.35m,
+        # p90 0.47m — and a MAX of 3.87m. The tail is what sets this number, not the median. Both
+        # install steps carry a STEP timeout so an apt hang fails here, named, instead of eating the
+        # job budget — see the OS-deps step below for the incident that prompted it.
+        timeout-minutes: 8
         run: pnpm --filter @reverie/web exec playwright install --with-deps chromium
 
       - name: Install Playwright OS dependencies (cache hit — browsers already present)
         if: steps.playwright-cache.outputs.cache-hit == 'true'
+        # WHY A STEP TIMEOUT, measured rather than guessed. This step normally runs 0.2-0.4m. On
+        # 2026-08-18 (run 32085029255) it hung for 14.8m and the job's own 15m cap fired, which
+        # reported as `e2e-a11y` "cancelled" at the install step — indistinguishable at a glance from
+        # a concurrency cancellation, and it cost a diagnosis to tell apart. Both are apt operations
+        # against Ubuntu mirrors; neither is anything this repo controls.
+        #
+        # 8 = ~2.1x the worst install observed across 80 runs (3.87m) and comfortably below the 15m
+        # job cap, so a hang surfaces as a FAILED STEP naming itself rather than an ambiguous
+        # job-level cancellation, while a merely-slow-but-progressing install still finishes.
+        #
+        # The first draft of this said 5, "~12x the observed normal", derived from a handful of runs
+        # showing 0.3-0.5m. The very next CI run took 3.87m — 1.29x headroom, tight enough that a
+        # slower day would have turned an infra hiccup into a red build, which is worse than the
+        # ambiguity it replaces. Measuring all 80 gave the tail the small sample had hidden. Same
+        # failure this file's own history keeps repeating: a number taken from too few observations.
+        #
+        # Deliberately NOT a raise of the job's `timeout-minutes`: 15 is right (a11y runs 8.3-9.7m)
+        # and the audit that set it stands.
+        timeout-minutes: 8
         run: pnpm --filter @reverie/web exec playwright install-deps chromium
 
       - uses: supabase/setup-cli@v1
@@ -376,6 +442,15 @@ jobs:
           version="$(pnpm --filter @reverie/web exec playwright --version | sed 's/^Version //')"
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
+      # All three e2e jobs cache under the SAME key on purpose — they must run identical browsers,
+      # and a per-job key would triple the storage for three copies of one binary. They also start
+      # together, so on a branch's first run all three miss, all three download, and two lose the
+      # race to save: "Cache already exists" in two of the three logs is EXPECTED, not a defect.
+      # Cost of the miss is ~0.4m per job and only on a branch's first run; later runs on the same
+      # branch hit. It is not worth a `main`-triggered warming job — see this workflow's own `push`
+      # comment on the concurrent-job ceiling, and note that in run 32085029255 `e2e-a11y` waited
+      # 42 minutes for a runner slot while its six siblings started at once. Adding an eighth job
+      # would buy back 0.4m by making that worse.
       - name: Cache Playwright browsers
         id: playwright-cache
         uses: actions/cache@v4
@@ -385,10 +460,34 @@ jobs:
 
       - name: Install Playwright browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'
+        # 8, against a MEASURED distribution over 80 cold installs: min 0.18m, median 0.35m,
+        # p90 0.47m — and a MAX of 3.87m. The tail is what sets this number, not the median. Both
+        # install steps carry a STEP timeout so an apt hang fails here, named, instead of eating the
+        # job budget — see the OS-deps step below for the incident that prompted it.
+        timeout-minutes: 8
         run: pnpm --filter @reverie/web exec playwright install --with-deps chromium
 
       - name: Install Playwright OS dependencies (cache hit — browsers already present)
         if: steps.playwright-cache.outputs.cache-hit == 'true'
+        # WHY A STEP TIMEOUT, measured rather than guessed. This step normally runs 0.2-0.4m. On
+        # 2026-08-18 (run 32085029255) it hung for 14.8m and the job's own 15m cap fired, which
+        # reported as `e2e-a11y` "cancelled" at the install step — indistinguishable at a glance from
+        # a concurrency cancellation, and it cost a diagnosis to tell apart. Both are apt operations
+        # against Ubuntu mirrors; neither is anything this repo controls.
+        #
+        # 8 = ~2.1x the worst install observed across 80 runs (3.87m) and comfortably below the 15m
+        # job cap, so a hang surfaces as a FAILED STEP naming itself rather than an ambiguous
+        # job-level cancellation, while a merely-slow-but-progressing install still finishes.
+        #
+        # The first draft of this said 5, "~12x the observed normal", derived from a handful of runs
+        # showing 0.3-0.5m. The very next CI run took 3.87m — 1.29x headroom, tight enough that a
+        # slower day would have turned an infra hiccup into a red build, which is worse than the
+        # ambiguity it replaces. Measuring all 80 gave the tail the small sample had hidden. Same
+        # failure this file's own history keeps repeating: a number taken from too few observations.
+        #
+        # Deliberately NOT a raise of the job's `timeout-minutes`: 15 is right (a11y runs 8.3-9.7m)
+        # and the audit that set it stands.
+        timeout-minutes: 8
         run: pnpm --filter @reverie/web exec playwright install-deps chromium
 
       - uses: supabase/setup-cli@v1
