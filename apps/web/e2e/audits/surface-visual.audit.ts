@@ -283,7 +283,11 @@ async function freezeMotion(page: Page) {
     .pointer-events-none.fixed.inset-0.-z-10 { display: none !important; }
     /* The ambient MATERIAL — see the note above this function for what it was doing and how it
        was measured. Same reason as the star field: wallpaper, not surface chrome. */
-    .rv-skin-texture { display: none !important; }`,
+    .rv-skin-texture { display: none !important; }
+    /* And the app background's own GRADIENT — the third and last wallpaper layer. See the note
+       above this function; body carries a radial-gradient, transparent surfaces show it through,
+       and Chrome dithers it with an unstable phase. Flat --bg colour remains. */
+    body { background-image: none !important; }`,
   })
 }
 

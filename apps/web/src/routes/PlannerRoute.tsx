@@ -8,19 +8,17 @@ import { useBooks } from '../data/books'
 import { useAllReads } from '../data/reads'
 import { Modal } from '../components/Modal'
 import { MONTHS } from '../library/constants'
+import { Surface } from '../components/Surface'
 
 type Tab = 'calendar' | 'releases'
 const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 function Stat({ n, label }: { n: number; label: string }) {
   return (
-    <div
-      className="skin-panel border border-line p-3 text-center"
-      style={{ background: 'var(--card)' }}
-    >
+    <Surface radius="panel" tone="card" pad={2} className="text-center">
       <div className="text-[22px] font-bold text-ink">{n}</div>
       <div className="text-[11px] text-muted">{label}</div>
-    </div>
+    </Surface>
   )
 }
 
@@ -261,13 +259,10 @@ function Releases({ books, openBook }: { books: Book[]; openBook: (id: string) =
     <div>
       {/* the external half: releases you DON'T own yet, from the authors your library loves */}
       <FromYourAuthors />
-      <div
-        className="mb-4 skin-card border border-line p-3 text-[13px] text-muted"
-        style={{ background: 'var(--card)' }}
-      >
+      <Surface radius="card" tone="card" pad={2} className="mb-4 text-[13px] text-muted">
         🗓️ Add a pub date to any book from its detail page — year only, month, or a full date. Books
         with dates appear here.
-      </div>
+      </Surface>
       <Section title="Coming soon" sub="Upcoming releases you’re tracking" list={upcoming} />
       <Section title="Just released" sub="Out in the last few months" list={recent} />
       <Section title="By release date" sub="Everything else with a date" list={past} />
