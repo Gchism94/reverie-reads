@@ -4,7 +4,7 @@ import { authFailure } from '../support/authError'
 import { keepOfflineCacheEmpty } from '../support/offlineCache'
 import { ok, okUser } from '../support/ok'
 import { SKIN_ORDER, type SkinId } from '@reverie/core'
-import { mkdirSync, writeFileSync, existsSync, readFileSync } from 'node:fs'
+import { mkdirSync, writeFileSync, existsSync, readFileSync, readdirSync, rmSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createHash } from 'node:crypto'
@@ -120,6 +120,7 @@ const WEB_ROOT = join(HERE, '..', '..')
 const OUT = join(WEB_ROOT, 'audit-output', 'surface-visual')
 const BASELINE = join(OUT, 'baseline')
 const CURRENT = join(OUT, 'current')
+const OBSERVATIONS = join(OUT, 'observations')
 
 /** Writing a baseline is explicit. Without it, a run compares — it never silently re-baselines. */
 const IS_BASELINE = process.env.SURFACE_BASELINE === '1'
@@ -434,6 +435,35 @@ const sha = (b: Buffer) => createHash('sha256').update(b).digest('hex').slice(0,
 const MAX_NOISE_DELTA = 2
 const MAX_NOISE_PIXELS = 64
 
+/**
+ * ── ONE RUN IS NOT A MEASUREMENT, AND THIS FILE ENFORCES THAT RATHER THAN ASKING ────────────────
+ * The failure this exists to stop has happened twice, in one week, by the same hand, and the second
+ * time the rule was already written down:
+ *
+ *   · `c157c1b` set an a11y budget from the worst of TWO CI runs. A third run exceeded it.
+ *   · #265 declared this harness "0 of 570 changed" from a SINGLE post-fix run and called the Batch 1
+ *     precondition met. Re-running the identical tree gave 24. The texture fix in it was real; the
+ *     verification was not. `b3350c5` found the third cause the single run had masked.
+ *
+ * Both are the same shape: a stochastic process sampled once, read as settled. And this one is worse
+ * than a wrong number — a clean run is the outcome you were hoping for, so nothing prompts a second
+ * look. The residual's original description, "~4-6 of 62, a different set each time", was describing
+ * exactly a distribution that sometimes lands on zero.
+ *
+ * WHY TOOLING AND NOT A RULE. `scripts/safe-revert.sh`'s entry in CLAUDE.md makes this argument
+ * already, for the same reason: that rule "existed since 2026-07-28 (#93) and being written down did
+ * not make it a reflex, because the failure happens inside a fast revert loop rather than at a moment
+ * of deliberation". N=1 is identical — run, read the number, move on. There is no moment of
+ * deliberation for a rule to catch, so the enforcement is here instead: a comparison run records its
+ * observation and REFUSES TO REPORT until it has at least MIN_OBSERVATIONS of them. "0 changed" is
+ * structurally unobtainable from one run.
+ *
+ * The report is the UNION of crops that differed in ANY observation, not the last one's — a crop that
+ * flags in one run and not the next is exactly the instability this measures, and taking the last run
+ * would discard it. Raise the bar with SURFACE_MIN_OBSERVATIONS for a tighter check.
+ */
+const MIN_OBSERVATIONS = Math.max(2, Number(process.env.SURFACE_MIN_OBSERVATIONS ?? 2))
+
 function pixelDelta(
   aPath: string,
   bPath: string,
@@ -536,6 +566,8 @@ test('surface visual — per-site crops across skins x modes', async ({ page }) 
   }
 
   writeFileSync(join(dir, 'manifest.json'), JSON.stringify(manifest, null, 2))
+  // A fresh baseline invalidates every observation taken against the old one.
+  if (IS_BASELINE) rmSync(OBSERVATIONS, { recursive: true, force: true })
   const total = Object.keys(manifest).length
   console.log(
     `surface-visual: ${IS_BASELINE ? 'BASELINE' : 'CURRENT'} — ${total} crops across ` +
@@ -582,19 +614,53 @@ test('surface visual — per-site crops across skins x modes', async ({ page }) 
     return
   }
   const base = JSON.parse(readFileSync(basePath, 'utf8')) as typeof manifest
+
+  // Record THIS run's observation, then refuse to report on fewer than MIN_OBSERVATIONS of them.
+  // See the note above MIN_OBSERVATIONS for why this is enforced here rather than asked for.
+  mkdirSync(OBSERVATIONS, { recursive: true })
+  const priorCount = readdirSync(OBSERVATIONS).filter((f) => f.endsWith('.json')).length
+  writeFileSync(join(OBSERVATIONS, `run-${priorCount + 1}.json`), JSON.stringify(manifest, null, 2))
+  const observations = readdirSync(OBSERVATIONS)
+    .filter((f) => f.endsWith('.json'))
+    .sort()
+    .map((f) => JSON.parse(readFileSync(join(OBSERVATIONS, f), 'utf8')) as typeof manifest)
+  console.log(
+    `surface-visual: observation ${observations.length} of ${MIN_OBSERVATIONS} required recorded.`,
+  )
+  expect(
+    observations.length,
+    `INSUFFICIENT OBSERVATIONS — ${observations.length} of ${MIN_OBSERVATIONS}. This harness measures ` +
+      `a stochastic process and will not report a result from one run: a clean single run is the ` +
+      `outcome you were hoping for, which is exactly why nothing prompts a second look. #265 reported ` +
+      `"0 of 570" from one run and was wrong; re-running the identical tree gave 24. Run the same ` +
+      `command again (the baseline is untouched) and the comparison will report the union across ` +
+      `runs. A fresh SURFACE_BASELINE=1 capture resets the count.`,
+  ).toBeGreaterThanOrEqual(MIN_OBSERVATIONS)
+
   const changed: string[] = []
   const added: string[] = []
   const removed: string[] = []
   const belowFloor: string[] = []
+  // The UNION across observations: a crop that differs in ANY run is unstable, and reporting only
+  // the latest run would discard precisely the flapping this exists to catch.
+  const everChanged = new Map<string, string>()
+  for (const obs of observations) {
+    for (const k of Object.keys(obs)) {
+      if (!(k in base) || base[k]!.hash === obs[k]!.hash) continue
+      if (!everChanged.has(k)) everChanged.set(k, obs[k]!.dom)
+    }
+  }
   for (const k of Object.keys(manifest)) {
     if (!(k in base)) {
       added.push(k)
       continue
     }
-    if (base[k]!.hash === manifest[k]!.hash) continue
+    if (!everChanged.has(k)) continue
     // A hash mismatch is the QUESTION, not the answer. Decode both and ask how big the difference
     // actually is — see the noise-floor note above `pixelDelta` for why, and for the measurements
-    // the two thresholds come from.
+    // the two thresholds come from. The PNGs on disk are the latest run's; a crop that flapped in an
+    // earlier observation still reports, with that run's delta unavailable — which is why the union
+    // is taken on hashes and the localisation is best-effort.
     const d = pixelDelta(join(BASELINE, `${k}.png`), join(CURRENT, `${k}.png`))
     if (d && d.maxDelta <= MAX_NOISE_DELTA && d.pixels <= MAX_NOISE_PIXELS) {
       belowFloor.push(`${k}  (${d.pixels}px, maxΔ=${d.maxDelta}, bbox ${d.bbox.join(',')})`)
