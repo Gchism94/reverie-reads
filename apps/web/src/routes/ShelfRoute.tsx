@@ -148,10 +148,7 @@ function ShelfScreen() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <div
-            className="flex rounded-[var(--radius-control)] border border-line p-1"
-            style={{ background: 'var(--card)' }}
-          >
+          <Surface radius="control" tone="card" pad={1} className="flex">
             {(
               [
                 ['spines', 'Shelf'],
@@ -173,7 +170,7 @@ function ShelfScreen() {
                 {label}
               </button>
             ))}
-          </div>
+          </Surface>
           <button
             type="button"
             onClick={() => updateList.mutate({ id: list.id, isPriority: !list.priority })}
