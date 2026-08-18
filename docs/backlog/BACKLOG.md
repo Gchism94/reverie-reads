@@ -734,6 +734,46 @@ the repo goes public.
 
 ## Known-flaky, with a prior
 
+- **`spine-shelf-reachability.spec.ts:477` — "cover aspect: the rendered cover box keeps the cover
+  ratio at every visible wave position". TWO occurrences, and by this section's own rule the next one
+  is a defect.**
+
+  | #   | run           | branch / PR                            | note                                         |
+  | --- | ------------- | -------------------------------------- | -------------------------------------------- |
+  | 1   | `31053864700` | `fix/spine-reveal-window` (#149)       | within the 17-day CI cost/value audit window |
+  | 2   | `32104816007` | `fix/recover-267-batch-rescope` (#271) | branch touches ZERO app source               |
+
+  **Mechanism.** A hover lands, the wave settles on a NEIGHBOURING book, and the 5s poll never
+  converges. Verbatim from occurrence 2:
+
+  ```
+  Error: expect(received).toBe(expected) // Object.is equality
+  Expected: "b8bb15d1-8763-461b-87ff-fbcb18a17429"
+  Received: "6f300bd6-fabd-4457-a792-58adcd61a6f4"
+  - Timeout 5000ms exceeded while waiting on the predicate
+  > 567 |   await expect.poll(async () => pickedId(page)).toBe(targetId)
+  ```
+
+  **Why occurrence 2 is classifiable as flake rather than regression, stated so occurrence 3 does not
+  have to re-derive it.** PR #271 changed `AGENTS.md`, one docs file, and a `.audit.ts` the main
+  Playwright config cannot match by construction — **zero app source**. Its app code was
+  byte-identical to a `main` that had passed twice in the preceding hour (runs `32101912366`,
+  `32098418357`). It does **not** reproduce locally: same tree, same spec, 12/12 in 2.2m with `cover
+aspect` at 9.1s. `e2e` failed exactly once in the surrounding 60 runs.
+
+  **This entry is what makes `retries: 1` safe.** CI retries were turned on in
+  `playwright.config.ts` because `retries: 0` conflated DETECTING flake with GATING on it — Playwright
+  still reports a retried pass as `flaky`, so detection is untouched. The risk of retries is that
+  they become a way to stop looking, and this ledger is the answer to that: with two occurrences
+  written down, **a third is a defect by the rule at the top of this section, not something to re-run
+  past.**
+
+  **What to check on occurrence 3, in order:** (1) whether the picked id is an ADJACENT spine
+  (wave-settling) or an arbitrary one (a real pick regression); (2) whether the branch touches
+  `SpineShelf.tsx` or its geometry at all — occurrences 1 and 2 differ exactly here, since #149 was a
+  spine-reveal branch and #271 was not; (3) `E2E_WORKERS` and runner contention, since
+  `playwright.config.ts` records this same spec as one of the two that starve under `workers=2`.
+
 - **CI `Start Supabase` — `failed to bind host port … address already in use`. TWO occurrences on
   2026-08-14, both in the `e2e` job, both re-run green.** Written down on the second, because the
   first was noted only in conversation and evaporated — the identical loop that kept
