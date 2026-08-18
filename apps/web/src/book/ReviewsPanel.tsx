@@ -3,6 +3,7 @@ import { Stars } from '../components/Stars'
 import { useReviews, useSetReviewHidden, useUpsertReview } from '../data/reviews'
 import { useReportContent } from '../data/moderation'
 import { useAuth } from '../auth/AuthProvider'
+import { Surface } from '../components/Surface'
 
 function initials(name: string): string {
   return name
@@ -42,7 +43,7 @@ export function ReviewsPanel({ workKey, reviewerName }: { workKey: string; revie
   }
 
   return (
-    <div className="rounded-2xl border border-line p-4" style={{ background: 'var(--card)' }}>
+    <Surface tone="card" radius="card" pad={3}>
       <div className="flex items-center justify-between">
         <span className="text-[14px] font-semibold text-ink">
           Reviews{reviews ? ` (${reviews.length})` : ''}
@@ -146,6 +147,6 @@ export function ReviewsPanel({ workKey, reviewerName }: { workKey: string; revie
           Post review
         </button>
       </div>
-    </div>
+    </Surface>
   )
 }

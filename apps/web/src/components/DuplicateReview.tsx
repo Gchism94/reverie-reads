@@ -4,6 +4,7 @@ import { mergeImport, type Book, type Incoming, type MatchStrength } from '@reve
 import { useBooks } from '../data/books'
 import { resolveCandidate, type ReviewAction } from '../data/duplicates'
 import { verdictLookupKey, type ReviewCandidate } from '../data/intake'
+import { Surface } from './Surface'
 
 const STRENGTH_LABEL: Record<MatchStrength, string> = {
   isbn: 'same ISBN',
@@ -151,11 +152,7 @@ export function DuplicateReview({
         const adds = existing ? foldSummary(existing, c.incoming) : []
         const k = keyOf(c)
         return (
-          <div
-            key={k}
-            className="rounded-2xl border border-line p-3"
-            style={{ background: 'var(--card)' }}
-          >
+          <Surface key={k} tone="card" radius="card" pad={2}>
             <div className="flex items-start gap-2">
               <input
                 type="checkbox"
@@ -237,7 +234,7 @@ export function DuplicateReview({
                 </div>
               </div>
             </div>
-          </div>
+          </Surface>
         )
       })}
 

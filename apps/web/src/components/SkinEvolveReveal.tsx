@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router'
 import { SKINS } from '@reverie/core'
 import { useProfile } from '../data/profile'
 import { useAdaptiveControls } from '../skin/controls'
+import { Surface } from './Surface'
 
 /**
  * The monthly "your profile is evolving" reveal. Shown when the cron has written a pending
@@ -15,10 +16,13 @@ export function SkinEvolveReveal() {
   if (!pending) return null
 
   return (
-    <div
+    <Surface
       role="status"
-      className="mx-auto mt-3 flex max-w-3xl flex-col gap-2 rounded-2xl border border-line px-4 py-3 sm:flex-row sm:items-center"
-      style={{ background: 'var(--card)', boxShadow: 'var(--shadow)' }}
+      tone="card"
+      radius="card"
+      pad={0}
+      raised
+      className="mx-auto mt-3 flex max-w-3xl flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center"
     >
       <div className="flex-1 text-[13.5px] text-ink">
         <span className="font-semibold">✦ Your reading profile is evolving.</span> Lately you’re{' '}
@@ -58,6 +62,6 @@ export function SkinEvolveReveal() {
           Lock my skin
         </button>
       </div>
-    </div>
+    </Surface>
   )
 }

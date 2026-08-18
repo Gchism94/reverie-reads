@@ -24,6 +24,7 @@ import {
 import { hasOnboarded } from './OnboardingRoute'
 import { useVoice } from '../skin/labels'
 import { BookmarkGlyph } from '../components/BookmarkGlyph'
+import { Surface } from '../components/Surface'
 
 const YEAR = new Date().getFullYear()
 
@@ -221,11 +222,7 @@ function HomeScreen() {
           </div>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             {reading.map((b, i) => (
-              <div
-                key={b.id}
-                className="flex gap-3 rounded-2xl border border-line p-3"
-                style={{ background: 'var(--card)' }}
-              >
+              <Surface key={b.id} tone="card" radius="card" pad={2} className="flex gap-3">
                 <button
                   type="button"
                   onClick={() => openBook(b.id)}
@@ -303,7 +300,7 @@ function HomeScreen() {
                     </button>
                   </div>
                 </div>
-              </div>
+              </Surface>
             ))}
           </div>
         </div>
@@ -384,9 +381,15 @@ function HomeScreen() {
       )}
 
       {reading.length === 0 && priorityTotal === 0 && (
-        <p className="mt-10 rounded-2xl border border-line p-6 text-center text-[14px] text-muted">
+        <Surface
+          as="p"
+          tone="bare"
+          radius="card"
+          pad={5}
+          className="mt-10 text-center text-[14px] text-muted"
+        >
           Mark a book “Reading” or star a Priority TBR and your home will come alive.
-        </p>
+        </Surface>
       )}
 
       {finishing && <LogReadForm book={finishing} onClose={() => setFinishing(null)} />}
