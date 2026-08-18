@@ -15,6 +15,7 @@ import { useAllReads } from '../data/reads'
 import { MONTHS } from '../library/constants'
 import { useLabels, useVoice } from '../skin/labels'
 import { SectionHeader } from '../components/Structure'
+import { Surface } from '../components/Surface'
 
 const THIS_YEAR = new Date().getFullYear()
 
@@ -47,10 +48,10 @@ function Bars({ entries }: { entries: [string, number][] }) {
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="skin-panel border border-line p-4" style={{ background: 'var(--card)' }}>
+    <Surface radius="panel" tone="card" pad={3}>
       <SectionHeader label={title} className="mb-3" />
       {children}
-    </div>
+    </Surface>
   )
 }
 
@@ -191,14 +192,10 @@ function StatsScreen() {
 
       <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
         {stats.map(([n, label]) => (
-          <div
-            key={label}
-            className="skin-panel border border-line p-3 text-center"
-            style={{ background: 'var(--card)' }}
-          >
+          <Surface key={label} radius="panel" tone="card" pad={2} className="text-center">
             <div className="skin-numeral text-[22px] font-bold text-ink">{n}</div>
             <div className="skin-label text-[11px] text-muted">{label}</div>
-          </div>
+          </Surface>
         ))}
       </div>
 

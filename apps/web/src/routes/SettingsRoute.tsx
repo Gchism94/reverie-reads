@@ -31,15 +31,16 @@ import { useSkin } from '../skin/useSkin'
 import { useSkinControls } from '../skin/controls'
 import { useAuth } from '../auth/AuthProvider'
 import { todayLocalDate } from '../lib/localDate'
+import { Surface } from '../components/Surface'
 
 const YEAR = new Date().getFullYear()
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="skin-panel border border-line p-5" style={{ background: 'var(--card)' }}>
+    <Surface radius="panel" tone="card" pad={4}>
       <h2 className="mb-3 text-[15px] font-semibold text-ink">{title}</h2>
       {children}
-    </div>
+    </Surface>
   )
 }
 
@@ -573,10 +574,12 @@ function SettingsScreen() {
               )}
               {dupes.length ? (
                 dupes.map((g, i) => (
-                  <div
+                  <Surface
                     key={i}
-                    className="flex items-center justify-between gap-3 skin-card border border-line p-3"
-                    style={{ background: 'var(--field)' }}
+                    radius="card"
+                    tone="field"
+                    pad={2}
+                    className="flex items-center justify-between gap-3"
                   >
                     <span className="text-[14px] font-semibold text-ink">
                       {g[0]?.title}{' '}
@@ -593,7 +596,7 @@ function SettingsScreen() {
                     >
                       Merge these {g.length}
                     </button>
-                  </div>
+                  </Surface>
                 ))
               ) : (
                 <p className="text-[13px] text-muted">
@@ -611,10 +614,13 @@ function SettingsScreen() {
               </p>
               <ul className="mb-3 flex max-h-[40dvh] flex-col gap-1.5 overflow-y-auto">
                 {titleCleanups.slice(0, 100).map((c) => (
-                  <li
+                  <Surface
+                    as="li"
                     key={c.id}
-                    className="skin-card border border-line p-2.5 text-[13px]"
-                    style={{ background: 'var(--field)' }}
+                    radius="card"
+                    tone="field"
+                    pad={0}
+                    className="p-2.5 text-[13px]"
                   >
                     <div className="text-muted line-through">{c.oldTitle}</div>
                     <div className="font-semibold text-ink">{c.newTitle}</div>
@@ -624,7 +630,7 @@ function SettingsScreen() {
                         {c.position !== '' ? ` #${c.position}` : ''}
                       </div>
                     )}
-                  </li>
+                  </Surface>
                 ))}
               </ul>
               {titleCleanups.length > 100 && (

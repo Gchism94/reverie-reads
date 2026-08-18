@@ -3,6 +3,7 @@ import { Link } from '@tanstack/react-router'
 import { splitName, type Book } from '@reverie/core'
 import { CoverImage } from './CoverImage'
 import { libraryMatch, type SearchResult } from '../lib/search'
+import { Surface } from './Surface'
 
 // The shared search results surface — one visual, both surfaces (Discover grid + the shelf picker's
 // list). Each result shows cover / title / author / year / series (task §1). A result already in the
@@ -67,10 +68,13 @@ export function SearchResults({
         {results.map((r) => {
           const inLib = libraryMatch(r, books)
           return (
-            <li
+            <Surface
+              as="li"
               key={`${r.isbn}|${r.title}`}
-              className="flex items-center gap-3 skin-card border border-line px-2.5 py-2"
-              style={{ background: 'var(--field)' }}
+              radius="card"
+              tone="field"
+              pad={0}
+              className="flex items-center gap-3 px-2.5 py-2"
             >
               <span
                 className="h-14 w-9 flex-none overflow-hidden rounded border border-line"
@@ -87,7 +91,7 @@ export function SearchResults({
               <span className="flex-none">
                 {inLib ? <OnShelf book={inLib} /> : renderActions(r)}
               </span>
-            </li>
+            </Surface>
           )
         })}
       </ul>
