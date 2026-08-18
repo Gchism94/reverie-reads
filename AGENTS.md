@@ -148,7 +148,11 @@ pnpm deploy:functions    # prod functions deploy — via the deploy guard
     deliberate exception). See `docs/reference/DEPLOY.md`.
 - **Heredocs containing shell examples MUST be single-quoted** — `<<'EOF'`, not `<<EOF` — so backticks
   and `$(…)` inside are text, never evaluated. This applies to any heredoc feeding `gh pr create
---body`, commit messages, or reports.
+--body`, commit messages, or reports. **Same hazard, second host: a backtick inside a JS/TS template
+  literal terminates it.** Prose about code, written into a `` `...` `` string — a CSS block in
+  `page.addStyleTag`, a prompt, a query — must not quote identifiers with backticks; put the prose in
+  a `/** */` block outside the literal instead. (2026-08-17: a comment inside `surface-visual`'s
+  style tag did exactly this and both harness runs died with `No tests found`.)
 - **A deploy command must never appear as an un-quoted literal** in a PR body, commit message, or
   report. Write it fenced/inline in a single-quoted heredoc or a `--body-file`; an un-quoted
   `` `supabase functions deploy …` `` in a double-quoted string executes. (Codifies the 2026-07-14
@@ -258,7 +262,7 @@ function` + fresh `create` resets it to the PUBLIC-execute default — verified 
 
 ## Testing & verification discipline
 
-Thirteen rules, each earned by a real failure. A rule without its reason gets dropped by whoever
+Fourteen rules, each earned by a real failure. A rule without its reason gets dropped by whoever
 inherits it, so the reason stays attached.
 
 - **Assert the thing itself, not a proxy that would look the same if the thing were absent.** This is
@@ -320,6 +324,27 @@ inherits it, so the reason stays attached.
   `/tmp/mutation-revert-backups/…` and prints the path, then reverts; it deliberately does NOT try
   to tell a deliberate mutant from real work, since that judgment is precisely what failed both
   times. Still verify each revert with `git status --porcelain` before the next mutant.
+- **A single run of a STOCHASTIC check is not a measurement, and the harness enforces this rather
+  than asking you to remember.** `surface-visual.audit.ts` records each comparison run as an
+  observation and refuses to report until it has ≥2 (`MIN_OBSERVATIONS`, raise with
+  `SURFACE_MIN_OBSERVATIONS`); it reports the UNION of crops that differed in any run, so a crop that
+  flags once and not the next cannot be averaged away. "0 changed" is structurally unobtainable from
+  one run. Twice in one week a single run was reported as settled, both times optimistic:
+  `c157c1b` set an a11y budget from the worst of TWO CI runs and a third exceeded it; then #265
+  declared the surface harness "0 of 570" from ONE post-fix run and called Batch 1's precondition
+  met — re-running the identical tree gave 24, and `b3350c5` found the third cause that run had
+  masked. The tell in hindsight: the residual was described from the start as "~4-6 of 62, a
+  different set each time", which is a distribution that sometimes lands on zero.
+  **Why tooling and not a fourteenth restatement** — the same argument `scripts/safe-revert.sh`
+  makes above: the rule WAS already written down, in a commit message, days before it was broken
+  again by the same hand. N=1 fails inside a loop (run, read the number, move on), not at a moment
+  of deliberation, so there is no pause for a rule to catch. A clean single run is also the outcome
+  you were hoping for, which is exactly why nothing prompts a second look — this failure mode is
+  self-concealing in a way a wrong number is not. Sibling audits were checked:
+  `visual-overflow.audit.ts` and `shelves-trigger.audit.ts` are single-pass reporters with no
+  baseline and no run-to-run comparison, so they have no "0 changed" to obtain and need no
+  equivalent.
+
 - **Run the full gate before reporting, not the subset that looks relevant.** Vitest runs on
   esbuild, which strips types without checking them, so a type-broken test file can pass `pnpm
 test` outright and only fail `tsc`. This has bitten twice, by two different tools: a broken
