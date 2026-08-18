@@ -249,23 +249,100 @@ to look; a person still rules.
 
 ## 5. Batching plan
 
-Sized on the Track B precedent (25–40 sites/batch was workable there for _mechanical_ changes;
-this is riskier per site, so batches are smaller) and the PR 5 rule that **a red run must mean one
-thing**.
+Sized on the Track B precedent (25–40 sites/batch was workable there for _mechanical_ changes; this
+is riskier per site, so batches are smaller) and the PR 5 rule that **a red run must mean one thing**.
 
-| batch | what                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | sites | why this order                                                                                                                                                                                                                                               |
-| ----: | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **0** | Build `Surface` + its unit tests + `surface-visual.audit.ts` + capture the `main` baseline. **Zero call sites migrated.** **Status: component + 29 tests done and green. The harness captures, but two identical runs still differ on ~5 of 62 crops. Motion (52/62) and a cold-cache webfont race (14/62) were found and fixed; DOM, geometry and per-render content are ruled out by measurement. Residual not closed — see the audit script's KNOWN LIMITATION. Batch 1 is blocked on it reaching 0.** |     0 | The instrument must exist and be trusted before it measures anything. A batch that ships the component _and_ migrates sites cannot tell a component bug from a migration bug.                                                                                |
-| **1** | The 25 sites already on `.skin-panel`/`.skin-card`                                                                                                                                                                                                                                                                                                                                                                                                                                                        |    25 | Most mechanical: radius and background already come from tokens, so the diff should be **empty**. A non-empty diff here means `Surface` itself is wrong — the cheapest possible place to learn that.                                                         |
-| **2** | The 18 `tone="bare"` sites (bordered, padded, no background)                                                                                                                                                                                                                                                                                                                                                                                                                                              |    18 | Second-simplest, one tone, no background question.                                                                                                                                                                                                           |
-| **3** | The 20 sites with a **hardcoded** Tailwind radius                                                                                                                                                                                                                                                                                                                                                                                                                                                         |    20 | The first batch that _should_ change pixels, per skin. Retires 20 Track-B-class hardcoded radii as a side effect. Must be its own batch precisely because a non-empty diff is expected here — bundling it with 1 or 2 would make their emptiness unreadable. |
-| **4** | The 9 remaining stragglers (`--card-solid`, `--bg0`, `--chip`, asymmetric padding tail)                                                                                                                                                                                                                                                                                                                                                                                                                   |     9 | Each needs a judgement call; small batch, per-site notes.                                                                                                                                                                                                    |
-| **5** | _Optional, separate decision:_ the 12 borderless kit carriers                                                                                                                                                                                                                                                                                                                                                                                                                                             |    12 | Outside the 72. Flagged in §2 so the scope cannot quietly grow mid-migration.                                                                                                                                                                                |
+**Re-scoped 2026-08-17, and the reason is structural rather than arithmetic.** The first version of
+this table keyed each batch to a different AXIS — batch 1 to a radius mechanism, 2 to a background,
+3 to a radius value, 4 to a background tail plus a padding shape. Axes are properties of sites, not
+partitions of them, so the batches overlapped: after batch 1 landed, **all 8** of batch 2's
+remaining sites were also batch 3 sites, 21 sites were in both 3 and 4, and 5 sites were in no batch
+at all. Batch 2's stated premise ("second-simplest… no background question", implying an empty diff)
+had become impossible, because every one of its sites carried a hardcoded radius.
 
-Order is deliberate: **empty-diff batches first**, so the harness earns trust on cases where any
-change is a bug, before it is used on batch 3 where change is the point.
+**A site is migrated all at once.** Replacing a `<div className="…">` with `<Surface tone radius pad
+border className>` resolves every axis that site sits on in the same edit, so a site cannot be "in
+batch 3 for its radius and batch 4 for its padding" — whichever batch reaches it first resolves
+both. The table below is therefore a **disjoint partition of the 50 remaining sites**, keyed to
+radius VALUE, with the other axes used to predict each batch's diff rather than to define membership.
 
----
+> **The partial-migration path exists and is deliberately not used.** `radius: 'none'` emits no class
+> and `className` is appended verbatim, so `<Surface radius="none" className="rounded-2xl">` is
+> expressible and would adopt `Surface` while preserving a hardcoded radius — an "adopt now, fix the
+> radius later" two-phase plan is genuinely available. It is rejected because the intermediate state
+> launders a hardcoded radius through the escape hatch §3 reserved for the padding TAIL, and a site
+> in that state _looks_ migrated while still carrying the defect the migration exists to retire. If
+> phase 2 ever stalled — batch 1 stalled a week on a harness bug — the repo would hold 42 sites
+> wearing the primitive and keeping the defect. That is this repo's own "dead code wearing tests"
+> shape, applied to a migration.
+
+| batch | what                                                                                                             |  sites | diff expected?                                                                                                                                                      |
+| ----: | ---------------------------------------------------------------------------------------------------------------- | -----: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **0** | Build `Surface` + tests + `surface-visual.audit.ts` + the `main` baseline. **DONE.**                             |      0 | — Harness reached a real 0/570, but only after three causes: motion, the `feTurbulence` texture (#265), and `body`'s radial-gradient (`b3350c5`) which #265 missed. |
+| **1** | The 25 sites on `.skin-panel`/`.skin-card`. **DONE — 0 pixels changed, verified twice.**                         |     25 | **None, and none observed.** Radius and background already came from tokens.                                                                                        |
+| **2** | The **8** sites whose radius is already a token or absent: 5 × `rounded-[var(--radius-control)]` + 3 × no radius |  **8** | **None.** `radius="control"` emits `rounded-[var(--radius-control)]` — the identical string — and `radius="none"` emits nothing. Verifiably empty, like batch 1.    |
+| **3** | The **17** `rounded-2xl` sites. **Carries `IndieScreen.tsx` ×4 — see §6.**                                       | **17** | **Yes, per skin.** One mapping decision: `rounded-2xl` → which radius token?                                                                                        |
+| **4** | The **15** `rounded-xl` sites. Carries `IndieScreen.tsx` ×1.                                                     | **15** | **Yes, per skin.** One mapping decision: `rounded-xl` → which token?                                                                                                |
+| **5** | The **10**-site small-value tail: `rounded-full` 4, `rounded-3xl` 3, `rounded-lg` 3                              | **10** | **Yes.** Three mapping decisions, accepted in one batch because 10 sites is cheap to attribute; split it if a diff proves ambiguous.                                |
+
+**8 + 17 + 15 + 10 = 50, disjoint and complete** — measured on the tree, not derived.
+
+**Padding and tone are resolved inside whichever radius batch owns the site, never separately.** The
+21 asymmetric-padding sites distribute as batch 5 ×9, batch 4 ×8, batch 3 ×2, batch 2 ×2; they take
+`pad={0}` plus `className`, exactly as batch 1's tail did. Tone likewise spans every batch (batch 3
+is card 10 / bare 5 / bg0 2, for instance) and is read per site from the background it actually
+paints. **Do not look for a padding batch or a tone batch — there isn't one, by construction.**
+
+**The 5 sites that were in no batch at all**, named because they had been invisible in every version
+of this table: `ClubsRoute.tsx:67`, `ClubsRoute.tsx:156`, `PlannerRoute.tsx:301`,
+`ShelfRoute.tsx:152`, `ShelvesRoute.tsx:460`. All five are the same thing — a segmented-control
+wrapper, `rounded-[var(--radius-control)]` + `p-1` + `border border-line`. They fell through because
+they carry a token radius (so not batch 3), an ordinary tone (so not batch 4's tail) and scale
+padding (so not its padding tail). They are batch 2 now, and being uniform they are the cheapest
+sites in the plan. Nothing is excluded from the partition, so there is no exclusion needing a reason.
+
+**Batch 5 (the "12 borderless kit carriers") is deleted from this table.** It was already removed by
+§7 decision 2 — "not deferred, not 'batch 5 later'… **Batch 5 is removed from §5**" — and its count
+had already been disproved by §2's re-measurement ("**7 borderless carriers, not 12**"; the 12 came
+from a line-grep that counted a comment mentioning `.skin-tile`). The row survived both corrections
+because neither propagated to the table. Three sections of one document disagreed three different
+ways — §5 vs §7 on whether the batch existed, §5 vs §2 on its size, and §5 vs the tree on every
+other count — and each disagreement survived several careful passes. Hence the ordering below.
+
+### Ordering, and why it is no longer "empty-diff first"
+
+The original line read: _"Order is deliberate: **empty-diff batches first**, so the harness earns
+trust on cases where any change is a bug, before it is used on batch 3 where change is the point."_
+
+**That principle is retained, not retired — it turned out to have one batch left.** The re-scope was
+expected to kill it, since batch 2's empty-diff premise was dead and every remaining batch keys to a
+hardcoded radius. Measuring the partition found otherwise: the 8 sites in the new batch 2 map to an
+emitted class **identical** to what they render today, so batch 2 is genuinely empty-diff and runs
+first for exactly the original reason.
+
+**What batch 1 already bought, stated so it is not re-litigated:** `Surface` provably reproduces
+token-driven output — 0 pixels changed across 570 crops, twice. Batches 3–5 do not need to re-prove
+that; their diffs are read as "did the radius change the way we intended, and did nothing else
+move?" The harness's value there is the second half of that question, and it is undiminished.
+
+**After batch 2, the principle has no further batches to order** — 3, 4 and 5 all expect diffs, and
+their order is by size (largest mapping decision first, so the ambiguous cases surface while
+attention is highest). If a future batch turns out empty-diff, put it first again.
+
+### Every count here is perishable, and that is the point
+
+Batch 1 moved batch 2 from 18 to 8 without anyone editing a number. **Re-measure before each batch
+and print what you measured.** CLAUDE.md's ratchet rule says it directly — "A ratchet's budget must
+be a MEASUREMENT taken from the tree, never a calculation" — and the reason a derived number is
+worse than a wrong one is that it stays plausible while the tree moves underneath it, and nothing
+fails. This document has now demonstrated that three times over: §5's batch-2 count (18, actually
+8), §2's radius split (states 20, its own parenthetical sums to 40, the tree measures 42), and §5's
+deleted batch 5 (12, actually 7, and already cut).
+
+The extractor is a dozen lines over `apps/web/src/**/*.tsx`: §2's population rule (`border
+border-line` + padded + non-interactive + not `.skin-control`/`.skin-field`), then classify each
+site by its own `className` radius literal and its adjacent `style={{ background }}`. **Counts in
+this table were measured that way on 2026-08-17 against `feat/surface-batch1`.**
 
 ## 6. What the two mutation-testing incidents mean for batch size
 
@@ -287,7 +364,9 @@ Three consequences for this work specifically:
    as a carrier count coming back 0.
 
 `IndieScreen.tsx` carries 5 of the 72 and was the site of the first incident. Worth treating as its
-own commit boundary within whatever batch it lands in.
+own commit boundary within whatever batch it lands in — **measured 2026-08-17, that is batch 3 (4
+sites: `:159`, `:308`, `:336`, `:361`, all `rounded-2xl`) and batch 4 (1 site: `:259`,
+`rounded-xl`).** It carried none of batch 1's 25, which is why this caution did not apply there.
 
 ---
 
