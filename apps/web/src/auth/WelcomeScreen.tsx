@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { authCallback } from '../lib/authCallback'
 import { useAuth } from './AuthProvider'
 import { Wordmark } from './Wordmark'
+import { Surface } from '../components/Surface'
 
 const displayFont = { fontFamily: 'var(--font-display)', fontWeight: 600 } as const
 
@@ -17,15 +18,12 @@ const reqs = (pw: string) => [
 function Card({ children }: { children: ReactNode }) {
   return (
     <main className="relative z-[1] mx-auto flex min-h-dvh w-full max-w-[520px] items-center px-6">
-      <div
-        className="w-full rounded-3xl border border-line p-7 text-center"
-        style={{ background: 'var(--card)', boxShadow: 'var(--shadow)' }}
-      >
+      <Surface tone="card" radius="panel" pad={0} raised className="w-full p-7 text-center">
         <Link to="/" className="mb-6 inline-block">
           <Wordmark />
         </Link>
         {children}
-      </div>
+      </Surface>
     </main>
   )
 }

@@ -87,9 +87,15 @@ function Card({
       </div>
       <div className="mt-1.5">
         {owned ? (
-          <span className="skin-label inline-block rounded-full border border-line px-2.5 py-1 text-[11px] text-muted">
+          <Surface
+            as="span"
+            tone="bare"
+            radius="control"
+            pad={0}
+            className="skin-label inline-block px-2.5 py-1 text-[11px] text-muted"
+          >
             On your shelf
-          </span>
+          </Surface>
         ) : (
           <button
             type="button"

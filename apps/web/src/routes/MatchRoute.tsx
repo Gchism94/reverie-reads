@@ -8,6 +8,7 @@ import {
   type MatchProfile,
   type MatchReason,
 } from '@reverie/core'
+import { Surface } from '../components/Surface'
 import { rootRoute } from './RootRoute'
 import { CoverImage } from '../components/CoverImage'
 import { useBooks } from '../data/books'
@@ -243,10 +244,7 @@ function MatchScreen() {
     if (!q) return null
     return (
       <section className="mx-auto w-full max-w-xl px-4 py-10 sm:px-6">
-        <div
-          className="rounded-3xl border border-line p-6"
-          style={{ background: 'var(--card)', boxShadow: 'var(--shadow)' }}
-        >
+        <Surface tone="card" radius="panel" pad={5} raised>
           <div
             className="skin-meter mb-3 h-1.5 overflow-hidden"
             style={{ background: 'var(--chip)' }}
@@ -343,7 +341,7 @@ function MatchScreen() {
               )}
             </>
           )}
-        </div>
+        </Surface>
       </section>
     )
   }

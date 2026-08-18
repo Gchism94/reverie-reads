@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useCoverAlternates } from '../data/coverStudio'
 import { useSetCover } from '../data/coverSheet'
 import type { CoverAlternate } from '../lib/enrich'
+import { Surface } from './Surface'
 
 /**
  * Cover Studio — pick a found edition (the import-review surface). Expands to the E1 alternate
@@ -50,7 +51,7 @@ export function CoverPicker({
 
   const alts = alternates ?? []
   return (
-    <div className="mt-1 rounded-lg border border-line p-2" style={{ background: 'var(--field)' }}>
+    <Surface tone="field" radius="card" pad={0} className="mt-1 p-2">
       {isLoading && <div className="text-[11px] text-muted">Finding editions…</div>}
       {saving && <div className="text-[11px] text-muted">Saving cover…</div>}
       {!isLoading && !saving && alts.length === 0 && (
@@ -82,6 +83,6 @@ export function CoverPicker({
       >
         Cancel
       </button>
-    </div>
+    </Surface>
   )
 }

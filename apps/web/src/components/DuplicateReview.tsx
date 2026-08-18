@@ -183,26 +183,20 @@ export function DuplicateReview({
                   <span className="italic">({STRENGTH_LABEL[c.strength]})</span>
                 </div>
                 <div className="mt-1.5 grid gap-1 text-[12.5px] sm:grid-cols-2">
-                  <div
-                    className="rounded-lg border border-line px-2 py-1"
-                    style={{ background: 'var(--field)' }}
-                  >
+                  <Surface tone="field" radius="card" pad={0} className="px-2 py-1">
                     <span className="text-[11px] uppercase tracking-[0.12em] text-muted">Kept</span>
                     <div className="text-ink">
                       your entry — rating, notes, shelves &amp; reads stay
                     </div>
-                  </div>
-                  <div
-                    className="rounded-lg border border-line px-2 py-1"
-                    style={{ background: 'var(--field)' }}
-                  >
+                  </Surface>
+                  <Surface tone="field" radius="card" pad={0} className="px-2 py-1">
                     <span className="text-[11px] uppercase tracking-[0.12em] text-muted">
                       Added on merge
                     </span>
                     <div className="text-ink">
                       {adds.length ? adds.join(', ') : 'nothing new — already complete'}
                     </div>
-                  </div>
+                  </Surface>
                 </div>
                 <div className="mt-2 flex flex-wrap gap-2">
                   <button
