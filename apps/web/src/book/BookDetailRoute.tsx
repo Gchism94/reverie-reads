@@ -576,13 +576,7 @@ function BuyAtIndie({ book }: { book: Book }) {
   const config = buyConfig(profile?.defaultStore)
   const links = buildBuyLinks(book, config)
   return (
-    <Surface
-      as="details"
-      tone="card"
-      radius="card"
-      pad={3}
-      className="mt-4"
-    >
+    <Surface as="details" tone="card" radius="card" pad={3} className="mt-4">
       <summary className="cursor-pointer text-[14px] font-semibold text-ink">
         Buy at an indie{profile?.defaultStore ? ` · ${profile.defaultStore.name}` : ''}
       </summary>

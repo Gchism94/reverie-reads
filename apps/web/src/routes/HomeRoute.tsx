@@ -381,7 +381,13 @@ function HomeScreen() {
       )}
 
       {reading.length === 0 && priorityTotal === 0 && (
-        <Surface as="p" tone="bare" radius="card" pad={5} className="mt-10 text-center text-[14px] text-muted">
+        <Surface
+          as="p"
+          tone="bare"
+          radius="card"
+          pad={5}
+          className="mt-10 text-center text-[14px] text-muted"
+        >
           Mark a book “Reading” or star a Priority TBR and your home will come alive.
         </Surface>
       )}
