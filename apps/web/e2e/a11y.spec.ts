@@ -50,6 +50,29 @@ function seedOwnLibrary(): void {
  * sign-in surfaced as a bare `TypeError` on the `.id` access, pointing at the wrong thing entirely.
  * Route them through the same `authFailure()` reader every other spec uses.
  */
+/**
+ * TEXT OVER ARBITRARY COVER ART IS EXCLUDED — a validity fix, not a convenience one.
+ *
+ * `axe` cannot evaluate contrast for text composited over an `<img>`: it resolves the nearest
+ * PAINTED background, and over artwork there is none. That class was therefore assigned to the
+ * token tests BY DESIGN — `packages/core/src/statePill.contrast.test.ts`, whose header says it
+ * outright ("axe does not measure text over an image, and the pill sits on arbitrary cover art"),
+ * and which is keyed off the SKINS registry so a tenth skin fails there before it can ship.
+ *
+ * What changed, and why the exclusion is now REQUIRED rather than tidy: #262/#264 stubbed every
+ * cover image suite-wide to a 1x1 PNG. axe can now resolve a background behind those elements — the
+ * STUB's. Observed on run 32092051435, tryst/light: `fg=#f4eae0 bg=#f8eee4 ratio=1.03` on a
+ * borrowed-state pill over a magnified cover. Near-white on near-white, a composite that exists in
+ * no reader's browser. It fails in BOTH directions — a stub background can equally make a genuinely
+ * unreadable pill measure fine.
+ *
+ * Scoped to a marker on the component rather than a selector list: `StatePill` carries
+ * `data-over-art`, and all five of its call sites are `absolute` inside a cover box, so there is
+ * nothing to keep in sync and no non-artwork usage being silenced. A future component that paints
+ * text onto artwork adds the attribute and inherits both the exclusion and this reasoning.
+ */
+const OVER_ART = '[data-over-art]'
+
 async function signedInClient(context: string): Promise<SupabaseClient> {
   const sb = createClient(SUPABASE_URL, ANON)
   const { data, error } = await sb.auth.signInWithPassword({
@@ -536,7 +559,10 @@ test.describe('axe sweep', () => {
         await expect(page.locator('html')).toHaveAttribute('data-mode', mode)
         await assertInkSettled(page, skin, mode, `${skin}/${mode} ${name}`)
 
-        const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze()
+        const results = await new AxeBuilder({ page })
+          .withTags(['wcag2a', 'wcag2aa'])
+          .exclude(OVER_ART)
+          .analyze()
         const serious = results.violations.filter(
           (v) => v.impact === 'serious' || v.impact === 'critical',
         )
@@ -603,7 +629,10 @@ test('unauthenticated landing + auth pass axe', async ({ page }) => {
     await page.goto(path)
     await page.locator('main').first().waitFor({ state: 'visible' })
     await page.waitForLoadState('networkidle') // let the landing's lazy below-fold chunk render before scanning
-    const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze()
+    const results = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa'])
+      .exclude(OVER_ART)
+      .analyze()
     for (const v of results.violations.filter(
       (x) => x.impact === 'serious' || x.impact === 'critical',
     )) {
