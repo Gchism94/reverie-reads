@@ -70,11 +70,38 @@ export default defineConfig({
   fullyParallel: true,
   workers: WORKERS,
   reporter: 'list',
+  // ── RETRIES: 1 ON CI, 0 LOCALLY — overturning "retries STAY 0", deliberately ──────────────────
+  // The rule this replaces read: "Retries STAY 0 — this suite exists to measure flake, not to
+  // absorb it." The intent was right and the mechanism was wrong: it CONFLATES DETECTING flake
+  // WITH GATING ON IT. Playwright reports a test that fails then passes on retry as `flaky`, not
+  // `passed`, so detection survives a retry completely. `retries: 0` was never what measured flake;
+  // it was what BLOCKED on it — a much weaker claim, and the one that stopped being worth its cost.
+  //
+  // What it was costing, measured rather than asserted: `spine-shelf-reachability.spec.ts:477`
+  // ("cover aspect") failed run 32104816007 on PR #271 — a branch touching ZERO app source (docs,
+  // CLAUDE.md, and a `.audit.ts` the main config cannot even match), whose app code was
+  // byte-identical to a `main` that had passed twice in the preceding hour. The same spec and the
+  // same test had gone once before, run 31053864700. It passes locally 12/12. A hover lands, the
+  // wave settles on a neighbouring book, and a 5s poll never converges.
+  //
+  // WHAT KEEPS THIS FROM BECOMING A WAY TO STOP LOOKING, which is the real risk: every occurrence
+  // goes in `docs/backlog/BACKLOG.md`'s "Known-flaky, with a prior" ledger, whose own standing rule
+  // is that A SECOND FAILURE IS A DEFECT, NOT A FLAKE. This test is recorded there with both of its
+  // occurrences, so the next one is a defect by that ledger's standard and is not something to
+  // re-run past. Retries end the gating; the ledger keeps the counting.
+  //
+  // Local stays 0: locally a red run is read immediately by the person who caused it, and there is
+  // no merge to block. The cost only exists on CI.
+  retries: process.env.CI ? 1 : 0,
   use: {
     baseURL: BASE_URL,
-    // `on-first-retry` was inert here: retries are 0, so there is never a first retry and every
-    // failure was reported with no trace at all. Retries STAY 0 — this suite exists to measure
-    // flake, not to absorb it — so the trace has to be kept on the first (only) attempt.
+    // `retain-on-failure` is KEPT, and it is now the better choice rather than merely the only one.
+    // The original note said `on-first-retry` "was inert here: retries are 0, so there is never a
+    // first retry" — true then, false now. Re-checked against the new config rather than left to
+    // describe a config that no longer exists: with retries at 1, `on-first-retry` would capture
+    // only the SECOND attempt, and a flake's first attempt — the one that actually failed and the
+    // only one carrying the evidence — would have no trace. `retain-on-failure` keeps the trace of
+    // any attempt that failed, including the failed first attempt of a test that then passes.
     trace: 'retain-on-failure',
   },
   // Three projects. `pnpm e2e` with no --project flag runs ALL THREE, in this same process, so
