@@ -100,9 +100,11 @@ export function DuplicateReview({
 
   return (
     <div className="flex flex-col gap-3">
-      <div
-        className="flex flex-wrap items-center gap-2 rounded-xl border border-line p-2.5"
-        style={{ background: 'var(--field)' }}
+      <Surface
+        tone="field"
+        radius="card"
+        pad={0}
+        className="flex flex-wrap items-center gap-2 p-2.5"
       >
         <label className="flex items-center gap-2 text-[12.5px] text-ink">
           <input
@@ -143,7 +145,7 @@ export function DuplicateReview({
         >
           Dismiss
         </button>
-      </div>
+      </Surface>
 
       {error && <p className="text-[12.5px] text-primary">{error}</p>}
 
