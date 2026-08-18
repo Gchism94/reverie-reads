@@ -15,6 +15,7 @@ import { Label } from '../components/Label'
 import { SkinDivider } from '../components/SkinDivider'
 import { DuplicateReview } from '../components/DuplicateReview'
 import { ImportSummary } from '../components/ImportSummary'
+import { Surface } from '../components/Surface'
 
 // First-run flag — honor-based / client-side (the project's v1 default), so a finished or skipped
 // onboarding never reappears. The trigger that sends a brand-new reader here lives in HomeRoute.
@@ -279,10 +280,7 @@ function OnboardingFlow() {
           })}
         </div>
 
-        <div
-          className="mt-5 border border-line px-4 py-3"
-          style={{ background: 'var(--card-solid)', borderRadius: 'var(--radius-panel)' }}
-        >
+        <Surface radius="panel" tone="card-solid" pad={0} className="mt-5 px-4 py-3">
           <span className="skin-label block text-[11px]" style={{ color: 'var(--accent-ink)' }}>
             Your skin · {skinLabel}
           </span>
@@ -292,7 +290,7 @@ function OnboardingFlow() {
           >
             {skinTagline}
           </p>
-        </div>
+        </Surface>
 
         <div className="mt-6 flex items-center justify-between gap-3">
           <Button variant="ghost" onClick={() => setStep(0)}>

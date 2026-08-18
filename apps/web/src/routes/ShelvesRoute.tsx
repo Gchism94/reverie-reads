@@ -456,10 +456,7 @@ function ShelvesScreen() {
               .skin-tile/.skin-panel are the card/panel radius scale rather than the control one, and
               .skin-field adds `clip-path: var(--ctl-clip)`, which would clip the buttons it wraps.
               A new kit class for one site would be overkill. */}
-          <div
-            className="flex rounded-[var(--radius-control)] border border-line p-1"
-            style={{ background: 'var(--card)' }}
-          >
+          <Surface radius="control" tone="card" pad={1} className="flex">
             {(['tbr', 'collection'] as const).map((t) => (
               <button
                 key={t}
@@ -476,7 +473,7 @@ function ShelvesScreen() {
                 {t === 'tbr' ? 'TBRs' : 'Collections'}
               </button>
             ))}
-          </div>
+          </Surface>
           <button
             type="button"
             onClick={() => {

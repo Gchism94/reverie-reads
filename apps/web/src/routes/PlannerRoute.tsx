@@ -297,10 +297,7 @@ function PlannerScreen() {
         >
           Planner
         </h1>
-        <div
-          className="flex rounded-[var(--radius-control)] border border-line p-1"
-          style={{ background: 'var(--card)' }}
-        >
+        <Surface radius="control" tone="card" pad={1} className="flex">
           {(['calendar', 'releases'] as const).map((t) => (
             <button
               key={t}
@@ -317,7 +314,7 @@ function PlannerScreen() {
               {t}
             </button>
           ))}
-        </div>
+        </Surface>
       </header>
 
       {tab === 'calendar' ? (
