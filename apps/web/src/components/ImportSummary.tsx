@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { StatNumber } from './Label'
 import { summaryHeadline, summaryNotices } from './importSummaryCopy'
 import type { ImportExportResult } from '../data/importLibrary'
+import { Surface } from './Surface'
 
 // The post-import summary (docs/archive/task-import-quality.md §4): reflects reality, honestly — what came
 // in, what folded, where to-read rows landed, and what's still empty in bulk (covers we'll fetch).
@@ -9,13 +10,10 @@ import type { ImportExportResult } from '../data/importLibrary'
 
 function Tile({ n, label }: { n: number; label: string }) {
   return (
-    <div
-      className="rounded-xl border border-line px-3 py-2.5 text-center"
-      style={{ background: 'var(--field)' }}
-    >
+    <Surface tone="field" radius="card" pad={0} className="px-3 py-2.5 text-center">
       <StatNumber className="block text-[22px] font-bold text-ink">{n}</StatNumber>
       <span className="text-[11px] uppercase tracking-[0.12em] text-muted">{label}</span>
-    </div>
+    </Surface>
   )
 }
 

@@ -18,6 +18,7 @@ import {
   sourceRect,
   type CropState,
 } from '../lib/cropMath'
+import { Surface } from './Surface'
 
 // The cover sheet — the cover is the door. Four ways in, one pipeline out (the covers Edge
 // Function): shoot your own copy, upload an image, pick an edition (with context: format · year ·
@@ -115,10 +116,7 @@ export function CoverSheet({ book, onClose }: { book: Book; onClose: () => void 
       <p className="-mt-2 mb-3 text-[13px] text-muted">{book.title}</p>
 
       {synced && (
-        <div
-          className="mb-4 rounded-xl border border-line p-3"
-          style={{ background: 'var(--field)' }}
-        >
+        <Surface tone="field" radius="card" pad={2} className="mb-4">
           <div className="text-[13.5px] font-semibold text-ink">Cover updated.</div>
           {canSync && (
             <button
@@ -147,7 +145,7 @@ export function CoverSheet({ book, onClose }: { book: Book; onClose: () => void 
           <button type="button" onClick={onClose} className="mt-2 text-[12px] text-muted underline">
             Done
           </button>
-        </div>
+        </Surface>
       )}
 
       <SectionLabel>Your copy</SectionLabel>

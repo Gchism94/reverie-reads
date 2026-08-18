@@ -63,11 +63,7 @@ export function ReviewsPanel({ workKey, reviewerName }: { workKey: string; revie
       <div className="flex flex-col gap-2">
         {reviews?.length ? (
           reviews.map((r) => (
-            <div
-              key={r.id}
-              className="rounded-xl border border-line p-3"
-              style={{ background: 'var(--field)' }}
-            >
+            <Surface key={r.id} tone="field" radius="card" pad={2}>
               <div className="flex items-center gap-2">
                 <span
                   className="flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-bold"
@@ -114,7 +110,7 @@ export function ReviewsPanel({ workKey, reviewerName }: { workKey: string; revie
                   </button>
                 )}
               </div>
-            </div>
+            </Surface>
           ))
         ) : (
           <p className="text-[13px] text-muted">No reviews yet — be the first voice.</p>
