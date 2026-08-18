@@ -46,6 +46,18 @@ export function StatePill({
     <span
       aria-hidden={announce ? undefined : true}
       title={title}
+      /* Marks text that composites over ARBITRARY COVER ART, for the a11y sweep to exclude.
+         All five call sites are `absolute` inside a cover box (CoverCard x3, SpineShelf x2) — this
+         component has no non-artwork usage, so the exclusion loses no real coverage.
+         axe cannot evaluate this class at all: it reads the nearest painted background, and over an
+         <img> there is none it can resolve. `packages/core/src/statePill.contrast.test.ts` owns the
+         guarantee instead, keyed off the SKINS registry so a tenth skin fails there before it ships.
+         Its header states the constraint verbatim: "axe does not measure text over an image, and the
+         pill sits on arbitrary cover art."
+         The attribute exists because the e2e suite now stubs every cover to a 1x1 PNG (#262/#264),
+         which hands axe a background it CAN resolve — the stub's, not the reader's. That turns a
+         structural non-answer into a confident wrong one, in both directions. */
+      data-over-art=""
       className={`flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${className}`}
       style={{
         background: STATE_PILL_TOKENS.surface,
