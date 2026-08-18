@@ -230,9 +230,11 @@ jobs:
       # pull cost anyway).
       - name: Install Playwright browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'
-        # 5, against a measured 0.3-0.5m. Both install steps carry a STEP timeout so an apt hang
-        # fails here, fast and named, instead of eating the job budget — see the OS-deps step below.
-        timeout-minutes: 5
+        # 8, against a MEASURED distribution over 80 cold installs: min 0.18m, median 0.35m,
+        # p90 0.47m — and a MAX of 3.87m. The tail is what sets this number, not the median. Both
+        # install steps carry a STEP timeout so an apt hang fails here, named, instead of eating the
+        # job budget — see the OS-deps step below for the incident that prompted it.
+        timeout-minutes: 8
         run: pnpm --filter @reverie/web exec playwright install --with-deps chromium
 
       - name: Install Playwright OS dependencies (cache hit — browsers already present)
@@ -243,11 +245,19 @@ jobs:
         # a concurrency cancellation, and it cost a diagnosis to tell apart. Both are apt operations
         # against Ubuntu mirrors; neither is anything this repo controls.
         #
-        # 5 is ~12x the observed normal and still a third of the job cap, so a hang surfaces as a
-        # FAILED STEP naming itself rather than an ambiguous job-level cancellation. This is
-        # deliberately NOT a raise of the job's `timeout-minutes`: 15 is right (normal a11y job is
-        # 8.3-9.7m across the last six green runs) and the audit that set it stands.
-        timeout-minutes: 5
+        # 8 = ~2.1x the worst install observed across 80 runs (3.87m) and comfortably below the 15m
+        # job cap, so a hang surfaces as a FAILED STEP naming itself rather than an ambiguous
+        # job-level cancellation, while a merely-slow-but-progressing install still finishes.
+        #
+        # The first draft of this said 5, "~12x the observed normal", derived from a handful of runs
+        # showing 0.3-0.5m. The very next CI run took 3.87m — 1.29x headroom, tight enough that a
+        # slower day would have turned an infra hiccup into a red build, which is worse than the
+        # ambiguity it replaces. Measuring all 80 gave the tail the small sample had hidden. Same
+        # failure this file's own history keeps repeating: a number taken from too few observations.
+        #
+        # Deliberately NOT a raise of the job's `timeout-minutes`: 15 is right (a11y runs 8.3-9.7m)
+        # and the audit that set it stands.
+        timeout-minutes: 8
         run: pnpm --filter @reverie/web exec playwright install-deps chromium
 
       - uses: supabase/setup-cli@v1
@@ -348,9 +358,11 @@ jobs:
 
       - name: Install Playwright browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'
-        # 5, against a measured 0.3-0.5m. Both install steps carry a STEP timeout so an apt hang
-        # fails here, fast and named, instead of eating the job budget — see the OS-deps step below.
-        timeout-minutes: 5
+        # 8, against a MEASURED distribution over 80 cold installs: min 0.18m, median 0.35m,
+        # p90 0.47m — and a MAX of 3.87m. The tail is what sets this number, not the median. Both
+        # install steps carry a STEP timeout so an apt hang fails here, named, instead of eating the
+        # job budget — see the OS-deps step below for the incident that prompted it.
+        timeout-minutes: 8
         run: pnpm --filter @reverie/web exec playwright install --with-deps chromium
 
       - name: Install Playwright OS dependencies (cache hit — browsers already present)
@@ -361,11 +373,19 @@ jobs:
         # a concurrency cancellation, and it cost a diagnosis to tell apart. Both are apt operations
         # against Ubuntu mirrors; neither is anything this repo controls.
         #
-        # 5 is ~12x the observed normal and still a third of the job cap, so a hang surfaces as a
-        # FAILED STEP naming itself rather than an ambiguous job-level cancellation. This is
-        # deliberately NOT a raise of the job's `timeout-minutes`: 15 is right (normal a11y job is
-        # 8.3-9.7m across the last six green runs) and the audit that set it stands.
-        timeout-minutes: 5
+        # 8 = ~2.1x the worst install observed across 80 runs (3.87m) and comfortably below the 15m
+        # job cap, so a hang surfaces as a FAILED STEP naming itself rather than an ambiguous
+        # job-level cancellation, while a merely-slow-but-progressing install still finishes.
+        #
+        # The first draft of this said 5, "~12x the observed normal", derived from a handful of runs
+        # showing 0.3-0.5m. The very next CI run took 3.87m — 1.29x headroom, tight enough that a
+        # slower day would have turned an infra hiccup into a red build, which is worse than the
+        # ambiguity it replaces. Measuring all 80 gave the tail the small sample had hidden. Same
+        # failure this file's own history keeps repeating: a number taken from too few observations.
+        #
+        # Deliberately NOT a raise of the job's `timeout-minutes`: 15 is right (a11y runs 8.3-9.7m)
+        # and the audit that set it stands.
+        timeout-minutes: 8
         run: pnpm --filter @reverie/web exec playwright install-deps chromium
 
       - uses: supabase/setup-cli@v1
@@ -440,9 +460,11 @@ jobs:
 
       - name: Install Playwright browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'
-        # 5, against a measured 0.3-0.5m. Both install steps carry a STEP timeout so an apt hang
-        # fails here, fast and named, instead of eating the job budget — see the OS-deps step below.
-        timeout-minutes: 5
+        # 8, against a MEASURED distribution over 80 cold installs: min 0.18m, median 0.35m,
+        # p90 0.47m — and a MAX of 3.87m. The tail is what sets this number, not the median. Both
+        # install steps carry a STEP timeout so an apt hang fails here, named, instead of eating the
+        # job budget — see the OS-deps step below for the incident that prompted it.
+        timeout-minutes: 8
         run: pnpm --filter @reverie/web exec playwright install --with-deps chromium
 
       - name: Install Playwright OS dependencies (cache hit — browsers already present)
@@ -453,11 +475,19 @@ jobs:
         # a concurrency cancellation, and it cost a diagnosis to tell apart. Both are apt operations
         # against Ubuntu mirrors; neither is anything this repo controls.
         #
-        # 5 is ~12x the observed normal and still a third of the job cap, so a hang surfaces as a
-        # FAILED STEP naming itself rather than an ambiguous job-level cancellation. This is
-        # deliberately NOT a raise of the job's `timeout-minutes`: 15 is right (normal a11y job is
-        # 8.3-9.7m across the last six green runs) and the audit that set it stands.
-        timeout-minutes: 5
+        # 8 = ~2.1x the worst install observed across 80 runs (3.87m) and comfortably below the 15m
+        # job cap, so a hang surfaces as a FAILED STEP naming itself rather than an ambiguous
+        # job-level cancellation, while a merely-slow-but-progressing install still finishes.
+        #
+        # The first draft of this said 5, "~12x the observed normal", derived from a handful of runs
+        # showing 0.3-0.5m. The very next CI run took 3.87m — 1.29x headroom, tight enough that a
+        # slower day would have turned an infra hiccup into a red build, which is worse than the
+        # ambiguity it replaces. Measuring all 80 gave the tail the small sample had hidden. Same
+        # failure this file's own history keeps repeating: a number taken from too few observations.
+        #
+        # Deliberately NOT a raise of the job's `timeout-minutes`: 15 is right (a11y runs 8.3-9.7m)
+        # and the audit that set it stands.
+        timeout-minutes: 8
         run: pnpm --filter @reverie/web exec playwright install-deps chromium
 
       - uses: supabase/setup-cli@v1
