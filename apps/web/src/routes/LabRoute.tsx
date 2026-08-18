@@ -4,6 +4,7 @@ import { type SkinId } from '@reverie/core'
 import { rootRoute } from './RootRoute'
 import { Nameplate } from '../components/Nameplate'
 import { loadAllSkinFonts } from '../skin/fonts'
+import { Surface } from '../components/Surface'
 
 /**
  * Skin-character eyeball (Stage 1b). Renders Tryst vs Aphelion side by side, in both modes, on a
@@ -176,10 +177,13 @@ function LabControls({ skin }: { skin: SkinId }) {
 
 function Cell({ skin, mode, label }: { skin: SkinId; mode: 'dark' | 'light'; label: string }) {
   return (
-    <div
+    <Surface
       data-skin={skin}
       data-mode={mode}
-      className="relative overflow-hidden rounded-2xl border border-line p-5"
+      tone="bare"
+      radius="card"
+      pad={4}
+      className="relative overflow-hidden"
       style={{ background: 'var(--bg0)', color: 'var(--ink)' }}
     >
       <div className="rv-skin-texture" />
@@ -204,7 +208,7 @@ function Cell({ skin, mode, label }: { skin: SkinId; mode: 'dark' | 'light'; lab
         </div>
         <LabControls skin={skin} />
       </div>
-    </div>
+    </Surface>
   )
 }
 

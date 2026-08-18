@@ -11,6 +11,7 @@ import {
 } from '../components/Structure'
 import { Spine } from '../components/Spine'
 import { BookmarkGlyph } from '../components/BookmarkGlyph'
+import { Surface } from '../components/Surface'
 
 // Spine shelf — real-style titles of varying length so the variable-length handling + size variation
 // show, NOT the specimen's tidy samples: a one-word, a medium, a long, and a monster (title+subtitle).
@@ -78,10 +79,13 @@ function MiniCard({ skin }: { skin: SkinId }) {
 
 function Cell({ skin, mode, label }: { skin: SkinId; mode: 'dark' | 'light'; label: string }) {
   return (
-    <div
+    <Surface
       data-skin={skin}
       data-mode={mode}
-      className="overflow-hidden rounded-2xl border border-line p-5"
+      tone="bare"
+      radius="card"
+      pad={4}
+      className="overflow-hidden"
       style={{ background: 'var(--bg0)', color: 'var(--ink)' }}
     >
       <div className="skin-label mb-4 text-[10px] text-muted">{label}</div>
@@ -138,7 +142,7 @@ function Cell({ skin, mode, label }: { skin: SkinId; mode: 'dark' | 'light'; lab
           Your shelves wait in the dark.
         </div>
       </div>
-    </div>
+    </Surface>
   )
 }
 
