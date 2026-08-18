@@ -47,6 +47,7 @@ import { MoreLikeThis } from './MoreLikeThis'
 import { workKeyFor } from '../data/reviews'
 import { useProfile } from '../data/profile'
 import { BookmarkGlyph } from '../components/BookmarkGlyph'
+import { Surface } from '../components/Surface'
 
 function fmtDate(d: string): string {
   if (!d) return 'Date not set'
@@ -575,10 +576,7 @@ function BuyAtIndie({ book }: { book: Book }) {
   const config = buyConfig(profile?.defaultStore)
   const links = buildBuyLinks(book, config)
   return (
-    <details
-      className="mt-4 rounded-2xl border border-line p-4"
-      style={{ background: 'var(--card)' }}
-    >
+    <Surface as="details" tone="card" radius="card" pad={3} className="mt-4">
       <summary className="cursor-pointer text-[14px] font-semibold text-ink">
         Buy at an indie{profile?.defaultStore ? ` · ${profile.defaultStore.name}` : ''}
       </summary>
@@ -617,7 +615,7 @@ function BuyAtIndie({ book }: { book: Book }) {
           </>
         )}
       </p>
-    </details>
+    </Surface>
   )
 }
 

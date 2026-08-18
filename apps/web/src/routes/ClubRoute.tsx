@@ -21,6 +21,7 @@ import {
 import { useReportContent } from '../data/moderation'
 import { useRealtimeRefetch } from '../hooks/useRealtimeRefetch'
 import { useVoice } from '../skin/labels'
+import { Surface } from '../components/Surface'
 
 function unitWord(type: ClubUnitType, label: string, n: number): string {
   return type === 'percent' ? `${n}%` : `${label} ${n}`
@@ -117,10 +118,7 @@ function ClubScreen() {
       </div>
 
       {/* my progress */}
-      <div
-        className="mt-6 rounded-2xl border border-line p-4"
-        style={{ background: 'var(--card)' }}
-      >
+      <Surface tone="card" radius="card" pad={3} className="mt-6">
         <div className="mb-1 text-[11px] uppercase tracking-[0.2em] text-muted">Your progress</div>
         <div className="flex items-center gap-3">
           <button
@@ -158,7 +156,7 @@ function ClubScreen() {
             }}
           />
         </div>
-      </div>
+      </Surface>
 
       {/* members */}
       <div className="mt-6">

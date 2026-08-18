@@ -16,6 +16,7 @@ import { loadAllSkinFonts } from '../skin/fonts'
 import { useSkinControls, useAdaptiveControls } from '../skin/controls'
 import { adaptiveVars, generateAdaptiveBundle } from '../skin/adaptive'
 import { SkinDivider } from '../components/SkinDivider'
+import { Surface } from '../components/Surface'
 
 const SWATCHES = ['--bg', '--card', '--primary', '--accent-fill', '--gold'] as const
 
@@ -211,10 +212,7 @@ function AdaptiveSection({ mode }: { mode: ResolvedMode }) {
       </p>
       <div className="mt-3 grid gap-4 sm:grid-cols-2">
         <AdaptiveCard bundle={preview} mode={mode} active={isActive} />
-        <div
-          className="flex flex-col justify-center gap-2 rounded-2xl border border-line p-4"
-          style={{ background: 'var(--card)' }}
-        >
+        <Surface tone="card" radius="card" pad={3} className="flex flex-col justify-center gap-2">
           <button
             type="button"
             onClick={() => regenerate()}
@@ -245,7 +243,7 @@ function AdaptiveSection({ mode }: { mode: ResolvedMode }) {
             {isActive ? 'Active.' : 'Not in use yet.'} Locking stops the monthly refresh from
             changing it.
           </p>
-        </div>
+        </Surface>
       </div>
     </div>
   )
