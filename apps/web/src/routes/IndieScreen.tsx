@@ -252,13 +252,10 @@ export default function IndieScreen() {
       >
         Indie bookstores near you
       </h1>
-      <div
-        className="mt-3 rounded-xl border border-line p-3 text-[13px] text-muted"
-        style={{ background: 'var(--card)' }}
-      >
+      <Surface tone="card" radius="card" pad={2} className="mt-3 text-[13px] text-muted">
         📚 Discover &amp; support independent bookstores. This is discovery and support — not live
         inventory; we won’t promise “in stock near you.”
-      </div>
+      </Surface>
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <button

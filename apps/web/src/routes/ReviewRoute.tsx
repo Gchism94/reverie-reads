@@ -7,6 +7,7 @@ import { useImportReviewModel } from '../data/importReview'
 import { CoverImage } from '../components/CoverImage'
 import { CoverPicker } from '../components/CoverPicker'
 import { useVoice } from '../skin/labels'
+import { Surface } from '../components/Surface'
 
 const REASON_LABEL: Record<NeedsLookReason, string> = {
   missing_cover: 'No cover',
@@ -18,10 +19,7 @@ const REASON_LABEL: Record<NeedsLookReason, string> = {
 
 function Stat({ label, value }: { label: string; value: number }) {
   return (
-    <div
-      className="rounded-xl border border-line px-3 py-2.5"
-      style={{ background: 'var(--card)' }}
-    >
+    <Surface tone="card" radius="card" pad={0} className="px-3 py-2.5">
       <div
         className="text-[20px] font-semibold text-ink"
         style={{ fontFamily: 'var(--font-display)' }}
@@ -29,7 +27,7 @@ function Stat({ label, value }: { label: string; value: number }) {
         {value}
       </div>
       <div className="text-[11px] uppercase tracking-[0.12em] text-muted">{label}</div>
-    </div>
+    </Surface>
   )
 }
 
@@ -95,17 +93,13 @@ function ListBucket({ title, items }: { title: string; items: NeedsLookItem[] })
       </h3>
       <ul className="mt-2 flex flex-col gap-1.5">
         {items.map((i) => (
-          <li
-            key={i.ref}
-            className="rounded-xl border border-line px-3 py-2"
-            style={{ background: 'var(--card)' }}
-          >
+          <Surface as="li" key={i.ref} tone="card" radius="card" pad={0} className="px-3 py-2">
             <div className="truncate text-[13.5px] font-semibold text-ink">{i.title}</div>
             <div className="text-[12px] text-muted">
               {i.author ? `${i.author} · ` : ''}
               {i.detail}
             </div>
-          </li>
+          </Surface>
         ))}
       </ul>
     </section>
@@ -214,12 +208,15 @@ function ReviewScreen() {
       {shownTriage.length === 0 &&
         !needsLook.oddGenre.length &&
         !needsLook.likelyDuplicate.length && (
-          <p
-            className="mt-6 rounded-xl border border-line px-3 py-3 text-center text-[13px] text-muted"
-            style={{ background: 'var(--card)' }}
+          <Surface
+            as="p"
+            tone="card"
+            radius="card"
+            pad={0}
+            className="mt-6 px-3 py-3 text-center text-[13px] text-muted"
           >
             Nothing needs a look — every book came in clean. {voice.motif}
-          </p>
+          </Surface>
         )}
     </section>
   )

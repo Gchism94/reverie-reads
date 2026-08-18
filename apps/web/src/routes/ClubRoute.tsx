@@ -163,10 +163,12 @@ function ClubScreen() {
         <h2 className="mb-2 text-[15px] font-semibold text-ink">Members</h2>
         <div className="flex flex-col gap-1.5">
           {(members ?? []).map((m) => (
-            <div
+            <Surface
               key={m.userId}
-              className="flex items-center justify-between rounded-xl border border-line px-3 py-2 text-[13.5px]"
-              style={{ background: 'var(--field)' }}
+              tone="field"
+              radius="card"
+              pad={0}
+              className="flex items-center justify-between px-3 py-2 text-[13.5px]"
             >
               <span className="text-ink">
                 {m.displayName}
@@ -175,7 +177,7 @@ function ClubScreen() {
               <span className="text-muted">
                 {unitWord(club.unitType, club.unitLabel, m.progress)}
               </span>
-            </div>
+            </Surface>
           ))}
         </div>
       </div>
@@ -185,11 +187,7 @@ function ClubScreen() {
         <h2 className="mb-2 text-[15px] font-semibold text-ink">Discussion</h2>
         <div className="flex flex-col gap-2">
           {(comments ?? []).map((c) => (
-            <div
-              key={c.id}
-              className="rounded-xl border border-line p-3"
-              style={{ background: 'var(--field)' }}
-            >
+            <Surface key={c.id} tone="field" radius="card" pad={2}>
               <div className="mb-1 flex items-center gap-2 text-[12px]">
                 <b className="text-ink">{nameOf(c.userId)}</b>
                 <span
@@ -234,7 +232,7 @@ function ClubScreen() {
                   </button>
                 )}
               </div>
-            </div>
+            </Surface>
           ))}
           {locked && locked.hidden > 0 && (
             <div className="rounded-xl border border-dashed border-line p-3 text-center text-[13px] text-muted">

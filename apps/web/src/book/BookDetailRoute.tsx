@@ -427,11 +427,7 @@ function BookDetailScreen() {
       </div>
       <div className="flex flex-col gap-2">
         {(reads ?? []).map((r) => (
-          <div
-            key={r.id}
-            className="rounded-xl border border-line p-3"
-            style={{ background: 'var(--field)' }}
-          >
+          <Surface key={r.id} tone="field" radius="card" pad={2}>
             <div className="flex items-center justify-between gap-2">
               <span className="text-[13.5px] font-semibold text-ink">{fmtDate(r.date)}</span>
               <button
@@ -447,7 +443,7 @@ function BookDetailScreen() {
               {r.rating ? <Stars value={r.rating} size={12} /> : null}
             </div>
             {r.notes && <div className="mt-1 text-[13px] text-ink">{r.notes}</div>}
-          </div>
+          </Surface>
         ))}
       </div>
 

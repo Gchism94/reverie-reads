@@ -15,6 +15,7 @@ import {
 import { useRealtimeRefetch } from '../hooks/useRealtimeRefetch'
 import { Modal } from '../components/Modal'
 import { useVoice } from '../skin/labels'
+import { Surface } from '../components/Surface'
 
 function LibraryPicker({
   books,
@@ -136,10 +137,12 @@ function SharedListScreen() {
       <div className="mt-5 flex flex-col gap-1.5">
         {doc.items.length ? (
           doc.items.map((it) => (
-            <div
+            <Surface
               key={it.id}
-              className="flex items-center justify-between gap-3 rounded-xl border border-line px-3 py-2"
-              style={{ background: 'var(--field)' }}
+              tone="field"
+              radius="card"
+              pad={0}
+              className="flex items-center justify-between gap-3 px-3 py-2"
             >
               <div className="min-w-0">
                 <div className="truncate text-[14px] font-semibold text-ink">{it.title}</div>
@@ -155,7 +158,7 @@ function SharedListScreen() {
               >
                 remove
               </button>
-            </div>
+            </Surface>
           ))
         ) : (
           <p className="text-[13px] text-muted">Empty — add the first book below.</p>

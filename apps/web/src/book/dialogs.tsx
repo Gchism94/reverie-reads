@@ -44,6 +44,7 @@ import { MoodPicker } from '../components/MoodPicker'
 import { useLabels } from '../skin/labels'
 import { readableWriteError } from '../lib/writeErrors'
 import { todayLocalDate } from '../lib/localDate'
+import { Surface } from '../components/Surface'
 
 /** Distinct contributor names across the library, for autocomplete. */
 function useAuthorSuggestions(): string[] {
@@ -629,10 +630,7 @@ export function EditDetails({
       {/* Clearing or renaming the series REMOVES this book's slot from that series' reading order —
           the same removal the series page's ✕ performs. Destructive enough to name before it happens. */}
       {confirmingLeave ? (
-        <div
-          className="mt-4 rounded-xl border border-line p-3"
-          style={{ background: 'var(--field)' }}
-        >
+        <Surface tone="field" radius="card" pad={2} className="mt-4">
           <p className="text-[13px] text-ink">
             {f.series.trim()
               ? `Moving this book to ${f.series.trim()} removes its slot from ${oldSeries}.`
@@ -666,7 +664,7 @@ export function EditDetails({
               {saving ? 'Saving…' : 'Save and remove'}
             </button>
           </div>
-        </div>
+        </Surface>
       ) : (
         <button
           type="button"
@@ -778,7 +776,7 @@ function MergePreview({
         can’t be undone — check what survives.
       </p>
 
-      <div className="rounded-xl border border-line p-3" style={{ background: 'var(--field)' }}>
+      <Surface tone="field" radius="card" pad={2}>
         <DiffRow label="Survivor">
           <span className="font-semibold">{merged.title}</span>
           <span className="block text-[12px] text-muted">
@@ -839,7 +837,7 @@ function MergePreview({
             <span className="text-muted">none</span>
           )}
         </DiffRow>
-      </div>
+      </Surface>
 
       <p className="mt-3 text-[12px] text-muted">
         {titleDropped ? `“${loser.title}” (the other title) is dropped. ` : ''}
