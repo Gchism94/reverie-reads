@@ -13,6 +13,7 @@ import {
   type ResolvedLocation,
 } from '../lib/location'
 import { findBookstores, type Store } from '../lib/overpass'
+import { Surface } from '../components/Surface'
 
 const miles = (km: number) => `${(km * 0.621371).toFixed(1)} mi`
 
@@ -154,11 +155,7 @@ function StoreList({
       {stores.map((s) => {
         const isDefault = s.id === defaultId
         return (
-          <li
-            key={s.id}
-            className="rounded-2xl border border-line p-3"
-            style={{ background: 'var(--card)' }}
-          >
+          <Surface as="li" key={s.id} tone="card" radius="card" pad={2}>
             <div className="flex items-baseline justify-between gap-2">
               <span className="text-[15px] font-semibold text-ink">
                 {isDefault && <span title="Your store">✓ </span>}
@@ -188,7 +185,7 @@ function StoreList({
                 {isDefault ? 'Remove as my store' : 'Set as my store'}
               </button>
             </div>
-          </li>
+          </Surface>
         )
       })}
     </ul>
@@ -305,14 +302,14 @@ export default function IndieScreen() {
       {error && <p className="mt-3 text-[13px] text-primary">{error}</p>}
 
       {!loc ? (
-        <div className="mt-6 rounded-2xl border border-line p-6 text-center">
+        <Surface tone="bare" radius="card" pad={5} className="mt-6 text-center">
           <p className="text-[14px] text-muted">
             Set a location to find nearby independent bookstores — or shop indies online:
           </p>
           <div className="flex justify-center">
             <ShopOnlineFallback />
           </div>
-        </div>
+        </Surface>
       ) : (
         <div className="mt-4">
           <p className="mb-2 text-[13.5px] text-ink">
@@ -333,7 +330,7 @@ export default function IndieScreen() {
             <p className="py-8 text-center text-[14px] text-muted">Finding nearby bookshops…</p>
           )}
           {stores.isError && (
-            <div className="rounded-2xl border border-line p-6 text-center">
+            <Surface tone="bare" radius="card" pad={5} className="text-center">
               <p className="text-[14px] text-muted">
                 Couldn’t reach the bookstore directory just now — but you can still support indies
                 online:
@@ -341,7 +338,7 @@ export default function IndieScreen() {
               <div className="flex justify-center">
                 <ShopOnlineFallback />
               </div>
-            </div>
+            </Surface>
           )}
           {stores.data && stores.data.length > 0 && (
             <>
@@ -358,7 +355,7 @@ export default function IndieScreen() {
             </>
           )}
           {stores.data && stores.data.length === 0 && (
-            <div className="mt-4 rounded-2xl border border-line p-6 text-center">
+            <Surface tone="bare" radius="card" pad={5} className="mt-4 text-center">
               <p className="text-[14px] text-muted">
                 No independent bookstores found nearby — map coverage is uneven outside the US and
                 some shops aren’t listed yet. You can still buy from indies online:
@@ -366,7 +363,7 @@ export default function IndieScreen() {
               <div className="flex justify-center">
                 <ShopOnlineFallback />
               </div>
-            </div>
+            </Surface>
           )}
         </div>
       )}
