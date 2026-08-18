@@ -63,10 +63,7 @@ function CreateClubModal({
           <div className="mb-1 text-[11px] uppercase tracking-[0.15em] text-muted">
             Track progress by
           </div>
-          <div
-            className="flex rounded-[var(--radius-control)] border border-line p-1"
-            style={{ background: 'var(--field)' }}
-          >
+          <Surface radius="control" tone="field" pad={1} className="flex">
             {(['chapter', 'page', 'percent'] as const).map((u) => (
               <button
                 key={u}
@@ -82,7 +79,7 @@ function CreateClubModal({
                 {u === 'chapter' ? 'Chapters' : u === 'page' ? 'Pages' : 'Percent'}
               </button>
             ))}
-          </div>
+          </Surface>
         </div>
         {unitType !== 'percent' && (
           <label className="block">
@@ -152,10 +149,7 @@ function CreateSharedModal({
           className={fieldClass}
           style={fieldStyle}
         />
-        <div
-          className="flex rounded-[var(--radius-control)] border border-line p-1"
-          style={{ background: 'var(--field)' }}
-        >
+        <Surface radius="control" tone="field" pad={1} className="flex">
           {(
             [
               ['list', 'Shared list'],
@@ -176,7 +170,7 @@ function CreateSharedModal({
               {label}
             </button>
           ))}
-        </div>
+        </Surface>
         <p className="text-[12.5px] text-muted">
           Anyone with the code can add and remove books, and everyone sees changes within a few
           seconds.
