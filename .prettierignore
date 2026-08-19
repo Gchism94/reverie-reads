@@ -10,3 +10,8 @@ backend
 design/from-claude-design
 design/Reverie_Theme_Studio.html
 *.html
+
+# Self-hosted font mirror — byte-faithful copies of Google Fonts css2 output (scripts/fetch-fonts.mjs
+# is the only writer; fontSubsetContract.test.ts guards the content). Reformatting would make every
+# re-fetch a spurious diff against upstream.
+apps/web/public/fonts/
