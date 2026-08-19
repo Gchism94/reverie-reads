@@ -1,10 +1,17 @@
 # Design backlog — design tool deliverables
 
-Outputs land in design/from-design-tool/<set>/ (code export + screenshots). coding agent implements
-against them on the token system (no hardcoded colors from the mockup). All render in the default skin
-(Tryst); show alt-skin proof where relevant.
+> **These statuses age. Verified 2026-08-18** (backlog verification pass), entry by entry, against
+> `origin/main` — content read via `git show origin/main:<path>` and shipped-ness by ancestry
+> (`git log origin/main -- <path>`), never by a PR badge or the working tree. Six entries had gone
+> stale between passes; the landing-page entry alone sat as "blocks public launch" through five
+> iterations of the shipped page. If you are planning against this file and the date above is old,
+> re-verify the entry you're about to build before building it. This file is the canonical copy;
+> `docs/backlog/DESIGN_BACKLOG.md` is a pointer here (it had drifted as a stale duplicate).
 
-## Done / in flight
+Outputs land in design/from-design-tool/<set>/ (code export + screenshots). coding agent implements
+against them on the token system (no hardcoded colors from the mockup).
+
+## Done — verified shipped on main, 2026-08-18
 
 - LANDING / MARKETING PAGE — DONE, shipped on main (branch landing-match, PR #4; claims-accuracy
   pass in #84, iterated since through the licensing and skin-kit passes). Lives at
@@ -13,28 +20,44 @@ against them on the token system (no hardcoded colors from the mockup). All rend
   showcase from the registry; money copy derived from revenueCopy(buyConfig()) and guarded by
   revenueClaims.test.ts; in the e2e a11y sweep's unauthenticated pass. Handoff archived at
   docs/archive/LANDING_MATCH_HANDOFF.md.
+- ONBOARDING / FIRST-RUN — DONE, shipped (6578e51 `feat(onboarding): first-run flow`, iterated
+  since). apps/web/src/routes/OnboardingRoute.tsx, registered in router.tsx: stepped stage with
+  progress dots, genre→skin pick straight from the registry (live re-skin on pick), CSV/Excel
+  import with duplicate review, import summary and enrichment. Design handoff was
+  design/from-design-tool/onboarding/HANDOFF.md (gitignored working-tree export).
+- AUTH SCREENS — DONE, shipped (895320d `feat(auth): landing + password/social auth front door`,
+  same commit family as the landing; iterated since). apps/web/src/auth/AuthScreen.tsx: sign in /
+  sign up / forgot with reset-sent and verify-email confirmation states, plus OAuth providers, on
+  the gold brand. Design handoff was design/from-design-tool/auth/HANDOFF.md.
+- ACCOUNT & DATA SCREENS — DONE, shipped. apps/web/src/routes/SettingsRoute.tsx carries the full
+  set: JSON library export (buildBackup), CSV/Excel import, a "Your data & privacy" summary
+  section, and delete-account with typed confirmation (`delete my account`) through
+  data/account.ts.
+- SKIN DIVIDER MOTIFS — DONE for all nine skins. components/SkinDivider.tsx holds a
+  `Record<SkinId, ReactNode>` of motifs — the type does not compile with one missing. The five
+  named here pre-build (Calliope / Mull / Compendium / Clew / Fledge) were working names for what
+  shipped as umbra / folio / hearth / almanac / bloom.
+- SKIN GALLERY — already BUILT in code (C3). Prompt exists (DESIGN_PROMPT_SKIN_GALLERY.md)
+  if a visual polish pass is ever wanted; not required.
 - DESKTOP — DONE -> design/from-design-tool/desktop/. Skin-agnostic shell on the token contract.
-- SKIN GALLERY — already BUILT in code (C3). Prompt exists (DESIGN_PROMPT_SKIN_GALLERY.md) if a
-  visual polish pass is ever wanted; not required.
-- WRAPPED — IN FLIGHT (prompt: DESIGN_PROMPT_WRAPPED.md). Review screens when they return.
 
-## Next (prioritized by launch impact)
+## Partial — some shipped, remainder named
 
-1. ONBOARDING / FIRST-RUN — empty state -> import (CSV/scan) -> first-skin reveal. Pairs with Phase 7
-   H1 (empty signups) + the import task. The new-user experience. NEW PROMPT NEEDED.
-2. AUTH SCREENS — sign in / sign up / verify email / reset. Pairs with H3 (email verification).
-3. ACCOUNT & DATA SCREENS — delete-account confirmation, data export, "what we store" privacy summary.
-   Pairs with H1.
-4. FIVE NEW SKIN DIVIDER MOTIFS — Calliope / Mull / Compendium / Clew / Fledge (like filigree /
-   alchemical / orbital / thorn). Needed when the 5 remaining skins are built.
-5. MOBILE PASS — confirm mobile-specific screens (scan flow, mobile nav) are covered; this build was
-   desktop-first.
+- WRAPPED — the app ships a private stats dashboard titled "Your Reading, Wrapped"
+  (routes/StatsRoute.tsx: year selector, stat tiles, month-by-month, genres, rereads), and the
+  landing's privacy copy correctly describes it as private. What has NOT shipped is a dedicated
+  "your reading year as art" experience distinct from the dashboard. Whether the design tool
+  screens (prompt: DESIGN_PROMPT_WRAPPED.md) ever came back is unverifiable from the tree —
+  design/from-design-tool/ is gitignored except its README. If the screens exist in Greg's
+  working tree, this is implement-next; if not, still in flight on the design side.
+- COVER STUDIO — per-book cover picking shipped (components/CoverPicker.tsx); the studio surface —
+  batch triage of missing/low-confidence/broken covers, photograph-your-copy — has no route or
+  component. PROMPT WRITTEN -> design/DESIGN_PROMPT_COVER_STUDIO.md. Scope in
+  docs/reference/COVER_SOURCING_AND_STUDIO.md. Needs its own look before any build.
 
-- Onboarding/first-run + IMPORT (one flow) -- HANDED OFF -> design/from-design-tool/onboarding/HANDOFF.md (in-app, renders in Tryst, skin system live; covers welcome -> genre/skin pick -> import map/review -> populated library + empty state).
+## Next
 
-- Auth screens -- HANDED OFF -> design/from-design-tool/auth/HANDOFF.md (genre-neutral gold brand; sign up / log in / verify email / forgot + reset / edge states incl. rate-limited).
-
-- Cover Studio (NEW; see docs/reference/COVER_SOURCING_AND_STUDIO.md) -- personal cover-curation surface, NOT a
-  Hardcover clone: edition-faithful candidate picker, photograph-your-copy, skin-themed typographic
-  placeholders, batch cover-triage (missing + low-confidence + broken/dead) from the import review + broken-cover signal via Sentry for now (in-app badge later), upload/URL/photo. Private + lean (own Storage/RLS).
-  PROMPT WRITTEN -> design/DESIGN_PROMPT_COVER_STUDIO.md (per-book editor + batch triage [batch-first, scales] + photograph-your-copy + placeholder across skins).
+1. MOBILE PASS — confirm mobile-specific screens (scan flow, mobile nav) are covered by design;
+   this build was desktop-first on the design side (the app itself is mobile-first per
+   conventions, and the scan flow ships in AddRoute). A design-coverage check, not a code gap —
+   unverifiable from the tree by nature.

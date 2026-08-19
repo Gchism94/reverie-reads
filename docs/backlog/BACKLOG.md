@@ -975,13 +975,35 @@ aspect` at 9.1s. `e2e` failed exactly once in the surrounding 60 runs.
 
 ## Product queue
 
-1. **Shelf-model redesign** — largest tester-facing item. Owned physical / ebook /
-   audio, Read, Borrowed, Wishlist, with per-shelf visibility.
-2. **P2 features** — reading-progress granularity, half stars, separate
-   audiobook-vs-print ratings, field-level merge picking, spice standardization
-   with toggle-off.
-3. **Metadata sourcing** — series seeding Hardcover → Wikidata (P179 + P1545, CC0,
-   decimal ordinals native); evaluate ISBNdb for the indie/KU gap.
+> **Verified 2026-08-18** (backlog verification pass) against `origin/main` — content via
+> `git show`, shipped-ness via ancestry, not PR badges. These statuses age; re-verify before
+> planning against an entry older than the date on it.
+
+1. ~~**Shelf-model redesign**~~ — **SHIPPED.** `packages/core/src/shelves.ts` ("B2 of the shelf
+   redesign") derives exactly this set — Owned with physical/ebook/audiobook breakdown, Borrowed,
+   Read (with DNF split), Wishlist — as views over the five-flag possession model, with
+   `visibleSections` applying the display rule. AGENTS.md's possession section documents the model
+   as the shipped convention. Task history in docs/archive/task-shelf-model.md.
+2. **P2 features** — status per feature (2026-08-18), not one verdict:
+   - **Half stars** — OPEN in the UI. The schema is ready (`reads.rating numeric(2,1)`), but
+     `components/Stars.tsx` renders and writes whole stars only (integers 1–5, `Math.round`).
+   - **Separate audiobook-vs-print ratings** — PARTIAL. Per-read `{format, rating}` exists in the
+     model, so the data can already express it; no surface aggregates or displays ratings by
+     format, and the book-level `rating` is single.
+   - **Reading-progress granularity** — OPEN. `progress` is 0..100 (smallint percent); nothing
+     finer (pages/chapters) exists.
+   - **Field-level merge picking** — PARTIAL, the backend half is done. `merge_books` takes
+     `p_fields jsonb` and `data/mergeBooks.ts` calls it with the engine-computed merged row; what
+     is absent is any UI for the reader to pick fields per-conflict (DuplicateReview lists what the
+     merge will take, it does not offer choices). Same shape as series consolidation was: RPC
+     shipped, picker unbuilt.
+   - **Spice standardization with toggle-off** — OPEN. Spice/intensity is settable (Add + book
+     dialogs) and filterable (1–5 in FilterPanel); no standardization pass and no hide-spice
+     toggle exist.
+3. **Metadata sourcing** — PARTIAL. ISBNdb is no longer "evaluate": it is integrated as an enrich
+   source (`packages/core/src/enrich.ts` PRECEDENCE lists it per-field). Wikidata series seeding
+   (P179 + P1545) remains OPEN — Wikidata appears only in manual audit queries under
+   docs/queries/, not in any code path.
 
 ## Deferred by decision, not forgotten
 
@@ -1035,12 +1057,16 @@ onboarding Stages B–D.
   thumb and a spine colour unless the cover is cleared and re-swept, or re-picked in Cover Studio.
   At N=1 that is a manual fix; if the count had been larger it would need a repair pass.
 
-- **LICENSE**: a proprietary training-fork grant exists (87e0195). Review whether
-  that text is right for a product repo before LLC formation. Contributor
-  copyright ownership needs a CLA or work-for-hire agreement — hardens with time.
-- **`NOTICES.md`**: generated from the pnpm tree, so it cannot see Deno-side Edge
-  Function dependencies. `npm:@imagemagick/magick-wasm` (Apache-2.0, covers
-  function) is missing and should be added.
+- **LICENSE** — entry rewritten 2026-08-18; the old text described a license that no longer
+  exists. The proprietary training-fork grant (87e0195) was replaced by **AGPL-3.0** in the
+  pre-public licensing pass (#154, `chore(license)`), which also landed `CLA.md` as a draft and
+  the CC0 corpus split. What remains open is the owner's review — whether AGPL-3.0 is the final
+  answer before LLC formation, and whether the CLA draft becomes binding — which is Greg's
+  decision and not verifiable from the tree.
+- ~~**`NOTICES.md`** missing `npm:@imagemagick/magick-wasm`~~ — done. Present in NOTICES.md
+  (Apache-2.0, with the embedded-ImageMagick dual-notice caveat) since the #154 NOTICES sweep.
+  The structural caveat stands: the inventory is generated from the pnpm tree and cannot see
+  Deno-side Edge Function dependencies, so future Deno deps need adding by hand the same way.
 - ~~**`AGENTS.md` rules pass**~~ — done (#93). Six rules, each with its reason,
   now live under "Shell & deploy safety" and "Testing & verification discipline"
   in `AGENTS.md`.
