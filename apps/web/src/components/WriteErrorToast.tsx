@@ -30,7 +30,10 @@ export function WriteErrorToast() {
           className="pointer-events-auto flex max-w-md items-start gap-3 rounded-2xl border py-2.5 pl-4 pr-2 text-[13px] text-ink"
           style={{
             borderColor: 'var(--accent-ink)',
-            background: 'linear-gradient(var(--card), var(--card)), var(--bg)',
+            // The same opaque-card idiom the §7.4 collapse retires — this toast is OUT of the
+            // Surface population (accent border, not border-line), so only the spelling changes:
+            // the authored solid replaces the composite, keeping it in step with Modal/UpdateToast.
+            background: 'var(--card-solid)',
             boxShadow: 'var(--shadow)',
           }}
         >
