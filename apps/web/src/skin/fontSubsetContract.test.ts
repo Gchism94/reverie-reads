@@ -87,11 +87,15 @@ describe('self-hosted font subsets keep the coverage the glyph allowlist was cal
         css.match(/@font-face/g)!.length,
         `${skin}.css has @font-face blocks without unicode-range`,
       ).toBe(css.match(/unicode-range:/g)?.length ?? 0)
-      // And every SOURCE is local — a gstatic/googleapis url() here means the mirror silently
-      // regressed to the third party the self-hosting removed. (The header comment legitimately
-      // names the upstream css2 URL as provenance, so this checks url() sources, not the file.)
+      // And the WHOLE FILE is free of font-origin strings — not merely the url() sources.
+      // Provenance lives in scripts/fetch-fonts.mjs, deliberately not in the shipped bytes, so
+      // this can be an exceptionless grep (assert-dist-clean.mjs makes the same claim of the
+      // built output). Every url() must also resolve inside the mirror.
+      expect(css, `${skin}.css ships a font-origin string`).not.toMatch(
+        /fonts\.googleapis\.com|gstatic/,
+      )
       for (const m of css.matchAll(/url\(([^)]+)\)/g)) {
-        expect(m[1], `${skin}.css loads a font from a third-party host`).toMatch(
+        expect(m[1], `${skin}.css loads a font from outside the mirror`).toMatch(
           /^\/fonts\/files\//,
         )
       }

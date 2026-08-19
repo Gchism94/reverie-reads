@@ -1,5 +1,7 @@
 /* Self-hosted mirror of Google Fonts css2 for the grimoire skin.
- * Source: https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Spectral:wght@400;500;600;700&display=swap
+ * Upstream source URL: recorded in scripts/fetch-fonts.mjs (SOURCES), the only writer
+ * of this file. Kept out of the shipped bytes so the built-output guard can assert ZERO
+ * font-origin strings ship (apps/web/scripts/assert-dist-clean.mjs).
  * Fetched by scripts/fetch-fonts.mjs — regenerate with `node scripts/fetch-fonts.mjs`.
  * Subsetting and unicode-range are Google's own, unmodified — glyphAllowlist.ts depends on
  * that (see fontSubsetContract.test.ts). Licenses: SIL OFL 1.1 (NOTICES.md, OFL.txt). */
