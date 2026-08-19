@@ -29,11 +29,16 @@ const webRoot = join(__dirname, '../..')
 const indexHtml = readFileSync(join(webRoot, 'index.html'), 'utf8')
 const tokensCss = readFileSync(join(webRoot, 'src/styles/tokens.css'), 'utf8')
 
-/** The `family=` parameters a Google Fonts css2 URL requests, decoded ('Libre+Franklin' → 'Libre Franklin'). */
-function familiesIn(url: string): string[] {
-  return [...url.matchAll(/family=([^:&]+)/g)].map((m) =>
-    decodeURIComponent(m[1]!).replace(/\+/g, ' '),
-  )
+/**
+ * The families a skin's SELF-HOSTED stylesheet actually declares. FONT_CSS now points at
+ * public/fonts/<skin>.css (mirrored from Google's css2 by scripts/fetch-fonts.mjs), so the
+ * families come from the shipped file's own @font-face blocks — the thing a reader's browser
+ * parses — rather than from a URL's query string. Stronger than the css2-era parse: a URL could
+ * request a family the CDN failed to serve; a font-family declaration in the shipped bytes cannot.
+ */
+function familiesIn(cssPath: string): string[] {
+  const css = readFileSync(join(webRoot, 'public', cssPath), 'utf8')
+  return [...new Set([...css.matchAll(/font-family:\s*'([^']+)'/g)].map((m) => m[1]!))]
 }
 
 /** The boot script's FONT map, parsed out of index.html rather than duplicated here. */
@@ -93,21 +98,27 @@ describe('font config — no drift between the places a typeface is declared', (
     expect(missing, missing.join('\n')).toHaveLength(0)
   })
 
-  // Duplication 3. A preconnect pointing at a host nothing loads from is dead weight; a missing one
-  // costs a round trip on every cold load.
-  it('preconnects cover exactly the hosts the font URLs use', () => {
-    const hosts = new Set(Object.values(FONT_CSS).map((u) => new URL(u).origin))
-    for (const host of hosts) {
-      expect(indexHtml, `no preconnect for ${host}`).toContain(`rel="preconnect" href="${host}"`)
+  // Duplication 3, inverted by self-hosting. The preconnect hints existed for the two Google
+  // origins; with the fonts local there is no cross-origin round trip to warm, and a lingering
+  // preconnect — or any font URL pointing back at a third-party host — would mean the GDPR
+  // exposure the self-hosting removed has quietly returned. Asserted in both places a regression
+  // could land: the boot markup and the FONT_CSS map.
+  it('no font loading touches a third-party host — every pairing is a local /fonts/ stylesheet', () => {
+    expect(indexHtml).not.toMatch(/fonts\.googleapis\.com|fonts\.gstatic\.com/)
+    for (const skin of skinIds) {
+      expect(FONT_CSS[skin], `${skin}'s pairing is not a local /fonts/ path`).toMatch(
+        /^\/fonts\/[a-z]+\.css$/,
+      )
     }
-    // gstatic serves the font BINARIES the css2 stylesheet points at — different origin, needs its
-    // own (crossorigin) preconnect, and no URL in FONT_CSS names it, so it can't be derived above.
-    expect(indexHtml).toContain('href="https://fonts.gstatic.com" crossorigin')
   })
 
-  it('every font URL uses display=swap — a FOIT would hide text until the CDN answers', () => {
+  it('every @font-face ships font-display: swap — a FOIT would hide text while a face loads', () => {
     for (const skin of skinIds) {
-      expect(FONT_CSS[skin], `${skin} is missing display=swap`).toContain('display=swap')
+      const css = readFileSync(join(webRoot, 'public', FONT_CSS[skin]), 'utf8')
+      const faces = css.match(/@font-face/g)?.length ?? 0
+      const swaps = css.match(/font-display:\s*swap/g)?.length ?? 0
+      expect(faces, `${skin}.css declares no faces at all`).toBeGreaterThan(0)
+      expect(swaps, `${skin}.css: ${faces} faces but ${swaps} font-display: swap`).toBe(faces)
     }
   })
 

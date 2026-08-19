@@ -37,16 +37,14 @@ import { fileURLToPath } from 'node:url'
  * that never renders for a reader. So the skin goes through the profile (the a11y sweep's
  * mechanism) and the page reloads, and the applied skin is READ BACK before any measurement counts.
  *
- * ── FONTS ARE REAL HERE, ON PURPOSE ─────────────────────────────────────────────────────────────
- * The suite stubs Google Fonts by default (support/fixtures.ts) and every --font stack falls back to
- * a real generic, so text still renders — but it renders in the WRONG METRICS. This audit is about
- * glyph widths, so measuring fallbacks would be a textbook proxy: it would report on a typeface the
- * reader never sees. `stubFonts: false` restores the real faces, and the sweep records which
- * families actually loaded per skin (`fontsLoaded`) so a CDN miss shows up as a caveat in the
- * report rather than as quietly-wrong numbers.
+ * ── FONTS ARE REAL HERE — as they now are suite-wide ────────────────────────────────────────────
+ * This audit measures glyph widths, so it always demanded real faces (a fallback face is a textbook
+ * proxy: a typeface the reader never sees). It used to opt out of the suite's Google Fonts stub for
+ * that; the stub is gone with the fonts self-hosted (support/fixtures.ts), so real faces are simply
+ * what every spec gets. The sweep still records which families actually loaded per skin
+ * (`fontsLoaded`) so a broken local font path shows up as a caveat rather than quietly-wrong
+ * numbers.
  */
-
-test.use({ stubFonts: false })
 
 const SUPABASE_URL = 'http://127.0.0.1:55321'
 const ANON =

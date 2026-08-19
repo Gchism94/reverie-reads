@@ -1,63 +1,26 @@
 import { expect, test, type Page } from './support/fixtures'
 
-// Font loading, asserted against OUR contract instead of Google's uptime.
+// Font loading, asserted against OUR mechanism — which, since feat/selfhost-webfonts, is entirely
+// first-party: the boot script injects /fonts/<skin>.css (a static file this app ships), whose
+// @font-face rules point at /fonts/files/*.woff2 (also shipped). No third party is in the path,
+// which is why the suite-wide Google Fonts stub this file used to opt out of no longer exists.
 //
-// ── WHAT THIS USED TO DO, AND WHY IT CHANGED ────────────────────────────────────────────────────
-// The previous version signed a user in, visited /skins, and asserted `document.fonts.check()` for
-// 18 hand-listed families. Every one of those assertions could fail for two unrelated reasons — a
-// real config drift, or fonts.googleapis.com being slow, rate-limited, or down — and it could not
-// distinguish them. `e2e` is a required check, so the second reason blocked every merge in the
-// repo (it blocked #206). It was testing a third party's availability, not this app.
+// The two directions this file has always owned survive the move, re-aimed at the local path:
+//   · SERVED — the app requests its skin stylesheet, the browser registers the family, real bytes
+//     load (document.fonts.check goes true only once a REGISTERED face has its data), and the
+//     intended stack lands on the element carrying the skin's voice. This is the direction the old
+//     suite-wide stub could have silently masked: a broken /fonts/ path — a deploy that dropped
+//     public/fonts, a renamed file, a bad rewrite — fails here, loudly, and nowhere else vacuously.
+//   · DEAD — the stylesheet request fails (a broken deploy artifact is the local analogue of the
+//     dead CDN). The app must degrade to the declared generic fallback: readable, never tofu.
 //
-// The coverage is NOT reduced, it is split by what each layer can actually answer:
-//   · src/skin/fontConfig.test.ts (unit, no browser) now owns the MATRIX — all nine skins, that
-//     each requests the families its own tokens name, that index.html's pre-paint boot map matches
-//     src/skin/fonts.ts, that every stack ends in a real generic fallback. That is where the
-//     18-family list's real intent lives now, and it covers more than 18 families' presence did.
-//   · this file owns the MECHANISM, once, in a browser: the app requests its stylesheet, the
-//     browser registers the family, and — the case nothing tested before — the app stays readable
-//     when the CDN does not answer at all.
-//
-// ── WHY INTERCEPTION, NOT A REAL FETCH ──────────────────────────────────────────────────────────
-// Both directions are forced with page.route, so neither depends on the network being any
-// particular way. The served CSS is our own @font-face, so the assertion "the family registered"
-// is true because the app asked for a stylesheet and the browser parsed it — not because a font
-// file happened to download. `src: local(...)` is deliberately NOT relied on for a pass: whether
-// Georgia or DejaVu exists differs between a macOS laptop and a CI runner, and that difference is
-// exactly the kind of environmental coin-flip this rewrite exists to remove.
+// The all-nine-skins matrix stays in src/skin/fontConfig.test.ts (config drift, no browser);
+// the subset/tofu contract stays in src/skin/fontSubsetContract.test.ts (shipped bytes, no browser).
 
-// ── THE ONE SPEC THAT OPTS OUT OF THE SUITE-WIDE FONT STUB ──────────────────────────────────────
-// support/fixtures.ts stubs fonts.googleapis.com with an empty 200 for EVERY spec, because a
-// third-party CDN in the path of the whole suite has broken required checks twice (see that file).
-// This spec is the deliberate exception: its entire purpose is exercising the real font mechanism
-// in BOTH directions — served and dead — which it forces itself, per test, with page.route below.
-// Leaving the blanket stub on would make every assertion here vacuous: the stub declares no
-// @font-face, so "the family registered" could never be true and "the CDN is dead" would be
-// trivially true. Do not remove this line to make something else pass.
-test.use({ stubFonts: false })
-
-const GOOGLE_CSS = '**/fonts.googleapis.com/**'
+const FONT_CSS_ROUTE = '**/fonts/*.css'
 
 /** The families the landing page's skin (tryst) depends on — see FONT_CSS.tryst. */
 const TRYST_DISPLAY = 'Fraunces'
-
-/** Serve a stylesheet that DEFINES the family, so the browser registers it without any download. */
-async function serveFontCss(page: Page): Promise<void> {
-  await page.route(GOOGLE_CSS, (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'text/css',
-      // A real @font-face block. local() candidates are a nicety — the assertions below key off
-      // registration and computed style, both of which hold whether or not one resolves.
-      body: `@font-face{font-family:'${TRYST_DISPLAY}';font-style:normal;font-weight:400 700;font-display:swap;src:local('Georgia'),local('DejaVu Serif'),local('Liberation Serif'),local('Times New Roman');}`,
-    }),
-  )
-}
-
-/** Fail every font request, the way a blocked, throttled, or offline CDN does. */
-async function blockFontCss(page: Page): Promise<void> {
-  await page.route(GOOGLE_CSS, (route) => route.abort())
-}
 
 const registeredFamilies = (page: Page): Promise<string[]> =>
   page.evaluate(() =>
@@ -70,64 +33,71 @@ const skinFontHrefs = (page: Page): Promise<string[]> =>
     [...document.querySelectorAll('link[data-skin-font]')].map((l) => l.getAttribute('href') ?? ''),
   )
 
-test('the app requests its skin stylesheet and registers the family it declares', async ({
+test('the app loads its self-hosted skin stylesheet, and the real face arrives', async ({
   page,
 }) => {
-  await serveFontCss(page)
+  // No interception in this direction — the entire point is that the real, shipped files serve.
   await page.goto('/')
   await expect(page.getByRole('heading', { name: /beautifully kept/i })).toBeVisible()
 
   // (a) OUR markup: the pre-paint boot script injected the active skin's pairing, pointing at the
-  //     css2 endpoint. This is the request the reader's browser actually makes.
+  //     app's own /fonts path — never a third-party host.
   const hrefs = await skinFontHrefs(page)
   expect(
     hrefs.length,
     'no link[data-skin-font] — the boot script did not inject a pairing',
   ).toBeGreaterThan(0)
-  expect(hrefs.some((h) => h.includes('fonts.googleapis.com/css2'))).toBe(true)
-  expect(hrefs.some((h) => h.includes(TRYST_DISPLAY))).toBe(true)
-  expect(hrefs.every((h) => h.includes('display=swap'))).toBe(true)
+  expect(hrefs.every((h) => h.startsWith('/fonts/'))).toBe(true)
+  expect(hrefs.some((h) => h.includes('googleapis') || h.includes('gstatic'))).toBe(false)
 
-  // (b) THE BROWSER acted on it: the stylesheet was fetched, parsed, and the family registered.
+  // (b) THE BROWSER acted on it: stylesheet parsed, family registered.
   await page.evaluate(() => (document as Document & { fonts: FontFaceSet }).fonts.ready)
   expect(await registeredFamilies(page)).toContain(TRYST_DISPLAY)
 
-  // (b) …and the intended stack is applied to the element that carries the skin's voice.
+  // (c) REAL BYTES loaded — not just a parsed rule. For a REGISTERED face, `fonts.check()` is
+  //     true only once its data is available, so this is the assertion that catches a stylesheet
+  //     whose url() points at a woff2 that 404s. (The old CDN-era spec could not make this claim:
+  //     it never let a real binary into the test. Locally the binary is ours, so its absence is a
+  //     product defect and exactly what this spec exists to catch.)
+  await expect
+    .poll(() => page.evaluate((fam) => document.fonts.check(`16px '${fam}'`), TRYST_DISPLAY), {
+      message: `the ${TRYST_DISPLAY} face never finished loading from /fonts/files/`,
+    })
+    .toBe(true)
+
+  // (d) …and the intended stack is applied to the element that carries the skin's voice.
   const stack = await page
     .getByRole('heading', { name: /beautifully kept/i })
     .evaluate((el) => getComputedStyle(el).fontFamily)
   expect(stack).toContain(TRYST_DISPLAY)
 })
 
-test('a dead font CDN degrades to the declared fallback — readable, never tofu', async ({
+test('a dead font path degrades to the declared fallback — readable, never tofu', async ({
   page,
 }) => {
-  await blockFontCss(page)
+  // The local analogue of the dead CDN: the deploy artifact lost its stylesheet.
+  await page.route(FONT_CSS_ROUTE, (route) => route.abort())
   await page.goto('/')
 
-  // The page still renders. This is the whole point: a font CDN is a decoration, not a dependency,
-  // and nothing tested this before.
+  // The page still renders. Fonts are a decoration, not a dependency — that contract does not
+  // weaken just because the files moved in-house.
   const heading = page.getByRole('heading', { name: /beautifully kept/i })
   await expect(heading).toBeVisible()
 
-  // The webfont genuinely did not arrive — otherwise the rest of this test proves nothing.
-  //
-  // Asserted on REGISTRATION, not `fonts.check()`, and the difference is the whole trap: with the
-  // stylesheet aborted no @font-face rule exists at all, so the browser treats 'Fraunces' as an
-  // unknown SYSTEM family, finds it absent, and reports `check()` → true (nothing to load, the
-  // cascade will fall through). `check()` only returns false for a face that IS registered and has
-  // not loaded. Measured here, not assumed: this assertion failed as `toBe(false)` on the first
-  // run for exactly that reason. The registered-face set has no such ambiguity.
+  // The webfont genuinely did not arrive. Asserted on REGISTRATION, not `fonts.check()`: with the
+  // stylesheet aborted no @font-face exists, the browser treats 'Fraunces' as an unknown system
+  // family, and `check()` would return TRUE (nothing to load). The registered-face set has no such
+  // ambiguity. (Measured in this spec's CDN era: the check() form passed for the wrong reason.)
   await page.evaluate(() =>
     (document as Document & { fonts: FontFaceSet }).fonts.ready.catch(() => undefined),
   )
   expect(
     await registeredFamilies(page),
-    'the CDN was supposed to be blocked — no @font-face should have registered',
+    'the font stylesheet was supposed to be blocked — no @font-face should have registered',
   ).not.toContain(TRYST_DISPLAY)
 
-  // The declared fallback is still in the cascade, so the browser has something real to render
-  // with — the stack ends in a generic (fontConfig.test.ts enforces that for every skin).
+  // The declared fallback is still in the cascade (fontConfig.test.ts enforces a generic tail for
+  // every skin), so the browser has something real to render with.
   const stack = await heading.evaluate((el) => getComputedStyle(el).fontFamily)
   expect(stack.toLowerCase()).toMatch(/serif|system-ui|georgia/)
 

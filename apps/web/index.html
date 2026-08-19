@@ -13,9 +13,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <title>Reverie</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <!-- Only the ACTIVE skin's font pairing is loaded (below, pre-paint), not all nine families.
+         Fonts are SELF-HOSTED under /fonts (scripts/fetch-fonts.mjs) — no third-party host.
          The Skin Gallery loads the rest on demand. Keep this map in sync with src/skin/fonts.ts. -->
     <script>
       // Set skin + light/dark mode before first paint to avoid a flash of the wrong identity.
@@ -24,17 +23,17 @@
           var valid = { tryst: 1, grimoire: 1, aphelion: 1, marrow: 1, umbra: 1, folio: 1, hearth: 1, almanac: 1, bloom: 1 }
           var skin = localStorage.getItem('reverie.skin')
           if (!valid[skin]) skin = 'tryst'
-          // Load ONLY the active skin's font pairing, pre-paint (display=swap → no FOIT).
+          // Load ONLY the active skin's font pairing, pre-paint (each @font-face carries font-display: swap → no FOIT).
           var FONT = {
-            tryst: 'https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,500;1,9..144,600&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap',
-            grimoire: 'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Spectral:wght@400;500;600;700&display=swap',
-            aphelion: 'https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap',
-            marrow: 'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Libre+Franklin:wght@400;500;600;700&display=swap',
-            umbra: 'https://fonts.googleapis.com/css2?family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap',
-            folio: 'https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Caveat:wght@400;600&display=swap',
-            hearth: 'https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Varela+Round&display=swap',
-            almanac: 'https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Archivo:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap',
-            bloom: 'https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700&family=Karla:ital,wght@0,400;0,500;0,700;1,400;1,700&display=swap',
+            tryst: '/fonts/tryst.css',
+            grimoire: '/fonts/grimoire.css',
+            aphelion: '/fonts/aphelion.css',
+            marrow: '/fonts/marrow.css',
+            umbra: '/fonts/umbra.css',
+            folio: '/fonts/folio.css',
+            hearth: '/fonts/hearth.css',
+            almanac: '/fonts/almanac.css',
+            bloom: '/fonts/bloom.css',
           }
           var fl = document.createElement('link')
           fl.rel = 'stylesheet'

@@ -770,6 +770,18 @@ the repo goes public.
   failing too, that is a defect in this class (runner region, cache key, mirror set) to diagnose,
   not more flake to absorb.
 
+- **`trope-rename-delete.spec.ts:180` — "deleting a personal trope confirms first, then removes it
+  from every book". ONE occurrence, recorded so a recurrence has a prior.**
+
+  Full-suite run on `feat/half-stars` (2026-08-19, local): the delete confirm rendered "It is not on
+  any books" where the test had seeded 2 carriers — the carrier count resolved to 0 at dialog-open.
+  Fast failure (3.0s), so a stale/racing count query, not a timeout. Classified flake, not
+  regression: the branch's diff touches ratings only (Stars/reviews/formatRatings — no trope code),
+  the same suite passed 4x on identical trope code earlier the same day, and the spec passed **3 of
+  3 in isolation** immediately after. Mechanism guess for occurrence 2 to verify: the confirm reads
+  a carrier count whose query hadn't settled under full-suite load. By this section's rule, a second
+  failure here is a defect in that count's loading state, not a flake.
+
 - **`spine-shelf-reachability.spec.ts:477` — "cover aspect: the rendered cover box keeps the cover
   ratio at every visible wave position". TWO occurrences, and by this section's own rule the next one
   is a defect.**
