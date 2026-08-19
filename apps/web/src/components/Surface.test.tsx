@@ -217,3 +217,62 @@ describe('Surface — passthrough', () => {
     expect(el.style.background).toBe('var(--card)')
   })
 })
+
+describe('Surface — ref forwarding (API pass)', () => {
+  /**
+   * The threshold was two independent customers, and two appeared: Modal's focus-on-open
+   * `panelRef` and SeriesArranger's dnd-kit `setNodeRef`. The contract is that the ref reaches
+   * the RENDERED element — including through `as` — because both customers hand it to code
+   * (`.focus()`, dnd-kit measuring) that needs the real node, not a wrapper.
+   */
+  it('forwards the ref to the rendered element (default div)', () => {
+    let node: HTMLElement | null = null
+    render(
+      <Surface
+        data-testid="s"
+        ref={(el: HTMLElement | null) => {
+          node = el
+        }}
+      >
+        x
+      </Surface>,
+    )
+    expect(node).not.toBeNull()
+    expect(node!).toBe(box())
+    expect(node!.tagName).toBe('DIV')
+  })
+
+  it('forwards through `as` — the ref sees the substituted element, not a div', () => {
+    let node: HTMLElement | null = null
+    render(
+      <Surface
+        as="li"
+        data-testid="s"
+        ref={(el: HTMLElement | null) => {
+          node = el
+        }}
+      >
+        x
+      </Surface>,
+    )
+    expect(node!.tagName).toBe('LI')
+    expect(node!).toBe(box())
+  })
+
+  it('a callback ref can drive imperative focus — the Modal mechanism', () => {
+    let node: HTMLElement | null = null
+    render(
+      <Surface
+        data-testid="s"
+        tabIndex={-1}
+        ref={(el: HTMLElement | null) => {
+          node = el
+        }}
+      >
+        x
+      </Surface>,
+    )
+    node!.focus()
+    expect(document.activeElement).toBe(box())
+  })
+})
