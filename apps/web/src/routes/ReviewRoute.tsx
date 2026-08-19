@@ -55,12 +55,15 @@ function TriageTile({
       </div>
       <div className="mt-1.5 truncate text-[12.5px] font-semibold text-ink">{item.title}</div>
       {item.author && <div className="truncate text-[11px] text-muted">{item.author}</div>}
-      <div
-        className="mt-1 inline-block rounded-full border border-line px-2 py-0.5 text-[11px] text-muted"
+      <Surface
+        tone="bare"
+        radius="control"
+        pad={0}
+        className="mt-1 inline-block px-2 py-0.5 text-[11px] text-muted"
         style={{ background: 'var(--chip)' }}
       >
         {REASON_LABEL[item.reason]}
-      </div>
+      </Surface>
       <CoverPicker book={coverBook} />
       {item.reason === 'low_confidence_cover' ? (
         <button
