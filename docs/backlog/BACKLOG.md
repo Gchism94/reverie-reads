@@ -732,6 +732,17 @@ the repo goes public.
   (`data/corpus_seed.json` + `data/reader_seed.json`, the 290-book pair) carry the same data in
   another form and are flagged for the same decision. Pre-public §4.
 
+- **A guard aimed at the right defect class but the wrong boundary — #287's truncation guard,
+  corrected by `fix/import-half-stars`.** #287 guarded half stars against `reviews.rating`'s
+  `smallint` (correctly: `useUpsertReview` throws pre-request, asserted by zero supabase calls).
+  The actual silent truncation was three `Math.round` calls on the IMPORT path
+  (`importMap.ts:278`, `csv.ts:149`, `csv.ts:309`) — application-level coercion that no
+  schema-type reasoning would surface: rate 4.5 → export → re-import came back 5, rounding UP,
+  with nothing on screen saying a value changed. The durable lesson: **type-level guards catch
+  type-level truncation; application-level coercion needs a round-trip test** (export → import →
+  compare), which is what `importRatingRoundTrip.test.ts` now is. When adding a guard for "X must
+  not silently change," enumerate every path that WRITES X, not just every column that STORES it.
+
 ## Known-flaky, with a prior
 
 - **Playwright install steps hanging on apt/CDN (`Install Playwright browsers` /
