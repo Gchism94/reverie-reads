@@ -43,7 +43,19 @@ try {
   process.exit(1)
 }
 
+// The self-hosted-fonts guarantee, asserted on the BYTES THAT SHIP (feat/selfhost-webfonts). The
+// launch claim is that no visitor request leaves the app's origin for TYPE: a lingering preconnect
+// or a pasted Google Fonts snippet re-opens a TLS handshake to Google carrying the visitor's IP —
+// the exact GDPR exposure the self-hosting removed — and nothing else would fail when it happens.
+// Source-level tests (fontConfig, fontSubsetContract) pass while a bundler carries the string
+// through, which is why this greps dist/. Scoped to the FONT origins by name, deliberately NOT all
+// of googleapis.com: the Google Books metadata API (lib/enrich.ts) is a knowing, documented
+// runtime dependency and lives in the bundle legitimately. There is no legitimate local case for a
+// font origin, so unlike the local-URL class below this one fails even un-enforced local builds.
+const FONT_ORIGINS = /fonts\.googleapis\.com|fonts\.gstatic\.com/gi
+
 const hits = []
+const fontHits = []
 for (const file of dist.filter((f) => SCAN_EXT.test(f))) {
   const text = readFileSync(file, 'utf8')
   const seen = new Set()
@@ -56,10 +68,26 @@ for (const file of dist.filter((f) => SCAN_EXT.test(f))) {
       )
     }
   }
+  for (const m of text.matchAll(FONT_ORIGINS)) {
+    fontHits.push(
+      `${relative(DIST, file)}: …${text.slice(Math.max(0, m.index - 40), m.index + m[0].length + 40)}…`,
+    )
+  }
+}
+
+if (fontHits.length > 0) {
+  console.error(
+    `assert-dist-clean: found ${fontHits.length} font-origin string(s) in dist/ — the fonts are ` +
+      `self-hosted and NOTHING may point a visitor's browser at Google for type:`,
+  )
+  for (const h of fontHits) console.error(`  ${h}`)
+  process.exit(1)
 }
 
 if (hits.length === 0) {
-  console.log(`assert-dist-clean: OK — no local URLs in ${dist.length} dist files`)
+  console.log(
+    `assert-dist-clean: OK — no local URLs and no font-origin strings in ${dist.length} dist files`,
+  )
   process.exit(0)
 }
 

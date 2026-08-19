@@ -94,10 +94,15 @@ for (const [skin, url] of Object.entries(SOURCES)) {
     manifest[fam].files++
   }
 
+  // The upstream URL deliberately does NOT ride in the shipped file: SOURCES above is the
+  // provenance record, and keeping the shipped bytes free of font-origin strings is what lets
+  // assert-dist-clean.mjs grep the BUILT OUTPUT for them with zero exceptions.
   const header =
     `/* Self-hosted mirror of Google Fonts css2 for the ${skin} skin.\n` +
-    ` * Source: ${url}\n` +
-    ` * Fetched by scripts/fetch-fonts.mjs — regenerate with \`node scripts/fetch-fonts.mjs\`.\n` +
+    ` * Upstream source URL: recorded in scripts/fetch-fonts.mjs (SOURCES), the only writer\n` +
+    ` * of this file. Kept out of the shipped bytes so the built-output guard can assert ZERO\n` +
+    ` * font-origin strings ship (apps/web/scripts/assert-dist-clean.mjs).\n` +
+    ` * Regenerate with \`node scripts/fetch-fonts.mjs\`.\n` +
     ` * Subsetting and unicode-range are Google's own, unmodified — glyphAllowlist.ts depends on\n` +
     ` * that (see fontSubsetContract.test.ts). Licenses: SIL OFL 1.1 (NOTICES.md, OFL.txt). */\n`
   writeFileSync(join(FONTS_DIR, `${skin}.css`), header + css)
