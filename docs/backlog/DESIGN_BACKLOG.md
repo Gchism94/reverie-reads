@@ -1,26 +1,7 @@
-# Design backlog — Claude Design deliverables
+# Design backlog — moved
 
-Outputs land in design/from-claude-design/<set>/ (code export + screenshots). Claude Code implements
-against them on the token system (no hardcoded colors from the mockup). All render in the default skin
-(Tryst); show alt-skin proof where relevant.
-
-## Done / in flight
-
-- DESKTOP — DONE -> design/from-claude-design/desktop/. Skin-agnostic shell on the token contract.
-- SKIN GALLERY — already BUILT in code (C3). Prompt exists (CLAUDE_DESIGN_PROMPT_SKIN_GALLERY.md) if a
-  visual polish pass is ever wanted; not required.
-- WRAPPED — IN FLIGHT (prompt: CLAUDE_DESIGN_PROMPT_WRAPPED.md). Review screens when they return.
-
-## Next (prioritized by launch impact)
-
-1. LANDING / MARKETING PAGE — public front door, unblocked by the Reverie name. Can't launch publicly
-   without it. DESIGN APPROVED (gold, genre-neutral) -> handoff at design/from-claude-design/landing/HANDOFF.md.
-2. ONBOARDING / FIRST-RUN — empty state -> import (CSV/scan) -> first-skin reveal. Pairs with Phase 7
-   H1 (empty signups) + the import task. The new-user experience. NEW PROMPT NEEDED.
-3. AUTH SCREENS — sign in / sign up / verify email / reset. Pairs with H3 (email verification).
-4. ACCOUNT & DATA SCREENS — delete-account confirmation, data export, "what we store" privacy summary.
-   Pairs with H1.
-5. FIVE NEW SKIN DIVIDER MOTIFS — Calliope / Mull / Compendium / Clew / Fledge (like filigree /
-   alchemical / orbital / thorn). Needed when the 5 remaining skins are built.
-6. MOBILE PASS — confirm mobile-specific screens (scan flow, mobile nav) are covered; this build was
-   desktop-first.
+The canonical design backlog is **`design/DESIGN_BACKLOG.md`**. This copy was a duplicate that
+drifted: the design/ copy kept receiving updates (onboarding and auth marked handed off, Cover
+Studio added) while this one still listed the shipped landing page as the top launch blocker.
+Found in the 2026-08-18 backlog verification pass; two copies of a status file guarantee one of
+them is wrong, so this one now just points at the other.
