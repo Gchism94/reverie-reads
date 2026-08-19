@@ -25,6 +25,7 @@ import {
   type SeriesEntry,
 } from '@reverie/core'
 import { CoverImage } from '../components/CoverImage'
+import { Surface } from '../components/Surface'
 import { useMoveEntry, useSeriesDetail } from '../data/series'
 
 /**
@@ -86,18 +87,24 @@ function Row({
   const title = book?.title ?? entry.title
 
   return (
-    <li
+    <Surface
+      as="li"
       ref={setNodeRef}
+      tone="bare"
+      radius="card"
+      pad={0}
       style={{
         transform: CSS.Transform.toString(transform),
         transition,
         // Colours come from the ONE token object the contrast test measures, so a change here cannot
         // pass a test that is still measuring the old value. `text-ink` on the title below resolves
         // to the same --ink through `--color-ink` in globals.css.
+        // Hence tone="bare" + TOK.surface here rather than tone="card": Surface would paint the
+        // same var(--card) string, but the SOURCE would no longer be the measured token object.
         background: TOK.surface,
         opacity: isDragging ? 0.65 : 1,
       }}
-      className="flex items-center gap-2.5 rounded-xl border border-line px-2.5 py-2"
+      className="flex items-center gap-2.5 px-2.5 py-2"
       data-testid="arrange-row"
       data-entry-id={entry.id}
       data-position={entry.position}
@@ -168,7 +175,7 @@ function Row({
           ▼
         </button>
       </span>
-    </li>
+    </Surface>
   )
 }
 

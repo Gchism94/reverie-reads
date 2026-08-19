@@ -1,3 +1,4 @@
+import { forwardRef } from 'react'
 import type { CSSProperties, ElementType, HTMLAttributes, ReactNode } from 'react'
 
 /**
@@ -17,7 +18,22 @@ import type { CSSProperties, ElementType, HTMLAttributes, ReactNode } from 'reac
  * of the data is the mistake the audit's own elevation finding had to be corrected for.
  */
 
-/** Which surface token paints it. `bare` = bordered and padded with no background (18 sites). */
+/**
+ * Which surface token paints it. `bare` = bordered and padded with no background (18 sites).
+ *
+ * ── THIS ENUM IS CLOSED BY MEASUREMENT, NOT OVERSIGHT (API pass, 2026-08-19) ────────────────────
+ * Two "gaps" surfaced during the migration — `--bg0` (2 lab sandbox cells) and `--chip`
+ * (ReviewRoute's triage badge) — and raw `var()` counts made `--chip` look like the third-most-used
+ * surface token (45 uses). Measured properly — non-interactive, Surface-eligible sites actually
+ * painting the token as background — the 45 collapse to **1**: nearly every `--chip` painter is a
+ * `<button>` or a `skin-control`/`skin-control-quiet` span, i.e. the control kit's population, not
+ * this component's. `--bg0` measures 2 (the dev-only lab cells), `--paper` 0 (all artwork:
+ * CoverPlaceholder/Spine/Structure), `--bg1` 0. The enum therefore mirrors the tokens the surface
+ * population actually paints — exactly these four — and the tail (3 sites) uses the `style`/
+ * `className` escape hatch, per the audit §3: a closed scale covers the head; the tail needs an
+ * escape hatch, not a bigger enum. Before adding a member here, re-run that measurement, not the
+ * grep. Full numbers: the `feat/surface-api-pass` PR body.
+ */
 export type SurfaceTone = 'card' | 'card-solid' | 'field' | 'bare'
 
 /** Skin-driven radius. `panel`/`card` reuse the existing kit classes rather than restating them. */
@@ -76,18 +92,28 @@ export type SurfaceProps = {
   as?: ElementType
 } & Omit<HTMLAttributes<HTMLElement>, 'style' | 'className' | 'children'>
 
-export function Surface({
-  tone = 'card',
-  radius = 'card',
-  pad = 2,
-  border = true,
-  raised = false,
-  className = '',
-  style,
-  children,
-  as: Tag = 'div',
-  ...rest
-}: SurfaceProps) {
+/**
+ * Ref-forwarding, added in the API pass once a SECOND independent customer appeared (the threshold
+ * set after batch 2 — "don't add API surface for one customer"): `Modal` needs the rendered element
+ * for focus-on-open, `SeriesArranger` hands it to dnd-kit's `setNodeRef`. Two different mechanisms,
+ * not two instances of one. The ref is typed `HTMLElement` because `as` means the element is not
+ * assumable — callers narrow at the site if they need a specific interface.
+ */
+export const Surface = forwardRef<HTMLElement, SurfaceProps>(function Surface(
+  {
+    tone = 'card',
+    radius = 'card',
+    pad = 2,
+    border = true,
+    raised = false,
+    className = '',
+    style,
+    children,
+    as: Tag = 'div',
+    ...rest
+  },
+  ref,
+) {
   if (import.meta.env.DEV && raised && !RAISED_TONES.includes(tone)) {
     console.warn(
       `Surface: raised={true} with tone="${tone}". Elevation was measured only on the card tones ` +
@@ -108,6 +134,7 @@ export function Surface({
 
   return (
     <Tag
+      ref={ref}
       className={classes}
       style={{
         ...(background ? { background } : {}),
@@ -119,4 +146,4 @@ export function Surface({
       {children}
     </Tag>
   )
-}
+})
