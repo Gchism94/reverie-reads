@@ -1,11 +1,4 @@
-import {
-  blendCuratedPool,
-  embeddingText,
-  genreKey,
-  tierDiscoverShelf,
-  type Book,
-} from '@reverie/core'
-import { volumesUrl } from './googleBooks'
+import { embeddingText, genreKey, type Book } from '@reverie/core'
 import { supabase } from './supabase'
 
 // Discover v1 (owner-approved): a genre-keyed browse of the wider catalog, one tap from Add.
@@ -111,58 +104,32 @@ export function isOwned(h: DiscoverHit, owned: Set<string>): boolean {
   return owned.has(`${norm(h.title)}|${norm(h.authors[0] ?? '')}`)
 }
 
-async function fetchPage(
-  query: string,
-  orderBy: 'newest' | 'relevance',
-  signal?: AbortSignal,
-): Promise<DiscoverHit[]> {
-  const url = volumesUrl(
-    `q=${encodeURIComponent(query)}&orderBy=${orderBy}&printType=books&langRestrict=en&maxResults=20`,
-  )
-  const res = await fetch(url, { signal })
-  if (!res.ok) throw new Error(`discover ${res.status}`)
-  const json = (await res.json()) as { items?: unknown[] }
-  // a browsable hit needs a face and a byline — skip catalog rows without them
-  return (json.items ?? []).map(volumeToHit).filter((h) => h.title && h.cover && h.authors.length)
-}
-
-/** The Discover shelf for a genre. Primary path: the releases fn's shared per-genre daily cache
- *  (one upstream lookup serves every reader, recency-gated server-side — no 1927 reprints on a
- *  "new & notable" shelf). Fallback: the original direct client fetch, so Discover still works
- *  with the fn undeployed or down. */
+/**
+ * The Discover shelf for a genre — ONE path: the `releases` fn's shared per-genre daily cache
+ * (24h TTL, one upstream lookup serves every reader, recency-gated + curated server-side).
+ *
+ * ── THE CLIENT FALLBACK WAS REMOVED, and this site is why the PR exists ─────────────────────────
+ * DiscoverRoute's useQuery has no `enabled` guard, so this runs on ROUTE MOUNT. The old fallback
+ * therefore sent the reader's IP to Google on navigation alone — no typing, no click, no consent —
+ * whenever the fn erred or returned an empty shelf. That is the automatic, no-action shape, and it
+ * is the one that cannot be defended by "the key is referrer-restricted": the exposure is the
+ * REQUEST, not the key.
+ *
+ * Availability cost, stated rather than waved past: with the fn down, a genre shelf is empty and
+ * DiscoverRoute renders its error state (:225 / :391). That is a smaller loss than it looks — the
+ * server path serves every reader from one 24h-cached lookup per genre, so an outage has to
+ * outlast the cache before anyone sees an empty shelf at all.
+ */
 export async function fetchDiscover(genre: string, signal?: AbortSignal): Promise<DiscoverHit[]> {
   const query = discoverQuery(genre)
-  try {
-    const { data, error } = await supabase.functions.invoke('releases', {
-      body: { mode: 'discover', genre: genreKey(genre), query },
-    })
-    if (!error) {
-      const hits = ((data as { hits?: DiscoverHit[] })?.hits ?? []).filter(
-        (h) => h?.title && h.cover && h.authors?.length,
-      )
-      if (hits.length) return hits
-    }
-  } catch {
-    /* fall through to the direct path */
-  }
-  const newest = await fetchPage(query, 'newest', signal)
-  let hits = newest
-  if (hits.length < 9) {
-    const filler = await fetchPage(query, 'relevance', signal)
-    hits = [...hits, ...filler]
-  }
-  // Curated injection for the four starved categories, mirroring the fn path: blend into the pool,
-  // then rank the union by the fn's own year-tier logic so curated and live sort by ONE function.
-  // For every other genre blendCuratedPool is a passthrough and this path is byte-identical to
-  // before — the fallback's no-tiering behavior there is pre-existing, not this feature's to change.
-  const deduped = dedupeHits(hits)
-  const pool = blendCuratedPool(genreKey(genre), deduped) as DiscoverHit[]
-  if (pool.length > deduped.length && import.meta.env.DEV)
-    console.debug(
-      `[discover] ${genre}: injected ${pool.length - deduped.length} curated (fallback path)`,
-    )
-  const ranked = pool === deduped ? pool : tierDiscoverShelf(pool, new Date().getFullYear())
-  return ranked.slice(0, 12)
+  const { data, error } = await supabase.functions.invoke('releases', {
+    body: { mode: 'discover', genre: genreKey(genre), query },
+    ...(signal ? { signal } : {}),
+  })
+  if (error) throw new Error(`discover unavailable: ${error.message}`)
+  return ((data as { hits?: DiscoverHit[] })?.hits ?? [])
+    .filter((h) => h?.title && h.cover && h.authors?.length)
+    .slice(0, 12)
 }
 
 // ── Tier 2b: taste ranking (owner-approved) ──

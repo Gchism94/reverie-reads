@@ -16,7 +16,18 @@ import process from 'node:process'
 
 const DIST = new URL('../dist', import.meta.url).pathname
 const SCAN_EXT = /\.(js|mjs|css|html|json|webmanifest|txt)$/
-const PATTERNS = [/(https?|wss?):\/\/(localhost|127\.0\.0\.1)(:\d+)?/gi, /:5[45]321\b/g]
+const PATTERNS = [
+  /(https?|wss?):\/\/(localhost|127\.0\.0\.1)(:\d+)?/gi,
+  /:5[45]321\b/g,
+  // THIRD-PARTY CATALOG LEG (fix/client-google-legs): all three client-side Google Books fetches
+  // were routed through Edge Functions, so the browser must never reach the volumes API and the
+  // bundle must not carry a Books key. This asserts the GUARANTEE the PR makes — without it, the
+  // property silently degrades the first time someone adds a fetch. Fonts (fonts.googleapis.com)
+  // are a separate, deliberate leg and are NOT matched: this targets the books API and the key
+  // name only. Ordinary vendor code has no reason to contain either string.
+  /www\.googleapis\.com\/books/gi,
+  /VITE_GOOGLE_BOOKS_KEY/g,
+]
 
 // Known-inert vendor fallback literals that ship inside every production bundle. Each is a default
 // that our code always overrides with real config — never a leak of OUR environment:

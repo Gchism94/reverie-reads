@@ -1,12 +1,22 @@
 import { matchBook, type Book, type Incoming } from '@reverie/core'
 import { supabase } from './supabase'
-import { volumesUrl } from './googleBooks'
 
 // One search implementation, two surfaces (Discover field + the shelf picker's "search everywhere").
-// Primary path: the `search` edge function — Hardcover (backend-only) + Google fill, server-cached,
-// rate-limited. Fallback path: client-side Google Books via the referrer-restricted key, so search
-// still works with the function undeployed or down. This fallback IS the documented Google key seam
-// (task §1): Hardcover is only reachable through the backend; Google has a client key too.
+// ONE path: the `search` edge function — Hardcover (backend-only) + Google fill, server-cached,
+// rate-limited. The reader's browser never talks to a third-party catalog.
+//
+// ── THE CLIENT GOOGLE FALLBACK WAS REMOVED, and this is the argument, not a footnote ────────────
+// It existed for availability: "search still works with the function undeployed or down", the
+// documented Google-key seam (task §1). That was a real benefit and it is genuinely being given
+// up. What retired it is WHEN it fired: precisely when the backend was broken — rare, unpredictable,
+// and unwatched. A privacy surface that only appears during an outage is the hardest kind to reason
+// about (nobody is looking when it happens, and it cannot be reproduced on demand), and it is not
+// the kind of thing a reader can consent to, because its existence is invisible until it triggers.
+// Availability we can measure; a leak we cannot observe we cannot bound.
+//
+// SO: with the function down, search returns EMPTY and the caller shows its error state. Chosen,
+// not defaulted into — the surfaces already render `isError` (DiscoverRoute:225, :391), so the
+// failure is visible to the reader rather than silently empty.
 
 /** A search hit — cover/title/author/year/series (task §1). No consensus fields (anti-consensus). */
 export interface SearchResult {
@@ -65,62 +75,22 @@ export function libraryMatch(r: SearchResult, library: readonly Book[]): Book | 
   return m.strength === 'none' ? null : m.book
 }
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/** Client-side Google Books mapping — the fallback leg (referrer-restricted key via volumesUrl). */
-function volumeToResult(item: any): SearchResult | null {
-  const v = item?.volumeInfo ?? {}
-  if (!v.title) return null
-  const cover = String(v.imageLinks?.thumbnail ?? v.imageLinks?.smallThumbnail ?? '')
-    .replace('http:', 'https:')
-    .replace('&edge=curl', '')
-  if (!cover) return null
-  const ids: any[] = v.industryIdentifiers ?? []
-  const isbn13 = ids.find((x) => x.type === 'ISBN_13')?.identifier
-  const isbn10 = ids.find((x) => x.type === 'ISBN_10')?.identifier
-  const year = typeof v.publishedDate === 'string' ? v.publishedDate.slice(0, 4) : ''
-  return {
-    source: 'google',
-    title: v.title,
-    authors: (v.authors ?? []).filter(Boolean),
-    cover,
-    isbn: isbn13 ?? isbn10 ?? '',
-    isbn13,
-    isbn10,
-    year: /^\d{4}$/.test(year) ? year : '',
-  }
-}
-/* eslint-enable @typescript-eslint/no-explicit-any */
-
-async function googleFallback(q: string, signal?: AbortSignal): Promise<SearchResult[]> {
-  const isbnQ = q.replace(/[^0-9Xx]/g, '')
-  const looksIsbn = isbnQ.length >= 10 && /^[0-9Xx\- ]+$/.test(q)
-  const query = looksIsbn ? `isbn:${isbnQ}` : encodeURIComponent(q)
-  const res = await fetch(volumesUrl(`q=${query}&maxResults=20&printType=books&langRestrict=en`), {
-    signal,
-  })
-  if (!res.ok) return []
-  const json = (await res.json()) as { items?: unknown[] }
-  return (json.items ?? []).map(volumeToResult).filter((r): r is SearchResult => r !== null)
-}
-
 /**
- * Search the wider catalog for a query (title / author / ISBN). Backend first (Hardcover + Google,
- * cached); on any failure or an empty backend answer, the client Google leg fills in so search is
- * never dead. Returns deduped results.
+ * Search the wider catalog for a query (title / author / ISBN). ONE path: the `search` edge
+ * function (Hardcover + Google fill, server-cached). Throws when the function fails, so the caller
+ * renders its error state instead of an indistinguishable "no results" — see the header for why
+ * there is no client-side fallback any more.
  */
 export async function searchEverywhere(q: string, signal?: AbortSignal): Promise<SearchResult[]> {
   const query = q.trim()
   if (query.length < 3) return []
-  try {
-    const { data, error } = await supabase.functions.invoke('search', { body: { q: query } })
-    if (!error) {
-      const results = ((data as { results?: SearchResult[] })?.results ?? []).filter(
-        (r) => r?.title && r.cover,
-      )
-      if (results.length) return dedupeResults(results)
-    }
-  } catch {
-    /* fall through to the client Google leg */
-  }
-  return dedupeResults(await googleFallback(query, signal))
+  const { data, error } = await supabase.functions.invoke('search', {
+    body: { q: query },
+    ...(signal ? { signal } : {}),
+  })
+  if (error) throw new Error(`search unavailable: ${error.message}`)
+  const results = ((data as { results?: SearchResult[] })?.results ?? []).filter(
+    (r) => r?.title && r.cover,
+  )
+  return dedupeResults(results)
 }
