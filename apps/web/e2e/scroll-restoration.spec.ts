@@ -159,10 +159,15 @@ test('forward navigation starts at the top, not at the previous page’s offset'
 // the full 15s poll, with no code change between them. A test that fails one run in three teaches
 // people to re-run rather than to look, so it runs where it is deterministic and says why here. The
 // property under test is viewport-independent; the desktop assertion is what proves the option.
-test('back navigation restores where the reader was', async ({ page }) => {
+test('back navigation restores where the reader was', async ({ page, isMobile }) => {
+  // Keyed to `isMobile` — the thing the note above is actually about (the touch viewport's only
+  // leave-gesture routes through /book) — not to the project NAME, which was a proxy: the
+  // layout-390 sweep project re-ran this at 390px under a different name and flaked exactly as
+  // documented on its first dispatch-shaped run. Any touch-viewport project, present or future,
+  // skips here for the same reason.
   test.skip(
-    test.info().project.name === 'mobile',
-    'mobile’s only leave-gesture routes through /book, where restoration timing is flaky — see the note above',
+    isMobile,
+    'a touch viewport’s only leave-gesture routes through /book, where restoration timing is flaky — see the note above',
   )
   const c = await client()
   await signIn(page, c.session)
