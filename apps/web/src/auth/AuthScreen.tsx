@@ -3,6 +3,7 @@ import { Link, useRouterState } from '@tanstack/react-router'
 import { useAuth, type OAuthProvider } from './AuthProvider'
 import { supabase } from '../lib/supabase'
 import { Wordmark } from './Wordmark'
+import { Surface } from '../components/Surface'
 
 /** Social sign-in is wired but inert until the owner provisions Google/Apple client id + secret in
  *  Supabase auth settings. Flip VITE_SOCIAL_AUTH_ENABLED=true after provisioning. Password is the
@@ -354,15 +355,12 @@ function Shell({ children }: { children: ReactNode }) {
           </p>
         </aside>
 
-        <div
-          className="w-full rounded-3xl border border-line p-7"
-          style={{ background: 'var(--card)', boxShadow: 'var(--shadow)' }}
-        >
+        <Surface tone="card" radius="panel" pad={0} raised className="w-full p-7">
           <Link to="/" className="mb-6 inline-block md:hidden">
             <Wordmark />
           </Link>
           {children}
-        </div>
+        </Surface>
       </div>
     </main>
   )
