@@ -11,8 +11,9 @@ import { describe, expect, it } from 'vitest'
  * (belt and braces — that one catches a dependency dragging it in), but this one fails in the unit
  * suite the moment someone writes the fetch, which is where it is cheapest to catch.
  *
- * Fonts are NOT in scope: `skin/fonts.ts` loads fonts.googleapis.com by deliberate design, a
- * separate leg with its own decision. This targets the books API and its bundled key.
+ * Fonts are NOT in scope here — not because they are an accepted external leg (they no longer
+ * are: self-hosted since #288, with their own stricter dist guard), but because this test's
+ * subject is the CATALOG surface: the books API and its bundled key.
  */
 const SRC = join(process.cwd(), 'src')
 const FORBIDDEN = [/www\.googleapis\.com\/books/i, /VITE_GOOGLE_BOOKS_KEY/]

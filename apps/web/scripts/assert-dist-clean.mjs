@@ -22,9 +22,10 @@ const PATTERNS = [
   // THIRD-PARTY CATALOG LEG (fix/client-google-legs): all three client-side Google Books fetches
   // were routed through Edge Functions, so the browser must never reach the volumes API and the
   // bundle must not carry a Books key. This asserts the GUARANTEE the PR makes — without it, the
-  // property silently degrades the first time someone adds a fetch. Fonts (fonts.googleapis.com)
-  // are a separate, deliberate leg and are NOT matched: this targets the books API and the key
-  // name only. Ordinary vendor code has no reason to contain either string.
+  // property silently degrades the first time someone adds a fetch. Font origins are guarded
+  // separately and MORE strictly by FONT_ORIGINS below (self-hosted since #288 — zero Google font
+  // strings may ship); these two patterns target the books API and the key name only. Ordinary
+  // vendor code has no reason to contain either string.
   /www\.googleapis\.com\/books/gi,
   /VITE_GOOGLE_BOOKS_KEY/g,
 ]

@@ -93,7 +93,8 @@ async function signIn(page: Page, session: { access_token: string; refresh_token
  * (assert-dist-clean does that). A guarantee that isn't asserted degrades the first time someone
  * adds a fetch.
  *
- * Fonts are deliberately NOT included: fonts.googleapis.com is a separate, decided leg.
+ * Fonts are not in this spec's filter — they are self-hosted since #288 (same-origin, with their
+ * own dist guard), so a font request could never legitimately match a third-party origin anyway.
  */
 test('Discover mount makes no third-party catalog request', async ({ page }) => {
   test.setTimeout(120_000)
