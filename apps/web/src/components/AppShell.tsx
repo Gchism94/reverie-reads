@@ -8,6 +8,7 @@ import { useSkinSync } from '../skin/controls'
 import { SkinDivider } from './SkinDivider'
 import { SkinEvolveReveal } from './SkinEvolveReveal'
 import { ThemeToggle } from './ThemeToggle'
+import { Surface } from './Surface'
 import { PowerGlyph } from './PowerGlyph'
 
 // Primary navigation. Glyph icons (token-coloured, no raster) echo the desktop design's rail.
@@ -306,17 +307,21 @@ function MobileTabBar() {
         />
       )}
 
+      {/* tone="card-solid" replaces the hand-rolled gradient this sheet carried — §7.4's collapse.
+          The gradient faked opacity by stacking --card over --bg; --card-solid is the AUTHORED
+          opaque plate, and in marrow/dark the two genuinely differ (composite (22,19,21) vs
+          #212328, maxΔ=19) — meaning this sheet and Modal wore different colours there until now.
+          radius="panel": the sheet is floating tray chrome (marrow's own token comment: "trays are
+          chamfer-cut"), not a content card — the held site was never radius-ruled by batch 3. */}
       {moreOpen && (
-        <div
+        <Surface
           id="mobile-more-sheet"
-          className="fixed inset-x-3 z-50 rounded-2xl border border-line p-2 lg:hidden"
-          style={{
-            bottom: 'calc(76px + env(safe-area-inset-bottom))',
-            // --card can carry alpha; layering it over --bg keeps the sheet opaque so the page
-            // underneath never bleeds through the menu
-            background: 'linear-gradient(var(--card), var(--card)), var(--bg)',
-            boxShadow: 'var(--shadow)',
-          }}
+          tone="card-solid"
+          radius="panel"
+          pad={0}
+          raised
+          className="fixed inset-x-3 z-50 p-2 lg:hidden"
+          style={{ bottom: 'calc(76px + env(safe-area-inset-bottom))' }}
         >
           <nav className="grid grid-cols-3 gap-1" aria-label="More destinations">
             {MORE_NAV.map((item) => (
@@ -348,7 +353,7 @@ function MobileTabBar() {
               <PowerGlyph /> Sign out
             </button>
           </div>
-        </div>
+        </Surface>
       )}
 
       <nav
