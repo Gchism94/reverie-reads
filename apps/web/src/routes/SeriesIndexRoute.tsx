@@ -9,6 +9,7 @@ import {
   progressLine,
   seriesProgress,
   type Book,
+  type ConsolidationSeries,
   type SeriesEntry,
 } from '@reverie/core'
 import { rootRoute } from './RootRoute'
@@ -16,6 +17,7 @@ import { useBooks } from '../data/books'
 import { useLists } from '../data/lists'
 import { useAllListItems } from '../data/listItems'
 import { useSeriesList } from '../data/series'
+import { ConsolidationQueue } from '../series/ConsolidationQueue'
 import { SeriesArranger } from '../series/SeriesArranger'
 
 /**
@@ -34,7 +36,7 @@ import { SeriesArranger } from '../series/SeriesArranger'
  * every series at page load would be a write storm, which is why the index itself reads only.
  */
 
-function SeriesRow({
+export function SeriesRow({
   name,
   books,
   entries,
@@ -136,6 +138,24 @@ function SeriesIndexScreen() {
     [books, entriesBySeries],
   )
 
+  // The consolidation engine's view of the SERIES ROWS (not the author-grouped display): id, name,
+  // live-entry count and how many library books carry the name. Empty until both queries settle —
+  // proposals over half-loaded data would auto-merge on a partial picture.
+  const consolidationRows = useMemo<ConsolidationSeries[]>(() => {
+    if (!books || !seriesList) return []
+    const bookCount = new Map<string, number>()
+    for (const b of books) {
+      const name = (b.series ?? '').trim()
+      if (name) bookCount.set(name, (bookCount.get(name) ?? 0) + 1)
+    }
+    return [...seriesList.values()].map((row) => ({
+      id: row.series.id,
+      name: row.series.name,
+      liveEntries: row.total,
+      memberBooks: bookCount.get(row.series.name) ?? 0,
+    }))
+  }, [books, seriesList])
+
   return (
     <section className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6">
       <header>
@@ -149,6 +169,10 @@ function SeriesIndexScreen() {
           Every series you have, by author. Open one to arrange its reading order.
         </p>
       </header>
+
+      {/* Tier 3's quiet queue + Tier 2's silent mount point. Inline and dismissible — the page's
+          sections render identically with or without it (never modal, never blocking). */}
+      <ConsolidationQueue rows={consolidationRows} />
 
       {!sections.length ? (
         <p className="mt-8 text-[13.5px] text-muted">

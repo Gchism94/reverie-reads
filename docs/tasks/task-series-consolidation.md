@@ -180,3 +180,35 @@ than a ghost: a ghost has no `books` row and is therefore structurally immune to
 `series_count` write in (c). A real book row is protected only by its `series` string differing
 from the target series' name. That is a much thinner guarantee, and it is the merge's problem to
 handle deliberately rather than inherit.
+
+---
+
+## Addendum — 2026-08-18: PR 3 decisions (the two the spec left open)
+
+**No migration.** PR 3 is app-only: the decision table and both RPCs shipped with PR 2, and the
+proposal engine is client-side by the RPC contract (keys supplied by the caller). Nothing here
+touches `supabase/`.
+
+**Where Tier 2 fires: on a visit to `/series`, never at app load.** "Automatic, silent" was a
+ruling about PROMPTING — no confirmation theatre for a pair carrying no judgment — not about
+timing, and `merge_series` deletes a row. The trigger sits where the write's effect is in front of
+the reader: on `/series`, the page whose whole subject is series records, two rows visibly become
+one. App-load firing would put a destructive RPC burst in every session's critical path, race
+concurrent tabs, and fail invisibly. Mechanics: one merge in flight at a time; each pair attempted
+once per mount, so a failing RPC cannot loop; nothing fires until the rulings table is in memory,
+so a ruled exact-variant pair is never auto-merged over (defensive — no UI writes such a ruling
+today, but the suppression is unconditional on principle: no ruling is ever overridden silently).
+
+**`related_but_separate` is a reachable third outcome in the queue, not collapsed into
+"distinct".** The proposal card offers all three rulings: merge (with the reader choosing the
+surviving name), distinct, and related-but-separate. The third exists because 20260822010000 added
+it as the true answer for sibling series in a shared universe and named its consumption "PR 3's
+job"; those rulings are the seed data for the universe layer, and a two-button queue would force
+the reader to record a falsehood at the exact moment they know the truth.
+
+**Tier 3's matcher ships initialism ONLY.** The spec says "initialism and other strong structural
+matches"; the "other" matches are deliberately absent until production evidence nominates one, the
+same way initialism itself earned its place (Phase 1: the one initialism link was real). Rule:
+one side single-word, the other ≥ 3 words, initialism ≥ 3 characters (TOG-sized), exact equality,
+every word counted (articles and conjunctions — that is how ACOTAR is built). Every Phase 1
+prefix false-positive is excluded structurally: both sides of those pairs are multi-word.
