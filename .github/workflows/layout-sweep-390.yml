@@ -1,0 +1,105 @@
+# layout-sweep-390 — the on-demand 390px LAYOUT sweep. Dispatch-only, deliberately.
+#
+# ── WHAT THIS CATCHES, AND WHAT IT CATEGORICALLY CANNOT ─────────────────────────────────────────
+# Named for the measurement, not the platform: this is a LAYOUT sweep at 390×844 in Chromium, not
+# "mobile testing". docs/audits/e2e-mobile-viewport.md §4 measured that headless Chromium's touch
+# emulation does not meaningfully change interaction dispatch — page.click/fill/dragTo go through
+# the same synthetic input layer regardless of isMobile/hasTouch, and momentum physics and the real
+# touch event model do not exist here to diverge from. So a green run means the layout holds at
+# 390px across the whole spec surface; it says NOTHING about touch behaviour on a phone.
+#
+# It exists to buy back, on demand, what playwright.config.ts's mobile allowlist gave up at PR
+# time: "a regression that manifests ONLY at 390px in a spec outside this list no longer fails the
+# PR." Run it when there is a hypothesis — a tokens/skin-kit/layout-heavy PR, a reader-reported
+# 390px defect, a pre-launch sweep. The Run-workflow UI's ref picker points it at any branch.
+#
+# ── WHY DISPATCH-ONLY — do not add `schedule:`, it was considered and declined (2026-08-20) ─────
+# Four grounds, all measured at the time of writing:
+#   1. NO NOTIFICATION PATH EXISTS. This repo has no webhook/Slack wiring, and "the owner gets a
+#      failure email" for scheduled runs is a per-account GitHub toggle the repo cannot see — a
+#      behavioural dependency, not a repo property. An unactioned red trains the reader that red
+#      is normal, the exact off-switch-for-looking the BACKLOG flake ledger exists to prevent.
+#   2. GITHUB SILENTLY AUTO-DISABLES scheduled workflows after 60 days of repo inactivity — a solo
+#      repo's quiet month turns the watcher off with no red ever firing, leaving a false belief in
+#      coverage.
+#   3. BISECTION DOMINATES. A PR red names its diff; a nightly red names a DAY (5–10 merges here),
+#      ~3–4 bisect steps × ~10m of owner attention per red — against a 17-day observed base rate
+#      of ZERO 390px-only regressions.
+#   4. Per §4 above, the signal cannot reach what people actually worry about on phones anyway.
+# A dispatched run always has a hypothesis or a diff attached, which dissolves 1 and 3 at once.
+#
+# NOT a required check, by design not omission: the ruleset's seven contexts (gate, e2e, e2e-a11y,
+# e2e-mobile, pgtap, secrets, cla) are the PR gate; this is a pointable instrument.
+
+name: layout-sweep-390
+
+on:
+  workflow_dispatch:
+
+# A re-trigger cancels the in-flight run: you re-dispatched because you want the NEWER answer
+# (same reasoning as ci.yml's cancel-in-progress on PR refs), and two sweeps racing one runner
+# pool would only starve the answer you're waiting for. Scoped to the ref so sweeping a suspect
+# branch never cancels a sweep of main.
+concurrency:
+  group: layout-sweep-390-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  layout-390:
+    name: layout-390
+    runs-on: ubuntu-latest
+    # Cap derived from the only measurement the full matrix has: 10.7m MEDIAN JOB time from the
+    # old always-on e2e-mobile job's history (a median of whole job runs — stack overhead and the
+    # old ~0.35m install included; NOT a max, and NOT suite-only time — the input named exactly,
+    # after this week's "measured max suite" mislabel). 10.7 − 0.35 old install + 5m worst-case
+    # CDN-only install bounds (1m trip + 4m retry, setup-browsers) = 15.35 → 16. First dispatch
+    # re-measures this post-#292; resize from that number, not this prior.
+    timeout-minutes: 16
+    env:
+      VITE_SUPABASE_URL: http://127.0.0.1:55321
+      VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
+      E2E_WORKERS: 1
+      # The gate that makes the layout-390 project EXIST (playwright.config.ts) — without it,
+      # local `pnpm e2e` and CI's e2e job stay three projects and never pay for this sweep.
+      LAYOUT_SWEEP_390: '1'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.9.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Cache + CDN-only download via the ONE composite (.github/actions/setup-browsers) — apt is
+      # deliberately OUT of the browser path; do not reintroduce --with-deps/install-deps here.
+      - name: Set up Playwright browsers (cached, apt-free)
+        uses: ./.github/actions/setup-browsers
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.0
+
+      - name: Start Supabase
+        run: supabase start -x studio,vector,edge-runtime,imgproxy
+
+      - name: 390px layout sweep
+        run: pnpm --filter @reverie/web e2e --project=layout-390
+
+      # A dispatch run exists to answer a question; if triage needs a second run to see what
+      # broke, the job failed at its job. The HTML report carries per-test traces and screenshots.
+      - name: Upload Playwright HTML report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: layout-sweep-390-report
+          path: |
+            apps/web/playwright-report/
+            apps/web/test-results/
+          retention-days: 14
