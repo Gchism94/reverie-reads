@@ -307,11 +307,11 @@ async function shelfOf(c: Client, name: string, titles: string[]) {
   // Explicit sort_order: this fixture writes RAW rows, bypassing every product path that now sets
   // it (createList / restore / ensureList all do, post the sort_order incident) — so determinism
   // here is the fixture's own job. Sequenced by call order, spaced like the product's ORDER_STEP.
-  const order = ++shelfOfSeq * 1000
+  const shelfSortOrder = ++shelfOfSeq * 1000
   const list = await okData(
     c.sb
       .from('lists')
-      .insert({ owner_id: c.uid, name, kind: 'tbr', sort_order: order })
+      .insert({ owner_id: c.uid, name, kind: 'tbr', sort_order: shelfSortOrder })
       .select('id')
       .single(),
     'shelf-regressions lists insert',
