@@ -53,6 +53,13 @@ export function useUpsertReview(workKey: string) {
   return useMutation({
     meta: { action: 'Your review' },
     mutationFn: async ({ rating, body, reviewerName }: { rating: number; body: string; reviewerName: string }) => {
+      // reviews.rating is a cross-user SMALLINT — a half star sent here would silently truncate
+      // in the database. The reviews composer renders whole-star Stars (step defaults to 1), but
+      // this throw is the fence that cannot be forgotten at a new call site: refuse loudly rather
+      // than let Postgres round.
+      if (!Number.isInteger(rating)) {
+        throw new Error(`Review ratings are whole stars (got ${rating}) — reviews.rating is a shared smallint column.`)
+      }
       const { data: auth } = await supabase.auth.getUser()
       const uid = auth.user?.id
       if (!uid) throw new Error('Not signed in')
