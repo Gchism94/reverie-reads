@@ -734,6 +734,30 @@ the repo goes public.
 
 ## Known-flaky, with a prior
 
+- **Playwright install steps hanging on apt/CDN (`Install Playwright browsers` /
+  `Install Playwright OS dependencies`). THREE occurrences in ~24h, now retried once with the retry
+  made VISIBLE — and this section's rule is what keeps the retry from becoming an off-switch.**
+
+  | #   | run                     | step                           | note                                                        |
+  | --- | ----------------------- | ------------------------------ | ----------------------------------------------------------- |
+  | 1   | `32085029255`           | OS dependencies (`e2e-a11y`)   | 14.8m hang; job's 15m cap fired as an ambiguous "cancelled" |
+  | 2   | `32201401052`           | Install browsers (`e2e`, #279) | tripped the 8m single-shot step timeout                     |
+  | 3   | `32201401052` (rerun 1) | OS dependencies (`e2e`, #279)  | different step, same class; second rerun passed             |
+
+  **Mechanism.** apt/CDN operations against Ubuntu mirrors on the hosted runner — nothing this repo
+  controls; normal step time is 0.2–0.4m against a measured 80-run max of 3.87m. Occurrence 1
+  produced the step-level timeout (#268, legibility); occurrences 2–3 each still cost a red build
+  and a manual re-run, which is the asymmetry the retry closes: flaky _tests_ already self-heal via
+  Playwright `retries: 1`, the install step did not.
+
+  **The retry is bounded and visible** (`ci.yml`, six install steps, comment blocks kept identical):
+  attempt 1 at 2m, attempt 2 at 8m, step backstop 11m, sized against each job's cap from measured
+  distributions — the arithmetic lives in the OS-deps comment block. Every attempt-1 trip emits a
+  `::warning` annotation naming the step. **Log each annotation occurrence here**: a trip is this
+  flake recurring, absorbed but not invisible — and if trips become frequent, or attempt 2 starts
+  failing too, that is a defect in this class (runner region, cache key, mirror set) to diagnose,
+  not more flake to absorb.
+
 - **`spine-shelf-reachability.spec.ts:477` — "cover aspect: the rendered cover box keeps the cover
   ratio at every visible wave position". TWO occurrences, and by this section's own rule the next one
   is a defect.**
