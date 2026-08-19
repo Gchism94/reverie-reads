@@ -1,4 +1,5 @@
 import type { Book, ReadStatus } from './types'
+import { snapHalfRating } from './rating'
 import { norm } from './normalize'
 import { uid } from './id'
 import { cleanIsbn, type Incoming } from './match'
@@ -146,7 +147,8 @@ export function parseCsvRows(text: string): CsvParsedRow[] {
 
     // Goodreads: rating 0 means UNRATED, not zero stars (app-wide, 0 carries "no rating yet";
     // the merge never writes a falsy rating over an existing one).
-    const rating = cR >= 0 ? Math.round(parseFloat(cell(r, cR)) || 0) : 0
+    // snapHalfRating, not Math.round: StoryGraph exports quarter stars and the app is half-star
+    const rating = cR >= 0 ? snapHalfRating(parseFloat(cell(r, cR)) || 0) : 0
     const shelf = cS >= 0 ? cell(r, cS).toLowerCase() : ''
     let readStatus: ReadStatus = 'Read'
     if (/to-read|to read/.test(shelf)) readStatus = 'Unread'
@@ -306,7 +308,8 @@ export function importCsv(existing: readonly Book[], text: string): CsvImportRes
     // last word = surname (parity with parseCsvRows — the old first-word split garbled middles)
     const last = parts.length > 1 ? (parts[parts.length - 1] ?? '') : authorRaw
     const first = parts.length > 1 ? parts.slice(0, -1).join(' ') : ''
-    const rating = cR >= 0 ? Math.round(parseFloat(cell(r, cR)) || 0) : 0
+    // snapHalfRating, not Math.round: StoryGraph exports quarter stars and the app is half-star
+    const rating = cR >= 0 ? snapHalfRating(parseFloat(cell(r, cR)) || 0) : 0
     const shelf = cS >= 0 ? cell(r, cS).toLowerCase() : ''
     let rs: ReadStatus = 'Read'
     if (/to-read|to read/.test(shelf)) rs = 'Unread'

@@ -124,7 +124,7 @@ export function LogReadForm({ book, onClose }: { book: Book; onClose: () => void
           </Field>
           <Field label="Rating">
             <div className="flex h-10 items-center">
-              <Stars value={rating} onChange={setRating} />
+              <Stars value={rating} step={0.5} onChange={setRating} />
             </div>
           </Field>
         </div>

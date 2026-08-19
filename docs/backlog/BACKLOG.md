@@ -732,11 +732,33 @@ the repo goes public.
   (`data/corpus_seed.json` + `data/reader_seed.json`, the 290-book pair) carry the same data in
   another form and are flagged for the same decision. Pre-public §4.
 
+- **A guard aimed at the right defect class but the wrong boundary — #287's truncation guard,
+  corrected by `fix/import-half-stars`.** #287 guarded half stars against `reviews.rating`'s
+  `smallint` (correctly: `useUpsertReview` throws pre-request, asserted by zero supabase calls).
+  The actual silent truncation was three `Math.round` calls on the IMPORT path
+  (`importMap.ts:278`, `csv.ts:149`, `csv.ts:309`) — application-level coercion that no
+  schema-type reasoning would surface: rate 4.5 → export → re-import came back 5, rounding UP,
+  with nothing on screen saying a value changed. The durable lesson: **type-level guards catch
+  type-level truncation; application-level coercion needs a round-trip test** (export → import →
+  compare), which is what `importRatingRoundTrip.test.ts` now is. When adding a guard for "X must
+  not silently change," enumerate every path that WRITES X, not just every column that STORES it.
+
 ## Known-flaky, with a prior
 
-- **Playwright install steps hanging on apt/CDN (`Install Playwright browsers` /
-  `Install Playwright OS dependencies`). FOUR occurrences, now retried once with the retry
-  made VISIBLE — and this section's rule is what keeps the retry from becoming an off-switch.**
+- ~~**Playwright install steps hanging on apt/CDN**~~ — **CLOSED 2026-08-19: the surface no longer
+  exists.** What actually fixed it was not a better timeout, retry, or mirror — it was removing apt
+  from the browser path entirely (`ci/no-apt-browser-path`): `ubuntu-latest` ships Google Chrome,
+  so the image already carries chromium's shared-library surface, and probe PR #291 proved all
+  three suites green with zero apt calls on BOTH arms (forced cache miss: CDN-only
+  `playwright install chromium`, ~11s; cache hit: no install step at all). The six install steps
+  collapsed into `.github/actions/setup-browsers`, whose header carries the class's condensed
+  history and the no-automatic-fallback ruling. The only network call left in the path is
+  Playwright's CDN on a cache miss, made rare by the push-to-main cache warmer; a CDN stall is
+  still bounded (1m/4m, apt-free) and still `::warning`s here. The ledger below stands as the
+  history that priced each escalation.
+
+  Original entry, for the record — four occurrences, each fix making apt fail _better_ until #4
+  proved no in-path fix could beat a mirror outage:
 
   | #   | run                     | step                                          | note                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
   | --- | ----------------------- | --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -758,6 +780,18 @@ the repo goes public.
   flake recurring, absorbed but not invisible — and if trips become frequent, or attempt 2 starts
   failing too, that is a defect in this class (runner region, cache key, mirror set) to diagnose,
   not more flake to absorb.
+
+- **`trope-rename-delete.spec.ts:180` — "deleting a personal trope confirms first, then removes it
+  from every book". ONE occurrence, recorded so a recurrence has a prior.**
+
+  Full-suite run on `feat/half-stars` (2026-08-19, local): the delete confirm rendered "It is not on
+  any books" where the test had seeded 2 carriers — the carrier count resolved to 0 at dialog-open.
+  Fast failure (3.0s), so a stale/racing count query, not a timeout. Classified flake, not
+  regression: the branch's diff touches ratings only (Stars/reviews/formatRatings — no trope code),
+  the same suite passed 4x on identical trope code earlier the same day, and the spec passed **3 of
+  3 in isolation** immediately after. Mechanism guess for occurrence 2 to verify: the confirm reads
+  a carrier count whose query hadn't settled under full-suite load. By this section's rule, a second
+  failure here is a defect in that count's loading state, not a flake.
 
 - **`spine-shelf-reachability.spec.ts:477` — "cover aspect: the rendered cover box keeps the cover
   ratio at every visible wave position". TWO occurrences, and by this section's own rule the next one

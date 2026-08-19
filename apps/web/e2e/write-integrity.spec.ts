@@ -376,8 +376,13 @@ test('a rating in the reading log leaves the book’s own rating untouched', asy
       .click()
     const dlg = page.getByRole('dialog', { name: /Log a read/i })
     await expect(dlg).toBeVisible({ timeout: 15_000 })
-    // Give THIS read 2 stars — pre-fix that overwrote the book's 5.
-    await dlg.getByRole('button').filter({ hasText: /★|☆/ }).nth(1).click()
+    // Give THIS read 2 stars — pre-fix that overwrote the book's 5. The control is the
+    // WAI-ARIA slider now (half stars); drive it by keyboard, which doubles as e2e proof of
+    // the a11y contract: four ArrowRights at step 0.5 = 2 stars, no pointer needed.
+    const stars = dlg.getByRole('slider', { name: /Your rating/i })
+    await stars.focus()
+    for (let i = 0; i < 4; i++) await stars.press('ArrowRight')
+    await expect(stars).toHaveAttribute('aria-valuenow', '2')
     await dlg.getByRole('button', { name: /Save to read log/i }).click()
     await expect(dlg).toBeHidden({ timeout: 15_000 })
 
