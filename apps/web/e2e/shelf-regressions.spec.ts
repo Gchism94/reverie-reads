@@ -86,6 +86,7 @@ async function client(): Promise<Client> {
 }
 
 async function reset(c: Client) {
+  shelfOfSeq = 0
   const { data: books } = await c.sb.from('books').select('id').eq('owner_id', c.uid)
   const ids = ((books as { id: string }[]) ?? []).map((b) => b.id)
   if (ids.length) {
@@ -301,9 +302,18 @@ test('Shelf reorder: covers are not drag-hijackable and the keyboard fallback re
 // the whole shelf. These drive the real gestures.
 
 /** Three owned books with covers on one shelf, spaced 1000 apart. Returns [listId, orderFn]. */
+let shelfOfSeq = 0
 async function shelfOf(c: Client, name: string, titles: string[]) {
+  // Explicit sort_order: this fixture writes RAW rows, bypassing every product path that now sets
+  // it (createList / restore / ensureList all do, post the sort_order incident) — so determinism
+  // here is the fixture's own job. Sequenced by call order, spaced like the product's ORDER_STEP.
+  const order = ++shelfOfSeq * 1000
   const list = await okData(
-    c.sb.from('lists').insert({ owner_id: c.uid, name, kind: 'tbr' }).select('id').single(),
+    c.sb
+      .from('lists')
+      .insert({ owner_id: c.uid, name, kind: 'tbr', sort_order: order })
+      .select('id')
+      .single(),
     'shelf-regressions lists insert',
   )
   const listId = (list as { id: string }).id
