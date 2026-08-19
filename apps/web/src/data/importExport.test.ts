@@ -849,3 +849,59 @@ describe('archived tombstones are keyed on title, not on a position that moves',
     expect(rows).toHaveLength(2)
   })
 })
+
+describe('shelf manual order — the lists sort_order round trip (the WebKit probe incident)', () => {
+  /**
+   * The defect: the export always captured sort_order (select('*') serialized wholesale), but the
+   * restore dropped it — every restored shelf landed NULL, and the reader's manual arrangement
+   * degraded to Postgres scan order in the one operation whose purpose is destroying nothing.
+   * These assert BY VALUE, at the write layer, which is where the drop happened.
+   */
+  it('preserves each shelf\'s exported sort_order through export → restore', async () => {
+    db.lists = [
+      // manual order deliberately different from array order AND from name order
+      { id: 'l-b', owner_id: OWNER, name: 'Bbb Shelf', kind: 'collection', is_priority: false, sort_order: 1000 },
+      { id: 'l-a', owner_id: OWNER, name: 'Aaa Shelf', kind: 'collection', is_priority: false, sort_order: 3000 },
+      { id: 'l-c', owner_id: OWNER, name: 'Ccc Shelf', kind: 'tbr', is_priority: true, sort_order: 2000 },
+    ]
+    const json = await buildBackup()
+    wipeToFreshAccount()
+    await restoreBackup(json)
+
+    const byName = Object.fromEntries(db.lists.map((l) => [l.name, l.sort_order]))
+    expect(byName).toEqual({ 'Bbb Shelf': 1000, 'Aaa Shelf': 3000, 'Ccc Shelf': 2000 })
+    // and the manual order those values encode: Bbb, Ccc, Aaa
+    const ordered = [...db.lists].sort((a, b) => (a.sort_order as number) - (b.sort_order as number)).map((l) => l.name)
+    expect(ordered).toEqual(['Bbb Shelf', 'Ccc Shelf', 'Aaa Shelf'])
+  })
+
+  it('an old-shape backup (no sort_order field) restores to a stable sequential order, never NULLs', async () => {
+    seedOldAccount()
+    const json = await buildBackup()
+    // simulate a backup written before the column existed: strip the field entirely
+    const parsed = JSON.parse(json) as { lists: Record<string, unknown>[] }
+    for (const l of parsed.lists) delete l.sort_order
+    wipeToFreshAccount()
+    await restoreBackup(JSON.stringify(parsed))
+
+    expect(db.lists.length).toBeGreaterThan(0)
+    for (const l of db.lists) expect(l.sort_order, `NULL sort_order restored onto ${String(l.name)}`).not.toBeNull()
+    // sequential in the file's own array order, spaced by the step
+    const orders = db.lists.map((l) => l.sort_order)
+    expect(orders).toEqual(orders.map((_, i) => (i + 1) * 1000))
+  })
+
+  it('a MIXED backup appends the missing ones after the highest preserved value, in file order', async () => {
+    db.lists = [
+      { id: 'l-1', owner_id: OWNER, name: 'Kept', kind: 'collection', is_priority: false, sort_order: 5000 },
+      { id: 'l-2', owner_id: OWNER, name: 'Lost A', kind: 'collection', is_priority: false, sort_order: null },
+      { id: 'l-3', owner_id: OWNER, name: 'Lost B', kind: 'tbr', is_priority: false, sort_order: null },
+    ]
+    const json = await buildBackup()
+    wipeToFreshAccount()
+    await restoreBackup(json)
+
+    const byName = Object.fromEntries(db.lists.map((l) => [l.name, l.sort_order]))
+    expect(byName).toEqual({ Kept: 5000, 'Lost A': 6000, 'Lost B': 7000 })
+  })
+})
