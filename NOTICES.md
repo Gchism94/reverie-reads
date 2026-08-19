@@ -132,28 +132,41 @@ after dependency changes to keep this current._
 
 ## Fonts
 
-**No font files ship in the distributed artifact.** All eighteen typefaces load at
-runtime from the Google Fonts CDN (per-skin `<link>` stylesheets in
-`apps/web/index.html`); the app distributes URLs, not font bytes, so font-license
-redistribution obligations do not attach to the artifact. Listed anyway — fonts are
-routinely missed, and if any typeface is ever self-hosted, its license terms attach at
-that moment:
+**All eighteen typefaces are self-hosted and redistributed** (`apps/web/public/fonts/`,
+fetched by `scripts/fetch-fonts.mjs` as byte-faithful mirrors of Google Fonts' woff2
+serving — their subsetting, their `unicode-range` descriptors, unmodified). That makes
+this repository a redistributor of the font software, so each family's license terms
+attach: every family is SIL Open Font License 1.1 (verified against the `google/fonts`
+repository — each lives under `ofl/`), which permits redistribution bundled with
+software provided the license and copyright notices accompany the fonts. They do: the
+full OFL text with all eighteen copyright notices ships at
+`apps/web/public/fonts/OFL.txt`, inside the same directory as the font files.
 
-| Typeface (skin)                           | License                   |
-| ----------------------------------------- | ------------------------- |
-| Fraunces, Hanken Grotesk (tryst)          | SIL Open Font License 1.1 |
-| Cormorant Garamond, Spectral (grimoire)   | SIL Open Font License 1.1 |
-| Space Grotesk, Space Mono (aphelion)      | SIL Open Font License 1.1 |
-| Playfair Display, Libre Franklin (marrow) | SIL Open Font License 1.1 |
-| Libre Caslon Text, Courier Prime (umbra)  | SIL Open Font License 1.1 |
-| EB Garamond, Caveat (folio)               | SIL Open Font License 1.1 |
-| Bitter, Varela Round (hearth)             | SIL Open Font License 1.1 |
-| Source Serif 4, Archivo (almanac)         | SIL Open Font License 1.1 |
-| Baloo 2, Karla (bloom)                    | SIL Open Font License 1.1 |
+Two families carry Reserved Font Names (Playfair Display; Varela Round). RFNs restrict
+naming of _modified_ versions only — these files are redistributed unmodified under
+their original names, so no RFN is exercised. The woff2 instancing/subsetting was
+performed upstream by Google and served by them under the same license.
 
-All are OFL-1.1 (verified against Google Fonts' per-family license metadata). OFL
-requires attribution and license preservation only on redistribution of the font
-software itself, which this repository does not do.
+| Typeface (skin)               | Upstream copyright                                                                                                           |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Fraunces (tryst)              | Copyright 2018 The Fraunces Project Authors (github.com/undercasetype/Fraunces)                                              |
+| Hanken Grotesk (tryst)        | Copyright 2021 The Hanken Grotesk Project Authors (github.com/marcologous/hanken-grotesk)                                    |
+| Cormorant Garamond (grimoire) | Copyright 2015 the Cormorant Project Authors (github.com/CatharsisFonts/Cormorant)                                           |
+| Spectral (grimoire)           | Copyright 2017 The Spectral Project Authors (github.com/productiontype/Spectral)                                             |
+| Space Grotesk (aphelion)      | Copyright 2020 The Space Grotesk Project Authors (github.com/floriankarsten/space-grotesk)                                   |
+| Space Mono (aphelion)         | Copyright 2016 The Space Mono Project Authors (github.com/googlefonts/spacemono)                                             |
+| Playfair Display (marrow)     | Copyright 2017 The Playfair Display Project Authors (github.com/clauseggers/Playfair-Display), RFN "Playfair Display"        |
+| Libre Franklin (marrow)       | Copyright 2020 The Libre Franklin Project Authors (github.com/googlefonts/Libre-Franklin)                                    |
+| Libre Caslon Text (umbra)     | Copyright 2018 The Libre Caslon Text Project Authors (github.com/thundernixon/Libre-Caslon)                                  |
+| Courier Prime (umbra)         | Copyright 2015 The Courier Prime Project Authors (github.com/quoteunquoteapps/CourierPrime)                                  |
+| EB Garamond (folio)           | Copyright 2017 The EB Garamond Project Authors (github.com/octaviopardo/EBGaramond12)                                        |
+| Caveat (folio)                | Copyright 2014 The Caveat Project Authors (github.com/googlefonts/caveat)                                                    |
+| Bitter (hearth)               | Copyright 2011 The Bitter Project Authors (github.com/solmatas/BitterPro)                                                    |
+| Varela Round (hearth)         | Copyright 2023 The Varela Round Project Authors (github.com/alefalefalef/Varela-Round-Hebrew), RFNs 'Varela', 'Varela Round' |
+| Source Serif 4 (almanac)      | Copyright 2014 The Source Serif 4 Project Authors (github.com/adobe-fonts/source-serif)                                      |
+| Archivo (almanac)             | Copyright 2020 The Archivo Project Authors (github.com/Omnibus-Type/Archivo)                                                 |
+| Baloo 2 (bloom)               | Copyright 2019 The Baloo 2 Project Authors (github.com/EkType/Baloo2)                                                        |
+| Karla (bloom)                 | Copyright 2019 The Karla Project Authors (github.com/googlefonts/karla)                                                      |
 
 ## Book cover images — not covered, not ours to license
 

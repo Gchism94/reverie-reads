@@ -7,6 +7,7 @@
 
 import type { PossessionState, PubDate, ReadStatus } from './types'
 import { parseCSV } from './csv'
+import { snapHalfRating } from './rating'
 import { parseSeriesFromTitle } from './seriesTitle'
 import { cleanIsbn, type Incoming } from './match'
 import { emptyOwned, possessionPatch } from './ownership'
@@ -275,7 +276,8 @@ export function rowToImported(row: string[], idx: Record<string, number>): Impor
   // Reader's own metadata (Reverie template + any export that carries it): identifier, rating, read date.
   const isbn = cleanIsbn(cell('isbn'))
   const ratingRaw = num(cell('rating'))
-  const rating = ratingRaw == null ? 0 : Math.max(0, Math.min(5, Math.round(ratingRaw)))
+  // snapHalfRating, not Math.round: rounding predates half stars and inflated 4.5 -> 5 on import
+  const rating = ratingRaw == null ? 0 : snapHalfRating(ratingRaw)
   const readDate = parseReadDate(cell('readDate'))
   const reads = readDate ? [{ date: readDate, format: 'Paperback', rating: 0, notes: '' }] : []
 

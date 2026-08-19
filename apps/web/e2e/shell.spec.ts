@@ -10,27 +10,35 @@ test('signed-out landing shows the gold front door', async ({ page }) => {
   await expect(page.getByRole('link', { name: 'Get started' }).first()).toBeVisible()
 })
 
-// Fraunces is Tryst's #1 character lever and the landing's display face. This used to assert
-// `fonts.check('600 24px "Fraunces"')` against a REAL Google Fonts fetch, which made a required
-// check depend on a third party's uptime — a CDN hiccup blocked every merge. What this repo
-// controls is that the landing ASKS for Fraunces and APPLIES it to the display element; whether
-// gstatic served bytes this second is not this app's contract.
+// Fraunces is Tryst's #1 character lever and the landing's display face. The css2 era asserted the
+// injected href NAMED Fraunces, because the URL's query string was the only place the request said
+// what it was for. Self-hosted (feat/selfhost-webfonts), the pairing is /fonts/tryst.css and the
+// family lives in the stylesheet's own @font-face rules — so "asks for Fraunces" is now asserted
+// where it's actually stated: the skin's local stylesheet is requested, and the browser registers
+// the Fraunces faces it declares.
 //
-// The mechanism (served vs. dead CDN, both forced with route interception) is covered once in
-// e2e/fonts.spec.ts; the all-nine-skins matrix lives in src/skin/fontConfig.test.ts.
+// The mechanism (served vs. dead stylesheet, both directions) is covered once in e2e/fonts.spec.ts;
+// the all-nine-skins matrix lives in src/skin/fontConfig.test.ts.
 test('the landing asks for Fraunces and applies it to the display face', async ({ page }) => {
   await page.goto('/')
   const heading = page.getByRole('heading', { name: /beautifully kept/i })
   await expect(heading).toBeVisible()
 
-  // Requested: the pre-paint boot script injected tryst's pairing, which names Fraunces.
+  // Requested: the pre-paint boot script injected tryst's self-hosted pairing…
   const hrefs = await page.evaluate(() =>
     [...document.querySelectorAll('link[data-skin-font]')].map((l) => l.getAttribute('href') ?? ''),
   )
-  expect(hrefs.some((h) => h.includes('Fraunces'))).toBe(true)
+  expect(hrefs).toContain('/fonts/tryst.css')
+
+  // …whose @font-face rules the browser parsed into registered Fraunces faces.
+  await page.evaluate(() => (document as Document & { fonts: FontFaceSet }).fonts.ready)
+  const families = await page.evaluate(() =>
+    [...(document as Document & { fonts: FontFaceSet }).fonts].map((f) => f.family),
+  )
+  expect(families).toContain('Fraunces')
 
   // Applied: the display element resolves to a stack led by Fraunces, with a real generic behind
-  // it — so a slow CDN degrades to system serif rather than to nothing.
+  // it — so a missing font file degrades to system serif rather than to nothing.
   const stack = await heading.evaluate((el) => getComputedStyle(el).fontFamily)
   expect(stack).toContain('Fraunces')
   expect(stack.toLowerCase()).toMatch(/serif/)
