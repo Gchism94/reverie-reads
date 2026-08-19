@@ -59,9 +59,9 @@ import { PNG } from 'pngjs'
  * Result: 41 of 570 -> 0 reported changed between two identical runs, with the 9 anti-aliasing crops
  * listed under their own heading rather than silently dropped.
  *
- * CAVEAT ON THE FONT GUARD, unchanged and still worth stating: `document.fonts.check()` returns true
- * for a family that is not a webfont at all, so under the stub `fontsSettled()` is probably vacuous.
- * It earns its keep only if this file is ever switched back to real fonts.
+ * THE FONT GUARD IS LOAD-BEARING NOW: with the suite's font stub removed (fonts self-hosted),
+ * `fontsSettled()` is what keeps a capture from racing a real face's load. Its old caveat — that
+ * under the stub it was probably vacuous — resolved in the direction it predicted.
  *
  * ONE GAP LEFT OPEN DELIBERATELY: `stub()` does not stub cover images, so this harness still makes
  * live requests to the seeded covers' 13 third-party hosts. It was NOT the residual — 0 of the 41
@@ -89,21 +89,20 @@ import { PNG } from 'pngjs'
  * requirement), so this rides an existing, tested path rather than a special capture mode.
  */
 /**
- * FONTS ARE STUBBED HERE — and this reverses the choice the visual-overflow audit made, on purpose.
+ * FONTS ARE REAL HERE NOW — the self-hosting flipped the trade this block used to argue.
  *
- * That audit measured GLYPH WIDTHS, so a fallback face would have reported on a typeface no reader
- * sees; real fonts were mandatory there. This harness measures SURFACE CHROME — radius, background,
- * border, padding. The migration does not touch type at all, so the typeface is not the subject; it
- * is a variable, and a variable that arrives over a third-party CDN.
+ * The stub era's reasoning, kept for the record: this harness measures SURFACE CHROME, type was a
+ * variable arriving over a third-party CDN, and with real CDN fonts 14 of 62 captures on a COLD
+ * cache raced the download (instability converged 5 -> 4 -> 0 as the HTTP cache warmed). A baseline
+ * whose stability depends on cache temperature is not a baseline — so the suite stubbed the CDN.
  *
- * It was not a variable in theory. Running with real fonts, 14 of 62 captures on a COLD cache raced
- * the download, and the instability converged 5 -> 4 -> 0 across repeated runs purely as the HTTP
- * cache warmed. A baseline whose stability depends on cache temperature is not a baseline.
- *
- * The suite's default stub serves an empty stylesheet, so every --font stack falls through to its
- * real generic fallback (guaranteed for all nine skins by fontConfig.test.ts). Text still renders,
- * deterministically, in a face that is identical on both sides of every diff — which is all a
- * surface diff needs it to be.
+ * Self-hosting (feat/selfhost-webfonts) removed both halves of that argument at once: the fonts are
+ * first-party static files served by the same webServer as the app (no third-party availability,
+ * no CDN cache temperature), and the suite-wide stub is gone (support/fixtures.ts). What makes the
+ * baseline stable now is `fontsSettled()` below — the wait until the active skin's real faces are
+ * genuinely loaded, which under the stub was vacuous and now earns its keep. The baseline captured
+ * after this change renders the faces a reader actually sees, which also makes the sweep a true
+ * nine-skin tofu check rather than a fallback-face proxy.
  */
 test.use({ reducedMotion: 'reduce' })
 
@@ -341,8 +340,15 @@ async function settle(page: Page) {
  * over run (5 -> 4 -> 0) as the HTTP cache warmed: a cold capture raced, a warm one did not. A
  * baseline whose stability depends on cache temperature is not a baseline.
  *
- * This reads the families out of the live tokens and polls `document.fonts.check` for each, so the
- * wait is on the thing itself rather than on a duration.
+ * This reads the families out of the live tokens and settles each via `document.fonts.load` —
+ * load, not merely check, and the difference became load-bearing the day the suite switched to
+ * real self-hosted fonts: `check()` OBSERVES and never initiates, and the browser only fetches a
+ * face some rendered text actually uses. A page whose visible text is all weight-600 never loads
+ * the 400 face, so polling `check('16px …')` (400-normal) spun for the full deadline on every
+ * capture and reported a font race that wasn't one — measured on this branch's first real-font
+ * sweep: both observation runs failed the fontRaces guard and ran ~30m against the baseline's
+ * ~13m, all of it deadline-spinning. `load()` fetches the matching face and resolves when it's
+ * usable, which is the thing this wait exists to know.
  */
 async function fontsSettled(page: Page): Promise<boolean> {
   return page
@@ -353,10 +359,10 @@ async function fontsSettled(page: Page): Promise<boolean> {
         fam(cs.getPropertyValue('--font-display')),
         fam(cs.getPropertyValue('--font-sans')),
       ].filter(Boolean)
-      const ok = () => wanted.every((f) => document.fonts.check(`16px "${f}"`))
       const deadline = performance.now() + 8000
+      const ok = () => wanted.every((f) => document.fonts.check(`16px "${f}"`))
       while (performance.now() < deadline) {
-        await document.fonts.ready
+        await Promise.all(wanted.map((f) => document.fonts.load(`16px "${f}"`))).catch(() => {})
         if (ok()) return true
         await new Promise((r) => setTimeout(r, 100))
       }

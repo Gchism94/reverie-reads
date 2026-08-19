@@ -393,6 +393,19 @@ rendering-layer code moves, not once per batch:** batches 3–5 are call-site ed
 captured on `main` stays valid across all of them. (Checking that baseline in as an artifact with a
 freshness guard keyed to those four paths is a good follow-up, separable from any one batch.)
 
+**Post-webfont baseline — the anti-aliasing floor moved, 2026-08-19, and stays moved.** The
+self-hosted-fonts change (#288) was exactly such a rendering-layer move, and it re-baselined the
+sweep with a difference that will outlive it: the suite-wide font stub is gone, so every crop now
+rasterizes REAL webfont faces instead of the system fallbacks the harness had measured against
+since it was built. The recaptured baseline's own stability observations were **0 changed of 570
+with 25 crops dismissed at the anti-aliasing noise floor** (maxΔ≤2 and ≤64px). Real faces
+anti-alias differently run to run, so ~25 dismissed is the new resting rate, not a symptom. Two
+implications, stated so this doesn't resurface in a few weeks as "unexplained harness flakiness"
+with nobody knowing #288 is the reason: a future batch whose crops ride the noise floor is a
+SMALLER anomaly than the same number would have been before 2026-08-19 — the harness has less
+margin than it had; and if the dismissed count drifts well past ~25 on a quiet tree, re-measure
+the floor against the real-font baseline rather than raising the thresholds blind.
+
 ## 6. What the two mutation-testing incidents mean for batch size
 
 Both prior incidents (`IndieScreen.tsx`, 6 uncommitted `.skin-control` migrations; and
