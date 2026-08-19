@@ -54,6 +54,98 @@ try {
 // font origin, so unlike the local-URL class below this one fails even un-enforced local builds.
 const FONT_ORIGINS = /fonts\.googleapis\.com|fonts\.gstatic\.com/gi
 
+// ── The POSITIVE half of the self-hosted-fonts guarantee: the fonts are actually IN dist ────────
+//
+// The FONT_ORIGINS class above is one-sided: it proves nothing points at Google, not that the
+// fonts shipped. SCAN_EXT never opens a woff2 (correct for pattern-scanning), so a build that
+// dropped public/fonts/ entirely would pass the negative check completely clean. e2e cannot catch
+// it either — the Playwright webServer runs vite DEV, which serves from public/ regardless of what
+// the build emitted. And the deployed failure is SILENT, not loud: vercel.json rewrites
+// "/(.*)" → /index.html, so a MISSING /fonts/files/*.woff2 returns 200 with HTML — the browser
+// fails to parse it as a font, falls back to system type, and reports nothing. That is the exact
+// failure removing the suite's font stub was meant to prevent ("it would have silently masked a
+// broken local font path"), relocated from the test suite to the artifact — which is why this
+// check exists here, on the artifact, and why deleting it as "redundant with the tests" would
+// reopen that hole.
+//
+// Nothing below is a hardcoded count — counts rot the moment a skin or family changes (the
+// two-copies staleness this repo has paid for twice). Everything derives from a source that
+// changes FIRST when the truth changes:
+//   · the per-skin stylesheet list keys off the SKIN REGISTRY (packages/core/src/skins.ts), the
+//     SkinDivider/contrast-test pattern — a tenth skin fails here before it ships without fonts;
+//   · the woff2 set is asserted as an exact MIRROR of public/fonts/files (vite copies public/
+//     verbatim, so any divergence is a build fault) — and because an empty mirror mirrors an
+//     empty directory, every url(/fonts/files/…) each shipped stylesheet declares must RESOLVE,
+//     and the family floor comes from scripts/fetch-fonts.mjs's SOURCES map, the single writer.
+//
+// All of it fails HARD, matching the missing-dist branch above and FONT_ORIGINS' reasoning: the
+// local-URL class warns locally because .env.local legitimately bakes local URLs; a missing
+// shipped font has no legitimate case anywhere.
+const REPO_ROOT = new URL('../../..', import.meta.url).pathname
+const fontFailures = []
+
+const skinsTs = readFileSync(join(REPO_ROOT, 'packages/core/src/skins.ts'), 'utf8')
+const skinsBlock = skinsTs.match(/export const SKINS[^{]*\{([\s\S]*?)\n\}/)?.[1] ?? ''
+const skinIds = [...skinsBlock.matchAll(/^ {2}(\w+): \{/gm)].map((m) => m[1])
+if (skinIds.length < 9) {
+  console.error(
+    `assert-dist-clean: parsed only ${skinIds.length} skin ids from packages/core/src/skins.ts — ` +
+      'the registry shape changed; fix this parser rather than letting the font check go vacuous.',
+  )
+  process.exit(1)
+}
+for (const skin of skinIds) {
+  const cssPath = join(DIST, 'fonts', `${skin}.css`)
+  try {
+    statSync(cssPath)
+  } catch {
+    fontFailures.push(`missing stylesheet: fonts/${skin}.css (skin '${skin}' is in the registry)`)
+    continue
+  }
+  for (const m of readFileSync(cssPath, 'utf8').matchAll(/url\(\/fonts\/files\/([^)]+)\)/g)) {
+    try {
+      statSync(join(DIST, 'fonts', 'files', m[1]))
+    } catch {
+      fontFailures.push(`fonts/${skin}.css references fonts/files/${m[1]}, which is not in dist`)
+    }
+  }
+}
+
+const PUBLIC_FILES = new URL('../public/fonts/files', import.meta.url).pathname
+const inPublic = new Set(readdirSync(PUBLIC_FILES))
+let inDist = new Set()
+try {
+  inDist = new Set(readdirSync(join(DIST, 'fonts', 'files')))
+} catch {
+  fontFailures.push('dist/fonts/files is missing entirely')
+}
+for (const f of inPublic)
+  if (!inDist.has(f)) fontFailures.push(`not copied to dist: fonts/files/${f}`)
+for (const f of inDist)
+  if (!inPublic.has(f)) fontFailures.push(`in dist but not in public/: fonts/files/${f}`)
+
+const fetcher = readFileSync(join(REPO_ROOT, 'scripts/fetch-fonts.mjs'), 'utf8')
+const familyCount = new Set([...fetcher.matchAll(/family=([A-Za-z+0-9]+)/g)].map((m) => m[1])).size
+if (familyCount < 1) {
+  console.error(
+    'assert-dist-clean: parsed no families from scripts/fetch-fonts.mjs SOURCES — fix the parser.',
+  )
+  process.exit(1)
+}
+if (inDist.size < familyCount) {
+  fontFailures.push(
+    `dist/fonts/files holds ${inDist.size} woff2 for ${familyCount} families in SOURCES — at least one family shipped no file`,
+  )
+}
+
+if (fontFailures.length > 0) {
+  console.error(
+    `assert-dist-clean: the self-hosted fonts did NOT fully ship — ${fontFailures.length} problem(s):`,
+  )
+  for (const f of fontFailures) console.error(`  ${f}`)
+  process.exit(1)
+}
+
 const hits = []
 const fontHits = []
 for (const file of dist.filter((f) => SCAN_EXT.test(f))) {
