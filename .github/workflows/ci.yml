@@ -483,3 +483,33 @@ jobs:
 
       - name: pgTAP (supabase/tests)
         run: supabase test db
+
+  # Correction #51's fix, identified 2026-08-17 and built once apt left the path: on push to main,
+  # populate the browser cache so every branch's first run HITS instead of downloading — and a hit,
+  # post-apt, means the browser path makes ZERO network calls. This deliberately revisits an older
+  # recorded decision here ("not worth a main-triggered warming job", written when the eighth job
+  # would have joined the PR run's seven-sibling burst and a miss cost only ~0.4m): this job runs on
+  # PUSH TO MAIN only — outside that burst entirely — and its point is risk removal (misses are the
+  # only remaining network call in the browser path), not minutes. Cache keys are branch-scoped
+  # upward, so a cache saved on main is restorable by every branch.
+  warm-browser-cache:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.9.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Set up Playwright browsers (cached, apt-free)
+        uses: ./.github/actions/setup-browsers
