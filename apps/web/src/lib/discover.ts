@@ -1,4 +1,10 @@
-import { embeddingText, genreKey, type Book } from '@reverie/core'
+import {
+  blendCuratedPool,
+  tierDiscoverShelf,
+  embeddingText,
+  genreKey,
+  type Book,
+} from '@reverie/core'
 import { supabase } from './supabase'
 
 // Discover v1 (owner-approved): a genre-keyed browse of the wider catalog, one tap from Add.
@@ -122,14 +128,30 @@ export function isOwned(h: DiscoverHit, owned: Set<string>): boolean {
  */
 export async function fetchDiscover(genre: string, signal?: AbortSignal): Promise<DiscoverHit[]> {
   const query = discoverQuery(genre)
-  const { data, error } = await supabase.functions.invoke('releases', {
-    body: { mode: 'discover', genre: genreKey(genre), query },
-    ...(signal ? { signal } : {}),
-  })
-  if (error) throw new Error(`discover unavailable: ${error.message}`)
-  return ((data as { hits?: DiscoverHit[] })?.hits ?? [])
-    .filter((h) => h?.title && h.cover && h.authors?.length)
-    .slice(0, 12)
+  try {
+    const { data, error } = await supabase.functions.invoke('releases', {
+      body: { mode: 'discover', genre: genreKey(genre), query },
+      ...(signal ? { signal } : {}),
+    })
+    if (!error) {
+      const hits = ((data as { hits?: DiscoverHit[] })?.hits ?? []).filter(
+        (h) => h?.title && h.cover && h.authors?.length,
+      )
+      if (hits.length) return hits.slice(0, 12)
+    }
+  } catch {
+    /* degrade to the LOCAL curated pool below — never to a network fetch */
+  }
+  // Fn down or empty: the LOCAL-ONLY degradation. blendCuratedPool draws from curated titles that
+  // SHIP IN THE BUNDLE — zero network, so the no-third-party-request guarantee holds in exactly
+  // the state that used to leak (the old fallback fetched Google here; the first draft of this PR
+  // then threw, which discover-curated.spec.ts correctly failed: the curated shelf for the four
+  // starved genres IS deliberate fn-down behavior, not a side effect of the fetch it rode with).
+  // In-scope genres render their curated set, tiered so recent titles lead; out-of-scope genres
+  // return [] and the route shows its empty-shelf state, same as always.
+  const pool = blendCuratedPool(genreKey(genre), []) as DiscoverHit[]
+  if (!pool.length) return []
+  return tierDiscoverShelf(pool, new Date().getFullYear()).slice(0, 12)
 }
 
 // ── Tier 2b: taste ranking (owner-approved) ──

@@ -104,8 +104,19 @@ test('Discover mount makes no third-party catalog request', async ({ page }) => 
   const thirdParty: string[] = []
   page.on('request', (r) => {
     const u = r.url()
-    if (/googleapis\.com\/books|openlibrary\.org|hardcover\.app/i.test(u)) thirdParty.push(u)
+    // CATALOG endpoints only — the subject of this PR. Cover IMAGES (covers.openlibrary.org,
+    // books.google.com/books/content) are a separate, standing app-wide leg with its own
+    // handling (the suite-wide image stub exists because of it); the curated fn-down shelf
+    // legitimately renders such covers, and this spec must not conflate an <img> load with a
+    // catalog query. First draft used bare `openlibrary\.org` and tripped on exactly that.
+    if (/www\.googleapis\.com\/books|openlibrary\.org\/search|api\.hardcover\.app/i.test(u))
+      thirdParty.push(u)
   })
+  // Cover CDNs stubbed for determinism (offline CI), same as discover-curated.spec.ts.
+  await page.route('**covers.openlibrary.org/**', (r) => r.fulfill({ status: 404, body: '' }))
+  await page.route('**books.google.com/books/content**', (r) =>
+    r.fulfill({ status: 404, body: '' }),
+  )
   // The releases fn is stubbed to FAIL — the old code's fallback fired exactly here, so this is
   // the state that used to leak. Empty shelf is the accepted cost, and it must stay silent.
   await page.route('**/functions/v1/releases**', (r) => r.fulfill({ status: 500, json: {} }))
