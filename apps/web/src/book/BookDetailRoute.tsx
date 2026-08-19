@@ -1,4 +1,4 @@
-import { useState, type ReactNode, useRef } from 'react'
+import { useState, type ReactNode, useRef, useMemo } from 'react'
 import { Link, createRoute, useNavigate } from '@tanstack/react-router'
 import {
   authorOf,
@@ -16,6 +16,7 @@ import {
   type PossessionState,
   type Owned,
   formatPartialDate,
+  latestRatingByFormat,
 } from '@reverie/core'
 import { useFilters } from '../library/filterStore'
 import { buyConfig } from '../lib/buyConfig'
@@ -127,6 +128,7 @@ function BookDetailScreen() {
   const navigate = useNavigate()
   const { data: books, isLoading } = useBooks()
   const { data: reads } = useReads(bookId)
+  const formatRatings = useMemo(() => latestRatingByFormat(reads ?? []), [reads])
   const { data: listIds } = useBookListIds(bookId)
   const { data: lists } = useLists()
   const { data: profile } = useProfile()
@@ -330,11 +332,24 @@ function BookDetailScreen() {
       </Label>
       <Stars
         value={book.rating}
+        step={0.5}
         onChange={(v) => updateBook.mutate({ id: book.id, patch: { rating: v } })}
       />
       <p className="mt-1 text-[11.5px] text-muted">
         Your rating only — Reverie never shows an averaged score.
       </p>
+      {/* Audiobook-vs-print: shown only when two or more formats carry rated reads. Most recent
+          rated read per format — the display rule and its reasons live on latestRatingByFormat. */}
+      {formatRatings.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1" data-testid="format-ratings">
+          {formatRatings.map((f) => (
+            <span key={f.format} className="flex items-center gap-1.5 text-[12.5px] text-muted">
+              {f.format}
+              <Stars value={f.rating} size={12} />
+            </span>
+          ))}
+        </div>
+      )}
 
       {/* reviews (opt-in, individual voices) */}
       <div className="mt-4">

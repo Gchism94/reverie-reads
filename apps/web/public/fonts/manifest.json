@@ -1,0 +1,74 @@
+{
+  "fraunces": {
+    "version": "v38",
+    "files": 21
+  },
+  "hankengrotesk": {
+    "version": "v12",
+    "files": 20
+  },
+  "cormorantgaramond": {
+    "version": "v21",
+    "files": 20
+  },
+  "spectral": {
+    "version": "v15",
+    "files": 20
+  },
+  "spacegrotesk": {
+    "version": "v22",
+    "files": 12
+  },
+  "spacemono": {
+    "version": "v17",
+    "files": 6
+  },
+  "librefranklin": {
+    "version": "v20",
+    "files": 20
+  },
+  "playfairdisplay": {
+    "version": "v40",
+    "files": 16
+  },
+  "courierprime": {
+    "version": "v11",
+    "files": 6
+  },
+  "librecaslontext": {
+    "version": "v5",
+    "files": 6
+  },
+  "caveat": {
+    "version": "v23",
+    "files": 8
+  },
+  "ebgaramond": {
+    "version": "v33",
+    "files": 49
+  },
+  "bitter": {
+    "version": "v42",
+    "files": 30
+  },
+  "varelaround": {
+    "version": "v21",
+    "files": 4
+  },
+  "archivo": {
+    "version": "v25",
+    "files": 15
+  },
+  "sourceserif4": {
+    "version": "v14",
+    "files": 18
+  },
+  "baloo2": {
+    "version": "v23",
+    "files": 16
+  },
+  "karla": {
+    "version": "v33",
+    "files": 10
+  }
+}
