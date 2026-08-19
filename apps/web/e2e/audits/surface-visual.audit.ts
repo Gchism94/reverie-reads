@@ -340,8 +340,15 @@ async function settle(page: Page) {
  * over run (5 -> 4 -> 0) as the HTTP cache warmed: a cold capture raced, a warm one did not. A
  * baseline whose stability depends on cache temperature is not a baseline.
  *
- * This reads the families out of the live tokens and polls `document.fonts.check` for each, so the
- * wait is on the thing itself rather than on a duration.
+ * This reads the families out of the live tokens and settles each via `document.fonts.load` —
+ * load, not merely check, and the difference became load-bearing the day the suite switched to
+ * real self-hosted fonts: `check()` OBSERVES and never initiates, and the browser only fetches a
+ * face some rendered text actually uses. A page whose visible text is all weight-600 never loads
+ * the 400 face, so polling `check('16px …')` (400-normal) spun for the full deadline on every
+ * capture and reported a font race that wasn't one — measured on this branch's first real-font
+ * sweep: both observation runs failed the fontRaces guard and ran ~30m against the baseline's
+ * ~13m, all of it deadline-spinning. `load()` fetches the matching face and resolves when it's
+ * usable, which is the thing this wait exists to know.
  */
 async function fontsSettled(page: Page): Promise<boolean> {
   return page
@@ -352,10 +359,10 @@ async function fontsSettled(page: Page): Promise<boolean> {
         fam(cs.getPropertyValue('--font-display')),
         fam(cs.getPropertyValue('--font-sans')),
       ].filter(Boolean)
-      const ok = () => wanted.every((f) => document.fonts.check(`16px "${f}"`))
       const deadline = performance.now() + 8000
+      const ok = () => wanted.every((f) => document.fonts.check(`16px "${f}"`))
       while (performance.now() < deadline) {
-        await document.fonts.ready
+        await Promise.all(wanted.map((f) => document.fonts.load(`16px "${f}"`))).catch(() => {})
         if (ok()) return true
         await new Promise((r) => setTimeout(r, 100))
       }
