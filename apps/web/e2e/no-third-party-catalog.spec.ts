@@ -2,7 +2,7 @@ import { expect, test, type Page } from './support/fixtures'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { authFailure } from './support/authError'
 import { keepOfflineCacheEmpty } from './support/offlineCache'
-import { ok, okData, okUser } from './support/ok'
+import { ok, okUser } from './support/ok'
 
 // Discover search e2e (docs/archive/task-discover-search.md): search field → results (deduped against the
 // library, "On your shelf" for owned) → add owned / add-to-shelf unowned, and the shelf picker's
@@ -71,19 +71,6 @@ async function client(): Promise<Client> {
   if (error || !data.session) throw new Error(authFailure('discover-search', TEST_EMAIL, error))
   shared = { sb, session: data.session, uid: data.session.user.id }
   return shared
-}
-
-async function reset(c: Client) {
-  const { data: books } = await c.sb.from('books').select('id').eq('owner_id', c.uid)
-  const ids = ((books as { id: string }[]) ?? []).map((b) => b.id)
-  if (ids.length) {
-    await ok(
-      c.sb.from('list_items').delete().in('book_id', ids),
-      'discover-search list_items delete',
-    )
-    await ok(c.sb.from('books').delete().in('id', ids), 'discover-search books delete')
-  }
-  await ok(c.sb.from('lists').delete().eq('owner_id', c.uid), 'discover-search lists delete')
 }
 
 async function signIn(page: Page, session: { access_token: string; refresh_token: string }) {
