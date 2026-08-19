@@ -745,9 +745,20 @@ the repo goes public.
 
 ## Known-flaky, with a prior
 
-- **Playwright install steps hanging on apt/CDN (`Install Playwright browsers` /
-  `Install Playwright OS dependencies`). FOUR occurrences, now retried once with the retry
-  made VISIBLE — and this section's rule is what keeps the retry from becoming an off-switch.**
+- ~~**Playwright install steps hanging on apt/CDN**~~ — **CLOSED 2026-08-19: the surface no longer
+  exists.** What actually fixed it was not a better timeout, retry, or mirror — it was removing apt
+  from the browser path entirely (`ci/no-apt-browser-path`): `ubuntu-latest` ships Google Chrome,
+  so the image already carries chromium's shared-library surface, and probe PR #291 proved all
+  three suites green with zero apt calls on BOTH arms (forced cache miss: CDN-only
+  `playwright install chromium`, ~11s; cache hit: no install step at all). The six install steps
+  collapsed into `.github/actions/setup-browsers`, whose header carries the class's condensed
+  history and the no-automatic-fallback ruling. The only network call left in the path is
+  Playwright's CDN on a cache miss, made rare by the push-to-main cache warmer; a CDN stall is
+  still bounded (1m/4m, apt-free) and still `::warning`s here. The ledger below stands as the
+  history that priced each escalation.
+
+  Original entry, for the record — four occurrences, each fix making apt fail _better_ until #4
+  proved no in-path fix could beat a mirror outage:
 
   | #   | run                     | step                                          | note                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
   | --- | ----------------------- | --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -1,0 +1,77 @@
+name: Setup Playwright browsers
+description: >
+  Cache-or-download Playwright's chromium, with ZERO apt in the path. The one copy of a procedure
+  that used to exist three times (e2e / e2e-a11y / e2e-mobile) — triplication is the staleness
+  mechanism this file replaces: three comment blocks in ci.yml once asserted a required-check state
+  that had gone false.
+
+# ── WHY THERE IS NO apt HERE, AND WHY IT MUST NOT COME BACK ──────────────────────────────────────
+#
+# History, condensed so the sizing's reasoning survives its numbers. The install steps used to run
+# `playwright install --with-deps chromium` (cache miss) and `playwright install-deps chromium`
+# (cache hit) — BOTH arms shelled out to apt, which is why the browser cache never protected
+# against this failure class: a cache HIT still ran an apt transaction. The class's ledger
+# (docs/backlog/BACKLOG.md "Known-flaky, with a prior", now closed): a 14.8m hang read as an
+# ambiguous job-level "cancelled" (run 32085029255) → a step timeout made it legible (#268) → a
+# bounded 1.5m/8m retry with dpkg-orphan repair made single stalls survivable (#284) → and then
+# four jobs died at exit 124 in one day (occurrence #4, run 32218269328) because
+# azure.archive.ubuntu.com went down for LONGER THAN BOTH BOUNDS: apt looped `Ign:` for the full
+# retry budget, ~9m35s per job. A retry beats a transient stall, never a mirror outage — that
+# mirror's unreliability is a years-old, still-open runner-images defect (actions/runner-images
+# #12949, #6894). Every fix in that chain made apt fail BETTER; this one removes it.
+#
+# What made removal possible: ubuntu-latest ships Google Chrome, so the image already carries the
+# chromium shared-library surface. PROVEN, not inferred — probe PR #291 (run 32282601956/…601664)
+# ran all three suites with no apt call at all, BOTH arms: forced cache miss (CDN-only
+# `playwright install chromium`, ~11s) and cache hit (no install step at all). All green.
+#
+# DELIBERATELY NO AUTOMATIC FALLBACK to `install-deps` on failure. If a future runner image drops
+# a library, chromium fails AT LAUNCH in ~30 seconds, and Playwright's error NAMES the missing
+# .so — a diagnosable red, versus the 9m35s silent hang this replaced. An `if: failure()` apt
+# fallback would quietly re-introduce the exact failure surface being removed, on a path nobody
+# watches, and would also mask what changed. If that red ever fires: the fix is a MINIMAL apt step
+# with exactly the libraries the launch error names, behind a fast-mirror swap — not --with-deps.
+#
+# DO NOT "improve" this into the mcr.microsoft.com/playwright container job the Playwright docs
+# suggest (playwright#23388). These jobs run `supabase start`, which brings up ~10 Docker
+# containers publishing ports to the HOST; inside a container job those become siblings, and
+# localhost:54321 stops resolving for every DB URL in the suite. Solvable with bridge-IP plumbing;
+# fragile forever.
+#
+# The retry below is CDN-only and needs no dpkg repair (nothing apt-shaped to poison). Measured
+# post-apt install: ~11s (probe, n=3 misses). The 1m first bound is ~5x that; the 4m second bound
+# keeps the single-shot generosity for the attempt whose trip is a red build. Composite steps
+# cannot carry timeout-minutes — the shell `timeout`s bound the attempts, the job caps backstop.
+#
+# CACHING: all three e2e jobs cache under the SAME key on purpose — they must run identical
+# browsers, and a per-job key would triple the storage. When several jobs miss together, the
+# losers of the save race log "Cache already exists" — EXPECTED, not a defect. The warm-cache job
+# (ci.yml, push to main) keeps this key populated so branch runs normally hit and make no network
+# call at all.
+
+runs:
+  using: composite
+  steps:
+    - name: Detect Playwright version
+      id: playwright-version
+      shell: bash
+      run: |
+        version="$(pnpm --filter @reverie/web exec playwright --version | sed 's/^Version //')"
+        echo "version=$version" >> "$GITHUB_OUTPUT"
+
+    - name: Cache Playwright browsers
+      id: playwright-cache
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/ms-playwright
+        key: playwright-${{ steps.playwright-version.outputs.version }}
+
+    - name: Install Playwright browsers (cache miss — CDN only, never apt)
+      if: steps.playwright-cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        if timeout --kill-after=15s 1m pnpm --filter @reverie/web exec playwright install chromium; then
+          exit 0
+        fi
+        echo "::warning title=Playwright install retried::attempt 1 of the CDN-only browser download exceeded its 1m bound or failed; retrying once with a 4m bound. Log the occurrence in docs/backlog/BACKLOG.md 'Known-flaky, with a prior'."
+        timeout --kill-after=15s 4m pnpm --filter @reverie/web exec playwright install chromium
