@@ -19,7 +19,7 @@ import { useIntake, type ReviewCandidate } from '../data/intake'
 import { useBooks } from '../data/books'
 import { resolveCandidate, type ReviewAction } from '../data/duplicates'
 import { enrichBook, type CoverAlternate } from '../lib/enrich'
-import { volumesUrl } from '../lib/googleBooks'
+import { searchEverywhere } from '../lib/search'
 import { useEffectiveSkin, useLabels, useVoice } from '../skin/labels'
 import { Chip } from '../components/Chip'
 import { CoverImage } from '../components/CoverImage'
@@ -55,36 +55,27 @@ interface SearchHit {
   pub: string
 }
 
+/**
+ * Add's catalog lookup — routed through the `search` edge function, not the browser.
+ *
+ * Add's own SearchHit is a strict subset of the fn's SearchResult (title/authors/cover/isbn/year),
+ * so this is a genuine swap rather than a shape change: `pub` takes the fn's `year`, and its
+ * ISBN-13-preferred `isbn` is already the field Add wanted. User-initiated (someone typed), so this
+ * leg was the least urgent of the three — but it is the same class, and leaving it would have kept
+ * the Books API key shipping in the bundle for one call site.
+ */
 async function searchGoogleBooks(q: string): Promise<SearchHit[]> {
-  const isISBN = /^[0-9Xx\- ]{10,17}$/.test(q) && q.replace(/[^0-9Xx]/g, '').length >= 10
-  const query = isISBN ? `isbn:${q.replace(/[^0-9Xx]/g, '')}` : encodeURIComponent(q)
-  const res = await fetch(volumesUrl(`q=${query}&maxResults=8`))
-  const json = (await res.json()) as {
-    items?: {
-      volumeInfo?: {
-        title?: string
-        authors?: string[]
-        imageLinks?: { thumbnail?: string }
-        publishedDate?: string
-        industryIdentifiers?: { type: string; identifier: string }[]
-      }
-    }[]
-  }
-  return (json.items ?? [])
-    .map((it) => {
-      const v = it.volumeInfo ?? {}
-      const ind =
-        (v.industryIdentifiers ?? []).find((x) => x.type === 'ISBN_13') ??
-        (v.industryIdentifiers ?? [])[0]
-      return {
-        title: v.title ?? '',
-        authors: v.authors ?? [],
-        cover: (v.imageLinks?.thumbnail ?? '').replace('http:', 'https:').replace('&edge=curl', ''),
-        isbn: ind?.identifier ?? '',
-        pub: v.publishedDate ?? '',
-      }
-    })
-    .filter((x) => x.title)
+  const results = await searchEverywhere(q)
+  return results
+    .slice(0, 8)
+    .map((r) => ({
+      title: r.title,
+      authors: r.authors,
+      cover: r.cover,
+      isbn: r.isbn,
+      pub: r.year,
+    }))
+    .filter((h) => h.title)
 }
 
 function parsePub(s: string): Book['pub'] {
