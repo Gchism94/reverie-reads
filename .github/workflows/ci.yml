@@ -277,93 +277,10 @@ jobs:
       # pull cost anyway).
       - name: Install Playwright browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'
-        # BOUNDED RETRY — 2m first attempt, 8m second, sized TOGETHER with the job caps (see the
-        # OS-deps step below for the full arithmetic; the two comment blocks are kept identical
-        # across all three jobs — sync them or the next reader trusts a stale one).
-        # The 11 here is a backstop only: 2 + 8 + 1. The shell `timeout`s inside `run` are what
-        # actually bound the attempts — a step-level timeout cannot retry, it kills the step.
-        timeout-minutes: 11
-        run: |
-          if timeout --kill-after=15s 1.5m pnpm --filter @reverie/web exec playwright install --with-deps chromium; then
-            exit 0
-          fi
-          echo "::warning title=Playwright install retried::attempt 1 of 'Install Playwright browsers' exceeded its 1.5m bound or failed; retrying once with an 8m bound. Known apt/CDN hang class — log the occurrence in docs/backlog/BACKLOG.md 'Known-flaky, with a prior'."
-          # Attempt 1 died mid-apt: `timeout` TERMs pnpm, but the apt-get GRANDCHILD survives as
-          # an orphan holding /var/lib/apt/lists/lock, and dpkg may be left interrupted. Both
-          # poison the retry with apt exit 100 — observed, not theorized (probe 32213689012 hit
-          # the interrupted-dpkg arm; probe 32214691334 hit the orphaned-apt-get arm after the
-          # first fix waited on the wrong lock). Kill the orphans by exact name, repair dpkg,
-          # then a short bounded wait for the locks to clear.
-          sudo pkill -9 -x apt-get 2>/dev/null || true
-          sudo pkill -9 -x dpkg 2>/dev/null || true
-          sudo dpkg --configure -a >/dev/null 2>&1 || true
-          for lock in /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock /var/lib/apt/lists/lock; do
-            for i in 1 2 3 4 5 6; do
-              sudo fuser "$lock" >/dev/null 2>&1 || break
-              sleep 5
-            done
-          done
-          timeout --kill-after=15s 8m pnpm --filter @reverie/web exec playwright install --with-deps chromium
-
-      - name: Install Playwright OS dependencies (cache hit — browsers already present)
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-        # BOUNDED RETRY (2m, then 8m), replacing the single-shot 8m step timeout. History, so the
-        # sizing's reasoning survives its numbers:
-        #
-        # The single-shot timeout was added after run 32085029255 (2026-08-18): this step normally
-        # runs 0.2-0.4m, hung for 14.8m, and the job's 15m cap fired — reported as an ambiguous
-        # job-level "cancelled" that cost a diagnosis to tell from a concurrency cancellation. The
-        # step timeout made the hang LEGIBLE (a failed step naming itself). It did not make it
-        # SURVIVABLE: three hangs in the following ~24h (32085029255; then 32201401052's first run
-        # and its first rerun, 2026-08-19) each still cost a red build and a manual re-run — while
-        # flaky TESTS already self-heal via Playwright `retries: 1`. This retry closes that
-        # asymmetry. Both attempts are apt/CDN operations against mirrors this repo does not
-        # control; a hang is infra, and one retry nearly always lands on a healthy path.
-        #
-        # THE SIZING IS COUPLED, measured 2026-08-19 (n=10 successful runs per job for job time;
-        # the 80-run install distribution: median 0.35m, p90 0.47m, MAX 3.87m):
-        #   - Attempt 2 keeps single-shot generosity: 8m = ~2.1x the 3.87m max, because ITS trip is
-        #     a red build (no third attempt) — the 5m-was-too-tight lesson still applies to it.
-        #   - Attempt 2's BOUND never enters the success-path arithmetic: a legit install finishes
-        #     by ~3.87m regardless. Only attempt 1's bound trades against the job cap, so it can be
-        #     tight (1.5m > 3x p90): its trip costs a retry and a warning, never a red build.
-        #   - Between attempts, up to ~0.5m of dpkg lock-wait + repair (the probe found a mid-apt
-        #     kill poisons the retry with apt exit 100 otherwise; run 32213689012).
-        #   - Success-path worst case = 1.5m trip + 0.5m repair + 3.87m legit attempt 2 + measured
-        #     max non-install job time:  e2e 1.5+0.5+3.87+13.58 = 19.45 < 20 ·
-        #     e2e-a11y 1.5+0.5+3.87+8.62 = 14.49 < 15 · e2e-mobile 1.5+0.5+3.87+6.20 = 12.07 < 20.
-        #     All fit; a11y and e2e by ~0.5m — thin, so if a suite grows past its measured max,
-        #     resize attempt 1 here rather than raising a job cap (documented twice as the wrong
-        #     lever).
-        #   - Both-attempts-hang: fails AT THIS STEP ~10.5m in, named, under every job cap — never
-        #     the ambiguous job-level cancellation this step's history is about.
-        #
-        # The retry is deliberately VISIBLE: a ::warning annotation fires on every trip, and the
-        # occurrence belongs in docs/backlog/BACKLOG.md "Known-flaky, with a prior" — that ledger's
-        # rule (a recurrence pattern is a defect, not a flake) is what stops this retry from
-        # becoming an off-switch for looking.
-        timeout-minutes: 11
-        run: |
-          if timeout --kill-after=15s 1.5m pnpm --filter @reverie/web exec playwright install-deps chromium; then
-            exit 0
-          fi
-          echo "::warning title=Playwright install retried::attempt 1 of 'Install Playwright OS dependencies' exceeded its 1.5m bound or failed; retrying once with an 8m bound. Known apt/CDN hang class — log the occurrence in docs/backlog/BACKLOG.md 'Known-flaky, with a prior'."
-          # Attempt 1 died mid-apt: `timeout` TERMs pnpm, but the apt-get GRANDCHILD survives as
-          # an orphan holding /var/lib/apt/lists/lock, and dpkg may be left interrupted. Both
-          # poison the retry with apt exit 100 — observed, not theorized (probe 32213689012 hit
-          # the interrupted-dpkg arm; probe 32214691334 hit the orphaned-apt-get arm after the
-          # first fix waited on the wrong lock). Kill the orphans by exact name, repair dpkg,
-          # then a short bounded wait for the locks to clear.
-          sudo pkill -9 -x apt-get 2>/dev/null || true
-          sudo pkill -9 -x dpkg 2>/dev/null || true
-          sudo dpkg --configure -a >/dev/null 2>&1 || true
-          for lock in /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock /var/lib/apt/lists/lock; do
-            for i in 1 2 3 4 5 6; do
-              sudo fuser "$lock" >/dev/null 2>&1 || break
-              sleep 5
-            done
-          done
-          timeout --kill-after=15s 8m pnpm --filter @reverie/web exec playwright install-deps chromium
+        # PROBE (throwaway): CDN-only — no --with-deps, no apt. Testing whether the runner
+        # image's own shared libraries (it ships Google Chrome) launch Playwright's chromium.
+        timeout-minutes: 6
+        run: pnpm --filter @reverie/web exec playwright install chromium
 
       - uses: supabase/setup-cli@v1
         with:
@@ -463,93 +380,10 @@ jobs:
 
       - name: Install Playwright browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'
-        # BOUNDED RETRY — 2m first attempt, 8m second, sized TOGETHER with the job caps (see the
-        # OS-deps step below for the full arithmetic; the two comment blocks are kept identical
-        # across all three jobs — sync them or the next reader trusts a stale one).
-        # The 11 here is a backstop only: 2 + 8 + 1. The shell `timeout`s inside `run` are what
-        # actually bound the attempts — a step-level timeout cannot retry, it kills the step.
-        timeout-minutes: 11
-        run: |
-          if timeout --kill-after=15s 1.5m pnpm --filter @reverie/web exec playwright install --with-deps chromium; then
-            exit 0
-          fi
-          echo "::warning title=Playwright install retried::attempt 1 of 'Install Playwright browsers' exceeded its 1.5m bound or failed; retrying once with an 8m bound. Known apt/CDN hang class — log the occurrence in docs/backlog/BACKLOG.md 'Known-flaky, with a prior'."
-          # Attempt 1 died mid-apt: `timeout` TERMs pnpm, but the apt-get GRANDCHILD survives as
-          # an orphan holding /var/lib/apt/lists/lock, and dpkg may be left interrupted. Both
-          # poison the retry with apt exit 100 — observed, not theorized (probe 32213689012 hit
-          # the interrupted-dpkg arm; probe 32214691334 hit the orphaned-apt-get arm after the
-          # first fix waited on the wrong lock). Kill the orphans by exact name, repair dpkg,
-          # then a short bounded wait for the locks to clear.
-          sudo pkill -9 -x apt-get 2>/dev/null || true
-          sudo pkill -9 -x dpkg 2>/dev/null || true
-          sudo dpkg --configure -a >/dev/null 2>&1 || true
-          for lock in /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock /var/lib/apt/lists/lock; do
-            for i in 1 2 3 4 5 6; do
-              sudo fuser "$lock" >/dev/null 2>&1 || break
-              sleep 5
-            done
-          done
-          timeout --kill-after=15s 8m pnpm --filter @reverie/web exec playwright install --with-deps chromium
-
-      - name: Install Playwright OS dependencies (cache hit — browsers already present)
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-        # BOUNDED RETRY (2m, then 8m), replacing the single-shot 8m step timeout. History, so the
-        # sizing's reasoning survives its numbers:
-        #
-        # The single-shot timeout was added after run 32085029255 (2026-08-18): this step normally
-        # runs 0.2-0.4m, hung for 14.8m, and the job's 15m cap fired — reported as an ambiguous
-        # job-level "cancelled" that cost a diagnosis to tell from a concurrency cancellation. The
-        # step timeout made the hang LEGIBLE (a failed step naming itself). It did not make it
-        # SURVIVABLE: three hangs in the following ~24h (32085029255; then 32201401052's first run
-        # and its first rerun, 2026-08-19) each still cost a red build and a manual re-run — while
-        # flaky TESTS already self-heal via Playwright `retries: 1`. This retry closes that
-        # asymmetry. Both attempts are apt/CDN operations against mirrors this repo does not
-        # control; a hang is infra, and one retry nearly always lands on a healthy path.
-        #
-        # THE SIZING IS COUPLED, measured 2026-08-19 (n=10 successful runs per job for job time;
-        # the 80-run install distribution: median 0.35m, p90 0.47m, MAX 3.87m):
-        #   - Attempt 2 keeps single-shot generosity: 8m = ~2.1x the 3.87m max, because ITS trip is
-        #     a red build (no third attempt) — the 5m-was-too-tight lesson still applies to it.
-        #   - Attempt 2's BOUND never enters the success-path arithmetic: a legit install finishes
-        #     by ~3.87m regardless. Only attempt 1's bound trades against the job cap, so it can be
-        #     tight (1.5m > 3x p90): its trip costs a retry and a warning, never a red build.
-        #   - Between attempts, up to ~0.5m of dpkg lock-wait + repair (the probe found a mid-apt
-        #     kill poisons the retry with apt exit 100 otherwise; run 32213689012).
-        #   - Success-path worst case = 1.5m trip + 0.5m repair + 3.87m legit attempt 2 + measured
-        #     max non-install job time:  e2e 1.5+0.5+3.87+13.58 = 19.45 < 20 ·
-        #     e2e-a11y 1.5+0.5+3.87+8.62 = 14.49 < 15 · e2e-mobile 1.5+0.5+3.87+6.20 = 12.07 < 20.
-        #     All fit; a11y and e2e by ~0.5m — thin, so if a suite grows past its measured max,
-        #     resize attempt 1 here rather than raising a job cap (documented twice as the wrong
-        #     lever).
-        #   - Both-attempts-hang: fails AT THIS STEP ~10.5m in, named, under every job cap — never
-        #     the ambiguous job-level cancellation this step's history is about.
-        #
-        # The retry is deliberately VISIBLE: a ::warning annotation fires on every trip, and the
-        # occurrence belongs in docs/backlog/BACKLOG.md "Known-flaky, with a prior" — that ledger's
-        # rule (a recurrence pattern is a defect, not a flake) is what stops this retry from
-        # becoming an off-switch for looking.
-        timeout-minutes: 11
-        run: |
-          if timeout --kill-after=15s 1.5m pnpm --filter @reverie/web exec playwright install-deps chromium; then
-            exit 0
-          fi
-          echo "::warning title=Playwright install retried::attempt 1 of 'Install Playwright OS dependencies' exceeded its 1.5m bound or failed; retrying once with an 8m bound. Known apt/CDN hang class — log the occurrence in docs/backlog/BACKLOG.md 'Known-flaky, with a prior'."
-          # Attempt 1 died mid-apt: `timeout` TERMs pnpm, but the apt-get GRANDCHILD survives as
-          # an orphan holding /var/lib/apt/lists/lock, and dpkg may be left interrupted. Both
-          # poison the retry with apt exit 100 — observed, not theorized (probe 32213689012 hit
-          # the interrupted-dpkg arm; probe 32214691334 hit the orphaned-apt-get arm after the
-          # first fix waited on the wrong lock). Kill the orphans by exact name, repair dpkg,
-          # then a short bounded wait for the locks to clear.
-          sudo pkill -9 -x apt-get 2>/dev/null || true
-          sudo pkill -9 -x dpkg 2>/dev/null || true
-          sudo dpkg --configure -a >/dev/null 2>&1 || true
-          for lock in /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock /var/lib/apt/lists/lock; do
-            for i in 1 2 3 4 5 6; do
-              sudo fuser "$lock" >/dev/null 2>&1 || break
-              sleep 5
-            done
-          done
-          timeout --kill-after=15s 8m pnpm --filter @reverie/web exec playwright install-deps chromium
+        # PROBE (throwaway): CDN-only — no --with-deps, no apt. Testing whether the runner
+        # image's own shared libraries (it ships Google Chrome) launch Playwright's chromium.
+        timeout-minutes: 6
+        run: pnpm --filter @reverie/web exec playwright install chromium
 
       - uses: supabase/setup-cli@v1
         with:
@@ -619,97 +453,14 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ steps.playwright-version.outputs.version }}
+          key: playwright-probe-nodeps-${{ steps.playwright-version.outputs.version }}
 
       - name: Install Playwright browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'
-        # BOUNDED RETRY — 2m first attempt, 8m second, sized TOGETHER with the job caps (see the
-        # OS-deps step below for the full arithmetic; the two comment blocks are kept identical
-        # across all three jobs — sync them or the next reader trusts a stale one).
-        # The 11 here is a backstop only: 2 + 8 + 1. The shell `timeout`s inside `run` are what
-        # actually bound the attempts — a step-level timeout cannot retry, it kills the step.
-        timeout-minutes: 11
-        run: |
-          if timeout --kill-after=15s 1.5m pnpm --filter @reverie/web exec playwright install --with-deps chromium; then
-            exit 0
-          fi
-          echo "::warning title=Playwright install retried::attempt 1 of 'Install Playwright browsers' exceeded its 1.5m bound or failed; retrying once with an 8m bound. Known apt/CDN hang class — log the occurrence in docs/backlog/BACKLOG.md 'Known-flaky, with a prior'."
-          # Attempt 1 died mid-apt: `timeout` TERMs pnpm, but the apt-get GRANDCHILD survives as
-          # an orphan holding /var/lib/apt/lists/lock, and dpkg may be left interrupted. Both
-          # poison the retry with apt exit 100 — observed, not theorized (probe 32213689012 hit
-          # the interrupted-dpkg arm; probe 32214691334 hit the orphaned-apt-get arm after the
-          # first fix waited on the wrong lock). Kill the orphans by exact name, repair dpkg,
-          # then a short bounded wait for the locks to clear.
-          sudo pkill -9 -x apt-get 2>/dev/null || true
-          sudo pkill -9 -x dpkg 2>/dev/null || true
-          sudo dpkg --configure -a >/dev/null 2>&1 || true
-          for lock in /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock /var/lib/apt/lists/lock; do
-            for i in 1 2 3 4 5 6; do
-              sudo fuser "$lock" >/dev/null 2>&1 || break
-              sleep 5
-            done
-          done
-          timeout --kill-after=15s 8m pnpm --filter @reverie/web exec playwright install --with-deps chromium
-
-      - name: Install Playwright OS dependencies (cache hit — browsers already present)
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-        # BOUNDED RETRY (2m, then 8m), replacing the single-shot 8m step timeout. History, so the
-        # sizing's reasoning survives its numbers:
-        #
-        # The single-shot timeout was added after run 32085029255 (2026-08-18): this step normally
-        # runs 0.2-0.4m, hung for 14.8m, and the job's 15m cap fired — reported as an ambiguous
-        # job-level "cancelled" that cost a diagnosis to tell from a concurrency cancellation. The
-        # step timeout made the hang LEGIBLE (a failed step naming itself). It did not make it
-        # SURVIVABLE: three hangs in the following ~24h (32085029255; then 32201401052's first run
-        # and its first rerun, 2026-08-19) each still cost a red build and a manual re-run — while
-        # flaky TESTS already self-heal via Playwright `retries: 1`. This retry closes that
-        # asymmetry. Both attempts are apt/CDN operations against mirrors this repo does not
-        # control; a hang is infra, and one retry nearly always lands on a healthy path.
-        #
-        # THE SIZING IS COUPLED, measured 2026-08-19 (n=10 successful runs per job for job time;
-        # the 80-run install distribution: median 0.35m, p90 0.47m, MAX 3.87m):
-        #   - Attempt 2 keeps single-shot generosity: 8m = ~2.1x the 3.87m max, because ITS trip is
-        #     a red build (no third attempt) — the 5m-was-too-tight lesson still applies to it.
-        #   - Attempt 2's BOUND never enters the success-path arithmetic: a legit install finishes
-        #     by ~3.87m regardless. Only attempt 1's bound trades against the job cap, so it can be
-        #     tight (1.5m > 3x p90): its trip costs a retry and a warning, never a red build.
-        #   - Between attempts, up to ~0.5m of dpkg lock-wait + repair (the probe found a mid-apt
-        #     kill poisons the retry with apt exit 100 otherwise; run 32213689012).
-        #   - Success-path worst case = 1.5m trip + 0.5m repair + 3.87m legit attempt 2 + measured
-        #     max non-install job time:  e2e 1.5+0.5+3.87+13.58 = 19.45 < 20 ·
-        #     e2e-a11y 1.5+0.5+3.87+8.62 = 14.49 < 15 · e2e-mobile 1.5+0.5+3.87+6.20 = 12.07 < 20.
-        #     All fit; a11y and e2e by ~0.5m — thin, so if a suite grows past its measured max,
-        #     resize attempt 1 here rather than raising a job cap (documented twice as the wrong
-        #     lever).
-        #   - Both-attempts-hang: fails AT THIS STEP ~10.5m in, named, under every job cap — never
-        #     the ambiguous job-level cancellation this step's history is about.
-        #
-        # The retry is deliberately VISIBLE: a ::warning annotation fires on every trip, and the
-        # occurrence belongs in docs/backlog/BACKLOG.md "Known-flaky, with a prior" — that ledger's
-        # rule (a recurrence pattern is a defect, not a flake) is what stops this retry from
-        # becoming an off-switch for looking.
-        timeout-minutes: 11
-        run: |
-          if timeout --kill-after=15s 1.5m pnpm --filter @reverie/web exec playwright install-deps chromium; then
-            exit 0
-          fi
-          echo "::warning title=Playwright install retried::attempt 1 of 'Install Playwright OS dependencies' exceeded its 1.5m bound or failed; retrying once with an 8m bound. Known apt/CDN hang class — log the occurrence in docs/backlog/BACKLOG.md 'Known-flaky, with a prior'."
-          # Attempt 1 died mid-apt: `timeout` TERMs pnpm, but the apt-get GRANDCHILD survives as
-          # an orphan holding /var/lib/apt/lists/lock, and dpkg may be left interrupted. Both
-          # poison the retry with apt exit 100 — observed, not theorized (probe 32213689012 hit
-          # the interrupted-dpkg arm; probe 32214691334 hit the orphaned-apt-get arm after the
-          # first fix waited on the wrong lock). Kill the orphans by exact name, repair dpkg,
-          # then a short bounded wait for the locks to clear.
-          sudo pkill -9 -x apt-get 2>/dev/null || true
-          sudo pkill -9 -x dpkg 2>/dev/null || true
-          sudo dpkg --configure -a >/dev/null 2>&1 || true
-          for lock in /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock /var/lib/apt/lists/lock; do
-            for i in 1 2 3 4 5 6; do
-              sudo fuser "$lock" >/dev/null 2>&1 || break
-              sleep 5
-            done
-          done
-          timeout --kill-after=15s 8m pnpm --filter @reverie/web exec playwright install-deps chromium
+        # PROBE (throwaway): CDN-only — no --with-deps, no apt. Testing whether the runner
+        # image's own shared libraries (it ships Google Chrome) launch Playwright's chromium.
+        timeout-minutes: 6
+        run: pnpm --filter @reverie/web exec playwright install chromium
 
       - uses: supabase/setup-cli@v1
         with:
