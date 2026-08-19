@@ -284,7 +284,7 @@ jobs:
         # actually bound the attempts — a step-level timeout cannot retry, it kills the step.
         timeout-minutes: 11
         run: |
-          if timeout --kill-after=15s 1.5m pnpm --filter @reverie/web exec playwright install --with-deps chromium; then
+          if timeout --kill-after=15s 1s pnpm --filter @reverie/web exec playwright install --with-deps chromium; then
             exit 0
           fi
           echo "::warning title=Playwright install retried::attempt 1 of 'Install Playwright browsers' exceeded its 1.5m bound or failed; retrying once with an 8m bound. Known apt/CDN hang class — log the occurrence in docs/backlog/BACKLOG.md 'Known-flaky, with a prior'."
@@ -344,7 +344,7 @@ jobs:
         # becoming an off-switch for looking.
         timeout-minutes: 11
         run: |
-          if timeout --kill-after=15s 1.5m pnpm --filter @reverie/web exec playwright install-deps chromium; then
+          if timeout --kill-after=15s 1s pnpm --filter @reverie/web exec playwright install-deps chromium; then
             exit 0
           fi
           echo "::warning title=Playwright install retried::attempt 1 of 'Install Playwright OS dependencies' exceeded its 1.5m bound or failed; retrying once with an 8m bound. Known apt/CDN hang class — log the occurrence in docs/backlog/BACKLOG.md 'Known-flaky, with a prior'."
@@ -470,7 +470,7 @@ jobs:
         # actually bound the attempts — a step-level timeout cannot retry, it kills the step.
         timeout-minutes: 11
         run: |
-          if timeout --kill-after=15s 1.5m pnpm --filter @reverie/web exec playwright install --with-deps chromium; then
+          if timeout --kill-after=15s 1s pnpm --filter @reverie/web exec playwright install --with-deps chromium; then
             exit 0
           fi
           echo "::warning title=Playwright install retried::attempt 1 of 'Install Playwright browsers' exceeded its 1.5m bound or failed; retrying once with an 8m bound. Known apt/CDN hang class — log the occurrence in docs/backlog/BACKLOG.md 'Known-flaky, with a prior'."
@@ -530,7 +530,7 @@ jobs:
         # becoming an off-switch for looking.
         timeout-minutes: 11
         run: |
-          if timeout --kill-after=15s 1.5m pnpm --filter @reverie/web exec playwright install-deps chromium; then
+          if timeout --kill-after=15s 1s pnpm --filter @reverie/web exec playwright install-deps chromium; then
             exit 0
           fi
           echo "::warning title=Playwright install retried::attempt 1 of 'Install Playwright OS dependencies' exceeded its 1.5m bound or failed; retrying once with an 8m bound. Known apt/CDN hang class — log the occurrence in docs/backlog/BACKLOG.md 'Known-flaky, with a prior'."
@@ -630,7 +630,7 @@ jobs:
         # actually bound the attempts — a step-level timeout cannot retry, it kills the step.
         timeout-minutes: 11
         run: |
-          if timeout --kill-after=15s 1.5m pnpm --filter @reverie/web exec playwright install --with-deps chromium; then
+          if timeout --kill-after=15s 1s pnpm --filter @reverie/web exec playwright install --with-deps chromium; then
             exit 0
           fi
           echo "::warning title=Playwright install retried::attempt 1 of 'Install Playwright browsers' exceeded its 1.5m bound or failed; retrying once with an 8m bound. Known apt/CDN hang class — log the occurrence in docs/backlog/BACKLOG.md 'Known-flaky, with a prior'."
@@ -690,7 +690,7 @@ jobs:
         # becoming an off-switch for looking.
         timeout-minutes: 11
         run: |
-          if timeout --kill-after=15s 1.5m pnpm --filter @reverie/web exec playwright install-deps chromium; then
+          if timeout --kill-after=15s 1s pnpm --filter @reverie/web exec playwright install-deps chromium; then
             exit 0
           fi
           echo "::warning title=Playwright install retried::attempt 1 of 'Install Playwright OS dependencies' exceeded its 1.5m bound or failed; retrying once with an 8m bound. Known apt/CDN hang class — log the occurrence in docs/backlog/BACKLOG.md 'Known-flaky, with a prior'."
