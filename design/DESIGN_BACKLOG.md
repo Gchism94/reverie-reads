@@ -6,6 +6,13 @@ against them on the token system (no hardcoded colors from the mockup). All rend
 
 ## Done / in flight
 
+- LANDING / MARKETING PAGE — DONE, shipped on main (branch landing-match, PR #4; claims-accuracy
+  pass in #84, iterated since through the licensing and skin-kit passes). Lives at
+  apps/web/src/auth/Landing.tsx + auth/landing/, rendered to logged-out visitors at every
+  non-/auth path via UnauthShell on the .gold-brand tokens (styles/brand.css). Nine-skin live
+  showcase from the registry; money copy derived from revenueCopy(buyConfig()) and guarded by
+  revenueClaims.test.ts; in the e2e a11y sweep's unauthenticated pass. Handoff archived at
+  docs/archive/LANDING_MATCH_HANDOFF.md.
 - DESKTOP — DONE -> design/from-claude-design/desktop/. Skin-agnostic shell on the token contract.
 - SKIN GALLERY — already BUILT in code (C3). Prompt exists (CLAUDE_DESIGN_PROMPT_SKIN_GALLERY.md) if a
   visual polish pass is ever wanted; not required.
@@ -13,16 +20,14 @@ against them on the token system (no hardcoded colors from the mockup). All rend
 
 ## Next (prioritized by launch impact)
 
-1. LANDING / MARKETING PAGE — public front door, unblocked by the Reverie name. Can't launch publicly
-   without it. DESIGN APPROVED (gold, genre-neutral) -> handoff at design/from-claude-design/landing/HANDOFF.md.
-2. ONBOARDING / FIRST-RUN — empty state -> import (CSV/scan) -> first-skin reveal. Pairs with Phase 7
+1. ONBOARDING / FIRST-RUN — empty state -> import (CSV/scan) -> first-skin reveal. Pairs with Phase 7
    H1 (empty signups) + the import task. The new-user experience. NEW PROMPT NEEDED.
-3. AUTH SCREENS — sign in / sign up / verify email / reset. Pairs with H3 (email verification).
-4. ACCOUNT & DATA SCREENS — delete-account confirmation, data export, "what we store" privacy summary.
+2. AUTH SCREENS — sign in / sign up / verify email / reset. Pairs with H3 (email verification).
+3. ACCOUNT & DATA SCREENS — delete-account confirmation, data export, "what we store" privacy summary.
    Pairs with H1.
-5. FIVE NEW SKIN DIVIDER MOTIFS — Calliope / Mull / Compendium / Clew / Fledge (like filigree /
+4. FIVE NEW SKIN DIVIDER MOTIFS — Calliope / Mull / Compendium / Clew / Fledge (like filigree /
    alchemical / orbital / thorn). Needed when the 5 remaining skins are built.
-6. MOBILE PASS — confirm mobile-specific screens (scan flow, mobile nav) are covered; this build was
+5. MOBILE PASS — confirm mobile-specific screens (scan flow, mobile nav) are covered; this build was
    desktop-first.
 
 - Onboarding/first-run + IMPORT (one flow) -- HANDED OFF -> design/from-claude-design/onboarding/HANDOFF.md (in-app, renders in Tryst, skin system live; covers welcome -> genre/skin pick -> import map/review -> populated library + empty state).
