@@ -295,8 +295,35 @@ function` + fresh `create` resets it to the PUBLIC-execute default — verified 
 
 ## Testing & verification discipline
 
-Sixteen rules, each earned by a real failure — counted from the list below, not carried forward. A rule without its reason gets dropped by whoever
+Seventeen rules, each earned by a real failure — counted from the list below, not carried forward. A rule without its reason gets dropped by whoever
 inherits it, so the reason stays attached.
+
+- **When a test needs a step a user would not take, that step is a FINDING until proven otherwise.**
+  A setup line that exists only to make the test pass — dismiss this overlay first, click twice, wait
+  for the animation, blur before clicking — is a claim about the product: that the path a reader
+  actually walks is different from the one being asserted. Sometimes it is a genuine harness
+  artifact. Often it is the defect, wearing the costume of a workaround, and writing it down closes
+  the case before anyone looks. **Before adding the step, state in one sentence what a reader does
+  instead, and why the test cannot do that.** If the answer is "it fails if I don't", that is the
+  finding.
+  Earned on `feat/search-withheld-notice`: the spec blurred the search box before clicking the
+  reveal, described in the report as working around an overlay that `toBeVisible()` cannot see. Both
+  halves were wrong, and the measurement said so. There was no overlay — the panel is IN FLOW
+  (`Frame`'s `relative` beats the `absolute` it is passed), vertical overlap measured 0.0px in four
+  skin × viewport combinations. What the blur actually hid was a real defect: pressing "show" with
+  the box focused blurred the input, unmounted the panel, collapsed the 77.8px it reserved, and
+  jumped the line up by exactly that (top 246.75 → 169.0) mid-gesture — so mouseup landed on a
+  different element than mousedown and the browser fired `click` on their common ancestor. **The
+  reader's first press did nothing, and the spec was green.**
+  Third instance of this shape in two days, which is why it is a rule and not a note: a guard located
+  by a label that changes with the state it is testing (#305), a touch-target spec passing on another
+  spec's residue, and this. Same failure each time — a convenience in the test standing in for an
+  unanswered question about the product.
+  **Two corollaries, both paid for here.** Playwright's `click()` does not save you: its hit-target
+  check passes at mousedown and it never re-checks mouseup, so it reports success against exactly
+  this build. Assert the CONSEQUENCE (the state flipped, the thing appeared), never the click. And
+  when the question is "does the reader see it", `toBeVisible()` is the wrong instrument — it does
+  not consider occlusion. Measure the geometry.
 
 - **Assert the thing itself, not a proxy that would look the same if the thing were absent.** This is
   the general form several rules below are instances of, stated once at the top so it covers cases
