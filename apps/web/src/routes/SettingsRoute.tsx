@@ -47,6 +47,14 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 const fieldClass = 'h-10 w-full skin-card border border-line px-3 text-[14px] text-ink outline-none'
 const fieldStyle = { background: 'var(--field)' } as const
 
+/**
+ * The import control's two labels. One place, because the disabled state has to SAY why — a control
+ * greyed out with no explanation reads as a broken app, and one that silently does nothing for a
+ * second is its own defect.
+ */
+const IMPORT_LABEL = '📚 Import a library export (CSV or Excel)'
+const IMPORT_LOADING_LABEL = '📚 Loading your library…'
+
 function SettingsScreen() {
   const qc = useQueryClient()
   const { data: profile } = useProfile()
@@ -106,6 +114,22 @@ function SettingsScreen() {
   }
 
   const all = books ?? []
+  /**
+   * "NOT YET KNOWN" IS NOT "KNOWN TO BE EMPTY", and `books ?? []` erases the difference.
+   *
+   * Every consumer of `all` above treats the fallback as a real library. For the counts that is
+   * harmless — their controls are gated on the count being non-zero, so a still-loading library
+   * renders them inert. The IMPORT has no such gate, and handing it `[]` is not a no-op: it is a
+   * statement that the reader owns nothing, so every incoming row matches nothing, nothing reaches
+   * the duplicate review queue, and the whole file is inserted as new. A reader who navigates to
+   * this screen in order to import — and whose library is large enough that the query is slow, i.e.
+   * exactly the reader with the most to lose — lands inside that window with the file picker in
+   * front of them.
+   *
+   * So the import control asks whether the library is KNOWN, not whether it is non-empty: a genuinely
+   * empty library (a first import, the common case for this screen) must still be importable.
+   */
+  const libraryLoaded = books !== undefined
   const dupes = findDuplicateGroups(all)
   // Legacy titles imported before #54 still carry Goodreads series junk ("Title (Series, #2)"); the
   // sweep re-parses them, cleaning the title and filling series only where the book has none.
@@ -676,11 +700,25 @@ function SettingsScreen() {
             </button>
             <button
               type="button"
+              /*
+               * A STATE-INDEPENDENT HANDLE. The visible label changes with the loading state, so a
+               * test that locates this button by its text is really waiting for the label to flip —
+               * it passes with the guard deleted, which is exactly what mutation testing caught.
+               */
+              data-testid="import-library"
               onClick={() => csvRef.current?.click()}
-              className="skin-control border border-line px-4 py-2 text-[13px] font-semibold text-ink"
+              /*
+               * THE GUARD IS HERE, ON THE BUTTON, AND ONLY HERE. Disabling the hidden <input> too
+               * was tried and removed: a disabled file input still accepts a programmatic
+               * `setInputFiles`, so it stopped nothing and would have been decoration with a
+               * passing test on top of it. The button is the only way a person reaches the file
+               * dialog, so it is the real control.
+               */
+              disabled={!libraryLoaded}
+              className="skin-control border border-line px-4 py-2 text-[13px] font-semibold text-ink disabled:opacity-50"
               style={{ background: 'var(--field)' }}
             >
-              📚 Import a library export (CSV or Excel)
+              {libraryLoaded ? IMPORT_LABEL : IMPORT_LOADING_LABEL}
             </button>
             <input
               ref={restoreRef}
