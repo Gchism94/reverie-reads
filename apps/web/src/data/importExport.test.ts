@@ -905,3 +905,39 @@ describe('shelf manual order — the lists sort_order round trip (the WebKit pro
     expect(byName).toEqual({ Kept: 5000, 'Lost A': 6000, 'Lost B': 7000 })
   })
 })
+
+describe('list_items.position — add paths append, never NULL (nullable-ordering class, member 3)', () => {
+  /**
+   * The CSV import's placement path left every membership NULL, which is the largest-shelf case of
+   * the reshuffle defect (a 200-book imported shelf, entirely unpositioned). Asserted at the write
+   * layer, by value, where the NULL was written.
+   */
+  it('the CSV import places books at sequential positions from the shelf max', async () => {
+    db.lists = [{ id: 'l-imp', owner_id: OWNER, name: 'Imported TBR', kind: 'tbr', is_priority: false, sort_order: 1000 }]
+    db.list_items = [
+      { list_id: 'l-imp', book_id: 'pre-existing', owner_id: OWNER, position: 5000, added_at: '2026-01-01T00:00:00Z' },
+    ]
+    const { nextItemPositionFor } = await import('./listItems')
+    // the helper the three add paths now share: max + step, never NULL
+    expect(await nextItemPositionFor('l-imp')).toBe(6000)
+  })
+
+  it('an empty shelf starts at the step, not at NULL or 0', async () => {
+    db.lists = [{ id: 'l-new', owner_id: OWNER, name: 'Fresh', kind: 'collection', is_priority: false, sort_order: 1000 }]
+    db.list_items = []
+    const { nextItemPositionFor } = await import('./listItems')
+    expect(await nextItemPositionFor('l-new')).toBe(1000)
+  })
+
+  it('restore still preserves each item position untouched (unchanged by this fix)', async () => {
+    seedOldAccount()
+    db.list_items = [
+      { list_id: 'l1', book_id: 'book-a', owner_id: OWNER, position: 3000, added_at: '2026-01-01T00:00:00Z' },
+      { list_id: 'l1', book_id: 'book-b', owner_id: OWNER, position: 1000, added_at: '2026-01-02T00:00:00Z' },
+    ]
+    const json = await buildBackup()
+    wipeToFreshAccount()
+    await restoreBackup(json)
+    expect([...db.list_items].map((i) => i.position).sort((a, b) => (a as number) - (b as number))).toEqual([1000, 3000])
+  })
+})

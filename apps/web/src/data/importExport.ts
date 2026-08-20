@@ -1,4 +1,5 @@
 import { nextListSortOrderFor, ORDER_STEP as LIST_ORDER_STEP } from './lists'
+import { nextItemPositionFor, ITEM_POSITION_STEP } from './listItems'
 import {
   isContributorRole,
   isKnownTrope,
@@ -996,7 +997,15 @@ export async function importCsvToBackend(
   let shelved = 0
   const place = async (listId: string, ids: string[]) => {
     if (!ids.length) return
-    const items = [...new Set(ids)].map((book_id) => ({ list_id: listId, book_id, owner_id: ownerId }))
+    // Sequential positions from the shelf's current max — the CSV import used to leave every
+    // placement NULL, which is exactly the largest-shelf case of the reshuffling defect.
+    const base = await nextItemPositionFor(listId)
+    const items = [...new Set(ids)].map((book_id, i) => ({
+      list_id: listId,
+      book_id,
+      owner_id: ownerId,
+      position: base + i * ITEM_POSITION_STEP,
+    }))
     // (list_id, book_id) is the PK — re-imports append nothing, never duplicate.
     const { error, count } = await supabase
       .from('list_items')

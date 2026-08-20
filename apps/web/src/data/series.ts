@@ -12,7 +12,7 @@ import {
 } from '@reverie/core'
 import { supabase } from '../lib/supabase'
 import { booksKey } from './books'
-import { allListItemsKey } from './listItems'
+import { allListItemsKey, nextItemPositionFor } from './listItems'
 
 /**
  * Series + series_entries — the series-membership relation behind the series page (the page IS
@@ -755,13 +755,7 @@ export function useAcquireGhost(name: string) {
       const { error: linkErr } = await supabase.from('series_entries').update({ book_id: bookId }).eq('id', input.entry.id)
       if (linkErr) throw linkErr
       if (input.tbrId) {
-        const { data: maxRows } = await supabase
-          .from('list_items')
-          .select('position')
-          .eq('list_id', input.tbrId)
-          .order('position', { ascending: false })
-          .limit(1)
-        const after = ((maxRows?.[0]?.position as number | null) ?? 0) + 1000
+        const after = await nextItemPositionFor(input.tbrId)
         const { error: liErr } = await supabase
           .from('list_items')
           .insert({ list_id: input.tbrId, book_id: bookId, owner_id: uid, position: after })
