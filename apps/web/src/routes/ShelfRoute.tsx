@@ -10,7 +10,12 @@ import { SpineShelf } from '../components/SpineShelf'
 import { SectionHeader } from '../components/Structure'
 import { BookmarkGlyph } from '../components/BookmarkGlyph'
 import { useBooks, useUpdateBook } from '../data/books'
-import { useAddListItem, useAllListItems, useRemoveListItem } from '../data/listItems'
+import {
+  orderListItems,
+  useAddListItem,
+  useAllListItems,
+  useRemoveListItem,
+} from '../data/listItems'
 import { useLists, useReorderList, useUpdateList } from '../data/lists'
 import { useConfirmedLookup } from '../hooks/useConfirmedLookup'
 import { useVoice } from '../skin/labels'
@@ -73,10 +78,7 @@ function ShelfScreen() {
   const byId = useMemo(() => new Map((books ?? []).map((b) => [b.id, b])), [books])
 
   const listItems = useMemo(
-    () =>
-      (items ?? [])
-        .filter((it) => it.list_id === listId)
-        .sort((a, b) => (a.position ?? 1e15) - (b.position ?? 1e15)),
+    () => orderListItems((items ?? []).filter((it) => it.list_id === listId)),
     [items, listId],
   )
   const shelfBooks = useMemo(
