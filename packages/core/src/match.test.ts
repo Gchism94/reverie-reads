@@ -160,7 +160,7 @@ describe('mergeImport', () => {
     // The headline case, and the same incoming rating (3) the fill-blank test above asserts is NOT
     // applied: the merge keeps the reader's 5 silently, and this is what says so.
     expect(mergeDifferences(existing, { title: 'Fourth Wing', rating: 3 })).toEqual([
-      { field: 'rating', kept: '5', offered: '3' },
+      { key: 'rating', field: 'rating', kept: '5', offered: '3' },
     ])
   })
 
@@ -225,9 +225,9 @@ describe('mergeImport', () => {
     })
     const inc = { title: 'T', rating: 5, format: 'Hardcover', pub: { y: 2024, m: null, d: null } }
     expect(mergeDifferences(rich, inc)).toEqual([
-      { field: 'format', kept: 'Paperback', offered: 'Hardcover' },
-      { field: 'published', kept: '2023', offered: '2024' },
-      { field: 'rating', kept: '4.5', offered: '5' },
+      { key: 'format', field: 'format', kept: 'Paperback', offered: 'Hardcover' },
+      { key: 'pub', field: 'published', kept: '2023', offered: '2024' },
+      { key: 'rating', field: 'rating', kept: '4.5', offered: '5' },
     ])
     // key order in the incoming literal must not move the answer
     const reordered = { pub: inc.pub, format: inc.format, title: 'T', rating: inc.rating }

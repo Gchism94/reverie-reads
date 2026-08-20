@@ -293,6 +293,8 @@ export const FILL_BLANK_FIELDS: readonly FillBlankField[] = [
 
 /** One field the merge decided silently: the existing value won, the incoming one was discarded. */
 export interface MergeDifference {
+  /** the classification table's key — what a picker checkbox is keyed to */
+  key: string
   /** short human label, from the classification table */
   field: string
   /** the value that survives (the existing record's) */
@@ -312,6 +314,11 @@ export interface MergeDifference {
  * Comparison is on the RENDERED string, deliberately: the question the line answers is "would a
  * reader see two different values", so 'The Empyrean' vs 'the empyrean' is worth surfacing (the
  * merge does keep the existing casing) even though the values are semantically the same.
+ *
+ * This is ALSO the picker's contested-field predicate (`mergeFieldOptions` builds its 'replace'
+ * rows from this list), which is why the row carries `key` and not just a display label. One
+ * predicate, one place: a second implementation of "both set and different" could drift from this
+ * one and nothing would catch it.
  */
 export function mergeDifferences(existing: Book, incoming: Incoming): MergeDifference[] {
   const out: MergeDifference[] = []
@@ -320,7 +327,7 @@ export function mergeDifferences(existing: Book, incoming: Incoming): MergeDiffe
     const kept = f.show(existing)
     const offered = f.show(incoming)
     if (!kept || !offered || kept === offered) continue
-    out.push({ field: f.label, kept, offered })
+    out.push({ key: f.key, field: f.label, kept, offered })
   }
   return out
 }

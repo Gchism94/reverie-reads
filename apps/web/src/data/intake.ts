@@ -1,5 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query'
 import {
+  applyFieldPicks,
   decideIntake,
   emptyDate,
   fromFirstLast,
@@ -12,6 +13,7 @@ import {
   type ImportMergeResult,
   type Incoming,
   type MatchStrength,
+  type MergeFieldPicks,
 } from '@reverie/core'
 import { supabase } from '../lib/supabase'
 import { toBookRow } from './mappers'
@@ -115,8 +117,15 @@ export async function insertNewBook(inc: Incoming, ownerId: string): Promise<{ i
 }
 
 /** Fold an incoming record INTO an existing book (existing row survives; user fields win). */
-export async function foldIn(existing: Book, inc: Incoming, ownerId: string): Promise<ImportMergeResult> {
-  const result = mergeImport(existing, inc)
+export async function foldIn(
+  existing: Book,
+  inc: Incoming,
+  ownerId: string,
+  picks?: MergeFieldPicks,
+): Promise<ImportMergeResult> {
+  // `applyFieldPicks` starts from mergeImport's own patch, so with no picks — the one-click path,
+  // and every import row — this is byte-identical to what it wrote before the picker existed.
+  const result = { ...mergeImport(existing, inc), patch: applyFieldPicks(existing, inc, picks) }
   if (Object.keys(result.patch).length) {
     const { error } = await supabase.from('books').update(toBookRow(result.patch)).eq('id', existing.id)
     if (error) throw error
