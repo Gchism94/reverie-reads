@@ -255,6 +255,29 @@ function` + fresh `create` resets it to the PUBLIC-execute default — verified 
   the remote, so no PR was corrupted — but that was luck about push timing, not the process working.
   The tell is reaching for `git checkout -b` while `git status` already shows modified files.
 
+- **A push to a branch whose PR has ALREADY MERGED strands the commit, and no CI can see it — the
+  `pre-push` hook is the only guard.** Second variant of the stranding class: not base ≠ main (the
+  #252/#263/#267 shape, which #273's `gate` step covers), but **pushed-after-merge**. #300 merged at
+  head `82d86b4`; the star-glyph fix `07ceacd` was pushed to that branch afterwards, so nothing
+  merged it again — `main` shipped without it, the PR read "Merged", CI was green, and it surfaced
+  only when the owner looked at his phone days later.
+  **Why it must be local, verified rather than assumed:** GitHub fires no `pull_request` events for
+  a CLOSED PR, `ci.yml`'s push trigger is `branches: [main]`, `cla.yml` is `pull_request_target`
+  (same blindness) and `layout-sweep-390` is dispatch-only. Such a push produces **no CI event of
+  any kind**. `.husky/pre-push` now refuses it, names the PR, and prints the recovery (fresh branch
+  off `main`, cherry-pick, new PR); override with `ALLOW_PUSH_TO_MERGED=1`. It fails OPEN with a
+  loud banner when `gh` is missing/offline — a guard that blocks every push on a plane gets
+  `--no-verify`'d habitually, taking the Prettier check with it.
+  **No per-clone setup to forget** (unlike `apps/web/.env.local`): husky installs via `package.json`'s
+  `prepare`, and `core.hooksPath` lives in the shared repo config, so it covers every worktree —
+  verified empirically, not inferred.
+  **Auditing for it needs the LIVE BRANCH REF, not the PR's head.** `gh pr list --json headRefOid`
+  reports the head _at merge time_, which is on `main` by definition — it structurally cannot see
+  this variant. Compare `git ls-remote --heads origin` tips against `main` instead. That scan
+  over-reports (a tip is also not an ancestor when the content re-landed via a later PR), so a hit
+  is a question, not a verdict: diff the touched files against `main` before calling anything
+  stranded.
+
 - **A stacked PR that says "Merged" has not necessarily landed. Run
   `scripts/check-pr-landed.sh <branch> [base]` before calling the thread closed.** Branching from
   another PR's own unmerged head is fine and often correct — `main` has not caught up yet. What is
