@@ -19,6 +19,12 @@ import { ok, okUser } from './support/ok'
 // Located by data-testid throughout. The notice's own text carries the count and the reveal
 // control's label is the thing under test, so locating by either would be keyed to exactly what a
 // mutation would change — a guard that reports "fine" against the broken build.
+//
+// NO STEP HERE IS ONE A READER WOULD NOT TAKE. Every case types into the search box and leaves it
+// focused, because that is the state a reader is in at the moment this feature speaks to them.
+// The first draft blurred the box first, and that single convenience step concealed a defect that
+// made the reader's first press do nothing (`a first press on "show" reveals` below). The panel's
+// geometry is asserted rather than assumed for the same reason — see the last test.
 
 const SUPABASE_URL = 'http://127.0.0.1:55321'
 const ANON =
@@ -143,22 +149,16 @@ const reveal = (page: Page) => page.getByTestId('search-hidden-reveal')
 const searchBox = (page: Page) => page.getByRole('searchbox', { name: 'Search your library' })
 const cardFor = (page: Page, title: string) => page.getByRole('button', { name: `Open ${title}` })
 
-/** Type a query, then blur the box.
+/** Type a query. Nothing else — the box KEEPS FOCUS, exactly as it does for a reader mid-search.
  *
- *  The blur is not decoration. While the search input holds focus, Toolbar's deployed
- *  SearchResultsPanel is an absolutely-positioned overlay hanging 6px below the input — directly
- *  over where the withheld line renders. toBeVisible() does not consider occlusion, so it would
- *  pass and the click on "show" would then fail on intercepted pointer events, reading as a broken
- *  control rather than a covered one.
- *
- *  blur(), NOT the Escape the panel advertises as its dismissal: Chromium's native handling of
- *  `<input type="search">` CLEARS the field on Escape, before the app's own onKeyDown blur runs.
- *  That fires a change to `q: ''`, the count legitimately drops to 0, and the line correctly does
- *  not render — a green-looking absence caused entirely by the harness. Cost an hour of looking at
- *  the component; recorded here so it costs nobody else one. */
+ *  An earlier draft blurred here, and that blur was hiding a real defect rather than working around
+ *  a harness quirk. With focus retained, Toolbar's SearchResultsPanel is on screen, and pressing
+ *  "show" used to do nothing at all (see the mousedown case below). Blurring first dismissed the
+ *  panel and made the whole class of failure unreachable from the test — a spec exercising a path
+ *  no reader takes. When a test needs a step a user would not take, that step is a finding until
+ *  proven otherwise. */
 async function search(page: Page, q: string) {
   await searchBox(page).fill(q)
-  await searchBox(page).blur()
 }
 
 async function openLibrary(page: Page) {
@@ -191,7 +191,15 @@ test('an exact-title query on a withheld book says so, with a real count, and re
   })
   await expect(cardFor(page, WISHED_TITLE)).toHaveCount(0)
 
-  // "— show" reveals them.
+  // A FIRST press on "show" reveals — no blur, no dismissal, no second attempt. This one click is
+  // the regression guard for the mousedown defect: the reveal sits below an IN-FLOW search panel
+  // (Toolbar's Frame carries `relative` and `absolute` both, and `relative` wins), so pressing it
+  // used to blur the input, unmount the panel, collapse the 77.8px it reserved, and jump this line
+  // upward mid-gesture. mouseup then landed on the paragraph instead of the button and the browser
+  // fired `click` on their common ancestor — the button never saw one, and the reader's first
+  // press did nothing. Playwright's own click does not notice: its hit-target check passes at
+  // mousedown, and it never re-checks mouseup. So the guard is not the click succeeding, it is
+  // these two assertions after it.
   await reveal(page).click()
   await expect(cardFor(page, WISHED_TITLE)).toBeVisible()
 
@@ -239,3 +247,59 @@ test('a query that hides nothing shows no line at all', async ({ page }) => {
   await expect(cardFor(page, PRESENT_TITLE)).toBeVisible()
   await expect(notice(page)).toHaveCount(0)
 })
+
+/** The search panel must not cover the line, MEASURED, in the case that actually matters.
+ *
+ *  This exists because "is it visible" is the wrong question and toBeVisible() answers only that
+ *  one — it does not consider occlusion, so a line buried under an overlay passes it. This feature
+ *  exists to tell a reader about a match they do not know exists; a line they must first know to
+ *  uncover is no feature at all. So the assertion is geometric.
+ *
+ *  It is deliberately NOT vacuous. A panel that failed to render would trivially overlap nothing,
+ *  so the panel is first required to exist and to contain the withheld book — the panel searches
+ *  the whole library unscoped, so the very book the grid hides does appear in it. Only then is the
+ *  overlap asserted.
+ *
+ *  Today it passes for a reason nobody chose: the panel is in flow (`relative` beats `absolute` on
+ *  Frame), so it PUSHES this line down instead of floating over it. Make the panel truly absolute —
+ *  which is plainly what its z-30/left-0/right-0/top-calc styling intends — and the two would
+ *  overlap by ~18px. That is exactly why this is a test and not a note: whoever fixes that
+ *  collision gets a red line here telling them to move the notice, rather than silently shipping a
+ *  covered one. */
+for (const [label, width, height] of [
+  ['desktop', 1280, 720],
+  ['phone', 390, 844],
+] as const) {
+  test(`the search panel does not cover the line — measured at ${label}`, async ({ page }) => {
+    await page.setViewportSize({ width, height })
+    await openLibrary(page)
+    await search(page, WISHED_TITLE)
+    await expect(notice(page)).toBeVisible()
+
+    const geo = await page.evaluate(() => {
+      const n = document.querySelector('[data-testid="search-hidden-notice"]')
+      const input = document.querySelector('input[type="search"]')
+      const panel = input?.parentElement?.querySelector(':scope > *:not(input)')
+      if (!n || !panel) return null
+      const a = n.getBoundingClientRect()
+      const b = panel.getBoundingClientRect()
+      return {
+        panelText: (panel as HTMLElement).innerText,
+        overlapY: Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top)),
+        overlapX: Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left)),
+      }
+    })
+
+    // The panel is really there, and really showing the withheld book — otherwise "no overlap"
+    // would be a statement about an absent element.
+    expect(geo, 'no search panel rendered — the overlap check would be vacuous').not.toBeNull()
+    expect(geo!.panelText).toContain(WISHED_TITLE)
+
+    // Overlapping columns are expected and fine; overlapping ROWS are the failure.
+    expect(geo!.overlapX).toBeGreaterThan(0)
+    expect(
+      geo!.overlapY,
+      `the search panel covers the withheld-matches line by ${geo!.overlapY}px at ${label} — move the line below the panel's reach`,
+    ).toBe(0)
+  })
+}
