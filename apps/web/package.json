@@ -11,7 +11,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "gen:template": "UPDATE_TEMPLATE=1 vitest run src/data/importTemplate.test.ts",
-    "e2e": "playwright test",
+    "e2e": "bash ../../scripts/stack-lock.sh playwright test",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
