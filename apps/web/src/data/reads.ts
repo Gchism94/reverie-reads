@@ -24,6 +24,10 @@ export function useAllReads() {
       const { data, error } = await supabase
         .from('reads')
         .select('id, book_id, read_on, format, rating, notes')
+        // Same total order as useReads below, for the same reason: the calendar/stats consumers
+        // get a deterministic sequence instead of whatever Postgres returned this time.
+        .order('read_on', { ascending: false, nullsFirst: false })
+        .order('created_at', { ascending: false })
       if (error) throw error
       return data as AllReadRow[]
     },
@@ -39,7 +43,12 @@ export function useReads(bookId: string) {
         .from('reads')
         .select('*')
         .eq('book_id', bookId)
-        .order('read_on', { ascending: false })
+        // Total order, though latestRatingByFormat no longer depends on it (it is order-total
+        // itself) — series.ts's rule: the fetch order is an optimization and a stable display
+        // order for the log, never a correctness dependency in a different package. nullsFirst
+        // false because desc would otherwise put UNDATED reads first (Postgres default).
+        .order('read_on', { ascending: false, nullsFirst: false })
+        .order('created_at', { ascending: false })
       if (error) throw error
       return (data as ReadRow[]).map(toReadRecord)
     },
