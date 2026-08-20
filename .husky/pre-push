@@ -1,3 +1,77 @@
+# Two guards, both chosen for the same reason: they are fast, and their failures are pure waste.
+
+# ── 1. STRANDED-PUSH GUARD: refuse a push to a branch whose PR has already merged ────────────────
+#
+# THE FOURTH OCCURRENCE of the stranding class, in a shape none of the existing machinery covers.
+# #300 merged at head 82d86b4; a later commit (07ceacd, the star-glyph fix) was pushed to that
+# same branch AFTERWARDS. The PR was already closed, so nothing merged it again: main shipped
+# without the fix, the PR still read "Merged", CI was green, and detection came from the owner
+# looking at his phone days later.
+#
+# WHY THIS HAS TO BE A LOCAL HOOK — verified, not assumed. GitHub fires no `pull_request` events
+# for a CLOSED PR, and this repo's push trigger is `branches: [main]` (ci.yml) — cla.yml is
+# pull_request_target (same blindness) and layout-sweep-390 is workflow_dispatch. A push to a
+# merged PR's branch therefore produces NO CI event of any kind. There is no CI design available;
+# the only moment the mistake is visible is the moment it is made.
+#
+# WHY REFUSE RATHER THAN WARN — assert-dist-clean.mjs's test applied ("does a legitimate case
+# exist?"). Pushing more work to a merged branch is never the right move: the commit cannot reach
+# main from there, and the fix is always the same (fresh branch off main, cherry-pick, new PR).
+# The asymmetry decides it — refusing wrongly costs one `ALLOW_PUSH_TO_MERGED=1`, allowing wrongly
+# costs a commit that silently ships nothing. Deletions and branches with no PR are untouched.
+#
+# WHY IT FAILS OPEN, LOUDLY — a guard that blocks every push on a plane gets `--no-verify`'d
+# habitually, and that would take the Prettier check below down with it. When `gh` is missing,
+# unauthenticated, or offline, this prints a banner that cannot be mistaken for a pass and lets
+# the push through. A silent pass-through is how a guard becomes decorative.
+while read -r local_ref local_sha _remote_ref _remote_sha; do
+  # all-zero local sha = branch deletion; nothing to strand
+  case "$local_sha" in *[!0]*) ;; *) continue ;; esac
+  branch="${local_ref#refs/heads/}"
+  [ "$branch" = "$local_ref" ] && continue      # not a branch ref (tag etc.)
+  [ "$branch" = "main" ] && continue
+
+  if ! command -v gh >/dev/null 2>&1; then
+    echo "⚠️  stranded-push guard SKIPPED — gh not installed. Push NOT checked against PR state." >&2
+    continue
+  fi
+  state="$(gh pr view "$branch" --json state,number,mergedAt 2>/dev/null)" || {
+    echo "⚠️  stranded-push guard SKIPPED — gh could not reach GitHub (offline or unauthenticated)." >&2
+    echo "    Push NOT checked. If '$branch' has already merged, this push will strand its commits." >&2
+    continue
+  }
+  # no PR for this branch yet is the normal case for new work
+  [ -z "$state" ] && continue
+  case "$state" in
+    *'"state":"MERGED"'*|*'"state":"CLOSED"'*)
+      [ "${ALLOW_PUSH_TO_MERGED:-}" = "1" ] && {
+        echo "⚠️  pushing to an already-closed PR's branch, ALLOW_PUSH_TO_MERGED=1 set — proceeding." >&2
+        continue
+      }
+      num="$(printf '%s' "$state" | sed -n 's/.*"number":\([0-9]*\).*/\1/p')"
+      st="$(printf '%s' "$state" | sed -n 's/.*"state":"\([A-Z]*\)".*/\1/p')"
+      cat >&2 <<MSG
+
+  ✗ REFUSING to push '$branch' — its PR (#$num) is already $st.
+
+    Commits pushed here CANNOT reach main: the PR merged the head it had at merge time, and
+    nothing will merge this branch again. It would read "Merged", CI would be green, and the
+    work would simply be absent from the product. That is the stranding class, occurrence #4
+    (#252, #263, #267, then #300's star-glyph fix).
+
+    Do this instead:
+        git checkout -b <new-branch> origin/main
+        git cherry-pick <your commits>
+        gh pr create
+
+    Override (you are sure): ALLOW_PUSH_TO_MERGED=1 git push
+MSG
+      exit 1
+      ;;
+  esac
+done
+
+# ── 2. PRETTIER (unchanged) ──────────────────────────────────────────────────────────────────────
 # Mirror of ci.yml's gate job "Prettier" step — `pnpm format:check`, and nothing else.
 #
 # WHY ONLY PRETTIER. Formatting is the one gate failure that is pure waste: it never indicates a
