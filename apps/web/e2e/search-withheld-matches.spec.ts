@@ -1,4 +1,5 @@
 import { expect, test, type Page } from './support/fixtures'
+import { SKIN_ORDER } from '@reverie/core'
 import { createClient } from '@supabase/supabase-js'
 import { authFailure } from './support/authError'
 import { keepOfflineCacheEmpty } from './support/offlineCache'
@@ -167,9 +168,23 @@ async function search(page: Page, q: string) {
   await searchBox(page).fill(q)
 }
 
-async function openLibrary(page: Page) {
+/** Force the profile's skin for the next load. Same mechanism a11y.spec uses — the app's skin-sync
+ *  reads the profile, so this must be written BEFORE signIn, not after. */
+async function setProfileSkin(skin: string) {
+  const c = await client()
+  const admin = createClient(SUPABASE_URL, SERVICE, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  })
+  await ok(
+    admin.from('profiles').update({ skin, mode: 'dark' }).eq('id', c.uid),
+    `search-withheld set skin ${skin}`,
+  )
+}
+
+async function openLibrary(page: Page, skin?: string) {
   const c = await client()
   await seedFixtures(c)
+  if (skin) await setProfileSkin(skin)
   await stub(page)
   await signIn(page, c.session)
   await page.goto('/library')
@@ -245,3 +260,70 @@ test('a query that hides nothing shows no line at all', async ({ page }) => {
   await expect(cardFor(page, PRESENT_TITLE)).toBeVisible()
   await expect(notice(page)).toHaveCount(0)
 })
+
+/** The search panel must not cover the line, MEASURED, in every skin, in the case that matters.
+ *
+ *  WHY GEOMETRY. "Is it visible" is the wrong question and `toBeVisible()` answers only that one —
+ *  it does not consider occlusion, so a line buried under an overlay passes it. This feature exists
+ *  to tell a reader about a match they do not know exists; a line they must first know to uncover is
+ *  no feature at all.
+ *
+ *  WHY EVERY SKIN, keyed off SKIN_ORDER rather than a local list. The first version of this guard
+ *  seeded one skin — tryst — and that made it blind to the exact change it was written to catch.
+ *  Turning the panel into a real overlay requires TWO edits (Frame's hardcoded `relative`, and
+ *  `.skin-plate { position: relative }` in skin-kit.css), because `.skin-plate` rides only on
+ *  Frame's `gilt-plate` branch, which only tryst uses. Do the Frame half alone and tryst is the ONE
+ *  skin that does not move — so a tryst-seeded guard reports green while the notice is covered in
+ *  the other eight. Measured: 0.00px overlap in tryst, 18.75px in aphelion, same build.
+ *
+ *  The axis is really the FRAME VARIANT (each skin maps to exactly one), and skin is how a test can
+ *  select one. Registry-keyed means a tenth skin is covered the day it is added rather than the day
+ *  someone remembers this file.
+ *
+ *  NOT VACUOUS, three ways. A panel that failed to render would trivially overlap nothing; a skin
+ *  that failed to apply would silently re-measure tryst nine times — which is the original bug
+ *  wearing a loop. So each case asserts the skin actually took, the panel exists, and the panel
+ *  holds the withheld book, before it asserts anything about overlap. */
+for (const skin of SKIN_ORDER) {
+  for (const [label, width, height] of [
+    ['desktop', 1280, 720],
+    ['phone', 390, 844],
+  ] as const) {
+    test(`the search panel does not cover the line — ${skin} at ${label}`, async ({ page }) => {
+      await page.setViewportSize({ width, height })
+      await openLibrary(page, skin)
+
+      // The skin REALLY applied. Without this the loop is nine reruns of whatever skin the profile
+      // happened to hold — a blind spot with more tests in front of it.
+      await expect(page.locator('html')).toHaveAttribute('data-skin', skin)
+
+      await search(page, WISHED_TITLE)
+      await expect(notice(page)).toBeVisible()
+
+      const geo = await page.evaluate(() => {
+        const n = document.querySelector('[data-testid="search-hidden-notice"]')
+        const input = document.querySelector('input[type="search"]')
+        const panel = input?.parentElement?.querySelector(':scope > *:not(input)')
+        if (!n || !panel) return null
+        const a = n.getBoundingClientRect()
+        const b = panel.getBoundingClientRect()
+        return {
+          panelText: (panel as HTMLElement).innerText,
+          position: getComputedStyle(panel).position,
+          overlapY: Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top)),
+          overlapX: Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left)),
+        }
+      })
+
+      expect(geo, 'no search panel rendered — the overlap check would be vacuous').not.toBeNull()
+      expect(geo!.panelText).toContain(WISHED_TITLE)
+
+      // Overlapping columns are expected and fine; overlapping ROWS are the failure.
+      expect(geo!.overlapX).toBeGreaterThan(0)
+      expect(
+        geo!.overlapY,
+        `the search panel (position: ${geo!.position}) covers the withheld-matches line by ${geo!.overlapY}px in ${skin} at ${label} — move the line below the panel's reach, or keep the panel in flow`,
+      ).toBe(0)
+    })
+  }
+}
