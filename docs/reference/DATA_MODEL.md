@@ -312,9 +312,22 @@ the migration and `20260716010000`'s column definition before citing it here). R
 fits: **prevention** where the column is authoritative and every write goes through controlled
 paths (series positions: NOT NULL, RPC-managed, and a collision is a data defect worth rejecting);
 **total ordering at read** where NULLs are legitimate values the read has to cope with
-(`read_on` — an undated read is real data; `sort_order`/`position` pre-backfill). A constraint
-cannot help a column whose NULLs mean something, and a read-side tiebreak cannot stop two writers
-from committing the same value — pick by which of those is true.
+(`read_on` — an undated read is real data; `sort_order`/`position` pre-backfill).
+
+**Nullability is the discriminator, not a circumstance — check it and the answer follows.**
+Postgres treats NULLs as DISTINCT in a unique index, so a constraint on a nullable column has
+nothing to grip: verified on this project's server (PostgreSQL 17.6, config pins major 17), a
+plain `UNIQUE (parent, pos)` accepted three `(1, NULL)` rows without complaint. So: column is
+`NOT NULL` → prevention is available (that NOT NULL on `series_entries.position` is what makes
+`series_position_uidx` bite); NULLs are legitimate data → only total read ordering works, because
+no ordinary constraint can reach the NULLs — and a read-side tiebreak, conversely, cannot stop two
+writers committing the same value. The class's own three members are the evidence: all three were
+NULLABLE ordering columns, which is exactly why prevention was never on the table for any of them.
+One closure so the third shape isn't proposed later: PostgreSQL 15+'s `UNIQUE NULLS NOT DISTINCT`
+CAN constrain NULL ties (verified here too — it rejected a second `(1, NULL)` row), and that is
+precisely why it does not fit ordering columns: it permits exactly ONE unpositioned row per
+parent, and "not yet positioned" is a state many rows legitimately share at once (#298's bulk-add
+and CSV import wrote whole batches of them).
 
 clubs               (id pk, title, author, cover_url,
                      unit_type 'chapter'|'page'|'percent', unit_count, unit_label,
