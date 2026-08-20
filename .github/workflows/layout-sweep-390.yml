@@ -52,8 +52,17 @@ jobs:
     # old always-on e2e-mobile job's history (a median of whole job runs — stack overhead and the
     # old ~0.35m install included; NOT a max, and NOT suite-only time — the input named exactly,
     # after this week's "measured max suite" mislabel). 10.7 − 0.35 old install + 5m worst-case
-    # CDN-only install bounds (1m trip + 4m retry, setup-browsers) = 15.35 → 16. First dispatch
-    # re-measures this post-#292; resize from that number, not this prior.
+    # CDN-only install bounds (1m trip + 4m retry, setup-browsers) = 15.35 → 16.
+    #
+    # A MEDIAN, where ci.yml's caps use measured MAX — a decision about job class, not an
+    # inconsistency to reconcile. A required PR check that trips its cap blocks a merge, so those
+    # caps are sized from the worst run ever observed; this job is a NON-BLOCKING dispatch, where
+    # a tripped cap costs exactly "run it again" — so a median plus a generous install allowance
+    # beats over-provisioning, and a slow run that trips is itself signal (the sweep got slower;
+    # look) rather than a merge outage. Known consequence, accepted: the two local verification
+    # runs bracketed the base (9.6m, 12.3m), and a 12.3m-shaped run that ALSO trips the install
+    # retry lands ~17.3m and fails this cap — rare-times-rare, and the failure mode is a re-run.
+    # First dispatch re-measures on CI hardware; resize from that number, not this prior.
     timeout-minutes: 16
     env:
       VITE_SUPABASE_URL: http://127.0.0.1:55321
