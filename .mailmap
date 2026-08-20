@@ -1,0 +1,9 @@
+# One author, one identity. Every commit in this repository was made by Greg Chism under two
+# email configurations (the university address and GitHub's noreply); this maps both to the
+# canonical personal address so `git log` / `shortlog` / `blame` report the sole author as one
+# line. LIMIT, stated plainly: .mailmap governs git's own tooling only — GitHub attributes by
+# email-to-account and ignores this file, so consolidating the GitHub contributor graph requires
+# adding (and verifying) the secondary address on the account itself. The CLA bot's single
+# machinery commit is deliberately NOT mapped: it is not authorship.
+Greg Chism <gchism94@gmail.com> <gchism@arizona.edu>
+Greg Chism <gchism94@gmail.com> Greg T. Chism <38962243+Gchism94@users.noreply.github.com>
