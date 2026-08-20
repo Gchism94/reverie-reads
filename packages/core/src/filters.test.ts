@@ -4,11 +4,13 @@ import {
   defaultFilters,
   groupSeries,
   hasReadingHistory,
+  hiddenMatchCount,
   inDefaultLibrary,
   isBookRead,
   matchesFilters,
   seriesLenBucket,
   sortBooks,
+  type LibraryFilters,
 } from './filters'
 import { makeBook } from './book.fixture'
 
@@ -338,5 +340,79 @@ describe('subgenre filter over subgenres[]', () => {
   it('pre-migration singles still match through the legacy field', () => {
     expect(matchesFilters(legacy, { ...defaultFilters(), sub: 'Noir' })).toBe(true)
     expect(matchesFilters(legacy, { ...defaultFilters(), sub: 'Gothic' })).toBe(false)
+  })
+})
+
+describe('hiddenMatchCount — what the search matched and the scope withheld', () => {
+  // The repro, as a unit: a wishlist-only book, no reads, queried by its exact full title. The grid
+  // shows nothing and says nothing. This is the count that lets it say something.
+  const wished = makeBook({
+    id: 'w',
+    title: 'The Cruel Prince',
+    ownership: 'unowned',
+    wishlist: true,
+    readStatus: 'unset',
+  })
+  const owned = makeBook({ id: 'o', title: 'The Cruel Crown' })
+  const bare = makeBook({
+    id: 'u',
+    title: 'The Cruel Curse',
+    ownership: 'unowned',
+    readStatus: 'unset',
+  })
+  const books = [wished, owned, bare]
+  const q = (query: string, over: Partial<LibraryFilters> = {}): LibraryFilters => ({
+    ...defaultFilters(),
+    ...over,
+    q: query,
+  })
+
+  it('counts the exact-title match the default scope withheld', () => {
+    // The number IS the claim, so the test states the number — not "greater than zero".
+    expect(hiddenMatchCount(books, q('The Cruel Prince'))).toBe(1)
+    // …and the book really is absent from the grid, which is what makes the line worth showing.
+    expect(books.filter((b) => matchesFilters(b, q('The Cruel Prince')))).toHaveLength(0)
+  })
+
+  it('counts EVERY withheld match, not just the first — a boolean would not do', () => {
+    // Two out-of-scope books, one in scope: the query straddles all three.
+    expect(hiddenMatchCount(books, q('The Cruel'))).toBe(2)
+    expect(books.filter((b) => matchesFilters(b, q('The Cruel')))).toHaveLength(1)
+  })
+
+  it('is zero when the query hides nothing — the standing "0 hidden" is the noise to avoid', () => {
+    expect(hiddenMatchCount(books, q('The Cruel Crown'))).toBe(0)
+  })
+
+  it('is zero when the query matches nothing at all', () => {
+    expect(hiddenMatchCount(books, q('Piranesi'))).toBe(0)
+  })
+
+  it('is zero with no query — this narrates search, not the resting grid', () => {
+    expect(hiddenMatchCount(books, defaultFilters())).toBe(0)
+  })
+
+  it('is zero once the wishlist chip is on — what it offers to do is already done', () => {
+    expect(hiddenMatchCount(books, q('The Cruel Prince', { wishlist: true }))).toBe(0)
+    expect(hiddenMatchCount(books, q('The Cruel', { wishlist: true }))).toBe(0)
+  })
+
+  it('is zero under a shelf link, which bypasses the scope gate rather than applying it', () => {
+    // shelf !== All takes the other branch in matchesFilters, so there is no scope gate to lift.
+    expect(hiddenMatchCount(books, q('The Cruel Prince', { shelf: 'wishlist' }))).toBe(0)
+  })
+
+  it('does not blame the scope for a book some OTHER facet excluded', () => {
+    // In scope (owned) and matching the text, but the genre chip rejects it. Nothing about that is
+    // the scope gate's doing, so revealing the wishlist would not bring it back — and the line must
+    // not claim it would.
+    const offGenre = makeBook({ id: 'g', title: 'The Cruel Sea', genre: 'fantasy', genres: [] })
+    expect(hiddenMatchCount([offGenre], q('The Cruel Sea', { genre: 'romance' }))).toBe(0)
+  })
+
+  it('reports a book held out by scope AND matching every other active facet', () => {
+    // The facets that DO pass must not suppress the report either: same wishlist-only book, under a
+    // genre chip it satisfies.
+    expect(hiddenMatchCount(books, q('The Cruel Prince', { genre: 'romance' }))).toBe(1)
   })
 })
