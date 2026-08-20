@@ -59,20 +59,55 @@ export function Stars({
     return '0%'
   }
 
+  /**
+   * TOUCH TARGET SIZING — coarse pointers only, interactive only.
+   *
+   * Measured before (390x844): the glyph box was 19.88 x 20px, so each HALF-star zone was
+   * 9.94 x 20 — 41% of WCAG 2.5.8's 24x24 minimum (AA in 2.2). Greg reported half stars as hard
+   * to hit; that number is the report.
+   *
+   * A half-zone is BY CONSTRUCTION half a star's box and the zones tile a continuous strip, so
+   * padding buys nothing — every pixel already belongs to some half. The star BOX WIDTH is the
+   * only lever, and the arithmetic is forced:
+   *   step 0.5 -> 10 targets -> 10 x 24 = 240px strip  (62% of a 390px viewport — fits)
+   *   step 1   ->  5 targets ->  5 x 24 = 120px strip  (the reviews composer, which omits `step`)
+   * 2.5.5 (AAA, 44px) is NOT chased: 10 x 44 = 440px does not fit 390.
+   *
+   * GLYPH AND ZONE ARE SEPARATE, deliberately: the zone width is driven by the floor above, the
+   * glyph stays at its designed `size` (20px default) and is centred inside it. Growing the star
+   * to 48px to win the target would be a design change nobody asked for.
+   *
+   * DISPLAY-MODE STARS ARE NOT TARGETS and get none of this — no floor applies to them.
+   *
+   * Scope is `pointer-coarse:` (Tailwind's variant, the idiom CoverCard's fave toggle already
+   * uses, alongside globals.css's coarse-pointer font-size rule). It cannot affect desktop, and
+   * it cannot affect the surface-visual harness, which runs Desktop Chrome — a FINE pointer.
+   */
+  const targetClass = onChange
+    ? step === 0.5
+      ? 'pointer-coarse:w-12 pointer-coarse:min-h-6 pointer-coarse:flex pointer-coarse:items-center pointer-coarse:justify-center'
+      : 'pointer-coarse:w-6 pointer-coarse:min-h-6 pointer-coarse:flex pointer-coarse:items-center pointer-coarse:justify-center'
+    : ''
+
   const star = (i: number) => (
     <span
       key={i}
       aria-hidden
       data-star={i}
-      className="relative inline-block leading-none"
+      className={`relative inline-block leading-none ${targetClass}`}
       style={{ fontSize: size, color: 'var(--chip-border)' }}
     >
-      ★
-      <span
-        className="absolute inset-y-0 left-0 overflow-hidden"
-        style={{ width: fill(i), color: 'var(--gold)' }}
-      >
+      {/* The gold fill clips a copy of the glyph. It is positioned against the GLYPH's own box
+          (a nested relative span), not the widened target box — otherwise a 48px-wide coarse
+          target would stretch the 50% fill to 24px and the half star would render as a smear. */}
+      <span className="relative inline-block">
         ★
+        <span
+          className="absolute inset-y-0 left-0 overflow-hidden"
+          style={{ width: fill(i), color: 'var(--gold)' }}
+        >
+          ★
+        </span>
       </span>
     </span>
   )
@@ -131,7 +166,9 @@ export function Stars({
       aria-valuetext={shown === 0 ? 'No rating' : label(shown)}
       onKeyDown={onKeyDown}
       onPointerDown={onPointerDown}
-      className="flex cursor-pointer gap-0.5 outline-offset-2 focus-visible:outline focus-visible:outline-2"
+      // gap-0 on coarse pointers: a 2px gap between stars is a DEAD strip between adjacent
+      // targets, and the ten half-zones are supposed to tile continuously. Fine pointers keep it.
+      className="flex cursor-pointer gap-0.5 outline-offset-2 focus-visible:outline focus-visible:outline-2 pointer-coarse:gap-0"
       style={{ outlineColor: 'var(--accent)' }}
     >
       {[1, 2, 3, 4, 5].map(star)}

@@ -25,7 +25,9 @@ describe('Stars — display (no onChange)', () => {
 
   it('renders a 50% gold overlay for the half star and full for whole stars', () => {
     const { container } = render(<Stars value={2.5} step={0.5} />)
-    const overlays = [...container.querySelectorAll('[data-star] > span')] as HTMLElement[]
+    // the fill lives one level deeper since the touch-target work: [data-star] > glyph > fill,
+    // so the glyph box can stay its designed size inside a widened coarse-pointer target
+    const overlays = [...container.querySelectorAll('[data-star] > span > span')] as HTMLElement[]
     expect(overlays.map((o) => o.style.width)).toEqual(['100%', '100%', '50%', '0%', '0%'])
   })
 })
