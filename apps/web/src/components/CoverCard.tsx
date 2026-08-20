@@ -122,7 +122,15 @@ export function CoverCard({
           className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center text-[14px] opacity-0 backdrop-blur transition-opacity focus-visible:opacity-100 group-hover:opacity-100 aria-pressed:opacity-100 pointer-coarse:opacity-100"
           style={{
             background: markBg,
-            color: book.fave ? markInk : '#fff',
+            // RULED (fix/scrim-contrast-guard): white in BOTH states, not the accent when faved.
+            // Over a real cover the accent inks at 1.09-2.69:1 across all 18 skin/mode combos
+            // (0.45 black on white artwork composites to rgb(140,140,140)) — under the 3:1
+            // non-text floor for a glyph that identifies a control's state. White reaches 3.36:1.
+            // The smallest ruling available, and self-consistent: this control ALREADY renders
+            // white when unfaved, so the accent only ever appeared in one of its two states. The
+            // skin's flavour signal is untouched — --mark-radius still gives Tryst a round pill
+            // and Aphelion a squared instrument tag. Guarded by coverOverlay.contrast.test.ts.
+            color: '#fff',
             borderRadius: 'var(--mark-radius)',
           }}
         >
