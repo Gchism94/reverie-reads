@@ -245,6 +245,25 @@ function LibraryScreen() {
           <button
             type="button"
             data-testid="search-hidden-reveal"
+            // A READER'S FIRST PRESS USED TO DO NOTHING, and the cause is layout, not this handler.
+            // Toolbar's SearchResultsPanel carries both `relative` (from Frame) and `absolute`
+            // (from its own className); `relative` wins, so the panel is IN FLOW and reserves
+            // 77.8px that pushes this line down. Pressing here blurs the search input, the panel
+            // unmounts, that 77.8px collapses, and the line jumps UP by exactly the panel height
+            // mid-gesture — measured 246.75 → 169.0. mouseup then lands on the paragraph rather
+            // than this button, so mousedown and mouseup have different targets and the browser
+            // fires `click` on their common ancestor instead. The button saw pointerdown and
+            // mousedown and never a click.
+            //
+            // preventDefault on mousedown cancels the focus transfer, so the input never blurs,
+            // the panel never closes, and nothing moves under the pointer. Same mechanism the
+            // panel's own rows use one file over ("mousedown so the pick lands before the input's
+            // blur closes the panel", Toolbar.tsx) — but the ACTION stays on onClick rather than
+            // moving into mousedown as those rows do. They navigate away, so firing early is free;
+            // here, mousedown-plus-click would toggle twice and land back where it started, and a
+            // mousedown-only action would be unreachable by keyboard. Preventing the blur is the
+            // part worth copying; where the action hangs is not.
+            onMouseDown={(e) => e.preventDefault()}
             onClick={toggleWishlist}
             aria-label="Show matches hidden by filters"
             className="underline underline-offset-2"
