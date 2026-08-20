@@ -149,6 +149,35 @@ export function matchesFilters(b: Book, f: LibraryFilters): boolean {
   return true
 }
 
+/** How many books the CURRENT SEARCH matched but the default-library scope withheld.
+ *
+ *  SAY WHAT YOU SILENTLY DID. matchesFilters applies the inDefaultLibrary gate BEFORE the text
+ *  filter, which is deliberate — but it means an exact-title query on a wishlist-only book returns
+ *  an empty grid with no indication anything was held back. The strongest intent signal a reader
+ *  can send is overruled by a view default, silently. This counts what was withheld so the UI can
+ *  state it. The sibling case is DuplicateReview's `differs` line, which narrates the values a
+ *  merge silently keeps over the ones it discards; Discover's fn-down fallback is the third surface
+ *  with the same shape (curated content substituted for live, indistinguishably) and has no such
+ *  line yet. All three do a defensible thing quietly; the fix is never to stop doing it, it is to
+ *  say so.
+ *
+ *  Both operands go through matchesFilters itself rather than re-deriving the predicate, so the
+ *  count can never disagree with the grid it annotates: a book counts only if lifting the scope
+ *  gate — and nothing else — would have brought it in. Every other facet still applies, so a book
+ *  the genre chip excluded is not reported as withheld by scope.
+ *
+ *  Zero without a query, mirroring matchesFilters' own `if (f.q)` gate: this narrates SEARCH, and
+ *  the unqueried grid already reads as "your library", not as a result set. Naturally zero when the
+ *  wishlist chip is already on or a shelf link is active, since neither run the gate — both
+ *  operands then agree, and there is nothing left to reveal. Like the differs line, it must return
+ *  nothing when nothing was withheld: a standing "0 hidden" is what teaches a reader to stop
+ *  reading the line. */
+export function hiddenMatchCount(books: readonly Book[], f: LibraryFilters): number {
+  if (!f.q) return 0
+  const unscoped: LibraryFilters = { ...f, wishlist: true }
+  return books.filter((b) => !matchesFilters(b, f) && matchesFilters(b, unscoped)).length
+}
+
 /** Ported verbatim from the prototype's libSort. */
 export function sortBooks(books: readonly Book[], sort: LibrarySort): Book[] {
   const c = [...books]
