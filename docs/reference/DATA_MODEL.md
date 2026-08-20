@@ -304,6 +304,18 @@ for such a column before reaching for the primary key.
 `NOT NULL` backfill stays a separate decision, and #294's step-4 reasoning (enumerate every write
 path first) is the precedent.
 
+**Breaking ties totally is one of TWO correct answers — the other is preventing them.** This repo
+already does both: `series_entries_position_uidx` (`20260816010000`) is a partial unique index on
+`(series_id, position) where removed_at is null`, over a `position numeric NOT NULL` column — so a
+live-position tie is IMPOSSIBLE at write time rather than resolved at read time (verified against
+the migration and `20260716010000`'s column definition before citing it here). Roughly when each
+fits: **prevention** where the column is authoritative and every write goes through controlled
+paths (series positions: NOT NULL, RPC-managed, and a collision is a data defect worth rejecting);
+**total ordering at read** where NULLs are legitimate values the read has to cope with
+(`read_on` — an undated read is real data; `sort_order`/`position` pre-backfill). A constraint
+cannot help a column whose NULLs mean something, and a read-side tiebreak cannot stop two writers
+from committing the same value — pick by which of those is true.
+
 clubs               (id pk, title, author, cover_url,
                      unit_type 'chapter'|'page'|'percent', unit_count, unit_label,
                      created_by fk, created_at)
