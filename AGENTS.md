@@ -235,6 +235,15 @@ function` + fresh `create` resets it to the PUBLIC-execute default — verified 
   leave the replacement in place rather than the reader with neither. The silence is the failure mode;
   a comment and a guard ordering are the antidote.
 
+- **A fresh worktree does not inherit `apps/web/.env.local` (gitignored), and the failure looks
+  nothing like the cause: unit tests fail in ways that read as real regressions** — offline-session
+  boot stuck on "Turning the page…", cache-scoping restores finding nothing. Copy it from the main
+  checkout as the FIRST step of every `git worktree add`. Measured impact has drifted with the
+  suite and the figure is dated so the next drift reads as drift, not contradiction: **10 failing
+  unit tests when first hit (2026-08-19, #288's session — diagnosed only after re-running clean
+  `origin/main` in the same worktree), 17 when it hit again (2026-08-20, #297's session)**. If a
+  fresh worktree shows unexplained unit failures, check for this file before suspecting the diff.
+
 - **Create the branch BEFORE the first edit, never after.** `git checkout -b` costs nothing at the
   start and is the only moment it is free. Starting work on whatever branch happens to be checked
   out — usually the last PR's — means the commit lands on that PR, and splitting it out afterward

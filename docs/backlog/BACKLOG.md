@@ -1121,7 +1121,10 @@ onboarding Stages B–D.
   pre-public licensing pass (#154, `chore(license)`), which also landed `CLA.md` as a draft and
   the CC0 corpus split. What remains open is the owner's review — whether AGPL-3.0 is the final
   answer before LLC formation, and whether the CLA draft becomes binding — which is Greg's
-  decision and not verifiable from the tree.
+  decision and not verifiable from the tree. **Post-#297 confirmation, recorded so the question
+  stays closed (2026-08-21):** filling the LICENSE appendix's copyright line did NOT break GitHub's
+  licence detection — `gh api repos/:owner/:repo --jq .license` returns `spdx_id: AGPL-3.0`
+  (`key: agpl-3.0`), so #297's revert-to-README fallback was not needed.
 - ~~**`NOTICES.md`** missing `npm:@imagemagick/magick-wasm`~~ — done. Present in NOTICES.md
   (Apache-2.0, with the embedded-ImageMagick dual-notice caveat) since the #154 NOTICES sweep.
   The structural caveat stands: the inventory is generated from the pnpm tree and cannot see
