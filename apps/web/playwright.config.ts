@@ -176,6 +176,39 @@ export default defineConfig({
         defaultBrowserType: 'chromium',
       },
     },
+    // ── layout-390: the on-demand 390px LAYOUT sweep — absent unless asked for ──────────────────
+    //
+    // The old blocklist project (everything except a11y and the two mouse-gesture specs), kept as
+    // a dispatch-time sweep after the allowlist above shrank the PR-time project to seven specs.
+    // What the allowlist gave up — "a regression that manifests ONLY at 390px in a spec outside
+    // this list no longer fails the PR" — this buys back on demand, via the layout-sweep-390
+    // workflow (which owns the full reasoning for why it is dispatch-only, never a cron).
+    //
+    // ENV-GATED, and that is load-bearing: `pnpm e2e` with no --project flag runs ALL projects in
+    // one process (see the note at the top of `projects`), so an unconditional fourth project
+    // would silently add ~10.7m to every local full-suite run and to CI's `e2e` job — a cost paid
+    // by everyone forever for a job that runs occasionally. With the var unset this project does
+    // not exist: 3 projects without, 4 with, verified via `playwright test --list`.
+    //
+    // testIgnore (a blocklist), not testMatch: a NEW spec is swept by default, which is the point
+    // of a sweep. `series-builder` and `shelf-regressions` stay out for the unchanged reason:
+    // their drags are literal desktop mouse gestures, so passing at 390px would prove the mouse
+    // path works, which is already proven, and say nothing about touch. Same viewport contract as
+    // `mobile` above, including the forced 'chromium' (spreading iPhone 13 unmodified would switch
+    // the engine to WebKit — probed and closed 2026-08-19).
+    ...(process.env.LAYOUT_SWEEP_390 === '1'
+      ? [
+          {
+            name: 'layout-390',
+            testIgnore: /(a11y|series-builder|shelf-regressions)\.spec\.ts$/,
+            use: {
+              ...devices['iPhone 13'],
+              viewport: { width: 390, height: 844 },
+              defaultBrowserType: 'chromium' as const,
+            },
+          },
+        ]
+      : []),
   ],
   webServer: {
     // Runs from this config's dir (apps/web), so `pnpm dev` boots @reverie/web with its own
