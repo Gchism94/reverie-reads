@@ -20,6 +20,23 @@
 # It does not read GitHub. "Merged" is exactly the claim that misled here, so the question it asks is
 # the one that cannot be fooled: is this commit an ancestor of the base branch's tip?
 #
+# PASS THE BRANCH REF, NOT THE PR's HEAD SHA — the tool's own blind spot, and it is a real one.
+# Ask this about a PR's `headRefOid` and the answer is "landed" every time the PR merged, because
+# that SHA is BY DEFINITION what merged. It is a tautology, not a check. Anything pushed to the
+# branch AFTER the merge is a different commit, is reachable from the live branch ref and from
+# nowhere on main, and is invisible to a headRefOid query — so the one query that always returns
+# green is the one that cannot see this whole class.
+#
+# That class is not hypothetical and it is not the same as the stacked-PR case above: `.husky/pre-push`
+# (#303) refuses a push to a branch whose PR has already merged, but it only fires on a push, so it
+# says nothing about a branch that was pushed and then never got a PR at all — the neighbour failure
+# found on 2026-08-20, where `feat/search-withheld-notice` sat on the remote, unmerged, in nobody's
+# queue, duplicating work that shipped as #306.
+#
+# So: `scripts/check-pr-landed.sh feat/some-branch` — the LIVE REF, which moves as the branch does.
+# For a sweep over everything still on the remote, `git cherry main origin/<branch>` compares by
+# PATCH-ID rather than SHA, which also survives the cherry-pick/rebase that makes SHA comparison lie.
+#
 # USAGE
 #   scripts/check-pr-landed.sh <branch-or-commit> [base-branch]     # base-branch defaults to main
 #
