@@ -83,49 +83,62 @@ async function signIn(page: Page): Promise<void> {
  */
 const MIN_TARGET = 24
 
-test('half-star zones meet the 24px touch-target floor at a phone viewport', async ({ page }) => {
-  test.setTimeout(120_000)
-  const c = await client()
-  await signIn(page)
-  const bookId = ((await c.sb.from('books').select('id').limit(1)).data ?? [])[0]?.id
-  await page.goto(`/book/${bookId}`)
+/**
+ * COARSE POINTERS ONLY, and this scoping is the contract rather than a convenience: the sizing
+ * rule is `pointer-coarse:`, so on a FINE pointer the zones stay at their designed 9.94px and
+ * SHOULD — a mouse does not need a 24px target and the desktop layout should not pay for one.
+ * The `rest` project (Desktop Chrome) swept this spec by its blocklist and failed it exactly
+ * that way on the first full run; asserting the floor there would have been asserting against
+ * the design. `isMobile` is the same guard cover-card-touch-affordance uses for its touch path.
+ */
+test.describe('star touch targets (coarse pointer only)', () => {
+  test.skip(({ isMobile }) => !isMobile, 'the 24px floor is a coarse-pointer rule by design')
 
-  const slider = page.getByRole('slider', { name: /Your rating/i })
-  await slider.waitFor({ timeout: 20_000 })
-  const boxes = await slider.evaluate((el) =>
-    [...el.querySelectorAll('[data-star]')].map((s) => {
-      const b = s.getBoundingClientRect()
-      return { w: b.width, h: b.height }
-    }),
-  )
-  expect(boxes.length, 'five star boxes').toBe(5)
-  for (const [i, b] of boxes.entries()) {
-    // each star holds TWO half-star targets side by side
-    expect(
-      b.w / 2,
-      `star ${i + 1}: half-zone width ${(b.w / 2).toFixed(2)}px < ${MIN_TARGET}`,
-    ).toBeGreaterThanOrEqual(MIN_TARGET)
-    expect(b.h, `star ${i + 1}: height ${b.h.toFixed(2)}px < ${MIN_TARGET}`).toBeGreaterThanOrEqual(
-      MIN_TARGET,
+  test('half-star zones meet the 24px touch-target floor at a phone viewport', async ({ page }) => {
+    test.setTimeout(120_000)
+    const c = await client()
+    await signIn(page)
+    const bookId = ((await c.sb.from('books').select('id').limit(1)).data ?? [])[0]?.id
+    await page.goto(`/book/${bookId}`)
+
+    const slider = page.getByRole('slider', { name: /Your rating/i })
+    await slider.waitFor({ timeout: 20_000 })
+    const boxes = await slider.evaluate((el) =>
+      [...el.querySelectorAll('[data-star]')].map((s) => {
+        const b = s.getBoundingClientRect()
+        return { w: b.width, h: b.height }
+      }),
     )
-  }
-})
+    expect(boxes.length, 'five star boxes').toBe(5)
+    for (const [i, b] of boxes.entries()) {
+      // each star holds TWO half-star targets side by side
+      expect(
+        b.w / 2,
+        `star ${i + 1}: half-zone width ${(b.w / 2).toFixed(2)}px < ${MIN_TARGET}`,
+      ).toBeGreaterThanOrEqual(MIN_TARGET)
+      expect(
+        b.h,
+        `star ${i + 1}: height ${b.h.toFixed(2)}px < ${MIN_TARGET}`,
+      ).toBeGreaterThanOrEqual(MIN_TARGET)
+    }
+  })
 
-test('whole-star mode meets the same floor with five targets, not ten', async ({ page }) => {
-  test.setTimeout(120_000)
-  await signIn(page)
-  await page.goto('/review')
-  const slider = page.getByRole('slider', { name: /Your rating/i }).first()
-  const present = await slider.count()
-  test.skip(present === 0, 'no whole-star control on this route in this fixture state')
-  const boxes = await slider.evaluate((el) =>
-    [...el.querySelectorAll('[data-star]')].map((s) => {
-      const b = s.getBoundingClientRect()
-      return { w: b.width, h: b.height }
-    }),
-  )
-  for (const b of boxes) {
-    expect(b.w).toBeGreaterThanOrEqual(MIN_TARGET)
-    expect(b.h).toBeGreaterThanOrEqual(MIN_TARGET)
-  }
+  test('whole-star mode meets the same floor with five targets, not ten', async ({ page }) => {
+    test.setTimeout(120_000)
+    await signIn(page)
+    await page.goto('/review')
+    const slider = page.getByRole('slider', { name: /Your rating/i }).first()
+    const present = await slider.count()
+    test.skip(present === 0, 'no whole-star control on this route in this fixture state')
+    const boxes = await slider.evaluate((el) =>
+      [...el.querySelectorAll('[data-star]')].map((s) => {
+        const b = s.getBoundingClientRect()
+        return { w: b.width, h: b.height }
+      }),
+    )
+    for (const b of boxes) {
+      expect(b.w).toBeGreaterThanOrEqual(MIN_TARGET)
+      expect(b.h).toBeGreaterThanOrEqual(MIN_TARGET)
+    }
+  })
 })
