@@ -143,22 +143,28 @@ const reveal = (page: Page) => page.getByTestId('search-hidden-reveal')
 const searchBox = (page: Page) => page.getByRole('searchbox', { name: 'Search your library' })
 const cardFor = (page: Page, title: string) => page.getByRole('button', { name: `Open ${title}` })
 
-/** Type a query, then blur the box.
+/** Type a query — and DELIBERATELY LEAVE THE BOX FOCUSED.
  *
- *  The blur is not decoration. While the search input holds focus, Toolbar's deployed
- *  SearchResultsPanel is an absolutely-positioned overlay hanging 6px below the input — directly
- *  over where the withheld line renders. toBeVisible() does not consider occlusion, so it would
- *  pass and the click on "show" would then fail on intercepted pointer events, reading as a broken
- *  control rather than a covered one.
+ *  This helper used to call `blur()` after filling, on the diagnosis that SearchResultsPanel
+ *  occludes the withheld line and the click fails on intercepted pointer events. Re-measured, that
+ *  is not what happens: `document.elementFromPoint` at the reveal button's centre returns the
+ *  BUTTON, so nothing is intercepting. The real mechanism is that mousedown blurs the input, the
+ *  panel unmounts mid-press, the button is re-laid-out from under the pointer, and mouseup lands on
+ *  nothing — native listeners recorded `pointerdown` and `mousedown` and then neither `mouseup` nor
+ *  `click`.
  *
- *  blur(), NOT the Escape the panel advertises as its dismissal: Chromium's native handling of
- *  `<input type="search">` CLEARS the field on Escape, before the app's own onKeyDown blur runs.
- *  That fires a change to `q: ''`, the count legitimately drops to 0, and the line correctly does
- *  not render — a green-looking absence caused entirely by the harness. Cost an hour of looking at
- *  the component; recorded here so it costs nobody else one. */
+ *  That distinction is the whole point of removing the blur. Blurring first made the test green
+ *  while leaving the defect in the product, because it skipped the only path this feature exists
+ *  for: type a query, read the line, press "show" — with the box still focused, which is where a
+ *  reader's hands actually are. The control now carries `onMouseDown={e => e.preventDefault()}`,
+ *  which keeps focus and therefore keeps the layout still.
+ *
+ *  Keeping the note that IS still true: dismiss with blur(), never Escape. Chromium's native
+ *  handling of `<input type="search">` CLEARS the field on Escape before the app's own onKeyDown
+ *  runs, so `q` becomes '', the count legitimately drops to 0, and the line correctly does not
+ *  render — a green-looking absence caused entirely by the harness. */
 async function search(page: Page, q: string) {
   await searchBox(page).fill(q)
-  await searchBox(page).blur()
 }
 
 async function openLibrary(page: Page) {

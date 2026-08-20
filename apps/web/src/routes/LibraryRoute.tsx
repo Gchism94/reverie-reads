@@ -245,6 +245,29 @@ function LibraryScreen() {
           <button
             type="button"
             data-testid="search-hidden-reveal"
+            /*
+             * PRESS BEFORE THE BLUR. This control sits directly under the search box, and while
+             * that box holds focus Toolbar renders SearchResultsPanel. A mousedown here blurs the
+             * input, the panel unmounts mid-press, and the button is re-laid-out from under the
+             * pointer — so mouseup lands on nothing and NO CLICK EVENT IS EVER PRODUCED. The
+             * reader's first press simply does nothing on the one path this feature is for:
+             * type a query, read the line, press "show".
+             *
+             * Measured rather than reasoned. With a plain onClick, native listeners on this button
+             * recorded `pointerdown` and `mousedown` and then neither `mouseup` nor `click`;
+             * `document.elementFromPoint` at the button's centre returned the button itself, so
+             * nothing was intercepting — the node moved. Calling the handler directly through the
+             * DOM worked, which is what distinguishes "the wiring is wrong" from "the press never
+             * became a click".
+             *
+             * SearchResultsPanel's own rows already carry this exact guard, with the same reason
+             * in a comment ("mousedown so the pick lands before the input's blur closes the
+             * panel"). This is the second control to need it, which makes it a property of sitting
+             * under that panel rather than a quirk of either one.
+             *
+             * onClick stays: it is what the keyboard uses, and the keyboard never takes this path.
+             */
+            onMouseDown={(e) => e.preventDefault()}
             onClick={toggleWishlist}
             aria-label="Show matches hidden by filters"
             className="underline underline-offset-2"
