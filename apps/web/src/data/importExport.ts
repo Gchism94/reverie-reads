@@ -1,3 +1,4 @@
+import { nextListSortOrderFor, ORDER_STEP as LIST_ORDER_STEP } from './lists'
 import {
   isContributorRole,
   isKnownTrope,
@@ -510,7 +511,7 @@ interface BackupShape {
   tropes?: Record<string, BackupTrope[]>
   moods?: Record<string, BackupMood[]>
   reads?: { book_id: string; read_on: string | null; format: string | null; rating: number | null; notes: string | null }[]
-  lists?: { id: string; name: string; kind: string; is_priority: boolean }[]
+  lists?: { id: string; name: string; kind: string; is_priority: boolean; sort_order?: number | null }[]
   list_items?: { list_id: string; book_id: string; position: number | null }[]
   reviews?: { work_key: string; reviewer_name: string | null; rating: number | null; body: string }[]
   /**
@@ -681,11 +682,30 @@ export async function restoreBackup(
   if (!data.books) throw new Error('That file doesn’t look like a Reverie backup.')
 
   // Lists first, mapping old → new ids.
+  //
+  // sort_order POLICY (the lists sort_order incident): the export has always captured it
+  // (select('*') serialized wholesale — only the restore dropped it), so PRESERVE the exported
+  // value when present. Backups whose lists predate the column (or hand-made files) may lack it;
+  // those get sequential slots APPENDED AFTER the highest preserved value, in the file's own array
+  // order — stable, reproducing at worst the order the file was written in. What is not
+  // acceptable is writing NULL into the column whose nullability was the bug: a restored account
+  // would order its shelves by Postgres scan order, destroying the reader's manual arrangement in
+  // the one operation whose purpose is destroying nothing.
   const listIdMap = new Map<string, string>()
-  for (const l of data.lists ?? []) {
+  const backupLists = data.lists ?? []
+  const maxPreserved = Math.max(0, ...backupLists.map((l) => l.sort_order ?? 0))
+  let appended = 0
+  for (const l of backupLists) {
+    const sortOrder = l.sort_order ?? maxPreserved + ++appended * LIST_ORDER_STEP
     const { data: created, error } = await supabase
       .from('lists')
-      .insert({ owner_id: ownerId, name: l.name, kind: l.kind, is_priority: l.is_priority })
+      .insert({
+        owner_id: ownerId,
+        name: l.name,
+        kind: l.kind,
+        is_priority: l.is_priority,
+        sort_order: sortOrder,
+      })
       .select('id')
       .single()
     if (error) throw error
@@ -873,9 +893,12 @@ async function ensureList(
   const key = name.trim().toLowerCase()
   const hit = cache.get(key)
   if (hit) return { id: hit, created: false }
+  // Appends to the end of the manual order like every other list creation — the CSV import's
+  // shelves used to insert NULL sort_order here and pile, unorderable-by-intent, at the end.
+  const sortOrder = await nextListSortOrderFor(ownerId)
   const { data: created, error } = await supabase
     .from('lists')
-    .insert({ owner_id: ownerId, name, kind })
+    .insert({ owner_id: ownerId, name, kind, sort_order: sortOrder })
     .select('id')
     .single()
   if (error) throw error

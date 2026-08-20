@@ -18,6 +18,20 @@ export const ORDER_STEP = 1000
 export const nextSortOrder = (lists: readonly UiList[]): number =>
   Math.max(0, ...lists.map((l) => l.sortOrder ?? 0)) + ORDER_STEP
 
+/**
+ * The next append position, read from the database — THE one implementation for every write path
+ * that creates a list (createList, the CSV import's ensureList). Extracted after the lists
+ * sort_order incident: three insert sites existed, one set sort_order and two forgot, and the two
+ * that forgot produced NULLs that a restore then ordered by Postgres scan order. A policy that
+ * exists once cannot be forgotten twice. Computed in JS over a plain select rather than
+ * order+limit so it behaves identically under the importExport test harness's mock client.
+ */
+export async function nextListSortOrderFor(ownerId: string): Promise<number> {
+  const { data } = await supabase.from('lists').select('sort_order').eq('owner_id', ownerId)
+  const rows = (data ?? []) as { sort_order: number | null }[]
+  return Math.max(0, ...rows.map((r) => r.sort_order ?? 0)) + ORDER_STEP
+}
+
 export const listsKey = ['lists'] as const
 
 const toUiList = (row: ListRow): UiList => ({
@@ -58,12 +72,7 @@ export function useCreateList() {
       const ownerId = auth.user?.id
       if (!ownerId) throw new Error('Not signed in')
       // New shelves append to the end of the manual order.
-      const { data: last } = await supabase
-        .from('lists')
-        .select('sort_order')
-        .order('sort_order', { ascending: false, nullsFirst: false })
-        .limit(1)
-      const sortOrder = ((last?.[0]?.sort_order as number | null) ?? 0) + ORDER_STEP
+      const sortOrder = await nextListSortOrderFor(ownerId)
       const { data, error } = await supabase
         .from('lists')
         .insert({
