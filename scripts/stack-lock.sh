@@ -66,10 +66,22 @@ NOTIFY_EVERY="${RV_STACK_LOCK_NOTIFY:-60}"
 # out mid-run, but to `node scripts/seed-dev.mjs` directly rather than through `pnpm db:seed`. That
 # is one refactor away from bricking every a11y run, so the escape is insurance, not ceremony.
 if [ "${RV_STACK_LOCK_HELD:-}" = "1" ]; then
-  echo "stack-lock: already held by this process tree — passing through"
+  echo "stack-lock: NOT LOCKING (re-entrant) — this process tree already holds the lock" >&2
   exec "$@"
 fi
 
+# ── Every non-locking path announces itself, on stderr ─────────────────────────────────────────
+# There are three ways this script does NOT lock: re-entrancy, CI, and the explicit disable. Each
+# prints one line naming WHICH path and WHY, and all three go to stderr — two of them printed to
+# stdout in the first draft, where a notice is easily lost in command output and pollutes anything
+# parsing it. A guard built to end a SILENT failure must not fail silently itself.
+#
+# The gate below stays `CI` rather than the narrower `GITHUB_ACTIONS`: `CI` is what every runner
+# sets and keeps this correct if CI ever moves, and the risk it carries — some local tool exporting
+# CI=1 and silently unlocking a developer run — is answered by VISIBILITY rather than by narrowing.
+# The line prints the value it saw (`CI=1`), so a wrongly-set gate announces itself on every run
+# instead of quietly dropping the lock.
+#
 # ── CI passthrough, and why it is correct rather than a dodge ──────────────────────────────────
 # This lock serialises SESSIONS SHARING ONE DEVELOPER BOX. On CI each job gets a dedicated ephemeral
 # runner with its own stack, so there is no shared resource and nothing to serialise. Locking there
@@ -78,12 +90,12 @@ fi
 # the branch that keeps that harmless. (Checked, not assumed: `flock` IS present on ubuntu-latest —
 # util-linux 2.39.3 — so this is a correctness choice, not a workaround for an absent binary.)
 if [ -n "${CI:-}" ]; then
-  echo "stack-lock: CI — dedicated runner, nothing to serialise; running unguarded"
+  echo "stack-lock: NOT LOCKING (CI=${CI}) — dedicated runner, own stack, nothing to serialise" >&2
   exec "$@"
 fi
 
 if [ "${RV_STACK_LOCK_DISABLE:-}" = "1" ]; then
-  echo "stack-lock: RV_STACK_LOCK_DISABLE=1 — running UNGUARDED by explicit request" >&2
+  echo "stack-lock: NOT LOCKING (RV_STACK_LOCK_DISABLE=1) — unguarded by explicit request" >&2
   exec "$@"
 fi
 
@@ -179,7 +191,8 @@ RV_STACK_LOCK_HELD=1 exec "$@"'
 STARTED_AT=$(date +%s)
 HEARTBEAT=""
 if ! lock_try true 2>/dev/null; then
-  echo "stack-lock: the stack is held — waiting up to $((TIMEOUT / 60)) min." >&2
+  if [ "$TIMEOUT" -ge 60 ]; then WAIT_DESC="$((TIMEOUT / 60)) min"; else WAIT_DESC="${TIMEOUT}s"; fi
+  echo "stack-lock: the stack is held — waiting up to ${WAIT_DESC}." >&2
   echo "            holder: $(describe_holder)" >&2
   echo "            lock:   $RV_STACK_LOCK_FILE" >&2
   echo "            (this is WAITING, not hung — a heartbeat prints every ${NOTIFY_EVERY}s)" >&2

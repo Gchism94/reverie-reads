@@ -112,6 +112,83 @@ bash "$SCRIPT" true >/dev/null 2>&1
 [ -e "$RV_STACK_LOCK_FILE" ] && ok "lock file kept after release (one inode for all acquirers)" ||
   bad "lock file was UNLINKED on release — two waiters could land on different inodes"
 
+# ── 8. The ticker: waiting ANNOUNCES ITSELF, repeatedly ────────────────────────────────────────
+# The requirement called load-bearing in review — that "waiting" and "hung" stay distinguishable —
+# was the one behaviour the original suite never observed, because its contended case waited 2s and
+# no sensible interval fires inside 2s. This waits long enough for MULTIPLE ticks and asserts the
+# count, so a ticker that fires once (or not at all) fails.
+echo "8. the ticker announces a long wait"
+TICKLOG="$TMP/tick.log"
+bash "$SCRIPT" sleep 11 >/dev/null 2>&1 &
+HOLDER=$!
+sleep 1
+RV_STACK_LOCK_NOTIFY=3 RV_STACK_LOCK_TIMEOUT=60 bash "$SCRIPT" echo "acquired-after-wait" \
+  >"$TMP/tick.out" 2>"$TICKLOG"
+wait "$HOLDER" 2>/dev/null
+TICKS=$(grep -c "still waiting" "$TICKLOG" 2>/dev/null | head -1 || true)
+TICKS=${TICKS:-0}
+[ "$TICKS" -ge 2 ] && ok "ticker fired $TICKS times during the wait (>=2)" ||
+  bad "ticker fired $TICKS times — a long wait would look hung"
+grep -q "holder: pid" "$TICKLOG" && ok "each tick names the holder" ||
+  bad "ticks do not identify the holder"
+[ "$(cat "$TMP/tick.out")" = "acquired-after-wait" ] && ok "acquired mid-interval and ran" ||
+  bad "did not run after waiting"
+
+# ── 9. The ticker is REAPED — no leak, and nothing prints after the command starts ─────────────
+# What tickers usually die on: the holder finishing between ticks, leaving a background loop alive.
+echo "9. the ticker is reaped"
+BEFORE=$(pgrep -f "still waiting" 2>/dev/null | wc -l | tr -d ' ')
+bash "$SCRIPT" sleep 4 >/dev/null 2>&1 &
+HOLDER=$!
+sleep 1
+RV_STACK_LOCK_NOTIFY=2 RV_STACK_LOCK_TIMEOUT=30 bash "$SCRIPT" echo done >/dev/null 2>"$TMP/reap.log"
+wait "$HOLDER" 2>/dev/null
+sleep 3 # well past another interval — a leaked ticker would print again here
+AFTER=$(pgrep -f "still waiting" 2>/dev/null | wc -l | tr -d ' ')
+[ "$AFTER" -le "$BEFORE" ] && ok "no heartbeat process leaked (before=$BEFORE after=$AFTER)" ||
+  bad "heartbeat leaked (before=$BEFORE after=$AFTER)"
+
+# ── 10. Every non-locking path announces itself on STDERR ──────────────────────────────────────
+# Two of the three printed to stdout in the first draft. A guard built to end a silent failure must
+# not fail silently, and stdout is where a notice gets lost in command output.
+echo "10. bypass paths announce on stderr"
+for probe in "RV_STACK_LOCK_HELD=1|re-entrant" "CI=1|CI=1" "RV_STACK_LOCK_DISABLE=1|DISABLE"; do
+  VAR="${probe%%|*}"
+  WANT="${probe##*|}"
+  ERR="$(env "$VAR" bash "$SCRIPT" true 2>&1 >/dev/null)"
+  case "$ERR" in
+    *"NOT LOCKING"*"$WANT"*) ok "$VAR announces on stderr: ${ERR%%$'\n'*}" ;;
+    *) bad "$VAR did not announce on stderr (got: ${ERR:-<nothing>})" ;;
+  esac
+done
+
+# ── 11. …and with CI unset it actually LOCKS ───────────────────────────────────────────────────
+# The half that makes case 10 mean something. "The command ran" is equally consistent with a
+# wrapper that never locks on that path at all, so assert the LOCK, not the run: hold it, then
+# confirm a CI-unset invocation is made to wait while a CI=1 one is not.
+echo "11. CI unset still locks"
+bash "$SCRIPT" sleep 4 >/dev/null 2>&1 &
+HOLDER=$!
+sleep 1
+T0=$(now)
+env -u CI RV_STACK_LOCK_TIMEOUT=30 bash "$SCRIPT" echo x >/dev/null 2>&1
+UNSET_WAIT=$(($(now) - T0))
+wait "$HOLDER" 2>/dev/null
+[ "$UNSET_WAIT" -ge 1 ] && ok "CI unset waited ${UNSET_WAIT}s — it really acquires" ||
+  bad "CI unset did not wait (${UNSET_WAIT}s) — that path may not lock at all"
+
+bash "$SCRIPT" sleep 4 >/dev/null 2>&1 &
+HOLDER=$!
+sleep 1
+T0=$(now)
+CI=1 bash "$SCRIPT" echo x >/dev/null 2>&1
+CI_WAIT=$(($(now) - T0))
+kill -9 "$HOLDER" 2>/dev/null
+pkill -9 -f "sleep 4" >/dev/null 2>&1
+wait "$HOLDER" 2>/dev/null
+[ "$CI_WAIT" -le 1 ] && ok "CI=1 bypassed the wait (${CI_WAIT}s) — the contrast is the proof" ||
+  bad "CI=1 waited ${CI_WAIT}s — expected passthrough"
+
 # ── INSTRUMENT VALIDATION — mutate the wrapper and confirm the cases catch it ──────────────────
 echo
 echo "── mutation: does case 3 actually test the lock? ──"
@@ -154,6 +231,24 @@ fi
 kill -9 "$HOLDER" 2>/dev/null
 pkill -9 -f "sleep 10" >/dev/null 2>&1
 wait "$HOLDER" 2>/dev/null
+
+echo
+echo "── mutation: does case 8 actually test the ticker? ──"
+MUT8="$TMP/stack-lock.noticker.sh"
+# Push the interval past the whole wait: the ticker exists but can never fire.
+sed 's|^NOTIFY_EVERY=.*|NOTIFY_EVERY=99999|' "$SCRIPT" >"$MUT8"
+bash "$MUT8" sleep 8 >/dev/null 2>&1 &
+HOLDER=$!
+sleep 1
+RV_STACK_LOCK_NOTIFY=3 RV_STACK_LOCK_TIMEOUT=60 bash "$MUT8" echo x >/dev/null 2>"$TMP/mut8.log"
+wait "$HOLDER" 2>/dev/null
+MUT_TICKS=$(grep -c "still waiting" "$TMP/mut8.log" 2>/dev/null | head -1 || true)
+MUT_TICKS=${MUT_TICKS:-0}
+if [ "$MUT_TICKS" -ge 2 ]; then
+  bad "MUTANT SURVIVED — case 8 counted $MUT_TICKS ticks from a ticker that cannot fire"
+else
+  ok "mutant killed — silenced ticker produced $MUT_TICKS ticks, case 8 requires >=2"
+fi
 
 echo
 echo "passed: $PASS   failed: $FAIL"
