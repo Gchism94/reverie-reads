@@ -11,7 +11,7 @@ import { searchEverywhere, type SearchResult } from '../lib/search'
 import { enrichBook } from '../lib/enrich'
 import { useIntake, type IntakeResult } from './intake'
 import { booksKey } from './books'
-import { allListItemsKey } from './listItems'
+import { allListItemsKey, nextItemPositionFor } from './listItems'
 import { listsKey } from './lists'
 
 // Data layer for Discover search — the query hook (shared by Discover + the shelf picker seam) and
@@ -96,13 +96,7 @@ export function useAddFromSearch() {
         const { data: auth } = await supabase.auth.getUser()
         const ownerId = auth.user?.id
         if (ownerId) {
-          const { data: maxRows } = await supabase
-            .from('list_items')
-            .select('position')
-            .eq('list_id', listId)
-            .order('position', { ascending: false })
-            .limit(1)
-          const after = ((maxRows?.[0]?.position as number | null) ?? 0) + 1000
+          const after = await nextItemPositionFor(listId)
           await supabase
             .from('list_items')
             .upsert([{ list_id: listId, book_id: res.bookId, owner_id: ownerId, position: after }], {
