@@ -273,8 +273,36 @@ series_entries      (id pk, series_id fk, owner_id fk, position numeric, label,
 
 lists               (id pk, owner_id fk, name, kind 'tbr'|'collection', is_priority bool,
                      sort_order numeric, description, created_at)
-list_items          (list_id fk, book_id fk, owner_id fk, position,
+list_items          (list_id fk, book_id fk, owner_id fk, position, added_at,
                      primary key (list_id, book_id))
+
+### The nullable-ordering class — CLOSED, three of three (2026-08-20)
+
+**The pattern: a nullable ordering column, no default, read without a tiebreak.** One grep found
+three instances and **two were shipping defects**, which is why the pattern is named here rather
+than left as three fixes.
+
+| column | what it turned out to be | closed by |
+| --- | --- | --- |
+| `lists.sort_order` | **real, data loss** — a backup restore wrote NULL for every shelf, destroying the reader's manual arrangement in the one operation whose purpose is destroying nothing | #294 |
+| `reads.read_on` | **real, nondeterminism** — ties produced an unstable per-format rating under the audiobook-vs-print surface; the "dated beats undated" rule was holding by accident | #296 |
+| `list_items.position` | **real but narrow, display instability** — three ordinary write paths (add-one, bulk-add, CSV import) left NULL, so an imported shelf collapsed to one sort key and reshuffled between fetches. No data loss: restore already preserved positions | this entry's PR |
+
+**What generalises, for the next reader.** A nullable ordering column is only safe if BOTH halves
+hold: every write path sets it (one shared helper, not a per-site re-implementation — see
+`nextListSortOrderFor` / `nextItemPositionFor`), and the read is a TOTAL order (`series.ts`'s
+entries query is the reference: value, then a meaningful tiebreak, then an identity tiebreak).
+Client-side sorting is fine; a client-side sort over an unordered fetch is not, because
+`Array.prototype.sort` is stable and therefore faithfully preserves arbitrary input order.
+
+**Pick the tiebreak for meaning, not convenience.** `list_items` already carried
+`added_at NOT NULL DEFAULT now()`, so its unpositioned rows order as "the order you added them"
+rather than by a random uuid — same determinism, an order a reader can actually recognise. Check
+for such a column before reaching for the primary key.
+
+**No migration in any of the three.** Existing NULLs are made deterministic at READ time; a
+`NOT NULL` backfill stays a separate decision, and #294's step-4 reasoning (enumerate every write
+path first) is the precedent.
 
 clubs               (id pk, title, author, cover_url,
                      unit_type 'chapter'|'page'|'percent', unit_count, unit_label,
