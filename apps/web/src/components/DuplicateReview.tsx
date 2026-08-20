@@ -1,6 +1,13 @@
 import { useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { mergeImport, type Book, type Incoming, type MatchStrength } from '@reverie/core'
+import {
+  mergeDifferences,
+  mergeImport,
+  type Book,
+  type Incoming,
+  type MatchStrength,
+  type MergeDifference,
+} from '@reverie/core'
 import { useBooks } from '../data/books'
 import { resolveCandidate, type ReviewAction } from '../data/duplicates'
 import { verdictLookupKey, type ReviewCandidate } from '../data/intake'
@@ -47,6 +54,28 @@ function foldSummary(existing: Book, inc: Incoming): string[] {
 }
 
 const author = (inc: Incoming) => [inc.first, inc.last].filter(Boolean).join(' ')
+
+/**
+ * THE DIFFERS LINE — the one place its phrasing lives, so changing the wording is a one-function
+ * edit rather than a hunt through JSX.
+ *
+ * It narrates what the merge SILENTLY DISCARDS: `mergeImport`'s patch reports only what a merge
+ * ADDS, so a field both records set — the reader's 4.5 rating against an import's 5 — renders
+ * nothing at all today. `mergeDifferences` (core, sharing the merge's own field classification)
+ * finds those pairs; this states them.
+ *
+ * PASSIVE BY DESIGN — not a picker. The measured contested count is 0-1 fields on a typical merge,
+ * and the most common one (`rating`) is a value no import may move at all. Two server-side
+ * decisions a control could never reach even if one were built: the plan moves whole-or-not-at-all
+ * (merge_books' `take_plan`) and `series_user_chosen` is derived inside the RPC.
+ *
+ * Returns null when nothing differs, which is most merges — a "differs: —" on every card is the
+ * noise that teaches a reader to stop reading the line.
+ */
+function differsLine(diffs: readonly MergeDifference[]): string | null {
+  if (!diffs.length) return null
+  return `differs: ${diffs.map((d) => `${d.field} ${d.kept} kept over ${d.offered}`).join(', ')}`
+}
 
 export function DuplicateReview({
   candidates,
@@ -152,6 +181,7 @@ export function DuplicateReview({
       {queue.map((c) => {
         const existing = byId.get(c.existingId)
         const adds = existing ? foldSummary(existing, c.incoming) : []
+        const differs = existing ? differsLine(mergeDifferences(existing, c.incoming)) : null
         const k = keyOf(c)
         return (
           <Surface key={k} tone="card" radius="card" pad={2}>
@@ -198,6 +228,11 @@ export function DuplicateReview({
                     </div>
                   </Surface>
                 </div>
+                {differs && (
+                  <p className="mt-1 text-[12px] text-muted" data-testid="merge-differs">
+                    {differs}
+                  </p>
+                )}
                 <div className="mt-2 flex flex-wrap gap-2">
                   <button
                     type="button"
