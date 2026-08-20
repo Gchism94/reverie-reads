@@ -89,13 +89,41 @@ export function Stars({
       : 'pointer-coarse:w-6 pointer-coarse:min-h-6 pointer-coarse:flex pointer-coarse:items-center pointer-coarse:justify-center'
     : ''
 
+  /**
+   * GLYPH SIZE ON COARSE POINTERS — ruled from the crops, not defaulted.
+   *
+   * The zone work above widened the interactive strip 107px -> 240px while the glyph stayed at its
+   * designed 20px, leaving ~28px of empty space per cell. The before/after crops (almanac + tryst,
+   * 390x844) showed two things a passing geometry assertion cannot: the row stopped reading as ONE
+   * control and became five scattered marks, and — worse — the SAME screen carries display-mode
+   * stars (the per-format line, per-read rows) whose tight rhythm the spread row now contradicts.
+   * Same glyph size, radically different spacing, 40px apart vertically: that reads as broken
+   * rather than as hierarchy.
+   *
+   * 32px in a 48px cell fills it, restores the row as a unit, and makes the interactive control
+   * visibly PRIMARY against the small (12px) display rows — which is the correct relationship and
+   * turns the mismatch into hierarchy. 20px was designed for a fine pointer at desktop scale; a
+   * thumb at 390px is a different design context. Targets comply at either glyph size, so this is
+   * a design call — and the crops are why it is now a decision rather than a leftover.
+   *
+   * Delivered as a CSS variable so the coarse-pointer override beats the inline base size, and so
+   * DISPLAY-MODE stars keep their caller's `size` untouched (they are not targets and get none of
+   * this).
+   */
+  //  --star-glyph is set ONLY by the coarse-pointer rule below; the caller's `size` rides as the
+  //  var()'s FALLBACK on the glyph itself. Setting the base inline (the first attempt) made the
+  //  override inert: an inline custom property beats a stylesheet rule regardless of media query,
+  //  so the class was present, the CSS was generated, and the glyph still computed 20px. Measured,
+  //  not reasoned — the audit read `--star-glyph: 20px` with the class applied.
+  const glyphGrow = onChange ? 'pointer-coarse:[--star-glyph:32px]' : ''
+
   const star = (i: number) => (
     <span
       key={i}
       aria-hidden
       data-star={i}
       className={`relative inline-block leading-none ${targetClass}`}
-      style={{ fontSize: size, color: 'var(--chip-border)' }}
+      style={{ fontSize: `var(--star-glyph, ${size}px)`, color: 'var(--chip-border)' }}
     >
       {/* The gold fill clips a copy of the glyph. It is positioned against the GLYPH's own box
           (a nested relative span), not the widened target box — otherwise a 48px-wide coarse
@@ -168,7 +196,7 @@ export function Stars({
       onPointerDown={onPointerDown}
       // gap-0 on coarse pointers: a 2px gap between stars is a DEAD strip between adjacent
       // targets, and the ten half-zones are supposed to tile continuously. Fine pointers keep it.
-      className="flex cursor-pointer gap-0.5 outline-offset-2 focus-visible:outline focus-visible:outline-2 pointer-coarse:gap-0"
+      className={`flex cursor-pointer gap-0.5 outline-offset-2 focus-visible:outline focus-visible:outline-2 pointer-coarse:gap-0 ${glyphGrow}`}
       style={{ outlineColor: 'var(--accent)' }}
     >
       {[1, 2, 3, 4, 5].map(star)}
