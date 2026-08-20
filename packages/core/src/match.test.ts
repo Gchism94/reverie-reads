@@ -5,6 +5,7 @@ import {
   importKey,
   isbn10to13,
   matchBook,
+  mergeDifferences,
   mergeImport,
   normalizeIsbn,
 } from './match'
@@ -146,6 +147,91 @@ describe('mergeImport', () => {
     expect(patch.series).toBe('The Empyrean')
     expect(patch.cover).toBe('http://c/x.jpg')
     expect(newReads.map((r) => r.date)).toEqual(['2025-06-01'])
+  })
+
+  // ── mergeDifferences: what the merge DISCARDS ────────────────────────────────────────────────
+  //
+  // Deliberately sharing `existing` with the mergeImport cases above, per the brief: the shared
+  // fixture is the point. If someone reclassifies a field in FILL_BLANK_FIELDS, the merge tests and
+  // these move together or one of them goes red — which is the drift alarm the single table exists
+  // to provide.
+
+  it('reports a field both sides set and disagree on — the existing value is the one that survives', () => {
+    // The headline case, and the same incoming rating (3) the fill-blank test above asserts is NOT
+    // applied: the merge keeps the reader's 5 silently, and this is what says so.
+    expect(mergeDifferences(existing, { title: 'Fourth Wing', rating: 3 })).toEqual([
+      { field: 'rating', kept: '5', offered: '3' },
+    ])
+  })
+
+  it('a blank on either side is a FILL, not a difference — nothing is reported', () => {
+    // `existing` has series: '' and cover: '' — the exact values the fill test above shows the
+    // merge TAKING. A taken value was never contested.
+    expect(
+      mergeDifferences(existing, {
+        title: 'Fourth Wing',
+        series: 'The Empyrean',
+        cover: 'http://c/x.jpg',
+      }),
+    ).toEqual([])
+    // …and the mirror: incoming blank against an existing value is equally not a difference.
+    expect(mergeDifferences(existing, { title: 'Fourth Wing', rating: 0, last: '' })).toEqual([])
+  })
+
+  it('identical values on both sides report nothing', () => {
+    expect(mergeDifferences(existing, { title: 'Fourth Wing', rating: 5, last: 'Yarros' })).toEqual(
+      [],
+    )
+  })
+
+  it('union fields never appear — both sides are kept, so nothing is discarded', () => {
+    // tags/genres/owned/possession all disagree here and all union in mergeImport.
+    const diffs = mergeDifferences(existing, {
+      title: 'Fourth Wing',
+      tags: ['Enemies to Lovers'],
+      genres: ['Fantasy'],
+      owned: { physical: 'hardcover', ebook: true, audiobook: false },
+      ownership: 'unowned',
+      wishlist: true,
+    })
+    expect(diffs).toEqual([])
+  })
+
+  it('classified-but-unreported fields stay off the line (cover URL, fabricated source/status)', () => {
+    const withValues = makeBook({
+      id: 'y',
+      title: 'T',
+      cover: 'http://existing/a.jpg',
+      source: 'Owned',
+      status: 'ongoing',
+    })
+    const diffs = mergeDifferences(withValues, {
+      title: 'T',
+      cover: 'http://incoming/b.jpg',
+      source: 'Imported',
+      status: 'standalone',
+    })
+    expect(diffs).toEqual([])
+  })
+
+  it('reports several fields at once, and is total — same answer whatever the input object order', () => {
+    const rich = makeBook({
+      id: 'z',
+      title: 'T',
+      last: 'Yarros',
+      rating: 4.5,
+      format: 'Paperback',
+      pub: { y: 2023, m: null, d: null },
+    })
+    const inc = { title: 'T', rating: 5, format: 'Hardcover', pub: { y: 2024, m: null, d: null } }
+    expect(mergeDifferences(rich, inc)).toEqual([
+      { field: 'format', kept: 'Paperback', offered: 'Hardcover' },
+      { field: 'published', kept: '2023', offered: '2024' },
+      { field: 'rating', kept: '4.5', offered: '5' },
+    ])
+    // key order in the incoming literal must not move the answer
+    const reordered = { pub: inc.pub, format: inc.format, title: 'T', rating: inc.rating }
+    expect(mergeDifferences(rich, reordered)).toEqual(mergeDifferences(rich, inc))
   })
 
   it('is idempotent — re-merging identical data is a no-op', () => {

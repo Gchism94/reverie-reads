@@ -152,6 +152,180 @@ export function enrichmentSeriesFill(
 }
 
 /**
+ * THE FILL-BLANK CLASSIFICATION — one table, two readers (feat/merge-differs-line).
+ *
+ * These are the fields where, when BOTH sides carry a value, the EXISTING one wins silently and
+ * the incoming one is discarded. `mergeImport` consumes this to compute its patch; `mergeDifferences`
+ * consumes the same entries to report what was discarded. They must not drift: if a field is
+ * reclassified in one place and not the other, the differs line starts describing a merge that no
+ * longer happens — the shape this repo has paid for three times in a fortnight (`max + 1000` at
+ * three sites, the half-star snap at three, two copies of DESIGN_BACKLOG.md). Hence a table rather
+ * than a second hand-written list.
+ *
+ * NOT IN HERE, deliberately, and each exclusion is by CONSTRUCTION rather than omission:
+ *   · union / additive fields (tags, genres, subgenres, contributors, owned, possession) — both
+ *     sides are kept, so nothing is discarded and there is nothing to report;
+ *   · never-overwrite fields (fave, plan, progress) and untouched ones (tropes, moods) — not the
+ *     engine's call to make, so not the engine's difference to narrate;
+ *   · `title`, which is the match key and is never patched.
+ * `rating` IS here: it fills a blank only, so a set existing rating wins — that silent keep is the
+ * single most common contested field (60 of 290 seed books carry a fractional rating that a
+ * Goodreads integer re-import disagrees with) and it is exactly what the differs line exists to
+ * show. Showing it is not offering it: it stays unpickable.
+ *
+ * `show` present = renderable on the one-line summary. Absent = classified but never reported,
+ * with the reason on the entry.
+ */
+interface FillBlankField {
+  key: string
+  /** short human label for the differs line */
+  label: string
+  existingBlank: (b: Book) => boolean
+  incomingHas: (inc: Incoming) => boolean
+  apply: (patch: Partial<Book>, inc: Incoming) => void
+  show?: (b: Book | Incoming) => string
+}
+
+/** The uniform "existing wins unless blank" entry, GENERIC over the key so `patch[k] = inc[k]`
+ *  keeps each field's own type (a widened key union collapses `status` to bare string). */
+const text = <
+  K extends
+    | 'first'
+    | 'last'
+    | 'series'
+    | 'genre'
+    | 'subgenre'
+    | 'status'
+    | 'cover'
+    | 'isbn'
+    | 'format'
+    | 'source',
+>(
+  key: K,
+  label: string,
+  show?: (b: Book | Incoming) => string,
+): FillBlankField => ({
+  key,
+  label,
+  existingBlank: (b) => !b[key],
+  incomingHas: (inc) => !!inc[key],
+  apply: (patch, inc) => {
+    patch[key] = inc[key]
+  },
+  ...(show ? { show } : {}),
+})
+
+const str =
+  (key: 'first' | 'last' | 'series' | 'genre' | 'subgenre' | 'format' | 'isbn') =>
+  (b: Book | Incoming): string =>
+    String(b[key] ?? '')
+
+export const FILL_BLANK_FIELDS: readonly FillBlankField[] = [
+  text('first', 'author first', str('first')),
+  text('last', 'author last', str('last')),
+  text('series', 'series', str('series')),
+  text('genre', 'genre', str('genre')),
+  text('subgenre', 'subgenre', str('subgenre')),
+  text('format', 'format', str('format')),
+  text('isbn', 'ISBN', str('isbn')),
+  // NOT REPORTED — a cover is a URL, which cannot be stated in a few words on a one-line summary,
+  // and a cover difference is already visible as a picture on the card.
+  text('cover', 'cover'),
+  // NOT REPORTED — both are values an import FABRICATES rather than carries: `source` is always
+  // 'Imported' (csv.ts) and `status` is always 'standalone' on the StoryGraph path / absent on
+  // Goodreads. Existing rows have both set on 290 of 290 seed books, so reporting them would fire
+  // on essentially every card — the noise that trains a reader to stop reading the line.
+  text('status', 'series status'),
+  text('source', 'source'),
+  {
+    key: 'position',
+    label: 'series position',
+    existingBlank: (b) => b.position === '',
+    incomingHas: (inc) => inc.position != null && inc.position !== '',
+    apply: (patch, inc) => {
+      patch.position = inc.position
+    },
+    show: (b) => String(b.position ?? ''),
+  },
+  {
+    key: 'seriesCount',
+    label: 'series length',
+    existingBlank: (b) => b.seriesCount == null,
+    incomingHas: (inc) => inc.seriesCount != null,
+    apply: (patch, inc) => {
+      patch.seriesCount = inc.seriesCount
+    },
+    show: (b) => (b.seriesCount == null ? '' : String(b.seriesCount)),
+  },
+  {
+    // The pub date moves as a WHOLE object, gated on the year; the differs line projects it to the
+    // year alone, which is the part a reader can read at a glance and the part the gate tests.
+    key: 'pub',
+    label: 'published',
+    existingBlank: (b) => !b.pub || !b.pub.y,
+    incomingHas: (inc) => !!inc.pub?.y,
+    apply: (patch, inc) => {
+      patch.pub = inc.pub
+    },
+    show: (b) => (b.pub?.y == null ? '' : String(b.pub.y)),
+  },
+  {
+    key: 'intensity',
+    label: 'intensity',
+    existingBlank: (b) => b.intensity == null,
+    incomingHas: (inc) => inc.intensity != null,
+    apply: (patch, inc) => {
+      patch.intensity = inc.intensity
+    },
+    show: (b) => (b.intensity == null ? '' : String(b.intensity)),
+  },
+  {
+    key: 'rating',
+    label: 'rating',
+    existingBlank: (b) => !b.rating,
+    incomingHas: (inc) => !!inc.rating,
+    apply: (patch, inc) => {
+      patch.rating = inc.rating
+    },
+    show: (b) => (b.rating ? String(b.rating) : ''),
+  },
+]
+
+/** One field the merge decided silently: the existing value won, the incoming one was discarded. */
+export interface MergeDifference {
+  /** short human label, from the classification table */
+  field: string
+  /** the value that survives (the existing record's) */
+  kept: string
+  /** the value the incoming record offered and the merge discards */
+  offered: string
+}
+
+/**
+ * What a merge DISCARDS — the counterpart to `mergeImport`'s patch, which reports only what it adds.
+ *
+ * A fill-blank field whose existing value is already set produces NO patch entry, which is why a
+ * disagreement renders nothing today. This reports those pairs, and only those: both sides set, and
+ * different. A blank on either side is a FILL (or a no-op), never a difference. Pure and total —
+ * same input, same answer, no ordering dependence.
+ *
+ * Comparison is on the RENDERED string, deliberately: the question the line answers is "would a
+ * reader see two different values", so 'The Empyrean' vs 'the empyrean' is worth surfacing (the
+ * merge does keep the existing casing) even though the values are semantically the same.
+ */
+export function mergeDifferences(existing: Book, incoming: Incoming): MergeDifference[] {
+  const out: MergeDifference[] = []
+  for (const f of FILL_BLANK_FIELDS) {
+    if (!f.show) continue
+    const kept = f.show(existing)
+    const offered = f.show(incoming)
+    if (!kept || !offered || kept === offered) continue
+    out.push({ field: f.label, kept, offered })
+  }
+  return out
+}
+
+/**
  * Most-complete field values flow into the existing record; **user-authored fields always win**.
  * Single-value fields fill blanks only (existing kept when set). Multi-value fields union
  * (additive — never removes a curated trope/genre or turns off an owned flag). myRating, owned,
@@ -161,41 +335,9 @@ export function enrichmentSeriesFill(
 export function mergeImport(existing: Book, incoming: Incoming): ImportMergeResult {
   const patch: Partial<Book> = {}
 
-  const fill = <
-    K extends
-      | 'first'
-      | 'last'
-      | 'series'
-      | 'genre'
-      | 'subgenre'
-      | 'status'
-      | 'cover'
-      | 'isbn'
-      | 'format'
-      | 'source',
-  >(
-    k: K,
-  ) => {
-    if (!existing[k] && incoming[k]) patch[k] = incoming[k]
+  for (const f of FILL_BLANK_FIELDS) {
+    if (f.existingBlank(existing) && f.incomingHas(incoming)) f.apply(patch, incoming)
   }
-  fill('first')
-  fill('last')
-  fill('series')
-  fill('genre')
-  fill('subgenre')
-  fill('status')
-  fill('cover')
-  fill('isbn')
-  fill('format')
-  fill('source')
-
-  if (existing.position === '' && incoming.position != null && incoming.position !== '')
-    patch.position = incoming.position
-  if (existing.seriesCount == null && incoming.seriesCount != null)
-    patch.seriesCount = incoming.seriesCount
-  if ((!existing.pub || !existing.pub.y) && incoming.pub?.y) patch.pub = incoming.pub
-  if (existing.intensity == null && incoming.intensity != null) patch.intensity = incoming.intensity // fill a blank only
-  if (!existing.rating && incoming.rating) patch.rating = incoming.rating // fill a blank rating only
 
   // Multi-value: union (additive).
   const tags = [...new Set([...existing.tags, ...(incoming.tags ?? [])])]
