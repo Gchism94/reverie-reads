@@ -274,9 +274,10 @@ function` + fresh `create` resets it to the PUBLIC-execute default — verified 
   **Auditing for it needs the LIVE BRANCH REF, not the PR's head.** `gh pr list --json headRefOid`
   reports the head _at merge time_, which is on `main` by definition — it structurally cannot see
   this variant. Compare `git ls-remote --heads origin` tips against `main` instead. That scan
-  over-reports (a tip is also not an ancestor when the content re-landed via a later PR), so a hit
-  is a question, not a verdict: diff the touched files against `main` before calling anything
-  stranded.
+  over-reports (a tip is also not an ancestor when the content re-landed via a later PR): 12 hits,
+  11 benign, one real. Diff the touched files against `main` before calling anything stranded —
+  this is the positive half of the error-characteristics rule in "Testing & verification
+  discipline", which carries both directions.
 
 - **A stacked PR that says "Merged" has not necessarily landed. Run
   `scripts/check-pr-landed.sh <branch> [base]` before calling the thread closed.** Branching from
@@ -294,7 +295,7 @@ function` + fresh `create` resets it to the PUBLIC-execute default — verified 
 
 ## Testing & verification discipline
 
-Fourteen rules, each earned by a real failure. A rule without its reason gets dropped by whoever
+Sixteen rules, each earned by a real failure — counted from the list below, not carried forward. A rule without its reason gets dropped by whoever
 inherits it, so the reason stays attached.
 
 - **Assert the thing itself, not a proxy that would look the same if the thing were absent.** This is
@@ -480,6 +481,34 @@ test` outright and only fail `tsc`. This has bitten twice, by two different tool
   a budget you computed rather than observed is a guess wearing a ratchet's clothes. The same shape
   as the negative-assertion rule above — an assertion that passes for a reason other than the one you
   think is worse than no assertion, because it also stops anyone else from looking.
+
+- **An instrument's output means nothing until you know its ERROR CHARACTERISTICS — in both
+  directions. Validate it against a known case before believing it.** Two failure directions, one
+  principle, kept together because splitting them is how a rule list stops being read (this repo has
+  paid for split documentation twice: two `DESIGN_BACKLOG.md` copies, and three `ci.yml` comments
+  each asserting the same false thing about required checks).
+
+  **A CLEAN result from an unvalidated instrument is not evidence** — the negative may be vacuous.
+  `scripts/spec-isolation-sweep.sh` reporting "0 false greens" is indistinguishable from a sweep
+  that cannot detect one, and it very nearly was: run with `--project=rest` it reported the eight
+  `mobile`-only specs as passing WITHOUT EXECUTING A TEST, caught only because a file that should
+  take 40s finished in 3. Its zero became meaningful only after replaying a known-bad
+  (`star-touch-targets.spec.ts` at `928d5d9^`) and confirming the harness fails on it. Same shape as
+  the Edge-Function deploy check: a 401 from a gateway rejecting an unknown route is
+  indistinguishable from a deployed function demanding a JWT, so that check is only readable
+  alongside a `definitely-not-a-function` control returning 404.
+
+  **A HIT from an over-reporting instrument is a question, not a verdict** — the positive may be
+  benign. The stranded-branch scan (`git ls-remote` tips not ancestors of `main`) surfaced 12
+  branches; checking the touched files showed 11 were harmless — content re-landed via a later PR
+  (#293, #257, #244), already-recovered prior incidents (#252, #263, #267), or closed-not-merged
+  work that was never meant to land (#190, #204). Exactly one was real (#300's `07ceacd`). Diff
+  before you conclude.
+
+  **So: before reporting a number from any guard, sweep, probe or audit, state what it would do on
+  a case you already know the answer to.** If you cannot name that case, the number is not yet
+  evidence — and a validated instrument's known over-reporting is a feature to document, not a bug
+  to hide.
 
 ## Data-integrity & sourcing discipline
 
