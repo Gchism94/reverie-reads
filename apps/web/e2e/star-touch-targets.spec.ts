@@ -2,7 +2,7 @@ import { expect, test, type Page } from './support/fixtures'
 import { createClient } from '@supabase/supabase-js'
 import { authFailure } from './support/authError'
 import { keepOfflineCacheEmpty } from './support/offlineCache'
-import { okUser } from './support/ok'
+import { ok, okData, okUser } from './support/ok'
 
 // Defect B (docs/audits/mobile-shelf-interaction.md): CoverCard's fave toggle and MatchRoute's
 // "Not tonight" dismiss were both `opacity-0 … group-hover:opacity-100` — hover-only reveal, so on
@@ -81,6 +81,48 @@ async function signIn(page: Page): Promise<void> {
  * A half-star zone is by construction half a star's box, so padding cannot buy target size the
  * way it can for an isolated button — the star box width IS the lever.
  */
+const STAR_TITLE = 'Star Target Probe'
+
+/**
+ * Seeds this spec's OWN book — and that is the point, not boilerplate.
+ *
+ * This spec inherited cover-card's scaffolding, whose seeder was deleted here as "unused" when
+ * lint flagged it (#300). The spec then passed for days on LEFTOVER STATE: a book another spec's
+ * run had left for the shared test user. A database restart cleared it and the route rendered
+ * "That book isn't in your library." A spec that depends on another spec's residue is a false
+ * green — it can pass while asserting nothing about the code under test.
+ *
+ * Every row carries every column the batch touches (PostgREST bulk inserts take the UNION of keys,
+ * so an omitted key arrives as explicit NULL and a NOT NULL column rejects the whole batch).
+ */
+async function seedStarBook(c: Client): Promise<string> {
+  await ok(
+    c.sb.from('books').delete().eq('owner_id', c.uid).eq('title', STAR_TITLE),
+    'star-targets book delete',
+  )
+  const row = await okData(
+    c.sb
+      .from('books')
+      .insert({
+        owner_id: c.uid,
+        title: STAR_TITLE,
+        author_first: 'Nell',
+        author_last: 'Marrow',
+        genre: 'fantasy',
+        status: 'standalone',
+        ownership: 'owned',
+        borrowed: false,
+        wishlist: false,
+        fave: false,
+        rating: 3.5,
+      })
+      .select('id')
+      .single(),
+    'star-targets book insert',
+  )
+  return (row as { id: string }).id
+}
+
 const MIN_TARGET = 24
 
 /**
@@ -97,8 +139,8 @@ test.describe('star touch targets (coarse pointer only)', () => {
   test('half-star zones meet the 24px touch-target floor at a phone viewport', async ({ page }) => {
     test.setTimeout(120_000)
     const c = await client()
+    const bookId = await seedStarBook(c)
     await signIn(page)
-    const bookId = ((await c.sb.from('books').select('id').limit(1)).data ?? [])[0]?.id
     await page.goto(`/book/${bookId}`)
 
     const slider = page.getByRole('slider', { name: /Your rating/i })
