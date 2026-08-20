@@ -1,4 +1,4 @@
-import { importKey, type Book, type DuplicateVerdict, type Incoming } from '@reverie/core'
+import { importKey, type Book, type DuplicateVerdict, type Incoming, type MergeFieldPicks } from '@reverie/core'
 import { supabase } from '../lib/supabase'
 import { foldIn, insertNewBook, verdictLookupKey, type ReviewCandidate, type VerdictLookup } from './intake'
 
@@ -65,15 +65,17 @@ export async function resolveCandidate(
   candidate: ReviewCandidate,
   existing: Book,
   action: ReviewAction,
+  /** Per-field overrides from DuplicateReview's picker; absent = the engine's own answer. */
+  picks?: MergeFieldPicks,
 ): Promise<void> {
   const ownerId = await currentUserId()
   const inc = candidate.incoming
   switch (action) {
     case 'merge':
-      await foldIn(await hydrateReads(existing), inc, ownerId)
+      await foldIn(await hydrateReads(existing), inc, ownerId, picks)
       return
     case 'always_merge':
-      await foldIn(await hydrateReads(existing), inc, ownerId)
+      await foldIn(await hydrateReads(existing), inc, ownerId, picks)
       await rememberVerdict(existing.id, inc, 'always_merge')
       return
     case 'keep_both':
