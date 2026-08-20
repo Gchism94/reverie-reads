@@ -1,12 +1,13 @@
 import { useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import {
-  mergeDifferences,
+  mergeFieldOptions,
   mergeImport,
   type Book,
   type Incoming,
   type MatchStrength,
-  type MergeDifference,
+  type MergeFieldOption,
+  type MergeFieldPicks,
 } from '@reverie/core'
 import { useBooks } from '../data/books'
 import { resolveCandidate, type ReviewAction } from '../data/duplicates'
@@ -56,26 +57,18 @@ function foldSummary(existing: Book, inc: Incoming): string[] {
 const author = (inc: Incoming) => [inc.first, inc.last].filter(Boolean).join(' ')
 
 /**
- * THE DIFFERS LINE — the one place its phrasing lives, so changing the wording is a one-function
- * edit rather than a hunt through JSX.
+ * WHY THERE IS NO LONGER A "differs:" LINE (#302 shipped one; this replaces it).
  *
- * It narrates what the merge SILENTLY DISCARDS: `mergeImport`'s patch reports only what a merge
- * ADDS, so a field both records set — the reader's 4.5 rating against an import's 5 — renders
- * nothing at all today. `mergeDifferences` (core, sharing the merge's own field classification)
- * finds those pairs; this states them.
- *
- * PASSIVE BY DESIGN — not a picker. The measured contested count is 0-1 fields on a typical merge,
- * and the most common one (`rating`) is a value no import may move at all. Two server-side
- * decisions a control could never reach even if one were built: the plan moves whole-or-not-at-all
- * (merge_books' `take_plan`) and `series_user_chosen` is derived inside the RPC.
- *
- * Returns null when nothing differs, which is most merges — a "differs: —" on every card is the
- * noise that teaches a reader to stop reading the line.
+ * That line existed to narrate what a merge SILENTLY DISCARDS — a field both records set, where
+ * `mergeImport`'s patch reports nothing because nothing is added. It was passive by design, since
+ * at the time there was no control to offer. A 'replace' checkbox states the identical pair
+ * (yours 4.5 / import 5) and lets a reader act on it, so keeping both would put the same sentence
+ * on one card twice — and the redundant one is the one that cannot be acted on. `mergeDifferences`
+ * is not orphaned by the removal: it is now the picker's contested-field predicate.
  */
-function differsLine(diffs: readonly MergeDifference[]): string | null {
-  if (!diffs.length) return null
-  return `differs: ${diffs.map((d) => `${d.field} ${d.kept} kept over ${d.offered}`).join(', ')}`
-}
+
+/** Whether a merge would take this option, given the reader's picks over the engine's defaults. */
+const taken = (o: MergeFieldOption, picks: MergeFieldPicks | undefined) => picks?.[o.key] ?? o.take
 
 export function DuplicateReview({
   candidates,
@@ -90,6 +83,12 @@ export function DuplicateReview({
 
   const [queue, setQueue] = useState<ReviewCandidate[]>(candidates)
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  /**
+   * Reader overrides, keyed by candidate then field. ABSENT MEANS THE ENGINE'S ANSWER — this map
+   * starts empty and stays empty for an untouched card, which is what keeps a 200-row import
+   * one-click: `applyFieldPicks(existing, inc, undefined)` is the engine's own patch.
+   */
+  const [picks, setPicks] = useState<Record<string, MergeFieldPicks>>({})
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -103,7 +102,7 @@ export function DuplicateReview({
       for (const c of items) {
         const existing = byId.get(c.existingId)
         if (!existing) continue
-        await resolveCandidate(c, existing, action)
+        await resolveCandidate(c, existing, action, picks[keyOf(c)])
         done.add(keyOf(c))
       }
     } catch (e) {
@@ -181,8 +180,11 @@ export function DuplicateReview({
       {queue.map((c) => {
         const existing = byId.get(c.existingId)
         const adds = existing ? foldSummary(existing, c.incoming) : []
-        const differs = existing ? differsLine(mergeDifferences(existing, c.incoming)) : null
+        const options = existing ? mergeFieldOptions(existing, c.incoming) : []
         const k = keyOf(c)
+        const chosen = picks[k]
+        const setPick = (field: string, take: boolean) =>
+          setPicks((p) => ({ ...p, [k]: { ...p[k], [field]: take } }))
         return (
           <Surface key={k} tone="card" radius="card" pad={2}>
             <div className="flex items-start gap-2">
@@ -223,21 +225,67 @@ export function DuplicateReview({
                     <span className="text-[11px] uppercase tracking-[0.12em] text-muted">
                       Added on merge
                     </span>
-                    <div className="text-ink">
-                      {adds.length ? adds.join(', ') : 'nothing new — already complete'}
-                    </div>
+                    {options.length ? (
+                      /*
+                       * COLLAPSED BY DEFAULT, and the summary is exactly the sentence this panel
+                       * showed before the picker existed. An import of several hundred rows pays
+                       * nothing for the capability: the closed card reads the same, Merge without
+                       * opening writes the same patch, and only a reader who has a disagreement
+                       * to settle opens it.
+                       */
+                      <details className="group">
+                        <summary className="cursor-pointer list-none text-ink marker:content-none">
+                          {adds.length ? adds.join(', ') : 'nothing new — already complete'}{' '}
+                          <span className="text-[11px] text-muted underline">
+                            choose fields ({options.length})
+                          </span>
+                        </summary>
+                        <ul className="mt-1.5 flex flex-col gap-1" data-testid="merge-field-picker">
+                          {options.map((o) => (
+                            <li key={o.key}>
+                              <label className="flex items-start gap-2 text-[12px]">
+                                <input
+                                  type="checkbox"
+                                  className="mt-0.5"
+                                  checked={taken(o, chosen)}
+                                  onChange={(e) => setPick(o.key, e.target.checked)}
+                                />
+                                <span className="min-w-0">
+                                  <span className="text-ink">{o.label}</span>{' '}
+                                  {o.kind === 'add' ? (
+                                    /*
+                                     * `theirs` is empty for the three fields the classification
+                                     * table carries with no `show` (cover, status, source) — they
+                                     * are unrenderable, not absent, so the row offers the decision
+                                     * without quoting a value it cannot display.
+                                     */
+                                    <span className="text-muted">
+                                      {o.theirs ? `add “${o.theirs}”` : 'add from the import'}
+                                    </span>
+                                  ) : (
+                                    <span className="text-muted">
+                                      keep yours “{o.mine}” — or take “{o.theirs}”
+                                    </span>
+                                  )}
+                                </span>
+                              </label>
+                            </li>
+                          ))}
+                        </ul>
+                      </details>
+                    ) : (
+                      <div className="text-ink">
+                        {adds.length ? adds.join(', ') : 'nothing new — already complete'}
+                      </div>
+                    )}
                   </Surface>
                 </div>
-                {differs && (
-                  <p className="mt-1 text-[12px] text-muted" data-testid="merge-differs">
-                    {differs}
-                  </p>
-                )}
                 <div className="mt-2 flex flex-wrap gap-2">
                   <button
                     type="button"
                     disabled={busy}
                     onClick={() => void resolveMany([c], 'merge')}
+                    aria-label={`Merge ${c.incoming.title}`}
                     className="skin-control px-3 py-1.5 text-[12.5px] font-semibold text-on-primary disabled:opacity-40"
                     style={{ background: 'var(--accent-fill)' }}
                   >
@@ -247,6 +295,7 @@ export function DuplicateReview({
                     type="button"
                     disabled={busy}
                     onClick={() => void resolveMany([c], 'keep_both')}
+                    aria-label={`Keep both ${c.incoming.title}`}
                     className="skin-control border border-line px-3 py-1.5 text-[12.5px] font-semibold text-ink disabled:opacity-40"
                     style={{ background: 'var(--field)' }}
                   >
@@ -256,6 +305,7 @@ export function DuplicateReview({
                     type="button"
                     disabled={busy}
                     onClick={() => void resolveMany([c], 'always_merge')}
+                    aria-label={`Always merge ${c.incoming.title}`}
                     className="skin-control border border-line px-3 py-1.5 text-[12.5px] font-semibold text-muted disabled:opacity-40"
                     style={{ background: 'var(--field)' }}
                     title="Merge now and auto-merge this pair on future imports"
