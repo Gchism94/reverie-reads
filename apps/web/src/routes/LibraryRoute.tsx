@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { createRoute, Link, useNavigate } from '@tanstack/react-router'
 import {
   groupSeries,
+  hiddenMatchCount,
   inDefaultLibrary,
   matchesFilters,
   sortBooks,
@@ -138,6 +139,10 @@ function LibraryScreen() {
   const mode = useFilters((s) => s.mode)
   const panelOpen = useFilters((s) => s.panelOpen)
   const setShelf = useFilters((s) => s.setShelf)
+  // The withheld-matches line REVEALS BY DRIVING THE CHIP — the same action ⊹ Show wishlist fires,
+  // not a second switch beside it. A parallel piece of state would be free to disagree with the
+  // chip (line says shown, chip says off), and the reader would have two controls for one scope.
+  const toggleWishlist = useFilters((s) => s.toggleWishlist)
   const updateBook = useUpdateBook()
   const navigate = useNavigate()
   // A shelf link is a one-time arrival, not a persistent URL param: it seeds the filter store on the
@@ -167,6 +172,27 @@ function LibraryScreen() {
   // The default library — what you have in hand (owned or borrowed) or have read. Wishlist and
   // unset-unread records join in only via the filter chip (docs/archive/task-ownership-v2.md).
   const libraryBooks = useMemo(() => (books ?? []).filter(inDefaultLibrary), [books])
+  // SAY WHAT YOU SILENTLY DID.
+  //
+  // The scope gate above is a deliberate model and stays exactly as it is — the defect it caused
+  // was never the filtering, it was the SILENCE. An exact-title query is the strongest intent
+  // signal a reader can send, and a view default was overruling it with nothing on screen to say
+  // so; the only escape was a chip whose label ("⊹ Show wishlist") never advertises that it
+  // governs search results.
+  //
+  // Third surface in this app with that shape, so it is worth naming rather than fixing once more
+  // in isolation. The sibling is DuplicateReview's `differs` line, which states the values a merge
+  // silently kept over the ones it discarded (components/DuplicateReview.tsx). The one still
+  // unnarrated is Discover's fn-down fallback, which substitutes curated content for live results
+  // indistinguishably. Each does something defensible and does it quietly; the fix is never to stop
+  // doing it, it is to say so — and, where there is a way to undo it, to offer that in the same
+  // breath.
+  //
+  // Two properties this line borrows from the differs line, both load-bearing: the count is REAL
+  // (hiddenMatchCount runs the books through matchesFilters itself, so it cannot disagree with the
+  // grid it annotates) and it renders NOTHING at zero, which is most searches. A standing "0
+  // hidden" is what teaches a reader to stop reading the line.
+  const hiddenCount = useMemo(() => hiddenMatchCount(books ?? [], filters), [books, filters])
 
   if (isLoading) return <Centered>{voice.loading}</Centered>
   if (isError) return <Centered>Couldn’t load your library — {(error as Error).message}</Centered>
@@ -208,6 +234,26 @@ function LibraryScreen() {
       <Toolbar filterToggleClass="lg:hidden" />
       {/* Mobile filters are toggled inline; on desktop they live in the persistent left column. */}
       <div className="lg:hidden">{panelOpen && <FilterPanel books={books} />}</div>
+
+      {hiddenCount > 0 && (
+        <p
+          role="status"
+          data-testid="search-hidden-notice"
+          className="mb-3 text-[12.5px] text-muted"
+        >
+          {hiddenCount} {hiddenCount === 1 ? 'match' : 'matches'} hidden by filters —{' '}
+          <button
+            type="button"
+            data-testid="search-hidden-reveal"
+            onClick={toggleWishlist}
+            aria-label="Show matches hidden by filters"
+            className="underline underline-offset-2"
+            style={{ color: 'var(--accent-ink)' }}
+          >
+            show
+          </button>
+        </p>
+      )}
 
       <SectionHeader
         className="mb-3"
