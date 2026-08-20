@@ -833,6 +833,23 @@ aspect` at 9.1s. `e2e` failed exactly once in the surrounding 60 runs.
   spine-reveal branch and #271 was not; (3) `E2E_WORKERS` and runner contention, since
   `playwright.config.ts` records this same spec as one of the two that starve under `workers=2`.
 
+  **Occurrence 3 — same FILE, different test: `:581` "containment: the revealed box stays inside
+  the track" (2026-08-20, local, `ci/layout-sweep-390` verification run 3).** A `toHaveCount`
+  failure at 39.3s, with the file's 5 remaining serial tests blocked behind it. What makes this one
+  different is the contrast, and the contrast is the content: it fired in the **127-test
+  `layout-390` sweep** (workers 1, fresh DB — and run 2 of the same sweep had passed this test
+  minutes earlier), while the identical spec passes consistently in the PR-time `mobile` project's
+  7-spec run, three green full-suite CI runs the same week. The checklist's item (1) doesn't apply
+  — the failing assertion isn't the pick — and no code change is in reach (the sweep branch touches
+  zero app source). That points at **load / run-length** — the spec's documented
+  starve-under-contention behaviour reached through a longer run rather than more workers. A fourth
+  occurrence starts at item (3).
+
+  **Operating convention for `layout-sweep-390` reds, recorded here so it outlives PR #293's
+  body:** a dispatch-run red gets this section's flake-vs-defect judgment like any PR red — it is
+  NOT self-evidently a flake just because the job is non-blocking. The sweep uploads its HTML
+  report on failure precisely so that judgment can be made from one run.
+
 - **CI `Start Supabase` — `failed to bind host port … address already in use`. TWO occurrences on
   2026-08-14, both in the `e2e` job, both re-run green.** Written down on the second, because the
   first was noted only in conversation and evaporated — the identical loop that kept
