@@ -1,4 +1,5 @@
 import { useRef, type KeyboardEvent, type PointerEvent } from 'react'
+import { snapHalfRating } from '@reverie/core'
 
 /**
  * Five-star rating, whole or half stars.
@@ -35,11 +36,21 @@ export function Stars({
   step?: 1 | 0.5
 }) {
   const rootRef = useRef<HTMLDivElement>(null)
+  // POINTER QUANTIZATION, deliberately local — the same clamp-and-snap policy as core's
+  // snapHalfRating, generalized over `step` for what the interactive control may EMIT. It stays
+  // here, unexported, on purpose: a step-parameterized `snapRating(raw, step)` in core would
+  // invite `snapRating(x, 1)` on an import path and silently reopen the whole-star truncation
+  // #289 closed. This is a third operation that merely RESEMBLES the two data coercions core
+  // consolidated; resemblance is not identity, and exporting it would let someone "finish the
+  // job" that must not be finished.
   const snap = (v: number) => Math.max(0, Math.min(5, Math.round(v / step) * step))
   // Display mode always renders the half grid: `step` bounds what an INTERACTIVE control can
   // emit (the truncation fence), but a read-only view of a stored 4.5 must show 4.5 — the
-  // per-read rows and the format line render without a step prop.
-  const shown = onChange ? snap(value) : Math.max(0, Math.min(5, Math.round(value * 2) / 2))
+  // per-read rows and the format line render without a step prop. snapHalfRating IS this policy
+  // (one place, #289); its isFinite guard is the one delta from the expression it replaces —
+  // non-finite input now renders 0 rather than propagating NaN into aria labels and overlay
+  // widths. Unreachable from a numeric column; strictly safer where it isn't.
+  const shown = onChange ? snap(value) : snapHalfRating(value)
   const label = (v: number) => `${v % 1 === 0 ? v : v.toFixed(1)} star${v === 1 ? '' : 's'}`
 
   const fill = (i: number): '0%' | '50%' | '100%' => {

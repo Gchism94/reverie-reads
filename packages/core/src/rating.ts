@@ -14,6 +14,17 @@
  *
  * 0 stays 0: app-wide, 0 means UNRATED ("no rating yet"), and the CSV merge never writes a falsy
  * rating over an existing one. This function never turns an unrated row into a rated one.
+ *
+ * ── WHY THIS IS NOT A NumericFieldSpec, so nobody unifies them (rating-policy audit §0.33) ──────
+ * The two have OPPOSITE contracts. parseNumericField is string → REJECT: it guards typed form
+ * input, so a wrong-granularity value must produce a visible error — refusing silent coercion is
+ * its entire purpose. snapHalfRating is number → COERCE: an import cannot ask, so a StoryGraph
+ * 1.25 must become 1.5 silently-but-documentedly, once, here — erroring on 900 CSV rows would be
+ * unusable. Adding a `step` to the field spec would force parseNumericField to pick one behavior
+ * and betray the other. Secondary but real: numericField's blank → null means "not set", while
+ * ratings are 0-as-unrated and NEVER null — a unification invites exactly that flattening. If a
+ * future tidy-up moves this into numericField, import snapping quietly becomes import ERRORS;
+ * this paragraph exists so that tidy-up reads the reasoning before it starts.
  */
 export function snapHalfRating(raw: number): number {
   if (!Number.isFinite(raw)) return 0
