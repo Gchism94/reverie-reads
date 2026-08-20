@@ -186,6 +186,8 @@ export function toReadEntry(row: ReadRow): ReadEntry {
     format: row.format ?? '',
     rating: row.rating ?? 0,
     notes: row.notes ?? '',
+    // the per-format rating's rule-3 tiebreak (latestRatingByFormat) — same read_on, later logged
+    createdAt: row.created_at,
   }
 }
 
