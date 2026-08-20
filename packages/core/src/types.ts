@@ -44,6 +44,12 @@ export interface ReadEntry {
   format: string
   rating: number
   notes: string
+  /** ISO timestamp of when the row was logged (`reads.created_at`). OPTIONAL, deliberately: the
+   *  DB mapper always supplies it, but CSV imports and the merge/match paths construct entries
+   *  from sources where no such timestamp exists. It is the rule-3 tiebreak for the per-format
+   *  rating (same `read_on`, or both undated → the later-LOGGED read is the more recent
+   *  statement); where it is absent the tiebreak honestly degrades to first-encountered. */
+  createdAt?: string
 }
 
 /** Which formats the reader HAS (independent of the format read). `false` physical = not
