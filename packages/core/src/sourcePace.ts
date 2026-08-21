@@ -52,14 +52,3 @@ export const SOURCE_BUDGETS: Readonly<Record<PacedSource, SourceBudget>> = {
 
 /** The shared budget key. GLOBAL, not per-caller: the cap is on our egress IP, not on each reader. */
 export const sourceBudgetKey = (source: PacedSource): string => `source:${source}:global`
-
-/**
- * How long to wait before calling `source` again, given when it was last called.
- * `null` for "never called" — the first call waits for nothing.
- *
- * Never negative: a long-idle source is due immediately, not owed time.
- */
-export function waitMsFor(source: PacedSource, lastAt: number | null, now: number): number {
-  if (lastAt === null) return 0
-  return Math.max(0, SOURCE_BUDGETS[source].gapMs - (now - lastAt))
-}
