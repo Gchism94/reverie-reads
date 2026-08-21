@@ -31,7 +31,27 @@ function SearchResultsPanel({ q, onPick }: { q: string; onPick: (b: Book) => voi
   if (!q.trim()) return null
   return (
     <Frame
-      className="absolute left-0 right-0 top-[calc(100%+6px)] z-30 overflow-hidden p-2 shadow-lg"
+      // INLINE, AND NOW THE SOURCE SAYS SO. This carried `absolute left-0 right-0
+      // top-[calc(100%+6px)] z-30` and rendered none of it. Frame hardcodes `relative` ahead of the
+      // className it is passed, Tailwind emits `relative` after `absolute`, and the class attribute's
+      // order does not decide a cascade — so the panel has always been IN FLOW, pushing the grid
+      // down rather than floating over it.
+      //
+      // The offset was dead in a way that actively misleads: `getComputedStyle().top` read 156px on
+      // a two-result panel, which is the containing block's own height (150 = 40px input + 110px
+      // panel) plus 6 — self-referential, because the panel is what makes that block 150 tall. A
+      // percentage `top` on a relatively-positioned element in an auto-height block computes to
+      // `auto`, so nothing was applied; devtools showed a live-looking number for an offset that
+      // never moved anything.
+      //
+      // `mt-1.5` is the 6px the dead calc was asking for, taken through a property that works in
+      // flow. Deliberately NOT the overlay: making the panel truly absolute needs `.skin-plate`
+      // changed too (it sets `position: relative` in skin-kit.css, so Frame alone leaves tryst
+      // in flow while the other eight skins float), and it covers both the withheld-matches line
+      // and the Grid/Series toggle — two relocations and a nine-skin sweep. That is a design task,
+      // not this one. The guard in search-withheld-matches.spec.ts is what makes that decision
+      // visible if anyone takes it.
+      className="mt-1.5 overflow-hidden p-2 shadow-lg"
       style={{ boxShadow: 'var(--shadow)' }}
     >
       <ul className="flex flex-col">
