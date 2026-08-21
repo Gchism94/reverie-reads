@@ -241,10 +241,6 @@ export function parseCsvRows(text: string): CsvParsedRow[] {
  * Parse a Goodreads/StoryGraph CSV into incoming book records — the row extras dropped.
  * Kept for callers that only need the books; the web intake path uses parseCsvRows.
  */
-export function parseCsvIncoming(text: string): Incoming[] {
-  return parseCsvRows(text).map((r) => r.incoming)
-}
-
 export interface CsvImportResult {
   books: Book[]
   added: number
