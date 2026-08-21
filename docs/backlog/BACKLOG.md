@@ -25,8 +25,8 @@ forgotten.
 > | Deliberately partial, and why      | never                          | —                                                                                                        |
 > | Grep audit, 2026-08                | never                          | —                                                                                                        |
 > | Pre-public tracked-data decisions  | never                          | —                                                                                                        |
-> | Known-flaky, with a prior          | never                          | —                                                                                                        |
-> | Test-infrastructure follow-ups     | never                          | —                                                                                                        |
+> | Known-flaky, with a prior          | **2026-08-20** (batch 2)       | 5 live: 1 CLOSED, 3 OPEN (stamped), 1 rewritten from source                                              |
+> | Test-infrastructure follow-ups     | **2026-08-20** (batch 2)       | 9 live: 1 CLOSED, 7 OPEN (stamped), 1 unverifiable from a Code session                                   |
 > | Product queue                      | 2026-08-18 (verification pass) | corrected then; not re-checked here                                                                      |
 > | everything below Product queue     | never                          | —                                                                                                        |
 >
@@ -855,6 +855,21 @@ the repo goes public.
 
 ## Known-flaky, with a prior
 
+> **PERISHABLE — audited entry by entry 2026-08-20 (batch 2 of the file).** Every live entry below
+> was read, checked against the tree, and checked for ancestry on `origin/main`. Result: **1 CLOSED**
+> (struck, naming the commit, original folded into a `<details>`), **3 OPEN** (each stamped with what
+> it was verified against), **1 rewritten from source** because BOTH of its line citations pointed at
+> the wrong lines.
+>
+> **The section's own rule is what makes its stamps perishable in a way the rest of the file's are
+> not.** An entry here says "occurrence N"; the count is a claim about CI history, and CI keeps
+> running after the stamp is written. A stamp below verifies that _the test still exists, still
+> carries the quoted title, and no fix has landed_ — the tree-side half. It does not and cannot
+> verify that the occurrence count is still current. Read a stamped entry as "the defect is still
+> reachable", never as "it has still only happened N times".
+>
+> Sections other than this one and Test-infrastructure follow-ups are UNAUDITED as of batch 2.
+
 - ~~**Playwright install steps hanging on apt/CDN**~~ — **CLOSED 2026-08-19: the surface no longer
   exists.** What actually fixed it was not a better timeout, retry, or mirror — it was removing apt
   from the browser path entirely (`ci/no-apt-browser-path`): `ubuntu-latest` ships Google Chrome,
@@ -903,6 +918,8 @@ the repo goes public.
   a carrier count whose query hadn't settled under full-suite load. By this section's rule, a second
   failure here is a defect in that count's loading state, not a flake.
 
+  <sub>**verified 2026-08-20** — still OPEN: the test still exists at `trope-rename-delete.spec.ts:180` with the quoted title intact; one occurrence (2026-08-19), no fix landed, so the prior stands.</sub>
+
 - **`spine-shelf-reachability.spec.ts:477` — "cover aspect: the rendered cover box keeps the cover
   ratio at every visible wave position". TWO occurrences, and by this section's own rule the next one
   is a defect.**
@@ -942,6 +959,8 @@ aspect` at 9.1s. `e2e` failed exactly once in the surrounding 60 runs.
   `SpineShelf.tsx` or its geometry at all — occurrences 1 and 2 differ exactly here, since #149 was a
   spine-reveal branch and #271 was not; (3) `E2E_WORKERS` and runner contention, since
   `playwright.config.ts` records this same spec as one of the two that starve under `workers=2`.
+
+  <sub>**verified 2026-08-20** — still OPEN: the test still exists at `spine-shelf-reachability.spec.ts:477` with the quoted title; two occurrences recorded and no fix landed, so by this section's own rule the third is a defect.</sub>
 
 - **CI `Start Supabase` — `failed to bind host port … address already in use`. TWO occurrences on
   2026-08-14, both in the `e2e` job, both re-run green.** Written down on the second, because the
@@ -983,9 +1002,13 @@ aspect` at 9.1s. `e2e` failed exactly once in the surrounding 60 runs.
   (`supabase stop --no-backup || true` then one retry), not a concurrency change to the workflow —
   the evidence above already rules that out.
 
-- **`cover-card-touch-affordance.spec.ts:169` — "at rest the toggle is invisible; hovering the card
-  reveals it". RESOLVED — root-caused and fixed in `fix/cover-card-hover-flake`.** Recorded anyway,
-  because the failure it represents is a process one as much as a technical one.
+  <sub>**verified 2026-08-20** — still OPEN: still open, and NOT closed by the stack lock — `scripts/stack-lock.sh` serialises the LOCAL stack between sessions on one developer box, while this entry is about CI, where each job already has an isolated runner. `.github/workflows/ci.yml` still has no bounded retry around `supabase start`. The entry's own Docker-race diagnosis survives; the concurrency hypothesis it already ruled out is the one the lock would have addressed.</sub>
+
+- ~~**`cover-card-touch-affordance.spec.ts:169` — "at rest the toggle is invisible; hovering the card reveals it" — three occurrences, none written down until the third.**~~ **CLOSED — verified against source 2026-08-20.** the fix landed in #215: `cover-card-touch-affordance.spec.ts:188` now does `await page.mouse.move(0, 0)` to establish the at-rest precondition before asserting it — the Playwright pointer was persisting across navigation, which is what produced all three occurrences. The desktop-only skip at :167 is intact. Closed by `3e76f92`.
+  <details><summary>original entry</summary>
+  - **`cover-card-touch-affordance.spec.ts:169` — "at rest the toggle is invisible; hovering the card
+    reveals it". RESOLVED — root-caused and fixed in `fix/cover-card-hover-flake`.** Recorded anyway,
+    because the failure it represents is a process one as much as a technical one.
 
   **Three occurrences, none of them written down until the third.** It failed twice during the
   2026-08-13 session — once in a full local run, once in CI — and both times was assessed in
@@ -1016,6 +1039,8 @@ aspect` at 9.1s. `e2e` failed exactly once in the surrounding 60 runs.
 
   **A second failure here is a defect, not a flake** — and this time the precondition is explicit,
   so a recurrence means something else moved.
+
+  </details>
 
 - **`discover-search.spec.ts:275` — "Shelf picker seam: search everywhere finds and adds an unowned
   book to this shelf".** Failed once in CI on PR #126 (run `30762811683`), passed on re-run with
@@ -1053,12 +1078,42 @@ aspect` at 9.1s. `e2e` failed exactly once in the surrounding 60 runs.
   tests click a `.first()` button while `STUB_RESULTS` holds two entries, and both then poll for
   exactly the book that ordering ambiguity would drop. Worth checking first on the next look.
 
+  <sub>**REWRITTEN FROM SOURCE 2026-08-20 — the line citations were WRONG in both occurrences.**
+  `discover-search.spec.ts:275` is `borrowed: false,` — a line inside a fixture object, not a test.
+  The test it means, "Shelf picker seam: 'search everywhere' finds and adds an unowned book to
+  this shelf", begins at **:282**. The second occurrence's cite is wrong the same way: **:218**
+  is `await page.getByLabel('Clear search').click()`, while the test it means begins at **:225**.
+  Both are off by roughly seven lines — near enough to look right, far enough to send the next
+  reader to the wrong place. The flake itself is unchanged and the entry's prose about
+  `keepOfflineCacheEmpty` (called at :116) is accurate; only the coordinates were wrong.</sub>
+
 ## Test-infrastructure follow-ups
 
-- Trio migration (a11y/fonts/cover-sheet onto per-user accounts) — buys
-  `E2E_WORKERS` back above 1 once CI runtime is a real cost.
+> **PERISHABLE — audited entry by entry 2026-08-20 (batch 2 of the file).** Result: **1 CLOSED**,
+> **7 OPEN** (each stamped with the file:line it was checked against), **1 UNVERIFIABLE** from a
+> Code session and marked so rather than guessed.
+>
+> **Two findings worth reading before trusting anything else here.** First, the one CLOSED entry
+> was closed a long time ago and the file already knew: the "In flight" section at the top records
+> the trio migration as done, while this section still listed it as outstanding — **one document
+> disagreeing with itself**, which no amount of careful writing catches and only an entry-by-entry
+> pass does. Second, that entry's stated PURPOSE was also false: it claimed the migration "buys
+> `E2E_WORKERS` back above 1", and it does not, because `workers: 1` is held by an unrelated
+> mid-run seeder race. An entry can be closed on its action and still wrong on its reason, and the
+> reason is the half that gets built on.
+>
+> Sections other than this one and Known-flaky are UNAUDITED as of batch 2.
+
+- ~~**Trio migration** (a11y/fonts/cover-sheet onto per-user accounts).~~ **CLOSED — verified against source 2026-08-20.** the trio each own an account: `a11y-e2e@reverie.local` (a11y.spec.ts:16) and `cover-sheet-e2e@reverie.local` (cover-sheet.spec.ts:23); `fonts.spec.ts` needs none (it runs signed-out on the landing page). Migrated in #92. **AND THE ENTRY'S STATED PURPOSE IS NOW FALSE** — it says the migration "buys `E2E_WORKERS` back above 1". It does not: `workers: 1` is load-bearing for an unrelated reason, namely that `a11y.spec.ts:40` and `shelf-membership.spec.ts:37` both `execFileSync('node', ['scripts/seed-dev.mjs'])` MID-RUN, so two workers would race the same seeder. Parallelism is not waiting on this entry. Note also that the file's own "In flight" section already recorded this migration as done, while this section listed it as outstanding — the same file disagreeing with itself. Closed by `0e8d4ef`.
+  <details><summary>original entry</summary>
+  - Trio migration (a11y/fonts/cover-sheet onto per-user accounts) — buys
+    `E2E_WORKERS` back above 1 once CI runtime is a real cost.
+
+  </details>
+
 - Offline-path e2e specs recorded in `docs/archive/task-offline-session.md`. They become
   the stabilized suite's first real exercise.
+  <sub>**2026-08-20: UNVERIFIABLE FROM HERE** — the entry promises archived offline specs 'become the stabilized suite's first real exercise'. Whether that has happened is a claim about the suite's composition over time, not about any file — it needs the CI history for the offline specs' first green run. Nothing in the tree settles it.</sub>
 - **The a11y sweep has never scanned `CoverPlaceholder`** — every seeded book has a
   `cover_url`, so the placeholder path has never been put in front of axe, despite
   being the surface with the most contrast-test investment in `packages/core`. Add
@@ -1066,12 +1121,14 @@ aspect` at 9.1s. `e2e` failed exactly once in the surrounding 60 runs.
   means one thing. (Deliberately excluded from `test/trio-migration`: bundling it
   would have made a red acceptance run ambiguous between a migration break and a
   new discovery.)
+  <sub>**verified 2026-08-20** — still OPEN: `scripts/seed-dev.mjs:138` seeds `cover_url: b.cover || null` from the corpus, and `a11y.spec.ts` adds no coverless book, so the sweep still never puts `CoverPlaceholder` in front of axe. (`discover-cover-quality.spec.ts:24` does exercise the placeholder, but that is a different spec and not an axe scan.)</sub>
 - The a11y sweep's Playwright trace (~249MB) corrupts at write time on the CI
   runner in roughly 2 of 3 failures — the artifact uploads, its outer zip passes
   CRC, but the inner `trace.zip` is not a readable zip. Small traces from the
   same runs upload and open cleanly, so the mechanism is sound; likely a flush
   race on oversized captures. Another argument for splitting a11y into its own
   CI job.
+  <sub>**verified 2026-08-20** — still OPEN: the e2e-a11y job still uploads traces (`ci.yml:359-364`) with no flush, chunking or size cap. The corruption RATE the entry quotes is CI-history data, not a source fact — the mechanism is unaddressed either way.</sub>
 - **No Deno runtime executes in the gate, so `paceSource`'s body never runs under
   test.** The outbound pacing enforcement lives in
   `supabase/functions/_shared/sourcePace.ts`, and `deno` is installed neither
@@ -1084,6 +1141,7 @@ aspect` at 9.1s. `e2e` failed exactly once in the surrounding 60 runs.
   reasoned about, none executed. Wiring a Deno runner into the gate is its own
   branch; it would also cover `_shared/coverUrl.ts` and every other function-side
   module, which are uncovered for the same reason.
+  <sub>**verified 2026-08-20** — still OPEN: `ci.yml` still starts Supabase with `-x …,edge-runtime`, so the Deno sandbox never runs in the gate; `supabase/functions/_shared/sourcePace.ts` is imported only by `supabase/functions/enrich/index.ts`. The `packages/core` twin has tests; the Deno body still executes nowhere under test.</sub>
 - **`cover-sheet.spec.ts` asserts cover _source selection_, never cover _render quality_**
   (`apps/web/e2e/cover-sheet.spec.ts:196,218,235,245`). Every assertion is
   `toHaveAttribute('src', new RegExp(STUB.…))` — which cover the sheet _picked_ — with zero
@@ -1095,6 +1153,7 @@ aspect` at 9.1s. `e2e` failed exactly once in the surrounding 60 runs.
   that a real cover painted. Filed, not fixed — the judgment call is whether e2e should
   duplicate the component guard or trust it. The `src`-only assertions are _correct for what
   they test_ (cover-sheet selection logic); the gap is that nothing tests the other half.
+  <sub>**verified 2026-08-20** — still OPEN: `cover-sheet.spec.ts` still asserts only `src` URLs (lines 202/225/242/252) with zero `naturalWidth`/`naturalHeight` assertions. The component guard DOES exist (`CoverImage.tsx:83` calls `isDegenerateGoogleCoverRender`), so the gap is e2e-layer only — which is the judgement the entry files rather than settles.</sub>
 - ~~**Split the a11y sweep into per-skin jobs.**~~ **DONE** — built in `chore/a11y-timeout-raise`
   rather than filed, once a second timeout raise proved the number was the wrong lever.
   The sweep was ONE test looping ten skin x mode passes, so a single `test.setTimeout` covered ~104
@@ -1118,6 +1177,8 @@ aspect` at 9.1s. `e2e` failed exactly once in the surrounding 60 runs.
   caught. Filed, not fixed — adding it means a second `test(...)` block that does _not_ call
   `signIn` and walks the unauth routes, which is its own fixture scope.
 
+  <sub>**verified 2026-08-20** — still OPEN: `route-viewport.spec.ts:248` signs in before walking all 24 routes, and the list holds no signed-out surface; the landing and `/auth` are still unmeasured there.</sub>
+
 - **`fetchCover` is still callerless after #123 — the ISBN-direct cover path is not live.**
   `git log -S"fetchCover(" --all -- apps/ supabase/` returns no commit, ever: its only references
   are its definition and two test files. So `buildOpenLibraryIsbnCoverUrl`, the `?default=false`
@@ -1131,6 +1192,7 @@ aspect` at 9.1s. `e2e` failed exactly once in the surrounding 60 runs.
   mechanism. **Third instance of tested-but-uncalled code**, after `bookshopId` and
   `VITE_LIBRO_AFFILIATE_ID`. Decide per case: wire it, or delete it and its tests. The pattern
   itself is worth a lint rule — an exported symbol whose only importers are `*.test.ts`.
+  <sub>**verified 2026-08-20** — still OPEN: `fetchCover` has exactly ONE non-test occurrence in the tree — its own `export` at `packages/core/src/covers.ts:310`. Still callerless, and `paceSource('ol-covers')` is still dead configuration guarded by live tests. This is the repo's own documented 'exported symbol whose only importers are `*.test.ts`' shape: the standing rule says delete it or wire it, and neither has happened.</sub>
 - **`normalizeImage` decodes the same bytes four times where one would do.** Each
   `ImageMagick.read` re-decodes from scratch: the full-size webp encode, the thumb encode, a read
   whose _only_ purpose is `width`/`height`, and the dominant-colour pass. The dimensions are
@@ -1141,6 +1203,8 @@ aspect` at 9.1s. `e2e` failed exactly once in the surrounding 60 runs.
   actually serves large art (a camera upload at full resolution, or a future higher-res cover
   source) pays all four decodes on a big image, in a wasm sandbox, against Supabase's per-request
   CPU limit. Do not treat the current cost as the ceiling.
+
+  <sub>**verified 2026-08-20** — still OPEN: `supabase/functions/covers/index.ts:163` still carries its own comment naming 'FOUR FULL DECODES OF THE SAME BYTES', with the four `encode`/`ImageMagick.read` passes at 167-206. Instrumented, not optimised.</sub>
 
 ## Product queue
 
