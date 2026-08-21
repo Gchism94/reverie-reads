@@ -580,6 +580,16 @@ several defects have been "fixed" in code paths no reader can reach.
    `docs/reference/TRADEMARK.md` stays as history.
 2. **Household model** — v1 default: one personal library per account; sharing happens
    via shared lists + clubs (defer a true shared household library).
-3. **Spoiler gating** — v1 default: honor-based (client-side). Server-enforced via RLS
-   is a later upgrade.
+3. **Spoiler gating — DECIDED AND SHIPPED: server-enforced via RLS.** Not a pending
+   decision and not client-side. `club_comments`' `gated read` policy has enforced
+   `unit <= public.club_progress(club_id)` — the `comment.unit <= myProgress` rule — since the
+   original clubs migration (`20260624010200_clubs.sql:93`), hardened by
+   `20260627040000_ugc_moderation.sql` to add `and not hidden`. A behind-progress reader never
+   receives the row: the filter is in the database, not in the client, so it holds for any caller
+   including a raw PostgREST request. Covered by `supabase/tests/spoiler_live_test.sql` (6
+   assertions: a comment posted ahead of a reader stays invisible, and advancing their progress
+   reveals exactly the now-eligible one). This entry previously read "v1 default: honor-based
+   (client-side); server-enforced via RLS is a later upgrade" — the upgrade had in fact shipped
+   before that sentence was written, and a reader following it would have built a client-side gate
+   the database already enforces.
 4. **Capability-code sharing** — keep it alongside real accounts (frictionless joins).

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CsvImportError, importCsv, parseCSV, parseCsvIncoming, parseCsvRows } from './csv'
+import { CsvImportError, importCsv, parseCSV, parseCsvRows } from './csv'
 import { makeBook } from './book.fixture'
 import { possessionPatch, possessionState } from './ownership'
 import type { Book } from './types'
@@ -80,7 +80,7 @@ describe('possession from Goodreads shelves (legacy CSV path)', () => {
       'Someday,Ana Huang,to-read,0',
       'Loaned,Ana Huang,borrowed,3',
     ].join('\n')
-    const rows = parseCsvIncoming(text)
+    const rows = parseCsvRows(text).map((r) => r.incoming)
     // The WORD each shelf yields, then the flags behind the two non-owned ones: a `borrowed` shelf
     // must set borrowed=true rather than claiming ownership (docs/archive/task-shelf-model.md).
     const word = (r: Partial<Book>) => possessionState({ ...possessionPatch('unset'), ...r })
