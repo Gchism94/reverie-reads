@@ -6,11 +6,10 @@ import {
   toFirstLast,
   type Book,
   type Contributor,
-  type List,
   type ReadEntry,
   type ReadStatus,
 } from '@reverie/core'
-import type { BookRow, ListRow, ReadRow } from './types'
+import type { BookRow, ReadRow } from './types'
 
 const READ_STATUS: readonly ReadStatus[] = ['unset', 'Unread', 'Reading', 'Read', 'DNF']
 const COVER_CONFIDENCE = ['high', 'medium', 'low', 'none'] as const
@@ -174,10 +173,6 @@ export function toBookRow(patch: Partial<Book>): Partial<BookRow> {
   // Insert-time only in practice (imports carry Goodreads' Date Added); UI patches never set it.
   if (patch.addedTs !== undefined && patch.addedTs > 0) row.added_at = new Date(patch.addedTs).toISOString()
   return row
-}
-
-export function toList(row: ListRow): List {
-  return { id: row.id, name: row.name, priority: row.is_priority, ids: [] }
 }
 
 export function toReadEntry(row: ReadRow): ReadEntry {

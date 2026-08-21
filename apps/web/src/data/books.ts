@@ -21,23 +21,6 @@ export function useBooks() {
   })
 }
 
-export function useAddBook() {
-  const qc = useQueryClient()
-  return useMutation({
-    meta: { action: 'The new book' },
-    mutationFn: async (input: Partial<Book> & { title: string }): Promise<Book> => {
-      const { data: auth } = await supabase.auth.getUser()
-      const ownerId = auth.user?.id
-      if (!ownerId) throw new Error('Not signed in')
-      const row = { ...toBookRow(input), owner_id: ownerId, title: input.title }
-      const { data, error } = await supabase.from('books').insert(row).select().single()
-      if (error) throw error
-      return toBook(data as BookRow)
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: booksKey }),
-  })
-}
-
 /** Optimistic update: patch the cache immediately, roll back on error, reconcile on settle. */
 /**
  * Patch one book.

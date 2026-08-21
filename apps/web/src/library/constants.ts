@@ -23,16 +23,6 @@ export const FORMATS = [
   'Special Edition',
 ] as const
 
-export const SUBGENRES = [
-  'Romantasy',
-  'Dark Romance',
-  'Romance',
-  'Contemporary',
-  'Fantasy',
-  'Sports',
-  'Cowboy Romance',
-] as const
-
 /** The neutral catch-all subgenre — offered in every genre, so a non-romance library never has to
  *  file a book under a romance subgenre. */
 export const NEUTRAL_SUBGENRE = 'Other'
@@ -424,8 +414,6 @@ export function tropeGroupsForGenre(genre: string): Record<string, string[]> {
   const universal = UNIVERSAL_TROPES.filter((t) => !inOwn.has(t.toLowerCase()))
   return universal.length ? { ...own, Universal: universal } : { ...own }
 }
-
-export const ALL_TROPES: string[] = Object.values(TROPE_GROUPS).flat()
 
 export const SORTS: { value: LibrarySort; label: string }[] = [
   { value: 'az', label: 'Title A–Z' },

@@ -36,25 +36,6 @@ export interface SkinVoice {
 const ISBN_NOTICE =
   'may be missing a leading digit and might not match — your books imported fine. Re-export with ISBNs as text to fix this.'
 
-export const NEUTRAL_VOICE: SkinVoice = {
-  empty: {
-    heading: 'Nothing here yet',
-    body: 'Add your first book to begin your library.',
-    cta: 'Add a book',
-  },
-  loading: 'Loading…',
-  miss: 'No books match.',
-  milestone: 'Goal complete — every book accounted for.',
-  resume: 'Pick up where you left off.',
-  season: 'The year is under way.',
-  motif: '✦',
-  isbnNotice: ISBN_NOTICE,
-  ownIt: 'I own this',
-  borrowedIt: 'Borrowed',
-  wantIt: 'I want to read this',
-  unsetIt: 'Not set',
-}
-
 export const TRYST_VOICE: SkinVoice = {
   empty: {
     heading: 'Your shelves wait in the dark.',
