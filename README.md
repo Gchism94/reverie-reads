@@ -37,12 +37,11 @@ pnpm dev                # run the web app
 ### Environment variables (names only — never commit values)
 
 The committed `apps/web/.env` already carries the local-stack defaults — a fresh clone needs no
-env setup for local dev. For real keys (Sentry, Google Books) or a non-local backend, copy
+env setup for local dev. For real keys (Sentry) or a non-local backend, copy
 `.env.example` / `apps/web/.env.example` to the matching `.env.local` and fill in your
 own values. Names only:
 
-- **Required:** `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_GOOGLE_BOOKS_KEY`
-  (referrer-restricted).
+- **Required:** `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`.
 - **Optional:** `VITE_SENTRY_DSN`, `VITE_SOCIAL_AUTH_ENABLED`,
   `VITE_BUY_ATTRIBUTION_MODE`, `VITE_BOOKSHOP_AFFILIATE_ID`.
 - **Set by the build, not by you:** `VITE_BUILD_ID` and `VITE_RELEASE` are both baked to the
