@@ -375,23 +375,24 @@ inherits it, so the reason stays attached.
   double the assignments" described behavior the test did not assert, and two reports
   contradicted each other for a full round because of it. Name what the assertions actually
   check, not what you hope the surrounding code does.
-- **Revert mutants with `scripts/safe-revert.sh <file>`, not `git checkout --`. Commit first as
-  well — but the script is the rule, because "commit first" alone has now failed twice.** Mutation
-  testing deliberately corrupts the tree to prove a guard has teeth, and `git checkout -- <file>`
-  resets the WHOLE file to HEAD: the mutant you meant to undo and any other uncommitted work in it,
-  silently, unrecoverably. Twice destroyed real work:
+- **`git checkout -- <file>` is now mechanically blocked for Claude Code sessions, not just
+  written down — a third incident is what changed that.** Two written rules (2026-07-28, #93; and
+  the paragraph this replaces) did not make it a reflex, because the failure happens inside a fast
+  revert loop rather than at a moment of deliberation. Three times it destroyed real work:
   **2026-08-14** — `git checkout -- src/routes/IndieScreen.tsx` mid-run wiped six uncommitted
-  `.skin-control` migrations, found only when a later carrier count came back 0; and **2026-08-15**
+  `.skin-control` migrations, found only when a later carrier count came back 0; **2026-08-15**
   (`a2bdfd7`, `feat/card-surface-rulings-coverage`) — the same command destroyed the uncommitted
   `card`/`line` fixture additions, discovered when 35 tests went red and the next mutant's anchors
-  stopped resolving.
-  This rule has existed since 2026-07-28 (#93) and being written down did not make it a reflex,
-  because the failure happens inside a fast revert loop rather than at a moment of deliberation —
-  which is why the fix is now a command that backs up unconditionally before reverting, rather than
-  a third restatement. `safe-revert.sh` copies the file's current content to
+  stopped resolving; and a third time, later in the same session that added `safe-revert.sh` in the
+  first place. `.claude/hooks/pretooluse-guard.sh`, wired via `.claude/settings.json`'s PreToolUse
+  hook, now refuses the `git checkout -- ...` / `git checkout <ref> -- ...` form outright before it
+  runs — no escape hatch, because `scripts/safe-revert.sh <file> [<file2> ...]` covers every case
+  `git checkout --` does for a tracked file. Use it — it backs up each file's current content to
   `/tmp/mutation-revert-backups/…` and prints the path, then reverts; it deliberately does NOT try
-  to tell a deliberate mutant from real work, since that judgment is precisely what failed both
-  times. Still verify each revert with `git status --porcelain` before the next mutant.
+  to tell a deliberate mutant from real work, since that judgment is precisely what failed all three
+  times. Still verify each revert with `git status --porcelain` before the next mutant. The hook
+  only covers Claude Code sessions issuing a Bash call — a human typing the raw form directly in a
+  terminal is not stopped by it, only by this paragraph.
 - **A single run of a STOCHASTIC check is not a measurement, and the harness enforces this rather
   than asking you to remember.** `surface-visual.audit.ts` records each comparison run as an
   observation and refuses to report until it has ≥2 (`MIN_OBSERVATIONS`, raise with

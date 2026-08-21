@@ -37,10 +37,20 @@
 # doing that would reintroduce check-then-act one level up, inside the code whose whole purpose is
 # to remove it.
 #
-# ── Known gap, documented rather than chased ────────────────────────────────────────────────────
-# `npx playwright test` / `supabase db reset` invoked DIRECTLY still bypass the lock. The wiring
-# targets the innermost package scripts so that both `pnpm e2e` from the root and from apps/web are
-# covered by one edit; someone reaching past those is out of scope by choice.
+# ── Formerly a known gap, now closed — two real incidents, not luck ────────────────────────────
+# `npx playwright test` / `supabase db reset` invoked DIRECTLY used to bypass this lock silently;
+# this file used to call that out of scope by choice. Two real collisions changed that call: a
+# parallel session's raw `npx playwright test` collided with another session's e2e run on the
+# fixed port 4317 (17x ERR_CONNECTION_REFUSED), and a `db:reset` overlapped a live session by
+# ordering luck, not because this lock enforced anything. Both raw forms are now refused two ways:
+#   - `.claude/hooks/pretooluse-guard.sh` blocks them at the Bash-tool layer for Claude Code
+#     sessions, before either binary even starts (see its own header for exactly what it matches).
+#   - apps/web/playwright.config.ts additionally refuses to load unless RV_STACK_LOCK_HELD=1 (the
+#     flag this script sets, below) or CI is set — that one fires for ANY `playwright test`
+#     invocation, human terminals included, not only Claude Code's.
+# `supabase db reset` has no equivalent config-load hook (the CLI is a compiled binary with no
+# script-loading point to hang a check on), so the Bash-tool hook is its only mechanical gate;
+# a human typing it directly in a terminal still relies on this comment and CLAUDE.md.
 #
 # Testability: the lock binary is `${STACK_LOCK_BIN:-auto}` and the lock path
 # `${RV_STACK_LOCK_FILE:-derived}`, so scripts/stack-lock.test.sh drives every branch without
