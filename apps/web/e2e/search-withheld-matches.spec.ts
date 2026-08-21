@@ -261,6 +261,15 @@ test('a query that hides nothing shows no line at all', async ({ page }) => {
   await expect(notice(page)).toHaveCount(0)
 })
 
+/*
+ * ── The one-axis blindness #311's port declared, now closed ─────────────────────────────────────
+ * #311 ported these measurements from dd7e287 and said plainly what they could not see: the loop
+ * parameterised VIEWPORT ONLY, with the skin pinned to `tryst` by this file's fixture — and tryst
+ * is the single skin whose `.skin-plate` stops option A changing anything. Its note ended "the
+ * separate fixture task does NOT collapse into them." This is that task, and the note was right:
+ * applying option A left the tryst-pinned version green while the notice was covered in the other
+ * eight skins. The loop below now parameterises BOTH axes, keyed off SKIN_ORDER.
+ */
 /** The search panel must not cover the line, MEASURED, in every skin, in the case that matters.
  *
  *  WHY GEOMETRY. "Is it visible" is the wrong question and `toBeVisible()` answers only that one —
