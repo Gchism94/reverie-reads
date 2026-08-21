@@ -235,14 +235,16 @@ function` + fresh `create` resets it to the PUBLIC-execute default — verified 
   leave the replacement in place rather than the reader with neither. The silence is the failure mode;
   a comment and a guard ordering are the antidote.
 
-- **A fresh worktree does not inherit `apps/web/.env.local` (gitignored), and the failure looks
-  nothing like the cause: unit tests fail in ways that read as real regressions** — offline-session
-  boot stuck on "Turning the page…", cache-scoping restores finding nothing. Copy it from the main
-  checkout as the FIRST step of every `git worktree add`. Measured impact has drifted with the
-  suite and the figure is dated so the next drift reads as drift, not contradiction: **10 failing
-  unit tests when first hit (2026-08-19, #288's session — diagnosed only after re-running clean
-  `origin/main` in the same worktree), 17 when it hit again (2026-08-20, #297's session)**. If a
-  fresh worktree shows unexplained unit failures, check for this file before suspecting the diff.
+- **The fresh-worktree `.env.local` failure class is CLOSED (2026-08-21): the committed
+  `apps/web/.env` carries the local-stack demo values in every Vite mode, so a fresh worktree
+  builds and tests with no env setup at all.** `.env.local` is now an optional per-machine
+  override and the ONLY home for real keys (Sentry DSN, Google Books) — never commit those into
+  `.env`. History, kept because the misdiagnosis pattern generalises: >=5 incidents where the
+  missing gitignored file made unit tests fail in ways that read as real regressions
+  (offline-session boot stuck on "Turning the page…", cache-scoping restores finding nothing) —
+  10 failing tests on 2026-08-19 (#288), 17 on 2026-08-20 (#297), plus build refusals. On a
+  branch that predates the committed `.env`, the old failure and the old fix (copy `.env.local`
+  from the main checkout) still apply.
 
 - **Create the branch BEFORE the first edit, never after.** `git checkout -b` costs nothing at the
   start and is the only moment it is free. Starting work on whatever branch happens to be checked
