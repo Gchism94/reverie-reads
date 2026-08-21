@@ -284,3 +284,29 @@ export function groupSeries(books: readonly Book[]): SeriesGroup[] {
     })
     .sort((a, b) => a.name.localeCompare(b.name))
 }
+
+/**
+ * Intensity hidden: the filter/sort state a hidden-spice reader must actually get.
+ *
+ * Hiding a FIELD is not the same as hiding its CONTROLS, and the difference is a real defect
+ * rather than a nicety. Two pieces of library state can go on constraining what a reader sees
+ * after the control that set them is gone:
+ *   · `intensity: [4, 5]` keeps filtering the grid — books vanish with no visible reason and no
+ *     way to clear it, because the Group that renders those chips is no longer on screen
+ *   · `sort: 'intensity'` keeps ordering the grid by the hidden field, which reads as a random
+ *     shuffle
+ * So hiding neutralizes both. `hiddenMatchCount` and `activeFilterCount` then report honestly on
+ * their own, since they read the same cleared object.
+ *
+ * Pure and total — it never mutates its argument, and returns it unchanged when nothing is
+ * hidden, so the visible-spice path is byte-identical to the pre-toggle behaviour.
+ */
+export function withIntensityHidden(f: LibraryFilters, hidden: boolean): LibraryFilters {
+  if (!hidden || f.intensity.length === 0) return f
+  return { ...f, intensity: [] }
+}
+
+/** The sort a hidden-spice reader gets: 'intensity' is meaningless once the field is hidden. */
+export function withIntensityHiddenSort(sort: LibrarySort, hidden: boolean): LibrarySort {
+  return hidden && sort === 'intensity' ? 'recent' : sort
+}

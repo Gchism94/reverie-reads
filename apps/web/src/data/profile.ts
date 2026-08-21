@@ -25,6 +25,8 @@ export interface Profile {
   adaptiveDismissed: AdaptivePending | null
   /** Split the Owned shelf by format (physical / ebook / audiobook + unmarked). Default off. */
   shelfBreakdownFormat: boolean
+  /** hide the intensity ("Spice") field entirely — a VIEW flag; books.intensity is untouched */
+  hideIntensity: boolean
   /** Give DNF its own shelf instead of showing those books within Read. Default off. */
   shelfBreakdownDnf: boolean
 }
@@ -45,6 +47,7 @@ interface ProfileRow {
   adaptive_pending: AdaptivePending | null
   adaptive_dismissed: AdaptivePending | null
   shelf_breakdown_format: boolean | null
+  hide_intensity: boolean | null
   shelf_breakdown_dnf: boolean | null
 }
 
@@ -68,6 +71,7 @@ const toProfile = (row: ProfileRow): Profile => ({
   // `?? false` mirrors the column defaults, and covers a row cached before the B1 migration —
   // the same posture as autoMergeDuplicates' `?? true`.
   shelfBreakdownFormat: row.shelf_breakdown_format ?? false,
+  hideIntensity: row.hide_intensity ?? false,
   shelfBreakdownDnf: row.shelf_breakdown_dnf ?? false,
 })
 
@@ -78,7 +82,7 @@ export function useProfile() {
     queryFn: async (): Promise<Profile | null> => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, display_name, goal_year, goal_target, auto_merge_duplicates, default_store_id, default_store_name, default_store_website, skin, mode, adaptive_skin, adaptive_locked, adaptive_pending, adaptive_dismissed, shelf_breakdown_format, shelf_breakdown_dnf')
+        .select('id, display_name, goal_year, goal_target, auto_merge_duplicates, default_store_id, default_store_name, default_store_website, skin, mode, adaptive_skin, adaptive_locked, adaptive_pending, adaptive_dismissed, shelf_breakdown_format, shelf_breakdown_dnf, hide_intensity')
         .limit(1)
         .maybeSingle()
       if (error) throw error
@@ -104,6 +108,7 @@ export function useUpdateProfile() {
       adaptivePending?: AdaptivePending | null
       adaptiveDismissed?: AdaptivePending | null
       shelfBreakdownFormat?: boolean
+      hideIntensity?: boolean
       shelfBreakdownDnf?: boolean
     }): Promise<void> => {
       const { data: auth } = await supabase.auth.getUser()
@@ -122,6 +127,7 @@ export function useUpdateProfile() {
       if (patch.adaptiveDismissed !== undefined) row.adaptive_dismissed = patch.adaptiveDismissed
       if (patch.shelfBreakdownFormat !== undefined)
         row.shelf_breakdown_format = patch.shelfBreakdownFormat
+      if (patch.hideIntensity !== undefined) row.hide_intensity = patch.hideIntensity
       if (patch.shelfBreakdownDnf !== undefined) row.shelf_breakdown_dnf = patch.shelfBreakdownDnf
       if (patch.defaultStore !== undefined) {
         row.default_store_id = patch.defaultStore?.id ?? null
@@ -133,4 +139,16 @@ export function useUpdateProfile() {
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: profileKey }),
   })
+}
+
+/**
+ * Whether this reader has hidden the intensity ("Spice") field.
+ *
+ * A hook rather than a prop so every render site is a one-liner and none of them drills profile
+ * through a grid — the same shape as `useLabels()`, which the same components already call.
+ * Defaults to FALSE while the profile query is loading: spice is visible for everyone today, so
+ * the loading state must not flash the field away and back.
+ */
+export function useHideIntensity(): boolean {
+  return useProfile().data?.hideIntensity ?? false
 }
