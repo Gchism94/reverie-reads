@@ -14,10 +14,6 @@ export interface UiList {
 /** Spaced-numeric step for manual ordering (shelves + books). Renumber-on-write keeps it simple. */
 export const ORDER_STEP = 1000
 
-/** The next append position after the given lists. */
-export const nextSortOrder = (lists: readonly UiList[]): number =>
-  Math.max(0, ...lists.map((l) => l.sortOrder ?? 0)) + ORDER_STEP
-
 /**
  * The next append position, read from the database — THE one implementation for every write path
  * that creates a list (createList, the CSV import's ensureList). Extracted after the lists
