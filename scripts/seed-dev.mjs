@@ -134,7 +134,10 @@ function toRow(b, ownerId) {
     subgenre: b.subgenre || null,
     genres: b.genres ?? [],
     tags: b.tropes ?? b.tags ?? [], // seed JSON still uses the romance "tropes" key
-    intensity: b.spice ?? b.intensity ?? 0,
+    // NULL is preserved, never fabricated as 0: null means "not assessed" and 0 means "assessed
+    // as none", and the seeder is the one place that could silently invent 535 judgements nobody
+    // made. `?? null` keeps a book the corpus never rated genuinely unrated.
+    intensity: b.spice ?? b.intensity ?? null,
     cover_url: b.cover || null,
     isbn: b.isbn || null,
     fave: !!b.fave,
