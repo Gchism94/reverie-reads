@@ -2,14 +2,10 @@ import { describe, expect, it } from 'vitest'
 import {
   isDegenerateGoogleCoverRender,
   DISPLAY_ONLY_COVER_SOURCES,
-  buildGoogleBooksUrl,
   buildOpenLibraryUrl,
   coverCandidates,
-  coverKey,
   enrichmentCoverFill,
-  extractGoogleCover,
   extractOpenLibraryCover,
-  fetchCover,
   isCoverSource,
   isGoogleContentCover,
   isGoogleNoCoverArt,
@@ -22,31 +18,13 @@ import {
 } from './covers'
 
 describe('cover helpers', () => {
-  it('builds a normalized cover key and query URLs', () => {
-    expect(coverKey({ title: 'Iron Flame', last: 'Yarros' })).toBe('ironflame|yarros')
-    expect(buildGoogleBooksUrl({ title: 'Iron Flame', last: 'Yarros' })).toContain('intitle:')
+  it('builds the Open Library search URL', () => {
     expect(buildOpenLibraryUrl({ title: 'Iron Flame' })).toContain('openlibrary.org/search.json')
   })
 
-  it('extracts covers and forces https on Google thumbnails', () => {
-    expect(
-      extractGoogleCover({
-        items: [{ volumeInfo: { imageLinks: { thumbnail: 'http://x/y?z&edge=curl' } } }],
-      }),
-    ).toBe('https://x/y?z')
+  it('extracts an Open Library cover from a search hit', () => {
     expect(extractOpenLibraryCover({ docs: [{ cover_i: 123 }] })).toBe(
       'https://covers.openlibrary.org/b/id/123-M.jpg',
-    )
-    expect(extractGoogleCover({ items: [] })).toBe('')
-  })
-
-  it('falls back from Google to Open Library', async () => {
-    const fake = (url: string) => ({
-      json: () =>
-        Promise.resolve(url.includes('googleapis') ? { items: [] } : { docs: [{ cover_i: 7 }] }),
-    })
-    expect(await fetchCover({ title: 'X', last: 'Y' }, (u) => Promise.resolve(fake(u)))).toBe(
-      'https://covers.openlibrary.org/b/id/7-M.jpg',
     )
   })
 })
@@ -235,27 +213,6 @@ describe('ingest posture — Google is display-time only', () => {
     expect(chain.length).toBeGreaterThan(0)
     expect(chain[0]).toContain('zoom=0') // upgraded for display, just never stored
     expect(isGoogleNoCoverArt(GOOGLE, 575, 750)).toBe(true) // plate guard intact
-  })
-})
-
-describe('fetchCover — Open Library only, never a URL we cannot keep', () => {
-  const olJson = { docs: [{ cover_i: 12345 }] }
-
-  it('resolves from Open Library', async () => {
-    const fetchImpl = async () => ({ json: async () => olJson })
-    await expect(fetchCover({ title: 'T', last: 'L' }, fetchImpl)).resolves.toContain(
-      'covers.openlibrary.org',
-    )
-  })
-
-  it('returns empty on a miss rather than falling back to Google', async () => {
-    const calls: string[] = []
-    const fetchImpl = async (url: string) => {
-      calls.push(url)
-      return { json: async () => ({ docs: [] }) }
-    }
-    await expect(fetchCover({ title: 'T', last: 'L' }, fetchImpl)).resolves.toBe('')
-    expect(calls.every((u) => !u.includes('googleapis'))).toBe(true)
   })
 })
 

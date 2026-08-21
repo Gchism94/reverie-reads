@@ -41,9 +41,6 @@ export const SEED_MOODS: readonly SeedMood[] = [
   { name: 'Thought-provoking' }, // reflective, stays with you
 ]
 
-/** The canonical names, for convenience (seed generation, tests). */
-export const CANONICAL_MOOD_NAMES: readonly string[] = SEED_MOODS.map((m) => m.name)
-
 /** The minimum a mood row needs for resolution/search. */
 export interface MoodLike {
   id: string
@@ -69,17 +66,6 @@ export function resolveMood<T extends MoodLike>(raw: string, moods: readonly T[]
   return moods.find((m) => norm(m.name) === target) ?? null
 }
 
-/** Type-ahead match for the picker's optional search. */
-export function moodMatches(query: string, mood: Pick<MoodLike, 'name'>): boolean {
-  const q = norm(query)
-  return q ? norm(mood.name).includes(q) : true
-}
-
 /** A book's moods for display — stable alphabetical (no pins/weight; every mood is equal). */
 export const sortBookMoods = (refs: readonly BookMoodRef[]): BookMoodRef[] =>
   [...refs].sort((a, b) => a.name.localeCompare(b.name))
-
-/** Mood names a book answers to (search/filters). Reader-assigned only — never a fallback guess. */
-export function bookMoodNames(b: { moods: readonly BookMoodRef[] }): string[] {
-  return b.moods.map((m) => m.name)
-}

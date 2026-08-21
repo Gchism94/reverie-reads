@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildOpenLibraryIsbnCoverUrl, fetchCover } from './covers'
+import { buildOpenLibraryIsbnCoverUrl } from './covers'
 
 // The Open Library cover chain: the ISBN-direct endpoint, its mandatory guard, and the artifact that
 // guard exists to keep out.
@@ -50,57 +50,5 @@ describe('buildOpenLibraryIsbnCoverUrl', () => {
   it('strips separators an ISBN may carry, keeping a trailing X', () => {
     expect(buildOpenLibraryIsbnCoverUrl('978-1-64937-404-2')).toContain('/9781649374042-L.jpg')
     expect(buildOpenLibraryIsbnCoverUrl('080442957X')).toContain('/080442957X-L.jpg')
-  })
-})
-
-describe('fetchCover — ISBN-direct first, search as the no-ISBN fallback', () => {
-  const searchHit = () =>
-    Promise.resolve({ json: () => Promise.resolve({ docs: [{ cover_i: 42 }] }) })
-  const searchMiss = () => Promise.resolve({ json: () => Promise.resolve({ docs: [] }) })
-
-  it('takes the ISBN-direct URL when the endpoint says 200, without searching at all', async () => {
-    let searched = false
-    const url = await fetchCover(
-      { title: 'Fourth Wing', last: 'Yarros', isbn: '9781649374042' },
-      () => {
-        searched = true
-        return searchHit()
-      },
-      () => Promise.resolve({ ok: true, status: 200 }),
-    )
-    expect(url).toBe('https://covers.openlibrary.org/b/isbn/9781649374042-L.jpg?default=false')
-    expect(searched, 'a direct hit must not also cost a search request').toBe(false)
-  })
-
-  it('falls through to search on a 404 — the documented "no cover for this ISBN"', async () => {
-    const url = await fetchCover(
-      { title: 'Fourth Wing', last: 'Yarros', isbn: '9781649374042' },
-      searchHit,
-      () => Promise.resolve({ ok: false, status: 404 }),
-    )
-    expect(url).toBe('https://covers.openlibrary.org/b/id/42-M.jpg')
-  })
-
-  it('uses search alone when there is no ISBN — the ~205 books that have none', async () => {
-    const url = await fetchCover({ title: 'Some Indie', last: 'Author' }, searchHit)
-    expect(url).toBe('https://covers.openlibrary.org/b/id/42-M.jpg')
-  })
-
-  it('returns empty when both paths miss — never a Google fallback', async () => {
-    const url = await fetchCover(
-      { title: 'Nothing', last: 'Nobody', isbn: '9999999999999' },
-      searchMiss,
-      () => Promise.resolve({ ok: false, status: 404 }),
-    )
-    expect(url).toBe('')
-  })
-
-  it('survives a network failure on the direct path by trying search', async () => {
-    const url = await fetchCover(
-      { title: 'Fourth Wing', last: 'Yarros', isbn: '9781649374042' },
-      searchHit,
-      () => Promise.reject(new Error('ECONNRESET')),
-    )
-    expect(url).toBe('https://covers.openlibrary.org/b/id/42-M.jpg')
   })
 })
