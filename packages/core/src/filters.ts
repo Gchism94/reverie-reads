@@ -30,8 +30,16 @@ export interface LibraryFilters {
   read: 'All' | ReadStatus
   format: 'All' | string
   fave: boolean
-  /** selected intensity/spice levels (1–5); empty = any. A book matches if its level is in the set. */
-  intensity: number[]
+  /**
+   * Selected intensity levels; empty = any. A book matches if ITS OWN value is in the set.
+   *
+   * `null` is a selectable member and means NOT ASSESSED — nobody has judged this book's
+   * intensity. It is a different thing from `0`, which means assessed and found to have none,
+   * and the two are never collapsed (owner ruling, 2026-08-21). Measured on the live database at
+   * the time of the ruling: 535 books at 0, 179 at null. Reading null as 0 would silently claim
+   * 179 judgements that were never made.
+   */
+  intensity: (number | null)[]
   /** filter to books where any contributor matches this name ('' = off) */
   author: string
   /** include books outside the default scope — books you neither have in hand nor ever opened.
@@ -131,7 +139,9 @@ export function matchesFilters(b: Book, f: LibraryFilters): boolean {
   }
   if (f.format !== 'All' && b.format !== f.format) return false
   if (f.fave && !b.fave) return false
-  if (f.intensity.length && !f.intensity.includes(b.intensity ?? 0)) return false
+  // `b.intensity ?? null`, never `?? 0`: an unassessed book matches only the explicit
+  // not-assessed selection. Normalizing undefined to null keeps a partial fixture honest too.
+  if (f.intensity.length && !f.intensity.includes(b.intensity ?? null)) return false
   if (f.author && !bookHasAuthor(b, f.author)) return false
   if (f.q) {
     const hay = [
@@ -194,9 +204,22 @@ export function sortBooks(books: readonly Book[], sort: LibrarySort): Book[] {
     case 'rating':
       c.sort((a, b) => b.rating - a.rating)
       break
-    case 'intensity':
-      c.sort((a, b) => (b.intensity ?? -1) - (a.intensity ?? -1))
-      break
+    case 'intensity': {
+      /*
+       * Not-assessed books go LAST, by partition rather than by sentinel.
+       *
+       * The previous `?? -1` ranked null BELOW 0 — an arithmetic claim that an unjudged book is
+       * less intense than one judged to have none. It happened to put them last, but only because
+       * this comparator is descending; the same expression under an ascending sort would put every
+       * unassessed book FIRST. Partitioning states the intent directly and survives a direction
+       * change, and it is the same distinction matchesFilters above now draws.
+       */
+      const assessed: Book[] = []
+      const unassessed: Book[] = []
+      for (const b of c) (b.intensity == null ? unassessed : assessed).push(b)
+      assessed.sort((a, b) => (b.intensity as number) - (a.intensity as number))
+      return [...assessed, ...unassessed]
+    }
     case 'recent':
       c.sort((a, b) => (b.addedTs || 0) - (a.addedTs || 0))
       break
