@@ -1,3 +1,10 @@
+#!/bin/sh
+# COMMITTED hooks dir (core.hooksPath = .githooks, set by package.json prepare). Moved out of
+# husky's .husky/_ because that directory is INSTALL-GENERATED: a worktree that had not run
+# `pnpm install` had no hooks at all and every guard below silently did not run — verified
+# 2026-08-21, two pushes from uninstalled worktrees sailed past both guards. Committed hooks arm
+# every worktree from checkout, no install required.
+
 # Two guards, both chosen for the same reason: they are fast, and their failures are pure waste.
 
 # ── 1. STRANDED-PUSH GUARD: refuse a push to a branch whose PR has already merged ────────────────
