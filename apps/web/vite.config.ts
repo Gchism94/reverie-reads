@@ -34,13 +34,14 @@ export default defineConfig(({ command, mode }) => {
   // Fail loudly at BUILD time, never fall back: a bundle without VITE_SUPABASE_URL can't reach the
   // backend, and on a Vercel deploy a local Supabase URL means the wrong env is about to ship to
   // reveriereads.app (the launch registration failure). Local prod builds legitimately bake the
-  // local stack URL from .env.local (e2e/preview), so the localhost check is deploy-only.
+  // local stack URL from the committed .env (or a .env.local override) for e2e/preview, so the
+  // localhost check is deploy-only.
   if (command === 'build') {
     const env = { ...loadEnv(mode, __dirname, 'VITE_'), ...process.env }
     const sbUrl = env.VITE_SUPABASE_URL
     if (!sbUrl) {
       throw new Error(
-        'VITE_SUPABASE_URL is missing — refusing to build. Set it in the environment (Vercel) or apps/web/.env.local (dev).',
+        'VITE_SUPABASE_URL is missing — refusing to build. Set it in the environment (Vercel); dev reads the committed apps/web/.env (is it missing?).',
       )
     }
     if (process.env.VERCEL && /\b(localhost|127\.0\.0\.1)\b/.test(sbUrl)) {

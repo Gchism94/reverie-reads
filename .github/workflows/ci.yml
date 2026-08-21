@@ -105,7 +105,7 @@ jobs:
     timeout-minutes: 10
     env:
       # lib/supabase.ts throws at IMPORT time (not just build time) if either var is unset — unit
-      # tests hit this too, verified locally: `pnpm test` fails 8 files/17 tests with no .env.local
+      # tests hit this too, verified locally: `pnpm test` failed 8 files/17 tests with no env file
       # present. The JOB default is the LOCAL stack's well-known demo values (not a secret — already
       # hardcoded in every e2e spec file) because three test files derive their expected localStorage
       # key from this URL's hostname (authStorageKey(): `sb-${hostname.split('.')[0]}-auth-token`) and
@@ -231,7 +231,7 @@ jobs:
     timeout-minutes: 19
     env:
       # The LOCAL Supabase stack's well-known demo values — already hardcoded in every e2e spec
-      # file (verified byte-identical to apps/web/.env.local), not a secret. Deliberately the
+      # file (the same values the committed apps/web/.env now carries), not a secret. Deliberately the
       # opposite of the gate job's placeholder above; the two must never merge into one job.
       VITE_SUPABASE_URL: http://127.0.0.1:55321
       VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
