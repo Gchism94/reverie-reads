@@ -14,6 +14,7 @@ import { useBooks } from '../data/books'
 import { useAllReads } from '../data/reads'
 import { MONTHS } from '../library/constants'
 import { useLabels, useVoice } from '../skin/labels'
+import { useHideIntensity } from '../data/profile'
 import { SectionHeader } from '../components/Structure'
 import { Surface } from '../components/Surface'
 
@@ -67,6 +68,7 @@ function tally<T>(items: T[], key: (x: T) => string | undefined): [string, numbe
 function StatsScreen() {
   const { data: books } = useBooks()
   const labels = useLabels()
+  const hideIntensity = useHideIntensity()
   const reads = useAllReads().data ?? []
   const all = books ?? []
 
@@ -233,9 +235,11 @@ function StatsScreen() {
         <Card title="Your shelves by format">
           <Bars entries={fmts} />
         </Card>
-        <Card title={`${labels.intensity} profile ${labels.intensityGlyph}`}>
-          <Bars entries={spdist} />
-        </Card>
+        {!hideIntensity && (
+          <Card title={`${labels.intensity} profile ${labels.intensityGlyph}`}>
+            <Bars entries={spdist} />
+          </Card>
+        )}
         {topTags.length > 0 && (
           <Card title={`Your top ${labels.tags.toLowerCase()}`}>
             <Bars entries={topTags} />
@@ -257,10 +261,12 @@ function StatsScreen() {
               </div>
             )}
             <div>♥ {all.filter((b) => b.fave).length} all-time faves</div>
-            <div>
-              {labels.intensityGlyph} {readBooks.filter((b) => (b.intensity ?? 0) >= 4).length}{' '}
-              high-{labels.intensity.toLowerCase()} reads
-            </div>
+            {!hideIntensity && (
+              <div>
+                {labels.intensityGlyph} {readBooks.filter((b) => (b.intensity ?? 0) >= 4).length}{' '}
+                high-{labels.intensity.toLowerCase()} reads
+              </div>
+            )}
             <div>📚 {seriesCount} series on your shelves</div>
           </div>
         </Card>

@@ -12,6 +12,7 @@ import { useFilters } from './filterStore'
 import { Chip } from '../components/Chip'
 import { FORMATS, READ_STATUSES } from './constants'
 import { useLabels } from '../skin/labels'
+import { useHideIntensity } from '../data/profile'
 import { Surface } from '../components/Surface'
 
 const LEN_BUCKETS: SeriesLenBucket[] = ['Any', '1', '2', '3', '4', '5+', 'Unknown']
@@ -37,6 +38,7 @@ export function FilterPanel({ books, bare = false }: { books: Book[]; bare?: boo
   const s = useFilters()
   const { filters } = s
   const labels = useLabels()
+  const hideIntensity = useHideIntensity()
   const [showAllTags, setShowAllTags] = useState(false)
 
   // Derive the subgenre facets from the LIBRARY's own books (not a fixed romance list), so any
@@ -129,19 +131,24 @@ export function FilterPanel({ books, bare = false }: { books: Book[]; bare?: boo
         ))}
       </Group>
 
-      <Group label={labels.intensity}>
-        {SPICE_LEVELS.map((lvl) => (
-          <Chip
-            key={lvl}
-            active={filters.intensity.includes(lvl)}
-            onClick={() => s.toggleIntensity(lvl)}
-          >
-            <span aria-label={`${labels.intensity} ${lvl}`}>
-              {labels.intensityGlyph.repeat(lvl)}
-            </span>
-          </Chip>
-        ))}
-      </Group>
+      {/* Hidden readers get no group AND no live filter — `withIntensityHidden` clears any
+          level they had selected before hiding, so the grid cannot stay constrained by a control
+          that is no longer on screen. */}
+      {!hideIntensity && (
+        <Group label={labels.intensity}>
+          {SPICE_LEVELS.map((lvl) => (
+            <Chip
+              key={lvl}
+              active={filters.intensity.includes(lvl)}
+              onClick={() => s.toggleIntensity(lvl)}
+            >
+              <span aria-label={`${labels.intensity} ${lvl}`}>
+                {labels.intensityGlyph.repeat(lvl)}
+              </span>
+            </Chip>
+          ))}
+        </Group>
+      )}
 
       {filters.shelf !== 'All' && (
         <Group label="Shelf">
