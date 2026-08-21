@@ -101,3 +101,38 @@ export function parseStores(elements: readonly OverpassEl[], lat: number, lng: n
   }
   return stores.sort((a, b) => a.distanceKm - b.distanceKm)
 }
+
+/** OSM `opening_hours` times rendered 12-hour, everything else left exactly as written.
+ *
+ *  The value from OpenStreetMap is a mini-language, not a time: `Mo-Fr 10:00-19:00; Sa 11:00-17:00`,
+ *  `24/7`, `Su off`, `PH 12:00-16:00`, sometimes a quoted comment. Reverie was rendering it raw
+ *  (indie.ts passed `t.opening_hours` straight through and IndieScreen printed it), so a reader saw
+ *  `19:00` where every other clock in their day says 7 PM.
+ *
+ *  So this rewrites TIME TOKENS ONLY and leaves the grammar untouched — day ranges, separators,
+ *  `off`, `24/7`, comments all survive byte-for-byte. That is deliberately narrower than "parse
+ *  opening_hours": a full parser is a known-hard problem with a spec of its own, and every part of
+ *  it we do not need is a part that can be wrong.
+ *
+ *  The three cases that make this quietly wrong if fumbled, all covered by tests:
+ *    · `00:00` is 12:00 AM, not 0:00 AM — hour 0 maps to 12.
+ *    · `12:00` is 12:00 PM, not 12:00 AM — noon is PM, and `h % 12` alone turns it into 0.
+ *    · `24:00` is OSM's legal end-of-day and means midnight; `Mo 09:00-24:00` must not render
+ *      `12:00 PM`. It is normalised to `12:00 AM` like `00:00`.
+ *  Minutes are preserved as written, so `17:30` is `5:30 PM`. Anything that is not `H:MM`/`HH:MM`
+ *  is returned untouched rather than guessed at. */
+export function formatHours12(hours: string): string {
+  if (!hours) return ''
+  return hours.replace(/\b(\d{1,2}):(\d{2})\b/g, (whole, h: string, m: string) => {
+    const hour = Number(h)
+    const min = Number(m)
+    // Not a wall-clock time we recognise (a date fragment, a malformed tag) — leave it alone.
+    if (!Number.isInteger(hour) || hour > 24 || min > 59) return whole
+    // 24:00 is OSM's end-of-day midnight; fold it onto 00:00 before the AM/PM decision.
+    const h24 = hour === 24 ? 0 : hour
+    const suffix = h24 < 12 ? 'AM' : 'PM'
+    // 0 -> 12 (midnight) and 12 -> 12 (noon); every other hour is h % 12.
+    const h12 = h24 % 12 === 0 ? 12 : h24 % 12
+    return `${h12}:${m} ${suffix}`
+  })
+}
