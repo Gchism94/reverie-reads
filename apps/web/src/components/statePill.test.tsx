@@ -30,6 +30,7 @@ const book = (over: Partial<Book>): Book => ({
   tropes: [],
   moods: [],
   intensity: null,
+  darkness: null,
   cover: '',
   pages: null,
   isbn: '',

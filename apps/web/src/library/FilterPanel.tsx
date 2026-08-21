@@ -172,6 +172,32 @@ export function FilterPanel({ books, bare = false }: { books: Book[]; bare?: boo
           })}
         </Group>
       )}
+      {/* Darkness — the OTHER axis, never gated by hide-spice: #325's toggle was scoped to
+          intensity/Spice by product decision, and silently extending it here would hide a
+          field the reader never asked to hide. */}
+      <Group label={labels.darkness}>
+        {SPICE_LEVELS.map((lvl) => {
+          // Each chip needs a NAME a screen reader can act on; a row of repeated glyphs (and,
+          // for 0, an empty span) would leave three of the seven indistinguishable by name alone.
+          const name =
+            lvl === null
+              ? `${labels.darkness} not assessed`
+              : lvl === 0
+                ? `${labels.darkness} none`
+                : `${labels.darkness} ${lvl}`
+          return (
+            <Chip
+              key={lvl === null ? 'unassessed' : lvl}
+              active={filters.darkness.includes(lvl)}
+              onClick={() => s.toggleDarkness(lvl)}
+            >
+              <span aria-label={name}>
+                {lvl === null ? '—' : lvl === 0 ? 'None' : labels.darknessGlyph.repeat(lvl)}
+              </span>
+            </Chip>
+          )
+        })}
+      </Group>
 
       {filters.shelf !== 'All' && (
         <Group label="Shelf">

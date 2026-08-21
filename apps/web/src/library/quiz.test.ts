@@ -131,9 +131,77 @@ describe('quiz answers accumulate genre lean, intensity and cravings', () => {
 })
 
 describe('buildQuizProfile is genre-neutral', () => {
-  it('maps the averaged intensity through, null when never asked', () => {
-    expect(buildQuizProfile(answer([1, 4, 2, 3, 0])).targetIntensity).toBeGreaterThanOrEqual(4)
-    expect(buildQuizProfile(emptyAnswers()).targetIntensity).toBeNull()
+  it('maps the averaged darkness through, null when never asked', () => {
+    expect(buildQuizProfile(answer([1, 4, 2, 3, 0])).targetDarkness).toBeGreaterThanOrEqual(4)
+    expect(buildQuizProfile(emptyAnswers()).targetDarkness).toBeNull()
+  })
+})
+
+/**
+ * THE REPOINT ITSELF (owner ruling, 2026-08-21) — the quiz's intensity question scores DARKNESS,
+ * not Spice.
+ *
+ * This is the assertion that has to exist, because the change is invisible in the copy: the five
+ * options were not rewritten, only the field they feed. A revert would leave every string on screen
+ * identical and silently move spice again, and nothing else in this suite would notice.
+ *
+ * Asserted at the SCORE, not just at the profile: a profile field could be renamed while the
+ * matcher still read b.intensity, and the two books below differ on one axis each so only the
+ * correct wiring can separate them.
+ */
+describe('the quiz question scores darkness, not spice', () => {
+  const extreme = QUIZ[1]!.opts.findIndex((o) => o.t === 'As extreme as it gets')
+
+  it('"As extreme as it gets" fills targetDarkness and leaves no spice target behind', () => {
+    const a = applyAnswer(emptyAnswers(), QUIZ[1]!.opts[extreme]!)
+    const p = buildQuizProfile(a)
+    expect(p.targetDarkness).toBe(5)
+    expect('targetIntensity' in p).toBe(false)
+  })
+
+  it('scores a dark book above a merely spicy one on that answer', () => {
+    const p = buildQuizProfile(applyAnswer(emptyAnswers(), QUIZ[1]!.opts[extreme]!))
+    const base = {
+      first: '',
+      last: '',
+      contributors: [],
+      series: '',
+      position: '' as const,
+      seriesCount: null,
+      status: 'standalone' as const,
+      genre: 'fantasy',
+      subgenre: '',
+      subgenres: [],
+      genres: [],
+      tags: [],
+      tropes: [],
+      moods: [],
+      cover: '',
+      pages: null,
+      isbn: '',
+      fave: false,
+      ownership: 'owned' as const,
+      borrowed: false,
+      wishlist: false,
+      owned: { physical: false as const, ebook: false, audiobook: false },
+      format: '',
+      rating: 0,
+      readStatus: 'unset' as const,
+      source: '',
+      pub: { y: null, m: null, d: null },
+      reads: [],
+      plan: { y: null, m: null, d: null },
+      progress: 0,
+      addedTs: 0,
+    }
+    const dark: Book = { ...base, id: 'dark', title: 'Dark', darkness: 5, intensity: 0 }
+    const spicy: Book = { ...base, id: 'spicy', title: 'Spicy', darkness: 0, intensity: 5 }
+    const ctx = buildMatchContext([dark, spicy])
+    const sDark = scoreMatch(dark, p, ctx)
+    const sSpicy = scoreMatch(spicy, p, ctx)
+    expect(sDark.score).toBeGreaterThan(sSpicy.score)
+    // and the reason that separates them is named for the right axis
+    expect(sDark.reasons.some((r) => r.key === 'darkness' && r.value >= 0.9)).toBe(true)
   })
 })
 

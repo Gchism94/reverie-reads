@@ -17,6 +17,7 @@ export function makeBook(partial: Partial<Book> & { id: string; title: string })
     tropes: [],
     moods: [],
     intensity: 0,
+    darkness: null,
     cover: '',
     pages: null,
     isbn: '',

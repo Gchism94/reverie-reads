@@ -135,6 +135,12 @@ function StatsScreen() {
     labels.intensityGlyph.repeat(i),
     readBooks.filter((b) => b.intensity === i).length,
   ])
+  // The second axis, counted the same way. `=== i` rather than `?? 0`, so a book nobody has
+  // assessed is absent from the bars rather than piled onto level 0 — the null/0 rule (#326).
+  const dkdist: [string, number][] = [1, 2, 3, 4, 5].map((i) => [
+    labels.darknessGlyph.repeat(i),
+    readBooks.filter((b) => b.darkness === i).length,
+  ])
   const topTags = tally(
     readBooks.flatMap((b) => bookTropeNames(b)),
     (t) => t,
@@ -240,6 +246,10 @@ function StatsScreen() {
             <Bars entries={spdist} />
           </Card>
         )}
+        {/* Not gated by hideIntensity: #325's toggle was scoped to Spice by product decision. */}
+        <Card title={`${labels.darkness} profile ${labels.darknessGlyph}`}>
+          <Bars entries={dkdist} />
+        </Card>
         {topTags.length > 0 && (
           <Card title={`Your top ${labels.tags.toLowerCase()}`}>
             <Bars entries={topTags} />
