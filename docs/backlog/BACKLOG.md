@@ -21,10 +21,10 @@ forgotten.
 > | section                            | last audited                   | result                                                                                                   |
 > | ---------------------------------- | ------------------------------ | -------------------------------------------------------------------------------------------------------- |
 > | Real bugs, outstanding             | **2026-08-20** (batch 1)       | 21 live entries: 9 CLOSED, 9 OPEN (stamped), 1 rewritten from source, 2 unverifiable from a Code session |
-> | Conventions — established patterns | never                          | —                                                                                                        |
-> | Deliberately partial, and why      | never                          | —                                                                                                        |
-> | Grep audit, 2026-08                | never                          | —                                                                                                        |
-> | Pre-public tracked-data decisions  | never                          | —                                                                                                        |
+> | Conventions — established patterns | **2026-08-20** (batch 3)       | 1 live: 1 ACCURATE (stamped)                                                                             |
+> | Deliberately partial, and why      | **2026-08-20** (batch 3)       | 2 live: 2 OPEN (stamped)                                                                                 |
+> | Grep audit, 2026-08                | **2026-08-20** (batch 3)       | 5 live: 2 CLOSED, 1 WRONG AS WRITTEN, 2 OPEN (one recounted)                                             |
+> | Pre-public tracked-data decisions  | **2026-08-20** (batch 3)       | 3 live: 2 OPEN (one WRONG AS WRITTEN on its reason), 1 stale-coordinates                                 |
 > | Known-flaky, with a prior          | **2026-08-20** (batch 2)       | 5 live: 1 CLOSED, 3 OPEN (stamped), 1 rewritten from source                                              |
 > | Test-infrastructure follow-ups     | **2026-08-20** (batch 2)       | 9 live: 1 CLOSED, 7 OPEN (stamped), 1 unverifiable from a Code session                                   |
 > | Product queue                      | 2026-08-18 (verification pass) | corrected then; not re-checked here                                                                      |
@@ -691,6 +691,11 @@ of "Real bugs, outstanding" on 2026-08-15 after docs/audits/backlog-nonseries-au
 first of them described no bug at all, and anyone scanning that section for work kept re-reading it
 as one.
 
+> **Audited entry by entry 2026-08-20 (batch 3 of the file).** 1 live entry, **ACCURATE**. A
+> convention entry is verified differently from a defect entry: the question is not "is this still
+> broken" but "is this still what the codebase does", so the check is that the named module exists
+> and that its stated consumers still use it.
+
 - **`useConfirmedLookup` (`apps/web/src/hooks/useConfirmedLookup.ts`) is the
   established pattern for a param-addressed lookup that can be loading, found, or
   genuinely absent — use it rather than reinventing per route.** Before
@@ -707,7 +712,17 @@ as one.
   row when absent, so its `!detail` can only ever mean loading, and the hook
   would be solving a problem that route doesn't have.
 
+  <sub>**verified 2026-08-20** — **ACCURATE**, still the convention.
+  `apps/web/src/hooks/useConfirmedLookup.ts` exists, and its consumers are exactly the three routes
+  the entry names: `ShelfRoute.tsx`, `MoodRoute.tsx`, `TropeRoute.tsx`. `SeriesRoute` still does not
+  use it, matching the entry's stated reason for excluding it. Nothing here needs action; the entry
+  is doing its job, which is to stop the next reader reinventing the hook.</sub>
+
 ## Deliberately partial, and why
+
+> **Audited entry by entry 2026-08-20 (batch 3 of the file).** 2 live entries, **both OPEN**.
+> Entries here are choices, not defects, so "OPEN" means the choice still stands and the code still
+> matches the description — not that anyone is expected to have acted.
 
 - **Logged reads do not reach any shelf or facet — the books cache carries
   `reads: []`.** `mappers.ts` loads reads separately and never merges them into
@@ -720,6 +735,11 @@ as one.
   `reads` is populated. Not fixed here — merging reads into the list query is a
   data-layer change with its own performance question, and it would silently move
   every read count in the app.
+
+  <sub>**verified 2026-08-20** — still OPEN and still accurate. `mappers.ts:103` still writes
+  `reads: []` into the books cache, so the collapse to `readStatus === 'Read'` the entry describes
+  is unchanged. The stated reason for not fixing it (a data-layer change that would silently move
+  every read count) is unchanged too.</sub>
 
 - **Thumb-class surfaces carry borrowed/DNF to a screen reader but not to the eye.**
   `feat/state-pills` added the state to the accessible name on SeriesStrip,
@@ -736,9 +756,28 @@ as one.
   - The genuinely small surfaces would need a non-text marker if they are ever to
     show state visually. The spine edge-marker idiom is the nearest precedent.
 
+  <sub>**verified 2026-08-20** — still OPEN, including the part the entry calls "the obvious next
+  step". `StatePill` appears in none of `MoodRoute.tsx`, `TropeRoute.tsx` or `DiscoverRoute.tsx`, so
+  the ~132px grid cells still have not taken it. The asymmetry the entry names — state reaching a
+  screen reader but not the eye — is intact on every surface it lists.</sub>
+
 ## Grep audit, 2026-08 (`docs/rules-and-grep-audit`) — recorded, not fixed
 
 Four sweeps behind the three rules added to AGENTS.md that session. Nothing here was changed.
+
+> **Audited entry by entry 2026-08-20 (batch 3 of the file).** 5 live items: **2 CLOSED**, **1 WRONG
+> AS WRITTEN**, **2 OPEN** (one of them recounted).
+>
+> **This section decays by a mechanism the earlier batches did not have.** Its entries are
+> _measurements of the codebase_, taken once. "Recorded, not fixed" is true of the backlog and says
+> nothing about the code: two of these closed because unrelated work fixed the defect while the entry
+> sat here, and one is now wrong because the file it cites was deleted. Judge an entry here against
+> source, never against whether anyone worked on it.
+>
+> **A count in this section is perishable in a way its prose is not.** "37 exported symbols" was true
+> the day it was counted; hundreds of PRs have landed since. A stamp below that restates a number
+> must say what re-derived it — see the unreachable-exports entry, where the recount is a
+> re-derivation and NOT the original script, which is not in the repo.
 
 - **`VITE_` env vars are all public — seven beyond the Supabase pair, and one is a real key.**
   Vite inlines every `VITE_`-prefixed var into the client bundle at build time, so each is readable
@@ -756,7 +795,29 @@ Four sweeps behind the three rules added to AGENTS.md that session. Nothing here
   Only `VITE_GOOGLE_BOOKS_KEY` is a credential. Worth a scheduled check that its referrer
   restriction is still in place, since nothing in the repo can assert that.
 
-- **`res.json()` in failure branches: one instance, already guarded.** `lib/covers.ts:88` parses
+  <sub>**verified 2026-08-20** — **WRONG AS WRITTEN, and the fix it implies is the wrong fix.** The
+  var's row says it gates `volumesUrl()` in `lib/googleBooks.ts`. **That file does not exist** —
+  #290 removed the client-side Google Books legs. `VITE_GOOGLE_BOOKS_KEY` is now read **nowhere in
+  app source**: the only occurrence of the string under `apps/web/src` is
+  `noThirdPartyCatalog.test.ts:19`, which lists it in `FORBIDDEN` — a test that exists to keep it
+  out. The live key is the **non-`VITE_`** `GOOGLE_BOOKS_KEY`, read via `Deno.env.get` in four edge
+  functions (`search`, `enrich`, `covers`, `releases`), which is server-side and never reaches a
+  browser.
+  **Measured, not inferred**, because the whole entry turns on whether Vite inlines it: with
+  `VITE_GOOGLE_BOOKS_KEY` present in `.env.local`, a full `pnpm build` produced a bundle containing
+  the key's value **0 times**, its name **0 times**, and `googleapis.com/books` **0 times**. Vite
+  inlines `VITE_` vars per reference, and there are no references left.
+  So the entry's premise — "Vite inlines every `VITE_`-prefixed var into the client bundle" — is
+  false as applied here, and neither action it points at is right: **rotation** would mint a new key
+  for a variable nothing reads, and **restriction** would secure an exposure that no longer exists.
+  **The correct action is deletion** of `VITE_GOOGLE_BOOKS_KEY` from every env file and from the
+  Vercel project. That is a code/config change and deliberately not made in this docs batch.
+  The rest of the table survives: the other eight are benign by design (Supabase URL + anon key
+  behind RLS, the Sentry DSN which ships client-side by design, the Bookshop affiliate ID which is
+  public by construction, two feature flags, and `VITE_BUILD_ID`/`VITE_RELEASE`, build-injected and
+  absent from env files).</sub>
+
+- ~~**`res.json()` in failure branches: one instance, already guarded.**~~ **CLOSED — verified against source 2026-08-20.** `lib/covers.ts:88` parses
   the error body but wraps it `.catch(() => null)`, which is the correct shape. The unguarded case
   the rule targets is the _fall-through_ in `supabase/functions/enrich/index.ts`'s `fetchJson`: it
   handles 429 and 5xx by status and then `return await r.json()` for everything else, so a 400/403/
@@ -764,13 +825,31 @@ Four sweeps behind the three rules added to AGENTS.md that session. Nothing here
   message, so a quota refusal degrades to "this source had nothing" — indistinguishable from an
   empty result, and it stamps `enriched_at` as though the book were checked.
 
-- **A flat 600ms retry on a 429, in `supabase/functions/geo/index.ts`.** `fetchUpstream` retries
+  <sub>**CLOSED 2026-08-20** — the fall-through this entry is actually about is gone, and fixed more
+  thoroughly than the entry asked. `enrich`'s `fetchJson` now classifies every response through a
+  shared `supabase/functions/_shared/httpClassify.ts`: `rate_limited` throws a `SourceHttpError`
+  carrying `retryAfterMs`, `retry` backs off, and a non-retryable 4xx throws **with the status and
+  never reads the body** (`// Non-retryable 4xx: throw WITH the status, and never read the body.`).
+  Only an OK body is parsed, and a malformed one raises `SourceBodyError` rather than degrading to
+  an empty success — precisely the "indistinguishable from an empty result" failure the entry named.
+  `lib/covers.ts`'s `.catch(() => null)` guard, which the entry called correct, is unchanged and
+  still correct.</sub>
+
+- ~~**A flat 600ms retry on a 429, in `supabase/functions/geo/index.ts`.**~~ **CLOSED — verified against source 2026-08-20.** `fetchUpstream` retries
   `429 || >= 500` with a fixed 600ms sleep and ignores `Retry-After` entirely. A limiter asking for
   60s gets asked again in 0.6s, which cannot succeed — it spends a second request of quota and then
   throws anyway. **The two retry loops in the codebase disagree about the same status**: `enrich`'s
   `fetchJson` throws immediately on 429 (correct — a 429 is not retryable on that timescale) while
   `geo` retries it. One of them is wrong and it is `geo`. Nominatim, its upstream, publishes an
   absolute 1 req/sec policy; a 600ms retry is below it by construction.
+
+  <sub>**CLOSED 2026-08-20** — fixed, and the fix carries this entry's own reasoning in the file.
+  `geo/index.ts:59-70` now reads "This **used to** retry a 429 after a flat 600ms, ignoring
+  `Retry-After` entirely", cites Nominatim's 1 req/sec policy, and names the disagreement with
+  `enrich`'s `fetchJson` as the tell that one of them was wrong. Current behaviour: 5xx retries with
+  backoff, a 429 honours `Retry-After` when present and is otherwise not retried, and no other 4xx
+  is ever retried. The 600ms sleep that survives at `:81` is the **transient-retry** path, not the
+  429 path — which is the distinction the entry was asking for.</sub>
 
 - **37 exported symbols are unreachable; 26 of them carry tests.** Method: no reference inside the
   defining file beyond its own declaration, and none in `apps/web/src`, `packages/core/src`,
@@ -789,6 +868,25 @@ Four sweeps behind the three rules added to AGENTS.md that session. Nothing here
   finding: `parseCsvIncoming` is unreachable while CSV import is a headline feature, and
   `visibleComments` is unreachable while the spoiler gate is a AGENTS.md-named core rule. Confirm
   the live path supersedes them before deleting either.
+
+  <sub>**verified 2026-08-20 — OPEN, and RECOUNTED rather than restated.** The recorded totals
+  (37 unreachable / 26 with tests) were a measurement, and the tree has moved by hundreds of PRs.
+  **A re-derivation today gives 49 unreachable value exports (`function`/`const`/`class`/`enum`), 38
+  of them referenced only from tests**, plus a further 29 unreachable `type`/`interface` exports the
+  original figure appears not to have counted.
+  **What verifies that number, stated because the section's own rule demands it:** a script walking
+  `export` declarations in `apps/web/src` + `packages/core/src` and grepping the entry's five search
+  paths for each name, treating an intra-file reference beyond the declaration as live. It is a
+  **re-derivation, not the original script**, which is not in the repo — so 49-vs-37 is partly method
+  and must not be read as "12 new dead exports appeared". Treat the totals as indicative.
+  **What is not indicative:** every one of the **19 symbols the entry names by hand is still
+  unreachable** — all 8 of the "actionable with tests" set (`fetchCover`, `waitMsFor`,
+  `parseCsvIncoming`, `visibleComments`, `coverKey`, `extractGoogleCover`, `buildGoogleBooksUrl`,
+  `renumberEntries`) and all 11 of the untested set (`useAddBook`, `ALL_TROPES`, `SUBGENRES`,
+  `OWNERSHIP_VALUES`, `CANONICAL_MOOD_NAMES`, `moodMatches`, `bookMoodNames`, `NEUTRAL_VOICE`,
+  `clearWriteErrors`, `nextSortOrder`, `toList`). Nothing on the list was deleted or wired up. The
+  two the entry flags for a second look — `parseCsvIncoming` while CSV import is a headline feature,
+  `visibleComments` while the spoiler gate is a AGENTS.md rule — are both still dead.</sub>
 
 ### The enforcement rule, shaped before committing to it
 
@@ -820,6 +918,11 @@ giving the reason** — the `ownedTables` principle that an exclusion without a 
 Expect a large first run; that is the point, and it should land as its own branch with the initial
 list triaged rather than blanket-ignored.
 
+<sub>**verified 2026-08-20** — still OPEN and **not adopted**: there is no `knip.json` in the repo
+and no `knip` entry in `package.json`. The recommendation stands unshipped, and the population it
+would report has grown (see the recount above), so the "expect a large first run" warning is now an
+understatement rather than an overstatement.</sub>
+
 ## Pre-public tracked-data decisions, 2026-08 (`docs/audits/pre-public-secrets.md`) — recorded, not fixed
 
 Sweep from the `docs/agent-md-rules-pass` AGENTS.md rules pass. The audit named these; most of its
@@ -829,10 +932,34 @@ function's unowned-domain fallback was corrected to `reveriereads.app`). Two are
 are the owner's call, not a Code-session fix — recorded here so they don't disappear from view before
 the repo goes public.
 
+> **Audited entry by entry 2026-08-20 (batch 3 of the file).** 3 live entries: **2 OPEN** (one of
+> them **WRONG AS WRITTEN on its reason**, which is the half people act on), **1 accurate in
+> substance with stale coordinates**.
+>
+> Both open entries were re-derived from `git ls-files` rather than inherited from the audit that
+> raised them, and both are still tracked. The section's preamble — the claim that most of the
+> audit's gaps are since closed — was spot-checked and holds: `.gitignore` carries
+> `*.pem`/`*.key`/`*.p12` and `.vercel/`, the full-history `gitleaks` scan runs and fails the build,
+> and `geo`'s contact fallback is `https://reveriereads.app` (`geo/index.ts:28`). One coordinate in
+> that preamble has drifted: the secret scan is cited as `ci.yml:76-88`, but the `secrets:` job
+> begins at **`:90`** (its comment block runs 86-89).
+
 - **`.npmrc` is tracked** (`git ls-files .npmrc` → `.npmrc`). Contents today are two harmless pnpm
   flags, but the file is the canonical place a registry `_authToken` lands — the moment any registry
   auth is added, the token commits silently. The audit's recommended shape is ignore-with-checked-in
   example (`.npmrc` → `.gitignore`, `.npmrc.example` committed). Pre-public §3.
+
+  <sub>**verified 2026-08-20** — **OPEN on the fact, WRONG AS WRITTEN on the risk.** `git ls-files
+.npmrc` still returns `.npmrc`, and its contents are still two pnpm flags, so the entry's factual
+  half stands and the recommended shape is still unapplied. But the risk it states — "the moment any
+  registry auth is added, the token commits **silently**" — is no longer true, and silence is the
+  whole reason the entry is filed as a pre-public concern. Two controls now stand between an
+  `_authToken` and a public repo: the file itself opens with "**NEVER put registry auth here**… Auth
+  belongs in `~/.npmrc`", and `.gitleaks.toml` sets `useDefault = true`, whose ruleset covers npm
+  tokens, scanned over **full history** (`fetch-depth: 0`) by a job that fails the build. So the
+  entry's action may still be worth taking, but not for the reason given: the failure mode it guards
+  against is now loud, and an entry whose reason has expired is the half a reader builds on.</sub>
+
 - **`data/raw/Chism_Books.xlsx` is tracked** (`git ls-files` → `data/raw/Chism_Books.xlsx`, 272 KB,
   since the initial commit `2378ffb`). The real library spreadsheet; its `GC Read` and **`TC Read`**
   columns are reading records for a **second person**, not only the owner. The owner's own data is
@@ -841,6 +968,15 @@ the repo goes public.
   before the repo ever goes public — the one moment a rewrite still works. The derived JSON seeds
   (`data/corpus_seed.json` + `data/reader_seed.json`, the 290-book pair) carry the same data in
   another form and are flagged for the same decision. Pre-public §4.
+
+  <sub>**verified 2026-08-20** — still OPEN, re-derived from `git ls-files` rather than inherited.
+  `data/raw/Chism_Books.xlsx` is still tracked, and both derived seeds (`data/corpus_seed.json`,
+  `data/reader_seed.json`) are still tracked alongside it, so the entry's "same data in another form"
+  point is intact — removing only the spreadsheet would not resolve it. One measurement correction:
+  the file is **270,207 bytes** (264 KiB), not the "272 KB" recorded. The substantive claim — that
+  the `TC Read` column is a second person's reading record, and that the publish-as-is vs
+  history-rewrite decision only stays available until the repo goes public — is unchanged and remains
+  the owner's call, not a Code session's.</sub>
 
 - **A guard aimed at the right defect class but the wrong boundary — #287's truncation guard,
   corrected by `fix/import-half-stars`.** #287 guarded half stars against `reviews.rating`'s
@@ -852,6 +988,15 @@ the repo goes public.
   type-level truncation; application-level coercion needs a round-trip test** (export → import →
   compare), which is what `importRatingRoundTrip.test.ts` now is. When adding a guard for "X must
   not silently change," enumerate every path that WRITES X, not just every column that STORES it.
+
+  <sub>**verified 2026-08-20** — the **lesson is accurate and worth keeping; its coordinates and its
+  tense are not.** All three cited `Math.round` calls are gone, replaced by `snapHalfRating`, each
+  with a comment naming the reason — so the entry's present tense ("The actual silent truncation
+  **is** three `Math.round` calls") now describes code that no longer exists. The line numbers have
+  each drifted: `importMap.ts:278` → **`:279`**, `csv.ts:149` → **`:150`**, `csv.ts:309` → **`:311`**.
+  `importRatingRoundTrip.test.ts` exists as described. Read this entry as a closed case study rather
+  than an open defect; its durable half — type-level guards catch type-level truncation, and
+  application-level coercion needs a round-trip test — is why it stays.</sub>
 
 ## Known-flaky, with a prior
 
