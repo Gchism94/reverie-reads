@@ -21,6 +21,7 @@ export function CoverCard({
   onToggleFave,
   onAddCover,
   selected = false,
+  hideIntensity = false,
 }: {
   book: Book
   onOpen: () => void
@@ -29,6 +30,8 @@ export function CoverCard({
   onAddCover?: () => void
   /** Master-detail selection (desktop): draws the accent ring + marks aria-current. */
   selected?: boolean
+  /** hide the intensity mark — the reader's profile flag, passed down (this is a leaf: no query) */
+  hideIntensity?: boolean
 }) {
   const author =
     formatAuthors(book.contributors) || [book.first, book.last].filter(Boolean).join(' ')
@@ -149,7 +152,7 @@ export function CoverCard({
           <StatePill kind="read" announce className="absolute left-1.5 top-1.5" />
         ) : null}
 
-        {intensity > 0 && (
+        {intensity > 0 && !hideIntensity && (
           <div
             className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 text-[10px] backdrop-blur"
             style={{ background: markBg, color: '#fff', borderRadius: 'var(--mark-radius)' }}

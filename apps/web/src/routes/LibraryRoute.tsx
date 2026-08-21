@@ -6,11 +6,14 @@ import {
   inDefaultLibrary,
   matchesFilters,
   sortBooks,
+  withIntensityHidden,
+  withIntensityHiddenSort,
   type Book,
   type LibraryShelfLink,
 } from '@reverie/core'
 import { rootRoute } from './RootRoute'
 import { useBooks, useUpdateBook } from '../data/books'
+import { useHideIntensity } from '../data/profile'
 import { useFilters } from '../library/filterStore'
 import { Toolbar } from '../library/Toolbar'
 import { FilterPanel } from '../library/FilterPanel'
@@ -135,7 +138,19 @@ function DetailDrawer({
 
 function LibraryScreen() {
   const { data: books, isLoading, isError, error } = useBooks()
-  const filters = useFilters((s) => s.filters)
+  const hideIntensity = useHideIntensity()
+  /*
+   * The EFFECTIVE filter state for a hidden-spice reader. Derived once, here, so every consumer
+   * below — the grid, the sort, and hiddenMatchCount's badge — reads the same object and cannot
+   * disagree about what is filtering. Without this, a level selected before hiding keeps
+   * constraining the grid with its clear-it chip no longer on screen.
+   */
+  const rawFilters = useFilters((s) => s.filters)
+  const filters = useMemo(
+    () => withIntensityHidden(rawFilters, hideIntensity),
+    [rawFilters, hideIntensity],
+  )
+  const sort = withIntensityHiddenSort(filters.sort, hideIntensity)
   const mode = useFilters((s) => s.mode)
   const panelOpen = useFilters((s) => s.panelOpen)
   const setShelf = useFilters((s) => s.setShelf)
@@ -164,10 +179,10 @@ function LibraryScreen() {
       books
         ? sortBooks(
             books.filter((b) => matchesFilters(b, filters)),
-            filters.sort,
+            sort,
           )
         : [],
-    [books, filters],
+    [books, filters, sort],
   )
   // The default library — what you have in hand (owned or borrowed) or have read. Wishlist and
   // unset-unread records join in only via the filter chip (docs/archive/task-ownership-v2.md).
@@ -307,6 +322,7 @@ function LibraryScreen() {
         <div style={COVER_GRID}>
           {visible.map((b) => (
             <CoverCard
+              hideIntensity={hideIntensity}
               key={b.id}
               book={b}
               selected={isDesktop && b.id === highlightId}
