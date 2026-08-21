@@ -341,12 +341,32 @@ function BookDetailScreen() {
       {/* Audiobook-vs-print: shown only when two or more formats carry rated reads. Most recent
           rated read per format — the display rule and its reasons live on latestRatingByFormat. */}
       {formatRatings.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1" data-testid="format-ratings">
+        /*
+         * STAR AND REVIEW TOGETHER, PER FORMAT. Both halves come from the same read — see
+         * `FormatRating.notes` — so the sentence under a format's stars is the opinion that
+         * produced them, never a note from a different sitting. Previously the words lived only
+         * in the reread log further down the page, which meant the one surface that exists to
+         * answer "was the audiobook better" showed the scores and hid the reasons.
+         *
+         * A format with no note renders its stars alone rather than an empty line: notes are
+         * optional, and a blank row would read as a missing thing rather than an unwritten one.
+         */
+        <div className="mt-2 flex flex-col gap-1.5" data-testid="format-ratings">
           {formatRatings.map((f) => (
-            <span key={f.format} className="flex items-center gap-1.5 text-[12.5px] text-muted">
-              {f.format}
-              <Stars value={f.rating} size={12} />
-            </span>
+            <div key={f.format} data-testid={`format-rating-${f.format}`}>
+              <span className="flex items-center gap-1.5 text-[12.5px] text-muted">
+                {f.format}
+                <Stars value={f.rating} size={12} />
+              </span>
+              {f.notes && (
+                <p
+                  className="mt-0.5 text-[13px] text-ink"
+                  data-testid={`format-review-${f.format}`}
+                >
+                  {f.notes}
+                </p>
+              )}
+            </div>
           ))}
         </div>
       )}
