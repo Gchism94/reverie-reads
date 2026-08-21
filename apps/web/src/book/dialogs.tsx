@@ -130,12 +130,12 @@ export function LogReadForm({ book, onClose }: { book: Book; onClose: () => void
             </div>
           </Field>
         </div>
-        <Field label="Notes (optional)">
+        <Field label="Your thoughts on this read">
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={3}
-            placeholder="Thoughts on this read…"
+            placeholder="How was this time through? Optional."
             className="skin-field w-full border border-line p-3 text-[14px] text-ink outline-none"
             style={fieldStyle}
           />

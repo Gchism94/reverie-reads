@@ -22,8 +22,8 @@ describe('latestRatingByFormat — the audiobook-vs-print display rule', () => {
       read('2026-02-01', 'Paperback', 4),
     ])
     expect(out).toEqual([
-      { format: 'Audiobook', rating: 3.5, date: '2026-03-01' },
-      { format: 'Paperback', rating: 4, date: '2026-02-01' },
+      { format: 'Audiobook', rating: 3.5, date: '2026-03-01', notes: '' },
+      { format: 'Paperback', rating: 4, date: '2026-02-01', notes: '' },
     ])
   })
 
@@ -35,8 +35,8 @@ describe('latestRatingByFormat — the audiobook-vs-print display rule', () => {
       read('2026-02-15', 'Paperback', 3),
     ])
     expect(out).toEqual([
-      { format: 'Paperback', rating: 3, date: '2026-02-15' },
-      { format: 'Audiobook', rating: 4.5, date: '2026-01-01' },
+      { format: 'Paperback', rating: 3, date: '2026-02-15', notes: '' },
+      { format: 'Audiobook', rating: 4.5, date: '2026-01-01', notes: '' },
     ])
   })
 
@@ -87,8 +87,8 @@ describe('the pick is total — same answer for ANY input order', () => {
     ]
     const expected = latestRatingByFormat(reads)
     expect(expected).toEqual([
-      { format: 'Audiobook', rating: 4.5, date: '2026-03-01' },
-      { format: 'Paperback', rating: 5, date: '2026-01-01' },
+      { format: 'Audiobook', rating: 4.5, date: '2026-03-01', notes: '' },
+      { format: 'Paperback', rating: 5, date: '2026-01-01', notes: '' },
     ])
     for (const p of permutations(reads)) {
       expect(latestRatingByFormat(p)).toEqual(expected)
@@ -107,6 +107,7 @@ describe('the pick is total — same answer for ANY input order', () => {
         format: 'Ebook',
         rating: 4,
         date: '2026-05-01',
+        notes: '',
       })
     }
   })
@@ -121,6 +122,7 @@ describe('the pick is total — same answer for ANY input order', () => {
       format: 'Ebook',
       rating: 4,
       date: '2026-06-01',
+      notes: '',
     })
   })
 
@@ -136,6 +138,7 @@ describe('the pick is total — same answer for ANY input order', () => {
         format: 'Ebook',
         rating: 4.5,
         date: '',
+        notes: '',
       })
     }
   })
@@ -154,8 +157,36 @@ describe('the pick is total — same answer for ANY input order', () => {
       read('2026-02-01', 'Paperback', 4),
     ])
     expect(out).toEqual([
-      { format: 'Audiobook', rating: 3.5, date: '2026-03-01' },
-      { format: 'Paperback', rating: 4, date: '2026-02-01' },
+      { format: 'Audiobook', rating: 3.5, date: '2026-03-01', notes: '' },
+      { format: 'Paperback', rating: 4, date: '2026-02-01', notes: '' },
     ])
+  })
+})
+
+describe('the note rides with the rating it belongs to', () => {
+  it("carries the WINNING read's notes, not another read's in the same format", () => {
+    // The whole point of surfacing these together: if the note came from a different pick than
+    // the stars, the page would show one read's score above another read's sentence.
+    const out = latestRatingByFormat([
+      { date: '2024-01-01', format: 'Audiobook', rating: 3, notes: 'narrator grated' },
+      { date: '2024-06-01', format: 'Audiobook', rating: 5, notes: 'second narrator, much better' },
+      { date: '2024-02-01', format: 'Paperback', rating: 4, notes: 'read it in two sittings' },
+    ])
+    const audio = out.find((f) => f.format === 'Audiobook')
+    expect(audio).toMatchObject({ rating: 5, notes: 'second narrator, much better' })
+    expect(out.find((f) => f.format === 'Paperback')).toMatchObject({
+      rating: 4,
+      notes: 'read it in two sittings',
+    })
+  })
+
+  it('gives an empty string when the winning read carried no note', () => {
+    const out = latestRatingByFormat([
+      { date: '2024-01-01', format: 'Audiobook', rating: 3, notes: 'said something once' },
+      { date: '2024-06-01', format: 'Audiobook', rating: 5, notes: '' },
+      { date: '2024-02-01', format: 'Paperback', rating: 4, notes: '' },
+    ])
+    // NOT the older note: an unwritten review must not inherit a previous read's words.
+    expect(out.find((f) => f.format === 'Audiobook')).toMatchObject({ rating: 5, notes: '' })
   })
 })
