@@ -187,7 +187,12 @@ test('back navigation restores where the reader was', async ({ page, isMobile })
   // The gesture differs by viewport because neither is a real navigation on both: on DESKTOP a cover
   // click keeps a selected-book rail and never leaves /library, and on MOBILE the Shelves link sits
   // behind the bottom nav's "more" sheet, so that locator just times out.
-  if (test.info().project.name === 'mobile') {
+  //
+  // `isMobile`, not the project NAME — same class as the skip above: the name was a proxy that
+  // broke twice in one week when new 390px projects appeared under other names (mobile-webkit,
+  // layout-390). Under the isMobile skip this branch is currently unreachable; it keys to the
+  // property anyway so lifting that skip can never resurrect the proxy.
+  if (isMobile) {
     await page.getByRole('button', { name: new RegExp('^Open Scroll Probe 01') }).click()
     await page.waitForURL(/\/book\//)
   } else {
