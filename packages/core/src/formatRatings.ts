@@ -22,6 +22,13 @@ export interface FormatRating {
   rating: number
   /** ISO date of that read — the receipt that makes "most recent" checkable in the UI */
   date: string
+  /**
+   * That same read's own words — `reads.notes`, which is per-read and therefore already
+   * per-format. It rides with the rating rather than being looked up separately, so the star and
+   * the sentence beside it can never come from different reads: one pick, one row, one opinion.
+   * Empty string when that read carried none.
+   */
+  notes: string
 }
 
 /**
@@ -60,6 +67,7 @@ export function latestRatingByFormat(reads: readonly ReadEntry[]): FormatRating[
       format: r.format,
       rating: r.rating,
       date: r.date,
+      notes: r.notes ?? '',
       createdAt: r.createdAt ?? '',
     }
     const cur = byFormat.get(r.format)
@@ -72,5 +80,5 @@ export function latestRatingByFormat(reads: readonly ReadEntry[]): FormatRating[
       // so the row order cannot swap between fetches either.
       a.date !== b.date ? (a.date < b.date ? 1 : -1) : a.format.localeCompare(b.format),
     )
-    .map(({ format, rating, date }) => ({ format, rating, date }))
+    .map(({ format, rating, date, notes }) => ({ format, rating, date, notes }))
 }
