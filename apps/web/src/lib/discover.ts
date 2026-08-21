@@ -110,6 +110,44 @@ export function isOwned(h: DiscoverHit, owned: Set<string>): boolean {
   return owned.has(`${norm(h.title)}|${norm(h.authors[0] ?? '')}`)
 }
 
+/** How many hits a shelf shows at once. */
+export const DISCOVER_BATCH = 20
+/** Ceiling on the pool the fn caches and returns per genre — three batches' worth.
+ *  Mirrored as DISCOVER_POOL in supabase/functions/releases/index.ts. */
+export const DISCOVER_POOL = 60
+
+/** The pool minus what the reader already shelves, when the toggle asks for that.
+ *
+ *  FILTERS THE POOL, NOT THE BATCH, and the order is the whole point. Chunk first and a reader who
+ *  owns nine of the first twenty gets a batch of eleven — the "typical attrition" shape, where the
+ *  shelf silently thins and the reader cannot tell a filtered batch from a short one. Filtering
+ *  first means every batch is a full DISCOVER_BATCH of things they do not have, and the pool simply
+ *  yields fewer batches. */
+export function visibleHits(
+  pool: readonly DiscoverHit[],
+  owned: Set<string>,
+  hideImported: boolean,
+): DiscoverHit[] {
+  return hideImported ? pool.filter((h) => !isOwned(h, owned)) : [...pool]
+}
+
+/** How many batches a list of hits divides into (0 for an empty list, 1 for a short one). */
+export const batchCount = (hits: readonly unknown[]): number =>
+  Math.ceil(hits.length / DISCOVER_BATCH)
+
+/** The `index`-th batch, CYCLING: past the last batch it wraps to the first, so the control never
+ *  dead-ends and the caller never has to bounds-check. Batches within one pass are disjoint —
+ *  consecutive presses show no repeats until the pool is exhausted, which is the point at which
+ *  repeating is what "cycle" means. A pool at or under DISCOVER_BATCH is a single batch, so the
+ *  fn-down curated path and an old deployed fn still returning 12 both land on "one batch, no
+ *  control" without a special case. */
+export function batchOf(hits: readonly DiscoverHit[], index: number): DiscoverHit[] {
+  const count = batchCount(hits)
+  if (count === 0) return []
+  const wrapped = ((index % count) + count) % count // negative-safe
+  return hits.slice(wrapped * DISCOVER_BATCH, wrapped * DISCOVER_BATCH + DISCOVER_BATCH)
+}
+
 /**
  * The Discover shelf for a genre — ONE path: the `releases` fn's shared per-genre daily cache
  * (24h TTL, one upstream lookup serves every reader, recency-gated + curated server-side).
@@ -137,7 +175,7 @@ export async function fetchDiscover(genre: string, signal?: AbortSignal): Promis
       const hits = ((data as { hits?: DiscoverHit[] })?.hits ?? []).filter(
         (h) => h?.title && h.cover && h.authors?.length,
       )
-      if (hits.length) return hits.slice(0, 12)
+      if (hits.length) return hits.slice(0, DISCOVER_POOL)
     }
   } catch {
     /* degrade to the LOCAL curated pool below — never to a network fetch */
@@ -151,7 +189,11 @@ export async function fetchDiscover(genre: string, signal?: AbortSignal): Promis
   // return [] and the route shows its empty-shelf state, same as always.
   const pool = blendCuratedPool(genreKey(genre), []) as DiscoverHit[]
   if (!pool.length) return []
-  return tierDiscoverShelf(pool, new Date().getFullYear()).slice(0, 12)
+  // Same ceiling as the live path, and deliberately still a no-op here: the curated sets are 8-12
+  // titles, all under DISCOVER_BATCH, so this path returns exactly what it always did — one short
+  // batch and no cycle control. The fallback's BEHAVIOUR is unchanged by the batching work; only
+  // the constant it clamps against moved.
+  return tierDiscoverShelf(pool, new Date().getFullYear()).slice(0, DISCOVER_POOL)
 }
 
 // ── Tier 2b: taste ranking (owner-approved) ──
@@ -167,7 +209,12 @@ export async function rankHitsByTaste(
   genre: string,
 ): Promise<Record<string, number> | null> {
   try {
-    let remaining = hits.slice(0, 16).map((h) => ({
+    // DISCOVER_BATCH, not the old fixed 16: callers now pass ONE BATCH rather than the whole
+    // shelf, and 16 would have left the last four of every batch unscored — silently downgrading
+    // "closest to your taste first" to "closest first, then four strays". Ranking stays per-batch
+    // so the promise holds for exactly what is on screen; the pool beyond it is not ranked and
+    // does not need to be until the reader asks for it.
+    let remaining = hits.slice(0, DISCOVER_BATCH).map((h) => ({
       key: hitKey(h),
       // same composition the library vectors use (title + author + world) — one semantic space
       text: embeddingText({ title: h.title, author: h.authors[0], genre }),
