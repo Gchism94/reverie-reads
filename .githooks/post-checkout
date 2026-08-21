@@ -1,0 +1,23 @@
+#!/bin/sh
+# post-checkout — fires after `git worktree add` (and any branch checkout; flag $3 = 1).
+#
+# Replaces "remember to run the bootstrap" with something that cannot be forgotten: a fresh
+# worktree announces its own missing install the moment it exists. Deliberately a BANNER, not an
+# auto-run — `pnpm install` can take minutes and grabbing the terminal mid-checkout would be the
+# kind of surprise that gets hooks disabled. The banner names the exact command; that is the
+# simplest thing that cannot be missed.
+#
+# Cheap by design: one flag test and one directory test; prints nothing when all is well.
+[ "$3" = "1" ] || exit 0
+if [ ! -d node_modules ]; then
+  printf '\033[1;31m%s\033[0m\n' \
+    "──────────────────────────────────────────────────────────────────────────" \
+    "  This worktree has no node_modules — builds, tests and the format hook" \
+    "  need it. Set up with:" \
+    "" \
+    "      pnpm install --frozen-lockfile        (or: scripts/worktree-init.sh)" \
+    "" \
+    "  The committed apps/web/.env already covers env — nothing to copy." \
+    "──────────────────────────────────────────────────────────────────────────" >&2
+fi
+exit 0
