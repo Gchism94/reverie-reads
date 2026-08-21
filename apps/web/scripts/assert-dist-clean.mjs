@@ -8,7 +8,8 @@
  * against "localhost"/"127.0.0.1" and must not trip this.
  *
  * Enforced on deploys/CI (VERCEL or CI env, or ENFORCE_DIST_CLEAN=1). A plain local `pnpm build`
- * only warns: .env.local intentionally bakes the local stack URL for the e2e/preview flows.
+ * only warns: the committed `apps/web/.env` intentionally bakes the local stack URL for the
+ * e2e/preview flows (a `.env.local`, when present, overrides it the same way).
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
@@ -91,7 +92,7 @@ const FONT_ORIGINS = /fonts\.googleapis\.com|fonts\.gstatic\.com/gi
 //     and the family floor comes from scripts/fetch-fonts.mjs's SOURCES map, the single writer.
 //
 // All of it fails HARD, matching the missing-dist branch above and FONT_ORIGINS' reasoning: the
-// local-URL class warns locally because .env.local legitimately bakes local URLs; a missing
+// local-URL class warns locally because `apps/web/.env` legitimately bakes local URLs; a missing
 // shipped font has no legitimate case anywhere.
 const REPO_ROOT = new URL('../../..', import.meta.url).pathname
 const fontFailures = []
@@ -205,4 +206,6 @@ if (enforce) {
   )
   process.exit(1)
 }
-console.warn('(warning only — local builds bake .env.local by design; deploys enforce this)')
+console.warn(
+  '(warning only — local builds bake the committed apps/web/.env by design; deploys enforce this)',
+)
