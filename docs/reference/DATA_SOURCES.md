@@ -24,8 +24,9 @@ including indie and Kindle Unlimited titles, _and_ being usable from a personal 
 > that sniffs as a valid image and would be stored as a durable cover.
 >
 > Adapted, not copied wholesale. Her project also falls back to Amazon, Goodreads and image search
-> when Open Library misses; we deliberately do not — see `packages/core/src/covers.ts`'s `fetchCover`
-> for the reasoning. A personal, non-commercial library can take that rights risk; this one
+> when Open Library misses; we deliberately do not: Amazon's terms bar
+> use as a general covers backend outside an affiliate context, Goodreads' developer terms prohibit
+> storing their data, and re-hosting scraped art is the unresolved rights risk named below. A personal, non-commercial library can take that rights risk; this one
 > distributes to other readers and cannot.
 > | **BookBrainz** | 2 | Free (CC0) | REST/GraphQL + dumps; sparse for romance |
 > | **WorldCat / OCLC** | 2 practical (4 data) | Gated | Discovery/Search API needs library membership + OAuth |
