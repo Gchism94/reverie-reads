@@ -977,7 +977,7 @@ aspect` at 9.1s. `e2e` failed exactly once in the surrounding 60 runs.
   NOT self-evidently a flake just because the job is non-blocking. The sweep uploads its HTML
   report on failure precisely so that judgment can be made from one run.
 
-  <sub>**verified 2026-08-20** — still OPEN: the test still exists at `spine-shelf-reachability.spec.ts:477` with the quoted title; two occurrences recorded and no fix landed, so by this section's own rule the third is a defect.</sub>
+  <sub>**verified 2026-08-20** — still OPEN: `spine-shelf-reachability.spec.ts:477` still exists, still carries the quoted title, and no fix has landed. **Deliberately silent on the occurrence count, and on whether the next red is a defect** — the ledger above owns both, and both move. The previous wording reasoned from the count ("two occurrences recorded … so by this section's own rule the third is a defect") and was falsified the same week by occurrence 3 landing directly above it. The section marker already declines to verify the count; an inference drawn from it at the ENTRY level is not covered by a disclaimer at the SECTION level, which is how this one went stale unnoticed. A stamp records what was checked against source — the count is the ledger's to state.</sub>
 
 - **CI `Start Supabase` — `failed to bind host port … address already in use`. TWO occurrences on
   2026-08-14, both in the `e2e` job, both re-run green.** Written down on the second, because the
