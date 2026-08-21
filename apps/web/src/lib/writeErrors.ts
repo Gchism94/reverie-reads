@@ -91,11 +91,6 @@ export function dismissWriteError(id: number): void {
   emit()
 }
 
-export function clearWriteErrors(): void {
-  errors = []
-  emit()
-}
-
 const subscribe = (cb: () => void): (() => void) => {
   listeners.add(cb)
   return () => listeners.delete(cb)
