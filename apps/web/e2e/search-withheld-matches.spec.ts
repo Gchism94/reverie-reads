@@ -245,3 +245,72 @@ test('a query that hides nothing shows no line at all', async ({ page }) => {
   await expect(cardFor(page, PRESENT_TITLE)).toBeVisible()
   await expect(notice(page)).toHaveCount(0)
 })
+
+/*
+ * ── PORTED from dd7e287 on `feat/search-withheld-notice` ────────────────────────────────────────
+ * Independent work by another session that reached the same defect from the other end. Its click
+ * fix duplicates the one already on this branch and is deliberately NOT carried; only these two
+ * measurements cross over, because they assert something nothing here does.
+ *
+ * BLIND IN ONE AXIS, said before anyone trusts them further than they go: the loop parameterises
+ * VIEWPORT ONLY. The skin is pinned to `tryst` by this file's fixture, and tryst is the single skin
+ * whose `.skin-plate` stops option A changing anything — the exact blindness §0.41 found in this
+ * branch's other geometry guard. Confirmed by applying option A and watching these still pass, so
+ * the separate fixture task does NOT collapse into them. They are a real guard against the panel
+ * being made truly absolute; they are not a cross-skin guard.
+ */
+/** The search panel must not cover the line, MEASURED, in the case that actually matters.
+ *
+ *  This exists because "is it visible" is the wrong question and toBeVisible() answers only that
+ *  one — it does not consider occlusion, so a line buried under an overlay passes it. This feature
+ *  exists to tell a reader about a match they do not know exists; a line they must first know to
+ *  uncover is no feature at all. So the assertion is geometric.
+ *
+ *  It is deliberately NOT vacuous. A panel that failed to render would trivially overlap nothing,
+ *  so the panel is first required to exist and to contain the withheld book — the panel searches
+ *  the whole library unscoped, so the very book the grid hides does appear in it. Only then is the
+ *  overlap asserted.
+ *
+ *  Today it passes for a reason nobody chose: the panel is in flow (`relative` beats `absolute` on
+ *  Frame), so it PUSHES this line down instead of floating over it. Make the panel truly absolute —
+ *  which is plainly what its z-30/left-0/right-0/top-calc styling intends — and the two would
+ *  overlap by ~18px. That is exactly why this is a test and not a note: whoever fixes that
+ *  collision gets a red line here telling them to move the notice, rather than silently shipping a
+ *  covered one. */
+for (const [label, width, height] of [
+  ['desktop', 1280, 720],
+  ['phone', 390, 844],
+] as const) {
+  test(`the search panel does not cover the line — measured at ${label}`, async ({ page }) => {
+    await page.setViewportSize({ width, height })
+    await openLibrary(page)
+    await search(page, WISHED_TITLE)
+    await expect(notice(page)).toBeVisible()
+
+    const geo = await page.evaluate(() => {
+      const n = document.querySelector('[data-testid="search-hidden-notice"]')
+      const input = document.querySelector('input[type="search"]')
+      const panel = input?.parentElement?.querySelector(':scope > *:not(input)')
+      if (!n || !panel) return null
+      const a = n.getBoundingClientRect()
+      const b = panel.getBoundingClientRect()
+      return {
+        panelText: (panel as HTMLElement).innerText,
+        overlapY: Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top)),
+        overlapX: Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left)),
+      }
+    })
+
+    // The panel is really there, and really showing the withheld book — otherwise "no overlap"
+    // would be a statement about an absent element.
+    expect(geo, 'no search panel rendered — the overlap check would be vacuous').not.toBeNull()
+    expect(geo!.panelText).toContain(WISHED_TITLE)
+
+    // Overlapping columns are expected and fine; overlapping ROWS are the failure.
+    expect(geo!.overlapX).toBeGreaterThan(0)
+    expect(
+      geo!.overlapY,
+      `the search panel covers the withheld-matches line by ${geo!.overlapY}px at ${label} — move the line below the panel's reach`,
+    ).toBe(0)
+  })
+}
