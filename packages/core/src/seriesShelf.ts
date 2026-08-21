@@ -133,11 +133,6 @@ export function positionBetween(
   return { position: (prev + next) / 2, renumber: true }
 }
 
-/** Integer renumber 1..n in current order — the silent renormalize when decimals get ugly. */
-export function renumberEntries(entries: readonly SeriesEntry[]): SeriesEntry[] {
-  return sortEntries(entries).map((e, i) => ({ ...e, position: i + 1 }))
-}
-
 /** One notion of title equality for every match in this module: trim + lowercase. */
 const normTitle = (t: string): string => t.trim().toLowerCase()
 

@@ -7,7 +7,6 @@ import {
   nextUp,
   positionBetween,
   progressLine,
-  renumberEntries,
   seedSeriesPositions,
   seriesProgress,
   matchEntryForBook,
@@ -112,18 +111,6 @@ describe('decimal positioning (drag-to-reorder)', () => {
     expect(positionBetween(null, 1)).toEqual({ position: 0, renumber: false })
     expect(positionBetween(7, null)).toEqual({ position: 8, renumber: false })
     expect(positionBetween(2.5, null)).toEqual({ position: 3, renumber: false })
-  })
-  it('renumber renormalizes to integers in current order', () => {
-    const out = renumberEntries([
-      entry({ id: 'a', position: 2.44 }),
-      entry({ id: 'b', position: 0.5 }),
-      entry({ id: 'c', position: 2.45 }),
-    ])
-    expect(out.map((e) => [e.id, e.position])).toEqual([
-      ['b', 1],
-      ['a', 2],
-      ['c', 3],
-    ])
   })
 })
 
