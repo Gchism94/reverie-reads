@@ -25,8 +25,8 @@ forgotten.
 > | Deliberately partial, and why      | never                          | —                                                                                                        |
 > | Grep audit, 2026-08                | never                          | —                                                                                                        |
 > | Pre-public tracked-data decisions  | never                          | —                                                                                                        |
-> | Known-flaky, with a prior          | never                          | —                                                                                                        |
-> | Test-infrastructure follow-ups     | never                          | —                                                                                                        |
+> | Known-flaky, with a prior          | **2026-08-20** (batch 2)       | 5 live: 1 CLOSED, 3 OPEN (stamped), 1 rewritten from source                                              |
+> | Test-infrastructure follow-ups     | **2026-08-20** (batch 2)       | 9 live: 1 CLOSED, 7 OPEN (stamped), 1 unverifiable from a Code session                                   |
 > | Product queue                      | 2026-08-18 (verification pass) | corrected then; not re-checked here                                                                      |
 > | everything below Product queue     | never                          | —                                                                                                        |
 >
@@ -233,27 +233,27 @@ anon, authenticated, service_role` later put an explicit `anon=X` back on all
   <details><summary>original entry</summary>
 
 - **Every `security definer` RPC in the repo is anon-callable, and the ownership
-  `raise` is the only thing stopping it.** Postgres grants `EXECUTE` to `PUBLIC` by
-  default, so `grant execute on function … to authenticated` is **additive, not
-  gating** — it adds nothing that PUBLIC didn't already have. Observed against the
-  local stack with the anon key: `POST /rest/v1/rpc/remove_series_entry` returns
-  `P0001 not owner of series entry` and `rpc/merge_books` returns `P0001 not owner of
+`raise` is the only thing stopping it.** Postgres grants `EXECUTE` to `PUBLIC` by
+default, so `grant execute on function … to authenticated` is **additive, not
+gating** — it adds nothing that PUBLIC didn't already have. Observed against the
+local stack with the anon key: `POST /rest/v1/rpc/remove_series_entry` returns
+`P0001 not owner of series entry` and `rpc/merge_books` returns `P0001 not owner of
 primary book` — both reached the function body and were turned away by the check
-  inside it, not by a grant. `proacl` on both reads
-  `=X/postgres | postgres=X/postgres | authenticated=X/postgres`, where the empty
-  grantee is PUBLIC.
-  **No exposure today**, and deterministically so: `security definer` runs the body,
-  `auth.uid()` is null for anon, and `owner_id = null` is never true, so the first
-  statement always refuses. The hazard is structural rather than current — it means
-  the `raise` is the entire boundary on every RPC here, and any future RPC whose
-  first statement is _not_ an ownership check inherits a function an unauthenticated
-  caller can run. The two that exist are written correctly; nothing enforces that the
-  third will be.
-  Fix is a small migration revoking `execute … from public` across both (and a
-  convention for new ones) — **its own branch**, because it should cover `merge_books`
-  in the same change and a red run there needs to mean one thing. Found during
-  `fix/atomic-series-removal-client` while testing the `pgrst_ddl_watch` schema-cache
-  reload, which is how an anon call came to be made at all.
+inside it, not by a grant. `proacl` on both reads
+`=X/postgres | postgres=X/postgres | authenticated=X/postgres`, where the empty
+grantee is PUBLIC.
+**No exposure today**, and deterministically so: `security definer` runs the body,
+`auth.uid()` is null for anon, and `owner_id = null` is never true, so the first
+statement always refuses. The hazard is structural rather than current — it means
+the `raise` is the entire boundary on every RPC here, and any future RPC whose
+first statement is _not_ an ownership check inherits a function an unauthenticated
+caller can run. The two that exist are written correctly; nothing enforces that the
+third will be.
+Fix is a small migration revoking `execute … from public` across both (and a
+convention for new ones) — **its own branch**, because it should cover `merge_books`
+in the same change and a red run there needs to mean one thing. Found during
+`fix/atomic-series-removal-client` while testing the `pgrst_ddl_watch` schema-cache
+reload, which is how an anon call came to be made at all.
 
   </details>
 
@@ -516,10 +516,10 @@ primary book` — both reached the function body and were turned away by the che
   what wins when both exist.
   <sub>**verified 2026-08-20** — still OPEN: `apps/web/src/library/filterStore.ts:34` still holds filters/sort/mode in a module-level Zustand store, and `LibraryRoute.tsx:151` validates only `shelf` from the URL.</sub>
 - ~~**Swallowed Supabase errors**: a11y's `setupFixtures`, `cleanup`, `setProfileSkinMode`.~~
-  **CLOSED — verified against source 2026-08-15.** Closed by `0e8d4ef` (#92), both halves:
-  `a11y.spec.ts` routes its sign-ins through `authFailure()` (`if (error || !data.session) throw new
+**CLOSED — verified against source 2026-08-15.** Closed by `0e8d4ef` (#92), both halves:
+`a11y.spec.ts` routes its sign-ins through `authFailure()` (`if (error || !data.session) throw new
 Error(authFailure(context, DEV_EMAIL, error))`) and its writes through `ok`/`okData`/`okUser`; and
-  `scripts/seed-dev.mjs:265` reports `describeSupabaseError(e)` rather than `Seed failed: {}`.
+`scripts/seed-dev.mjs:265` reports `describeSupabaseError(e)` rather than `Seed failed: {}`.
 
   <details><summary>original entry</summary>
 
