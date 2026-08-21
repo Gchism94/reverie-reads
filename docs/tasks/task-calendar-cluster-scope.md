@@ -3,7 +3,7 @@
 **Status:** scoping only. No implementation, no mockups. The output of this document is the decision
 list at the end.
 
-`docs/backlog/BACKLOG.md:1077` lists "Calendar cluster" under **Parked design conversations**. This
+`docs/backlog/BACKLOG.md`, under **Parked design conversations**, lists "Calendar cluster". This
 document is the attempt to unpark it, which means naming what has to be decided before anything is
 built — not proposing a design.
 
@@ -142,7 +142,7 @@ cluster will touch whether or not it wants to.
 
 ## 4. The year heatmap — a live re-decision, not a revival
 
-`BACKLOG.md:1073`, under a deferred list:
+`docs/backlog/BACKLOG.md`, under **Deferred by decision, not forgotten**:
 
 > Year heatmap. No longer sold by copy.
 
