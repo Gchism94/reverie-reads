@@ -36,7 +36,9 @@ pnpm dev                # run the web app
 
 ### Environment variables (names only — never commit values)
 
-Copy `.env.example` / `apps/web/.env.example` to the matching `.env.local` and fill in your
+The committed `apps/web/.env` already carries the local-stack defaults — a fresh clone needs no
+env setup for local dev. For real keys (Sentry, Google Books) or a non-local backend, copy
+`.env.example` / `apps/web/.env.example` to the matching `.env.local` and fill in your
 own values. Names only:
 
 - **Required:** `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`.
