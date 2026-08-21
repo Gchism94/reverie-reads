@@ -1,5 +1,46 @@
 import { defineConfig, devices } from '@playwright/test'
 
+// ── Stack-lock enforcement: refuse to run outside the lock ─────────────────────────────────────
+// scripts/stack-lock.sh's own header names this as a documented, deliberately-scoped-out gap:
+// `npx playwright test` invoked directly bypasses the lock entirely, because the lock wraps
+// `playwright test` as a whole (`pnpm e2e` → `bash scripts/stack-lock.sh playwright test`) and
+// nothing stops a caller from reaching past the wrapper to the binary underneath. Two sessions
+// did exactly that and collided on the fixed port 4317 below (webServer's `--strictPort` means
+// the loser gets ERR_CONNECTION_REFUSED on every test, not a clean failure) — CI passthrough only
+// ever needed to ANNOUNCE "not locking," never PROVE it didn't need to.
+//
+// This config file is loaded on every invocation of `playwright test` — `npx`, bare, `pnpm exec`,
+// or the wrapped `pnpm e2e` — so the check belongs here, not only in the wrapper: the wrapper is
+// bypassable by reaching past it, config-loading is not. `scripts/stack-lock.sh` sets
+// RV_STACK_LOCK_HELD=1 for the whole process tree it wraps (its own re-entrancy guard, documented
+// in its header) — that is also exactly the signal this needs. CI is exempt for the same reason
+// stack-lock.sh exempts it: a dedicated runner has nothing to serialise against.
+//
+// Defense in depth, not redundant with `.claude/hooks/pretooluse-guard.sh`: that hook only fires
+// for Claude Code sessions issuing a Bash tool call. This fires for anything that loads this
+// file — a human's own terminal included.
+if (!process.env.CI && process.env.RV_STACK_LOCK_HELD !== '1') {
+  console.error(
+    [
+      '',
+      'playwright.config.ts: refusing to run — not under scripts/stack-lock.sh.',
+      '',
+      '  This suite always binds the fixed port 4317 (strictPort, reuseExistingServer: false — see',
+      '  the PORT comment below), so a second unguarded run collides with whatever already holds',
+      '  it instead of failing cleanly. Run it through the lock instead:',
+      '',
+      '      pnpm e2e                          (from the repo root)',
+      '      pnpm --filter @reverie/web e2e     (from anywhere, e.g. CI)',
+      '',
+      '  Both forward flags, e.g. `pnpm e2e --project=rest`.',
+      '',
+      '  Deliberate raw run, typed not defaulted: RV_STACK_LOCK_HELD=1 npx playwright test ...',
+      '',
+    ].join('\n'),
+  )
+  process.exit(1)
+}
+
 // A dedicated, unusual port so the suite can never adopt a stray dev server (e.g. another local
 // project squatting Vite's default 5173) and silently test the wrong app. Three guards:
 //  - the pinned port below is shared by baseURL and webServer.url;
