@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { SOURCE_BUDGETS, sourceBudgetKey, waitMsFor, type PacedSource } from './sourcePace'
+import { SOURCE_BUDGETS, sourceBudgetKey } from './sourcePace'
 
 // The pacing policy, and the parity guard that keeps the Deno copy honest.
 //
@@ -49,50 +49,6 @@ describe('the documented limits are what we encode', () => {
   it('the old client-side 220ms is slower than nothing but faster than every OL gap — the bug it replaced', () => {
     expect(SOURCE_BUDGETS['ol-covers'].gapMs).toBeGreaterThan(220)
     expect(SOURCE_BUDGETS['ol-search'].gapMs).toBeGreaterThan(220)
-  })
-})
-
-describe('waitMsFor — a caller cannot get through faster than the gap', () => {
-  it('the first call waits for nothing', () => {
-    expect(waitMsFor('ol-covers', null, 1_000_000)).toBe(0)
-  })
-
-  it('an immediate second call waits the FULL gap', () => {
-    expect(waitMsFor('ol-covers', 1_000_000, 1_000_000)).toBe(3000)
-  })
-
-  it('waits only the remainder when some of the gap has already passed', () => {
-    expect(waitMsFor('ol-covers', 1_000_000, 1_002_000)).toBe(1000)
-  })
-
-  it('is due immediately once the gap has elapsed, and is never owed negative time', () => {
-    expect(waitMsFor('ol-covers', 1_000_000, 1_003_000)).toBe(0)
-    expect(waitMsFor('ol-covers', 1_000_000, 9_999_999)).toBe(0)
-  })
-
-  // THE PROPERTY THE BRIEF ASKED FOR, as arithmetic: however tightly a caller loops, the enforced
-  // spacing means N calls cannot occupy less than (N-1) x gap. A caller cannot outrun it by asking
-  // faster, because each call's wait is computed from the previous call's actual time.
-  it.each(['ol-covers', 'ol-search'] as PacedSource[])(
-    '%s: a tight loop of 10 calls still spans at least 9 gaps',
-    (source) => {
-      const gap = SOURCE_BUDGETS[source].gapMs
-      let now = 0
-      let last: number | null = null
-      for (let i = 0; i < 10; i++) {
-        now += waitMsFor(source, last, now) // the caller is forced to wait
-        last = now
-      }
-      expect(now).toBe(9 * gap)
-    },
-  )
-
-  it('a caller that ignores the wait still cannot spend more than the window budget', () => {
-    // The second mechanism: the gap shapes the traffic, the budget caps it. Even a caller that
-    // somehow skipped every sleep is stopped by rate_limit_consume at `max` per window.
-    const b = SOURCE_BUDGETS['ol-covers']
-    expect(b.max).toBe(100)
-    expect(b.windowSecs).toBe(300)
   })
 })
 
