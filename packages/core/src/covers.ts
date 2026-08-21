@@ -1,24 +1,3 @@
-export interface CoverLookup {
-  title: string
-  last?: string
-}
-
-/** Open Library search URL — the prototype's fallback source. */
-export function buildOpenLibraryUrl(b: CoverLookup): string {
-  return `https://openlibrary.org/search.json?title=${encodeURIComponent(
-    b.title,
-  )}&author=${encodeURIComponent(b.last ?? '')}&limit=1`
-}
-
-interface OpenLibraryResponse {
-  docs?: { cover_i?: number }[]
-}
-
-export function extractOpenLibraryCover(json: OpenLibraryResponse): string {
-  const id = json.docs?.[0]?.cover_i
-  return id ? `https://covers.openlibrary.org/b/id/${id}-M.jpg` : ''
-}
-
 // ── Cover system (the cover is the door) ──
 
 /** Where a book's current cover came from — provenance persisted alongside the stored asset. */
@@ -242,9 +221,3 @@ export function enrichmentCoverFill(
   if (book.cover) return '' // fill-only — an existing cover (user, seed, or prior fill) stays
   return offered
 }
-
-/** The ISBN-direct cover endpoint. `default=false` is MANDATORY and is the whole point of this URL:
- *  without it Open Library answers a miss with a 43-byte 1x1 GIF at HTTP 200, which sniffs as a
- *  valid image and would be stored as a durable cover. With it, a miss is a clean 404. */
-export const buildOpenLibraryIsbnCoverUrl = (isbn: string): string =>
-  `https://covers.openlibrary.org/b/isbn/${isbn.replace(/[^0-9Xx]/g, '')}-L.jpg?default=false`

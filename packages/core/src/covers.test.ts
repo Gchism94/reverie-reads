@@ -2,10 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   isDegenerateGoogleCoverRender,
   DISPLAY_ONLY_COVER_SOURCES,
-  buildOpenLibraryUrl,
   coverCandidates,
   enrichmentCoverFill,
-  extractOpenLibraryCover,
   isCoverSource,
   isGoogleContentCover,
   isGoogleNoCoverArt,
@@ -16,18 +14,6 @@ import {
   mayIngestCover,
   upgradeCoverUrl,
 } from './covers'
-
-describe('cover helpers', () => {
-  it('builds the Open Library search URL', () => {
-    expect(buildOpenLibraryUrl({ title: 'Iron Flame' })).toContain('openlibrary.org/search.json')
-  })
-
-  it('extracts an Open Library cover from a search hit', () => {
-    expect(extractOpenLibraryCover({ docs: [{ cover_i: 123 }] })).toBe(
-      'https://covers.openlibrary.org/b/id/123-M.jpg',
-    )
-  })
-})
 
 describe('cover system provenance + non-overwrite', () => {
   it('recognizes stored (durable) cover URLs vs external hotlinks', () => {
