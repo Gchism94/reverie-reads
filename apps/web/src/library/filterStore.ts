@@ -23,7 +23,8 @@ interface FilterState {
   setAuthor: (a: string) => void
   toggleFave: () => void
   toggleWishlist: () => void
-  toggleIntensity: (level: number) => void
+  /** `null` toggles the NOT-ASSESSED selection — never folded into 0 (assessed as none) */
+  toggleIntensity: (level: number | null) => void
   setSort: (s: LibrarySort) => void
   setShelf: (s: LibraryShelfLink) => void
   setMode: (m: LibraryMode) => void

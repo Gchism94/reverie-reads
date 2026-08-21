@@ -16,7 +16,16 @@ import { useHideIntensity } from '../data/profile'
 import { Surface } from '../components/Surface'
 
 const LEN_BUCKETS: SeriesLenBucket[] = ['Any', '1', '2', '3', '4', '5+', 'Unknown']
-const SPICE_LEVELS = [1, 2, 3, 4, 5]
+/*
+ * The selectable intensity values, and there are SEVEN, not five.
+ *
+ * 1–5 alone left two large populations unreachable by any intensity filter: books assessed as
+ * having none (0) and books nobody has assessed (null). Measured on the live database when this
+ * was fixed: 535 at 0 and 179 at null, against 49 across levels 3–5. `null` is listed here as
+ * itself rather than as a stand-in number precisely so the two can never be collapsed into one
+ * chip — that collapse is the defect this replaces.
+ */
+const SPICE_LEVELS: (number | null)[] = [0, 1, 2, 3, 4, 5, null]
 // Mirrors ShelvesRoute's SECTION_LABEL — same words for the same shelf, wherever it's named.
 const SHELF_LINK_LABEL: Record<Exclude<LibraryShelfLink, 'All'>, string> = {
   owned: 'Owned',
@@ -133,20 +142,34 @@ export function FilterPanel({ books, bare = false }: { books: Book[]; bare?: boo
 
       {/* Hidden readers get no group AND no live filter — `withIntensityHidden` clears any
           level they had selected before hiding, so the grid cannot stay constrained by a control
-          that is no longer on screen. */}
+          that is no longer on screen. (#325)
+          The chips inside are #326's: `null` is a selectable member meaning NOT ASSESSED, distinct
+          from `0` meaning assessed-and-none, each with a name a screen reader can act on. Both
+          halves are kept — hiding decides WHETHER the group renders, the chips decide WHAT it
+          offers, and neither answer substitutes for the other. */}
       {!hideIntensity && (
         <Group label={labels.intensity}>
-          {SPICE_LEVELS.map((lvl) => (
-            <Chip
-              key={lvl}
-              active={filters.intensity.includes(lvl)}
-              onClick={() => s.toggleIntensity(lvl)}
-            >
-              <span aria-label={`${labels.intensity} ${lvl}`}>
-                {labels.intensityGlyph.repeat(lvl)}
-              </span>
-            </Chip>
-          ))}
+          {SPICE_LEVELS.map((lvl) => {
+            // Each chip needs a NAME a screen reader can act on; a row of repeated glyphs (and,
+            // for 0, an empty span) would leave three of the seven indistinguishable by name alone.
+            const name =
+              lvl === null
+                ? `${labels.intensity} not assessed`
+                : lvl === 0
+                  ? `${labels.intensity} none`
+                  : `${labels.intensity} ${lvl}`
+            return (
+              <Chip
+                key={lvl === null ? 'unassessed' : lvl}
+                active={filters.intensity.includes(lvl)}
+                onClick={() => s.toggleIntensity(lvl)}
+              >
+                <span aria-label={name}>
+                  {lvl === null ? '—' : lvl === 0 ? 'None' : labels.intensityGlyph.repeat(lvl)}
+                </span>
+              </Chip>
+            )
+          })}
         </Group>
       )}
 
