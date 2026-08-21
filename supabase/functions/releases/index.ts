@@ -31,6 +31,12 @@ const SERVICE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 const BOOKS_KEY = Deno.env.get('GOOGLE_BOOKS_KEY') ?? ''
 const REFERER = Deno.env.get('BOOKS_KEY_REFERER') ?? 'https://reveriereads.app/'
 
+/** Ceiling on the discover pool cached + returned per genre. Mirrors DISCOVER_POOL in
+ *  apps/web/src/lib/discover.ts; the client pages it into batches of DISCOVER_BATCH.
+ *  The two deploy independently (Vercel vs Supabase), so neither side may ASSUME the other's
+ *  number — the client pages whatever length it receives, and this only ever caps. */
+const DISCOVER_POOL = 60
+
 const svc = {
   apikey: SERVICE,
   Authorization: `Bearer ${SERVICE}`,
@@ -158,7 +164,17 @@ async function fetchDiscoverShelf(query: string, genre: string): Promise<Hit[]> 
   const injected = pool.length - all.length
   if (injected > 0)
     console.log(`[discover] ${genre}: injected ${injected} curated of ${pool.length} pool`)
-  return tierDiscoverShelf(pool as Hit[], new Date().getFullYear()).slice(0, 12)
+  // Returns a POOL, not a shelf. The client shows DISCOVER_BATCH (20) at a time and cycles through
+  // the rest locally, so "new batch" costs ZERO extra calls — this payload is what the 24h
+  // per-genre cache already holds, and re-invoking with an offset would only hand back the same
+  // cached array. Cheaper than re-fetching by exactly one upstream round trip per batch.
+  //
+  // 60 = three batches, and it is a ceiling rather than a promise: ~80 raw come back from the two
+  // orderings, and quality-gating plus dedupe routinely leave fewer, so a genre that yields 34
+  // simply has two batches. Ordering still matters inside it — tierDiscoverShelf puts the last two
+  // years first, so later batches are progressively older, which is the right shape for "show me
+  // more" and the reason this is not a random sample.
+  return tierDiscoverShelf(pool as Hit[], new Date().getFullYear()).slice(0, DISCOVER_POOL)
 }
 
 Deno.serve(async (req: Request) => {
