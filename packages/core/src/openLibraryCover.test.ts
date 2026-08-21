@@ -1,8 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { buildOpenLibraryIsbnCoverUrl } from './covers'
 
-// The Open Library cover chain: the ISBN-direct endpoint, its mandatory guard, and the artifact that
-// guard exists to keep out.
+// The Open Library blank-plate artifact, pinned. The LIVE ingest chain is the `covers` edge
+// function (Deno — unimportable from Vitest), whose `?default=false` is the primary defence
+// against this artifact and whose host-agnostic MIN_COVER_EDGE_PX floor is the backstop
+// (supabase/functions/covers/index.ts). The gate never boots the Deno sandbox, so this file is the
+// only EXECUTABLE guard that the artifact those defences are sized against is what we think it is
+// — same pattern as sourcePace's Deno-parity test. The core-side URL builder that once lived
+// beside this (buildOpenLibraryIsbnCoverUrl) was dead code and is gone; the knowledge is the
+// artifact, not the builder.
 //
 // Cover-resolution approach adapted from work shared by Annabelle
 // (https://github.com/Annabelle0726/somnia-library) — see docs/reference/DATA_SOURCES.md.
@@ -33,22 +38,5 @@ describe('the blank-plate artifact is what we think it is', () => {
     const height = bytes[8]! | (bytes[9]! << 8)
     expect([width, height]).toEqual([1, 1])
     expect(Math.min(width, height)).toBeLessThan(50) // MIN_COVER_EDGE_PX in the covers function
-  })
-})
-
-describe('buildOpenLibraryIsbnCoverUrl', () => {
-  it('always carries default=false — the whole reason for this URL shape', () => {
-    const url = buildOpenLibraryIsbnCoverUrl('9781649374042')
-    expect(url).toContain('default=false')
-    expect(url).toBe('https://covers.openlibrary.org/b/isbn/9781649374042-L.jpg?default=false')
-  })
-
-  it('asks for -L, not -M — ingest normalizes to ~1200px and -M starves the resizer', () => {
-    expect(buildOpenLibraryIsbnCoverUrl('9781649374042')).toContain('-L.jpg')
-  })
-
-  it('strips separators an ISBN may carry, keeping a trailing X', () => {
-    expect(buildOpenLibraryIsbnCoverUrl('978-1-64937-404-2')).toContain('/9781649374042-L.jpg')
-    expect(buildOpenLibraryIsbnCoverUrl('080442957X')).toContain('/080442957X-L.jpg')
   })
 })
