@@ -5,7 +5,9 @@ import {
   bookSubgenres,
   CORE_GENRES,
   fromFirstLast,
-  mergeBooks,
+  applyBookMergePicks,
+  bookMergeOptions,
+  type MergeFieldPicks,
   parseNumericFields,
   possessionPatch,
   possessionState,
@@ -752,12 +754,18 @@ function MergePreview({
   loser: Book
   pending: boolean
   onBack: () => void
-  onConfirm: () => void
+  onConfirm: (picks: MergeFieldPicks) => void
   onClose: () => void
 }) {
-  const merged =
-    mergeBooks({ books: [primary, loser], tbrs: [], collections: [] }, primary.id, [loser.id])
-      .books[0] ?? primary
+  /*
+   * Per-field picks over the engine's defaults — same model as DuplicateReview's picker: absent
+   * key = the engine's answer, so an untouched dialog confirms exactly what it confirmed before
+   * the picker existed. The preview below renders the PICK-AWARE merge, so flipping a field
+   * updates the rows a reader is already looking at rather than a separate summary.
+   */
+  const [picks, setPicks] = useState<Record<string, boolean>>({})
+  const options = bookMergeOptions(primary, loser)
+  const merged = applyBookMergePicks(primary, loser, picks)
   const moods = unionRefs(primary.moods, loser.moods)
   const tropes = unionRefs(primary.tropes, loser.tropes)
   const formats = ownedFormatList(merged.owned)
@@ -839,6 +847,43 @@ function MergePreview({
         </DiffRow>
       </Surface>
 
+      {options.length > 0 && (
+        <details className="mt-2">
+          <summary className="cursor-pointer list-none text-[12.5px] text-muted marker:content-none">
+            <span className="underline">Choose fields ({options.length})</span> — the rows above
+            update as you pick
+          </summary>
+          <ul className="mt-1.5 flex flex-col gap-1" data-testid="merge-book-picker">
+            {options.map((o) => (
+              <li key={o.key}>
+                <label className="flex items-start gap-2 text-[12px]">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5"
+                    checked={picks[o.key] ?? o.take}
+                    onChange={(e) => setPicks((prev) => ({ ...prev, [o.key]: e.target.checked }))}
+                  />
+                  <span className="min-w-0">
+                    <span className="text-ink">{o.label}</span>{' '}
+                    {o.kind === 'add' ? (
+                      <span className="text-muted">
+                        {o.theirs ? `take “${o.theirs}”` : 'take the other book’s'}
+                      </span>
+                    ) : (
+                      <span className="text-muted">
+                        {o.mine || o.theirs
+                          ? `keep “${o.mine}” — or take “${o.theirs}”`
+                          : 'take the other book’s'}
+                      </span>
+                    )}
+                  </span>
+                </label>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+
       <p className="mt-3 text-[12px] text-muted">
         {titleDropped ? `“${loser.title}” (the other title) is dropped. ` : ''}
         List memberships from both move to the survivor.
@@ -856,7 +901,7 @@ function MergePreview({
         </button>
         <button
           type="button"
-          onClick={onConfirm}
+          onClick={() => onConfirm(picks)}
           disabled={pending}
           className="h-11 flex-1 skin-control text-[14px] font-semibold disabled:opacity-50"
           style={{
@@ -896,7 +941,7 @@ export function MergeDialog({
         pending={merge.isPending}
         onBack={() => setLoser(null)}
         onClose={onClose}
-        onConfirm={() => merge.mutate({ primary: book, loser }, { onSuccess: onClose })}
+        onConfirm={(picks) => merge.mutate({ primary: book, loser, picks }, { onSuccess: onClose })}
       />
     )
 
