@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { createRoute, useNavigate } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { genreKey, SKINS, SKIN_ORDER, splitName, type Book, type TasteAnchors } from '@reverie/core'
@@ -14,12 +14,15 @@ import { CoverImage } from '../components/CoverImage'
 import { SearchResults } from '../components/SearchResults'
 import type { SearchResult } from '../lib/search'
 import {
+  batchCount,
+  batchOf,
   fetchDiscover,
   hitKey,
   isOwned,
   ownedKeys,
   rankHitsByTaste,
   sortByTaste,
+  visibleHits,
   type DiscoverHit,
 } from '../lib/discover'
 import { TasteTier } from '../components/TasteTier'
@@ -277,27 +280,54 @@ function DiscoverScreen() {
     retry: 1,
   })
 
+  // The pool, the reader's filter over it, and which slice of it is on screen.
+  //
+  // batchIndex resets to 0 whenever the GENRE or the TOGGLE changes, because both change how many
+  // batches exist: sitting on batch 2 of a three-batch shelf and then hiding your library can leave
+  // you pointing past the end of a one-batch list. batchOf wraps rather than returning empty, so
+  // this is belt-and-braces — but landing a reader mid-shelf after they changed the shelf is the
+  // wrong answer even when it renders.
+  const [hideImported, setHideImported] = useState(false)
+  const [batchIndex, setBatchIndex] = useState(0)
+  const gkey = genreKey(genre)
+  useEffect(() => setBatchIndex(0), [gkey, hideImported])
+
+  const visible = useMemo(
+    () => visibleHits(q.data ?? [], owned, hideImported),
+    // `owned` is rebuilt every render from useBooks; key on the library's identity instead so this
+    // does not recompute on every keystroke in the search box.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [q.data, books, hideImported],
+  )
+  const batches = batchCount(visible)
+  const batch = useMemo(() => batchOf(visible, batchIndex), [visible, batchIndex])
+
   // Tier 2b: score the shelf against the reader's taste centroid. Unavailability (cold start /
   // fn down / budget cut) is thrown, NOT returned — returned null would be cached as data for
   // hours and keep hiding taste after the fn recovers. Errors stay silent (catalog order) and
   // retry on the next visit; taste is an enhancement, never a gate.
+  //
+  // Scoped to the CURRENT BATCH, not the pool: the promise this feature makes is about the shelf in
+  // front of the reader, and ranking 60 to show 20 would spend the embed budget on 40 they may
+  // never see. The key already carries the batch's hit keys, so each batch's scores cache on first
+  // view and cycling back is free.
   const rank = useQuery({
-    queryKey: ['discover-rank', genreKey(genre), (q.data ?? []).map(hitKey).join('|')],
+    queryKey: ['discover-rank', genreKey(genre), batch.map(hitKey).join('|')],
     queryFn: async () => {
-      const scores = await rankHitsByTaste(q.data ?? [], genre)
+      const scores = await rankHitsByTaste(batch, genre)
       if (!scores) throw new Error('taste unavailable')
       return scores
     },
-    enabled: !!q.data?.length,
+    enabled: batch.length > 0,
     staleTime: 1000 * 60 * 60 * 6,
     retry: 0,
   })
   // The reader's fixed display anchors — one fetch, shared by every card (TanStack dedupes the key).
   const { data: anchors } = useTasteCalibration()
-  const ordered = q.data
+  const ordered = batch.length
     ? rank.data
-      ? sortByTaste(q.data, rank.data)
-      : q.data.map((hit) => ({ hit }) as { hit: DiscoverHit; taste?: number })
+      ? sortByTaste(batch, rank.data)
+      : batch.map((hit) => ({ hit }) as { hit: DiscoverHit; taste?: number })
     : []
 
   return (
@@ -416,22 +446,58 @@ function DiscoverScreen() {
 
           {q.isSuccess && q.data.length > 0 && (
             <>
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <Chip
+                  active={hideImported}
+                  onClick={() => setHideImported((v) => !v)}
+                  title="Hide books already in your library"
+                >
+                  Hide what I have
+                </Chip>
+                {/* Only offered when there IS another batch. A single-batch shelf — the curated
+                    fn-down path, a thin genre, or an older deployed fn still returning 12 — shows
+                    no control rather than a button that re-renders the same twenty. */}
+                {batches > 1 && (
+                  <button
+                    type="button"
+                    data-testid="discover-new-batch"
+                    onClick={() => setBatchIndex((i) => i + 1)}
+                    className="skin-control-quiet border border-line px-3 py-1.5 text-[12.5px] text-ink"
+                    style={{ background: 'var(--chip)' }}
+                  >
+                    New batch{' '}
+                    <span className="skin-numeral text-muted">
+                      {(batchIndex % batches) + 1}/{batches}
+                    </span>
+                  </button>
+                )}
+              </div>
               {rank.data && (
                 <p className="mb-3 text-[12px] text-muted">
                   Closest to your taste first — learned from the books you love.
                 </p>
               )}
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-                {ordered.map(({ hit: h, taste }) => (
-                  <Card
-                    key={`${h.isbn}|${h.title}`}
-                    hit={h}
-                    owned={isOwned(h, owned)}
-                    taste={taste}
-                    anchors={anchors}
-                  />
-                ))}
-              </div>
+              {ordered.length === 0 ? (
+                // Reachable only with the toggle on: the pool had hits, the reader owns all of them.
+                <p
+                  className="px-2 py-10 text-center text-[14px] text-muted"
+                  data-testid="discover-all-owned"
+                >
+                  You already have everything on this shelf. Turn off “Hide what I have” to see it.
+                </p>
+              ) : (
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                  {ordered.map(({ hit: h, taste }) => (
+                    <Card
+                      key={`${h.isbn}|${h.title}`}
+                      hit={h}
+                      owned={isOwned(h, owned)}
+                      taste={taste}
+                      anchors={anchors}
+                    />
+                  ))}
+                </div>
+              )}
             </>
           )}
 
