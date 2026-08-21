@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { matchBook, mergeImport, type Incoming } from './match'
-import { parseCsvIncoming } from './csv'
+import { parseCsvRows } from './csv'
 import type { Book } from './types'
 import { makeBook } from './book.fixture'
 
@@ -8,7 +8,7 @@ import { makeBook } from './book.fixture'
 // policy can be tested directly, including re-import idempotency.
 function runImport(library: Book[], csv: string) {
   const result = { added: 0, merged: 0, review: 0 }
-  for (const inc of parseCsvIncoming(csv)) {
+  for (const inc of parseCsvRows(csv).map((r) => r.incoming)) {
     const m = matchBook(inc, library)
     if (m.strength === 'none') {
       library.push(toBook(inc))
