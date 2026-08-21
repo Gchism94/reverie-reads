@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { mergeBooks as mergeBooksCore, type Book } from '@reverie/core'
+import { applyBookMergePicks, type Book, type MergeFieldPicks } from '@reverie/core'
 import { supabase } from '../lib/supabase'
 import { toBookRow } from './mappers'
 import { booksKey } from './books'
@@ -16,13 +16,18 @@ export function usePerformMerge() {
   const qc = useQueryClient()
   return useMutation({
     meta: { action: 'The merge' },
-    mutationFn: async ({ primary, loser }: { primary: Book; loser: Book }): Promise<void> => {
-      const merged = mergeBooksCore(
-        { books: [primary, loser], tbrs: [], collections: [] },
-        primary.id,
-        [loser.id],
-      ).books[0]
-      if (!merged) throw new Error('Merge produced no book')
+    mutationFn: async ({
+      primary,
+      loser,
+      picks,
+    }: {
+      primary: Book
+      loser: Book
+      /** per-field overrides from MergePreview's picker; absent = the engine's answer, so the
+       *  bulk path (SettingsRoute passes none) writes exactly what it always wrote */
+      picks?: MergeFieldPicks
+    }): Promise<void> => {
+      const merged = applyBookMergePicks(primary, loser, picks)
       const { error } = await supabase.rpc('merge_books', {
         p_primary: primary.id,
         p_loser: loser.id,
