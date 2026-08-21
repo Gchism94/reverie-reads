@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { geoCacheKey, haversineKm, isChain, parseStores, type OverpassEl } from './indie'
+import {
+  formatHours12,
+  geoCacheKey,
+  haversineKm,
+  isChain,
+  parseStores,
+  type OverpassEl,
+} from './indie'
 
 describe('isChain', () => {
   it('excludes known chains, keeps independents', () => {
@@ -74,5 +81,60 @@ describe('parseStores', () => {
       -90.07,
     )
     expect(out[0]).toMatchObject({ name: 'Indie', phone: '555-1234', website: 'https://i.co' })
+  })
+})
+
+describe('formatHours12 — OSM opening_hours rendered for a reader', () => {
+  // Real-shaped values. Overpass returns the opening_hours mini-language, not a time, and the
+  // screen was printing it raw — so these assert the WHOLE string, grammar included, not just the
+  // clock. Several DIFFERENT stores on purpose: an off-by-noon bug passes a single 10:00-18:00
+  // fixture happily and only fails on the shop that opens at noon or closes at midnight.
+  it('converts a plain weekday range', () => {
+    expect(formatHours12('Mo-Fr 10:00-19:00')).toBe('Mo-Fr 10:00 AM-7:00 PM')
+  })
+
+  it('converts every period in a multi-clause value, keeping the separators', () => {
+    expect(formatHours12('Mo-Fr 09:00-17:30; Sa 11:00-16:00; Su 12:00-17:00')).toBe(
+      'Mo-Fr 9:00 AM-5:30 PM; Sa 11:00 AM-4:00 PM; Su 12:00 PM-5:00 PM',
+    )
+  })
+
+  it('midnight is 12:00 AM, not 0:00 AM', () => {
+    expect(formatHours12('Fr-Sa 18:00-00:00')).toBe('Fr-Sa 6:00 PM-12:00 AM')
+  })
+
+  it('noon is 12:00 PM, not 12:00 AM — the off-by-noon case', () => {
+    expect(formatHours12('Mo 12:00-18:00')).toBe('Mo 12:00 PM-6:00 PM')
+    expect(formatHours12('Mo 12:30-13:00')).toBe('Mo 12:30 PM-1:00 PM')
+  })
+
+  it("24:00 is OSM's end-of-day midnight, not midday", () => {
+    // The trap: `24 % 12 === 0` would render this 12:00 PM and shut the shop twelve hours early.
+    expect(formatHours12('Mo-Su 09:00-24:00')).toBe('Mo-Su 9:00 AM-12:00 AM')
+  })
+
+  it('the hour either side of noon and midnight lands correctly', () => {
+    expect(formatHours12('11:00-13:00')).toBe('11:00 AM-1:00 PM')
+    expect(formatHours12('23:00-01:00')).toBe('11:00 PM-1:00 AM')
+  })
+
+  it('preserves minutes exactly as written', () => {
+    expect(formatHours12('Tu 08:05-20:45')).toBe('Tu 8:05 AM-8:45 PM')
+  })
+
+  it('leaves non-time grammar untouched', () => {
+    expect(formatHours12('24/7')).toBe('24/7')
+    expect(formatHours12('Mo-Sa 10:00-18:00; Su off')).toBe('Mo-Sa 10:00 AM-6:00 PM; Su off')
+    expect(formatHours12('PH 12:00-16:00')).toBe('PH 12:00 PM-4:00 PM')
+    expect(formatHours12('"by appointment"')).toBe('"by appointment"')
+  })
+
+  it('is empty for an absent tag — the screen renders nothing rather than a stray clock', () => {
+    expect(formatHours12('')).toBe('')
+  })
+
+  it('leaves values that are not wall-clock times alone rather than guessing', () => {
+    expect(formatHours12('Mo 10:75-18:00')).toBe('Mo 10:75-6:00 PM')
+    expect(formatHours12('Mo 25:00-26:00')).toBe('Mo 25:00-26:00')
   })
 })
