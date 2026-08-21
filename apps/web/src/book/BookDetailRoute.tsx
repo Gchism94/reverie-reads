@@ -271,7 +271,7 @@ function BookDetailScreen() {
               <Pill key={s}>{s}</Pill>
             ))}
             <Pill>{seriesBadge}</Pill>
-            {(book.intensity ?? 0) > 0 && (
+            {(book.intensity ?? 0) > 0 && !(profile?.hideIntensity ?? false) && (
               <Pill>{labels.intensityGlyph.repeat(book.intensity ?? 0)}</Pill>
             )}
             {formatPartialDate(book.pub) && <Pill>📅 {formatPartialDate(book.pub)}</Pill>}

@@ -28,6 +28,7 @@ import type { ReviewCandidate } from '../data/intake'
 import { APP_NAME, SKIN_LIST, type Mode } from '@reverie/core'
 import { BUILD_LABEL } from '../lib/updates'
 import { useSkin } from '../skin/useSkin'
+import { useLabels } from '../skin/labels'
 import { useSkinControls } from '../skin/controls'
 import { useAuth } from '../auth/AuthProvider'
 import { todayLocalDate } from '../lib/localDate'
@@ -58,6 +59,7 @@ const IMPORT_LOADING_LABEL = '📚 Loading your library…'
 function SettingsScreen() {
   const qc = useQueryClient()
   const { data: profile } = useProfile()
+  const labels = useLabels()
   const { data: books } = useBooks()
   const updateProfile = useUpdateProfile()
   const updateBook = useUpdateBook()
@@ -480,6 +482,23 @@ function SettingsScreen() {
             </Link>
             .
           </p>
+
+          <label className="mt-4 flex items-start gap-2.5 text-[13px] text-ink">
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={profile?.hideIntensity ?? false}
+              onChange={(e) => updateProfile.mutate({ hideIntensity: e.target.checked })}
+            />
+            <span>
+              Hide {labels.intensity.toLowerCase()} {labels.intensityGlyph}
+              <span className="block text-[12px] text-muted">
+                Removes it everywhere — the mark on covers and book pages, the filter, the sort, and
+                the stats card. Nothing is deleted: levels you have already set are kept, and
+                turning this off brings them all back.
+              </span>
+            </span>
+          </label>
         </Section>
 
         <Section title="Library tools">

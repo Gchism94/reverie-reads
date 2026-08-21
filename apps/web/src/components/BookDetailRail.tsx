@@ -8,6 +8,7 @@ import {
 } from '@reverie/core'
 import { subgenreGradient } from '../library/constants'
 import { useLabels, useVoice } from '../skin/labels'
+import { useHideIntensity } from '../data/profile'
 import { Chip } from './Chip'
 import { CoverImage } from './CoverImage'
 import { Nameplate } from './Nameplate'
@@ -26,6 +27,8 @@ export function BookDetailRail({
 }) {
   const labels = useLabels()
   const voice = useVoice()
+  // Above the `if (!book)` early return below — rules-of-hooks.
+  const hideIntensity = useHideIntensity()
 
   if (!book) {
     return (
@@ -85,7 +88,7 @@ export function BookDetailRail({
             Read
           </span>
         )}
-        {intensity > 0 && (
+        {intensity > 0 && !hideIntensity && (
           <span
             className="skin-control px-2.5 py-1 text-[11px] font-semibold"
             style={{

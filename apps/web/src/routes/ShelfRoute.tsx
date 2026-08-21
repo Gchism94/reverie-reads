@@ -4,6 +4,7 @@ import { type Book } from '@reverie/core'
 import { rootRoute } from './RootRoute'
 import { BackLink } from '../components/BackLink'
 import { CoverCard } from '../components/CoverCard'
+import { useHideIntensity } from '../data/profile'
 import { LibraryPicker } from '../components/LibraryPicker'
 import { ExternalSearchSheet } from '../components/ExternalSearchSheet'
 import { SpineShelf } from '../components/SpineShelf'
@@ -39,6 +40,7 @@ const COVER_GRID: React.CSSProperties = {
 function ShelfScreen() {
   const { listId } = shelfRoute.useParams()
   const navigate = useNavigate()
+  const hideIntensity = useHideIntensity()
   const { data: books } = useBooks()
   const listsQuery = useLists()
   const lists = listsQuery.data
@@ -246,6 +248,7 @@ function ShelfScreen() {
               style={dragIdx === i ? { opacity: 0.4 } : undefined}
             >
               <CoverCard
+                hideIntensity={hideIntensity}
                 book={b}
                 onOpen={() => openBook(b.id)}
                 onToggleFave={() => updateBook.mutate({ id: b.id, patch: { fave: !b.fave } })}
