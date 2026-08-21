@@ -6,18 +6,17 @@ the runbook for shipping to it. Owner decisions: **Reverie** is the name (2026-0
 
 ## Topology
 
-| Piece         | Where                                               | Notes                                                        |
-| ------------- | --------------------------------------------------- | ------------------------------------------------------------ |
-| Backend       | Supabase project `tzimctugmzuadrsitnpr` (us-west-2) | Postgres + Auth + Storage + Edge Functions; pgvector enabled |
-| Web app       | Vercel — https://reveriereads.vercel.app            | custom domain: reveriereads.app                              |
-| External APIs | Google Books (keyed, client-side)                   | key lives in env, never committed                            |
+| Piece         | Where                                               | Notes                                                              |
+| ------------- | --------------------------------------------------- | ------------------------------------------------------------------ |
+| Backend       | Supabase project `tzimctugmzuadrsitnpr` (us-west-2) | Postgres + Auth + Storage + Edge Functions; pgvector enabled       |
+| Web app       | Vercel — https://reveriereads.vercel.app            | custom domain: reveriereads.app                                    |
+| External APIs | Google Books (keyed, server-side)                   | `GOOGLE_BOOKS_KEY` is a Supabase function secret, never in web env |
 
 ## Web env (Vercel project settings)
 
 ```
 VITE_SUPABASE_URL=https://tzimctugmzuadrsitnpr.supabase.co
 VITE_SUPABASE_ANON_KEY=sb_publishable_kp8TvVCeARWRqqk4z0a0CA_35y5KZgQ   # publishable — client-safe by design
-VITE_GOOGLE_BOOKS_KEY=<the referrer-restricted Books key>
 # optional: VITE_SENTRY_DSN, VITE_SOCIAL_AUTH_ENABLED, VITE_BUY_ATTRIBUTION_MODE + affiliate ids
 ```
 
