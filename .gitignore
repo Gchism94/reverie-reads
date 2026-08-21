@@ -17,6 +17,9 @@ test-results/
 .env
 .env.*
 !.env.example
+# The one committed env file: the local stack's public demo values (see its own header).
+# Real keys stay in .env.local, which the patterns above keep ignoring.
+!apps/web/.env
 
 # Supabase local
 supabase/.branches/

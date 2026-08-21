@@ -235,14 +235,16 @@ function` + fresh `create` resets it to the PUBLIC-execute default — verified 
   leave the replacement in place rather than the reader with neither. The silence is the failure mode;
   a comment and a guard ordering are the antidote.
 
-- **A fresh worktree does not inherit `apps/web/.env.local` (gitignored), and the failure looks
-  nothing like the cause: unit tests fail in ways that read as real regressions** — offline-session
-  boot stuck on "Turning the page…", cache-scoping restores finding nothing. Copy it from the main
-  checkout as the FIRST step of every `git worktree add`. Measured impact has drifted with the
-  suite and the figure is dated so the next drift reads as drift, not contradiction: **10 failing
-  unit tests when first hit (2026-08-19, #288's session — diagnosed only after re-running clean
-  `origin/main` in the same worktree), 17 when it hit again (2026-08-20, #297's session)**. If a
-  fresh worktree shows unexplained unit failures, check for this file before suspecting the diff.
+- **The fresh-worktree `.env.local` failure class is CLOSED (2026-08-21): the committed
+  `apps/web/.env` carries the local-stack demo values in every Vite mode, so a fresh worktree
+  builds and tests with no env setup at all.** `.env.local` is now an optional per-machine
+  override and the ONLY home for real keys (Sentry DSN, Google Books) — never commit those into
+  `.env`. History, kept because the misdiagnosis pattern generalises: >=5 incidents where the
+  missing gitignored file made unit tests fail in ways that read as real regressions
+  (offline-session boot stuck on "Turning the page…", cache-scoping restores finding nothing) —
+  10 failing tests on 2026-08-19 (#288), 17 on 2026-08-20 (#297), plus build refusals. On a
+  branch that predates the committed `.env`, the old failure and the old fix (copy `.env.local`
+  from the main checkout) still apply.
 
 - **Create the branch BEFORE the first edit, never after.** `git checkout -b` costs nothing at the
   start and is the only moment it is free. Starting work on whatever branch happens to be checked
@@ -264,13 +266,19 @@ function` + fresh `create` resets it to the PUBLIC-execute default — verified 
   **Why it must be local, verified rather than assumed:** GitHub fires no `pull_request` events for
   a CLOSED PR, `ci.yml`'s push trigger is `branches: [main]`, `cla.yml` is `pull_request_target`
   (same blindness) and `layout-sweep-390` is dispatch-only. Such a push produces **no CI event of
-  any kind**. `.husky/pre-push` now refuses it, names the PR, and prints the recovery (fresh branch
+  any kind**. `.githooks/pre-push` now refuses it, names the PR, and prints the recovery (fresh branch
   off `main`, cherry-pick, new PR); override with `ALLOW_PUSH_TO_MERGED=1`. It fails OPEN with a
   loud banner when `gh` is missing/offline — a guard that blocks every push on a plane gets
   `--no-verify`'d habitually, taking the Prettier check with it.
-  **No per-clone setup to forget** (unlike `apps/web/.env.local`): husky installs via `package.json`'s
-  `prepare`, and `core.hooksPath` lives in the shared repo config, so it covers every worktree —
-  verified empirically, not inferred.
+  **Hooks are COMMITTED (`.githooks/`), not install-generated — because the husky arrangement's
+  "no per-clone setup to forget" claim was false and this session proved it.** husky created its
+  hook shims in `.husky/_` on `pnpm install`, and `core.hooksPath` is a RELATIVE path resolved
+  per-worktree — so an uninstalled worktree had NO hooks and no warning, and two pushes from such
+  worktrees ran neither guard (verified 2026-08-21). Committed hooks arm every worktree from
+  checkout. The one true per-clone step (`git config core.hooksPath .githooks`) runs via
+  `package.json`'s `prepare`; a clone that has NEVER run `pnpm install` has no hooks config and no
+  guards — run `scripts/worktree-init.sh` (or any `pnpm install`) once. `.githooks/post-checkout`
+  banners any fresh worktree that lacks `node_modules`, naming the exact command.
   **Auditing for it needs the LIVE BRANCH REF, not the PR's head.** `gh pr list --json headRefOid`
   reports the head _at merge time_, which is on `main` by definition — it structurally cannot see
   this variant. Compare `git ls-remote --heads origin` tips against `main` instead. That scan
