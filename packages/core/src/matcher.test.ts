@@ -8,7 +8,7 @@ import { makeBook } from './book.fixture'
 const profile: MatchProfile = {
   subWeights: { Romantasy: 3 },
   wantTags: ['Enemies to Lovers', 'Fae'],
-  targetIntensity: 4,
+  targetDarkness: 4,
 }
 
 describe('scoreMatch (Tier 0 vibe matcher)', () => {
@@ -22,7 +22,7 @@ describe('scoreMatch (Tier 0 vibe matcher)', () => {
       title: 'Match',
       subgenre: 'Romantasy',
       tags: ['Enemies to Lovers', 'Fae'],
-      intensity: 4,
+      darkness: 4,
       rating: 5,
       readStatus: 'Unread',
     })
@@ -31,7 +31,7 @@ describe('scoreMatch (Tier 0 vibe matcher)', () => {
       title: 'Miss',
       subgenre: 'Contemporary',
       tags: [],
-      intensity: 1,
+      darkness: 1,
       rating: 0,
       readStatus: 'Read',
     })
@@ -42,18 +42,20 @@ describe('scoreMatch (Tier 0 vibe matcher)', () => {
     expect(lo.score).toBeGreaterThanOrEqual(0)
   })
 
-  it('unknown intensity sits between a perfect fit and a bad fit (mild neutral, not a free pass)', () => {
-    const perfect = scoreMatch(makeBook({ id: 'a', title: 'A', intensity: 4 }), profile).score
-    const unknown = scoreMatch(makeBook({ id: 'b', title: 'B', intensity: null }), profile).score
-    const bad = scoreMatch(makeBook({ id: 'c', title: 'C', intensity: 0 }), profile).score
+  it('unknown darkness sits between a perfect fit and a bad fit (mild neutral, not a free pass)', () => {
+    // The scored axis is DARKNESS since the split (2026-08-21); this used to vary intensity, which
+    // now moves nothing here — every book would tie and the assertion would read as a regression.
+    const perfect = scoreMatch(makeBook({ id: 'a', title: 'A', darkness: 4 }), profile).score
+    const unknown = scoreMatch(makeBook({ id: 'b', title: 'B', darkness: null }), profile).score
+    const bad = scoreMatch(makeBook({ id: 'c', title: 'C', darkness: 0 }), profile).score
     expect(unknown).toBeLessThan(perfect)
     expect(unknown).toBeGreaterThan(bad)
   })
 
-  it('ignores intensity entirely when the reader has no preference (null target)', () => {
-    const p: MatchProfile = { subWeights: {}, wantTags: [], targetIntensity: null }
-    const spicy = scoreMatch(makeBook({ id: 'a', title: 'A', intensity: 5 }), p)
-    const mild = scoreMatch(makeBook({ id: 'b', title: 'B', intensity: 0 }), p)
+  it('ignores darkness entirely when the reader has no preference (null target)', () => {
+    const p: MatchProfile = { subWeights: {}, wantTags: [], targetDarkness: null }
+    const spicy = scoreMatch(makeBook({ id: 'a', title: 'A', darkness: 5 }), p)
+    const mild = scoreMatch(makeBook({ id: 'b', title: 'B', darkness: 0 }), p)
     expect(spicy.score).toBe(mild.score)
   })
 
@@ -69,7 +71,7 @@ describe('scoreMatch (Tier 0 vibe matcher)', () => {
     const p: MatchProfile = {
       subWeights: {},
       wantTags: ['Slow Burn', 'Locked Room'],
-      targetIntensity: null,
+      targetDarkness: null,
     }
     const rare = scoreMatch(makeBook({ id: 'r', title: 'R', tags: ['Locked Room'] }), p, ctx)
     const common = scoreMatch(makeBook({ id: 'c', title: 'C', tags: ['Slow Burn'] }), p, ctx)
@@ -81,7 +83,7 @@ describe('scoreMatch (Tier 0 vibe matcher)', () => {
     const p: MatchProfile = {
       subWeights: {},
       wantTags: ['enemies to lovers'],
-      targetIntensity: null,
+      targetDarkness: null,
     }
     const b = makeBook({ id: 'a', title: 'A', tags: ['Enemies to Lovers'] })
     expect(scoreMatch(b, p).reasons.find((x) => x.key === 'tags')?.value).toBe(1)
@@ -109,7 +111,7 @@ describe('scoreMatch (Tier 0 vibe matcher)', () => {
       }),
     ])
     const none = buildMatchContext([])
-    const p: MatchProfile = { subWeights: {}, wantTags: [], targetIntensity: null }
+    const p: MatchProfile = { subWeights: {}, wantTags: [], targetDarkness: null }
     const book2 = makeBook({
       id: '2',
       title: 'Book 2',
@@ -133,7 +135,7 @@ describe('scoreMatch (Tier 0 vibe matcher)', () => {
   })
 
   it('DNF is a real negative — no more accidental unread bonus', () => {
-    const p: MatchProfile = { subWeights: {}, wantTags: [], targetIntensity: null }
+    const p: MatchProfile = { subWeights: {}, wantTags: [], targetDarkness: null }
     const dnf = scoreMatch(makeBook({ id: 'd', title: 'D', readStatus: 'DNF' }), p)
     const unread = scoreMatch(makeBook({ id: 'u', title: 'U', readStatus: 'Unread' }), p)
     const read = scoreMatch(makeBook({ id: 'r', title: 'R', readStatus: 'Read' }), p)
@@ -142,7 +144,7 @@ describe('scoreMatch (Tier 0 vibe matcher)', () => {
   })
 
   it('rereads are a love signal on quality, not just "already read"', () => {
-    const p: MatchProfile = { subWeights: {}, wantTags: [], targetIntensity: null }
+    const p: MatchProfile = { subWeights: {}, wantTags: [], targetDarkness: null }
     const reads = [
       { date: '2025-01-01', format: 'ebook', rating: 0, notes: '' },
       { date: '2025-06-01', format: 'ebook', rating: 0, notes: '' },
@@ -164,7 +166,7 @@ describe('scoreMatch (Tier 0 vibe matcher)', () => {
       makeBook({ id: '4', title: 'Hated 2', tags: ['Billionaire'], readStatus: 'DNF' }),
     ]
     const ctx = buildMatchContext(library, { now })
-    const noQuiz: MatchProfile = { subWeights: {}, wantTags: [], targetIntensity: null }
+    const noQuiz: MatchProfile = { subWeights: {}, wantTags: [], targetDarkness: null }
     const loved = scoreMatch(makeBook({ id: 'l', title: 'L', tags: ['Locked Room'] }), noQuiz, ctx)
     const hated = scoreMatch(makeBook({ id: 'h', title: 'H', tags: ['Billionaire'] }), noQuiz, ctx)
     const blank = scoreMatch(makeBook({ id: 'b', title: 'B', tags: [] }), noQuiz, ctx)
@@ -175,7 +177,7 @@ describe('scoreMatch (Tier 0 vibe matcher)', () => {
 
   it('"not tonight" feedback floors novelty and decays back over 60 days', () => {
     const now = Date.parse('2026-01-01')
-    const p: MatchProfile = { subWeights: {}, wantTags: [], targetIntensity: null }
+    const p: MatchProfile = { subWeights: {}, wantTags: [], targetDarkness: null }
     const b = makeBook({ id: 'x', title: 'X', readStatus: 'Unread' })
     const fresh = buildMatchContext([], { now, dismissedAt: { x: now - 86_400_000 } })
     const fading = buildMatchContext([], { now, dismissedAt: { x: now - 45 * 86_400_000 } })

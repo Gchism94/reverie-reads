@@ -46,8 +46,9 @@ function whyLine(reasons: MatchReason[]): string {
     return `Close to your loves: ${taste.lovedTags.slice(0, 2).join(' · ')}`
   const sub = reasons.find((r) => r.key === 'subgenre')
   if (sub && sub.value >= 0.9) return 'Squarely your world'
-  const heat = reasons.find((r) => r.key === 'intensity')
-  if (heat && heat.value >= 0.9) return 'Heat right on target'
+  // The quiz scores DARKNESS since the axis split, so this line no longer describes heat.
+  const dark = reasons.find((r) => r.key === 'darkness')
+  if (dark && dark.value >= 0.9) return 'Pitched right for how heavy you want it'
   return 'A fresh pick from your shelves'
 }
 
@@ -119,7 +120,7 @@ function score(
   // resolves subWeights[book.subgenre] ?? subWeights[book.genre]). Taste-only mode (Tier 1) skips
   // the quiz entirely: a mood-neutral profile over the standing taste.
   const profile: MatchProfile = opts.tasteOnly
-    ? { subWeights: {}, wantTags: [], targetIntensity: null }
+    ? { subWeights: {}, wantTags: [], targetDarkness: null }
     : buildQuizProfile(a)
   const ctx = buildMatchContext(books, { dismissedAt: opts.dismissedAt })
 

@@ -370,6 +370,7 @@ export function importCsv(existing: readonly Book[], text: string): CsvImportRes
         tropes: [],
         moods: [],
         intensity: null,
+        darkness: null, // no import format describes emotional darkness — see importMap
         cover: '',
         pages: null,
         isbn: '',

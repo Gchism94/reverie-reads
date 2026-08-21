@@ -63,6 +63,7 @@ export function toBook(row: BookRow): Book {
         .map((bm) => ({ id: bm.moods!.id, name: bm.moods!.name })),
     ),
     intensity: row.intensity ?? null,
+    darkness: row.darkness ?? null,
     cover: row.cover_url ?? '',
     coverConfidence: COVER_CONFIDENCE.includes(row.cover_confidence as (typeof COVER_CONFIDENCE)[number])
       ? (row.cover_confidence as Book['coverConfidence'])
@@ -131,6 +132,7 @@ export function toBookRow(patch: Partial<Book>): Partial<BookRow> {
   if (patch.genres !== undefined) row.genres = patch.genres
   if (patch.tags !== undefined) row.tags = patch.tags
   if (patch.intensity !== undefined) row.intensity = patch.intensity
+  if (patch.darkness !== undefined) row.darkness = patch.darkness
   if (patch.cover !== undefined) row.cover_url = patch.cover || null
   // coverConfidence: an EXPLICIT undefined (key present) clears the column — null = trusted
   // user-chosen cover, the cover-sheet paths' post-ingest state.

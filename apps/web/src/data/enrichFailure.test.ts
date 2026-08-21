@@ -51,6 +51,7 @@ const makeBook = (over: Partial<Book>): Book => ({
   series: '', position: '', seriesCount: null, status: 'standalone',
   genre: 'fantasy', subgenre: '', subgenres: [], genres: [], tags: [], tropes: [], moods: [],
   intensity: null, cover: '', pages: null, isbn: '', fave: false,
+  darkness: null,
   ownership: 'owned', borrowed: false, wishlist: false,
   owned: { physical: false, ebook: false, audiobook: false },
   format: '', rating: 0, readStatus: 'unset', source: '',

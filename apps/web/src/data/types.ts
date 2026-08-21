@@ -18,6 +18,7 @@ export interface BookRow {
   genres: string[]
   tags: string[]
   intensity: number | null
+  darkness: number | null
   cover_url: string | null
   cover_confidence: string | null
   cover_thumb_url: string | null
