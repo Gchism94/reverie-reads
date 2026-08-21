@@ -3,6 +3,36 @@
 Living record. Items leave by being done or by an explicit decision, not by being
 forgotten.
 
+> ## These entries age. Check before you build.
+>
+> **An entry describes the code as it was WHEN WRITTEN, not a live mirror of the tree.** That is
+> not a flaw to be fixed by writing more carefully — it is what a written record IS, and this
+> project has now paid for the lesson four times (§0.7 twice, §2.6 once, and the series-cluster
+> audit below). In §2.6 the drift **changed a product decision**. Four consecutive prompts have
+> been drafted from entries that turned out to be already fixed.
+>
+> **So: read the entry, then check the tree, then check ancestry.** `git log -S"<string>" -- <path>`
+> and `git merge-base --is-ancestor <sha> origin/main` are the two commands that settle it. Do not
+> judge an entry by its own confidence; a confident entry is exactly the one that reads as current
+> when it is not.
+>
+> ### Audit status, per section
+>
+> | section                            | last audited                   | result                                                                                                   |
+> | ---------------------------------- | ------------------------------ | -------------------------------------------------------------------------------------------------------- |
+> | Real bugs, outstanding             | **2026-08-20** (batch 1)       | 21 live entries: 9 CLOSED, 9 OPEN (stamped), 1 rewritten from source, 2 unverifiable from a Code session |
+> | Conventions — established patterns | never                          | —                                                                                                        |
+> | Deliberately partial, and why      | never                          | —                                                                                                        |
+> | Grep audit, 2026-08                | never                          | —                                                                                                        |
+> | Pre-public tracked-data decisions  | never                          | —                                                                                                        |
+> | Known-flaky, with a prior          | never                          | —                                                                                                        |
+> | Test-infrastructure follow-ups     | never                          | —                                                                                                        |
+> | Product queue                      | 2026-08-18 (verification pass) | corrected then; not re-checked here                                                                      |
+> | everything below Product queue     | never                          | —                                                                                                        |
+>
+> **Only the audited section carries stamps.** An entry with no `verified` stamp has not been
+> checked against source since it was written — treat its age as unknown, whatever its tone.
+
 ## In flight
 
 - Nothing. The infrastructure arc is done: CI landed (`chore/ci`), the trio moved
@@ -11,6 +41,19 @@ forgotten.
   (`docs/archive/task-ci.md`). Everything below is product or its own branch.
 
 ## Real bugs, outstanding
+
+> **PERISHABLE — audited entry by entry 2026-08-20 (batch 1 of the file).** Every live entry below
+> was read, checked against the tree, and checked for ancestry on `origin/main`. Result: **9 CLOSED**
+> (struck, each naming the commit, original folded into a `<details>`), **9 OPEN** (each stamped with
+> what it was verified against), **1 rewritten from source** because the entry misdescribed a defect
+> that was half-shipped, **2 unverifiable** from a Code session and said so rather than guessed.
+>
+> The stamps are the point: an entry here carrying `verified 2026-08-20` was checked on that date
+> against the file:line it names. One carrying nothing was not. **The stamps themselves age** — a
+> month from now this section needs the same treatment, and the honest read of a stale stamp is
+> "true once", not "true".
+>
+> Sections other than this one are UNAUDITED (see the table at the top of the file).
 
 > **Series-cluster audit, 2026-08-14.** All eight series-data-integrity entries were re-verified
 > against current source, after four consecutive prompts were drafted from entries that turned out
@@ -33,14 +76,18 @@ forgotten.
 > Entries outside the series cluster were **not** re-verified in this pass and may carry the same
 > drift.
 
-- **`merge_books` doesn't fold `series_user_chosen` when a loser's series field wins the merge.**
-  `feat/series-user-chosen` added the column and taught `sync_book_series`/`remove_series_entry` to
-  set it, but left `merge_books` untouched: the primary keeps its own flag, which is correct in the
-  common case (the primary's series was already provenance-tracked or blank). The narrow edge is a
-  loser whose reader-chosen series wins via `p_fields` — the winning value carries no flag afterward,
-  so a later enrichment sweep could treat it as fill-only and silently replace it. Folding OR logic
-  into `merge_books` (winning flag = primary's OR loser's, whichever field actually won) is its own
-  change with its own pgTAP.
+- ~~**`merge_books` doesn't fold `series_user_chosen` when a loser's series field wins the merge.**~~ **CLOSED — verified against source 2026-08-20.** `20260824010000_merge_books_fold_series_user_chosen.sql` adds the fold: it captures the loser's provenance and ORs the flag into the survivor. The entry's own edge case — a loser's reader-chosen series winning via `p_fields` and carrying no flag — is the one that migration closes. Closed by `395d806`.
+  <details><summary>original entry</summary>
+  - **`merge_books` doesn't fold `series_user_chosen` when a loser's series field wins the merge.**
+    `feat/series-user-chosen` added the column and taught `sync_book_series`/`remove_series_entry` to
+    set it, but left `merge_books` untouched: the primary keeps its own flag, which is correct in the
+    common case (the primary's series was already provenance-tracked or blank). The narrow edge is a
+    loser whose reader-chosen series wins via `p_fields` — the winning value carries no flag afterward,
+    so a later enrichment sweep could treat it as fill-only and silently replace it. Folding OR logic
+    into `merge_books` (winning flag = primary's OR loser's, whichever field actually won) is its own
+    change with its own pgTAP.
+
+  </details>
 
 - **Nothing scores confidence on a surviving `series` value the way `cover_confidence` does for
   covers.** `feat/series-user-chosen` withholds `low`/`none`-confidence series entirely rather than
@@ -51,6 +98,8 @@ forgotten.
   queue proposes merges between two `series` ROWS on name similarity; this is per-book provenance on
   one book's `series` FIELD from an enrichment match. Different subject, signal and surface, so
   neither closes the other.
+
+  <sub>**verified 2026-08-20** — still OPEN: no `series_confidence`/`seriesConfidence` exists anywhere in `packages/core/src` or `apps/web/src`, against 34 occurrences of `cover_confidence`; no migration defines such a column.</sub>
 
 - **The six `sameRiskAsPowerSymbol` glyphs are the same defect, unfired.**
   `apps/web/src/lib/glyphAllowlist.ts` tiers `⏹` `⏱` `⌕` `⌂` `⌘` (Misc Technical,
@@ -64,6 +113,8 @@ forgotten.
   six to inline SVG in a follow-up branch, matching `PowerGlyph`'s pattern,
   rather than waiting to spot each on a real device one at a time.**
 
+  <sub>**verified 2026-08-20** — still OPEN: all six glyphs remain tiered under `SAME_RISK_AS_POWER_SYMBOL` in `apps/web/src/lib/glyphAllowlist.ts:80-86`; none has been converted to SVG.</sub>
+
 - **`a11y.spec.ts:309` timed out once on `fix/signout-glyph-tofu`'s standing e2e
   run — `page.waitForLoadState` exceeded 600000ms, not an axe violation.**
   One run, not re-run (the standing-rule reason: a green re-run would launder a
@@ -75,6 +126,8 @@ forgotten.
   for ten minutes. Recorded so a recurrence has a prior to compare against,
   same reasoning as the `discover-search.spec.ts:275` entry under
   "Known-flaky, with a prior": a second failure here is a defect, not a flake.
+
+  <sub>**2026-08-20: UNVERIFIABLE FROM HERE** — needs the original CI run or a re-run of that branch's suite; the timeout was a one-off observation and the line has since moved. Nothing in the tree can confirm or refute it.</sub>
 
 - **The Supabase MCP connection reaches only project `cywpkhtpxekmjvuoloem`
   ("Steppe") — a different application, not Reverie.** Its tables are `groups`,
@@ -93,7 +146,16 @@ forgotten.
   through this particular tool, which silently produced wrong-project answers
   rather than an error.
 
-- **Production ACL verification belongs in the deploy protocol — nothing checks it
+  <sub>**2026-08-20: UNVERIFIABLE FROM HERE** — an MCP/environment configuration fact, not a source fact. Confirming it needs a live MCP session; the project id appears nowhere in the repo.</sub>
+
+- **Production ACL verification belongs in the deploy protocol — nothing checks it after a deploy.**
+  <sub>**REWRITTEN FROM SOURCE 2026-08-20 — the entry as written was WRONG.** It asked for one thing;
+  half of it shipped. The CONVENTION half is DONE: `AGENTS.md` now carries the
+  revoke-by-name rule for every new RPC (2 occurrences of `revoke execute`), and
+  `20260801010000_revoke_public_execute.sql` is on `main`. The PROTOCOL half is still
+  open: `docs/reference/DEPLOY.md` contains zero mentions of `proacl` and has no
+  post-deploy grant-verification step. What remains is only the deploy-protocol
+  addition, not the convention.</sub>
   today.** `20260801010000` revoked EXECUTE from PUBLIC across every RPC and was
   deployed and reported as done. Nobody read prod's `proacl` afterwards. A
   platform-side bulk `grant ... on all routines in schema public to postgres,
@@ -103,7 +165,7 @@ anon, authenticated, service_role` later put an explicit `anon=X` back on all
   revoke itself never failed; it was made irrelevant by named grants layered over
   it, which `revoke ... from public` would not have touched.
   Two things follow. First, **deploying a grant is not the same as verifying it
-  landed and stayed**: `docs/reference/DEPLOY.md` should require reading `proacl` after any
+  landed and stayed\*\*: `docs/reference/DEPLOY.md` should require reading `proacl` after any
   migration that touches grants, and there is a case for a periodic check rather
   than a post-deploy one, since the change arrived with no deploy of ours. Second,
   the mechanism is outside this repo and can recur at any time with no
@@ -151,6 +213,7 @@ anon, authenticated, service_role` later put an explicit `anon=X` back on all
   `--yes` so the second prompt is acknowledged rather than accidental, or feed
   the CLI its own confirmation and stop depending on EOF semantics we don't
   control. Recorded during `fix/deploy-guard`, deliberately not fixed there.
+  <sub>**verified 2026-08-20** — still OPEN: `scripts/deploy-guard.sh:244` still builds `supabase db push` with no `--yes`, so the CLI's own prompt remains downstream of the guard's `y/N`.</sub>
 - ~~**Every `security definer` RPC in the repo is anon-callable, and the ownership `raise` is the
   only thing stopping it.**~~ **CLOSED — verified against source 2026-08-15.** Closed by `9f338d9`
   (#110), which is the migration this entry proposes: `20260801010000_revoke_public_execute.sql`
@@ -227,20 +290,25 @@ reload, which is how an anon call came to be made at all.
 
   </details>
 
-- **A book removed from its series still wears a "Series of N" pill.**
-  `seriesStatusBadge` reads `status` and `series_count` and never `series`
-  (`packages/core/src/seriesStatus.ts` ~L62), and the pill that renders it
-  (`book/BookDetailRoute.tsx` ~L256) is ungated — unlike `SeriesStrip` one line up
-  at ~L251, which correctly disappears. So the series door goes and the badge stays.
-  **Verified in the browser** on `fix/atomic-series-removal-client`: after removing a
-  linked slot, the removed book's page showed no series door and a `Series of 5` pill,
-  with `series: null, position: 2, series_count: 5, status: 'ongoing'` in the row.
-  Identical before and after S3b — neither `remove_series_entry` nor the two-write
-  path it replaced touches `status` or `series_count`, so this is not a regression.
-  `position` also survives a removal but is rendered nowhere once `series` is null, so
-  the badge is the only visible symptom. Recorded rather than fixed on the owner's
-  instruction: whether removal should also clear `status`/`series_count` is a product
-  decision, not a bug fix.
+- ~~**A book removed from its series still wears a "Series of N" pill.**~~ **CLOSED — verified against source 2026-08-20.** `packages/core/src/seriesStatus.ts:95` now returns `'Standalone'` when `!b.series?.trim()` and the status is one of `ASSERTS_SERIES_MEMBERSHIP`, so a book with no series cannot render a membership badge. Closed by `861e55a`.
+  <details><summary>original entry</summary>
+  - **A book removed from its series still wears a "Series of N" pill.**
+    `seriesStatusBadge` reads `status` and `series_count` and never `series`
+    (`packages/core/src/seriesStatus.ts` ~L62), and the pill that renders it
+    (`book/BookDetailRoute.tsx` ~L256) is ungated — unlike `SeriesStrip` one line up
+    at ~L251, which correctly disappears. So the series door goes and the badge stays.
+    **Verified in the browser** on `fix/atomic-series-removal-client`: after removing a
+    linked slot, the removed book's page showed no series door and a `Series of 5` pill,
+    with `series: null, position: 2, series_count: 5, status: 'ongoing'` in the row.
+    Identical before and after S3b — neither `remove_series_entry` nor the two-write
+    path it replaced touches `status` or `series_count`, so this is not a regression.
+    `position` also survives a removal but is rendered nowhere once `series` is null, so
+    the badge is the only visible symptom. Recorded rather than fixed on the owner's
+    instruction: whether removal should also clear `status`/`series_count` is a product
+    decision, not a bug fix.
+
+  </details>
+
 - ~~**`useMoveEntry`'s renumber is 2n sequential round trips, and it is not a transaction.**~~
   **CLOSED — verified against source 2026-08-14.** The proposed shape in this entry — "one RPC
   taking `(entry_id, position)[]` doing the whole renumber plus the book mirror in a single
@@ -305,16 +373,28 @@ reload, which is how an anon call came to be made at all.
 
   </details>
 
-- **Archived tombstones are keyed on (series, position); every functional consumer keys on
-  title.** `slotKey` (`importExport.ts`) identifies a backed-up removal by series name +
-  position, and its own comment calls that "the only thing that identifies 'the same slot'".
-  But nothing else agrees: suppressing a source-refresh resurrection matches by title
-  (`mergeSourceEntries` against the tombstone's `title`), and reviving on re-add matches by
-  normalized title (`series.ts` revive pass). Position is the archive's identity and title is
-  the system's. Two consequences, both silent:
+- ~~\*\*Archived tombstones are keyed on (series, position); every functional consumer keys on~~ **CLOSED — verified against source 2026-08-20.** `apps/web/src/data/importExport.ts:301` keys `slotKey` on `${seriesId}@t:${nameKey(title)}` (falling back to position only when the title is empty), aligning the archive with the title-based identity every functional consumer already used. Closed by `1fad07f`.
+  <details><summary>original entry</summary>
+  - **Archived tombstones are keyed on (series, position); every functional consumer keys on
+    title.** `slotKey` (`importExport.ts`) identifies a backed-up removal by series name +
+    position, and its own comment calls that "the only thing that identifies 'the same slot'".
+    But nothing else agrees: suppressing a source-refresh resurrection matches by title
+    (`mergeSourceEntries` against the tombstone's `title`), and reviving on re-add matches by
+    normalized title (`series.ts` revive pass). Position is the archive's identity and title is
+    the system's. Two consequences, both silent:
+
+  </details>
+
+- ~~**Two tombstones at one position lose one.** Reachable today: remove #2, re-add, reposition,~~ **CLOSED — verified against source 2026-08-20.** closed by the same title-based `slotKey` — two tombstones at one position no longer collide, because position is no longer the key. Closed by `1fad07f`.
+  <details><summary>original entry</summary>
   - **Two tombstones at one position lose one.** Reachable today: remove #2, re-add, reposition,
     remove again. The backup exports both; restore's within-file dedupe collapses them on
     `slotKey`, so the second is dropped without a word.
+
+  </details>
+
+- ~~**A restore into a non-empty library can drop a refusal.** If a live entry already occupies~~ **CLOSED — verified against source 2026-08-20.** closed by the same title-based `slotKey` — a live entry at the position no longer causes the refusal to be dropped. Closed by `1fad07f`.
+  <details><summary>original entry</summary>
   - **A restore into a non-empty library can drop a refusal.** If a live entry already occupies
     the archived tombstone's position, the tombstone is skipped ("existing state wins") — so the
     reader's removal is gone, and the next Hardcover refresh resurrects the ghost they dismissed.
@@ -328,6 +408,9 @@ reload, which is how an anon call came to be made at all.
     **The honest fix is keying archived tombstones on (series, normalized title)**, which closes
     both cases at once and aligns the archive with every consumer — a v-next backup-format decision,
     its own branch. Recorded rather than fixed on the owner's instruction.
+
+  </details>
+
 - ~~**Revive matches on title alone, so a removal can revive the wrong slot.**~~ — done
   (`fix/revive-author-match`). `matchTombstoneForRevive` in `packages/core` now takes title
   first and consults author only to break a tie between same-title tombstones, refusing to
@@ -385,37 +468,53 @@ reload, which is how an anon call came to be made at all.
 
   </details>
 
-- **Scroll position is unmanaged app-wide.** TanStack Router ships a
-  `scrollRestoration` option and it is simply unconfigured on `createRouter`. Wrong
-  in both directions: back-navigation doesn't restore where you were, and forward
-  navigation keeps the _previous_ page's scroll rather than starting at the top.
-  Its own branch — one option flips behavior on every route at once, so a red run
-  needs to mean one thing.
-- **Search text lost on back-navigation**: `/tropes` `q`, `/discover` `query`,
-  `/match` `vibeQ` — all `useState`, same defect class as the tab bug and the same
-  fix shape (a validated search param). Not bundled with `fix/tab-routing` for the
-  same reason.
-- **`/shelves` `openListId` lost alongside the tab** — still open, and the entry
-  above it was wrong about what the param is. It is **not** "which shelf accordion is
-  expanded": `setOpenListId` is wired to each shelf's **Edit** button, and the id it
-  holds selects the list rendered into a `ListModal` — an edit **sheet**, dialog and
-  all. There is no accordion on this screen. Component state, lost on unmount, same
-  class as the tab bug.
-  **URL persistence was built for it and deliberately reverted** (`feat/search-param-persistence`,
-  #249): a param that survives back-navigation makes the browser back button re-open a
-  modal nobody clicked, taking focus on arrival. Restoring an expanded row would have
-  been fine; auto-reopening a dialog is worse than the lost state it fixes — and the
-  original entry only read as an easy win because its own description of the behavior
-  was wrong. Left open because the underlying defect is real (the sheet you were
-  editing vanishes on back-nav); the URL is just not the mechanism. A fix would need
-  to restore the sheet without stealing focus, or restore scroll/selection instead of
-  the dialog.
+- ~~**Scroll position is unmanaged app-wide.** TanStack Router ships a~~ **CLOSED — verified against source 2026-08-20.** `apps/web/src/router.tsx:68` sets `scrollRestoration: true`, and `apps/web/e2e/scroll-restoration.spec.ts` guards both directions the entry names. Closed by `311bd5a`.
+  <details><summary>original entry</summary>
+  - **Scroll position is unmanaged app-wide.** TanStack Router ships a
+    `scrollRestoration` option and it is simply unconfigured on `createRouter`. Wrong
+    in both directions: back-navigation doesn't restore where you were, and forward
+    navigation keeps the _previous_ page's scroll rather than starting at the top.
+    Its own branch — one option flips behavior on every route at once, so a red run
+    needs to mean one thing.
+
+  </details>
+
+- ~~**Search text lost on back-navigation**: `/tropes` `q`, `/discover` `query`,~~ **CLOSED — verified against source 2026-08-20.** `/tropes` persists `q` and `/discover` persists `query` through `validateSearch`, guarded by `apps/web/e2e/search-param-persistence.spec.ts`. Closed by `4ac9126`.
+  <details><summary>original entry</summary>
+  - **Search text lost on back-navigation**: `/tropes` `q`, `/discover` `query`,
+    `/match` `vibeQ` — all `useState`, same defect class as the tab bug and the same
+    fix shape (a validated search param). Not bundled with `fix/tab-routing` for the
+    same reason.
+
+  </details>
+
+- ~~**`/shelves` `openListId` lost alongside the tab** — still open, and the entry~~ **CLOSED — verified against source 2026-08-20.** **and the entry is also WRONG AS WRITTEN**: it calls the surface an accordion, but `openListId` opens an EDIT SHEET. Persistence was added in `4ac9126` and deliberately reverted in `1ec7725` for that reason — a param surviving back-navigation re-opens a modal nobody clicked. `ShelvesRoute.tsx:370` keeps it as component state on purpose. Closed by decision, not by omission. Closed by `1ec7725`.
+  <details><summary>original entry</summary>
+  - **`/shelves` `openListId` lost alongside the tab** — still open, and the entry
+    above it was wrong about what the param is. It is **not** "which shelf accordion is
+    expanded": `setOpenListId` is wired to each shelf's **Edit** button, and the id it
+    holds selects the list rendered into a `ListModal` — an edit **sheet**, dialog and
+    all. There is no accordion on this screen. Component state, lost on unmount, same
+    class as the tab bug.
+    **URL persistence was built for it and deliberately reverted** (`feat/search-param-persistence`,
+    #249): a param that survives back-navigation makes the browser back button re-open a
+    modal nobody clicked, taking focus on arrival. Restoring an expanded row would have
+    been fine; auto-reopening a dialog is worse than the lost state it fixes — and the
+    original entry only read as an easy win because its own description of the behavior
+    was wrong. Left open because the underlying defect is real (the sheet you were
+    editing vanishes on back-nav); the URL is just not the mechanism. A fix would need
+    to restore the sheet without stealing focus, or restore scroll/selection instead of
+    the dialog.
+
+  </details>
+
 - **`/library` filters, sort and mode live in a module-level Zustand store.**
   Survives back-navigation (the store outlives the unmount), lost on reload,
   invisible to deep-linking or sharing. That store _masks_ the back-nav symptom
   rather than having it, which is why `fix/tab-routing` deliberately left it
   alone. Moving it to the URL needs a store-vs-URL precedence decision first —
   what wins when both exist.
+  <sub>**verified 2026-08-20** — still OPEN: `apps/web/src/library/filterStore.ts:34` still holds filters/sort/mode in a module-level Zustand store, and `LibraryRoute.tsx:151` validates only `shelf` from the URL.</sub>
 - ~~**Swallowed Supabase errors**: a11y's `setupFixtures`, `cleanup`, `setProfileSkinMode`.~~
 **CLOSED — verified against source 2026-08-15.** Closed by `0e8d4ef` (#92), both halves:
 `a11y.spec.ts` routes its sign-ins through `authFailure()` (`if (error || !data.session) throw new
@@ -448,6 +547,7 @@ Error(authFailure(context, DEV_EMAIL, error))`) and its writes through `ok`/`okD
   typecheck already prevents in `src/` — but it is not a substitute for either guard above, and
   its own branch: turning it on will surface whatever pre-existing type errors 19 spec files have
   accumulated while unwatched, and a red run there needs to mean one thing.
+  <sub>**verified 2026-08-20** — still OPEN: `apps/web/tsconfig.json`'s `include` is `["src", "vite.config.ts"]` — `e2e/` is still outside it, and no separate e2e tsconfig exists.</sub>
 - **`cleanup()` is a sequential `await` chain, so any failing step skips every step after it —
   including the profile restore.** `a11y.spec.ts`'s `cleanup()` runs its deletes and
   `setProfileSkinMode('tryst', 'system')` one after another with nothing isolating them, so a
@@ -462,6 +562,7 @@ Error(authFailure(context, DEV_EMAIL, error))`) and its writes through `ok`/`okD
   resilient to a mid-chain failure (run every step regardless, collect failures) is its own small
   change with its own trade-off (a cleanup that reports three failures instead of stopping at the
   first) — a call for whoever next touches this fixture, not a drive-by here.
+  <sub>**verified 2026-08-20** — still OPEN: `apps/web/e2e/a11y.spec.ts:254-269` is still a sequential `await` chain; `7fc75ca` made its failures loud but not resilient, so a mid-chain throw still skips the profile restore.</sub>
 - ~~**`a11y.spec.ts`'s `cleanup()` could never delete its `shared_docs` row.**~~ — done. Removed
   the delete entirely rather than granting the privilege: `20260624010400_grants.sql` grants only
   `select, insert, update` on `public.shared_docs` to `anon, authenticated`, `sharedLists.ts`
@@ -474,6 +575,7 @@ Error(authFailure(context, DEV_EMAIL, error))`) and its writes through `ok`/`okD
   one. Warn with real counts before it happens. Merge-routed restore stays blocked
   on field-level merge picking — trading a visible duplicate for a silent loss is
   the wrong direction.
+  <sub>**verified 2026-08-20** — still OPEN: `importExport.ts:695` restores without a pre-flight count check and `SettingsRoute.tsx:730` shows counts only after the fact; no warning-with-counts exists.</sub>
 - **Flash of the wrong mode on a fresh device.** A reader whose profile `mode` is
   `dark`, on a device with no `reverie.mode` in localStorage — first-ever load, or
   right after the sign-out cache clear (`fix/offline-session`) — gets a light
@@ -484,6 +586,7 @@ Error(authFailure(context, DEV_EMAIL, error))`) and its writes through `ok`/`okD
   pre-seeds localStorage before the app's own first paint. Made more reachable by
   the sign-out cache clear, which deliberately wipes local state. App-source; its
   own branch later.
+  <sub>**verified 2026-08-20** — still OPEN: `index.html:43` defaults to `'system'` when `reverie.mode` is absent, and `skin/controls.ts:86` hydrates only after the profile query resolves — so a fresh device can still paint the wrong mode first.</sub>
 - ~~**`merge_books` can silently null out a reader's plan.**~~ — fixed by
   `20260803010000_merge_plan_precision.sql`, guarded by
   `supabase/tests/merge_plan_test.sql`, both mutation-checked. `take_plan` is
@@ -546,12 +649,17 @@ Error(authFailure(context, DEV_EMAIL, error))`) and its writes through `ok`/`okD
 
   </details>
 
-- **`ProgressSlider` writes the same book twice on every release, guaranteed.**
-  `BookDetailRoute.tsx` ~L183-184: `onPointerUp` and `onBlur` both fire
-  `updateBook.mutate(...)` with the identical `value`. Idempotent — ordering
-  can't corrupt it, since both writes carry the same payload — so this is pure
-  waste (a doubled request on every slider release), not the data-loss shape
-  above. Drop one of the two handlers.
+- ~~**`ProgressSlider` writes the same book twice on every release, guaranteed.**~~ **CLOSED — verified against source 2026-08-20.** `apps/web/src/book/BookDetailRoute.tsx:97` dedupes on a `committed` ref (`if (value === committed.current) return`), so one gesture writes once; `progressSlider.test.tsx` holds it. Closed by `102083a`.
+  <details><summary>original entry</summary>
+  - **`ProgressSlider` writes the same book twice on every release, guaranteed.**
+    `BookDetailRoute.tsx` ~L183-184: `onPointerUp` and `onBlur` both fire
+    `updateBook.mutate(...)` with the identical `value`. Idempotent — ordering
+    can't corrupt it, since both writes carry the same payload — so this is pure
+    waste (a doubled request on every slider release), not the data-loss shape
+    above. Drop one of the two handlers.
+
+  </details>
+
 - **`useRealtimeRefetch` should cover `lists` and `books`, not just clubs and
   shared lists.** `fix/state-pills-flake` closed the reader-facing half of a
   stale-persisted-cache defect with `useConfirmedLookup` (below) — a route no
@@ -572,6 +680,8 @@ Error(authFailure(context, DEV_EMAIL, error))`) and its writes through `ok`/`okD
   branch — it's an actual subscription surface change, not a follow-on to a bug
   fix, and its own measurement (connection cost, invalidation-storm risk under a
   large library) belongs with it.
+
+  <sub>**verified 2026-08-20** — still OPEN: `useRealtimeRefetch` has exactly two call sites — `ClubRoute.tsx:50` (clubs/members/comments) and `SharedListRoute.tsx:78` (shared_docs); neither `books` nor `lists` is subscribed.</sub>
 
 ## Conventions — established patterns, not open work
 

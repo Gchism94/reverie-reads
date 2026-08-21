@@ -248,22 +248,35 @@ function LibraryScreen() {
             /*
              * PRESS BEFORE THE BLUR. This control sits directly under the search box, and while
              * that box holds focus Toolbar renders SearchResultsPanel. A mousedown here blurs the
-             * input, the panel unmounts mid-press, and the button is re-laid-out from under the
-             * pointer — so mouseup lands on nothing and NO CLICK EVENT IS EVER PRODUCED. The
-             * reader's first press simply does nothing on the one path this feature is for:
-             * type a query, read the line, press "show".
+             * input, the panel unmounts mid-press, the line JUMPS UP into the space the panel was
+             * occupying, and mouseup therefore lands on a different element than mousedown — the
+             * browser fires `click` on their common ancestor instead of on this button. The
+             * reader's first press does nothing on the one path this feature is for: type a query,
+             * read the line, press "show".
              *
-             * Measured rather than reasoned. With a plain onClick, native listeners on this button
-             * recorded `pointerdown` and `mousedown` and then neither `mouseup` nor `click`;
-             * `document.elementFromPoint` at the button's centre returned the button itself, so
-             * nothing was intercepting — the node moved. Calling the handler directly through the
-             * DOM worked, which is what distinguishes "the wiring is wrong" from "the press never
-             * became a click".
+             * RIGHT ANSWER, WRONG REASON — corrected from this commit's own first description,
+             * which said the panel was absolutely positioned and the button was vaguely
+             * "re-laid-out". The fix below was correct; the mechanism given for it was not, and a
+             * reviewer navigating by it would carry the wrong model of the whole `Frame` thread.
+             * What is actually true, measured on `feat/search-withheld-notice` (dd7e287):
+             * `SearchResultsPanel` is handed `absolute` in its className but `Frame` also applies
+             * `relative`, and `relative` WINS — so the panel is IN FLOW and reserves 77.8px of
+             * vertical space. Removing it collapses that space and this line moves top 246.75 →
+             * 169.0 mid-gesture. Vertical overlap between panel and line measures 0.0px, so there
+             * was never any occlusion to work around.
              *
-             * SearchResultsPanel's own rows already carry this exact guard, with the same reason
-             * in a comment ("mousedown so the pick lands before the input's blur closes the
-             * panel"). This is the second control to need it, which makes it a property of sitting
-             * under that panel rather than a quirk of either one.
+             * The original reading came from reading a CLASS STRING (`absolute left-0 right-0
+             * z-30`) instead of a computed style — the exact proxy this repo's own testing rules
+             * warn about, committed while writing a comment about measuring rather than reasoning.
+             *
+             * The observations that were right and still stand: with a plain onClick, native
+             * listeners recorded `pointerdown` and `mousedown` and then neither `mouseup` nor
+             * `click`, and `document.elementFromPoint` at the button's centre returned the button
+             * itself — nothing was intercepting it.
+             *
+             * SearchResultsPanel's own rows already carry this guard, with the same reason in a
+             * comment ("mousedown so the pick lands before the input's blur closes the panel").
+             * Second control to need it, which makes it a property of sitting under that panel.
              *
              * onClick stays: it is what the keyboard uses, and the keyboard never takes this path.
              */
