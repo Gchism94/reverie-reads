@@ -13,6 +13,7 @@ import {
   type ResolvedLocation,
 } from '../lib/location'
 import { findBookstores, type Store } from '../lib/overpass'
+import { formatHours12 } from '@reverie/core'
 import { Surface } from '../components/Surface'
 
 const miles = (km: number) => `${(km * 0.621371).toFixed(1)} mi`
@@ -165,7 +166,10 @@ function StoreList({
             </div>
             {s.address && <div className="mt-0.5 text-[13px] text-muted">{s.address}</div>}
             <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px]">
-              {s.hours && <span className="text-muted">🕑 {s.hours}</span>}
+              {/* 12-hour at the render site, not in the Store shape: `hours` stays the verbatim
+                  OSM tag so the parser and its tests keep speaking OSM, and only the reader-facing
+                  string is localised. */}
+              {s.hours && <span className="text-muted">🕑 {formatHours12(s.hours)}</span>}
               {s.phone && (
                 <a href={`tel:${s.phone}`} className="text-primary">
                   {s.phone}
