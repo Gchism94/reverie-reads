@@ -303,7 +303,7 @@ function` + fresh `create` resets it to the PUBLIC-execute default — verified 
 
 ## Testing & verification discipline
 
-Eighteen rules, each earned by a real failure — counted from the list below, not carried forward. A rule without its reason gets dropped by whoever
+Nineteen rules, each earned by a real failure — counted from the list below, not carried forward. A rule without its reason gets dropped by whoever
 inherits it, so the reason stays attached.
 
 - **When a test needs a step a user would not take, that step is a FINDING until proven otherwise.**
@@ -559,6 +559,32 @@ test` outright and only fail `tsc`. This has bitten twice, by two different tool
   a case you already know the answer to.** If you cannot name that case, the number is not yet
   evidence — and a validated instrument's known over-reporting is a feature to document, not a bug
   to hide.
+
+- **A command written into a comment, runbook or PR body is a CLAIM ABOUT AN INTERFACE, and an unrun
+  claim is a guess. Either execute it once before committing, or mark it explicitly unverified.**
+  The failure is silent at authoring time and lands entirely on whoever copies it — which is the
+  person least equipped to tell a typo from a real problem, because they are usually running it to
+  find something out, and a refusal reads as "the thing I was investigating is broken."
+  **Two committed usage lines, both authored without being run, both wrong on their first copy:**
+  · `docs/queries/backup-paging-row-counts.sql` documented `supabase db execute --linked --file …`.
+  There is no `execute` subcommand — `supabase db --help` lists `query`, and `--linked`/`--file` are
+  ITS flags, so the whole line had to be re-shaped, not just re-spelled.
+  · `scripts/import-corpus-csv.mjs` documented `--owner-email you@example.com` (three times) while
+  its own parser matches only the `--name=value` form, requiring `--owner-email=`. The
+  space-separated form parses to `null` and the script exits — **and its own error message prints
+  the correct `=` form**, so the file contradicted itself in two places at once and neither was
+  noticed for as long as nobody typed it.
+  **The sweep that found the second one is the argument for the rule.** Across `docs/queries/` (28
+  files) and `scripts/`, FOUR lines are copy-pasteable invocations rather than prose references, and
+  TWO of the four were wrong. The other two — `supabase migration list --linked`, and
+  `psql "$PROD_DB_URL" -f … --csv -o …` — check out against `--help`. That is a hit rate, not a note
+  about carelessness, so treat a command in a comment the way you would treat an assertion: it is
+  not evidence until it has executed.
+  **Running it is usually cheap even when the target is not.** A prod-only query can be executed
+  against the LOCAL stack to prove the invocation form and that the SQL parses (`--local` instead of
+  `--linked`); an arg parser can be exercised on its own in one `node -e`. Neither needs the
+  database the command is ultimately for. If it genuinely cannot be run, say `UNVERIFIED` on the
+  line — an honest marker costs the reader nothing and a wrong command costs them the session.
 
 ## Data-integrity & sourcing discipline
 
