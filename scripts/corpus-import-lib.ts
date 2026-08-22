@@ -229,6 +229,72 @@ const OMNIBUS = [
 export const isOmnibusSuspect = (title: string): boolean => OMNIBUS.some((re) => re.test(title))
 
 /** Everything the owner reviews before --write. Anomalies are surfaced, never resolved. */
+/**
+ * Sort key for reading two dump files SIDE BY SIDE. `new.csv` and `unmatched-library.csv` are both
+ * sorted by this, so a MISSED MATCH surfaces as near-identical titles at the same place in each —
+ * which is the whole point of dumping them: a counts-only report cannot tell "the CSV genuinely
+ * lacks these 231 books" from "the matcher missed them", and two aligned lists can.
+ */
+export const normTitleKey = (t: string): string =>
+  t
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+
+/**
+ * LIBRARY BOOKS NO CSV ROW MATCHED — the thing the script has never computed.
+ *
+ * `classify` walks CSV rows and asks what each one matched; nothing ever asked the inverse. On the
+ * owner's data 231 of 491 library books (47%) matched nothing, and a report of counts cannot say
+ * whether that is a true absence or a matcher gap.
+ *
+ * A FUZZY near-miss is NOT a match and its candidate stays in this list: the row did not import and
+ * the book did not pair, so a reader hunting for "why is this book not accounted for" must find it
+ * here rather than have it silently excluded because something almost matched.
+ */
+export function unmatchedLibrary(
+  library: readonly Book[],
+  existing: readonly { book: Book }[],
+): Book[] {
+  const matched = new Set(existing.map((e) => e.book.id))
+  return library
+    .filter((b) => !matched.has(b.id))
+    .sort((a, b) => normTitleKey(a.title).localeCompare(normTitleKey(b.title)))
+}
+
+/**
+ * Rows whose author field names MORE THAN ONE person — ' & ' or a comma.
+ *
+ * Invisible in today's report, and consequential: `workKeyOf` concatenates the normalised author,
+ * so "Guillermo del Toro & Chuck Hogan" becomes a key like `guillermochuckdeltorohogan`. Two CSVs
+ * spelling the co-authors differently, or in the other order, produce different keys for one work.
+ * COUNTED, NOT FIXED — the key derivation is deliberately untouched here.
+ */
+export const coAuthorRows = (rows: readonly ImportRecord[]): ImportRecord[] =>
+  rows.filter((r) => / & |,/.test(`${r.first} ${r.last}`.trim()) || / & |,/.test(r.author))
+
+/**
+ * Rows missing a First or a Last. Their `workKey` degrades to `title|` — every such row in a given
+ * title collides with every other, across authors. The existing report lists rows with NO author at
+ * all; this is the wider set, where one half is present and the key is still degraded.
+ */
+export const partialAuthorRows = (rows: readonly ImportRecord[]): ImportRecord[] =>
+  rows.filter((r) => !r.first.trim() || !r.last.trim())
+
+/**
+ * CSV escaping for the --dump files. In the lib rather than inline in the script because it is the
+ * part most likely to be wrong and the only part worth a test: book titles carry commas
+ * ("Salt, Harbour"), quotes, and occasionally newlines, and an unescaped one silently shifts every
+ * later column — a dump that reads plausibly and aligns wrongly is worse than no dump.
+ */
+export const csvCell = (v: unknown): string => {
+  const t = String(v ?? '')
+  return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t
+}
+
+export const csvFile = (header: readonly string[], rows: readonly (readonly unknown[])[]): string =>
+  [header.join(','), ...rows.map((r) => r.map(csvCell).join(','))].join('\n') + '\n'
+
 export function buildReport({
   records,
   kept,
@@ -252,6 +318,10 @@ export function buildReport({
 }) {
   const omnibus = kept.filter((r) => isOmnibusSuspect(r.title)).map((r) => r.title)
   const emptyAuthor = kept.filter((r) => !r.author).map((r) => r.title)
+  // Counts only — see coAuthorRows / partialAuthorRows for why each matters. Neither changes the
+  // key derivation in this PR; they exist so the owner can see the shape before deciding.
+  const coAuthored = coAuthorRows(kept)
+  const partialAuthor = partialAuthorRows(kept)
   const unmappedGenre = kept
     .filter((r) => r.genreRaw && !r.genre)
     .map((r) => `${r.title} (${r.genreRaw})`)
@@ -276,6 +346,10 @@ export function buildReport({
     })),
     omnibusSuspects: omnibus,
     emptyAuthor,
+    /** rows naming more than one author — their work_key concatenates all of them */
+    coAuthorRows: coAuthored.length,
+    /** rows missing First or Last — their work_key degrades to `title|` */
+    partialAuthorRows: partialAuthor.length,
     unmappedGenre,
   }
 }

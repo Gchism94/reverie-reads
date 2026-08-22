@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
+  unmatchedLibrary,
+  coAuthorRows,
+  partialAuthorRows,
+  normTitleKey,
+  csvCell,
+  csvFile,
   parseCsv,
   toRecords,
   normalizeRecord,
@@ -159,5 +165,126 @@ describe('anomaly surfacing', () => {
     const r = records()[1]!
     expect(r.tcRead).toBe(true)
     expect(workKeyOf(r)).not.toContain('tc')
+  })
+})
+
+/**
+ * THE DIAGNOSTICS (--dump). Instrumentation only: none of these change the matcher, the key
+ * derivation, or the CSV. They exist so 231 unmatched library books stop being a number nobody can
+ * interrogate.
+ */
+describe('unmatchedLibrary — the inverse the classifier never computed', () => {
+  const lib = [
+    makeBook({ id: 'b1', title: 'Ash Crown', first: 'Vera', last: 'Stone' }),
+    makeBook({ id: 'b2', title: 'Salt Harbor', first: 'Milo', last: 'Reyes' }),
+    makeBook({ id: 'b3', title: 'A Quiet Ledger', first: 'Nell', last: 'Marrow' }),
+  ]
+
+  it('returns the library books no row strongly matched', () => {
+    const out = unmatchedLibrary(lib, [{ book: lib[1]! }])
+    expect(out.map((b) => b.id)).toEqual(['b3', 'b1']) // sorted by normalised title
+  })
+
+  it('a FUZZY near-miss candidate still counts as unmatched', () => {
+    // A near-miss did not import and did not pair. Excluding it would hide a book from the one file
+    // someone reads to ask "why is this not accounted for".
+    expect(unmatchedLibrary(lib, []).map((b) => b.id)).toEqual(['b3', 'b1', 'b2'])
+  })
+
+  it('sorts by the SAME key new.csv uses, so the two files align', () => {
+    // The alignment is the diagnostic: a missed match reads as near-identical titles at the same
+    // place in both files. Sorting them differently would destroy the only thing the dump adds.
+    expect(normTitleKey('A Quiet Ledger!')).toBe('a quiet ledger')
+    expect(normTitleKey('  The—Ash   Crown ')).toBe('the ash crown')
+  })
+
+  it('is empty when everything matched', () => {
+    expect(
+      unmatchedLibrary(
+        lib,
+        lib.map((book) => ({ book })),
+      ),
+    ).toEqual([])
+  })
+})
+
+describe('author-shape counts — invisible in the report until now', () => {
+  const rows = () =>
+    toRecords(
+      parseCsv(
+        [
+          'Title,"Author, First","Author, Last",Series,Completed / Standalones,Genre,Tags,,GC Read,TC Read,Duplicate,,',
+          'The Strain,Guillermo del Toro & Chuck,Hogan,,Standalone,Horror,,,,,,,',
+          'Solo Work,Vera,Stone,,Standalone,Fantasy,,,,,,,',
+          'No Last,Milo,,,Standalone,Fantasy,,,,,,,',
+          'No First,,Reyes,,Standalone,Fantasy,,,,,,,',
+          'Comma Pair,"Ann, Bob",Smith,,Standalone,Fantasy,,,,,,,',
+        ].join('\n'),
+      ),
+    ).map(normalizeRecord)
+
+  it('counts rows naming more than one author', () => {
+    // Their work_key concatenates every name, so two spellings of the same pair key differently.
+    const co = coAuthorRows(rows()).map((r) => r.title)
+    expect(co).toContain('The Strain')
+    expect(co).toContain('Comma Pair')
+    expect(co).not.toContain('Solo Work')
+  })
+
+  it('counts rows missing First OR Last — wider than the empty-author list', () => {
+    // The existing report lists rows with NO author at all; these have half a name and still
+    // degrade their key to `title|`.
+    const partial = partialAuthorRows(rows()).map((r) => r.title)
+    expect(partial).toEqual(expect.arrayContaining(['No Last', 'No First']))
+    expect(partial).not.toContain('Solo Work')
+  })
+
+  it('a partial name keys on the HALF THAT IS PRESENT — not on `title|`', () => {
+    // Worth pinning precisely, because the brief for this work described these rows as degrading
+    // to `title|`. They do not: workKeyOf is `norm(title)|norm(authorOf(rec))`, and authorOf
+    // returns whichever half exists — so "Milo" with no last name keys as `nolast|milo`, which is
+    // a DIFFERENT key from the same book carrying "Milo Reyes". Only a row with NO author at all
+    // produces the trailing-pipe form, and that is the narrower emptyAuthor list the report
+    // already prints. The divergence is real; its shape is just not the one assumed.
+    const byTitle = (t: string) => rows().find((r) => r.title === t)!
+    expect(byTitle('No Last').workKey).toBe('nolast|milo')
+    expect(byTitle('No First').workKey).toBe('nofirst|reyes')
+    expect(byTitle('No Last').workKey.endsWith('|')).toBe(false)
+  })
+
+  it('the key derivation is UNCHANGED by this PR — reporting is the job', () => {
+    // Instrumentation only. If this ever fails, someone has started fixing the thing this PR
+    // deliberately only measures.
+    expect(rows().find((r) => r.title === 'Solo Work')!.workKey).toBe('solowork|verastone')
+  })
+})
+
+describe('CSV escaping for the dump files', () => {
+  // The dump's job is to be READ SIDE BY SIDE with another file. An unescaped comma shifts every
+  // later column, so the file still opens and still looks plausible while pairing the wrong title
+  // with the wrong author — exactly the failure a diagnostic must not have.
+  it('quotes a value containing a comma', () => {
+    expect(csvCell('Salt, Harbour')).toBe('"Salt, Harbour"')
+  })
+
+  it('doubles embedded quotes', () => {
+    expect(csvCell('The "Real" Thing')).toBe('"The ""Real"" Thing"')
+  })
+
+  it('quotes a value containing a newline', () => {
+    expect(csvCell('Two\nLines')).toBe('"Two\nLines"')
+  })
+
+  it('leaves an ordinary value alone — no gratuitous quoting', () => {
+    expect(csvCell('Ash Crown')).toBe('Ash Crown')
+  })
+
+  it('renders null and undefined as empty rather than the strings "null"/"undefined"', () => {
+    expect(csvCell(null)).toBe('')
+    expect(csvCell(undefined)).toBe('')
+  })
+
+  it('builds a file with a header and a trailing newline', () => {
+    expect(csvFile(['a', 'b'], [['1', 'x, y']])).toBe('a,b\n1,"x, y"\n')
   })
 })
