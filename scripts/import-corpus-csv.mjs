@@ -106,15 +106,29 @@ async function resolveOwnerId() {
   return u.id
 }
 
-/** The owner's whole library, mapped just far enough for matchBook + works promotion. */
+/** The owner's whole library, mapped just far enough for matchBook + works promotion.
+ *
+ *  PAGINATED, and the loop is load-bearing: PostgREST caps an un-ranged select at 1,000 rows and
+ *  says nothing. The local --write exercise found it the hard way — a 1,136-book library fetched
+ *  as exactly 1,000, the 136 past the cap were invisible to both the classifier and the skip set,
+ *  and the "idempotent" re-run inserted all 136 again. Every scripted fetch of a whole table in
+ *  this file pages until a short page for the same reason. */
 async function fetchLibrary(ownerId) {
-  const { data, error } = await supabase
-    .from('books')
-    .select(
-      'id, title, author_first, author_last, series, position, series_count, status, pages, pub_y, pub_m, pub_d, cover_url, cover_source, cover_source_url, cover_color, cover_confidence, genre, tags, isbn',
-    )
-    .eq('owner_id', ownerId)
-  if (error) fail(`fetch books: ${error.message}`)
+  const PAGE = 1000
+  const data = []
+  for (let from = 0; ; from += PAGE) {
+    const { data: page, error } = await supabase
+      .from('books')
+      .select(
+        'id, title, author_first, author_last, series, position, series_count, status, pages, pub_y, pub_m, pub_d, cover_url, cover_source, cover_source_url, cover_color, cover_confidence, genre, tags, isbn',
+      )
+      .eq('owner_id', ownerId)
+      .order('id', { ascending: true })
+      .range(from, from + PAGE - 1)
+    if (error) fail(`fetch books: ${error.message}`)
+    data.push(...page)
+    if (page.length < PAGE) break
+  }
   return data.map((b) => ({
     id: b.id,
     title: b.title,
@@ -290,11 +304,19 @@ async function runImport() {
 }
 
 async function runBackfill() {
-  const { data: rows, error } = await supabase
-    .from('works')
-    .select('work_key, work_id, cover_url')
-    .or('cover_url.is.null,work_id.is.null')
-  if (error) fail(`works select: ${error.message}`)
+  const PAGE = 1000
+  const rows = []
+  for (let from = 0; ; from += PAGE) {
+    const { data: page, error } = await supabase
+      .from('works')
+      .select('work_key, work_id, cover_url')
+      .or('cover_url.is.null,work_id.is.null')
+      .order('work_key', { ascending: true })
+      .range(from, from + PAGE - 1)
+    if (error) fail(`works select: ${error.message}`)
+    rows.push(...page)
+    if (page.length < PAGE) break
+  }
   if (!rows.length) {
     console.log('backfill: nothing missing — every works row has a cover and a work_id')
     return
