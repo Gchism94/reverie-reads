@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Book } from '@reverie/core'
 import { supabase } from '../lib/supabase'
+import { pageAll } from './paging'
 import { isOwned, ownedKeys, type DiscoverHit } from '../lib/discover'
 
 // Releases / author-following (owner-approved run). The library DERIVES "your authors" — anyone
@@ -81,9 +82,16 @@ export function useAuthorFollows() {
   return useQuery({
     queryKey: followsKey,
     queryFn: async (): Promise<Record<string, FollowState>> => {
-      const { data, error } = await supabase.from('author_follows').select('author_name, state')
-      if (error) throw error
-      return Object.fromEntries((data as { author_name: string; state: FollowState }[]).map((r) => [r.author_name, r.state]))
+      const data = await pageAll<{ author_name: string; state: FollowState }>(
+        'author_follows',
+        (from, to) =>
+          supabase
+            .from('author_follows')
+            .select('author_name, state', { count: 'exact' })
+            .order('author_name')
+            .range(from, to),
+      )
+      return Object.fromEntries(data.map((r) => [r.author_name, r.state]))
     },
   })
 }

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
+import { pageAll } from './paging'
 
 export type SharedKind = 'list' | 'clubtbr'
 
@@ -37,9 +38,17 @@ export function useMySharedRefs() {
   return useQuery({
     queryKey: sharedRefsKey,
     queryFn: async (): Promise<SharedRef[]> => {
-      const { data, error } = await supabase.from('shared_refs').select('code, kind, name').order('created_at', { ascending: false })
-      if (error) throw error
-      return (data as { code: string; kind: SharedKind; name: string | null }[]).map((r) => ({
+      const data = await pageAll<{ code: string; kind: SharedKind; name: string | null }>(
+        'shared_refs',
+        (from, to) =>
+          supabase
+            .from('shared_refs')
+            .select('code, kind, name', { count: 'exact' })
+            .order('created_at', { ascending: false })
+            .order('code')
+            .range(from, to),
+      )
+      return data.map((r) => ({
         code: r.code,
         kind: r.kind,
         name: r.name ?? 'Shared list',

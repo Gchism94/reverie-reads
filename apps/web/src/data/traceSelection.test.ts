@@ -16,16 +16,19 @@ import type { Book } from '@reverie/core'
 const enrichCalls: { title?: string; refresh?: boolean; trace?: boolean }[] = []
 let stamps: { id: string; enriched_at: string | null }[] = []
 
-vi.mock('../lib/supabase', () => ({
+vi.mock('../lib/supabase', async () => {
+  const { pagedSelect } = await import('./pagedSelect.fixture')
+  return {
   supabase: {
     auth: { getUser: async () => ({ data: { user: null } }) },
     from: () => ({
-      select: () => Promise.resolve({ data: stamps, error: null }),
+      select: () => pagedSelect(stamps),
       insert: () => Promise.resolve({ error: null }),
       update: () => ({ eq: () => Promise.resolve({ error: null }) }),
     }),
   },
-}))
+  }
+})
 vi.mock('../lib/enrich', () => ({
   enrichBookOutcome: async (i: { title?: string; refresh?: boolean; trace?: boolean }) => {
     enrichCalls.push(i)

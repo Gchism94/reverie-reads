@@ -1,5 +1,6 @@
 import { importKey, type Book, type DuplicateVerdict, type Incoming, type MergeFieldPicks } from '@reverie/core'
 import { supabase } from '../lib/supabase'
+import { pageAll } from './paging'
 import { foldIn, insertNewBook, verdictLookupKey, type ReviewCandidate, type VerdictLookup } from './intake'
 
 interface VerdictRow {
@@ -10,10 +11,18 @@ interface VerdictRow {
 
 /** Load the user's remembered duplicate verdicts into a lookup keyed by (book, incoming key). */
 export async function loadVerdicts(): Promise<VerdictLookup> {
-  const { data, error } = await supabase.from('merge_verdicts').select('book_id, incoming_key, verdict')
-  if (error) throw error
+  // One row per remembered duplicate decision — this grows fastest during exactly the bulk import
+  // whose de-duplication it is meant to inform.
+  const data = await pageAll<VerdictRow>('merge_verdicts', (from, to) =>
+    supabase
+      .from('merge_verdicts')
+      .select('book_id, incoming_key, verdict', { count: 'exact' })
+      .order('book_id')
+      .order('incoming_key')
+      .range(from, to),
+  )
   const lookup: VerdictLookup = new Map()
-  for (const r of (data as VerdictRow[]) ?? []) lookup.set(`${r.book_id}|${r.incoming_key}`, r.verdict)
+  for (const r of data) lookup.set(`${r.book_id}|${r.incoming_key}`, r.verdict)
   return lookup
 }
 
