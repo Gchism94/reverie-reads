@@ -29,6 +29,7 @@ import { useBooks, useDeleteBook, useUpdateBook } from '../data/books'
 import { useDeleteRead, useReads } from '../data/reads'
 import { useBookListIds, useToggleListItem } from '../data/listItems'
 import { useCreateList, useLists } from '../data/lists'
+import { LevelGuideCard } from '../components/LevelGuideCard'
 import { Stars } from '../components/Stars'
 import { Chip } from '../components/Chip'
 import { READ_STATUS_OPTIONS, readStatusLabel, subgenreGradient } from '../library/constants'
@@ -68,12 +69,90 @@ function Label({ children, action }: { children: ReactNode; action?: ReactNode }
   )
 }
 
+/**
+ * WHICH LEVEL PILLS SHOW — the two gating rules, as one testable function rather than two inline
+ * conditions in JSX where neither can be asserted without rendering the whole route.
+ *
+ * They differ, and the difference is the thing most likely to be "tidied" into a single condition:
+ *
+ *   · `> 0` for BOTH axes. NULL means NOT ASSESSED, 0 means ASSESSED AND FOUND TO HAVE NONE
+ *     (#326's ruling), and neither is a claim worth a pill. `books.darkness` is NULL across
+ *     essentially the whole library today, so darkness is absent from nearly every book — the rule
+ *     working, not a missing feature.
+ *   · `hideIntensity` gates SPICE ONLY. It is the spice-hiding preference; darkness is a separate
+ *     axis and a reader who hid spice has said nothing about it. Gating both on one flag would
+ *     silently hide a level they never asked to hide.
+ */
+export function visibleLevelPills(
+  book: Pick<Book, 'intensity' | 'darkness'>,
+  hideIntensity: boolean,
+): { intensity: boolean; darkness: boolean } {
+  return {
+    intensity: (book.intensity ?? 0) > 0 && !hideIntensity,
+    darkness: (book.darkness ?? 0) > 0,
+  }
+}
+
+/**
+ * A level pill that can explain itself. READ-ONLY BY CONSTRUCTION — it renders `LevelGuideCard`,
+ * which has no `onChange` and no way to reach one. `LevelPicker` is deliberately NOT used here:
+ * it is an input, and book detail must not become an editing surface because a prop defaulted the
+ * wrong way. See LevelGuideCard's header for the full reasoning.
+ *
+ * A <button> rather than a tappable <span>: it is focusable, Enter/Space work, and `aria-expanded`
+ * tells a screen-reader user the definition is a thing they can open rather than decoration.
+ */
+function LevelPill({
+  axis,
+  label,
+  glyph,
+  level,
+  open,
+  onToggle,
+}: {
+  axis: string
+  label: string
+  glyph: string
+  level: number
+  open: boolean
+  onToggle: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={open}
+      aria-controls={`level-guide-${axis}`}
+      // The glyph row is decorative once the accessible name says the number: five chillies read
+      // as five separate emoji to a screen reader otherwise.
+      aria-label={`${label} ${level} of 5 — ${open ? 'hide' : 'show'} what this means`}
+      className="skin-control-quiet px-2.5 py-1 text-[11.5px] font-semibold"
+      style={{
+        background: 'color-mix(in srgb, var(--violet) 18%, transparent)',
+        color: 'var(--ink)',
+      }}
+    >
+      <span aria-hidden>{glyph.repeat(level)}</span>
+    </button>
+  )
+}
+
 function Pill({ children, muted = false }: { children: ReactNode; muted?: boolean }) {
   return (
     <span
       className="skin-control-quiet px-2.5 py-1 text-[11.5px] font-semibold"
       style={{
-        background: muted ? 'var(--chip)' : 'rgba(123,63,160,0.18)',
+        /*
+         * TOKEN, not a literal. This was `rgba(123,63,160,0.18)` — which is tryst's `--violet`
+         * (#7b3fa0) at 18%, hardcoded, so EVERY skin rendered tryst's purple regardless of its own
+         * palette. It breaks AGENTS.md's no-hardcoded-colours rule and it had been sitting here
+         * unflagged; a second glyph pill (darkness, below) was about to depend on it.
+         *
+         * `color-mix` over the live token keeps the recipe identical — same hue source, same 18% —
+         * so tryst is pixel-unchanged and the other eight skins stop borrowing its purple. That is
+         * a deliberate visual change in eight skins, screenshotted rather than slipped in.
+         */
+        background: muted ? 'var(--chip)' : 'color-mix(in srgb, var(--violet) 18%, transparent)',
         color: muted ? 'var(--muted)' : 'var(--ink)',
       }}
     >
@@ -128,6 +207,9 @@ function BookDetailScreen() {
   const navigate = useNavigate()
   const { data: books, isLoading } = useBooks()
   const { data: reads } = useReads(bookId)
+  /** Which level axis is currently explaining itself, if any. One at a time: two open cards on a
+   *  metadata row would push the page around and neither would be the answer to a single tap. */
+  const [openLevel, setOpenLevel] = useState<'intensity' | 'darkness' | null>(null)
   const formatRatings = useMemo(() => latestRatingByFormat(reads ?? []), [reads])
   const { data: listIds } = useBookListIds(bookId)
   const { data: lists } = useLists()
@@ -167,6 +249,7 @@ function BookDetailScreen() {
       </div>
     )
 
+  const levelPills = visibleLevelPills(book, profile?.hideIntensity ?? false)
   const [g0, g1] = subgenreGradient(book.subgenre, book.genre)
   const workKey = workKeyFor(book)
   const reviewerName = profile?.displayName || 'Reader'
@@ -271,13 +354,59 @@ function BookDetailScreen() {
               <Pill key={s}>{s}</Pill>
             ))}
             <Pill>{seriesBadge}</Pill>
-            {(book.intensity ?? 0) > 0 && !(profile?.hideIntensity ?? false) && (
-              <Pill>{labels.intensityGlyph.repeat(book.intensity ?? 0)}</Pill>
+            {/*
+              TWO AXES, ONE GATE EACH — and the gates differ on purpose.
+
+              `> 0` for both: NULL means NOT ASSESSED and 0 means ASSESSED AS NONE (#326's ruling),
+              and neither earns a pill. `books.darkness` is NULL for essentially the whole library
+              today, so the darkness pill is ABSENT on nearly every book. That is the rule working,
+              not a missing feature.
+
+              `hideIntensity` gates SPICE ONLY. It is the spice-hiding preference; darkness is a
+              different axis and a reader who hid spice has said nothing about it.
+            */}
+            {levelPills.intensity && (
+              <LevelPill
+                axis="intensity"
+                label={labels.intensity}
+                glyph={labels.intensityGlyph}
+                level={book.intensity ?? 0}
+                open={openLevel === 'intensity'}
+                onToggle={() => setOpenLevel((c) => (c === 'intensity' ? null : 'intensity'))}
+              />
+            )}
+            {levelPills.darkness && (
+              <LevelPill
+                axis="darkness"
+                label={labels.darkness}
+                glyph={labels.darknessGlyph}
+                level={book.darkness ?? 0}
+                open={openLevel === 'darkness'}
+                onToggle={() => setOpenLevel((c) => (c === 'darkness' ? null : 'darkness'))}
+              />
             )}
             {formatPartialDate(book.pub) && <Pill>📅 {formatPartialDate(book.pub)}</Pill>}
             {/* Absent when unknown — no pill at all, rather than a fabricated 0 or a guess. */}
             {book.pages != null && <Pill>{book.pages} pp</Pill>}
           </div>
+
+          {/* BELOW the row, not inside it: the pills live in a flex-wrap, and a card in that flow
+              would be squeezed between them and re-wrap the row every time it opened. */}
+          {openLevel && (
+            <LevelGuideCard
+              id={`level-guide-${openLevel}`}
+              level={(openLevel === 'intensity' ? book.intensity : book.darkness) ?? 0}
+              definition={
+                (openLevel === 'intensity'
+                  ? labels.intensityLevels[book.intensity ?? 0]
+                  : labels.darknessLevels[book.darkness ?? 0]) ?? ''
+              }
+              onDismiss={() => setOpenLevel(null)}
+              dismissLabel={`Close the ${
+                openLevel === 'intensity' ? labels.intensity : labels.darkness
+              } level guide`}
+            />
+          )}
         </div>
       </div>
 
