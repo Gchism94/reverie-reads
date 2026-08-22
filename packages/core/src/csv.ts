@@ -404,3 +404,22 @@ export function importCsv(existing: readonly Book[], text: string): CsvImportRes
 
   return { books, added, updated }
 }
+
+/**
+ * CSV WRITING. This file was parse-only until the library CSV export needed a writer; it lives here
+ * so the two writers in the tree (the corpus importer's --dump, and the Settings export) are one
+ * implementation with one set of tests. A second copy is the "third normalizer" mistake in a new
+ * costume — book titles carry commas ("Salt, Harbour"), quotes and apostrophes, and an unescaped
+ * cell silently shifts every later column, producing a file that reads plausibly and aligns wrongly.
+ *
+ * null/undefined render as empty rather than the strings "null"/"undefined".
+ */
+export const csvCell = (v: unknown): string => {
+  const t = String(v ?? '')
+  return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t
+}
+
+/** Header cells are escaped like body cells — the library export's header contains "Author, First",
+ *  whose comma would otherwise split one column into two and shift the whole row. */
+export const csvFile = (header: readonly string[], rows: readonly (readonly unknown[])[]): string =>
+  [header.map(csvCell).join(','), ...rows.map((r) => r.map(csvCell).join(','))].join('\n') + '\n'

@@ -3,6 +3,7 @@ import { nextItemPositionFor, ITEM_POSITION_STEP } from './listItems'
 import {
   isContributorRole,
   isKnownTrope,
+  libraryCsv,
   parseCsvRows,
   TROPE_FACETS,
   type Book,
@@ -13,6 +14,7 @@ import {
 } from '@reverie/core'
 import { supabase } from '../lib/supabase'
 import type { BookRow } from './types'
+import { toBook } from './mappers'
 import { applyIncoming, type ReviewCandidate } from './intake'
 import { loadVerdicts } from './duplicates'
 import { persistContributors } from './contributors'
@@ -1052,4 +1054,46 @@ export async function importCsvToBackend(
     bookIds: ids,
     extras: { tbrPlaced: tbrBookIds.length, shelvesCreated, shelved, noCover, noIsbn, unplacedNotes, tropeLikeShelves },
   }
+}
+
+/**
+ * The full library, PAGED.
+ *
+ * PostgREST silently caps an un-ranged select — no error, just a short result — and that cap is not
+ * hypothetical here: reading a library as one un-ranged select is the defect that let the corpus
+ * import re-insert 136 books it should have matched, because the rows it should have matched
+ * against were never returned. This library is 491 books today and will be roughly 1,366 after the
+ * corpus import lands, so a CSV export added now crosses the cap on its first real use after that
+ * write. Page until a short page, exactly as scripts/import-corpus-csv.mjs' fetchLibrary does.
+ *
+ * `.order('id')` is not cosmetic: `.range()` over an unordered select is not guaranteed to return
+ * disjoint pages, so without it the pages can overlap and drop rows. Display order is applied
+ * afterwards, in libraryCsv.
+ */
+const EXPORT_PAGE = 1000
+
+export async function fetchLibraryPaged(): Promise<Book[]> {
+  const rows: BookRow[] = []
+  for (let from = 0; ; from += EXPORT_PAGE) {
+    const { data, error } = await supabase
+      .from('books')
+      .select('*, book_authors(position, role, authors(id, name)), book_tropes(emphasis, tropes(id, name)), book_moods(moods(id, name))')
+      .order('id', { ascending: true })
+      .range(from, from + EXPORT_PAGE - 1)
+    if (error) throw error
+    const page = (data ?? []) as BookRow[]
+    rows.push(...page)
+    if (page.length < EXPORT_PAGE) break
+  }
+  return rows.map(toBook)
+}
+
+/**
+ * The library in the SOURCE FILE'S OWN SCHEMA — see packages/core/src/libraryCsv.ts for why the
+ * shape is what it is. Reads through fetchLibraryPaged rather than the useBooks cache on purpose:
+ * that query is itself un-ranged, so an export served from it would inherit the very cap this is
+ * written to avoid.
+ */
+export async function buildLibraryCsv(): Promise<string> {
+  return libraryCsv(await fetchLibraryPaged())
 }

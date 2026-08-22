@@ -6,7 +6,7 @@ import { rootRoute } from './RootRoute'
 import { useBooks, useUpdateBook } from '../data/books'
 import { useProfile, useUpdateProfile } from '../data/profile'
 import { usePerformMerge } from '../data/mergeBooks'
-import { buildBackup, restoreBackup } from '../data/importExport'
+import { buildBackup, buildLibraryCsv, restoreBackup } from '../data/importExport'
 import { importDetectedExport, type ImportExportResult } from '../data/importLibrary'
 import { enrichImported } from '../data/importEnrich'
 import { ImportSummary } from '../components/ImportSummary'
@@ -151,6 +151,31 @@ function SettingsScreen() {
     // (a filename, not stored data), but wrong for the same reason near midnight west of UTC.
     a.download = `reverie-backup-${todayLocalDate()}.json`
     a.click()
+  }
+
+  /**
+   * The spreadsheet export — the library in the shape of the source file it is meant to be compared
+   * against, NOT a backup. Same download mechanics as the JSON one above, and the same reason for
+   * the local (not UTC) date in the filename.
+   *
+   * Busy state, unlike the JSON export: this one pages the whole library over the network, so on a
+   * large library there is a real gap between the click and the file, and a control that looks
+   * inert invites a second click and a second full read.
+   */
+  const [csvBusy, setCsvBusy] = useState(false)
+  const exportLibraryCsv = async () => {
+    setCsvBusy(true)
+    try {
+      const csv = await buildLibraryCsv()
+      const a = document.createElement('a')
+      a.href = `data:text/csv;charset=utf-8,${encodeURIComponent(csv)}`
+      a.download = `reverie-library-${todayLocalDate()}.csv`
+      a.click()
+    } catch (e) {
+      setStatus(`Couldn’t export the CSV: ${(e as Error).message}`)
+    } finally {
+      setCsvBusy(false)
+    }
   }
 
   const confirmText = 'delete my account'
@@ -708,6 +733,19 @@ function SettingsScreen() {
               style={{ background: 'var(--field)' }}
             >
               ⬇ Export library (JSON)
+            </button>
+            <button
+              type="button"
+              /* A state-independent handle, for the reason spelled out on the import button below:
+               * the label flips while the export runs, so a test that finds this by its text is
+               * waiting for the label rather than asserting the control. */
+              data-testid="export-library-csv"
+              onClick={() => void exportLibraryCsv()}
+              disabled={csvBusy}
+              className="skin-control border border-line px-4 py-2 text-[13px] font-semibold text-ink disabled:opacity-50"
+              style={{ background: 'var(--field)' }}
+            >
+              {csvBusy ? 'Exporting…' : '⬇ Export for spreadsheet (CSV)'}
             </button>
             <button
               type="button"
