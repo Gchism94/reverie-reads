@@ -67,8 +67,7 @@ function unpagedReads(files: readonly string[], dir = DIR): Read[] {
 const BOUNDED_BY_PARENT: Record<string, string> = {
   'reads.ts:reads': 'one book’s reads — rereads of a single title',
   'reviews.ts:reviews': 'one work’s reviews',
-  'listItems.ts:list_items': 'one shelf’s membership, or one book’s shelves',
-  'lists.ts:lists': 'the max sort_order for one owner — a fold, not a list',
+  'listItems.ts:list_items': 'one book’s shelf memberships — bounded by shelf count, not library size',
   'series.ts:series_entries': 'one series’ slots',
   'series.ts:books': 'one series’ books',
   'clubs.ts:club_members': 'one club’s members',
