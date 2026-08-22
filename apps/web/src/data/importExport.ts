@@ -441,44 +441,190 @@ export function seriesRulingRows(
  *
  * Reading a v4 file still works — the new sections are optional and simply arrive empty.
  */
+/**
+ * PAGE SIZE. PostgREST caps an un-ranged select — and a ranged one — at this many rows per
+ * response, and it does so SILENTLY: no error, no warning, just a short answer.
+ */
+const BACKUP_PAGE = 1000
+
+/**
+ * Read a whole table, paging until a short page, and REFUSE to return a partial answer.
+ *
+ * `{ count: 'exact' }` makes the server report the full number of rows the query matches — not the
+ * page's size — so the row count is measured by the database rather than inferred from the loop
+ * that is itself the thing most likely to be wrong. If the two disagree, the export throws instead
+ * of writing a backup with a hole in it.
+ *
+ * That check is the point. A count derived from the same fetch it is meant to be checking would
+ * agree with a truncated read every time — a proxy that looks fine precisely when it isn't. The
+ * server's count is the independent measurement.
+ *
+ * `order` is not cosmetic: `.range()` over an unordered select is not guaranteed to return disjoint
+ * pages, so without a total order the pages can overlap and drop rows while still counting right.
+ * Every caller passes its table's primary key.
+ */
+async function pageAll<T>(
+  label: string,
+  page: (
+    from: number,
+    to: number,
+  ) => PromiseLike<{ data: T[] | null; error: unknown; count: number | null }>,
+): Promise<T[]> {
+  const rows: T[] = []
+  let total: number | null = null
+  for (let from = 0; ; from += BACKUP_PAGE) {
+    const { data, error, count } = await page(from, from + BACKUP_PAGE - 1)
+    if (error) throw error
+    const got = data ?? []
+    rows.push(...got)
+    if (count != null) total = count
+    if (got.length < BACKUP_PAGE) break
+    // TERMINATION, not an optimization. Without this the loop trusts the window to advance, and a
+    // read that keeps returning page one — the shape a dropped `.range()` produces — spins forever
+    // accumulating duplicates until the tab runs out of memory. Found by writing that regression as
+    // a test: it OOM'd instead of failing. Overshooting the server's count is impossible for a
+    // healthy read, so stopping there costs nothing and turns a hang into the error below.
+    if (total != null && rows.length >= total) break
+  }
+  // Two different faults, told apart because they need different fixes. Short means the read
+  // stopped early; over means it never advanced and re-read the same window. Both abort — the
+  // point is that neither can reach a file.
+  if (total != null && rows.length !== total)
+    throw new Error(
+      rows.length > total
+        ? `Backup aborted: paging did not advance for ${label} — re-read the same rows until it ` +
+          `overshot ${total}. Nothing was written.`
+        : `Backup aborted: read ${rows.length} of ${total} ${label} rows. Nothing was written — a ` +
+          `partial backup is worse than none, because it restores cleanly.`,
+    )
+  return rows
+}
+
+/** Sum of the arrays inside a `{ key: T[] }` section — what the FILE actually carries. */
+const nested = (o: Record<string, readonly unknown[]>): number =>
+  Object.values(o).reduce((n, v) => n + v.length, 0)
+
+/**
+ * Row counts for every section, as written. `restoreBackup` asserts the payload still matches
+ * before it writes anything, so a truncated or damaged FILE fails loudly instead of restoring
+ * cleanly and quietly missing books.
+ *
+ * These are counts of what is IN THE FILE, which is a different job from the write-time check in
+ * `pageAll` above (fetched rows vs the server's own count). One catches a bad read, the other
+ * catches a bad file; neither can stand in for the other.
+ */
+export interface BackupCounts {
+  [section: string]: number
+}
+
 export async function buildBackup(): Promise<string> {
   const ownerId = await currentUserId()
   const [books, contribs, bookTropes, bookMoods, reads, lists, items, reviews, verdicts, follows, rulings, tombstones, dismissals, profile] =
     await Promise.all([
-      supabase.from('books').select('*'),
-      supabase.from('books').select('id, book_authors(position, role, authors(name))'),
+      pageAll<BookRow>('books', (from, to) =>
+        supabase.from('books').select('*', { count: 'exact' }).order('id').range(from, to),
+      ),
+      pageAll<ContribJoinRow>('contributor', (from, to) =>
+        supabase
+          .from('books')
+          .select('id, book_authors(position, role, authors(name))', { count: 'exact' })
+          .order('id')
+          .range(from, to) as unknown as PromiseLike<{ data: ContribJoinRow[] | null; error: unknown; count: number | null }>,
+      ),
       // Names, not ids — see the taxonomy round-trip note above.
-      supabase.from('book_tropes').select('book_id, emphasis, tropes(name, facet)'),
-      supabase.from('book_moods').select('book_id, moods(name)'),
-      supabase.from('reads').select('*'),
-      supabase.from('lists').select('*'),
-      supabase.from('list_items').select('*'),
-      supabase.from('reviews').select('work_key, reviewer_name, rating, body, created_at').eq('reviewer_id', ownerId),
-      supabase.from('merge_verdicts').select('book_id, incoming_key, verdict'),
-      supabase.from('author_follows').select('author_name, state'),
+      pageAll<TropeJoinRow>('book_tropes', (from, to) =>
+        supabase
+          .from('book_tropes')
+          .select('book_id, emphasis, tropes(name, facet)', { count: 'exact' })
+          .order('book_id')
+          .order('trope_id')
+          .range(from, to) as unknown as PromiseLike<{ data: TropeJoinRow[] | null; error: unknown; count: number | null }>,
+      ),
+      pageAll<MoodJoinRow>('book_moods', (from, to) =>
+        supabase
+          .from('book_moods')
+          .select('book_id, moods(name)', { count: 'exact' })
+          .order('book_id')
+          .order('mood_id')
+          .range(from, to) as unknown as PromiseLike<{ data: MoodJoinRow[] | null; error: unknown; count: number | null }>,
+      ),
+      pageAll<NonNullable<BackupShape['reads']>[number]>('reads', (from, to) =>
+        supabase.from('reads').select('*', { count: 'exact' }).order('id').range(from, to),
+      ),
+      pageAll<NonNullable<BackupShape['lists']>[number]>('lists', (from, to) =>
+        supabase.from('lists').select('*', { count: 'exact' }).order('id').range(from, to),
+      ),
+      pageAll<NonNullable<BackupShape['list_items']>[number]>('list_items', (from, to) =>
+        supabase
+          .from('list_items')
+          .select('*', { count: 'exact' })
+          .order('list_id')
+          .order('book_id')
+          .range(from, to),
+      ),
+      pageAll<NonNullable<BackupShape['reviews']>[number]>('reviews', (from, to) =>
+        supabase
+          .from('reviews')
+          .select('work_key, reviewer_name, rating, body, created_at', { count: 'exact' })
+          .eq('reviewer_id', ownerId)
+          .order('id')
+          .range(from, to),
+      ),
+      pageAll<NonNullable<BackupShape['merge_verdicts']>[number]>('merge_verdicts', (from, to) =>
+        supabase
+          .from('merge_verdicts')
+          .select('book_id, incoming_key, verdict', { count: 'exact' })
+          .order('book_id')
+          .order('incoming_key')
+          .range(from, to),
+      ),
+      pageAll<NonNullable<BackupShape['author_follows']>[number]>('author_follows', (from, to) =>
+        supabase
+          .from('author_follows')
+          .select('author_name, state', { count: 'exact' })
+          .order('author_name')
+          .range(from, to),
+      ),
       // Only the two refusal rulings travel — see the ownedTables.ts entry for why 'same' does
       // not (it's already reflected in the merged books/series_entries data, and its
       // surviving_series_id can't be remapped onto a restored account's regenerated series ids).
-      supabase.from('series_merge_decisions').select('name_key_a, name_key_b, ruling').neq('ruling', 'same'),
+      pageAll<NonNullable<BackupShape['series_merge_decisions']>[number]>('series_merge_decisions', (from, to) =>
+        supabase
+          .from('series_merge_decisions')
+          .select('name_key_a, name_key_b, ruling', { count: 'exact' })
+          .neq('ruling', 'same')
+          .order('id')
+          .range(from, to),
+      ),
       // The two refusals — see the note above. Tombstones key on the series NAME; dismissals on
       // the trope name, for the same reason every other taxonomy reference does.
-      supabase
-        .from('series_entries')
-        .select('position, label, title, author, source, removed_at, series(name)')
-        .not('removed_at', 'is', null),
-      supabase.from('trope_suggestions').select('book_id, state, tropes(name)').eq('state', 'dismissed'),
+      pageAll<TombstoneJoinRow>('series_entries', (from, to) =>
+        supabase
+          .from('series_entries')
+          .select('position, label, title, author, source, removed_at, series(name)', { count: 'exact' })
+          .not('removed_at', 'is', null)
+          .order('id')
+          .range(from, to) as unknown as PromiseLike<{ data: TombstoneJoinRow[] | null; error: unknown; count: number | null }>,
+      ),
+      pageAll<DismissalJoinRow>('trope_suggestions', (from, to) =>
+        supabase
+          .from('trope_suggestions')
+          .select('book_id, state, tropes(name)', { count: 'exact' })
+          .eq('state', 'dismissed')
+          .order('book_id')
+          .order('trope_id')
+          .range(from, to) as unknown as PromiseLike<{ data: DismissalJoinRow[] | null; error: unknown; count: number | null }>,
+      ),
       supabase
         .from('profiles')
         .select('display_name, goal_year, goal_target, auto_merge_duplicates, default_store_id, default_store_name, default_store_website, skin, mode, adaptive_skin, adaptive_locked')
         .eq('id', ownerId)
         .maybeSingle(),
     ])
-  for (const r of [books, contribs, bookTropes, bookMoods, reads, lists, items, reviews, verdicts, follows, rulings, tombstones, dismissals])
-    if (r.error) throw r.error
 
   // Per-book contributors, keyed by (old) book id.
   const contributorsByBook: Record<string, { name: string; role: string; position: number }[]> = {}
-  for (const row of (contribs.data as unknown as ContribJoinRow[]) ?? []) {
+  for (const row of contribs) {
     const list = (row.book_authors ?? [])
       .map((ba) => ({ name: authorName(ba.authors), role: ba.role, position: ba.position }))
       .filter((c) => c.name)
@@ -486,28 +632,94 @@ export async function buildBackup(): Promise<string> {
     if (list.length) contributorsByBook[row.id] = list
   }
 
+  const tropes = tropesByBook(bookTropes)
+  const moods = moodsByBook(bookMoods)
+  const series_tombstones = seriesTombstones(tombstones)
+  const trope_dismissals = dismissalsByBook(dismissals)
+
   return JSON.stringify({
-    v: 5,
+    v: 6,
     app: 'reverie',
     exportedAt: new Date().toISOString(),
-    books: books.data,
+    // The file's own completeness check — see BackupCounts. Written LAST in spirit: every number
+    // is taken from the value actually being serialized on the line above it, never from the
+    // query that produced it, so a section that lost rows between fetch and write is still caught.
+    counts: {
+      books: books.length,
+      contributors: nested(contributorsByBook),
+      tropes: nested(tropes),
+      moods: nested(moods),
+      reads: reads.length,
+      lists: lists.length,
+      list_items: items.length,
+      reviews: reviews.length,
+      merge_verdicts: verdicts.length,
+      author_follows: follows.length,
+      series_merge_decisions: rulings.length,
+      series_tombstones: series_tombstones.length,
+      trope_dismissals: nested(trope_dismissals),
+    } satisfies BackupCounts,
+    books,
     contributors: contributorsByBook,
-    tropes: tropesByBook((bookTropes.data as unknown as TropeJoinRow[]) ?? []),
-    moods: moodsByBook((bookMoods.data as unknown as MoodJoinRow[]) ?? []),
-    reads: reads.data,
-    lists: lists.data,
-    list_items: items.data,
-    reviews: reviews.data,
-    merge_verdicts: verdicts.data,
-    author_follows: follows.data ?? [],
-    series_merge_decisions: rulings.data,
-    series_tombstones: seriesTombstones((tombstones.data as unknown as TombstoneJoinRow[]) ?? []),
-    trope_dismissals: dismissalsByBook((dismissals.data as unknown as DismissalJoinRow[]) ?? []),
+    tropes,
+    moods,
+    reads,
+    lists,
+    list_items: items,
+    reviews,
+    merge_verdicts: verdicts,
+    author_follows: follows,
+    series_merge_decisions: rulings,
+    series_tombstones,
+    trope_dismissals,
     profile: profile.data ?? null,
   })
 }
 
+/**
+ * Compare a backup's declared counts against what the payload actually carries.
+ *
+ * Returns the mismatches, so the caller can name ALL of them at once rather than failing on the
+ * first — a file that lost three sections should say so in one message.
+ *
+ * A file with no `counts` (v5 and earlier) yields no mismatches and restores as it always did.
+ * That is a deliberate hole with a floor under it: those files were written before this check
+ * existed, so refusing them would strand every backup taken to date. It is stated here rather than
+ * left to be inferred, because "no mismatches" from an older file means "not checked", not "sound".
+ */
+export function countMismatches(data: BackupShape): string[] {
+  const counts = data.counts
+  if (!counts) return []
+  const actual: Record<string, number> = {
+    books: (data.books ?? []).length,
+    contributors: nested(data.contributors ?? {}),
+    tropes: nested(data.tropes ?? {}),
+    moods: nested(data.moods ?? {}),
+    reads: (data.reads ?? []).length,
+    lists: (data.lists ?? []).length,
+    list_items: (data.list_items ?? []).length,
+    reviews: (data.reviews ?? []).length,
+    merge_verdicts: (data.merge_verdicts ?? []).length,
+    author_follows: (data.author_follows ?? []).length,
+    series_merge_decisions: (data.series_merge_decisions ?? []).length,
+    series_tombstones: (data.series_tombstones ?? []).length,
+    trope_dismissals: nested(data.trope_dismissals ?? {}),
+  }
+  const out: string[] = []
+  for (const [section, declared] of Object.entries(counts)) {
+    const got = actual[section]
+    // A section the file declares but this build doesn't know: not a mismatch, and not silently
+    // ignored either — a newer backup restored by an older build should say what it skipped.
+    if (got === undefined) continue
+    if (got !== declared) out.push(`${section}: expected ${declared}, found ${got}`)
+  }
+  return out
+}
+
 interface BackupShape {
+  /** v6+. Row counts as written — see BackupCounts and countMismatches. Absent in v5 and earlier,
+   *  which restore unchecked rather than being refused. */
+  counts?: BackupCounts
   books?: BookRow[]
   contributors?: Record<string, { name: string; role: string; position: number }[]>
   /** v5+; absent in a v4 file, which simply restores without them. */
@@ -550,10 +762,13 @@ async function restoreTombstones(tombstones: readonly BackupTombstone[], ownerId
   for (const t of tombstones) if (t.series?.trim()) wanted.set(nameKey(t.series), t.series.trim())
   if (!wanted.size) return 0
 
-  const { data: existing, error: readErr } = await supabase.from('series').select('id, name')
-  if (readErr) throw readErr
+  // PAGED: a short read here does not fail, it MIS-MATCHES — every series past the cap looks
+  // absent, so the insert below re-creates one that already exists.
+  const existing = await pageAll<{ id: string; name: string }>('series', (from, to) =>
+    supabase.from('series').select('id, name', { count: 'exact' }).order('id').range(from, to),
+  )
   const seriesIdByName = new Map<string, string>()
-  for (const row of (existing as { id: string; name: string }[]) ?? []) seriesIdByName.set(nameKey(row.name), row.id)
+  for (const row of existing) seriesIdByName.set(nameKey(row.name), row.id)
 
   const toCreate = [...wanted.entries()].filter(([k]) => !seriesIdByName.has(k)).map(([, name]) => name)
   if (toCreate.length) {
@@ -567,12 +782,20 @@ async function restoreTombstones(tombstones: readonly BackupTombstone[], ownerId
 
   // Which slots this account already has — live or dead — so a re-restore can't duplicate one.
   const seriesIds = [...seriesIdByName.values()]
-  const { data: occupied, error: slotErr } = await supabase
-    .from('series_entries')
-    .select('series_id, position, title')
-  if (slotErr) throw slotErr
+  // PAGED, and this one is a GUARD: `taken` is what stops a re-restore duplicating a slot. Read
+  // short, it does not report fewer slots — it silently stops preventing duplicates, which is the
+  // failure it exists to prevent.
+  const occupied = await pageAll<{ series_id: string; position: number; title: string }>(
+    'series_entries',
+    (from, to) =>
+      supabase
+        .from('series_entries')
+        .select('series_id, position, title', { count: 'exact' })
+        .order('id')
+        .range(from, to),
+  )
   const taken = new Set<string>()
-  for (const row of (occupied as { series_id: string; position: number; title: string }[]) ?? []) {
+  for (const row of occupied) {
     if (seriesIds.includes(row.series_id))
       taken.add(slotKey(row.series_id, row.title, row.position))
   }
@@ -607,12 +830,18 @@ async function restoreTaxonomy(
     return { tropes: 0, moods: 0, dismissals: 0 }
   }
 
-  const [tv, mv] = await Promise.all([
-    supabase.from('tropes').select('id, name, owner_id'),
-    supabase.from('moods').select('id, name, owner_id'),
+  // PAGED: a name past the cap reads as "not in the vocabulary", and the caller coins a personal
+  // duplicate of a trope or mood the account already has.
+  const [tvRows, mvRows] = await Promise.all([
+    pageAll<{ id: string; name: string; owner_id: string | null }>('tropes', (from, to) =>
+      supabase.from('tropes').select('id, name, owner_id', { count: 'exact' }).order('id').range(from, to),
+    ),
+    pageAll<{ id: string; name: string; owner_id: string | null }>('moods', (from, to) =>
+      supabase.from('moods').select('id, name, owner_id', { count: 'exact' }).order('id').range(from, to),
+    ),
   ])
-  if (tv.error) throw tv.error
-  if (mv.error) throw mv.error
+  const tv = { data: tvRows, error: null }
+  const mv = { data: mvRows, error: null }
 
   type VocabRow = { id: string; name: string; owner_id: string | null }
   const tropeIdx = vocabIndex((tv.data as VocabRow[]) ?? [])
@@ -683,6 +912,16 @@ export async function restoreBackup(
   const ownerId = await currentUserId()
   const data = JSON.parse(json) as BackupShape
   if (!data.books) throw new Error('That file doesn’t look like a Reverie backup.')
+
+  // BEFORE ANY WRITE. A backup that restores cleanly while missing rows is the failure this whole
+  // change exists to end, so the check has to happen while refusing still costs nothing — once the
+  // first list is inserted, a refusal leaves a half-restored account behind.
+  const mismatches = countMismatches(data)
+  if (mismatches.length)
+    throw new Error(
+      `That backup is incomplete — nothing was restored. ${mismatches.join('; ')}. ` +
+        `Re-export from the account it came from.`,
+    )
 
   // Lists first, mapping old → new ids.
   //
@@ -938,10 +1177,14 @@ export async function importCsvToBackend(
   const rows = parseCsvRows(text)
   const verdicts = await loadVerdicts()
 
-  const { data: readRows, error: re } = await supabase
-    .from('reads')
-    .select('book_id, read_on, format, rating, notes')
-  if (re) throw re
+  // PAGED: reading history past the cap would read as "never read".
+  const readRows = await pageAll<Record<string, unknown>>('reads', (from, to) =>
+    supabase
+      .from('reads')
+      .select('book_id, read_on, format, rating, notes', { count: 'exact' })
+      .order('id')
+      .range(from, to),
+  )
   const readsByBook = new Map<string, Book['reads']>()
   for (const r of (readRows as {
     book_id: string
@@ -989,10 +1232,12 @@ export async function importCsvToBackend(
   }
 
   // ── placements: Imported TBR + custom shelves (create on first sight, membership appended) ──
-  const { data: listRows, error: le } = await supabase.from('lists').select('id, name')
-  if (le) throw le
+  // PAGED: a shelf past the cap looks absent and gets created a second time.
+  const listRows = await pageAll<{ id: string; name: string }>('lists', (from, to) =>
+    supabase.from('lists').select('id, name', { count: 'exact' }).order('id').range(from, to),
+  )
   const listCache = new Map<string, string>(
-    ((listRows as { id: string; name: string }[]) ?? []).map((l) => [l.name.trim().toLowerCase(), l.id]),
+    listRows.map((l) => [l.name.trim().toLowerCase(), l.id]),
   )
 
   const shelvesCreated: string[] = []
@@ -1057,34 +1302,21 @@ export async function importCsvToBackend(
 }
 
 /**
- * The full library, PAGED.
- *
- * PostgREST silently caps an un-ranged select — no error, just a short result — and that cap is not
- * hypothetical here: reading a library as one un-ranged select is the defect that let the corpus
- * import re-insert 136 books it should have matched, because the rows it should have matched
- * against were never returned. This library is 491 books today and will be roughly 1,366 after the
- * corpus import lands, so a CSV export added now crosses the cap on its first real use after that
- * write. Page until a short page, exactly as scripts/import-corpus-csv.mjs' fetchLibrary does.
- *
- * `.order('id')` is not cosmetic: `.range()` over an unordered select is not guaranteed to return
- * disjoint pages, so without it the pages can overlap and drop rows. Display order is applied
- * afterwards, in libraryCsv.
+ * The full library, PAGED — through the same helper the backup uses, so there is one paging
+ * discipline in this file rather than two that can drift. Display order is applied afterwards, in
+ * libraryCsv.
  */
-const EXPORT_PAGE = 1000
-
 export async function fetchLibraryPaged(): Promise<Book[]> {
-  const rows: BookRow[] = []
-  for (let from = 0; ; from += EXPORT_PAGE) {
-    const { data, error } = await supabase
+  const rows = await pageAll<BookRow>('books', (from, to) =>
+    supabase
       .from('books')
-      .select('*, book_authors(position, role, authors(id, name)), book_tropes(emphasis, tropes(id, name)), book_moods(moods(id, name))')
+      .select(
+        '*, book_authors(position, role, authors(id, name)), book_tropes(emphasis, tropes(id, name)), book_moods(moods(id, name))',
+        { count: 'exact' },
+      )
       .order('id', { ascending: true })
-      .range(from, from + EXPORT_PAGE - 1)
-    if (error) throw error
-    const page = (data ?? []) as BookRow[]
-    rows.push(...page)
-    if (page.length < EXPORT_PAGE) break
-  }
+      .range(from, to),
+  )
   return rows.map(toBook)
 }
 
