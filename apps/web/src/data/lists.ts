@@ -24,8 +24,16 @@ export const ORDER_STEP = 1000
  * order+limit so it behaves identically under the importExport test harness's mock client.
  */
 export async function nextListSortOrderFor(ownerId: string): Promise<number> {
-  const { data } = await supabase.from('lists').select('sort_order').eq('owner_id', ownerId)
-  const rows = (data ?? []) as { sort_order: number | null }[]
+  // PAGED for the same reason as nextItemPositionFor: a short read yields a too-low MAX, and the
+  // resulting collision is silent — which is the exact class the sort_order incident was about.
+  const rows = await pageAll<{ sort_order: number | null }>('lists', (from, to) =>
+    supabase
+      .from('lists')
+      .select('sort_order', { count: 'exact' })
+      .eq('owner_id', ownerId)
+      .order('id')
+      .range(from, to),
+  )
   return Math.max(0, ...rows.map((r) => r.sort_order ?? 0)) + ORDER_STEP
 }
 

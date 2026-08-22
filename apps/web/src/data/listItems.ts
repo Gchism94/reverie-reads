@@ -26,8 +26,18 @@ export const ITEM_POSITION_STEP = 1000
  * under mock clients.
  */
 export async function nextItemPositionFor(listId: string): Promise<number> {
-  const { data } = await supabase.from('list_items').select('position').eq('list_id', listId)
-  const rows = (data ?? []) as { position: number | null }[]
+  // PAGED. One shelf, but a shelf is not small: after the corpus import a single "Imported TBR"
+  // can hold well over a thousand books, and a truncated read here does not fail — it returns a
+  // MAX that is too low, so the next append collides with an existing position. The fold stays in
+  // JS on purpose (see above); paging fixes the truncation without re-opening that choice.
+  const rows = await pageAll<{ position: number | null }>('list_items', (from, to) =>
+    supabase
+      .from('list_items')
+      .select('position', { count: 'exact' })
+      .eq('list_id', listId)
+      .order('book_id')
+      .range(from, to),
+  )
   return Math.max(0, ...rows.map((r) => r.position ?? 0)) + ITEM_POSITION_STEP
 }
 
