@@ -26,7 +26,8 @@
     "db:status": "supabase status",
     "db:seed": "bash scripts/stack-lock.sh node scripts/seed-dev.mjs",
     "deploy:functions": "bash scripts/deploy-guard.sh functions",
-    "deploy:migrations": "bash scripts/deploy-guard.sh migrations"
+    "deploy:migrations": "bash scripts/deploy-guard.sh migrations",
+    "import:corpus": "vite-node scripts/import-corpus-csv.mjs --"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
@@ -37,6 +38,7 @@
     "globals": "^15.14.0",
     "prettier": "^3.4.2",
     "typescript": "^5.7.2",
-    "typescript-eslint": "^8.18.0"
+    "typescript-eslint": "^8.18.0",
+    "vite-node": "^2.1.9"
   }
 }
