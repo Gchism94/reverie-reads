@@ -133,7 +133,19 @@ function Calendar({ books, openBook }: { books: Book[]; openBook: (id: string) =
 
       <div className="grid grid-cols-7 gap-1.5">
         {DOW.map((d) => (
-          <div key={d} className="pb-1 text-center text-[11px] text-muted">
+          /*
+           * LEFT-ALIGNED, matching the numerals — and this is the fix for the misalignment the
+           * review shots exposed, chosen over the more obvious one.
+           *
+           * With the tiles gone, nothing ties a numeral to its column any more, so the old
+           * centre-vs-left mismatch (~12px down every column) became visible. Centring the
+           * NUMERALS instead would have re-broken it on marked days: a numeral centred above a
+           * dot cluster whose width grows with the event count leaves that cluster's left edge
+           * ragged column to column, and at 12 dots + "+n" it wanders badly. Moving the header
+           * is the change that costs nothing — the dots already follow the cell's left spine, so
+           * this puts the header on the same spine and marked-day layout is untouched.
+           */
+          <div key={d} className="pb-1 pl-1 text-left text-[11px] text-muted">
             {d}
           </div>
         ))}
