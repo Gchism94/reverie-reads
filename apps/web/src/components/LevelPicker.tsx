@@ -94,7 +94,32 @@ export function LevelPicker({
             aria-pressed={i <= value}
             aria-describedby={shown === i ? guideId : undefined}
             aria-expanded={pinned === i}
-            style={{ opacity: i <= value ? 1 : 0.3 }}
+            className="grid h-6 w-6 place-items-center rounded-full border text-[13px] leading-none"
+            style={{
+              // THE RING CARRIES THE STATE — the glyph no longer does, and that is the fix.
+              //
+              // These levels encoded selection as `opacity: i <= value ? 1 : 0.3`, which fails
+              // WCAG 1.4.11's 3:1 for non-text contrast in ALL EIGHTEEN skin x mode combinations
+              // (measured 1.08–1.38:1). Opacity crushes any glyph toward its own background by
+              // construction, so no choice of glyph could have rescued it — and the darkness moon
+              // (U+1F311 NEW MOON, near-black) additionally failed SELECTED in 8 of 9 dark skins,
+              // 1.32–1.60:1. Named by codepoint, not pasted: this component is glyph-AGNOSTIC — it
+              // renders whatever `glyph` prop it is handed — and glyphAllowlist.test.ts rightly
+              // refuses an undeclared symbol here, comment or not.
+              //
+              // --muted is the one token measured to clear 3:1 against the card in every
+              // combination (4.51:1 worst, bloom/dark 8.25:1 best). Ring present = this control
+              // exists; ring FILLED = this level is set. Both readings are the same muted-vs-card
+              // pair, so one assertion covers presence and state together —
+              // levelRing.contrast.test.ts, registry-keyed over all nine skins.
+              //
+              // --accent-fill is deliberately NOT load-bearing here. It measures 1.00:1 against
+              // the card in almanac/dark — literally the same colour — and under 3:1 in three more
+              // dark skins, so anything that depended on it would be invisible in four skins. It
+              // may be layered back as decoration later; nothing may rely on it.
+              borderColor: 'var(--muted)',
+              background: i <= value ? 'var(--muted)' : 'transparent',
+            }}
           >
             {glyph}
           </button>

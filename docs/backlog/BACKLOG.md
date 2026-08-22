@@ -1408,6 +1408,33 @@ aspect` at 9.1s. `e2e` failed exactly once in the surrounding 60 runs.
 - iOS barcode wasm fallback — decide once tester platform mix is known.
 - Year heatmap. No longer sold by copy.
 
+## Parked — a skin-palette pass, when someone next opens the palettes
+
+- **`--accent-fill` is invisible against `--card` in four dark skins, and in almanac/dark it IS the
+  card colour.** Measured from `SKIN_TOKENS` while fixing the level-picker ring
+  (`levelRing.contrast.test.ts`), where it was the obvious token to carry state and could not:
+
+  | skin/mode    | `--accent-fill` vs `--card`  |
+  | ------------ | ---------------------------- |
+  | almanac/dark | **1.00:1** — the same colour |
+  | hearth/dark  | 1.48:1                       |
+  | tryst/dark   | 2.30:1                       |
+  | bloom/dark   | 2.76:1                       |
+
+  WCAG 1.4.11's floor for a control boundary is 3:1, so anything whose visibility depends on an
+  accent fill is absent in those four. The level picker was rebuilt around `--muted` instead
+  (4.51:1 worst across all eighteen) precisely to avoid the dependency.
+
+  **Why no existing test catches this.** `skinCharacter.contrast.test.ts` asserts text ON the fill
+  (`onPrimary` vs `accentFill`) at AA 4.5:1, which is a different question and passes happily: a
+  fill can be perfectly readable to write on and still vanish against the surface it sits in. The
+  suite has no fill-vs-surface pair anywhere, so this class is structurally invisible to it.
+
+  **Not scheduled work, and deliberately not fixed here.** Changing `--accent-fill` in four skins
+  is a palette decision with reach far past this picker — every button, chip and active state that
+  uses it. Recorded so the next person opening the palettes has the numbers, and so the next
+  feature reaching for an accent fill as a state carrier knows it cannot be one.
+
 ## Parked design conversations
 
 Calendar cluster; multi-series universe layer; borrowed-as-subsystem; Match
