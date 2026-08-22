@@ -134,6 +134,7 @@ function workFromBook(b) {
     work_key: `${norm(b.title)}|${norm(author)}`,
     title: b.title,
     contributors: author ? [{ name: author, role: 'author', position: 0 }] : [],
+    author_text: author,
     series: b.series ?? null,
     position: b.position ?? null,
     series_count: b.series_count ?? null,
@@ -158,6 +159,7 @@ function workFromRecord(r) {
     work_key: r.workKey,
     title: r.title,
     contributors: r.author ? [{ name: r.author, role: 'author', position: 0 }] : [],
+    author_text: r.author,
     series: r.series || null,
     position: null, // the CSV carries none; inventing one is exactly what the integrity rule bans
     series_count: null,
