@@ -73,9 +73,30 @@ describe('the migrations mirror the inference map exactly', () => {
     ...pairsFrom('20260721020000_taxonomy_neutral.sql'),
   ]
 
+  /**
+   * ('romance','romance') is in book_editing's VALUES list and cannot be taken out of it: applied
+   * migrations are history, and rewriting one would change what a fresh database replays.
+   *
+   * The pair is dropped from the TS map by the subgenre-never-a-genre ruling — a genre is never its
+   * own subgenre, so there is nothing to infer from it. The migration that carried it is what put
+   * the redundant value into the data in the first place; the durable fix is the guard plus a
+   * repair, not an edit to the file that ran.
+   *
+   * Declared here rather than silently filtered, on the principle that an exclusion without a
+   * stated reason is the bug.
+   */
+  const RETIRED_BY_RULING = new Set(['romance'])
+
   it('every TS pair appears across the SQL VALUES lists, and nothing extra', () => {
     const ts = Object.entries(SUBGENRE_PRIMARY_GENRE)
-    expect(new Map(sqlPairs)).toEqual(new Map(ts))
-    expect(sqlPairs.length).toBe(ts.length)
+    const live = sqlPairs.filter(([sub]) => !RETIRED_BY_RULING.has(sub))
+    expect(new Map(live)).toEqual(new Map(ts))
+    expect(live.length).toBe(ts.length)
+  })
+
+  it('every retired pair really was in the SQL — the exclusion cannot go stale', () => {
+    // If the pair ever leaves the migration, this exclusion is dead weight and should be deleted.
+    const inSql = new Set(sqlPairs.map(([sub]) => sub))
+    for (const sub of RETIRED_BY_RULING) expect(inSql.has(sub), `'${sub}' no longer in SQL`).toBe(true)
   })
 })

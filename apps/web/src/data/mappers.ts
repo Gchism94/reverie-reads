@@ -1,5 +1,7 @@
 import {
   isContributorRole,
+  isCoreGenreValue,
+  withoutGenres,
   sortBookTropes,
   sortBookMoods,
   normalizeSeriesStatus,
@@ -122,12 +124,23 @@ export function toBookRow(patch: Partial<Book>): Partial<BookRow> {
   if (patch.status !== undefined) row.status = patch.status
   if (patch.genre !== undefined) row.genre = patch.genre // '' = no primary chosen (column is NOT NULL)
   // subgenres[] and the denormalized-first `subgenre` stay in sync whichever one a writer sends.
+  //
+  // THE BOUNDARY for the subgenre-never-a-genre ruling: a core genre reaching this point is a
+  // mis-filed genre, and it is dropped rather than stored. Every write goes through here, so this
+  // is the one place that can hold the line — a check in a form would be one form's check.
+  //
+  // Dropped, not thrown: the value is REDUNDANT wherever it exists today. The audit finds books
+  // carrying subgenre='romance' whose genre is already 'romance', so removing it loses nothing,
+  // while throwing would refuse a save on a book the reader merely opened and edited — punishing
+  // them for data the app itself offered. If a value ever names a genre the book does NOT carry,
+  // that is a repair for the audit to surface, not something a mapper should guess at.
   if (patch.subgenres !== undefined) {
-    row.subgenres = patch.subgenres
-    row.subgenre = patch.subgenres[0] ?? null
+    row.subgenres = withoutGenres(patch.subgenres)
+    row.subgenre = row.subgenres[0] ?? null
   } else if (patch.subgenre !== undefined) {
-    row.subgenre = patch.subgenre || null
-    row.subgenres = patch.subgenre ? [patch.subgenre] : []
+    const kept = patch.subgenre && !isCoreGenreValue(patch.subgenre) ? patch.subgenre : ''
+    row.subgenre = kept || null
+    row.subgenres = kept ? [kept] : []
   }
   if (patch.genres !== undefined) row.genres = patch.genres
   if (patch.tags !== undefined) row.tags = patch.tags
