@@ -1,0 +1,283 @@
+// The PURE half of the corpus CSV import — parsing, normalization, identity, classification,
+// anomaly detection. No I/O, no supabase, no env: everything here is unit-tested against a
+// synthetic fixture (packages/core/src/corpusImport.test.ts), and import-corpus-csv.mjs is the
+// thin shell that feeds it a real file and a real database.
+//
+// NORMALIZERS ARE IMPORTED, NEVER REIMPLEMENTED. `norm` is core's (lowercase, strip to a-z0-9) —
+// the same function the enrich fn duplicates byte-for-byte for enrichment_cache's `ta:` keys, so
+// `'ta:' + workKeyOf(...)` IS a cache key, and the backfill is a join rather than a re-match.
+// `matchBook` is the app's own import classifier; `normalizeImportGenres` is the app's own
+// genre/tag shaper. A third normalizer here would drift from all of them (the two-norms divergence
+// between discover.ts and core is already on record as a hazard).
+
+import { norm } from '../packages/core/src/normalize'
+import { matchBook, isStrong } from '../packages/core/src/match'
+import { normalizeImportGenres } from '../packages/core/src/genreNormalize'
+import type { Book } from '../packages/core/src/types'
+
+/** RFC-4180-ish CSV: quoted fields, embedded commas, doubled quotes, CRLF-tolerant. The file is
+ *  ~1.2k rows so a hand parser beats a dependency; it refuses ragged quoting loudly. */
+export function parseCsv(text: string): string[][] {
+  const rows = []
+  let row = []
+  let field = ''
+  let inQuotes = false
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i]
+    if (inQuotes) {
+      if (c === '"') {
+        if (text[i + 1] === '"') {
+          field += '"'
+          i++
+        } else inQuotes = false
+      } else field += c
+    } else if (c === '"') {
+      inQuotes = true
+    } else if (c === ',') {
+      row.push(field)
+      field = ''
+    } else if (c === '\n' || c === '\r') {
+      if (c === '\r' && text[i + 1] === '\n') i++
+      row.push(field)
+      field = ''
+      if (row.length > 1 || row[0] !== '') rows.push(row)
+      row = []
+    } else field += c
+  }
+  if (field !== '' || row.length) {
+    row.push(field)
+    if (row.length > 1 || row[0] !== '') rows.push(row)
+  }
+  if (inQuotes) throw new Error('unterminated quote — the CSV is malformed, refusing to guess')
+  return rows
+}
+
+/** Column positions by header name, so a reordered export fails loudly instead of silently
+ *  shifting every field one to the left. */
+const HEADERS = {
+  title: 'Title',
+  first: 'Author, First',
+  last: 'Author, Last',
+  series: 'Series',
+  status: 'Completed / Standalones',
+  genre: 'Genre',
+  tags: 'Tags',
+  gcRead: 'GC Read',
+  tcRead: 'TC Read',
+  duplicate: 'Duplicate',
+}
+
+export interface CsvRecord {
+  title: string
+  first: string
+  last: string
+  series: string
+  statusRaw: string
+  genreRaw: string
+  tagsRaw: string
+  gcRead: boolean
+  tcRead: boolean
+  duplicate: boolean
+}
+
+export function toRecords(rows: string[][]): CsvRecord[] {
+  const header = (rows[0] ?? []).map((h) => h.trim())
+  const col: Record<string, number> = {}
+  for (const [k, name] of Object.entries(HEADERS)) {
+    const idx = header.indexOf(name)
+    if (idx === -1 && k !== 'tcRead') throw new Error(`missing expected column "${name}"`)
+    col[k] = idx
+  }
+  const cell = (r: string[], k: string) => {
+    const idx = col[k]
+    return idx != null && idx >= 0 ? (r[idx] ?? '').trim() : ''
+  }
+  const out: CsvRecord[] = []
+  for (const r of rows.slice(1)) {
+    const title = cell(r, 'title')
+    if (!title) continue // blank spacer rows
+    out.push({
+      title,
+      first: cell(r, 'first'),
+      last: cell(r, 'last'),
+      series: cell(r, 'series'),
+      statusRaw: cell(r, 'status'),
+      genreRaw: cell(r, 'genre'),
+      tagsRaw: cell(r, 'tags'),
+      gcRead: truthyFlag(cell(r, 'gcRead')),
+      // TC Read is ANOTHER PERSON'S reading data. It is parsed ONLY so the report can count what
+      // is being deliberately left behind; nothing downstream of the report ever sees it.
+      tcRead: truthyFlag(cell(r, 'tcRead')),
+      duplicate: truthyFlag(cell(r, 'duplicate')),
+    })
+  }
+  return out
+}
+
+const truthyFlag = (v: string): boolean => {
+  const s = String(v ?? '')
+    .trim()
+    .toLowerCase()
+  return s !== '' && s !== 'false' && s !== '0' && s !== 'no'
+}
+
+/** Full author name the way the app and the enrich fn both compose it. */
+export const authorOf = (rec: Pick<CsvRecord, 'first' | 'last'>): string =>
+  [rec.first, rec.last].filter(Boolean).join(' ').trim()
+
+/** THE identity. `'ta:' + workKeyOf(rec)` is an enrichment_cache key, by construction. */
+export const workKeyOf = (rec: Pick<CsvRecord, 'title' | 'first' | 'last'>): string =>
+  `${norm(rec.title)}|${norm(authorOf(rec))}`
+
+/** CSV status column → the app's series-status vocabulary, conservatively: recognizable tokens
+ *  map, anything else rides through lowercased, blanks stay null. */
+export function seriesStatusOf(statusRaw: string, hasSeries: boolean): string {
+  const s = statusRaw.trim().toLowerCase()
+  if (!s) return hasSeries ? 'ongoing' : 'standalone'
+  if (s.startsWith('standalone')) return 'standalone'
+  if (s.startsWith('complete')) return 'completed'
+  if (s.startsWith('ongoing')) return 'ongoing'
+  return s
+}
+
+export interface ImportRecord extends CsvRecord {
+  author: string
+  workKey: string
+  genre: string | null
+  genres: string[]
+  tags: string[]
+  status: string
+}
+
+export function normalizeRecord(rec: CsvRecord): ImportRecord {
+  const g = normalizeImportGenres(rec.genreRaw, rec.tagsRaw)
+  return {
+    ...rec,
+    author: authorOf(rec),
+    workKey: workKeyOf(rec),
+    genre: g.genre ? g.genre.toLowerCase() : null,
+    genres: g.genres,
+    tags: g.tags,
+    status: seriesStatusOf(rec.statusRaw, !!rec.series),
+  }
+}
+
+/** Rows marked Duplicate are dropped; among the rest, exact work_key collisions collapse to the
+ *  first occurrence (the report lists what collapsed, so nothing disappears silently). */
+export function dropAndCollapse(records: ImportRecord[]) {
+  const kept: ImportRecord[] = []
+  const collapsed: { kept: string; dropped: string; workKey: string }[] = []
+  const seen = new Map<string, ImportRecord>()
+  let duplicatesDropped = 0
+  for (const r of records) {
+    if (r.duplicate) {
+      duplicatesDropped++
+      continue
+    }
+    const prior = seen.get(r.workKey)
+    if (prior) {
+      collapsed.push({ kept: prior.title, dropped: r.title, workKey: r.workKey })
+      continue
+    }
+    seen.set(r.workKey, r)
+    kept.push(r)
+  }
+  return { kept, collapsed, duplicatesDropped }
+}
+
+/**
+ * Classify each record against the existing library via matchBook — the app's own classifier.
+ * strong (isbn / title-author / title-series-pos) → existing; 'fuzzy' → NEAR-MISS, never
+ * auto-resolved (the data-integrity rule: a self-resolved guess looks identical in the diff to a
+ * sourced fact, so ambiguity is surfaced, not decided); 'none' → new.
+ */
+export function classify(records: ImportRecord[], library: readonly Book[]) {
+  const existing: { record: ImportRecord; book: Book; strength: string }[] = []
+  const fresh: ImportRecord[] = []
+  const nearMiss: {
+    record: ImportRecord
+    candidate: { title: string; last: string; id: string }
+    strength: string
+  }[] = []
+  for (const r of records) {
+    const m = matchBook(
+      { title: r.title, first: r.first, last: r.last, series: r.series || undefined },
+      library,
+    )
+    if (m.strength !== 'none' && isStrong(m.strength)) {
+      existing.push({ record: r, book: m.book, strength: m.strength })
+    } else if (m.strength === 'fuzzy') {
+      nearMiss.push({
+        record: r,
+        candidate: { title: m.book.title, last: m.book.last, id: m.book.id },
+        strength: m.strength,
+      })
+    } else {
+      fresh.push(r)
+    }
+  }
+  return { existing, fresh, nearMiss }
+}
+
+/** Omnibus suspects — multi-book volumes that would poison series data if treated as one work. */
+const OMNIBUS = [
+  /Books?\s+\d/i,
+  /Box\s*Set/i,
+  /Collection/i,
+  /#\d+\s*-\s*\d+/,
+  /\b\d+\s*-\s*\d+\b.*(series|trilogy|duology)/i,
+  /(series|trilogy|duology).*\b\d+\s*-\s*\d+\b/i,
+]
+export const isOmnibusSuspect = (title: string): boolean => OMNIBUS.some((re) => re.test(title))
+
+/** Everything the owner reviews before --write. Anomalies are surfaced, never resolved. */
+export function buildReport({
+  records,
+  kept,
+  collapsed,
+  duplicatesDropped,
+  existing,
+  fresh,
+  nearMiss,
+}: {
+  records: ImportRecord[]
+  kept: ImportRecord[]
+  collapsed: { kept: string; dropped: string; workKey: string }[]
+  duplicatesDropped: number
+  existing: { record: ImportRecord; book: Book; strength: string }[]
+  fresh: ImportRecord[]
+  nearMiss: {
+    record: ImportRecord
+    candidate: { title: string; last: string; id: string }
+    strength: string
+  }[]
+}) {
+  const omnibus = kept.filter((r) => isOmnibusSuspect(r.title)).map((r) => r.title)
+  const emptyAuthor = kept.filter((r) => !r.author).map((r) => r.title)
+  const unmappedGenre = kept
+    .filter((r) => r.genreRaw && !r.genre)
+    .map((r) => `${r.title} (${r.genreRaw})`)
+  const tcReadCount = records.filter((r) => r.tcRead).length
+  return {
+    totals: {
+      csvRows: records.length,
+      duplicatesDropped,
+      keyCollisionsCollapsed: collapsed.length,
+      afterDropAndCollapse: kept.length,
+      matchedExisting: existing.length,
+      newWorks: fresh.length,
+      nearMiss: nearMiss.length,
+      // counted and then deliberately left behind — another person's data is written NOWHERE
+      tcReadRowsNotImported: tcReadCount,
+      gcRead: kept.filter((r) => r.gcRead).length,
+    },
+    collapsed,
+    nearMiss: nearMiss.map((n) => ({
+      csv: `${n.record.title} — ${n.record.author}`,
+      library: `${n.candidate.title} — ${n.candidate.last} (${n.candidate.id})`,
+    })),
+    omnibusSuspects: omnibus,
+    emptyAuthor,
+    unmappedGenre,
+  }
+}
