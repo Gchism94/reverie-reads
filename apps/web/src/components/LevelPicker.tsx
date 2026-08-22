@@ -95,7 +95,19 @@ export function LevelPicker({
               // Setting the level ALWAYS works; only the guide is suppressed. Once dismissed, this
               // is the plain picker it was before the guide existed.
               onChange(value === i ? 0 : i)
-              if (dismissed) return
+              // GATE ON THE GUIDE BEING CLOSED, NOT ON THE FLAG ALONE.
+              //
+              // `if (dismissed) return` was wrong because the "What do the levels mean?" button
+              // below is deliberately NOT gated on the flag: a dismissed reader can still open the
+              // guide from it. Returning here on the flag alone meant that once open, no tap could
+              // move the guide — `onChange` still fired, so the VALUE changed underneath a panel
+              // frozen on whichever level opened it. The guide then described a level the reader
+              // was no longer on, which is worse than not showing it at all.
+              //
+              // `pinned === null` is "the guide is closed". Closed + dismissed is the plain picker
+              // the dismissal asked for, so it still returns early. OPEN means the reader asked to
+              // see it just now, and it must track them until they close it again.
+              if (pinned === null && dismissed) return
               // Re-clicking the PINNED level closes it, and closing is closing — it goes through
               // `dismiss` like every other route. Treating it as a mere toggle was the bug: the
               // guide shut, the flag never set, and the next tap popped it straight back.

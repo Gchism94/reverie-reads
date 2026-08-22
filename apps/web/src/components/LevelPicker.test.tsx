@@ -378,3 +378,74 @@ describe('LevelPicker — dismissal sticks', () => {
     }
   })
 })
+
+/**
+ * THE GUIDE MUST TRACK THE LEVEL WHILE IT IS OPEN — all four states of (dismissed x open).
+ *
+ * The defect: `if (dismissed) return` sat before the pin-follow logic, while "What do the levels
+ * mean?" is deliberately NOT gated on the flag. So a dismissed reader could open the guide and
+ * then no tap could move it — `onChange` still fired, so the value changed underneath a panel
+ * frozen on whichever level opened it, describing a level the reader had left.
+ *
+ * Every assertion below reads the guide's RENDERED TEXT, not a state flag or a class: the failure
+ * was that the panel said the wrong words, so the words are what has to be checked.
+ */
+describe('the guide follows the level while it is open', () => {
+  /** The guide panel is role="status"; its text is the numeral plus that level's definition. */
+  const guide = () => screen.queryByRole('status')
+
+  it('NOT dismissed + open: tapping another level moves the guide', () => {
+    const { level } = setup(0)
+    fireEvent.click(level(2))
+    expect(guide()).toHaveTextContent(LEVELS[2])
+    fireEvent.click(level(4))
+    expect(guide()).toHaveTextContent(LEVELS[4])
+    expect(guide()).not.toHaveTextContent(LEVELS[2])
+  })
+
+  it('DISMISSED + open via the link: tapping another level STILL moves the guide', () => {
+    // The regression case. Dismiss, then re-open from the permanent link, then tap.
+    const { level } = setup(0)
+    fireEvent.click(level(2))
+    fireEvent.click(screen.getByRole('button', { name: /Close the Spice level guide/ }))
+    expect(guide()).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: /What do the levels mean\?/ }))
+    expect(guide()).not.toBeNull()
+
+    fireEvent.click(level(5))
+    expect(
+      guide(),
+      'the guide froze on the level it opened at while the value moved underneath it',
+    ).toHaveTextContent(LEVELS[5])
+  })
+
+  it('DISMISSED + closed: a tap sets the level and does NOT open the guide', () => {
+    // The dismissal still means what it said — this is the plain picker.
+    const { level, onChange } = setup(0)
+    fireEvent.click(level(2))
+    fireEvent.click(screen.getByRole('button', { name: /Close the Spice level guide/ }))
+    onChange.mockClear()
+
+    fireEvent.click(level(4))
+    expect(onChange).toHaveBeenCalledWith(4) // setting the level always works
+    expect(guide(), 'a dismissed, closed guide re-opened itself on a tap').toBeNull()
+  })
+
+  it('DISMISSED + open: re-clicking the pinned level closes it again', () => {
+    // Closing is closing, by every route — the re-opened guide must still be closable the same way.
+    const { level } = setup(0)
+    fireEvent.click(level(2))
+    fireEvent.click(screen.getByRole('button', { name: /Close the Spice level guide/ }))
+    fireEvent.click(screen.getByRole('button', { name: /What do the levels mean\?/ }))
+
+    // The link opens at `value || 0`; value is 0 here because onChange is a spy, so re-click 0's
+    // pin by clicking the level the guide is currently pinned to.
+    const pinnedNow = guide()?.textContent ?? ''
+    expect(pinnedNow).toContain(LEVELS[0])
+    fireEvent.click(level(1))
+    expect(guide()).toHaveTextContent(LEVELS[1])
+    fireEvent.click(level(1))
+    expect(guide(), 're-clicking the pinned level did not close the guide').toBeNull()
+  })
+})
