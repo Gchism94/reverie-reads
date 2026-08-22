@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { LevelGuideCard } from './LevelGuideCard'
 import { rememberGuideDismissed, useGuideDismissed } from './levelGuideDismissed'
 
 /**
@@ -159,35 +160,22 @@ export function LevelPicker({
           Modal's focus trap or backdrop — those exist to take over the screen, and taking the
           screen over to define one word would be worse than the problem. It stays in flow so it
           cannot cover the row that spawned it, and so it reflows on a narrow viewport for free. */}
-      {shown !== null ? (
-        <div
+      {/* THE CARD IS THE ONLY PRESENTATION. A resting <p> used to show `levels[value]` whenever the
+          card was closed — the same fact, said twice, in two places, in two styles. One of them had
+          to go, and the card is the one that can explain a level the reader is not currently on.
+
+          CONSEQUENCE, stated because it is a real trade and not an oversight: a reader who has
+          dismissed the guide now has NO inline level text at all. "What do the levels mean?" below
+          is the only route back, which is exactly why that link is never gated on the dismissal
+          flag — it is load-bearing now, not a convenience. */}
+      {shown !== null && (
+        <LevelGuideCard
           id={guideId}
-          role="status"
-          className="skin-card mt-1 flex items-start gap-2 border border-line px-2.5 py-1.5 text-[12px] text-ink"
-          style={{ background: 'var(--chip)' }}
-        >
-          <span
-            className="skin-numeral flex-none font-semibold"
-            style={{ color: 'var(--accent-ink)' }}
-          >
-            {shown}
-          </span>
-          <span className="min-w-0 flex-1">{levels[shown]}</span>
-          {pinned !== null && (
-            <button
-              type="button"
-              onClick={dismiss}
-              aria-label={`Close the ${label} level guide`}
-              className="flex-none text-muted"
-            >
-              ✕
-            </button>
-          )}
-        </div>
-      ) : (
-        // At rest: the selected level's definition, which is what #330 added and what a reader
-        // wants when they are not exploring. levels[0] covers "nothing set".
-        <p className="mt-1 text-[12px] text-muted">{levels[value] ?? ''}</p>
+          level={shown}
+          definition={levels[shown] ?? ''}
+          onDismiss={pinned !== null ? dismiss : undefined}
+          dismissLabel={`Close the ${label} level guide`}
+        />
       )}
 
       {/* THE PERMANENT WAY BACK. Always present, never gated on the dismissal flag — a reader who
