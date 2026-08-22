@@ -43,10 +43,36 @@ const emit = () => {
 
 /** Postgres speaks in constraint names. Translate the ones a reader can actually act on. */
 export function readableWriteError(error: unknown): string {
-  const raw =
-    typeof error === 'object' && error !== null && 'message' in error
-      ? String((error as { message: unknown }).message)
-      : String(error ?? '')
+  const obj =
+    typeof error === 'object' && error !== null ? (error as Record<string, unknown>) : null
+  const raw = obj && 'message' in obj ? String(obj.message) : String(error ?? '')
+  // `code` as well as `message`, because the one error this file most needs to name carries its
+  // identity ONLY in the code. Read straight off a local PostgREST, not from memory:
+  //   read : { code: '42703',    message: "column books.darkness_nonexistent does not exist" }
+  //   write: { code: 'PGRST204', message: "Could not find the 'darkness_nonexistent' column of
+  //            'books' in the schema cache" }
+  const code = obj && 'code' in obj ? String(obj.code) : ''
+
+  // A COLUMN THIS BUILD EXPECTS IS NOT IN THE DATABASE — i.e. app code shipped ahead of its
+  // migration. Named first because it is a deploy fault, not a data fault: every other branch here
+  // tells a reader something they can fix, and this one cannot be fixed by retyping anything.
+  //
+  // Worth the branch because of what its absence cost. On 2026-08-27 `books.darkness` shipped while
+  // its migration sat undeployed; every save failed for hours behind "The change didn't save." —
+  // the least specific sentence in this file — and it took a human noticing to find it. The message
+  // does not blame the reader and does not pretend the value was rejected.
+  //
+  // MATCHED ON `code`, NOT ON PROSE. PostgREST's wording carries the column and table names, so a
+  // message regex would be matching a template that varies per column; the codes do not vary. The
+  // message patterns below are a narrow fallback for a re-thrown error that lost its code, anchored
+  // to PostgREST's exact phrasing so they cannot widen into a catch-all.
+  if (
+    code === 'PGRST204' ||
+    code === '42703' ||
+    /Could not find the '.+' column of '.+' in the schema cache/.test(raw) ||
+    /^column .+ does not exist$/.test(raw)
+  )
+    return 'This build expects a database change that hasn’t been deployed yet.'
 
   if (/books_pub_m_check/.test(raw)) return 'The publication month has to be between 1 and 12.'
   if (/books_pub_d_check/.test(raw)) return 'The publication day has to be between 1 and 31.'
