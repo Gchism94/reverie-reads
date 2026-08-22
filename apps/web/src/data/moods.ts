@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { titleCase } from '@reverie/core'
 import { supabase } from '../lib/supabase'
+import { pageAll } from './paging'
 import { booksKey } from './books'
 
 /**
@@ -42,9 +43,15 @@ export function useMoods() {
   return useQuery({
     queryKey: moodsKey,
     queryFn: async (): Promise<UiMood[]> => {
-      const { data, error } = await supabase.from('moods').select('id, owner_id, canonical_id, name').order('name')
-      if (error) throw error
-      return (data as MoodRowT[]).map(toUiMood)
+      const data = await pageAll<MoodRowT>('moods', (from, to) =>
+        supabase
+          .from('moods')
+          .select('id, owner_id, canonical_id, name', { count: 'exact' })
+          .order('name')
+          .order('id')
+          .range(from, to),
+      )
+      return data.map(toUiMood)
     },
   })
 }
@@ -59,9 +66,15 @@ export function useAllBookMoods() {
   return useQuery({
     queryKey: bookMoodsKey,
     queryFn: async (): Promise<BookMoodRow[]> => {
-      const { data, error } = await supabase.from('book_moods').select('book_id, mood_id')
-      if (error) throw error
-      return (data ?? []) as BookMoodRow[]
+      // A JOIN table — see the book_tropes note in tropes.ts.
+      return await pageAll<BookMoodRow>('book_moods', (from, to) =>
+        supabase
+          .from('book_moods')
+          .select('book_id, mood_id', { count: 'exact' })
+          .order('book_id')
+          .order('mood_id')
+          .range(from, to),
+      )
     },
   })
 }

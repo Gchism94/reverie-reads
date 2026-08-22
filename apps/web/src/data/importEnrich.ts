@@ -1,5 +1,6 @@
 import type { Book } from '@reverie/core'
 import { supabase } from '../lib/supabase'
+import { pageAll } from './paging'
 import { bulkComplete } from './enrichLibrary'
 import { booksKey } from './books'
 import type { QueryClient } from '@tanstack/react-query'
@@ -25,7 +26,17 @@ export async function enrichImported(qc: QueryClient, importedIds: string[]): Pr
 async function fetchBooks(): Promise<Book[]> {
   // Fallback when the cache isn't warm (rare — the import flow just read it). Import scopes the
   // batch by id anyway, so a light select is enough to hand bulkComplete the incomplete rows.
-  const { data } = await supabase.from('books').select('*, book_authors(position, role, authors(id, name))')
   const { toBook } = await import('./mappers')
-  return ((data as Parameters<typeof toBook>[0][]) ?? []).map(toBook)
+  const data = await pageAll<Parameters<typeof toBook>[0]>('books', (from, to) =>
+    supabase
+      .from('books')
+      .select('*, book_authors(position, role, authors(id, name))', { count: 'exact' })
+      .order('id')
+      .range(from, to) as unknown as PromiseLike<{
+      data: Parameters<typeof toBook>[0][] | null
+      error: unknown
+      count: number | null
+    }>,
+  )
+  return data.map(toBook)
 }

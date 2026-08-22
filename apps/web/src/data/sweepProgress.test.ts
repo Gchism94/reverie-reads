@@ -5,14 +5,17 @@ import { sweepCountText, type SweepCount } from './sweepProgress'
 /** Swapped per test so the ordering assertion can see when a source call happens. */
 let enrichCalls: () => void = () => {}
 
-vi.mock('../lib/supabase', () => ({
+vi.mock('../lib/supabase', async () => {
+  const { pagedSelect } = await import('./pagedSelect.fixture')
+  return {
   supabase: {
     from: () => ({
-      select: () => Promise.resolve({ data: [], error: null }),
+      select: () => pagedSelect([]),
       update: () => ({ eq: () => Promise.resolve({ error: null }) }),
     }),
   },
-}))
+  }
+})
 vi.mock('../lib/enrich', () => ({
   enrichBookOutcome: async () => {
     enrichCalls()

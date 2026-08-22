@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { ReadEntry } from '@reverie/core'
 import { supabase } from '../lib/supabase'
+import { pageAll } from './paging'
 import { toReadRecord, type ReadRecord } from './mappers'
 import type { ReadRow } from './types'
 
@@ -21,15 +22,20 @@ export function useAllReads() {
   return useQuery({
     queryKey: allReadsKey,
     queryFn: async (): Promise<AllReadRow[]> => {
-      const { data, error } = await supabase
-        .from('reads')
-        .select('id, book_id, read_on, format, rating, notes')
-        // Same total order as useReads below, for the same reason: the calendar/stats consumers
-        // get a deterministic sequence instead of whatever Postgres returned this time.
-        .order('read_on', { ascending: false, nullsFirst: false })
-        .order('created_at', { ascending: false })
-      if (error) throw error
-      return data as AllReadRow[]
+      // Every read in the account, rereads included — it feeds the calendar and stats, where a
+      // truncated answer reads as a year with fewer books in it rather than as an error.
+      return await pageAll<AllReadRow>('reads', (from, to) =>
+        supabase
+          .from('reads')
+          .select('id, book_id, read_on, format, rating, notes', { count: 'exact' })
+          // Same total order as useReads below, for the same reason: the calendar/stats consumers
+          // get a deterministic sequence instead of whatever Postgres returned this time. `id` is
+          // appended because neither of the other two is unique, and paging needs a total order.
+          .order('read_on', { ascending: false, nullsFirst: false })
+          .order('created_at', { ascending: false })
+          .order('id')
+          .range(from, to),
+      )
     },
   })
 }

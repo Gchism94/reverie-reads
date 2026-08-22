@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Book } from '@reverie/core'
 import { supabase } from '../lib/supabase'
+import { pageAll } from './paging'
 import { toBook, toBookRow } from './mappers'
 import type { BookRow } from './types'
 
@@ -11,12 +12,26 @@ export function useBooks() {
   return useQuery({
     queryKey: booksKey,
     queryFn: async (): Promise<Book[]> => {
-      const { data, error } = await supabase
-        .from('books')
-        .select('*, book_authors(position, role, authors(id, name)), book_tropes(emphasis, tropes(id, name)), book_moods(moods(id, name))')
-        .order('added_at', { ascending: true })
-      if (error) throw error
-      return (data as BookRow[]).map(toBook)
+      // PAGED. An un-ranged select stops at 1,000 rows without saying so, and this query feeds
+      // the whole app — Library, Match, Stats, and Discover's "hide what I have". A short answer
+      // there does not look like an error, it looks like a smaller library, and the specific
+      // damage is that `isOwned` classifies owned books as new: the reader re-adds by hand the
+      // duplicates the corpus import exists to remove.
+      //
+      // `added_at` is not unique, so it cannot page on its own — two rows sharing a timestamp can
+      // land in both windows or neither. `id` breaks the tie and makes the pages disjoint.
+      const rows = await pageAll<BookRow>('books', (from, to) =>
+        supabase
+          .from('books')
+          .select(
+            '*, book_authors(position, role, authors(id, name)), book_tropes(emphasis, tropes(id, name)), book_moods(moods(id, name))',
+            { count: 'exact' },
+          )
+          .order('added_at', { ascending: true })
+          .order('id')
+          .range(from, to),
+      )
+      return rows.map(toBook)
     },
   })
 }
