@@ -59,6 +59,7 @@ interface Access {
 let access: Access[] = []
 /** When true, the fake serves only the first PAGE_CAP rows and ignores the requested window. */
 let ignoreRange = false
+let unorderedReads = 0
 const PAGE_CAP = 1000
 
 /** Embedded-select resolution, keyed by the exact select string the code under test uses. */
@@ -214,8 +215,18 @@ class Query implements PromiseLike<{ data: Row[] | Row | null; error: unknown }>
         this.notEquals.every(([c, v]) => r[c] !== v) &&
         this.negated.every((c) => r[c] != null),
     )
-    for (const col of [...this.orderBy].reverse())
-      matched.sort((a, b) => String(a[col] ?? '').localeCompare(String(b[col] ?? '')))
+    if (this.orderBy.length) {
+      for (const col of [...this.orderBy].reverse())
+        matched.sort((a, b) => String(a[col] ?? '').localeCompare(String(b[col] ?? '')))
+    } else {
+      // AN UNORDERED SELECT HAS NO STABLE ORDER, and Postgres does not pretend otherwise. Modelled
+      // deterministically by rotating one position per request: successive pages of an unordered
+      // query then overlap and skip, exactly as they may in production. Without this the fake
+      // silently hands back insertion order and a paged read with no `.order()` looks correct.
+      unorderedReads++
+      const k = unorderedReads % (matched.length || 1)
+      matched.push(...matched.splice(0, k))
+    }
     // The count is of the WHOLE match, not the window — that is what `{ count: 'exact' }` means,
     // and it is the only reason buildBackup can tell a short page from a finished read.
     const count = this.exactCount ? matched.length : null
@@ -333,6 +344,7 @@ beforeEach(() => {
   currentUser = OWNER
   access = []
   ignoreRange = false
+  unorderedReads = 0
   seedOldAccount()
 })
 
@@ -1031,6 +1043,26 @@ describe('a backup cannot silently lose rows — paging, and the file’s own co
     const bookkeeping = new Set(['v', 'app', 'exportedAt', 'counts', 'profile'])
     const sections = Object.keys(parsed).filter((k) => !bookkeeping.has(k))
     expect(Object.keys(parsed.counts as object).sort()).toEqual(sections.sort())
+  })
+
+  it('counts what the FILE carries, not what the query returned — they are not the same number', async () => {
+    // Found by mutation: swapping a section's count from the serialized value to its source query
+    // left every test green, because the fixture had no row that the export DROPS on the way out.
+    // A book_trope pointing at a trope that resolves to no name is exactly that row — the query
+    // returns 4, the file carries 3 — so the manifest has to describe the payload or it certifies
+    // a number nothing in the file can be checked against.
+    db.book_tropes.push({ book_id: 'book-a', trope_id: 't-ghost', owner_id: OWNER, emphasis: 'present' })
+
+    const parsed = JSON.parse(await buildBackup()) as Record<string, unknown>
+    const counts = parsed.counts as Record<string, number>
+
+    expect(counts.tropes, 'the dropped row must not be counted').toBe(3)
+
+    // The general invariant, so this holds for every section rather than the one that caught it.
+    const size = (v: unknown): number =>
+      Array.isArray(v) ? v.length : Object.values(v as Record<string, unknown[]>).reduce((n, a) => n + a.length, 0)
+    for (const [section, declared] of Object.entries(counts))
+      expect(size(parsed[section]), `counts.${section} must describe the payload`).toBe(declared)
   })
 
   it('refuses a file whose payload lost rows, and writes NOTHING before refusing', async () => {
