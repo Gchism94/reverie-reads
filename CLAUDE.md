@@ -303,7 +303,7 @@ function` + fresh `create` resets it to the PUBLIC-execute default — verified 
 
 ## Testing & verification discipline
 
-Seventeen rules, each earned by a real failure — counted from the list below, not carried forward. A rule without its reason gets dropped by whoever
+Eighteen rules, each earned by a real failure — counted from the list below, not carried forward. A rule without its reason gets dropped by whoever
 inherits it, so the reason stays attached.
 
 - **When a test needs a step a user would not take, that step is a FINDING until proven otherwise.**
@@ -393,6 +393,20 @@ inherits it, so the reason stays attached.
   times. Still verify each revert with `git status --porcelain` before the next mutant. The hook
   only covers Claude Code sessions issuing a Bash call — a human typing the raw form directly in a
   terminal is not stopped by it, only by this paragraph.
+
+- **`safe-revert.sh` reverts to HEAD, so it destroys UNCOMMITTED work in the file it reverts —
+  commit or stash the real change before mutating a file you intend to revert.** This is the
+  `git checkout --` failure class reappearing INSIDE the tool built to prevent it, which is why it
+  needs its own line: the script's contract is "put this file back the way HEAD has it", and a
+  reverted mutation and an unrelated uncommitted edit in the same file are indistinguishable to it
+  by design. Observed 2026-08-22 on `feat/calendar-sparse-pass`: an uncommitted weekday-header
+  alignment fix and an experimental numerals-centred variant were in the same file; reverting the
+  variant took the fix with it, and only a pre-mutation `cp` of the file made it recoverable.
+  **The recovery path is real and worth knowing rather than re-deriving in a panic**: the script
+  backs the file up to `/tmp/mutation-revert-backups/<path>.<epoch>` and prints that path before it
+  reverts, so the work is retrievable from there. **Diff after reverting rather than assuming** —
+  `diff <your-backup> <file>` or `git status --porcelain` — because the loss is silent: the mutation
+  is gone, which is what you were looking for, and the missing real work looks like nothing at all.
 - **A single run of a STOCHASTIC check is not a measurement, and the harness enforces this rather
   than asking you to remember.** `surface-visual.audit.ts` records each comparison run as an
   observation and refuses to report until it has ≥2 (`MIN_OBSERVATIONS`, raise with
