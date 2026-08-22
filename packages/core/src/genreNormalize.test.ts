@@ -85,6 +85,8 @@ describe('normalizeImportGenres — primary genre + cores', () => {
       genre: null,
       genres: [],
       tags: [],
+      subgenre: null,
+      subgenres: [],
       intensity: null,
       unmappedGenre: null,
     })
@@ -92,6 +94,8 @@ describe('normalizeImportGenres — primary genre + cores', () => {
       genre: null,
       genres: [],
       tags: [],
+      subgenre: null,
+      subgenres: [],
       intensity: null,
       unmappedGenre: null,
     })

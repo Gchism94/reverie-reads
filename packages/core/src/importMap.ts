@@ -259,10 +259,8 @@ export function rowToImported(row: string[], idx: Record<string, number>): Impor
   const title = parsedFromTitle.title
 
   const { first, last, contributors } = contributorsFor(cell)
-  const { genre, genres, tags, intensity, unmappedGenre } = normalizeImportGenres(
-    cell('genre'),
-    cell('tags'),
-  )
+  const { genre, genres, tags, subgenre, subgenres, intensity, unmappedGenre } =
+    normalizeImportGenres(cell('genre'), cell('tags'))
 
   // The column is authoritative when present — a reader-maintained Series column outranks a title
   // that happens to contain a paren. Parsed-from-title fills the gap only when the column is
@@ -315,6 +313,10 @@ export function rowToImported(row: string[], idx: Record<string, number>): Impor
     status: seriesName ? 'ongoing' : 'standalone',
     genre: genre ?? undefined,
     genres,
+    // A known subgenre in the genre column now reaches the book as a subgenre, instead of being
+    // demoted to a tag with nothing left naming the genre. Omitted rather than sent empty when
+    // there is none, so an import never clears a subgenre a merge target already had.
+    ...(subgenre ? { subgenre, subgenres } : {}),
     tags,
     intensity,
     readStatus,
