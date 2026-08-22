@@ -37,6 +37,7 @@ const BOOKS: Book[] = [
     tropes: [],
     moods: [],
     intensity: 0,
+    darkness: null,
     cover: '', // blank for the same reason as series
     pages: null,
     isbn: '',

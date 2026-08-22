@@ -25,6 +25,8 @@ interface FilterState {
   toggleWishlist: () => void
   /** `null` toggles the NOT-ASSESSED selection — never folded into 0 (assessed as none) */
   toggleIntensity: (level: number | null) => void
+  /** same contract as toggleIntensity, for the darkness axis */
+  toggleDarkness: (level: number | null) => void
   setSort: (s: LibrarySort) => void
   setShelf: (s: LibraryShelfLink) => void
   setMode: (m: LibraryMode) => void
@@ -62,6 +64,15 @@ export const useFilters = create<FilterState>((set) => ({
         intensity: s.filters.intensity.includes(level)
           ? s.filters.intensity.filter((x) => x !== level)
           : [...s.filters.intensity, level],
+      },
+    })),
+  toggleDarkness: (level) =>
+    set((s) => ({
+      filters: {
+        ...s.filters,
+        darkness: s.filters.darkness.includes(level)
+          ? s.filters.darkness.filter((x) => x !== level)
+          : [...s.filters.darkness, level],
       },
     })),
   setSort: (sort) => set((s) => ({ filters: { ...s.filters, sort } })),

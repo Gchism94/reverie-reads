@@ -18,7 +18,7 @@ import { buildTasteProfile, tasteFit, type TasteProfile } from './tasteProfile'
 //    book N of a series they haven't started is suppressed instead of ranked like book 1;
 //  · NOVELTY and QUALITY are separated: unread still leads, but a much-reread book is a love
 //    signal, not "seen it" — and DNF is finally a real negative on both axes.
-// Absent optional signals (no target intensity, empty cravings) sit at a 0.5 NEUTRAL so a missing
+// Absent optional signals (no target darkness, empty cravings) sit at a 0.5 NEUTRAL so a missing
 // signal never advantages or tanks a book. Pure + deterministic throughout.
 
 export interface MatchProfile {
@@ -26,8 +26,16 @@ export interface MatchProfile {
   subWeights: Record<string, number>
   /** tags the reader is craving (matched against book.tags, case-insensitive) */
   wantTags: string[]
-  /** desired intensity 0..5, or null for no preference */
-  targetIntensity: number | null
+  /**
+   * Desired DARKNESS 0..5, or null for no preference.
+   *
+   * Renamed from `targetIntensity` when the two axes were split (owner ruling, 2026-08-21). The
+   * quiz has always been this field's only producer, and its question — "How intense do you want
+   * it?", answered "Gentle & comforting" through "As extreme as it gets" — was darkness language
+   * scoring against the SPICE column. Renaming rather than keeping both is what stops the profile
+   * carrying a field nothing fills. Spice is simply not scored: nothing asks about it.
+   */
+  targetDarkness: number | null
 }
 
 export type MatchReasonKey =
@@ -35,7 +43,7 @@ export type MatchReasonKey =
   | 'tasteTags'
   | 'subgenre'
   | 'tasteWorld'
-  | 'intensity'
+  | 'darkness'
   | 'quality'
   | 'novelty'
   | 'series'
@@ -92,7 +100,7 @@ export const MATCH_WEIGHTS: Record<MatchReasonKey, number> = {
   tasteTags: 0.13, // …but the LEARNED tag taste now speaks alongside it
   subgenre: 0.1,
   tasteWorld: 0.07,
-  intensity: 0.12,
+  darkness: 0.12,
   quality: 0.08,
   novelty: 0.15,
   series: 0.1,
@@ -182,11 +190,14 @@ export function scoreMatch(b: Book, p: MatchProfile, ctx?: MatchContext): MatchS
     add('tasteWorld', NEUTRAL)
   }
 
-  // intensity — distance to target. UNKNOWN sits at 0.75: mildly neutral, a deliberate change from
-  // the old "no penalty" (which let a no-data book tie a perfect fit).
-  if (p.targetIntensity == null) add('intensity', NEUTRAL)
-  else if (b.intensity == null) add('intensity', 0.75)
-  else add('intensity', 1 - Math.abs(b.intensity - p.targetIntensity) / 5)
+  // darkness — distance to target. UNKNOWN sits at 0.75: mildly neutral, a deliberate change from
+  // the old "no penalty" (which let a no-data book tie a perfect fit). Reads b.darkness since the
+  // split; every existing book is null here until a reader assesses it, so most books take the
+  // 0.75 unknown branch rather than being scored against a heat value that answered a different
+  // question.
+  if (p.targetDarkness == null) add('darkness', NEUTRAL)
+  else if (b.darkness == null) add('darkness', 0.75)
+  else add('darkness', 1 - Math.abs(b.darkness - p.targetDarkness) / 5)
 
   // quality — the reader's OWN verdicts: rating, rereads as a love signal, DNF as a real negative
   const dnf = b.readStatus === 'DNF'

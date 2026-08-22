@@ -6,7 +6,14 @@ import { normalizeName } from './contributors'
 import { isOwnedBook, isPossessed, isWanted } from './ownership'
 import { claimedSeriesLength } from './seriesIndex'
 
-export type LibrarySort = 'az' | 'author' | 'rating' | 'intensity' | 'recent' | 'series'
+export type LibrarySort =
+  | 'az'
+  | 'author'
+  | 'rating'
+  | 'intensity'
+  | 'darkness'
+  | 'recent'
+  | 'series'
 export type SeriesLenBucket = 'Any' | '1' | '2' | '3' | '4' | '5+' | 'Unknown'
 export type LibraryMode = 'grid' | 'series'
 /** Mirrors the /shelves derived-shelf sections (ShelfSectionKey in shelves.ts), for the Library link
@@ -40,6 +47,13 @@ export interface LibraryFilters {
    * 179 judgements that were never made.
    */
   intensity: (number | null)[]
+  /**
+   * Selected DARKNESS levels; empty = any. Same contract as `intensity` above and for the same
+   * reason — `null` is a selectable member meaning NOT ASSESSED, distinct from `0` (assessed and
+   * found to have none), never collapsed. A separate axis from Spice (owner ruling 2026-08-21):
+   * intensity is heat, this is how dark/heavy the book is. Every existing book starts null here.
+   */
+  darkness: (number | null)[]
   /** filter to books where any contributor matches this name ('' = off) */
   author: string
   /** include books outside the default scope — books you neither have in hand nor ever opened.
@@ -61,6 +75,7 @@ export const defaultFilters = (): LibraryFilters => ({
   format: 'All',
   fave: false,
   intensity: [],
+  darkness: [],
   author: '',
   wishlist: false,
   shelf: 'All',
@@ -142,6 +157,8 @@ export function matchesFilters(b: Book, f: LibraryFilters): boolean {
   // `b.intensity ?? null`, never `?? 0`: an unassessed book matches only the explicit
   // not-assessed selection. Normalizing undefined to null keeps a partial fixture honest too.
   if (f.intensity.length && !f.intensity.includes(b.intensity ?? null)) return false
+  // Same `?? null` rule as intensity directly above — see the comment there.
+  if (f.darkness.length && !f.darkness.includes(b.darkness ?? null)) return false
   if (f.author && !bookHasAuthor(b, f.author)) return false
   if (f.q) {
     const hay = [
@@ -220,6 +237,18 @@ export function sortBooks(books: readonly Book[], sort: LibrarySort): Book[] {
       assessed.sort((a, b) => (b.intensity as number) - (a.intensity as number))
       return [...assessed, ...unassessed]
     }
+    case 'darkness': {
+      /*
+       * Same partition as the intensity case above, and for the same reason: not-assessed books
+       * have no level to rank, so they go LAST by partition rather than by a sentinel that only
+       * happens to sort correctly while this comparator is descending.
+       */
+      const assessed: Book[] = []
+      const unassessed: Book[] = []
+      for (const b of c) (b.darkness == null ? unassessed : assessed).push(b)
+      assessed.sort((a, b) => (b.darkness as number) - (a.darkness as number))
+      return [...assessed, ...unassessed]
+    }
     case 'recent':
       c.sort((a, b) => (b.addedTs || 0) - (a.addedTs || 0))
       break
@@ -244,6 +273,7 @@ export function activeFilterCount(f: LibraryFilters): number {
   if (f.format !== 'All') n++
   if (f.fave) n++
   if (f.intensity.length) n++
+  if (f.darkness.length) n++
   if (f.author) n++
   if (f.wishlist) n++
   if (f.shelf !== 'All') n++

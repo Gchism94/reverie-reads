@@ -238,8 +238,13 @@ test('Edit details: title, ISBN and spice are editable and persist', async ({ pa
     const dlg = await openEdit(page)
     await dlg.getByLabel('Title').fill('The Corrected Title')
     await dlg.getByLabel('ISBN').fill('9780316580792')
-    // Spice: the same 1–5 control Add uses. Click the 3rd notch.
-    await dlg.getByRole('button', { name: /\b3$/ }).first().click()
+    // Spice: the same 1-5 control Add uses. Click the 3rd notch.
+    //
+    // Anchored on the AXIS NAME, not on a trailing digit. Two things changed under this spec: the
+    // buttons now carry their level's definition in the accessible name ("Spice 3 — On the page,
+    // not dwelt on"), so a `/\b3$/` match no longer reaches them; and a second DARKNESS picker sits
+    // beside this one with its own "3", which the old `.first()` only survived by ordering luck.
+    await dlg.getByRole('button', { name: /^Spice 3\b/ }).click()
     await dlg.getByRole('button', { name: /Save details/i }).click()
     await expect(dlg).toBeHidden({ timeout: 15_000 })
 

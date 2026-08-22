@@ -222,6 +222,7 @@ function AddForm({
   const toggleSub = (s: string) =>
     setSubs((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]))
   const [intensity, setIntensity] = useState(0)
+  const [darkness, setDarkness] = useState(0)
   const [showOtherSubs, setShowOtherSubs] = useState(false)
   // Position gets the same treatment Edit got in #78: one explicit parser, errors shown rather than
   // silently coerced. `Number(v) || ''` turned 0 into "unset" and quietly ate "1.5 (novella)".
@@ -339,6 +340,7 @@ function AddForm({
       // tropes are tagged in the refine step via the full picker (book_tropes needs a saved id);
       // no lightweight freeform tags here — the structured trope system is the one source of truth.
       intensity,
+      darkness,
       ...possessionPatch(possession),
       owned,
       cover,
@@ -617,22 +619,53 @@ function AddForm({
         </div>
       </div>
 
-      <div className="mt-3 flex items-center gap-2">
-        <span className="text-[11px] uppercase tracking-[0.15em] text-muted">
-          {labels.intensity}
-        </span>
-        {[1, 2, 3, 4, 5].map((i) => (
-          <button
-            key={i}
-            type="button"
-            onClick={() => setIntensity(intensity === i ? 0 : i)}
-            aria-label={`${labels.intensity} ${i}`}
-            aria-pressed={i <= intensity}
-            style={{ opacity: i <= intensity ? 1 : 0.3 }}
-          >
-            {labels.intensityGlyph}
-          </button>
-        ))}
+      <div className="mt-3">
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] uppercase tracking-[0.15em] text-muted">
+            {labels.intensity}
+          </span>
+          {[1, 2, 3, 4, 5].map((i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => setIntensity(intensity === i ? 0 : i)}
+              aria-label={`${labels.intensity} ${i} — ${labels.intensityLevels[i]}`}
+              aria-pressed={i <= intensity}
+              title={labels.intensityLevels[i]}
+              style={{ opacity: i <= intensity ? 1 : 0.3 }}
+            >
+              {labels.intensityGlyph}
+            </button>
+          ))}
+        </div>
+        {/* The level guide. Both pickers were bare glyph rows with no statement anywhere of what a
+            level MEANT, so no reader could rate consistently against their own past self. Shows the
+            selected level's definition, and level 0's when nothing is set. */}
+        <p className="mt-1 text-[12px] text-muted">{labels.intensityLevels[intensity] ?? ''}</p>
+      </div>
+      <div className="mt-3">
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] uppercase tracking-[0.15em] text-muted">
+            {labels.darkness}
+          </span>
+          {[1, 2, 3, 4, 5].map((i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => setDarkness(darkness === i ? 0 : i)}
+              aria-label={`${labels.darkness} ${i} — ${labels.darknessLevels[i]}`}
+              aria-pressed={i <= darkness}
+              title={labels.darknessLevels[i]}
+              style={{ opacity: i <= darkness ? 1 : 0.3 }}
+            >
+              {labels.darknessGlyph}
+            </button>
+          ))}
+        </div>
+        {/* The level guide. Both pickers were bare glyph rows with no statement anywhere of what a
+            level MEANT, so no reader could rate consistently against their own past self. Shows the
+            selected level's definition, and level 0's when nothing is set. */}
+        <p className="mt-1 text-[12px] text-muted">{labels.darknessLevels[darkness] ?? ''}</p>
       </div>
 
       {dup && (
@@ -720,6 +753,7 @@ function BulkAdd() {
             genres: [skinGenre],
             tags: [],
             intensity: null,
+            darkness: null,
             owned: { physical: 'paperback', ebook: false, audiobook: false },
             cover: hit.cover,
             isbn: hit.isbn,
