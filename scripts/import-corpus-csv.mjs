@@ -1,0 +1,351 @@
+// import-corpus-csv.mjs — the corpus CSV import (works-layer Phase 4 tooling).
+//
+// ── HOW TO RUN (owner-run; a Code session never runs the write) ─────────────────────────────────
+//
+//   Dry run (DEFAULT — report only, writes nothing):
+//     pnpm exec vite-node scripts/import-corpus-csv.mjs -- chism-books-library.csv \
+//       --owner-email you@example.com
+//
+//   Review the report: near-misses, omnibus suspects, empty authors, unmapped genres, collapsed
+//   collisions. Resolve what needs resolving in the CSV itself, re-run the dry run, and only then:
+//
+//     pnpm exec vite-node scripts/import-corpus-csv.mjs -- chism-books-library.csv \
+//       --owner-email you@example.com --write
+//
+//   Enrichment backfill (repeatable, any time after works rows exist):
+//     pnpm exec vite-node scripts/import-corpus-csv.mjs -- --backfill
+//
+//   Env: SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (default to the well-known LOCAL stack values,
+//   the seed-dev.mjs convention — set both explicitly for anything that is not the local stack).
+//
+// ── WHAT --write DOES, exactly ──────────────────────────────────────────────────────────────────
+//   1. Upserts EVERY existing library book's objective fields into `works` (on work_key), so the
+//      corpus is complete rather than just the CSV delta.
+//   2. Upserts a `works` row per NEW CSV record (objective fields + tags only).
+//   3. Inserts a `books` row for the owner per NEW record. GC Read → read_status 'Read', else
+//      'unset'. TC READ IS ANOTHER PERSON'S DATA AND IS WRITTEN NOWHERE — it appears in the report
+//      as a count of what was deliberately left behind, and that is its entire lifecycle here.
+//   4. Idempotent: works upserts on work_key; a re-run's CSV rows classify as matched-existing and
+//      are skipped for books insertion.
+//
+// ── DECISIONS INHERITED, NOT INVENTED ───────────────────────────────────────────────────────────
+//   · Identity/normalizers come from corpus-import-lib.mjs (core norm / matchBook /
+//     normalizeImportGenres) — see its header for why 'ta:' + work_key IS an enrichment_cache key.
+//   · Series: the name lands on books.series and works.series; NO position is invented (the CSV
+//     has none) and NO series row/entry is created. Per 20260817010000_sync_book_series.sql's own
+//     header, series-row/entry creation is deliberately CLIENT-side (getOrCreateSeries carries the
+//     Tier-1 near-match prevention); books.series alone is the standing "claim path" the app
+//     already groups by (groupSeries reads b.series). A direct insert therefore bypasses nothing —
+//     entries appear when the reader first touches the series in the UI, exactly as for a book
+//     added before any series row existed.
+//   · Contributors: author_first/author_last land on the row; no book_authors join rows. Core's
+//     contributor fallback (contributors.ts) synthesizes the author-role contributor from
+//     first/last when the join is empty, so the app renders these identically to the e2e fixtures
+//     that use the same shape. `works.contributors` carries the full Contributor[] explicitly.
+//   · Possession: every inserted book is ownership='owned', borrowed=false, wishlist=false. THE
+//     CSV CARRIES NO POSSESSION DATA, so this is an assumption, stated here and in the report: the
+//     file is the owner's library list. Override per-run with --possession=unowned if that read is
+//     wrong for some batch.
+//   · Every books row carries EVERY column the batch uses, defaults included — PostgREST builds
+//     one INSERT whose column list is the union of all rows' keys, and an omitted key arrives as
+//     an explicit NULL, not the column default (the a11y.spec seeding incident).
+//
+// ── ENRICHMENT BACKFILL (--backfill) ────────────────────────────────────────────────────────────
+//   For works rows missing cover_url OR work_id: look up enrichment_cache at key
+//   'ta:' + work_key (the exact construction — no re-matching), and copy the resolved identity
+//   (work_id) and cover fields out of the cached record. The ~new books rows enrich through the
+//   EXISTING per-book pipeline as the reader uses the app; this promotes those results into the
+//   corpus whenever it is re-run. The enrich fn itself is untouched.
+
+import { readFileSync } from 'node:fs'
+import { createClient } from '@supabase/supabase-js'
+import {
+  parseCsv,
+  toRecords,
+  normalizeRecord,
+  dropAndCollapse,
+  classify,
+  buildReport,
+} from './corpus-import-lib.ts'
+import { norm } from '../packages/core/src/normalize.ts'
+
+const URL_DEFAULT = 'http://127.0.0.1:55321'
+const SERVICE_DEFAULT =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU'
+
+const args = process.argv.slice(2).filter((a) => a !== '--')
+const flags = new Set(args.filter((a) => a.startsWith('--') && !a.includes('=')))
+const opt = (name) => {
+  const hit = args.find((a) => a.startsWith(`--${name}=`))
+  return hit ? hit.split('=').slice(1).join('=') : null
+}
+const csvPath = args.find((a) => !a.startsWith('--'))
+const WRITE = flags.has('--write')
+const BACKFILL = flags.has('--backfill')
+
+const supabase = createClient(
+  process.env.SUPABASE_URL ?? URL_DEFAULT,
+  process.env.SUPABASE_SERVICE_ROLE_KEY ?? SERVICE_DEFAULT,
+  { auth: { autoRefreshToken: false, persistSession: false } },
+)
+
+const fail = (msg) => {
+  console.error(`import-corpus-csv: ${msg}`)
+  process.exit(1)
+}
+
+async function resolveOwnerId() {
+  const direct = opt('owner-id')
+  if (direct) return direct
+  const email = opt('owner-email')
+  if (!email) fail('pass --owner-email=<email> or --owner-id=<uuid> — never hardcoded')
+  const { data, error } = await supabase.auth.admin.listUsers({ perPage: 1000 })
+  if (error) fail(`listUsers: ${error.message}`)
+  const u = data.users.find((x) => x.email === email)
+  if (!u) fail(`no auth user with email ${email}`)
+  return u.id
+}
+
+/** The owner's whole library, mapped just far enough for matchBook + works promotion.
+ *
+ *  PAGINATED, and the loop is load-bearing: PostgREST caps an un-ranged select at 1,000 rows and
+ *  says nothing. The local --write exercise found it the hard way — a 1,136-book library fetched
+ *  as exactly 1,000, the 136 past the cap were invisible to both the classifier and the skip set,
+ *  and the "idempotent" re-run inserted all 136 again. Every scripted fetch of a whole table in
+ *  this file pages until a short page for the same reason. */
+async function fetchLibrary(ownerId) {
+  const PAGE = 1000
+  const data = []
+  for (let from = 0; ; from += PAGE) {
+    const { data: page, error } = await supabase
+      .from('books')
+      .select(
+        'id, title, author_first, author_last, series, position, series_count, status, pages, pub_y, pub_m, pub_d, cover_url, cover_source, cover_source_url, cover_color, cover_confidence, genre, tags, isbn',
+      )
+      .eq('owner_id', ownerId)
+      .order('id', { ascending: true })
+      .range(from, from + PAGE - 1)
+    if (error) fail(`fetch books: ${error.message}`)
+    data.push(...page)
+    if (page.length < PAGE) break
+  }
+  return data.map((b) => ({
+    id: b.id,
+    title: b.title,
+    first: b.author_first ?? '',
+    last: b.author_last ?? '',
+    series: b.series ?? '',
+    position: b.position ?? '',
+    isbn: b.isbn ?? '',
+    row: b,
+  }))
+}
+
+/** A book row → its works upsert payload. The book's own fields are the survivor identity. */
+function workFromBook(b) {
+  const author = [b.author_first, b.author_last].filter(Boolean).join(' ').trim()
+  return {
+    work_key: `${norm(b.title)}|${norm(author)}`,
+    title: b.title,
+    contributors: author ? [{ name: author, role: 'author', position: 0 }] : [],
+    author_text: author,
+    series: b.series ?? null,
+    position: b.position ?? null,
+    series_count: b.series_count ?? null,
+    status: b.status ?? null,
+    pages: b.pages ?? null,
+    pub_y: b.pub_y ?? null,
+    pub_m: b.pub_m ?? null,
+    pub_d: b.pub_d ?? null,
+    cover_url: b.cover_url ?? null,
+    cover_source: b.cover_source ?? null,
+    cover_source_url: b.cover_source_url ?? null,
+    cover_color: b.cover_color ?? null,
+    cover_confidence: b.cover_confidence != null ? Number(b.cover_confidence) : null,
+    genre: b.genre ?? null,
+    tags: b.tags ?? [],
+  }
+}
+
+/** A fresh CSV record → its works upsert payload. Objective fields only; nothing personal. */
+function workFromRecord(r) {
+  return {
+    work_key: r.workKey,
+    title: r.title,
+    contributors: r.author ? [{ name: r.author, role: 'author', position: 0 }] : [],
+    author_text: r.author,
+    series: r.series || null,
+    position: null, // the CSV carries none; inventing one is exactly what the integrity rule bans
+    series_count: null,
+    status: r.status,
+    pages: null,
+    pub_y: null,
+    pub_m: null,
+    pub_d: null,
+    cover_url: null,
+    cover_source: null,
+    cover_source_url: null,
+    cover_color: null,
+    cover_confidence: null,
+    genre: r.genre,
+    tags: r.tags,
+  }
+}
+
+/** A fresh CSV record → the owner's books insert. Every column the batch uses, on every row. */
+function bookFromRecord(r, ownerId, possession) {
+  return {
+    owner_id: ownerId,
+    title: r.title,
+    author_first: r.first || null,
+    author_last: r.last || null,
+    series: r.series || null,
+    position: null,
+    series_count: null,
+    status: r.status,
+    // '' for unmapped, NEVER the column's historical 'romance' default — #255 removed exactly that
+    // silent guess (a book added without a genre saves with NONE), and the app writes '' since.
+    genre: r.genre ?? '',
+    genres: r.genres,
+    subgenre: null,
+    tags: r.tags,
+    ownership: possession,
+    borrowed: false,
+    wishlist: false,
+    // null = NOT ASSESSED, never 0 (assessed as none) — the seeder's own rule, kept
+    intensity: null,
+    read_status: r.gcRead ? 'Read' : 'unset',
+    rating: 0,
+    fave: false,
+    format: null,
+    isbn: null,
+    cover_url: null,
+    source: 'Owned',
+    pub_y: null,
+    pub_m: null,
+    pub_d: null,
+    progress: 0,
+  }
+}
+
+async function upsertWorks(rows, label) {
+  for (let i = 0; i < rows.length; i += 200) {
+    const chunk = rows.slice(i, i + 200)
+    const { error } = await supabase.from('works').upsert(chunk, { onConflict: 'work_key' })
+    if (error) fail(`works upsert (${label}, chunk at ${i}): ${error.message}`)
+  }
+  console.log(`works: upserted ${rows.length} (${label})`)
+}
+
+async function runImport() {
+  if (!csvPath) fail('pass the CSV path as an argument')
+  const ownerId = await resolveOwnerId()
+  const text = readFileSync(csvPath, 'utf8')
+  const records = toRecords(parseCsv(text)).map(normalizeRecord)
+  const { kept, collapsed, duplicatesDropped } = dropAndCollapse(records)
+  const library = await fetchLibrary(ownerId)
+  const { existing, fresh, nearMiss } = classify(kept, library)
+
+  const report = buildReport({
+    records,
+    kept,
+    collapsed,
+    duplicatesDropped,
+    existing,
+    fresh,
+    nearMiss,
+  })
+  report.assumptions = {
+    possession: `all NEW books insert as ownership='${opt('possession') ?? 'owned'}' — the CSV carries no possession data; override with --possession=`,
+    libraryBooks: library.length,
+  }
+  console.log(JSON.stringify(report, null, 2))
+
+  if (!WRITE) {
+    console.log(
+      '\nDRY RUN — nothing written. Review the near-miss and omnibus lists above, then re-run with --write.',
+    )
+    return
+  }
+
+  if (nearMiss.length) {
+    console.log(
+      `\nNOTE: ${nearMiss.length} near-miss rows are NOT imported — they stay for the owner to resolve in the CSV (rename to match, or mark Duplicate) and re-run. Auto-resolving them is what the data-integrity rule forbids.`,
+    )
+  }
+
+  // 1) the whole existing library → corpus (idempotent on work_key)
+  await upsertWorks(
+    library.map((b) => workFromBook(b.row)),
+    'promoted from existing library',
+  )
+
+  // 2) fresh CSV rows → corpus
+  await upsertWorks(fresh.map(workFromRecord), 'new from CSV')
+
+  // 3) fresh CSV rows → the owner's books (skip any that appeared since classification)
+  const possession = opt('possession') ?? 'owned'
+  const current = await fetchLibrary(ownerId)
+  const have = new Set(
+    current.map((b) => `${norm(b.title)}|${norm([b.first, b.last].filter(Boolean).join(' '))}`),
+  )
+  const toInsert = fresh
+    .filter((r) => !have.has(r.workKey))
+    .map((r) => bookFromRecord(r, ownerId, possession))
+  for (let i = 0; i < toInsert.length; i += 200) {
+    const chunk = toInsert.slice(i, i + 200)
+    const { error } = await supabase.from('books').insert(chunk)
+    if (error) fail(`books insert (chunk at ${i}): ${error.message}`)
+  }
+  console.log(
+    `books: inserted ${toInsert.length} for owner ${ownerId} (${fresh.length - toInsert.length} skipped as already present)`,
+  )
+  console.log('\nDone. Re-running is safe: works upserts, books skips.')
+}
+
+async function runBackfill() {
+  const PAGE = 1000
+  const rows = []
+  for (let from = 0; ; from += PAGE) {
+    const { data: page, error } = await supabase
+      .from('works')
+      .select('work_key, work_id, cover_url')
+      .or('cover_url.is.null,work_id.is.null')
+      .order('work_key', { ascending: true })
+      .range(from, from + PAGE - 1)
+    if (error) fail(`works select: ${error.message}`)
+    rows.push(...page)
+    if (page.length < PAGE) break
+  }
+  if (!rows.length) {
+    console.log('backfill: nothing missing — every works row has a cover and a work_id')
+    return
+  }
+  let updated = 0
+  for (const w of rows) {
+    // the exact cache-key construction — 'ta:' + work_key IS the enrich fn's own key
+    const { data: hit } = await supabase
+      .from('enrichment_cache')
+      .select('work_id, record')
+      .eq('key', `ta:${w.work_key}`)
+      .maybeSingle()
+    if (!hit) continue
+    const rec = hit.record ?? {}
+    const patch = {}
+    if (!w.work_id && (hit.work_id || rec.workId)) patch.work_id = hit.work_id || rec.workId
+    if (!w.cover_url && rec.cover) {
+      patch.cover_url = rec.cover
+      if (rec.provenance?.cover?.source) patch.cover_source = rec.provenance.cover.source
+    }
+    if (!Object.keys(patch).length) continue
+    const { error: ue } = await supabase.from('works').update(patch).eq('work_key', w.work_key)
+    if (ue) fail(`works update ${w.work_key}: ${ue.message}`)
+    updated++
+  }
+  console.log(
+    `backfill: ${updated} of ${rows.length} incomplete works rows filled from enrichment_cache (repeatable — re-run after more books enrich)`,
+  )
+}
+
+if (BACKFILL) await runBackfill()
+else await runImport()
