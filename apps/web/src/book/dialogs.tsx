@@ -47,6 +47,7 @@ import { useLabels } from '../skin/labels'
 import { readableWriteError } from '../lib/writeErrors'
 import { todayLocalDate } from '../lib/localDate'
 import { Surface } from '../components/Surface'
+import { LevelPicker } from '../components/LevelPicker'
 
 /** Distinct contributor names across the library, for autocomplete. */
 function useAuthorSuggestions(): string[] {
@@ -569,54 +570,22 @@ export function EditDetails({
         </div>
       </div>
 
-      <div className="mt-3">
-        <div className="flex items-center gap-2">
-          <span className="text-[11px] uppercase tracking-[0.15em] text-muted">
-            {labels.intensity}
-          </span>
-          {[1, 2, 3, 4, 5].map((i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => setIntensity(intensity === i ? 0 : i)}
-              aria-label={`${labels.intensity} ${i} — ${labels.intensityLevels[i]}`}
-              aria-pressed={i <= intensity}
-              title={labels.intensityLevels[i]}
-              style={{ opacity: i <= intensity ? 1 : 0.3 }}
-            >
-              {labels.intensityGlyph}
-            </button>
-          ))}
-        </div>
-        {/* The level guide. Both pickers were bare glyph rows with no statement anywhere of what a
-            level MEANT, so no reader could rate consistently against their own past self. Shows the
-            selected level's definition, and level 0's when nothing is set. */}
-        <p className="mt-1 text-[12px] text-muted">{labels.intensityLevels[intensity] ?? ''}</p>
-      </div>
-      <div className="mt-3">
-        <div className="flex items-center gap-2">
-          <span className="text-[11px] uppercase tracking-[0.15em] text-muted">
-            {labels.darkness}
-          </span>
-          {[1, 2, 3, 4, 5].map((i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => setDarkness(darkness === i ? 0 : i)}
-              aria-label={`${labels.darkness} ${i} — ${labels.darknessLevels[i]}`}
-              aria-pressed={i <= darkness}
-              title={labels.darknessLevels[i]}
-              style={{ opacity: i <= darkness ? 1 : 0.3 }}
-            >
-              {labels.darknessGlyph}
-            </button>
-          ))}
-        </div>
-        {/* The level guide. Both pickers were bare glyph rows with no statement anywhere of what a
-            level MEANT, so no reader could rate consistently against their own past self. Shows the
-            selected level's definition, and level 0's when nothing is set. */}
-        <p className="mt-1 text-[12px] text-muted">{labels.darknessLevels[darkness] ?? ''}</p>
-      </div>
+      <LevelPicker
+        label={labels.intensity}
+        glyph={labels.intensityGlyph}
+        levels={labels.intensityLevels}
+        value={intensity}
+        onChange={setIntensity}
+        name="intensity"
+      />
+      <LevelPicker
+        label={labels.darkness}
+        glyph={labels.darknessGlyph}
+        levels={labels.darknessLevels}
+        value={darkness}
+        onChange={setDarkness}
+        name="darkness"
+      />
       {/* Mood — the reader's own impression (how it landed). Reader-assigned, never derived; assigns
           persist immediately (book_moods), independent of this form's Save. */}
       <div className="mt-3">
