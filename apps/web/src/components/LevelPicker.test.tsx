@@ -8,7 +8,18 @@ import { LevelPicker } from './LevelPicker'
  * "works" while quietly changing the reader's data underneath them.
  */
 
-const LEVELS = ['None on the page', 'Kisses', 'Closed door', 'On the page', 'Explicit', 'Throughout']
+// `as const` so the indices are KNOWN-DEFINED. Without it `noUncheckedIndexedAccess` types every
+// `LEVELS[n]` as `string | undefined`, which vitest happily runs — esbuild strips types without
+// checking them — and only `tsc` rejects. That is exactly how this file reached CI green on the
+// unit suite and red on `gate`.
+const LEVELS = [
+  'None on the page',
+  'Kisses',
+  'Closed door',
+  'On the page',
+  'Explicit',
+  'Throughout',
+] as const
 
 const setup = (value = 0) => {
   const onChange = vi.fn()
