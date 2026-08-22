@@ -26,7 +26,7 @@ import {
   type QuizAnswers,
 } from '../library/quiz'
 
-interface Pick {
+export interface Pick {
   b: Book
   s: number
   isRead: boolean
@@ -61,9 +61,20 @@ const modeOf = (m: Map<string, number>): string | undefined =>
 
 /** Result vocabulary drawn from the MATCHED books, not a fixed romance script (task §3). The headline
  *  and pills describe what was actually surfaced — the dominant subgenre/genre, its real tropes, and
- *  a representative intensity — so a horror result reads like horror and a literary one like literary.
- *  Intensity shows as spice (🌶️) only when the match is romance-leaning; otherwise a neutral word. */
-function describeMatches(
+ *  a representative level — so a horror result reads like horror and a literary one like literary.
+ *
+ *  THE LEVEL PILL READS WHICHEVER AXIS IT IS ABOUT TO NAME. A romance-leaning result shows spice
+ *  (🌶️ + a HEAT word) and therefore reads `intensity`; every other result shows a neutral
+ *  INTENSITY word and therefore reads `darkness`. Before the axis split (#330) there was one column
+ *  and one source, and this function kept reading `intensity` for both — so a non-romance result
+ *  picked a darkness word and fed it a median of SPICE values, describing books by an axis it was
+ *  not naming. Which field to read depends on `domGenreKey`, so the genre mode is computed FIRST,
+ *  in its own pass, and the collection pass below uses it. */
+// Exported for `matchPill.test.ts`. NOT the dead-export-wearing-tests shape CLAUDE.md warns about:
+// it has a live intra-file caller (`score`, below), so exporting adds a test seam rather than
+// creating an unreachable symbol. The alternative — asserting the pill through the route in e2e —
+// could not isolate WHICH column fed the number, which is the whole defect.
+export function describeMatches(
   picks: Pick[],
   a: QuizAnswers,
 ): { headline: string; sub: string; tags: string[] } {
@@ -75,17 +86,24 @@ function describeMatches(
       tags: [],
     }
   }
-  const subCount = new Map<string, number>()
+  // Pass 1 — genre mode only, because the pass below needs it to know which axis it is sampling.
+  // `top` is at most 8 books, so a second walk costs nothing.
   const genreCount = new Map<string, number>()
+  for (const b of top) if (b.genre) genreCount.set(b.genre, (genreCount.get(b.genre) ?? 0) + 1)
+  const domGenreKey = modeOf(genreCount)
+
+  // Pass 2 — everything else, now that the axis is known.
+  const subCount = new Map<string, number>()
   const tropeCount = new Map<string, number>()
-  const intensities: number[] = []
+  const levels: number[] = []
   for (const b of top) {
     if (b.subgenre) subCount.set(b.subgenre, (subCount.get(b.subgenre) ?? 0) + 1)
-    if (b.genre) genreCount.set(b.genre, (genreCount.get(b.genre) ?? 0) + 1)
     for (const t of b.tropes) tropeCount.set(t.name, (tropeCount.get(t.name) ?? 0) + 1)
-    if (b.intensity != null) intensities.push(b.intensity)
+    // Spice for a romance result, darkness for everything else — the same condition that picks the
+    // WORD below, so the number and the vocabulary can never come from different columns.
+    const v = domGenreKey === 'romance' ? b.intensity : b.darkness
+    if (v != null) levels.push(v)
   }
-  const domGenreKey = modeOf(genreCount)
   const domSub = modeOf(subCount)
   const domGenreLabel = domGenreKey ? genreLabel(domGenreKey) : undefined
   const headline = `${a.pace === 'slow' ? 'Slow-burn ' : ''}${domSub ?? domGenreLabel ?? 'Your shelves'}`
@@ -95,7 +113,7 @@ function describeMatches(
     .slice(0, 3)
     .map(([t]) => t)
   const tags: string[] = []
-  const sorted = [...intensities].sort((x, y) => x - y)
+  const sorted = [...levels].sort((x, y) => x - y)
   const median = sorted[Math.floor(sorted.length / 2)]
   if (median != null) {
     const iv = Math.max(0, Math.min(5, Math.round(median)))
