@@ -281,19 +281,10 @@ export const coAuthorRows = (rows: readonly ImportRecord[]): ImportRecord[] =>
 export const partialAuthorRows = (rows: readonly ImportRecord[]): ImportRecord[] =>
   rows.filter((r) => !r.first.trim() || !r.last.trim())
 
-/**
- * CSV escaping for the --dump files. In the lib rather than inline in the script because it is the
- * part most likely to be wrong and the only part worth a test: book titles carry commas
- * ("Salt, Harbour"), quotes, and occasionally newlines, and an unescaped one silently shifts every
- * later column — a dump that reads plausibly and aligns wrongly is worse than no dump.
- */
-export const csvCell = (v: unknown): string => {
-  const t = String(v ?? '')
-  return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t
-}
-
-export const csvFile = (header: readonly string[], rows: readonly (readonly unknown[])[]): string =>
-  [header.join(','), ...rows.map((r) => r.map(csvCell).join(','))].join('\n') + '\n'
+/** CSV escaping now lives in core (packages/core/src/csv.ts) so the --dump writer and the Settings
+ *  library export share one implementation and one set of tests. Re-exported here so this lib's
+ *  callers keep importing it from the same place. */
+export { csvCell, csvFile } from '../packages/core/src/csv'
 
 export function buildReport({
   records,
