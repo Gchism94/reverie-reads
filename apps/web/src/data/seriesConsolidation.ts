@@ -7,6 +7,7 @@ import {
   type SeriesRuling,
 } from '@reverie/core'
 import { supabase } from '../lib/supabase'
+import { pageAll } from './paging'
 import { booksKey } from './books'
 import { seriesKey, seriesListKey } from './series'
 
@@ -33,11 +34,14 @@ export function useSeriesRulings() {
   return useQuery({
     queryKey: seriesRulingsKey,
     queryFn: async (): Promise<DecidedSeriesPair[]> => {
-      const { data, error } = await supabase
-        .from('series_merge_decisions')
-        .select('name_key_a, name_key_b, ruling')
-      if (error) throw error
-      return ((data ?? []) as RulingRowT[]).map((r) => ({
+      const data = await pageAll<RulingRowT>('series_merge_decisions', (from, to) =>
+        supabase
+          .from('series_merge_decisions')
+          .select('name_key_a, name_key_b, ruling', { count: 'exact' })
+          .order('id')
+          .range(from, to),
+      )
+      return data.map((r) => ({
         nameKeyA: r.name_key_a,
         nameKeyB: r.name_key_b,
         ruling: r.ruling as SeriesRuling,

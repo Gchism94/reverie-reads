@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
+import { pageAll } from './paging'
 import { listsKey } from './lists'
 
 export const bookListsKey = (bookId: string) => ['book-lists', bookId] as const
@@ -62,11 +63,15 @@ export function useAllListItems() {
   return useQuery({
     queryKey: allListItemsKey,
     queryFn: async (): Promise<ListItemRow[]> => {
-      const { data, error } = await supabase
-        .from('list_items')
-        .select('list_id, book_id, position, added_at')
-      if (error) throw error
-      return data as ListItemRow[]
+      // Every shelf membership in the account — scales with the library, not with shelf count.
+      return await pageAll<ListItemRow>('list_items', (from, to) =>
+        supabase
+          .from('list_items')
+          .select('list_id, book_id, position, added_at', { count: 'exact' })
+          .order('list_id')
+          .order('book_id')
+          .range(from, to),
+      )
     },
   })
 }

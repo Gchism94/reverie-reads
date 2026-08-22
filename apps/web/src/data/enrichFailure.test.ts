@@ -20,11 +20,13 @@ let outcomeIdx = 0
 /** Nth update (1-based) that should come back with an error; 0 = never. */
 let failUpdateAt = 0
 
-vi.mock('../lib/supabase', () => ({
+vi.mock('../lib/supabase', async () => {
+  const { pagedSelect } = await import('./pagedSelect.fixture')
+  return {
   supabase: {
     auth: { getUser: async () => ({ data: { user: null } }) },
     from: () => ({
-      select: () => Promise.resolve({ data: [], error: null }),
+      select: () => pagedSelect([]),
       insert: () => Promise.resolve({ error: null }),
       update: (patch: Record<string, unknown>) => ({
         eq: (_c: string, id: string) => {
@@ -38,7 +40,8 @@ vi.mock('../lib/supabase', () => ({
       }),
     }),
   },
-}))
+  }
+})
 vi.mock('../lib/enrich', () => ({
   enrichBookOutcome: async () => outcomes[Math.min(outcomeIdx++, outcomes.length - 1)],
 }))

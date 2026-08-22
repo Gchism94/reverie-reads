@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
+import { pageAll } from './paging'
 import type { ListRow } from './types'
 
 export interface UiList {
@@ -44,13 +45,16 @@ export function useLists() {
   return useQuery({
     queryKey: listsKey,
     queryFn: async (): Promise<UiList[]> => {
-      const { data, error } = await supabase
-        .from('lists')
-        .select('*')
-        .order('sort_order', { ascending: true, nullsFirst: false })
-        .order('created_at', { ascending: true })
-      if (error) throw error
-      return (data as ListRow[]).map(toUiList)
+      const data = await pageAll<ListRow>('lists', (from, to) =>
+        supabase
+          .from('lists')
+          .select('*', { count: 'exact' })
+          .order('sort_order', { ascending: true, nullsFirst: false })
+          .order('created_at', { ascending: true })
+          .order('id')
+          .range(from, to),
+      )
+      return data.map(toUiList)
     },
   })
 }

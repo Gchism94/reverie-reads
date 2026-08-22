@@ -1,5 +1,6 @@
 import { contributorsFromAuthors, enrichmentCoverFill, enrichmentSeriesFill, mergeImport, type Book, type CoverSource, type Incoming } from '@reverie/core'
 import { supabase } from '../lib/supabase'
+import { pageAll } from './paging'
 import { toBookRow } from './mappers'
 import { enrichBookOutcome, type EnrichResult } from '../lib/enrich'
 import { ingestCover } from '../lib/covers'
@@ -57,11 +58,10 @@ export function sweepCandidates(books: Book[], stampById: Map<string, string | n
 
 /** The stamp map `sweepCandidates` needs — fetched once, shared by the button and the sweep. */
 export async function fetchEnrichmentStamps(): Promise<Map<string, string | null>> {
-  const { data, error } = await supabase.from('books').select('id, enriched_at')
-  if (error) throw error
-  return new Map(
-    ((data as { id: string; enriched_at: string | null }[]) ?? []).map((r) => [r.id, r.enriched_at]),
+  const data = await pageAll<{ id: string; enriched_at: string | null }>('books', (from, to) =>
+    supabase.from('books').select('id, enriched_at', { count: 'exact' }).order('id').range(from, to),
   )
+  return new Map(data.map((r) => [r.id, r.enriched_at]))
 }
 
 /**
