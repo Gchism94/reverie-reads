@@ -1,6 +1,9 @@
 import { expect, test, type Page } from '@playwright/test'
+import { authFailure } from '../support/authError'
+import { okUser } from '../support/ok'
 import { createClient } from '@supabase/supabase-js'
-import { mkdirSync } from 'node:fs'
+import { createHash } from 'node:crypto'
+import { mkdirSync, readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 
 /**
@@ -53,16 +56,20 @@ test.beforeAll(async () => {
   const { data } = await admin.auth.admin.listUsers({ perPage: 1000 })
   uid = data?.users?.find((u) => u.email === EMAIL)?.id ?? ''
   if (!uid) {
-    const created = await admin.auth.admin.createUser({
-      email: EMAIL,
-      password: PASSWORD,
-      email_confirm: true,
-    })
-    uid = created.data.user!.id
+    // okUser, not `.data.user!` — a non-null assertion on a failed call throws a bare TypeError at
+    // the READ rather than naming the call that failed, which in a shoot script means a confusing
+    // crash instead of "createUser failed".
+    uid = (
+      await okUser(
+        admin.auth.admin.createUser({ email: EMAIL, password: PASSWORD, email_confirm: true }),
+        'calendar-shots createUser',
+      )
+    ).id
   }
   const sb = createClient(SUPABASE_URL, ANON)
-  const { data: s } = await sb.auth.signInWithPassword({ email: EMAIL, password: PASSWORD })
-  session = s.session!
+  const { data: s, error } = await sb.auth.signInWithPassword({ email: EMAIL, password: PASSWORD })
+  if (error || !s.session) throw new Error(authFailure('calendar-shots', EMAIL, error))
+  session = s.session
 })
 
 /** Wipe and re-seed. `reads` carry dates (the pink dots); `plan_*` carry the violet ones. */
@@ -144,18 +151,23 @@ const shot = async (page: Page, name: string) =>
   page.screenshot({ path: join(OUT, `${name}--${TAG}.png`), fullPage: true })
 
 /** A tight crop of ONE cell — at 390px a 1.5px dot is unreviewable in a full-page PNG. */
-async function cellShot(page: Page, day: number, name: string) {
+async function cellShot(page: Page, day: number, name: string, padY = 18) {
   const cell = page.locator(`button[aria-label^="April ${day} "], div:text-is("${day}")`).first()
   const box = await cell.boundingBox()
   if (!box) return
   const pad = 18
+  // padY is separate because a cell that OVERFLOWS is taller than its box: the cap case renders
+  // 12 dots plus "+n", which grows the cell past `box.height`. The first version of this crop used
+  // one symmetric pad and cut the "+28" clean off — the shot whose entire job was proving the
+  // overflow degrades gracefully was the one shot that did not show it. Extra vertical room also
+  // proves the taller row is not colliding with the week below.
   await page.screenshot({
     path: join(OUT, `${name}--${TAG}.png`),
     clip: {
       x: Math.max(0, box.x - pad),
       y: Math.max(0, box.y - pad),
       width: box.width + pad * 2,
-      height: box.height + pad * 2,
+      height: box.height + pad + padY,
     },
   })
 }
@@ -270,7 +282,7 @@ test('D4-cap-fires-40-events', async ({ page }) => {
   await page.setViewportSize(PHONE)
   await openPlanner(page)
   await shot(page, 'D4-cap-grid-390-tryst-dark-2026-04-15')
-  await cellShot(page, 9, 'D4-cap-cell-12dots-plus28-390-tryst-dark-2026-04-15')
+  await cellShot(page, 9, 'D4-cap-cell-12dots-plus28-390-tryst-dark-2026-04-15', 72)
 })
 
 // ── E. desktop ─────────────────────────────────────────────────────────────────────────────────
@@ -287,9 +299,49 @@ test('E-desktop-sparse-and-dense', async ({ page }) => {
   await openPlanner(page)
   await shot(page, 'E1-sparse-1280-tryst-dark-2026-04-15')
 
+  // A FULL re-open, not page.reload(): the first version reloaded and re-shot, and the two
+  // desktop PNGs came out byte-identical (same MD5) — one datapoint wearing two filenames. The
+  // seed below is also materially denser than E1's three marks, so the two shots cannot look the
+  // same even if something upstream caches.
   const days = [1, 2, 4, 5, 7, 9, 10, 13, 15, 17, 19, 21, 24, 27, 29]
-  await seed({ reads: days.map((d) => ({ day: d, count: (d % 3) + 1 })) })
-  await page.reload()
-  await page.waitForTimeout(900)
+  await seed({
+    reads: days.map((d) => ({ day: d, count: (d % 3) + 1 })),
+    plans: [
+      { day: 6, count: 2 },
+      { day: 20, count: 1 },
+    ],
+  })
+  await openPlanner(page)
   await shot(page, 'E2-dense-1280-tryst-dark-2026-04-15')
+})
+
+/**
+ * THE HARNESS MUST BE ABLE TO DETECT ITS OWN FAILURE.
+ *
+ * E1 and E2 once came out byte-identical — same MD5 — so section E had one datapoint wearing two
+ * filenames, and nothing said so. A screenshot harness that can silently write the same image
+ * twice is an instrument with unknown error characteristics: every shot it emits is then only as
+ * trustworthy as the assumption that it shot what the filename claims.
+ *
+ * Two PNGs SHOULD never match here: every shot differs in skin, mode, seed, viewport or crop.
+ * A collision therefore means a shot did not re-render — a missed navigation, a stale seed, a
+ * reload that returned cache — and it is a defect in the evidence, not a cosmetic duplicate.
+ * Runs last, and fails loudly rather than warning.
+ */
+test('no two screenshots are byte-identical', async () => {
+  const seen = new Map<string, string>()
+  const dupes: string[] = []
+  for (const f of readdirSync(OUT).filter((n) => n.endsWith('.png'))) {
+    const sum = createHash('md5')
+      .update(readFileSync(join(OUT, f)))
+      .digest('hex')
+    const prior = seen.get(sum)
+    if (prior) dupes.push(`${prior}  ==  ${f}  (md5 ${sum})`)
+    else seen.set(sum, f)
+  }
+  expect(
+    dupes,
+    `these screenshots are byte-identical, so at least one did not re-render what its name ` +
+      `claims:\n  ${dupes.join('\n  ')}`,
+  ).toEqual([])
 })
