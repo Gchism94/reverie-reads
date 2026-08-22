@@ -55,6 +55,12 @@ interface Access {
   table: Table
   columns: string
   mode: 'select' | 'insert' | 'upsert' | 'update'
+  /** `.range()` was called — i.e. this read pages. */
+  ranged: boolean
+  /** `.order()` was called — i.e. the pages are disjoint. */
+  ordered: boolean
+  /** `.single()`/`.maybeSingle()`, or a head-only count: reads no row set, so paging is moot. */
+  bounded: boolean
 }
 let access: Access[] = []
 /** When true, the fake serves only the first PAGE_CAP rows and ignores the requested window. */
@@ -110,6 +116,8 @@ class Query implements PromiseLike<{ data: Row[] | Row | null; error: unknown }>
   private negated: string[] = []
   private columns = '*'
   private exactCount = false
+  private rangeCalled = false
+  private head = false
   private orderBy: string[] = []
   private window: { from: number; to: number } | null = null
   private pending: Row[] | null = null
@@ -118,9 +126,10 @@ class Query implements PromiseLike<{ data: Row[] | Row | null; error: unknown }>
 
   constructor(private table: Table) {}
 
-  select(columns = '*', opts?: { count?: string }) {
+  select(columns = '*', opts?: { count?: string; head?: boolean }) {
     this.columns = columns
     this.exactCount = opts?.count === 'exact'
+    this.head = opts?.head === true
     return this
   }
   /** Paging, as PostgREST does it: a total order, a window, and a full-set count alongside the
@@ -132,6 +141,7 @@ class Query implements PromiseLike<{ data: Row[] | Row | null; error: unknown }>
     return this
   }
   range(from: number, to: number) {
+    this.rangeCalled = true
     // `ignoreRange` models the pre-fix code path exactly: PostgREST returns its first page and the
     // caller never asks for a second. Not an artificial fault — it is what this file did until
     // this commit, and what a future edit that drops `.range()` would restore.
@@ -181,7 +191,14 @@ class Query implements PromiseLike<{ data: Row[] | Row | null; error: unknown }>
   }
 
   private async run(single: boolean): Promise<{ data: Row[] | Row | null; error: unknown; count: number | null }> {
-    access.push({ table: this.table, columns: this.columns, mode: this.mode })
+    access.push({
+      table: this.table,
+      columns: this.columns,
+      mode: this.mode,
+      ranged: this.rangeCalled,
+      ordered: this.orderBy.length > 0,
+      bounded: single || this.head,
+    })
     const table = db[this.table]
     if (this.mode === 'insert' || this.mode === 'upsert') {
       const written: Row[] = (this.pending ?? []).map((r) => ({ id: r.id ?? uuid(), ...r }))
@@ -1136,6 +1153,33 @@ describe('a backup cannot silently lose rows — paging, and the file’s own co
     const named = db.tropes.filter((t) => t.name === 'Enemies to Lovers')
     expect(named, 'the canonical trope must be reused, not duplicated').toHaveLength(1)
     expect(named[0]?.owner_id).toBe(null)
+  })
+
+  it('EVERY multi-row read in export AND restore pages, and orders its pages', async () => {
+    // The exhaustive guard, keyed to the call sites rather than to a fixture per table.
+    //
+    // Two per-table tests were written first and BOTH were proxies: dropping `.order()` from the
+    // vocabulary read and `.range()` from the anti-duplicate read each left the suite green,
+    // because catching those needs a fixture with over a thousand rows IN THAT TABLE, and adding
+    // one per table is both unaffordable and permanently one table behind the code. This asserts
+    // the property directly — a read that returns a row set declares a window and a total order —
+    // so a new un-paged read added tomorrow fails without anyone remembering to seed for it.
+    //
+    // `bounded` reads are exempt with a reason, not by omission: `.maybeSingle()` returns one row
+    // and `head: true` returns none, so neither can be truncated.
+    access = []
+    const json = await buildBackup()
+    wipeToFreshAccount()
+    await restoreBackup(json)
+
+    const unpaged = access
+      .filter((a) => a.mode === 'select' && !a.bounded)
+      .filter((a) => !a.ranged || !a.ordered)
+      .map((a) => `${a.table}${a.ranged ? '' : ' (no .range)'}${a.ordered ? '' : ' (no .order)'}`)
+
+    expect([...new Set(unpaged)]).toEqual([])
+    // …and the guard is looking at something: if this is 0, the filter above proves nothing.
+    expect(access.filter((a) => a.mode === 'select' && !a.bounded).length).toBeGreaterThan(10)
   })
 
   it('an intact file still restores — the guard does not refuse healthy backups', async () => {
