@@ -143,7 +143,14 @@ test('a book added without choosing a genre saves with none — not the skin’s
   await signIn(page, c.session)
 
   // The skin really is the sci-fi room — otherwise this test could pass without proving anything.
-  expect(await page.evaluate(() => document.documentElement.dataset.skin)).toBe('aphelion')
+  //
+  // toHaveAttribute, NOT `expect(await page.evaluate(...))`. The skin arrives in two stages:
+  // useSkin.ts:21 paints from localStorage's `reverie.skin` for an instant first frame, then :86
+  // reconciles from the PROFILE at sign-in. A one-shot evaluate is a snapshot with no retry, so it
+  // races that reconciliation — and when it loses it reads the localStorage default and reports
+  // `tryst`, which is a true statement about a frame nobody sees. toHaveAttribute polls, so it
+  // waits for the settle it is actually asserting. Cost three unrelated gates on 2026-08-21.
+  await expect(page.locator('html')).toHaveAttribute('data-skin', 'aphelion')
 
   await addBookTitled(page, TITLE)
 
@@ -172,7 +179,10 @@ test('the same add under a different skin stores the same nothing', async ({ pag
     'add-genre cleanup',
   )
   await signIn(page, c.session)
-  expect(await page.evaluate(() => document.documentElement.dataset.skin)).toBe('grimoire')
+  // Same two-stage race as the aphelion assertion above — this one never reported red, which is
+  // exactly why it is fixed in the same pass: it is the identical snapshot against the identical
+  // reconciliation, and "has not failed yet" is a statement about timing, not about safety.
+  await expect(page.locator('html')).toHaveAttribute('data-skin', 'grimoire')
 
   await addBookTitled(page, TITLE)
 
