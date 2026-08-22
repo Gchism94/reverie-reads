@@ -36,6 +36,12 @@ ds-bundle/
 .design-sync/node_modules
 data/raw/Library_App_list.xlsx
 data/raw/library_connected_series.csv
+# The corpus-import source CSV. Sits at the repo root because the import script takes its path as
+# an argument — do not move it. It carries PERSONAL READ FLAGS, including a SECOND PERSON'S reading
+# data (TC Read), so it must never be tracked: one `git add -A` without this line would commit it.
+# Same class as the two data/raw files above; the gitignore gap on their sibling Chism_Books.xlsx
+# is the incident this line exists to not repeat (docs/audits/pre-public-secrets.md §4).
+chism-books-library.csv
 
 # design tool exports — large (multi-MB) and regenerable from design tool; kept local for
 # reference, never tracked. Ignore every export shape consistently (.html and .dc.html alike).
