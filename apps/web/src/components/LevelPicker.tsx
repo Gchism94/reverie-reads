@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { rememberGuideDismissed, useGuideDismissed } from './levelGuideDismissed'
 
 /**
  * A five-glyph 0–5 picker with a per-level guide — Spice and Darkness, one implementation.
@@ -48,17 +49,26 @@ export function LevelPicker({
 }) {
   const [pinned, setPinned] = useState<number | null>(null)
   const [previewed, setPreviewed] = useState<number | null>(null)
+  const dismissed = useGuideDismissed()
   const rootRef = useRef<HTMLDivElement>(null)
+
+  /** Every dismissal path goes through here — ✕, Escape, outside click, re-click — because the
+   *  reader who closed it meant the same thing each way. Forking behaviour by which route was used
+   *  would make the guide's future depend on a detail nobody tracks. */
+  const dismiss = () => {
+    setPinned(null)
+    rememberGuideDismissed()
+  }
 
   // A pin outlives the pointer, so it needs the two dismissals a transient preview does not:
   // Escape from anywhere, and a click that lands outside this picker. Both are Modal's contract.
   useEffect(() => {
     if (pinned === null) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setPinned(null)
+      if (e.key === 'Escape') dismiss()
     }
     const onDown = (e: globalThis.PointerEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) setPinned(null)
+      if (!rootRef.current?.contains(e.target as Node)) dismiss()
     }
     document.addEventListener('keydown', onKey)
     document.addEventListener('pointerdown', onDown)
@@ -82,13 +92,20 @@ export function LevelPicker({
             key={i}
             type="button"
             onClick={() => {
+              // Setting the level ALWAYS works; only the guide is suppressed. Once dismissed, this
+              // is the plain picker it was before the guide existed.
               onChange(value === i ? 0 : i)
-              setPinned(pinned === i ? null : i)
+              if (dismissed) return
+              // Re-clicking the PINNED level closes it, and closing is closing — it goes through
+              // `dismiss` like every other route. Treating it as a mere toggle was the bug: the
+              // guide shut, the flag never set, and the next tap popped it straight back.
+              if (pinned === i) dismiss()
+              else setPinned(i)
             }}
             // Mouse only: a synthesised touch "hover" would fight the tap that follows it.
-            onPointerEnter={(e) => e.pointerType === 'mouse' && setPreviewed(i)}
+            onPointerEnter={(e) => e.pointerType === 'mouse' && !dismissed && setPreviewed(i)}
             onPointerLeave={(e) => e.pointerType === 'mouse' && setPreviewed(null)}
-            onFocus={() => setPreviewed(i)}
+            onFocus={() => !dismissed && setPreviewed(i)}
             onBlur={() => setPreviewed(null)}
             aria-label={`${label} ${i} — ${levels[i]}`}
             aria-pressed={i <= value}
@@ -147,7 +164,7 @@ export function LevelPicker({
           {pinned !== null && (
             <button
               type="button"
-              onClick={() => setPinned(null)}
+              onClick={dismiss}
               aria-label={`Close the ${label} level guide`}
               className="flex-none text-muted"
             >
@@ -160,6 +177,20 @@ export function LevelPicker({
         // wants when they are not exploring. levels[0] covers "nothing set".
         <p className="mt-1 text-[12px] text-muted">{levels[value] ?? ''}</p>
       )}
+
+      {/* THE PERMANENT WAY BACK. Always present, never gated on the dismissal flag — a reader who
+          turned the guide off and later wants it has one obvious control rather than a settings
+          hunt, and a reader who never dismissed it loses nothing by its being there. A real
+          <button>, so it is focusable and Enter/Space work; opening from here does NOT clear the
+          flag, because asking once is not the same as asking always. */}
+      <button
+        type="button"
+        onClick={() => setPinned(value || 0)}
+        className="mt-1 text-[11px] underline underline-offset-2"
+        style={{ color: 'var(--accent-ink)' }}
+      >
+        What do the levels mean?
+      </button>
     </div>
   )
 }
