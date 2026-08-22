@@ -49,15 +49,35 @@ const enter = (el: Element, pointerType = 'mouse') => {
   fireEvent(el, ev)
 }
 
-describe('LevelPicker — the resting state', () => {
-  it('shows the selected level’s definition when nothing is open', () => {
+describe('LevelPicker — the resting state shows NO level text at all', () => {
+  /**
+   * The card is the only presentation. A resting <p> used to render `levels[value]` whenever the
+   * card was closed, so the same fact appeared twice in two styles; it is gone. These assert the
+   * ABSENCE, which is the change — a reader at rest sees the glyph row and the "what do the levels
+   * mean?" link, and nothing else.
+   */
+  it('renders no definition text when the card is closed', () => {
     setup(3)
-    expect(screen.getByText(LEVELS[3])).toBeInTheDocument()
+    expect(screen.queryByRole('status')).toBeNull()
+    expect(
+      screen.queryByText(LEVELS[3]),
+      'the resting <p> is back — the level is being described in two places again',
+    ).toBeNull()
   })
 
-  it('shows level 0’s definition when nothing is set', () => {
+  it('renders none for level 0 either', () => {
     setup(0)
-    expect(screen.getByText(LEVELS[0])).toBeInTheDocument()
+    expect(screen.queryByRole('status')).toBeNull()
+    expect(screen.queryByText(LEVELS[0])).toBeNull()
+  })
+
+  it('the link is the only route back once nothing is open', () => {
+    // Load-bearing, not a convenience: with the resting text gone this is the sole way to reach a
+    // definition, which is why it is never gated on the dismissal flag.
+    setup(2)
+    expect(screen.getByRole('button', { name: /What do the levels mean\?/ })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /What do the levels mean\?/ }))
+    expect(screen.getByRole('status')).toHaveTextContent(LEVELS[2])
   })
 })
 
@@ -69,13 +89,14 @@ describe('LevelPicker — preview without committing', () => {
     expect(onChange).not.toHaveBeenCalled()
   })
 
-  it('blur returns to the selected level’s definition', () => {
+  it('blur closes the card and leaves no text behind', () => {
     const { level } = setup(1)
     fireEvent.focus(level(4))
     expect(screen.getByRole('status')).toHaveTextContent(LEVELS[4])
     fireEvent.blur(level(4))
+    // Blur closes the card and leaves NOTHING — there is no resting text to fall back to now.
     expect(screen.queryByRole('status')).toBeNull()
-    expect(screen.getByText(LEVELS[1])).toBeInTheDocument()
+    expect(screen.queryByText(LEVELS[1])).toBeNull()
   })
 
   it('a MOUSE hover previews without committing', () => {
