@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { LevelPicker } from './LevelPicker'
+import { resetLevelGuideDismissedForTests } from './levelGuideDismissed'
 
 /**
  * The guide's whole reason to exist is that a reader can read what a level MEANS without setting
@@ -20,6 +21,10 @@ const LEVELS = [
   'Explicit',
   'Throughout',
 ] as const
+
+// The dismissal flag is module state by design (one flag, both axes, live across mounts), so it
+// has to be put back between cases or the first dismissal silently suppresses every later guide.
+beforeEach(() => resetLevelGuideDismissedForTests())
 
 const setup = (value = 0) => {
   const onChange = vi.fn()
@@ -213,5 +218,163 @@ describe('LevelPicker — the accessible wiring', () => {
     )
     fireEvent.click(screen.getByRole('button', { name: /^Darkness 2 —/ }))
     expect(screen.getByRole('status')).toHaveAttribute('id', 'level-guide-darkness')
+  })
+})
+
+/**
+ * Sticky dismissal. These assert the CONSEQUENCE a reader experiences — after dismissing, a tap
+ * still sets the level and no guide appears — rather than that a flag was written. A test that
+ * watches the localStorage write would pass against a build that persists the flag and then ignores
+ * it, which is the whole failure this feature could have.
+ */
+describe('LevelPicker — dismissal sticks', () => {
+  const guide = () => screen.queryByRole('status')
+
+  it('after ANY dismissal path, a later tap sets the level and shows no guide', () => {
+    // Every path is asserted to produce the same end state — the flag must not fork by route.
+    const paths: [string, (level: (i: number) => HTMLElement) => void][] = [
+      ['close control', () => fireEvent.click(screen.getByRole('button', { name: /^Close the/ }))],
+      ['Escape', () => fireEvent.keyDown(document, { key: 'Escape' })],
+      ['outside click', () => fireEvent.pointerDown(document.body)],
+      ['re-click', (level) => fireEvent.click(level(3))],
+    ]
+    for (const [name, dismissVia] of paths) {
+      resetLevelGuideDismissedForTests()
+      const onChange = vi.fn()
+      const { unmount } = render(
+        <LevelPicker
+          label="Spice"
+          glyph="S"
+          levels={LEVELS}
+          value={0}
+          onChange={onChange}
+          name="intensity"
+        />,
+      )
+      const level = (i: number) => screen.getByRole('button', { name: new RegExp(`^Spice ${i} —`) })
+      fireEvent.click(level(3))
+      expect(guide(), `${name}: guide should be open before dismissing`).toBeInTheDocument()
+      dismissVia(level)
+      expect(guide(), `${name}: guide should be gone`).toBeNull()
+
+      // and it stays gone for the NEXT interaction — the point of the flag
+      fireEvent.click(level(5))
+      expect(onChange, `${name}: the level must still be settable`).toHaveBeenLastCalledWith(5)
+      expect(guide(), `${name}: dismissal did not stick`).toBeNull()
+      unmount()
+    }
+  })
+
+  it('survives a REMOUNT — a fresh dialog does not start popping again', () => {
+    const { unmount, level } = setup(0)
+    fireEvent.click(level(2))
+    fireEvent.keyDown(document, { key: 'Escape' })
+    unmount()
+
+    const onChange = vi.fn()
+    render(
+      <LevelPicker
+        label="Spice"
+        glyph="S"
+        levels={LEVELS}
+        value={0}
+        onChange={onChange}
+        name="intensity"
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: /^Spice 4 —/ }))
+    expect(onChange).toHaveBeenLastCalledWith(4)
+    expect(guide()).toBeNull()
+  })
+
+  it('hover and focus stop previewing once dismissed', () => {
+    const { level } = setup(0)
+    fireEvent.click(level(2))
+    fireEvent.keyDown(document, { key: 'Escape' })
+    fireEvent.focus(level(4))
+    expect(guide()).toBeNull()
+    enter(level(4))
+    expect(guide()).toBeNull()
+  })
+
+  it('ONE FLAG, BOTH AXES — dismissing Spice stops Darkness popping too', () => {
+    render(
+      <>
+        <LevelPicker
+          label="Spice"
+          glyph="S"
+          levels={LEVELS}
+          value={0}
+          onChange={() => {}}
+          name="intensity"
+        />
+        <LevelPicker
+          label="Darkness"
+          glyph="D"
+          levels={LEVELS}
+          value={0}
+          onChange={() => {}}
+          name="darkness"
+        />
+      </>,
+    )
+    fireEvent.click(screen.getByRole('button', { name: /^Spice 2 —/ }))
+    fireEvent.keyDown(document, { key: 'Escape' })
+    // the OTHER picker, never touched, is already quiet
+    fireEvent.click(screen.getByRole('button', { name: /^Darkness 3 —/ }))
+    expect(screen.queryByRole('status')).toBeNull()
+  })
+
+  it('the re-entry link opens the guide ANYWAY, at the current value', () => {
+    const { level } = setup(4)
+    fireEvent.click(level(2))
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(guide()).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'What do the levels mean?' }))
+    expect(guide()).toHaveTextContent(LEVELS[4])
+  })
+
+  it('the re-entry link opens at 0 when nothing is set', () => {
+    setup(0)
+    fireEvent.click(screen.getByRole('button', { name: 'What do the levels mean?' }))
+    expect(guide()).toHaveTextContent(LEVELS[0])
+  })
+
+  it('the re-entry link is present before any dismissal too — it is not a recovery-only control', () => {
+    setup(0)
+    expect(screen.getByRole('button', { name: 'What do the levels mean?' })).toBeInTheDocument()
+  })
+
+  it('STORAGE UNAVAILABLE degrades to re-showing, and never throws', () => {
+    // Private mode / denied storage throws on plain access. The guide must keep working; the
+    // dismissal simply does not persist past this session.
+    const spy = vi.spyOn(window, 'localStorage', 'get').mockImplementation(() => {
+      throw new Error('denied')
+    })
+    try {
+      const { level, unmount } = setup(0)
+      fireEvent.click(level(3))
+      expect(guide()).toBeInTheDocument()
+      expect(() => fireEvent.keyDown(document, { key: 'Escape' })).not.toThrow()
+      expect(guide()).toBeNull()
+      unmount()
+
+      // the in-memory flag still held for the session, so this remount is quiet — but nothing
+      // crashed, and the link below still works, which is the contract that matters
+      render(
+        <LevelPicker
+          label="Spice"
+          glyph="S"
+          levels={LEVELS}
+          value={0}
+          onChange={() => {}}
+          name="intensity"
+        />,
+      )
+      fireEvent.click(screen.getByRole('button', { name: 'What do the levels mean?' }))
+      expect(guide()).toBeInTheDocument()
+    } finally {
+      spy.mockRestore()
+    }
   })
 })
