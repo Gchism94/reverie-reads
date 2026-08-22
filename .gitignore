@@ -62,3 +62,8 @@ design/from-design-tool/**/*.dc.html
 
 # Discovery-audit output (screenshots + report), regenerated on each run — never committed.
 apps/web/audit-output/
+
+# Corpus-import diagnostics (--dump). These list the owner's library book by book — a second
+# person's reading data is in the same CSV the import reads, so these never get committed.
+corpus-dump/
+*-corpus-dump/

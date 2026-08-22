@@ -6,6 +6,16 @@
 //     pnpm exec vite-node scripts/import-corpus-csv.mjs -- chism-books-library.csv \
 //       --owner-email you@example.com
 //
+//   Diagnostics — write out WHAT the classifier decided, not just how many times (dry run is fine,
+//   nothing is written to the database):
+//     pnpm exec vite-node scripts/import-corpus-csv.mjs -- chism-books-library.csv \
+//       --owner-email you@example.com --dump=corpus-dump
+//
+//   That produces new.csv, matched.csv and unmatched-library.csv. The third is the one to read:
+//   library books NO csv row matched, which the report has never computed. It and new.csv share a
+//   sort key, so open them side by side — a missed match reads as near-identical titles in both.
+//   `corpus-dump/` is gitignored; these files contain the owner's library and must not be committed.
+//
 //   Review the report: near-misses, omnibus suspects, empty authors, unmapped genres, collapsed
 //   collisions. Resolve what needs resolving in the CSV itself, re-run the dry run, and only then:
 //
@@ -57,7 +67,8 @@
 //   EXISTING per-book pipeline as the reader uses the app; this promotes those results into the
 //   corpus whenever it is re-run. The enrich fn itself is untouched.
 
-import { readFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { createClient } from '@supabase/supabase-js'
 import {
   parseCsv,
@@ -66,6 +77,9 @@ import {
   dropAndCollapse,
   classify,
   buildReport,
+  unmatchedLibrary,
+  normTitleKey,
+  csvFile,
 } from './corpus-import-lib.ts'
 import { norm } from '../packages/core/src/normalize.ts'
 
@@ -237,6 +251,58 @@ async function upsertWorks(rows, label) {
   console.log(`works: upserted ${rows.length} (${label})`)
 }
 
+/**
+ * `--dump=<dir>` — write what the classifier DECIDED, not just how many times.
+ *
+ * The report has only ever printed counts and the near-miss list, so "231 library books matched
+ * nothing" is unreadable: it cannot distinguish a CSV that genuinely lacks those books from a
+ * matcher that missed them. These three files make that difference visible to a person.
+ *
+ * `new.csv` and `unmatched-library.csv` are BOTH sorted by the same normalised title, so the two
+ * can be read side by side — a missed match shows up as near-identical titles at the same place in
+ * each. That alignment is the diagnostic; the files individually are just lists.
+ *
+ * WRITES NOTHING TO THE DATABASE and is available in a dry run, which is the only time anyone
+ * should need it.
+ */
+function writeDump(dir, { fresh, existing, library }) {
+  mkdirSync(dir, { recursive: true })
+
+  const newRows = [...fresh]
+    .sort((a, b) => normTitleKey(a.title).localeCompare(normTitleKey(b.title)))
+    .map((r) => [r.title, r.first, r.last, r.series, r.workKey])
+  writeFileSync(
+    join(dir, 'new.csv'),
+    csvFile(['title', 'first', 'last', 'series', 'work_key'], newRows),
+  )
+
+  const matchedRows = existing.map((e) => [
+    e.record.title,
+    e.record.first,
+    e.record.last,
+    e.book.title,
+    [e.book.first, e.book.last].filter(Boolean).join(' '),
+    e.strength,
+  ])
+  writeFileSync(
+    join(dir, 'matched.csv'),
+    csvFile(
+      ['csv_title', 'csv_first', 'csv_last', 'library_title', 'library_author', 'strength'],
+      matchedRows,
+    ),
+  )
+
+  const unmatched = unmatchedLibrary(library, existing)
+  writeFileSync(
+    join(dir, 'unmatched-library.csv'),
+    csvFile(
+      ['title', 'author', 'id'],
+      unmatched.map((b) => [b.title, [b.first, b.last].filter(Boolean).join(' '), b.id]),
+    ),
+  )
+  return { new: newRows.length, matched: matchedRows.length, unmatchedLibrary: unmatched.length }
+}
+
 async function runImport() {
   if (!csvPath) fail('pass the CSV path as an argument')
   const ownerId = await resolveOwnerId()
@@ -258,6 +324,10 @@ async function runImport() {
   report.assumptions = {
     possession: `all NEW books insert as ownership='${opt('possession') ?? 'owned'}' — the CSV carries no possession data; override with --possession=`,
     libraryBooks: library.length,
+  }
+  const dumpDir = opt('dump')
+  if (dumpDir) {
+    report.dump = { dir: dumpDir, ...writeDump(dumpDir, { fresh, existing, library }) }
   }
   console.log(JSON.stringify(report, null, 2))
 
