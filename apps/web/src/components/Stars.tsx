@@ -39,6 +39,15 @@ export function Stars({
   /** Mouse-only live preview: the value the cursor is currently over, or null when it is not over
    *  the control (or the pointer is not a mouse). Never committed — see `display` below. */
   const [hoverValue, setHoverValue] = useState<number | null>(null)
+  /** The value under a finger MID-DRAG. Like `hoverValue` it is preview-only and never committed
+   *  until pointerup; unlike it, it is set for every pointer type, because a drag is not a fiction
+   *  the browser synthesises — the finger really is somewhere. */
+  const [dragValue, setDragValue] = useState<number | null>(null)
+  /** Whether this press has become a drag. A ref, not state: it is read inside pointer handlers in
+   *  the same tick it is written, where a state update has not landed yet. */
+  const draggingRef = useRef(false)
+  /** Where the press started, so pointerup can tell a TAP from a DRAG without a distance guess. */
+  const pressRef = useRef<{ x: number; value: number | null } | null>(null)
   // POINTER QUANTIZATION, deliberately local — the same clamp-and-snap policy as core's
   // snapHalfRating, generalized over `step` for what the interactive control may EMIT. It stays
   // here, unexported, on purpose: a step-parameterized `snapRating(raw, step)` in core would
@@ -72,7 +81,10 @@ export function Stars({
    *   · clear-on-reclick compares the clicked value to the current one; against a hover value that
    *     comparison is `v === v` and the affordance dies.
    */
-  const display = hoverValue ?? shown
+  // Drag first: while a finger is down its position is the most recent thing the reader did, and
+  // a stale mouse hover must not outrank it. `shown` is untouched, so aria still announces the
+  // COMMITTED value throughout the drag — see the block above for why that split exists.
+  const display = dragValue ?? hoverValue ?? shown
 
   const fill = (i: number): '0%' | '50%' | '100%' => {
     if (display >= i) return '100%'
@@ -196,10 +208,24 @@ export function Stars({
    *  the move and the press cannot drift apart — two copies of this arithmetic is exactly how a
    *  preview ends up one half-star off the thing it commits. */
   const hitValue = (e: PointerEvent): number | null => {
-    const target = (e.target as HTMLElement).closest('[data-star]')
-    if (!target || !rootRef.current) return null
-    const i = Number(target.getAttribute('data-star'))
-    const rect = target.getBoundingClientRect()
+    const root = rootRef.current
+    if (!root) return null
+    // COORDINATE-BASED, NOT `e.target.closest(...)`, and this is what makes the drag work at all.
+    //
+    // `setPointerCapture` RETARGETS every subsequent event to the capturing element — the root —
+    // so `e.target` stops being the star under the finger the moment capture is taken. The old
+    // `closest('[data-star]')` then returns null for the entire drag and every move is discarded:
+    // no error, no warning, the stars simply never move. Asking the ROOT which star contains this
+    // x-coordinate is immune, because it never consults the event's target.
+    const stars = Array.from(root.querySelectorAll('[data-star]')) as HTMLElement[]
+    if (stars.length === 0) return null
+    // First star whose right edge is at or past the pointer; past the last star, the last one.
+    // Clamping rather than returning null keeps a drag that runs off either end pinned to the end
+    // instead of dropping the preview mid-gesture.
+    const hit = stars.find((el) => e.clientX <= el.getBoundingClientRect().right) ?? stars.at(-1)
+    if (!hit) return null
+    const i = Number(hit.getAttribute('data-star'))
+    const rect = hit.getBoundingClientRect()
     const leftHalf = e.clientX - rect.left < rect.width / 2
     return step === 0.5 && leftHalf ? i - 0.5 : i
   }
@@ -217,6 +243,18 @@ export function Stars({
   const isMouse = (e: PointerEvent) => e.pointerType === 'mouse'
 
   const onPointerMove = (e: PointerEvent) => {
+    // A press in progress takes precedence over the hover model for EVERY pointer type: once a
+    // finger (or a held mouse button) is down, the reader is choosing, not browsing.
+    if (pressRef.current) {
+      const v = hitValue(e)
+      if (v === null) return
+      // A press only becomes a drag once it moves to a DIFFERENT value. A few pixels of thumb
+      // wobble inside one half-star zone is still a tap, which is what keeps clear-on-reclick
+      // usable on touch — the affordance would otherwise be almost unhittable.
+      if (v !== pressRef.current.value) draggingRef.current = true
+      setDragValue(v)
+      return
+    }
     if (!isMouse(e)) return
     setHoverValue(hitValue(e))
   }
@@ -226,14 +264,43 @@ export function Stars({
    *  preview is stale and the display owes the reader the committed value again. */
   const clearHover = () => setHoverValue(null)
 
+  /**
+   * PRESS PREVIEWS, RELEASE COMMITS. The press no longer writes.
+   *
+   * Committing on pointerdown made every drag a write of wherever the finger first landed, and
+   * then four more writes as it moved — the reader's rating would be whatever they happened to
+   * touch on the way to what they wanted. One gesture is one decision, so it is one commit.
+   */
   const onPointerDown = (e: PointerEvent) => {
-    // Prefer the preview the reader is actually looking at; fall back to hit-testing this event
-    // for the paths that never produced one (touch, and a mouse that entered and clicked without
-    // an intervening move). One source of truth per press, either way.
     const v = hoverValue ?? hitValue(e)
     if (v === null) return
-    // clicking the value you already have clears it — the whole-star control's affordance, kept
-    set(v === shown ? 0 : v)
+    pressRef.current = { x: e.clientX, value: v }
+    draggingRef.current = false
+    setDragValue(v)
+    // Capture so the gesture keeps reporting after the finger leaves the star it started on —
+    // without it, moves outside the root never arrive and the drag stops at the first boundary.
+    try {
+      rootRef.current?.setPointerCapture(e.pointerId)
+    } catch {
+      // Older/synthetic pointers may refuse capture. The drag then works only within the root,
+      // which is a degradation rather than a break — so this is deliberately not fatal.
+    }
+  }
+
+  const onPointerUp = (e: PointerEvent) => {
+    const press = pressRef.current
+    pressRef.current = null
+    const wasDragging = draggingRef.current
+    draggingRef.current = false
+    setDragValue(null)
+    if (!press) return
+    const v = hitValue(e) ?? press.value
+    if (v === null) return
+    // CLEAR-ON-RECLICK IS A TAP AFFORDANCE, NOT A DRAG ONE. Dragging to the value you already have
+    // is a reader landing where they meant to land; zeroing it there would punish precision. Only
+    // a tap — press and release without the pointer having moved between stars — can clear.
+    if (!wasDragging && v === shown) set(0)
+    else set(v)
   }
 
   return (
@@ -249,12 +316,24 @@ export function Stars({
       onKeyDown={onKeyDown}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
       onPointerLeave={clearHover}
-      onPointerCancel={clearHover}
+      onPointerCancel={(e) => {
+        // The browser took the pointer (scroll took over, context menu, tab blur). Abandon the
+        // gesture WITHOUT committing: a cancelled gesture is not a decision.
+        pressRef.current = null
+        draggingRef.current = false
+        setDragValue(null)
+        clearHover()
+        void e
+      }}
       // gap-0 on coarse pointers: a 2px gap between stars is a DEAD strip between adjacent
       // targets, and the ten half-zones are supposed to tile continuously. Fine pointers keep it.
       className={`flex cursor-pointer gap-0.5 outline-offset-2 focus-visible:outline focus-visible:outline-2 pointer-coarse:gap-0 ${glyphGrow}`}
-      style={{ outlineColor: 'var(--accent)' }}
+      // `pan-y`, NOT `none`: the browser keeps vertical scrolling, so a reader swiping the page
+      // from over the stars still scrolls, while horizontal movement belongs to the rating. `none`
+      // would trap the page — the control would win a gesture the reader meant for the document.
+      style={{ outlineColor: 'var(--accent)', touchAction: 'pan-y' }}
     >
       {[1, 2, 3, 4, 5].map(star)}
     </div>
