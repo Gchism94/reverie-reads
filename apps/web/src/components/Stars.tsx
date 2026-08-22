@@ -1,4 +1,4 @@
-import { useRef, type KeyboardEvent, type PointerEvent } from 'react'
+import { useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
 import { snapHalfRating } from '@reverie/core'
 
 /**
@@ -36,6 +36,9 @@ export function Stars({
   step?: 1 | 0.5
 }) {
   const rootRef = useRef<HTMLDivElement>(null)
+  /** Mouse-only live preview: the value the cursor is currently over, or null when it is not over
+   *  the control (or the pointer is not a mouse). Never committed — see `display` below. */
+  const [hoverValue, setHoverValue] = useState<number | null>(null)
   // POINTER QUANTIZATION, deliberately local — the same clamp-and-snap policy as core's
   // snapHalfRating, generalized over `step` for what the interactive control may EMIT. It stays
   // here, unexported, on purpose: a step-parameterized `snapRating(raw, step)` in core would
@@ -53,9 +56,27 @@ export function Stars({
   const shown = onChange ? snap(value) : snapHalfRating(value)
   const label = (v: number) => `${v % 1 === 0 ? v : v.toFixed(1)} star${v === 1 ? '' : 's'}`
 
+  /**
+   * WHAT THE EYE SEES, split from what the control IS — and the split is the whole design.
+   *
+   * `shown` stays the COMMITTED value and keeps every job it had: `aria-valuenow`/`aria-valuetext`,
+   * the keyboard's `set(shown + delta)`, and the clicking-your-current-value-clears check. `display`
+   * is the render-only value, and only `fill()` reads it.
+   *
+   * Collapsing the two — letting hover override `shown` outright — breaks three things quietly:
+   *   · aria would announce a value the reader never chose. A screen-reader user is not moving a
+   *     mouse, so a hover preview is a sighted-mouse-user affordance; the accessible value must not
+   *     appear to change until a real commit. This is deliberately NOT what is on screen mid-hover.
+   *   · arrow keys would step from wherever the mouse happens to be resting rather than from the
+   *     committed rating.
+   *   · clear-on-reclick compares the clicked value to the current one; against a hover value that
+   *     comparison is `v === v` and the affordance dies.
+   */
+  const display = hoverValue ?? shown
+
   const fill = (i: number): '0%' | '50%' | '100%' => {
-    if (shown >= i) return '100%'
-    if (shown >= i - 0.5) return '50%'
+    if (display >= i) return '100%'
+    if (display >= i - 0.5) return '50%'
     return '0%'
   }
 
@@ -171,13 +192,46 @@ export function Stars({
     }
   }
 
-  const onPointerDown = (e: PointerEvent) => {
+  /** Which value the pointer is over: closest [data-star], left half vs right half. Extracted so
+   *  the move and the press cannot drift apart — two copies of this arithmetic is exactly how a
+   *  preview ends up one half-star off the thing it commits. */
+  const hitValue = (e: PointerEvent): number | null => {
     const target = (e.target as HTMLElement).closest('[data-star]')
-    if (!target || !rootRef.current) return
+    if (!target || !rootRef.current) return null
     const i = Number(target.getAttribute('data-star'))
     const rect = target.getBoundingClientRect()
     const leftHalf = e.clientX - rect.left < rect.width / 2
-    const v = step === 0.5 && leftHalf ? i - 0.5 : i
+    return step === 0.5 && leftHalf ? i - 0.5 : i
+  }
+
+  /**
+   * MOUSE ONLY, and that is a correctness gate rather than a preference.
+   *
+   * A touch "hover" is a fiction the browser synthesises: `pointermove` fires with
+   * `pointerType: 'touch'` during a drag, and the event ordering around tap is not dependable —
+   * so a touch preview would light stars under a finger that is scrolling past. Coarse pointers
+   * also already have a deliberately different model here (the 32px glyph / 48px target work in
+   * the block above), and this must not disturb it. Pen is excluded for the same ordering reason:
+   * hover is only trustworthy from a device that genuinely has it.
+   */
+  const isMouse = (e: PointerEvent) => e.pointerType === 'mouse'
+
+  const onPointerMove = (e: PointerEvent) => {
+    if (!isMouse(e)) return
+    setHoverValue(hitValue(e))
+  }
+
+  /** Both, because they are different exits: leave is the mouse going away, cancel is the browser
+   *  taking the pointer (a drag starting, a context menu, the tab losing it). Either way the
+   *  preview is stale and the display owes the reader the committed value again. */
+  const clearHover = () => setHoverValue(null)
+
+  const onPointerDown = (e: PointerEvent) => {
+    // Prefer the preview the reader is actually looking at; fall back to hit-testing this event
+    // for the paths that never produced one (touch, and a mouse that entered and clicked without
+    // an intervening move). One source of truth per press, either way.
+    const v = hoverValue ?? hitValue(e)
+    if (v === null) return
     // clicking the value you already have clears it — the whole-star control's affordance, kept
     set(v === shown ? 0 : v)
   }
@@ -194,6 +248,9 @@ export function Stars({
       aria-valuetext={shown === 0 ? 'No rating' : label(shown)}
       onKeyDown={onKeyDown}
       onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerLeave={clearHover}
+      onPointerCancel={clearHover}
       // gap-0 on coarse pointers: a 2px gap between stars is a DEAD strip between adjacent
       // targets, and the ten half-zones are supposed to tile continuously. Fine pointers keep it.
       className={`flex cursor-pointer gap-0.5 outline-offset-2 focus-visible:outline focus-visible:outline-2 pointer-coarse:gap-0 ${glyphGrow}`}
