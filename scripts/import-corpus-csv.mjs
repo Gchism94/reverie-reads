@@ -4,12 +4,12 @@
 //
 //   Dry run (DEFAULT — report only, writes nothing):
 //     pnpm exec vite-node scripts/import-corpus-csv.mjs -- chism-books-library.csv \
-//       --owner-email you@example.com
+//       --owner-email=you@example.com
 //
 //   Diagnostics — write out WHAT the classifier decided, not just how many times (dry run is fine,
 //   nothing is written to the database):
 //     pnpm exec vite-node scripts/import-corpus-csv.mjs -- chism-books-library.csv \
-//       --owner-email you@example.com --dump=corpus-dump
+//       --owner-email=you@example.com --dump=corpus-dump
 //
 //   That produces new.csv, matched.csv and unmatched-library.csv. The third is the one to read:
 //   library books NO csv row matched, which the report has never computed. It and new.csv share a
@@ -20,7 +20,7 @@
 //   collisions. Resolve what needs resolving in the CSV itself, re-run the dry run, and only then:
 //
 //     pnpm exec vite-node scripts/import-corpus-csv.mjs -- chism-books-library.csv \
-//       --owner-email you@example.com --write
+//       --owner-email=you@example.com --write
 //
 //   Enrichment backfill (repeatable, any time after works rows exist):
 //     pnpm exec vite-node scripts/import-corpus-csv.mjs -- --backfill
