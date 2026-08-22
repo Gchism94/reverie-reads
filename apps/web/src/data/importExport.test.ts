@@ -55,8 +55,18 @@ interface Access {
   table: Table
   columns: string
   mode: 'select' | 'insert' | 'upsert' | 'update'
+  /** `.range()` was called — i.e. this read pages. */
+  ranged: boolean
+  /** `.order()` was called — i.e. the pages are disjoint. */
+  ordered: boolean
+  /** `.single()`/`.maybeSingle()`, or a head-only count: reads no row set, so paging is moot. */
+  bounded: boolean
 }
 let access: Access[] = []
+/** When true, the fake serves only the first PAGE_CAP rows and ignores the requested window. */
+let ignoreRange = false
+let unorderedReads = 0
+const PAGE_CAP = 1000
 
 /** Embedded-select resolution, keyed by the exact select string the code under test uses. */
 function project(table: Table, columns: string, rows: Row[]): Row[] {
@@ -105,14 +115,37 @@ class Query implements PromiseLike<{ data: Row[] | Row | null; error: unknown }>
   private notEquals: [string, unknown][] = []
   private negated: string[] = []
   private columns = '*'
+  private exactCount = false
+  private rangeCalled = false
+  private head = false
+  private orderBy: string[] = []
+  private window: { from: number; to: number } | null = null
   private pending: Row[] | null = null
   private mode: 'select' | 'insert' | 'upsert' | 'update' = 'select'
   private patch: Row | null = null
 
   constructor(private table: Table) {}
 
-  select(columns = '*') {
+  select(columns = '*', opts?: { count?: string; head?: boolean }) {
     this.columns = columns
+    this.exactCount = opts?.count === 'exact'
+    this.head = opts?.head === true
+    return this
+  }
+  /** Paging, as PostgREST does it: a total order, a window, and a full-set count alongside the
+   *  page. The stand-in has to model all three, because buildBackup's truncation guard compares
+   *  the rows it read against the count the server reported — a fake that ignored either would
+   *  make that guard untestable. */
+  order(col: string, _opts?: { ascending?: boolean }) {
+    this.orderBy.push(col)
+    return this
+  }
+  range(from: number, to: number) {
+    this.rangeCalled = true
+    // `ignoreRange` models the pre-fix code path exactly: PostgREST returns its first page and the
+    // caller never asks for a second. Not an artificial fault — it is what this file did until
+    // this commit, and what a future edit that drops `.range()` would restore.
+    if (!ignoreRange) this.window = { from, to }
     return this
   }
   eq(col: string, val: unknown) {
@@ -151,14 +184,21 @@ class Query implements PromiseLike<{ data: Row[] | Row | null; error: unknown }>
     return this.run(true)
   }
   then<A, B>(
-    onOk?: ((v: { data: Row[] | Row | null; error: unknown }) => A | PromiseLike<A>) | null,
+    onOk?: ((v: { data: Row[] | Row | null; error: unknown; count: number | null }) => A | PromiseLike<A>) | null,
     onErr?: ((r: unknown) => B | PromiseLike<B>) | null,
   ): PromiseLike<A | B> {
     return this.run(false).then(onOk, onErr)
   }
 
-  private async run(single: boolean): Promise<{ data: Row[] | Row | null; error: unknown }> {
-    access.push({ table: this.table, columns: this.columns, mode: this.mode })
+  private async run(single: boolean): Promise<{ data: Row[] | Row | null; error: unknown; count: number | null }> {
+    access.push({
+      table: this.table,
+      columns: this.columns,
+      mode: this.mode,
+      ranged: this.rangeCalled,
+      ordered: this.orderBy.length > 0,
+      bounded: single || this.head,
+    })
     const table = db[this.table]
     if (this.mode === 'insert' || this.mode === 'upsert') {
       const written: Row[] = (this.pending ?? []).map((r) => ({ id: r.id ?? uuid(), ...r }))
@@ -180,24 +220,55 @@ class Query implements PromiseLike<{ data: Row[] | Row | null; error: unknown }>
         else table.push(row)
       }
       const data = project(this.table, this.columns, written)
-      return { data: single ? (data[0] ?? null) : data, error: null }
+      return { data: single ? (data[0] ?? null) : data, error: null, count: null }
     }
     if (this.mode === 'update') {
       for (const row of table.filter((r) => this.filters.every(([c, v]) => r[c] === v))) Object.assign(row, this.patch)
-      return { data: null, error: null }
+      return { data: null, error: null, count: null }
     }
-    const hits = project(
-      this.table,
-      this.columns,
-      table.filter(
-        (r) =>
-          this.filters.every(([c, v]) => r[c] === v) &&
-          this.notEquals.every(([c, v]) => r[c] !== v) &&
-          this.negated.every((c) => r[c] != null),
-      ),
+    const matched = table.filter(
+      (r) =>
+        this.filters.every(([c, v]) => r[c] === v) &&
+        this.notEquals.every(([c, v]) => r[c] !== v) &&
+        this.negated.every((c) => r[c] != null),
     )
-    return { data: single ? (hits[0] ?? null) : hits, error: null }
+    if (this.orderBy.length) {
+      for (const col of [...this.orderBy].reverse())
+        matched.sort((a, b) => String(a[col] ?? '').localeCompare(String(b[col] ?? '')))
+    } else {
+      // AN UNORDERED SELECT HAS NO STABLE ORDER, and Postgres does not pretend otherwise. Rotated
+      // per request so no test can come to depend on insertion order from an unordered read.
+      //
+      // This is a FAITHFULNESS measure, not the ordering guard: it was written as the guard, and
+      // mutation testing showed it does not reliably catch a dropped `.order()` — the rotation is
+      // small enough that the windows still happen to tile. The read-must-be-ordered property is
+      // asserted at the call site instead (see the every-multi-row-read test).
+      unorderedReads++
+      const k = unorderedReads % (matched.length || 1)
+      matched.push(...matched.splice(0, k))
+    }
+    // The count is of the WHOLE match, not the window — that is what `{ count: 'exact' }` means,
+    // and it is the only reason buildBackup can tell a short page from a finished read.
+    const count = this.exactCount ? matched.length : null
+    const windowed = this.window
+      ? matched.slice(this.window.from, this.window.to + 1)
+      : matched.slice(0, PAGE_CAP)
+    const hits = project(this.table, this.columns, windowed)
+    return { data: single ? (hits[0] ?? null) : hits, error: null, count }
   }
+}
+
+/**
+ * A hand-made / pre-v6 backup, built by editing a real export.
+ *
+ * v6 files declare their own row counts and `restoreBackup` refuses one whose payload disagrees —
+ * so a fixture that edits the payload has to drop the manifest, because that is what the file it
+ * is standing in for actually looks like. Keeping a stale manifest would test the guard, not the
+ * tolerance these cases are about; the guard has its own tests, which assert the refusal directly.
+ */
+const handMade = (parsed: Record<string, unknown>): string => {
+  delete parsed.counts
+  return JSON.stringify(parsed)
 }
 
 vi.mock('../lib/supabase', () => ({
@@ -292,6 +363,8 @@ beforeEach(() => {
   seq = 0
   currentUser = OWNER
   access = []
+  ignoreRange = false
+  unorderedReads = 0
   seedOldAccount()
 })
 
@@ -444,7 +517,7 @@ describe('backup round trip — the data v4 dropped on the floor', () => {
     parsed.series_tombstones = [parsed.series_tombstones[0], parsed.series_tombstones[0]]
     wipeToFreshAccount()
 
-    const result = await restoreBackup(JSON.stringify(parsed))
+    const result = await restoreBackup(handMade(parsed))
 
     expect(result.tombstones).toBe(1)
     expect(db.series_entries).toHaveLength(1)
@@ -459,7 +532,8 @@ describe('backup round trip — the data v4 dropped on the floor', () => {
     v4.v = 4
     wipeToFreshAccount()
 
-    const result = await restoreBackup(JSON.stringify(v4))
+    // A genuine v4 file predates the counts manifest entirely — see handMade.
+    const result = await restoreBackup(handMade(v4))
 
     expect(result.books).toBe(2)
     expect(result).toMatchObject({ tropes: 0, moods: 0, follows: 0 })
@@ -490,7 +564,7 @@ describe('backup round trip — the data v4 dropped on the floor', () => {
     ]
     wipeToFreshAccount()
 
-    const result = await restoreBackup(JSON.stringify(parsed))
+    const result = await restoreBackup(handMade(parsed))
 
     // Everything else lands intact…
     expect(result.books).toBe(2)
@@ -529,7 +603,7 @@ describe('backup round trip — the data v4 dropped on the floor', () => {
     }))
     wipeToFreshAccount()
 
-    const result = await restoreBackup(JSON.stringify(parsed))
+    const result = await restoreBackup(handMade(parsed))
 
     // It restores rather than throwing — the archive predates the drop and must still be readable.
     expect(result.books).toBe(2)
@@ -547,14 +621,14 @@ describe('backup round trip — the data v4 dropped on the floor', () => {
     }
   })
 
-  it('exports v5 with the new sections keyed by book id', async () => {
+  it('exports v6 with the new sections keyed by book id', async () => {
     const parsed = JSON.parse(await buildBackup()) as {
       v: number
       tropes: Record<string, { name: string; emphasis: string }[]>
       moods: Record<string, { name: string }[]>
       author_follows: { author_name: string; state: string }[]
     }
-    expect(parsed.v).toBe(5)
+    expect(parsed.v).toBe(6)
     expect((parsed.tropes['book-a'] ?? []).map((t) => t.name).sort()).toEqual(['Dragons With Opinions', 'Enemies to Lovers'])
     expect(parsed.moods['book-a']).toEqual([{ name: 'Devastating' }])
     expect(parsed.author_follows).toHaveLength(2)
@@ -571,7 +645,7 @@ describe('backup round trip — hostile and partial files', () => {
     ]
     wipeToFreshAccount()
 
-    const result = await restoreBackup(JSON.stringify(parsed))
+    const result = await restoreBackup(handMade(parsed))
 
     expect(result.follows).toBe(1)
     expect(db.author_follows.map((f) => str(f, 'author_name'))).toEqual(['Rebecca Yarros'])
@@ -584,7 +658,7 @@ describe('backup round trip — hostile and partial files', () => {
     parsed.tropes['book-a'] = [{ name: 'Brand New Thing', facet: 'nonsense', emphasis: 'shouted' }]
     wipeToFreshAccount({ keepCanonical: false })
 
-    await restoreBackup(JSON.stringify(parsed))
+    await restoreBackup(handMade(parsed))
 
     const coined = db.tropes.find((t) => t.name === 'Brand New Thing')
     expect(str(coined, 'facet')).toBe('vibe')
@@ -598,7 +672,7 @@ describe('backup round trip — hostile and partial files', () => {
     parsed.tropes['book-that-never-existed'] = [{ name: 'Enemies to Lovers', facet: 'dynamics', emphasis: 'pinned' }]
     wipeToFreshAccount()
 
-    const result = await restoreBackup(JSON.stringify(parsed))
+    const result = await restoreBackup(handMade(parsed))
 
     expect(result.books).toBe(2)
     expect(result.tropes).toBe(3) // the three real ones; the orphan is skipped, not thrown on
@@ -672,7 +746,7 @@ describe('backup round trip — the reader’s refusals', () => {
     expect(parsed.series_tombstones[0]).toMatchObject({ series: 'Empyrean', position: 3, title: 'Onyx Storm' })
 
     wipeToFreshAccount()
-    const result = await restoreBackup(JSON.stringify(parsed))
+    const result = await restoreBackup(handMade(parsed))
 
     expect(result.tombstones).toBe(1)
     // The parent series was materialized so the tombstone has somewhere to live.
@@ -697,7 +771,7 @@ describe('backup round trip — the reader’s refusals', () => {
     expect(parsed.trope_dismissals).toEqual({ 'book-b': ['Enemies to Lovers'] })
 
     wipeToFreshAccount()
-    const result = await restoreBackup(JSON.stringify(parsed))
+    const result = await restoreBackup(handMade(parsed))
 
     expect(result.dismissals).toBe(1)
     expect(db.trope_suggestions).toHaveLength(1)
@@ -718,7 +792,7 @@ describe('backup round trip — the reader’s refusals', () => {
     parsed.tropes = {} // and it is not assigned anywhere either, so nothing coins it
     wipeToFreshAccount({ keepCanonical: false })
 
-    const result = await restoreBackup(JSON.stringify(parsed))
+    const result = await restoreBackup(handMade(parsed))
 
     expect(result.dismissals).toBe(0)
     expect(db.tropes).toHaveLength(0) // no vocabulary invented out of a rejection
@@ -729,7 +803,7 @@ describe('backup round trip — the reader’s refusals', () => {
     parsed.series_tombstones = [{ series: '   ' } as { series: string }]
     wipeToFreshAccount()
 
-    const result = await restoreBackup(JSON.stringify(parsed))
+    const result = await restoreBackup(handMade(parsed))
 
     expect(result.tombstones).toBe(0)
     expect(db.series_entries).toHaveLength(0)
@@ -744,7 +818,7 @@ describe('backup round trip — the reader’s refusals', () => {
     expect(parsed.series_merge_decisions.map((r) => r.ruling).sort()).toEqual(['distinct', 'related_but_separate'])
 
     wipeToFreshAccount()
-    await restoreBackup(JSON.stringify(parsed))
+    await restoreBackup(handMade(parsed))
 
     expect(db.series_merge_decisions).toHaveLength(2)
     expect(db.series_merge_decisions.every((r) => str(r, 'owner_id') === NEW_OWNER)).toBe(true)
@@ -882,7 +956,7 @@ describe('shelf manual order — the lists sort_order round trip (the WebKit pro
     const parsed = JSON.parse(json) as { lists: Record<string, unknown>[] }
     for (const l of parsed.lists) delete l.sort_order
     wipeToFreshAccount()
-    await restoreBackup(JSON.stringify(parsed))
+    await restoreBackup(handMade(parsed))
 
     expect(db.lists.length).toBeGreaterThan(0)
     for (const l of db.lists) expect(l.sort_order, `NULL sort_order restored onto ${String(l.name)}`).not.toBeNull()
@@ -939,5 +1013,181 @@ describe('list_items.position — add paths append, never NULL (nullable-orderin
     wipeToFreshAccount()
     await restoreBackup(json)
     expect([...db.list_items].map((i) => i.position).sort((a, b) => (a as number) - (b as number))).toEqual([1000, 3000])
+  })
+})
+
+describe('a backup cannot silently lose rows — paging, and the file’s own completeness check', () => {
+  /** Books beyond the page cap, so a single un-ranged read would come back short. */
+  const seedManyBooks = (n: number) => {
+    db.books = Array.from({ length: n }, (_, i) => ({
+      id: `bulk-${String(i).padStart(5, '0')}`,
+      owner_id: OWNER,
+      title: `Bulk ${i}`,
+      read_status: 'Unread',
+      genres: [],
+      tags: [],
+    }))
+  }
+
+  it('exports EVERY book when the library is larger than one page', async () => {
+    seedManyBooks(2500)
+    const parsed = JSON.parse(await buildBackup()) as { books: Row[]; counts: Record<string, number> }
+    expect(parsed.books).toHaveLength(2500)
+    expect(parsed.counts.books).toBe(2500)
+    // Not merely the count: the last book must be present. A loop that re-read page one three
+    // times would also produce 2500 rows against a less careful fake.
+    expect(parsed.books.at(-1)?.id).toBe('bulk-02499')
+    expect(new Set(parsed.books.map((b) => b.id)).size).toBe(2500)
+  })
+
+  it('REFUSES to write a backup when the read stops advancing', async () => {
+    // The regression this guard exists for: `.range()` stops being honoured and every request
+    // returns page one. Before this change that shape had TWO failure modes and no guard against
+    // either — the old un-ranged code silently serialized 1,000 rows, and a ranged loop whose
+    // window is ignored spins forever. It now aborts, named, having written nothing.
+    seedManyBooks(2500)
+    ignoreRange = true
+    await expect(buildBackup()).rejects.toThrow(/paging did not advance for books/)
+  })
+
+  it('says nothing was written, so the failure cannot be mistaken for a partial success', async () => {
+    seedManyBooks(1200)
+    ignoreRange = true
+    await expect(buildBackup()).rejects.toThrow(/Nothing was written/)
+  })
+
+  it('counts every section the export writes — a new section cannot ship uncounted', async () => {
+    // Keyed to the payload itself rather than to a hand-kept list: add a section to buildBackup
+    // without counting it and this fails, which is the only way the manifest stays honest.
+    const parsed = JSON.parse(await buildBackup()) as Record<string, unknown>
+    const bookkeeping = new Set(['v', 'app', 'exportedAt', 'counts', 'profile'])
+    const sections = Object.keys(parsed).filter((k) => !bookkeeping.has(k))
+    expect(Object.keys(parsed.counts as object).sort()).toEqual(sections.sort())
+  })
+
+  it('counts what the FILE carries, not what the query returned — they are not the same number', async () => {
+    // Found by mutation: swapping a section's count from the serialized value to its source query
+    // left every test green, because the fixture had no row that the export DROPS on the way out.
+    // A book_trope pointing at a trope that resolves to no name is exactly that row — the query
+    // returns 4, the file carries 3 — so the manifest has to describe the payload or it certifies
+    // a number nothing in the file can be checked against.
+    db.book_tropes.push({ book_id: 'book-a', trope_id: 't-ghost', owner_id: OWNER, emphasis: 'present' })
+
+    const parsed = JSON.parse(await buildBackup()) as Record<string, unknown>
+    const counts = parsed.counts as Record<string, number>
+
+    expect(counts.tropes, 'the dropped row must not be counted').toBe(3)
+
+    // The general invariant, so this holds for every section rather than the one that caught it.
+    const size = (v: unknown): number =>
+      Array.isArray(v) ? v.length : Object.values(v as Record<string, unknown[]>).reduce((n, a) => n + a.length, 0)
+    for (const [section, declared] of Object.entries(counts))
+      expect(size(parsed[section]), `counts.${section} must describe the payload`).toBe(declared)
+  })
+
+  it('refuses a file whose payload lost rows, and writes NOTHING before refusing', async () => {
+    const parsed = JSON.parse(await buildBackup()) as Record<string, unknown>
+    ;(parsed.books as Row[]).pop() // the truncation a partial download or a bad export leaves
+    wipeToFreshAccount()
+
+    await expect(restoreBackup(JSON.stringify(parsed))).rejects.toThrow(/incomplete/)
+    // The refusal has to come before the first insert — a half-restored account is worse than a
+    // refused one, and `lists` are written first, so they are where a late check would show.
+    expect(db.books).toHaveLength(0)
+    expect(db.lists).toHaveLength(0)
+  })
+
+  it('refuses a file that GAINED rows too — a mismatch is a mismatch in either direction', async () => {
+    const parsed = JSON.parse(await buildBackup()) as Record<string, unknown>
+    ;(parsed.books as Row[]).push({ id: 'smuggled', title: 'Smuggled' })
+    wipeToFreshAccount()
+    await expect(restoreBackup(JSON.stringify(parsed))).rejects.toThrow(/books: expected 2, found 3/)
+  })
+
+  it('catches a nested section losing rows, not just the top-level arrays', async () => {
+    const parsed = JSON.parse(await buildBackup()) as Record<string, unknown>
+    const tropes = parsed.tropes as Record<string, unknown[]>
+    const first = Object.keys(tropes)[0] as string
+    tropes[first] = []
+    wipeToFreshAccount()
+    await expect(restoreBackup(JSON.stringify(parsed))).rejects.toThrow(/tropes: expected 3/)
+  })
+
+  it('names EVERY damaged section at once rather than failing on the first', async () => {
+    const parsed = JSON.parse(await buildBackup()) as Record<string, unknown>
+    ;(parsed.books as Row[]).pop()
+    ;(parsed.reads as Row[]).pop()
+    await expect(restoreBackup(JSON.stringify(parsed))).rejects.toThrow(/books: .*; reads: /)
+  })
+
+  it('a pre-v6 file has no manifest and restores unchecked — deliberately', async () => {
+    // Refusing these would strand every backup taken before this change. The hole is real; it is
+    // bounded to files that predate the manifest, and it is why `handMade` exists above.
+    const parsed = JSON.parse(await buildBackup()) as Record<string, unknown>
+    ;(parsed.books as Row[]).pop()
+    wipeToFreshAccount()
+
+    const result = await restoreBackup(handMade(parsed))
+    expect(result.books).toBe(1)
+  })
+
+  it('finds a vocabulary name that sits PAST the page cap instead of coining a duplicate', async () => {
+    // The restore path reads whole tables too, and truncation there does not surface as a short
+    // list — it surfaces as a name that "isn't in the vocabulary", so the restore coins a personal
+    // duplicate of a canonical trope the account already has. A guard that silently stops
+    // guarding, which is why it is asserted on the OUTCOME (no duplicate row) rather than on the
+    // number of rows read.
+    const json = await buildBackup()
+    // Ids sort before 't-canon', so the trope the backup needs lands past the first page.
+    db.tropes = [
+      ...Array.from({ length: 1500 }, (_, i) => ({
+        id: `t-aaa-${String(i).padStart(5, '0')}`,
+        owner_id: null,
+        name: `Filler ${i}`,
+        facet: 'vibe',
+      })),
+      ...db.tropes,
+    ]
+    wipeToFreshAccount()
+
+    const result = await restoreBackup(json)
+
+    expect(result.tropes).toBe(3)
+    const named = db.tropes.filter((t) => t.name === 'Enemies to Lovers')
+    expect(named, 'the canonical trope must be reused, not duplicated').toHaveLength(1)
+    expect(named[0]?.owner_id).toBe(null)
+  })
+
+  it('EVERY multi-row read in export AND restore pages, and orders its pages', async () => {
+    // The exhaustive guard, keyed to the call sites rather than to a fixture per table.
+    //
+    // Two per-table tests were written first and BOTH were proxies: dropping `.order()` from the
+    // vocabulary read and `.range()` from the anti-duplicate read each left the suite green,
+    // because catching those needs a fixture with over a thousand rows IN THAT TABLE, and adding
+    // one per table is both unaffordable and permanently one table behind the code. This asserts
+    // the property directly — a read that returns a row set declares a window and a total order —
+    // so a new un-paged read added tomorrow fails without anyone remembering to seed for it.
+    //
+    // `bounded` reads are exempt with a reason, not by omission: `.maybeSingle()` returns one row
+    // and `head: true` returns none, so neither can be truncated.
+    access = []
+    const json = await buildBackup()
+    wipeToFreshAccount()
+    await restoreBackup(json)
+
+    const unpaged = access
+      .filter((a) => a.mode === 'select' && !a.bounded)
+      .filter((a) => !a.ranged || !a.ordered)
+      .map((a) => `${a.table}${a.ranged ? '' : ' (no .range)'}${a.ordered ? '' : ' (no .order)'}`)
+
+    expect([...new Set(unpaged)]).toEqual([])
+    // …and the guard is looking at something: if this is 0, the filter above proves nothing.
+    expect(access.filter((a) => a.mode === 'select' && !a.bounded).length).toBeGreaterThan(10)
+  })
+
+  it('an intact file still restores — the guard does not refuse healthy backups', async () => {
+    const json = await buildBackup()
+    wipeToFreshAccount()
+    await expect(restoreBackup(json)).resolves.toMatchObject({ books: 2 })
   })
 })
