@@ -97,6 +97,7 @@ describe('the migrations mirror the inference map exactly', () => {
   it('every retired pair really was in the SQL — the exclusion cannot go stale', () => {
     // If the pair ever leaves the migration, this exclusion is dead weight and should be deleted.
     const inSql = new Set(sqlPairs.map(([sub]) => sub))
-    for (const sub of RETIRED_BY_RULING) expect(inSql.has(sub), `'${sub}' no longer in SQL`).toBe(true)
+    for (const sub of RETIRED_BY_RULING)
+      expect(inSql.has(sub), `'${sub}' no longer in SQL`).toBe(true)
   })
 })
