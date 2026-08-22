@@ -33,31 +33,36 @@ let rulingRows: { name_key_a: string; name_key_b: string; ruling: string }[] = [
  *  REFETCH happened, which is the moment a loop-guard mutant would fire its second merge. */
 let rulingSelects = 0
 
-vi.mock('../lib/supabase', () => ({
-  supabase: {
-    from: (table: string) => ({
-      select: () => {
-        if (table !== 'series_merge_decisions') throw new Error(`unexpected table ${table}`)
-        rulingSelects++
-        return Promise.resolve({ data: rulingRows, error: null })
+vi.mock('../lib/supabase', async () => {
+  const { pagedSelect } = await import('../data/pagedSelect.fixture')
+  return {
+    supabase: {
+      from: (table: string) => ({
+        select: () => {
+          if (table !== 'series_merge_decisions') throw new Error(`unexpected table ${table}`)
+          // Still counts ONE per read while the table fits in a page, so the refetch observable
+          // these tests depend on is unchanged by paging.
+          rulingSelects++
+          return pagedSelect(() => rulingRows)
+        },
+      }),
+      rpc: (fn: string, args: Record<string, unknown>) => {
+        rpcCalls.push({ fn, args })
+        if (fn === 'record_series_ruling') {
+          rulingRows = [
+            ...rulingRows,
+            {
+              name_key_a: String(args.p_name_key_a),
+              name_key_b: String(args.p_name_key_b),
+              ruling: String(args.p_ruling),
+            },
+          ]
+        }
+        return Promise.resolve({ data: null, error: null })
       },
-    }),
-    rpc: (fn: string, args: Record<string, unknown>) => {
-      rpcCalls.push({ fn, args })
-      if (fn === 'record_series_ruling') {
-        rulingRows = [
-          ...rulingRows,
-          {
-            name_key_a: String(args.p_name_key_a),
-            name_key_b: String(args.p_name_key_b),
-            ruling: String(args.p_ruling),
-          },
-        ]
-      }
-      return Promise.resolve({ data: null, error: null })
     },
-  },
-}))
+  }
+})
 
 const { ConsolidationQueue } = await import('./ConsolidationQueue')
 

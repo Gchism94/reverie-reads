@@ -7,6 +7,7 @@ import {
   type TropeFacet,
 } from '@reverie/core'
 import { supabase } from '../lib/supabase'
+import { pageAll } from './paging'
 import { booksKey } from './books'
 
 /**
@@ -55,9 +56,11 @@ export function useTropes() {
   return useQuery({
     queryKey: tropesKey,
     queryFn: async (): Promise<UiTrope[]> => {
-      const { data, error } = await supabase.from('tropes').select('*').order('name')
-      if (error) throw error
-      return (data as TropeRowT[]).map(toUiTrope)
+      const data = await pageAll<TropeRowT>('tropes', (from, to) =>
+        // `name` is not unique across canonical and personal rows — `id` makes the pages disjoint.
+        supabase.from('tropes').select('*', { count: 'exact' }).order('name').order('id').range(from, to),
+      )
+      return data.map(toUiTrope)
     },
   })
 }
@@ -73,9 +76,15 @@ export function useAllBookTropes() {
   return useQuery({
     queryKey: bookTropesKey,
     queryFn: async (): Promise<BookTropeRow[]> => {
-      const { data, error } = await supabase.from('book_tropes').select('book_id, trope_id, emphasis')
-      if (error) throw error
-      return (data ?? []) as BookTropeRow[]
+      // A JOIN table: several rows per book, so it crosses the cap well before `books` does.
+      return await pageAll<BookTropeRow>('book_tropes', (from, to) =>
+        supabase
+          .from('book_tropes')
+          .select('book_id, trope_id, emphasis', { count: 'exact' })
+          .order('book_id')
+          .order('trope_id')
+          .range(from, to),
+      )
     },
   })
 }

@@ -1047,7 +1047,7 @@ describe('a backup cannot silently lose rows — paging, and the file’s own co
     // window is ignored spins forever. It now aborts, named, having written nothing.
     seedManyBooks(2500)
     ignoreRange = true
-    await expect(buildBackup()).rejects.toThrow(/paging did not advance for books/)
+    await expect(buildBackup()).rejects.toThrow(/Backup aborted: Paging did not advance for books/)
   })
 
   it('says nothing was written, so the failure cannot be mistaken for a partial success', async () => {

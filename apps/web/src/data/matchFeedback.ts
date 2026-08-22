@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
+import { pageAll } from './paging'
 
 // Match feedback, server-side (owner-approved dev path): "not tonight" survives the device.
 // The map shape the matcher consumes stays exactly what localStorage held — bookId → epoch ms —
@@ -57,9 +58,15 @@ export function useDismissed() {
   return useQuery({
     queryKey: matchFeedbackKey,
     queryFn: async (): Promise<Record<string, number>> => {
-      const { data, error } = await supabase.from('match_feedback').select('book_id, at').eq('kind', 'dismissed')
-      if (error) throw error
-      return toDismissedMap(data as FeedbackRow[])
+      const data = await pageAll<FeedbackRow>('match_feedback', (from, to) =>
+        supabase
+          .from('match_feedback')
+          .select('book_id, at', { count: 'exact' })
+          .eq('kind', 'dismissed')
+          .order('book_id')
+          .range(from, to),
+      )
+      return toDismissedMap(data)
     },
   })
 }

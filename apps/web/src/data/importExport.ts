@@ -13,6 +13,7 @@ import {
   type TropeFacet,
 } from '@reverie/core'
 import { supabase } from '../lib/supabase'
+import { pageAll } from './paging'
 import type { BookRow } from './types'
 import { toBook } from './mappers'
 import { applyIncoming, type ReviewCandidate } from './intake'
@@ -441,65 +442,6 @@ export function seriesRulingRows(
  *
  * Reading a v4 file still works — the new sections are optional and simply arrive empty.
  */
-/**
- * PAGE SIZE. PostgREST caps an un-ranged select — and a ranged one — at this many rows per
- * response, and it does so SILENTLY: no error, no warning, just a short answer.
- */
-const BACKUP_PAGE = 1000
-
-/**
- * Read a whole table, paging until a short page, and REFUSE to return a partial answer.
- *
- * `{ count: 'exact' }` makes the server report the full number of rows the query matches — not the
- * page's size — so the row count is measured by the database rather than inferred from the loop
- * that is itself the thing most likely to be wrong. If the two disagree, the export throws instead
- * of writing a backup with a hole in it.
- *
- * That check is the point. A count derived from the same fetch it is meant to be checking would
- * agree with a truncated read every time — a proxy that looks fine precisely when it isn't. The
- * server's count is the independent measurement.
- *
- * `order` is not cosmetic: `.range()` over an unordered select is not guaranteed to return disjoint
- * pages, so without a total order the pages can overlap and drop rows while still counting right.
- * Every caller passes its table's primary key.
- */
-async function pageAll<T>(
-  label: string,
-  page: (
-    from: number,
-    to: number,
-  ) => PromiseLike<{ data: T[] | null; error: unknown; count: number | null }>,
-): Promise<T[]> {
-  const rows: T[] = []
-  let total: number | null = null
-  for (let from = 0; ; from += BACKUP_PAGE) {
-    const { data, error, count } = await page(from, from + BACKUP_PAGE - 1)
-    if (error) throw error
-    const got = data ?? []
-    rows.push(...got)
-    if (count != null) total = count
-    if (got.length < BACKUP_PAGE) break
-    // TERMINATION, not an optimization. Without this the loop trusts the window to advance, and a
-    // read that keeps returning page one — the shape a dropped `.range()` produces — spins forever
-    // accumulating duplicates until the tab runs out of memory. Found by writing that regression as
-    // a test: it OOM'd instead of failing. Overshooting the server's count is impossible for a
-    // healthy read, so stopping there costs nothing and turns a hang into the error below.
-    if (total != null && rows.length >= total) break
-  }
-  // Two different faults, told apart because they need different fixes. Short means the read
-  // stopped early; over means it never advanced and re-read the same window. Both abort — the
-  // point is that neither can reach a file.
-  if (total != null && rows.length !== total)
-    throw new Error(
-      rows.length > total
-        ? `Backup aborted: paging did not advance for ${label} — re-read the same rows until it ` +
-          `overshot ${total}. Nothing was written.`
-        : `Backup aborted: read ${rows.length} of ${total} ${label} rows. Nothing was written — a ` +
-          `partial backup is worse than none, because it restores cleanly.`,
-    )
-  return rows
-}
-
 /** Sum of the arrays inside a `{ key: T[] }` section — what the FILE actually carries. */
 const nested = (o: Record<string, readonly unknown[]>): number =>
   Object.values(o).reduce((n, v) => n + v.length, 0)
@@ -519,6 +461,10 @@ export interface BackupCounts {
 
 export async function buildBackup(): Promise<string> {
   const ownerId = await currentUserId()
+  // `pageAll` is shared with reads that write nothing, so its message cannot promise this — but
+  // here it is both true and the first thing a reader needs to know, because the alternative they
+  // will assume is a half-written file.
+  return backupAborted(async () => {
   const [books, contribs, bookTropes, bookMoods, reads, lists, items, reviews, verdicts, follows, rulings, tombstones, dismissals, profile] =
     await Promise.all([
       pageAll<BookRow>('books', (from, to) =>
@@ -674,6 +620,17 @@ export async function buildBackup(): Promise<string> {
     trope_dismissals,
     profile: profile.data ?? null,
   })
+  })
+}
+
+/** Re-throw a failed backup read with the reassurance that belongs to THIS caller. */
+async function backupAborted<T>(fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn()
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    throw new Error(`Backup aborted: ${msg} Nothing was written — a partial backup is worse than none, because it restores cleanly.`)
+  }
 }
 
 /**

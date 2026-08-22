@@ -11,6 +11,7 @@ import {
   type SeriesStatus,
 } from '@reverie/core'
 import { supabase } from '../lib/supabase'
+import { pageAll } from './paging'
 import { booksKey } from './books'
 import { allListItemsKey, nextItemPositionFor } from './listItems'
 
@@ -133,12 +134,16 @@ export function useSeriesList() {
   return useQuery({
     queryKey: seriesListKey,
     queryFn: async (): Promise<Map<string, SeriesListRow>> => {
-      const [{ data: rows, error }, { data: ents, error: e2 }] = await Promise.all([
-        supabase.from('series').select('*'),
-        supabase.from('series_entries').select('*'),
+      // series_entries carries a row per slot — including the ghost slots a series implies — so it
+      // crosses the cap ahead of `series`, and a short read here silently shortens series.
+      const [rows, ents] = await Promise.all([
+        pageAll<SeriesRowT>('series', (from, to) =>
+          supabase.from('series').select('*', { count: 'exact' }).order('id').range(from, to),
+        ),
+        pageAll<SeriesEntryRowT>('series_entries', (from, to) =>
+          supabase.from('series_entries').select('*', { count: 'exact' }).order('id').range(from, to),
+        ),
       ])
-      if (error) throw error
-      if (e2) throw e2
       const byId = new Map<string, SeriesListRow>()
       for (const r of (rows ?? []) as SeriesRowT[])
         byId.set(r.id, { series: toUiSeries(r), total: 0, ghosts: 0, removed: 0, entries: [] })
