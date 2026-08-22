@@ -7,7 +7,7 @@
 -- still latent.
 --
 -- READ-ONLY. Run against the target database by hand; a Code session does not run this.
---   supabase db execute --linked --file docs/queries/backup-paging-row-counts.sql
+--   supabase db query --linked --file docs/queries/backup-paging-row-counts.sql
 --
 -- Reading the result: `over_cap = true` on any row means backups written before the fix were
 -- missing rows from that section, silently, and restored clean. `headroom` is how many rows that
