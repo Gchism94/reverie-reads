@@ -32,13 +32,23 @@ type Tab = 'calendar' | 'releases'
 const DOT_CAP = 12
 
 /**
- * Today's ring. Kept as-is from the previous design, and deliberately NOT re-toned in this pass —
- * see the PR for the measurement that says it needs a decision: `--gold` against `--bg0` is
- * 2.08:1 in bloom/light and 3.03:1 in folio/dark, so on the page (where these cells now sit, the
- * tiles having gone) it is below or at the WCAG 1.4.11 3:1 floor in two combinations. Changing it
- * is a colour-language call, not a layout one.
+ * Today's marker: an underline beneath the NUMERAL, not a ring around the cell.
+ *
+ * The ring had to go, and the desktop shots settled it. At 1280px it became a ~134x128px gold box
+ * around a numeral sitting in its top-left corner — the only rectangle on the screen, and the exact
+ * shape the tile removal had just deleted. It read as a residual tile rather than a marker, and
+ * width amplified it. An underline scales; a full-cell ring does not.
+ *
+ * ATTACHED TO THE NUMERAL, deliberately. A first pass underlined the CELL, which put the rule below
+ * the dot cluster — so the more a day held, the further the marker drifted from the number it
+ * marks, and on the cap day it would sit several rows below it. Bound to the numeral it stays put
+ * at any density.
+ *
+ * `--gold`'s VALUE is untouched: 2.08:1 against --bg0 in bloom/light and 3.03:1 in folio/dark,
+ * below and at the WCAG 1.4.11 floor. That is a palette decision, not a layout one, and stays the
+ * owner's call — though this shape change may reduce how much rides on it.
  */
-const TODAY_RING = { boxShadow: 'inset 0 0 0 1px var(--gold)' } as const
+const TODAY_UNDERLINE = { boxShadow: 'inset 0 -2px 0 0 var(--gold)', paddingBottom: '1px' } as const
 
 const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
@@ -134,18 +144,18 @@ function Calendar({ books, openBook }: { books: Book[]; openBook: (id: string) =
       <div className="grid grid-cols-7 gap-1.5">
         {DOW.map((d) => (
           /*
-           * LEFT-ALIGNED, matching the numerals — and this is the fix for the misalignment the
-           * review shots exposed, chosen over the more obvious one.
+           * CENTRED — header and numeral together, which is the fix the SHOTS chose over the one
+           * this file previously argued for.
            *
-           * With the tiles gone, nothing ties a numeral to its column any more, so the old
-           * centre-vs-left mismatch (~12px down every column) became visible. Centring the
-           * NUMERALS instead would have re-broken it on marked days: a numeral centred above a
-           * dot cluster whose width grows with the event count leaves that cluster's left edge
-           * ragged column to column, and at 12 dots + "+n" it wanders badly. Moving the header
-           * is the change that costs nothing — the dots already follow the cell's left spine, so
-           * this puts the header on the same spine and marked-day layout is untouched.
+           * With the tiles gone nothing tied a numeral to its column, exposing a ~12px
+           * centre-vs-left mismatch. The first fix moved the HEADER left to meet the numerals, on
+           * the reasoning that centring numerals would leave marked days' dot clusters ragged. The
+           * images did not support it: at real densities (1-3 dots) the clusters centre cleanly,
+           * while headers-left pulled every column's content toward its left edge and left visibly
+           * more empty space on the right of the grid than the left — it read as drifting rather
+           * than deliberate. Centred is better balanced and is what a calendar conventionally does.
            */
-          <div key={d} className="pb-1 pl-1 text-left text-[11px] text-muted">
+          <div key={d} className="pb-1 text-center text-[11px] text-muted">
             {d}
           </div>
         ))}
@@ -170,14 +180,10 @@ function Calendar({ books, openBook }: { books: Book[]; openBook: (id: string) =
               <div
                 key={d}
                 aria-hidden
-                className="aspect-square p-1 text-[11px]"
-                style={{
-                  color: 'var(--muted)',
-                  borderRadius: 'var(--radius-card)',
-                  ...(today ? TODAY_RING : {}),
-                }}
+                className="aspect-square p-1 text-center text-[11px]"
+                style={{ color: 'var(--muted)' }}
               >
-                {d}
+                <span style={today ? TODAY_UNDERLINE : undefined}>{d}</span>
               </div>
             )
           }
@@ -187,15 +193,14 @@ function Calendar({ books, openBook }: { books: Book[]; openBook: (id: string) =
               type="button"
               onClick={() => setDay(d)}
               aria-label={`${MONTHS[cal.m]} ${d} — ${total} ${total === 1 ? 'entry' : 'entries'}`}
-              className="aspect-square p-1 text-left"
-              style={{ borderRadius: 'var(--radius-card)', ...(today ? TODAY_RING : {}) }}
+              className="aspect-square p-1 text-center"
             >
               {/* --ink, not --muted: with the tiles gone this numeral is half the has-something
                   signal, and it must read as deliberate against the empty days beside it. */}
               <div className="text-[11px] font-semibold" style={{ color: 'var(--ink)' }}>
-                {d}
+                <span style={today ? TODAY_UNDERLINE : undefined}>{d}</span>
               </div>
-              <div className="mt-0.5 flex flex-wrap gap-0.5">
+              <div className="mt-0.5 flex flex-wrap justify-center gap-0.5">
                 {shownReads.map((_, k) => (
                   <span
                     key={`r${k}`}

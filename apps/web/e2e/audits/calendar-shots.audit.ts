@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { authFailure } from '../support/authError'
+import { keepOfflineCacheEmpty } from '../support/offlineCache'
 import { okUser } from '../support/ok'
 import { createClient } from '@supabase/supabase-js'
 import { createHash } from 'node:crypto'
@@ -135,6 +136,11 @@ async function setSkin(skin: string, mode: string) {
 }
 
 async function openPlanner(page: Page, pinned = PINNED) {
+  // WITHOUT THIS, A RE-OPEN SHOWS THE PREVIOUS SEED. The query cache is mirrored into IndexedDB
+  // and restored on load, so navigating again inside one test re-renders the data the LAST seed
+  // produced. That is exactly how E2 shipped as a copy of E1's sparse month while its filename
+  // claimed dense — the seed had changed in the database and the screen had not.
+  await keepOfflineCacheEmpty(page)
   // Clock first: the app reads `new Date()` during render, so pinning after navigation is too late.
   await page.clock.setFixedTime(new Date(pinned))
   await page.addInitScript(() => localStorage.setItem('reverie.onboarded', '1'))
@@ -147,14 +153,58 @@ async function openPlanner(page: Page, pinned = PINNED) {
   await page.waitForTimeout(900) // let the (reduced-motion) sky settle before the shutter
 }
 
-const shot = async (page: Page, name: string) =>
-  page.screenshot({ path: join(OUT, `${name}--${TAG}.png`), fullPage: true })
+/**
+ * ASSERT THE THING ITSELF, AT THE SHUTTER.
+ *
+ * Every shot declares which days it expects to be marked, and this reads them back off the page
+ * before capturing. That is the guard; the md5 check below is not.
+ *
+ * The md5 check cannot do this job and it is worth saying why, because it LOOKED like it could:
+ * the ambient star field is randomised per render, so two captures of the identical screen differ
+ * by a few bytes anyway. Every PNG is therefore byte-distinct no matter what was seeded, and the
+ * duplicate check passes unconditionally — it proves two files are not identical, never that they
+ * show different content, which is the only thing it was added for. Planting a duplicate proved it
+ * FIRES; it did not prove it fires on THIS defect. A dense shot whose grid holds three marks now
+ * fails here, at capture time, and no amount of sky noise can satisfy it.
+ */
+async function shot(page: Page, name: string, expectMarkedDays: number[]) {
+  // SCOPED TO THE BRANCH, and the scoping is a real limitation rather than a convenience: the
+  // before-shots are captured from `main`, whose day cells predate the aria-label this reads, so
+  // the assertion cannot see them and correctly refused to shoot them. Those three reference
+  // images are therefore UNGUARDED — they come from a tree nobody is changing, and their only job
+  // is to sit beside the after-shots. Every shot of the branch, which is what this PR changes, is
+  // checked.
+  if (TAG !== 'branch') {
+    await page.screenshot({ path: join(OUT, `${name}--${TAG}.png`), fullPage: true })
+    return
+  }
+  const labels = await page
+    .locator('button[aria-label*="entr"]')
+    .evaluateAll((els) =>
+      els.map((e) => Number((e.getAttribute('aria-label') ?? '').match(/\s(\d{1,2})\s/)?.[1] ?? 0)),
+    )
+  const got = [...new Set(labels.filter(Boolean))].sort((a, b) => a - b)
+  const want = [...expectMarkedDays].sort((a, b) => a - b)
+  expect(
+    got,
+    `${name}: the page shows marks on [${got}] but this shot was seeded for [${want}]. The screen ` +
+      `is not showing what the filename claims — do not publish this image.`,
+  ).toEqual(want)
+  await page.screenshot({ path: join(OUT, `${name}--${TAG}.png`), fullPage: true })
+}
 
 /** A tight crop of ONE cell — at 390px a 1.5px dot is unreviewable in a full-page PNG. */
 async function cellShot(page: Page, day: number, name: string, padY = 18) {
-  const cell = page.locator(`button[aria-label^="April ${day} "], div:text-is("${day}")`).first()
+  // MONTHS is MONTH_ABBR — "Apr", not "April". The first version of this selector spelled the month
+  // out and matched nothing, and its `div:text-is` fallback stopped matching once the numeral moved
+  // inside a <span>; both branches then burned the full 30s locator timeout per crop, which read as
+  // the whole shoot hanging. Match on the DAY portion of the label, which no month spelling affects.
+  const cell = page
+    .locator(`button[aria-label*=" ${day} —"], span:text-is("${day}"), div:text-is("${day}")`)
+    .first()
+  await cell.waitFor({ state: 'visible', timeout: 5_000 })
   const box = await cell.boundingBox()
-  if (!box) return
+  if (!box) throw new Error(`cellShot: no cell found for day ${day} (${name})`)
   const pad = 18
   // padY is separate because a cell that OVERFLOWS is taller than its box: the cap case renders
   // 12 dots plus "+n", which grows the cell past `box.height`. The first version of this crop used
@@ -185,7 +235,7 @@ for (const [skin, mode] of [
     await seed({})
     await page.setViewportSize(PHONE)
     await openPlanner(page)
-    await shot(page, `A1-empty-390-${skin}-${mode}-2026-04-15`)
+    await shot(page, `A1-empty-390-${skin}-${mode}-2026-04-15`, [])
   })
 
   test(`A-sparse-${skin}-${mode}`, async ({ page }) => {
@@ -199,7 +249,7 @@ for (const [skin, mode] of [
     })
     await page.setViewportSize(PHONE)
     await openPlanner(page)
-    await shot(page, `A2-sparse-390-${skin}-${mode}-2026-04-15`)
+    await shot(page, `A2-sparse-390-${skin}-${mode}-2026-04-15`, [3, 11, 22])
   })
 
   test(`A-dense-${skin}-${mode}`, async ({ page }) => {
@@ -208,7 +258,11 @@ for (const [skin, mode] of [
     await seed({ reads: days.map((d) => ({ day: d, count: (d % 3) + 1 })) })
     await page.setViewportSize(PHONE)
     await openPlanner(page)
-    await shot(page, `A3-dense-390-${skin}-${mode}-2026-04-15`)
+    await shot(
+      page,
+      `A3-dense-390-${skin}-${mode}-2026-04-15`,
+      [1, 2, 4, 5, 7, 9, 10, 13, 15, 17, 19, 21, 24, 27, 29],
+    )
   })
 }
 
@@ -232,7 +286,7 @@ for (const [skin, mode] of [
     })
     await page.setViewportSize(PHONE)
     await openPlanner(page)
-    await shot(page, `C-grid-390-${skin}-${mode}-2026-04-15`)
+    await shot(page, `C-grid-390-${skin}-${mode}-2026-04-15`, [8, 15])
     await cellShot(page, 15, `C-cell-today+dots-${skin}-${mode}-2026-04-15`)
   })
 }
@@ -249,7 +303,7 @@ test('D1-six-rows-saturday-start', async ({ page }) => {
   })
   await page.setViewportSize(PHONE)
   await openPlanner(page, PINNED_SIX_ROWS)
-  await shot(page, 'D1-six-rows-aug2026-saturday-start-390-tryst-dark-2026-08-19')
+  await shot(page, 'D1-six-rows-aug2026-saturday-start-390-tryst-dark-2026-08-19', [2, 29])
 })
 
 test('D2-sunday-start-no-leading-blanks', async ({ page }) => {
@@ -263,7 +317,7 @@ test('D2-sunday-start-no-leading-blanks', async ({ page }) => {
   })
   await page.setViewportSize(PHONE)
   await openPlanner(page, PINNED_SUNDAY_START)
-  await shot(page, 'D2-sunday-start-mar2026-390-tryst-dark-2026-03-18')
+  await shot(page, 'D2-sunday-start-mar2026-390-tryst-dark-2026-03-18', [1, 18])
 })
 
 test('D3-both-dot-kinds-on-one-day', async ({ page }) => {
@@ -271,7 +325,7 @@ test('D3-both-dot-kinds-on-one-day', async ({ page }) => {
   await seed({ reads: [{ day: 9, count: 2 }], plans: [{ day: 9, count: 2 }] })
   await page.setViewportSize(PHONE)
   await openPlanner(page)
-  await shot(page, 'D3-both-kinds-grid-390-tryst-dark-2026-04-15')
+  await shot(page, 'D3-both-kinds-grid-390-tryst-dark-2026-04-15', [9])
   await cellShot(page, 9, 'D3-both-kinds-cell-390-tryst-dark-2026-04-15')
 })
 
@@ -281,7 +335,7 @@ test('D4-cap-fires-40-events', async ({ page }) => {
   await seed({ reads: [{ day: 9, count: 40 }] })
   await page.setViewportSize(PHONE)
   await openPlanner(page)
-  await shot(page, 'D4-cap-grid-390-tryst-dark-2026-04-15')
+  await shot(page, 'D4-cap-grid-390-tryst-dark-2026-04-15', [9])
   await cellShot(page, 9, 'D4-cap-cell-12dots-plus28-390-tryst-dark-2026-04-15', 72)
 })
 
@@ -297,7 +351,7 @@ test('E-desktop-sparse-and-dense', async ({ page }) => {
   })
   await page.setViewportSize(DESKTOP)
   await openPlanner(page)
-  await shot(page, 'E1-sparse-1280-tryst-dark-2026-04-15')
+  await shot(page, 'E1-sparse-1280-tryst-dark-2026-04-15', [3, 11, 22])
 
   // A FULL re-open, not page.reload(): the first version reloaded and re-shot, and the two
   // desktop PNGs came out byte-identical (same MD5) — one datapoint wearing two filenames. The
@@ -312,7 +366,11 @@ test('E-desktop-sparse-and-dense', async ({ page }) => {
     ],
   })
   await openPlanner(page)
-  await shot(page, 'E2-dense-1280-tryst-dark-2026-04-15')
+  await shot(
+    page,
+    'E2-dense-1280-tryst-dark-2026-04-15',
+    [1, 2, 4, 5, 6, 7, 9, 10, 13, 15, 17, 19, 20, 21, 24, 27, 29],
+  )
 })
 
 /**
