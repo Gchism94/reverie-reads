@@ -99,7 +99,13 @@ export function ownedKeys(books: readonly Book[]): Set<string> {
   for (const b of books) {
     const isbn = isbnKey(b.isbn ?? '')
     if (isbn) keys.add(isbn)
-    keys.add(`${norm(b.title)}|${norm(b.contributors[0]?.name ?? '')}`)
+    // contributors[0] when the join is loaded, else the back-compat first/last columns — the same
+    // fallback order mappers.toBook uses for the primary author. Without it, a book whose row
+    // carries author_first/author_last but no book_authors rows (every scripted insert: the e2e
+    // fixtures, seed-dev, the corpus import) hashes as `title|` and the hide-what-I-have toggle
+    // silently misses it. Caught by the corpus browse e2e; the defect predates the corpus.
+    const name = b.contributors[0]?.name ?? [b.first, b.last].filter(Boolean).join(' ')
+    keys.add(`${norm(b.title)}|${norm(name)}`)
   }
   return keys
 }

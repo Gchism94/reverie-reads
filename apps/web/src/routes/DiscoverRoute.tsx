@@ -25,6 +25,7 @@ import {
   visibleHits,
   type DiscoverHit,
 } from '../lib/discover'
+import { useWorksBrowse, workToHit } from '../data/works'
 import { TasteTier } from '../components/TasteTier'
 import { useTasteCalibration } from '../data/taste'
 import { Surface } from '../components/Surface'
@@ -288,8 +289,17 @@ function DiscoverScreen() {
   // this is belt-and-braces — but landing a reader mid-shelf after they changed the shelf is the
   // wrong answer even when it renders.
   const [hideImported, setHideImported] = useState(false)
-  const [batchIndex, setBatchIndex] = useState(0)
   const gkey = genreKey(genre)
+  // Corpus filter row — its own text inputs, NOT the big search box above: that box replaces the
+  // whole rail with SearchSection (external + library) when active, and the catalog filter must
+  // narrow the shelf in place instead of navigating away from it.
+  const [corpusQ, setCorpusQ] = useState('')
+  const [corpusTag, setCorpusTag] = useState('')
+  const corpusQDebounced = useDebouncedValue(corpusQ, 400)
+  const corpus = useWorksBrowse({ genre: gkey, tag: corpusTag.trim(), q: corpusQDebounced })
+  const corpusHits = (corpus.data?.pages ?? []).flat().map(workToHit)
+  const corpusVisible = hideImported ? corpusHits.filter((h) => !isOwned(h, owned)) : corpusHits
+  const [batchIndex, setBatchIndex] = useState(0)
   useEffect(() => setBatchIndex(0), [gkey, hideImported])
 
   const visible = useMemo(
@@ -403,6 +413,103 @@ function DiscoverScreen() {
             ))}
           </div>
 
+          {/* ── the corpus browse — LEADS. A growing shared catalog: "show more" APPENDS the next
+              twenty (useInfiniteQuery), deliberately unlike the external shelf's batchOf() below,
+              which CYCLES a fixed cached pool and replaces twenty with the next twenty. Same page
+              size, opposite accumulation; both sit on this screen, so the difference is stated. */}
+          <section aria-label="Browse the catalog" className="mb-8">
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <input
+                type="search"
+                value={corpusQ}
+                onChange={(e) => setCorpusQ(e.target.value)}
+                placeholder="Filter the catalog — title or author…"
+                aria-label="Filter the catalog by title or author"
+                data-testid="corpus-filter"
+                className="skin-field h-9 min-w-[180px] flex-1 border border-line px-3 text-[13px] text-ink outline-none"
+                style={{ background: 'var(--field)' }}
+              />
+              <input
+                type="text"
+                value={corpusTag}
+                onChange={(e) => setCorpusTag(e.target.value)}
+                placeholder="Tag…"
+                aria-label="Filter the catalog by tag"
+                data-testid="corpus-tag-filter"
+                className="skin-field h-9 w-32 border border-line px-3 text-[13px] text-ink outline-none"
+                style={{ background: 'var(--field)' }}
+              />
+              <Chip
+                active={hideImported}
+                onClick={() => setHideImported((v) => !v)}
+                title="Hide books already in your library"
+              >
+                Hide what I have
+              </Chip>
+            </div>
+
+            {corpus.isPending && (
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4" aria-hidden>
+                {Array.from({ length: 8 }, (_, i) => (
+                  <div key={i} className="flex flex-col gap-2">
+                    <div
+                      className="aspect-[2/3] rounded-[8px] border border-line"
+                      style={{ background: 'var(--card)' }}
+                    />
+                    <div className="h-3 w-3/4 rounded" style={{ background: 'var(--card)' }} />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {corpus.isSuccess && corpusVisible.length === 0 && (
+              <p
+                className="px-2 py-8 text-center text-[13.5px] text-muted"
+                data-testid="corpus-empty"
+              >
+                {corpusHits.length > 0
+                  ? 'Everything here is already on your shelf.'
+                  : 'The catalog has nothing for this filter yet — it fills in as libraries are shared.'}
+              </p>
+            )}
+
+            {corpusVisible.length > 0 && (
+              <>
+                <div
+                  className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4"
+                  data-testid="corpus-grid"
+                >
+                  {corpusVisible.map((h) => (
+                    <Card
+                      key={`${h.title}|${h.authors[0] ?? ''}`}
+                      hit={h}
+                      owned={isOwned(h, owned)}
+                    />
+                  ))}
+                </div>
+                {corpus.hasNextPage && (
+                  <div className="mt-4 text-center">
+                    <button
+                      type="button"
+                      data-testid="corpus-show-more"
+                      onClick={() => void corpus.fetchNextPage()}
+                      disabled={corpus.isFetchingNextPage}
+                      className="skin-control border border-line px-5 py-2 text-[13px] font-semibold text-ink disabled:opacity-50"
+                      style={{ background: 'var(--chip)' }}
+                    >
+                      {corpus.isFetchingNextPage ? 'Fetching…' : 'Show more'}
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </section>
+
+          {/* ── the external shelf — secondary now that the corpus leads ── */}
+          <h2 className="skin-label mb-3 text-[12px] uppercase tracking-[0.18em] text-muted">
+            New and notable from the wider shelves
+          </h2>
+
           {q.isPending && (
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4" aria-hidden>
               {Array.from({ length: 8 }, (_, i) => (
@@ -446,14 +553,9 @@ function DiscoverScreen() {
 
           {q.isSuccess && q.data.length > 0 && (
             <>
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <Chip
-                  active={hideImported}
-                  onClick={() => setHideImported((v) => !v)}
-                  title="Hide books already in your library"
-                >
-                  Hide what I have
-                </Chip>
+              <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
+                {/* the Hide-what-I-have chip lives in the corpus filter row above; one preference,
+                    one control, both sections obey it */}
                 {/* Only offered when there IS another batch. A single-batch shelf — the curated
                     fn-down path, a thin genre, or an older deployed fn still returning 12 — shows
                     no control rather than a button that re-renders the same twenty. */}
