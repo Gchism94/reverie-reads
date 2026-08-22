@@ -83,6 +83,10 @@ export interface NormalizedGenres {
   tags: string[]
   /** intensity from a spice token, else null */
   intensity: number | null
+  /** the primary subgenre — first KNOWN subgenre seen in the genre column, else null */
+  subgenre: string | null
+  /** every known subgenre seen, first-seen order, deduped */
+  subgenres: string[]
   /** the raw genre field when it was non-empty but mapped to NO core genre (e.g. a leaked "standalone"
    *  or an unrecognized label) — the import-review "odd/unmapped genre" signal (E3). null otherwise. */
   unmappedGenre: string | null
@@ -105,6 +109,7 @@ function splitTokens(field: string): string[] {
 export function normalizeImportGenres(genreField: string, tagsField = ''): NormalizedGenres {
   const cores: CoreGenre[] = []
   const tags: string[] = []
+  const subgenres: string[] = []
   let intensity: number | null = null
 
   const addTag = (t: string) => {
@@ -132,6 +137,23 @@ export function normalizeImportGenres(genreField: string, tagsField = ''): Norma
       addTag(litTag)
       continue
     }
+    // A KNOWN SUBGENRE names its parent genre. Before this, "Dark Romance" in the genre column was
+    // demoted to a tag and the book landed with no genre at all — the taxonomy already knew the
+    // answer and nothing asked it.
+    //
+    // The tag is KEPT as well as the subgenre recorded, following the LITERARY_DESCRIPTIVE branch
+    // directly above, which maps to a genre *and* leaves a tag "so the nuance isn't lost". Tags are
+    // load-bearing elsewhere — search, filters, and bookTropeNames' fallback — so dropping them
+    // here would quietly change what an imported book matches. Making the tag go away is a
+    // separate decision with its own consequences, not a fold into this one.
+    const parentKey = SUBGENRE_PRIMARY_GENRE[key]
+    if (parentKey) {
+      const parent = CORE_GENRES.find((g) => g.toLowerCase() === parentKey)
+      if (parent && !cores.includes(parent)) cores.push(parent)
+      if (!subgenres.some((x) => x.toLowerCase() === key)) subgenres.push(raw.trim())
+      addTag(raw)
+      continue
+    }
     addTag(raw) // a genuine non-core token → a descriptive tag
   }
 
@@ -145,11 +167,15 @@ export function normalizeImportGenres(genreField: string, tagsField = ''): Norma
   const uniqueTags = [...new Set(tags)]
   // A non-empty genre column that yielded no core genre is worth a look in the import review (the
   // canonical case is the real file's leaked "standalone"; also catches genuinely unrecognized labels).
+  // Unchanged in meaning: `cores` is non-empty whenever a known subgenre named its parent, so a
+  // genre column of "Dark Romance" is no longer reported as unmapped — because it no longer is.
   const unmappedGenre = genreField.trim() !== '' && cores.length === 0 ? genreField.trim() : null
   return {
     genre: cores[0] ?? null,
     genres: cores,
     tags: uniqueTags,
+    subgenre: subgenres[0] ?? null,
+    subgenres,
     intensity,
     unmappedGenre,
   }
@@ -176,7 +202,8 @@ export function genreKey(raw: string): string {
 // migration mirrors these pairs exactly — a web-side parity test keeps all three in sync.
 export const SUBGENRE_PRIMARY_GENRE: Record<string, string> = {
   'dark romance': 'romance',
-  romance: 'romance',
+  // No `romance: 'romance'` — see GENRE_SUBGENRES. A genre is never its own subgenre, so there is
+  // nothing to infer FROM it; the value should not be in the subgenre field at all.
   sports: 'romance',
   'cowboy romance': 'romance',
   'epic fantasy': 'fantasy',
@@ -252,6 +279,30 @@ export const SUBGENRE_PRIMARY_GENRE: Record<string, string> = {
 }
 
 /** The genre a subgenre unambiguously implies, or null (shared/unknown — reader decides). */
+/**
+ * Is this value a CORE GENRE, and therefore never a subgenre?
+ *
+ * Owner ruling: subgenres are exactly one layer below genre. "Dark Romance" is a subgenre of
+ * Romance; "Romance" is never a subgenre of anything. A core-genre value in the subgenre field is
+ * not a subgenre — it is a second genre that was mis-filed.
+ *
+ * Matched against CORE_GENRES by NAME, case-insensitively — deliberately NOT through `genreKey`.
+ * `genreKey` resolves 'Thriller' to Mystery and 'Historical' to Literary, but those are collapses
+ * and descriptive mappings, not spellings of a genre: both are legitimate subgenres one layer below
+ * their parent. Measured before choosing: checking the taxonomy through `genreKey` flags four
+ * values, of which exactly one is a real violation and three are these. An over-reporting
+ * instrument's hit is a question, not a verdict, so the narrow test is the correct one.
+ */
+export function isCoreGenreValue(value: string): boolean {
+  const v = (value ?? '').trim().toLowerCase()
+  return v !== '' && CORE_GENRES.some((g) => g.toLowerCase() === v)
+}
+
+/** Drop any value that is really a genre from a list of subgenres. */
+export function withoutGenres(values: readonly string[]): string[] {
+  return values.filter((v) => !isCoreGenreValue(v))
+}
+
 export function inferGenreFromSubgenre(subgenre: string): string | null {
   return SUBGENRE_PRIMARY_GENRE[subgenre.trim().toLowerCase()] ?? null
 }

@@ -40,7 +40,11 @@ export const GENRE_SUBGENRES: Record<string, readonly string[]> = {
   romance: [
     'Romantasy',
     'Dark Romance',
-    'Romance',
+    // 'Romance' was here. A subgenre is exactly one layer BELOW its genre, so a core genre can
+    // never be its own subgenre — and offering it here is what put it into the data: the audit
+    // (docs/queries/subgenre-is-a-genre-audit.sql) finds books carrying subgenre='romance' with
+    // genre='romance' already set, i.e. a purely redundant value. Guarded by
+    // subgenreNeverGenre.test.ts, keyed off CORE_GENRES so it cannot come back under any spelling.
     'Contemporary',
     'Sports',
     'Cowboy Romance',
