@@ -36,6 +36,12 @@ create table public.works (
   title text not null,
   -- the Contributor[] shape the app's Book type carries: [{ name, role, position }]
   contributors jsonb not null default '[]',
+  -- DENORMALIZED search target: the contributor names joined as plain text, written by the same
+  -- scripts that write `contributors`. Exists because the browse's author search runs through
+  -- PostgREST, which can `ilike` a text column but cannot substring-search inside a jsonb array —
+  -- `contains` is exact-shape containment, not "name includes". One writer (the import/backfill),
+  -- two representations, and the jsonb stays the structured truth.
+  author_text text not null default '',
   series text,
   position numeric,
   series_count int,
