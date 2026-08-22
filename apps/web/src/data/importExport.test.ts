@@ -236,10 +236,13 @@ class Query implements PromiseLike<{ data: Row[] | Row | null; error: unknown }>
       for (const col of [...this.orderBy].reverse())
         matched.sort((a, b) => String(a[col] ?? '').localeCompare(String(b[col] ?? '')))
     } else {
-      // AN UNORDERED SELECT HAS NO STABLE ORDER, and Postgres does not pretend otherwise. Modelled
-      // deterministically by rotating one position per request: successive pages of an unordered
-      // query then overlap and skip, exactly as they may in production. Without this the fake
-      // silently hands back insertion order and a paged read with no `.order()` looks correct.
+      // AN UNORDERED SELECT HAS NO STABLE ORDER, and Postgres does not pretend otherwise. Rotated
+      // per request so no test can come to depend on insertion order from an unordered read.
+      //
+      // This is a FAITHFULNESS measure, not the ordering guard: it was written as the guard, and
+      // mutation testing showed it does not reliably catch a dropped `.order()` — the rotation is
+      // small enough that the windows still happen to tile. The read-must-be-ordered property is
+      // asserted at the call site instead (see the every-multi-row-read test).
       unorderedReads++
       const k = unorderedReads % (matched.length || 1)
       matched.push(...matched.splice(0, k))
