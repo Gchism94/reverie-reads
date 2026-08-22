@@ -13,6 +13,7 @@
 import { norm } from '../packages/core/src/normalize'
 import { matchBook, isStrong } from '../packages/core/src/match'
 import { normalizeImportGenres } from '../packages/core/src/genreNormalize'
+import { normalizeSeriesStatus } from '../packages/core/src/seriesStatus'
 import type { Book } from '../packages/core/src/types'
 
 /** RFC-4180-ish CSV: quoted fields, embedded commas, doubled quotes, CRLF-tolerant. The file is
@@ -129,16 +130,13 @@ export const authorOf = (rec: Pick<CsvRecord, 'first' | 'last'>): string =>
 export const workKeyOf = (rec: Pick<CsvRecord, 'title' | 'first' | 'last'>): string =>
   `${norm(rec.title)}|${norm(authorOf(rec))}`
 
-/** CSV status column → the app's series-status vocabulary, conservatively: recognizable tokens
- *  map, anything else rides through lowercased, blanks stay null. */
-export function seriesStatusOf(statusRaw: string, hasSeries: boolean): string {
-  const s = statusRaw.trim().toLowerCase()
-  if (!s) return hasSeries ? 'ongoing' : 'standalone'
-  if (s.startsWith('standalone')) return 'standalone'
-  if (s.startsWith('complete')) return 'completed'
-  if (s.startsWith('ongoing')) return 'ongoing'
-  return s
-}
+/** CSV status column → the app's series-status enum — core's OWN normalizer, because books.status
+ *  is a CLOSED check constraint and a passthrough of unrecognized tokens violates it. The first
+ *  draft here invented a mapper that let unknown values "ride through lowercased"; the local
+ *  --write exercise hit books_status_check on the very first chunk. Same rule as norm/matchBook/
+ *  normalizeImportGenres: the app already has this function, so this file must not have a second. */
+export const seriesStatusOf = (statusRaw: string, hasSeries: boolean): string =>
+  normalizeSeriesStatus(statusRaw, hasSeries)
 
 export interface ImportRecord extends CsvRecord {
   author: string
