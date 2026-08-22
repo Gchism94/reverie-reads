@@ -64,6 +64,7 @@ export function incomingToBook(inc: Incoming): Book {
     tropes: [],
     moods: [],
     intensity: inc.intensity ?? null,
+    darkness: null, // no import format carries a darkness signal — a reader assesses it
     cover: inc.cover ?? '',
     pages: inc.pages ?? null,
     isbn: inc.isbn ?? '',

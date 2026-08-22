@@ -48,6 +48,7 @@ const member = (id: string, seriesCount: number): Book => ({
   tropes: [],
   moods: [],
   intensity: 0,
+  darkness: null,
   cover: '',
   pages: null,
   isbn: '',

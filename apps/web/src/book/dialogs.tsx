@@ -205,6 +205,7 @@ export function EditDetails({
   // Spice was settable in Add and NOWHERE else — a book's intensity could not be changed after
   // creation except by CSV import. Same control as Add, so the gesture is the one readers know.
   const [intensity, setIntensity] = useState<number>(book.intensity ?? 0)
+  const [darkness, setDarkness] = useState<number>(book.darkness ?? 0)
   const toggleSub = (s: string) =>
     setSubs((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]))
   const subVocab = subgenresForGenre(f.genre)
@@ -289,6 +290,7 @@ export function EditDetails({
           title: f.title.trim(),
           isbn: f.isbn.trim(),
           intensity,
+          darkness,
           // series, position and seriesCount are DELIBERATELY ABSENT from this patch. All three are
           // series-level facts (books.series itself, plus its synced copies
           // series_entries.position and series.length), and sync_book_series below owns all three
@@ -567,23 +569,53 @@ export function EditDetails({
         </div>
       </div>
 
-      {/* Spice / intensity — settable here at last; Add was previously the only place it could be set. */}
-      <div className="mt-3 flex items-center gap-2">
-        <span className="text-[11px] uppercase tracking-[0.15em] text-muted">
-          {labels.intensity}
-        </span>
-        {[1, 2, 3, 4, 5].map((i) => (
-          <button
-            key={i}
-            type="button"
-            onClick={() => setIntensity(intensity === i ? 0 : i)}
-            aria-label={`${labels.intensity} ${i}`}
-            aria-pressed={i <= intensity}
-            style={{ opacity: i <= intensity ? 1 : 0.3 }}
-          >
-            {labels.intensityGlyph}
-          </button>
-        ))}
+      <div className="mt-3">
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] uppercase tracking-[0.15em] text-muted">
+            {labels.intensity}
+          </span>
+          {[1, 2, 3, 4, 5].map((i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => setIntensity(intensity === i ? 0 : i)}
+              aria-label={`${labels.intensity} ${i} — ${labels.intensityLevels[i]}`}
+              aria-pressed={i <= intensity}
+              title={labels.intensityLevels[i]}
+              style={{ opacity: i <= intensity ? 1 : 0.3 }}
+            >
+              {labels.intensityGlyph}
+            </button>
+          ))}
+        </div>
+        {/* The level guide. Both pickers were bare glyph rows with no statement anywhere of what a
+            level MEANT, so no reader could rate consistently against their own past self. Shows the
+            selected level's definition, and level 0's when nothing is set. */}
+        <p className="mt-1 text-[12px] text-muted">{labels.intensityLevels[intensity] ?? ''}</p>
+      </div>
+      <div className="mt-3">
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] uppercase tracking-[0.15em] text-muted">
+            {labels.darkness}
+          </span>
+          {[1, 2, 3, 4, 5].map((i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => setDarkness(darkness === i ? 0 : i)}
+              aria-label={`${labels.darkness} ${i} — ${labels.darknessLevels[i]}`}
+              aria-pressed={i <= darkness}
+              title={labels.darknessLevels[i]}
+              style={{ opacity: i <= darkness ? 1 : 0.3 }}
+            >
+              {labels.darknessGlyph}
+            </button>
+          ))}
+        </div>
+        {/* The level guide. Both pickers were bare glyph rows with no statement anywhere of what a
+            level MEANT, so no reader could rate consistently against their own past self. Shows the
+            selected level's definition, and level 0's when nothing is set. */}
+        <p className="mt-1 text-[12px] text-muted">{labels.darknessLevels[darkness] ?? ''}</p>
       </div>
       {/* Mood — the reader's own impression (how it landed). Reader-assigned, never derived; assigns
           persist immediately (book_moods), independent of this form's Save. */}

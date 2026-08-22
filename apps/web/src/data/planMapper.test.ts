@@ -23,6 +23,7 @@ function row(plan: Partial<Pick<BookRow, 'plan_y' | 'plan_m' | 'plan_d' | 'plan_
     genres: [],
     tags: [],
     intensity: null,
+    darkness: null,
     cover_url: null,
     cover_thumb_url: null,
     cover_source: null,

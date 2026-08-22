@@ -19,8 +19,15 @@ export interface QuizOption {
   /** genre lean — keys are lowercased primary-genre keys (CORE_GENRES lowercased, matching
    *  `book.genre`); values accumulate into the match profile's subWeights. */
   genres?: Record<string, number>
-  /** desired intensity 1..5 on the generic 0..5 axis (the romance skin reads it as spice) */
-  intensity?: number
+  /**
+   * Desired DARKNESS 1..5 on the 0..5 axis — how dark/heavy, not how hot.
+   *
+   * Repointed from `intensity` (owner ruling, 2026-08-21). The five options below were already
+   * darkness language and were never rewritten; only the field they score changed. This is an
+   * intentional behaviour change: an answer to "How intense do you want it?" now moves a book's
+   * darkness match, not its spice match.
+   */
+  darkness?: number
   tropes?: string[]
   pace?: 'slow' | 'mid' | 'fast'
 }
@@ -45,11 +52,11 @@ export const QUIZ: QuizQuestion[] = [
   {
     q: 'How intense do you want it?',
     opts: [
-      { t: 'Gentle & comforting', intensity: 1 },
-      { t: 'A little tension', intensity: 2 },
-      { t: 'Properly gripping', intensity: 3 },
-      { t: 'Dark & heavy', intensity: 4 },
-      { t: 'As extreme as it gets', intensity: 5 },
+      { t: 'Gentle & comforting', darkness: 1 },
+      { t: 'A little tension', darkness: 2 },
+      { t: 'Properly gripping', darkness: 3 },
+      { t: 'Dark & heavy', darkness: 4 },
+      { t: 'As extreme as it gets', darkness: 5 },
     ],
   },
   {
@@ -78,7 +85,7 @@ export const QUIZ: QuizQuestion[] = [
       { t: 'Swept away & wonderstruck', genres: { fantasy: 1, romance: 1 } },
       { t: 'Warm & content', genres: { cozy: 1, romance: 1 } },
       { t: 'Moved & reflective', genres: { literary: 2, nonfiction: 1 } },
-      { t: 'Wrecked, in the best way', tropes: ['Slow Burn'], intensity: 4 },
+      { t: 'Wrecked, in the best way', tropes: ['Slow Burn'], darkness: 4 },
     ],
   },
 ]
@@ -91,14 +98,14 @@ export const INTENSITY = ['', 'Gentle', 'Mild', 'Intense', 'Dark', 'Harrowing']
 export interface QuizAnswers {
   /** accumulated genre lean, keyed by lowercased primary-genre key */
   genres: Record<string, number>
-  intensities: number[]
+  darknesses: number[]
   tropes: string[]
   pace: 'slow' | 'mid' | 'fast' | null
 }
 
 export const emptyAnswers = (): QuizAnswers => ({
   genres: {},
-  intensities: [],
+  darknesses: [],
   tropes: [],
   pace: null,
 })
@@ -106,24 +113,24 @@ export const emptyAnswers = (): QuizAnswers => ({
 export function applyAnswer(a: QuizAnswers, o: QuizOption): QuizAnswers {
   const next: QuizAnswers = {
     genres: { ...a.genres },
-    intensities: [...a.intensities],
+    darknesses: [...a.darknesses],
     tropes: [...a.tropes],
     pace: o.pace ?? a.pace,
   }
   for (const [k, v] of Object.entries(o.genres ?? {})) next.genres[k] = (next.genres[k] ?? 0) + v
   if (o.tropes) next.tropes.push(...o.tropes)
-  if (o.intensity) next.intensities.push(o.intensity)
+  if (o.darkness) next.darknesses.push(o.darkness)
   return next
 }
 
 /** Translate the quiz answers into the core matcher's genre-neutral profile. The genre lean feeds
  *  subWeights (keyed off the lowercased primary-genre key, which the matcher resolves through
  *  `subWeights[book.subgenre] ?? subWeights[book.genre]`); cravings feed wantTags; the averaged
- *  intensity feeds targetIntensity (null = no preference). Pure — the same function the Match route
+ *  darkness feeds targetDarkness (null = no preference). Pure — the same function the Match route
  *  and its tests share. */
 export function buildQuizProfile(a: QuizAnswers): MatchProfile {
-  const target = a.intensities.length
-    ? Math.round(a.intensities.reduce((x, y) => x + y, 0) / a.intensities.length)
+  const target = a.darknesses.length
+    ? Math.round(a.darknesses.reduce((x, y) => x + y, 0) / a.darknesses.length)
     : null
-  return { subWeights: { ...a.genres }, wantTags: [...new Set(a.tropes)], targetIntensity: target }
+  return { subWeights: { ...a.genres }, wantTags: [...new Set(a.tropes)], targetDarkness: target }
 }

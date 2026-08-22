@@ -38,6 +38,7 @@ const book = (partial: Partial<Book> & { id: string; title: string }): Book => (
   tropes: [],
   moods: [],
   intensity: null,
+  darkness: null,
   cover: '',
   pages: null,
   isbn: '',
