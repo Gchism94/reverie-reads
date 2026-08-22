@@ -37,7 +37,9 @@ class Query implements PromiseLike<{ data: Record<string, unknown>[]; error: unk
     return this
   }
   then<A, B = never>(
-    onOk?: ((v: { data: Record<string, unknown>[]; error: unknown }) => A | PromiseLike<A>) | null,
+    onOk?:
+      | ((v: { data: Record<string, unknown>[]; error: unknown; count: number }) => A | PromiseLike<A>)
+      | null,
     onErr?: ((r: unknown) => B | PromiseLike<B>) | null,
   ): PromiseLike<A | B> {
     requests.push(this.range_)
@@ -45,7 +47,9 @@ class Query implements PromiseLike<{ data: Record<string, unknown>[]; error: unk
     // PostgREST serves the requested window, then caps what it will return in one response.
     const end = to === null ? rows.length : to + 1
     const page = rows.slice(from, end).slice(0, PAGE_CAP)
-    return Promise.resolve({ data: page, error: null }).then(onOk, onErr)
+    // `{ count: 'exact' }` reports the size of the WHOLE match, not the page — the number the
+    // export checks its own read against.
+    return Promise.resolve({ data: page, error: null, count: rows.length }).then(onOk, onErr)
   }
 }
 
@@ -103,12 +107,14 @@ describe('the library export pages past the row cap', () => {
     ])
   })
 
-  it('makes a SECOND request when the library is exactly one full page', async () => {
-    // The off-by-one that a "stop when the page is empty-ish" loop gets wrong: at exactly 1000 the
-    // first page is full, so it cannot be known to be the last one.
+  it('stops at exactly one full page, because the server’s count says the read is complete', async () => {
+    // The off-by-one a "stop when the page looks short" loop gets wrong: at exactly 1000 the first
+    // page is full and cannot be known to be the last one FROM ITS LENGTH. The exact count settles
+    // it without a speculative second request — and, more importantly, bounds the loop, so a read
+    // that stops advancing fails instead of spinning.
     seed(1000)
     expect(await fetchLibraryPaged()).toHaveLength(1000)
-    expect(requests).toHaveLength(2)
+    expect(requests).toHaveLength(1)
   })
 
   it('makes exactly one request for a library smaller than a page', async () => {
