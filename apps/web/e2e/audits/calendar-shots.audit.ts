@@ -1,0 +1,295 @@
+import { expect, test, type Page } from '@playwright/test'
+import { createClient } from '@supabase/supabase-js'
+import { mkdirSync } from 'node:fs'
+import { join } from 'node:path'
+
+/**
+ * CALENDAR SPARSE PASS — review screenshots. Not a guard: this asserts almost nothing and exists
+ * to produce PNGs a human decides from. `.audit.ts` keeps it out of `pnpm e2e`.
+ *
+ * ── WHY THE CLOCK IS PINNED ─────────────────────────────────────────────────────────────────────
+ * `Calendar` derives BOTH the month it opens on and the --gold "today" ring from `new Date()`. An
+ * unpinned run therefore moves the ring between shots and re-shoots a different month next week,
+ * so a before/after pair taken minutes apart would not be comparing the same thing.
+ *
+ * ── WHY REDUCED MOTION ──────────────────────────────────────────────────────────────────────────
+ * The ambient sky drifts and twinkles. Two shots of an identical tree would differ, and that noise
+ * reads as a rendering difference in a contact sheet where the reader is looking for exactly that.
+ *
+ * SYNTHETIC DATA ONLY — every row here is fabricated in a throwaway account. The owner's real
+ * library has almost no dated reads, which is why the dense cases have to be invented at all.
+ */
+
+const SUPABASE_URL = 'http://127.0.0.1:55321'
+const ANON =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0'
+const SERVICE =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU'
+
+const EMAIL = 'calendar-shots-audit@reverie.local'
+const PASSWORD = 'calendar-shots-audit-password'
+
+/** Mid-month, a Wednesday: the ring lands inside the grid rather than on an edge. */
+const PINNED = '2026-04-15T12:00:00'
+/** March 2026 starts on a SUNDAY — no leading blanks. */
+const PINNED_SUNDAY_START = '2026-03-18T12:00:00'
+/** August 2026 starts on a SATURDAY with 31 days — forces SIX rows. */
+const PINNED_SIX_ROWS = '2026-08-19T12:00:00'
+
+const OUT = join(process.cwd(), 'audit-output', 'calendar-shots')
+const TAG = process.env.RV_SHOT_TAG ?? 'branch'
+
+const admin = createClient(SUPABASE_URL, SERVICE, {
+  auth: { autoRefreshToken: false, persistSession: false },
+})
+
+let uid = ''
+let session: { access_token: string; refresh_token: string }
+
+test.use({ reducedMotion: 'reduce' })
+
+test.beforeAll(async () => {
+  mkdirSync(OUT, { recursive: true })
+  const { data } = await admin.auth.admin.listUsers({ perPage: 1000 })
+  uid = data?.users?.find((u) => u.email === EMAIL)?.id ?? ''
+  if (!uid) {
+    const created = await admin.auth.admin.createUser({
+      email: EMAIL,
+      password: PASSWORD,
+      email_confirm: true,
+    })
+    uid = created.data.user!.id
+  }
+  const sb = createClient(SUPABASE_URL, ANON)
+  const { data: s } = await sb.auth.signInWithPassword({ email: EMAIL, password: PASSWORD })
+  session = s.session!
+})
+
+/** Wipe and re-seed. `reads` carry dates (the pink dots); `plan_*` carry the violet ones. */
+async function seed(spec: {
+  reads?: { day: number; count: number }[]
+  plans?: { day: number; count: number }[]
+  month?: { y: number; m: number }
+}) {
+  const { y, m } = spec.month ?? { y: 2026, m: 4 }
+  const { data: old } = await admin.from('books').select('id').eq('owner_id', uid)
+  const ids = ((old as { id: string }[]) ?? []).map((b) => b.id)
+  if (ids.length) {
+    await admin.from('reads').delete().in('book_id', ids)
+    await admin.from('books').delete().in('id', ids)
+  }
+  const books: Record<string, unknown>[] = []
+  const total =
+    (spec.reads ?? []).reduce((a, r) => a + r.count, 0) +
+    (spec.plans ?? []).reduce((a, r) => a + r.count, 0)
+  for (let i = 0; i < Math.max(total, 1); i++)
+    books.push({
+      owner_id: uid,
+      title: `Fabricated Title ${i + 1}`,
+      author_first: 'Synthetic',
+      author_last: 'Fixture',
+      genre: 'fantasy',
+      status: 'standalone',
+      ownership: 'owned',
+      borrowed: false,
+      wishlist: false,
+      read_status: 'Read',
+      plan_y: null,
+      plan_m: null,
+      plan_d: null,
+    })
+  const { data: made } = await admin.from('books').insert(books).select('id')
+  const bookIds = ((made as { id: string }[]) ?? []).map((b) => b.id)
+
+  let cursor = 0
+  const reads: Record<string, unknown>[] = []
+  for (const r of spec.reads ?? [])
+    for (let k = 0; k < r.count; k++) {
+      reads.push({
+        book_id: bookIds[cursor++ % bookIds.length],
+        owner_id: uid,
+        read_on: `${y}-${String(m).padStart(2, '0')}-${String(r.day).padStart(2, '0')}`,
+        format: 'Paperback',
+        rating: 4,
+        notes: '',
+      })
+    }
+  if (reads.length) await admin.from('reads').insert(reads)
+
+  for (const p of spec.plans ?? [])
+    for (let k = 0; k < p.count; k++) {
+      const id = bookIds[cursor++ % bookIds.length]
+      await admin.from('books').update({ plan_y: y, plan_m: m, plan_d: p.day }).eq('id', id)
+    }
+}
+
+async function setSkin(skin: string, mode: string) {
+  await admin.from('profiles').upsert({ id: uid, display_name: 'Shots', skin, mode })
+}
+
+async function openPlanner(page: Page, pinned = PINNED) {
+  // Clock first: the app reads `new Date()` during render, so pinning after navigation is too late.
+  await page.clock.setFixedTime(new Date(pinned))
+  await page.addInitScript(() => localStorage.setItem('reverie.onboarded', '1'))
+  await page.goto(
+    `/#access_token=${session.access_token}&refresh_token=${session.refresh_token}&expires_in=3600&token_type=bearer&type=magiclink`,
+  )
+  await page.getByRole('button', { name: /enter your library/i }).click({ timeout: 20_000 })
+  await page.goto('/planner')
+  await expect(page.getByRole('heading', { name: 'Planner' })).toBeVisible({ timeout: 20_000 })
+  await page.waitForTimeout(900) // let the (reduced-motion) sky settle before the shutter
+}
+
+const shot = async (page: Page, name: string) =>
+  page.screenshot({ path: join(OUT, `${name}--${TAG}.png`), fullPage: true })
+
+/** A tight crop of ONE cell — at 390px a 1.5px dot is unreviewable in a full-page PNG. */
+async function cellShot(page: Page, day: number, name: string) {
+  const cell = page.locator(`button[aria-label^="April ${day} "], div:text-is("${day}")`).first()
+  const box = await cell.boundingBox()
+  if (!box) return
+  const pad = 18
+  await page.screenshot({
+    path: join(OUT, `${name}--${TAG}.png`),
+    clip: {
+      x: Math.max(0, box.x - pad),
+      y: Math.max(0, box.y - pad),
+      width: box.width + pad * 2,
+      height: box.height + pad * 2,
+    },
+  })
+}
+
+const PHONE = { width: 390, height: 844 }
+const DESKTOP = { width: 1280, height: 900 }
+
+// ── A. does it still read as a calendar ────────────────────────────────────────────────────────
+for (const [skin, mode] of [
+  ['tryst', 'dark'],
+  ['bloom', 'light'],
+] as const) {
+  test(`A-empty-${skin}-${mode}`, async ({ page }) => {
+    await setSkin(skin, mode)
+    await seed({})
+    await page.setViewportSize(PHONE)
+    await openPlanner(page)
+    await shot(page, `A1-empty-390-${skin}-${mode}-2026-04-15`)
+  })
+
+  test(`A-sparse-${skin}-${mode}`, async ({ page }) => {
+    await setSkin(skin, mode)
+    await seed({
+      reads: [
+        { day: 3, count: 1 },
+        { day: 11, count: 2 },
+      ],
+      plans: [{ day: 22, count: 1 }],
+    })
+    await page.setViewportSize(PHONE)
+    await openPlanner(page)
+    await shot(page, `A2-sparse-390-${skin}-${mode}-2026-04-15`)
+  })
+
+  test(`A-dense-${skin}-${mode}`, async ({ page }) => {
+    await setSkin(skin, mode)
+    const days = [1, 2, 4, 5, 7, 9, 10, 13, 15, 17, 19, 21, 24, 27, 29]
+    await seed({ reads: days.map((d) => ({ day: d, count: (d % 3) + 1 })) })
+    await page.setViewportSize(PHONE)
+    await openPlanner(page)
+    await shot(page, `A3-dense-390-${skin}-${mode}-2026-04-15`)
+  })
+}
+
+// ── C. the measured extremes ───────────────────────────────────────────────────────────────────
+for (const [skin, mode] of [
+  ['bloom', 'light'],
+  ['folio', 'dark'],
+  ['hearth', 'dark'],
+  ['tryst', 'dark'],
+  ['hearth', 'light'],
+] as const) {
+  test(`C-extremes-${skin}-${mode}`, async ({ page }) => {
+    await setSkin(skin, mode)
+    // Marks ON the pinned day, so one crop shows the today ring AND both dot colours together.
+    await seed({
+      reads: [
+        { day: 15, count: 2 },
+        { day: 8, count: 1 },
+      ],
+      plans: [{ day: 15, count: 1 }],
+    })
+    await page.setViewportSize(PHONE)
+    await openPlanner(page)
+    await shot(page, `C-grid-390-${skin}-${mode}-2026-04-15`)
+    await cellShot(page, 15, `C-cell-today+dots-${skin}-${mode}-2026-04-15`)
+  })
+}
+
+// ── D. layout edges ────────────────────────────────────────────────────────────────────────────
+test('D1-six-rows-saturday-start', async ({ page }) => {
+  await setSkin('tryst', 'dark')
+  await seed({
+    month: { y: 2026, m: 8 },
+    reads: [
+      { day: 2, count: 1 },
+      { day: 29, count: 2 },
+    ],
+  })
+  await page.setViewportSize(PHONE)
+  await openPlanner(page, PINNED_SIX_ROWS)
+  await shot(page, 'D1-six-rows-aug2026-saturday-start-390-tryst-dark-2026-08-19')
+})
+
+test('D2-sunday-start-no-leading-blanks', async ({ page }) => {
+  await setSkin('tryst', 'dark')
+  await seed({
+    month: { y: 2026, m: 3 },
+    reads: [
+      { day: 1, count: 1 },
+      { day: 18, count: 1 },
+    ],
+  })
+  await page.setViewportSize(PHONE)
+  await openPlanner(page, PINNED_SUNDAY_START)
+  await shot(page, 'D2-sunday-start-mar2026-390-tryst-dark-2026-03-18')
+})
+
+test('D3-both-dot-kinds-on-one-day', async ({ page }) => {
+  await setSkin('tryst', 'dark')
+  await seed({ reads: [{ day: 9, count: 2 }], plans: [{ day: 9, count: 2 }] })
+  await page.setViewportSize(PHONE)
+  await openPlanner(page)
+  await shot(page, 'D3-both-kinds-grid-390-tryst-dark-2026-04-15')
+  await cellShot(page, 9, 'D3-both-kinds-cell-390-tryst-dark-2026-04-15')
+})
+
+test('D4-cap-fires-40-events', async ({ page }) => {
+  await setSkin('tryst', 'dark')
+  // 40 on one day: the cap should render 12 dots then "+28" rather than bleeding out of the cell.
+  await seed({ reads: [{ day: 9, count: 40 }] })
+  await page.setViewportSize(PHONE)
+  await openPlanner(page)
+  await shot(page, 'D4-cap-grid-390-tryst-dark-2026-04-15')
+  await cellShot(page, 9, 'D4-cap-cell-12dots-plus28-390-tryst-dark-2026-04-15')
+})
+
+// ── E. desktop ─────────────────────────────────────────────────────────────────────────────────
+test('E-desktop-sparse-and-dense', async ({ page }) => {
+  await setSkin('tryst', 'dark')
+  await seed({
+    reads: [
+      { day: 3, count: 1 },
+      { day: 11, count: 2 },
+    ],
+    plans: [{ day: 22, count: 1 }],
+  })
+  await page.setViewportSize(DESKTOP)
+  await openPlanner(page)
+  await shot(page, 'E1-sparse-1280-tryst-dark-2026-04-15')
+
+  const days = [1, 2, 4, 5, 7, 9, 10, 13, 15, 17, 19, 21, 24, 27, 29]
+  await seed({ reads: days.map((d) => ({ day: d, count: (d % 3) + 1 })) })
+  await page.reload()
+  await page.waitForTimeout(900)
+  await shot(page, 'E2-dense-1280-tryst-dark-2026-04-15')
+})

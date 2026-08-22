@@ -11,6 +11,35 @@ import { MONTHS } from '../library/constants'
 import { Surface } from '../components/Surface'
 
 type Tab = 'calendar' | 'releases'
+/**
+ * ── THE DOT ENCODING SURVIVES, AND THE NUMBER IS WHY ────────────────────────────────────────────
+ * One dot per event, kept. `docs/tasks/task-calendar-cluster-scope.md` argued the encoding
+ * "provably fails at 390px"; it did not, and the scope doc was reasoning from a hypothetical heavy
+ * day rather than from data. MEASURED against the owner's production library:
+ *
+ *   · busiest single day ................ 8 events
+ *   · cell capacity at 390px ............ 15 dots  (46px cell -> 5 per row x 3 rows)
+ *
+ * 8 < 15, so a count or a density ramp would be solving a problem nobody has, and both throw away
+ * what a dot row gives free: you can see at a glance that Tuesday had three and Thursday one.
+ * The number is recorded HERE, next to the encoding it justifies, so the next person inherits the
+ * measurement instead of the assumption it replaced.
+ *
+ * THE CAP IS INSURANCE, NOT THE DESIGN. 12 leaves room for the `+n` inside the same 15-dot budget,
+ * so an unforeseen 40-event day degrades to "12 dots +28" instead of bleeding out of its cell.
+ * It should never fire on real data; it exists so that if it ever does, the failure is legible.
+ */
+const DOT_CAP = 12
+
+/**
+ * Today's ring. Kept as-is from the previous design, and deliberately NOT re-toned in this pass —
+ * see the PR for the measurement that says it needs a decision: `--gold` against `--bg0` is
+ * 2.08:1 in bloom/light and 3.03:1 in folio/dark, so on the page (where these cells now sit, the
+ * tiles having gone) it is below or at the WCAG 1.4.11 3:1 floor in two combinations. Changing it
+ * is a colour-language call, not a layout one.
+ */
+const TODAY_RING = { boxShadow: 'inset 0 0 0 1px var(--gold)' } as const
+
 const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 function Stat({ n, label }: { n: number; label: string }) {
@@ -114,36 +143,66 @@ function Calendar({ books, openBook }: { books: Book[]; openBook: (id: string) =
         {Array.from({ length: days }).map((_, i) => {
           const d = i + 1
           const m = map.get(d)
-          const has = m && (m.read.length || m.plan.length)
+          const has = !!m && m.read.length + m.plan.length > 0
           const today = isThisMonth && now.getDate() === d
+          const total = (m?.read.length ?? 0) + (m?.plan.length ?? 0)
+          const shownReads = m ? m.read.slice(0, DOT_CAP) : []
+          const shownPlans = m ? m.plan.slice(0, Math.max(0, DOT_CAP - shownReads.length)) : []
+          const overflow = total - shownReads.length - shownPlans.length
+
+          // AN EMPTY DAY IS NOT A BOX. It draws its numeral and nothing else — no border, no fill,
+          // no tile. See the header block: a month with four marks has ~27 of these, and drawing
+          // them as identical bordered tiles was the screen's main visual defect.
+          if (!has) {
+            return (
+              <div
+                key={d}
+                aria-hidden
+                className="aspect-square p-1 text-[11px]"
+                style={{
+                  color: 'var(--muted)',
+                  borderRadius: 'var(--radius-card)',
+                  ...(today ? TODAY_RING : {}),
+                }}
+              >
+                {d}
+              </div>
+            )
+          }
           return (
             <button
               key={d}
               type="button"
-              disabled={!has}
               onClick={() => setDay(d)}
-              className="aspect-square skin-tile border p-1 text-left disabled:cursor-default"
-              style={{
-                borderColor: today ? 'var(--gold)' : 'var(--line)',
-                background: has ? 'var(--card)' : 'transparent',
-              }}
+              aria-label={`${MONTHS[cal.m]} ${d} — ${total} ${total === 1 ? 'entry' : 'entries'}`}
+              className="aspect-square p-1 text-left"
+              style={{ borderRadius: 'var(--radius-card)', ...(today ? TODAY_RING : {}) }}
             >
-              <div className="text-[11px] text-muted">{d}</div>
+              {/* --ink, not --muted: with the tiles gone this numeral is half the has-something
+                  signal, and it must read as deliberate against the empty days beside it. */}
+              <div className="text-[11px] font-semibold" style={{ color: 'var(--ink)' }}>
+                {d}
+              </div>
               <div className="mt-0.5 flex flex-wrap gap-0.5">
-                {m?.read.map((_, k) => (
+                {shownReads.map((_, k) => (
                   <span
                     key={`r${k}`}
                     className="h-1.5 w-1.5 rounded-full"
                     style={{ background: 'var(--primary)' }}
                   />
                 ))}
-                {m?.plan.map((_, k) => (
+                {shownPlans.map((_, k) => (
                   <span
                     key={`p${k}`}
                     className="h-1.5 w-1.5 rounded-full"
                     style={{ background: 'var(--violet)' }}
                   />
                 ))}
+                {overflow > 0 && (
+                  <span className="text-[9px] leading-none" style={{ color: 'var(--muted)' }}>
+                    +{overflow}
+                  </span>
+                )}
               </div>
             </button>
           )
