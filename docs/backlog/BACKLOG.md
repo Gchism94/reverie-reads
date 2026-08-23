@@ -18,17 +18,17 @@ forgotten.
 >
 > ### Audit status, per section
 >
-> | section                            | last audited                   | result                                                                                                   |
-> | ---------------------------------- | ------------------------------ | -------------------------------------------------------------------------------------------------------- |
-> | Real bugs, outstanding             | **2026-08-20** (batch 1)       | 21 live entries: 9 CLOSED, 9 OPEN (stamped), 1 rewritten from source, 2 unverifiable from a Code session |
-> | Conventions — established patterns | **2026-08-20** (batch 3)       | 1 live: 1 ACCURATE (stamped)                                                                             |
-> | Deliberately partial, and why      | **2026-08-20** (batch 3)       | 2 live: 2 OPEN (stamped)                                                                                 |
-> | Grep audit, 2026-08                | **2026-08-20** (batch 3)       | 5 live: 2 CLOSED, 1 WRONG AS WRITTEN, 2 OPEN (one recounted)                                             |
-> | Pre-public tracked-data decisions  | **2026-08-20** (batch 3)       | 3 live: 2 OPEN (one WRONG AS WRITTEN on its reason), 1 stale-coordinates                                 |
-> | Known-flaky, with a prior          | **2026-08-20** (batch 2)       | 5 live: 1 CLOSED, 3 OPEN (stamped), 1 rewritten from source                                              |
-> | Test-infrastructure follow-ups     | **2026-08-20** (batch 2)       | 9 live: 1 CLOSED, 7 OPEN (stamped), 1 unverifiable from a Code session                                   |
-> | Product queue                      | 2026-08-18 (verification pass) | corrected then; not re-checked here                                                                      |
-> | everything below Product queue     | never                          | —                                                                                                        |
+> | section                            | last audited             | result                                                                                                                                                 |
+> | ---------------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+> | Real bugs, outstanding             | **2026-08-20** (batch 1) | 21 live entries: 9 CLOSED, 9 OPEN (stamped), 1 rewritten from source, 2 unverifiable from a Code session                                               |
+> | Conventions — established patterns | **2026-08-20** (batch 3) | 1 live: 1 ACCURATE (stamped)                                                                                                                           |
+> | Deliberately partial, and why      | **2026-08-20** (batch 3) | 2 live: 2 OPEN (stamped)                                                                                                                               |
+> | Grep audit, 2026-08                | **2026-08-20** (batch 3) | 5 live: 2 CLOSED, 1 WRONG AS WRITTEN, 2 OPEN (one recounted)                                                                                           |
+> | Pre-public tracked-data decisions  | **2026-08-20** (batch 3) | 3 live: 2 OPEN (one WRONG AS WRITTEN on its reason), 1 stale-coordinates                                                                               |
+> | Known-flaky, with a prior          | **2026-08-20** (batch 2) | 5 live: 1 CLOSED, 3 OPEN (stamped), 1 rewritten from source                                                                                            |
+> | Test-infrastructure follow-ups     | **2026-08-20** (batch 2) | 9 live: 1 CLOSED, 7 OPEN (stamped), 1 unverifiable from a Code session                                                                                 |
+> | Product queue                      | **2026-08-22** (batch 4) | 6 live units: 4 CLOSED, 2 OPEN (stamped) — the 2026-08-18 stamp had gone stale on four of the six                                                      |
+> | everything below Product queue     | **2026-08-22** (batch 4) | 9 live: 6 OPEN (stamped), 1 corrected from source (one table row), 1 PARTIAL (one sub-point wrong as written, 3 unverifiable), 1 carries no tree claim |
 >
 > **Only the audited section carries stamps.** An entry with no `verified` stamp has not been
 > checked against source since it was written — treat its age as unknown, whatever its tone.
@@ -1370,49 +1370,252 @@ aspect` at 9.1s. `e2e` failed exactly once in the surrounding 60 runs.
 
 ## Product queue
 
-> **Verified 2026-08-18** (backlog verification pass) against `origin/main` — content via
-> `git show`, shipped-ness via ancestry, not PR badges. These statuses age; re-verify before
-> planning against an entry older than the date on it.
+> **PERISHABLE — audited entry by entry 2026-08-22 (batch 4 of the file).** Every live entry below
+> was read, checked against `origin/main` (content via `git show` / `git grep`, shipped-ness via
+> `git merge-base --is-ancestor`, never a PR badge). Result: **6 live units — 4 CLOSED**, **2 OPEN**
+> (each stamped with what it was verified against).
+>
+> Sub-entries are counted individually because entry 2 asks for it itself ("status per feature, not
+> one verdict") — and the spice sub-entry turned out to have a different verdict per half, so a
+> single verdict would have hidden one of them.
+>
+> The previous stamp here read 2026-08-18. Four of the six units had moved since, and the two
+> largest moved within hours of that pass: `7243085` landed at 22:57 on 2026-08-18, after the pass
+> that called half stars OPEN. That is this file's own warning behaving exactly as written, not a
+> failure of the earlier pass.
 
 1. ~~**Shelf-model redesign**~~ — **SHIPPED.** `packages/core/src/shelves.ts` ("B2 of the shelf
    redesign") derives exactly this set — Owned with physical/ebook/audiobook breakdown, Borrowed,
    Read (with DNF split), Wishlist — as views over the five-flag possession model, with
    `visibleSections` applying the display rule. AGENTS.md's possession section documents the model
    as the shipped convention. Task history in docs/archive/task-shelf-model.md.
-2. **P2 features** — status per feature (2026-08-18), not one verdict:
-   - **Half stars** — OPEN in the UI. The schema is ready (`reads.rating numeric(2,1)`), but
-     `components/Stars.tsx` renders and writes whole stars only (integers 1–5, `Math.round`).
-   - **Separate audiobook-vs-print ratings** — PARTIAL. Per-read `{format, rating}` exists in the
-     model, so the data can already express it; no surface aggregates or displays ratings by
-     format, and the book-level `rating` is single.
+
+   <sub>**re-confirmed 2026-08-22** — `shelves.ts:157` still exports `visibleSections`. Still CLOSED.</sub>
+
+2. **P2 features** — status per feature, re-verified 2026-08-22. **Four of the five have closed**
+   since the 2026-08-18 pass; one is accurate as written.
+
+   - ~~**Half stars**~~ — **CLOSED — verified against source 2026-08-22.** `Stars.tsx` declares
+     `step?: 1 | 0.5` (line 36), imports `snapHalfRating` (line 2), and line 65 reads
+     `const shown = onChange ? snap(value) : snapHalfRating(value)`. It is not an unused prop: both
+     reader-facing call sites opt in — `BookDetailRoute.tsx:462-464` (the book's own rating) and
+     `dialogs.tsx:130` (Log a read). `reviews.rating` stays whole-star **by design**, not by
+     omission: `step` defaults to 1 so the reviews composer cannot emit a half, and
+     `useUpsertReview` additionally throws on a non-integer. Closed by `7243085`, an ancestor of
+     `origin/main`.
+
+   - ~~**Separate audiobook-vs-print ratings**~~ — **CLOSED — verified against source 2026-08-22.**
+     Closed by the same commit, `7243085`. The entry's "no surface … displays ratings by format" is
+     no longer true: `BookDetailRoute.tsx:213` computes `latestRatingByFormat(reads ?? [])`, and
+     lines 471-495 render a per-format line — stars **and** that read's own note — whenever two or
+     more formats carry rated reads. Entry works too: "Log a read" captures Format and a half-star
+     Rating side by side (`dialogs.tsx:115-133`). **The "aggregates" half will never close, and
+     that is the point:** the rule is the most recent rated read per format, explicitly not an
+     average — averaging your own rereads would invent a number nobody gave, which is the
+     aggregate-rating disease AGENTS.md forbids. The book-level `rating` staying single is likewise
+     the design, not a gap.
+
    - **Reading-progress granularity** — OPEN. `progress` is 0..100 (smallint percent); nothing
      finer (pages/chapters) exists.
-   - **Field-level merge picking** — PARTIAL, the backend half is done. `merge_books` takes
-     `p_fields jsonb` and `data/mergeBooks.ts` calls it with the engine-computed merged row; what
-     is absent is any UI for the reader to pick fields per-conflict (DuplicateReview lists what the
-     merge will take, it does not offer choices). Same shape as series consolidation was: RPC
-     shipped, picker unbuilt.
-   - **Spice standardization with toggle-off** — OPEN. Spice/intensity is settable (Add + book
-     dialogs) and filterable (1–5 in FilterPanel); no standardization pass and no hide-spice
-     toggle exist.
+
+     <sub>**verified 2026-08-22** — still OPEN, and accurate as written.
+     `supabase/migrations/20260624010000_core_schema.sql:66` is
+     `progress smallint check (progress between 0 and 100)`. No later migration alters that column —
+     the only other hit across `supabase/migrations` is `20260805010000_drop_plan_date.sql:168`,
+     which reads it through `p_fields` rather than changing its DDL. A grep for `progress_pages`,
+     `progress_chapters`, `progress_unit` and `progress_mode` across `supabase/migrations`,
+     `packages/core/src` and `apps/web/src` returns **zero** hits.</sub>
+
+   - ~~**Field-level merge picking**~~ — **CLOSED — verified against source 2026-08-22.** The entry
+     says "what is absent is any UI for the reader to pick fields per-conflict"; two such UIs now
+     exist, one on each merge surface. **Import / duplicate review:** `DuplicateReview.tsx:183`
+     builds the options via `mergeFieldOptions` and holds a `picks` state with a per-field
+     `setPick(field, take)`; lines 236-273 render the controls themselves — a checkbox per
+     contested field reading "keep yours … or take …", inside a list marked
+     `data-testid="merge-field-picker"`. The patch path is `data/intake.ts:129`, which spreads
+     `mergeImport(existing, inc)` and overrides `patch` with `applyFieldPicks(existing, inc, picks)`.
+     Closed by `3ce2258`. **Library merge of two saved books:** `book/dialogs.tsx:768-769` calls
+     `bookMergeOptions` then `applyBookMergePicks`, and `data/mergeBooks.ts:30` sends the result.
+     Closed by `47e96b0`. Both are ancestors of `origin/main`.
+     **One capability was deliberately not built** and should not be re-derived as a gap: declining
+     a _union_ is not offered, because a union is additive and destroys nothing, so the control
+     would be paid for on every card of every import to undo something that was never a loss.
+     Note also that the import picker does **not** go through `p_fields` or `merge_books` at all —
+     `resolveCandidate` calls `foldIn`, which does a plain `books.update`, so the picker shapes the
+     PATCH. The entry's framing of the RPC as "the backend half" of this UI was a misread of which
+     path runs.
+
+   - ~~**Spice standardization with toggle-off**~~ — **CLOSED on both halves — verified against
+     source 2026-08-22.** The entry bundles two claims and both are now false; they closed
+     separately, so they are recorded separately.
+     **Toggle-off:** `supabase/migrations/20260825010000_hide_intensity.sql` adds
+     `profiles.hide_intensity` (boolean not null default false), and `hideIntensity` is read in
+     eleven files including `SettingsRoute.tsx` (the toggle itself), `CoverCard.tsx`,
+     `BookDetailRail.tsx`, `FilterPanel.tsx`, `StatsRoute.tsx` and `data/profile.ts`. Hiding is a
+     VIEW flag — `books.intensity` is never modified, so unhiding restores every level the reader
+     set, the same suppress-never-clear rule the format flags follow. Closed by `4551920`.
+     **Standardization:** `packages/core/src/labels.ts` now carries `SPICE_LEVEL_GUIDE`, a
+     definition for each level 0-5 ("Closed door — it happens, you don't see it"), surfaced through
+     `LevelPicker` and the read-only `LevelGuideCard`. Its header names the exact defect this P2
+     item was about — five identical glyphs with "nothing anywhere in the product saying what 3
+     meant", so "two readers, or one reader six months apart, had no way to rate consistently". The
+     scale is declared per skin in `FieldLabels`, so a skin can reword it without forking it. Closed
+     by `d9003f6`.
+     **A canonical `spice_levels` table was deliberately NOT built**, and the reason should survive
+     so it is not re-proposed: tropes and moods have such tables because they hold named entities a
+     reader can coin — unique on `lower(name)`, a `canonical_id` to alias with, an `aliases`
+     array. `intensity` is a `smallint check (between 0 and 5)`: no name to be unique on, no coinage
+     the CHECK would permit, nothing for `canonical_id` to point at, no spellings to alias. That
+     table would ship with a personal layer that can never be populated — dead schema on day one.
+
+   <details><summary>the five sub-entries as they read before this pass</summary>
+
+   **Half stars** — OPEN in the UI. The schema is ready (`reads.rating numeric(2,1)`), but `components/Stars.tsx` renders and writes whole stars only (integers 1–5, `Math.round`).
+
+   **Separate audiobook-vs-print ratings** — PARTIAL. Per-read `{format, rating}` exists in the model, so the data can already express it; no surface aggregates or displays ratings by format, and the book-level `rating` is single.
+
+   **Reading-progress granularity** — OPEN. `progress` is 0..100 (smallint percent); nothing finer (pages/chapters) exists.
+
+   **Field-level merge picking** — PARTIAL, the backend half is done. `merge_books` takes `p_fields jsonb` and `data/mergeBooks.ts` calls it with the engine-computed merged row; what is absent is any UI for the reader to pick fields per-conflict (DuplicateReview lists what the merge will take, it does not offer choices). Same shape as series consolidation was: RPC shipped, picker unbuilt.
+
+   **Spice standardization with toggle-off** — OPEN. Spice/intensity is settable (Add + book dialogs) and filterable (1–5 in FilterPanel); no standardization pass and no hide-spice toggle exist.
+
+   </details>
+
 3. **Metadata sourcing** — PARTIAL. ISBNdb is no longer "evaluate": it is integrated as an enrich
    source (`packages/core/src/enrich.ts` PRECEDENCE lists it per-field). Wikidata series seeding
    (P179 + P1545) remains OPEN — Wikidata appears only in manual audit queries under
    docs/queries/, not in any code path.
 
+   <sub>**verified 2026-08-22** — still accurate on both halves. ISBNdb: `enrich.ts:13` includes
+   `'isbndb'` in the `EnrichSource` union, and it appears in nine per-field PRECEDENCE lists at
+   `enrich.ts:89-101`, ranked first for `pageCount`, `publisher`, `pubY`, `pubM`, `pubD`, `binding`,
+   `language`, `isbn13` and `isbn10`. It is live in both `supabase/functions/enrich/index.ts` and
+   `apps/web/src/data/enrichLibrary.ts`, so it is an integrated source rather than a dead constant.
+   Wikidata: a case-insensitive file grep across `apps`, `packages`, `supabase` and `scripts`
+   returns **zero** files; every hit in the repo is under `docs/`, exactly as the entry says.</sub>
+
 ## Deferred by decision, not forgotten
 
+> **PERISHABLE — audited entry by entry 2026-08-22 (batch 4).** All five checked against
+> `origin/main`. Result: **5 live, 5 OPEN** — every one still accurately deferred. Two are not
+> merely absent but deliberately implemented as described (the offline landing, the barcode
+> fallback message), noted per entry so nobody re-derives them as missing work.
+
 - Offline write queue. Writes currently fail visibly — a subsystem, not a branch.
+
+  <sub>**verified 2026-08-22** — still OPEN. A grep for `outbox`, `writeQueue`, `mutationQueue`,
+  `offlineQueue` and `pendingWrites` across `apps`, `packages` and `supabase` returns **zero**
+  files. `apps/web/src/lib/offlineCache.ts` is a READ cache only; mutations are optimistic with
+  `onError` rollback (`data/books.ts:86` and `:107`, `data/listItems.ts:192`, `data/reads.ts:91`),
+  which is the "fail visibly" the entry describes.</sub>
+
 - Realtime subscriptions across sign-out.
+
+  <sub>**verified 2026-08-22** — still OPEN. `hooks/useRealtimeRefetch.ts` subscribes inside a
+  `useEffect` keyed on the channel, the serialized subs and the query client, and removes the
+  channel only on unmount. It observes no auth state at all, so sign-out while a subscribed route
+  stays mounted is exactly the ungoverned case the entry defers. Two live call sites:
+  `ClubRoute.tsx:50` and `SharedListRoute.tsx:78`.</sub>
+
 - Signed-out reader opening offline sees above-fold landing content only.
+
+  <sub>**verified 2026-08-22** — still OPEN, and **implemented as described rather than merely
+  unfinished**. `auth/Landing.tsx:9` lazy-loads the below-fold chunk inside a `ChunkBoundary`
+  (line 220) whose comment states the contract: if the chunk cannot be fetched, "the hero, nav and
+  CTA above have already rendered and must stay." What is deferred is the scope of what renders
+  offline, not a missing boundary.</sub>
+
 - iOS barcode wasm fallback — decide once tester platform mix is known.
+
+  <sub>**verified 2026-08-22** — still OPEN and still awaiting the same input.
+  `AddRoute.tsx:828` gates on `window.BarcodeDetector`, the native API only; a grep for `zxing` and
+  `quagga` across `apps` and `packages` returns **zero** files, so no wasm decoder exists. An
+  unsupported browser gets a graceful line rather than a broken control, at `AddRoute.tsx:830`:
+  "Barcode scanning isn't supported in this browser — search by title or ISBN below."</sub>
+
 - Year heatmap. No longer sold by copy.
+
+  <sub>**verified 2026-08-22** — still OPEN, and the copy claim holds: a grep for `heatmap` and
+  `heat map` across `apps` and `packages` returns **zero** hits, so nothing in the product promises
+  one. One stale pointer worth knowing before planning against this:
+  `docs/reference/STATS_PRIVACY_AND_FEATURES.md:33` still lists a "reading-season heatmap
+  (months/days)" under READING RHYTHM. That is a reference doc rather than app copy, so it does not
+  contradict the entry — but it is the document someone would build from.</sub>
 
 ## Parked — a skin-palette pass, when someone next opens the palettes
 
+> **PERISHABLE — audited 2026-08-22 (batch 4).** 1 live entry. The reasoning and the conclusion
+> hold; **one row of the table did not reproduce and has been corrected from source** — tryst/dark
+> was measured without compositing its translucent `--card`. The affected set is unchanged at
+> four skins. Details in the entry.
+
 - **`--accent-fill` is invisible against `--card` in four dark skins, and in almanac/dark it IS the
   card colour.** Measured from `SKIN_TOKENS` while fixing the level-picker ring
-  (`levelRing.contrast.test.ts`), where it was the obvious token to carry state and could not:
+  (`levelRing.contrast.test.ts`), where it was the obvious token to carry state and could not.
+
+  **One row corrected 2026-08-22; the affected set is unchanged at four.** Recomputed with the WCAG
+  relative-luminance formula directly from `packages/core/src/skinTokens.fixture.ts`, against
+  `--card` — the surface this column has always named — compositing it over `--bg0` wherever it is
+  translucent:
+
+  | skin/mode    | `--accent-fill` vs `--card`  | the old table said |
+  | ------------ | ---------------------------- | ------------------ |
+  | almanac/dark | **1.00:1** — the same colour | 1.00               |
+  | hearth/dark  | 1.48:1                       | 1.48               |
+  | tryst/dark   | **2.54:1**                   | 2.30               |
+  | bloom/dark   | 2.76:1                       | 2.76               |
+
+  almanac/dark's "it IS the card colour" is literally exact: `accentFill`, `card` and `cardSolid`
+  are all `#241f14`.
+
+  **The tryst/dark correction, and the class of mistake it belongs to.** The old 2.30 is
+  `--accent-fill` measured against `rgba(42, 21, 58, 0.55)` **with its alpha discarded** — the raw
+  triplet treated as opaque, `rgb(42, 21, 58)` — which reproduces 2.30 exactly. Honouring the alpha
+  and compositing over `--bg0` gives `rgb(28.1, 14.3, 40.0)` and **2.54:1**. So the original number
+  was not a slip in arithmetic or a different pair chosen on purpose; it skipped compositing a
+  translucent token over its background, and measured a colour that nothing ever paints.
+
+  **The fixture already warns about exactly this, one field above the one being measured.** `--line`
+  is documented as kept "AS AUTHORED. Every one of the 18 is an rgba with alpha < 0.5, so a
+  border-visibility measurement that skips compositing it over the painted card is measuring a
+  colour nothing ever renders." `--card`'s own doc states the same rule positively — it is "kept raw
+  rather than pre-composited so skinTokensParity.test.ts can pin it directly to tokens.css; the
+  consumer composites it over bg0 itself." **The consumer is whoever measures.** tryst is the only
+  dark skin whose `--card` carries alpha, which is why it is the only row that moved.
+
+  **A related trap, named so it is not mistaken for a fifth skin.** `--card` and `--card-solid` are
+  different questions, and the fixture says they "diverge … in the three Fable 5 combos where
+  `--card-solid` was deliberately lifted away from `--card` (marrow/dark, umbra/light,
+  umbra/dark)". marrow/dark is **3.17:1** against `--card` — above the 3:1 floor, so it is **not**
+  in the affected set — and 2.70:1 against `--card-solid`. Measuring the latter and reading it
+  against this table's header surfaces the divergence, not a missing skin.
+
+  **Not staleness, either way.** `skinTokens.fixture.ts` is byte-identical between the commit that
+  wrote this entry (`329487e`) and `origin/main` — the diff for that file is empty. The tryst number
+  was wrong when written, not drifted.
+
+  WCAG 1.4.11's floor for a control boundary is 3:1, so anything whose visibility depends on an
+  accent fill is absent in those four skins. The level picker was rebuilt around `--muted` instead
+  (4.51:1 worst across all eighteen) precisely to avoid the dependency. **The conclusion is
+  unaffected by the correction above** — every skin named still fails 3:1, and the set is the same
+  four it always was.
+
+  **Why no existing test catches this — accurate as written, verified 2026-08-22.**
+  `skinCharacter.contrast.test.ts` asserts text ON the fill (`onPrimary` against `accentFill`) at AA
+  4.5:1, which is a different question and passes happily: a fill can be perfectly readable to write
+  on and still vanish against the surface it sits in. Confirmed exhaustively — every `accentFill`
+  pairing in the suite is text-on-fill (`skinCharacter.contrast.test.ts:45` and `:49`,
+  `ownershipControl.contrast.test.ts:27`), plus one parity pin to the CSS var at
+  `skinTokensParity.test.ts:114`. There is **no fill-vs-surface pair anywhere** across the twelve
+  `*.contrast.test.ts` files, so this class is structurally invisible to the suite.
+
+  **Not scheduled work, and deliberately not fixed here.** Changing `--accent-fill` in four skins is
+  a palette decision with reach far past this picker — every button, chip and active state that uses
+  it. Recorded so the next person opening the palettes has the numbers, and so the next feature
+  reaching for an accent fill as a state carrier knows it cannot be one.
+
+  <details><summary>the original table, as it read before this pass</summary>
 
   | skin/mode    | `--accent-fill` vs `--card`  |
   | ------------ | ---------------------------- |
@@ -1421,27 +1624,26 @@ aspect` at 9.1s. `e2e` failed exactly once in the surrounding 60 runs.
   | tryst/dark   | 2.30:1                       |
   | bloom/dark   | 2.76:1                       |
 
-  WCAG 1.4.11's floor for a control boundary is 3:1, so anything whose visibility depends on an
-  accent fill is absent in those four. The level picker was rebuilt around `--muted` instead
-  (4.51:1 worst across all eighteen) precisely to avoid the dependency.
-
-  **Why no existing test catches this.** `skinCharacter.contrast.test.ts` asserts text ON the fill
-  (`onPrimary` vs `accentFill`) at AA 4.5:1, which is a different question and passes happily: a
-  fill can be perfectly readable to write on and still vanish against the surface it sits in. The
-  suite has no fill-vs-surface pair anywhere, so this class is structurally invisible to it.
-
-  **Not scheduled work, and deliberately not fixed here.** Changing `--accent-fill` in four skins
-  is a palette decision with reach far past this picker — every button, chip and active state that
-  uses it. Recorded so the next person opening the palettes has the numbers, and so the next
-  feature reaching for an accent fill as a state carrier knows it cannot be one.
+  </details>
 
 ## Parked design conversations
+
+> **Audited 2026-08-22 (batch 4): nothing here is verifiable, by design.** This is a list of topic
+> names, not entries — it makes no claim about the tree, so there is nothing to check against
+> source and no stamp to add. Recorded explicitly so a later pass does not read the missing stamp as
+> "not yet audited".
 
 Calendar cluster; multi-series universe layer; borrowed-as-subsystem; Match
 approach (b), library-signal-driven; opt-in genre-gradient personalization;
 onboarding Stages B–D.
 
 ## Open decisions
+
+> **PERISHABLE — audited entry by entry 2026-08-22 (batch 4).** 2 live entries; 2 more are already
+> struck and were re-confirmed. Result: **1 OPEN** (stamped) and **1 PARTIAL** — the cover-cache
+> entry's removal half is confirmed, one of its two sub-points is **wrong as written** (the clearing
+> it says was "not done here" shipped in the very same commit), and its production measurements are
+> **unverifiable from a Code session**.
 
 - **DECIDED + REMOVED (2026-08): the global `{isbn}.jpg` cover cache is gone.** The enrich
   function's `scheduleCoverCache` fetched every resolved cover a second time and stored it at
@@ -1458,6 +1660,15 @@ onboarding Stages B–D.
   `packages/core/src/noGlobalCoverCache.test.ts`, which reads the Deno source (no Deno test runner
   exists) and fails if `enrich` regains any Storage write.
 
+  <sub>**verified 2026-08-22 — the removal itself is CONFIRMED.** `scheduleCoverCache` survives
+  nowhere in shipping code: every hit across `apps`, `packages` and `supabase` is either the guard
+  test (`noGlobalCoverCache.test.ts:7`, `:41`, `:50`, which asserts that `cacheCover`,
+  `scheduleCoverCache` and `coverKeyFor` are all gone) or a migration comment. `COMPLETE_DAYS = 30`
+  is real at `supabase/functions/enrich/index.ts:528` and used at line 549, and
+  `docs/queries/global-cover-cache-audit.sql` exists. **The measurements (33, 1, 3%) are
+  UNVERIFIABLE FROM A CODE SESSION** — they are counts against the production database. What would
+  settle them is re-running that audit query against prod, which is the owner's to run.</sub>
+
   **Two things the removal does NOT do, both left as owner data decisions:**
 
   1. **The 41 already-stored objects survive.** Deleting the writer does not unstore what it wrote.
@@ -1466,18 +1677,47 @@ onboarding Stages B–D.
      `enrichment_cache.provenance->'cover'->>'source'` — the object path is just an ISBN and the
      book row, if any, now carries our host. Query 2 in
      `docs/queries/global-cover-cache-audit.sql`.
-  2. **Adoption continues for up to 30 days after deploy.** Cache rows already rewritten still hold
-     a global URL in `record.cover`, and a rewritten row has a cover and an isbn13 so `isComplete`
-     is true and `isFresh` keeps it for `COMPLETE_DAYS = 30`. Every hit on such a row still hands
-     the client a stored URL that `isIngestibleCoverUrl` declines to re-ingest — so new degraded
-     rows can still appear, from `bulkComplete` and from `AddRoute`, until those rows age out or
-     are cleared. Clearing them is a one-statement data fix; not done here.
+
+     <sub>**verified 2026-08-22 — still OPEN in code; the count is UNVERIFIABLE FROM A CODE
+     SESSION.** The code half is confirmed: `20260808010000_clear_global_cover_cache_rows.sql`
+     states in its own body that "No `storage.objects` row is touched or deleted — the already-stored
+     bytes are a separate, deliberately deferred data decision", and it clears `record.cover` while
+     explicitly leaving `provenance` intact so the Google-origin breakdown stays answerable. The
+     **41** is a production object count and cannot be checked from here; Query 2 against prod would
+     settle it.</sub>
+
+  2. ~~**Adoption continues for up to 30 days after deploy.**~~ **WRONG AS WRITTEN — corrected
+     2026-08-22.** The sentence "Clearing them is a one-statement data fix; not done here" was
+     **never true**. `supabase/migrations/20260808010000_clear_global_cover_cache_rows.sql` performs
+     exactly that clearing, and `git show --stat 97042e2` shows the migration was added **in the
+     same commit that wrote this entry** — the commit contradicted itself. The migration nulls
+     `record.cover` and sets `complete = false` on every row whose `record.cover` points at our own
+     public covers bucket, which retires the 30-day window rather than waiting it out; it is
+     self-limiting on re-run, since a cleared row no longer matches. Its `WHERE` cannot over-match:
+     `mergeRecords` only ever writes external source URLs into `record.cover`, so our own Storage
+     host could only have come from `scheduleCoverCache`'s PATCH.
+     **What remains genuinely open is a deploy question, not a code one, and it is UNVERIFIABLE FROM
+     A CODE SESSION:** whether that migration has been applied to production. If it has, the adoption
+     window described here is already closed; if it has not, the 30-day tail still runs. The remote
+     column of `supabase migration list --linked` is what settles it, and per AGENTS.md that is the
+     owner's to run.
+
+     <details><summary>the sub-entry as it read before this pass</summary>
+
+     **Adoption continues for up to 30 days after deploy.** Cache rows already rewritten still hold a global URL in `record.cover`, and a rewritten row has a cover and an isbn13 so `isComplete` is true and `isFresh` keeps it for `COMPLETE_DAYS = 30`. Every hit on such a row still hands the client a stored URL that `isIngestibleCoverUrl` declines to re-ingest — so new degraded rows can still appear, from `bulkComplete` and from `AddRoute`, until those rows age out or are cleared. Clearing them is a one-statement data fix; not done here.
+
+     </details>
 
   **The one degraded book cannot repair itself.** `useCoverBackfill` skips it (`isStoredCoverUrl`
   is true), and `resharpenSource` needs `coverSourceUrl` to re-fetch from — which the adoption path
   never set, because only the ingest sets it. It keeps a working cover and permanently lacks a
   thumb and a spine colour unless the cover is cleared and re-swept, or re-picked in Cover Studio.
   At N=1 that is a manual fix; if the count had been larger it would need a repair pass.
+
+  <sub>**2026-08-22 — UNVERIFIABLE FROM A CODE SESSION.** Whether one book is still degraded is a
+  production row state. What would settle it: Query 1 in `docs/queries/global-cover-cache-audit.sql`
+  against prod, or the owner re-picking that cover in Cover Studio. Deliberately not downgraded to
+  OPEN — the code path described is real, but its subject is a row nobody here can see.</sub>
 
 - **LICENSE** — entry rewritten 2026-08-18; the old text described a license that no longer
   exists. The proprietary training-fork grant (87e0195) was replaced by **AGPL-3.0** in the
@@ -1488,10 +1728,26 @@ onboarding Stages B–D.
   stays closed (2026-08-21):** filling the LICENSE appendix's copyright line did NOT break GitHub's
   licence detection — `gh api repos/:owner/:repo --jq .license` returns `spdx_id: AGPL-3.0`
   (`key: agpl-3.0`), so #297's revert-to-README fallback was not needed.
+
+  <sub>**verified 2026-08-22** — accurate as written. `LICENSE` opens "GNU AFFERO GENERAL PUBLIC
+  LICENSE / Version 3, 19 November 2007", and `CLA.md` is present on `origin/main`. The recorded
+  confirmation reproduces exactly: re-running that same read-only `gh api` call today returns
+  `"key":"agpl-3.0"` and `"spdx_id":"AGPL-3.0"`. **The open half stays open and is UNVERIFIABLE
+  FROM A CODE SESSION** — whether AGPL-3.0 is final, and whether the CLA becomes binding, are owner
+  decisions settled only by Greg saying so.</sub>
+
 - ~~**`NOTICES.md`** missing `npm:@imagemagick/magick-wasm`~~ — done. Present in NOTICES.md
   (Apache-2.0, with the embedded-ImageMagick dual-notice caveat) since the #154 NOTICES sweep.
   The structural caveat stands: the inventory is generated from the pnpm tree and cannot see
   Deno-side Edge Function dependencies, so future Deno deps need adding by hand the same way.
+
+  <sub>**re-confirmed 2026-08-22** — `NOTICES.md:75` carries the `@imagemagick/magick-wasm` row
+  (0.0.35, Apache-2.0) with the dual-notice caveat. Still CLOSED.</sub>
+
 - ~~**`AGENTS.md` rules pass**~~ — done (#93). Six rules, each with its reason,
   now live under "Shell & deploy safety" and "Testing & verification discipline"
   in `AGENTS.md`.
+
+  <sub>**re-confirmed 2026-08-22** — both headings are present in `AGENTS.md`, and both sections
+  have grown well past the original six (the testing section now counts eighteen). Still CLOSED; the
+  count in the entry describes what #93 delivered, not today's file.</sub>
