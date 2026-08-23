@@ -35,6 +35,28 @@ const OWNED = `${TERM} Owned`
 const CORPUS = `${TERM} Corpus`
 const FRESH = `${TERM} Fresh`
 
+/**
+ * WHY THE CORPUS FIXTURE IS NAMESPACED ON GENRE **AND** AUTHOR, NOT JUST ON TITLE.
+ *
+ * `works` is a SHARED table — it is the one book-describing table in the schema that is not
+ * per-user — so a row this file inserts is visible to every other spec's reader, and the projects
+ * run in parallel workers. `discover-corpus.spec.ts` browses `/discover?genre=mystery` and asserts
+ * an EXACT count (`toHaveCount(25)`), and its text-filter test asserts an exact count for
+ * `author_text ilike '%Vera Stone%'`. A fixture here sharing either value lands inside those
+ * counts.
+ *
+ * That is not hypothetical — it is why this constant exists. The first draft of this file used
+ * `genre: 'mystery'` and `Vera Stone`, and the full suite came back with
+ * `discover-corpus` expecting 25 and receiving 26: one extra mystery work, inserted by this file,
+ * in another worker, mid-assertion. Title-prefix cleanup does not help, because the collision is
+ * on the columns the other spec COUNTS BY, not on the one this file deletes by.
+ *
+ * So: a genre no spec browses, an author no spec filters on, and a tag nothing else uses. Anything
+ * added here later needs the same treatment.
+ */
+const CORPUS_GENRE = 'literary'
+const CORPUS_AUTHOR = 'Quill Marrowbane'
+
 test.describe.configure({ mode: 'serial' })
 
 type Client = {
@@ -85,14 +107,15 @@ async function seed(c: Client): Promise<string> {
   await ok(
     c.admin.from('works').insert([
       {
-        work_key: 'triageprobecorpus|verastone',
+        work_key: 'triageprobecorpus|quillmarrowbane',
         title: CORPUS,
-        contributors: [{ name: 'Vera Stone', role: 'author', position: 0 }],
-        author_text: 'Vera Stone',
+        contributors: [{ name: CORPUS_AUTHOR, role: 'author', position: 0 }],
+        author_text: CORPUS_AUTHOR,
         series: 'The Triage Cycle',
         position: 3,
-        genre: 'mystery',
-        tags: ['seaside'],
+        // NAMESPACED ON EVERY AXIS THIS ROW IS COUNTABLE BY — see WHY, above the constants.
+        genre: CORPUS_GENRE,
+        tags: ['triage probe only'],
         cover_url: null,
         pub_y: 2021,
       },
@@ -108,7 +131,7 @@ async function seed(c: Client): Promise<string> {
         title: OWNED,
         author_first: 'Nell',
         author_last: 'Marrow',
-        genre: 'mystery',
+        genre: CORPUS_GENRE,
         status: 'standalone',
         ownership: 'owned',
         borrowed: false,
@@ -136,7 +159,8 @@ const RESULTS = [
   {
     source: 'hardcover',
     title: CORPUS,
-    authors: ['Vera Stone'],
+    // must be the corpus row's author too, or the two work_keys disagree and the row never matches
+    authors: [CORPUS_AUTHOR],
     cover: 'https://example.invalid/b.jpg',
     isbn: '',
     year: '2021',
@@ -233,7 +257,7 @@ test('picking a corpus result prefills from the CORPUS ROW, not the catalog hit'
   // The genre select is labelled by the SKIN's vocabulary (`labels.genre`), not the word "Genre" —
   // in tryst, the skin this account is seeded with, it reads "Romance". Ask the registry rather than
   // hardcoding the string, so a vocabulary change moves this spec with it instead of breaking it.
-  await expect(page.getByLabel(TRYST_LABELS.genre)).toHaveValue('mystery')
+  await expect(page.getByLabel(TRYST_LABELS.genre)).toHaveValue(CORPUS_GENRE)
 })
 
 test('classification does not block the results — labels arrive after the list does', async ({
@@ -260,12 +284,21 @@ test('classification does not block the results — labels arrive after the list
   await page.getByLabel('Search for a book').fill(TERM)
   await page.getByRole('button', { name: 'Search', exact: true }).click()
 
-  // Every hit is on screen with the corpus answer still in flight.
+  // Every hit is on screen with the corpus answer still outstanding — the claim under test.
   await expect(rows(page)).toHaveCount(3, { timeout: 20_000 })
-  // The library half is already decided — it needs no second round trip.
-  expect(await labelOf(page, OWNED)).toBe('In your library')
-  // The corpus half is not yet known, so the row reads as the safe direction (an extra add
-  // control), never as a withheld one.
+
+  // And the LIBRARY half finishes while that response is STILL held, which is the other half of
+  // "does not block": the two reads are independent, not chained.
+  //
+  // POLLED, NOT READ ONCE, and the difference is a real defect this spec had. `useBooks` is itself
+  // a round trip; reading its label instantly asserts that an unrelated query has already resolved,
+  // which is true most of the time and false under load. It failed exactly that way the first time
+  // this file ran alongside another spec — 'New to your library', because `books` had not landed
+  // yet. The product was right and the assertion was racing a query this test is not about.
+  await expect.poll(() => labelOf(page, OWNED), { timeout: 20_000 }).toBe('In your library')
+
+  // The corpus half is still unknown here (the route is held), so the row reads in the SAFE
+  // direction — an extra add control — never the severe one, a withheld one.
   expect(await labelOf(page, CORPUS)).toBe('New to your library')
 
   release()
