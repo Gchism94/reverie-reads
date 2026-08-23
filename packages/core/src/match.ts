@@ -1,5 +1,5 @@
 import type { Book, Owned, ReadEntry } from './types'
-import { norm } from './normalize'
+import { authorOf, norm } from './normalize'
 import { contributorsChanged, reconcileContributors } from './contributors'
 import { mergePossession } from './ownership'
 
@@ -33,21 +33,128 @@ export const isStrong = (s: MatchStrength): boolean =>
 
 export type Incoming = Partial<Book> & { title: string }
 
+/**
+ * THE PERSISTED KEY. Stays on `norm`, deliberately, and must not be "upgraded" to the fold below.
+ *
+ * `importKey` builds `merge_verdicts.incoming_key` from this, and that column is part of the table's
+ * PRIMARY KEY (`owner_id, book_id, incoming_key`) — every remembered "keep separate" / "always
+ * merge" verdict a reader has ever recorded is filed under a key of this exact shape. Change the
+ * shape and none of them are ever found again: the verdicts do not error, they simply stop applying,
+ * and the reader is re-asked about pairs they already ruled on. Same orphaning hazard as
+ * `works.work_key` and the enrich fn's `ta:` cache keys, which is why the fold is a SEPARATE
+ * comparator rather than a change to `norm`.
+ */
 const authorAuthorKey = (b: { title: string; last?: string }) => norm(b.title) + '|' + norm(b.last)
+
+// ── THE MATCHING FOLD — comparison only, never storage ──────────────────────────────────────────
+//
+// `norm` keeps `[a-z0-9]` and drops everything else, so a diacritic does not degrade to its base
+// letter — it VANISHES. `norm('Ibañez')` is `'ibaez'`, which compares equal to nothing a person
+// would type, and unequal to `'ibanez'`. Measured on the 2026-08-23 import: one book lost this way.
+//
+// The fix is NFD decomposition (ñ → n + U+0303) then dropping the combining marks, so ñ folds to n
+// before `norm` sees it.
+//
+// ⚠ THIS MUST NOT MOVE INTO `norm`. Every stored `works.work_key` and every `'ta:'` enrichment-cache
+// key is built on `norm` as it stands; folding there would orphan all of them at once, silently —
+// the join simply stops finding rows. `normalize.test.ts` pins `norm('Ibañez') === 'ibaez'` so that
+// a later "cleanup" cannot quietly perform that migration.
+const fold = (s: string | null | undefined): string =>
+  norm(
+    String(s ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, ''),
+  )
+
+/** The whole author name, folded — split-invariant. This is what makes 'Scarlett'/'St. Clair' and
+ *  'Scarlett St.'/'Clair' the same person: both compose to 'scarlettstclair'. */
+const foldedFullAuthor = (b: { first?: string; last?: string }): string => fold(authorOf(b))
+
 // Title with the subtitle (after :/– etc.) dropped, then normalized (strips punctuation + case).
-const fuzzyTitle = (t: string) => norm(t.replace(/\s*[:–—-].*$/, ''))
+const fuzzyTitle = (t: string) => fold(t.replace(/\s*[:–—-].*$/, ''))
 
 export interface BookMatch {
   book: Book
   strength: MatchStrength
 }
 
+// ── TYPO TOLERANCE (fuzzy only, never strong) ───────────────────────────────────────────────────
+
 /**
- * Find the best existing library record for an incoming book. Priority: ISBN exact (10↔13
- * normalized) → normalized title+author → title+series+position → fuzzy (same author + title
- * equal ignoring subtitle/punctuation/case). Returns strength 'none' if nothing matches.
- * Matches only on real shared keys — enrichment may fill the incoming ISBN, but a match is
- * never fabricated.
+ * The title as the typo leg compares it: the matching fold, plus `&` spelled out.
+ *
+ * `norm` DELETES `&` rather than folding it, so 'Promises & Pomegranates' becomes
+ * 'promisespomegranates' and sits 3 edits from 'promisesandpomegranates' — a 0.87 ratio, under the
+ * threshold, for a pair that is obviously the same book. Spelling it out first makes that pair
+ * identical under this comparator.
+ *
+ * DELIBERATELY NOT in the strong legs' fold. An ampersand difference resolving to an exact key
+ * would AUTO-MERGE the pair, and the whole argument of this leg is that a title that differs at all
+ * — by a slipped letter or by a spelled-out conjunction — earns a human glance rather than a silent
+ * merge. So it widens what gets REVIEWED and nothing else.
+ */
+const typoTitle = (t: string): string => fold(String(t ?? '').replace(/&/g, ' and '))
+
+/** Levenshtein distance, two-row DP. Callers gate on the length pre-filter below, so this only ever
+ *  runs on same-author candidates of comparable length. */
+function editDistance(a: string, b: string): number {
+  if (a === b) return 0
+  if (!a.length) return b.length
+  if (!b.length) return a.length
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i)
+  let cur = new Array<number>(b.length + 1)
+  for (let i = 1; i <= a.length; i++) {
+    cur[0] = i
+    for (let j = 1; j <= b.length; j++) {
+      const sub = (prev[j - 1] as number) + (a[i - 1] === b[j - 1] ? 0 : 1)
+      cur[j] = Math.min((prev[j] as number) + 1, (cur[j - 1] as number) + 1, sub)
+    }
+    const swap = prev
+    prev = cur
+    cur = swap
+  }
+  return prev[b.length] as number
+}
+
+/** 1 − distance/longest. 1.0 identical, 0.0 nothing in common. */
+function similarity(a: string, b: string): number {
+  const max = Math.max(a.length, b.length)
+  if (!max) return 1
+  return 1 - editDistance(a, b) / max
+}
+
+/** A one-or-two-character slip in a title is a typo; a different title is a different book. 0.9 was
+ *  chosen against the 2026-08-23 import: it admits all 17 real typos and, with the author gate in
+ *  front of it, excludes both same-title-different-author false positives in that file. */
+const TYPO_MIN_SIMILARITY = 0.9
+/** Titles this far apart in length are not the same title with a slip in it. Pure cost control — it
+ *  keeps the edit distance off pairs that cannot clear the threshold anyway. */
+const TYPO_MAX_LEN_DELTA = 8
+
+/**
+ * Find the best existing library record for an incoming book.
+ *
+ * Priority: ISBN exact (10↔13 normalized) → title + FULL author → title + last name →
+ * title+series+position → fuzzy (same author, title equal ignoring subtitle) → fuzzy (same author,
+ * title within a typo's distance). Returns strength 'none' if nothing matches. Matches only on real
+ * shared keys — enrichment may fill the incoming ISBN, but a match is never fabricated.
+ *
+ * ── TWO STRONG AUTHOR LEGS, AND WHY NEITHER ALONE IS ENOUGH ────────────────────────────────────
+ * The full-author leg is SPLIT-INVARIANT: 'Scarlett'/'St. Clair' and 'Scarlett St.'/'Clair' are the
+ * same name cut in two different places, and keying on `last` alone cannot see that. Measured on the
+ * 2026-08-23 import: 12 books, every "St." author in the file.
+ * The last-name leg stays because full-author alone would REGRESS middle-initial variance —
+ * 'Jennifer L. Armentrout' vs 'Jennifer Armentrout' matches today via `last` and would stop. Its
+ * false-positive surface is exactly what it is today; nothing was widened to keep it.
+ * (This also brings library matching into line with corpus identity: `workKeyOf` is already
+ * full-author.)
+ *
+ * ── THE EMPTY-AUTHOR GUARD, WHICH IS A BEHAVIOUR CHANGE ────────────────────────────────────────
+ * A leg fires only when its own author component is non-empty. Without that, a row with no author
+ * keys as `title|` and title-author-matches ANY same-titled authorless book — and because
+ * `isStrong('title-author')` is true while `autoMergeStrong` defaults TRUE on the import path, that
+ * silently AUTO-MERGED two unrelated books with no review step. The ISBN leg is untouched: a row
+ * with no author can still match on a real shared identifier.
  */
 export function matchBook(incoming: Incoming, library: readonly Book[]): BookMatch {
   const inIsbn = normalizeIsbn(incoming.isbn ?? '')
@@ -55,9 +162,28 @@ export function matchBook(incoming: Incoming, library: readonly Book[]): BookMat
     const m = library.find((b) => normalizeIsbn(b.isbn) === inIsbn)
     if (m) return { book: m, strength: 'isbn' }
   }
-  const inKey = authorAuthorKey({ title: incoming.title, last: incoming.last })
-  const exact = library.find((b) => authorAuthorKey(b) === inKey)
-  if (exact) return { book: exact, strength: 'title-author' }
+
+  const inTitle = fold(incoming.title)
+
+  // Strong leg 1 — title + FULL author. Guarded on a non-empty folded name.
+  const inFull = foldedFullAuthor(incoming)
+  if (inFull) {
+    const m = library.find((b) => {
+      const bFull = foldedFullAuthor(b)
+      return !!bFull && bFull === inFull && fold(b.title) === inTitle
+    })
+    if (m) return { book: m, strength: 'title-author' }
+  }
+
+  // Strong leg 2 — title + last name. Guarded the same way, on `last`.
+  const inLast = fold(incoming.last)
+  if (inLast) {
+    const m = library.find((b) => {
+      const bLast = fold(b.last)
+      return !!bLast && bLast === inLast && fold(b.title) === inTitle
+    })
+    if (m) return { book: m, strength: 'title-author' }
+  }
 
   if (incoming.series) {
     const m = library.find(
@@ -70,14 +196,33 @@ export function matchBook(incoming: Incoming, library: readonly Book[]): BookMat
     if (m) return { book: m, strength: 'title-series-pos' }
   }
 
-  if (incoming.last) {
+  // Same author, same title once the subtitle is dropped.
+  if (inLast) {
     const inFuzzy = fuzzyTitle(incoming.title)
-    const m = library.find(
-      (b) =>
-        norm(b.last) === norm(incoming.last) &&
-        fuzzyTitle(b.title) === inFuzzy &&
-        authorAuthorKey(b) !== inKey, // would have matched exactly above
-    )
+    const m = library.find((b) => fold(b.last) === inLast && fuzzyTitle(b.title) === inFuzzy)
+    if (m) return { book: m, strength: 'fuzzy' }
+  }
+
+  // Same author, title within a typo's distance. FUZZY BY CONSTRUCTION, NEVER STRONG — `decideIntake`
+  // routes fuzzy to review/add and never to an auto-merge, and that is the entire safety argument
+  // for admitting near-misses at all. The same data that produced 17 true positives produced two
+  // same-title-different-author pairs; the author gate excludes those, and anything the gate lets
+  // through still stops at a human.
+  //
+  // COST: this is the only leg that computes edit distance, and it runs per import row against a
+  // ~1,600-book library. The author gate is evaluated FIRST and is a string compare, so the distance
+  // is computed only for same-author candidates — a handful per row, not the whole shelf.
+  if (inFull || inLast) {
+    const inTypo = typoTitle(incoming.title)
+    const m = library.find((b) => {
+      const bFull = foldedFullAuthor(b)
+      const bLast = fold(b.last)
+      const sameAuthor = (!!inFull && bFull === inFull) || (!!inLast && bLast === inLast)
+      if (!sameAuthor) return false
+      const bTypo = typoTitle(b.title)
+      if (Math.abs(bTypo.length - inTypo.length) > TYPO_MAX_LEN_DELTA) return false
+      return similarity(bTypo, inTypo) >= TYPO_MIN_SIMILARITY
+    })
     if (m) return { book: m, strength: 'fuzzy' }
   }
 

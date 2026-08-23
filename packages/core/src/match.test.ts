@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
+import { norm } from './normalize'
 import {
   decideIntake,
+  isStrong,
   enrichmentSeriesFill,
   importKey,
   isbn10to13,
@@ -244,5 +246,180 @@ describe('mergeImport', () => {
     expect(res.changed).toBe(false)
     expect(Object.keys(res.patch)).toHaveLength(0)
     expect(res.newReads).toHaveLength(0)
+  })
+})
+
+// ── ACCEPTANCE FIXTURES — the real cases from the 2026-08-23 import of 1,166 rows ───────────────
+//
+// Every case below is a book the matcher should have caught and didn't (or caught and shouldn't
+// have). They are transcribed from that measurement, not invented: 17 title typos, 12 multi-part
+// surname splits, 1 diacritic, plus the empty-author class that produced FALSE strong matches.
+describe('matchBook hardening — the measured import failures', () => {
+  const lib = (over: Partial<Parameters<typeof makeBook>[0]>) =>
+    [makeBook({ id: 'x', title: 'placeholder', ...over })] as const
+
+  describe('1. multi-part surnames — the same name split in two different places', () => {
+    // 12 books in the file, every "St." author: St. Clair x5, St. James, St. Crowe.
+    const cases = [
+      ['A Touch of Chaos', 'Scarlett', 'St. Clair', 'Scarlett St.', 'Clair'],
+      ['The Never King', 'Nikki', 'St. Crowe', 'Nikki St.', 'Crowe'],
+      ['Of Ink and Alchemy', 'Sloane', 'St. James', 'Sloane St.', 'James'],
+    ] as const
+
+    for (const [title, f1, l1, f2, l2] of cases) {
+      it(`${title}: ${f1}/${l1} matches ${f2}/${l2} strongly`, () => {
+        const m = matchBook({ title, first: f2, last: l2 }, lib({ title, first: f1, last: l1 }))
+        expect(m.strength).toBe('title-author')
+        expect(isStrong(m.strength)).toBe(true)
+        expect(m.book.id).toBe('x')
+      })
+      it(`${title}: and symmetrically, ${f2}/${l2} matches ${f1}/${l1}`, () => {
+        const m = matchBook({ title, first: f1, last: l1 }, lib({ title, first: f2, last: l2 }))
+        expect(m.strength).toBe('title-author')
+      })
+    }
+  })
+
+  describe('2. the last-name leg stays — middle-initial variance must not regress', () => {
+    // The regression guard for keeping BOTH strong legs. Full-author alone breaks this pair.
+    it('Jennifer L. Armentrout matches Jennifer Armentrout on the same title', () => {
+      const m = matchBook(
+        { title: 'A Shadow in the Ember', first: 'Jennifer', last: 'Armentrout' },
+        lib({ title: 'A Shadow in the Ember', first: 'Jennifer L.', last: 'Armentrout' }),
+      )
+      expect(m.strength).toBe('title-author')
+      expect(m.book.id).toBe('x')
+    })
+  })
+
+  describe('3. diacritics fold for MATCHING only', () => {
+    it('Ibañez matches Ibanez', () => {
+      const m = matchBook(
+        { title: 'Graceless Heart', first: 'Isabel', last: 'Ibanez' },
+        lib({ title: 'Graceless Heart', first: 'Isabel', last: 'Ibañez' }),
+      )
+      expect(m.strength).toBe('title-author')
+      expect(m.book.id).toBe('x')
+    })
+
+    it('THE STORAGE KEY IS UNCHANGED — norm still deletes the tilde', () => {
+      // Pinned deliberately. Every stored works.work_key and every 'ta:' enrichment-cache key is
+      // built on this exact behaviour; folding HERE would orphan all of them silently. If this test
+      // ever fails, someone has migrated the keys without migrating the data.
+      expect(norm('Ibañez')).toBe('ibaez')
+      expect(norm('Ibanez')).toBe('ibanez')
+      expect(norm('Ibañez')).not.toBe(norm('Ibanez'))
+    })
+
+    it('and importKey — a merge_verdicts PRIMARY KEY component — is unchanged too', () => {
+      // Same hazard, different table: merge_verdicts is keyed (owner_id, book_id, incoming_key).
+      // A reshaped key does not error, it just stops finding every verdict the reader ever recorded.
+      expect(importKey({ title: 'Graceless Heart', last: 'Ibañez' })).toBe('gracelessheart|ibaez')
+      expect(importKey({ title: 'Iron  Flame', last: 'YARROS' })).toBe('ironflame|yarros')
+    })
+  })
+
+  describe('4. an empty author must never produce a STRONG match', () => {
+    // The sharpest of the four. isStrong('title-author') is true and autoMergeStrong defaults TRUE
+    // on the import path, so before this guard these auto-merged two unrelated books with NO review.
+    it('empty vs empty: two authorless rows sharing a title do not match', () => {
+      const m = matchBook(
+        { title: 'Untitled Manuscript' },
+        lib({ title: 'Untitled Manuscript', first: '', last: '' }),
+      )
+      expect(m.strength).toBe('none')
+    })
+
+    it('empty vs present: an authorless row does not match an authored one', () => {
+      const m = matchBook(
+        { title: 'Untitled Manuscript' },
+        lib({ title: 'Untitled Manuscript', first: 'Real', last: 'Author' }),
+      )
+      expect(m.strength).toBe('none')
+    })
+
+    it('present vs empty: and not in the other direction either', () => {
+      const m = matchBook(
+        { title: 'Untitled Manuscript', first: 'Real', last: 'Author' },
+        lib({ title: 'Untitled Manuscript', first: '', last: '' }),
+      )
+      expect(m.strength).toBe('none')
+    })
+
+    it('but an authorless row STILL matches on ISBN — that leg is untouched', () => {
+      const m = matchBook(
+        { title: 'Untitled Manuscript', isbn: '9780306406157' },
+        lib({ title: 'Something Else', first: '', last: '', isbn: '0306406152' }),
+      )
+      expect(m.strength).toBe('isbn')
+      expect(m.book.id).toBe('x')
+    })
+  })
+
+  describe('5. title typos flag FUZZY — never strong, so never an auto-merge', () => {
+    const typos = [
+      ['The Crown of Guilded Bones', 'The Crown of Gilded Bones', 'Jennifer L.', 'Armentrout'],
+      ['Mopuntain Boss', 'Mountain Boss', 'S.J.', 'Tilly'],
+      ['Story and Fury', 'Storm and Fury', 'Jennifer L.', 'Armentrout'],
+      ['Promises & Pomegranates', 'Promises and Pomegranates', 'Sav R.', 'Miller'],
+    ] as const
+
+    for (const [damaged, real, first, last] of typos) {
+      it(`"${damaged}" flags fuzzy against "${real}"`, () => {
+        const m = matchBook({ title: damaged, first, last }, lib({ title: real, first, last }))
+        expect(m.strength).toBe('fuzzy')
+        // THE ASSERTION THAT MATTERS MOST: fuzzy is what keeps this away from auto-merge.
+        expect(isStrong(m.strength)).toBe(false)
+        expect(decideIntake(m.strength, { autoMergeStrong: true, fuzzyMode: 'review' })).toBe(
+          'review',
+        )
+        expect(m.book.id).toBe('x')
+      })
+    }
+  })
+
+  describe('6. must NOT match at all — the two real false positives in the same file', () => {
+    it('Red Rabbit (Devyn Rivers) vs Red Rabbit (Alexis Grecian) — same title, different authors', () => {
+      const m = matchBook(
+        { title: 'Red Rabbit', first: 'Devyn', last: 'Rivers' },
+        lib({ title: 'Red Rabbit', first: 'Alexis', last: 'Grecian' }),
+      )
+      expect(m.strength).toBe('none')
+    })
+
+    it('Exile (Steph Macca) vs Exiles (Mason Coile) — near title, different authors', () => {
+      const m = matchBook(
+        { title: 'Exile', first: 'Steph', last: 'Macca' },
+        lib({ title: 'Exiles', first: 'Mason', last: 'Coile' }),
+      )
+      expect(m.strength).toBe('none')
+    })
+
+    it('a genuinely different title by the SAME author is not a typo', () => {
+      // The author gate is not on its own enough; the similarity floor has to do its half.
+      const m = matchBook(
+        { title: 'Iron Flame', first: 'Rebecca', last: 'Yarros' },
+        lib({ title: 'Fourth Wing', first: 'Rebecca', last: 'Yarros' }),
+      )
+      expect(m.strength).toBe('none')
+    })
+  })
+
+  describe('7. unchanged legs', () => {
+    it('title + series + position still matches', () => {
+      const m = matchBook(
+        { title: 'Book Two', series: 'The Cycle', position: 2 },
+        lib({ title: 'Book Two', first: '', last: '', series: 'The Cycle', position: 2 }),
+      )
+      expect(m.strength).toBe('title-series-pos')
+    })
+
+    it("isStrong's set is exactly isbn / title-author / title-series-pos", () => {
+      expect(isStrong('isbn')).toBe(true)
+      expect(isStrong('title-author')).toBe(true)
+      expect(isStrong('title-series-pos')).toBe(true)
+      expect(isStrong('fuzzy')).toBe(false)
+      expect(isStrong('none')).toBe(false)
+    })
   })
 })
