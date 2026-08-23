@@ -3,14 +3,16 @@
 // synthetic fixture (packages/core/src/corpusImport.test.ts), and import-corpus-csv.mjs is the
 // thin shell that feeds it a real file and a real database.
 //
-// NORMALIZERS ARE IMPORTED, NEVER REIMPLEMENTED. `norm` is core's (lowercase, strip to a-z0-9) —
-// the same function the enrich fn duplicates byte-for-byte for enrichment_cache's `ta:` keys, so
-// `'ta:' + workKeyOf(...)` IS a cache key, and the backfill is a join rather than a re-match.
+// NORMALIZERS ARE IMPORTED, NEVER REIMPLEMENTED. `workKeyOf` — and the `norm` inside it (core's:
+// lowercase, strip to a-z0-9) — is the same function the enrich fn duplicates byte-for-byte for
+// enrichment_cache's `ta:` keys, so `'ta:' + workKeyOf(...)` IS a cache key, and the backfill is a
+// join rather than a re-match. It moved INTO core so the app's add-search triage can share it:
+// apps/web cannot import from scripts/, and a corpus identity computed twice is one that drifts.
 // `matchBook` is the app's own import classifier; `normalizeImportGenres` is the app's own
 // genre/tag shaper. A third normalizer here would drift from all of them (the two-norms divergence
 // between discover.ts and core is already on record as a hazard).
 
-import { norm } from '../packages/core/src/normalize'
+import { workKeyOf } from '../packages/core/src/normalize'
 import { matchBook, isStrong } from '../packages/core/src/match'
 import { normalizeImportGenres } from '../packages/core/src/genreNormalize'
 import { normalizeSeriesStatus } from '../packages/core/src/seriesStatus'
@@ -126,9 +128,12 @@ const truthyFlag = (v: string): boolean => {
 export const authorOf = (rec: Pick<CsvRecord, 'first' | 'last'>): string =>
   [rec.first, rec.last].filter(Boolean).join(' ').trim()
 
-/** THE identity. `'ta:' + workKeyOf(rec)` is an enrichment_cache key, by construction. */
-export const workKeyOf = (rec: Pick<CsvRecord, 'title' | 'first' | 'last'>): string =>
-  `${norm(rec.title)}|${norm(authorOf(rec))}`
+/** THE identity. `'ta:' + workKeyOf(rec)` is an enrichment_cache key, by construction.
+ *  Re-exported from core rather than defined here — the app's add-search triage needs the SAME
+ *  answer and cannot import from `scripts/`, so the one definition lives in core (this file's
+ *  header rule, applied to itself). Behaviour is unchanged: core's `authorOf` composes the full
+ *  name identically, and `norm` strips the whitespace `.trim()` used to. */
+export { workKeyOf }
 
 /** CSV status column → the app's series-status enum — core's OWN normalizer, because books.status
  *  is a CLOSED check constraint and a passthrough of unrecognized tokens violates it. The first
