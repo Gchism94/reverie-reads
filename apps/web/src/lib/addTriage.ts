@@ -37,39 +37,28 @@ export interface TriagedResult {
 }
 
 /**
- * THE EMPTY-LAST-NAME GUARD.
+ * THE EMPTY-AUTHOR GUARD NOW LIVES IN CORE — this is deliberately a thin call.
  *
- * `matchBook`'s title-author leg keys on `norm(title) + '|' + norm(last)`. `resultToIncoming`
- * derives `last` by splitting the author on whitespace and dropping the first word — so a
- * single-word author ('Homer', 'Ovid') or a catalog row with no author at all yields `last: ''`
- * and a key of `` `title|` ``, which matches ANY library book that also has no last name. That is
- * a false "you already own this", and it is the worst of the three states to get wrong: it does
- * not merely mislabel the row, it withholds the add control for a book the reader does not have.
+ * This function used to carry its own guard (#353): `matchBook`'s title-author leg keyed on
+ * `norm(title) + '|' + norm(last)`, so a single-word author or a catalog row with no author at all
+ * produced `` `title|` `` and matched ANY authorless library book — a false "you already own this",
+ * which is the worst of the three states to get wrong because it withholds the add control for a
+ * book the reader does not have. The local workaround re-asked against the library minus its
+ * authorless rows.
  *
- * Same defect the works e2e caught in `ownedKeys` — authorless books hashed as `title|` and so
- * escaping "Hide what I have" (fixed in #340). Second instance, different surface.
- *
- * The guard does NOT drop such a result to 'new' outright: matchBook's ISBN and title-series-pos
- * legs never look at the author and stay sound. So when `last` normalizes to empty and the matcher
- * came back on the title-author leg, it is re-asked against the library MINUS the authorless books
- * — the only rows that can produce the `title|` collision. Against that subset the title-author leg
- * is structurally unable to fire (every remaining key ends in a non-empty last, the incoming key
- * ends in nothing) and the fuzzy leg is already gated behind `incoming.last`, so whatever comes
- * back is ISBN or title+series+position evidence, which is what we wanted to keep.
- *
- * The one thing this gives up is a title-series-position match against a library book that ALSO has
- * no author. That trade is deliberate and one-directional: under-claiming shows an add control for
- * a book the reader has (recoverable — intake still de-dupes on save), over-claiming hides the add
- * control for a book they do not (not recoverable from the reader's side).
+ * `feat/matchbook-hardening` moved that guard into `matchBook` itself, where every caller gets it
+ * (Discover's `libraryMatch`, CSV/bulk import, this). KEEPING THE LOCAL COPY WOULD NOW BE A
+ * REGRESSION, not defense in depth, and that is why it is gone rather than left as a belt:
+ * `matchBook` gained a full-author leg, so a single-word author like 'Homer' is a REAL name that
+ * legitimately matches a 'Homer' book. The old guard keys off `last` being empty — which is still
+ * true for 'Homer' — and would retry against a library filtered to non-empty `last`, throwing away
+ * the very row that correctly matched. The local guard cannot tell "no author" from "one-word
+ * author"; core's can, because it asks whether the folded name is empty rather than whether the
+ * surname field is.
  */
 function libraryHit(r: SearchResult, library: readonly Book[]): Book | null {
-  const inc = resultToIncoming(r)
-  const m = matchBook(inc, library)
-  if (m.strength === 'none') return null
-  if (m.strength !== 'title-author' || norm(inc.last)) return m.book
-  const authored = library.filter((b) => !!norm(b.last))
-  const retry = matchBook(inc, authored)
-  return retry.strength === 'none' ? null : retry.book
+  const m = matchBook(resultToIncoming(r), library)
+  return m.strength === 'none' ? null : m.book
 }
 
 /** The corpus identity of a catalog result: normalized title + normalized FULL author name — core's
