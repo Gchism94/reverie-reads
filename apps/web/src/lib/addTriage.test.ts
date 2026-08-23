@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { makeBook } from '../../../../packages/core/src/book.fixture'
-import type { Contributor } from '@reverie/core'
+import { norm, type Contributor } from '@reverie/core'
 import type { SearchResult } from './search'
 import type { WorkRow } from '../data/works'
 import { resultWorkKey, triageLabel, triageResults, workRowKeys } from './addTriage'
@@ -18,10 +18,16 @@ const result = (r: Partial<SearchResult>): SearchResult => ({
 const contribs = (name: string): Contributor[] =>
   name ? [{ name, role: 'author', position: 0 }] : []
 
-const work = (w: Partial<WorkRow> & { title: string; author?: string }): WorkRow => ({
-  work_key: `${w.title.toLowerCase().replace(/[^a-z0-9]/g, '')}|${(w.author ?? '').toLowerCase().replace(/[^a-z0-9]/g, '')}`,
-  title: w.title,
-  contributors: contribs(w.author ?? ''),
+/** A works row. `author` is a convenience that expands to `contributors` + the default
+ *  `work_key`; every other field is a plain override, so the spread comes LAST and `title` is
+ *  supplied by it rather than restated (restating it before the spread is a TS2783 — the exact
+ *  shape Vitest runs happily on and `tsc` refuses). */
+const work = ({
+  author = '',
+  ...over
+}: Partial<WorkRow> & { title: string; author?: string }): WorkRow => ({
+  work_key: `${norm(over.title)}|${norm(author)}`,
+  contributors: contribs(author),
   series: null,
   position: null,
   cover_url: null,
@@ -30,7 +36,7 @@ const work = (w: Partial<WorkRow> & { title: string; author?: string }): WorkRow
   pub_y: null,
   pub_m: null,
   pub_d: null,
-  ...w,
+  ...over,
 })
 
 const state = (
