@@ -1,4 +1,4 @@
-import { useInfiniteQuery } from '@tanstack/react-query'
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import type { Contributor } from '@reverie/core'
 import { supabase } from '../lib/supabase'
 import { DISCOVER_BATCH, type DiscoverHit } from '../lib/discover'
@@ -94,8 +94,13 @@ type Filterable = {
   or(expr: string): Filterable
 }
 
-async function fetchWorksPage(f: WorksFilters, page: number): Promise<WorkRow[]> {
-  const { from, to } = worksPageRange(page)
+/**
+ * ONE ranged read of `works`, filtered. Every corpus select in the app goes through here, and the
+ * `.range()` is not optional: an un-ranged PostgREST select stops at 1,000 rows WITHOUT SAYING SO,
+ * which is the defect class this project has already paid for in `buildBackup`, `useBooks`,
+ * `fetchLibrary` and the works promotion. The corpus is past 1,100 rows, so it is live here.
+ */
+async function fetchWorks(f: WorksFilters, from: number, to: number): Promise<WorkRow[]> {
   const base = supabase.from('works').select(COLS)
   // One logic path: the same applyWorksFilters the unit tests drive. The structural cast exists
   // because supabase's builder generics recurse past tsc's instantiation depth when fed through a
@@ -104,6 +109,11 @@ async function fetchWorksPage(f: WorksFilters, page: number): Promise<WorkRow[]>
   const { data, error } = await query.order('title', { ascending: true }).range(from, to)
   if (error) throw error
   return (data ?? []) as unknown as WorkRow[]
+}
+
+const fetchWorksPage = (f: WorksFilters, page: number): Promise<WorkRow[]> => {
+  const { from, to } = worksPageRange(page)
+  return fetchWorks(f, from, to)
 }
 
 /**
@@ -121,6 +131,47 @@ export function useWorksBrowse(filters: WorksFilters) {
     initialPageParam: 0,
     getNextPageParam: (lastPage, pages) =>
       lastPage.length === DISCOVER_BATCH ? pages.length : undefined,
+    staleTime: 1000 * 60 * 10,
+  })
+}
+
+/**
+ * How many corpus rows one add-search lookup will consider. A CAP, stated rather than implied: a
+ * reader's term that matches more works than this leaves the tail unlabelled, and an unlabelled
+ * corpus row reads as "New to your library" — the mild direction of the error (an extra add
+ * control), never the severe one (a withheld add control for a book they do not have).
+ *
+ * 200 against a ~1.1k-row corpus, because the term is one a person typed at Add: a title or an
+ * author, not a browse filter. Raise it against a measurement — a term that legitimately saturates
+ * — not against a guess.
+ */
+export const WORKS_LOOKUP_LIMIT = 200
+
+/**
+ * The corpus half of Add's search triage: ONE ranged query for the WHOLE result set, keyed on the
+ * term the reader typed — not one query per result.
+ *
+ * Runs through the same `applyWorksFilters`/`fetchWorks` path as the browse, so the text leg is
+ * literally the browse's text leg (`title.ilike` OR `author_text.ilike`, over the denormalized
+ * column that exists because PostgREST cannot substring-search the `contributors` jsonb). A second
+ * copy of the filter composition is exactly the drift `applyWorksFilters` exists to prevent.
+ *
+ * DELIBERATELY SEPARATE from the search itself, and never awaited before results render: the hits
+ * paint as soon as the catalog answers, and the corpus labels arrive when this resolves. Blocking
+ * the list on a second round trip is a regression that is invisible on a fast connection.
+ *
+ * KNOWN GAP, worth naming rather than discovering later: `works` stores no ISBN, so a reader who
+ * searches BY ISBN gets a term that matches no corpus row on title or author, and every result is
+ * labelled from the library alone. Closing it needs an ISBN on the corpus, not a cleverer query.
+ */
+export function useWorksLookup(term: string) {
+  const q = term.trim()
+  return useQuery({
+    queryKey: ['works-lookup', q],
+    // Same floor as searchEverywhere's — below it the term matches most of the corpus and means
+    // nothing, and the catalog would not have searched either.
+    enabled: q.length >= 3,
+    queryFn: () => fetchWorks({ genre: '', tag: '', q }, 0, WORKS_LOOKUP_LIMIT - 1),
     staleTime: 1000 * 60 * 10,
   })
 }
