@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { createRoute, useNavigate } from '@tanstack/react-router'
+import { createRoute, Link, useNavigate } from '@tanstack/react-router'
 import {
   contributorsFromAuthors,
   formatAuthors,
@@ -17,9 +17,11 @@ import { useQueryClient } from '@tanstack/react-query'
 import { rootRoute } from './RootRoute'
 import { useIntake, type ReviewCandidate } from '../data/intake'
 import { useBooks } from '../data/books'
+import { useWorksLookup, workToHit, type WorkRow } from '../data/works'
+import { triageLabel, triageResults, type TriagedResult } from '../lib/addTriage'
 import { resolveCandidate, type ReviewAction } from '../data/duplicates'
 import { enrichBook, type CoverAlternate } from '../lib/enrich'
-import { searchEverywhere } from '../lib/search'
+import { searchEverywhere, type SearchResult } from '../lib/search'
 import { useEffectiveSkin, useLabels, useVoice } from '../skin/labels'
 import { Chip } from '../components/Chip'
 import { CoverImage } from '../components/CoverImage'
@@ -57,27 +59,62 @@ interface SearchHit {
 }
 
 /**
- * Add's catalog lookup — routed through the `search` edge function, not the browser.
+ * What a pick hands the form: the five catalog fields, plus the three a `works` row carries and a
+ * catalog result does not. A corpus pick is the better prefill precisely because of those three —
+ * prefilling from the search hit instead would throw away the series, position and genre the
+ * corpus already knows and make the reader retype them.
  *
- * Add's own SearchHit is a strict subset of the fn's SearchResult (title/authors/cover/isbn/year),
- * so this is a genuine swap rather than a shape change: `pub` takes the fn's `year`, and its
- * ISBN-13-preferred `isbn` is already the field Add wanted. User-initiated (someone typed), so this
- * leg was the least urgent of the three — but it is the same class, and leaving it would have kept
- * the Books API key shipping in the bundle for one call site.
+ * NOT tags. The corpus's `tags` are lowercased tag tokens and this form has nowhere to put them:
+ * tropes are tagged in the refine step against a saved id, and there is no freeform tag field by
+ * design. Inventing one here to have somewhere to land them would be a bigger change than the
+ * prefill is worth; the tags stay on the corpus row for whoever wires the refine step to it.
  */
-async function searchGoogleBooks(q: string): Promise<SearchHit[]> {
-  const results = await searchEverywhere(q)
-  return results
-    .slice(0, 8)
-    .map((r) => ({
-      title: r.title,
-      authors: r.authors,
-      cover: r.cover,
-      isbn: r.isbn,
-      pub: r.year,
-    }))
-    .filter((h) => h.title)
+interface Picked extends Partial<SearchHit> {
+  series?: string
+  position?: string
+  genre?: string
 }
+
+/** How many catalog results Add shows. */
+const ADD_RESULT_LIMIT = 8
+
+/**
+ * Add's catalog lookup — routed through the `search` edge function, NOT the browser.
+ *
+ * NAMED FOR WHAT IT DOES. This was `searchGoogleBooks` until this change, which was a leftover from
+ * before the client-side Google fallback was removed and had become a name that LIES about a
+ * privacy-relevant behaviour: the browser does not talk to Google here, `searchEverywhere` does the
+ * whole job server-side (Hardcover + Google fill, server-cached, rate-limited). Someone auditing
+ * "does the browser talk to Google" greps for exactly that name, and would have been misled by it.
+ *
+ * Returns `SearchResult`, not Add's five-field `SearchHit`, and that is load-bearing rather than
+ * incidental: `series` and `seriesPosition` survive to the triage classifier, which needs them for
+ * matchBook's `title-series-pos` leg. Truncating first would disable that leg silently.
+ */
+async function searchCatalog(q: string): Promise<SearchResult[]> {
+  const results = await searchEverywhere(q)
+  return results.filter((r) => r.title).slice(0, ADD_RESULT_LIMIT)
+}
+
+/** A catalog result as the form's prefill — `pub` takes the fn's `year`, and its ISBN-13-preferred
+ *  `isbn` is already the field Add wanted. */
+const hitOf = (r: SearchResult): SearchHit => ({
+  title: r.title,
+  authors: r.authors,
+  cover: r.cover,
+  isbn: r.isbn,
+  pub: r.year,
+})
+
+/** A corpus row as the form's prefill. The five shared fields come from `workToHit` — the SAME
+ *  mapper Discover's corpus picks use, so a corpus pick means the same thing on both screens — and
+ *  the three corpus-only fields ride alongside. */
+const pickedFromWork = (w: WorkRow): Picked => ({
+  ...workToHit(w),
+  series: w.series ?? '',
+  position: w.position == null ? '' : String(w.position),
+  genre: w.genre ?? '',
+})
 
 function parsePub(s: string): Book['pub'] {
   const m = s.match(/^(\d{4})(?:-(\d{2}))?(?:-(\d{2}))?/)
@@ -176,7 +213,7 @@ function AddForm({
   defaultUnowned = false,
   onAdded,
 }: {
-  hit: Partial<SearchHit>
+  hit: Picked
   defaultUnowned?: boolean
   onAdded: () => void
 }) {
@@ -202,14 +239,19 @@ function AddForm({
   )
   const [form, setForm] = useState({
     title: hit.title ?? '',
-    series: '',
-    position: '',
+    // Prefilled ONLY from a corpus pick — a catalog hit carries none of these three, so for every
+    // other entry point they are still '' and the picker still prompts rather than guessing.
+    // `seriesEdited` stays false for a corpus prefill, which is correct: the reader did not choose
+    // it, so `seriesUserChosen` saves false and a later enrich sweep may still treat it as
+    // fill-only. Same for `genreEdited`.
+    series: hit.series ?? '',
+    position: hit.position ?? '',
     // NOT skinGenre. The skin still decides which genre the picker OPENS to (see `skinGenre`'s uses
     // below) — that convenience is the reason it exists and is kept. What it must not do is get
     // SAVED: an untouched picker meant the active skin's association was stored as though the
     // reader had chosen it. types.ts is explicit — "'' = not chosen yet — the edit form prompts,
     // never guesses" — and this form was guessing.
-    genre: '',
+    genre: hit.genre ?? '',
     format: 'Paperback' as string,
     readStatus: 'unset' as Book['readStatus'],
   })
@@ -706,8 +748,9 @@ function BulkAdd() {
     for (const [i, line] of lines.entries()) {
       setStatus(`Looking up ${i + 1}/${lines.length}…`)
       try {
-        const hit = (await searchGoogleBooks(line))[0]
-        if (!hit) continue
+        const top = (await searchCatalog(line))[0]
+        if (!top) continue
+        const hit = hitOf(top)
         const np = (hit.authors[0] ?? '').trim().split(/\s+/)
         const res = await intake(
           {
@@ -780,6 +823,92 @@ function BulkAdd() {
   )
 }
 
+/**
+ * ONE search result, with its triage state said out loud.
+ *
+ * THE STATE IS TEXT. Not a colour, not an icon alone — it has to survive greyscale, a colour-blind
+ * reader and a screen reader equally. It rides `--muted` (4.51:1 at worst across all eighteen
+ * skin x mode combinations), NOT `--accent-fill`, which measures 1.00:1 against `--card` in
+ * almanac/dark — literally the same colour — and under 3:1 in three more dark skins. The level
+ * picker was rebuilt on `--muted` for exactly this reason.
+ *
+ * WHY 'library' IS NOT A PICK BUTTON. For the other two states the whole row is the add gesture,
+ * which is the right primary action. For a book the reader already has it is not: the thing they
+ * want is the record they already own, so the row stops being a pick target entirely and the only
+ * control is "Open it". Leaving the add gesture on it and adding a link beside would have offered
+ * "add a second copy" as the primary action, and would also have nested one interactive element
+ * inside another.
+ */
+function TriageRow({ t, onPick }: { t: TriagedResult; onPick: (p: Picked) => void }) {
+  const r = t.result
+  const inner = (
+    <>
+      <span
+        className="h-16 w-11 flex-none overflow-hidden rounded border border-line"
+        style={{ background: 'var(--chip)' }}
+      >
+        {/* through CoverImage so a catalog "no image" plate never renders as a result cover */}
+        {r.cover && <CoverImage book={{ title: r.title, cover: r.cover }} thumb />}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[14px] font-semibold text-ink">{r.title}</span>
+        <span className="block truncate text-[12px] text-muted">
+          {r.authors.join(', ')}
+          {r.year ? ` \u00b7 ${r.year.slice(0, 4)}` : ''}
+        </span>
+        {/* Semibold, not a second colour: the state has to be distinguishable from the author line
+            it sits under, and weight does that without adding a colour the reader must decode.
+            `--muted` is the carrier (4.51:1 at worst across all eighteen skin x mode combinations);
+            `--accent-fill` is not, at 1.00:1 against `--card` in almanac/dark. */}
+        <span
+          className="block truncate text-[12px] font-semibold text-muted"
+          data-testid="triage-label"
+        >
+          {triageLabel(t)}
+        </span>
+      </span>
+    </>
+  )
+
+  return (
+    <Surface
+      as="li"
+      radius="card"
+      tone="field"
+      pad={0}
+      className="flex items-center gap-3 p-2"
+      data-testid="add-result"
+      data-triage={t.state}
+    >
+      {t.state === 'library' && t.book ? (
+        <>
+          <span className="flex flex-1 items-center gap-3">{inner}</span>
+          <Link
+            to="/book/$bookId"
+            params={{ bookId: t.book.id }}
+            data-testid="triage-open"
+            className="skin-control flex-none border border-line px-3 py-1.5 text-[12.5px] font-semibold text-ink"
+            style={{ background: 'var(--card)' }}
+          >
+            Open it
+          </Link>
+        </>
+      ) : (
+        <button
+          type="button"
+          // A corpus row is the better prefill: it carries the series, position and genre the
+          // catalog result does not, so picking one fills them in rather than making the reader
+          // retype what the corpus already knows.
+          onClick={() => onPick(t.work ? pickedFromWork(t.work) : hitOf(r))}
+          className="flex flex-1 items-center gap-3 text-left"
+        >
+          {inner}
+        </button>
+      )}
+    </Surface>
+  )
+}
+
 function AddScreen() {
   const voice = useVoice()
   const navigate = useNavigate()
@@ -787,9 +916,15 @@ function AddScreen() {
   // elsewhere in the app — lands here with the form already filled, one tap from saved.
   const prefill = addRoute.useSearch()
   const [q, setQ] = useState('')
-  const [results, setResults] = useState<SearchHit[] | null>(null)
+  // SearchResult, not SearchHit: the triage classifier needs `series`/`seriesPosition`, which the
+  // five-field hit drops. The truncation to a hit happens at the PICK, not at the search.
+  const [results, setResults] = useState<SearchResult[] | null>(null)
   const [busy, setBusy] = useState(false)
-  const [picked, setPicked] = useState<Partial<SearchHit> | null>(() =>
+  // The term the results on screen belong to. Distinct from `q`, which changes on every keystroke:
+  // the corpus lookup must follow what was SEARCHED, or a half-typed query refetches the corpus on
+  // every character and labels the visible results against a term nobody asked for.
+  const [searched, setSearched] = useState('')
+  const [picked, setPicked] = useState<Picked | null>(() =>
     prefill.title
       ? {
           title: prefill.title,
@@ -803,14 +938,26 @@ function AddScreen() {
   const [scanStatus, setScanStatus] = useState<string | null>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
+  // Already paged (#350), so the library side of the check is sound above 1,000 rows.
+  const { data: books } = useBooks()
+  // ONE ranged corpus query for the whole result set, keyed on the term that was SEARCHED. It runs
+  // alongside the catalog search, never in front of it.
+  const corpus = useWorksLookup(searched)
+  // Labelled the moment the hits arrive — on the library alone if the corpus query is still in
+  // flight, gaining the corpus half when it resolves. Nothing here waits on a second round trip,
+  // which is the regression that would be invisible on a fast connection.
+  const triaged = triageResults(results ?? [], books ?? [], corpus.data)
 
   async function runSearch(term = q) {
     const query = term.trim()
     if (!query) return
     setBusy(true)
     setPicked(null)
+    // Set BEFORE the await, so the corpus lookup starts alongside the catalog search rather than
+    // after it. The two round trips overlap; neither waits on the other.
+    setSearched(query)
     try {
-      setResults(await searchGoogleBooks(query))
+      setResults(await searchCatalog(query))
     } catch {
       setResults([])
     } finally {
@@ -942,30 +1089,15 @@ function AddScreen() {
       {results && !picked && (
         <div className="mt-4 flex flex-col gap-2">
           {results.length ? (
-            results.map((it, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => setPicked(it)}
-                className="flex items-center gap-3 skin-card border border-line p-2 text-left"
-                style={{ background: 'var(--field)' }}
-              >
-                <div
-                  className="h-16 w-11 flex-none overflow-hidden rounded border border-line"
-                  style={{ background: 'var(--chip)' }}
-                >
-                  {/* through CoverImage so a Google "no image" plate never renders as a result cover */}
-                  {it.cover && <CoverImage book={{ title: it.title, cover: it.cover }} thumb />}
-                </div>
-                <div className="min-w-0">
-                  <div className="truncate text-[14px] font-semibold text-ink">{it.title}</div>
-                  <div className="truncate text-[12px] text-muted">
-                    {it.authors.join(', ')}
-                    {it.pub ? ` · ${it.pub.slice(0, 4)}` : ''}
-                  </div>
-                </div>
-              </button>
-            ))
+            <ul className="flex flex-col gap-2" data-testid="add-results">
+              {triaged.map((t, i) => (
+                <TriageRow
+                  key={`${t.result.isbn}|${t.result.title}|${i}`}
+                  t={t}
+                  onPick={setPicked}
+                />
+              ))}
+            </ul>
           ) : (
             <p className="text-[13px] text-muted">
               {voice.miss}{' '}
