@@ -29,6 +29,20 @@ const LEGACY_KEY = 'react-query'
 /** One row per reader. */
 const rowKey = (userId: string): string => `react-query:${userId}`
 
+/**
+ * Cross-account household responses never enter the offline mirror. Reader-scoped query keys keep
+ * two signed-in users apart in memory, and AuthProvider clears that memory on sign-out; refusing to
+ * dehydrate this namespace adds the stronger at-rest rule that another member's curated library is
+ * not left in IndexedDB at all.
+ *
+ * Series remains excluded for its existing write-on-read/stale-shape reasons in main.tsx. Keeping
+ * the key decision here makes the privacy boundary directly unit-testable without importing the
+ * app entry point.
+ */
+export function isOfflinePersistableQueryKey(queryKey: readonly unknown[]): boolean {
+  return queryKey[0] !== 'series' && queryKey[0] !== 'series-strip' && queryKey[0] !== 'household'
+}
+
 // Identity comes from storedSession.ts, which reads the persisted session synchronously and — since
 // the offline-session work — also reports a PRESENT-but-unparseable auth key rather than silently
 // treating it as signed out. Everything here still fails closed: no readable reader, no row.

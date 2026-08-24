@@ -11,7 +11,11 @@ import { AuthProvider } from './auth/AuthProvider'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { initErrorMonitoring } from './lib/sentry'
 import { BUILD_ID, installPreloadErrorReload } from './lib/updates'
-import { createDexiePersister, evictLegacyOfflineCache } from './lib/offlineCache'
+import {
+  createDexiePersister,
+  evictLegacyOfflineCache,
+  isOfflinePersistableQueryKey,
+} from './lib/offlineCache'
 import { reportWriteError } from './lib/writeErrors'
 import { router } from './router'
 import './styles/tokens.css'
@@ -83,10 +87,12 @@ createRoot(rootEl).render(
             // library's notion of "worth persisting" changes. (#78 had to inline the predicate —
             // react-query and react-query-persist-client resolved two different query-core builds,
             // so the helper's Query type didn't match this parameter's. #80 collapsed them to one.)
+            // Household is deliberately different from the personal offline library: each response
+            // includes another account's curated rows, so it remains network-only and never rests
+            // in IndexedDB. The in-memory keys still include the signed-in reader id, and sign-out
+            // clears the QueryClient as it already does for every personal query.
             shouldDehydrateQuery: (q) =>
-              defaultShouldDehydrateQuery(q) &&
-              q.queryKey[0] !== 'series' &&
-              q.queryKey[0] !== 'series-strip',
+              defaultShouldDehydrateQuery(q) && isOfflinePersistableQueryKey(q.queryKey),
           },
         }}
         onSuccess={() => {

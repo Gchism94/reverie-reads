@@ -21,6 +21,15 @@ import { SeriesView } from '../library/SeriesView'
 import { CoverCard } from '../components/CoverCard'
 import { CoverSheet } from '../components/CoverSheet'
 import { BookDetailRail } from '../components/BookDetailRail'
+import {
+  HouseholdBookCard,
+  HouseholdBookDetail,
+  LibraryScopeControl,
+  type LibraryScope,
+} from '../components/HouseholdLibrary'
+import { Surface } from '../components/Surface'
+import { useHouseholdBooks, useHouseholdRoster, type HouseholdBook } from '../data/household'
+import { useAuth } from '../auth/AuthProvider'
 import { useIsDesktop, useIsWide } from '../hooks/useMediaQuery'
 import { useVoice } from '../skin/labels'
 import { SectionHeader, SignatureEmblem } from '../components/Structure'
@@ -136,7 +145,7 @@ function DetailDrawer({
   )
 }
 
-function LibraryScreen() {
+function PersonalLibraryScreen() {
   const { data: books, isLoading, isError, error } = useBooks()
   const hideIntensity = useHideIntensity()
   /*
@@ -211,7 +220,25 @@ function LibraryScreen() {
 
   if (isLoading) return <Centered>{voice.loading}</Centered>
   if (isError) return <Centered>Couldn’t load your library — {(error as Error).message}</Centered>
-  if (!books || books.length === 0) return <EmptyState />
+  if (!books || books.length === 0) {
+    return (
+      <div className="flex min-h-full flex-col px-4 py-6 sm:px-6">
+        <header className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1
+              className="text-[22px] italic text-ink"
+              style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+            >
+              Library
+            </h1>
+            <span className="text-[12.5px] text-muted">0 books · 0 faves</span>
+          </div>
+          <ScopeSwitch scope="personal" />
+        </header>
+        <EmptyState />
+      </div>
+    )
+  }
 
   const toggleFave = (id: string, fave: boolean) =>
     updateBook.mutate({ id, patch: { fave: !fave } })
@@ -234,16 +261,19 @@ function LibraryScreen() {
 
   const center = (
     <div className="min-w-0 px-4 py-6 sm:px-6 lg:px-7">
-      <header className="mb-3 flex items-baseline justify-between gap-3">
-        <h1
-          className="text-[22px] italic text-ink"
-          style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
-        >
-          Library
-        </h1>
-        <span className="text-[12.5px] text-muted">
-          {libraryBooks.length} books · {libraryBooks.filter((b) => b.fave).length} faves
-        </span>
+      <header className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1
+            className="text-[22px] italic text-ink"
+            style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+          >
+            Library
+          </h1>
+          <span className="text-[12.5px] text-muted">
+            {libraryBooks.length} books · {libraryBooks.filter((b) => b.fave).length} faves
+          </span>
+        </div>
+        <ScopeSwitch scope="personal" />
       </header>
 
       <Toolbar filterToggleClass="lg:hidden" />
@@ -378,17 +408,250 @@ function LibraryScreen() {
   )
 }
 
+function ScopeSwitch({ scope }: { scope: LibraryScope }) {
+  const navigate = useNavigate()
+  const setScope = (next: LibraryScope) =>
+    void navigate({
+      to: '/library',
+      search: next === 'household' ? { scope: 'household' } : {},
+      replace: true,
+    })
+  return <LibraryScopeControl scope={scope} onChange={setScope} />
+}
+
+function HouseholdCentered({ children }: { children: ReactNode }) {
+  return (
+    <Surface
+      tone="field"
+      radius="panel"
+      pad={5}
+      className="mx-auto my-10 max-w-xl text-center text-[14px] text-muted"
+    >
+      {children}
+    </Surface>
+  )
+}
+
+function HouseholdDetailDrawer({
+  book,
+  currentReaderId,
+  onClose,
+}: {
+  book: HouseholdBook
+  currentReaderId: string
+  onClose: () => void
+}) {
+  const closeRef = useRef<HTMLButtonElement>(null)
+  useEffect(() => {
+    closeRef.current?.focus()
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  return (
+    <div
+      className="fixed inset-0 z-40"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${book.title} household details`}
+    >
+      <button
+        type="button"
+        aria-label="Close household details"
+        onClick={onClose}
+        className="absolute inset-0"
+        style={{ background: 'color-mix(in srgb, var(--bg0) 55%, transparent)' }}
+      />
+      <div
+        className="absolute right-0 top-0 flex h-dvh w-[min(360px,92vw)] flex-col border-l border-line"
+        style={{ background: 'var(--bg1)', boxShadow: 'var(--shadow)' }}
+      >
+        <div className="flex justify-end p-2">
+          <button
+            ref={closeRef}
+            type="button"
+            onClick={onClose}
+            aria-label="Close household details"
+            className="skin-control grid h-8 w-8 place-items-center border border-line text-[13px] text-ink"
+            style={{ background: 'var(--card)' }}
+          >
+            ✕
+          </button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <HouseholdBookDetail book={book} currentReaderId={currentReaderId} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function HouseholdLibraryScreen() {
+  const { session } = useAuth()
+  const currentReaderId = session?.user.id ?? ''
+  const roster = useHouseholdRoster()
+  const householdBooks = useHouseholdBooks()
+  const isWide = useIsWide()
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+
+  const members = roster.data ?? []
+  const books = householdBooks.data ?? []
+  const selected = (selectedId && books.find((book) => book.id === selectedId)) || null
+  const dockedBook = selected ?? books[0] ?? null
+  const onlyCurrentMember =
+    members.length === 1 && !!currentReaderId && members[0]?.userId === currentReaderId
+  const householdName = members[0]?.householdName ?? 'Household'
+  const error = roster.error ?? householdBooks.error
+
+  const center = (
+    <div className="min-w-0 px-4 py-6 sm:px-6 lg:px-7">
+      <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1
+            className="text-[22px] italic text-ink"
+            style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+          >
+            Library
+          </h1>
+          <span className="text-[12.5px] text-muted">Household · read-only</span>
+        </div>
+        <ScopeSwitch scope="household" />
+      </header>
+
+      {roster.isLoading || householdBooks.isLoading ? (
+        <HouseholdCentered>Loading the household library…</HouseholdCentered>
+      ) : error ? (
+        <HouseholdCentered>
+          Couldn’t load the household library — {(error as Error).message}
+        </HouseholdCentered>
+      ) : members.length === 0 ? (
+        <HouseholdCentered>
+          <h2 className="text-[18px] font-semibold text-ink">No household linked</h2>
+          <p className="mt-2">
+            This account is not part of a household. Personal remains your active library.
+          </p>
+        </HouseholdCentered>
+      ) : (
+        <>
+          <Surface tone="field" radius="panel" pad={2} className="mb-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="text-[15px] font-semibold text-ink">{householdName}</h2>
+                <p className="mt-0.5 text-[12px] text-muted">
+                  {members.length} {members.length === 1 ? 'member' : 'members'} · every card names
+                  its personal-library owner
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-1.5" aria-label="Household members">
+                {members.map((member) => (
+                  <span
+                    key={member.userId}
+                    className="skin-control px-2.5 py-1 text-[11.5px] font-semibold text-ink"
+                    style={{ background: 'var(--chip)' }}
+                  >
+                    {member.displayName}
+                    {member.userId === currentReaderId ? ' (you)' : ''}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </Surface>
+
+          {onlyCurrentMember && (
+            <Surface
+              tone="field"
+              radius="control"
+              pad={2}
+              role="status"
+              className="mb-4 text-[12.5px] text-muted"
+            >
+              You’re the only household member left. This scope stays read-only and now contains
+              only your personal library.
+            </Surface>
+          )}
+
+          {books.length === 0 ? (
+            <HouseholdCentered>
+              <h2 className="text-[18px] font-semibold text-ink">
+                {onlyCurrentMember ? 'Your household library is empty' : 'No household books yet'}
+              </h2>
+              <p className="mt-2">
+                {onlyCurrentMember
+                  ? 'You’re the only member left, and your personal library has no books to show here.'
+                  : 'The household is linked, but none of its members has a library book to show.'}
+              </p>
+            </HouseholdCentered>
+          ) : (
+            <>
+              <SectionHeader label="Household library" readout={books.length} className="mb-3" />
+              <div style={COVER_GRID}>
+                {books.map((book) => (
+                  <HouseholdBookCard
+                    key={book.id}
+                    book={book}
+                    currentReaderId={currentReaderId}
+                    selected={isWide && dockedBook?.id === book.id}
+                    onOpen={() => setSelectedId(book.id)}
+                  />
+                ))}
+              </div>
+            </>
+          )}
+        </>
+      )}
+    </div>
+  )
+
+  return (
+    <>
+      <section className="xl:grid xl:items-start xl:grid-cols-[minmax(0,1fr)_360px]">
+        {center}
+        <aside
+          aria-label="Household book details"
+          className="hidden xl:sticky xl:top-0 xl:block xl:h-dvh xl:border-l xl:border-line"
+        >
+          <HouseholdBookDetail book={dockedBook} currentReaderId={currentReaderId} />
+        </aside>
+      </section>
+      {!isWide && selected && (
+        <HouseholdDetailDrawer
+          book={selected}
+          currentReaderId={currentReaderId}
+          onClose={() => setSelectedId(null)}
+        />
+      )}
+    </>
+  )
+}
+
+function LibraryScreen() {
+  const { scope } = libraryRoute.useSearch()
+  return scope === 'household' ? <HouseholdLibraryScreen /> : <PersonalLibraryScreen />
+}
+
 const SHELF_LINK_VALUES: readonly LibraryShelfLink[] = ['owned', 'borrowed', 'read', 'wishlist']
+
+export interface LibraryRouteSearch {
+  shelf?: LibraryShelfLink
+  scope?: 'household'
+}
+
+export const validateLibrarySearch = (search: Record<string, unknown>): LibraryRouteSearch => ({
+  shelf: SHELF_LINK_VALUES.includes(search.shelf as LibraryShelfLink)
+    ? (search.shelf as LibraryShelfLink)
+    : undefined,
+  // Personal is represented by absence. Every unknown or array-valued input fails closed to it.
+  scope: search.scope === 'household' ? 'household' : undefined,
+})
 
 export const libraryRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'library',
   // Deep link from a /shelves derived-shelf header (the AuthRoute `?mode=` pattern) — undefined
   // means "no shelf link", so plain /library stays the canonical URL.
-  validateSearch: (search: Record<string, unknown>): { shelf?: LibraryShelfLink } => ({
-    shelf: SHELF_LINK_VALUES.includes(search.shelf as LibraryShelfLink)
-      ? (search.shelf as LibraryShelfLink)
-      : undefined,
-  }),
+  validateSearch: validateLibrarySearch,
   component: LibraryScreen,
 })
