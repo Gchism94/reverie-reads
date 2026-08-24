@@ -56,6 +56,12 @@ describe('applyWorksFilters', () => {
     expect(r.calls).toEqual([['or', 'title.ilike.%yarros%,author_text.ilike.%yarros%']])
   })
 
+  it('ISBN-10 search becomes exact canonical ISBN-13 array containment', () => {
+    const r = new Recorder()
+    applyWorksFilters(r, filters({ q: '0-306-40615-2' }))
+    expect(r.calls).toEqual([['contains', 'isbns⊇["9780306406157"]']])
+  })
+
   it('strips % and , from the term — commas are PostgREST or() separators', () => {
     const r = new Recorder()
     applyWorksFilters(r, filters({ q: '100%, guaranteed' }))
@@ -89,6 +95,7 @@ describe('workToHit — a corpus row IS an Add prefill', () => {
     work_key: 'k',
     title: 'Ash Crown',
     contributors: [{ name: 'Vera Stone', role: 'author', position: 0 }],
+    isbns: [],
     series: null,
     position: null,
     cover_url: null,
@@ -104,7 +111,13 @@ describe('workToHit — a corpus row IS an Add prefill', () => {
     const h = workToHit(row())
     expect(h.title).toBe('Ash Crown')
     expect(h.authors).toEqual(['Vera Stone'])
-    expect(h.isbn).toBe('') // the corpus stores none yet; Add treats empty as absent
+    expect(h.isbn).toBe('') // Add treats an unknown ISBN as absent
+  })
+
+  it('prefills the first canonical ISBN when the corpus knows an edition', () => {
+    expect(workToHit(row({ isbns: ['9780306406157', '9781649374042'] })).isbn).toBe(
+      '9780306406157',
+    )
   })
 
   it('a coverless row maps to cover "" — the placeholder is the designed common case at launch', () => {

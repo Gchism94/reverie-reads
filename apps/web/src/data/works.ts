@@ -1,5 +1,5 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
-import type { Contributor } from '@reverie/core'
+import { normalizeIsbn, type Contributor } from '@reverie/core'
 import { supabase } from '../lib/supabase'
 import { DISCOVER_BATCH, type DiscoverHit } from '../lib/discover'
 
@@ -17,7 +17,7 @@ export interface WorksFilters {
   genre: string
   /** exact tag membership (works.tags is lowercased at import), '' = all */
   tag: string
-  /** title/author substring, '' = none */
+  /** title/author substring or ISBN-10/13 exact lookup, '' = none */
   q: string
 }
 
@@ -25,6 +25,7 @@ export interface WorkRow {
   work_key: string
   title: string
   contributors: Contributor[]
+  isbns: string[]
   series: string | null
   position: number | null
   cover_url: string | null
@@ -35,7 +36,8 @@ export interface WorkRow {
   pub_d: number | null
 }
 
-const COLS = 'work_key, title, contributors, series, position, cover_url, genre, tags, pub_y, pub_m, pub_d'
+const COLS =
+  'work_key, title, contributors, isbns, series, position, cover_url, genre, tags, pub_y, pub_m, pub_d'
 
 /** Page N's inclusive row range — pure, so the paging arithmetic is testable without a client. */
 export const worksPageRange = (page: number): { from: number; to: number } => ({
@@ -50,10 +52,11 @@ export const worksPageRange = (page: number): { from: number; to: number } => ({
  * THROUGH this function; a second copy of the filter logic is exactly the drift this shape exists
  * to prevent.
  *
- * Text search matches title OR author_text — the denormalized column the migration carries
- * precisely because PostgREST cannot substring-search the contributors jsonb. `%` and `,` are
- * stripped from the term rather than escaped: PostgREST's .or() syntax treats commas as
- * separators, and a literal % in a reader's search is noise, not a wildcard request.
+ * A usable ISBN-10/13 is canonicalized to ISBN-13 and uses exact array containment. Everything
+ * else matches title OR author_text — the denormalized column the migration carries precisely
+ * because PostgREST cannot substring-search the contributors jsonb. `%` and `,` are stripped from
+ * text terms rather than escaped: PostgREST's .or() syntax treats commas as separators, and a
+ * literal % in a reader's search is noise, not a wildcard request.
  */
 export function applyWorksFilters<
   T extends {
@@ -65,15 +68,20 @@ export function applyWorksFilters<
   let q = query
   if (f.genre) q = q.eq('genre', f.genre)
   if (f.tag) q = q.contains('tags', [f.tag.toLowerCase()])
-  const term = f.q.trim().replace(/[%,]/g, '')
-  if (term) q = q.or(`title.ilike.%${term}%,author_text.ilike.%${term}%`)
+  const raw = f.q.trim()
+  const isbn = normalizeIsbn(raw)
+  if (isbn) q = q.contains('isbns', [isbn])
+  else {
+    const term = raw.replace(/[%,]/g, '')
+    if (term) q = q.or(`title.ilike.%${term}%,author_text.ilike.%${term}%`)
+  }
   return q
 }
 
 /** works row → the Discover card contract. A corpus pick IS an Add prefill, same as an external
- *  hit — authors from contributors, isbn deliberately '' (the corpus stores none yet), pub from
- *  pub_y so the card's year renders. cover may be '' for months; CoverPlaceholder is the designed
- *  common case at launch, not an error state. */
+ *  hit — authors from contributors, the first canonical ISBN when known, pub from pub_y so the
+ *  card's year renders. cover may be '' for months; CoverPlaceholder is the designed common case
+ *  at launch, not an error state. */
 export function workToHit(w: WorkRow): DiscoverHit {
   const pub = [w.pub_y, w.pub_m, w.pub_d]
     .filter((x): x is number => x != null)
@@ -83,7 +91,7 @@ export function workToHit(w: WorkRow): DiscoverHit {
     title: w.title,
     authors: (w.contributors ?? []).map((c) => c.name).filter(Boolean),
     cover: w.cover_url ?? '',
-    isbn: '',
+    isbn: w.isbns[0] ?? '',
     pub,
   }
 }
@@ -151,18 +159,18 @@ export const WORKS_LOOKUP_LIMIT = 200
  * The corpus half of Add's search triage: ONE ranged query for the WHOLE result set, keyed on the
  * term the reader typed — not one query per result.
  *
- * Runs through the same `applyWorksFilters`/`fetchWorks` path as the browse, so the text leg is
- * literally the browse's text leg (`title.ilike` OR `author_text.ilike`, over the denormalized
- * column that exists because PostgREST cannot substring-search the `contributors` jsonb). A second
- * copy of the filter composition is exactly the drift `applyWorksFilters` exists to prevent.
+ * Runs through the same `applyWorksFilters`/`fetchWorks` path as the browse, so an ISBN uses exact
+ * containment and the text leg is literally the browse's text leg (`title.ilike` OR
+ * `author_text.ilike`, over the denormalized column that exists because PostgREST cannot
+ * substring-search the `contributors` jsonb). A second copy of the filter composition is exactly
+ * the drift `applyWorksFilters` exists to prevent.
  *
  * DELIBERATELY SEPARATE from the search itself, and never awaited before results render: the hits
  * paint as soon as the catalog answers, and the corpus labels arrive when this resolves. Blocking
  * the list on a second round trip is a regression that is invisible on a fast connection.
  *
- * KNOWN GAP, worth naming rather than discovering later: `works` stores no ISBN, so a reader who
- * searches BY ISBN gets a term that matches no corpus row on title or author, and every result is
- * labelled from the library alone. Closing it needs an ISBN on the corpus, not a cleverer query.
+ * ISBN-10 input is promoted to canonical ISBN-13 before the corpus query, matching the same
+ * normalization used by library matching and the owner-run importer.
  */
 export function useWorksLookup(term: string) {
   const q = term.trim()

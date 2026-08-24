@@ -13,10 +13,17 @@
 // between discover.ts and core is already on record as a hazard).
 
 import { workKeyOf } from '../packages/core/src/normalize'
-import { matchBook, isStrong } from '../packages/core/src/match'
+import { matchBook, isStrong, normalizeIsbn } from '../packages/core/src/match'
 import { normalizeImportGenres } from '../packages/core/src/genreNormalize'
 import { normalizeSeriesStatus } from '../packages/core/src/seriesStatus'
 import type { Book } from '../packages/core/src/types'
+
+/** Canonical, stable ISBN set for persistence. Invalid values disappear; ISBN-10 and ISBN-13
+ * representations of the same edition collapse to one ISBN-13. First-seen order is preserved so
+ * repeated owner-run imports do not churn arrays that already contain the same identifiers. */
+export function canonicalIsbns(values: readonly (string | null | undefined)[]): string[] {
+  return [...new Set(values.map((value) => normalizeIsbn(value ?? '')).filter(Boolean))]
+}
 
 /** RFC-4180-ish CSV: quoted fields, embedded commas, doubled quotes, CRLF-tolerant. The file is
  *  ~1.2k rows so a hand parser beats a dependency; it refuses ragged quoting loudly. */

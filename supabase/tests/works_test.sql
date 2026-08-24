@@ -6,26 +6,40 @@
 -- the boundary moved somewhere else, which is the regression this file exists to catch.
 
 begin;
-select plan(8);
+select plan(10);
 
 insert into auth.users (id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
 values
   ('cccccccc-cccc-cccc-cccc-cccccccccccc', 'authenticated', 'authenticated', 'works-a@example.com', '{}', '{"display_name":"WA"}', now(), now());
 
 -- Seed one corpus row as table owner (RLS bypass — the same standing service-role write path).
-insert into public.works (work_key, title, contributors, genre, tags)
+insert into public.works (work_key, title, contributors, genre, tags, isbns)
 values ('fourthwing|rebeccayarros', 'Fourth Wing',
         '[{"name":"Rebecca Yarros","role":"author","position":0}]', 'romance',
-        array['Dragon Riders']);
+        array['Dragon Riders'], array['9781649374042']);
 
 -- ── a signed-in reader ──
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"cccccccc-cccc-cccc-cccc-cccccccccccc","role":"authenticated"}', true);
 
 select is(
-  (select count(*)::int from public.works),
+  (select count(*)::int from public.works where work_key = 'fourthwing|rebeccayarros'),
   1,
-  'authenticated reads the corpus — the whole read model'
+  'authenticated reads the seeded corpus row — the whole read model'
+);
+
+select is(
+  (select count(*)::int from public.works
+    where work_key = 'fourthwing|rebeccayarros'
+      and isbns @> array['9781649374042']),
+  1,
+  'authenticated can find a work by canonical ISBN array containment'
+);
+
+select is(
+  (select isbns[1] from public.works where work_key = 'fourthwing|rebeccayarros'),
+  '9781649374042',
+  'canonical ISBNs are readable with the rest of the objective metadata'
 );
 
 select is(

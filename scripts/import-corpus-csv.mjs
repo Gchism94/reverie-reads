@@ -30,7 +30,8 @@
 //
 // ── WHAT --write DOES, exactly ──────────────────────────────────────────────────────────────────
 //   1. Upserts EVERY existing library book's objective fields into `works` (on work_key), so the
-//      corpus is complete rather than just the CSV delta.
+//      corpus is complete rather than just the CSV delta, then merges each usable book ISBN into
+//      that work's canonical ISBN-13 set.
 //   2. Upserts a `works` row per NEW CSV record (objective fields + tags only).
 //   3. Inserts a `books` row for the owner per NEW record. GC Read → read_status 'Read', else
 //      'unset'. TC READ IS ANOTHER PERSON'S DATA AND IS WRITTEN NOWHERE — it appears in the report
@@ -61,11 +62,12 @@
 //     an explicit NULL, not the column default (the a11y.spec seeding incident).
 //
 // ── ENRICHMENT BACKFILL (--backfill) ────────────────────────────────────────────────────────────
-//   For works rows missing cover_url OR work_id: look up enrichment_cache at key
+//   For works rows missing cover_url, work_id, OR ISBNs: look up enrichment_cache at key
 //   'ta:' + work_key (the exact construction — no re-matching), and copy the resolved identity
-//   (work_id) and cover fields out of the cached record. The ~new books rows enrich through the
-//   EXISTING per-book pipeline as the reader uses the app; this promotes those results into the
-//   corpus whenever it is re-run. The enrich fn itself is untouched.
+//   (work_id), cover fields, and canonical edition ISBNs out of the cached record. Existing ISBNs
+//   are unioned, never replaced. The ~new books rows enrich through the EXISTING per-book pipeline
+//   as the reader uses the app; this promotes those results into the corpus whenever it is re-run.
+//   The enrich fn itself is untouched.
 
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -80,6 +82,7 @@ import {
   unmatchedLibrary,
   normTitleKey,
   csvFile,
+  canonicalIsbns,
 } from './corpus-import-lib.ts'
 import { norm } from '../packages/core/src/normalize.ts'
 
@@ -251,6 +254,51 @@ async function upsertWorks(rows, label) {
   console.log(`works: upserted ${rows.length} (${label})`)
 }
 
+const sameStrings = (a, b) => a.length === b.length && a.every((value, i) => value === b[i])
+
+/** Merge the owner's known edition identifiers into work-level rows after the objective-field
+ * upsert. ISBNs stay out of the upsert payload itself so a later rerun with an empty book ISBN can
+ * never replace a richer set previously obtained from enrichment_cache. */
+async function mergeLibraryWorkIsbns(books) {
+  const incomingByWork = new Map()
+  for (const b of books) {
+    const incoming = canonicalIsbns([b.isbn])
+    if (!incoming.length) continue
+    const workKey = `${norm(b.title)}|${norm(
+      [b.author_first, b.author_last].filter(Boolean).join(' '),
+    )}`
+    incomingByWork.set(
+      workKey,
+      canonicalIsbns([...(incomingByWork.get(workKey) ?? []), ...incoming]),
+    )
+  }
+
+  const keys = [...incomingByWork.keys()]
+  let updated = 0
+  for (let i = 0; i < keys.length; i += 200) {
+    const chunk = keys.slice(i, i + 200)
+    const { data, error } = await supabase
+      .from('works')
+      .select('work_key, isbns')
+      .in('work_key', chunk)
+    if (error) fail(`works ISBN select (chunk at ${i}): ${error.message}`)
+    for (const row of data ?? []) {
+      const merged = canonicalIsbns([
+        ...(row.isbns ?? []),
+        ...(incomingByWork.get(row.work_key) ?? []),
+      ])
+      if (sameStrings(row.isbns ?? [], merged)) continue
+      const { error: updateError } = await supabase
+        .from('works')
+        .update({ isbns: merged })
+        .eq('work_key', row.work_key)
+      if (updateError) fail(`works ISBN update ${row.work_key}: ${updateError.message}`)
+      updated++
+    }
+  }
+  console.log(`works: merged library ISBNs into ${updated} of ${keys.length} ISBN-bearing works`)
+}
+
 /**
  * `--dump=<dir>` — write what the classifier DECIDED, not just how many times.
  *
@@ -349,6 +397,7 @@ async function runImport() {
     library.map((b) => workFromBook(b.row)),
     'promoted from existing library',
   )
+  await mergeLibraryWorkIsbns(library.map((b) => b.row))
 
   // 2) fresh CSV rows → corpus
   await upsertWorks(fresh.map(workFromRecord), 'new from CSV')
@@ -379,20 +428,20 @@ async function runBackfill() {
   for (let from = 0; ; from += PAGE) {
     const { data: page, error } = await supabase
       .from('works')
-      .select('work_key, work_id, cover_url')
-      .or('cover_url.is.null,work_id.is.null')
+      .select('work_key, work_id, cover_url, isbns')
       .order('work_key', { ascending: true })
       .range(from, from + PAGE - 1)
     if (error) fail(`works select: ${error.message}`)
     rows.push(...page)
     if (page.length < PAGE) break
   }
-  if (!rows.length) {
-    console.log('backfill: nothing missing — every works row has a cover and a work_id')
+  const incomplete = rows.filter((row) => !row.cover_url || !row.work_id || !row.isbns?.length)
+  if (!incomplete.length) {
+    console.log('backfill: nothing missing — every works row has a cover, work_id, and ISBN')
     return
   }
   let updated = 0
-  for (const w of rows) {
+  for (const w of incomplete) {
     // the exact cache-key construction — 'ta:' + work_key IS the enrich fn's own key
     const { data: hit } = await supabase
       .from('enrichment_cache')
@@ -407,13 +456,22 @@ async function runBackfill() {
       patch.cover_url = rec.cover
       if (rec.provenance?.cover?.source) patch.cover_source = rec.provenance.cover.source
     }
+    const recordIsbns = Array.isArray(rec.isbns) ? rec.isbns : []
+    const isbns = canonicalIsbns([
+      ...(w.isbns ?? []),
+      rec.isbn,
+      rec.isbn13,
+      rec.isbn10,
+      ...recordIsbns,
+    ])
+    if (!sameStrings(w.isbns ?? [], isbns)) patch.isbns = isbns
     if (!Object.keys(patch).length) continue
     const { error: ue } = await supabase.from('works').update(patch).eq('work_key', w.work_key)
     if (ue) fail(`works update ${w.work_key}: ${ue.message}`)
     updated++
   }
   console.log(
-    `backfill: ${updated} of ${rows.length} incomplete works rows filled from enrichment_cache (repeatable — re-run after more books enrich)`,
+    `backfill: ${updated} of ${incomplete.length} incomplete works rows filled from enrichment_cache (repeatable — re-run after more books enrich)`,
   )
 }
 

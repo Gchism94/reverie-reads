@@ -15,6 +15,7 @@ import {
   workKeyOf,
   isOmnibusSuspect,
   seriesStatusOf,
+  canonicalIsbns,
 } from '../../../scripts/corpus-import-lib'
 import { makeBook } from './book.fixture'
 
@@ -88,6 +89,14 @@ describe('normalizeRecord', () => {
     expect(seriesStatusOf('Standalone', false)).toBe('standalone')
     expect(seriesStatusOf('', true)).toBe('ongoing')
     expect(seriesStatusOf('', false)).toBe('standalone')
+  })
+})
+
+describe('canonicalIsbns', () => {
+  it('promotes ISBN-10, strips punctuation, deduplicates, and omits invalid values', () => {
+    expect(canonicalIsbns(['0-306-40615-2', '978-0-306-40615-7', '', null, 'not an isbn'])).toEqual(
+      ['9780306406157'],
+    )
   })
 })
 

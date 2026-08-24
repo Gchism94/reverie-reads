@@ -1,4 +1,4 @@
-import { matchBook, norm, workKeyOf, type Book } from '@reverie/core'
+import { matchBook, norm, normalizeIsbn, workKeyOf, type Book } from '@reverie/core'
 import { resultToIncoming, type SearchResult } from './search'
 import type { WorkRow } from '../data/works'
 
@@ -86,6 +86,16 @@ export function workRowKeys(w: WorkRow): string[] {
   return [derived, w.work_key].filter((k): k is string => !!k)
 }
 
+/** One catalog result may expose the same edition through any of these fields. Canonicalizing here
+ * makes ISBN-10 scans join the ISBN-13 values persisted on works. */
+export function resultIsbn(r: SearchResult): string {
+  for (const raw of [r.isbn13, r.isbn, r.isbn10]) {
+    const isbn = normalizeIsbn(raw ?? '')
+    if (isbn) return isbn
+  }
+  return ''
+}
+
 /**
  * Label every result.
  *
@@ -100,12 +110,22 @@ export function triageResults(
   corpus: readonly WorkRow[] | null | undefined,
 ): TriagedResult[] {
   const byKey = new Map<string, WorkRow>()
-  for (const w of corpus ?? []) for (const k of workRowKeys(w)) if (!byKey.has(k)) byKey.set(k, w)
+  const byIsbn = new Map<string, WorkRow>()
+  for (const w of corpus ?? []) {
+    for (const k of workRowKeys(w)) if (!byKey.has(k)) byKey.set(k, w)
+    for (const raw of w.isbns ?? []) {
+      const isbn = normalizeIsbn(raw)
+      if (isbn && !byIsbn.has(isbn)) byIsbn.set(isbn, w)
+    }
+  }
 
   return results.map((result) => {
     const book = libraryHit(result, library)
+    const isbn = resultIsbn(result)
     const rk = resultWorkKey(result)
-    const work = (rk ? byKey.get(rk) : undefined) ?? null
+    // ISBN is edition identity and survives catalog title/author variation, so it is the stronger
+    // join. The work key remains the fallback for records without an ISBN.
+    const work = (isbn ? byIsbn.get(isbn) : undefined) ?? (rk ? byKey.get(rk) : undefined) ?? null
     return { result, book, work, state: book ? 'library' : work ? 'corpus' : 'new' }
   })
 }
