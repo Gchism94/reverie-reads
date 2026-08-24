@@ -53,6 +53,17 @@ const PASSWORD = 'placeholder-title-e2e-password'
 /** Measured to reproduce (3px over) on the unfixed build — see the header. */
 const CLUB_TITLE = 'The Overflow Book Club of Extremely Long Naming'
 
+/**
+ * A REAL corpus title, and the one from the screenshot. `Accumulation` rendered as "Accumulatic" in
+ * the marrow/box-lid plate — a single unbreakable word wider than the panel, spilling past the clip
+ * edge instead of breaking onto the next of its three lines. Measured on the unfixed build at a
+ * 390px viewport: 61px of horizontal overflow on ONE line. (Dreamcatcher 65, Frankenstein 52,
+ * Hungerstone 50, Meditations 37 — same class, same plate.)
+ */
+const ONE_WORD_TITLE = 'Accumulation'
+/** marrow is the skin whose plate is `box-lid`, the confirmed-broken variant. */
+const CLIP_SKIN = 'marrow'
+
 test.describe.configure({ mode: 'serial' })
 
 type Client = {
@@ -113,6 +124,26 @@ async function seed(c: Client): Promise<void> {
     'placeholder-title club_members insert',
   )
   seededClubId.set(PROJECT(), id)
+
+  // A coverless BOOK, for the horizontal-clip case below. Coverless on purpose: a book with a cover
+  // never reaches the placeholder at all.
+  await ok(c.admin.from('books').delete().eq('owner_id', c.uid), 'placeholder-title books delete')
+  await ok(
+    c.admin.from('books').insert({
+      owner_id: c.uid,
+      title: ONE_WORD_TITLE,
+      author_first: 'Aimee',
+      author_last: 'Pokwatka',
+      genre: 'literary',
+      status: 'standalone',
+      ownership: 'owned',
+      borrowed: false,
+      wishlist: false,
+      read_status: 'unset',
+      cover_url: null,
+    }),
+    'placeholder-title books insert',
+  )
 }
 
 async function signIn(page: Page, session: { access_token: string; refresh_token: string }) {
@@ -201,4 +232,96 @@ test('a truncated plate title always carries the clamp that draws its ellipsis',
         `must be present.`,
     ).toBe(true)
   }
+})
+
+/**
+ * The HORIZONTAL half of the same contract, and a different failure from the one above.
+ *
+ * The club test asserts that a title truncated VERTICALLY carries the affordance that signals it.
+ * This asserts that a title is not cut HORIZONTALLY at all: `-webkit-line-clamp` bounds height and
+ * does nothing for one unbreakable word wider than the box, which simply spills past both clip
+ * edges — no ellipsis, no signal, letters just gone. That is what `Accumulation` did.
+ *
+ * WHY THE ASSERTION IS "wraps to 2+ lines" AND NOT ONLY "no overflow". A no-overflow assertion
+ * passes trivially on a title that fits, so on its own it could go green while proving nothing —
+ * and it would do exactly that if a future font-size change shrank the type. Requiring the word to
+ * occupy more than one line IS the fixture-can-still-fail check: it holds only while the title is
+ * genuinely too wide for one line, which is the condition the fix exists for.
+ *
+ * The tolerance is 4px, not 0, and the reason is in this file's header: the italic tail of a glyph
+ * hangs ~3px past the box and `scrollWidth` tracks it. Asserting 0 would be a permanently red test
+ * dressed as a guard — the same trap the club test above documents avoiding.
+ */
+async function measureOneWordTitle(page: Page, title: string) {
+  return page.evaluate((t) => {
+    for (const plate of Array.from(
+      document.querySelectorAll<HTMLElement>('[role="img"][aria-label*="placeholder cover"]'),
+    )) {
+      // the WIDE block only — the narrow block renders a monogram and never a title
+      const wide = plate.querySelector<HTMLElement>('.ph-plate-wide') ?? plate
+      const el = Array.from(wide.querySelectorAll<HTMLElement>('span')).find(
+        (s) => (s.textContent ?? '').trim() === t,
+      )
+      if (!el || !el.clientWidth) continue
+      const cs = getComputedStyle(el)
+      const lineHeight = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.25
+      return {
+        overflowX: el.scrollWidth - el.clientWidth,
+        scrollWidth: el.scrollWidth,
+        clientWidth: el.clientWidth,
+        lines: Math.round(el.clientHeight / lineHeight),
+        overflowWrap: cs.overflowWrap,
+        fontSize: cs.fontSize,
+      }
+    }
+    return null
+  }, title)
+}
+
+test('a one-word title wraps instead of spilling past the plate edge', async ({ page }) => {
+  const c = await client()
+  await ok(
+    c.admin.from('profiles').upsert({
+      id: c.uid,
+      display_name: 'Placeholder Title',
+      skin: CLIP_SKIN,
+      mode: 'dark',
+    }),
+    'placeholder-title skin swap',
+  )
+  await stub(page)
+  await signIn(page, c.session)
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/library')
+  await page.waitForSelector('[role="img"][aria-label*="placeholder cover"]', { timeout: 20_000 })
+  await page.waitForTimeout(600)
+
+  const m = await measureOneWordTitle(page, ONE_WORD_TITLE)
+  expect(
+    m,
+    `no plate title rendering "${ONE_WORD_TITLE}" — the guard measured nothing`,
+  ).not.toBeNull()
+
+  // THE DEFECT FIRST, THE VACUITY CHECK SECOND — and the order is not cosmetic. Both assertions go
+  // red when the fix is removed (an unwrapped word is on one line AND overflowing), so whichever
+  // runs first is the message the next person reads. Mutation-tested with them the other way round:
+  // deleting `overflowWrap` reported "now fits on 1 line — use a longer one-word title", sending
+  // the reader to lengthen a fixture that was never the problem. Diagnose the failure, then the
+  // instrument.
+  expect(
+    m!.overflowX,
+    `"${ONE_WORD_TITLE}" overflows the plate by ${m!.overflowX}px (scrollWidth ${m!.scrollWidth} vs ` +
+      `clientWidth ${m!.clientWidth}) with overflow-wrap "${m!.overflowWrap}" — the word is being cut ` +
+      `mid-letter with no ellipsis and no signal. That is the "Accumulatic" defect: check that the ` +
+      `plate's title span still spreads TITLE_OVERFLOW.`,
+  ).toBeLessThanOrEqual(4)
+
+  // Now the fixture check: it does not overflow, but is that because it wrapped or because it was
+  // never wide enough to need to? Only the first is worth anything.
+  expect(
+    m!.lines,
+    `"${ONE_WORD_TITLE}" fits on ${m!.lines} line at ${m!.fontSize} (clientWidth ${m!.clientWidth}) ` +
+      `without overflowing, so this test can no longer detect the clipping it exists for. Use a ` +
+      `longer one-word title, or check whether the plate's one-word font ramp shrank.`,
+  ).toBeGreaterThanOrEqual(2)
 })

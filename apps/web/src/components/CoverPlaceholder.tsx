@@ -30,9 +30,12 @@ import { useStructure } from '../skin/structure'
  * signal in a way a silently missing first letter never was.
  *
  * The 'plain' plate at the bottom of this file already carried this shape and is left as it was.
- * NOTE: the TITLE spans keep clamp-without-wrap, so a single unbreakable word longer than the panel
- * would still clip at both ends there. No such title exists in the corpus and none was observed in
- * the audit, so it is recorded rather than changed here.
+ *
+ * THE NOTE THAT USED TO SIT HERE SAID THE TITLE SPANS WERE LEFT UNFIXED because "no such title
+ * exists in the corpus". That was true when it was written and stopped being true on 2026-08-23,
+ * when the corpus import added 126 one-word titles. Closed by TITLE_OVERFLOW below; the forecast is
+ * kept rather than deleted because it is the record of a defect predicted, deferred on a factual
+ * premise, and then landed the moment that premise expired.
  */
 const AUTHOR_OVERFLOW: CSSProperties = {
   display: '-webkit-box',
@@ -41,6 +44,32 @@ const AUTHOR_OVERFLOW: CSSProperties = {
   overflow: 'hidden',
   overflowWrap: 'anywhere',
 }
+
+/**
+ * THE TITLE'S OVERFLOW CONTRACT — the same fix as AUTHOR_OVERFLOW, one line count later.
+ *
+ * A title span is centred in a clipping panel exactly as the author span is, so it had exactly the
+ * author bug: a single word wider than the panel spilled past BOTH clip edges instead of breaking
+ * onto the next of its available lines. Measured on 2026-08-23 against real corpus titles at a
+ * 390px viewport, before this existed — 'Accumulation' overflowed the marrow/box-lid plate by 61px
+ * on ONE line, rendering as "Accumulatic"; 'Dreamcatcher' by 65px, 'Frankenstein' by 52px,
+ * 'Hungerstone' by 50px, 'Meditations' by 37px. `overflow-wrap: anywhere` is the half that fixes
+ * it; the clamp is still needed to bound the height once the word is free to wrap.
+ *
+ * WHY A FUNCTION RATHER THAN A SECOND CONSTANT. `AUTHOR_OVERFLOW` hardcodes two lines, and titles
+ * use three (four on 'plain'). Reusing it wholesale would silently retune every plate's title from
+ * three lines to two — a layout change smuggled in under a clipping fix.
+ *
+ * WHY IT IS NOT AUTHOR-SPECIFIC AND NEVER WAS. Nothing in the author fix depended on the text being
+ * a name; it depended on the box clipping and the word being unbreakable. Both are true of titles.
+ */
+const TITLE_OVERFLOW = (lines: number): CSSProperties => ({
+  display: '-webkit-box',
+  WebkitLineClamp: lines,
+  WebkitBoxOrient: 'vertical',
+  overflow: 'hidden',
+  overflowWrap: 'anywhere',
+})
 
 /**
  * The placeholderCover slot (Fable 5 slot 9): a coverless book gets a DESIGNED plate, never a gray
@@ -144,10 +173,7 @@ function PlaceholderPlate({
             lineHeight: 1.25,
             color: 'var(--ph-ink)',
             textAlign: 'center',
-            display: '-webkit-box',
-            WebkitLineClamp: 3,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
+            ...TITLE_OVERFLOW(3),
           }}
         >
           {title || 'Untitled'}
@@ -296,10 +322,7 @@ function PlaceholderPlate({
             letterSpacing: oneWord ? '0.04em' : 0,
             textTransform: oneWord ? 'uppercase' : 'none',
             color: 'var(--ph-ink)',
-            display: '-webkit-box',
-            WebkitLineClamp: 3,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
+            ...TITLE_OVERFLOW(3),
           }}
         >
           {title || 'Untitled'}
@@ -432,10 +455,7 @@ function PlaceholderPlate({
             lineHeight: 1.22,
             color: 'var(--ph-ink)',
             textAlign: 'center',
-            display: '-webkit-box',
-            WebkitLineClamp: 3,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
+            ...TITLE_OVERFLOW(3),
           }}
         >
           {title || 'Untitled'}
@@ -553,10 +573,7 @@ function PlaceholderPlate({
               fontSize: oneWord ? 'clamp(15px, 17cqw, 26px)' : 'clamp(11px, 9.5cqw, 14px)',
               lineHeight: 1.2,
               color: 'var(--paper-ink)',
-              display: '-webkit-box',
-              WebkitLineClamp: 3,
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden',
+              ...TITLE_OVERFLOW(3),
             }}
           >
             {title || 'Untitled'}
@@ -686,10 +703,7 @@ function PlaceholderPlate({
               lineHeight: 1.2,
               letterSpacing: '0.06em',
               color: 'var(--paper-ink)',
-              display: '-webkit-box',
-              WebkitLineClamp: 3,
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden',
+              ...TITLE_OVERFLOW(3),
             }}
           >
             {title || 'Untitled'}
@@ -810,10 +824,7 @@ function PlaceholderPlate({
             fontFeatureSettings: "'onum' 1",
             color: 'var(--ph-ink)',
             textAlign: 'center',
-            display: '-webkit-box',
-            WebkitLineClamp: 3,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
+            ...TITLE_OVERFLOW(3),
           }}
         >
           {title || 'Untitled'}
@@ -922,10 +933,7 @@ function PlaceholderPlate({
               fontSize: oneWord ? 'clamp(15px, 16cqw, 23px)' : 'clamp(11px, 9.5cqw, 14px)',
               lineHeight: 1.25,
               color: 'var(--paper-ink)',
-              display: '-webkit-box',
-              WebkitLineClamp: 3,
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden',
+              ...TITLE_OVERFLOW(3),
             }}
           >
             {title || 'Untitled'}
@@ -1027,10 +1035,7 @@ function PlaceholderPlate({
               lineHeight: 1.2,
               letterSpacing: oneWord ? '0.06em' : '0.02em',
               color: 'var(--cta-ink)',
-              display: '-webkit-box',
-              WebkitLineClamp: 3,
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden',
+              ...TITLE_OVERFLOW(3),
             }}
           >
             {title || 'Untitled'}
@@ -1178,10 +1183,7 @@ function PlaceholderPlate({
               fontSize: oneWord ? 'clamp(15px, 16cqw, 24px)' : 'clamp(11px, 9.5cqw, 14px)',
               lineHeight: 1.2,
               color: 'var(--paper-ink)',
-              display: '-webkit-box',
-              WebkitLineClamp: 3,
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden',
+              ...TITLE_OVERFLOW(3),
             }}
           >
             {title || 'Untitled'}
@@ -1269,10 +1271,7 @@ function PlaceholderPlate({
           fontSize: 'clamp(11px, 15cqw, 22px)',
           lineHeight: 1.06,
           color: colors.color,
-          display: '-webkit-box',
-          WebkitLineClamp: 4,
-          WebkitBoxOrient: 'vertical',
-          overflow: 'hidden',
+          ...TITLE_OVERFLOW(4),
         }}
       >
         {title || 'Untitled'}
