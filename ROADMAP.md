@@ -7,8 +7,11 @@ app at the end of each step.
 
 - [x] Lock the name — **Reverie** (owner decision, 2026-07).
 - [ ] Confirm the stack in `docs/reference/ARCHITECTURE.md` (React+TS+Supabase is the default).
-- [ ] Resolve the open decisions: local-first vs. REST; household model; spoiler gating
-      honor-based vs. server-enforced; keep capability-code sharing alongside accounts?
+- [ ] Resolve local-first vs. REST.
+- [x] Household model — linked personal libraries with a read-only household view; writes stay
+      personal (owner decision, 2026-08-23).
+- [x] Spoiler gating — server-enforced through RLS.
+- [x] Keep capability-code sharing alongside accounts.
 
 ## Phase 1 — Backend foundation
 
@@ -31,7 +34,9 @@ app at the end of each step.
 ## Phase 3 — Multi-user
 
 - [ ] Accounts + multi-device sync (library follows the user).
-- [ ] Household library with member identities/roles.
+- [ ] Household library with member identities/roles. Backend membership, roster, privacy boundary,
+      and curated read API are defined in `20260829010000_household_foundation.sql`; the Library
+      scope UI remains.
 - [ ] Clubs on the backend: read-alongs with per-user progress; shared/club TBRs;
       comments with (optional) server-enforced spoiler gating.
 

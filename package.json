@@ -27,7 +27,8 @@
     "db:seed": "bash scripts/stack-lock.sh node scripts/seed-dev.mjs",
     "deploy:functions": "bash scripts/deploy-guard.sh functions",
     "deploy:migrations": "bash scripts/deploy-guard.sh migrations",
-    "import:corpus": "vite-node scripts/import-corpus-csv.mjs --"
+    "import:corpus": "vite-node scripts/import-corpus-csv.mjs --",
+    "household:link": "vite-node scripts/link-household.mjs --"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",

@@ -627,8 +627,12 @@ several defects have been "fixed" in code paths no reader can reach.
 1. **App name — DECIDED (owner, 2026-07): Reverie is the name.** No longer a
    placeholder. Keep reading it from `APP_NAME` in `@reverie/core` (never hardcode);
    `docs/reference/TRADEMARK.md` stays as history.
-2. **Household model** — v1 default: one personal library per account; sharing happens
-   via shared lists + clubs (defer a true shared household library).
+2. **Household model — DECIDED (owner, 2026-08-23): linked personal libraries with a
+   filterable household view.** Accounts keep separate libraries and all writes remain personal.
+   V1's cross-account path is read-only and explicitly omits ratings, read state, notes,
+   spice/darkness, plans/progress, favourites and personal tags. Match, Stats and Series remain
+   personal-only until the owner expands their scope explicitly. Membership is owner-run rather
+   than a client invite flow (`20260829010000_household_foundation.sql`).
 3. **Spoiler gating — DECIDED AND SHIPPED: server-enforced via RLS.** Not a pending
    decision and not client-side. `club_comments`' `gated read` policy has enforced
    `unit <= public.club_progress(club_id)` — the `comment.unit <= myProgress` rule — since the

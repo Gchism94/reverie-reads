@@ -329,6 +329,10 @@ precisely why it does not fit ordering columns: it permits exactly ONE unpositio
 parent, and "not yet positioned" is a state many rows legitimately share at once (#298's bulk-add
 and CSV import wrote whole batches of them).
 
+households           (id pk, name, created_at, updated_at)
+household_members    (household_id fk, user_id fk unique, role 'owner'|'member', joined_at,
+                     primary key (household_id, user_id))
+
 clubs               (id pk, title, author, cover_url,
                      unit_type 'chapter'|'page'|'percent', unit_count, unit_label,
                      created_by fk, created_at)
@@ -347,8 +351,14 @@ Also present, supporting features rather than the core library: `book_embeddings
 `geo_cache` / `releases_cache`, `rate_limits`, `content_reports`, `merge_verdicts`,
 `reading_orders` / `reading_order_items`, `author_follows`.
 
-**`households` / `household_members` do not exist.** v1 is one personal library per account;
-sharing happens through shared lists and clubs (`AGENTS.md`, open decision 2).
+**Households link libraries; they do not merge them.** `books` retains its owner-only SELECT and
+write policies, so membership does not expose another reader's raw row through PostgREST.
+`household_library_books()` is the one cross-account read path and returns a fixed whitelist of
+bibliographic + possession fields. It deliberately omits ratings, favourites, read state/logs,
+notes, spice/darkness, plans/progress and personal tags/moods/tropes. `household_roster()` supplies
+member identity even when a member's library is empty. V1 membership changes are service-role,
+owner-run operations through `link_household`; the implementation script is dry-run-first and
+takes UUIDs only at runtime (`20260829010000_household_foundation.sql`).
 
 ### Notes
 
@@ -368,6 +378,9 @@ sharing happens through shared lists and clubs (`AGENTS.md`, open decision 2).
   `tropes`/`moods` rows correctly survive — they are shared vocabulary, not the reader's.
   `apps/web/src/data/ownedTables.test.ts` parses these migrations and fails if any owner-scoped
   table lacks a cascade path, so the property cannot quietly lapse.
+  Household membership follows the same cascade. The collective `households` row has no creator
+  FK; deleting the account that first linked it therefore does not destroy the remaining members'
+  relationship.
 - **`series_entries.removed_at` is a tombstone, not a delete.** Removing a book from a series
   soft-deletes the entry (`removed_at = now()`, `book_id = null`, `user_edited = true`) rather
   than dropping the row, so a later Hardcover refresh cannot resurrect a slot the reader
