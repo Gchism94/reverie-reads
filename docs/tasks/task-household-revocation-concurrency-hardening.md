@@ -115,6 +115,21 @@ Required correction:
 - Make the operator path verify the reviewed household's resulting lifecycle state rather than
   reporting success solely because the RPC returned.
 
+### Review follow-up — paused authorization and deterministic concurrency proof
+
+A review of `8aceb77^{}..3e769bd` found two remaining integration blockers:
+
+- TanStack Query retains cached data with `status: 'success'`, `fetchStatus: 'paused'`, and
+  `isFetching: false` when an authorization-sensitive revalidation cannot start offline. Household
+  rendering must therefore require every needed query to be both successful and idle, return no
+  renderable roster/books while paused, clear selection through that authorization loss, and tell
+  the reader that household access cannot be verified offline.
+- The first two-session regression used a fixed 750 ms delete-trigger delay. Startup or pool delay
+  could let an old implementation escape the intended overlap. The committed harness must instead
+  synchronize real RPC transactions with advisory locks, inspect both worker sessions in
+  `pg_locks`, and release them only after it has proved either household-row serialization (fixed)
+  or two independently completed cleanup decisions (old).
+
 ## Coverage gaps this task must close
 
 - Existing pgTAP household tests are single-session and do not assert final-member deletion.
@@ -162,14 +177,19 @@ deployment, or production access without the owner's explicit authorization.
 
 ## Candidate verification — 2026-08-25
 
-- Full unit suite: 2,943 assertions passed (2,341 core + 602 web).
+- Full unit suite: 2,944 assertions passed (2,341 core + 603 web).
 - Full database suite: 460 pgTAP assertions passed.
-- Deterministic two-session final-unlink harness passed with both accounts, profiles, and personal
-  books preserved; both memberships removed; empty household deleted.
+- Deterministic two-session final-unlink harness passed using a controller-owned advisory barrier
+  and observed `pg_locks` state, with both accounts, profiles, and personal books preserved; both
+  memberships removed; empty household deleted.
 - Focused household browser suite: 9 passed, 1 expected project-specific skip across desktop and
   mobile.
 - Full browser suite: 218 passed, 10 expected project-specific skips across 228 cases.
 - Type checking, lint, production build, formatting, and diff checks passed.
+
+The first final-HEAD full-browser attempt had one unrelated, non-reproducible personal-trope fixture
+count failure. Its exact three-test file then passed in isolation, and a complete rerun passed all
+218 runnable cases. No application change was made for the transient failure.
 
 The candidate has not been pushed, merged, deployed, or exercised against production. Re-run the
 documented gates from the final committed HEAD after any review-driven change.

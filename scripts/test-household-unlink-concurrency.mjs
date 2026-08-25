@@ -1,11 +1,14 @@
 // Deterministic local two-session regression for concurrent final household unlinks.
-// A test-only BEFORE DELETE delay makes both old transactions evaluate cleanup concurrently; the
-// household-row lock in unlink_household_member serializes the fixed implementation before that
-// point. The trigger and all fixtures are removed even when an assertion fails.
+// Both real RPC calls run in explicit transactions behind a controller-owned commit barrier. The
+// harness observes pg_locks before releasing either transaction: the fixed implementation has one
+// worker at the barrier and one serialized on the household row, while the old implementation has
+// both workers at the barrier after independently evaluating cleanup. No elapsed-time delay decides
+// whether the race was reached.
 
 import assert from 'node:assert/strict'
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
+import { once } from 'node:events'
 import { createClient } from '@supabase/supabase-js'
 
 const SUPABASE_URL = 'http://127.0.0.1:55321'
@@ -19,16 +22,84 @@ const client = () =>
   })
 
 const admin = client()
-const firstSession = client()
-const secondSession = client()
 const fixtureUserIds = []
 let householdId = null
 
-const sql = (statement) =>
-  execFileSync('psql', [DATABASE_URL, '-v', 'ON_ERROR_STOP=1', '-c', statement], {
+// Two-key advisory locks make the controller barrier easy to identify exactly in pg_locks.
+const BARRIER_CLASS = 1_608_202_608
+const BARRIER_ID = 1
+
+const sqlScalar = (statement) =>
+  execFileSync('psql', [DATABASE_URL, '-X', '-qAt', '-v', 'ON_ERROR_STOP=1', '-c', statement], {
     stdio: 'pipe',
     encoding: 'utf8',
-  })
+  }).trim()
+
+const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds))
+
+class PsqlSession {
+  constructor(name) {
+    this.name = name
+    this.sequence = 0
+    this.buffer = ''
+    this.stderr = ''
+    this.pending = null
+    this.process = spawn('psql', [DATABASE_URL, '-X', '-qAt', '-v', 'ON_ERROR_STOP=1'], {
+      stdio: ['pipe', 'pipe', 'pipe'],
+    })
+    this.process.stdout.setEncoding('utf8')
+    this.process.stderr.setEncoding('utf8')
+    this.process.stdout.on('data', (chunk) => this.#consume(chunk))
+    this.process.stderr.on('data', (chunk) => {
+      this.stderr += chunk
+    })
+    this.process.on('error', (error) => this.#reject(error))
+    this.process.on('exit', (code) => {
+      if (this.pending) {
+        this.#reject(new Error(`${this.name} psql exited ${code}: ${this.stderr.trim()}`))
+      }
+    })
+  }
+
+  #consume(chunk) {
+    this.buffer += chunk
+    const lines = this.buffer.split('\n')
+    this.buffer = lines.pop() ?? ''
+    for (const line of lines) {
+      if (!this.pending) continue
+      if (line === this.pending.sentinel) {
+        const { resolve, output } = this.pending
+        this.pending = null
+        resolve(output.join('\n').trim())
+      } else {
+        this.pending.output.push(line)
+      }
+    }
+  }
+
+  #reject(error) {
+    if (!this.pending) return
+    const { reject } = this.pending
+    this.pending = null
+    reject(error)
+  }
+
+  command(statement) {
+    assert.equal(this.pending, null, `${this.name} already has a command in flight`)
+    const sentinel = `__reverie_${this.name}_${this.sequence++}_${randomUUID()}__`
+    return new Promise((resolve, reject) => {
+      this.pending = { sentinel, output: [], resolve, reject }
+      this.process.stdin.write(`${statement}\n\\echo ${sentinel}\n`)
+    })
+  }
+
+  async close() {
+    if (this.process.exitCode !== null) return
+    const exited = once(this.process, 'exit')
+    this.process.stdin.end()
+    await exited
+  }
+}
 
 const dbError = (action, error) =>
   new Error(`${action}: ${error?.message ?? JSON.stringify(error)}`)
@@ -61,32 +132,44 @@ async function fixtureAccount(label) {
   return userId
 }
 
-function installDelayTrigger() {
-  sql(`
-    drop trigger if exists __test_household_unlink_delay on public.household_members;
-    drop function if exists public.__test_household_unlink_delay();
-    create function public.__test_household_unlink_delay()
-    returns trigger
-    language plpgsql
-    set search_path = ''
-    as $$
-    begin
-      perform pg_catalog.pg_sleep(0.75);
-      return old;
-    end;
-    $$;
-    create trigger __test_household_unlink_delay
-      before delete on public.household_members
-      for each row execute function public.__test_household_unlink_delay();
-  `)
+async function waitForConcurrentState(workerPids) {
+  const deadline = Date.now() + 10_000
+  while (Date.now() < deadline) {
+    const [barrierWaiters, waitingWorkers] = sqlScalar(`
+      select
+        count(*) filter (
+          where not granted
+            and locktype = 'advisory'
+            and classid = ${BARRIER_CLASS}
+            and objid = ${BARRIER_ID}
+            and mode = 'ShareLock'
+        ),
+        count(distinct pid) filter (where not granted)
+      from pg_catalog.pg_locks
+      where pid in (${workerPids.join(', ')});
+    `)
+      .split('|')
+      .map(Number)
+
+    // Fixed: the first RPC completed behind the barrier; the second worker is waiting on the
+    // household row. Old: both RPCs completed behind the barrier without serializing cleanup.
+    if (barrierWaiters === 2 || (barrierWaiters === 1 && waitingWorkers === 2)) {
+      return { barrierWaiters, waitingWorkers }
+    }
+    await delay(25)
+  }
+  throw new Error('timed out waiting for both unlink transactions to reach a proven lock state')
 }
 
-function removeDelayTrigger() {
-  sql(`
-    drop trigger if exists __test_household_unlink_delay on public.household_members;
-    drop function if exists public.__test_household_unlink_delay();
+const unlinkTransaction = (session, userId, reviewedHouseholdId) =>
+  session.command(`
+    begin;
+    set local role service_role;
+    select public.unlink_household_member('${userId}'::uuid, '${reviewedHouseholdId}'::uuid);
+    reset role;
+    select pg_catalog.pg_advisory_xact_lock_shared(${BARRIER_CLASS}, ${BARRIER_ID});
+    commit;
   `)
-}
 
 async function main() {
   const firstUserId = await fixtureAccount('first')
@@ -99,20 +182,53 @@ async function main() {
   if (linked.error || !linked.data) throw dbError('fixture household link', linked.error)
   householdId = linked.data
 
-  installDelayTrigger()
-  const results = await Promise.all([
-    firstSession.rpc('unlink_household_member', {
-      p_user: firstUserId,
-      p_household: householdId,
-    }),
-    secondSession.rpc('unlink_household_member', {
-      p_user: secondUserId,
-      p_household: householdId,
-    }),
-  ])
-  for (const [index, result] of results.entries()) {
-    if (result.error) throw dbError(`concurrent unlink ${index + 1}`, result.error)
-    assert.equal(result.data, householdId, `concurrent unlink ${index + 1} returned household`)
+  const controller = new PsqlSession('controller')
+  const workers = [new PsqlSession('first'), new PsqlSession('second')]
+  let unlinkResults = []
+  let barrierHeld = false
+  try {
+    await controller.command(`select pg_catalog.pg_advisory_lock(${BARRIER_CLASS}, ${BARRIER_ID});`)
+    barrierHeld = true
+    const workerPids = await Promise.all(
+      workers.map(async (worker) => Number(await worker.command('select pg_backend_pid();'))),
+    )
+    assert.ok(workerPids.every(Number.isInteger), 'worker database sessions expose stable PIDs')
+
+    unlinkResults = [
+      unlinkTransaction(workers[0], firstUserId, householdId),
+      unlinkTransaction(workers[1], secondUserId, householdId),
+    ]
+    const concurrentState = await waitForConcurrentState(workerPids)
+
+    await controller.command(
+      `select pg_catalog.pg_advisory_unlock(${BARRIER_CLASS}, ${BARRIER_ID});`,
+    )
+    barrierHeld = false
+    const outputs = await Promise.all(unlinkResults)
+    assert.equal(
+      concurrentState.barrierWaiters,
+      1,
+      'the household row serializes the second RPC before final-member cleanup',
+    )
+    for (const [index, output] of outputs.entries()) {
+      assert.match(
+        output,
+        new RegExp(householdId),
+        `concurrent unlink ${index + 1} returned household`,
+      )
+    }
+  } finally {
+    if (barrierHeld) {
+      try {
+        await controller.command(
+          `select pg_catalog.pg_advisory_unlock(${BARRIER_CLASS}, ${BARRIER_ID});`,
+        )
+      } catch (error) {
+        console.error(`barrier cleanup failed: ${String(error)}`)
+      }
+    }
+    await Promise.allSettled(unlinkResults)
+    await Promise.allSettled([...workers.map((worker) => worker.close()), controller.close()])
   }
 
   const [memberships, household, profiles, books, firstAuth, secondAuth] = await Promise.all([
@@ -147,11 +263,6 @@ async function main() {
 try {
   await main()
 } finally {
-  try {
-    removeDelayTrigger()
-  } catch (error) {
-    console.error(`delay-trigger cleanup failed: ${String(error)}`)
-  }
   if (householdId) {
     await admin.from('households').delete().eq('id', householdId)
   }

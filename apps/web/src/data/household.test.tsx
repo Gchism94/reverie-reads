@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocked = vi.hoisted(() => ({
   readerId: 'reader-a',
@@ -24,6 +24,7 @@ import {
   householdRosterKey,
   useHouseholdBookSelection,
   useHouseholdBooks,
+  useHouseholdLibraryAuthorization,
   useHouseholdRoster,
   type HouseholdBook,
 } from './household'
@@ -70,6 +71,10 @@ const householdBook = (id: string, ownerId = 'reader-a'): HouseholdBook => ({
 beforeEach(() => {
   mocked.readerId = 'reader-a'
   mocked.rpc.mockReset()
+})
+
+afterEach(() => {
+  onlineManager.setOnline(true)
 })
 
 describe('household query identity and RPC boundary', () => {
@@ -280,6 +285,35 @@ describe('household query identity and RPC boundary', () => {
     await waitFor(() => expect(second.result.current.isSuccess).toBe(true))
     expect(mocked.rpc).toHaveBeenCalledTimes(2)
     second.unmount()
+  })
+
+  it('does not authorize cached household data while offline revalidation is paused', async () => {
+    const cachedMember = {
+      householdId: 'house-a',
+      householdName: 'Cached household',
+      userId: 'reader-a',
+      displayName: 'Avery',
+      role: 'owner' as const,
+    }
+    const cachedBook = householdBook('cached-book')
+    const { client, wrapper } = queryHarness()
+    client.setQueryData(householdRosterKey('reader-a'), [cachedMember])
+    client.setQueryData(householdBooksKey('reader-a', 'house-a'), [cachedBook])
+    onlineManager.setOnline(false)
+
+    const { result, unmount } = renderHook(() => useHouseholdLibraryAuthorization(), { wrapper })
+
+    await waitFor(() => expect(result.current.paused).toBe(true))
+    expect(result.current.paused).toBe(true)
+    expect(result.current.authorized).toBe(false)
+    expect(result.current.householdId).toBeNull()
+    expect(result.current.members).toEqual([])
+    expect(result.current.books).toEqual([])
+    expect(client.getQueryData(householdRosterKey('reader-a'))).toEqual([cachedMember])
+    expect(client.getQueryData(householdBooksKey('reader-a', 'house-a'))).toEqual([cachedBook])
+    expect(mocked.rpc).not.toHaveBeenCalled()
+
+    unmount()
   })
 
   it('forgets a selection across authorization loss or household replacement', () => {

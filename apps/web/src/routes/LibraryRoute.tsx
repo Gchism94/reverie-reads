@@ -32,8 +32,7 @@ import { Surface } from '../components/Surface'
 import {
   labelHouseholdData,
   useHouseholdBookSelection,
-  useHouseholdBooks,
-  useHouseholdRoster,
+  useHouseholdLibraryAuthorization,
   type HouseholdBook,
 } from '../data/household'
 import { useAuth } from '../auth/AuthProvider'
@@ -437,27 +436,19 @@ function HouseholdDetailDrawer({
 function HouseholdLibraryScreen() {
   const { session } = useAuth()
   const currentReaderId = session?.user.id ?? ''
-  const roster = useHouseholdRoster()
-  // The roster response is the authorization decision. While it is revalidating, there is no
-  // authorized household id and therefore no book query capable of repainting an earlier scope.
-  const householdId =
-    !roster.isFetching && !roster.error ? (roster.data?.[0]?.householdId ?? null) : null
-  const householdBooks = useHouseholdBooks(householdId)
+  const household = useHouseholdLibraryAuthorization()
   const isWide = useIsWide()
 
   const labelled = useMemo(
-    () => labelHouseholdData(roster.data ?? [], householdBooks.data ?? []),
-    [roster.data, householdBooks.data],
+    () => labelHouseholdData(household.members, household.books),
+    [household.members, household.books],
   )
   const members = labelled.members
   const books = labelled.books
-  const isLoading = roster.isFetching || (!!householdId && householdBooks.isFetching)
-  const error = roster.error ?? householdBooks.error
-  const isSettled = !isLoading && !error
-  const hasHousehold = isSettled && members.length > 0
+  const hasHousehold = household.authorized && members.length > 0
   const availableBooks = useMemo(() => (hasHousehold ? books : []), [books, hasHousehold])
   const selection = useHouseholdBookSelection({
-    householdId,
+    householdId: household.householdId,
     books: availableBooks,
     authorized: hasHousehold,
   })
@@ -476,11 +467,15 @@ function HouseholdLibraryScreen() {
     <div className="min-w-0 px-4 py-6 sm:px-6 lg:px-7">
       <LibraryHeader scope="household" readout="Household · read-only" className="mb-4" />
 
-      {isLoading ? (
-        <HouseholdCentered>Loading the household library…</HouseholdCentered>
-      ) : error ? (
+      {household.paused ? (
         <HouseholdCentered>
-          Couldn’t load the household library — {(error as Error).message}
+          Household access can’t be verified while offline. Reconnect to view the household library.
+        </HouseholdCentered>
+      ) : household.loading ? (
+        <HouseholdCentered>Loading the household library…</HouseholdCentered>
+      ) : household.error ? (
+        <HouseholdCentered>
+          Couldn’t load the household library — {(household.error as Error).message}
         </HouseholdCentered>
       ) : members.length === 0 ? (
         <HouseholdCentered>

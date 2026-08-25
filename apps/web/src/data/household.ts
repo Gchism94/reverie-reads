@@ -248,6 +248,20 @@ export const householdRosterKey = (readerId: string) => ['household', 'roster', 
 export const householdBooksKey = (readerId: string, householdId: string) =>
   ['household', 'books', readerId, householdId] as const
 
+interface HouseholdAuthorizationQueryState {
+  status: 'pending' | 'error' | 'success'
+  fetchStatus: 'fetching' | 'paused' | 'idle'
+}
+
+/**
+ * Cached household data is not authorization. A query authorizes its response only after a
+ * successful network attempt has completely settled. In particular, TanStack reports an offline
+ * revalidation as success + paused when it has cached data; treating !isFetching as settled would
+ * repaint that data while membership cannot be checked.
+ */
+export const householdQueryIsAuthorized = (query: HouseholdAuthorizationQueryState): boolean =>
+  query.status === 'success' && query.fetchStatus === 'idle'
+
 const authorizationSensitiveQueryOptions = {
   staleTime: 0,
   gcTime: 0,
@@ -299,4 +313,32 @@ export function useHouseholdBooks(householdId: string | null) {
       return ((data ?? []) as HouseholdBookRow[]).map(toHouseholdBook)
     },
   })
+}
+
+/**
+ * The sole authorization boundary for the household screen. It returns no renderable roster or
+ * books until both required queries are successful and idle, and reports paused separately so the
+ * screen can explain why network-only household access is unavailable.
+ */
+export function useHouseholdLibraryAuthorization() {
+  const roster = useHouseholdRoster()
+  const rosterAuthorized = householdQueryIsAuthorized(roster)
+  const householdId = rosterAuthorized ? (roster.data?.[0]?.householdId ?? null) : null
+  const householdBooks = useHouseholdBooks(householdId)
+  const booksAuthorized = !householdId || householdQueryIsAuthorized(householdBooks)
+  const authorized = rosterAuthorized && booksAuthorized
+  const paused =
+    roster.fetchStatus === 'paused' ||
+    (!!householdId && householdBooks.fetchStatus === 'paused')
+  const error = roster.error ?? householdBooks.error
+
+  return {
+    householdId,
+    members: authorized ? (roster.data ?? []) : [],
+    books: authorized ? (householdBooks.data ?? []) : [],
+    authorized,
+    paused,
+    error,
+    loading: !paused && !error && !authorized,
+  }
 }
