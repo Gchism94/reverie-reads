@@ -15,7 +15,7 @@ they can open and edit the same document. The app picks a sync backend automatic
 | Mode                 | When                                                         | Live?                             | Notes                                                 |
 | -------------------- | ------------------------------------------------------------ | --------------------------------- | ----------------------------------------------------- |
 | **Cloud (Supabase)** | You've set a Project URL + anon key in ⚙ Sync setup          | Yes, across any device/person     | Recommended for a household or remote club            |
-| **Host-shared**      | Running inside an environment that provides `window.storage` | Yes, for everyone using that copy | e.g. the AI assistant artifact preview                      |
+| **Host-shared**      | Running inside an environment that provides `window.storage` | Yes, for everyone using that copy | e.g. the AI assistant artifact preview                |
 | **This device**      | A plain static deployment with no backend configured         | No                                | Still fully usable; share via **Export/Import** codes |
 
 The app polls the shared document every few seconds while you have a list or read-along open, so
