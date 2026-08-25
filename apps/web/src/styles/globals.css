@@ -53,6 +53,10 @@
   }
 }
 
+dialog[data-drawer-dialog]::backdrop {
+  background: transparent;
+}
+
 /* iOS Safari auto-zooms the page when a focused text control renders under 16px — and the zoom
    sticks after the keyboard closes, so the app "comes back zoomed in". Keep every text control at
    ≥16px on touch devices. !important so per-element utilities (text-[14px] etc.) can't undercut it;

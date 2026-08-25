@@ -82,7 +82,10 @@ interface HouseholdBookRow {
   added_at: string
 }
 
-const readerName = (value: string | null): string => value?.trim() || 'Reader'
+const shortReaderId = (readerId: string): string => readerId.slice(0, 8)
+
+const readerName = (value: string | null, readerId: string): string =>
+  value?.trim() || `Reader · ${shortReaderId(readerId)}`
 
 const numericPosition = (value: number | string | null): number | null => {
   if (value === null) return null
@@ -99,14 +102,14 @@ export const toHouseholdMember = (row: HouseholdRosterRow): HouseholdMember => (
   householdId: row.household_id,
   householdName: row.household_name,
   userId: row.user_id,
-  displayName: readerName(row.display_name),
+  displayName: readerName(row.display_name, row.user_id),
   role: row.member_role,
 })
 
 export const toHouseholdBook = (row: HouseholdBookRow): HouseholdBook => ({
   id: row.book_id,
   ownerId: row.owner_id,
-  ownerName: readerName(row.owner_name),
+  ownerName: readerName(row.owner_name, row.owner_id),
   title: row.title,
   author: row.author?.trim() ?? '',
   cover: row.cover_url ?? '',
@@ -134,6 +137,44 @@ export const toHouseholdBook = (row: HouseholdBookRow): HouseholdBook => ({
   addedAt: row.added_at,
 })
 
+function ambiguousReaderNames(
+  rows: readonly { readerId: string; displayName: string }[],
+): Set<string> {
+  const idsByName = new Map<string, Set<string>>()
+  for (const row of rows) {
+    const ids = idsByName.get(row.displayName) ?? new Set<string>()
+    ids.add(row.readerId)
+    idsByName.set(row.displayName, ids)
+  }
+  return new Set(
+    [...idsByName.entries()].filter(([, ids]) => ids.size > 1).map(([name]) => name),
+  )
+}
+
+export function disambiguateHouseholdMembers(
+  members: readonly HouseholdMember[],
+): HouseholdMember[] {
+  const ambiguous = ambiguousReaderNames(
+    members.map((member) => ({ readerId: member.userId, displayName: member.displayName })),
+  )
+  return members.map((member) =>
+    ambiguous.has(member.displayName)
+      ? { ...member, displayName: `${member.displayName} · ${shortReaderId(member.userId)}` }
+      : member,
+  )
+}
+
+export function disambiguateHouseholdBooks(books: readonly HouseholdBook[]): HouseholdBook[] {
+  const ambiguous = ambiguousReaderNames(
+    books.map((book) => ({ readerId: book.ownerId, displayName: book.ownerName })),
+  )
+  return books.map((book) =>
+    ambiguous.has(book.ownerName)
+      ? { ...book, ownerName: `${book.ownerName} · ${shortReaderId(book.ownerId)}` }
+      : book,
+  )
+}
+
 export const householdRosterKey = (readerId: string) =>
   ['household', 'roster', readerId] as const
 export const householdBooksKey = (readerId: string) =>
@@ -148,7 +189,9 @@ export function useHouseholdRoster() {
     queryFn: async (): Promise<HouseholdMember[]> => {
       const { data, error } = await supabase.rpc('household_roster')
       if (error) throw error
-      return ((data ?? []) as HouseholdRosterRow[]).map(toHouseholdMember)
+      return disambiguateHouseholdMembers(
+        ((data ?? []) as HouseholdRosterRow[]).map(toHouseholdMember),
+      )
     },
   })
 }
@@ -162,7 +205,9 @@ export function useHouseholdBooks() {
     queryFn: async (): Promise<HouseholdBook[]> => {
       const { data, error } = await supabase.rpc('household_library_books')
       if (error) throw error
-      return ((data ?? []) as HouseholdBookRow[]).map(toHouseholdBook)
+      return disambiguateHouseholdBooks(
+        ((data ?? []) as HouseholdBookRow[]).map(toHouseholdBook),
+      )
     },
   })
 }

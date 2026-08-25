@@ -19,6 +19,7 @@ vi.mock('../lib/supabase', () => ({
 }))
 
 import {
+  disambiguateHouseholdBooks,
   householdBooksKey,
   householdRosterKey,
   useHouseholdBooks,
@@ -54,6 +55,20 @@ describe('household query identity and RPC boundary', () => {
           display_name: 'Avery',
           member_role: 'owner',
         },
+        {
+          household_id: 'house-1',
+          household_name: 'The Readers',
+          user_id: 'reader-b',
+          display_name: 'Avery',
+          member_role: 'member',
+        },
+        {
+          household_id: 'house-1',
+          household_name: 'The Readers',
+          user_id: 'reader-c',
+          display_name: null,
+          member_role: 'member',
+        },
       ],
       error: null,
     })
@@ -67,8 +82,22 @@ describe('household query identity and RPC boundary', () => {
         householdId: 'house-1',
         householdName: 'The Readers',
         userId: 'reader-a',
-        displayName: 'Avery',
+        displayName: 'Avery · reader-a',
         role: 'owner',
+      },
+      {
+        householdId: 'house-1',
+        householdName: 'The Readers',
+        userId: 'reader-b',
+        displayName: 'Avery · reader-b',
+        role: 'member',
+      },
+      {
+        householdId: 'house-1',
+        householdName: 'The Readers',
+        userId: 'reader-c',
+        displayName: 'Reader · reader-c',
+        role: 'member',
       },
     ])
   })
@@ -132,6 +161,16 @@ describe('household query identity and RPC boundary', () => {
     expect(result.current.data?.[0]).not.toHaveProperty('fave')
     expect(result.current.data?.[0]).not.toHaveProperty('readStatus')
     expect(result.current.data?.[0]).not.toHaveProperty('notes')
+
+    const first = result.current.data?.[0]
+    expect(first).toBeDefined()
+    expect(
+      disambiguateHouseholdBooks([
+        first!,
+        { ...first!, id: 'book-2', ownerId: 'reader-c' },
+        { ...first!, id: 'book-3' },
+      ]).map((book) => book.ownerName),
+    ).toEqual(['Blake · reader-b', 'Blake · reader-c', 'Blake · reader-b'])
   })
 
   it('fails closed without a readable signed-in reader', async () => {

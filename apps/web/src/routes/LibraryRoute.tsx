@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { createRoute, Link, useNavigate } from '@tanstack/react-router'
 import {
   groupSeries,
@@ -21,6 +21,7 @@ import { SeriesView } from '../library/SeriesView'
 import { CoverCard } from '../components/CoverCard'
 import { CoverSheet } from '../components/CoverSheet'
 import { BookDetailRail } from '../components/BookDetailRail'
+import { DrawerDialog } from '../components/DrawerDialog'
 import {
   HouseholdBookCard,
   HouseholdBookDetail,
@@ -85,9 +86,6 @@ const COVER_GRID: React.CSSProperties = {
   gap: '18px 16px',
 }
 
-/** Detail rail as an overlay drawer (lg→xl tier, on selection) so the cover grid keeps its columns.
- *  Modal: backdrop dismiss, Escape, focus the close button on open. Appears without motion (the panel
- *  is mounted on select), so it's inherently reduced-motion-safe. */
 function DetailDrawer({
   book,
   onClose,
@@ -97,51 +95,10 @@ function DetailDrawer({
   onClose: () => void
   onToggleFave: (id: string) => void
 }) {
-  const closeRef = useRef<HTMLButtonElement>(null)
-  useEffect(() => {
-    closeRef.current?.focus()
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
-
   return (
-    <div
-      className="fixed inset-0 z-40"
-      role="dialog"
-      aria-modal="true"
-      aria-label={`${book.title} details`}
-    >
-      <button
-        type="button"
-        aria-label="Close details"
-        onClick={onClose}
-        className="absolute inset-0"
-        style={{ background: 'color-mix(in srgb, var(--bg0) 55%, transparent)' }}
-      />
-      <div
-        className="absolute right-0 top-0 flex h-dvh w-[min(360px,92vw)] flex-col border-l border-line"
-        style={{ background: 'var(--bg1)', boxShadow: 'var(--shadow)' }}
-      >
-        <div className="flex justify-end p-2">
-          <button
-            ref={closeRef}
-            type="button"
-            onClick={onClose}
-            aria-label="Close details"
-            className="grid h-8 w-8 place-items-center rounded-full border border-line text-[13px] text-ink"
-            style={{ background: 'var(--card)' }}
-          >
-            ✕
-          </button>
-        </div>
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          <BookDetailRail book={book} onToggleFave={onToggleFave} />
-        </div>
-      </div>
-    </div>
+    <DrawerDialog title={`${book.title} details`} closeLabel="Close details" onClose={onClose}>
+      <BookDetailRail book={book} onToggleFave={onToggleFave} />
+    </DrawerDialog>
   )
 }
 
@@ -218,23 +175,26 @@ function PersonalLibraryScreen() {
   // hidden" is what teaches a reader to stop reading the line.
   const hiddenCount = useMemo(() => hiddenMatchCount(books ?? [], filters), [books, filters])
 
-  if (isLoading) return <Centered>{voice.loading}</Centered>
-  if (isError) return <Centered>Couldn’t load your library — {(error as Error).message}</Centered>
+  if (isLoading) {
+    return (
+      <div className="flex min-h-full flex-col px-4 py-6 sm:px-6">
+        <LibraryHeader scope="personal" readout="Loading…" />
+        <Centered>{voice.loading}</Centered>
+      </div>
+    )
+  }
+  if (isError) {
+    return (
+      <div className="flex min-h-full flex-col px-4 py-6 sm:px-6">
+        <LibraryHeader scope="personal" readout="Unavailable" />
+        <Centered>Couldn’t load your library — {(error as Error).message}</Centered>
+      </div>
+    )
+  }
   if (!books || books.length === 0) {
     return (
       <div className="flex min-h-full flex-col px-4 py-6 sm:px-6">
-        <header className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1
-              className="text-[22px] italic text-ink"
-              style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
-            >
-              Library
-            </h1>
-            <span className="text-[12.5px] text-muted">0 books · 0 faves</span>
-          </div>
-          <ScopeSwitch scope="personal" />
-        </header>
+        <LibraryHeader scope="personal" readout="0 books · 0 faves" />
         <EmptyState />
       </div>
     )
@@ -261,20 +221,11 @@ function PersonalLibraryScreen() {
 
   const center = (
     <div className="min-w-0 px-4 py-6 sm:px-6 lg:px-7">
-      <header className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1
-            className="text-[22px] italic text-ink"
-            style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
-          >
-            Library
-          </h1>
-          <span className="text-[12.5px] text-muted">
-            {libraryBooks.length} books · {libraryBooks.filter((b) => b.fave).length} faves
-          </span>
-        </div>
-        <ScopeSwitch scope="personal" />
-      </header>
+      <LibraryHeader
+        scope="personal"
+        readout={`${libraryBooks.length} books · ${libraryBooks.filter((b) => b.fave).length} faves`}
+        className="mb-3"
+      />
 
       <Toolbar filterToggleClass="lg:hidden" />
       {/* Mobile filters are toggled inline; on desktop they live in the persistent left column. */}
@@ -419,6 +370,31 @@ function ScopeSwitch({ scope }: { scope: LibraryScope }) {
   return <LibraryScopeControl scope={scope} onChange={setScope} />
 }
 
+function LibraryHeader({
+  scope,
+  readout,
+  className = '',
+}: {
+  scope: LibraryScope
+  readout: string
+  className?: string
+}) {
+  return (
+    <header className={`${className} flex flex-wrap items-center justify-between gap-3`}>
+      <div>
+        <h1
+          className="text-[22px] italic text-ink"
+          style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+        >
+          Library
+        </h1>
+        <span className="text-[12.5px] text-muted">{readout}</span>
+      </div>
+      <ScopeSwitch scope={scope} />
+    </header>
+  )
+}
+
 function HouseholdCentered({ children }: { children: ReactNode }) {
   return (
     <Surface
@@ -441,51 +417,14 @@ function HouseholdDetailDrawer({
   currentReaderId: string
   onClose: () => void
 }) {
-  const closeRef = useRef<HTMLButtonElement>(null)
-  useEffect(() => {
-    closeRef.current?.focus()
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
-
   return (
-    <div
-      className="fixed inset-0 z-40"
-      role="dialog"
-      aria-modal="true"
-      aria-label={`${book.title} household details`}
+    <DrawerDialog
+      title={`${book.title} household details`}
+      closeLabel="Close household details"
+      onClose={onClose}
     >
-      <button
-        type="button"
-        aria-label="Close household details"
-        onClick={onClose}
-        className="absolute inset-0"
-        style={{ background: 'color-mix(in srgb, var(--bg0) 55%, transparent)' }}
-      />
-      <div
-        className="absolute right-0 top-0 flex h-dvh w-[min(360px,92vw)] flex-col border-l border-line"
-        style={{ background: 'var(--bg1)', boxShadow: 'var(--shadow)' }}
-      >
-        <div className="flex justify-end p-2">
-          <button
-            ref={closeRef}
-            type="button"
-            onClick={onClose}
-            aria-label="Close household details"
-            className="skin-control grid h-8 w-8 place-items-center border border-line text-[13px] text-ink"
-            style={{ background: 'var(--card)' }}
-          >
-            ✕
-          </button>
-        </div>
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          <HouseholdBookDetail book={book} currentReaderId={currentReaderId} />
-        </div>
-      </div>
-    </div>
+      <HouseholdBookDetail book={book} currentReaderId={currentReaderId} />
+    </DrawerDialog>
   )
 }
 
@@ -499,29 +438,26 @@ function HouseholdLibraryScreen() {
 
   const members = roster.data ?? []
   const books = householdBooks.data ?? []
-  const selected = (selectedId && books.find((book) => book.id === selectedId)) || null
-  const dockedBook = selected ?? books[0] ?? null
-  const onlyCurrentMember =
-    members.length === 1 && !!currentReaderId && members[0]?.userId === currentReaderId
-  const householdName = members[0]?.householdName ?? 'Household'
+  const isLoading = roster.isLoading || householdBooks.isLoading
   const error = roster.error ?? householdBooks.error
+  const isSettled = !isLoading && !error
+  const hasHousehold = isSettled && members.length > 0
+  const availableBooks = hasHousehold ? books : []
+  const selected = (selectedId && availableBooks.find((book) => book.id === selectedId)) || null
+  const dockedBook =
+    isWide && availableBooks.length > 0 ? (selected ?? availableBooks[0] ?? null) : null
+  const onlyCurrentMember =
+    hasHousehold &&
+    members.length === 1 &&
+    !!currentReaderId &&
+    members[0]?.userId === currentReaderId
+  const householdName = hasHousehold ? (members[0]?.householdName ?? 'Household') : 'Household'
 
   const center = (
     <div className="min-w-0 px-4 py-6 sm:px-6 lg:px-7">
-      <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1
-            className="text-[22px] italic text-ink"
-            style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
-          >
-            Library
-          </h1>
-          <span className="text-[12.5px] text-muted">Household · read-only</span>
-        </div>
-        <ScopeSwitch scope="household" />
-      </header>
+      <LibraryHeader scope="household" readout="Household · read-only" className="mb-4" />
 
-      {roster.isLoading || householdBooks.isLoading ? (
+      {isLoading ? (
         <HouseholdCentered>Loading the household library…</HouseholdCentered>
       ) : error ? (
         <HouseholdCentered>
@@ -560,7 +496,7 @@ function HouseholdLibraryScreen() {
             </div>
           </Surface>
 
-          {onlyCurrentMember && (
+          {onlyCurrentMember ? (
             <Surface
               tone="field"
               radius="control"
@@ -571,9 +507,9 @@ function HouseholdLibraryScreen() {
               You’re the only household member left. This scope stays read-only and now contains
               only your personal library.
             </Surface>
-          )}
+          ) : null}
 
-          {books.length === 0 ? (
+          {availableBooks.length === 0 ? (
             <HouseholdCentered>
               <h2 className="text-[18px] font-semibold text-ink">
                 {onlyCurrentMember ? 'Your household library is empty' : 'No household books yet'}
@@ -586,9 +522,13 @@ function HouseholdLibraryScreen() {
             </HouseholdCentered>
           ) : (
             <>
-              <SectionHeader label="Household library" readout={books.length} className="mb-3" />
+              <SectionHeader
+                label="Household library"
+                readout={availableBooks.length}
+                className="mb-3"
+              />
               <div style={COVER_GRID}>
-                {books.map((book) => (
+                {availableBooks.map((book) => (
                   <HouseholdBookCard
                     key={book.id}
                     book={book}
@@ -607,22 +547,28 @@ function HouseholdLibraryScreen() {
 
   return (
     <>
-      <section className="xl:grid xl:items-start xl:grid-cols-[minmax(0,1fr)_360px]">
+      <section
+        className={
+          dockedBook ? 'xl:grid xl:items-start xl:grid-cols-[minmax(0,1fr)_360px]' : undefined
+        }
+      >
         {center}
-        <aside
-          aria-label="Household book details"
-          className="hidden xl:sticky xl:top-0 xl:block xl:h-dvh xl:border-l xl:border-line"
-        >
-          <HouseholdBookDetail book={dockedBook} currentReaderId={currentReaderId} />
-        </aside>
+        {dockedBook ? (
+          <aside
+            aria-label="Household book details"
+            className="hidden xl:sticky xl:top-0 xl:block xl:h-dvh xl:border-l xl:border-line"
+          >
+            <HouseholdBookDetail book={dockedBook} currentReaderId={currentReaderId} />
+          </aside>
+        ) : null}
       </section>
-      {!isWide && selected && (
+      {!isWide && selected ? (
         <HouseholdDetailDrawer
           book={selected}
           currentReaderId={currentReaderId}
           onClose={() => setSelectedId(null)}
         />
-      )}
+      ) : null}
     </>
   )
 }
