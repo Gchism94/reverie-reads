@@ -22,8 +22,10 @@ const admin = createClient(SUPABASE_URL, SERVICE, {
 
 let owner: Account
 let member: Account
+let replacement: Account | undefined
 let householdId = ''
 let projectName = ''
+let replacementBookId = ''
 let seeded:
   | {
       ownerBookId: string
@@ -63,9 +65,10 @@ async function account(role: string, displayName: string): Promise<Account> {
 async function removeFixtureAccounts(): Promise<void> {
   const users = await admin.auth.admin.listUsers({ perPage: 1000 })
   if (users.error) throw users.error
-  const fixtures = users.data.users.filter(
-    (user) => user.email === fixtureEmail('owner') || user.email === fixtureEmail('member'),
+  const fixtureEmails = new Set(
+    ['owner', 'member', 'replacement'].map((role) => fixtureEmail(role)),
   )
+  const fixtures = users.data.users.filter((user) => user.email && fixtureEmails.has(user.email))
   const userIds = fixtures.map((user) => user.id)
   if (userIds.length === 0) return
 
@@ -307,6 +310,27 @@ test('two linked personal libraries appear together without exposing personal co
   await expect(page.locator('aside[aria-label="Household book details"]')).toHaveCount(0)
 
   seeded = await seedDuplicateBooks()
+
+  // Inspect the authenticated RPC payload itself, not only the rendered surface. Private sentinel
+  // values must never cross the server boundary where client mappers could accidentally retain them.
+  const ownerClient = createClient(SUPABASE_URL, ANON, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  })
+  await ownerClient.auth.setSession(owner.session)
+  const sharedPayload = await ownerClient.rpc('household_library_books')
+  if (sharedPayload.error) throw sharedPayload.error
+  expect(sharedPayload.data).toHaveLength(2)
+  for (const row of sharedPayload.data ?? []) {
+    expect(row).not.toHaveProperty('tags')
+    expect(row).not.toHaveProperty('notes')
+    expect(row).not.toHaveProperty('tropes')
+    expect(row).not.toHaveProperty('moods')
+  }
+  const serializedPayload = JSON.stringify(sharedPayload.data)
+  for (const sentinel of Object.values(seeded.sentinels)) {
+    expect(serializedPayload).not.toContain(sentinel)
+  }
+
   await page.reload()
 
   await expect(page.getByRole('button', { name: 'Household' })).toHaveAttribute(
@@ -333,11 +357,13 @@ test('two linked personal libraries appear together without exposing personal co
       })),
     ).toEqual({ client: 390, scroll: 390 })
 
+    const initialScrollY = await page.evaluate(() => window.scrollY)
     await memberCard.focus()
     await memberCard.click()
     const detail = page.getByRole('dialog', { name: /household details/i })
     const close = detail.getByRole('button', { name: 'Close household details' })
     await expect(detail).toHaveJSProperty('open', true)
+    expect(await detail.evaluate((dialog) => dialog.matches(':modal'))).toBe(true)
     await expect(close).toBeFocused()
     await expect(detail).toContainText(`From ${member.displayName}'s personal library`)
     await expect(detail).toContainText('Read-only household view')
@@ -355,6 +381,14 @@ test('two linked personal libraries appear together without exposing personal co
         return !!top?.closest('dialog[data-drawer-dialog]')
       }),
     ).toBe(true)
+    const backgroundBlocked = await page
+      .getByRole('button', { name: 'Personal' })
+      .click({ trial: true, timeout: 500 })
+      .then(
+        () => false,
+        () => true,
+      )
+    expect(backgroundBlocked).toBe(true)
     await page.keyboard.press('Tab')
     expect(
       await page.evaluate(() =>
@@ -370,6 +404,20 @@ test('two linked personal libraries appear together without exposing personal co
     await page.keyboard.press('Escape')
     await expect(detail).toHaveCount(0)
     await expect(memberCard).toBeFocused()
+    expect(await page.evaluate(() => document.documentElement.style.overflow)).toBe('')
+    expect(await page.evaluate(() => window.scrollY)).toBe(initialScrollY)
+
+    // Backdrop dismissal and repeated cycles must not leave listeners, focus, or scroll locks behind.
+    await memberCard.click()
+    await page.mouse.click(4, Math.floor((page.viewportSize()?.height ?? 844) / 2))
+    await expect(detail).toHaveCount(0)
+    await expect(memberCard).toBeFocused()
+
+    // Repeated open/close cycles must not accumulate Escape listeners or retain the scroll lock.
+    await memberCard.click()
+    await expect(detail).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(detail).toHaveCount(0)
     expect(await page.evaluate(() => document.documentElement.style.overflow)).toBe('')
   } else {
     expect(await page.evaluate(() => document.documentElement.clientWidth)).toBeGreaterThanOrEqual(
@@ -418,24 +466,125 @@ test('the second reader gets the same household view with their own identity mar
   }
 })
 
-test('removing the other account leaves a read-only one-member household', async ({ page }) => {
-  await okData(
-    admin.rpc('unlink_household_member', {
-      p_user: member.uid,
-      p_household: householdId,
-    }),
-    'household-library member unlink',
+test('an already-open tab never repaints a revoked household while a replacement settles', async ({
+  page,
+}) => {
+  await signIn(page, owner.session)
+  await page.goto('/library?scope=household')
+  await expect(page.locator(`[data-owner="${member.uid}"]`)).toBeVisible()
+  const oldHouseholdId = householdId
+  const oldHouseholdName = `Household Library ${projectName}`
+
+  // Leaving household scope must evict its authorization-sensitive in-memory queries.
+  await page.getByRole('button', { name: 'Personal', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Personal', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true',
   )
 
-  const preservedAccount = await admin.auth.admin.getUserById(member.uid)
+  replacement = await account('replacement', `Casey ${projectName}`)
+  await okData(
+    admin.rpc('unlink_household_member', {
+      p_user: owner.uid,
+      p_household: oldHouseholdId,
+    }),
+    'household-library owner external unlink',
+  )
+  householdId = await okData(
+    admin.rpc('link_household', {
+      p_name: `Replacement Household ${projectName}`,
+      p_owner: owner.uid,
+      p_members: [replacement.uid],
+    }),
+    'household-library replacement link',
+  )
+  replacementBookId = (
+    await okData(
+      admin
+        .from('books')
+        .insert({
+          owner_id: replacement.uid,
+          title: `Replacement Household Book ${projectName}`,
+          author_first: 'Casey',
+          author_last: 'Fixture',
+          authors_display: 'Casey Fixture',
+          status: 'standalone',
+          ownership: 'owned',
+        })
+        .select('id')
+        .single(),
+      'household-library replacement book insert',
+    )
+  ).id
+
+  let releaseRoster!: () => void
+  const rosterGate = new Promise<void>((resolve) => {
+    releaseRoster = resolve
+  })
+  let releaseBooks!: () => void
+  const booksGate = new Promise<void>((resolve) => {
+    releaseBooks = resolve
+  })
+  let markBooksRequested!: () => void
+  const booksRequested = new Promise<void>((resolve) => {
+    markBooksRequested = resolve
+  })
+  const rosterPattern = '**/rest/v1/rpc/household_roster'
+  const booksPattern = '**/rest/v1/rpc/household_library_books'
+  await page.route(rosterPattern, async (route) => {
+    await rosterGate
+    await route.continue()
+  })
+  await page.route(booksPattern, async (route) => {
+    markBooksRequested()
+    await booksGate
+    await route.continue()
+  })
+
+  await page.getByRole('button', { name: 'Household', exact: true }).click()
+  await expect(page.getByText('Loading the household library…')).toBeVisible()
+  await expect(page.locator(`[data-owner="${member.uid}"]`)).toHaveCount(0)
+  await expect(page.getByText(oldHouseholdName, { exact: true })).toHaveCount(0)
+
+  releaseRoster()
+  await booksRequested
+  await expect(page.getByText('Loading the household library…')).toBeVisible()
+  await expect(page.locator(`[data-owner="${member.uid}"]`)).toHaveCount(0)
+  releaseBooks()
+
+  await expect(
+    page.getByText(`Replacement Household ${projectName}`, { exact: true }),
+  ).toBeVisible()
+  await expect(page.locator(`[data-owner="${replacement.uid}"]`)).toContainText(
+    replacement.displayName,
+  )
+  await expect(page.locator(`[data-owner="${member.uid}"]`)).toHaveCount(0)
+  await expect(page.getByText(oldHouseholdName, { exact: true })).toHaveCount(0)
+  await page.unroute(rosterPattern)
+  await page.unroute(booksPattern)
+})
+
+test('removing the replacement account leaves a read-only one-member household', async ({
+  page,
+}) => {
+  if (!replacement) throw new Error('household-library replacement account was not created')
+  await okData(
+    admin.rpc('unlink_household_member', {
+      p_user: replacement.uid,
+      p_household: householdId,
+    }),
+    'household-library replacement unlink',
+  )
+
+  const preservedAccount = await admin.auth.admin.getUserById(replacement.uid)
   if (preservedAccount.error || !preservedAccount.data.user) {
-    throw new Error('household-library unlink deleted the member account')
+    throw new Error('household-library unlink deleted the replacement account')
   }
   const preservedBooks = await ok(
-    admin.from('books').select('id').eq('owner_id', member.uid),
-    'household-library preserved member books',
+    admin.from('books').select('id').eq('owner_id', replacement.uid),
+    'household-library preserved replacement books',
   )
-  expect(preservedBooks?.map((book) => book.id)).toContain(seeded?.memberBookId)
+  expect(preservedBooks?.map((book) => book.id)).toContain(replacementBookId)
 
   await signIn(page, owner.session)
   await page.goto('/library?scope=household')
@@ -445,5 +594,6 @@ test('removing the other account leaves a read-only one-member household', async
   await expect(page.locator(`[data-owner="${owner.uid}"]`)).toContainText(
     `${owner.displayName} (you)`,
   )
+  await expect(page.locator(`[data-owner="${replacement.uid}"]`)).toHaveCount(0)
   await expect(page.locator(`[data-owner="${member.uid}"]`)).toHaveCount(0)
 })

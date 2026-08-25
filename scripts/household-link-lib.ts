@@ -52,6 +52,13 @@ export interface HouseholdUnlinkConfig {
   userId: string
 }
 
+export interface HouseholdUnlinkVerification {
+  reviewedHouseholdId: string
+  returnedHouseholdId: string
+  remainingMembershipCount: number
+  householdExists: boolean
+}
+
 /** Validate and normalize the runtime-only account identifiers used by the owner-run linker. */
 export function householdLinkConfig(input: HouseholdLinkInput): HouseholdLinkConfig {
   const name = input.name.trim()
@@ -141,4 +148,26 @@ export function parseHouseholdUnlinkArgs(args: readonly string[]): HouseholdUnli
   const userId = (hit?.slice('--user-id='.length) ?? '').trim().toLowerCase()
   if (!UUID.test(userId)) throw new Error('pass a valid --user-id=<uuid>')
   return { userId }
+}
+
+/** Verify the reviewed household reached the lifecycle state implied by its remaining roster. */
+export function verifyHouseholdUnlink({
+  reviewedHouseholdId,
+  returnedHouseholdId,
+  remainingMembershipCount,
+  householdExists,
+}: HouseholdUnlinkVerification): 'deleted' | 'retained' {
+  if (returnedHouseholdId !== reviewedHouseholdId) {
+    throw new Error('household unlink verification failed: RPC returned a different household')
+  }
+  if (!Number.isInteger(remainingMembershipCount) || remainingMembershipCount < 0) {
+    throw new Error('household unlink verification failed: unreadable remaining roster count')
+  }
+  if (remainingMembershipCount === 0 && householdExists) {
+    throw new Error('household unlink verification failed: empty household still exists')
+  }
+  if (remainingMembershipCount > 0 && !householdExists) {
+    throw new Error('household unlink verification failed: populated household is missing')
+  }
+  return remainingMembershipCount === 0 ? 'deleted' : 'retained'
 }

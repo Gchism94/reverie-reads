@@ -29,7 +29,13 @@ import {
   type LibraryScope,
 } from '../components/HouseholdLibrary'
 import { Surface } from '../components/Surface'
-import { useHouseholdBooks, useHouseholdRoster, type HouseholdBook } from '../data/household'
+import {
+  labelHouseholdData,
+  useHouseholdBookSelection,
+  useHouseholdBooks,
+  useHouseholdRoster,
+  type HouseholdBook,
+} from '../data/household'
 import { useAuth } from '../auth/AuthProvider'
 import { useIsDesktop, useIsWide } from '../hooks/useMediaQuery'
 import { useVoice } from '../skin/labels'
@@ -432,18 +438,31 @@ function HouseholdLibraryScreen() {
   const { session } = useAuth()
   const currentReaderId = session?.user.id ?? ''
   const roster = useHouseholdRoster()
-  const householdBooks = useHouseholdBooks()
+  // The roster response is the authorization decision. While it is revalidating, there is no
+  // authorized household id and therefore no book query capable of repainting an earlier scope.
+  const householdId =
+    !roster.isFetching && !roster.error ? (roster.data?.[0]?.householdId ?? null) : null
+  const householdBooks = useHouseholdBooks(householdId)
   const isWide = useIsWide()
-  const [selectedId, setSelectedId] = useState<string | null>(null)
 
-  const members = roster.data ?? []
-  const books = householdBooks.data ?? []
-  const isLoading = roster.isLoading || householdBooks.isLoading
+  const labelled = useMemo(
+    () => labelHouseholdData(roster.data ?? [], householdBooks.data ?? []),
+    [roster.data, householdBooks.data],
+  )
+  const members = labelled.members
+  const books = labelled.books
+  const isLoading = roster.isFetching || (!!householdId && householdBooks.isFetching)
   const error = roster.error ?? householdBooks.error
   const isSettled = !isLoading && !error
   const hasHousehold = isSettled && members.length > 0
-  const availableBooks = hasHousehold ? books : []
-  const selected = (selectedId && availableBooks.find((book) => book.id === selectedId)) || null
+  const availableBooks = useMemo(() => (hasHousehold ? books : []), [books, hasHousehold])
+  const selection = useHouseholdBookSelection({
+    householdId,
+    books: availableBooks,
+    authorized: hasHousehold,
+  })
+  const selected = selection.selected
+
   const dockedBook =
     isWide && availableBooks.length > 0 ? (selected ?? availableBooks[0] ?? null) : null
   const onlyCurrentMember =
@@ -534,7 +553,7 @@ function HouseholdLibraryScreen() {
                     book={book}
                     currentReaderId={currentReaderId}
                     selected={isWide && dockedBook?.id === book.id}
-                    onOpen={() => setSelectedId(book.id)}
+                    onOpen={() => selection.open(book.id)}
                   />
                 ))}
               </div>
@@ -566,7 +585,7 @@ function HouseholdLibraryScreen() {
         <HouseholdDetailDrawer
           book={selected}
           currentReaderId={currentReaderId}
-          onClose={() => setSelectedId(null)}
+          onClose={selection.clear}
         />
       ) : null}
     </>

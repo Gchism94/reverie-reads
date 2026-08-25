@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query'
+import { useEffect, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../auth/AuthProvider'
 import { supabase } from '../lib/supabase'
 
@@ -43,6 +44,11 @@ export interface HouseholdBook {
   addedAt: string
 }
 
+interface HouseholdBookSelection {
+  bookId: string
+  householdId: string
+}
+
 interface HouseholdRosterRow {
   household_id: string
   household_name: string
@@ -82,10 +88,7 @@ interface HouseholdBookRow {
   added_at: string
 }
 
-const shortReaderId = (readerId: string): string => readerId.slice(0, 8)
-
-const readerName = (value: string | null, readerId: string): string =>
-  value?.trim() || `Reader · ${shortReaderId(readerId)}`
+const readerName = (value: string | null): string => value?.trim() || 'Reader'
 
 const numericPosition = (value: number | string | null): number | null => {
   if (value === null) return null
@@ -102,14 +105,14 @@ export const toHouseholdMember = (row: HouseholdRosterRow): HouseholdMember => (
   householdId: row.household_id,
   householdName: row.household_name,
   userId: row.user_id,
-  displayName: readerName(row.display_name, row.user_id),
+  displayName: readerName(row.display_name),
   role: row.member_role,
 })
 
 export const toHouseholdBook = (row: HouseholdBookRow): HouseholdBook => ({
   id: row.book_id,
   ownerId: row.owner_id,
-  ownerName: readerName(row.owner_name, row.owner_id),
+  ownerName: readerName(row.owner_name),
   title: row.title,
   author: row.author?.trim() ?? '',
   cover: row.cover_url ?? '',
@@ -137,77 +140,163 @@ export const toHouseholdBook = (row: HouseholdBookRow): HouseholdBook => ({
   addedAt: row.added_at,
 })
 
-function ambiguousReaderNames(
-  rows: readonly { readerId: string; displayName: string }[],
-): Set<string> {
-  const idsByName = new Map<string, Set<string>>()
-  for (const row of rows) {
-    const ids = idsByName.get(row.displayName) ?? new Set<string>()
-    ids.add(row.readerId)
-    idsByName.set(row.displayName, ids)
+const normalizedReaderName = (value: string): string => value.trim().toLocaleLowerCase()
+
+function uniqueReaderSuffix(readerId: string, allReaderIds: readonly string[]): string {
+  const distinctOthers = [...new Set(allReaderIds)].filter((candidate) => candidate !== readerId)
+  let length = Math.min(8, readerId.length)
+  while (
+    length < readerId.length &&
+    distinctOthers.some((candidate) => candidate.slice(0, length) === readerId.slice(0, length))
+  ) {
+    length += 1
   }
-  return new Set(
-    [...idsByName.entries()].filter(([, ids]) => ids.size > 1).map(([name]) => name),
-  )
+  return readerId.slice(0, length)
 }
 
-export function disambiguateHouseholdMembers(
+/**
+ * One complete-roster-derived identity map feeds both member chips and book ownership labels.
+ * Book rows are deliberately not allowed to decide whether a name is ambiguous: members with an
+ * empty library still participate, and a colliding eight-character UUID prefix grows until unique.
+ */
+export function householdOwnerLabels(
   members: readonly HouseholdMember[],
-): HouseholdMember[] {
-  const ambiguous = ambiguousReaderNames(
-    members.map((member) => ({ readerId: member.userId, displayName: member.displayName })),
-  )
-  return members.map((member) =>
-    ambiguous.has(member.displayName)
-      ? { ...member, displayName: `${member.displayName} · ${shortReaderId(member.userId)}` }
-      : member,
+): ReadonlyMap<string, string> {
+  const idsByName = new Map<string, Set<string>>()
+  for (const member of members) {
+    const name = normalizedReaderName(member.displayName)
+    const ids = idsByName.get(name) ?? new Set<string>()
+    ids.add(member.userId)
+    idsByName.set(name, ids)
+  }
+
+  const allReaderIds = members.map((member) => member.userId)
+  return new Map(
+    members.map((member) => {
+      const ids = idsByName.get(normalizedReaderName(member.displayName)) ?? new Set<string>()
+      const needsSuffix = member.displayName === 'Reader' || ids.size > 1
+      const label = needsSuffix
+        ? `${member.displayName} · ${uniqueReaderSuffix(member.userId, allReaderIds)}`
+        : member.displayName
+      return [member.userId, label]
+    }),
   )
 }
 
-export function disambiguateHouseholdBooks(books: readonly HouseholdBook[]): HouseholdBook[] {
-  const ambiguous = ambiguousReaderNames(
-    books.map((book) => ({ readerId: book.ownerId, displayName: book.ownerName })),
-  )
-  return books.map((book) =>
-    ambiguous.has(book.ownerName)
-      ? { ...book, ownerName: `${book.ownerName} · ${shortReaderId(book.ownerId)}` }
-      : book,
-  )
+export function labelHouseholdData(
+  members: readonly HouseholdMember[],
+  books: readonly HouseholdBook[],
+): { members: HouseholdMember[]; books: HouseholdBook[] } {
+  const labels = householdOwnerLabels(members)
+  return {
+    members: members.map((member) => ({
+      ...member,
+      displayName: labels.get(member.userId) ?? member.displayName,
+    })),
+    // A curated row whose owner is absent from the authorizing roster fails closed instead of
+    // receiving an independently-derived label and rendering as if it were still authorized.
+    books: books.flatMap((book) => {
+      const ownerName = labels.get(book.ownerId)
+      return ownerName ? [{ ...book, ownerName }] : []
+    }),
+  }
 }
 
-export const householdRosterKey = (readerId: string) =>
-  ['household', 'roster', readerId] as const
-export const householdBooksKey = (readerId: string) =>
-  ['household', 'books', readerId] as const
+/**
+ * A household selection carries the household that authorized it. Any authorization transition
+ * clears the stored value, so recovery cannot reopen a drawer without a new reader gesture even if
+ * the same book id becomes visible again.
+ */
+export function useHouseholdBookSelection({
+  householdId,
+  books,
+  authorized,
+}: {
+  householdId: string | null
+  books: readonly HouseholdBook[]
+  authorized: boolean
+}) {
+  const [selection, setSelection] = useState<HouseholdBookSelection | null>(null)
+  const selected =
+    (authorized &&
+      selection?.householdId === householdId &&
+      books.find((book) => book.id === selection.bookId)) ||
+    null
+
+  useEffect(() => {
+    if (!selection) return
+    const remainsAuthorized =
+      authorized &&
+      !!householdId &&
+      selection.householdId === householdId &&
+      books.some((book) => book.id === selection.bookId)
+    if (!remainsAuthorized) setSelection(null)
+  }, [authorized, books, householdId, selection])
+
+  return {
+    selected,
+    open: (bookId: string) => {
+      if (authorized && householdId && books.some((book) => book.id === bookId)) {
+        setSelection({ bookId, householdId })
+      }
+    },
+    clear: () => setSelection(null),
+  }
+}
+
+export const householdRosterKey = (readerId: string) => ['household', 'roster', readerId] as const
+export const householdBooksKey = (readerId: string, householdId: string) =>
+  ['household', 'books', readerId, householdId] as const
+
+const authorizationSensitiveQueryOptions = {
+  staleTime: 0,
+  gcTime: 0,
+  refetchOnMount: 'always' as const,
+  refetchOnWindowFocus: 'always' as const,
+}
 
 export function useHouseholdRoster() {
   const { session } = useAuth()
   const readerId = session?.user.id ?? ''
+  const queryClient = useQueryClient()
+  const queryKey = householdRosterKey(readerId)
+
+  useEffect(() => {
+    const mountedQueryKey = householdRosterKey(readerId)
+    return () => queryClient.removeQueries({ queryKey: mountedQueryKey, exact: true })
+  }, [queryClient, readerId])
+
   return useQuery({
-    queryKey: householdRosterKey(readerId),
+    queryKey,
     enabled: !!readerId,
+    ...authorizationSensitiveQueryOptions,
     queryFn: async (): Promise<HouseholdMember[]> => {
       const { data, error } = await supabase.rpc('household_roster')
       if (error) throw error
-      return disambiguateHouseholdMembers(
-        ((data ?? []) as HouseholdRosterRow[]).map(toHouseholdMember),
-      )
+      return ((data ?? []) as HouseholdRosterRow[]).map(toHouseholdMember)
     },
   })
 }
 
-export function useHouseholdBooks() {
+export function useHouseholdBooks(householdId: string | null) {
   const { session } = useAuth()
   const readerId = session?.user.id ?? ''
+  const queryClient = useQueryClient()
+  const queryKey = householdBooksKey(readerId, householdId ?? '')
+
+  useEffect(() => {
+    const mountedQueryKey = householdBooksKey(readerId, householdId ?? '')
+    return () => queryClient.removeQueries({ queryKey: mountedQueryKey, exact: true })
+  }, [queryClient, readerId, householdId])
+
   return useQuery({
-    queryKey: householdBooksKey(readerId),
-    enabled: !!readerId,
+    queryKey,
+    enabled: !!readerId && !!householdId,
+    ...authorizationSensitiveQueryOptions,
     queryFn: async (): Promise<HouseholdBook[]> => {
       const { data, error } = await supabase.rpc('household_library_books')
       if (error) throw error
-      return disambiguateHouseholdBooks(
-        ((data ?? []) as HouseholdBookRow[]).map(toHouseholdBook),
-      )
+      return ((data ?? []) as HouseholdBookRow[]).map(toHouseholdBook)
     },
   })
 }

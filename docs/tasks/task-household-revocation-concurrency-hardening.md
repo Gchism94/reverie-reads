@@ -1,6 +1,7 @@
 # Task: household revocation and concurrency hardening
 
-Status: **queued — next major task after the active feature-fix queue is complete**.
+Status: **implemented and locally verified on `codex/fix-household-revocation-concurrency`;
+pending independent review and integration**.
 
 Branch when implementation begins: create a fresh `codex/` branch from the then-current household
 stack. Re-check every coordinate and ancestry before editing; the findings below describe the code
@@ -158,3 +159,17 @@ This task is complete only when all four reachable failures have regression test
 layer, the full unit/type/lint/format/e2e/database gates pass from a clean committed worktree, and a
 fresh review finds no remaining authorization, identity, or final-unlink lifecycle defect. No merge,
 deployment, or production access without the owner's explicit authorization.
+
+## Candidate verification — 2026-08-25
+
+- Full unit suite: 2,943 assertions passed (2,341 core + 602 web).
+- Full database suite: 460 pgTAP assertions passed.
+- Deterministic two-session final-unlink harness passed with both accounts, profiles, and personal
+  books preserved; both memberships removed; empty household deleted.
+- Focused household browser suite: 9 passed, 1 expected project-specific skip across desktop and
+  mobile.
+- Full browser suite: 218 passed, 10 expected project-specific skips across 228 cases.
+- Type checking, lint, production build, formatting, and diff checks passed.
+
+The candidate has not been pushed, merged, deployed, or exercised against production. Re-run the
+documented gates from the final committed HEAD after any review-driven change.

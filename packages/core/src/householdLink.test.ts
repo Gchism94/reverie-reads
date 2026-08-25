@@ -4,6 +4,7 @@ import {
   householdLinkPreview,
   parseHouseholdLinkArgs,
   parseHouseholdUnlinkArgs,
+  verifyHouseholdUnlink,
 } from '../../../scripts/household-link-lib'
 
 const OWNER = '11111111-1111-4111-8111-111111111111'
@@ -114,5 +115,51 @@ describe('household link arguments', () => {
       userId: MEMBER,
     })
     expect(() => parseHouseholdUnlinkArgs(['--user-id=not-a-uuid'])).toThrow(/valid --user-id/)
+  })
+
+  it('verifies both valid household lifecycle outcomes after unlink', () => {
+    expect(
+      verifyHouseholdUnlink({
+        reviewedHouseholdId: 'house-1',
+        returnedHouseholdId: 'house-1',
+        remainingMembershipCount: 1,
+        householdExists: true,
+      }),
+    ).toBe('retained')
+    expect(
+      verifyHouseholdUnlink({
+        reviewedHouseholdId: 'house-1',
+        returnedHouseholdId: 'house-1',
+        remainingMembershipCount: 0,
+        householdExists: false,
+      }),
+    ).toBe('deleted')
+  })
+
+  it('refuses an orphan, a missing populated household, or a mismatched RPC result', () => {
+    expect(() =>
+      verifyHouseholdUnlink({
+        reviewedHouseholdId: 'house-1',
+        returnedHouseholdId: 'house-1',
+        remainingMembershipCount: 0,
+        householdExists: true,
+      }),
+    ).toThrow(/empty household still exists/)
+    expect(() =>
+      verifyHouseholdUnlink({
+        reviewedHouseholdId: 'house-1',
+        returnedHouseholdId: 'house-1',
+        remainingMembershipCount: 1,
+        householdExists: false,
+      }),
+    ).toThrow(/populated household is missing/)
+    expect(() =>
+      verifyHouseholdUnlink({
+        reviewedHouseholdId: 'house-1',
+        returnedHouseholdId: 'house-2',
+        remainingMembershipCount: 0,
+        householdExists: false,
+      }),
+    ).toThrow(/different household/)
   })
 })

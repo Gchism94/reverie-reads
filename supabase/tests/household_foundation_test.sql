@@ -3,7 +3,7 @@
 -- reader's raw books/profile rows or subjective fields client-readable.
 
 begin;
-select plan(68);
+select plan(74);
 
 insert into auth.users (id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
 values
@@ -474,6 +474,41 @@ select is((select count(*)::int from public.household_roster()), 1,
 
 select is((select count(*)::int from public.household_library_books()), 1,
   'the remaining member still sees their own household-library row');
+
+-- ── explicit final-member unlink deletes the now-empty household and nothing personal ──
+reset role;
+select set_config(
+  'test.final_household_id',
+  (select id::text from household_probe),
+  true
+);
+set local role service_role;
+select set_config('request.jwt.claims', '{"role":"service_role"}', true);
+select is(
+  public.unlink_household_member(
+    '62222222-2222-4222-8222-222222222222',
+    current_setting('test.final_household_id')::uuid
+  ),
+  current_setting('test.final_household_id')::uuid,
+  'service-role unlink supports the final remaining member'
+);
+reset role;
+
+select is((select count(*)::int from public.household_members
+  where user_id = '62222222-2222-4222-8222-222222222222'), 0,
+  'final unlink removes the last membership');
+select is((select count(*)::int from public.households h
+  join household_probe p on p.id = h.id), 0,
+  'final unlink deletes the empty household');
+select is((select count(*)::int from auth.users
+  where id = '62222222-2222-4222-8222-222222222222'), 1,
+  'final unlink preserves the authentication account');
+select is((select count(*)::int from public.profiles
+  where id = '62222222-2222-4222-8222-222222222222'), 1,
+  'final unlink preserves the profile');
+select is((select count(*)::int from public.books
+  where owner_id = '62222222-2222-4222-8222-222222222222'), 1,
+  'final unlink preserves the personal library');
 
 select * from finish();
 rollback;

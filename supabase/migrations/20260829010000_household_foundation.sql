@@ -230,6 +230,14 @@ begin
     raise exception 'membership changed since preview' using errcode = '40001';
   end if;
 
+  -- Different departing users lock different profile/membership rows. The shared household row is
+  -- therefore the serialization boundary for final-member cleanup: without it, two concurrent
+  -- unlinks can each see the other's uncommitted membership and both leave an empty household.
+  perform 1
+  from public.households h
+  where h.id = target
+  for update;
+
   delete from public.household_members
   where user_id = p_user and household_id = p_household;
   delete from public.households h

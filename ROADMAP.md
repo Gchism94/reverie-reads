@@ -36,8 +36,8 @@ app at the end of each step.
 - [ ] Accounts + multi-device sync (library follows the user).
 - [ ] Household library with member identities/roles. Backend membership, roster, privacy boundary,
       and curated read API are defined in `20260829010000_household_foundation.sql`; the Library
-      scope UI remains. Before the household stack merges or deploys, complete the queued revocation,
-      identity, and concurrent-final-unlink hardening task in
+      scope UI remains. Before the household stack merges or deploys, integrate and independently
+      review the revocation, identity, and concurrent-final-unlink hardening task in
       `docs/tasks/task-household-revocation-concurrency-hardening.md`.
 - [ ] Clubs on the backend: read-alongs with per-user progress; shared/club TBRs;
       comments with (optional) server-enforced spoiler gating.

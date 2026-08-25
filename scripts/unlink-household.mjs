@@ -7,7 +7,7 @@
 // with --write. The account, profile, and personal books are never deleted by this operation.
 
 import { createClient } from '@supabase/supabase-js'
-import { parseHouseholdUnlinkArgs } from './household-link-lib.ts'
+import { parseHouseholdUnlinkArgs, verifyHouseholdUnlink } from './household-link-lib.ts'
 
 const LOCAL_URL = 'http://127.0.0.1:55321'
 const LOCAL_SERVICE_ROLE =
@@ -97,16 +97,27 @@ async function main() {
   )
   if (unlinkError) throw dbError('household unlink failed', unlinkError)
 
-  const [authResult, preservedProfileResult, removedMembershipResult, bookResult] =
-    await Promise.all([
-      supabase.auth.admin.getUserById(userId),
-      supabase.from('profiles').select('id').eq('id', userId).maybeSingle(),
-      supabase
-        .from('household_members')
-        .select('user_id', { count: 'exact', head: true })
-        .eq('user_id', userId),
-      supabase.from('books').select('id', { count: 'exact', head: true }).eq('owner_id', userId),
-    ])
+  const [
+    authResult,
+    preservedProfileResult,
+    removedMembershipResult,
+    remainingRosterResult,
+    reviewedHouseholdResult,
+    bookResult,
+  ] = await Promise.all([
+    supabase.auth.admin.getUserById(userId),
+    supabase.from('profiles').select('id').eq('id', userId).maybeSingle(),
+    supabase
+      .from('household_members')
+      .select('user_id', { count: 'exact', head: true })
+      .eq('user_id', userId),
+    supabase
+      .from('household_members')
+      .select('user_id', { count: 'exact', head: true })
+      .eq('household_id', householdId),
+    supabase.from('households').select('id').eq('id', householdId).maybeSingle(),
+    supabase.from('books').select('id', { count: 'exact', head: true }).eq('owner_id', userId),
+  ])
   if (authResult.error || !authResult.data.user)
     throw dbError('authentication-account preservation check failed', authResult.error)
   if (preservedProfileResult.error || !preservedProfileResult.data)
@@ -115,9 +126,20 @@ async function main() {
     throw dbError('membership removal check failed', removedMembershipResult.error)
   if (removedMembershipResult.count !== 0)
     throw new Error('membership removal check failed: the account is still linked')
+  if (remainingRosterResult.error || remainingRosterResult.count === null)
+    throw dbError('remaining household roster check failed', remainingRosterResult.error)
+  if (reviewedHouseholdResult.error)
+    throw dbError('reviewed household lifecycle check failed', reviewedHouseholdResult.error)
   if (bookResult.error) throw dbError('personal-book preservation check failed', bookResult.error)
+
+  const householdState = verifyHouseholdUnlink({
+    reviewedHouseholdId: householdId,
+    returnedHouseholdId: removedHouseholdId,
+    remainingMembershipCount: remainingRosterResult.count,
+    householdExists: !!reviewedHouseholdResult.data,
+  })
   console.log(
-    `\nUnlinked ${userId} from household ${removedHouseholdId}. Account/profile preserved; ${bookResult.count ?? 0} personal book(s) remain.`,
+    `\nUnlinked ${userId} from household ${removedHouseholdId}. Household ${householdState}; account/profile preserved; ${bookResult.count ?? 0} personal book(s) remain.`,
   )
 }
 
