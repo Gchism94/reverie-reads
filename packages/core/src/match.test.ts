@@ -20,6 +20,20 @@ describe('ISBN normalization', () => {
     expect(normalizeIsbn('9780306406157')).toBe('9780306406157')
     expect(normalizeIsbn('not-an-isbn')).toBe('')
   })
+
+  it('rejects checksum-invalid ISBN-10 and ISBN-13 values', () => {
+    // The bad 10 differs from the valid one only in its check digit. Accepting it used to promote
+    // both strings to the same ISBN-13, manufacturing an edition match that did not exist.
+    expect(normalizeIsbn('0306406153')).toBe('')
+    expect(isbn10to13('0306406153')).toBe('')
+    expect(normalizeIsbn('9780306406158')).toBe('')
+  })
+
+  it('accepts X only as a valid ISBN-10 check digit', () => {
+    expect(normalizeIsbn('0-8044-2957-X')).toBe('9780804429573')
+    expect(normalizeIsbn('0-8044-295X-7')).toBe('')
+    expect(normalizeIsbn('97803064061X7')).toBe('')
+  })
 })
 
 describe('matchBook', () => {

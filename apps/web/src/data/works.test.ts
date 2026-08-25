@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { applyWorksFilters, workToHit, worksPageRange, type WorkRow } from './works'
+import {
+  applyWorksFilters,
+  canonicalLookupIsbns,
+  isMissingWorksIsbns,
+  mergeWorkRows,
+  workToHit,
+  worksPageRange,
+  type WorkRow,
+} from './works'
 import { DISCOVER_BATCH } from '../lib/discover'
 
 /**
@@ -31,6 +39,22 @@ const filters = (over: Partial<{ genre: string; tag: string; q: string }> = {}) 
   ...over,
 })
 
+const row = (over: Partial<WorkRow> = {}): WorkRow => ({
+  work_key: 'k',
+  title: 'Ash Crown',
+  contributors: [{ name: 'Vera Stone', role: 'author', position: 0 }],
+  isbns: [],
+  series: null,
+  position: null,
+  cover_url: null,
+  genre: 'fantasy',
+  tags: [],
+  pub_y: null,
+  pub_m: null,
+  pub_d: null,
+  ...over,
+})
+
 describe('applyWorksFilters', () => {
   it('no filters → no calls: the bare browse selects everything', () => {
     const r = new Recorder()
@@ -54,6 +78,12 @@ describe('applyWorksFilters', () => {
     const r = new Recorder()
     applyWorksFilters(r, filters({ q: 'yarros' }))
     expect(r.calls).toEqual([['or', 'title.ilike.%yarros%,author_text.ilike.%yarros%']])
+  })
+
+  it('ISBN-10 search becomes exact canonical ISBN-13 array containment', () => {
+    const r = new Recorder()
+    applyWorksFilters(r, filters({ q: '0-306-40615-2' }))
+    expect(r.calls).toEqual([['contains', 'isbns⊇["9780306406157"]']])
   })
 
   it('strips % and , from the term — commas are PostgREST or() separators', () => {
@@ -85,26 +115,26 @@ describe('worksPageRange', () => {
 })
 
 describe('workToHit — a corpus row IS an Add prefill', () => {
-  const row = (over: Partial<WorkRow> = {}): WorkRow => ({
-    work_key: 'k',
-    title: 'Ash Crown',
-    contributors: [{ name: 'Vera Stone', role: 'author', position: 0 }],
-    series: null,
-    position: null,
-    cover_url: null,
-    genre: 'fantasy',
-    tags: [],
-    pub_y: null,
-    pub_m: null,
-    pub_d: null,
-    ...over,
-  })
-
   it('maps authors from contributors and keeps the DiscoverHit contract', () => {
     const h = workToHit(row())
     expect(h.title).toBe('Ash Crown')
     expect(h.authors).toEqual(['Vera Stone'])
-    expect(h.isbn).toBe('') // the corpus stores none yet; Add treats empty as absent
+    expect(h.isbn).toBe('') // Add treats an unknown ISBN as absent
+  })
+
+  it('prefills the first canonical ISBN when the corpus knows an edition', () => {
+    expect(workToHit(row({ isbns: ['9780306406157', '9781649374042'] })).isbn).toBe(
+      '9780306406157',
+    )
+  })
+
+  it('preserves the catalog edition when it matched a later corpus ISBN', () => {
+    expect(
+      workToHit(
+        row({ isbns: ['9780306406157', '9781649374042'] }),
+        '978-1-64937-404-2',
+      ).isbn,
+    ).toBe('9781649374042')
   })
 
   it('a coverless row maps to cover "" — the placeholder is the designed common case at launch', () => {
@@ -121,5 +151,29 @@ describe('workToHit — a corpus row IS an Add prefill', () => {
 
   it('empty contributors yield an empty authors list, not a crash or a ghost name', () => {
     expect(workToHit(row({ contributors: [] })).authors).toEqual([])
+  })
+})
+
+describe('edition lookup planning and rollout', () => {
+  it('canonicalizes and deduplicates the catalog ISBN batch', () => {
+    expect(
+      canonicalLookupIsbns(['0-306-40615-2', '9780306406157', 'bad', '9781649374042']),
+    ).toEqual(['9780306406157', '9781649374042'])
+  })
+
+  it('merges a later ISBN hit into the text hit for the same work', () => {
+    const base = row({ work_key: 'same', isbns: [] })
+    const edition = row({ work_key: 'same', isbns: ['9781649374042'] })
+    expect(mergeWorkRows([base], [edition])).toEqual([edition])
+  })
+
+  it('recognizes only the missing-column errors that the staged client may ignore', () => {
+    expect(isMissingWorksIsbns({ code: '42703', message: 'column works.isbns does not exist' })).toBe(
+      true,
+    )
+    expect(
+      isMissingWorksIsbns({ code: 'PGRST204', message: "Could not find the 'isbns' column in the schema cache" }),
+    ).toBe(true)
+    expect(isMissingWorksIsbns({ code: '42501', message: 'permission denied for works' })).toBe(false)
   })
 })

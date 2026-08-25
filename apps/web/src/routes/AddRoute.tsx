@@ -18,7 +18,7 @@ import { rootRoute } from './RootRoute'
 import { useIntake, type ReviewCandidate } from '../data/intake'
 import { useBooks } from '../data/books'
 import { useWorksLookup, workToHit, type WorkRow } from '../data/works'
-import { triageLabel, triageResults, type TriagedResult } from '../lib/addTriage'
+import { resultIsbn, triageLabel, triageResults, type TriagedResult } from '../lib/addTriage'
 import { resolveCandidate, type ReviewAction } from '../data/duplicates'
 import { enrichBook, type CoverAlternate } from '../lib/enrich'
 import { searchEverywhere, type SearchResult } from '../lib/search'
@@ -102,15 +102,15 @@ const hitOf = (r: SearchResult): SearchHit => ({
   title: r.title,
   authors: r.authors,
   cover: r.cover,
-  isbn: r.isbn,
+  isbn: resultIsbn(r),
   pub: r.year,
 })
 
 /** A corpus row as the form's prefill. The five shared fields come from `workToHit` — the SAME
  *  mapper Discover's corpus picks use, so a corpus pick means the same thing on both screens — and
  *  the three corpus-only fields ride alongside. */
-const pickedFromWork = (w: WorkRow): Picked => ({
-  ...workToHit(w),
+const pickedFromWork = (w: WorkRow, result: SearchResult): Picked => ({
+  ...workToHit(w, resultIsbn(result)),
   series: w.series ?? '',
   position: w.position == null ? '' : String(w.position),
   genre: w.genre ?? '',
@@ -899,7 +899,7 @@ function TriageRow({ t, onPick }: { t: TriagedResult; onPick: (p: Picked) => voi
           // A corpus row is the better prefill: it carries the series, position and genre the
           // catalog result does not, so picking one fills them in rather than making the reader
           // retype what the corpus already knows.
-          onClick={() => onPick(t.work ? pickedFromWork(t.work) : hitOf(r))}
+          onClick={() => onPick(t.work ? pickedFromWork(t.work, r) : hitOf(r))}
           className="flex flex-1 items-center gap-3 text-left"
         >
           {inner}
@@ -940,9 +940,9 @@ function AddScreen() {
   const streamRef = useRef<MediaStream | null>(null)
   // Already paged (#350), so the library side of the check is sound above 1,000 rows.
   const { data: books } = useBooks()
-  // ONE ranged corpus query for the whole result set, keyed on the term that was SEARCHED. It runs
-  // alongside the catalog search, never in front of it.
-  const corpus = useWorksLookup(searched)
+  // The ranged term query starts alongside catalog search. Once results arrive, their ISBNs feed
+  // one additional batched lookup so alternate catalog title/author metadata cannot hide a work.
+  const corpus = useWorksLookup(searched, (results ?? []).map(resultIsbn))
   // Labelled the moment the hits arrive — on the library alone if the corpus query is still in
   // flight, gaining the corpus half when it resolves. Nothing here waits on a second round trip,
   // which is the regression that would be invisible on a fast connection.

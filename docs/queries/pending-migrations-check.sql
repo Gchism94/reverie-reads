@@ -9,7 +9,7 @@
 -- `pnpm deploy:migrations`, which wraps `supabase db push` behind scripts/deploy-guard.sh. So
 -- merging to main does NOT apply anything, and the repo alone cannot say what production has.
 --
--- The right-hand list below is the 73 migration files in supabase/migrations/ as of this
+-- The right-hand list below is the 78 migration files in supabase/migrations/ as of this
 -- writing. The query compares them against supabase_migrations.schema_migrations — the table the
 -- Supabase CLI itself uses to track what it has applied — and returns only the gap.
 --
@@ -90,7 +90,12 @@ with repo(version, name) as (
     ('20260821010000', 'set_series_order_collision_skip'),
     ('20260822010000', 'series_merge_decisions'),
     ('20260823010000', 'merge_series'),
-    ('20260824010000', 'merge_books_fold_series_user_chosen')
+    ('20260824010000', 'merge_books_fold_series_user_chosen'),
+    ('20260825010000', 'hide_intensity'),
+    ('20260826010000', 'books_darkness'),
+    ('20260827010000', 'works'),
+    ('20260828010000', 'works_isbns'),
+    ('20260829010000', 'household_foundation')
 )
 select
   repo.version,

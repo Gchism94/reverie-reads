@@ -91,6 +91,14 @@ export const USER_OWNED_TABLES: OwnedTable[] = [
 
   // ── shared/social: restoring these into another account would fabricate history ──
   {
+    table: 'household_members',
+    owner: 'user_id',
+    plan: {
+      backup: false,
+      why: 'Household membership is a live relationship with another account. One reader’s backup cannot recreate that relationship or consent on restore.',
+    },
+  },
+  {
     table: 'clubs',
     owner: 'created_by',
     plan: { backup: false, why: 'A club is collective, not owned by one reader; recreating it on restore would fabricate a club its other members never joined.' },

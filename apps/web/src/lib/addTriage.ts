@@ -1,4 +1,4 @@
-import { matchBook, norm, workKeyOf, type Book } from '@reverie/core'
+import { matchBook, norm, normalizeIsbn, workKeyOf, type Book } from '@reverie/core'
 import { resultToIncoming, type SearchResult } from './search'
 import type { WorkRow } from '../data/works'
 
@@ -86,6 +86,16 @@ export function workRowKeys(w: WorkRow): string[] {
   return [derived, w.work_key].filter((k): k is string => !!k)
 }
 
+/** One catalog result may expose the same edition through any of these fields. Canonicalizing here
+ * makes ISBN-10 scans join the ISBN-13 values persisted on works. */
+export function resultIsbn(r: SearchResult): string {
+  for (const raw of [r.isbn13, r.isbn, r.isbn10]) {
+    const isbn = normalizeIsbn(raw ?? '')
+    if (isbn) return isbn
+  }
+  return ''
+}
+
 /**
  * Label every result.
  *
@@ -100,12 +110,35 @@ export function triageResults(
   corpus: readonly WorkRow[] | null | undefined,
 ): TriagedResult[] {
   const byKey = new Map<string, WorkRow>()
-  for (const w of corpus ?? []) for (const k of workRowKeys(w)) if (!byKey.has(k)) byKey.set(k, w)
+  const byIsbn = new Map<string, WorkRow>()
+  const ambiguousIsbns = new Set<string>()
+  for (const w of corpus ?? []) {
+    for (const k of workRowKeys(w)) if (!byKey.has(k)) byKey.set(k, w)
+    for (const raw of w.isbns ?? []) {
+      const isbn = normalizeIsbn(raw)
+      if (!isbn || ambiguousIsbns.has(isbn)) continue
+      const prior = byIsbn.get(isbn)
+      if (!prior) byIsbn.set(isbn, w)
+      else if (prior.work_key !== w.work_key) {
+        // Unexpected cross-work collisions are ambiguous, never "first row wins". The owner-run
+        // importer rejects these before writing, but old/manual data must still fail in the safe
+        // direction here: no corpus classification rather than attaching the wrong work.
+        byIsbn.delete(isbn)
+        ambiguousIsbns.add(isbn)
+      }
+    }
+  }
 
   return results.map((result) => {
     const book = libraryHit(result, library)
+    const isbn = resultIsbn(result)
     const rk = resultWorkKey(result)
-    const work = (rk ? byKey.get(rk) : undefined) ?? null
+    // ISBN is edition identity and survives catalog title/author variation, so it is the stronger
+    // join. The work key remains the fallback for records without an ISBN.
+    const work =
+      (isbn && !ambiguousIsbns.has(isbn) ? byIsbn.get(isbn) : undefined) ??
+      (rk ? byKey.get(rk) : undefined) ??
+      null
     return { result, book, work, state: book ? 'library' : work ? 'corpus' : 'new' }
   })
 }

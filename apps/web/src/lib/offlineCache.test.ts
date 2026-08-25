@@ -6,6 +6,7 @@ import {
   createDexiePersister,
   evictLegacyOfflineCache,
   evictOtherReaders,
+  isOfflinePersistableQueryKey,
 } from './offlineCache'
 import { storedUserId } from './storedSession'
 
@@ -50,6 +51,20 @@ describe('Dexie offline persister', () => {
 
     await persister.removeClient()
     expect(await persister.restoreClient()).toBeUndefined()
+  })
+})
+
+describe('query dehydration boundary', () => {
+  it('never persists cross-account household responses', () => {
+    expect(isOfflinePersistableQueryKey(['household', 'roster', 'reader-a'])).toBe(false)
+    expect(isOfflinePersistableQueryKey(['household', 'books', 'reader-a'])).toBe(false)
+  })
+
+  it('keeps personal offline data eligible while retaining the series exclusions', () => {
+    expect(isOfflinePersistableQueryKey(['books'])).toBe(true)
+    expect(isOfflinePersistableQueryKey(['lists'])).toBe(true)
+    expect(isOfflinePersistableQueryKey(['series'])).toBe(false)
+    expect(isOfflinePersistableQueryKey(['series-strip', 'book-1'])).toBe(false)
   })
 })
 

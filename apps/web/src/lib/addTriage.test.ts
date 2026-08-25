@@ -3,7 +3,7 @@ import { makeBook } from '../../../../packages/core/src/book.fixture'
 import { norm, type Contributor } from '@reverie/core'
 import type { SearchResult } from './search'
 import type { WorkRow } from '../data/works'
-import { resultWorkKey, triageLabel, triageResults, workRowKeys } from './addTriage'
+import { resultIsbn, resultWorkKey, triageLabel, triageResults, workRowKeys } from './addTriage'
 
 const result = (r: Partial<SearchResult>): SearchResult => ({
   source: 'hardcover',
@@ -28,6 +28,7 @@ const work = ({
 }: Partial<WorkRow> & { title: string; author?: string }): WorkRow => ({
   work_key: `${norm(over.title)}|${norm(author)}`,
   contributors: contribs(author),
+  isbns: [],
   series: null,
   position: null,
   cover_url: null,
@@ -158,6 +159,49 @@ describe('triageResults', () => {
     expect(t[0]?.book).toBeNull()
   })
 
+  it('ISBN joins a catalog edition to the corpus even when title and author differ', () => {
+    const rows = [
+      work({
+        title: 'The Canonical Title',
+        author: 'Vera Stone',
+        isbns: ['9780306406157'],
+      }),
+    ]
+    const t = triageResults(
+      [
+        result({
+          title: 'Publisher Alternate Title',
+          authors: ['V. Stone'],
+          isbn10: '0-306-40615-2',
+        }),
+      ],
+      [],
+      rows,
+    )
+    expect(t[0]?.state).toBe('corpus')
+    expect(t[0]?.work).toBe(rows[0])
+  })
+
+  it('a cross-work ISBN collision is ambiguous, never silently first-row-wins', () => {
+    const rows = [
+      work({ title: 'First Work', author: 'One Author', isbns: ['9780306406157'] }),
+      work({ title: 'Second Work', author: 'Two Author', isbns: ['9780306406157'] }),
+    ]
+    const t = triageResults(
+      [
+        result({
+          title: 'Publisher Alternate',
+          authors: ['Nobody Matching'],
+          isbn13: '9780306406157',
+        }),
+      ],
+      [],
+      rows,
+    )
+    expect(t[0]?.state).toBe('new')
+    expect(t[0]?.work).toBeNull()
+  })
+
   it('library AND corpus → library leads, the corpus row rides along', () => {
     const rows = [work({ title: 'Fourth Wing', author: 'Rebecca Yarros' })]
     const t = triageResults(
@@ -213,6 +257,12 @@ describe('triageResults', () => {
 })
 
 describe('the corpus identity is the importer’s, not the library matcher’s', () => {
+  it('canonicalizes whichever catalog ISBN field is available', () => {
+    expect(resultIsbn(result({ isbn10: '0-306-40615-2' }))).toBe('9780306406157')
+    expect(resultIsbn(result({ isbn: 'not-an-isbn' }))).toBe('')
+    expect(resultIsbn(result({ isbn13: 'bad', isbn10: '0-306-40615-2' }))).toBe('9780306406157')
+  })
+
   it('keys on the FULL author name — works.work_key’s shape', () => {
     expect(resultWorkKey(result({ title: 'Iron Flame', authors: ['Rebecca Yarros'] }))).toBe(
       'ironflame|rebeccayarros',

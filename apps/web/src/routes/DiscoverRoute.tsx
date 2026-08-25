@@ -297,7 +297,7 @@ function DiscoverScreen() {
   const [corpusTag, setCorpusTag] = useState('')
   const corpusQDebounced = useDebouncedValue(corpusQ, 400)
   const corpus = useWorksBrowse({ genre: gkey, tag: corpusTag.trim(), q: corpusQDebounced })
-  const corpusHits = (corpus.data?.pages ?? []).flat().map(workToHit)
+  const corpusHits = (corpus.data?.pages ?? []).flat().map((work) => workToHit(work))
   const corpusVisible = hideImported ? corpusHits.filter((h) => !isOwned(h, owned)) : corpusHits
   const [batchIndex, setBatchIndex] = useState(0)
   useEffect(() => setBatchIndex(0), [gkey, hideImported])

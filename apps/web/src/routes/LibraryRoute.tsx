@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { createRoute, Link, useNavigate } from '@tanstack/react-router'
 import {
   groupSeries,
@@ -21,6 +21,21 @@ import { SeriesView } from '../library/SeriesView'
 import { CoverCard } from '../components/CoverCard'
 import { CoverSheet } from '../components/CoverSheet'
 import { BookDetailRail } from '../components/BookDetailRail'
+import { DrawerDialog } from '../components/DrawerDialog'
+import {
+  HouseholdBookCard,
+  HouseholdBookDetail,
+  LibraryScopeControl,
+  type LibraryScope,
+} from '../components/HouseholdLibrary'
+import { Surface } from '../components/Surface'
+import {
+  labelHouseholdData,
+  useHouseholdBookSelection,
+  useHouseholdLibraryAuthorization,
+  type HouseholdBook,
+} from '../data/household'
+import { useAuth } from '../auth/AuthProvider'
 import { useIsDesktop, useIsWide } from '../hooks/useMediaQuery'
 import { useVoice } from '../skin/labels'
 import { SectionHeader, SignatureEmblem } from '../components/Structure'
@@ -76,9 +91,6 @@ const COVER_GRID: React.CSSProperties = {
   gap: '18px 16px',
 }
 
-/** Detail rail as an overlay drawer (lg→xl tier, on selection) so the cover grid keeps its columns.
- *  Modal: backdrop dismiss, Escape, focus the close button on open. Appears without motion (the panel
- *  is mounted on select), so it's inherently reduced-motion-safe. */
 function DetailDrawer({
   book,
   onClose,
@@ -88,55 +100,14 @@ function DetailDrawer({
   onClose: () => void
   onToggleFave: (id: string) => void
 }) {
-  const closeRef = useRef<HTMLButtonElement>(null)
-  useEffect(() => {
-    closeRef.current?.focus()
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
-
   return (
-    <div
-      className="fixed inset-0 z-40"
-      role="dialog"
-      aria-modal="true"
-      aria-label={`${book.title} details`}
-    >
-      <button
-        type="button"
-        aria-label="Close details"
-        onClick={onClose}
-        className="absolute inset-0"
-        style={{ background: 'color-mix(in srgb, var(--bg0) 55%, transparent)' }}
-      />
-      <div
-        className="absolute right-0 top-0 flex h-dvh w-[min(360px,92vw)] flex-col border-l border-line"
-        style={{ background: 'var(--bg1)', boxShadow: 'var(--shadow)' }}
-      >
-        <div className="flex justify-end p-2">
-          <button
-            ref={closeRef}
-            type="button"
-            onClick={onClose}
-            aria-label="Close details"
-            className="grid h-8 w-8 place-items-center rounded-full border border-line text-[13px] text-ink"
-            style={{ background: 'var(--card)' }}
-          >
-            ✕
-          </button>
-        </div>
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          <BookDetailRail book={book} onToggleFave={onToggleFave} />
-        </div>
-      </div>
-    </div>
+    <DrawerDialog title={`${book.title} details`} closeLabel="Close details" onClose={onClose}>
+      <BookDetailRail book={book} onToggleFave={onToggleFave} />
+    </DrawerDialog>
   )
 }
 
-function LibraryScreen() {
+function PersonalLibraryScreen() {
   const { data: books, isLoading, isError, error } = useBooks()
   const hideIntensity = useHideIntensity()
   /*
@@ -209,9 +180,30 @@ function LibraryScreen() {
   // hidden" is what teaches a reader to stop reading the line.
   const hiddenCount = useMemo(() => hiddenMatchCount(books ?? [], filters), [books, filters])
 
-  if (isLoading) return <Centered>{voice.loading}</Centered>
-  if (isError) return <Centered>Couldn’t load your library — {(error as Error).message}</Centered>
-  if (!books || books.length === 0) return <EmptyState />
+  if (isLoading) {
+    return (
+      <div className="flex min-h-full flex-col px-4 py-6 sm:px-6">
+        <LibraryHeader scope="personal" readout="Loading…" />
+        <Centered>{voice.loading}</Centered>
+      </div>
+    )
+  }
+  if (isError) {
+    return (
+      <div className="flex min-h-full flex-col px-4 py-6 sm:px-6">
+        <LibraryHeader scope="personal" readout="Unavailable" />
+        <Centered>Couldn’t load your library — {(error as Error).message}</Centered>
+      </div>
+    )
+  }
+  if (!books || books.length === 0) {
+    return (
+      <div className="flex min-h-full flex-col px-4 py-6 sm:px-6">
+        <LibraryHeader scope="personal" readout="0 books · 0 faves" />
+        <EmptyState />
+      </div>
+    )
+  }
 
   const toggleFave = (id: string, fave: boolean) =>
     updateBook.mutate({ id, patch: { fave: !fave } })
@@ -234,17 +226,11 @@ function LibraryScreen() {
 
   const center = (
     <div className="min-w-0 px-4 py-6 sm:px-6 lg:px-7">
-      <header className="mb-3 flex items-baseline justify-between gap-3">
-        <h1
-          className="text-[22px] italic text-ink"
-          style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
-        >
-          Library
-        </h1>
-        <span className="text-[12.5px] text-muted">
-          {libraryBooks.length} books · {libraryBooks.filter((b) => b.fave).length} faves
-        </span>
-      </header>
+      <LibraryHeader
+        scope="personal"
+        readout={`${libraryBooks.length} books · ${libraryBooks.filter((b) => b.fave).length} faves`}
+        className="mb-3"
+      />
 
       <Toolbar filterToggleClass="lg:hidden" />
       {/* Mobile filters are toggled inline; on desktop they live in the persistent left column. */}
@@ -378,17 +364,254 @@ function LibraryScreen() {
   )
 }
 
+function ScopeSwitch({ scope }: { scope: LibraryScope }) {
+  const navigate = useNavigate()
+  const setScope = (next: LibraryScope) =>
+    void navigate({
+      to: '/library',
+      search: next === 'household' ? { scope: 'household' } : {},
+      replace: true,
+    })
+  return <LibraryScopeControl scope={scope} onChange={setScope} />
+}
+
+function LibraryHeader({
+  scope,
+  readout,
+  className = '',
+}: {
+  scope: LibraryScope
+  readout: string
+  className?: string
+}) {
+  return (
+    <header className={`${className} flex flex-wrap items-center justify-between gap-3`}>
+      <div>
+        <h1
+          className="text-[22px] italic text-ink"
+          style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+        >
+          Library
+        </h1>
+        <span className="text-[12.5px] text-muted">{readout}</span>
+      </div>
+      <ScopeSwitch scope={scope} />
+    </header>
+  )
+}
+
+function HouseholdCentered({ children }: { children: ReactNode }) {
+  return (
+    <Surface
+      tone="field"
+      radius="panel"
+      pad={5}
+      className="mx-auto my-10 max-w-xl text-center text-[14px] text-muted"
+    >
+      {children}
+    </Surface>
+  )
+}
+
+function HouseholdDetailDrawer({
+  book,
+  currentReaderId,
+  onClose,
+}: {
+  book: HouseholdBook
+  currentReaderId: string
+  onClose: () => void
+}) {
+  return (
+    <DrawerDialog
+      title={`${book.title} household details`}
+      closeLabel="Close household details"
+      onClose={onClose}
+    >
+      <HouseholdBookDetail book={book} currentReaderId={currentReaderId} />
+    </DrawerDialog>
+  )
+}
+
+function HouseholdLibraryScreen() {
+  const { session } = useAuth()
+  const currentReaderId = session?.user.id ?? ''
+  const household = useHouseholdLibraryAuthorization()
+  const isWide = useIsWide()
+
+  const labelled = useMemo(
+    () => labelHouseholdData(household.members, household.books),
+    [household.members, household.books],
+  )
+  const members = labelled.members
+  const books = labelled.books
+  const hasHousehold = household.authorized && members.length > 0
+  const availableBooks = useMemo(() => (hasHousehold ? books : []), [books, hasHousehold])
+  const selection = useHouseholdBookSelection({
+    householdId: household.householdId,
+    books: availableBooks,
+    authorized: hasHousehold,
+  })
+  const selected = selection.selected
+
+  const dockedBook =
+    isWide && availableBooks.length > 0 ? (selected ?? availableBooks[0] ?? null) : null
+  const onlyCurrentMember =
+    hasHousehold &&
+    members.length === 1 &&
+    !!currentReaderId &&
+    members[0]?.userId === currentReaderId
+  const householdName = hasHousehold ? (members[0]?.householdName ?? 'Household') : 'Household'
+
+  const center = (
+    <div className="min-w-0 px-4 py-6 sm:px-6 lg:px-7">
+      <LibraryHeader scope="household" readout="Household · read-only" className="mb-4" />
+
+      {household.paused ? (
+        <HouseholdCentered>
+          Household access can’t be verified while offline. Reconnect to view the household library.
+        </HouseholdCentered>
+      ) : household.loading ? (
+        <HouseholdCentered>Loading the household library…</HouseholdCentered>
+      ) : household.error ? (
+        <HouseholdCentered>
+          Couldn’t load the household library — {(household.error as Error).message}
+        </HouseholdCentered>
+      ) : members.length === 0 ? (
+        <HouseholdCentered>
+          <h2 className="text-[18px] font-semibold text-ink">No household linked</h2>
+          <p className="mt-2">
+            This account is not part of a household. Personal remains your active library.
+          </p>
+        </HouseholdCentered>
+      ) : (
+        <>
+          <Surface tone="field" radius="panel" pad={2} className="mb-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="text-[15px] font-semibold text-ink">{householdName}</h2>
+                <p className="mt-0.5 text-[12px] text-muted">
+                  {members.length} {members.length === 1 ? 'member' : 'members'} · every card names
+                  its personal-library owner
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-1.5" aria-label="Household members">
+                {members.map((member) => (
+                  <span
+                    key={member.userId}
+                    className="skin-control px-2.5 py-1 text-[11.5px] font-semibold text-ink"
+                    style={{ background: 'var(--chip)' }}
+                  >
+                    {member.displayName}
+                    {member.userId === currentReaderId ? ' (you)' : ''}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </Surface>
+
+          {onlyCurrentMember ? (
+            <Surface
+              tone="field"
+              radius="control"
+              pad={2}
+              role="status"
+              className="mb-4 text-[12.5px] text-muted"
+            >
+              You’re the only household member left. This scope stays read-only and now contains
+              only your personal library.
+            </Surface>
+          ) : null}
+
+          {availableBooks.length === 0 ? (
+            <HouseholdCentered>
+              <h2 className="text-[18px] font-semibold text-ink">
+                {onlyCurrentMember ? 'Your household library is empty' : 'No household books yet'}
+              </h2>
+              <p className="mt-2">
+                {onlyCurrentMember
+                  ? 'You’re the only member left, and your personal library has no books to show here.'
+                  : 'The household is linked, but none of its members has a library book to show.'}
+              </p>
+            </HouseholdCentered>
+          ) : (
+            <>
+              <SectionHeader
+                label="Household library"
+                readout={availableBooks.length}
+                className="mb-3"
+              />
+              <div style={COVER_GRID}>
+                {availableBooks.map((book) => (
+                  <HouseholdBookCard
+                    key={book.id}
+                    book={book}
+                    currentReaderId={currentReaderId}
+                    selected={isWide && dockedBook?.id === book.id}
+                    onOpen={() => selection.open(book.id)}
+                  />
+                ))}
+              </div>
+            </>
+          )}
+        </>
+      )}
+    </div>
+  )
+
+  return (
+    <>
+      <section
+        className={
+          dockedBook ? 'xl:grid xl:items-start xl:grid-cols-[minmax(0,1fr)_360px]' : undefined
+        }
+      >
+        {center}
+        {dockedBook ? (
+          <aside
+            aria-label="Household book details"
+            className="hidden xl:sticky xl:top-0 xl:block xl:h-dvh xl:border-l xl:border-line"
+          >
+            <HouseholdBookDetail book={dockedBook} currentReaderId={currentReaderId} />
+          </aside>
+        ) : null}
+      </section>
+      {!isWide && selected ? (
+        <HouseholdDetailDrawer
+          book={selected}
+          currentReaderId={currentReaderId}
+          onClose={selection.clear}
+        />
+      ) : null}
+    </>
+  )
+}
+
+function LibraryScreen() {
+  const { scope } = libraryRoute.useSearch()
+  return scope === 'household' ? <HouseholdLibraryScreen /> : <PersonalLibraryScreen />
+}
+
 const SHELF_LINK_VALUES: readonly LibraryShelfLink[] = ['owned', 'borrowed', 'read', 'wishlist']
+
+export interface LibraryRouteSearch {
+  shelf?: LibraryShelfLink
+  scope?: 'household'
+}
+
+export const validateLibrarySearch = (search: Record<string, unknown>): LibraryRouteSearch => ({
+  shelf: SHELF_LINK_VALUES.includes(search.shelf as LibraryShelfLink)
+    ? (search.shelf as LibraryShelfLink)
+    : undefined,
+  // Personal is represented by absence. Every unknown or array-valued input fails closed to it.
+  scope: search.scope === 'household' ? 'household' : undefined,
+})
 
 export const libraryRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'library',
   // Deep link from a /shelves derived-shelf header (the AuthRoute `?mode=` pattern) — undefined
   // means "no shelf link", so plain /library stays the canonical URL.
-  validateSearch: (search: Record<string, unknown>): { shelf?: LibraryShelfLink } => ({
-    shelf: SHELF_LINK_VALUES.includes(search.shelf as LibraryShelfLink)
-      ? (search.shelf as LibraryShelfLink)
-      : undefined,
-  }),
+  validateSearch: validateLibrarySearch,
   component: LibraryScreen,
 })
