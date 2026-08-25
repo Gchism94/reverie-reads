@@ -357,8 +357,11 @@ write policies, so membership does not expose another reader's raw row through P
 bibliographic + possession fields. It deliberately omits ratings, favourites, read state/logs,
 notes, spice/darkness, plans/progress and personal tags/moods/tropes. `household_roster()` supplies
 member identity even when a member's library is empty. V1 membership changes are service-role,
-owner-run operations through `link_household`; the implementation script is dry-run-first and
-takes UUIDs only at runtime (`20260829010000_household_foundation.sql`).
+owner-run operations through `link_household` and `unlink_household_member`. Both implementation
+scripts are dry-run-first and show the actual household plus its complete roster before a write;
+the linker refuses an incomplete existing roster. Unlinking removes only membership and mutual
+household-library access—the account, profile, and personal books remain intact. UUIDs are supplied
+only at runtime (`20260829010000_household_foundation.sql`).
 
 ### Notes
 

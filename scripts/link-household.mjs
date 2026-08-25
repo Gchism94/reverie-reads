@@ -12,7 +12,7 @@
 // IDs never belong in a migration or committed source file.
 
 import { createClient } from '@supabase/supabase-js'
-import { parseHouseholdLinkArgs } from './household-link-lib.ts'
+import { householdLinkPreview, parseHouseholdLinkArgs } from './household-link-lib.ts'
 
 const LOCAL_URL = 'http://127.0.0.1:55321'
 const LOCAL_SERVICE_ROLE =
@@ -37,34 +37,66 @@ async function main() {
     auth: { autoRefreshToken: false, persistSession: false },
   })
 
-  const { data: profiles, error: profileError } = await supabase
-    .from('profiles')
-    .select('id, display_name')
-    .in('id', config.allUserIds)
+  const [profileResult, requestedMembershipResult] = await Promise.all([
+    supabase.from('profiles').select('id, display_name').in('id', config.allUserIds),
+    supabase
+      .from('household_members')
+      .select('household_id, user_id, role')
+      .in('user_id', config.allUserIds),
+  ])
+  const { data: profiles, error: profileError } = profileResult
   if (profileError) throw dbError('profile lookup failed', profileError)
 
   const found = new Map((profiles ?? []).map((profile) => [profile.id, profile.display_name]))
   const missing = config.allUserIds.filter((id) => !found.has(id))
   if (missing.length) throw new Error(`no profile for: ${missing.join(', ')}`)
 
-  const { data: memberships, error: membershipError } = await supabase
-    .from('household_members')
-    .select('household_id, user_id, role')
-    .in('user_id', config.allUserIds)
+  const { data: requestedMemberships, error: membershipError } = requestedMembershipResult
   if (membershipError) throw dbError('membership lookup failed', membershipError)
+
+  const implicatedIds = [
+    ...new Set((requestedMemberships ?? []).map((membership) => membership.household_id)),
+  ]
+  const [householdResult, rosterResult] = implicatedIds.length
+    ? await Promise.all([
+        supabase.from('households').select('id, name').in('id', implicatedIds),
+        supabase
+          .from('household_members')
+          .select('household_id, user_id, role')
+          .in('household_id', implicatedIds),
+      ])
+    : [
+        { data: [], error: null },
+        { data: [], error: null },
+      ]
+  if (householdResult.error) throw dbError('household lookup failed', householdResult.error)
+  if (rosterResult.error) throw dbError('complete roster lookup failed', rosterResult.error)
+
+  const rosterIds = [...new Set((rosterResult.data ?? []).map((membership) => membership.user_id))]
+  const extraProfileIds = rosterIds.filter((id) => !found.has(id))
+  let allProfiles = profiles ?? []
+  if (extraProfileIds.length) {
+    const { data: extraProfiles, error: extraProfileError } = await supabase
+      .from('profiles')
+      .select('id, display_name')
+      .in('id', extraProfileIds)
+    if (extraProfileError) throw dbError('existing member profile lookup failed', extraProfileError)
+    allProfiles = [...allProfiles, ...(extraProfiles ?? [])]
+  }
+
+  const preview = householdLinkPreview(
+    config,
+    allProfiles,
+    householdResult.data ?? [],
+    rosterResult.data ?? [],
+  )
 
   console.log(
     JSON.stringify(
       {
         mode: write ? 'WRITE' : 'DRY RUN — nothing written',
         endpoint: url,
-        household: config.name,
-        accounts: config.allUserIds.map((id) => ({
-          id,
-          displayName: found.get(id) ?? null,
-          requestedRole: id === config.ownerId ? 'owner' : 'member',
-        })),
-        existingMemberships: memberships ?? [],
+        ...preview,
       },
       null,
       2,
@@ -72,8 +104,18 @@ async function main() {
   )
 
   if (!write) {
-    console.log('\nDry run complete. Review the account identities, then repeat with --write.')
+    console.log(
+      preview.canWrite
+        ? '\nDry run complete. Review every affected account, then repeat with --write.'
+        : '\nDry run complete. WRITE IS BLOCKED until the request includes the complete existing roster and only one household.',
+    )
     return
+  }
+
+  if (!preview.canWrite) {
+    throw new Error(
+      'write blocked: include every existing household member and do not span households',
+    )
   }
 
   const { data: householdId, error: linkError } = await supabase.rpc('link_household', {
@@ -83,7 +125,40 @@ async function main() {
   })
   if (linkError) throw dbError('household link failed', linkError)
 
-  console.log(`\nLinked ${config.allUserIds.length} accounts in household ${householdId}.`)
+  const [linkedHouseholdResult, linkedMembershipResult] = await Promise.all([
+    supabase.from('households').select('id, name').eq('id', householdId).single(),
+    supabase
+      .from('household_members')
+      .select('household_id, user_id, role')
+      .eq('household_id', householdId),
+  ])
+  if (linkedHouseholdResult.error)
+    throw dbError('linked household verification failed', linkedHouseholdResult.error)
+  if (linkedMembershipResult.error)
+    throw dbError('linked roster verification failed', linkedMembershipResult.error)
+  const linkedIds = (linkedMembershipResult.data ?? []).map((membership) => membership.user_id)
+  const { data: linkedProfiles, error: linkedProfileError } = await supabase
+    .from('profiles')
+    .select('id, display_name')
+    .in('id', linkedIds)
+  if (linkedProfileError) throw dbError('linked profile verification failed', linkedProfileError)
+
+  console.log(
+    `\nLinked household (authoritative post-write state):\n${JSON.stringify(
+      {
+        endpoint: url,
+        household: linkedHouseholdResult.data,
+        roster: (linkedMembershipResult.data ?? []).map((membership) => ({
+          ...membership,
+          displayName:
+            (linkedProfiles ?? []).find((profile) => profile.id === membership.user_id)
+              ?.display_name ?? null,
+        })),
+      },
+      null,
+      2,
+    )}`,
+  )
 }
 
 main().catch((error) => {

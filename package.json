@@ -28,7 +28,8 @@
     "deploy:functions": "bash scripts/deploy-guard.sh functions",
     "deploy:migrations": "bash scripts/deploy-guard.sh migrations",
     "import:corpus": "vite-node scripts/import-corpus-csv.mjs --",
-    "household:link": "vite-node scripts/link-household.mjs --"
+    "household:link": "vite-node scripts/link-household.mjs --",
+    "household:unlink": "vite-node scripts/unlink-household.mjs --"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",

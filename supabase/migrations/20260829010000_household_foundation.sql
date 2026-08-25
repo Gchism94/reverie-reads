@@ -54,7 +54,8 @@ as $$
   );
 $$;
 
-revoke all on function public.is_household_member(uuid) from public;
+revoke all on function public.is_household_member(uuid)
+  from public, anon, authenticated, service_role;
 grant execute on function public.is_household_member(uuid) to authenticated;
 
 alter table public.households enable row level security;
@@ -86,6 +87,7 @@ as $$
 declare
   all_users uuid[];
   existing_households uuid[];
+  existing_users uuid[];
   target uuid;
   missing_profiles int;
 begin
@@ -116,11 +118,21 @@ begin
     raise exception '% account(s) have no profile', missing_profiles using errcode = '23503';
   end if;
 
-  -- Lock any existing membership rows for this set so two owner-run links cannot race a user into
-  -- different households despite the unique(user_id) boundary.
+  -- Profiles exist before membership does, so they are the serialization boundary for both new
+  -- and existing members. UUID order makes overlapping link/unlink transactions take locks in the
+  -- same order instead of deadlocking or racing an unlinked account into two households.
+  perform 1
+  from public.profiles p
+  where p.id = any(all_users)
+  order by p.id
+  for update;
+
+  -- Membership rows are locked as well so the complete-roster check and insertion below observe
+  -- one stable household state after the profile locks have serialized every affected account.
   perform 1
   from public.household_members hm
   where hm.user_id = any(all_users)
+  order by hm.user_id
   for update;
 
   select array_agg(distinct hm.household_id)
@@ -138,12 +150,37 @@ begin
     insert into public.households (name)
     values (trim(p_name))
     returning id into target;
+  else
+    select array_agg(hm.user_id order by hm.user_id)
+    into existing_users
+    from public.household_members hm
+    where hm.household_id = target;
+
+    -- Extending an existing household is allowed only when the operator supplied its COMPLETE
+    -- current roster. Otherwise omitted people would silently gain access to the new accounts.
+    if not (existing_users <@ all_users) then
+      raise exception 'requested set omits existing household members'
+        using errcode = '22023';
+    end if;
   end if;
 
   insert into public.household_members (household_id, user_id, role)
   select target, u.user_id, case when u.user_id = p_owner then 'owner' else 'member' end
   from unnest(all_users) u(user_id)
-  on conflict (user_id) do nothing;
+  where not exists (
+    select 1 from public.household_members existing where existing.user_id = u.user_id
+  );
+
+  if exists (
+    select 1
+    from unnest(all_users) requested(user_id)
+    left join public.household_members linked
+      on linked.household_id = target and linked.user_id = requested.user_id
+    where linked.user_id is null
+  ) then
+    raise exception 'could not link the complete requested household'
+      using errcode = '23505';
+  end if;
 
   -- A rerun may name an existing member as the household owner. Make the requested role explicit;
   -- multiple owners are allowed so household access never depends on one account remaining active.
@@ -155,8 +192,59 @@ begin
 end;
 $$;
 
-revoke all on function public.link_household(text, uuid, uuid[]) from public, authenticated;
+revoke all on function public.link_household(text, uuid, uuid[]) from public, anon, authenticated;
 grant execute on function public.link_household(text, uuid, uuid[]) to service_role;
+
+-- Membership-only removal is the inverse privacy operation: the account, profile, and personal
+-- books remain untouched while both directions of household access disappear immediately. Empty
+-- households created by an explicit final unlink are removed; one-member households remain valid.
+create function public.unlink_household_member(p_user uuid, p_household uuid)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  target uuid;
+begin
+  if p_user is null then
+    raise exception 'household member is required' using errcode = '22023';
+  end if;
+  if p_household is null then
+    raise exception 'reviewed household is required' using errcode = '22023';
+  end if;
+
+  -- Same always-present lock and ordering convention as link_household.
+  perform 1 from public.profiles p where p.id = p_user for update;
+
+  select hm.household_id
+  into target
+  from public.household_members hm
+  where hm.user_id = p_user
+  for update;
+
+  if target is null then
+    raise exception 'account is not linked to a household' using errcode = 'P0002';
+  end if;
+  if target <> p_household then
+    raise exception 'membership changed since preview' using errcode = '40001';
+  end if;
+
+  delete from public.household_members
+  where user_id = p_user and household_id = p_household;
+  delete from public.households h
+  where h.id = target
+    and not exists (
+      select 1 from public.household_members remaining where remaining.household_id = h.id
+    );
+
+  return target;
+end;
+$$;
+
+revoke all on function public.unlink_household_member(uuid, uuid)
+  from public, anon, authenticated, service_role;
+grant execute on function public.unlink_household_member(uuid, uuid) to service_role;
 
 -- A roster includes display names even though profiles itself stays owner-only. Empty-library
 -- members therefore still appear in a household scope picker.
@@ -182,7 +270,8 @@ as $$
   order by (hm.user_id = (select auth.uid())) desc, p.display_name nulls last, hm.user_id;
 $$;
 
-revoke all on function public.household_roster() from public;
+revoke all on function public.household_roster()
+  from public, anon, authenticated, service_role;
 grant execute on function public.household_roster() to authenticated;
 
 -- The household library contract: bibliographic facts + possession only. Specifically absent:
@@ -261,5 +350,6 @@ as $$
   order by p.display_name nulls last, b.title, b.id;
 $$;
 
-revoke all on function public.household_library_books() from public;
+revoke all on function public.household_library_books()
+  from public, anon, authenticated, service_role;
 grant execute on function public.household_library_books() to authenticated;

@@ -632,7 +632,9 @@ several defects have been "fixed" in code paths no reader can reach.
    V1's cross-account path is read-only and explicitly omits ratings, read state, notes,
    spice/darkness, plans/progress, favourites and personal tags. Match, Stats and Series remain
    personal-only until the owner expands their scope explicitly. Membership is owner-run rather
-   than a client invite flow (`20260829010000_household_foundation.sql`).
+   than a client invite flow. Linking requires disclosure of the complete existing roster;
+   unlinking removes only membership and preserves both accounts' personal data
+   (`20260829010000_household_foundation.sql`).
 3. **Spoiler gating — DECIDED AND SHIPPED: server-enforced via RLS.** Not a pending
    decision and not client-side. `club_comments`' `gated read` policy has enforced
    `unit <= public.club_progress(club_id)` — the `comment.unit <= myProgress` rule — since the
