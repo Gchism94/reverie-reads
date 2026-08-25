@@ -25,6 +25,40 @@ export function canonicalIsbns(values: readonly (string | null | undefined)[]): 
   return [...new Set(values.map((value) => normalizeIsbn(value ?? '')).filter(Boolean))]
 }
 
+export interface WorkIsbnSet {
+  workKey: string
+  isbns: readonly (string | null | undefined)[]
+}
+
+export interface IsbnCollision {
+  isbn: string
+  workKeys: string[]
+}
+
+/** Cross-work edition identity is invalid. Duplicate inputs for the SAME work are harmless and
+ * collapse first; one canonical ISBN assigned to distinct work keys is reported deterministically. */
+export function crossWorkIsbnCollisions(rows: readonly WorkIsbnSet[]): IsbnCollision[] {
+  const worksByIsbn = new Map<string, Set<string>>()
+  for (const row of rows) {
+    for (const isbn of canonicalIsbns(row.isbns)) {
+      const keys = worksByIsbn.get(isbn) ?? new Set<string>()
+      keys.add(row.workKey)
+      worksByIsbn.set(isbn, keys)
+    }
+  }
+  return [...worksByIsbn]
+    .filter(([, keys]) => keys.size > 1)
+    .map(([isbn, keys]) => ({ isbn, workKeys: [...keys].sort() }))
+    .sort((a, b) => a.isbn.localeCompare(b.isbn))
+}
+
+export function assertNoCrossWorkIsbnCollisions(rows: readonly WorkIsbnSet[]): void {
+  const collisions = crossWorkIsbnCollisions(rows)
+  if (!collisions.length) return
+  const detail = collisions.map((c) => `${c.isbn}: ${c.workKeys.join(', ')}`).join('\n')
+  throw new Error(`cross-work ISBN collision(s) — refusing to write:\n${detail}`)
+}
+
 /** RFC-4180-ish CSV: quoted fields, embedded commas, doubled quotes, CRLF-tolerant. The file is
  *  ~1.2k rows so a hand parser beats a dependency; it refuses ragged quoting loudly. */
 export function parseCsv(text: string): string[][] {

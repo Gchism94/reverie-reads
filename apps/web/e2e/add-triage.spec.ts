@@ -33,7 +33,10 @@ const PASSWORD = 'add-triage-e2e-password'
 const TERM = 'Triage Probe'
 const OWNED = `${TERM} Owned`
 const CORPUS = `${TERM} Corpus`
+const CORPUS_CANONICAL = 'Canonical Ember Archive'
 const FRESH = `${TERM} Fresh`
+const CORPUS_FIRST_ISBN = '9780306406157'
+const CORPUS_RESULT_ISBN = '9781649374042'
 
 /**
  * WHY THE CORPUS FIXTURE IS NAMESPACED ON GENRE **AND** AUTHOR, NOT JUST ON TITLE.
@@ -97,7 +100,10 @@ async function client(): Promise<Client> {
 
 /** The reader owns one of the three, the corpus describes another, nothing describes the third. */
 async function seed(c: Client): Promise<string> {
-  await ok(c.admin.from('works').delete().like('title', `${TERM}%`), 'add-triage works cleanup')
+  await ok(
+    c.admin.from('works').delete().eq('work_key', 'canonicalemberarchive|canonicalember'),
+    'add-triage works cleanup',
+  )
   await ok(c.admin.from('books').delete().eq('owner_id', c.uid), 'add-triage books cleanup')
 
   // EVERY ROW GETS EVERY COLUMN THE BATCH USES. PostgREST sends one INSERT for the whole array and
@@ -107,10 +113,15 @@ async function seed(c: Client): Promise<string> {
   await ok(
     c.admin.from('works').insert([
       {
-        work_key: 'triageprobecorpus|quillmarrowbane',
-        title: CORPUS,
-        contributors: [{ name: CORPUS_AUTHOR, role: 'author', position: 0 }],
-        author_text: CORPUS_AUTHOR,
+        work_key: 'canonicalemberarchive|canonicalember',
+        // Neither title nor author matches TERM/the catalog result. The only correct join is the
+        // batched result-ISBN lookup that begins after the catalog response arrives.
+        title: CORPUS_CANONICAL,
+        contributors: [{ name: 'Canonical Ember', role: 'author', position: 0 }],
+        author_text: 'Canonical Ember',
+        // The matching edition is deliberately SECOND: clicking must preserve it rather than
+        // replacing it with the work row's first ISBN.
+        isbns: [CORPUS_FIRST_ISBN, CORPUS_RESULT_ISBN],
         series: 'The Triage Cycle',
         position: 3,
         // NAMESPACED ON EVERY AXIS THIS ROW IS COUNTABLE BY — see WHY, above the constants.
@@ -159,10 +170,10 @@ const RESULTS = [
   {
     source: 'hardcover',
     title: CORPUS,
-    // must be the corpus row's author too, or the two work_keys disagree and the row never matches
+    // Deliberately differs from the corpus author; ISBN is the only identity shared by both.
     authors: [CORPUS_AUTHOR],
     cover: 'https://example.invalid/b.jpg',
-    isbn: '',
+    isbn: CORPUS_RESULT_ISBN,
     year: '2021',
   },
   {
@@ -241,15 +252,16 @@ test('a book already in the library offers no add gesture at all', async ({ page
   await expect(row(page, CORPUS).locator('button')).toHaveCount(1)
 })
 
-test('picking a corpus result prefills from the CORPUS ROW, not the catalog hit', async ({
+test('the ISBN lookup finds alternate metadata and a click preserves the matched edition', async ({
   page,
 }) => {
+  const c = await client()
   await search(page)
   await expect.poll(() => labelOf(page, CORPUS), { timeout: 15_000 }).toBe('In the corpus')
   await row(page, CORPUS).locator('button').click()
   // THE CONSEQUENCE: the form carries the series, position and genre only the corpus row knows.
   // The catalog stub supplies none of them, so a green here cannot come from the search hit.
-  await expect(page.getByPlaceholder('Title', { exact: true })).toHaveValue(CORPUS, {
+  await expect(page.getByPlaceholder('Title', { exact: true })).toHaveValue(CORPUS_CANONICAL, {
     timeout: 15_000,
   })
   await expect(page.getByPlaceholder('Series')).toHaveValue('The Triage Cycle')
@@ -258,6 +270,22 @@ test('picking a corpus result prefills from the CORPUS ROW, not the catalog hit'
   // in tryst, the skin this account is seeded with, it reads "Romance". Ask the registry rather than
   // hardcoding the string, so a vocabulary change moves this spec with it instead of breaking it.
   await expect(page.getByLabel(TRYST_LABELS.genre)).toHaveValue(CORPUS_GENRE)
+
+  // ISBN is not a visible edit field on this compact form, so assert the click-to-prefill path at
+  // its consequence: the saved book carries the SECOND, actually matched edition, never [0].
+  await page.getByRole('button', { name: /^Add to my library$/ }).click()
+  await expect
+    .poll(async () => {
+      const { data, error } = await c.admin
+        .from('books')
+        .select('isbn')
+        .eq('owner_id', c.uid)
+        .eq('title', CORPUS_CANONICAL)
+        .maybeSingle()
+      if (error) throw error
+      return data?.isbn ?? ''
+    })
+    .toBe(CORPUS_RESULT_ISBN)
 })
 
 test('classification does not block the results — labels arrive after the list does', async ({

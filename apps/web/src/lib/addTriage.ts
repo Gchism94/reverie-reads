@@ -111,11 +111,21 @@ export function triageResults(
 ): TriagedResult[] {
   const byKey = new Map<string, WorkRow>()
   const byIsbn = new Map<string, WorkRow>()
+  const ambiguousIsbns = new Set<string>()
   for (const w of corpus ?? []) {
     for (const k of workRowKeys(w)) if (!byKey.has(k)) byKey.set(k, w)
     for (const raw of w.isbns ?? []) {
       const isbn = normalizeIsbn(raw)
-      if (isbn && !byIsbn.has(isbn)) byIsbn.set(isbn, w)
+      if (!isbn || ambiguousIsbns.has(isbn)) continue
+      const prior = byIsbn.get(isbn)
+      if (!prior) byIsbn.set(isbn, w)
+      else if (prior.work_key !== w.work_key) {
+        // Unexpected cross-work collisions are ambiguous, never "first row wins". The owner-run
+        // importer rejects these before writing, but old/manual data must still fail in the safe
+        // direction here: no corpus classification rather than attaching the wrong work.
+        byIsbn.delete(isbn)
+        ambiguousIsbns.add(isbn)
+      }
     }
   }
 
@@ -125,7 +135,10 @@ export function triageResults(
     const rk = resultWorkKey(result)
     // ISBN is edition identity and survives catalog title/author variation, so it is the stronger
     // join. The work key remains the fallback for records without an ISBN.
-    const work = (isbn ? byIsbn.get(isbn) : undefined) ?? (rk ? byKey.get(rk) : undefined) ?? null
+    const work =
+      (isbn && !ambiguousIsbns.has(isbn) ? byIsbn.get(isbn) : undefined) ??
+      (rk ? byKey.get(rk) : undefined) ??
+      null
     return { result, book, work, state: book ? 'library' : work ? 'corpus' : 'new' }
   })
 }

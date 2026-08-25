@@ -62,7 +62,7 @@
 //     an explicit NULL, not the column default (the a11y.spec seeding incident).
 //
 // ── ENRICHMENT BACKFILL (--backfill) ────────────────────────────────────────────────────────────
-//   For works rows missing cover_url, work_id, OR ISBNs: look up enrichment_cache at key
+//   For EVERY works row: look up enrichment_cache at key
 //   'ta:' + work_key (the exact construction — no re-matching), and copy the resolved identity
 //   (work_id), cover fields, and canonical edition ISBNs out of the cached record. Existing ISBNs
 //   are unioned, never replaced. The ~new books rows enrich through the EXISTING per-book pipeline
@@ -83,7 +83,9 @@ import {
   normTitleKey,
   csvFile,
   canonicalIsbns,
+  assertNoCrossWorkIsbnCollisions,
 } from './corpus-import-lib.ts'
+import { runBackfill } from './corpus-backfill.ts'
 import { norm } from '../packages/core/src/normalize.ts'
 
 const URL_DEFAULT = 'http://127.0.0.1:55321'
@@ -156,6 +158,23 @@ async function fetchLibrary(ownerId) {
     isbn: b.isbn ?? '',
     row: b,
   }))
+}
+
+/** The whole shared corpus identity surface, paged for the same silent-1,000 cap as books. */
+async function fetchWorksIsbns() {
+  const PAGE = 1000
+  const rows = []
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from('works')
+      .select('work_key, isbns')
+      .order('work_key', { ascending: true })
+      .range(from, from + PAGE - 1)
+    if (error) fail(`works identity select: ${error.message}`)
+    rows.push(...(data ?? []))
+    if ((data ?? []).length < PAGE) break
+  }
+  return rows
 }
 
 /** A book row → its works upsert payload. The book's own fields are the survivor identity. */
@@ -392,6 +411,24 @@ async function runImport() {
     )
   }
 
+  // Preflight the FINAL edition identity before the first upsert. Existing rows and this owner's
+  // library are considered together; duplicate rows for one work collapse, but one ISBN on two
+  // distinct work keys aborts the owner-run write with the exact keys to resolve.
+  const existingWorks = await fetchWorksIsbns()
+  try {
+    assertNoCrossWorkIsbnCollisions([
+      ...existingWorks.map((row) => ({ workKey: row.work_key, isbns: row.isbns ?? [] })),
+      ...library.map((book) => ({
+        workKey: `${norm(book.row.title)}|${norm(
+          [book.row.author_first, book.row.author_last].filter(Boolean).join(' '),
+        )}`,
+        isbns: [book.row.isbn],
+      })),
+    ])
+  } catch (error) {
+    fail(error instanceof Error ? error.message : String(error))
+  }
+
   // 1) the whole existing library → corpus (idempotent on work_key)
   await upsertWorks(
     library.map((b) => workFromBook(b.row)),
@@ -422,58 +459,49 @@ async function runImport() {
   console.log('\nDone. Re-running is safe: works upserts, books skips.')
 }
 
-async function runBackfill() {
+async function runBackfillCommand() {
   const PAGE = 1000
-  const rows = []
-  for (let from = 0; ; from += PAGE) {
-    const { data: page, error } = await supabase
-      .from('works')
-      .select('work_key, work_id, cover_url, isbns')
-      .order('work_key', { ascending: true })
-      .range(from, from + PAGE - 1)
-    if (error) fail(`works select: ${error.message}`)
-    rows.push(...page)
-    if (page.length < PAGE) break
+  const store = {
+    async fetchWorks() {
+      const rows = []
+      for (let from = 0; ; from += PAGE) {
+        const { data, error } = await supabase
+          .from('works')
+          .select('work_key, work_id, cover_url, isbns')
+          .order('work_key', { ascending: true })
+          .range(from, from + PAGE - 1)
+        if (error) throw new Error(`works select: ${error.message}`)
+        rows.push(...(data ?? []))
+        if ((data ?? []).length < PAGE) break
+      }
+      return rows
+    },
+    async fetchEnrichments(keys) {
+      const rows = []
+      for (let i = 0; i < keys.length; i += 200) {
+        const { data, error } = await supabase
+          .from('enrichment_cache')
+          .select('key, work_id, record')
+          .in('key', keys.slice(i, i + 200))
+        if (error) throw new Error(`enrichment cache select (chunk at ${i}): ${error.message}`)
+        rows.push(...(data ?? []))
+      }
+      return rows
+    },
+    async updateWork(workKey, patch) {
+      const { error } = await supabase.from('works').update(patch).eq('work_key', workKey)
+      if (error) throw new Error(`works update ${workKey}: ${error.message}`)
+    },
   }
-  const incomplete = rows.filter((row) => !row.cover_url || !row.work_id || !row.isbns?.length)
-  if (!incomplete.length) {
-    console.log('backfill: nothing missing — every works row has a cover, work_id, and ISBN')
-    return
+  try {
+    const result = await runBackfill(store)
+    console.log(
+      `backfill: examined ${result.examined} works, found ${result.cacheHits} cache rows, updated ${result.updated} (repeatable — re-run after more books enrich)`,
+    )
+  } catch (error) {
+    fail(error instanceof Error ? error.message : String(error))
   }
-  let updated = 0
-  for (const w of incomplete) {
-    // the exact cache-key construction — 'ta:' + work_key IS the enrich fn's own key
-    const { data: hit } = await supabase
-      .from('enrichment_cache')
-      .select('work_id, record')
-      .eq('key', `ta:${w.work_key}`)
-      .maybeSingle()
-    if (!hit) continue
-    const rec = hit.record ?? {}
-    const patch = {}
-    if (!w.work_id && (hit.work_id || rec.workId)) patch.work_id = hit.work_id || rec.workId
-    if (!w.cover_url && rec.cover) {
-      patch.cover_url = rec.cover
-      if (rec.provenance?.cover?.source) patch.cover_source = rec.provenance.cover.source
-    }
-    const recordIsbns = Array.isArray(rec.isbns) ? rec.isbns : []
-    const isbns = canonicalIsbns([
-      ...(w.isbns ?? []),
-      rec.isbn,
-      rec.isbn13,
-      rec.isbn10,
-      ...recordIsbns,
-    ])
-    if (!sameStrings(w.isbns ?? [], isbns)) patch.isbns = isbns
-    if (!Object.keys(patch).length) continue
-    const { error: ue } = await supabase.from('works').update(patch).eq('work_key', w.work_key)
-    if (ue) fail(`works update ${w.work_key}: ${ue.message}`)
-    updated++
-  }
-  console.log(
-    `backfill: ${updated} of ${incomplete.length} incomplete works rows filled from enrichment_cache (repeatable — re-run after more books enrich)`,
-  )
 }
 
-if (BACKFILL) await runBackfill()
+if (BACKFILL) await runBackfillCommand()
 else await runImport()

@@ -16,7 +16,14 @@ import {
   isOmnibusSuspect,
   seriesStatusOf,
   canonicalIsbns,
+  assertNoCrossWorkIsbnCollisions,
+  crossWorkIsbnCollisions,
 } from '../../../scripts/corpus-import-lib'
+import {
+  runBackfill,
+  type BackfillPatch,
+  type CorpusBackfillStore,
+} from '../../../scripts/corpus-backfill'
 import { makeBook } from './book.fixture'
 
 /**
@@ -97,6 +104,96 @@ describe('canonicalIsbns', () => {
     expect(canonicalIsbns(['0-306-40615-2', '978-0-306-40615-7', '', null, 'not an isbn'])).toEqual(
       ['9780306406157'],
     )
+  })
+
+  it('rejects checksum-invalid identifiers instead of canonicalizing them', () => {
+    expect(canonicalIsbns(['0306406153', '9780306406158'])).toEqual([])
+  })
+})
+
+describe('cross-work ISBN collisions', () => {
+  it('allows repeats within one work but reports the same edition on distinct works', () => {
+    const rows = [
+      { workKey: 'one', isbns: ['0-306-40615-2', '9780306406157'] },
+      { workKey: 'two', isbns: ['9780306406157'] },
+    ]
+    expect(crossWorkIsbnCollisions(rows)).toEqual([
+      { isbn: '9780306406157', workKeys: ['one', 'two'] },
+    ])
+    expect(() => assertNoCrossWorkIsbnCollisions(rows)).toThrow(
+      /cross-work ISBN collision.*9780306406157.*one, two/s,
+    )
+  })
+
+  it('does not treat repeated rows for the same work as a collision', () => {
+    expect(
+      crossWorkIsbnCollisions([
+        { workKey: 'one', isbns: ['0306406152'] },
+        { workKey: 'one', isbns: ['9780306406157'] },
+      ]),
+    ).toEqual([])
+  })
+})
+
+describe('runBackfill', () => {
+  it('inspects an already-complete work and accumulates a later enrichment ISBN', async () => {
+    const updates: { workKey: string; patch: BackfillPatch }[] = []
+    const store: CorpusBackfillStore = {
+      async fetchWorks() {
+        return [
+          {
+            work_key: 'complete-work',
+            work_id: 'hc:work:1',
+            cover_url: 'https://covers.test/already.jpg',
+            isbns: ['9780306406157'],
+          },
+        ]
+      },
+      async fetchEnrichments() {
+        return [
+          {
+            key: 'ta:complete-work',
+            work_id: 'hc:work:1',
+            record: { isbns: ['9780306406157', '9781649374042'] },
+          },
+        ]
+      },
+      async updateWork(workKey, patch) {
+        updates.push({ workKey, patch })
+      },
+    }
+
+    await expect(runBackfill(store)).resolves.toEqual({ examined: 1, cacheHits: 1, updated: 1 })
+    expect(updates).toEqual([
+      {
+        workKey: 'complete-work',
+        patch: { isbns: ['9780306406157', '9781649374042'] },
+      },
+    ])
+  })
+
+  it('checks all proposed ISBNs before performing any update', async () => {
+    let writes = 0
+    const store: CorpusBackfillStore = {
+      async fetchWorks() {
+        return [
+          { work_key: 'one', work_id: null, cover_url: null, isbns: [] },
+          { work_key: 'two', work_id: null, cover_url: null, isbns: [] },
+        ]
+      },
+      async fetchEnrichments() {
+        return [
+          { key: 'ta:one', work_id: null, record: { isbn13: '9780306406157' } },
+          { key: 'ta:two', work_id: null, record: { isbn10: '0306406152' } },
+        ]
+      },
+      async updateWork() {
+        writes++
+      },
+    }
+
+    await expect(runBackfill(store)).rejects.toThrow(/cross-work ISBN collision/)
+    expect(writes).toBe(0)
   })
 })
 

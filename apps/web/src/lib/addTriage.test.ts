@@ -182,6 +182,26 @@ describe('triageResults', () => {
     expect(t[0]?.work).toBe(rows[0])
   })
 
+  it('a cross-work ISBN collision is ambiguous, never silently first-row-wins', () => {
+    const rows = [
+      work({ title: 'First Work', author: 'One Author', isbns: ['9780306406157'] }),
+      work({ title: 'Second Work', author: 'Two Author', isbns: ['9780306406157'] }),
+    ]
+    const t = triageResults(
+      [
+        result({
+          title: 'Publisher Alternate',
+          authors: ['Nobody Matching'],
+          isbn13: '9780306406157',
+        }),
+      ],
+      [],
+      rows,
+    )
+    expect(t[0]?.state).toBe('new')
+    expect(t[0]?.work).toBeNull()
+  })
+
   it('library AND corpus → library leads, the corpus row rides along', () => {
     const rows = [work({ title: 'Fourth Wing', author: 'Rebecca Yarros' })]
     const t = triageResults(

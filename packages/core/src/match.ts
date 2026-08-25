@@ -7,9 +7,26 @@ import { mergePossession } from './ownership'
 
 export const cleanIsbn = (raw: string): string => (raw || '').replace(/[^0-9Xx]/g, '').toUpperCase()
 
+function validIsbn10(c: string): boolean {
+  if (!/^\d{9}[\dX]$/.test(c)) return false
+  let sum = 0
+  for (let i = 0; i < 10; i++) {
+    const digit = c[i] === 'X' ? 10 : Number(c[i])
+    sum += digit * (10 - i)
+  }
+  return sum % 11 === 0
+}
+
+function validIsbn13(c: string): boolean {
+  if (!/^97[89]\d{10}$/.test(c)) return false
+  let sum = 0
+  for (let i = 0; i < 12; i++) sum += Number(c[i]) * (i % 2 === 0 ? 1 : 3)
+  return Number(c[12]) === (10 - (sum % 10)) % 10
+}
+
 export function isbn10to13(isbn10: string): string {
   const c = cleanIsbn(isbn10)
-  if (c.length !== 10) return ''
+  if (!validIsbn10(c)) return ''
   const core = '978' + c.slice(0, 9)
   let sum = 0
   for (let i = 0; i < 12; i++) sum += Number(core[i]) * (i % 2 === 0 ? 1 : 3)
@@ -19,8 +36,8 @@ export function isbn10to13(isbn10: string): string {
 /** Canonical ISBN-13 for matching (ISBN-10 promoted), or '' if not a usable ISBN. */
 export function normalizeIsbn(raw: string): string {
   const c = cleanIsbn(raw)
-  if (c.length === 13) return c
-  if (c.length === 10) return isbn10to13(c)
+  if (validIsbn13(c)) return c
+  if (validIsbn10(c)) return isbn10to13(c)
   return ''
 }
 
