@@ -1,4 +1,9 @@
-# Task: feat/series-integrity-mechanism (v2)
+# Superseded task: series integrity mechanism (v2)
+
+Status: **mechanism phases shipped; remaining reconciliation/design work superseded by the series
+truth and library-experience overhaul in `ROADMAP.md`**. This record remains authoritative for the
+write-path, provenance, ordering, and owner-ruling history it documents, but it is not a current
+implementation brief.
 
 Branch: `feat/series-integrity-mechanism` off `main`.
 Read first: `docs/audits/series-position-integrity.md`, `docs/audits/series-count-schema.md`,

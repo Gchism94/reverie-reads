@@ -1,4 +1,7 @@
-# Task: feat/discover-curated-candidates
+# Completed task: curated Discover candidates
+
+Status: **complete**. The curated injection for the four starved categories shipped in PR #199.
+Future measured refreshes are governed by `docs/tasks/task-discover-recuration.md`.
 
 Branch: `feat/discover-curated-candidates` off `main`.
 Read first: `docs/audits/discover-recency.md` (e0e9dc4), and

@@ -1,9 +1,11 @@
-# Task: docs/discover-recuration-followup
+# Scheduled task: measured Discover re-curation
+
+Status: **scheduled/evidence-triggered, not active**. The dependency named below shipped in PR #199;
+measure actual decay before starting the first refresh.
 
 Branch: `docs/discover-recuration-followup` off `main`.
-Depends on: `feat/discover-curated-candidates` (Phase 1 resolution + Phase 2 injection —
-`packages/core/src/discoverCurated.ts`, its Deno mirror `supabase/functions/releases/curated.ts`,
-and the `curated: true` provenance marker). Not yet merged to `main` as of this task's writing.
+Depends on: shipped curated-candidate injection (`packages/core/src/discoverCurated.ts`, its Deno
+mirror `supabase/functions/releases/curated.ts`, and the `curated: true` provenance marker).
 
 ## What this governs
 
@@ -19,12 +21,10 @@ by design and recommended **(a) hand re-curation on a 6-month cadence + (c) prov
 measurement**, with **(b) a standing pipeline explicitly deferred** to the corpus-freshness premium
 feature already scoped in `docs/decisions/decision-monetization-boundary.md` (see note below).
 
-> **Note: that file does not exist in this repo as of this task's writing.** Both the
-> original curated-candidates task spec and its Phase 3 report reference it as "already scoped";
-> a repo-wide search (`docs/decisions/`, `AGENTS.md`, and a general grep for "monetiz"/"premium")
-> turns up nothing under that name or any other. Item 5 below still points to it, because that is
-> where the corpus-freshness decision belongs when it is written — but whoever picks up that
-> pointer should not assume the doc is there without checking first.
+> **Status correction, 2026-08-25:** the decision now exists canonically at
+> `docs/decisions/0006-monetization-boundary.md`; the former unnumbered duplicate is a stable pointer.
+> It explicitly places corpus freshness in the premium reader tier and is the boundary for any
+> standing refresh pipeline.
 
 This task file is what governs the _next_ re-curation cycle — cadence, mechanism, the measurement
 that has to happen first, and an early-trigger condition independent of the calendar. It is not

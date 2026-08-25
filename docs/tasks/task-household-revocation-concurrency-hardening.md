@@ -1,7 +1,12 @@
-# Task: household revocation and concurrency hardening
+# Completed task: household revocation and concurrency hardening
 
-Status: **implemented and locally verified on `codex/fix-household-revocation-concurrency`;
-pending independent review and integration**.
+Status: **complete, independently reviewed, integrated, deployed, and smoke-tested in production**.
+
+Completion: merged through `18f20af0fd276ca1ae2cd360f1d20ace91b1158f` on 2026-08-25. The
+review reported no actionable findings. Migrations `20260828010000` and `20260829010000` were
+recorded remotely; the exact deployment was promoted and passed public plus owner-authenticated
+Account A/Account B smoke checks. This brief is retained as implementation and review provenance,
+not remaining work.
 
 Branch when implementation begins: create a fresh `codex/` branch from the then-current household
 stack. Re-check every coordinate and ancestry before editing; the findings below describe the code
