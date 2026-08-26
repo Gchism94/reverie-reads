@@ -3,6 +3,10 @@
 Living record. Items leave by being done or by an explicit decision, not by being
 forgotten.
 
+This file is an evidence ledger, not the execution order. Current priorities and dependencies live
+in the root `ROADMAP.md`. Before promoting an entry into active work, re-check its last verification
+stamp against current `origin/main` and create or refresh a brief in `docs/tasks/`.
+
 > ## These entries age. Check before you build.
 >
 > **An entry describes the code as it was WHEN WRITTEN, not a live mirror of the tree.** That is

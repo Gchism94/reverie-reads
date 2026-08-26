@@ -1,4 +1,9 @@
-# Task: fix/series-consolidation
+# Completed task: series consolidation
+
+Status: **complete through PR 3**. Prevention, merge machinery/decision persistence, and the tiered
+proposal surface shipped by PRs #137, #182, and #285. The broader series truth and Library
+experience are reopened as a new program in `ROADMAP.md`; this file remains provenance for the
+consolidation mechanism and its decisions.
 
 Branch: `fix/series-consolidation` off `main`.
 Repo: book-corpus.

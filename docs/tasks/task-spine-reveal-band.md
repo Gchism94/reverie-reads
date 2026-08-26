@@ -1,4 +1,7 @@
-# Task: fix/spine-reveal-band
+# Planned task: shared spine reveal band
+
+Status: **planned, not active**. Revalidate the measurements and component coordinates against
+current `main` before implementation.
 
 Branch: `fix/spine-reveal-band` off `main`.
 Audits: `docs/audits/spine-overlay-clamp.md` (951ec48) and

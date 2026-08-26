@@ -11,15 +11,18 @@
 Outputs land in design/from-design-tool/<set>/ (code export + screenshots). coding agent implements
 against them on the token system (no hardcoded colors from the mockup).
 
+## Reopened by owner — 2026-08-25
+
+- **LANDING / MARKETING PAGE REDESIGN — P1 after the series overhaul.** The existing page shipped
+  and remains the production baseline, but it is no longer the final product direction. Re-audit
+  the app's complete current capability set before designing; derive the page's visual language
+  from the authenticated product; use warm, personal Reverie voice; and show accurate glimpses made
+  with curated fixture data rather than private production data. Do not invent features or preserve
+  stale screenshots. The result must cover responsive layout, accessibility, performance, SEO,
+  sign-in/get-started paths, and claims accuracy. Ordering and completion gates live in `ROADMAP.md`.
+
 ## Done — verified shipped on main, 2026-08-18
 
-- LANDING / MARKETING PAGE — DONE, shipped on main (branch landing-match, PR #4; claims-accuracy
-  pass in #84, iterated since through the licensing and skin-kit passes). Lives at
-  apps/web/src/auth/Landing.tsx + auth/landing/, rendered to logged-out visitors at every
-  non-/auth path via UnauthShell on the .gold-brand tokens (styles/brand.css). Nine-skin live
-  showcase from the registry; money copy derived from revenueCopy(buyConfig()) and guarded by
-  revenueClaims.test.ts; in the e2e a11y sweep's unauthenticated pass. Handoff archived at
-  docs/archive/LANDING_MATCH_HANDOFF.md.
 - ONBOARDING / FIRST-RUN — DONE, shipped (6578e51 `feat(onboarding): first-run flow`, iterated
   since). apps/web/src/routes/OnboardingRoute.tsx, registered in router.tsx: stepped stage with
   progress dots, genre→skin pick straight from the registry (live re-skin on pick), CSV/Excel

@@ -1,4 +1,7 @@
-# Task scope — the Calendar cluster
+# Planned task scope — the Calendar cluster
+
+Status: **planned, not active**. The sparse calendar pass shipped in PR #344; revalidate the
+remaining route, density, mobile, and heatmap decisions against current `main` before building.
 
 **Status:** scoping only. No implementation, no mockups. The output of this document is the decision
 list at the end.
