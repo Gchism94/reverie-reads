@@ -20,7 +20,7 @@ For each workflow, job, required check, setup phase, cache, artifact, retry, and
 - inspect branch protection and Vercel deploy coupling so removing a job cannot silently remove a
   required release gate;
 - include the current `gate`, `e2e`, `cla`, `e2e-a11y`, `e2e-mobile`, `pgtap`, and `secrets` checks,
-  while distinguishing the Contributor License Agreement check from retired Claude tooling.
+  while distinguishing the Contributor License Agreement check from retired vendor tooling.
 
 Fold the open CI/deploy residues in `docs/backlog/BACKLOG.md` into this review: bounded Supabase
 startup recovery and cleanup, production RPC ACL verification, the deploy guard's second prompt,
