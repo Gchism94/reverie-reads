@@ -1,7 +1,6 @@
 # Task: recovery mirror and workspace hygiene
 
-Status: **recovery and both safe pruning sets complete; protected-file decisions and canonical
-realignment remain**.
+Status: **complete**.
 
 ## Purpose
 
@@ -41,20 +40,20 @@ is a stale workspace-root reference and must not be repaired by recreating the d
 
 ## Post-prune review and second-set execution
 
-| Path                                       | Decision                          | Evidence and required handling                                                                                                                                                                                                                                                           |
-| ------------------------------------------ | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/Users/gregchism/dev/book-corpus`         | Keep and realign                  | This is the canonical project, but its clean checkout is still on the obsolete, recovery-archived `codex/chore-retire-vendor-tooling` branch. After the review worktrees are resolved, switch it to an up-to-date local `main` tracking `origin/main`; do not merge the obsolete branch. |
-| `book-corpus-prioritized-roadmap` worktree | Keep until integrated             | Five documentation commits are ahead of `origin/main` and preserved by exact private-recovery refs. The checkout location is operational only; the artifacts are the committed files in this repository.                                                                                 |
-| `book-corpus-household-hardening-log`      | Removed in second safe set        | Was clean; its head is contained in production `main` and the reviewed household range is preserved.                                                                                                                                                                                     |
-| `book-corpus-series-overhaul`              | Removed in second safe set        | Was clean; its head is contained in production `main` and has an exact private-recovery ref. It was a historical implementation worktree, not the queued series-overhaul task.                                                                                                           |
-| `reverie-works-isbns`                      | Removed in second safe set        | Was clean; its exact head is preserved privately and the reviewed feature is integrated.                                                                                                                                                                                                 |
-| `.worktrees/series-consolidation`          | Removed in second safe set        | Was clean, detached, and stale-locked as `initializing`. Its head is not in current `main`, but it is reachable from multiple exact recovery refs. It was unlocked immediately before removal.                                                                                           |
-| `reverie-calendar-scope`                   | Removed in second safe set        | Its only untracked file was an older copy of `docs/tasks/task-calendar-cluster-scope.md`; `main` has the corrected `AGENTS.md` reference and non-stale backlog wording. The detached head is recovery-reachable.                                                                         |
-| `rv-cal-main`                              | Removed in second safe set        | Its only untracked browser-audit source file was byte-identical to the file already on `main`. The detached head is recovery-reachable.                                                                                                                                                  |
-| `reverie-layout-sweep`                     | Needs protected-file decision     | Tracked state is clean and the exact head is preserved, but its ignored `apps/web/.env.local` differs from the canonical copy. Do not read, copy, or delete it without an explicit secrets-handling decision.                                                                            |
-| `reverie-star-targets`                     | Needs protected-file decision     | Same protected-file boundary as `reverie-layout-sweep`.                                                                                                                                                                                                                                  |
-| `reverie-withheld-click`                   | Needs protected-file decision     | Same protected-file boundary as `reverie-layout-sweep`.                                                                                                                                                                                                                                  |
-| Canonical `_to_delete/`                    | Moved to Trash in second safe set | Contained only staged stale zero-byte Git locks, abandoned rebase metadata, and a scratch genre patch script whose intended behavior is already present on `main`. It remains recoverable in the 2026-08-25 Reverie safe-prune Trash batch.                                              |
+| Path                                       | Decision                           | Evidence and required handling                                                                                                                                                                                                                                  |
+| ------------------------------------------ | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/Users/gregchism/dev/book-corpus`         | Kept and realigned                 | Its stale local `main` belonged to the pre-cleanup history and had no merge base with rewritten canonical history; the exact old ref is preserved privately. Local `main` now tracks and exactly matches `origin/main` without merging the unrelated histories. |
+| `book-corpus-prioritized-roadmap` worktree | Keep until integrated              | Five documentation commits are ahead of `origin/main` and preserved by exact private-recovery refs. The checkout location is operational only; the artifacts are the committed files in this repository.                                                        |
+| `book-corpus-household-hardening-log`      | Removed in second safe set         | Was clean; its head is contained in production `main` and the reviewed household range is preserved.                                                                                                                                                            |
+| `book-corpus-series-overhaul`              | Removed in second safe set         | Was clean; its head is contained in production `main` and has an exact private-recovery ref. It was a historical implementation worktree, not the queued series-overhaul task.                                                                                  |
+| `reverie-works-isbns`                      | Removed in second safe set         | Was clean; its exact head is preserved privately and the reviewed feature is integrated.                                                                                                                                                                        |
+| `.worktrees/series-consolidation`          | Removed in second safe set         | Was clean, detached, and stale-locked as `initializing`. Its head is not in current `main`, but it is reachable from multiple exact recovery refs. It was unlocked immediately before removal.                                                                  |
+| `reverie-calendar-scope`                   | Removed in second safe set         | Its only untracked file was an older copy of `docs/tasks/task-calendar-cluster-scope.md`; `main` has the corrected `AGENTS.md` reference and non-stale backlog wording. The detached head is recovery-reachable.                                                |
+| `rv-cal-main`                              | Removed in second safe set         | Its only untracked browser-audit source file was byte-identical to the file already on `main`. The detached head is recovery-reachable.                                                                                                                         |
+| `reverie-layout-sweep`                     | Removed after private preservation | Its distinct ignored `apps/web/.env.local` was moved without inspection to the owner-only local backup, then the clean tracked worktree was removed. Its exact head remains in private recovery.                                                                |
+| `reverie-star-targets`                     | Removed after private preservation | Same preservation and removal boundary as `reverie-layout-sweep`.                                                                                                                                                                                               |
+| `reverie-withheld-click`                   | Removed after private preservation | Same preservation and removal boundary as `reverie-layout-sweep`.                                                                                                                                                                                               |
+| Canonical `_to_delete/`                    | Moved to Trash in second safe set  | Contained only staged stale zero-byte Git locks, abandoned rebase metadata, and a scratch genre patch script whose intended behavior is already present on `main`. It remains recoverable in the 2026-08-25 Reverie safe-prune Trash batch.                     |
 
 The owner-approved second safe set removed the five redundant review worktrees named above and the
 nested series worktree, then pruned the registrations. Canonical `_to_delete/` moved to Trash. The
@@ -62,10 +61,16 @@ post-run audit confirmed that all seven paths are absent, all retained worktrees
 removed branch refs remain available, the three distinct protected files remain untouched, and Git
 connectivity succeeds. No garbage collection was run.
 
+The final owner-approved pass moved the three distinct environment files without reading them to
+`/Users/gregchism/.codex/private-backups/reverie-reads/env-2026-08-26/`, with directory mode `700`
+and file mode `600`, then removed their worktrees. The final registry contains only canonical
+`book-corpus` and this roadmap worktree. Canonical `main` exactly matches production
+`18f20af0fd276ca1ae2cd360f1d20ace91b1158f` and tracks `origin/main`.
+
 ## Completion gate
 
-Phase 1, both read-only audits, and both owner-approved safe pruning sets are complete. Resolve the
-three protected-file decisions without exposing or committing secrets, integrate the roadmap branch,
-and realign the canonical checkout before beginning product work.
+Phase 1, both read-only audits, both safe pruning sets, protected-file preservation, registration
+cleanup, and canonical realignment are complete. Integrate this roadmap branch through its normal
+reviewed PR; no further workspace mutation is required before product work.
 
 No production data, deployment, migration, contributor rewrite, or CSV reconciliation is in scope.
