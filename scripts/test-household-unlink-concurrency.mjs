@@ -1,9 +1,7 @@
-// Deterministic local two-session regression for concurrent final household unlinks.
-// Both real RPC calls run in explicit transactions behind a controller-owned commit barrier. The
-// harness observes pg_locks before releasing either transaction: the fixed implementation has one
-// worker at the barrier and one serialized on the household row, while the old implementation has
-// both workers at the barrier after independently evaluating cleanup. No elapsed-time delay decides
-// whether the race was reached.
+// Deterministic local two-session regressions for household revocation and corpus ISBN resolution.
+// Real writes run in explicit transactions behind controller-owned lock barriers. The harness reads
+// pg_locks before releasing transactions, so lock state rather than elapsed-time delay proves each
+// race was reached.
 
 import assert from 'node:assert/strict'
 import { execFileSync, spawn } from 'node:child_process'
@@ -28,6 +26,7 @@ let householdId = null
 // Two-key advisory locks make the controller barrier easy to identify exactly in pg_locks.
 const BARRIER_CLASS = 1_608_202_608
 const BARRIER_ID = 1
+const ISBN_BARRIER_ID = 2
 
 const sqlScalar = (statement) =>
   execFileSync('psql', [DATABASE_URL, '-X', '-qAt', '-v', 'ON_ERROR_STOP=1', '-c', statement], {
@@ -132,7 +131,7 @@ async function fixtureAccount(label) {
   return userId
 }
 
-async function waitForConcurrentState(workerPids) {
+async function waitForConcurrentState(workerPids, barrierId = BARRIER_ID) {
   const deadline = Date.now() + 10_000
   while (Date.now() < deadline) {
     const [barrierWaiters, waitingWorkers] = sqlScalar(`
@@ -141,7 +140,7 @@ async function waitForConcurrentState(workerPids) {
           where not granted
             and locktype = 'advisory'
             and classid = ${BARRIER_CLASS}
-            and objid = ${BARRIER_ID}
+            and objid = ${barrierId}
             and mode = 'ShareLock'
         ),
         count(distinct pid) filter (where not granted)
@@ -151,8 +150,8 @@ async function waitForConcurrentState(workerPids) {
       .split('|')
       .map(Number)
 
-    // Fixed: the first RPC completed behind the barrier; the second worker is waiting on the
-    // household row. Old: both RPCs completed behind the barrier without serializing cleanup.
+    // Fixed: the first write completed behind the barrier; the second worker is waiting on its
+    // serialization lock. Old: both writes completed behind the barrier without serializing.
     if (barrierWaiters === 2 || (barrierWaiters === 1 && waitingWorkers === 2)) {
       return { barrierWaiters, waitingWorkers }
     }
@@ -202,6 +201,19 @@ const authenticatedCall = (userId, statement) => `
   select 'rejected-after-serialization';
 `
 
+const authenticatedPersonalWrite = (userId, statement) => `
+  begin;
+  set local role authenticated;
+  select set_config(
+    'request.jwt.claims',
+    '{"sub":"${userId}","role":"authenticated"}',
+    true
+  );
+  ${statement};
+  commit;
+  select 'personal-write-committed';
+`
+
 async function runRevocationRace({ action, userId, statement, verify }) {
   const revoker = new PsqlSession(`${action}-revoker`)
   const worker = new PsqlSession(`${action}-worker`)
@@ -230,6 +242,105 @@ async function runRevocationRace({ action, userId, statement, verify }) {
   } finally {
     if (revocationOpen) await revoker.command('rollback;').catch(() => {})
     await Promise.allSettled([workerResult, worker.close(), revoker.close()])
+  }
+}
+
+async function runTriggerRevocationRace({ action, userId, statement, verify }) {
+  const revoker = new PsqlSession(`${action}-revoker`)
+  const worker = new PsqlSession(`${action}-worker`)
+  let workerResult = null
+  let revocationOpen = false
+  try {
+    const workerPid = Number(await worker.command('select pg_backend_pid();'))
+    assert.ok(Number.isInteger(workerPid), `${action} worker exposes a stable PID`)
+
+    await revoker.command(`
+      begin;
+      set local role service_role;
+      select public.unlink_household_member('${userId}'::uuid, '${householdId}'::uuid);
+      reset role;
+      select 'revoked-but-uncommitted';
+    `)
+    revocationOpen = true
+
+    workerResult = worker.command(authenticatedPersonalWrite(userId, statement))
+    await waitForBlockedWorker(workerPid, action)
+    await revoker.command('commit;')
+    revocationOpen = false
+    assert.match(await workerResult, /personal-write-committed/, `${action} keeps personal edit`)
+    await verify()
+    console.log(`✓ ${action} keeps the personal edit but suppresses its revoked household write`)
+  } finally {
+    if (revocationOpen) await revoker.command('rollback;').catch(() => {})
+    await Promise.allSettled([workerResult, worker.close(), revoker.close()])
+  }
+}
+
+async function runPersonalBookRevocationRace({ action, userId, bookId, statement, verify }) {
+  const remover = new PsqlSession(`${action}-remover`)
+  const worker = new PsqlSession(`${action}-worker`)
+  let workerResult = null
+  let removalOpen = false
+  try {
+    const workerPid = Number(await worker.command('select pg_backend_pid();'))
+    assert.ok(Number.isInteger(workerPid), `${action} worker exposes a stable PID`)
+
+    await remover.command(`
+      begin;
+      set local role authenticated;
+      select set_config(
+        'request.jwt.claims',
+        '{"sub":"${userId}","role":"authenticated"}',
+        true
+      );
+      select public.remove_personal_book('${bookId}'::uuid);
+      reset role;
+      select 'removed-but-uncommitted';
+    `)
+    removalOpen = true
+
+    workerResult = worker.command(authenticatedPersonalWrite(userId, statement))
+    await waitForBlockedWorker(workerPid, action)
+    await remover.command('commit;')
+    removalOpen = false
+    assert.match(await workerResult, /personal-write-committed/, `${action} keeps personal edit`)
+    await verify()
+    console.log(`✓ ${action} suppresses the household write after exact-book removal`)
+  } finally {
+    if (removalOpen) await remover.command('rollback;').catch(() => {})
+    await Promise.allSettled([workerResult, worker.close(), remover.close()])
+  }
+}
+
+async function runPersonalBookRebindRace({ action, userId, rebindStatement, statement, verify }) {
+  const rebinder = new PsqlSession(`${action}-rebinder`)
+  const worker = new PsqlSession(`${action}-worker`)
+  let workerResult = null
+  let rebindOpen = false
+  try {
+    const workerPid = Number(await worker.command('select pg_backend_pid();'))
+    assert.ok(Number.isInteger(workerPid), `${action} worker exposes a stable PID`)
+
+    await rebinder.command(`
+      begin;
+      set local role service_role;
+      select set_config('request.jwt.claims', '{"role":"service_role"}', true);
+      ${rebindStatement};
+      reset role;
+      select 'rebound-but-uncommitted';
+    `)
+    rebindOpen = true
+
+    workerResult = worker.command(authenticatedPersonalWrite(userId, statement))
+    await waitForBlockedWorker(workerPid, action)
+    await rebinder.command('commit;')
+    rebindOpen = false
+    assert.match(await workerResult, /personal-write-committed/, `${action} keeps personal edit`)
+    await verify()
+    console.log(`✓ ${action} suppresses the household write after exact-work rebinding`)
+  } finally {
+    if (rebindOpen) await rebinder.command('rollback;').catch(() => {})
+    await Promise.allSettled([workerResult, worker.close(), rebinder.close()])
   }
 }
 
@@ -360,6 +471,491 @@ async function exerciseAuthorizationRevocations({
     },
   })
   await relinkMember(ownerId, memberId)
+
+  sqlScalar(`
+    insert into public.household_work_enrichment (
+      household_id, work_id, tags, tropes, updated_by
+    ) values (
+      '${householdId}'::uuid,
+      '${borrowedWorkId}'::uuid,
+      array['retained-household-tag'],
+      '[{"name":"retained household trope"}]'::jsonb,
+      '${ownerId}'::uuid
+    )
+    on conflict (household_id, work_id) do update
+    set tags = excluded.tags, tropes = excluded.tropes, updated_by = excluded.updated_by;
+  `)
+  const trope = await admin
+    .from('tropes')
+    .insert({
+      owner_id: memberId,
+      name: `Concurrent revoked trope ${randomUUID()}`,
+      facet: 'vibe',
+    })
+    .select('id')
+    .single()
+  if (trope.error || !trope.data) throw dbError('trope race fixture insert', trope.error)
+
+  await runTriggerRevocationRace({
+    action: 'personal-tag-trigger',
+    userId: memberId,
+    statement: `update public.books set tags = array['revoked-tag-race']
+      where id = '${borrowedBookId}'::uuid`,
+    verify: async () => {
+      assert.equal(
+        sqlScalar(
+          `select array_to_string(tags, ',') from public.books
+           where id = '${borrowedBookId}'::uuid;`,
+        ),
+        'revoked-tag-race',
+        'revoked tag edit remains on the personal book',
+      )
+      assert.equal(
+        sqlScalar(
+          `select array_to_string(tags, ',') from public.household_work_enrichment
+           where household_id = '${householdId}'::uuid and work_id = '${borrowedWorkId}'::uuid;`,
+        ),
+        'retained-household-tag',
+        'revoked tag trigger leaves retained household tags unchanged',
+      )
+      assert.equal(
+        sqlScalar(
+          `select tropes::text from public.household_work_enrichment
+           where household_id = '${householdId}'::uuid and work_id = '${borrowedWorkId}'::uuid;`,
+        ),
+        '[{"name": "retained household trope"}]',
+        'revoked tag trigger leaves the sibling household trope field unchanged',
+      )
+    },
+  })
+  await relinkMember(ownerId, memberId)
+
+  await runTriggerRevocationRace({
+    action: 'personal-trope-trigger',
+    userId: memberId,
+    statement: `insert into public.book_tropes (book_id, trope_id, owner_id, emphasis)
+      values (
+        '${borrowedBookId}'::uuid, '${trope.data.id}'::uuid, '${memberId}'::uuid, 'pinned'
+      )`,
+    verify: async () => {
+      assert.equal(
+        sqlScalar(
+          `select count(*) from public.book_tropes
+           where book_id = '${borrowedBookId}'::uuid and trope_id = '${trope.data.id}'::uuid;`,
+        ),
+        '1',
+        'revoked trope edit remains on the personal book',
+      )
+      assert.equal(
+        sqlScalar(
+          `select count(*)
+           from public.household_work_enrichment e
+           cross join lateral jsonb_array_elements(e.tropes) trope_value
+           where e.household_id = '${householdId}'::uuid
+             and e.work_id = '${borrowedWorkId}'::uuid
+             and trope_value ->> 'id' = '${trope.data.id}';`,
+        ),
+        '0',
+        'revoked trope trigger writes no trope into the retained household overlay',
+      )
+      assert.equal(
+        sqlScalar(
+          `select array_to_string(tags, ',') from public.household_work_enrichment
+           where household_id = '${householdId}'::uuid and work_id = '${borrowedWorkId}'::uuid;`,
+        ),
+        'retained-household-tag',
+        'revoked trope trigger leaves the sibling household tag field unchanged',
+      )
+    },
+  })
+  await relinkMember(ownerId, memberId)
+
+  await runPersonalBookRevocationRace({
+    action: 'personal-trope-after-book-removal',
+    userId: memberId,
+    bookId: borrowedBookId,
+    statement: `update public.book_tropes set emphasis = 'present'
+      where book_id = '${borrowedBookId}'::uuid and trope_id = '${trope.data.id}'::uuid`,
+    verify: async () => {
+      assert.equal(
+        sqlScalar(
+          `select emphasis from public.book_tropes
+           where book_id = '${borrowedBookId}'::uuid and trope_id = '${trope.data.id}'::uuid;`,
+        ),
+        'present',
+        'the personal trope edit survives exact-book removal',
+      )
+      assert.equal(
+        sqlScalar(
+          `select count(*)
+           from public.household_work_enrichment e
+           cross join lateral jsonb_array_elements(e.tropes) trope_value
+           where e.household_id = '${householdId}'::uuid
+             and e.work_id = '${borrowedWorkId}'::uuid
+             and trope_value ->> 'id' = '${trope.data.id}';`,
+        ),
+        '0',
+        'the removed personal book writes no trope into the retained household overlay',
+      )
+    },
+  })
+  sqlScalar(`
+    begin;
+    set local role authenticated;
+    select set_config(
+      'request.jwt.claims',
+      '{"sub":"${memberId}","role":"authenticated"}',
+      true
+    );
+    select public.restore_personal_book('${borrowedBookId}'::uuid);
+    commit;
+  `)
+}
+
+async function exerciseConcurrentRebindSuppression(userId) {
+  const suffix = randomUUID()
+  const sourceTitle = `Concurrent rebind source ${suffix}`
+  const targetTitle = `Concurrent rebind target ${suffix}`
+  let bookId = null
+  let oldWorkId = null
+  let targetWorkId = null
+  let destinationBookId = null
+  let destinationOldWorkId = null
+  let destinationTargetWorkId = null
+  let tropeId = null
+
+  try {
+    const sourceBook = await admin
+      .from('books')
+      .insert({
+        owner_id: userId,
+        title: sourceTitle,
+        author_first: 'Concurrent',
+        author_last: 'Source',
+        authors_display: 'Concurrent Source',
+        status: 'standalone',
+        ownership: 'owned',
+      })
+      .select('id, corpus_work_id')
+      .single()
+    if (sourceBook.error || !sourceBook.data)
+      throw dbError('rebind source book insert', sourceBook.error)
+    bookId = sourceBook.data.id
+    oldWorkId = sourceBook.data.corpus_work_id
+
+    const targetWork = await admin
+      .from('works')
+      .insert({
+        work_key: `concurrent:rebind-target:${suffix}`,
+        title: targetTitle,
+        author_text: 'Concurrent Rebind',
+        contributors: [{ name: 'Concurrent Rebind', role: 'author', position: 0 }],
+        creation_source: 'reconciliation',
+      })
+      .select('id')
+      .single()
+    if (targetWork.error || !targetWork.data)
+      throw dbError('rebind target work insert', targetWork.error)
+    targetWorkId = targetWork.data.id
+
+    const trope = await admin
+      .from('tropes')
+      .insert({
+        owner_id: userId,
+        name: `Concurrent rebind trope ${suffix}`,
+        facet: 'vibe',
+      })
+      .select('id')
+      .single()
+    if (trope.error || !trope.data) throw dbError('rebind trope insert', trope.error)
+    tropeId = trope.data.id
+
+    const joined = await admin.from('book_tropes').insert({
+      book_id: bookId,
+      trope_id: tropeId,
+      owner_id: userId,
+      emphasis: 'present',
+    })
+    if (joined.error) throw dbError('rebind trope join insert', joined.error)
+
+    await runPersonalBookRebindRace({
+      action: 'personal-trope-after-work-rebind',
+      userId,
+      rebindStatement: `update public.books
+        set corpus_work_id = '${targetWorkId}'::uuid,
+            title = '${targetTitle}',
+            author_first = 'Concurrent',
+            author_last = 'Rebind',
+            authors_display = 'Concurrent Rebind',
+            isbn = null
+        where id = '${bookId}'::uuid`,
+      statement: `update public.book_tropes set emphasis = 'pinned'
+        where book_id = '${bookId}'::uuid and trope_id = '${tropeId}'::uuid`,
+      verify: async () => {
+        assert.equal(
+          sqlScalar(
+            `select emphasis from public.book_tropes
+             where book_id = '${bookId}'::uuid and trope_id = '${tropeId}'::uuid;`,
+          ),
+          'pinned',
+          'the personal trope edit survives exact-work rebinding',
+        )
+        assert.equal(
+          sqlScalar(
+            `select count(*)
+             from public.household_work_enrichment e
+             cross join lateral jsonb_array_elements(e.tropes) trope_value
+             where e.household_id = '${householdId}'::uuid
+               and e.work_id = '${oldWorkId}'::uuid
+               and trope_value ->> 'id' = '${tropeId}'
+               and trope_value ->> 'emphasis' = 'present';`,
+          ),
+          '1',
+          'the previous household snapshot is not rewritten after rebinding',
+        )
+        assert.equal(
+          sqlScalar(
+            `select count(*)
+             from public.household_work_enrichment e
+             cross join lateral jsonb_array_elements(e.tropes) trope_value
+             where e.household_id = '${householdId}'::uuid
+               and e.work_id = '${targetWorkId}'::uuid
+               and trope_value ->> 'id' = '${tropeId}';`,
+          ),
+          '0',
+          'the newly rebound work receives no stale personal overlay write',
+        )
+      },
+    })
+
+    const destinationBook = await admin
+      .from('books')
+      .insert({
+        owner_id: userId,
+        title: `Concurrent move destination source ${suffix}`,
+        author_first: 'Concurrent',
+        author_last: 'Move Source',
+        authors_display: 'Concurrent Move Source',
+        status: 'standalone',
+        ownership: 'owned',
+      })
+      .select('id, corpus_work_id')
+      .single()
+    if (destinationBook.error || !destinationBook.data)
+      throw dbError('rebind move destination book insert', destinationBook.error)
+    destinationBookId = destinationBook.data.id
+    destinationOldWorkId = destinationBook.data.corpus_work_id
+
+    const destinationTargetTitle = `Concurrent move destination target ${suffix}`
+    const destinationTargetWork = await admin
+      .from('works')
+      .insert({
+        work_key: `concurrent:move-rebind-target:${suffix}`,
+        title: destinationTargetTitle,
+        author_text: 'Concurrent Move Rebind',
+        contributors: [{ name: 'Concurrent Move Rebind', role: 'author', position: 0 }],
+        creation_source: 'reconciliation',
+      })
+      .select('id')
+      .single()
+    if (destinationTargetWork.error || !destinationTargetWork.data)
+      throw dbError('rebind move destination target insert', destinationTargetWork.error)
+    destinationTargetWorkId = destinationTargetWork.data.id
+
+    await runPersonalBookRebindRace({
+      action: 'moved-trope-after-destination-rebind',
+      userId,
+      rebindStatement: `update public.books
+        set corpus_work_id = '${destinationTargetWorkId}'::uuid,
+            title = '${destinationTargetTitle}',
+            author_first = 'Concurrent',
+            author_last = 'Move Rebind',
+            authors_display = 'Concurrent Move Rebind',
+            isbn = null
+        where id = '${destinationBookId}'::uuid`,
+      statement: `update public.book_tropes set book_id = '${destinationBookId}'::uuid
+        where book_id = '${bookId}'::uuid and trope_id = '${tropeId}'::uuid`,
+      verify: async () => {
+        assert.equal(
+          sqlScalar(`select book_id from public.book_tropes where trope_id = '${tropeId}'::uuid;`),
+          destinationBookId,
+          'the personal trope move survives destination rebinding',
+        )
+        assert.equal(
+          sqlScalar(
+            `select count(*)
+             from public.household_work_enrichment e
+             cross join lateral jsonb_array_elements(e.tropes) trope_value
+             where e.household_id = '${householdId}'::uuid
+               and e.work_id = '${targetWorkId}'::uuid
+               and trope_value ->> 'id' = '${tropeId}';`,
+          ),
+          '0',
+          'the source household snapshot reflects the completed personal move',
+        )
+        assert.equal(
+          sqlScalar(
+            `select count(*)
+             from public.household_work_enrichment e
+             cross join lateral jsonb_array_elements(e.tropes) trope_value
+             where e.household_id = '${householdId}'::uuid
+               and e.work_id = '${destinationTargetWorkId}'::uuid
+               and trope_value ->> 'id' = '${tropeId}';`,
+          ),
+          '0',
+          'the newly rebound move destination receives no stale overlay write',
+        )
+      },
+    })
+  } finally {
+    if (bookId) sqlScalar(`delete from public.books where id = '${bookId}'::uuid;`)
+    if (destinationBookId) {
+      sqlScalar(`delete from public.books where id = '${destinationBookId}'::uuid;`)
+    }
+    if (oldWorkId || targetWorkId || destinationOldWorkId || destinationTargetWorkId) {
+      const workIds = [oldWorkId, targetWorkId, destinationOldWorkId, destinationTargetWorkId]
+        .filter(Boolean)
+        .map((id) => `'${id}'::uuid`)
+        .join(', ')
+      sqlScalar(`
+        delete from public.household_works
+        where household_id = '${householdId}'::uuid and work_id in (${workIds});
+        delete from public.works where id in (${workIds});
+      `)
+    }
+    if (tropeId) sqlScalar(`delete from public.tropes where id = '${tropeId}'::uuid;`)
+  }
+}
+
+async function exerciseMovedTropeLockOrdering(userId) {
+  const suffix = randomUUID()
+  const bookIds = [randomUUID(), randomUUID()].sort()
+  const workIds = []
+  let tropeId = null
+  let moveResult = null
+  const targetEditor = new PsqlSession('moved-trope-target-editor')
+  const mover = new PsqlSession('moved-trope-mover')
+  let targetEditOpen = false
+
+  try {
+    const books = await admin
+      .from('books')
+      .insert(
+        bookIds.map((id, index) => ({
+          id,
+          owner_id: userId,
+          title: `Moved trope lock fixture ${index + 1} ${suffix}`,
+          author_first: 'Concurrent',
+          author_last: 'Mover',
+          authors_display: 'Concurrent Mover',
+          status: 'standalone',
+          ownership: 'owned',
+        })),
+      )
+      .select('id, corpus_work_id')
+    if (books.error || books.data?.length !== 2)
+      throw dbError('moved trope books insert', books.error)
+    const workByBook = new Map(books.data.map((book) => [book.id, book.corpus_work_id]))
+    workIds.push(workByBook.get(bookIds[0]), workByBook.get(bookIds[1]))
+
+    const trope = await admin
+      .from('tropes')
+      .insert({
+        owner_id: userId,
+        name: `Moved trope lock sentinel ${suffix}`,
+        facet: 'vibe',
+      })
+      .select('id')
+      .single()
+    if (trope.error || !trope.data) throw dbError('moved trope insert', trope.error)
+    tropeId = trope.data.id
+
+    const joined = await admin.from('book_tropes').insert({
+      book_id: bookIds[0],
+      trope_id: tropeId,
+      owner_id: userId,
+      emphasis: 'present',
+    })
+    if (joined.error) throw dbError('moved trope join insert', joined.error)
+
+    const moverPid = Number(await mover.command('select pg_backend_pid();'))
+    assert.ok(Number.isInteger(moverPid), 'moved trope worker exposes a stable PID')
+    await targetEditor.command(`
+      begin;
+      set local role authenticated;
+      select set_config(
+        'request.jwt.claims',
+        '{"sub":"${userId}","role":"authenticated"}',
+        true
+      );
+      select id from public.books where id = '${bookIds[1]}'::uuid for update;
+      select 'target-book-locked';
+    `)
+    targetEditOpen = true
+
+    moveResult = mover.command(
+      authenticatedPersonalWrite(
+        userId,
+        `update public.book_tropes set book_id = '${bookIds[1]}'::uuid
+         where book_id = '${bookIds[0]}'::uuid and trope_id = '${tropeId}'::uuid`,
+      ),
+    )
+    await waitForBlockedWorker(moverPid, 'moved trope prelock')
+
+    const targetEditResult = await targetEditor.command(`
+      update public.books set tags = array['move-lock-order']
+      where id = '${bookIds[1]}'::uuid;
+      commit;
+      select 'target-edit-committed';
+    `)
+    targetEditOpen = false
+    assert.match(targetEditResult, /target-edit-committed/, 'target book edit avoids a lock cycle')
+    assert.match(await moveResult, /personal-write-committed/, 'moved trope edit commits')
+
+    assert.equal(
+      sqlScalar(
+        `select count(*)
+         from public.household_work_enrichment e
+         cross join lateral jsonb_array_elements(e.tropes) trope_value
+         where e.household_id = '${householdId}'::uuid
+           and e.work_id = '${workIds[0]}'::uuid
+           and trope_value ->> 'id' = '${tropeId}';`,
+      ),
+      '0',
+      'the moved trope leaves the source household snapshot',
+    )
+    assert.equal(
+      sqlScalar(
+        `select array_to_string(e.tags, ',') || '|' || (trope_value ->> 'id')
+         from public.household_work_enrichment e
+         cross join lateral jsonb_array_elements(e.tropes) trope_value
+         where e.household_id = '${householdId}'::uuid
+           and e.work_id = '${workIds[1]}'::uuid
+           and trope_value ->> 'id' = '${tropeId}';`,
+      ),
+      `move-lock-order|${tropeId}`,
+      'the target keeps its concurrent tag edit and receives the moved trope',
+    )
+    console.log('✓ moved trope joins prelock both books before either household lock')
+  } finally {
+    if (targetEditOpen) await targetEditor.command('rollback;').catch(() => {})
+    await Promise.allSettled([moveResult, targetEditor.close(), mover.close()])
+    sqlScalar(
+      `delete from public.books where id in ('${bookIds[0]}'::uuid, '${bookIds[1]}'::uuid);`,
+    )
+    if (workIds.filter(Boolean).length > 0) {
+      const reviewedWorkIds = workIds
+        .filter(Boolean)
+        .map((id) => `'${id}'::uuid`)
+        .join(', ')
+      sqlScalar(`
+        delete from public.household_works
+        where household_id = '${householdId}'::uuid and work_id in (${reviewedWorkIds});
+        delete from public.works where id in (${reviewedWorkIds});
+      `)
+    }
+    if (tropeId) sqlScalar(`delete from public.tropes where id = '${tropeId}'::uuid;`)
+  }
 }
 
 const unlinkTransaction = (session, userId, reviewedHouseholdId) =>
@@ -371,6 +967,130 @@ const unlinkTransaction = (session, userId, reviewedHouseholdId) =>
     select pg_catalog.pg_advisory_xact_lock_shared(${BARRIER_CLASS}, ${BARRIER_ID});
     commit;
   `)
+
+const isbn13Fixture = () => {
+  const payload = BigInt(`0x${randomUUID().replaceAll('-', '')}`)
+    .toString()
+    .padStart(9, '0')
+    .slice(-9)
+  const firstTwelve = `979${payload}`
+  const weighted = [...firstTwelve].reduce(
+    (sum, digit, index) => sum + Number(digit) * (index % 2 === 0 ? 1 : 3),
+    0,
+  )
+  return `${firstTwelve}${(10 - (weighted % 10)) % 10}`
+}
+
+const concurrentBookInsert = ({ session, userId, bookId, title, isbn }) =>
+  session.command(`
+    begin;
+    set local role authenticated;
+    select set_config(
+      'request.jwt.claims',
+      '{"sub":"${userId}","role":"authenticated"}',
+      true
+    );
+    insert into public.books (
+      id, owner_id, title, author_first, author_last, authors_display, status, ownership, isbn
+    ) values (
+      '${bookId}'::uuid, '${userId}'::uuid, '${title}', 'Concurrent', 'Resolver',
+      'Concurrent Resolver', 'standalone', 'unowned', '${isbn}'
+    );
+    reset role;
+    select pg_catalog.pg_advisory_xact_lock_shared(${BARRIER_CLASS}, ${ISBN_BARRIER_ID});
+    commit;
+    select 'isbn-book-committed';
+  `)
+
+async function exerciseConcurrentIsbnResolution(firstUserId, secondUserId) {
+  const isbn = isbn13Fixture()
+  const bookIds = [randomUUID(), randomUUID()]
+  assert.equal(
+    sqlScalar(`select count(*) from public.works where '${isbn}' = any(isbns);`),
+    '0',
+    'concurrent ISBN fixture starts unused',
+  )
+
+  const controller = new PsqlSession('isbn-controller')
+  const workers = [new PsqlSession('isbn-first'), new PsqlSession('isbn-second')]
+  let insertResults = []
+  let barrierHeld = false
+  try {
+    await controller.command(
+      `select pg_catalog.pg_advisory_lock(${BARRIER_CLASS}, ${ISBN_BARRIER_ID});`,
+    )
+    barrierHeld = true
+    const workerPids = await Promise.all(
+      workers.map(async (worker) => Number(await worker.command('select pg_backend_pid();'))),
+    )
+    assert.ok(workerPids.every(Number.isInteger), 'ISBN workers expose stable PIDs')
+
+    insertResults = [
+      concurrentBookInsert({
+        session: workers[0],
+        userId: firstUserId,
+        bookId: bookIds[0],
+        title: 'Concurrent ISBN title alpha',
+        isbn,
+      }),
+      concurrentBookInsert({
+        session: workers[1],
+        userId: secondUserId,
+        bookId: bookIds[1],
+        title: 'Concurrent ISBN title beta',
+        isbn,
+      }),
+    ]
+    const concurrentState = await waitForConcurrentState(workerPids, ISBN_BARRIER_ID)
+
+    await controller.command(
+      `select pg_catalog.pg_advisory_unlock(${BARRIER_CLASS}, ${ISBN_BARRIER_ID});`,
+    )
+    barrierHeld = false
+    const outputs = await Promise.all(insertResults)
+    assert.equal(
+      concurrentState.barrierWaiters,
+      1,
+      'one first-time ISBN resolver waits while the other holds the canonical ISBN lock',
+    )
+    for (const [index, output] of outputs.entries()) {
+      assert.match(output, /isbn-book-committed/, `concurrent ISBN add ${index + 1} committed`)
+    }
+
+    assert.equal(
+      sqlScalar(
+        `select count(distinct corpus_work_id) from public.books
+         where id in ('${bookIds[0]}'::uuid, '${bookIds[1]}'::uuid);`,
+      ),
+      '1',
+      'title variants with the same new ISBN receive one corpus link',
+    )
+    assert.equal(
+      sqlScalar(`select count(*) from public.works where '${isbn}' = any(isbns);`),
+      '1',
+      'the concurrent ISBN adds create only one corpus work',
+    )
+    assert.equal(
+      sqlScalar(`select creation_source from public.works where '${isbn}' = any(isbns) limit 1;`),
+      'reader_add',
+      'the unique concurrent result remains an ordinary reader-added work',
+    )
+    console.log('✓ concurrent title variants with one new ISBN resolve to one ordinary work')
+  } finally {
+    if (barrierHeld) {
+      await controller
+        .command(`select pg_catalog.pg_advisory_unlock(${BARRIER_CLASS}, ${ISBN_BARRIER_ID});`)
+        .catch(() => {})
+    }
+    await Promise.allSettled(insertResults)
+    await Promise.allSettled([...workers.map((worker) => worker.close()), controller.close()])
+    sqlScalar(`
+      delete from public.books where id in ('${bookIds[0]}'::uuid, '${bookIds[1]}'::uuid);
+      delete from public.works
+      where '${isbn}' = any(isbns) and creation_source = 'reader_add';
+    `)
+  }
+}
 
 async function main() {
   const firstUserId = await fixtureAccount('first')
@@ -409,6 +1129,9 @@ async function main() {
     ownerBookId,
     borrowedBookId: borrowed.data.id,
   })
+  await exerciseConcurrentRebindSuppression(firstUserId)
+  await exerciseMovedTropeLockOrdering(firstUserId)
+  await exerciseConcurrentIsbnResolution(firstUserId, secondUserId)
 
   const controller = new PsqlSession('controller')
   const workers = [new PsqlSession('first'), new PsqlSession('second')]

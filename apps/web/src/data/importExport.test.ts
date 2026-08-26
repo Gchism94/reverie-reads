@@ -61,6 +61,8 @@ interface Access {
   ordered: boolean
   /** `.single()`/`.maybeSingle()`, or a head-only count: reads no row set, so paging is moot. */
   bounded: boolean
+  /** Write payload, retained so ordering-sensitive restore tests can assert the staged state. */
+  values?: Row[]
 }
 let access: Access[] = []
 /** When true, the fake serves only the first PAGE_CAP rows and ignores the requested window. */
@@ -112,6 +114,7 @@ function project(table: Table, columns: string, rows: Row[]): Row[] {
 
 class Query implements PromiseLike<{ data: Row[] | Row | null; error: unknown }> {
   private filters: [string, unknown][] = []
+  private inclusions: [string, unknown[]][] = []
   private notEquals: [string, unknown][] = []
   private negated: string[] = []
   private columns = '*'
@@ -150,6 +153,10 @@ class Query implements PromiseLike<{ data: Row[] | Row | null; error: unknown }>
   }
   eq(col: string, val: unknown) {
     this.filters.push([col, val])
+    return this
+  }
+  in(col: string, values: unknown[]) {
+    this.inclusions.push([col, values])
     return this
   }
   /** `.neq('ruling', 'same')` — the only not-equal filter the code under test uses. */
@@ -198,6 +205,12 @@ class Query implements PromiseLike<{ data: Row[] | Row | null; error: unknown }>
       ranged: this.rangeCalled,
       ordered: this.orderBy.length > 0,
       bounded: single || this.head,
+      values:
+        this.mode === 'insert' || this.mode === 'upsert'
+          ? structuredClone(this.pending ?? [])
+          : this.mode === 'update' && this.patch
+            ? [structuredClone(this.patch)]
+            : undefined,
     })
     const table = db[this.table]
     if (this.mode === 'insert' || this.mode === 'upsert') {
@@ -223,12 +236,12 @@ class Query implements PromiseLike<{ data: Row[] | Row | null; error: unknown }>
       return { data: single ? (data[0] ?? null) : data, error: null, count: null }
     }
     if (this.mode === 'update') {
-      for (const row of table.filter((r) => this.filters.every(([c, v]) => r[c] === v))) Object.assign(row, this.patch)
+      for (const row of table.filter((r) => this.matches(r))) Object.assign(row, this.patch)
       return { data: null, error: null, count: null }
     }
     const matched = table.filter(
       (r) =>
-        this.filters.every(([c, v]) => r[c] === v) &&
+        this.matches(r) &&
         this.notEquals.every(([c, v]) => r[c] !== v) &&
         this.negated.every((c) => r[c] != null),
     )
@@ -255,6 +268,13 @@ class Query implements PromiseLike<{ data: Row[] | Row | null; error: unknown }>
       : matched.slice(0, PAGE_CAP)
     const hits = project(this.table, this.columns, windowed)
     return { data: single ? (hits[0] ?? null) : hits, error: null, count }
+  }
+
+  private matches(row: Row): boolean {
+    return (
+      this.filters.every(([column, value]) => row[column] === value) &&
+      this.inclusions.every(([column, values]) => values.includes(row[column]))
+    )
   }
 }
 
@@ -417,6 +437,31 @@ describe('backup round trip — the data v4 dropped on the floor', () => {
       { author: 'A Noisy Newsletter', state: 'muted' },
       { author: 'Rebecca Yarros', state: 'followed' },
     ])
+  })
+
+  it('replays historical tropes before restoring owned household eligibility', async () => {
+    db.books[0]!.ownership = 'owned'
+    db.books[1]!.ownership = 'unowned'
+    const json = await buildBackup()
+    wipeToFreshAccount()
+    access = []
+
+    await restoreBackup(json)
+
+    const firstBookInsert = access.find(
+      (entry) => entry.table === 'books' && entry.mode === 'insert',
+    )
+    const tropeReplayIndex = access.findIndex(
+      (entry) => entry.table === 'book_tropes' && entry.mode === 'upsert',
+    )
+    const ownershipRestoreIndex = access.findIndex(
+      (entry) => entry.table === 'books' && entry.mode === 'update',
+    )
+    expect(firstBookInsert?.values?.[0]?.ownership).toBe('unowned')
+    expect(tropeReplayIndex).toBeGreaterThanOrEqual(0)
+    expect(ownershipRestoreIndex).toBeGreaterThan(tropeReplayIndex)
+    expect(db.books.find((book) => book.title === 'Fourth Wing')?.ownership).toBe('owned')
+    expect(db.books.find((book) => book.title === 'Iron Flame')?.ownership).toBe('unowned')
   })
 
   it('re-coins the reader’s personal vocabulary, and reuses canonical rows instead of duplicating them', async () => {

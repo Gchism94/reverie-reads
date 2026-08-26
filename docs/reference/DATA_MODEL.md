@@ -350,7 +350,8 @@ works                (id pk, work_key unique, work_id, title, contributors jsonb
                      genre, subgenre, genres text[], subgenres text[], tags text[], isbns text[],
                      metadata_status, creation_source, created_by, created_at, updated_at)
                      -- work_key preserves Unicode letters/numbers after NFKD + mark removal;
-                     -- creation_source may be reconciliation for an ambiguous safe refusal
+                     -- creation_source may be reconciliation for an ambiguous safe refusal;
+                     -- canonical ISBN-13 assignments serialize in sorted advisory-lock order
 work_metadata_edits  (id pk, work_id fk, editor_id, previous_value jsonb, next_value jsonb,
                      created_at)                      -- append-only corpus edit audit
 
@@ -389,8 +390,27 @@ those same sources and returns its retained `wishlist` field as false.
 Migration deployment does not synthesize `household_work_enrichment` from historical personal tags
 or tropes. Historical sharing is an owner-approved, target-scoped reconciliation data fix after an
 inventory and dry run. Neither automatic owned inclusion nor the borrowed-share checkbox publishes
-pre-existing annotations. New edits made after household inclusion synchronize through the scoped
-overlay triggers.
+pre-existing annotations. New edits made after household inclusion synchronize field-by-field: a
+personal tag edit replaces household tags only, and a personal trope edit replaces household tropes
+only. Each preserves the sibling household field, serializes with unlink, and rechecks the exact
+owner membership, personal work link, exact-copy eligibility, and active household work while
+holding both the personal-book and household locks. An owned copy is eligible automatically; a
+borrowed copy is eligible only through an active share for that exact book, work, and household.
+Trope snapshots aggregate only joins whose `owner_id` matches the personal book owner, so malformed
+cross-owner rows left by an older policy cannot be republished by a later legitimate edit. The
+trigger captures the expected corpus binding before waiting on any personal-book lock; a moved join
+captures both bindings and prelocks both books in UUID order before either household lock. A
+concurrent server rebind therefore suppresses the stale household side effect without discarding the
+personal edit, and opposite book/household lock order cannot form a moved-join deadlock.
+Backup restore stages every restored book as unowned, replays historical personal tropes, and only
+then restores owned state, so replay does not masquerade as new household-sharing consent.
+
+Canonical ISBN resolution acquires transaction advisory locks for every normalized ISBN-13 in
+deduplicated sorted order before counting candidates or inserting a work. Concurrent first-time adds
+therefore reuse one corpus work even when their title keys differ, and multi-ISBN writers cannot form
+opposite-order deadlocks. The same boundary rejects future cross-work ISBN collisions from direct
+corpus writes. Duplicate ISBN ownership that predates the boundary is not rewritten: personal adds
+against that ambiguous data still receive a reconciliation work instead of an arbitrary match.
 
 Corpus cover publication reuses the existing cover ingestion boundary: a newly shared option must
 have the reviewed `url`/optional `source`/optional `sourceUrl` shape, resolve to the project origin

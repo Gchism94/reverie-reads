@@ -24,8 +24,10 @@ Completed in the feature branch:
   signed project issuer's origin and its option uses the reviewed object schema; request Host headers
   are not trusted, and a different `COVER_PUBLIC_URL` origin remains safely unsupported until it has
   an explicit database-controlled trust configuration;
-- household synchronization for tags and tropes without exposing ratings, reading state, plans,
-  favourites, moods, or notes;
+- field-scoped household synchronization for tags and tropes: an intentional tag edit updates only
+  household tags, an intentional trope edit updates only household tropes, and both preserve the
+  independently curated sibling field without exposing ratings, reading state, plans, favourites,
+  moods, or notes. Only an exact owned copy or exact actively shared borrowed copy can publish;
 - database, unit, cache-authorization, and presentation regression coverage.
 
 The PR review hardening pass also closes the following privacy boundaries:
@@ -38,9 +40,21 @@ The PR review hardening pass also closes the following privacy boundaries:
   annotation reconciliation remains a separate target-scoped operator data fix after inventory,
   dry run, and owner approval; neither automatic owned inclusion nor the explicit borrowed checkbox
   publishes pre-existing annotations;
-- every membership/corpus mutation rechecks current membership and work/link eligibility after its
-  serialization lock. The local two-session harness proves all five affected mutations against an
-  uncommitted concurrent unlink, plus the final-unlink lifecycle, without timing sleeps;
+- every membership/corpus mutation and automatic annotation path rechecks current membership and
+  exact-copy/work/link eligibility at its serialization point. Annotation paths lock the personal
+  book as well as the household, and the trope join policy binds both old and new joins to books
+  owned by the authenticated reader. Trope aggregation ignores historical cross-owner rows. The
+  expected work binding is captured before a book-lock wait; moved joins capture both bindings and
+  prelock both books in UUID order before either household lock. The local two-session harness
+  proves five explicit mutations plus both annotation triggers against an uncommitted concurrent
+  unlink, an exact personal-book removal race, ordinary and moved-join server-rebind races, moved
+  join lock ordering, and the final-unlink lifecycle, without timing sleeps;
+- backup restore replays historical personal tropes while restored books are staged as unowned, then
+  restores owned state so household membership is rebuilt without publishing backup history;
+- canonical ISBN resolution locks all normalized identifiers in stable sorted order before lookup
+  and insertion. The same harness proves concurrent first-time adds with one ISBN and distinct title
+  keys create one ordinary corpus work and two links, while historical ambiguous ISBN ownership
+  continues to route to reconciliation;
 - household trope overlays are typed and rendered, including when a trope is the overlay's only
   content.
 
@@ -53,14 +67,16 @@ Still pending and intentionally not performed:
 
 Verification completed on the feature branch:
 
-- 2,950 unit assertions passed across 146 test files;
-- 543 pgTAP assertions passed across 26 files after a clean local database reset;
+- 2,951 unit assertions passed across 146 test files;
+- 558 pgTAP assertions passed across 26 files after a clean local database reset;
 - the complete Playwright matrix passed with 218 runnable cases and 10 expected project skips;
 - typecheck, lint, formatting, production build, and `git diff --check` passed.
 
-The review hardening follow-up was checked with 83 focused membership pgTAP assertions, 80 focused
-core assertions, 36 focused web assertions, five deterministic concurrent-revocation races, and the
-concurrent final-unlink lifecycle before the whole-repository rerun recorded above.
+The review hardening follow-up was checked with 98 focused membership pgTAP assertions, 80 focused
+core assertions, 36 focused household-web assertions, 49 focused restore assertions, eight
+deterministic authorization/eligibility-revocation races, two deterministic server-rebind races,
+the moved-join lock-order regression, the concurrent first-ISBN resolver, and the concurrent
+final-unlink lifecycle before the whole-repository rerun recorded above.
 
 The first pgTAP invocation was intentionally discarded because it ran concurrently against the
 same local database just populated by Playwright. Its inflated global counts demonstrated fixture
@@ -137,8 +153,9 @@ Additional rules derived from that contract:
      Cover options are shared candidates; a personal or household display choice may remain a scoped
      preference without deleting or overwriting the corpus options.
    - **Household:** shared descriptive enrichment such as household tags and tropes. Editing it from
-     an eligible personal-book surface updates the single household overlay, so every household
-     member sees the same result. It does not become global corpus data.
+     an eligible personal-book surface updates only the corresponding field on the single household
+     overlay, preserving the independently curated sibling field, so every household member sees the
+     same result. It does not become global corpus data.
    - **Personal:** ownership/borrowing, wishlist, owned formats, reading status and logs, rating,
      notes, progress, plans, favourites, and personal lists. These remain private and never become
      household fields merely because the work also belongs to the household.

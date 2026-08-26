@@ -161,6 +161,77 @@ $$;
 revoke all on function public.corpus_cover_option_is_valid(jsonb)
   from public, anon, authenticated, service_role;
 
+-- Canonical ISBN resolution is a transaction-level write boundary, not merely a lookup. Every
+-- writer locks the same normalized ISBN-13 values in the same order before it checks or assigns
+-- them, so concurrent first editions cannot create two ordinary works and multi-ISBN updates do
+-- not deadlock by choosing opposite lock orders.
+create function public.canonical_library_isbns(p_isbns text[])
+returns text[]
+language sql
+immutable
+set search_path = ''
+as $$
+  select coalesce(array_agg(isbn order by isbn), '{}')
+  from (
+    select distinct regexp_replace(value, '[^0-9]', '', 'g') as isbn
+    from unnest(coalesce(p_isbns, '{}')) value
+  ) normalized
+  where isbn ~ '^[0-9]{13}$';
+$$;
+
+revoke all on function public.canonical_library_isbns(text[])
+  from public, anon, authenticated, service_role;
+
+create function public.lock_library_isbns(p_isbns text[])
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  isbn text;
+begin
+  foreach isbn in array public.canonical_library_isbns(p_isbns)
+  loop
+    perform pg_catalog.pg_advisory_xact_lock(
+      pg_catalog.hashtextextended('reverie:canonical-isbn:' || isbn, 0)
+    );
+  end loop;
+end;
+$$;
+
+revoke all on function public.lock_library_isbns(text[])
+  from public, anon, authenticated, service_role;
+
+-- Keep direct corpus writers on the same boundary as personal-book resolution. Existing ambiguous
+-- ISBN data remains visible to the reconciliation resolver; only a new assignment that would add a
+-- second ordinary owner for an ISBN is refused.
+create function public.validate_work_isbn_assignment()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  new.isbns := public.canonical_library_isbns(new.isbns);
+  perform public.lock_library_isbns(new.isbns);
+
+  if exists (
+    select 1
+    from public.works existing
+    cross join unnest(new.isbns) isbn
+    where existing.id <> new.id and isbn = any(existing.isbns)
+  ) then
+    raise exception 'canonical ISBN is already assigned to another work'
+      using errcode = '23505';
+  end if;
+  return new;
+end;
+$$;
+
+revoke all on function public.validate_work_isbn_assignment()
+  from public, anon, authenticated, service_role;
+
 -- A supplied corpus id is valid only when bibliographic evidence resolves to exactly one work.
 -- ISBN wins when present in the corpus; title+full-author is the fallback. Multiple candidates are
 -- a reconciliation case, never permission to take whichever UUID sorts first.
@@ -398,6 +469,13 @@ where b.corpus_work_id is null;
 
 alter table public.books alter column corpus_work_id set not null;
 
+-- Install the future-write boundary after the legacy inventory has been preserved. A database that
+-- already contains ambiguous ISBN ownership must still deploy and route those personal additions
+-- to reconciliation rather than guessing or rewriting historical corpus rows.
+create trigger works_validate_isbn_assignment
+  before insert or update of isbns on public.works
+  for each row execute function public.validate_work_isbn_assignment();
+
 -- New personal rows always retain a corpus anchor. A supplied Discover/Add work must match one
 -- unambiguous bibliographic identity. Uncertain fallback matches receive a reconciliation work
 -- rather than silently attaching to the first UUID.
@@ -424,6 +502,10 @@ begin
   );
   target_key := public.library_work_key(new.title, author_name);
   normalized_isbn := regexp_replace(coalesce(new.isbn, ''), '[^0-9]', '', 'g');
+
+  -- Waiters take a fresh READ COMMITTED snapshot after the first writer commits, so the count below
+  -- sees that work and reuses it. Invalid/absent ISBNs produce an empty lock set.
+  perform public.lock_library_isbns(array[normalized_isbn]);
 
   if new.corpus_work_id is not null then
     if not public.book_corpus_binding_is_unambiguous(
@@ -847,11 +929,131 @@ create trigger household_members_sync_owned_books
   after insert on public.household_members
   for each row execute function public.sync_new_household_member_books();
 
--- Tags and tropes are shared household enrichment, not corpus metadata and not private reading
--- state. Whenever a personal copy is edited, copy only those reviewed fields to an already-active
--- household work. Ratings, favourites, reads, plans, progress, moods, and notes never enter this
--- function and therefore cannot leak through an accidental broad row copy.
-create function public.sync_personal_book_household_enrichment(p_book uuid)
+-- The original UPDATE policy checked only the join row's owner_id. Bind both the old and new join
+-- to a personal book owned by that reader so moving a known trope row cannot target another
+-- reader's book UUID and enter its security-definer household trigger.
+drop policy "book_tropes: update own" on public.book_tropes;
+create policy "book_tropes: update own" on public.book_tropes for update
+  using (
+    owner_id = (select auth.uid())
+    and exists (
+      select 1 from public.books b
+      where b.id = book_id and b.owner_id = (select auth.uid())
+    )
+  )
+  with check (
+    owner_id = (select auth.uid())
+    and exists (
+      select 1 from public.books b
+      where b.id = book_id and b.owner_id = (select auth.uid())
+    )
+  );
+
+-- Tags and tropes are independent household-enrichment fields, not corpus metadata and not private
+-- reading state. Both edit paths serialize with household unlink, then recheck the exact owner,
+-- personal link, and active household work while holding that household lock. A concurrent
+-- revocation therefore keeps the personal edit but suppresses its household side effect.
+create function public.lock_personal_book_household_enrichment(
+  p_book uuid,
+  p_owner uuid,
+  p_expected_work uuid
+)
+returns table (household_id uuid, work_id uuid, owner_id uuid)
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  target_household uuid;
+  target_work uuid;
+  target_owner uuid;
+begin
+  target_work := p_expected_work;
+  if target_work is null then return; end if;
+
+  -- Personal removal/rebinding serializes here. Book-first is compatible with the existing book
+  -- triggers, and the row lock stays held through the eventual overlay write.
+  perform 1
+  from public.books b
+  where b.id = p_book and b.owner_id = p_owner
+  for update;
+  if not found then return; end if;
+
+  select hm.household_id, b.owner_id
+  into target_household, target_owner
+  from public.books b
+  join public.household_members hm on hm.user_id = b.owner_id
+  join public.household_works hw on hw.household_id = hm.household_id
+    and hw.work_id = b.corpus_work_id and hw.removed_at is null
+  where b.id = p_book
+    and b.owner_id = p_owner
+    and b.corpus_work_id = target_work
+    and b.removed_at is null
+    and (
+      b.ownership = 'owned'
+      or exists (
+        select 1 from public.household_book_shares s
+        where s.book_id = b.id
+          and s.household_id = hm.household_id
+          and s.work_id = b.corpus_work_id
+          and s.removed_at is null
+      )
+    );
+
+  if target_household is null then return; end if;
+
+  -- Match unlink_household_member's membership-then-household order. If revocation already owns
+  -- this row, the trigger waits here and observes its deletion instead of forming a lock cycle.
+  perform 1
+  from public.household_members hm
+  where hm.household_id = target_household and hm.user_id = target_owner
+  for key share;
+  if not found then return; end if;
+
+  perform 1 from public.households h where h.id = target_household for update;
+  if not found then return; end if;
+
+  if not exists (
+    select 1
+    from public.household_members hm
+    join public.books b on b.owner_id = hm.user_id
+    join public.household_works hw on hw.household_id = hm.household_id
+      and hw.work_id = b.corpus_work_id and hw.removed_at is null
+    where hm.household_id = target_household
+      and hm.user_id = target_owner
+      and b.id = p_book
+      and b.owner_id = target_owner
+      and b.corpus_work_id = target_work
+      and b.removed_at is null
+      and (
+        b.ownership = 'owned'
+        or exists (
+          select 1 from public.household_book_shares s
+          where s.book_id = b.id
+            and s.household_id = target_household
+            and s.work_id = target_work
+            and s.removed_at is null
+        )
+      )
+  ) then return; end if;
+
+  household_id := target_household;
+  work_id := target_work;
+  owner_id := target_owner;
+  return next;
+end;
+$$;
+
+revoke all on function public.lock_personal_book_household_enrichment(uuid, uuid, uuid)
+  from public, anon, authenticated, service_role;
+
+-- A tag edit replaces only household tags. Pre-link personal tropes and independently curated
+-- household tropes remain untouched.
+create function public.sync_personal_book_household_tags(
+  p_book uuid,
+  p_owner uuid,
+  p_expected_work uuid
+)
 returns void
 language plpgsql
 security definer
@@ -862,15 +1064,59 @@ declare
   target_work uuid;
   target_owner uuid;
   target_tags text[];
+begin
+  select locked.household_id, locked.work_id, locked.owner_id
+  into target_household, target_work, target_owner
+  from public.lock_personal_book_household_enrichment(
+    p_book, p_owner, p_expected_work
+  ) locked;
+
+  if target_household is null then return; end if;
+
+  select b.tags into target_tags
+  from public.books b
+  where b.id = p_book and b.owner_id = target_owner and b.corpus_work_id = target_work;
+
+  insert into public.household_work_enrichment (
+    household_id, work_id, tags, updated_by
+  ) values (
+    target_household,
+    target_work,
+    coalesce(target_tags, '{}'),
+    target_owner
+  )
+  on conflict (household_id, work_id) do update
+  set tags = excluded.tags,
+      updated_by = excluded.updated_by;
+end;
+$$;
+
+revoke all on function public.sync_personal_book_household_tags(uuid, uuid, uuid)
+  from public, anon, authenticated, service_role;
+
+-- A trope edit replaces only household tropes. Pre-link personal tags and independently curated
+-- household tags remain untouched.
+create function public.sync_personal_book_household_tropes(
+  p_book uuid,
+  p_owner uuid,
+  p_expected_work uuid
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  target_household uuid;
+  target_work uuid;
+  target_owner uuid;
   target_tropes jsonb;
 begin
-  select hm.household_id, b.corpus_work_id, b.owner_id, b.tags
-  into target_household, target_work, target_owner, target_tags
-  from public.books b
-  join public.household_members hm on hm.user_id = b.owner_id
-  join public.household_works hw on hw.household_id = hm.household_id
-    and hw.work_id = b.corpus_work_id and hw.removed_at is null
-  where b.id = p_book and b.removed_at is null;
+  select locked.household_id, locked.work_id, locked.owner_id
+  into target_household, target_work, target_owner
+  from public.lock_personal_book_household_enrichment(
+    p_book, p_owner, p_expected_work
+  ) locked;
 
   if target_household is null then return; end if;
 
@@ -881,25 +1127,24 @@ begin
   into target_tropes
   from public.book_tropes bt
   join public.tropes t on t.id = bt.trope_id
-  where bt.book_id = p_book;
+  where bt.book_id = p_book
+    and bt.owner_id = target_owner;
 
   insert into public.household_work_enrichment (
-    household_id, work_id, tags, tropes, updated_by
+    household_id, work_id, tropes, updated_by
   ) values (
     target_household,
     target_work,
-    coalesce(target_tags, '{}'),
     target_tropes,
     target_owner
   )
   on conflict (household_id, work_id) do update
-  set tags = excluded.tags,
-      tropes = excluded.tropes,
+  set tropes = excluded.tropes,
       updated_by = excluded.updated_by;
 end;
 $$;
 
-revoke all on function public.sync_personal_book_household_enrichment(uuid)
+revoke all on function public.sync_personal_book_household_tropes(uuid, uuid, uuid)
   from public, anon, authenticated, service_role;
 
 create function public.sync_book_tags_to_household()
@@ -909,7 +1154,9 @@ security definer
 set search_path = ''
 as $$
 begin
-  perform public.sync_personal_book_household_enrichment(new.id);
+  perform public.sync_personal_book_household_tags(
+    new.id, new.owner_id, new.corpus_work_id
+  );
   return new;
 end;
 $$;
@@ -927,8 +1174,59 @@ language plpgsql
 security definer
 set search_path = ''
 as $$
+declare
+  old_work uuid;
+  new_work uuid;
 begin
-  perform public.sync_personal_book_household_enrichment(coalesce(new.book_id, old.book_id));
+  if tg_op = 'UPDATE' and old.book_id is distinct from new.book_id then
+    -- Capture both bindings before either book-row wait. A server rebind that is already in flight
+    -- must not cause this independent join edit to adopt the newly committed corpus identity.
+    select b.corpus_work_id into old_work
+    from public.books b
+    where b.id = old.book_id and b.owner_id = old.owner_id;
+    select b.corpus_work_id into new_work
+    from public.books b
+    where b.id = new.book_id and b.owner_id = new.owner_id;
+
+    -- A service/operator move still refreshes both snapshots. Lock both personal books before
+    -- either helper can acquire a household lock; UUID ordering prevents opposite moves from
+    -- forming a book-to-book cycle.
+    perform 1
+    from public.books b
+    where b.id in (old.book_id, new.book_id)
+    order by b.id
+    for update;
+
+    if old.book_id < new.book_id then
+      perform public.sync_personal_book_household_tropes(
+        old.book_id, old.owner_id, old_work
+      );
+      perform public.sync_personal_book_household_tropes(
+        new.book_id, new.owner_id, new_work
+      );
+    else
+      perform public.sync_personal_book_household_tropes(
+        new.book_id, new.owner_id, new_work
+      );
+      perform public.sync_personal_book_household_tropes(
+        old.book_id, old.owner_id, old_work
+      );
+    end if;
+  elsif tg_op = 'DELETE' then
+    select b.corpus_work_id into old_work
+    from public.books b
+    where b.id = old.book_id and b.owner_id = old.owner_id;
+    perform public.sync_personal_book_household_tropes(
+      old.book_id, old.owner_id, old_work
+    );
+  else
+    select b.corpus_work_id into new_work
+    from public.books b
+    where b.id = new.book_id and b.owner_id = new.owner_id;
+    perform public.sync_personal_book_household_tropes(
+      new.book_id, new.owner_id, new_work
+    );
+  end if;
   return coalesce(new, old);
 end;
 $$;
