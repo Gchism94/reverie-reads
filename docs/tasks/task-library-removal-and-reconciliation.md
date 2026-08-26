@@ -11,6 +11,68 @@ The shared corpus and a personal library have different lifecycles. A reader may
 their library, but that operation must not delete or degrade the corpus work, edition, contributors,
 ISBNs, sourcing provenance, or another reader's library record.
 
+## Library inclusion rules — owner ruling, 2026-08-25
+
+Household visibility is derived from possession, not from the mere existence of a personal book
+record:
+
+`household visible = owned OR (borrowed AND explicitly shared with this household)`
+
+Wishlist, reading history, ratings, notes, plans, favourites, tags, and list membership never make a
+book household-visible by themselves.
+
+| Personal state                                             |                           Personal library                           |           Household library           | Rule                                                                                                   |
+| ---------------------------------------------------------- | :------------------------------------------------------------------: | :-----------------------------------: | ------------------------------------------------------------------------------------------------------ |
+| Owned                                                      |                                 Yes                                  |                  Yes                  | Household inclusion is automatic; there is no owned-book opt-out under this model.                     |
+| Borrowed                                                   |                                 Yes                                  |             No by default             | The reader may explicitly check **Share this borrowed book with my household**.                        |
+| Borrowed + shared                                          |                                 Yes                                  |                  Yes                  | Household sees a borrowed copy attributed to its owner.                                                |
+| Wishlist only                                              |                                 Yes                                  |                  No                   | Wishlist is private personal intent.                                                                   |
+| Borrowed + wishlist                                        |                                 Yes                                  | Only when borrowed sharing is checked | Wanting a personal copy while borrowing one is valid; household never sees the wishlist flag.          |
+| Owned + wishlist                                           |                                 Yes                                  |           Yes because owned           | Valid when the reader owns one format/edition and still wants another; wishlist remains private.       |
+| Owned + borrowed                                           |                                 Yes                                  |           Yes because owned           | Valid across formats/copies; the borrowed-share checkbox has no effect while owned visibility applies. |
+| No possession flags, but reading history                   |                                 Yes                                  |                  No                   | A read or DNF stays in the reader's default personal library but does not imply household possession.  |
+| No possession or reading history, but other personal state | Stored until explicitly removed; visibility follows personal filters |                  No                   | Notes, plans, favourites, tags, and list membership do not imply household possession.                 |
+
+Additional rules derived from that contract:
+
+1. **Borrowed sharing is explicit, off by default, and household-scoped.** Never infer it from the
+   fact that the book was formerly owned or formerly visible. Unlinking or joining a different
+   household must not expose an old borrowed-share choice to the new household without a new
+   confirmation.
+2. **Wishlist is an independent flag, not a possession state.** It may coexist with owned or
+   borrowed because the reader may want another format, edition, or permanent copy. It is never
+   included in the household RPC payload.
+3. **Transitions recompute visibility immediately.** Marking a book owned makes it household-visible.
+   Removing owned status leaves it visible only if it is still borrowed and explicitly shared with
+   the current household. Returning a borrowed book disables its household visibility; a remaining
+   wishlist or reading history keeps it personal.
+   The borrowed-sharing control is relevant only to borrowed-only visibility and must not imply that
+   it can hide a book that is also owned.
+4. **No silent deletion when flags clear.** Clearing owned, borrowed, and wishlist does not itself
+   delete the personal book row when reads, reviews, notes, plans, tags, favourites, or list
+   membership remain. Actual removal is a separate explicit action with an accurate consequence
+   warning.
+5. **Household display preserves ownership.** Combine matching works for presentation only when the
+   UI still identifies every visible owner/copy. One member removing or unsharing a copy must not
+   remove another member's copy.
+6. **Only the personal owner may mutate possession or sharing.** Household members cannot edit,
+   unshare, return, or remove another member's book. From household scope, an owned personal copy may
+   be removed only through the same reviewed personal-removal operation; a borrowed personal copy
+   may leave household scope by unchecking sharing without leaving the personal library.
+7. **Household privacy remains curated.** Household responses may expose the bibliographic fields,
+   owner label, relevant copy/format facts, and whether the visible copy is owned or shared-borrowed.
+   Shared borrowed copies should read as **Borrowed by [member]**, never as household-owned.
+   They must not expose wishlist, reads/read status, ratings, reviews, notes, progress, plans,
+   favourites, personal tags, moods, tropes, or other private reader state.
+8. **Import, restore, and reconciliation do not invent consent.** New borrowed rows default to not
+   shared. A restore must not re-share a borrowed book into a different household. The current CSV
+   reconciliation is a narrow exception only because the owner explicitly ruled that every resolved
+   CSV row belongs in the present household; any borrowed CSV row therefore needs an explicit,
+   reviewed household-share assignment in the dry-run.
+9. **Offline and revoked access fail closed.** A cached household result, including a shared borrowed
+   book, is not renderable while household authorization is paused, unavailable, revoked, or
+   replaced.
+
 ## Existing baseline to audit, not rebuild
 
 Personal Book Detail already renders **Remove book** and calls `useDeleteBook`, which performs a
@@ -24,18 +86,9 @@ second deletion path with different semantics. Determine exactly which reader-ow
 which series ghosts remain, how list membership and reads behave, whether an undo/soft-removal model
 is justified, and what the confirmation must disclose.
 
-The current household is a read-only union of linked personal libraries, not an independently owned
-collection. Therefore:
-
-- Personal scope may offer **Remove from my library** for the signed-in reader's row.
-- Household scope may offer the same operation only for a copy owned by the signed-in reader, with
-  copy and owner identity stated explicitly.
-- Another member's copy remains read-only.
-- The work disappears from household scope only when no remaining household member owns a matching
-  visible copy.
-- A future ability to hide a personal book from household scope while keeping it personal would
-  require a new sharing/visibility model and an explicit owner decision; do not imply that behavior
-  with a destructive button.
+The current household remains a read-only union of the eligible personal rows defined above, not an
+independently owned collection. A work leaves household scope only when no member has an owned copy
+or an explicitly shared borrowed copy.
 
 Before implementation, trace every dependent personal object—reads, reviews, notes, plans, tags,
 lists, series entries, clubs, and cached/offline state—and decide what removal retains, deletes, or
