@@ -227,8 +227,13 @@ jobs:
     # `!= 'true'` (not `== 'false'`): an absent or garbled classifier output must RUN this job.
     if: github.event_name == 'pull_request' && needs.changes.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
-    # Cap re-derived post-apt (2026-08-19): 1m install trip + 4m CDN retry + 13.58m measured max suite = 18.58 → 19. The old 20 was sized around a 1.5m+0.5m+8m apt budget that no longer exists; see .github/actions/setup-browsers.
-    timeout-minutes: 19
+    # Cap re-derived from PR #361 (2026-08-26): its 18m9s cache-hit job comprised a 16m21s suite,
+    # an 8s browser-cache step, and about 1m40s of other setup/cleanup. The browser action's hard
+    # recovery bound is 5m30s: a 1m first download and 4m retry, each with a 15s kill grace.
+    # Replacing the 8s hit with that path yields about 23m31s → 25. The former 19m cap could not fit
+    # the recovery path it claimed to bound. This remains a tight tripwire and changes no green-run
+    # work: no new retry, sleep, job, or suite split. See .github/actions/setup-browsers.
+    timeout-minutes: 25
     env:
       # The LOCAL Supabase stack's well-known demo values — already hardcoded in every e2e spec
       # file (the same values the committed apps/web/.env now carries), not a secret. Deliberately the
