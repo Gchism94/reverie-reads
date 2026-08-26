@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { makeBook } from '../../../../packages/core/src/book.fixture'
-import { norm, type Contributor } from '@reverie/core'
+import { workKeyOf, type Contributor } from '@reverie/core'
 import type { SearchResult } from './search'
 import type { WorkRow } from '../data/works'
 import { resultIsbn, resultWorkKey, triageLabel, triageResults, workRowKeys } from './addTriage'
@@ -27,7 +27,7 @@ const work = ({
   ...over
 }: Partial<WorkRow> & { title: string; author?: string }): WorkRow => ({
   id: 'work-1',
-  work_key: `${norm(over.title)}|${norm(author)}`,
+  work_key: workKeyOf({ title: over.title, last: author }),
   contributors: contribs(author),
   isbns: [],
   series: null,
@@ -199,6 +199,49 @@ describe('triageResults', () => {
       [],
       rows,
     )
+    expect(t[0]?.state).toBe('new')
+    expect(t[0]?.work).toBeNull()
+  })
+
+  it('does not fall back to an exact title when the result ISBN is ambiguous', () => {
+    const rows = [
+      work({ title: 'Exact Title', author: 'Exact Author', isbns: ['9780306406157'] }),
+      work({ title: 'Different Title', author: 'Other Author', isbns: ['9780306406157'] }),
+    ]
+    const t = triageResults(
+      [
+        result({
+          title: 'Exact Title',
+          authors: ['Exact Author'],
+          isbn13: '9780306406157',
+        }),
+      ],
+      [],
+      rows,
+    )
+    expect(t[0]?.state).toBe('new')
+    expect(t[0]?.work).toBeNull()
+  })
+
+  it('preserves non-Latin title and author identity instead of collapsing every work to |', () => {
+    const rows = [
+      work({ title: '三体', author: '刘慈欣', work_key: 'legacy:external-three-body' }),
+      work({ title: '活着', author: '余华', work_key: 'legacy:external-to-live' }),
+    ]
+
+    const t = triageResults([result({ title: '三体', authors: ['刘慈欣'] })], [], rows)
+    expect(resultWorkKey(t[0]!.result)).toBe('三体|刘慈欣')
+    expect(t[0]?.state).toBe('corpus')
+    expect(t[0]?.work).toBe(rows[0])
+  })
+
+  it('routes an ambiguous derived fallback to reconciliation instead of taking the first row', () => {
+    const rows = [
+      work({ title: '三体', author: '刘慈欣', work_key: 'external:first' }),
+      work({ title: '三体', author: '刘慈欣', work_key: 'external:second' }),
+    ]
+
+    const t = triageResults([result({ title: '三体', authors: ['刘慈欣'] })], [], rows)
     expect(t[0]?.state).toBe('new')
     expect(t[0]?.work).toBeNull()
   })

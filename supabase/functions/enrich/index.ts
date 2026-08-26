@@ -36,6 +36,7 @@ import {
 } from '../_shared/httpClassify.ts'
 import { captureEdgeError } from '../_shared/observe.ts'
 import { olHeaders } from '../_shared/olIdentity.ts'
+import { workIdentityPart } from '../_shared/workIdentity.ts'
 
 /** A cover edition choice surfaced to the import review + Cover Studio (distilled E1 alternate). */
 interface CoverAlternate {
@@ -60,7 +61,7 @@ interface EnrichInput {
 }
 
 const cleanIsbn = (s: string) => (s || '').replace(/[^0-9Xx]/g, '').toUpperCase()
-const norm = (s: string) => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+const norm = workIdentityPart
 // The old local UA ('Reverie/1.0 (personal book library; enrichment aggregator)') identified the app
 // but carried NO contact address, which is the half OL's identified tier actually requires — so it
 // bought nothing. OL calls now use the shared olHeaders() (name + contact, one home, guard-tested).

@@ -7,8 +7,10 @@ Status: **membership/removal foundation implemented on
 
 Completed in the feature branch:
 
-- stable `books.corpus_work_id` links, with provisional attributable corpus creation for unmatched
-  legacy and reader-added books;
+- stable `books.corpus_work_id` links that ordinary owner updates cannot mutate, with server-owned
+  rebinding constrained to one unambiguous ISBN or Unicode-preserving title/full-author identity;
+  unmatched rows create attributable provisional works and ambiguous fallbacks create explicit
+  reconciliation works instead of selecting a UUID by sort order;
 - first-class `household_works`, per-person borrowed-share sources, and a household enrichment
   overlay;
 - owned auto-inclusion, borrowed opt-in/opt-out, wishlist exclusion, and one work-level household
@@ -18,9 +20,29 @@ Completed in the feature branch:
 - independent household removal that preserves personal rows and corpus data and refuses removal
   while an active owned copy requires membership;
 - corpus synchronization for genre, subgenre, and cover candidates with an append-only edit audit;
+  a cover becomes shared only when its exact `u/{owner}/{book}/{revision}` object exists behind the
+  signed project issuer's origin and its option uses the reviewed object schema; request Host headers
+  are not trusted, and a different `COVER_PUBLIC_URL` origin remains safely unsupported until it has
+  an explicit database-controlled trust configuration;
 - household synchronization for tags and tropes without exposing ratings, reading state, plans,
   favourites, moods, or notes;
 - database, unit, cache-authorization, and presentation regression coverage.
+
+The PR review hardening pass also closes the following privacy boundaries:
+
+- both household read contracts admit owned rows or an active share for that exact borrowed book;
+  one copy admitting a work never exposes another member's unshared borrowed copy, and the legacy
+  compatibility RPC always reports `wishlist = false`;
+- migration deployment creates no household enrichment from historical personal tags/tropes and
+  promotes no historical personal tag or arbitrary cover into a provisional corpus work. Historical
+  annotation reconciliation remains a separate target-scoped operator data fix after inventory,
+  dry run, and owner approval; neither automatic owned inclusion nor the explicit borrowed checkbox
+  publishes pre-existing annotations;
+- every membership/corpus mutation rechecks current membership and work/link eligibility after its
+  serialization lock. The local two-session harness proves all five affected mutations against an
+  uncommitted concurrent unlink, plus the final-unlink lifecycle, without timing sleeps;
+- household trope overlays are typed and rendered, including when a trope is the overlay's only
+  content.
 
 Still pending and intentionally not performed:
 
@@ -31,10 +53,14 @@ Still pending and intentionally not performed:
 
 Verification completed on the feature branch:
 
-- 2,945 unit assertions passed across 146 test files;
-- 510 pgTAP assertions passed across 26 files after a clean local database reset;
+- 2,950 unit assertions passed across 146 test files;
+- 543 pgTAP assertions passed across 26 files after a clean local database reset;
 - the complete Playwright matrix passed with 218 runnable cases and 10 expected project skips;
 - typecheck, lint, formatting, production build, and `git diff --check` passed.
+
+The review hardening follow-up was checked with 83 focused membership pgTAP assertions, 80 focused
+core assertions, 36 focused web assertions, five deterministic concurrent-revocation races, and the
+concurrent final-unlink lifecycle before the whole-repository rerun recorded above.
 
 The first pgTAP invocation was intentionally discarded because it ran concurrently against the
 same local database just populated by Playwright. Its inflated global counts demonstrated fixture
@@ -147,7 +173,8 @@ history remain.
 
 `household_library_works()` is the primary work-level household contract. The previous
 `household_library_books()` signature remains temporarily as a staged-deploy compatibility path and
-hides archived personal rows, but new UI must not derive household membership from it.
+hides archived, wishlist-only, and unshared borrowed personal rows. Its retained `wishlist` field is
+always false; new UI must not derive household membership or personal intent from it.
 
 ## CSV reconciliation contract
 

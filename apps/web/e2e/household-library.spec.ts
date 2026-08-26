@@ -368,6 +368,7 @@ test('two linked personal libraries appear together without exposing personal co
       `Active copies: ${owner.displayName} (you), ${member.displayName}`,
     )
     await expect(detail).toContainText(seeded.sentinels.tag)
+    await expect(detail).toContainText(seeded.sentinels.trope)
     await expect(
       detail.getByRole('button', { name: /favourite|favorite|cover|shelf|edit/i }),
     ).toHaveCount(0)
@@ -430,6 +431,7 @@ test('two linked personal libraries appear together without exposing personal co
       `Active copies: ${owner.displayName} (you), ${member.displayName}`,
     )
     await expect(rail).toContainText(seeded.sentinels.tag)
+    await expect(rail).toContainText(seeded.sentinels.trope)
     await expect(rail.getByText(seeded.sentinels.note, { exact: false })).toHaveCount(0)
     await expect(rail.getByText(seeded.sentinels.mood, { exact: false })).toHaveCount(0)
 
@@ -465,6 +467,7 @@ test('the second reader gets the same household view with their own identity mar
   await expect(detail.getByRole('link')).toHaveCount(0)
   if (seeded) {
     await expect(detail).toContainText(seeded.sentinels.tag)
+    await expect(detail).toContainText(seeded.sentinels.trope)
     await expect(detail.getByText(seeded.sentinels.note, { exact: false })).toHaveCount(0)
     await expect(detail.getByText(seeded.sentinels.mood, { exact: false })).toHaveCount(0)
   }

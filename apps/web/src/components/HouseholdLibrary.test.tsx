@@ -80,6 +80,18 @@ describe('household Library presentation', () => {
     ).not.toBeInTheDocument()
   })
 
+  it('renders a trope-only household overlay in the detail DOM', () => {
+    const tropeOnly = {
+      ...book('reader-a', 'Avery'),
+      householdTags: [],
+      householdTropes: [{ name: 'Only One Bed', emphasis: 'pinned' as const }],
+    }
+    render(<HouseholdBookDetail book={tropeOnly} currentReaderId="reader-a" />)
+
+    expect(screen.getByText('Household notes')).toBeInTheDocument()
+    expect(screen.getByText(/Only One Bed/)).toBeInTheDocument()
+  })
+
   it('uses a real pressed-state scope control', () => {
     const onChange = vi.fn()
     render(<LibraryScopeControl scope="personal" onChange={onChange} />)

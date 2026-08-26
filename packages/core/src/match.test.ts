@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { norm } from './normalize'
+import { norm, workIdentityPart, workKeyOf } from './normalize'
 import {
   decideIntake,
   isStrong,
@@ -12,6 +12,7 @@ import {
   normalizeIsbn,
 } from './match'
 import { makeBook } from './book.fixture'
+import { workIdentityPart as edgeWorkIdentityPart } from '../../../supabase/functions/_shared/workIdentity'
 
 describe('ISBN normalization', () => {
   it('promotes ISBN-10 to ISBN-13 and matches either form', () => {
@@ -33,6 +34,17 @@ describe('ISBN normalization', () => {
     expect(normalizeIsbn('0-8044-2957-X')).toBe('9780804429573')
     expect(normalizeIsbn('0-8044-295X-7')).toBe('')
     expect(normalizeIsbn('97803064061X7')).toBe('')
+  })
+})
+
+describe('corpus identity', () => {
+  it('preserves Unicode letters and numbers while folding punctuation and compatibility forms', () => {
+    expect(workIdentityPart(' 三 體：ＩｂａÑｅｚ Ⅱ ')).toBe('三體ibanezii')
+    expect(edgeWorkIdentityPart(' 三 體：ＩｂａÑｅｚ Ⅱ ')).toBe('三體ibanezii')
+    expect(workKeyOf({ title: '三体', first: '刘', last: '慈欣' })).toBe('三体|刘慈欣')
+    expect(workKeyOf({ title: '活着', last: '余华' })).not.toBe(
+      workKeyOf({ title: '三体', last: '刘慈欣' }),
+    )
   })
 })
 

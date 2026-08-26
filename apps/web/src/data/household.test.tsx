@@ -186,7 +186,12 @@ describe('household query identity and RPC boundary', () => {
             shared: true,
           }],
           household_tags: ['found family'],
-          household_tropes: [],
+          household_tropes: [
+            { id: 'trope-1', name: ' Only One Bed ', emphasis: 'pinned' },
+            { name: 'Found Family', emphasis: 'unexpected-value' },
+            { name: '   ' },
+            'not-an-object',
+          ],
           pub_y: 2026,
           pub_m: null,
           pub_d: null,
@@ -210,6 +215,10 @@ describe('household query identity and RPC boundary', () => {
       id: 'work-1',
       position: 2.5,
       householdTags: ['found family'],
+      householdTropes: [
+        { id: 'trope-1', name: 'Only One Bed', emphasis: 'pinned' },
+        { name: 'Found Family', emphasis: 'present' },
+      ],
       owners: [{
         userId: 'reader-b',
         displayName: 'Blake',

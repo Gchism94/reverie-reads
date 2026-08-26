@@ -272,6 +272,16 @@ export function HouseholdBookDetail({
                 {tag}
               </span>
             ))}
+            {book.householdTropes.map((trope) => (
+              <span
+                key={trope.id ?? `${trope.name}:${trope.emphasis}`}
+                className="skin-control px-2.5 py-1 text-[12px] font-semibold text-ink"
+                style={{ background: 'var(--chip)' }}
+              >
+                {trope.emphasis === 'pinned' ? '✦ ' : ''}
+                {trope.name}
+              </span>
+            ))}
           </div>
         </div>
       )}

@@ -31,11 +31,17 @@ export interface HouseholdBook {
   isbns: string[]
   owners: HouseholdBookOwner[]
   householdTags: string[]
-  householdTropes: unknown[]
+  householdTropes: HouseholdTrope[]
   publicationYear: number | null
   publicationMonth: number | null
   publicationDay: number | null
   addedAt: string
+}
+
+export interface HouseholdTrope {
+  id?: string
+  name: string
+  emphasis: 'pinned' | 'present'
 }
 
 export interface HouseholdBookOwner {
@@ -110,6 +116,19 @@ const numericPosition = (value: number | string | null): number | null => {
   return Number.isFinite(parsed) ? parsed : null
 }
 
+const householdTropes = (value: readonly unknown[] | null): HouseholdTrope[] =>
+  (value ?? []).flatMap((entry) => {
+    if (!entry || typeof entry !== 'object') return []
+    const row = entry as { id?: unknown; name?: unknown; emphasis?: unknown }
+    const name = typeof row.name === 'string' ? row.name.trim() : ''
+    if (!name) return []
+    return [{
+      ...(typeof row.id === 'string' && row.id ? { id: row.id } : {}),
+      name,
+      emphasis: row.emphasis === 'pinned' ? 'pinned' : 'present',
+    }]
+  })
+
 /**
  * Explicit mappers are a second whitelist beside the RPC return signature. If the database
  * function ever grows a column, it does not silently become client state just because PostgREST
@@ -156,7 +175,7 @@ export const toHouseholdBook = (row: HouseholdBookRow): HouseholdBook => ({
       : [],
   ),
   householdTags: row.household_tags ?? [],
-  householdTropes: row.household_tropes ?? [],
+  householdTropes: householdTropes(row.household_tropes),
   publicationYear: row.pub_y,
   publicationMonth: row.pub_m,
   publicationDay: row.pub_d,

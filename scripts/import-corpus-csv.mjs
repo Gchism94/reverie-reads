@@ -86,7 +86,7 @@ import {
   assertNoCrossWorkIsbnCollisions,
 } from './corpus-import-lib.ts'
 import { runBackfill } from './corpus-backfill.ts'
-import { norm } from '../packages/core/src/normalize.ts'
+import { workKeyOf } from '../packages/core/src/normalize.ts'
 
 const URL_DEFAULT = 'http://127.0.0.1:55321'
 const SERVICE_DEFAULT =
@@ -181,7 +181,7 @@ async function fetchWorksIsbns() {
 function workFromBook(b) {
   const author = [b.author_first, b.author_last].filter(Boolean).join(' ').trim()
   return {
-    work_key: `${norm(b.title)}|${norm(author)}`,
+    work_key: workKeyOf({ title: b.title, last: author }),
     title: b.title,
     contributors: author ? [{ name: author, role: 'author', position: 0 }] : [],
     author_text: author,
@@ -283,9 +283,11 @@ async function mergeLibraryWorkIsbns(books) {
   for (const b of books) {
     const incoming = canonicalIsbns([b.isbn])
     if (!incoming.length) continue
-    const workKey = `${norm(b.title)}|${norm(
-      [b.author_first, b.author_last].filter(Boolean).join(' '),
-    )}`
+    const workKey = workKeyOf({
+      title: b.title,
+      first: b.author_first ?? '',
+      last: b.author_last ?? '',
+    })
     incomingByWork.set(
       workKey,
       canonicalIsbns([...(incomingByWork.get(workKey) ?? []), ...incoming]),
@@ -419,9 +421,11 @@ async function runImport() {
     assertNoCrossWorkIsbnCollisions([
       ...existingWorks.map((row) => ({ workKey: row.work_key, isbns: row.isbns ?? [] })),
       ...library.map((book) => ({
-        workKey: `${norm(book.row.title)}|${norm(
-          [book.row.author_first, book.row.author_last].filter(Boolean).join(' '),
-        )}`,
+        workKey: workKeyOf({
+          title: book.row.title,
+          first: book.row.author_first ?? '',
+          last: book.row.author_last ?? '',
+        }),
         isbns: [book.row.isbn],
       })),
     ])
@@ -443,7 +447,7 @@ async function runImport() {
   const possession = opt('possession') ?? 'owned'
   const current = await fetchLibrary(ownerId)
   const have = new Set(
-    current.map((b) => `${norm(b.title)}|${norm([b.first, b.last].filter(Boolean).join(' '))}`),
+    current.map((b) => workKeyOf({ title: b.title, first: b.first, last: b.last })),
   )
   const toInsert = fresh
     .filter((r) => !have.has(r.workKey))

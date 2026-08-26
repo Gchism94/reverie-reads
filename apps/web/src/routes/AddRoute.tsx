@@ -8,6 +8,7 @@ import {
   SERIES_POSITION,
   SKINS,
   toFirstLast,
+  workKeyOf,
   type Book,
   type Contributor,
   type Owned,
@@ -362,8 +363,17 @@ function AddForm({
       audiobook: isAudio,
     }
     const { first, last } = toFirstLast(contribs)
+    const editedIdentity = workKeyOf({ title: form.title.trim(), last: formatAuthors(contribs) })
+    const pickedIdentity = workKeyOf({
+      title: hit.title ?? '',
+      last: formatAuthors(contributorsFromAuthors(hit.authors ?? [])),
+    })
     const book: Partial<Book> & { title: string } = {
-      corpusWorkId: hit.corpusWorkId,
+      // A corpus pick is a binding, not a suggestion to carry across arbitrary title/author edits.
+      // Clearing it here lets the database resolve the edited bibliography (ISBN first, then the
+      // Unicode title/full-author key) instead of rejecting a stale supplied UUID.
+      corpusWorkId:
+        hit.corpusWorkId && editedIdentity === pickedIdentity ? hit.corpusWorkId : undefined,
       title: form.title.trim(),
       first,
       last,

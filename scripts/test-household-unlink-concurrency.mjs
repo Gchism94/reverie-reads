@@ -35,7 +35,7 @@ const sqlScalar = (statement) =>
     encoding: 'utf8',
   }).trim()
 
-const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds))
+const yieldTurn = () => new Promise((resolve) => setImmediate(resolve))
 
 class PsqlSession {
   constructor(name) {
@@ -156,9 +156,210 @@ async function waitForConcurrentState(workerPids) {
     if (barrierWaiters === 2 || (barrierWaiters === 1 && waitingWorkers === 2)) {
       return { barrierWaiters, waitingWorkers }
     }
-    await delay(25)
+    await yieldTurn()
   }
   throw new Error('timed out waiting for both unlink transactions to reach a proven lock state')
+}
+
+async function waitForBlockedWorker(workerPid, action) {
+  const deadline = Date.now() + 10_000
+  while (Date.now() < deadline) {
+    const blocked = Number(
+      sqlScalar(`
+        select count(*) from pg_catalog.pg_locks
+        where pid = ${workerPid} and not granted;
+      `),
+    )
+    if (blocked > 0) return
+    await yieldTurn()
+  }
+  throw new Error(`timed out waiting for ${action} to block behind the revocation lock`)
+}
+
+const authenticatedCall = (userId, statement) => `
+  begin;
+  set local role authenticated;
+  select set_config(
+    'request.jwt.claims',
+    '{"sub":"${userId}","role":"authenticated"}',
+    true
+  );
+  do $race$
+  declare
+    rejected boolean := false;
+  begin
+    begin
+      ${statement};
+    exception when sqlstate '40001' then
+      rejected := true;
+    end;
+    if not rejected then
+      raise exception 'expected serialization refusal after concurrent membership revocation';
+    end if;
+  end;
+  $race$;
+  commit;
+  select 'rejected-after-serialization';
+`
+
+async function runRevocationRace({ action, userId, statement, verify }) {
+  const revoker = new PsqlSession(`${action}-revoker`)
+  const worker = new PsqlSession(`${action}-worker`)
+  let workerResult = null
+  let revocationOpen = false
+  try {
+    const workerPid = Number(await worker.command('select pg_backend_pid();'))
+    assert.ok(Number.isInteger(workerPid), `${action} worker exposes a stable PID`)
+
+    await revoker.command(`
+      begin;
+      set local role service_role;
+      select public.unlink_household_member('${userId}'::uuid, '${householdId}'::uuid);
+      reset role;
+      select 'revoked-but-uncommitted';
+    `)
+    revocationOpen = true
+
+    workerResult = worker.command(authenticatedCall(userId, statement))
+    await waitForBlockedWorker(workerPid, action)
+    await revoker.command('commit;')
+    revocationOpen = false
+    assert.match(await workerResult, /rejected-after-serialization/, `${action} rejects stale auth`)
+    await verify()
+    console.log(`✓ ${action} rechecks authorization after its serialization lock`)
+  } finally {
+    if (revocationOpen) await revoker.command('rollback;').catch(() => {})
+    await Promise.allSettled([workerResult, worker.close(), revoker.close()])
+  }
+}
+
+async function relinkMember(ownerId, memberId) {
+  const linked = await admin.rpc('link_household', {
+    p_name: 'Concurrent final unlink fixture',
+    p_owner: ownerId,
+    p_members: [memberId],
+  })
+  if (linked.error || linked.data !== householdId) {
+    throw dbError('fixture member relink', linked.error)
+  }
+}
+
+async function exerciseAuthorizationRevocations({
+  ownerId,
+  memberId,
+  ownerBookId,
+  borrowedBookId,
+}) {
+  const ownerWorkId = sqlScalar(
+    `select corpus_work_id from public.books where id = '${ownerBookId}'::uuid;`,
+  )
+  const borrowedWorkId = sqlScalar(
+    `select corpus_work_id from public.books where id = '${borrowedBookId}'::uuid;`,
+  )
+
+  await runRevocationRace({
+    action: 'add-personal-book',
+    userId: memberId,
+    statement: `perform public.add_personal_book_to_household('${borrowedBookId}'::uuid)`,
+    verify: async () => {
+      assert.equal(
+        sqlScalar(
+          `select count(*) from public.household_book_shares
+           where book_id = '${borrowedBookId}'::uuid and removed_at is null;`,
+        ),
+        '0',
+        'revoked add creates no borrowed share',
+      )
+    },
+  })
+  await relinkMember(ownerId, memberId)
+
+  sqlScalar(`
+    begin;
+    set local role authenticated;
+    select set_config(
+      'request.jwt.claims',
+      '{"sub":"${memberId}","role":"authenticated"}',
+      true
+    );
+    select public.add_personal_book_to_household('${borrowedBookId}'::uuid);
+    commit;
+  `)
+
+  await runRevocationRace({
+    action: 'remove-personal-share',
+    userId: memberId,
+    statement: `perform public.remove_personal_book_from_household('${borrowedBookId}'::uuid)`,
+    verify: async () => {
+      assert.equal(
+        sqlScalar(
+          `select count(*) from public.household_book_shares
+           where book_id = '${borrowedBookId}'::uuid and removed_at is null;`,
+        ),
+        '1',
+        'revoked share removal leaves the prior share active',
+      )
+    },
+  })
+  await relinkMember(ownerId, memberId)
+
+  await runRevocationRace({
+    action: 'remove-household-work',
+    userId: memberId,
+    statement: `perform public.remove_household_work('${borrowedWorkId}'::uuid)`,
+    verify: async () => {
+      assert.equal(
+        sqlScalar(
+          `select count(*) from public.household_works
+           where household_id = '${householdId}'::uuid and work_id = '${borrowedWorkId}'::uuid
+             and removed_at is null;`,
+        ),
+        '1',
+        'revoked household removal leaves membership active',
+      )
+    },
+  })
+  await relinkMember(ownerId, memberId)
+
+  await runRevocationRace({
+    action: 'update-household-enrichment',
+    userId: memberId,
+    statement: `perform public.update_household_work_enrichment(
+      '${ownerWorkId}'::uuid, array['unauthorized-race'], '[]'::jsonb
+    )`,
+    verify: async () => {
+      assert.equal(
+        sqlScalar(
+          `select count(*) from public.household_work_enrichment
+           where household_id = '${householdId}'::uuid and work_id = '${ownerWorkId}'::uuid
+             and 'unauthorized-race' = any(tags);`,
+        ),
+        '0',
+        'revoked enrichment update writes no household annotation',
+      )
+    },
+  })
+  await relinkMember(ownerId, memberId)
+
+  await runRevocationRace({
+    action: 'update-corpus-metadata',
+    userId: memberId,
+    statement: `perform public.update_corpus_work_metadata(
+      '${ownerWorkId}'::uuid,
+      'unauthorized-race', null, array['unauthorized-race'], '{}', null, '[]'::jsonb
+    )`,
+    verify: async () => {
+      assert.equal(
+        sqlScalar(
+          `select count(*) from public.works
+           where id = '${ownerWorkId}'::uuid and genre = 'unauthorized-race';`,
+        ),
+        '0',
+        'revoked corpus update changes no global metadata',
+      )
+    },
+  })
+  await relinkMember(ownerId, memberId)
 }
 
 const unlinkTransaction = (session, userId, reviewedHouseholdId) =>
@@ -181,6 +382,33 @@ async function main() {
   })
   if (linked.error || !linked.data) throw dbError('fixture household link', linked.error)
   householdId = linked.data
+
+  const ownerBookId = sqlScalar(
+    `select id from public.books where owner_id = '${firstUserId}'::uuid order by id limit 1;`,
+  )
+  const borrowed = await admin
+    .from('books')
+    .insert({
+      owner_id: secondUserId,
+      title: 'Concurrent borrowed authorization fixture',
+      author_first: 'Local',
+      author_last: 'Borrower',
+      authors_display: 'Local Borrower',
+      status: 'standalone',
+      ownership: 'unowned',
+      borrowed: true,
+    })
+    .select('id')
+    .single()
+  if (borrowed.error || !borrowed.data)
+    throw dbError('borrowed race fixture insert', borrowed.error)
+
+  await exerciseAuthorizationRevocations({
+    ownerId: firstUserId,
+    memberId: secondUserId,
+    ownerBookId,
+    borrowedBookId: borrowed.data.id,
+  })
 
   const controller = new PsqlSession('controller')
   const workers = [new PsqlSession('first'), new PsqlSession('second')]
@@ -254,7 +482,7 @@ async function main() {
   assert.equal(memberships.count, 0, 'both memberships are removed')
   assert.equal(household.data, null, 'the empty household is deleted')
   assert.equal(profiles.data?.length, 2, 'both profiles remain')
-  assert.equal(books.data?.length, 2, 'both personal books remain')
+  assert.equal(books.data?.length, 3, 'both owned books and the borrowed fixture remain')
   console.log(
     '✓ concurrent final unlinks preserve both accounts/libraries and delete the household',
   )

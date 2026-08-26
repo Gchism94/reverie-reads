@@ -231,6 +231,8 @@ books               (id pk, owner_id fk→profiles, corpus_work_id fk→works no
                      enriched_at, tropes_suggested_at,
                      added_at, updated_at,
                      removed_at, removed_by)          -- soft personal-library removal
+                     -- corpus_work_id is immutable to authenticated owner updates; insert and
+                     -- server rebind resolve one unique ISBN or Unicode title/full-author match
                      -- NOTE: no aggregate_rating column, and there will not be one.
 
 -- contributors: ordered, multi-role. `books.author_first/last` stay as the denormalized primary.
@@ -347,6 +349,8 @@ works                (id pk, work_key unique, work_id, title, contributors jsonb
                      cover_url/source/source_url/color/confidence, cover_options jsonb,
                      genre, subgenre, genres text[], subgenres text[], tags text[], isbns text[],
                      metadata_status, creation_source, created_by, created_at, updated_at)
+                     -- work_key preserves Unicode letters/numbers after NFKD + mark removal;
+                     -- creation_source may be reconciliation for an ambiguous safe refusal
 work_metadata_edits  (id pk, work_id fk, editor_id, previous_value jsonb, next_value jsonb,
                      created_at)                      -- append-only corpus edit audit
 
@@ -377,6 +381,26 @@ checks the household control. Wishlist and reading state never create household 
 attribution. It deliberately omits ratings, favourites, read state/logs, notes, intensity/darkness,
 plans/progress, wishlist, moods, and lists. Household tags/tropes live in the household overlay;
 genre, subgenre, and cover candidates flow to the corpus through an attributable allowlisted path.
+An owned row is visible as a copy; a borrowed row is visible only when an active
+`household_book_shares` row exists for that exact book, work, and household. A different copy that
+admits the same work cannot reveal it. The legacy `household_library_books()` compatibility RPC uses
+those same sources and returns its retained `wishlist` field as false.
+
+Migration deployment does not synthesize `household_work_enrichment` from historical personal tags
+or tropes. Historical sharing is an owner-approved, target-scoped reconciliation data fix after an
+inventory and dry run. Neither automatic owned inclusion nor the borrowed-share checkbox publishes
+pre-existing annotations. New edits made after household inclusion synchronize through the scoped
+overlay triggers.
+
+Corpus cover publication reuses the existing cover ingestion boundary: a newly shared option must
+have the reviewed `url`/optional `source`/optional `sourceUrl` shape, resolve to the project origin
+derived from the signed JWT issuer, and correspond to a real `covers` object under
+`u/{owner}/{book}/`. Request Host headers are never trusted. Existing curated external options may be
+retained or selected, but arbitrary new remote URLs cannot be introduced by a personal edit or
+`update_corpus_work_metadata`. `COVER_PUBLIC_URL` must remain unset or use that same origin; a
+different CDN origin is safely rejected until it has an explicit database-controlled trust
+configuration. Membership and work eligibility are rechecked after the row locks in every
+household/corpus mutation so a concurrent unlink wins in the safe direction.
 Personal removal is a soft archive and cannot remove the household or corpus row. Household removal
 cannot remove personal or corpus rows and is refused while any active owned personal copy requires
 membership. The legacy `household_library_books()` RPC remains only for staged-deploy compatibility.

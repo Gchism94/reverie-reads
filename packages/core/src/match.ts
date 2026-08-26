@@ -1,5 +1,5 @@
 import type { Book, Owned, ReadEntry } from './types'
-import { authorOf, norm } from './normalize'
+import { authorOf, norm, workIdentityPart } from './normalize'
 import { contributorsChanged, reconcileContributors } from './contributors'
 import { mergePossession } from './ownership'
 
@@ -65,23 +65,12 @@ const authorAuthorKey = (b: { title: string; last?: string }) => norm(b.title) +
 
 // ── THE MATCHING FOLD — comparison only, never storage ──────────────────────────────────────────
 //
-// `norm` keeps `[a-z0-9]` and drops everything else, so a diacritic does not degrade to its base
-// letter — it VANISHES. `norm('Ibañez')` is `'ibaez'`, which compares equal to nothing a person
-// would type, and unequal to `'ibanez'`. Measured on the 2026-08-23 import: one book lost this way.
+// Corpus identity and library comparison now share the Unicode-preserving fold. It degrades
+// diacritics to their base letters without collapsing non-Latin titles/authors to empty strings.
 //
-// The fix is NFD decomposition (ñ → n + U+0303) then dropping the combining marks, so ñ folds to n
-// before `norm` sees it.
-//
-// ⚠ THIS MUST NOT MOVE INTO `norm`. Every stored `works.work_key` and every `'ta:'` enrichment-cache
-// key is built on `norm` as it stands; folding there would orphan all of them at once, silently —
-// the join simply stops finding rows. `normalize.test.ts` pins `norm('Ibañez') === 'ibaez'` so that
-// a later "cleanup" cannot quietly perform that migration.
-const fold = (s: string | null | undefined): string =>
-  norm(
-    String(s ?? '')
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, ''),
-  )
+// ⚠ THIS MUST NOT MOVE INTO `norm`. `importKey` persists `norm` output in merge-verdict primary
+// keys; changing that shape would silently orphan readers' prior duplicate decisions.
+const fold = workIdentityPart
 
 /** The whole author name, folded — split-invariant. This is what makes 'Scarlett'/'St. Clair' and
  *  'Scarlett St.'/'Clair' the same person: both compose to 'scarlettstclair'. */
