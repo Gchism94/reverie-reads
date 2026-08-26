@@ -64,6 +64,9 @@ async function client(): Promise<Client> {
 /** Seed the corpus via the service role — the same standing write path the import script uses.
  *  Rows are namespaced by title prefix and re-seeded per test file run. */
 async function seedWorks(c: Client): Promise<void> {
+  // Personal rows now hold a restrictive corpus FK. Clear the fixture copy before replacing its
+  // corpus rows; production removal is soft, but deterministic fixture reseeding owns both sides.
+  await ok(c.admin.from('books').delete().eq('owner_id', c.uid), 'discover-corpus books cleanup')
   await ok(
     c.admin.from('works').delete().like('title', 'Corpus Probe %'),
     'discover-corpus works cleanup',
@@ -86,7 +89,6 @@ async function seedWorks(c: Client): Promise<void> {
   const { error } = await c.admin.from('works').insert(rows)
   if (error) throw new Error(`discover-corpus works seed failed: ${JSON.stringify(error)}`)
   // the owner's own library holds probe 001, so hide-what-I-have has something real to hide
-  await ok(c.admin.from('books').delete().eq('owner_id', c.uid), 'discover-corpus books cleanup')
   await ok(
     c.admin.from('books').insert({
       owner_id: c.uid,

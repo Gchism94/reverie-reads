@@ -40,6 +40,7 @@ const filters = (over: Partial<{ genre: string; tag: string; q: string }> = {}) 
 })
 
 const row = (over: Partial<WorkRow> = {}): WorkRow => ({
+  id: 'work-1',
   work_key: 'k',
   title: 'Ash Crown',
   contributors: [{ name: 'Vera Stone', role: 'author', position: 0 }],

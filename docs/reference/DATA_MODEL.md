@@ -39,7 +39,7 @@ comments. Reproduced here with the parts that most often get guessed wrong calle
 
 ```jsonc
 {
-  id, title,
+  id, corpusWorkId, title,      // stable link to the shared works row
   first, last,                 // primary author, denormalized — mirrors contributors[0]
   contributors: [ { id?, name, role, position } ],   // ordered; role ∈ author | co_author |
                                                      // translator | illustrator | narrator | editor
@@ -203,7 +203,7 @@ profiles            (id pk = auth user, display_name, created_at,
                      auto_merge_duplicates bool not null default true,
                      default_store_id, default_store_name, default_store_website)
 
-books               (id pk, owner_id fk→profiles, title,
+books               (id pk, owner_id fk→profiles, corpus_work_id fk→works not null, title,
                      author_first, author_last, authors_display,
                      series, position numeric, series_count smallint,
                      status text,          -- books_status_check: the 7 SeriesStatus values
@@ -226,10 +226,11 @@ books               (id pk, owner_id fk→profiles, title,
                      read_status text not null default 'unset',
                                           -- books_read_status_check: unset|Unread|Reading|Read|DNF
                      source, pub_y, pub_m, pub_d,     -- flexible precision; m/d range-checked
-                     plan_date, progress smallint,
+                     plan_y, plan_m, plan_d, progress smallint,
                      reading_position numeric, reading_now_hidden bool,
                      enriched_at, tropes_suggested_at,
-                     added_at, updated_at)
+                     added_at, updated_at,
+                     removed_at, removed_by)          -- soft personal-library removal
                      -- NOTE: no aggregate_rating column, and there will not be one.
 
 -- contributors: ordered, multi-role. `books.author_first/last` stay as the denormalized primary.
@@ -332,6 +333,22 @@ and CSV import wrote whole batches of them).
 households           (id pk, name, created_at, updated_at)
 household_members    (household_id fk, user_id fk unique, role 'owner'|'member', joined_at,
                      primary key (household_id, user_id))
+household_works      (household_id fk, work_id fk→works, added_by, inclusion_source,
+                     added_at, removed_at, removed_by,
+                     primary key (household_id, work_id))
+household_book_shares(book_id fk→books, household_id fk, work_id fk, shared_by, shared_at,
+                     removed_at, removed_by)          -- per-person borrowed checkbox source
+household_work_enrichment
+                    (household_id, work_id, tags text[], tropes jsonb, updated_by, updated_at,
+                     primary key (household_id, work_id))
+
+works                (id pk, work_key unique, work_id, title, contributors jsonb, author_text,
+                     series/position/count/status, pages, publication date,
+                     cover_url/source/source_url/color/confidence, cover_options jsonb,
+                     genre, subgenre, genres text[], subgenres text[], tags text[], isbns text[],
+                     metadata_status, creation_source, created_by, created_at, updated_at)
+work_metadata_edits  (id pk, work_id fk, editor_id, previous_value jsonb, next_value jsonb,
+                     created_at)                      -- append-only corpus edit audit
 
 clubs               (id pk, title, author, cover_url,
                      unit_type 'chapter'|'page'|'percent', unit_count, unit_label,
@@ -351,17 +368,22 @@ Also present, supporting features rather than the core library: `book_embeddings
 `geo_cache` / `releases_cache`, `rate_limits`, `content_reports`, `merge_verdicts`,
 `reading_orders` / `reading_order_items`, `author_follows`.
 
-**Households link libraries; they do not merge them.** `books` retains its owner-only SELECT and
-write policies, so membership does not expose another reader's raw row through PostgREST.
-`household_library_books()` is the one cross-account read path and returns a fixed whitelist of
-bibliographic + possession fields. It deliberately omits ratings, favourites, read state/logs,
-notes, spice/darkness, plans/progress and personal tags/moods/tropes. `household_roster()` supplies
-member identity even when a member's library is empty. V1 membership changes are service-role,
-owner-run operations through `link_household` and `unlink_household_member`. Both implementation
-scripts are dry-run-first and show the actual household plus its complete roster before a write;
-the linker refuses an incomplete existing roster. Unlinking removes only membership and mutual
-household-library access—the account, profile, and personal books remain intact. UUIDs are supplied
-only at runtime (`20260829010000_household_foundation.sql`).
+**Personal, household, and corpus membership are independent.** `books` is owner-only reader state;
+`household_works` is collective membership; `works` is shared catalog identity. Owned personal
+copies ensure household membership. Borrowed copies create a per-book share only after the reader
+checks the household control. Wishlist and reading state never create household membership.
+
+`household_library_works()` returns one curated row per work plus only active possession/copy
+attribution. It deliberately omits ratings, favourites, read state/logs, notes, intensity/darkness,
+plans/progress, wishlist, moods, and lists. Household tags/tropes live in the household overlay;
+genre, subgenre, and cover candidates flow to the corpus through an attributable allowlisted path.
+Personal removal is a soft archive and cannot remove the household or corpus row. Household removal
+cannot remove personal or corpus rows and is refused while any active owned personal copy requires
+membership. The legacy `household_library_books()` RPC remains only for staged-deploy compatibility.
+
+Membership linking/unlinking remains service-role, owner-run, dry-run-first operation through
+`link_household` and `unlink_household_member`. Runtime client mutations use narrow authenticated
+RPCs with no direct table grants.
 
 ### Notes
 

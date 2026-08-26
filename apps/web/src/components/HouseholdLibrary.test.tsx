@@ -5,13 +5,11 @@ import { HouseholdBookCard, HouseholdBookDetail, LibraryScopeControl } from './H
 
 const book = (ownerId: string, ownerName: string): HouseholdBook => ({
   id: `book-${ownerId}`,
-  ownerId,
-  ownerName,
   title: 'Duplicate Title',
   author: 'Quill Marrowbane',
   cover: 'https://covers.example.test/duplicate.jpg',
-  coverThumb: '',
   coverColor: '',
+  coverOptions: [],
   series: 'Household Cycle',
   position: 2,
   seriesCount: 3,
@@ -20,14 +18,23 @@ const book = (ownerId: string, ownerName: string): HouseholdBook => ({
   genres: [],
   subgenre: '',
   subgenres: [],
-  isbn: '9780000000001',
-  ownership: 'owned',
-  borrowed: false,
-  wishlist: true,
-  ownedPhysical: 'hardcover',
-  ownedEbook: true,
-  ownedAudiobook: false,
-  bookFormat: '',
+  isbns: ['9780000000001'],
+  owners: [
+    {
+      bookId: `copy-${ownerId}`,
+      userId: ownerId,
+      displayName: ownerName,
+      ownership: 'owned',
+      borrowed: false,
+      ownedPhysical: 'hardcover',
+      ownedEbook: true,
+      ownedAudiobook: false,
+      bookFormat: '',
+      shared: false,
+    },
+  ],
+  householdTags: [],
+  householdTropes: [],
   publicationYear: 2026,
   publicationMonth: null,
   publicationDay: null,
@@ -35,7 +42,7 @@ const book = (ownerId: string, ownerName: string): HouseholdBook => ({
 })
 
 describe('household Library presentation', () => {
-  it('keeps duplicate titles distinguishable by textual member identity', () => {
+  it('names the active personal copies while keeping household works distinct', () => {
     const openA = vi.fn()
     const openB = vi.fn()
     render(
@@ -53,21 +60,19 @@ describe('household Library presentation', () => {
       </>,
     )
 
-    expect(screen.getByText("Avery (you)'s library")).toBeInTheDocument()
-    expect(screen.getByText("Blake's library")).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: /from Blake/ }))
+    expect(screen.getAllByText('Avery (you)')).not.toHaveLength(0)
+    expect(screen.getAllByText('Blake')).not.toHaveLength(0)
+    fireEvent.click(screen.getAllByRole('button', { name: /in the household library/ })[1]!)
     expect(openB).toHaveBeenCalledOnce()
     expect(openA).not.toHaveBeenCalled()
   })
 
-  it('renders shared details without any personal mutation or full-page affordance', () => {
+  it('renders corpus details and explains the independent household lifecycle', () => {
     render(<HouseholdBookDetail book={book('reader-a', 'Avery')} currentReaderId="reader-a" />)
 
-    expect(screen.getByText("From Avery (you)'s personal library")).toBeInTheDocument()
-    expect(screen.getByText('Read-only household view')).toBeInTheDocument()
-    expect(screen.getByText('Owned')).toBeInTheDocument()
-    expect(screen.getByText('Wishlist')).toBeInTheDocument()
-    expect(screen.getByText('Hardcover')).toBeInTheDocument()
+    expect(screen.getByText('In your household library')).toBeInTheDocument()
+    expect(screen.getByText('Active copies: Avery (you)')).toBeInTheDocument()
+    expect(screen.getByText(/Owned · Hardcover · Ebook/)).toBeInTheDocument()
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /full page/i })).not.toBeInTheDocument()
     expect(

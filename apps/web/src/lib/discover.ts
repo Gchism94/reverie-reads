@@ -16,6 +16,8 @@ import { supabase } from './supabase'
 
 /** Same shape as the Add screen's search hits — a Discover pick IS an add prefill. */
 export interface DiscoverHit {
+  /** Present for corpus-backed hits so Add preserves the exact shared-work identity. */
+  corpusWorkId?: string
   title: string
   authors: string[]
   cover: string

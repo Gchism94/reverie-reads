@@ -4,6 +4,7 @@
 export interface BookRow {
   id: string
   owner_id: string
+  corpus_work_id: string
   title: string
   author_first: string | null
   author_last: string | null
@@ -59,6 +60,8 @@ export interface BookRow {
   enriched_at: string | null
   added_at: string
   updated_at: string
+  removed_at: string | null
+  removed_by: string | null
   /** ordered contributor join (present when the books query selects it) */
   book_authors?: BookAuthorRow[]
   book_tropes?: { emphasis: string; tropes: { id: string; name: string } | null }[]

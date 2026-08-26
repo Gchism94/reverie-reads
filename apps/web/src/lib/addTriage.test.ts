@@ -26,6 +26,7 @@ const work = ({
   author = '',
   ...over
 }: Partial<WorkRow> & { title: string; author?: string }): WorkRow => ({
+  id: 'work-1',
   work_key: `${norm(over.title)}|${norm(author)}`,
   contributors: contribs(author),
   isbns: [],

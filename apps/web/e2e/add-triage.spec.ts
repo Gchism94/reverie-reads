@@ -100,11 +100,11 @@ async function client(): Promise<Client> {
 
 /** The reader owns one of the three, the corpus describes another, nothing describes the third. */
 async function seed(c: Client): Promise<string> {
+  await ok(c.admin.from('books').delete().eq('owner_id', c.uid), 'add-triage books cleanup')
   await ok(
     c.admin.from('works').delete().eq('work_key', 'canonicalemberarchive|canonicalember'),
     'add-triage works cleanup',
   )
-  await ok(c.admin.from('books').delete().eq('owner_id', c.uid), 'add-triage books cleanup')
 
   // EVERY ROW GETS EVERY COLUMN THE BATCH USES. PostgREST sends one INSERT for the whole array and
   // its column list is the UNION of every row's keys, so a row omitting a key the batch inserts
@@ -226,7 +226,7 @@ async function search(page: Page): Promise<string> {
 test('each result says which of the three states it is in, in words', async ({ page }) => {
   await search(page)
   await expect.poll(() => labelOf(page, CORPUS), { timeout: 15_000 }).toBe('In the corpus')
-  expect(await labelOf(page, OWNED)).toBe('In your library')
+  expect(await labelOf(page, OWNED)).toBe('In your library · also in the corpus')
   expect(await labelOf(page, FRESH)).toBe('New to your library')
 })
 
@@ -331,5 +331,5 @@ test('classification does not block the results — labels arrive after the list
 
   release()
   await expect.poll(() => labelOf(page, CORPUS), { timeout: 20_000 }).toBe('In the corpus')
-  expect(await labelOf(page, OWNED)).toBe('In your library')
+  expect(await labelOf(page, OWNED)).toBe('In your library · also in the corpus')
 })

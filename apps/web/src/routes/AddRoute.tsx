@@ -70,6 +70,7 @@ interface SearchHit {
  * prefill is worth; the tags stay on the corpus row for whoever wires the refine step to it.
  */
 interface Picked extends Partial<SearchHit> {
+  corpusWorkId?: string
   series?: string
   position?: string
   genre?: string
@@ -362,6 +363,7 @@ function AddForm({
     }
     const { first, last } = toFirstLast(contribs)
     const book: Partial<Book> & { title: string } = {
+      corpusWorkId: hit.corpusWorkId,
       title: form.title.trim(),
       first,
       last,
@@ -927,6 +929,7 @@ function AddScreen() {
   const [picked, setPicked] = useState<Picked | null>(() =>
     prefill.title
       ? {
+          corpusWorkId: prefill.work,
           title: prefill.title,
           authors: prefill.author ? [prefill.author] : [],
           cover: prefill.cover ?? '',
@@ -1132,6 +1135,8 @@ const str = (v: unknown): string | undefined => (typeof v === 'string' && v.trim
 /** All-optional prefill params — the explicit optional-key type keeps plain `to="/add"` links
  *  valid everywhere (no required `search` prop). */
 interface AddPrefill {
+  /** exact shared-work identity when the pick came from the Reverie corpus */
+  work?: string
   title?: string
   author?: string
   isbn?: string
@@ -1148,6 +1153,7 @@ export const addRoute = createRoute({
   component: AddScreen,
   validateSearch: (s: Record<string, unknown>): AddPrefill => {
     const out: AddPrefill = {}
+    if (str(s.work)) out.work = str(s.work)
     if (str(s.title)) out.title = str(s.title)
     if (str(s.author)) out.author = str(s.author)
     if (str(s.isbn)) out.isbn = str(s.isbn)

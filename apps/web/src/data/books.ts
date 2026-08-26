@@ -27,6 +27,7 @@ export function useBooks() {
             '*, book_authors(position, role, authors(id, name)), book_tropes(emphasis, tropes(id, name)), book_moods(moods(id, name))',
             { count: 'exact' },
           )
+          .is('removed_at', null)
           .order('added_at', { ascending: true })
           .order('id')
           .range(from, to),
@@ -95,7 +96,7 @@ export function useDeleteBook() {
   return useMutation({
     meta: { action: 'Deleting the book' },
     mutationFn: async (id: string): Promise<void> => {
-      const { error } = await supabase.from('books').delete().eq('id', id)
+      const { error } = await supabase.rpc('remove_personal_book', { p_book: id })
       if (error) throw error
     },
     onMutate: async (id) => {
@@ -107,6 +108,11 @@ export function useDeleteBook() {
     onError: (_err, _id, ctx) => {
       if (ctx?.previous) qc.setQueryData(booksKey, ctx.previous)
     },
-    onSettled: () => qc.invalidateQueries({ queryKey: booksKey }),
+    onSettled: async () => {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: booksKey }),
+        qc.invalidateQueries({ queryKey: ['household'] }),
+      ])
+    },
   })
 }

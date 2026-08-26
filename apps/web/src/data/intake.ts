@@ -48,6 +48,7 @@ export function incomingToBook(inc: Incoming): Book {
   const subgenre = inc.subgenre ?? ''
   return {
     id: '',
+    corpusWorkId: inc.corpusWorkId,
     title: inc.title,
     first: inc.first ?? '',
     last: inc.last ?? '',
@@ -129,6 +130,13 @@ export async function foldIn(
   const result = { ...mergeImport(existing, inc), patch: applyFieldPicks(existing, inc, picks) }
   if (Object.keys(result.patch).length) {
     const { error } = await supabase.from('books').update(toBookRow(result.patch)).eq('id', existing.id)
+    if (error) throw error
+  }
+  if (inc.corpusWorkId && !existing.corpusWorkId) {
+    const { error } = await supabase
+      .from('books')
+      .update({ corpus_work_id: inc.corpusWorkId })
+      .eq('id', existing.id)
     if (error) throw error
   }
   // A reconciled contributor list (not a books column) persists through the RPC.

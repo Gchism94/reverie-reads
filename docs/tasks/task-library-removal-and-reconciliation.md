@@ -1,6 +1,45 @@
 # Task: corpus-preserving library removal and owner reconciliation
 
-Status: **queued after recovery, contributor-history cleanup, and workspace pruning**.
+Status: **membership/removal foundation implemented on
+`codex/feat-library-membership-foundation`; production reconciliation remains pending owner review**.
+
+## Implementation checkpoint — 2026-08-26
+
+Completed in the feature branch:
+
+- stable `books.corpus_work_id` links, with provisional attributable corpus creation for unmatched
+  legacy and reader-added books;
+- first-class `household_works`, per-person borrowed-share sources, and a household enrichment
+  overlay;
+- owned auto-inclusion, borrowed opt-in/opt-out, wishlist exclusion, and one work-level household
+  card with active-copy attribution;
+- soft personal removal that preserves reads, lists, corpus identity, household membership, and
+  household enrichment;
+- independent household removal that preserves personal rows and corpus data and refuses removal
+  while an active owned copy requires membership;
+- corpus synchronization for genre, subgenre, and cover candidates with an append-only edit audit;
+- household synchronization for tags and tropes without exposing ratings, reading state, plans,
+  favourites, moods, or notes;
+- database, unit, cache-authorization, and presentation regression coverage.
+
+Still pending and intentionally not performed:
+
+- inspection and dry-run classification of the private CSV;
+- the deterministic reconciliation operator and verified rollback artifact;
+- owner approval and owner-executed production migration/reconciliation;
+- production Account A/B and household smoke verification.
+
+Verification completed on the feature branch:
+
+- 2,945 unit assertions passed across 146 test files;
+- 510 pgTAP assertions passed across 26 files after a clean local database reset;
+- the complete Playwright matrix passed with 218 runnable cases and 10 expected project skips;
+- typecheck, lint, formatting, production build, and `git diff --check` passed.
+
+The first pgTAP invocation was intentionally discarded because it ran concurrently against the
+same local database just populated by Playwright. Its inflated global counts demonstrated fixture
+contamination; a clean reset followed by the isolated pgTAP run above matches the fresh database
+provided to the GitHub Actions job.
 
 Private input: the owner-supplied, gitignored `chism-books-library.csv`. Never commit the file, its
 reader data, a production export, or a title-level reconciliation report.
@@ -98,29 +137,17 @@ Additional rules derived from that contract:
     book, is not renderable while household authorization is paused, unavailable, revoked, or
     replaced.
 
-## Existing baseline to audit, not rebuild
+## Implemented baseline and compatibility path
 
-Personal Book Detail already renders **Remove book** and calls `useDeleteBook`, which performs a
-direct owner-RLS-scoped delete from `public.books` with an optimistic cache removal. The current
-confirmation says only “Remove this book from your library?” Several dependent tables cascade on
-book deletion, while `series_entries.book_id` uses `on delete set null`. The corpus tables are
-referenced by the personal row and are not deleted by that direction of the relationship.
+Personal Book Detail now calls the owner-scoped `remove_personal_book` RPC. It archives the personal
+row with `removed_at` instead of deleting it, and every ordinary personal-library read filters those
+rows out. Reads, list membership, tropes, moods, series links, and other dependent state therefore
+remain recoverable. The confirmation names the personal scope and explicitly says the household and
+history remain.
 
-Treat this as an existing capability that needs a full consequence and UX audit. Do not add a
-second deletion path with different semantics. Determine exactly which reader-owned data is lost,
-which series ghosts remain, how list membership and reads behave, whether an undo/soft-removal model
-is justified, and what the confirmation must disclose.
-
-The shipped household RPC is currently a read-only union of eligible personal rows. That is a
-baseline limitation, not the target model: it cannot retain a household book after its personal row
-is deleted and cannot hold household-only books or shared enrichment. Implementation therefore
-requires first-class household-work membership plus a household overlay, with independent RLS/RPC
-rules and migration/backfill coverage. Do not try to simulate independence in the client cache.
-
-Before implementation, trace every dependent personal object—reads, reviews, notes, plans, tags,
-lists, series entries, clubs, and cached/offline state—and decide what removal retains, deletes, or
-requires a warning. Prefer a recoverable removal model if these dependencies make a hard delete
-surprising. RLS and RPC grants must prevent cross-owner removal.
+`household_library_works()` is the primary work-level household contract. The previous
+`household_library_books()` signature remains temporarily as a staged-deploy compatibility path and
+hides archived personal rows, but new UI must not derive household membership from it.
 
 ## CSV reconciliation contract
 

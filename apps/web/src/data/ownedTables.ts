@@ -34,6 +34,8 @@ export interface OwnedTable {
   /** The column that ties a row to a user. */
   owner: string
   plan: BackupPlan
+  /** Attribution reaches a user, but the row belongs to a live collective/shared record. */
+  collective?: true
 }
 
 export const USER_OWNED_TABLES: OwnedTable[] = [
@@ -96,6 +98,42 @@ export const USER_OWNED_TABLES: OwnedTable[] = [
     plan: {
       backup: false,
       why: 'Household membership is a live relationship with another account. One reader’s backup cannot recreate that relationship or consent on restore.',
+    },
+  },
+  {
+    table: 'household_works',
+    owner: 'added_by',
+    collective: true,
+    plan: {
+      backup: false,
+      why: 'A household work belongs to the live household, not to the member who first added it. Restoring one reader’s backup must not recreate or overwrite collective membership.',
+    },
+  },
+  {
+    table: 'household_book_shares',
+    owner: 'shared_by',
+    collective: true,
+    plan: {
+      backup: false,
+      why: 'The borrowed-book checkbox is meaningful only inside the current live household. Restoring it without that household and its other sources would fabricate shared consent.',
+    },
+  },
+  {
+    table: 'household_work_enrichment',
+    owner: 'updated_by',
+    collective: true,
+    plan: {
+      backup: false,
+      why: 'Household tags and tropes are shared household state. A single member’s personal backup cannot safely choose or recreate the collective value.',
+    },
+  },
+  {
+    table: 'work_metadata_edits',
+    owner: 'editor_id',
+    collective: true,
+    plan: {
+      backup: false,
+      why: 'Corpus edit history is an append-only shared audit record. It stays with the corpus and must never be replayed as a personal restore write.',
     },
   },
   {

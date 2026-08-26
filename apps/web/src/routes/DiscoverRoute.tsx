@@ -107,6 +107,7 @@ function Card({
               void navigate({
                 to: '/add',
                 search: {
+                  work: hit.corpusWorkId,
                   title: hit.title,
                   author: author || undefined,
                   isbn: hit.isbn || undefined,

@@ -22,6 +22,7 @@ export interface WorksFilters {
 }
 
 export interface WorkRow {
+  id: string
   work_key: string
   title: string
   contributors: Contributor[]
@@ -40,7 +41,7 @@ export interface WorkRow {
 // deploy precedes the owner-run migration, text reads retry with BASE_COLS and remain functional;
 // ISBN-specific reads safely return no matches until the column exists.
 const BASE_COLS =
-  'work_key, title, contributors, series, position, cover_url, genre, tags, pub_y, pub_m, pub_d'
+  'id, work_key, title, contributors, series, position, cover_url, genre, tags, pub_y, pub_m, pub_d'
 const ISBN_COLS = `${BASE_COLS}, isbns`
 
 /** Page N's inclusive row range — pure, so the paging arithmetic is testable without a client. */
@@ -92,6 +93,7 @@ export function workToHit(w: WorkRow, preferredIsbn = ''): DiscoverHit {
     .map((x, i) => (i === 0 ? String(x) : String(x).padStart(2, '0')))
     .join('-')
   return {
+    corpusWorkId: w.id,
     title: w.title,
     authors: (w.contributors ?? []).map((c) => c.name).filter(Boolean),
     cover: w.cover_url ?? '',
