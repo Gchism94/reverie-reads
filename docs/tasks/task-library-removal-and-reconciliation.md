@@ -1,7 +1,45 @@
 # Task: corpus-preserving library removal and owner reconciliation
 
-Status: **membership/removal foundation implemented on
-`codex/feat-library-membership-foundation`; production reconciliation remains pending owner review**.
+Status: **membership/removal foundation merged to `main`; production migration remains unapplied
+pending integration of the verified backfill-performance hotfix and a new owner-run deployment.
+Production reconciliation remains pending owner review**.
+
+## Production migration performance hotfix — 2026-08-26
+
+The first owner-run deployment of `20260830010000_library_membership_foundation.sql` failed safely
+and transactionally before its migration-history row was recorded. The public web deployment was
+not promoted. Supabase's local CLI trace isolated the failure to the ambiguous reconciliation
+backfill: it spent 19.906 seconds running per-book correlated counts over the complete `works`
+table. The preceding missing-work backfill had already consumed 16.246 seconds with the same
+repeated identity work. No lock, competing long-running query, or network failure was present.
+
+The hotfix on `codex/fix-library-migration-performance` keeps the reviewed identity priority and
+safe-refusal behavior unchanged while replacing the repeated scans:
+
+- one non-unique expression index stores the immutable Unicode title/full-author fallback key;
+- transaction-local ISBN, fallback-key, and personal-book identity snapshots are built once and
+  reused by missing-work creation, ambiguity classification, and final binding;
+- newly created provisional and reconciliation works are appended to those snapshots so counts
+  remain equivalent to live-table counts;
+- binding decisions are staged separately from the row update, and the internal link backfill does
+  not rewrite reader-facing `updated_at` values or invalidate unchanged enrichment keys;
+- a lightweight source-shape regression prevents the per-row corpus-count and binding subqueries
+  from returning without adding another long-running CI lane.
+
+Verification completed before review:
+
+- clean local reset applied the modified migration and seed successfully;
+- all 567 pgTAP assertions passed across 26 files;
+- the core suite passed with the structural migration regression;
+- a pre-migration synthetic scale fixture used 25,004 corpus works and 5,012 personal books under a
+  20-second PostgreSQL statement timeout. The complete migration applied in 3.47 seconds, linked all
+  5,012 books, created the two expected reconciliation works, recorded the migration version, and
+  restored both temporarily suppressed `books` triggers.
+
+The production migration must not be retried from the previous merge commit. Integrate and review
+this hotfix first, then repeat the normal owner-confirmed migration deployment from synchronized,
+clean `main`. Keep the web deployment staged until the new migration version and RPC availability
+are verified.
 
 ## Implementation checkpoint — 2026-08-26
 
