@@ -62,7 +62,7 @@ export function DrawerDialog({
       dialog.removeEventListener('keydown', trapFocus)
       if (dialog.open) dialog.close()
       document.documentElement.style.overflow = previousOverflow
-      opener?.focus()
+      opener?.focus({ preventScroll: true })
     }
   }, [])
 

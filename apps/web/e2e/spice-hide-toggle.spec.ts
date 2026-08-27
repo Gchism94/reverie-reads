@@ -137,7 +137,9 @@ test('hiding spice removes the mark and the filter, and neutralizes a filter set
   await expect(page.locator('[title="Spice 4/5"]').first()).toBeVisible()
 
   // ── a filter set BEFORE hiding — the state that must not survive ─────────────────────────────
-  await page.getByLabel('Spice 4').first().click()
+  await page.getByRole('button', { name: /^Filters/ }).click()
+  const filterDialog = page.getByRole('dialog', { name: 'Library filters' })
+  await filterDialog.getByLabel('Spice 4').first().click()
   await expect(page.getByRole('button', { name: `Open ${PLAIN}` })).toBeHidden({ timeout: 15_000 })
 
   // ── hide it, and wait for the WRITE, not the checkbox ────────────────────────────────────────
@@ -167,7 +169,10 @@ test('hiding spice removes the mark and the filter, and neutralizes a filter set
   await expect(page.locator('[title="Spice 4/5"]')).toHaveCount(0)
   // THE POINT: the level-4 filter selected earlier is neutralized, so the plain book is back.
   await expect(page.getByRole('button', { name: `Open ${PLAIN}` })).toBeVisible({ timeout: 15_000 })
-  await expect(page.getByLabel('Spice 4')).toHaveCount(0)
+  await page.getByRole('button', { name: /^Filters/ }).click()
+  await expect(
+    page.getByRole('dialog', { name: 'Library filters' }).getByLabel('Spice 4'),
+  ).toHaveCount(0)
 
   // ── nothing deleted: the stored level survives, so unhiding restores it ──────────────────────
   const rows = (await okData(
