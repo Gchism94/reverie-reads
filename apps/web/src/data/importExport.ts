@@ -20,6 +20,11 @@ import { applyIncoming, type ReviewCandidate } from './intake'
 import { loadVerdicts } from './duplicates'
 import { persistContributors } from './contributors'
 
+// Keep URL-sized PostgREST filters comfortably below the local gateway's request-line limit.
+// Restore is already a staged, multi-request operation, so run these sequentially and fail at the
+// first rejected batch instead of creating a burst of ownership-trigger work.
+const RESTORE_OWNERSHIP_BATCH_SIZE = 100
+
 async function currentUserId(): Promise<string> {
   const { data } = await supabase.auth.getUser()
   const id = data.user?.id
@@ -913,6 +918,7 @@ export async function restoreBackup(
 
   // Books next.
   const bookIdMap = new Map<string, string>()
+  const restoredOwnedBookIds: string[] = []
   for (const b of data.books) {
     // plan_date is DROPPED from the row rather than restored. Same contract as `reading_orders`
     // above, but it needs stripping rather than skipping: that was a top-level key nothing read,
@@ -931,12 +937,16 @@ export async function restoreBackup(
     } = b
     const { data: created, error } = await supabase
       .from('books')
-      .insert({ ...rest, owner_id: ownerId })
+      // Restore historical annotations before re-enabling owned household membership. Inserting an
+      // owned row first would create household_work, then the trope replay below would look like a
+      // new consenting edit and publish private backup history into the household overlay.
+      .insert({ ...rest, ownership: 'unowned', owner_id: ownerId })
       .select('id')
       .single()
     if (error) throw error
     const newId = (created as { id: string }).id
     bookIdMap.set(b.id, newId)
+    if (b.ownership === 'owned') restoredOwnedBookIds.push(newId)
     // Restore the book's full contributor list (v4) via the owner-scoped RPC.
     const contribs = data.contributors?.[b.id]
     if (contribs?.length) {
@@ -1023,6 +1033,19 @@ export async function restoreBackup(
 
   // Tropes + moods (v5), resolved by name onto the new book ids.
   const taxonomy = await restoreTaxonomy(data, bookIdMap, ownerId)
+
+  // Re-enable the backed-up ownership only after historical trope joins exist. This update creates
+  // required household membership but does not fire either annotation trigger, so restore remains
+  // faithful without inventing household-sharing consent.
+  for (let start = 0; start < restoredOwnedBookIds.length; start += RESTORE_OWNERSHIP_BATCH_SIZE) {
+    const batch = restoredOwnedBookIds.slice(start, start + RESTORE_OWNERSHIP_BATCH_SIZE)
+    const { error } = await supabase
+      .from('books')
+      .update({ ownership: 'owned' })
+      .in('id', batch)
+      .eq('owner_id', ownerId)
+    if (error) throw error
+  }
 
   // Followed/muted authors (v5) — keyed by display name, so nothing to remap.
   const follows = followRows(data.author_follows ?? [], ownerId)

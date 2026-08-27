@@ -8,6 +8,7 @@ function row(plan: Partial<Pick<BookRow, 'plan_y' | 'plan_m' | 'plan_d' | 'plan_
   return {
     id: 'b1',
     owner_id: 'o1',
+    corpus_work_id: 'w1',
     title: 'A Book',
     author_first: null,
     author_last: null,
@@ -58,6 +59,8 @@ function row(plan: Partial<Pick<BookRow, 'plan_y' | 'plan_m' | 'plan_d' | 'plan_
     tropes_suggested_at: null,
     added_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
+    removed_at: null,
+    removed_by: null,
     ...plan,
   }
 }

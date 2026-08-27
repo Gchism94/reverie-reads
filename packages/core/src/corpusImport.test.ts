@@ -347,7 +347,7 @@ describe('author-shape counts — invisible in the report until now', () => {
 
   it('a partial name keys on the HALF THAT IS PRESENT — not on `title|`', () => {
     // Worth pinning precisely, because the brief for this work described these rows as degrading
-    // to `title|`. They do not: workKeyOf is `norm(title)|norm(authorOf(rec))`, and authorOf
+    // to `title|`. They do not: workKeyOf folds title|authorOf(rec), and authorOf
     // returns whichever half exists — so "Milo" with no last name keys as `nolast|milo`, which is
     // a DIFFERENT key from the same book carrying "Milo Reyes". Only a row with NO author at all
     // produces the trailing-pipe form, and that is the narrower emptyAuthor list the report
@@ -358,9 +358,7 @@ describe('author-shape counts — invisible in the report until now', () => {
     expect(byTitle('No Last').workKey.endsWith('|')).toBe(false)
   })
 
-  it('the key derivation is UNCHANGED by this PR — reporting is the job', () => {
-    // Instrumentation only. If this ever fails, someone has started fixing the thing this PR
-    // deliberately only measures.
+  it('the Unicode-safe key keeps the established ASCII shape', () => {
     expect(rows().find((r) => r.title === 'Solo Work')!.workKey).toBe('solowork|verastone')
   })
 })

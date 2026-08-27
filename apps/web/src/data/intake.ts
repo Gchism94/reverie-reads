@@ -48,6 +48,7 @@ export function incomingToBook(inc: Incoming): Book {
   const subgenre = inc.subgenre ?? ''
   return {
     id: '',
+    corpusWorkId: inc.corpusWorkId,
     title: inc.title,
     first: inc.first ?? '',
     last: inc.last ?? '',
@@ -131,6 +132,9 @@ export async function foldIn(
     const { error } = await supabase.from('books').update(toBookRow(result.patch)).eq('id', existing.id)
     if (error) throw error
   }
+  // Corpus identity is established on insert. A merge may enrich the surviving personal row, but
+  // must never rebind it to the incoming row's corpus work; server-owned reconciliation is the only
+  // path allowed to change that global-integrity link.
   // A reconciled contributor list (not a books column) persists through the RPC.
   if (result.patch.contributors) {
     const merged: Contributor[] = result.patch.contributors

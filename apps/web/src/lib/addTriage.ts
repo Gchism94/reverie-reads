@@ -1,4 +1,4 @@
-import { matchBook, norm, normalizeIsbn, workKeyOf, type Book } from '@reverie/core'
+import { matchBook, normalizeIsbn, workIdentityPart, workKeyOf, type Book } from '@reverie/core'
 import { resultToIncoming, type SearchResult } from './search'
 import type { WorkRow } from '../data/works'
 
@@ -17,7 +17,7 @@ import type { WorkRow } from '../data/works'
  * still looking like it worked.
  *
  * NORMALIZERS ARE IMPORTED, NEVER REIMPLEMENTED (corpus-import-lib's rule, and it applies here for
- * the same reason): `norm`, `matchBook` and `workKeyOf` are core's. A local copy of any of them
+ * the same reason): `workIdentityPart`, `matchBook` and `workKeyOf` are core's. A local copy
  * would drift from the importer that writes `works.work_key` and from the intake that decides a
  * duplicate, and the drift would show up as a lookup that quietly never matches.
  */
@@ -67,7 +67,7 @@ function libraryHit(r: SearchResult, library: readonly Book[]): Book | null {
  *  authorless corpus row — the library-side trap above, on the other side of the join. */
 export function resultWorkKey(r: SearchResult): string {
   const author = (r.authors[0] ?? '').trim()
-  if (!norm(author) || !norm(r.title)) return ''
+  if (!workIdentityPart(author) || !workIdentityPart(r.title)) return ''
   return workKeyOf({ title: r.title, last: author })
 }
 
@@ -81,8 +81,11 @@ export function resultWorkKey(r: SearchResult): string {
  * contribute only their stored key, never a `` `title|` `` derived one.
  */
 export function workRowKeys(w: WorkRow): string[] {
-  const author = (w.contributors ?? []).map((c) => c.name).find((n) => !!norm(n)) ?? ''
-  const derived = norm(author) && norm(w.title) ? workKeyOf({ title: w.title, last: author }) : ''
+  const author = (w.contributors ?? []).map((c) => c.name).find((n) => !!workIdentityPart(n)) ?? ''
+  const derived =
+    workIdentityPart(author) && workIdentityPart(w.title)
+      ? workKeyOf({ title: w.title, last: author })
+      : ''
   return [derived, w.work_key].filter((k): k is string => !!k)
 }
 
@@ -111,9 +114,18 @@ export function triageResults(
 ): TriagedResult[] {
   const byKey = new Map<string, WorkRow>()
   const byIsbn = new Map<string, WorkRow>()
+  const ambiguousKeys = new Set<string>()
   const ambiguousIsbns = new Set<string>()
   for (const w of corpus ?? []) {
-    for (const k of workRowKeys(w)) if (!byKey.has(k)) byKey.set(k, w)
+    for (const k of workRowKeys(w)) {
+      if (ambiguousKeys.has(k)) continue
+      const prior = byKey.get(k)
+      if (!prior) byKey.set(k, w)
+      else if (prior.work_key !== w.work_key) {
+        byKey.delete(k)
+        ambiguousKeys.add(k)
+      }
+    }
     for (const raw of w.isbns ?? []) {
       const isbn = normalizeIsbn(raw)
       if (!isbn || ambiguousIsbns.has(isbn)) continue
@@ -135,10 +147,13 @@ export function triageResults(
     const rk = resultWorkKey(result)
     // ISBN is edition identity and survives catalog title/author variation, so it is the stronger
     // join. The work key remains the fallback for records without an ISBN.
-    const work =
-      (isbn && !ambiguousIsbns.has(isbn) ? byIsbn.get(isbn) : undefined) ??
-      (rk ? byKey.get(rk) : undefined) ??
-      null
+    // An ISBN collision is terminal. Falling through to a title match here would let the client
+    // offer a corpus attachment that the SQL identity boundary must reject as ambiguous.
+    const work = ambiguousIsbns.has(isbn)
+      ? null
+      : ((isbn ? byIsbn.get(isbn) : undefined) ??
+        (rk && !ambiguousKeys.has(rk) ? byKey.get(rk) : undefined) ??
+        null)
     return { result, book, work, state: book ? 'library' : work ? 'corpus' : 'new' }
   })
 }

@@ -26,6 +26,11 @@ import { BackLink } from '../components/BackLink'
 import { SeriesStrip } from '../components/SeriesStrip'
 import { CoverImage } from '../components/CoverImage'
 import { useBooks, useDeleteBook, useUpdateBook } from '../data/books'
+import {
+  useAddPersonalBookToHousehold,
+  useHouseholdLibraryAuthorization,
+  useRemovePersonalBookFromHousehold,
+} from '../data/household'
 import { useDeleteRead, useReads } from '../data/reads'
 import { useBookListIds, useToggleListItem } from '../data/listItems'
 import { useCreateList, useLists } from '../data/lists'
@@ -221,6 +226,9 @@ function BookDetailScreen() {
   // the book itself loads.
   const updateBook = useUpdateBook(bookId)
   const deleteBook = useDeleteBook()
+  const household = useHouseholdLibraryAuthorization()
+  const shareWithHousehold = useAddPersonalBookToHousehold()
+  const unshareFromHousehold = useRemovePersonalBookFromHousehold()
   const deleteRead = useDeleteRead(bookId)
   const toggleListItem = useToggleListItem(bookId)
   const createList = useCreateList()
@@ -252,6 +260,12 @@ function BookDetailScreen() {
   const levelPills = visibleLevelPills(book, profile?.hideIntensity ?? false)
   const [g0, g1] = subgenreGradient(book.subgenre, book.genre)
   const workKey = workKeyFor(book)
+  const householdWork = book.corpusWorkId
+    ? household.books.find((candidate) => candidate.id === book.corpusWorkId)
+    : undefined
+  const personalHouseholdShare = householdWork?.owners.find(
+    (owner) => owner.bookId === book.id && owner.shared,
+  )
   const reviewerName = profile?.displayName || 'Reader'
   const setOwned = (owned: Owned) => updateBook.mutate({ id: book.id, patch: { owned } })
   // Four-state possession WORD over five independent flags (docs/archive/task-shelf-model.md): picking one
@@ -675,6 +689,38 @@ function BookDetailScreen() {
       <Label>Plan a read date</Label>
       <PlanEditor book={book} />
 
+      {book.ownership === 'owned' ? (
+        household.members.length > 0 && (
+          <Surface tone="field" radius="control" pad={2} className="mt-4 text-[12.5px] text-muted">
+            Included in the household library automatically because you own a copy.
+          </Surface>
+        )
+      ) : book.borrowed && household.members.length > 0 ? (
+        <button
+          type="button"
+          role="checkbox"
+          aria-checked={!!personalHouseholdShare}
+          disabled={
+            !household.authorized || shareWithHousehold.isPending || unshareFromHousehold.isPending
+          }
+          onClick={() =>
+            personalHouseholdShare
+              ? unshareFromHousehold.mutate(book.id)
+              : shareWithHousehold.mutate(book.id)
+          }
+          className="skin-control mt-4 flex w-full items-center justify-between border border-line px-3 py-2.5 text-left text-[13px] font-semibold text-ink disabled:opacity-50"
+          style={{ background: 'var(--field)' }}
+        >
+          <span>
+            Share this borrowed book with the household
+            <span className="mt-0.5 block text-[11.5px] font-normal text-muted">
+              Your wishlist choice stays personal.
+            </span>
+          </span>
+          <span aria-hidden>{personalHouseholdShare ? '✓' : '○'}</span>
+        </button>
+      ) : null}
+
       {/* actions */}
       <div className="mt-8 flex flex-wrap gap-2">
         <button
@@ -688,7 +734,12 @@ function BookDetailScreen() {
         <button
           type="button"
           onClick={() => {
-            if (!window.confirm('Remove this book from your library?')) return
+            if (
+              !window.confirm(
+                'Remove this book from your personal library? Reading history is preserved, and any household entry stays in the household.',
+              )
+            )
+              return
             deleteBook.mutate(book.id, { onSuccess: () => void navigate({ to: '/' }) })
           }}
           // accent-ink, not primary: on this --card background, hearth/dark's --primary measures
@@ -699,7 +750,7 @@ function BookDetailScreen() {
           className="skin-control border border-line px-4 py-2 text-[13px] font-semibold"
           style={{ background: 'var(--card)', color: 'var(--accent-ink)' }}
         >
-          Remove book
+          Remove from personal library
         </button>
       </div>
 

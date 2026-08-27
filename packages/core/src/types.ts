@@ -107,6 +107,8 @@ export interface Review {
 
 export interface Book {
   id: string
+  /** Shared-corpus identity. Optional only for pre-migration backups and in-memory fixtures. */
+  corpusWorkId?: string
   title: string
   /** Primary author's given/family name — kept as the back-compat denormalized primary (it equals
    *  contributors[0] with an author role). All ordered contributors live in `contributors`. */

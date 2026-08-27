@@ -36,6 +36,7 @@ export function toBook(row: BookRow): Book {
   const primary = contributors.length ? toFirstLast(contributors) : { first: row.author_first ?? '', last: row.author_last ?? '' }
   return {
     id: row.id,
+    corpusWorkId: row.corpus_work_id,
     title: row.title,
     first: primary.first,
     last: primary.last,
@@ -114,6 +115,7 @@ export function toBook(row: BookRow): Book {
 /** Domain Book patch -> writable book columns. Only provided fields are mapped. */
 export function toBookRow(patch: Partial<Book>): Partial<BookRow> {
   const row: Partial<BookRow> = {}
+  if (patch.corpusWorkId !== undefined) row.corpus_work_id = patch.corpusWorkId
   if (patch.title !== undefined) row.title = patch.title
   if (patch.first !== undefined) row.author_first = patch.first || null
   if (patch.last !== undefined) row.author_last = patch.last || null

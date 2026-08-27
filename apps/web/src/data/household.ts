@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../auth/AuthProvider'
 import { supabase } from '../lib/supabase'
 
@@ -15,13 +15,11 @@ export interface HouseholdMember {
 
 export interface HouseholdBook {
   id: string
-  ownerId: string
-  ownerName: string
   title: string
   author: string
   cover: string
-  coverThumb: string
   coverColor: string
+  coverOptions: { url?: string; source?: string; sourceUrl?: string }[]
   series: string
   position: number | null
   seriesCount: number | null
@@ -30,18 +28,33 @@ export interface HouseholdBook {
   genres: string[]
   subgenre: string
   subgenres: string[]
-  isbn: string
-  ownership: string
-  borrowed: boolean
-  wishlist: boolean
-  ownedPhysical: string
-  ownedEbook: boolean
-  ownedAudiobook: boolean
-  bookFormat: string
+  isbns: string[]
+  owners: HouseholdBookOwner[]
+  householdTags: string[]
+  householdTropes: HouseholdTrope[]
   publicationYear: number | null
   publicationMonth: number | null
   publicationDay: number | null
   addedAt: string
+}
+
+export interface HouseholdTrope {
+  id?: string
+  name: string
+  emphasis: 'pinned' | 'present'
+}
+
+export interface HouseholdBookOwner {
+  bookId: string
+  userId: string
+  displayName: string
+  ownership: string
+  borrowed: boolean
+  ownedPhysical: string
+  ownedEbook: boolean
+  ownedAudiobook: boolean
+  bookFormat: string
+  shared: boolean
 }
 
 interface HouseholdBookSelection {
@@ -58,14 +71,12 @@ interface HouseholdRosterRow {
 }
 
 interface HouseholdBookRow {
-  book_id: string
-  owner_id: string
-  owner_name: string | null
+  work_id: string
   title: string
   author: string | null
   cover_url: string | null
-  cover_thumb_url: string | null
   cover_color: string | null
+  cover_options: { url?: string; source?: string; sourceUrl?: string }[] | null
   series_name: string | null
   series_position: number | string | null
   series_count: number | null
@@ -74,18 +85,27 @@ interface HouseholdBookRow {
   genres: string[] | null
   subgenre: string | null
   subgenres: string[] | null
-  isbn: string | null
-  ownership: string | null
-  borrowed: boolean | null
-  wishlist: boolean | null
-  owned_physical: string | null
-  owned_ebook: boolean | null
-  owned_audiobook: boolean | null
-  book_format: string | null
+  isbns: string[] | null
+  owners: HouseholdBookOwnerRow[] | null
+  household_tags: string[] | null
+  household_tropes: unknown[] | null
   pub_y: number | null
   pub_m: number | null
   pub_d: number | null
   added_at: string
+}
+
+interface HouseholdBookOwnerRow {
+  bookId?: string
+  userId?: string
+  displayName?: string | null
+  ownership?: string | null
+  borrowed?: boolean | null
+  ownedPhysical?: string | null
+  ownedEbook?: boolean | null
+  ownedAudiobook?: boolean | null
+  format?: string | null
+  shared?: boolean | null
 }
 
 const readerName = (value: string | null): string => value?.trim() || 'Reader'
@@ -95,6 +115,19 @@ const numericPosition = (value: number | string | null): number | null => {
   const parsed = typeof value === 'number' ? value : Number(value)
   return Number.isFinite(parsed) ? parsed : null
 }
+
+const householdTropes = (value: readonly unknown[] | null): HouseholdTrope[] =>
+  (value ?? []).flatMap((entry) => {
+    if (!entry || typeof entry !== 'object') return []
+    const row = entry as { id?: unknown; name?: unknown; emphasis?: unknown }
+    const name = typeof row.name === 'string' ? row.name.trim() : ''
+    if (!name) return []
+    return [{
+      ...(typeof row.id === 'string' && row.id ? { id: row.id } : {}),
+      name,
+      emphasis: row.emphasis === 'pinned' ? 'pinned' : 'present',
+    }]
+  })
 
 /**
  * Explicit mappers are a second whitelist beside the RPC return signature. If the database
@@ -110,14 +143,12 @@ export const toHouseholdMember = (row: HouseholdRosterRow): HouseholdMember => (
 })
 
 export const toHouseholdBook = (row: HouseholdBookRow): HouseholdBook => ({
-  id: row.book_id,
-  ownerId: row.owner_id,
-  ownerName: readerName(row.owner_name),
+  id: row.work_id,
   title: row.title,
   author: row.author?.trim() ?? '',
   cover: row.cover_url ?? '',
-  coverThumb: row.cover_thumb_url ?? '',
   coverColor: row.cover_color ?? '',
+  coverOptions: row.cover_options ?? [],
   series: row.series_name ?? '',
   position: numericPosition(row.series_position),
   seriesCount: row.series_count,
@@ -126,14 +157,25 @@ export const toHouseholdBook = (row: HouseholdBookRow): HouseholdBook => ({
   genres: row.genres ?? [],
   subgenre: row.subgenre ?? '',
   subgenres: row.subgenres ?? [],
-  isbn: row.isbn ?? '',
-  ownership: row.ownership ?? 'unowned',
-  borrowed: row.borrowed ?? false,
-  wishlist: row.wishlist ?? false,
-  ownedPhysical: row.owned_physical ?? '',
-  ownedEbook: row.owned_ebook ?? false,
-  ownedAudiobook: row.owned_audiobook ?? false,
-  bookFormat: row.book_format ?? '',
+  isbns: row.isbns ?? [],
+  owners: (row.owners ?? []).flatMap((owner) =>
+    owner.userId && owner.bookId
+      ? [{
+          bookId: owner.bookId,
+          userId: owner.userId,
+          displayName: readerName(owner.displayName ?? null),
+          ownership: owner.ownership ?? 'unowned',
+          borrowed: owner.borrowed ?? false,
+          ownedPhysical: owner.ownedPhysical ?? '',
+          ownedEbook: owner.ownedEbook ?? false,
+          ownedAudiobook: owner.ownedAudiobook ?? false,
+          bookFormat: owner.format ?? '',
+          shared: owner.shared ?? false,
+        }]
+      : [],
+  ),
+  householdTags: row.household_tags ?? [],
+  householdTropes: householdTropes(row.household_tropes),
   publicationYear: row.pub_y,
   publicationMonth: row.pub_m,
   publicationDay: row.pub_d,
@@ -193,12 +235,16 @@ export function labelHouseholdData(
       ...member,
       displayName: labels.get(member.userId) ?? member.displayName,
     })),
-    // A curated row whose owner is absent from the authorizing roster fails closed instead of
-    // receiving an independently-derived label and rendering as if it were still authorized.
-    books: books.flatMap((book) => {
-      const ownerName = labels.get(book.ownerId)
-      return ownerName ? [{ ...book, ownerName }] : []
-    }),
+    // Owner copy data is roster-authorized independently of household membership. An unknown
+    // owner is dropped, while the work itself remains: household membership survives personal
+    // removal and therefore legitimately has no active owner copy.
+    books: books.map((book) => ({
+      ...book,
+      owners: book.owners.flatMap((owner) => {
+        const displayName = labels.get(owner.userId)
+        return displayName ? [{ ...owner, displayName }] : []
+      }),
+    })),
   }
 }
 
@@ -308,7 +354,7 @@ export function useHouseholdBooks(householdId: string | null) {
     enabled: !!readerId && !!householdId,
     ...authorizationSensitiveQueryOptions,
     queryFn: async (): Promise<HouseholdBook[]> => {
-      const { data, error } = await supabase.rpc('household_library_books')
+      const { data, error } = await supabase.rpc('household_library_works')
       if (error) throw error
       return ((data ?? []) as HouseholdBookRow[]).map(toHouseholdBook)
     },
@@ -341,4 +387,111 @@ export function useHouseholdLibraryAuthorization() {
     error,
     loading: !paused && !error && !authorized,
   }
+}
+
+const invalidateLibraryMembership = async (queryClient: ReturnType<typeof useQueryClient>) => {
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: ['household'] }),
+    queryClient.invalidateQueries({ queryKey: ['books'] }),
+    queryClient.invalidateQueries({ queryKey: ['works-browse'] }),
+  ])
+}
+
+export function useAddPersonalBookToHousehold() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    meta: { action: 'Sharing with the household' },
+    mutationFn: async (bookId: string): Promise<string> => {
+      const { data, error } = await supabase.rpc('add_personal_book_to_household', {
+        p_book: bookId,
+      })
+      if (error) throw error
+      return data as string
+    },
+    onSuccess: () => invalidateLibraryMembership(queryClient),
+  })
+}
+
+export function useRemoveHouseholdWork() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    meta: { action: 'Removing from the household library' },
+    mutationFn: async (workId: string): Promise<string> => {
+      const { data, error } = await supabase.rpc('remove_household_work', { p_work: workId })
+      if (error) throw error
+      return data as string
+    },
+    onSuccess: () => invalidateLibraryMembership(queryClient),
+  })
+}
+
+export function useRemovePersonalBookFromHousehold() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    meta: { action: 'Removing your household share' },
+    mutationFn: async (bookId: string): Promise<string> => {
+      const { data, error } = await supabase.rpc('remove_personal_book_from_household', {
+        p_book: bookId,
+      })
+      if (error) throw error
+      return data as string
+    },
+    onSuccess: () => invalidateLibraryMembership(queryClient),
+  })
+}
+
+export function useUpdateHouseholdWorkEnrichment() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    meta: { action: 'Updating household details' },
+    mutationFn: async ({
+      workId,
+      tags,
+      tropes,
+    }: {
+      workId: string
+      tags: string[]
+      tropes: unknown[]
+    }): Promise<string> => {
+      const { data, error } = await supabase.rpc('update_household_work_enrichment', {
+        p_work: workId,
+        p_tags: tags,
+        p_tropes: tropes,
+      })
+      if (error) throw error
+      return data as string
+    },
+    onSuccess: () => invalidateLibraryMembership(queryClient),
+  })
+}
+
+export interface CorpusMetadataPatch {
+  workId: string
+  genre: string
+  subgenre: string
+  genres: string[]
+  subgenres: string[]
+  coverUrl: string
+  coverOptions: { url?: string; source?: string; sourceUrl?: string }[]
+}
+
+export function useUpdateCorpusWorkMetadata() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    meta: { action: 'Updating shared book details' },
+    mutationFn: async (patch: CorpusMetadataPatch): Promise<string> => {
+      const { data, error } = await supabase.rpc('update_corpus_work_metadata', {
+        p_work: patch.workId,
+        p_genre: patch.genre,
+        p_subgenre: patch.subgenre,
+        p_genres: patch.genres,
+        p_subgenres: patch.subgenres,
+        p_cover_url: patch.coverUrl,
+        p_cover_options: patch.coverOptions,
+      })
+      if (error) throw error
+      return data as string
+    },
+    onSuccess: () => invalidateLibraryMembership(queryClient),
+  })
 }

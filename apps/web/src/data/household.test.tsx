@@ -26,6 +26,9 @@ import {
   useHouseholdBooks,
   useHouseholdLibraryAuthorization,
   useHouseholdRoster,
+  useAddPersonalBookToHousehold,
+  useRemoveHouseholdWork,
+  useRemovePersonalBookFromHousehold,
   type HouseholdBook,
 } from './household'
 
@@ -39,13 +42,11 @@ const queryHarness = () => {
 
 const householdBook = (id: string, ownerId = 'reader-a'): HouseholdBook => ({
   id,
-  ownerId,
-  ownerName: 'Avery',
   title: 'Title',
   author: '',
   cover: '',
-  coverThumb: '',
   coverColor: '',
+  coverOptions: [],
   series: '',
   position: null,
   seriesCount: null,
@@ -54,14 +55,21 @@ const householdBook = (id: string, ownerId = 'reader-a'): HouseholdBook => ({
   genres: [],
   subgenre: '',
   subgenres: [],
-  isbn: '',
-  ownership: 'owned',
-  borrowed: false,
-  wishlist: false,
-  ownedPhysical: '',
-  ownedEbook: false,
-  ownedAudiobook: false,
-  bookFormat: '',
+  isbns: [],
+  owners: [{
+    bookId: `copy-${id}`,
+    userId: ownerId,
+    displayName: 'Avery',
+    ownership: 'owned',
+    borrowed: false,
+    ownedPhysical: '',
+    ownedEbook: false,
+    ownedAudiobook: false,
+    bookFormat: '',
+    shared: false,
+  }],
+  householdTags: [],
+  householdTropes: [],
   publicationYear: null,
   publicationMonth: null,
   publicationDay: null,
@@ -146,18 +154,16 @@ describe('household query identity and RPC boundary', () => {
     ])
   })
 
-  it('keeps only the curated household_library_books fields in client state', async () => {
+  it('keeps only the curated household_library_works fields in client state', async () => {
     mocked.rpc.mockResolvedValue({
       data: [
         {
-          book_id: 'book-1',
-          owner_id: 'reader-b',
-          owner_name: 'Blake',
+          work_id: 'work-1',
           title: 'Duplicate Title',
           author: 'Quill Marrowbane',
           cover_url: null,
-          cover_thumb_url: null,
           cover_color: null,
+          cover_options: [],
           series_name: null,
           series_position: '2.5',
           series_count: null,
@@ -166,14 +172,26 @@ describe('household query identity and RPC boundary', () => {
           genres: [],
           subgenre: null,
           subgenres: [],
-          isbn: '9780000000001',
-          ownership: 'owned',
-          borrowed: true,
-          wishlist: false,
-          owned_physical: 'hardcover',
-          owned_ebook: false,
-          owned_audiobook: true,
-          book_format: 'hardcover',
+          isbns: ['9780000000001'],
+          owners: [{
+            bookId: 'book-1',
+            userId: 'reader-b',
+            displayName: 'Blake',
+            ownership: 'owned',
+            borrowed: true,
+            ownedPhysical: 'hardcover',
+            ownedEbook: false,
+            ownedAudiobook: true,
+            format: 'hardcover',
+            shared: true,
+          }],
+          household_tags: ['found family'],
+          household_tropes: [
+            { id: 'trope-1', name: ' Only One Bed ', emphasis: 'pinned' },
+            { name: 'Found Family', emphasis: 'unexpected-value' },
+            { name: '   ' },
+            'not-an-object',
+          ],
           pub_y: 2026,
           pub_m: null,
           pub_d: null,
@@ -192,15 +210,22 @@ describe('household query identity and RPC boundary', () => {
     const { result } = renderHook(() => useHouseholdBooks('house-1'), { wrapper })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
-    expect(mocked.rpc).toHaveBeenCalledWith('household_library_books')
+    expect(mocked.rpc).toHaveBeenCalledWith('household_library_works')
     expect(result.current.data?.[0]).toMatchObject({
-      id: 'book-1',
-      ownerId: 'reader-b',
-      ownerName: 'Blake',
+      id: 'work-1',
       position: 2.5,
-      ownership: 'owned',
-      borrowed: true,
-      ownedPhysical: 'hardcover',
+      householdTags: ['found family'],
+      householdTropes: [
+        { id: 'trope-1', name: 'Only One Bed', emphasis: 'pinned' },
+        { name: 'Found Family', emphasis: 'present' },
+      ],
+      owners: [{
+        userId: 'reader-b',
+        displayName: 'Blake',
+        ownership: 'owned',
+        borrowed: true,
+        ownedPhysical: 'hardcover',
+      }],
     })
     expect(result.current.data?.[0]).not.toHaveProperty('rating')
     expect(result.current.data?.[0]).not.toHaveProperty('fave')
@@ -229,13 +254,11 @@ describe('household query identity and RPC boundary', () => {
     ]
     const baseBook = {
       id: 'book-1',
-      ownerId: firstId,
-      ownerName: 'Untrusted independent label',
       title: 'Title',
       author: '',
       cover: '',
-      coverThumb: '',
       coverColor: '',
+      coverOptions: [],
       series: '',
       position: null,
       seriesCount: null,
@@ -244,31 +267,51 @@ describe('household query identity and RPC boundary', () => {
       genres: [],
       subgenre: '',
       subgenres: [],
-      isbn: '',
-      ownership: 'owned',
-      borrowed: false,
-      wishlist: false,
-      ownedPhysical: '',
-      ownedEbook: false,
-      ownedAudiobook: false,
-      bookFormat: '',
+      isbns: [],
+      owners: [
+        {
+          bookId: 'copy-1',
+          userId: firstId,
+          displayName: 'Untrusted independent label',
+          ownership: 'owned',
+          borrowed: false,
+          ownedPhysical: '',
+          ownedEbook: false,
+          ownedAudiobook: false,
+          bookFormat: '',
+          shared: false,
+        },
+        {
+          bookId: 'copy-outside',
+          userId: 'outside-reader',
+          displayName: 'Outside',
+          ownership: 'owned',
+          borrowed: false,
+          ownedPhysical: '',
+          ownedEbook: false,
+          ownedAudiobook: false,
+          bookFormat: '',
+          shared: false,
+        },
+      ],
+      householdTags: [],
+      householdTropes: [],
       publicationYear: null,
       publicationMonth: null,
       publicationDay: null,
       addedAt: '2026-08-25T00:00:00Z',
     }
 
-    const labelled = labelHouseholdData(members, [
-      baseBook,
-      { ...baseBook, id: 'book-unrostered', ownerId: 'outside-reader' },
-    ])
+    const labelled = labelHouseholdData(members, [baseBook])
 
     expect(labelled.members.map((member) => member.displayName)).toEqual([
       'Avery · aaaaaaaa-1',
       'avery · aaaaaaaa-2',
     ])
     expect(labelled.books).toHaveLength(1)
-    expect(labelled.books[0]?.ownerName).toBe(labelled.members[0]?.displayName)
+    expect(labelled.books[0]?.owners).toEqual([
+      expect.objectContaining({ userId: firstId, displayName: labelled.members[0]?.displayName }),
+    ])
   })
 
   it('removes authorization-sensitive roster data on unmount and fetches again on remount', async () => {
@@ -358,5 +401,23 @@ describe('household query identity and RPC boundary', () => {
     await waitFor(() => expect(result.current.fetchStatus).toBe('idle'))
     expect(mocked.rpc).not.toHaveBeenCalled()
     noReader.unmount()
+  })
+
+  it('uses separate RPCs for a personal borrowed checkbox and collective household removal', async () => {
+    mocked.rpc.mockResolvedValue({ data: 'work-1', error: null })
+    const { wrapper } = queryHarness()
+    const add = renderHook(() => useAddPersonalBookToHousehold(), { wrapper })
+    const unshare = renderHook(() => useRemovePersonalBookFromHousehold(), { wrapper })
+    const removeWork = renderHook(() => useRemoveHouseholdWork(), { wrapper })
+
+    await act(() => add.result.current.mutateAsync('book-1'))
+    await act(() => unshare.result.current.mutateAsync('book-1'))
+    await act(() => removeWork.result.current.mutateAsync('work-1'))
+
+    expect(mocked.rpc.mock.calls).toEqual([
+      ['add_personal_book_to_household', { p_book: 'book-1' }],
+      ['remove_personal_book_from_household', { p_book: 'book-1' }],
+      ['remove_household_work', { p_work: 'work-1' }],
+    ])
   })
 })

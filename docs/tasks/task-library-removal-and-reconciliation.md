@@ -1,6 +1,93 @@
 # Task: corpus-preserving library removal and owner reconciliation
 
-Status: **queued after recovery, contributor-history cleanup, and workspace pruning**.
+Status: **membership/removal foundation implemented on
+`codex/feat-library-membership-foundation`; production reconciliation remains pending owner review**.
+
+## Implementation checkpoint — 2026-08-26
+
+Completed in the feature branch:
+
+- stable `books.corpus_work_id` links that ordinary owner updates cannot mutate, with server-owned
+  rebinding constrained to one unambiguous ISBN or Unicode-preserving title/full-author identity;
+  unmatched rows create attributable provisional works and ambiguous fallbacks create explicit
+  reconciliation works instead of selecting a UUID by sort order;
+- first-class `household_works`, per-person borrowed-share sources, and a household enrichment
+  overlay;
+- owned auto-inclusion, borrowed opt-in/opt-out, wishlist exclusion, and one work-level household
+  card with active-copy attribution;
+- soft personal removal that preserves reads, lists, corpus identity, household membership, and
+  household enrichment;
+- independent household removal that preserves personal rows and corpus data and refuses removal
+  while an active owned copy requires membership;
+- corpus synchronization for genre, subgenre, and cover candidates with an append-only edit audit;
+  a cover becomes shared only when its exact `u/{owner}/{book}/{revision}` object exists behind the
+  signed project issuer's origin and its option uses the reviewed object schema; request Host headers
+  are not trusted, and a different `COVER_PUBLIC_URL` origin remains safely unsupported until it has
+  an explicit database-controlled trust configuration;
+- field-scoped household synchronization for tags and tropes: an intentional tag edit updates only
+  household tags, an intentional trope edit updates only household tropes, and both preserve the
+  independently curated sibling field without exposing ratings, reading state, plans, favourites,
+  moods, or notes. Only an exact owned copy or exact actively shared borrowed copy can publish;
+- database, unit, cache-authorization, and presentation regression coverage.
+
+The PR review hardening pass also closes the following privacy boundaries:
+
+- both household read contracts admit owned rows or an active share for that exact borrowed book;
+  one copy admitting a work never exposes another member's unshared borrowed copy, and the legacy
+  compatibility RPC always reports `wishlist = false`;
+- migration deployment creates no household enrichment from historical personal tags/tropes and
+  promotes no historical personal tag or arbitrary cover into a provisional corpus work. Historical
+  annotation reconciliation remains a separate target-scoped operator data fix after inventory,
+  dry run, and owner approval; neither automatic owned inclusion nor the explicit borrowed checkbox
+  publishes pre-existing annotations;
+- every membership/corpus mutation and automatic annotation path rechecks current membership and
+  exact-copy/work/link eligibility at its serialization point. Annotation paths lock the personal
+  book as well as the household. Trope INSERT/UPDATE authorization permits only canonical
+  vocabulary or the authenticated reader's own private vocabulary, and the definer aggregation
+  independently filters both mismatched join owners and cross-owner referenced tropes left by legacy
+  or operator writes. The expected work binding is captured before a book-lock wait; moved joins
+  capture both bindings and prelock both books in UUID order before either household lock, then
+  refresh source before destination so a duplicate-copy destination remains the final snapshot. The
+  local two-session harness
+  proves five explicit mutations plus both annotation triggers against an uncommitted concurrent
+  unlink, an exact personal-book removal race, ordinary and moved-join server-rebind races, moved
+  join lock ordering, and the final-unlink lifecycle, without timing sleeps;
+- backup restore replays historical personal tropes while restored books are staged as unowned, then
+  restores owned state in sequential batches of at most 100 UUIDs so household membership is rebuilt
+  without publishing backup history or exceeding gateway request-line limits;
+- canonical ISBN resolution locks all normalized identifiers in stable sorted order before lookup
+  and insertion. The same harness proves concurrent first-time adds with one ISBN and distinct title
+  keys create one ordinary corpus work and two links, while historical ambiguous ISBN ownership
+  continues to route to reconciliation;
+- household trope overlays are typed and rendered, including when a trope is the overlay's only
+  content.
+
+Still pending and intentionally not performed:
+
+- inspection and dry-run classification of the private CSV;
+- the deterministic reconciliation operator and verified rollback artifact;
+- owner approval and owner-executed production migration/reconciliation;
+- production Account A/B and household smoke verification.
+
+Verification completed on the feature branch:
+
+- 2,952 unit assertions passed across 146 test files;
+- 567 pgTAP assertions passed across 26 files after a clean local database reset;
+- the complete Playwright matrix passed with 218 runnable cases and 10 expected project skips;
+- typecheck, lint, formatting, production build, and `git diff --check` passed.
+
+The review hardening follow-up was checked with 107 focused membership pgTAP assertions, 80 focused
+core assertions, 36 focused household-web assertions, 50 focused restore assertions, and all 13
+deterministic harness cases covering authorization/eligibility revocation, exact-book removal,
+server rebinding, moved-join prelocking, concurrent first-ISBN resolution, and final-unlink lifecycle.
+The latest three-fix diff also received a fresh bounded blind review for bypasses, lock-order
+regressions, legitimate-write breakage, and false-positive tests; it found no blockers before the
+whole-repository rerun recorded above.
+
+The first pgTAP invocation was intentionally discarded because it ran concurrently against the
+same local database just populated by Playwright. Its inflated global counts demonstrated fixture
+contamination; a clean reset followed by the isolated pgTAP run above matches the fresh database
+provided to the GitHub Actions job.
 
 Private input: the owner-supplied, gitignored `chism-books-library.csv`. Never commit the file, its
 reader data, a production export, or a title-level reconciliation report.
@@ -72,8 +159,9 @@ Additional rules derived from that contract:
      Cover options are shared candidates; a personal or household display choice may remain a scoped
      preference without deleting or overwriting the corpus options.
    - **Household:** shared descriptive enrichment such as household tags and tropes. Editing it from
-     an eligible personal-book surface updates the single household overlay, so every household
-     member sees the same result. It does not become global corpus data.
+     an eligible personal-book surface updates only the corresponding field on the single household
+     overlay, preserving the independently curated sibling field, so every household member sees the
+     same result. It does not become global corpus data.
    - **Personal:** ownership/borrowing, wishlist, owned formats, reading status and logs, rating,
      notes, progress, plans, favourites, and personal lists. These remain private and never become
      household fields merely because the work also belongs to the household.
@@ -98,29 +186,18 @@ Additional rules derived from that contract:
     book, is not renderable while household authorization is paused, unavailable, revoked, or
     replaced.
 
-## Existing baseline to audit, not rebuild
+## Implemented baseline and compatibility path
 
-Personal Book Detail already renders **Remove book** and calls `useDeleteBook`, which performs a
-direct owner-RLS-scoped delete from `public.books` with an optimistic cache removal. The current
-confirmation says only “Remove this book from your library?” Several dependent tables cascade on
-book deletion, while `series_entries.book_id` uses `on delete set null`. The corpus tables are
-referenced by the personal row and are not deleted by that direction of the relationship.
+Personal Book Detail now calls the owner-scoped `remove_personal_book` RPC. It archives the personal
+row with `removed_at` instead of deleting it, and every ordinary personal-library read filters those
+rows out. Reads, list membership, tropes, moods, series links, and other dependent state therefore
+remain recoverable. The confirmation names the personal scope and explicitly says the household and
+history remain.
 
-Treat this as an existing capability that needs a full consequence and UX audit. Do not add a
-second deletion path with different semantics. Determine exactly which reader-owned data is lost,
-which series ghosts remain, how list membership and reads behave, whether an undo/soft-removal model
-is justified, and what the confirmation must disclose.
-
-The shipped household RPC is currently a read-only union of eligible personal rows. That is a
-baseline limitation, not the target model: it cannot retain a household book after its personal row
-is deleted and cannot hold household-only books or shared enrichment. Implementation therefore
-requires first-class household-work membership plus a household overlay, with independent RLS/RPC
-rules and migration/backfill coverage. Do not try to simulate independence in the client cache.
-
-Before implementation, trace every dependent personal object—reads, reviews, notes, plans, tags,
-lists, series entries, clubs, and cached/offline state—and decide what removal retains, deletes, or
-requires a warning. Prefer a recoverable removal model if these dependencies make a hard delete
-surprising. RLS and RPC grants must prevent cross-owner removal.
+`household_library_works()` is the primary work-level household contract. The previous
+`household_library_books()` signature remains temporarily as a staged-deploy compatibility path and
+hides archived, wishlist-only, and unshared borrowed personal rows. Its retained `wishlist` field is
+always false; new UI must not derive household membership or personal intent from it.
 
 ## CSV reconciliation contract
 

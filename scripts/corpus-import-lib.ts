@@ -3,8 +3,8 @@
 // synthetic fixture (packages/core/src/corpusImport.test.ts), and import-corpus-csv.mjs is the
 // thin shell that feeds it a real file and a real database.
 //
-// NORMALIZERS ARE IMPORTED, NEVER REIMPLEMENTED. `workKeyOf` — and the `norm` inside it (core's:
-// lowercase, strip to a-z0-9) — is the same function the enrich fn duplicates byte-for-byte for
+// NORMALIZERS ARE IMPORTED, NEVER REIMPLEMENTED. `workKeyOf` — Unicode NFKD, lowercase, remove
+// marks, then preserve every script's letters/numbers — is the same function the enrich fn mirrors for
 // enrichment_cache's `ta:` keys, so `'ta:' + workKeyOf(...)` IS a cache key, and the backfill is a
 // join rather than a re-match. It moved INTO core so the app's add-search triage can share it:
 // apps/web cannot import from scripts/, and a corpus identity computed twice is one that drifts.
@@ -172,8 +172,8 @@ export const authorOf = (rec: Pick<CsvRecord, 'first' | 'last'>): string =>
 /** THE identity. `'ta:' + workKeyOf(rec)` is an enrichment_cache key, by construction.
  *  Re-exported from core rather than defined here — the app's add-search triage needs the SAME
  *  answer and cannot import from `scripts/`, so the one definition lives in core (this file's
- *  header rule, applied to itself). Behaviour is unchanged: core's `authorOf` composes the full
- *  name identically, and `norm` strips the whitespace `.trim()` used to. */
+ *  header rule, applied to itself). Core's `authorOf` composes the full name identically, while
+ *  Unicode-aware identity keeps non-Latin works from collapsing to the empty key. */
 export { workKeyOf }
 
 /** CSV status column → the app's series-status enum — core's OWN normalizer, because books.status

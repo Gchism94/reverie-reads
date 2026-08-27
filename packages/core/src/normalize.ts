@@ -4,6 +4,24 @@ export const norm = (s: string | null | undefined): string =>
     .toLowerCase()
     .replace(/[^a-z0-9]/g, '')
 
+/**
+ * Unicode-preserving identity fold for bibliographic title/author matching.
+ *
+ * NFKD keeps the useful compatibility behavior of the legacy key (full-width Latin characters
+ * and accented Latin letters collapse to the form a reader is likely to type), while Unicode
+ * letter/number classes preserve scripts such as Chinese, Arabic, Cyrillic, and Devanagari.
+ * Punctuation, spacing, and combining marks are deliberately ignored.
+ *
+ * `norm` remains unchanged because it also shapes persisted merge-verdict keys. New corpus
+ * identities and comparison-only matching use this helper instead.
+ */
+export const workIdentityPart = (s: string | null | undefined): string =>
+  String(s ?? '')
+    .normalize('NFKD')
+    .toLowerCase()
+    .replace(/\p{M}/gu, '')
+    .replace(/[^\p{L}\p{N}]/gu, '')
+
 /** "First Last" from a book's split author fields. */
 export const authorOf = (b: { first?: string; last?: string }): string =>
   [b.first, b.last].filter(Boolean).join(' ')
@@ -24,4 +42,4 @@ export const authorOf = (b: { first?: string; last?: string }): string =>
  * this one.
  */
 export const workKeyOf = (b: { title: string; first?: string; last?: string }): string =>
-  `${norm(b.title)}|${norm(authorOf(b))}`
+  `${workIdentityPart(b.title)}|${workIdentityPart(authorOf(b))}`

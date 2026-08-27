@@ -28,6 +28,7 @@ import { captureEdgeError, logEvent } from '../_shared/observe.ts'
 import { Trace, wantsTrace } from '../_shared/trace.ts'
 import { isGoogleNoCoverArt, upgradeCoverUrl } from '../_shared/coverUrl.ts'
 import { olHeaders } from '../_shared/olIdentity.ts'
+import { workIdentityPart } from '../_shared/workIdentity.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -54,7 +55,7 @@ const THUMB_EDGE = 300 // long-edge cap for the grid/spine thumb
 const EDITIONS_TTL_DAYS = 7
 
 const cleanIsbn = (s: string) => (s || '').replace(/[^0-9Xx]/g, '').toUpperCase()
-const norm = (s: string) => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+const norm = workIdentityPart
 
 // ── magick-wasm init (once per isolate; the wasm ships inside the npm package) ──
 let magickReady: Promise<void> | null = null

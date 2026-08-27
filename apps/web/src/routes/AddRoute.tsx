@@ -8,6 +8,7 @@ import {
   SERIES_POSITION,
   SKINS,
   toFirstLast,
+  workKeyOf,
   type Book,
   type Contributor,
   type Owned,
@@ -70,6 +71,7 @@ interface SearchHit {
  * prefill is worth; the tags stay on the corpus row for whoever wires the refine step to it.
  */
 interface Picked extends Partial<SearchHit> {
+  corpusWorkId?: string
   series?: string
   position?: string
   genre?: string
@@ -361,7 +363,17 @@ function AddForm({
       audiobook: isAudio,
     }
     const { first, last } = toFirstLast(contribs)
+    const editedIdentity = workKeyOf({ title: form.title.trim(), last: formatAuthors(contribs) })
+    const pickedIdentity = workKeyOf({
+      title: hit.title ?? '',
+      last: formatAuthors(contributorsFromAuthors(hit.authors ?? [])),
+    })
     const book: Partial<Book> & { title: string } = {
+      // A corpus pick is a binding, not a suggestion to carry across arbitrary title/author edits.
+      // Clearing it here lets the database resolve the edited bibliography (ISBN first, then the
+      // Unicode title/full-author key) instead of rejecting a stale supplied UUID.
+      corpusWorkId:
+        hit.corpusWorkId && editedIdentity === pickedIdentity ? hit.corpusWorkId : undefined,
       title: form.title.trim(),
       first,
       last,
@@ -927,6 +939,7 @@ function AddScreen() {
   const [picked, setPicked] = useState<Picked | null>(() =>
     prefill.title
       ? {
+          corpusWorkId: prefill.work,
           title: prefill.title,
           authors: prefill.author ? [prefill.author] : [],
           cover: prefill.cover ?? '',
@@ -1132,6 +1145,8 @@ const str = (v: unknown): string | undefined => (typeof v === 'string' && v.trim
 /** All-optional prefill params — the explicit optional-key type keeps plain `to="/add"` links
  *  valid everywhere (no required `search` prop). */
 interface AddPrefill {
+  /** exact shared-work identity when the pick came from the Reverie corpus */
+  work?: string
   title?: string
   author?: string
   isbn?: string
@@ -1148,6 +1163,7 @@ export const addRoute = createRoute({
   component: AddScreen,
   validateSearch: (s: Record<string, unknown>): AddPrefill => {
     const out: AddPrefill = {}
+    if (str(s.work)) out.work = str(s.work)
     if (str(s.title)) out.title = str(s.title)
     if (str(s.author)) out.author = str(s.author)
     if (str(s.isbn)) out.isbn = str(s.isbn)

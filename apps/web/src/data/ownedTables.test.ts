@@ -131,10 +131,13 @@ describe('account deletion reaches every user-owned table', () => {
   // delete-account deletes the auth user; everything owned must fall out by cascade. Verified
   // empirically against a live database too (auth.users delete → book_tropes/book_moods/
   // author_follows all emptied); this keeps it true as the schema grows.
-  it.each(USER_OWNED_TABLES.map((t) => t.table))('%s cascades to auth.users', (table) => {
+  it.each(USER_OWNED_TABLES.filter((t) => !t.collective).map((t) => t.table))(
+    '%s cascades to auth.users',
+    (table) => {
     expect(schema.has(table)).toBe(true)
     expect(cascadePathToUsers(table)).not.toBeNull()
-  })
+    },
+  )
 })
 
 describe('no user-owned table may go unregistered', () => {

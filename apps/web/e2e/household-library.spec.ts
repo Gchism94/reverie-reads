@@ -92,7 +92,8 @@ async function removeFixtureAccounts(): Promise<void> {
 async function seedDuplicateBooks(): Promise<NonNullable<typeof seeded>> {
   // EVERY ROW GETS EVERY COLUMN THE BATCH USES. PostgREST unions the keys in a bulk insert,
   // otherwise an omitted possession flag becomes an explicit NULL and violates its constraint.
-  // Private values are deliberately populated so accidental Book coercion is visible below.
+  // Annotations present at row creation stay personal. The explicit post-link tag edit and trope
+  // link below publish their fields to the household; note and mood remain private.
   const base = {
     author_first: 'Quill',
     author_last: 'Marrowbane',
@@ -114,9 +115,9 @@ async function seedDuplicateBooks(): Promise<NonNullable<typeof seeded>> {
     plan_y: null as number | null,
   }
   const sentinels = {
-    tag: `PRIVATE_TAG_${projectName}`,
+    tag: `HOUSEHOLD_TAG_${projectName}`,
     note: `PRIVATE_NOTE_${projectName}`,
-    trope: `PRIVATE_TROPE_${projectName}`,
+    trope: `HOUSEHOLD_TROPE_${projectName}`,
     mood: `PRIVATE_MOOD_${projectName}`,
   }
 
@@ -142,7 +143,7 @@ async function seedDuplicateBooks(): Promise<NonNullable<typeof seeded>> {
           ...base,
           owner_id: member.uid,
           title: `Household Duplicate ${projectName}`,
-          tags: [sentinels.tag],
+          tags: [],
           borrowed: true,
           wishlist: true,
           owned_physical: 'paperback',
@@ -161,6 +162,14 @@ async function seedDuplicateBooks(): Promise<NonNullable<typeof seeded>> {
   const ownerBookId = books?.find((book) => book.owner_id === owner.uid)?.id
   const memberBookId = books?.find((book) => book.owner_id === member.uid)?.id
   if (!ownerBookId || !memberBookId) throw new Error('household-library seed IDs missing')
+
+  await ok(
+    admin
+      .from('books')
+      .update({ tags: [sentinels.tag] })
+      .eq('id', memberBookId),
+    'household-library explicit shared tag edit',
+  )
 
   await ok(
     admin.from('reads').insert({
@@ -311,25 +320,26 @@ test('two linked personal libraries appear together without exposing personal co
 
   seeded = await seedDuplicateBooks()
 
-  // Inspect the authenticated RPC payload itself, not only the rendered surface. Private sentinel
-  // values must never cross the server boundary where client mappers could accidentally retain them.
+  // Inspect the authenticated RPC payload itself, not only the rendered surface. Household
+  // tags/tropes must cross the boundary; private notes/moods and reading fields must not.
   const ownerClient = createClient(SUPABASE_URL, ANON, {
     auth: { autoRefreshToken: false, persistSession: false },
   })
   await ownerClient.auth.setSession(owner.session)
-  const sharedPayload = await ownerClient.rpc('household_library_books')
+  const sharedPayload = await ownerClient.rpc('household_library_works')
   if (sharedPayload.error) throw sharedPayload.error
-  expect(sharedPayload.data).toHaveLength(2)
+  expect(sharedPayload.data).toHaveLength(1)
   for (const row of sharedPayload.data ?? []) {
-    expect(row).not.toHaveProperty('tags')
     expect(row).not.toHaveProperty('notes')
-    expect(row).not.toHaveProperty('tropes')
     expect(row).not.toHaveProperty('moods')
+    expect(row).not.toHaveProperty('rating')
+    expect(row).not.toHaveProperty('read_status')
   }
   const serializedPayload = JSON.stringify(sharedPayload.data)
-  for (const sentinel of Object.values(seeded.sentinels)) {
-    expect(serializedPayload).not.toContain(sentinel)
-  }
+  expect(serializedPayload).toContain(seeded.sentinels.tag)
+  expect(serializedPayload).toContain(seeded.sentinels.trope)
+  expect(serializedPayload).not.toContain(seeded.sentinels.note)
+  expect(serializedPayload).not.toContain(seeded.sentinels.mood)
 
   await page.reload()
 
@@ -337,17 +347,15 @@ test('two linked personal libraries appear together without exposing personal co
     'aria-pressed',
     'true',
   )
-  await expect(page.getByTestId('household-book-card')).toHaveCount(2)
+  await expect(page.getByTestId('household-book-card')).toHaveCount(1)
 
-  const ownerCard = page.locator(`[data-owner="${owner.uid}"]`)
-  const memberCard = page.locator(`[data-owner="${member.uid}"]`)
+  const ownerCard = page.locator(`[data-owners~="${owner.uid}"]`)
+  const memberCard = page.locator(`[data-owners~="${member.uid}"]`)
   await expect(ownerCard).toContainText(`${owner.displayName} (you)`)
   await expect(memberCard).toContainText(member.displayName)
   await expect(ownerCard).toContainText(`Household Duplicate ${projectName}`)
-  await expect(memberCard).toContainText(`Household Duplicate ${projectName}`)
-  for (const sentinel of Object.values(seeded.sentinels)) {
-    await expect(page.getByText(sentinel, { exact: false })).toHaveCount(0)
-  }
+  await expect(page.getByText(seeded.sentinels.note, { exact: false })).toHaveCount(0)
+  await expect(page.getByText(seeded.sentinels.mood, { exact: false })).toHaveCount(0)
 
   if (isMobile) {
     expect(
@@ -365,15 +373,17 @@ test('two linked personal libraries appear together without exposing personal co
     await expect(detail).toHaveJSProperty('open', true)
     expect(await detail.evaluate((dialog) => dialog.matches(':modal'))).toBe(true)
     await expect(close).toBeFocused()
-    await expect(detail).toContainText(`From ${member.displayName}'s personal library`)
-    await expect(detail).toContainText('Read-only household view')
+    await expect(detail).toContainText(
+      `Active copies: ${owner.displayName} (you), ${member.displayName}`,
+    )
+    await expect(detail).toContainText(seeded.sentinels.tag)
+    await expect(detail).toContainText(seeded.sentinels.trope)
     await expect(
       detail.getByRole('button', { name: /favourite|favorite|cover|shelf|edit/i }),
     ).toHaveCount(0)
     await expect(detail.getByRole('link')).toHaveCount(0)
-    for (const sentinel of Object.values(seeded.sentinels)) {
-      await expect(detail.getByText(sentinel, { exact: false })).toHaveCount(0)
-    }
+    await expect(detail.getByText(seeded.sentinels.note, { exact: false })).toHaveCount(0)
+    await expect(detail.getByText(seeded.sentinels.mood, { exact: false })).toHaveCount(0)
     expect(await page.evaluate(() => document.documentElement.style.overflow)).toBe('hidden')
     expect(
       await page.evaluate(() => {
@@ -426,10 +436,13 @@ test('two linked personal libraries appear together without exposing personal co
     const rail = page.locator('aside[aria-label="Household book details"]')
     await expect(rail).toBeVisible()
     await memberCard.click()
-    await expect(rail).toContainText(`From ${member.displayName}'s personal library`)
-    for (const sentinel of Object.values(seeded.sentinels)) {
-      await expect(rail.getByText(sentinel, { exact: false })).toHaveCount(0)
-    }
+    await expect(rail).toContainText(
+      `Active copies: ${owner.displayName} (you), ${member.displayName}`,
+    )
+    await expect(rail).toContainText(seeded.sentinels.tag)
+    await expect(rail).toContainText(seeded.sentinels.trope)
+    await expect(rail.getByText(seeded.sentinels.note, { exact: false })).toHaveCount(0)
+    await expect(rail.getByText(seeded.sentinels.mood, { exact: false })).toHaveCount(0)
 
     await page.setViewportSize({ width: 1279, height: 844 })
     const detail = page.getByRole('dialog', { name: /household details/i })
@@ -448,21 +461,24 @@ test('the second reader gets the same household view with their own identity mar
   await signIn(page, member.session)
   await page.goto('/library?scope=household')
 
-  await expect(page.locator(`[data-owner="${member.uid}"]`)).toContainText(
+  await expect(page.locator(`[data-owners~="${member.uid}"]`)).toContainText(
     `${member.displayName} (you)`,
   )
-  await expect(page.locator(`[data-owner="${owner.uid}"]`)).toContainText(owner.displayName)
-  await page.locator(`[data-owner="${member.uid}"]`).click()
+  await expect(page.locator(`[data-owners~="${owner.uid}"]`)).toContainText(owner.displayName)
+  await page.locator(`[data-owners~="${member.uid}"]`).click()
   const detail =
     testInfo.project.name === 'mobile'
       ? page.getByRole('dialog', { name: /household details/i })
       : page.locator('aside[aria-label="Household book details"]')
-  await expect(detail).toContainText('Read-only household view')
+  await expect(detail).toContainText(
+    `Active copies: ${owner.displayName}, ${member.displayName} (you)`,
+  )
   await expect(detail.getByRole('link')).toHaveCount(0)
   if (seeded) {
-    for (const sentinel of Object.values(seeded.sentinels)) {
-      await expect(detail.getByText(sentinel, { exact: false })).toHaveCount(0)
-    }
+    await expect(detail).toContainText(seeded.sentinels.tag)
+    await expect(detail).toContainText(seeded.sentinels.trope)
+    await expect(detail.getByText(seeded.sentinels.note, { exact: false })).toHaveCount(0)
+    await expect(detail.getByText(seeded.sentinels.mood, { exact: false })).toHaveCount(0)
   }
 })
 
@@ -471,7 +487,7 @@ test('an already-open tab never repaints a revoked household while a replacement
 }) => {
   await signIn(page, owner.session)
   await page.goto('/library?scope=household')
-  await expect(page.locator(`[data-owner="${member.uid}"]`)).toBeVisible()
+  await expect(page.locator(`[data-owners~="${member.uid}"]`)).toBeVisible()
   const oldHouseholdId = householdId
   const oldHouseholdName = `Household Library ${projectName}`
 
@@ -530,7 +546,7 @@ test('an already-open tab never repaints a revoked household while a replacement
     markBooksRequested = resolve
   })
   const rosterPattern = '**/rest/v1/rpc/household_roster'
-  const booksPattern = '**/rest/v1/rpc/household_library_books'
+  const booksPattern = '**/rest/v1/rpc/household_library_works'
   await page.route(rosterPattern, async (route) => {
     await rosterGate
     await route.continue()
@@ -543,22 +559,22 @@ test('an already-open tab never repaints a revoked household while a replacement
 
   await page.getByRole('button', { name: 'Household', exact: true }).click()
   await expect(page.getByText('Loading the household library…')).toBeVisible()
-  await expect(page.locator(`[data-owner="${member.uid}"]`)).toHaveCount(0)
+  await expect(page.locator(`[data-owners~="${member.uid}"]`)).toHaveCount(0)
   await expect(page.getByText(oldHouseholdName, { exact: true })).toHaveCount(0)
 
   releaseRoster()
   await booksRequested
   await expect(page.getByText('Loading the household library…')).toBeVisible()
-  await expect(page.locator(`[data-owner="${member.uid}"]`)).toHaveCount(0)
+  await expect(page.locator(`[data-owners~="${member.uid}"]`)).toHaveCount(0)
   releaseBooks()
 
   await expect(
     page.getByText(`Replacement Household ${projectName}`, { exact: true }),
   ).toBeVisible()
-  await expect(page.locator(`[data-owner="${replacement.uid}"]`)).toContainText(
+  await expect(page.locator(`[data-owners~="${replacement.uid}"]`)).toContainText(
     replacement.displayName,
   )
-  await expect(page.locator(`[data-owner="${member.uid}"]`)).toHaveCount(0)
+  await expect(page.locator(`[data-owners~="${member.uid}"]`)).toHaveCount(0)
   await expect(page.getByText(oldHouseholdName, { exact: true })).toHaveCount(0)
   await page.unroute(rosterPattern)
   await page.unroute(booksPattern)
@@ -590,10 +606,15 @@ test('removing the replacement account leaves a read-only one-member household',
   await page.goto('/library?scope=household')
 
   await expect(page.getByText(/only household member left/i)).toBeVisible()
-  await expect(page.getByTestId('household-book-card')).toHaveCount(1)
-  await expect(page.locator(`[data-owner="${owner.uid}"]`)).toContainText(
+  await expect(page.getByTestId('household-book-card')).toHaveCount(2)
+  await expect(page.locator(`[data-owners~="${owner.uid}"]`)).toContainText(
     `${owner.displayName} (you)`,
   )
-  await expect(page.locator(`[data-owner="${replacement.uid}"]`)).toHaveCount(0)
-  await expect(page.locator(`[data-owner="${member.uid}"]`)).toHaveCount(0)
+  await expect(page.locator(`[data-owners~="${replacement.uid}"]`)).toHaveCount(0)
+  await expect(page.locator(`[data-owners~="${member.uid}"]`)).toHaveCount(0)
+  await expect(
+    page
+      .getByTestId('household-book-card')
+      .filter({ hasText: `Replacement Household Book ${projectName}` }),
+  ).toBeVisible()
 })

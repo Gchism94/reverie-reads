@@ -33,6 +33,7 @@ import {
   labelHouseholdData,
   useHouseholdBookSelection,
   useHouseholdLibraryAuthorization,
+  useRemoveHouseholdWork,
   type HouseholdBook,
 } from '../data/household'
 import { useAuth } from '../auth/AuthProvider'
@@ -417,10 +418,14 @@ function HouseholdDetailDrawer({
   book,
   currentReaderId,
   onClose,
+  onRemove,
+  removing,
 }: {
   book: HouseholdBook
   currentReaderId: string
   onClose: () => void
+  onRemove?: () => void
+  removing: boolean
 }) {
   return (
     <DrawerDialog
@@ -428,7 +433,12 @@ function HouseholdDetailDrawer({
       closeLabel="Close household details"
       onClose={onClose}
     >
-      <HouseholdBookDetail book={book} currentReaderId={currentReaderId} />
+      <HouseholdBookDetail
+        book={book}
+        currentReaderId={currentReaderId}
+        onRemove={onRemove}
+        removing={removing}
+      />
     </DrawerDialog>
   )
 }
@@ -437,6 +447,7 @@ function HouseholdLibraryScreen() {
   const { session } = useAuth()
   const currentReaderId = session?.user.id ?? ''
   const household = useHouseholdLibraryAuthorization()
+  const removeWork = useRemoveHouseholdWork()
   const isWide = useIsWide()
 
   const labelled = useMemo(
@@ -453,6 +464,15 @@ function HouseholdLibraryScreen() {
     authorized: hasHousehold,
   })
   const selected = selection.selected
+  const removeFromHousehold = (book: HouseholdBook) => {
+    if (
+      !window.confirm(
+        `Remove ${book.title} from the household library? Personal libraries and the corpus will stay unchanged.`,
+      )
+    )
+      return
+    removeWork.mutate(book.id, { onSuccess: selection.clear })
+  }
 
   const dockedBook =
     isWide && availableBooks.length > 0 ? (selected ?? availableBooks[0] ?? null) : null
@@ -465,7 +485,7 @@ function HouseholdLibraryScreen() {
 
   const center = (
     <div className="min-w-0 px-4 py-6 sm:px-6 lg:px-7">
-      <LibraryHeader scope="household" readout="Household · read-only" className="mb-4" />
+      <LibraryHeader scope="household" readout="Household · shared" className="mb-4" />
 
       {household.paused ? (
         <HouseholdCentered>
@@ -491,8 +511,8 @@ function HouseholdLibraryScreen() {
               <div>
                 <h2 className="text-[15px] font-semibold text-ink">{householdName}</h2>
                 <p className="mt-0.5 text-[12px] text-muted">
-                  {members.length} {members.length === 1 ? 'member' : 'members'} · every card names
-                  its personal-library owner
+                  {members.length} {members.length === 1 ? 'member' : 'members'} · one shared entry
+                  per work
                 </p>
               </div>
               <div className="flex flex-wrap gap-1.5" aria-label="Household members">
@@ -518,8 +538,8 @@ function HouseholdLibraryScreen() {
               role="status"
               className="mb-4 text-[12.5px] text-muted"
             >
-              You’re the only household member left. This scope stays read-only and now contains
-              only your personal library.
+              You’re the only household member left. Household entries remain independent of your
+              personal library.
             </Surface>
           ) : null}
 
@@ -530,8 +550,8 @@ function HouseholdLibraryScreen() {
               </h2>
               <p className="mt-2">
                 {onlyCurrentMember
-                  ? 'You’re the only member left, and your personal library has no books to show here.'
-                  : 'The household is linked, but none of its members has a library book to show.'}
+                  ? 'Add an owned book, or explicitly share a borrowed book, to begin this household library.'
+                  : 'Owned books join automatically. Borrowed books join only when a member chooses to share them.'}
               </p>
             </HouseholdCentered>
           ) : (
@@ -572,7 +592,16 @@ function HouseholdLibraryScreen() {
             aria-label="Household book details"
             className="hidden xl:sticky xl:top-0 xl:block xl:h-dvh xl:border-l xl:border-line"
           >
-            <HouseholdBookDetail book={dockedBook} currentReaderId={currentReaderId} />
+            <HouseholdBookDetail
+              book={dockedBook}
+              currentReaderId={currentReaderId}
+              onRemove={
+                dockedBook.owners.some((owner) => owner.ownership === 'owned')
+                  ? undefined
+                  : () => removeFromHousehold(dockedBook)
+              }
+              removing={removeWork.isPending}
+            />
           </aside>
         ) : null}
       </section>
@@ -581,6 +610,12 @@ function HouseholdLibraryScreen() {
           book={selected}
           currentReaderId={currentReaderId}
           onClose={selection.clear}
+          onRemove={
+            selected.owners.some((owner) => owner.ownership === 'owned')
+              ? undefined
+              : () => removeFromHousehold(selected)
+          }
+          removing={removeWork.isPending}
         />
       ) : null}
     </>
