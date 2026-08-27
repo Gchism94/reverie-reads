@@ -1,7 +1,40 @@
 # Task: corpus-preserving library removal and owner reconciliation
 
-Status: **membership/removal foundation implemented on
-`codex/feat-library-membership-foundation`; production reconciliation remains pending owner review**.
+Status: **membership/removal foundation merged in PR #361; production migration `20260830010000`
+awaits the reviewed bounded-backfill hotfix, and production reconciliation remains pending owner
+review. Corpus-admin preservation/enrichment is in progress on
+`codex/feat-corpus-admin-enrichment`.**
+
+## Corpus-admin and reconciliation checkpoint — 2026-08-27
+
+Implemented and locally verified on the current feature branch, pending independent review:
+
+- service-managed corpus-administrator grants plus a dry-run-by-default owner operator;
+- an audited, fill-only corpus completion path for contributors, series identity when known, pages,
+  publication precision, publisher, language, description, ISBNs, genres, external edition/work
+  identity, provenance, and confidence;
+- corpus-owned cover objects under `w/{work}/{revision}`. Existing personal-object or upstream
+  corpus covers are re-ingested without changing the selected artwork, so deleting a personal
+  library row, account, or `u/{reader}/...` object cannot take the corpus cover with it. Google
+  Books remains the explicit display-only exception and is never stored;
+- last-chance fill-only preservation before personal soft removal, merge deletion, or account
+  cascade deletion, including ordered contributor roles and valid ISBN-10 conversion to canonical
+  ISBN-13. Reader state and private annotations never cross that boundary;
+- additive canonical corpus tropes. A corpus administrator can add directly, or promote by adding
+  in a personal or household library. Removing the personal/household assignment does not retract
+  the accepted corpus association. Ordinary-reader household tropes remain household-only;
+- a generic service-role-only atomic household-membership reconciliation RPC and a private
+  CSV-specific dry-run/write operator. The ignored CSV currently contains 1,166 rows: 100 Account A
+  markers, 175 Account B markers, 13 carrying both markers, 904 carrying neither, and 57 rows marked
+  duplicate. No title-level output is committed;
+- pre-write backups and dry-run reports are written only to an owner-selected directory outside the
+  repository with owner-only permissions. Any unmatched or ambiguous normalized title/author match
+  blocks all writes.
+
+The later three-reader vote mechanism is deliberately not implemented here. It will decide when an
+ordinary-reader proposal is authorized, then call the same additive corpus-trope promotion boundary
+with `source_scope = 'vote'`. Vote evidence and thresholds need their own schema, abuse controls,
+retraction/correction policy, and task review.
 
 ## Implementation checkpoint — 2026-08-26
 
@@ -155,25 +188,31 @@ Additional rules derived from that contract:
    path; no household action may delete or rewrite another member's personal row.
 8. **Data edits have one explicit scope.** Do not copy a mutable `books` row between scopes.
    - **Corpus:** canonical bibliographic identity and standard catalog data. At minimum, genre,
-     subgenre, and the available cover options are corpus changes and must flow to every linked view.
+     subgenre, available cover options, and accepted canonical tropes are corpus changes and must
+     flow to every linked view.
      Cover options are shared candidates; a personal or household display choice may remain a scoped
      preference without deleting or overwriting the corpus options.
    - **Household:** shared descriptive enrichment such as household tags and tropes. Editing it from
      an eligible personal-book surface updates only the corresponding field on the single household
      overlay, preserving the independently curated sibling field, so every household member sees the
-     same result. It does not become global corpus data.
+     same result. Ordinary-reader edits do not become global corpus data. A corpus administrator's
+     added trope is also promoted additively to the canonical work; removing it from the household
+     later does not erase the accepted corpus association.
    - **Personal:** ownership/borrowing, wishlist, owned formats, reading status and logs, rating,
      notes, progress, plans, favourites, and personal lists. These remain private and never become
-     household fields merely because the work also belongs to the household.
+     household fields merely because the work also belongs to the household. Personal trope
+     assignments remain personal for ordinary readers; a corpus administrator's newly assigned
+     trope is also promoted additively to the canonical work.
 9. **Shared enrichment survives personal deletion.** Household tags, tropes, and other explicitly
    household-scoped enrichment attach to household membership or the household-work overlay—not to
    one member's personal row—so deleting that row cannot erase the household's edits. Removing the
    final household membership may delete or archive that overlay according to a separately reviewed
    recovery policy; it must not alter the corpus.
-10. **Canonical changes are validated and attributable.** Genre, subgenre, and cover-option writes
-    go through one corpus write path with provenance, validation, and conflict handling. A personal
-    row must not silently override global data, and household enrichment must never be promoted to
-    the corpus by accident.
+10. **Canonical changes are validated and attributable.** Genre, subgenre, cover-option, and trope
+    writes go through explicit corpus boundaries with provenance, validation, and conflict handling.
+    A personal row must not silently override global data. Trope promotion is immediate only for a
+    service-granted corpus administrator; ordinary-reader household enrichment is never promoted by
+    accident.
 11. **Existing private enrichment needs an explicit migration decision.** The shipped model treats
     tags, moods, and tropes as owner-scoped and omits them from household reads. Do not bulk-expose
     historical values merely because the new overlay exists. Inventory them in the reconciliation

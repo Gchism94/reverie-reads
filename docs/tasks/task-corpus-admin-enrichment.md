@@ -1,0 +1,108 @@
+# Task: corpus-administrator enrichment and durable corpus metadata
+
+Status: **implementation and local verification complete on
+`codex/feat-corpus-admin-enrichment`; pending independent diff review and integration. No production
+data or deployment has been changed.**
+
+## Objective
+
+Make the corpus the durable owner of every objective fact that can outlive a personal or household
+library membership. Authorize a small, service-managed administrator set to complete missing corpus
+metadata and accept canonical tropes without granting direct table writes from the browser.
+
+## Implemented boundaries
+
+- `corpus_admins` is service-managed and excluded from personal backup/restore.
+- `complete_corpus_work_metadata` is authenticated-reachable but enforces the caller's administrator
+  grant, accepts an exact field allowlist, fills gaps instead of replacing curated facts, rejects
+  ISBN collisions, validates corpus-owned covers, and appends a before/after audit record.
+- Personal soft deletion, merge hard deletion, and account cascade deletion first preserve all
+  unambiguous objective gaps in the bound work, including ordered contributor roles and valid
+  ISBN-10 conversion to canonical ISBN-13. Ratings, reading history, notes, ownership, wishlist,
+  lists, moods, personal tags, and other reader state never cross that boundary.
+- Shared covers are ingested to `w/{work}/{revision}`. Existing `u/{reader}/...` and upstream cover
+  URLs are candidates for exact-artwork relocation; Google Books URLs remain display-only.
+- `work_tropes` stores additive canonical work associations. Administrator additions from personal
+  books, household enrichment, and the direct RPC converge on one internal promotion path. Scoped
+  removal does not retract accepted corpus data.
+- Ordinary readers cannot call direct promotion, and their household edits remain household-only.
+  A future three-vote mechanism is an authorization source for the same promotion path, not part of
+  this task.
+- Personal trope promotion refuses another reader's private vocabulary row even if its UUID is
+  supplied directly. A malformed personal `canonical_id` can resolve only to a true ownerless
+  canonical row; it cannot place private vocabulary in the corpus.
+
+## Cover recovery audit — 2026-08-27
+
+The private Git recovery mirror was inspected across its archived local, branch, tag, and pull-ref
+history. It correctly preserves code history, including the tracked 290-row reader seed with its
+historical external cover references, but deliberately contains no database export or Storage
+backup. The two archived source workbooks contain library identity/state but no cover column.
+
+A read-only production audit found:
+
+- 1,335 corpus works: 486 with covers and 849 without;
+- 1,343 personal book rows: 1,291 with covers and 52 without;
+- 797 coverless works with exactly one current personal-book cover candidate, plus one ambiguous
+  multi-candidate work that must not be guessed;
+- 789 coverless works with an enrichment-cache cover candidate;
+- 2,767 cover objects, all under personal `u/` paths, with zero missing full-size or thumbnail
+  objects among the currently referenced book covers;
+- 45 full-size objects belonging to personal book UUIDs that no longer exist. Supabase reports no
+  available physical backup and PITR is disabled, so those objects cannot be safely re-associated
+  with a work from Storage paths alone. They are retained, not deleted or guessed.
+
+This is primarily a corpus-promotion gap rather than lost image bytes. The administrator sweep now
+runs an owner-scoped recovery preflight before external lookup: it promotes the administrator's
+exact selected personal covers through the same validation used by removal preservation, refetches
+the corpus, and relocates fragile `u/`/upstream references to durable `w/` objects before calling
+metadata providers. Cover-only relocation leaves the enrichment clock unchanged, so rate limiting
+cannot hide unfinished metadata work. Corpus-only works with no historical personal cover remain
+ordinary missing-cover candidates; the app must source them rather than invent a recovery record.
+
+## Reconciliation coupling
+
+The private owner CSV is interpreted only by the gitignored operator. Exact normalized title and
+full-author matching is required because the file has no ISBN column. Ambiguity or an unmatched row
+blocks the atomic write. Dry-run and backup artifacts must live outside the repository with mode
+`0600` files inside a mode `0700` directory.
+
+## Required rollout order
+
+1. Integrate and deploy the bounded-backfill hotfix for migration `20260830010000`.
+2. Apply `20260830010000` from clean synchronized `main` through the owner-confirmed deploy guard.
+3. Independently review and integrate this feature branch.
+4. Deploy the covers function and migration `20260831010000` from clean synchronized `main`; the
+   owner personally answers the migration guard because the migration changes write behavior.
+5. Dry-run both administrator grants and the CSV reconciliation. Review the exact external reports
+   and backup checksums; do not approve from aggregate counts alone.
+6. The owner executes both production writes and completes Account A, Account B, household-only,
+   corpus-only, removal, cover-completion, and trope-promotion smoke checks.
+
+## Local verification — 2026-08-27
+
+- Clean database rebuild applied every migration through `20260831010000`.
+- Full pgTAP: 27 files and 623 assertions passed. The focused cover-recovery contract also passed
+  all 56 assertions after the clean rebuild.
+- Core/web unit suites: 79 + 71 files and 2,350 + 619 assertions passed.
+- TypeScript, ESLint, Prettier, production build, and `git diff --check` passed. Schema lint added no
+  finding; its two reports are the existing temporary-table analysis limitations in
+  `backfill_series_from_titles` and `merge_series`.
+- Browser matrix: 217 cases passed and 10 expected project-specific cases skipped. One unchanged
+  native shelf-drag case exposed a deterministic Playwright mid-drag auto-scroll failure: the trace
+  showed no `dragenter`, `drop`, RPC, or database request. Keeping both handles in the test viewport
+  preserved the real-drag assertion and the focused case then passed. No product shelf code changed.
+- The covers Edge Function's personal/corpus prefix separation, mixed-target refusal, and
+  service-managed admin lookup are guarded by source-contract tests; database tests independently
+  validate the real object path and administrator RPC boundary. The repository does not install a
+  standalone Deno test runtime.
+
+## Completion gate
+
+- Clean local reset and full pgTAP suite pass.
+- Core/web unit suites, typecheck, lint, formatting, build, and the complete browser matrix pass.
+- Edge-function corpus cover authorization and path isolation are reviewed and exercised.
+- An independent diff review finds no correctness, privacy, authorization, deadlock, or data-loss
+  issue.
+- Owner-run dry-runs are exact, backups are restorable, production writes match the approved plan,
+  and post-write counts prove corpus works were neither removed nor silently reassigned.

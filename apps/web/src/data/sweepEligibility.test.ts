@@ -56,11 +56,13 @@ describe('sweepCandidates — the one predicate', () => {
       title: 'Done',
       cover: 'https://x/c.jpg',
       isbn: '9780000000001',
+      pages: 320,
       pub: { y: 2020, m: null, d: null },
       genres: ['fantasy'],
       status: 'standalone',
     })
     expect(sweepCandidates([complete], stamps({}))).toHaveLength(0)
+    expect(sweepCandidates([{ ...complete, pages: null }], stamps({}))).toHaveLength(1)
   })
 })
 

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { HouseholdBook } from '../data/household'
 import { HouseholdBookCard, HouseholdBookDetail, LibraryScopeControl } from './HouseholdLibrary'
@@ -88,8 +88,26 @@ describe('household Library presentation', () => {
     }
     render(<HouseholdBookDetail book={tropeOnly} currentReaderId="reader-a" />)
 
-    expect(screen.getByText('Household notes')).toBeInTheDocument()
+    expect(screen.getByText('Shared details')).toBeInTheDocument()
     expect(screen.getByText(/Only One Bed/)).toBeInTheDocument()
+  })
+
+  it('offers an explicit corpus-trope action only when the administrator handler is present', async () => {
+    const add = vi.fn().mockResolvedValue(undefined)
+    render(
+      <HouseholdBookDetail
+        book={book('reader-a', 'Avery')}
+        currentReaderId="reader-a"
+        onAddCorpusTrope={add}
+      />,
+    )
+
+    fireEvent.change(screen.getByLabelText('Add a corpus trope'), {
+      target: { value: 'Quiet competence' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }))
+    await waitFor(() => expect(add).toHaveBeenCalledWith('Quiet competence'))
+    await waitFor(() => expect(screen.getByLabelText('Add a corpus trope')).toHaveValue(''))
   })
 
   it('uses a real pressed-state scope control', () => {

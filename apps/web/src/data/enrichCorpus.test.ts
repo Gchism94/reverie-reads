@@ -1,0 +1,147 @@
+import { describe, expect, it } from 'vitest'
+import type { EnrichResult } from '../lib/enrich'
+import {
+  corpusCoverNeedsDurableOwnership,
+  corpusPatchFromEnrichment,
+  corpusWorkIsIncomplete,
+  corpusWorkShouldCheck,
+  type CorpusEnrichmentWork,
+} from './enrichCorpus'
+
+const completeWork = (over: Partial<CorpusEnrichmentWork> = {}): CorpusEnrichmentWork => ({
+  id: '11111111-1111-4111-8111-111111111111',
+  title: 'A Complete Work',
+  authorText: 'Ada Reader',
+  contributors: [{ name: 'Ada Reader', role: 'author', position: 0 }],
+  series: '',
+  position: null,
+  pages: 320,
+  publicationYear: 2025,
+  publisher: 'Warm House',
+  language: 'en',
+  description: 'A description.',
+  isbns: ['9780306406157'],
+  genre: 'fantasy',
+  genres: ['fantasy'],
+  cover:
+    'https://project.test/storage/v1/object/public/covers/w/11111111-1111-4111-8111-111111111111/rev1.webp',
+  enrichedAt: null,
+  ...over,
+})
+
+describe('corpus enrichment eligibility', () => {
+  it('treats each objective field the aggregator can fill as a real corpus gap', () => {
+    expect(corpusWorkIsIncomplete(completeWork())).toBe(false)
+    for (const patch of [
+      { cover: '' },
+      { isbns: [] },
+      { publicationYear: null },
+      { pages: null },
+      { publisher: '' },
+      { language: '' },
+      { description: '' },
+      { genre: '' },
+      { contributors: [] },
+      { series: 'Known Series', position: null },
+    ] satisfies Partial<CorpusEnrichmentWork>[]) {
+      expect(corpusWorkIsIncomplete(completeWork(patch)), JSON.stringify(patch)).toBe(true)
+    }
+  })
+
+  it('does not call an absent series a gap, because standalone is the safe default', () => {
+    expect(corpusWorkIsIncomplete(completeWork({ series: '', position: null }))).toBe(false)
+  })
+
+  it('distinguishes durable corpus covers from reader-owned and upstream URLs', () => {
+    expect(corpusCoverNeedsDurableOwnership(completeWork().cover)).toBe(false)
+    expect(
+      corpusCoverNeedsDurableOwnership(
+        'https://project.test/storage/v1/object/public/covers/u/reader/book/rev1.webp',
+      ),
+    ).toBe(true)
+    expect(corpusCoverNeedsDurableOwnership('https://covers.example.test/book.webp')).toBe(true)
+    expect(
+      corpusCoverNeedsDurableOwnership(
+        'https://books.google.com/books/content?id=abc&printsec=frontcover&img=1',
+      ),
+    ).toBe(false)
+  })
+
+  it('uses short retries while high-value identity is missing and longer retries once present', () => {
+    const now = Date.parse('2026-08-31T12:00:00Z')
+    const twoDaysAgo = '2026-08-29T12:00:00Z'
+    const fourDaysAgo = '2026-08-27T12:00:00Z'
+    const twentyDaysAgo = '2026-08-11T12:00:00Z'
+    const fortyDaysAgo = '2026-07-22T12:00:00Z'
+    expect(corpusWorkShouldCheck(completeWork({ cover: '', enrichedAt: twoDaysAgo }), now)).toBe(false)
+    expect(corpusWorkShouldCheck(completeWork({ cover: '', enrichedAt: fourDaysAgo }), now)).toBe(true)
+    expect(
+      corpusWorkShouldCheck(
+        completeWork({
+          cover: 'https://project.test/storage/v1/object/public/covers/u/reader/book/rev1.webp',
+          enrichedAt: fourDaysAgo,
+        }),
+        now,
+      ),
+    ).toBe(true)
+    expect(corpusWorkShouldCheck(completeWork({ description: '', enrichedAt: twentyDaysAgo }), now)).toBe(false)
+    expect(corpusWorkShouldCheck(completeWork({ description: '', enrichedAt: fortyDaysAgo }), now)).toBe(true)
+  })
+})
+
+describe('corpus enrichment patch', () => {
+  it('carries every objective field returned by the aggregator into the audited RPC patch', () => {
+    const result: EnrichResult = {
+      title: 'A Work',
+      authors: ['Ada Reader', 'Bea Writer'],
+      author: 'Ada Reader',
+      series: 'The Sequence',
+      seriesPosition: 2,
+      publisher: 'Warm House',
+      pubY: 2025,
+      pubM: 6,
+      pubD: 12,
+      pageCount: 321,
+      isbn10: '0306406152',
+      isbn13: '9780306406157',
+      isbn: '9780306406157',
+      isbns: ['9780306406157', '9780140328721'],
+      language: 'en',
+      genre: 'fantasy',
+      genres: ['fantasy', 'romance'],
+      description: 'A description.',
+      cover: 'https://covers.openlibrary.org/b/id/1-L.jpg',
+      workId: 'OLW1',
+      editionId: 'OLE1',
+      provenance: {
+        cover: { source: 'openlibrary', at: '2026-08-31T00:00:00Z' },
+        pageCount: { source: 'openlibrary', at: '2026-08-31T00:00:00Z' },
+      },
+      source: 'openlibrary',
+      confidence: 'high',
+    }
+    expect(corpusPatchFromEnrichment(result)).toEqual({
+      contributors: [
+        { name: 'Ada Reader', role: 'author', position: 0 },
+        { name: 'Bea Writer', role: 'author', position: 1 },
+      ],
+      authorText: 'Ada Reader, Bea Writer',
+      series: 'The Sequence',
+      position: 2,
+      pages: 321,
+      pubY: 2025,
+      pubM: 6,
+      pubD: 12,
+      publisher: 'Warm House',
+      language: 'en',
+      description: 'A description.',
+      isbns: ['9780306406157', '9780140328721', '9780306406157', '9780306406157', '0306406152'],
+      genre: 'fantasy',
+      genres: ['fantasy', 'romance'],
+      externalWorkId: 'OLW1',
+      editionId: 'OLE1',
+      provenance: result.provenance,
+      confidence: 'high',
+    })
+  })
+})

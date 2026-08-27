@@ -41,6 +41,7 @@ import { useIsDesktop, useIsWide } from '../hooks/useMediaQuery'
 import { useVoice } from '../skin/labels'
 import { SectionHeader, SignatureEmblem } from '../components/Structure'
 import { PageHeader } from '../components/PageHeader'
+import { useAdminAddCorpusWorkTrope, useCorpusAdminStatus } from '../data/enrichCorpus'
 
 function Centered({ children }: { children: ReactNode }) {
   return (
@@ -454,12 +455,16 @@ function HouseholdDetailDrawer({
   onClose,
   onRemove,
   removing,
+  onAddCorpusTrope,
+  addingCorpusTrope,
 }: {
   book: HouseholdBook
   currentReaderId: string
   onClose: () => void
   onRemove?: () => void
   removing: boolean
+  onAddCorpusTrope?: (name: string) => Promise<void>
+  addingCorpusTrope?: boolean
 }) {
   return (
     <DrawerDialog
@@ -472,6 +477,8 @@ function HouseholdDetailDrawer({
         currentReaderId={currentReaderId}
         onRemove={onRemove}
         removing={removing}
+        onAddCorpusTrope={onAddCorpusTrope}
+        addingCorpusTrope={addingCorpusTrope}
       />
     </DrawerDialog>
   )
@@ -482,6 +489,8 @@ function HouseholdLibraryScreen() {
   const currentReaderId = session?.user.id ?? ''
   const household = useHouseholdLibraryAuthorization()
   const removeWork = useRemoveHouseholdWork()
+  const { data: isCorpusAdmin = false } = useCorpusAdminStatus()
+  const addCorpusTrope = useAdminAddCorpusWorkTrope()
   const isWide = useIsWide()
 
   const labelled = useMemo(
@@ -635,6 +644,14 @@ function HouseholdLibraryScreen() {
                   : () => removeFromHousehold(dockedBook)
               }
               removing={removeWork.isPending}
+              onAddCorpusTrope={
+                isCorpusAdmin
+                  ? async (name) => {
+                      await addCorpusTrope.mutateAsync({ workId: dockedBook.id, name })
+                    }
+                  : undefined
+              }
+              addingCorpusTrope={addCorpusTrope.isPending}
             />
           </aside>
         ) : null}
@@ -650,6 +667,14 @@ function HouseholdLibraryScreen() {
               : () => removeFromHousehold(selected)
           }
           removing={removeWork.isPending}
+          onAddCorpusTrope={
+            isCorpusAdmin
+              ? async (name) => {
+                  await addCorpusTrope.mutateAsync({ workId: selected.id, name })
+                }
+              : undefined
+          }
+          addingCorpusTrope={addCorpusTrope.isPending}
         />
       ) : null}
     </>

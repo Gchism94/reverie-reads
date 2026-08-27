@@ -1,6 +1,7 @@
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { RECONCILIATION_BACKUP_PRIMARY_KEYS } from '../../../../scripts/household-reconciliation-lib'
 import { USER_OWNED_TABLES } from './ownedTables'
 
 // Structural guards over the SCHEMA, read from supabase/migrations rather than restated here — a
@@ -161,6 +162,18 @@ describe('no user-owned table may go unregistered', () => {
   it('every exclusion carries a reason', () => {
     for (const t of USER_OWNED_TABLES) {
       if (!t.plan.backup) expect(t.plan.why.length, `${t.table} is excluded without a reason`).toBeGreaterThan(20)
+    }
+  })
+
+  it('gives every reconciliation-backup table a stable primary-key order', () => {
+    expect(Object.keys(RECONCILIATION_BACKUP_PRIMARY_KEYS).sort()).toEqual(
+      USER_OWNED_TABLES.map((entry) => entry.table).sort(),
+    )
+    for (const entry of USER_OWNED_TABLES) {
+      expect(
+        RECONCILIATION_BACKUP_PRIMARY_KEYS[entry.table]?.length,
+        `${entry.table} cannot be safely paged without a total order`,
+      ).toBeGreaterThan(0)
     }
   })
 })

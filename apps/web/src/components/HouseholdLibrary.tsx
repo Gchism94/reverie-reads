@@ -187,12 +187,17 @@ export function HouseholdBookDetail({
   currentReaderId,
   onRemove,
   removing = false,
+  onAddCorpusTrope,
+  addingCorpusTrope = false,
 }: {
   book: HouseholdBook | null
   currentReaderId: string
   onRemove?: () => void
   removing?: boolean
+  onAddCorpusTrope?: (name: string) => Promise<void>
+  addingCorpusTrope?: boolean
 }) {
+  const [corpusTropeName, setCorpusTropeName] = useState('')
   if (!book) {
     return (
       <div className="flex h-full flex-col items-center justify-center px-6 text-center text-muted">
@@ -260,7 +265,7 @@ export function HouseholdBookDetail({
       {(book.householdTags.length > 0 || book.householdTropes.length > 0) && (
         <div className="mt-4">
           <div className="mb-1.5 text-[11px] uppercase tracking-[0.2em] text-muted">
-            Household notes
+            Shared details
           </div>
           <div className="flex flex-wrap gap-1.5">
             {book.householdTags.map((tag) => (
@@ -279,6 +284,7 @@ export function HouseholdBookDetail({
                 style={{ background: 'var(--chip)' }}
               >
                 {trope.emphasis === 'pinned' ? '✦ ' : ''}
+                {trope.scope === 'corpus' ? 'Shared · ' : ''}
                 {trope.name}
               </span>
             ))}
@@ -308,6 +314,47 @@ export function HouseholdBookDetail({
           )}
         </dl>
       )}
+
+      {onAddCorpusTrope ? (
+        <form
+          className="mt-4"
+          onSubmit={(event) => {
+            event.preventDefault()
+            const name = corpusTropeName.trim()
+            if (!name) return
+            void onAddCorpusTrope(name)
+              .then(() => setCorpusTropeName(''))
+              .catch(() => undefined)
+          }}
+        >
+          <label
+            htmlFor={`corpus-trope-${book.id}`}
+            className="mb-1.5 block text-[11px] uppercase tracking-[0.2em] text-muted"
+          >
+            Add a corpus trope
+          </label>
+          <p className="mb-2 text-[11.5px] text-muted">
+            Administrator additions become shared catalog metadata and remain after a library
+            removal.
+          </p>
+          <div className="flex gap-2">
+            <input
+              id={`corpus-trope-${book.id}`}
+              value={corpusTropeName}
+              onChange={(event) => setCorpusTropeName(event.target.value)}
+              placeholder="Trope name"
+              className="skin-control min-w-0 flex-1 border border-line bg-field px-3 py-2 text-[13px] text-ink"
+            />
+            <button
+              type="submit"
+              disabled={addingCorpusTrope || !corpusTropeName.trim()}
+              className="skin-control skin-btn-primary px-3 py-2 text-[12px] font-semibold disabled:opacity-50"
+            >
+              {addingCorpusTrope ? 'Adding…' : 'Add'}
+            </button>
+          </div>
+        </form>
+      ) : null}
 
       <Surface tone="field" radius="control" pad={2} className="mt-auto text-[12px] text-muted">
         {book.owners.some((owner) => owner.ownership === 'owned')

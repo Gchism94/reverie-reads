@@ -22,11 +22,12 @@ const COMPLETE_RECHECK_DAYS = 30
 const PARTIAL_RETRY_DAYS = 3
 const DAY = 86_400_000
 
-/** A book worth enriching: missing a cover, ISBN, pub year, genres, or (for a series) position. */
+/** A book worth enriching: missing a cover, ISBN, pub year, page count, genres, or series position. */
 export function isIncomplete(b: Book): boolean {
   if (!b.cover) return true
   if (!b.isbn) return true
   if (!b.pub?.y) return true
+  if (!b.pages) return true
   if (!b.genres.length) return true
   if (b.status !== 'standalone' && (!b.series || b.position === '')) return true
   return false
@@ -99,6 +100,7 @@ function toIncoming(e: EnrichResult, b: Book): Incoming {
     cover: enrichmentCoverFill(b, e.cover),
     genre: e.genre || undefined,
     genres: e.genres,
+    pages: e.pageCount,
     // Multi-author enrichment → contributor list (first author, rest co-authors); mergeImport
     // unions these into the existing book additively.
     contributors: e.authors?.length ? contributorsFromAuthors(e.authors) : undefined,

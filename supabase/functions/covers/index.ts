@@ -8,10 +8,11 @@
 //  · action:'ingest' — EVERY chosen cover flows through here regardless of source (edition pick,
 //    camera, upload, pasted URL): receive the bytes (multipart) or fetch the URL (server-side, no
 //    client CORS), validate magic bytes + a sane size cap, normalize to webp (max ~1200px long edge)
-//    plus a ~300px thumb, extract the dominant colour (spine tint), and store both in the caller's
-//    user-scoped path in the public 'covers' bucket: u/{uid}/{bookId}/{rev}.webp (+ {rev}_t.webp).
-//    The DB row is patched by the CLIENT via the normal RLS-checked mutation — this function never
-//    writes books rows, so ownership enforcement stays in one place (RLS).
+//    plus a ~300px thumb, extract the dominant colour (spine tint), and store both in the public
+//    'covers' bucket. Personal cover paths are u/{uid}/{bookId}/{rev}.webp; authenticated corpus
+//    administrators may instead use w/{workId}/{rev}.webp so shared metadata never depends on a
+//    reader-owned object. The DB row is patched by the CLIENT through its scoped RPC/mutation —
+//    this function never writes books or works rows, so write authorization stays at the DB edge.
 //
 // Image work uses magick-wasm (the Supabase-documented wasm path): proper filtered resize, webp
 // encode, and decode for jpeg/png/webp/gif/tiff inputs. No hotlinking survives ingest.
@@ -237,10 +238,27 @@ const publicUrl = (path: string): string => {
 // ── action: ingest ──
 
 interface IngestFields {
-  bookId: string
+  bookId?: string
+  /** Admin-only durable corpus target. Exactly one of bookId/workId is accepted. */
+  workId?: string
+  scope?: 'personal' | 'corpus'
   source: string
   sourceUrl?: string
   url?: string
+}
+
+async function isCorpusAdmin(uid: string): Promise<boolean> {
+  if (!DB_URL || !SERVICE) return false
+  try {
+    const r = await fetch(
+      `${DB_URL}/rest/v1/corpus_admins?user_id=eq.${encodeURIComponent(uid)}&select=user_id&limit=1`,
+      { headers: dbHeaders },
+    )
+    if (!r.ok) return false
+    return ((await r.json()) as { user_id?: string }[]).some((row) => row.user_id === uid)
+  } catch {
+    return false
+  }
 }
 
 /** Smallest edge a real cover can have. A 1x1 tracking/placeholder pixel is the artifact this
@@ -276,7 +294,9 @@ async function handleIngest(req: Request, uid: string, tr: Trace): Promise<Respo
       file = new Uint8Array(await f.arrayBuffer())
     }
     fields = {
-      bookId: String(form.get('bookId') ?? ''),
+      bookId: form.get('bookId') ? String(form.get('bookId')) : undefined,
+      workId: form.get('workId') ? String(form.get('workId')) : undefined,
+      scope: form.get('scope') === 'corpus' ? 'corpus' : 'personal',
       source: String(form.get('source') ?? ''),
       sourceUrl: form.get('sourceUrl') ? String(form.get('sourceUrl')) : undefined,
     }
@@ -286,8 +306,14 @@ async function handleIngest(req: Request, uid: string, tr: Trace): Promise<Respo
     tracing = wantsTrace(body)
   }
 
-  if (!fields.bookId || !/^[0-9a-f-]{16,64}$/i.test(fields.bookId))
-    return json({ error: 'bad_book_id' }, 400)
+  const corpusScope = fields.scope === 'corpus'
+  const targetId = corpusScope ? fields.workId : fields.bookId
+  if (!targetId || !/^[0-9a-f-]{16,64}$/i.test(targetId))
+    return json({ error: corpusScope ? 'bad_work_id' : 'bad_book_id' }, 400)
+  if ((corpusScope && fields.bookId) || (!corpusScope && fields.workId))
+    return json({ error: 'ambiguous_target' }, 400)
+  if (corpusScope && !(await isCorpusAdmin(uid)))
+    return json({ error: 'corpus_admin_required' }, 403)
   if (!SOURCES.has(fields.source)) return json({ error: 'bad_source' }, 400)
   // Refuse to persist a display-only source, by label OR by host.
   if (!INGESTIBLE_SOURCES.has(fields.source)) {
@@ -342,7 +368,7 @@ async function handleIngest(req: Request, uid: string, tr: Trace): Promise<Respo
   if (!sniffed) return json({ error: 'not_an_image' }, 415)
 
   const rev = Date.now().toString(36)
-  const base = `u/${uid}/${fields.bookId}`
+  const base = corpusScope ? `w/${targetId}` : `u/${uid}/${targetId}`
 
   try {
     const n = await normalizeImage(file, tr)

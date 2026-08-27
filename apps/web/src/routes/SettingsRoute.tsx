@@ -20,6 +20,15 @@ import {
   type BulkOptions,
   type BulkProgress,
 } from '../data/enrichLibrary'
+import {
+  bulkCompleteCorpus,
+  corpusEnrichmentCandidatesKey,
+  fetchCorpusEnrichmentCandidates,
+  recoverAdminPersonalCorpusCovers,
+  useCorpusAdminStatus,
+  useCorpusEnrichmentCandidates,
+  type CorpusBulkProgress,
+} from '../data/enrichCorpus'
 import { resharpenCovers, resharpenSource, type ResharpenProgress } from '../data/resharpenCovers'
 import { sweepCountText } from '../data/sweepProgress'
 import { DuplicateReview } from '../components/DuplicateReview'
@@ -83,6 +92,9 @@ function SettingsScreen() {
   const [tracing, setTracing] = useState(false)
   const [progress, setProgress] = useState<BulkProgress | null>(null)
   const stopRef = useRef(false)
+  const [corpusCompleting, setCorpusCompleting] = useState(false)
+  const [corpusProgress, setCorpusProgress] = useState<CorpusBulkProgress | null>(null)
+  const corpusStopRef = useRef(false)
   const [sharpening, setSharpening] = useState(false)
   const [sharpProgress, setSharpProgress] = useState<ResharpenProgress | null>(null)
   const sharpStopRef = useRef(false)
@@ -105,6 +117,9 @@ function SettingsScreen() {
   })
   const eligibleCount = stamps ? sweepCandidates(books ?? [], stamps).length : null
   const restingCount = eligibleCount === null ? 0 : incompleteCount - eligibleCount
+  const { data: isCorpusAdmin = false } = useCorpusAdminStatus()
+  const { data: corpusCandidates } = useCorpusEnrichmentCandidates(isCorpusAdmin)
+  const corpusEligibleCount = corpusCandidates?.length ?? null
   // Covers whose STORED pixels can be improved from a larger source (Google/OL) — the re-sharpen set.
   const sharpenableCount = (books ?? []).filter((b) => resharpenSource(b) !== null).length
 
@@ -341,6 +356,54 @@ function SettingsScreen() {
     setProgress(null)
   }
 
+  async function runCorpusComplete() {
+    if (!corpusCandidates?.length) return
+    corpusStopRef.current = false
+    setCorpusCompleting(true)
+    setCorpusProgress({ scanned: 0, total: corpusCandidates.length, filled: 0 })
+    try {
+      // Keep the reader's exact selected artwork before source lookup can offer another edition.
+      // Refetch after the RPC because newly recovered u/ covers now need immediate w/ relocation.
+      const recovery = await recoverAdminPersonalCorpusCovers()
+      const freshCandidates = await fetchCorpusEnrichmentCandidates()
+      setCorpusProgress({ scanned: 0, total: freshCandidates.length, filled: 0 })
+      const result = await bulkCompleteCorpus(
+        freshCandidates,
+        setCorpusProgress,
+        () => corpusStopRef.current,
+      )
+      const prefix =
+        result.stopReason === 'error'
+          ? '⚠ Corpus sweep stopped early — '
+          : result.stopReason === 'rate_limited'
+            ? 'Corpus sweep paused — the book data sources are busy. '
+            : result.stopReason === 'limit'
+              ? 'Corpus sweep paused at the per-run limit — run it again to continue. '
+              : result.stopReason === 'user'
+                ? 'Corpus sweep stopped — '
+                : 'Corpus sweep complete — '
+      const failed = result.failed
+        ? ` · ${result.failed} couldn’t be checked and remain eligible to retry`
+        : ''
+      const recovered = recovery.recoveredCovers
+        ? ` · recovered ${recovery.recoveredCovers} exact personal cover${recovery.recoveredCovers === 1 ? '' : 's'}`
+        : ''
+      setStatus(
+        `${prefix}checked ${result.scanned} of ${result.total} · filled ${result.filled} · ${result.nothing} had nothing new${recovered}${failed}${result.errorMessage ? ` · ${result.errorMessage}` : ''}.`,
+      )
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: corpusEnrichmentCandidatesKey }),
+        qc.invalidateQueries({ queryKey: ['works-browse'] }),
+        qc.invalidateQueries({ queryKey: ['household'] }),
+      ])
+    } catch (error) {
+      setStatus(`Couldn’t finish the corpus sweep: ${(error as Error).message}`)
+    } finally {
+      setCorpusCompleting(false)
+      setCorpusProgress(null)
+    }
+  }
+
   async function runResharpen() {
     sharpStopRef.current = false
     setSharpening(true)
@@ -561,6 +624,40 @@ function SettingsScreen() {
               <p className="w-full text-[12px] text-muted">
                 {restingCount} incomplete book{restingCount === 1 ? '' : 's'} checked recently —
                 eligible again after the recheck window (3 days, 30 once cover and series are in).
+              </p>
+            )}
+            {isCorpusAdmin &&
+              (corpusCompleting ? (
+                <button
+                  type="button"
+                  onClick={() => (corpusStopRef.current = true)}
+                  className="skin-control border border-line px-4 py-2 text-[13px] font-semibold text-ink"
+                  style={{ background: 'var(--field)' }}
+                >
+                  ⏹ Stop shared corpus (
+                  {corpusProgress
+                    ? `${corpusProgress.scanned}/${corpusProgress.total}`
+                    : 'starting…'}
+                  )
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => void runCorpusComplete()}
+                  disabled={!corpusEligibleCount}
+                  className="skin-control border border-line px-4 py-2 text-[13px] font-semibold text-ink disabled:opacity-50"
+                  style={{ background: 'var(--field)' }}
+                >
+                  ✨ Complete shared corpus covers &amp; info
+                  {corpusEligibleCount !== null && corpusEligibleCount > 0
+                    ? ` (${corpusEligibleCount})`
+                    : ''}
+                </button>
+              ))}
+            {isCorpusAdmin && !corpusCompleting && (
+              <p className="w-full text-[12px] text-muted">
+                Admin tool · fills objective gaps for personal, household-only, and corpus-only
+                books. Shared covers are stored independently of every reader account.
               </p>
             )}
             {!completing && (

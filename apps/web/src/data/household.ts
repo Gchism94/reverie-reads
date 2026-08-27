@@ -42,6 +42,7 @@ export interface HouseholdTrope {
   id?: string
   name: string
   emphasis: 'pinned' | 'present'
+  scope?: 'corpus'
 }
 
 export interface HouseholdBookOwner {
@@ -119,13 +120,14 @@ const numericPosition = (value: number | string | null): number | null => {
 const householdTropes = (value: readonly unknown[] | null): HouseholdTrope[] =>
   (value ?? []).flatMap((entry) => {
     if (!entry || typeof entry !== 'object') return []
-    const row = entry as { id?: unknown; name?: unknown; emphasis?: unknown }
+    const row = entry as { id?: unknown; name?: unknown; emphasis?: unknown; scope?: unknown }
     const name = typeof row.name === 'string' ? row.name.trim() : ''
     if (!name) return []
     return [{
       ...(typeof row.id === 'string' && row.id ? { id: row.id } : {}),
       name,
       emphasis: row.emphasis === 'pinned' ? 'pinned' : 'present',
+      ...(row.scope === 'corpus' ? { scope: 'corpus' as const } : {}),
     }]
   })
 

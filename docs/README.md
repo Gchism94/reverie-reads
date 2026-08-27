@@ -47,6 +47,8 @@ breaking their provenance links.
 - `task-recovery-and-workspace-hygiene.md` — private recovery mirror and read-only pruning audit.
 - `task-library-removal-and-reconciliation.md` — corpus-preserving removal and the guarded owner
   CSV reconciliation that follows recovery/history hygiene.
+- `task-corpus-admin-enrichment.md` — service-managed corpus completion, durable shared covers,
+  additive administrator trope promotion, and its rollout gates.
 
 ## archive/ — what we did (history)
 
