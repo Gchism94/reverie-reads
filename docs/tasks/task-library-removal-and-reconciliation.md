@@ -42,15 +42,19 @@ The PR review hardening pass also closes the following privacy boundaries:
   publishes pre-existing annotations;
 - every membership/corpus mutation and automatic annotation path rechecks current membership and
   exact-copy/work/link eligibility at its serialization point. Annotation paths lock the personal
-  book as well as the household, and the trope join policy binds both old and new joins to books
-  owned by the authenticated reader. Trope aggregation ignores historical cross-owner rows. The
-  expected work binding is captured before a book-lock wait; moved joins capture both bindings and
-  prelock both books in UUID order before either household lock. The local two-session harness
+  book as well as the household. Trope INSERT/UPDATE authorization permits only canonical
+  vocabulary or the authenticated reader's own private vocabulary, and the definer aggregation
+  independently filters both mismatched join owners and cross-owner referenced tropes left by legacy
+  or operator writes. The expected work binding is captured before a book-lock wait; moved joins
+  capture both bindings and prelock both books in UUID order before either household lock, then
+  refresh source before destination so a duplicate-copy destination remains the final snapshot. The
+  local two-session harness
   proves five explicit mutations plus both annotation triggers against an uncommitted concurrent
   unlink, an exact personal-book removal race, ordinary and moved-join server-rebind races, moved
   join lock ordering, and the final-unlink lifecycle, without timing sleeps;
 - backup restore replays historical personal tropes while restored books are staged as unowned, then
-  restores owned state so household membership is rebuilt without publishing backup history;
+  restores owned state in sequential batches of at most 100 UUIDs so household membership is rebuilt
+  without publishing backup history or exceeding gateway request-line limits;
 - canonical ISBN resolution locks all normalized identifiers in stable sorted order before lookup
   and insertion. The same harness proves concurrent first-time adds with one ISBN and distinct title
   keys create one ordinary corpus work and two links, while historical ambiguous ISBN ownership
@@ -67,16 +71,18 @@ Still pending and intentionally not performed:
 
 Verification completed on the feature branch:
 
-- 2,951 unit assertions passed across 146 test files;
-- 558 pgTAP assertions passed across 26 files after a clean local database reset;
+- 2,952 unit assertions passed across 146 test files;
+- 567 pgTAP assertions passed across 26 files after a clean local database reset;
 - the complete Playwright matrix passed with 218 runnable cases and 10 expected project skips;
 - typecheck, lint, formatting, production build, and `git diff --check` passed.
 
-The review hardening follow-up was checked with 98 focused membership pgTAP assertions, 80 focused
-core assertions, 36 focused household-web assertions, 49 focused restore assertions, eight
-deterministic authorization/eligibility-revocation races, two deterministic server-rebind races,
-the moved-join lock-order regression, the concurrent first-ISBN resolver, and the concurrent
-final-unlink lifecycle before the whole-repository rerun recorded above.
+The review hardening follow-up was checked with 107 focused membership pgTAP assertions, 80 focused
+core assertions, 36 focused household-web assertions, 50 focused restore assertions, and all 13
+deterministic harness cases covering authorization/eligibility revocation, exact-book removal,
+server rebinding, moved-join prelocking, concurrent first-ISBN resolution, and final-unlink lifecycle.
+The latest three-fix diff also received a fresh bounded blind review for bypasses, lock-order
+regressions, legitimate-write breakage, and false-positive tests; it found no blockers before the
+whole-repository rerun recorded above.
 
 The first pgTAP invocation was intentionally discarded because it ran concurrently against the
 same local database just populated by Playwright. Its inflated global counts demonstrated fixture

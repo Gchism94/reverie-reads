@@ -1,6 +1,6 @@
 -- Personal, household, and corpus membership have independent lifecycles.
 begin;
-select plan(98);
+select plan(107);
 
 select is((select count(*)::int from public.household_work_enrichment), 0,
   'deploying the migration does not publish historical personal tags or tropes');
@@ -528,6 +528,14 @@ select ok(
   'the legacy read path never returns another member''s wishlist state'
 );
 
+insert into public.tropes (id, owner_id, name, facet)
+values (
+  '70000000-0000-4000-8000-000000000035',
+  '71111111-1111-4111-8111-111111111111',
+  'Victim private trope',
+  'vibe'
+);
+
 select set_config(
   'request.jwt.claims',
   '{"sub":"72222222-2222-4222-8222-222222222222","role":"authenticated"}',
@@ -556,6 +564,26 @@ select lives_ok(
   'an unshared borrowed overlap may still keep a private personal trope'
 );
 select throws_ok(
+  $$insert into public.book_tropes (book_id, trope_id, owner_id)
+    values (
+      '72000000-0000-4000-8000-000000000001',
+      '70000000-0000-4000-8000-000000000035',
+      '72222222-2222-4222-8222-222222222222'
+    )$$,
+  '42501',
+  null,
+  'a reader cannot attach another reader''s known private trope UUID'
+);
+select throws_ok(
+  $$update public.book_tropes
+    set trope_id = '70000000-0000-4000-8000-000000000035'
+    where book_id = '72000000-0000-4000-8000-000000000002'
+      and owner_id = '72222222-2222-4222-8222-222222222222'$$,
+  '42501',
+  null,
+  'a reader cannot retarget their join to another reader''s known private trope UUID'
+);
+select throws_ok(
   $$update public.book_tropes
     set book_id = '71000000-0000-4000-8000-000000000001'
     where trope_id = (
@@ -567,6 +595,17 @@ select throws_ok(
 );
 reset role;
 select is(
+  (select count(*)::int from public.book_tropes
+   where book_id = '72000000-0000-4000-8000-000000000002'
+     and trope_id = (
+       select id from public.tropes
+       where owner_id = '72222222-2222-4222-8222-222222222222'
+         and name = 'Unshared overlap sentinel'
+     )),
+  1,
+  'a refused cross-owner update leaves the reader''s legitimate join intact'
+);
+select is(
   (select count(*)::int from public.household_work_enrichment e
    join membership_household h on h.id = e.household_id
    where e.work_id = (
@@ -576,6 +615,75 @@ select is(
   0,
   'an unshared borrowed copy cannot publish annotations through another copy''s household work'
 );
+
+-- Simulate a legacy malformed join whose join/book owner agrees but whose referenced private trope
+-- belongs to somebody else. The definer snapshot must filter the vocabulary row independently of
+-- RLS, while continuing to publish this reader's legitimate trope for the same eligible book.
+insert into public.book_tropes (book_id, trope_id, owner_id)
+values (
+  '72000000-0000-4000-8000-000000000001',
+  '70000000-0000-4000-8000-000000000035',
+  '72222222-2222-4222-8222-222222222222'
+);
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"72222222-2222-4222-8222-222222222222","role":"authenticated"}',
+  true
+);
+select lives_ok(
+  $$insert into public.book_tropes (book_id, trope_id, owner_id)
+    select
+      '72000000-0000-4000-8000-000000000001',
+      id,
+      '72222222-2222-4222-8222-222222222222'
+    from public.tropes
+    where owner_id = '72222222-2222-4222-8222-222222222222'
+      and name = 'Unshared overlap sentinel'$$,
+  'a reader can still publish their own private trope to an eligible household work'
+);
+reset role;
+select is(
+  (select count(*)::int
+   from public.household_work_enrichment e
+   cross join lateral jsonb_array_elements(e.tropes) trope_value
+   join membership_household h on h.id = e.household_id
+   where e.work_id = (
+       select corpus_work_id from public.books
+       where id = '72000000-0000-4000-8000-000000000001'
+     )
+     and trope_value ->> 'name' = 'Victim private trope'),
+  0,
+  'a definer snapshot excludes a legacy reference to another reader''s private trope'
+);
+select is(
+  (select count(*)::int
+   from public.household_work_enrichment e
+   cross join lateral jsonb_array_elements(e.tropes) trope_value
+   join membership_household h on h.id = e.household_id
+   where e.work_id = (
+       select corpus_work_id from public.books
+       where id = '72000000-0000-4000-8000-000000000001'
+     )
+     and trope_value ->> 'name' = 'Unshared overlap sentinel'),
+  1,
+  'the same definer snapshot retains the target reader''s legitimate private trope'
+);
+delete from public.book_tropes
+where book_id = '72000000-0000-4000-8000-000000000001'
+  and trope_id in (
+    '70000000-0000-4000-8000-000000000035',
+    (select id from public.tropes
+     where owner_id = '72222222-2222-4222-8222-222222222222'
+       and name = 'Unshared overlap sentinel')
+  );
+delete from public.household_work_enrichment
+where household_id = (select id from membership_household)
+  and work_id = (
+    select corpus_work_id from public.books
+    where id = '72000000-0000-4000-8000-000000000001'
+  );
+delete from public.tropes where id = '70000000-0000-4000-8000-000000000035';
 
 -- Simulate one invalid cross-owner join left by the former weak UPDATE policy. A later legitimate
 -- owner edit must not sweep that historical row into the household snapshot.
@@ -682,6 +790,82 @@ where household_id = (select id from membership_household)
     select corpus_work_id from public.books
     where id = '71000000-0000-4000-8000-000000000002'
   );
+
+-- Duplicate personal copies can share one work and therefore one household overlay. The source UUID
+-- deliberately sorts after the destination: UUID-ordered snapshots previously wrote the populated
+-- destination first and then erased it with the empty source snapshot.
+insert into public.books (
+  id, owner_id, title, author_first, author_last, ownership, borrowed, wishlist
+)
+values
+  ('71000000-0000-4000-8000-000000000036', '71111111-1111-4111-8111-111111111111',
+   'Descending duplicate work', 'Order', 'Sentinel', 'owned', false, false),
+  ('71900000-0000-4000-8000-000000000036', '71111111-1111-4111-8111-111111111111',
+   'Descending duplicate work', 'Order', 'Sentinel', 'owned', false, false);
+select set_config(
+  'test.descending_duplicate_work_id',
+  (select corpus_work_id::text from public.books
+   where id = '71000000-0000-4000-8000-000000000036'),
+  true
+);
+select is(
+  (select corpus_work_id from public.books
+   where id = '71900000-0000-4000-8000-000000000036'),
+  current_setting('test.descending_duplicate_work_id')::uuid,
+  'the descending-UUID fixtures bind to the same corpus work and household overlay'
+);
+insert into public.tropes (id, owner_id, name, facet)
+values (
+  '70000000-0000-4000-8000-000000000036',
+  '71111111-1111-4111-8111-111111111111',
+  'Descending move sentinel',
+  'vibe'
+);
+insert into public.book_tropes (book_id, trope_id, owner_id)
+values (
+  '71900000-0000-4000-8000-000000000036',
+  '70000000-0000-4000-8000-000000000036',
+  '71111111-1111-4111-8111-111111111111'
+);
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"71111111-1111-4111-8111-111111111111","role":"authenticated"}',
+  true
+);
+select lives_ok(
+  $$update public.book_tropes
+    set book_id = '71000000-0000-4000-8000-000000000036'
+    where book_id = '71900000-0000-4000-8000-000000000036'
+      and trope_id = '70000000-0000-4000-8000-000000000036'$$,
+  'an owner can move a trope from a higher UUID to a lower duplicate-copy UUID'
+);
+reset role;
+select is(
+  (select count(*)::int
+   from public.household_work_enrichment e
+   cross join lateral jsonb_array_elements(e.tropes) trope_value
+   join membership_household h on h.id = e.household_id
+   where e.work_id = current_setting('test.descending_duplicate_work_id')::uuid
+     and trope_value ->> 'id' = '70000000-0000-4000-8000-000000000036'),
+  1,
+  'the destination remains the final semantic snapshot for duplicate personal copies'
+);
+delete from public.book_tropes
+where trope_id = '70000000-0000-4000-8000-000000000036';
+delete from public.tropes where id = '70000000-0000-4000-8000-000000000036';
+delete from public.books where id in (
+  '71000000-0000-4000-8000-000000000036',
+  '71900000-0000-4000-8000-000000000036'
+);
+delete from public.household_work_enrichment
+where household_id = (select id from membership_household)
+  and work_id = current_setting('test.descending_duplicate_work_id')::uuid;
+delete from public.household_works
+where household_id = (select id from membership_household)
+  and work_id = current_setting('test.descending_duplicate_work_id')::uuid;
+delete from public.works
+where id = current_setting('test.descending_duplicate_work_id')::uuid;
 
 set local role authenticated;
 select set_config(

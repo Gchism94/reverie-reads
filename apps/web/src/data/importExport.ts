@@ -20,6 +20,11 @@ import { applyIncoming, type ReviewCandidate } from './intake'
 import { loadVerdicts } from './duplicates'
 import { persistContributors } from './contributors'
 
+// Keep URL-sized PostgREST filters comfortably below the local gateway's request-line limit.
+// Restore is already a staged, multi-request operation, so run these sequentially and fail at the
+// first rejected batch instead of creating a burst of ownership-trigger work.
+const RESTORE_OWNERSHIP_BATCH_SIZE = 100
+
 async function currentUserId(): Promise<string> {
   const { data } = await supabase.auth.getUser()
   const id = data.user?.id
@@ -1032,11 +1037,12 @@ export async function restoreBackup(
   // Re-enable the backed-up ownership only after historical trope joins exist. This update creates
   // required household membership but does not fire either annotation trigger, so restore remains
   // faithful without inventing household-sharing consent.
-  if (restoredOwnedBookIds.length) {
+  for (let start = 0; start < restoredOwnedBookIds.length; start += RESTORE_OWNERSHIP_BATCH_SIZE) {
+    const batch = restoredOwnedBookIds.slice(start, start + RESTORE_OWNERSHIP_BATCH_SIZE)
     const { error } = await supabase
       .from('books')
       .update({ ownership: 'owned' })
-      .in('id', restoredOwnedBookIds)
+      .in('id', batch)
       .eq('owner_id', ownerId)
     if (error) throw error
   }

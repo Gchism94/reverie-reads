@@ -396,14 +396,18 @@ only. Each preserves the sibling household field, serializes with unlink, and re
 owner membership, personal work link, exact-copy eligibility, and active household work while
 holding both the personal-book and household locks. An owned copy is eligible automatically; a
 borrowed copy is eligible only through an active share for that exact book, work, and household.
-Trope snapshots aggregate only joins whose `owner_id` matches the personal book owner, so malformed
-cross-owner rows left by an older policy cannot be republished by a later legitimate edit. The
-trigger captures the expected corpus binding before waiting on any personal-book lock; a moved join
-captures both bindings and prelocks both books in UUID order before either household lock. A
-concurrent server rebind therefore suppresses the stale household side effect without discarding the
-personal edit, and opposite book/household lock order cannot form a moved-join deadlock.
+`book_tropes` INSERT/UPDATE authorization also requires the referenced trope to be canonical or
+owned by the acting reader. Definer snapshots independently require both a join `owner_id` matching
+the personal book owner and a canonical-or-same-owner referenced trope, so either shape of malformed
+legacy cross-owner row remains private. The trigger captures the expected corpus binding before
+waiting on any personal-book lock; a moved join captures both bindings and prelocks both books in
+UUID order before either household lock, then refreshes the source before the destination so a
+duplicate-copy destination is the final semantic snapshot. A concurrent server rebind therefore
+suppresses the stale household side effect without discarding the personal edit, and opposite
+book/household lock order cannot form a moved-join deadlock.
 Backup restore stages every restored book as unowned, replays historical personal tropes, and only
-then restores owned state, so replay does not masquerade as new household-sharing consent.
+then restores owned state in sequential batches of at most 100 UUIDs, so replay does not masquerade
+as new household-sharing consent and large libraries do not exceed gateway request-line limits.
 
 Canonical ISBN resolution acquires transaction advisory locks for every normalized ISBN-13 in
 deduplicated sorted order before counting candidates or inserting a work. Concurrent first-time adds

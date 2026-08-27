@@ -45,7 +45,9 @@ const NEW_OWNER = 'user-new'
 let db: Db
 let currentUser = OWNER
 let seq = 0
-const uuid = () => `id-${++seq}`
+const realisticUuid = (n: number): string =>
+  `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`
+const uuid = () => realisticUuid(++seq)
 
 /** Read a string column off an untyped fake row. */
 const str = (r: Row | undefined, col: string): string => String(r?.[col] ?? '')
@@ -63,6 +65,8 @@ interface Access {
   bounded: boolean
   /** Write payload, retained so ordering-sensitive restore tests can assert the staged state. */
   values?: Row[]
+  /** `.in()` filters, retained so URL-size-sensitive writes cannot hide behind the in-memory fake. */
+  inclusions?: { column: string; values: unknown[] }[]
 }
 let access: Access[] = []
 /** When true, the fake serves only the first PAGE_CAP rows and ignores the requested window. */
@@ -211,6 +215,10 @@ class Query implements PromiseLike<{ data: Row[] | Row | null; error: unknown }>
           : this.mode === 'update' && this.patch
             ? [structuredClone(this.patch)]
             : undefined,
+      inclusions: this.inclusions.map(([column, values]) => ({
+        column,
+        values: structuredClone(values),
+      })),
     })
     const table = db[this.table]
     if (this.mode === 'insert' || this.mode === 'upsert') {
@@ -462,6 +470,41 @@ describe('backup round trip — the data v4 dropped on the floor', () => {
     expect(ownershipRestoreIndex).toBeGreaterThan(tropeReplayIndex)
     expect(db.books.find((book) => book.title === 'Fourth Wing')?.ownership).toBe('owned')
     expect(db.books.find((book) => book.title === 'Iron Flame')?.ownership).toBe('unowned')
+  })
+
+  it('restores more than 300 owned books through bounded UUID filters', async () => {
+    const bookCount = 305
+    const books = Array.from({ length: bookCount }, (_, index) => ({
+      id: realisticUuid(10_000 + index),
+      owner_id: OWNER,
+      title: `Restored owned book ${index}`,
+      genre: 'literary',
+      ownership: 'owned',
+    }))
+    wipeToFreshAccount()
+    access = []
+
+    await restoreBackup(JSON.stringify({ books }))
+
+    const ownershipUpdates = access.filter(
+      (entry) =>
+        entry.table === 'books' &&
+        entry.mode === 'update' &&
+        entry.values?.[0]?.ownership === 'owned',
+    )
+    const idBatches = ownershipUpdates.map(
+      (entry) => entry.inclusions?.find((filter) => filter.column === 'id')?.values ?? [],
+    )
+    const restoredIds = idBatches.flat()
+
+    expect(idBatches.map((batch) => batch.length)).toEqual([100, 100, 100, 5])
+    expect(restoredIds).toHaveLength(bookCount)
+    expect(new Set(restoredIds).size).toBe(bookCount)
+    expect(restoredIds.every((id) => /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-8[0-9a-f]{3}-[0-9a-f]{12}$/.test(String(id)))).toBe(true)
+    expect(db.books).toHaveLength(bookCount)
+    expect(db.books.every((book) => book.owner_id === NEW_OWNER && book.ownership === 'owned')).toBe(
+      true,
+    )
   })
 
   it('re-coins the reader’s personal vocabulary, and reuses canonical rows instead of duplicating them', async () => {

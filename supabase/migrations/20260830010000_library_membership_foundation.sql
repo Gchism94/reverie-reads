@@ -929,9 +929,24 @@ create trigger household_members_sync_owned_books
   after insert on public.household_members
   for each row execute function public.sync_new_household_member_books();
 
--- The original UPDATE policy checked only the join row's owner_id. Bind both the old and new join
--- to a personal book owned by that reader so moving a known trope row cannot target another
--- reader's book UUID and enter its security-definer household trigger.
+-- A join may reference only canonical vocabulary or the acting reader's personal vocabulary.
+-- Book ownership and trope ownership are independent boundaries: knowing another reader's private
+-- trope UUID must not make its name publishable through this security-definer household trigger.
+drop policy "book_tropes: insert own" on public.book_tropes;
+create policy "book_tropes: insert own" on public.book_tropes for insert
+  with check (
+    owner_id = (select auth.uid())
+    and exists (
+      select 1 from public.books b
+      where b.id = book_id and b.owner_id = (select auth.uid())
+    )
+    and exists (
+      select 1 from public.tropes t
+      where t.id = trope_id
+        and (t.owner_id is null or t.owner_id = (select auth.uid()))
+    )
+  );
+
 drop policy "book_tropes: update own" on public.book_tropes;
 create policy "book_tropes: update own" on public.book_tropes for update
   using (
@@ -946,6 +961,11 @@ create policy "book_tropes: update own" on public.book_tropes for update
     and exists (
       select 1 from public.books b
       where b.id = book_id and b.owner_id = (select auth.uid())
+    )
+    and exists (
+      select 1 from public.tropes t
+      where t.id = trope_id
+        and (t.owner_id is null or t.owner_id = (select auth.uid()))
     )
   );
 
@@ -1128,7 +1148,8 @@ begin
   from public.book_tropes bt
   join public.tropes t on t.id = bt.trope_id
   where bt.book_id = p_book
-    and bt.owner_id = target_owner;
+    and bt.owner_id = target_owner
+    and (t.owner_id is null or t.owner_id = target_owner);
 
   insert into public.household_work_enrichment (
     household_id, work_id, tropes, updated_by
@@ -1197,21 +1218,15 @@ begin
     order by b.id
     for update;
 
-    if old.book_id < new.book_id then
-      perform public.sync_personal_book_household_tropes(
-        old.book_id, old.owner_id, old_work
-      );
-      perform public.sync_personal_book_household_tropes(
-        new.book_id, new.owner_id, new_work
-      );
-    else
-      perform public.sync_personal_book_household_tropes(
-        new.book_id, new.owner_id, new_work
-      );
-      perform public.sync_personal_book_household_tropes(
-        old.book_id, old.owner_id, old_work
-      );
-    end if;
+    -- Locks are ordered by UUID above, but snapshots follow move semantics: remove from the source,
+    -- then publish the destination as the final state. When duplicate personal copies share one
+    -- household/work overlay, an empty source snapshot must not overwrite the moved destination.
+    perform public.sync_personal_book_household_tropes(
+      old.book_id, old.owner_id, old_work
+    );
+    perform public.sync_personal_book_household_tropes(
+      new.book_id, new.owner_id, new_work
+    );
   elsif tg_op = 'DELETE' then
     select b.corpus_work_id into old_work
     from public.books b
