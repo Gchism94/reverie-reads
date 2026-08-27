@@ -27,7 +27,7 @@ import {
 import { envInt, rateLimit, tooMany } from '../_shared/ratelimit.ts'
 import { captureEdgeError, logEvent } from '../_shared/observe.ts'
 import { Trace, wantsTrace } from '../_shared/trace.ts'
-import { isGoogleNoCoverArt, upgradeCoverUrl } from '../_shared/coverUrl.ts'
+import { isGoogleContentCover, isGoogleNoCoverArt, upgradeCoverUrl } from '../_shared/coverUrl.ts'
 import { olHeaders } from '../_shared/olIdentity.ts'
 import { workIdentityPart } from '../_shared/workIdentity.ts'
 
@@ -273,11 +273,6 @@ const SOURCES = new Set(['hardcover', 'google', 'openlibrary', 'upload', 'camera
 // the client refuses too, but the client is not the security boundary.
 const INGESTIBLE_SOURCES = new Set(['hardcover', 'openlibrary', 'upload', 'camera', 'url'])
 
-/** Host check, because the declared source is not sufficient: a Google URL wearing the label 'url'
- *  (the lazy backfill's label for pre-existing covers) is still a Google image. */
-const isGoogleHostedCover = (url: string): boolean =>
-  /(?:books\.google\.[a-z.]+|googleusercontent\.com)\/books\/content/i.test(url || '')
-
 async function handleIngest(req: Request, uid: string, tr: Trace): Promise<Response> {
   let file: Uint8Array | null = null
   let fields: IngestFields
@@ -321,7 +316,7 @@ async function handleIngest(req: Request, uid: string, tr: Trace): Promise<Respo
     return json({ error: 'display_only_source' }, 422)
   }
   for (const candidate of [fields.url, fields.sourceUrl]) {
-    if (candidate && isGoogleHostedCover(candidate)) {
+    if (candidate && isGoogleContentCover(candidate)) {
       logEvent('info', 'covers', 'ingest_refused_display_only', {
         uid,
         source: fields.source,
@@ -341,7 +336,6 @@ async function handleIngest(req: Request, uid: string, tr: Trace): Promise<Respo
     // Fetch the LARGEST the source offers (Google zoom=0, OL -L) so the stored asset isn't a 128px
     // thumbnail; record the upgraded URL as provenance so a re-sharpen never re-fetches the small one.
     const url = upgradeCoverUrl(raw, 'full')
-    fetchedUrl = url
     sourceUrl = sourceUrl ? upgradeCoverUrl(sourceUrl, 'full') : url
     let r: Response
     try {
@@ -355,6 +349,18 @@ async function handleIngest(req: Request, uid: string, tr: Trace): Promise<Respo
       return json({ error: 'fetch_failed' }, 422)
     }
     if (!r.ok) return json({ error: 'fetch_failed', status: r.status }, 422)
+    // Redirects remain supported for ordinary provider/CDN URLs, but their terminal host is a new
+    // validation boundary. A non-Google URL must not redirect Google Books bytes into permanent
+    // personal or corpus Storage; reject before the response body is read.
+    fetchedUrl = r.url || url
+    if (isGoogleContentCover(fetchedUrl)) {
+      logEvent('info', 'covers', 'ingest_refused_display_only', {
+        uid,
+        source: fields.source,
+        host: 'google_redirect',
+      })
+      return json({ error: 'display_only_source' }, 422)
+    }
     const len = Number(r.headers.get('content-length') ?? 0)
     if (len > MAX_INPUT_BYTES) return json({ error: 'too_large', maxBytes: MAX_INPUT_BYTES }, 413)
     const buf = new Uint8Array(await tr.time('covers.readBody', () => r.arrayBuffer()))

@@ -1,4 +1,9 @@
-import { isIngestibleCoverUrl, type Contributor, type CoverSource } from '@reverie/core'
+import {
+  isGoogleContentCover,
+  isIngestibleCoverUrl,
+  type Contributor,
+  type CoverSource,
+} from '@reverie/core'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { enrichBookOutcome, type EnrichResult } from '../lib/enrich'
 import { ingestCorpusCover } from '../lib/covers'
@@ -91,8 +96,7 @@ export function corpusWorkIsIncomplete(work: CorpusEnrichmentWork): boolean {
 export function corpusCoverNeedsDurableOwnership(url: string): boolean {
   if (!url) return false
   if (/\/storage\/v1\/object\/public\/covers\/w\//i.test(url)) return false
-  if (/(?:books[.]google[.][^/]+|[^/]+[.]googleusercontent[.]com)\/books\/content/i.test(url))
-    return false
+  if (isGoogleContentCover(url)) return false
   return true
 }
 

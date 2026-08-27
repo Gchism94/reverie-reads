@@ -1,5 +1,5 @@
 begin;
-select plan(56);
+select plan(62);
 
 insert into auth.users (id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
 values
@@ -21,7 +21,36 @@ values
     '80000000-0000-4000-8000-000000000004', 'legacycover|writer', 'Legacy Cover', 'D Writer',
     '[{"name":"D Writer","role":"author","position":0}]'::jsonb,
     'https://legacy.example/selected-cover.webp'
+  ),
+  (
+    '80000000-0000-4000-8000-000000000005', 'lookalikework|writer', 'Lookalike Work', 'L Writer',
+    '[]'::jsonb, null
   );
+
+select ok(
+  public.google_books_display_cover_url_is_valid(
+    'https://books.google.com/books/content?id=legitimate'
+  ),
+  'the Google Books API image host remains a sanctioned display-only cover'
+);
+select ok(
+  public.google_books_display_cover_url_is_valid(
+    'https://books.googleusercontent.com/books/content?id=legitimate'
+  ),
+  'the exact Google Books image mirror remains sanctioned'
+);
+select ok(
+  not public.google_books_display_cover_url_is_valid(
+    'https://books.google.evil.example/books/content?id=attacker'
+  )
+  and not public.google_books_display_cover_url_is_valid(
+    'https://books.googleusercontent.com.evil.example/books/content?id=attacker'
+  )
+  and not public.google_books_display_cover_url_is_valid(
+    'https://books.google.com@evil.example/books/content?id=attacker'
+  ),
+  'lookalike and userinfo hosts are never classified as Google-owned artwork'
+);
 
 insert into storage.objects (bucket_id, name, owner)
 values
@@ -68,6 +97,16 @@ select set_config(
 );
 
 select is(public.is_corpus_admin(), true, 'the service-managed grant authorizes its account');
+select public.complete_corpus_work_metadata(
+  '80000000-0000-4000-8000-000000000005',
+  '{"coverUrl":"https://books.google.evil.example/books/content?id=attacker","coverSource":"google"}'::jsonb,
+  '2026-08-31T12:00:00Z'
+);
+select is(
+  (select cover_url from public.works where id = '80000000-0000-4000-8000-000000000005'),
+  null::text,
+  'administrator completion cannot publish a Google lookalike host'
+);
 select is(
   public.complete_corpus_work_metadata(
     '80000000-0000-4000-8000-000000000001',
@@ -186,6 +225,32 @@ select is(
 
 reset role;
 select set_config('request.jwt.claims', '{}', true);
+insert into public.books (
+  id, owner_id, corpus_work_id, title, author_first, author_last, ownership,
+  cover_url, cover_source, cover_source_url
+) values (
+  '81000000-0000-4000-8000-000000000005',
+  '82222222-2222-4222-8222-222222222222',
+  '80000000-0000-4000-8000-000000000005',
+  'Lookalike Work', 'L', 'Writer', 'unowned',
+  'https://books.google.evil.example/books/content?id=attacker', 'google',
+  'https://books.google.evil.example/books/content?id=attacker'
+);
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"82222222-2222-4222-8222-222222222222","role":"authenticated","iss":"http://127.0.0.1:55321/auth/v1"}',
+  true
+);
+select public.remove_personal_book('81000000-0000-4000-8000-000000000005');
+select is(
+  (select cover_url from public.works where id = '80000000-0000-4000-8000-000000000005'),
+  null::text,
+  'ordinary personal removal cannot promote an attacker-controlled Google lookalike'
+);
+
+reset role;
+select set_config('request.jwt.claims', '{}', true);
 insert into public.works (id, work_key, title, author_text, contributors)
 values (
   '80000000-0000-4000-8000-000000000003', 'deletedwork|writer', 'Deleted Work', 'C Writer',
@@ -220,6 +285,41 @@ select is(
   (select concat_ws('|', jsonb_array_length(contributors), contributors -> 1 ->> 'role')
    from public.works where id = '80000000-0000-4000-8000-000000000003'),
   '2|co_author', 'ordered multi-contributor identity and roles survive personal deletion'
+);
+
+insert into auth.users (id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+values (
+  '85555555-5555-4555-8555-555555555555', 'authenticated', 'authenticated',
+  'account-cascade@example.com', '{}', '{}', now(), now()
+);
+insert into public.works (id, work_key, title, author_text, contributors)
+values (
+  '85000000-0000-4000-8000-000000000001', 'accountcascade|writer',
+  'Account Cascade', 'E Writer', '[]'::jsonb
+);
+insert into public.books (id, owner_id, corpus_work_id, title, author_first, author_last, ownership)
+values (
+  '85000000-0000-4000-8000-000000000002', '85555555-5555-4555-8555-555555555555',
+  '85000000-0000-4000-8000-000000000001', 'Account Cascade', 'E', 'Writer', 'unowned'
+);
+insert into public.authors (id, owner_id, name, name_key)
+values
+  ('85000000-0000-4000-8000-000000000003', '85555555-5555-4555-8555-555555555555',
+   'E Writer', 'e writer'),
+  ('85000000-0000-4000-8000-000000000004', '85555555-5555-4555-8555-555555555555',
+   'F Collaborator', 'f collaborator');
+insert into public.book_authors (book_id, author_id, owner_id, position, role)
+values
+  ('85000000-0000-4000-8000-000000000002', '85000000-0000-4000-8000-000000000003',
+   '85555555-5555-4555-8555-555555555555', 0, 'author'),
+  ('85000000-0000-4000-8000-000000000002', '85000000-0000-4000-8000-000000000004',
+   '85555555-5555-4555-8555-555555555555', 1, 'co_author');
+delete from auth.users where id = '85555555-5555-4555-8555-555555555555';
+select is(
+  (select concat_ws('|', jsonb_array_length(contributors), contributors -> 1 ->> 'role')
+   from public.works where id = '85000000-0000-4000-8000-000000000001'),
+  '2|co_author',
+  'account deletion preserves the complete contributor graph before sibling cascades begin'
 );
 insert into public.books (
   id, owner_id, corpus_work_id, title, author_first, author_last, ownership

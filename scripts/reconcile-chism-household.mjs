@@ -21,6 +21,7 @@ import {
   householdReconciliationCounts,
   planHouseholdReconciliation,
   RECONCILIATION_BACKUP_PRIMARY_KEYS,
+  RECONCILIATION_HOUSEHOLD_BACKUP_SPECS,
 } from './household-reconciliation-lib.ts'
 
 const LOCAL_URL = 'http://127.0.0.1:55321'
@@ -160,22 +161,20 @@ async function backupOwnerState(householdId) {
     })
     tables[entry.table] = rows
   }
-  const [households, members, works, shares, enrichment] = await Promise.all([
-    supabase.from('households').select('*').eq('id', householdId),
-    supabase.from('household_members').select('*').eq('household_id', householdId),
-    supabase.from('household_works').select('*').eq('household_id', householdId),
-    supabase.from('household_book_shares').select('*').eq('household_id', householdId),
-    supabase.from('household_work_enrichment').select('*').eq('household_id', householdId),
-  ])
-  for (const [label, result] of Object.entries({
-    households,
-    members,
-    works,
-    shares,
-    enrichment,
-  })) {
-    if (result.error) throw dbError(`backup household ${label}`, result.error)
-  }
+  const householdEntries = await Promise.all(
+    RECONCILIATION_HOUSEHOLD_BACKUP_SPECS.map(async (entry) => {
+      const rows = await pageQuery(`backup household ${entry.key}`, (from, to) => {
+        let query = supabase
+          .from(entry.table)
+          .select('*', { count: 'exact' })
+          .eq(entry.table === 'households' ? 'id' : 'household_id', householdId)
+        for (const column of entry.primaryKey) query = query.order(column)
+        return query.range(from, to)
+      })
+      return [entry.key, rows]
+    }),
+  )
+  const household = Object.fromEntries(householdEntries)
   const { count: corpusCount, error: countError } = await supabase
     .from('works')
     .select('id', { count: 'exact', head: true })
@@ -187,13 +186,7 @@ async function backupOwnerState(householdId) {
     householdId,
     corpusCount,
     ownerTables: tables,
-    household: {
-      households: households.data,
-      members: members.data,
-      works: works.data,
-      shares: shares.data,
-      enrichment: enrichment.data,
-    },
+    household,
   }
 }
 

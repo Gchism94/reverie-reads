@@ -65,6 +65,11 @@ describe('corpus enrichment eligibility', () => {
         'https://books.google.com/books/content?id=abc&printsec=frontcover&img=1',
       ),
     ).toBe(false)
+    expect(
+      corpusCoverNeedsDurableOwnership(
+        'https://books.google.evil.example/books/content?id=attacker',
+      ),
+    ).toBe(true)
   })
 
   it('uses short retries while high-value identity is missing and longer retries once present', () => {

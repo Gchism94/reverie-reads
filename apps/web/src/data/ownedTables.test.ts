@@ -1,7 +1,10 @@
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { RECONCILIATION_BACKUP_PRIMARY_KEYS } from '../../../../scripts/household-reconciliation-lib'
+import {
+  RECONCILIATION_BACKUP_PRIMARY_KEYS,
+  RECONCILIATION_HOUSEHOLD_BACKUP_SPECS,
+} from '../../../../scripts/household-reconciliation-lib'
 import { USER_OWNED_TABLES } from './ownedTables'
 
 // Structural guards over the SCHEMA, read from supabase/migrations rather than restated here — a
@@ -14,6 +17,10 @@ import { USER_OWNED_TABLES } from './ownedTables'
 // expected delete statements would ever notice.
 
 const MIGRATIONS = join(__dirname, '../../../../supabase/migrations')
+const RECONCILIATION_SCRIPT = readFileSync(
+  join(__dirname, '../../../../scripts/reconcile-chism-household.mjs'),
+  'utf8',
+)
 
 interface Fk {
   target: string
@@ -175,5 +182,37 @@ describe('no user-owned table may go unregistered', () => {
         `${entry.table} cannot be safely paged without a total order`,
       ).toBeGreaterThan(0)
     }
+  })
+
+  it('declares a total order for every collective household rollback section', () => {
+    expect(RECONCILIATION_HOUSEHOLD_BACKUP_SPECS).toEqual([
+      { key: 'households', table: 'households', primaryKey: ['id'] },
+      {
+        key: 'members',
+        table: 'household_members',
+        primaryKey: ['household_id', 'user_id'],
+      },
+      { key: 'works', table: 'household_works', primaryKey: ['household_id', 'work_id'] },
+      { key: 'shares', table: 'household_book_shares', primaryKey: ['book_id'] },
+      {
+        key: 'enrichment',
+        table: 'household_work_enrichment',
+        primaryKey: ['household_id', 'work_id'],
+      },
+    ])
+  })
+
+  it('routes collective household rollback rows through counted, ordered pagination', () => {
+    const start = RECONCILIATION_SCRIPT.indexOf('RECONCILIATION_HOUSEHOLD_BACKUP_SPECS.map')
+    const end = RECONCILIATION_SCRIPT.indexOf(
+      'const household = Object.fromEntries(householdEntries)',
+    )
+    const block = RECONCILIATION_SCRIPT.slice(start, end)
+    expect(start).toBeGreaterThan(-1)
+    expect(end).toBeGreaterThan(start)
+    expect(block).toContain('pageQuery(`backup household ${entry.key}`')
+    expect(block).toContain(".select('*', { count: 'exact' })")
+    expect(block).toContain('for (const column of entry.primaryKey) query = query.order(column)')
+    expect(block).toContain('return query.range(from, to)')
   })
 })

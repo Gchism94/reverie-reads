@@ -40,6 +40,25 @@ export const RECONCILIATION_BACKUP_PRIMARY_KEYS: Record<string, readonly string[
   series_merge_decisions: ['id'],
 }
 
+/** Collective rows copied into the same pre-change rollback artifact. Keep this registry separate
+ * from USER_OWNED_TABLES: `households` is intentionally collective, but it still needs the same
+ * counted paging and total-order guarantee as personal data. */
+export const RECONCILIATION_HOUSEHOLD_BACKUP_SPECS = [
+  { key: 'households', table: 'households', primaryKey: ['id'] },
+  {
+    key: 'members',
+    table: 'household_members',
+    primaryKey: ['household_id', 'user_id'],
+  },
+  { key: 'works', table: 'household_works', primaryKey: ['household_id', 'work_id'] },
+  { key: 'shares', table: 'household_book_shares', primaryKey: ['book_id'] },
+  {
+    key: 'enrichment',
+    table: 'household_work_enrichment',
+    primaryKey: ['household_id', 'work_id'],
+  },
+] as const
+
 export interface ReconciliationWorkRow {
   id: string
   title: string

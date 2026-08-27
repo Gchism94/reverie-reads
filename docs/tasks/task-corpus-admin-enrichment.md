@@ -60,6 +60,27 @@ metadata providers. Cover-only relocation leaves the enrichment clock unchanged,
 cannot hide unfinished metadata work. Corpus-only works with no historical personal cover remain
 ordinary missing-cover candidates; the app must source them rather than invent a recovery record.
 
+## Independent-review corrections — 2026-08-27
+
+The first exact-range review found four data-preservation and cover-boundary defects. The corrected
+candidate now:
+
+- preserves every account-owned book from a `BEFORE DELETE ON auth.users` trigger, while the full
+  contributor graph still exists, before the independent profile/author/book cascades begin;
+- parses Google cover URLs and accepts only the two observed exact Google Books image hosts, so a
+  lookalike, userinfo trick, or path substring cannot become a shared corpus hotlink;
+- revalidates the terminal URL after a followed cover redirect and rejects Google display-only
+  bytes before reading the response body or writing personal/corpus Storage; and
+- routes all five collective household rollback sections through the existing exact-count paging
+  guard with declared primary-key total ordering, while preserving the artifact's established keys
+  and row shapes.
+
+Focused regressions cover account deletion with a secondary contributor, both SQL publication
+paths, TypeScript and Edge URL classification, terminal-response check ordering, and the complete
+collective-backup registry. A separate read-only bypass/regression review of the corrected working
+diff found no actionable issue; the committed head still requires the normal exact-range integration
+review.
+
 ## Reconciliation coupling
 
 The private owner CSV is interpreted only by the gitignored operator. Exact normalized title and
@@ -82,9 +103,9 @@ blocks the atomic write. Dry-run and backup artifacts must live outside the repo
 ## Local verification — 2026-08-27
 
 - Clean database rebuild applied every migration through `20260831010000`.
-- Full pgTAP: 27 files and 623 assertions passed. The focused cover-recovery contract also passed
-  all 56 assertions after the clean rebuild.
-- Core/web unit suites: 79 + 71 files and 2,350 + 619 assertions passed.
+- Full pgTAP: 27 files and 629 assertions passed. The focused corpus administration, cover recovery,
+  host validation, and account-cascade contract passed all 62 assertions after the clean rebuild.
+- Core/web unit suites: 79 + 71 files and 2,352 + 620 assertions passed.
 - TypeScript, ESLint, Prettier, production build, and `git diff --check` passed. Schema lint added no
   finding; its two reports are the existing temporary-table analysis limitations in
   `backfill_series_from_titles` and `merge_series`.

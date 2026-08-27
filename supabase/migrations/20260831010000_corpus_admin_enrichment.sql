@@ -145,6 +145,24 @@ $$;
 revoke all on function public.hosted_corpus_cover_object_name(text, uuid)
   from public, anon, authenticated, service_role;
 
+-- Google Books covers remain display-only. Accept only the two hosts actually emitted by the
+-- Google Books API and its image mirror; a caller-controlled lookalike must never become a shared
+-- hotlink merely because its hostname contains "books.google".
+create function public.google_books_display_cover_url_is_valid(p_url text)
+returns boolean
+language sql
+immutable
+set search_path = ''
+as $$
+  select coalesce(
+    trim(p_url) ~* '^https://(books[.]google[.]com|books[.]googleusercontent[.]com)(:443)?/books/content([/?#]|$)',
+    false
+  );
+$$;
+
+revoke all on function public.google_books_display_cover_url_is_valid(text)
+  from public, anon, authenticated, service_role;
+
 -- Fill objective gaps in one work. Existing values win: an automated sweep completes blanks but
 -- never silently replaces curated metadata. Arrays are additive and canonical ISBN collisions are
 -- refused field-by-field rather than attaching an edition to two works.
@@ -220,7 +238,8 @@ begin
   end if;
 
   if requested_cover_url is not null then
-    if requested_cover_source = 'google' and requested_cover_url ~* '^https://(books[.]google[.][^/]+|[^/]+[.]googleusercontent[.]com)/books/content' then
+    if requested_cover_source = 'google'
+      and public.google_books_display_cover_url_is_valid(requested_cover_url) then
       safe_cover := requested_cover_url;
     elsif public.hosted_corpus_cover_object_name(requested_cover_url, p_work) is not null then
       safe_cover := requested_cover_url;
@@ -797,7 +816,7 @@ begin
     public.hosted_book_cover_object_name(b.cover_url, b.owner_id, b.id) is not null
     or (
       b.cover_source = 'google'
-      and b.cover_url ~* '^https://(books[.]google[.][^/]+|[^/]+[.]googleusercontent[.]com)/books/content'
+      and public.google_books_display_cover_url_is_valid(b.cover_url)
     )
   )
     and public.corpus_cover_option_is_valid(safe_cover_option) then
@@ -938,6 +957,35 @@ revoke all on function public.preserve_personal_book_before_delete()
 create trigger books_preserve_objective_metadata_before_delete
   before delete on public.books
   for each row execute function public.preserve_personal_book_before_delete();
+
+-- `auth.users` deletion fans out through independent profile, book, author, and book-author
+-- cascades whose sibling order is not defined. Preserve while the complete contributor graph still
+-- exists, before any of those cascades begin; the per-book trigger remains the direct-delete and
+-- merge boundary and its later account-cascade invocation is harmless because writes are fill-only.
+create function public.preserve_account_books_before_delete()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  source_book uuid;
+begin
+  for source_book in
+    select b.id from public.books b where b.owner_id = old.id order by b.id
+  loop
+    perform public.preserve_personal_book_objective_metadata(source_book);
+  end loop;
+  return old;
+end;
+$$;
+
+revoke all on function public.preserve_account_books_before_delete()
+  from public, anon, authenticated, service_role;
+
+create trigger auth_users_preserve_account_books_before_delete
+  before delete on auth.users
+  for each row execute function public.preserve_account_books_before_delete();
 
 create or replace function public.remove_personal_book(p_book uuid)
 returns uuid

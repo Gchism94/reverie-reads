@@ -115,6 +115,18 @@ describe('Google "no image" plate detection (the #56 white-card regression)', ()
     )
     expect(isGoogleContentCover('https://covers.openlibrary.org/b/id/9-L.jpg')).toBe(false)
     expect(isGoogleContentCover('https://assets.hardcover.app/x.jpeg')).toBe(false)
+    expect(
+      isGoogleContentCover('https://books.google.evil.example/books/content?id=attacker'),
+    ).toBe(false)
+    expect(
+      isGoogleContentCover('https://books.googleusercontent.com.evil.example/books/content?id=x'),
+    ).toBe(false)
+    expect(isGoogleContentCover('https://evil.example/books.google.com/books/content?id=x')).toBe(
+      false,
+    )
+    expect(isGoogleContentCover('https://books.google.com@evil.example/books/content?id=x')).toBe(
+      false,
+    )
     expect(isGoogleContentCover('')).toBe(false)
   })
 
@@ -187,6 +199,9 @@ describe('ingest posture — Google is display-time only', () => {
     expect(mayIngestCover('openlibrary', OL)).toBe(true)
     expect(mayIngestCover('camera')).toBe(true) // file upload, no URL
     expect(mayIngestCover('upload')).toBe(true)
+    expect(
+      mayIngestCover('url', 'https://books.google.evil.example/books/content?id=reader-choice'),
+    ).toBe(true)
   })
 
   it('treats an already-stored URL as nothing to ingest', () => {
