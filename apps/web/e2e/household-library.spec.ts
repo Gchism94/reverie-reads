@@ -92,7 +92,8 @@ async function removeFixtureAccounts(): Promise<void> {
 async function seedDuplicateBooks(): Promise<NonNullable<typeof seeded>> {
   // EVERY ROW GETS EVERY COLUMN THE BATCH USES. PostgREST unions the keys in a bulk insert,
   // otherwise an omitted possession flag becomes an explicit NULL and violates its constraint.
-  // Values span both scopes: tags/tropes are deliberately household-shared; note/mood stay private.
+  // Annotations present at row creation stay personal. The explicit post-link tag edit and trope
+  // link below publish their fields to the household; note and mood remain private.
   const base = {
     author_first: 'Quill',
     author_last: 'Marrowbane',
@@ -142,7 +143,7 @@ async function seedDuplicateBooks(): Promise<NonNullable<typeof seeded>> {
           ...base,
           owner_id: member.uid,
           title: `Household Duplicate ${projectName}`,
-          tags: [sentinels.tag],
+          tags: [],
           borrowed: true,
           wishlist: true,
           owned_physical: 'paperback',
@@ -161,6 +162,14 @@ async function seedDuplicateBooks(): Promise<NonNullable<typeof seeded>> {
   const ownerBookId = books?.find((book) => book.owner_id === owner.uid)?.id
   const memberBookId = books?.find((book) => book.owner_id === member.uid)?.id
   if (!ownerBookId || !memberBookId) throw new Error('household-library seed IDs missing')
+
+  await ok(
+    admin
+      .from('books')
+      .update({ tags: [sentinels.tag] })
+      .eq('id', memberBookId),
+    'household-library explicit shared tag edit',
+  )
 
   await ok(
     admin.from('reads').insert({
