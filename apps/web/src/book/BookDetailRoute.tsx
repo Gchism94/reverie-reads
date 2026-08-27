@@ -281,21 +281,31 @@ function BookDetailScreen() {
   const seriesBadge = seriesStatusBadge(book)
 
   return (
-    <section className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6">
+    <section className="mx-auto w-full max-w-4xl px-4 py-6 sm:px-6 lg:py-8">
       <BackLink fallback="/library" className="text-[13px] text-muted hover:text-ink">
         ← Library
       </BackLink>
 
       {/* header */}
       {/* cover + title share the row even on phones — a stacked w-32 cover left dead space beside it */}
-      <div className="mt-3 flex gap-4 sm:gap-5">
+      <div
+        className="skin-panel mt-4 flex gap-4 border border-line p-4 sm:gap-7 sm:p-7"
+        style={{
+          background:
+            'linear-gradient(115deg, color-mix(in srgb, var(--primary) 10%, var(--panel-fill)), var(--panel-fill) 48%)',
+          boxShadow: 'var(--shadow)',
+        }}
+      >
         {/* the cover is the door — tapping it opens the cover sheet (change/add a cover) */}
         <button
           type="button"
           onClick={() => setDialog('cover')}
           aria-label={book.cover ? 'Change cover' : 'Add a cover'}
-          className="relative aspect-[2/3] w-28 flex-none overflow-hidden rounded-xl border border-line sm:w-40"
-          style={{ background: `linear-gradient(150deg, ${g0}, ${g1})` }}
+          className="skin-card relative aspect-[2/3] w-28 flex-none overflow-hidden border border-line sm:w-44"
+          style={{
+            background: `linear-gradient(150deg, ${g0}, ${g1})`,
+            filter: 'drop-shadow(0 18px 22px rgba(0, 0, 0, 0.3))',
+          }}
         >
           <CoverImage book={book} />
           {!book.cover && (
@@ -314,9 +324,12 @@ function BookDetailScreen() {
         </button>
 
         <div className="min-w-0 flex-1">
+          <span className="skin-label text-[10px]" style={{ color: 'var(--accent-ink)' }}>
+            Book record
+          </span>
           <div className="flex items-start justify-between gap-3">
             <h1
-              className="text-[23px] italic leading-tight text-ink sm:text-[28px]"
+              className="mt-2 max-w-[18ch] text-balance text-[27px] font-semibold leading-[1.02] text-ink sm:text-[42px]"
               style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
             >
               {book.title}
@@ -332,7 +345,7 @@ function BookDetailScreen() {
               {book.fave ? '♥' : '♡'}
             </button>
           </div>
-          <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[15px] text-muted">
+          <div className="mt-2 flex flex-wrap items-center gap-x-1.5 text-[15px] text-muted">
             {book.contributors.length ? (
               book.contributors.map((c, i) => (
                 <span key={`${c.name}-${i}`} className="inline-flex items-center">
@@ -360,7 +373,7 @@ function BookDetailScreen() {
             )}
           </div>
           {book.series && <SeriesStrip book={book} />}
-          <div className="mt-3 flex flex-wrap gap-1.5">
+          <div className="mt-4 flex flex-wrap gap-1.5">
             {bookGenres(book).map((g) => (
               <Pill key={g}>{CORE_GENRES.find((cg) => cg.toLowerCase() === g) ?? g}</Pill>
             ))}
@@ -421,6 +434,24 @@ function BookDetailScreen() {
               } level guide`}
             />
           )}
+
+          <div className="mt-5 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setDialog('log')}
+              className="skin-control skin-btn-primary h-10 px-4 text-[12px]"
+            >
+              Log a read
+            </button>
+            <button
+              type="button"
+              onClick={() => setDialog('edit')}
+              className="skin-control h-10 border border-line px-4 text-[12px] font-semibold text-ink"
+              style={{ background: 'var(--card)' }}
+            >
+              Edit details
+            </button>
+          </div>
         </div>
       </div>
 
@@ -467,7 +498,7 @@ function BookDetailScreen() {
             onClick={() => setDialog('edit')}
             className="text-[12px] text-primary"
           >
-            edit details
+            Edit rating
           </button>
         }
       >

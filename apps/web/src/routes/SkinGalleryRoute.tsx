@@ -17,8 +17,9 @@ import { useSkinControls, useAdaptiveControls } from '../skin/controls'
 import { adaptiveVars, generateAdaptiveBundle } from '../skin/adaptive'
 import { SkinDivider } from '../components/SkinDivider'
 import { Surface } from '../components/Surface'
-
-const SWATCHES = ['--bg', '--card', '--primary', '--accent-fill', '--gold'] as const
+import { Spine } from '../components/Spine'
+import { SignatureRing } from '../components/Structure'
+import { PageHeader } from '../components/PageHeader'
 
 function SkinCard({
   skin,
@@ -37,60 +38,110 @@ function SkinCard({
     <div
       data-skin={skin.id}
       data-mode={mode}
-      className="overflow-hidden rounded-2xl border"
-      style={{ background: 'var(--bg)', borderColor: active ? 'var(--primary)' : 'var(--line)' }}
+      className="relative isolate overflow-hidden border"
+      style={{
+        background: 'var(--bg)',
+        borderColor: active ? 'var(--primary)' : 'var(--line)',
+        borderRadius: 'var(--radius-panel)',
+        boxShadow: active ? 'var(--shadow)' : undefined,
+      }}
     >
-      <div className="p-4">
-        <div className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--muted)' }}>
+      <div className="rv-skin-texture" />
+      <div className="relative p-5">
+        <div className="skin-label text-[10px]" style={{ color: 'var(--accent-ink)' }}>
           {skin.genre}
         </div>
         <div
-          className="mt-0.5 text-[22px] leading-tight"
+          className="mt-1 text-[27px] leading-none"
           style={{ fontFamily: 'var(--font-display)', color: 'var(--ink)', fontWeight: 600 }}
         >
           {skin.label}
         </div>
-        <div className="mt-1 text-[13px]" style={{ color: 'var(--muted)' }}>
+        <div
+          className="mt-2 min-h-[38px] text-[12px] leading-relaxed"
+          style={{ color: 'var(--muted)' }}
+        >
           {skin.tagline}
         </div>
 
-        <div className="mt-3 flex gap-1.5">
-          {SWATCHES.map((v) => (
+        <div
+          className="mt-4 grid grid-cols-[40px_minmax(0,1fr)] gap-3 border p-3"
+          style={{
+            borderColor: 'var(--line)',
+            borderRadius: 'var(--radius-card)',
+            background: 'var(--panel-fill)',
+          }}
+        >
+          <div
+            className="flex flex-col items-center gap-3 border-r pt-1"
+            style={{ borderColor: 'var(--line)' }}
+          >
             <span
-              key={v}
-              className="h-5 w-5 rounded-full border"
-              style={{ background: `var(${v})`, borderColor: 'var(--chip-border)' }}
+              className="h-2 w-2"
+              style={{ borderRadius: 'var(--radius-control)', background: 'var(--primary)' }}
             />
+            <span
+              className="h-2 w-2 opacity-50"
+              style={{ borderRadius: 'var(--radius-control)', background: 'var(--muted)' }}
+            />
+            <span
+              className="h-2 w-2 opacity-50"
+              style={{ borderRadius: 'var(--radius-control)', background: 'var(--muted)' }}
+            />
+          </div>
+          <div className="grid grid-cols-[54px_minmax(0,1fr)] items-center gap-3">
+            <div className="flex h-[154px] items-end justify-center overflow-hidden">
+              <Spine
+                book={{
+                  id: `gallery-${skin.id}`,
+                  title: 'Crimson Letters',
+                  first: 'D',
+                  last: 'Marchand',
+                }}
+                skin={skin.id}
+              />
+            </div>
+            <div className="min-w-0">
+              <div className="skin-label text-[8px]" style={{ color: 'var(--accent-ink)' }}>
+                Currently reading
+              </div>
+              <div
+                className="mt-2 text-[16px] font-semibold leading-[1.05]"
+                style={{ color: 'var(--ink)', fontFamily: 'var(--font-display)' }}
+              >
+                Crimson Letters
+              </div>
+              <div className="mt-2">
+                <SignatureRing value={42} max={60} size={58} skin={skin.id} />
+              </div>
+              <span className="skin-control skin-btn-primary mt-3 inline-grid h-8 place-items-center px-3 text-[9px]">
+                Continue
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-1.5">
+          {['Typography', 'Material', 'Controls'].map((label) => (
+            <span
+              key={label}
+              className="skin-control border px-2 py-1 text-[8px]"
+              style={{
+                borderColor: 'var(--chip-border)',
+                background: 'var(--chip)',
+                color: 'var(--ink)',
+              }}
+            >
+              {label}
+            </span>
           ))}
         </div>
 
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <span
-            className="skin-control border px-3 py-1 text-[12px] font-medium"
-            style={{
-              background: 'var(--chip)',
-              color: 'var(--ink)',
-              borderColor: 'var(--chip-border)',
-            }}
-          >
-            Sample tag
-          </span>
-          <span
-            className="skin-control px-3 py-1 text-[12px] font-semibold"
-            style={{ background: 'var(--accent-fill)', color: 'var(--on-primary)' }}
-          >
-            Primary
-          </span>
-          <span className="text-[12px]" style={{ color: 'var(--primary)' }}>
-            A link
-          </span>
-        </div>
-
-        <SkinDivider skin={skin.id} className="mt-3" />
+        <SkinDivider skin={skin.id} className="mt-4" />
       </div>
 
       <div
-        className="flex items-center justify-between border-t px-4 py-2.5"
+        className="relative flex items-center justify-between border-t px-5 py-3"
         style={{ borderColor: 'var(--line)', background: 'var(--card)' }}
       >
         {active ? (
@@ -110,8 +161,7 @@ function SkinCard({
           type="button"
           onClick={onSelect}
           disabled={active}
-          className="skin-control px-4 py-1.5 text-[12.5px] font-semibold disabled:opacity-50"
-          style={{ background: 'var(--accent-fill)', color: 'var(--on-primary)' }}
+          className="skin-control skin-btn-primary h-9 px-4 text-[11px] disabled:opacity-50"
         >
           {active ? 'In use' : 'Use this skin'}
         </button>
@@ -258,19 +308,14 @@ function SkinGalleryScreen() {
   useEffect(() => loadAllSkinFonts(), [])
 
   return (
-    <section className="mx-auto w-full max-w-4xl px-4 py-6 sm:px-6">
-      <h1
-        className="text-[22px] italic text-ink"
-        style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
-      >
-        Skins
-      </h1>
-      <p className="mt-1 text-[13px] text-muted">
-        A skin restyles the whole app — palette, type, and ambiance — to fit what you read. Light
-        and dark is a separate choice; previews update with it.
-      </p>
+    <section className="mx-auto w-full max-w-[1240px] px-4 py-6 sm:px-6 lg:py-8">
+      <PageHeader
+        eyebrow="Choose your atmosphere"
+        title="Genre rooms"
+        description="Each skin changes the objects, rhythm, typography, and voice of Reverie. Color is only the beginning."
+      />
 
-      <div className="mt-4 flex items-center gap-2">
+      <div className="mt-5 flex flex-wrap items-center gap-2">
         <span className="text-[11px] uppercase tracking-[0.15em] text-muted">Preview in</span>
         {(
           [
@@ -300,7 +345,7 @@ function SkinGalleryScreen() {
         ))}
       </div>
 
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+      <div className="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
         {SKIN_LIST.map((s) => (
           <SkinCard
             key={s.id}

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { createRoute, useNavigate } from '@tanstack/react-router'
 import {
   authorOf,
@@ -327,7 +327,7 @@ function DerivedShelves({
                     {shelf.key === 'ownedUnmarked' && (
                       <p className="mb-1 text-[12px] text-muted">{COPY.unmarkedHint}</p>
                     )}
-                    <SpineShelf books={shelf.books} onOpen={onOpen} />
+                    <SpineShelf books={shelf.books} onOpen={onOpen} compact />
                   </div>
                 ))}
               </div>
@@ -377,6 +377,10 @@ function ShelvesScreen() {
   const [pickerFor, setPickerFor] = useState<UiList | null>(null)
   const [externalFor, setExternalFor] = useState<UiList | null>(null)
   const [dragListIdx, setDragListIdx] = useState<number | null>(null)
+  // Native dragstart and drop may occur before React has committed the state update from
+  // dragstart. Keep the source synchronously available to the drop handler; state remains the
+  // render channel for the dragged-row treatment.
+  const dragListIdxRef = useRef<number | null>(null)
 
   const all = books ?? []
   const byId = new Map(all.map((b) => [b.id, b]))
@@ -413,10 +417,12 @@ function ShelvesScreen() {
   }
 
   const dropListOn = (target: number) => {
-    if (dragListIdx == null || dragListIdx === target) return
+    const source = dragListIdxRef.current
+    if (source == null || source === target) return
     const ids = shown.map((l) => l.id)
-    const [moved] = ids.splice(dragListIdx, 1)
+    const [moved] = ids.splice(source, 1)
     ids.splice(target, 0, moved!)
+    dragListIdxRef.current = null
     setDragListIdx(null)
     applyTabOrder(ids)
   }
@@ -503,6 +509,13 @@ function ShelvesScreen() {
               // The grab handle below is the only place a shelf drag can start.
               <div
                 key={l.id}
+                // Commit on entry as well as drop: the richer spine preview can put the next shelf
+                // beyond the viewport, and Chromium may finish an auto-scrolled native drag
+                // without dispatching drop. Only the grab handle seeds dragListIdxRef, so book
+                // cover drags still cannot reorder shelves.
+                onDragEnter={() => {
+                  if (dragListIdxRef.current != null) dropListOn(i)
+                }}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={() => dropListOn(i)}
                 style={dragListIdx === i ? { opacity: 0.4 } : undefined}
@@ -541,8 +554,14 @@ function ShelvesScreen() {
                     <button
                       type="button"
                       draggable
-                      onDragStart={() => setDragListIdx(i)}
-                      onDragEnd={() => setDragListIdx(null)}
+                      onDragStart={() => {
+                        dragListIdxRef.current = i
+                        setDragListIdx(i)
+                      }}
+                      onDragEnd={() => {
+                        dragListIdxRef.current = null
+                        setDragListIdx(null)
+                      }}
                       aria-label={`Drag to reorder ${l.name}`}
                       title={`Drag to reorder ${l.name}`}
                       className="cursor-grab px-1 text-[13px] leading-none text-muted"
@@ -583,6 +602,7 @@ function ShelvesScreen() {
                     onOpen={openBook}
                     onAdd={() => setPickerFor(l)}
                     addLabel={`Add a book to ${l.name}`}
+                    compact
                   />
                 ) : (
                   <Surface

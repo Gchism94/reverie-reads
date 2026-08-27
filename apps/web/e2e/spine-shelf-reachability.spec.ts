@@ -332,6 +332,26 @@ test('scroll reach: sweeping picks EVERY book, and the extremes pick the termina
   // openable. The picked button IS the tap target now (one element per book).
   await track(page).evaluate((el) => (el.scrollLeft = el.scrollWidth))
   await expect.poll(async () => pickedId(page)).toBe(big.bookIds[35])
+  const indicator = page.locator('[data-spine-shelf] [data-spine-position]')
+  await expect(indicator).toHaveAttribute('data-spine-position', '35')
+  const markerEndDelta = await indicator.evaluate((bar) => {
+    const marker = bar.querySelector<HTMLElement>('[data-spine-marker]')!
+    const barBox = bar.getBoundingClientRect()
+    const markerBox = marker.getBoundingClientRect()
+    return Math.abs(markerBox.left + markerBox.width / 2 - barBox.right)
+  })
+  expect(markerEndDelta, 'last-book marker must land on the end of its track').toBeLessThanOrEqual(
+    1,
+  )
+
+  // The visible marker doubles as an accessible range scrubber. Its own terminal key must drive
+  // the shelf to the same last book; testing scrollLeft alone would miss a disconnected control.
+  await track(page).evaluate((el) => (el.scrollLeft = 0))
+  await expect.poll(async () => pickedId(page)).toBe(big.bookIds[0])
+  await page.getByRole('slider', { name: 'Browse books by position' }).press('End')
+  await expect.poll(async () => pickedId(page)).toBe(big.bookIds[35])
+  await expect(indicator).toHaveAttribute('data-spine-position', '35')
+
   await page.locator('[data-spine-picked]').click({ timeout: 5_000 })
   await expect(page).toHaveURL(new RegExp(`/book/${big.bookIds[35]}`))
 })

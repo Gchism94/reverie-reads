@@ -25,6 +25,7 @@ import { hasOnboarded } from './OnboardingRoute'
 import { useVoice } from '../skin/labels'
 import { BookmarkGlyph } from '../components/BookmarkGlyph'
 import { Surface } from '../components/Surface'
+import { PageHeader } from '../components/PageHeader'
 
 const YEAR = new Date().getFullYear()
 
@@ -130,31 +131,57 @@ function HomeScreen() {
   }
 
   const firstName = profile?.displayName ? profile.displayName.split(' ')[0] : ''
+  const todayLabel = new Intl.DateTimeFormat(undefined, {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  }).format(new Date())
 
   return (
-    <section className="px-4 py-6 sm:px-6">
+    <section className="mx-auto w-full max-w-[1240px] px-4 py-6 sm:px-6 lg:py-8">
+      <PageHeader
+        eyebrow={todayLabel}
+        title={`${greeting()}${firstName ? `, ${firstName}` : ''}.`}
+        description="Pick up where you left off, then decide what deserves your attention next."
+        actions={
+          <button
+            type="button"
+            onClick={() => void navigate({ to: '/add' })}
+            className="skin-control skin-btn-primary h-10 px-4 text-[13px]"
+          >
+            ＋ Add a book
+          </button>
+        }
+      />
+
       {/* hero — framed per skin (Aphelion corner-bracket callsign plate · Tryst gilt plate), with the
           signature goal-ring (radar cycle-ring vs gilt fleuron ring) and structural status tags. */}
       <Frame
-        className="flex flex-wrap items-center gap-5 p-5 backdrop-blur"
+        className="mt-6 flex flex-wrap items-center gap-6 p-5 backdrop-blur sm:p-7"
         style={{ boxShadow: 'var(--shadow)' }}
       >
         <button type="button" onClick={setGoal} aria-label={`Set your ${YEAR} reading goal`}>
-          <SignatureRing value={uniqueThisYear} max={goalTarget} />
+          <SignatureRing value={uniqueThisYear} max={goalTarget} size={112} />
         </button>
         <div className="min-w-[230px] flex-1">
-          <div
-            className="text-[22px] italic text-ink"
+          <span className="skin-label text-[10px]" style={{ color: 'var(--accent-ink)' }}>
+            Your reading year
+          </span>
+          <h2
+            className="mt-2 max-w-[24ch] text-balance text-[24px] font-semibold leading-[1.08] text-ink sm:text-[30px]"
             style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
           >
-            {greeting()}
-            {firstName ? `, ${firstName}` : ''}.
-          </div>
-          <div className="mt-1 text-[14px] text-muted">
+            {reading.length
+              ? 'Another chapter is waiting.'
+              : unread.length
+                ? 'Your next great read is already here.'
+                : 'Build a reading life that feels like yours.'}
+          </h2>
+          <p className="mt-2 max-w-[62ch] text-[13px] leading-relaxed text-muted">
             {yearReads.length} read{yearReads.length !== 1 ? 's' : ''} logged in {YEAR}
-            {yearReads.length !== uniqueThisYear ? ` (${uniqueThisYear} books)` : ''} ·{' '}
-            {unread.length} unread waiting
-          </div>
+            {yearReads.length !== uniqueThisYear ? ` across ${uniqueThisYear} books` : ''}.{' '}
+            {unread.length} unread waiting.
+          </p>
           {goalTarget > 0 && uniqueThisYear >= goalTarget && (
             /* the milestone line, spoken in the skin's voice (Fable 5 voice-pack quartet) */
             <div
@@ -176,7 +203,7 @@ function HomeScreen() {
               {voice.season}
             </div>
           )}
-          <div className="mt-2.5 flex flex-wrap gap-1.5">
+          <div className="mt-4 flex flex-wrap gap-1.5">
             <StatusTag tone="muted">{all.filter(isPossessed).length} books</StatusTag>
             <StatusTag glyph="♥">{all.filter((b) => b.fave).length} faves</StatusTag>
             {priorityLists.length > 0 && (
@@ -184,13 +211,13 @@ function HomeScreen() {
             )}
           </div>
         </div>
-        <div className="flex flex-col gap-2">
+        <div className="flex w-full gap-2 sm:w-auto sm:flex-col">
           <button
             type="button"
             onClick={() => void navigate({ to: '/match' })}
-            className="skin-control skin-btn-primary px-4 py-2 text-[13px]"
+            className="skin-control skin-btn-primary h-10 flex-1 px-4 text-[12px] sm:flex-none"
           >
-            💘 Find my next read
+            Find my next read
           </button>
           <button
             type="button"
@@ -199,9 +226,9 @@ function HomeScreen() {
               const pick = unread[Math.floor(Math.random() * unread.length)]
               if (pick) openBook(pick.id)
             }}
-            className="skin-control skin-btn-secondary px-4 py-2 text-[13px]"
+            className="skin-control skin-btn-secondary h-10 flex-1 px-4 text-[12px] sm:flex-none"
           >
-            🎲 Surprise me
+            Surprise me
           </button>
         </div>
       </Frame>
@@ -220,13 +247,20 @@ function HomeScreen() {
               ＋ Add
             </button>
           </div>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <div className="mt-3 grid gap-4 sm:grid-cols-2">
             {reading.map((b, i) => (
-              <Surface key={b.id} tone="card" radius="card" pad={2} className="flex gap-3">
+              <Surface
+                key={b.id}
+                tone="card"
+                radius="card"
+                pad={2}
+                raised={i === 0}
+                className={`flex gap-3 ${i === 0 ? 'sm:col-span-2 sm:grid sm:grid-cols-[112px_minmax(0,1fr)] sm:p-5' : ''}`}
+              >
                 <button
                   type="button"
                   onClick={() => openBook(b.id)}
-                  className="h-20 w-14 flex-none overflow-hidden rounded-md border border-line"
+                  className={`flex-none overflow-hidden rounded-md border border-line ${i === 0 ? 'h-24 w-16 sm:h-auto sm:w-[112px] sm:self-stretch' : 'h-20 w-14'}`}
                   style={{ background: 'var(--field)' }}
                   aria-label={`Open ${b.title}`}
                 >
@@ -314,24 +348,20 @@ function HomeScreen() {
             <button
               type="button"
               onClick={() => void navigate({ to: '/shelf/$listId', params: { listId: l.id } })}
-              className="block text-left"
+              className="block w-full text-left"
             >
-              <h2
-                className="text-[18px] italic text-ink underline-offset-4 hover:underline"
-                style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
-              >
-                <span style={{ color: 'var(--accent-ink)' }}>
-                  <BookmarkGlyph size={13} />
-                </span>{' '}
-                {l.name}{' '}
-                <span aria-hidden className="text-[13px] text-muted">
-                  ›
-                </span>
-              </h2>
+              <SectionHeader
+                label={
+                  <>
+                    <BookmarkGlyph size={13} /> {l.name} <span aria-hidden>›</span>
+                  </>
+                }
+                readout={shelfBooks.length}
+              />
             </button>
             {shelfBooks.length > 0 && (
-              <p className="mb-1 text-[12.5px] text-muted">
-                Scroll the shelf — covers flip as you go
+              <p className="mb-3 mt-1 text-[12px] text-muted">
+                Your hand-picked next reads. Swipe the shelf and open one when it feels right.
               </p>
             )}
             <SpineShelf
@@ -347,31 +377,31 @@ function HomeScreen() {
       {/* coming soon */}
       {soon.length > 0 && (
         <div className="mt-8">
-          <h2
-            className="text-[18px] italic text-ink"
-            style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+          <SectionHeader label="Coming soon" readout={soon.length} />
+          <p className="mb-3 mt-1 text-[12px] text-muted">
+            Releases you’re tracking over the next four months.
+          </p>
+          <div
+            className="flex snap-x gap-4 overflow-x-auto pb-2"
+            style={{ scrollbarWidth: 'none' }}
           >
-            Coming soon
-          </h2>
-          <p className="mb-2 text-[12.5px] text-muted">Releases you’re tracking, next 4 months</p>
-          <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
             {soon.map(({ b }) => (
               <button
                 key={b.id}
                 type="button"
                 onClick={() => openBook(b.id)}
-                className="w-24 flex-none text-left"
+                className="w-28 flex-none snap-start text-left"
                 aria-label={`Open ${b.title}`}
               >
                 <div
-                  className="aspect-[2/3] overflow-hidden rounded-lg border border-line"
-                  style={{ background: 'var(--field)' }}
+                  className="skin-card aspect-[2/3] overflow-hidden border border-line"
+                  style={{ background: 'var(--field)', boxShadow: 'var(--shadow)' }}
                 >
                   <CoverImage book={b} />
                 </div>
-                <div className="mt-1 truncate text-[12px] font-semibold text-ink">{b.title}</div>
-                <div className="text-[11px] text-primary">
-                  📅 {b.pub.m ? `${MONTHS[b.pub.m - 1]} ` : ''}
+                <div className="mt-2 truncate text-[12px] font-semibold text-ink">{b.title}</div>
+                <div className="mt-0.5 text-[11px] text-primary">
+                  {b.pub.m ? `${MONTHS[b.pub.m - 1]} ` : ''}
                   {b.pub.y}
                 </div>
               </button>
@@ -381,14 +411,24 @@ function HomeScreen() {
       )}
 
       {reading.length === 0 && priorityTotal === 0 && (
-        <Surface
-          as="p"
-          tone="bare"
-          radius="card"
-          pad={5}
-          className="mt-10 text-center text-[14px] text-muted"
-        >
-          Mark a book “Reading” or star a Priority TBR and your home will come alive.
+        <Surface tone="card" radius="panel" pad={5} raised className="mt-9 text-center">
+          <h2
+            className="text-[23px] font-semibold text-ink"
+            style={{ fontFamily: 'var(--font-display)' }}
+          >
+            Give Home something to remember.
+          </h2>
+          <p className="mx-auto mt-2 max-w-[46ch] text-[14px] leading-relaxed text-muted">
+            Mark a book as Reading or make a TBR your priority shelf. Your next chapter will live
+            here.
+          </p>
+          <button
+            type="button"
+            onClick={() => void navigate({ to: '/library' })}
+            className="skin-control skin-btn-primary mt-5 h-10 px-5 text-[12px]"
+          >
+            Browse your library
+          </button>
         </Surface>
       )}
 

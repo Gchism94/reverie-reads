@@ -1,8 +1,9 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { isBorrowedBook, isDnf, isPossessed, stateSuffix, type Book } from '@reverie/core'
+import { authorOf, isBorrowedBook, isDnf, isPossessed, stateSuffix, type Book } from '@reverie/core'
 import { Spine } from './Spine'
 import { CoverImage } from './CoverImage'
 import { StatePill } from './StatePill'
+import { ProgressMeter } from './Structure'
 
 /**
  * A horizontal shelf of book spines — each a real per-skin Spine (gilt-bound Tryst · brushed-metal
@@ -89,6 +90,7 @@ export function SpineShelf({
   onAdd,
   addLabel = 'Add a book',
   onReorder,
+  compact = false,
 }: {
   books: Book[]
   onOpen: (id: string) => void
@@ -97,6 +99,8 @@ export function SpineShelf({
   addLabel?: string
   /** when set, spines can be dragged (and keyboard-moved) into a new order */
   onReorder?: (orderedIds: string[]) => void
+  /** overview rows omit the selected-book inspector so several shelves remain quickly scannable */
+  compact?: boolean
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const [activeId, setActiveId] = useState<string | null>(books[0]?.id ?? null)
@@ -240,7 +244,25 @@ export function SpineShelf({
   pointerIdRef.current = pointerId
   /** Pending hover-intent timer (see HOVER_INTENT_MS). */
   const hoverTimerRef = useRef(0)
+  /** Screen point that armed the current hover pin. Magnification can move another hit box under a
+   *  stationary cursor; a pointerenter at the same point is layout churn, not reader intent. */
+  const hoverPinnedPointRef = useRef<{ x: number; y: number } | null>(null)
   useEffect(() => () => window.clearTimeout(hoverTimerRef.current), [])
+  const armHoverPick = (id: string, x: number, y: number) => {
+    const pinnedPoint = hoverPinnedPointRef.current
+    if (
+      pointerIdRef.current != null &&
+      pinnedPoint &&
+      Math.hypot(x - pinnedPoint.x, y - pinnedPoint.y) < 6
+    )
+      return
+    window.clearTimeout(hoverTimerRef.current)
+    const point = { x, y }
+    hoverTimerRef.current = window.setTimeout(() => {
+      hoverPinnedPointRef.current = point
+      setPointerId(id)
+    }, HOVER_INTENT_MS)
+  }
   /** True while settleScroll's own smooth glide is emitting scroll events. Its writes are the
    *  component's, not the user's — they must never dismiss a pointer pin (a hover pick landing
    *  while the glide's tail is still emitting was getting cleared by the pin's scroll-dismissal
@@ -262,6 +284,29 @@ export function SpineShelf({
   const windowW = (el: HTMLElement): number => {
     const first = el.querySelector<HTMLElement>('[data-spine]')
     return first ? first.offsetLeft + first.offsetWidth / 2 : 0
+  }
+
+  /** Seat a book in the fixed reveal window. Arrow buttons and the scrubber use the same geometry
+   *  as touch scrolling, including the terminal slack solve, so the final marker and final spine
+   *  arrive together instead of representing two subtly different notions of "the end". */
+  const scrollToIndex = (index: number): void => {
+    const el = ref.current
+    if (!el || books.length === 0) return
+    const next = Math.max(0, Math.min(books.length - 1, index))
+    const slot = el.querySelectorAll<HTMLElement>('[data-spine]')[next]
+    const book = books[next]
+    if (!slot || !book) return
+    const maxScroll = Math.max(0, el.scrollWidth - el.clientWidth)
+    const target = Math.min(
+      maxScroll,
+      Math.max(0, slot.offsetLeft + slot.offsetWidth / 2 - windowW(el)),
+    )
+    setPointerId(null)
+    setActiveId(book.id)
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    settlingRef.current = !reduced
+    settleTargetRef.current = target
+    el.scrollTo({ left: target, behavior: reduced ? 'auto' : 'smooth' })
   }
 
   /** Auto-centre after a gesture ends: scroll the nearest slot into the window so every settled
@@ -424,107 +469,246 @@ export function SpineShelf({
     }
   }, [pointerId, books])
 
+  const shownIndex = Math.max(
+    0,
+    books.findIndex((book) => book.id === shownId),
+  )
+  const shownBook = books[shownIndex]
+  // Index / (length - 1), not (index + 1) / length: the endpoints are semantic. The first book is
+  // exactly 0 and the last is exactly 100, including the two-book case that exposed the old
+  // one-short marker visually.
+  const positionPct = books.length <= 1 ? 100 : (shownIndex / (books.length - 1)) * 100
+
   return (
-    <div
-      ref={ref}
-      // `relative` so the track is its slots' offsetParent: every offsetLeft in the pick and wave
-      // arithmetic is then in the SAME track-content coordinate space as scrollLeft. Without it,
-      // offsets were measured from <main> — a systematic ~16px (section padding) frame mismatch
-      // between slot centres and the anchor, found while measuring the tracking defect.
-      className="relative flex items-end gap-1.5 overflow-x-auto pb-4 pt-4"
-      // minHeight reserves the revealed cover's constant peak extent (see REVEAL_HEADROOM's
-      // comment) — the floor, not the height: shelves whose spines already exceed it are
-      // untouched.
-      style={{
-        scrollbarWidth: 'none',
-        minHeight: REVEAL_HEADROOM + TRACK_PAD_BOTTOM + (onReorder ? REORDER_ROW_H : 0),
-      }}
-      // MOUSE-ONLY, matching onPointerEnter's condition below. Touch pointers are transient: the
-      // browser fires a full pointerleave chain after EVERY tap-release (measured in Chromium's
-      // emulation; iOS documents the same), so an unconditional clear races the tap's trailing
-      // click — tap-to-pick survived only because its click re-set pointerId after the leave, and
-      // tap-to-OPEN was a coin flip between opening and silently re-picking. A touch pick is
-      // dismissed by what touch does next (another tap, or a scroll re-pick), not by the phantom
-      // leave of a finger that lifted.
-      onPointerLeave={(e) => {
-        if (e.pointerType !== 'mouse') return
-        window.clearTimeout(hoverTimerRef.current)
-        setPointerId(null)
-      }}
+    <section
+      data-spine-shelf
+      className="skin-panel isolate overflow-hidden border border-line"
+      style={{ background: 'var(--panel-fill)', boxShadow: 'var(--shadow)' }}
     >
-      {/* RESERVED SLACK, leading. Static from the first frame; puts the window (the first slot's
+      {!compact &&
+        (shownBook ? (
+          <div
+            className="grid grid-cols-[72px_minmax(0,1fr)] items-center gap-4 border-b border-line p-4 sm:grid-cols-[86px_minmax(0,1fr)_auto] sm:gap-5 sm:p-5"
+            style={{
+              background:
+                'linear-gradient(110deg, color-mix(in srgb, var(--primary) 10%, transparent), transparent 48%)',
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => onOpen(shownBook.id)}
+              className="skin-card aspect-[2/3] w-[72px] overflow-hidden border border-line sm:w-[86px]"
+              style={{
+                background: 'var(--field)',
+                filter: 'drop-shadow(0 10px 12px rgba(0, 0, 0, 0.28))',
+              }}
+              aria-label={`Open ${shownBook.title}`}
+            >
+              <CoverImage book={shownBook} />
+            </button>
+            <div className="min-w-0">
+              <span className="skin-label text-[10px]" style={{ color: 'var(--accent-ink)' }}>
+                Volume {String(shownIndex + 1).padStart(2, '0')} · {books.length}
+              </span>
+              <h3
+                className="mt-1 line-clamp-2 text-[20px] font-semibold leading-[1.08] text-ink sm:text-[25px]"
+                style={{ fontFamily: 'var(--font-display)' }}
+              >
+                {shownBook.title}
+              </h3>
+              <p className="mt-1 truncate text-[12px] text-muted">
+                {authorOf(shownBook) || 'Author not set'}
+              </p>
+              <div className="mt-3 max-w-[360px]">
+                <ProgressMeter value={shownBook.progress} max={100} />
+                <div className="mt-1.5 flex items-center justify-between gap-3 text-[11px] text-muted">
+                  <span>{shownBook.readStatus}</span>
+                  <span className="skin-numeral">{shownBook.progress}%</span>
+                </div>
+              </div>
+            </div>
+            <div className="col-span-2 flex items-center gap-2 sm:col-span-1 sm:flex-col sm:items-stretch">
+              <button
+                type="button"
+                onClick={() => onOpen(shownBook.id)}
+                className="skin-control skin-btn-primary h-10 flex-1 px-4 text-[12px] sm:flex-none"
+              >
+                Open book
+              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => scrollToIndex(shownIndex - 1)}
+                  disabled={shownIndex === 0}
+                  className="skin-control skin-btn-icon grid h-10 flex-1 place-items-center disabled:opacity-30 sm:w-10"
+                  aria-label="Previous book"
+                >
+                  ←
+                </button>
+                <button
+                  type="button"
+                  onClick={() => scrollToIndex(shownIndex + 1)}
+                  disabled={shownIndex === books.length - 1}
+                  className="skin-control skin-btn-icon grid h-10 flex-1 place-items-center disabled:opacity-30 sm:w-10"
+                  aria-label="Next book"
+                >
+                  →
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between gap-4 border-b border-line p-5">
+            <div>
+              <span className="skin-label text-[10px]" style={{ color: 'var(--accent-ink)' }}>
+                The shelf is waiting
+              </span>
+              <p className="mt-1 text-[13px] text-muted">Add the first volume to begin.</p>
+            </div>
+            {onAdd ? (
+              <button
+                type="button"
+                onClick={onAdd}
+                className="skin-control skin-btn-primary h-10 px-4 text-[12px]"
+              >
+                ＋ Add a book
+              </button>
+            ) : null}
+          </div>
+        ))}
+
+      <div className="flex items-end justify-between gap-4 px-4 pb-1 pt-4 sm:px-5">
+        <div>
+          <span className="skin-label text-[10px]" style={{ color: 'var(--accent-ink)' }}>
+            Browse the shelf
+          </span>
+          <p className="mt-1 text-[11px] text-muted">Drag, swipe, or use the arrows</p>
+        </div>
+        {shownBook ? (
+          <span className="skin-numeral text-[11px] text-muted">
+            {shownIndex + 1} / {books.length}
+          </span>
+        ) : null}
+      </div>
+
+      <div className="relative overflow-hidden pt-2">
+        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-[var(--panel-fill)] to-transparent" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-[var(--panel-fill)] to-transparent" />
+        <div
+          ref={ref}
+          // `relative` so the track is its slots' offsetParent: every offsetLeft in the pick and wave
+          // arithmetic is then in the SAME track-content coordinate space as scrollLeft. Without it,
+          // offsets were measured from <main> — a systematic ~16px (section padding) frame mismatch
+          // between slot centres and the anchor, found while measuring the tracking defect.
+          className="relative flex items-end gap-1.5 overflow-x-auto pb-4 pt-8"
+          // minHeight reserves the revealed cover's constant peak extent (see REVEAL_HEADROOM's
+          // comment) — the floor, not the height: shelves whose spines already exceed it are
+          // untouched.
+          style={{
+            scrollbarWidth: 'none',
+            minHeight: REVEAL_HEADROOM + TRACK_PAD_BOTTOM + (onReorder ? REORDER_ROW_H : 0),
+          }}
+          // MOUSE-ONLY. Touch pointers are transient: the
+          // browser fires a full pointerleave chain after EVERY tap-release (measured in Chromium's
+          // emulation; iOS documents the same), so an unconditional clear races the tap's trailing
+          // click — tap-to-pick survived only because its click re-set pointerId after the leave, and
+          // tap-to-OPEN was a coin flip between opening and silently re-picking. A touch pick is
+          // dismissed by what touch does next (another tap, or a scroll re-pick), not by the phantom
+          // leave of a finger that lifted.
+          onPointerLeave={(e) => {
+            if (e.pointerType !== 'mouse') return
+            window.clearTimeout(hoverTimerRef.current)
+            hoverPinnedPointRef.current = null
+            setPointerId(null)
+          }}
+          // Track-level intent is deliberate. Per-spine pointerenter depends on which transformed
+          // box wins hit-testing while the wave is moving; the nearest LIVE visual box at the
+          // pointer coordinate is stable, and a stationary cursor cannot retarget itself.
+          onPointerMove={(e) => {
+            if (e.pointerType !== 'mouse' || dragIdx != null) return
+            let bestId: string | null = null
+            let distance = Infinity
+            ref.current?.querySelectorAll<HTMLElement>('[data-spine]').forEach((slot) => {
+              const box = slot.getBoundingClientRect()
+              const d = Math.abs(box.left + box.width / 2 - e.clientX)
+              if (d < distance) {
+                distance = d
+                bestId = slot.dataset.spine ?? null
+              }
+            })
+            if (bestId) armHoverPick(bestId, e.clientX, e.clientY)
+          }}
+        >
+          {/* RESERVED SLACK, leading. Static from the first frame; puts the window (the first slot's
         centre) far enough inside the viewport that the revealed box and its ring fit at rest
         with no clamping — see LEAD_SLACK's comment. */}
-      <div aria-hidden className="flex-none self-end" style={{ width: LEAD_SLACK }} />
-      {books.map((b, i) => {
-        const shown = b.id === shownId
-        // Spines you don't have in hand (wishlist / unset) sit ghosted on the shelf — a TBR shelf
-        // is mostly books you don't own yet. A borrowed book is in hand, so it never ghosts.
-        // Artwork-only dim (--ghost-opacity); the title stays in the aria-label.
-        const unowned = !isPossessed(b)
-        return (
-          <div key={b.id} className="flex flex-none flex-col items-center self-end">
-            <button
-              data-spine={b.id}
-              data-spine-picked={shown ? '' : undefined}
-              draggable={!!onReorder}
-              onDragStart={() => {
-                window.clearTimeout(hoverTimerRef.current)
-                setDragIdx(i)
-              }}
-              onDragOver={(e) => onReorder && e.preventDefault()}
-              onDrop={() => {
-                if (dragIdx != null) place(dragIdx, i)
-                setDragIdx(null)
-              }}
-              onDragEnd={() => setDragIdx(null)}
-              // One rule, every modality: a not-yet-picked spine's first activation picks it; the
-              // picked spine opens. Mouse hover picks before the click lands (click opens); touch
-              // gets tap-to-pick then tap-to-open; keyboard picks on focus, Enter opens.
-              onClick={() => (shown ? onOpen(b.id) : setPointerId(b.id))}
-              onPointerEnter={(e) => {
-                if (e.pointerType !== 'mouse') return
-                window.clearTimeout(hoverTimerRef.current)
-                hoverTimerRef.current = window.setTimeout(() => setPointerId(b.id), HOVER_INTENT_MS)
-              }}
-              onFocus={(e) => {
-                if (e.target.matches(':focus-visible')) setPointerId(b.id)
-              }}
-              title={b.title}
-              // On a spine the ACCESSIBLE NAME is the load-bearing channel for state: a 26px spine
-              // cannot carry a text pill, so the edge marker is a find-it-fast affordance and this
-              // is the actual information. Same fixed order as everywhere else — DNF, then borrowed.
-              aria-label={
-                shown ? `Open ${b.title}${stateSuffix(b)}` : `Reveal ${b.title}${stateSuffix(b)}`
-              }
-              className="relative flex-none"
-              style={{
-                transformOrigin: '50% 100%',
-                willChange: 'transform',
-                ...(dragIdx === i ? { opacity: 0.4 } : undefined),
-              }}
-            >
-              {/* The magnification target is the BUTTON (see the choreography's comment on why —
+          <div aria-hidden className="flex-none self-end" style={{ width: LEAD_SLACK }} />
+          {books.map((b, i) => {
+            const shown = b.id === shownId
+            // Spines you don't have in hand (wishlist / unset) sit ghosted on the shelf — a TBR shelf
+            // is mostly books you don't own yet. A borrowed book is in hand, so it never ghosts.
+            // Artwork-only dim (--ghost-opacity); the title stays in the aria-label.
+            const unowned = !isPossessed(b)
+            return (
+              <div key={b.id} className="flex flex-none flex-col items-center self-end">
+                <button
+                  data-spine={b.id}
+                  data-spine-picked={shown ? '' : undefined}
+                  draggable={!!onReorder}
+                  onDragStart={() => {
+                    window.clearTimeout(hoverTimerRef.current)
+                    setDragIdx(i)
+                  }}
+                  onDragOver={(e) => onReorder && e.preventDefault()}
+                  onDrop={() => {
+                    if (dragIdx != null) place(dragIdx, i)
+                    setDragIdx(null)
+                  }}
+                  onDragEnd={() => setDragIdx(null)}
+                  // One rule, every modality: a not-yet-picked spine's first activation picks it; the
+                  // picked spine opens. Mouse hover picks before the click lands (click opens); touch
+                  // gets tap-to-pick then tap-to-open; keyboard picks on focus, Enter opens.
+                  onClick={() => (shown ? onOpen(b.id) : setPointerId(b.id))}
+                  onFocus={(e) => {
+                    if (e.target.matches(':focus-visible')) setPointerId(b.id)
+                  }}
+                  title={b.title}
+                  // On a spine the ACCESSIBLE NAME is the load-bearing channel for state: a 26px spine
+                  // cannot carry a text pill, so the edge marker is a find-it-fast affordance and this
+                  // is the actual information. Same fixed order as everywhere else — DNF, then borrowed.
+                  aria-label={
+                    shown
+                      ? `Open ${b.title}${stateSuffix(b)}`
+                      : `Reveal ${b.title}${stateSuffix(b)}`
+                  }
+                  className="relative flex-none"
+                  style={{
+                    transformOrigin: '50% 100%',
+                    willChange: 'transform',
+                    ...(dragIdx === i ? { opacity: 0.4 } : undefined),
+                  }}
+                >
+                  {/* The magnification target is the BUTTON (see the choreography's comment on why —
                 boxes, focus rings and visuals must agree). Its LAYOUT box is the natural spine
                 size and never changes; the choreography writes transform/z-index imperatively.
                 The cover is NOT inset-0: it is a fixed 120×176 box — the cover's own ratio —
                 bottom-centre anchored and counter-scaled per frame so the bitmap never renders
                 at any other ratio (defect 1 of fix/spine-magnify-geometry). Its initial
                 transform keeps it far inside the slack until the first choreography write. */}
-              <span
-                className="relative block"
-                style={unowned ? { opacity: 'var(--ghost-opacity)' } : undefined}
-              >
-                <span data-mag-art className="block" style={{ transformOrigin: '50% 100%' }}>
-                  <Spine
-                    book={b}
-                    active={false}
-                    tint={b.coverColor}
-                    dnf={isDnf(b)}
-                    borrowed={isBorrowedBook(b)}
-                  />
-                </span>
-                {/* skin-card (--radius-card): the SAME token CoverCard uses for a real cover of
+                  <span
+                    className="relative block"
+                    style={unowned ? { opacity: 'var(--ghost-opacity)' } : undefined}
+                  >
+                    <span data-mag-art className="block" style={{ transformOrigin: '50% 100%' }}>
+                      <Spine
+                        book={b}
+                        active={false}
+                        tint={b.coverColor}
+                        dnf={isDnf(b)}
+                        borrowed={isBorrowedBook(b)}
+                      />
+                    </span>
+                    {/* skin-card (--radius-card): the SAME token CoverCard uses for a real cover of
                   this shape — reads truer than --mark-radius, which is the small chip/badge
                   silhouette, not a card-sized surface (Marrow cuts corners on both; softer skins
                   differ meaningfully — --radius-card 12 vs --mark-radius 3). The box-shadow ring
@@ -534,82 +718,132 @@ export function SpineShelf({
                   the shelf background, else --primary — see the token's comment in tokens.css)
                   and it needs no separate fade: this whole span's opacity already carries the
                   spine→cover cross-fade, and box-shadow fades with its element like any paint. */}
-                <span
-                  data-mag-cover
-                  aria-hidden
-                  className="pointer-events-none absolute bottom-0 left-1/2 skin-card overflow-hidden border border-line"
-                  style={{
-                    width: MAG_W,
-                    height: MAG_H,
-                    opacity: 0,
-                    transformOrigin: '50% 100%',
-                    transform: 'translateX(-50%) scale(0.2)',
-                    boxShadow: `0 0 0 ${RING_W}px var(--pick-ring)`,
-                  }}
-                >
-                  <CoverImage book={b} thumb />
-                  {isDnf(b) && <StatePill kind="dnf" className="absolute left-1 top-1" />}
-                  {isBorrowedBook(b) && (
-                    <StatePill kind="borrowed" className="absolute bottom-1 right-1" />
-                  )}
-                </span>
+                    <span
+                      data-mag-cover
+                      aria-hidden
+                      className="pointer-events-none absolute bottom-0 left-1/2 skin-card overflow-hidden border border-line"
+                      style={{
+                        width: MAG_W,
+                        height: MAG_H,
+                        opacity: 0,
+                        transformOrigin: '50% 100%',
+                        transform: 'translateX(-50%) scale(0.2)',
+                        boxShadow: `0 0 0 ${RING_W}px var(--pick-ring)`,
+                      }}
+                    >
+                      <CoverImage book={b} thumb />
+                      {isDnf(b) && <StatePill kind="dnf" className="absolute left-1 top-1" />}
+                      {isBorrowedBook(b) && (
+                        <StatePill kind="borrowed" className="absolute bottom-1 right-1" />
+                      )}
+                    </span>
+                  </span>
+                </button>
+                {/* The keyboard half of the gesture — drag alone would leave the shelf unarrangeable
+              without a pointer. Quiet enough to leave the signature look intact. */}
+                {onReorder && (
+                  <span className="mt-1 flex gap-0.5">
+                    <button
+                      type="button"
+                      onClick={() => place(i, i - 1)}
+                      disabled={i === 0}
+                      aria-label={`Move ${b.title} earlier`}
+                      className="rounded border border-line px-1 text-[11px] leading-none text-muted disabled:opacity-30"
+                      style={{ background: 'var(--chip)' }}
+                    >
+                      ◀
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => place(i, i + 1)}
+                      disabled={i === books.length - 1}
+                      aria-label={`Move ${b.title} later`}
+                      className="rounded border border-line px-1 text-[11px] leading-none text-muted disabled:opacity-30"
+                      style={{ background: 'var(--chip)' }}
+                    >
+                      ▶
+                    </button>
+                  </span>
+                )}
+              </div>
+            )
+          })}
+          {onAdd && (
+            <button
+              type="button"
+              onClick={onAdd}
+              aria-label={addLabel}
+              title={addLabel}
+              className="flex-none self-end"
+            >
+              <span
+                className="flex h-36 w-9 items-center justify-center rounded-md border border-dashed border-line text-[18px]"
+                style={{ background: 'var(--chip)', color: 'var(--muted)' }}
+              >
+                ＋
               </span>
             </button>
-            {/* The keyboard half of the gesture — drag alone would leave the shelf unarrangeable
-              without a pointer. Quiet enough to leave the signature look intact. */}
-            {onReorder && (
-              <span className="mt-1 flex gap-0.5">
-                <button
-                  type="button"
-                  onClick={() => place(i, i - 1)}
-                  disabled={i === 0}
-                  aria-label={`Move ${b.title} earlier`}
-                  className="rounded border border-line px-1 text-[11px] leading-none text-muted disabled:opacity-30"
-                  style={{ background: 'var(--chip)' }}
-                >
-                  ◀
-                </button>
-                <button
-                  type="button"
-                  onClick={() => place(i, i + 1)}
-                  disabled={i === books.length - 1}
-                  aria-label={`Move ${b.title} later`}
-                  className="rounded border border-line px-1 text-[11px] leading-none text-muted disabled:opacity-30"
-                  style={{ background: 'var(--chip)' }}
-                >
-                  ▶
-                </button>
-              </span>
-            )}
-          </div>
-        )
-      })}
-      {onAdd && (
-        <button
-          type="button"
-          onClick={onAdd}
-          aria-label={addLabel}
-          title={addLabel}
-          className="flex-none self-end"
-        >
-          <span
-            className="flex h-36 w-9 items-center justify-center rounded-md border border-dashed border-line text-[18px]"
-            style={{ background: 'var(--chip)', color: 'var(--muted)' }}
-          >
-            ＋
-          </span>
-        </button>
-      )}
-      {/* RESERVED SLACK, trailing — responsive (see the trailSlack effect): sized so the last
+          )}
+          {/* RESERVED SLACK, trailing — responsive (see the trailSlack effect): sized so the last
         book's centre reaches the window at scrollLeft max, exactly. Also the momentum-contract
         half: end-edge transformed overhang would extend scrollWidth (CSSWG #9458), and every
         rightward displacement lands inside this spacer. */}
-      <div
-        aria-hidden
-        data-trail-slack
-        className="flex-none self-end"
-        style={{ width: trailSlack ?? LEAD_SLACK }}
-      />
-    </div>
+          <div
+            aria-hidden
+            data-trail-slack
+            className="flex-none self-end"
+            style={{ width: trailSlack ?? LEAD_SLACK }}
+          />
+        </div>
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-[18px] border-t"
+          style={{
+            borderColor: 'var(--gold-deep)',
+            background:
+              'linear-gradient(180deg, color-mix(in srgb, var(--gold-deep) 55%, var(--bg1)), var(--bg0))',
+            boxShadow: '0 -7px 16px rgba(0, 0, 0, 0.18), inset 0 1px rgba(255, 255, 255, 0.1)',
+          }}
+        />
+      </div>
+
+      {shownBook ? (
+        <div className="px-4 pb-4 pt-3 sm:px-5">
+          <div className="relative h-5" data-spine-position={shownIndex}>
+            <span
+              aria-hidden
+              className="absolute inset-x-0 top-1/2 h-[3px] -translate-y-1/2 rounded-full"
+              style={{ background: 'var(--chip)' }}
+            />
+            <span
+              aria-hidden
+              className="absolute left-0 top-1/2 h-[3px] -translate-y-1/2 rounded-full"
+              style={{ width: `${positionPct}%`, background: 'var(--primary)' }}
+            />
+            <span
+              data-spine-marker
+              aria-hidden
+              className="absolute top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rotate-45"
+              style={{
+                left: `${positionPct}%`,
+                background: 'var(--accent)',
+                boxShadow: '0 0 10px color-mix(in srgb, var(--accent) 65%, transparent)',
+              }}
+            />
+            <input
+              type="range"
+              min={0}
+              max={Math.max(0, books.length - 1)}
+              step={1}
+              value={shownIndex}
+              disabled={books.length <= 1}
+              onInput={(event) => scrollToIndex(Number(event.currentTarget.value))}
+              aria-label="Browse books by position"
+              className="absolute inset-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-default"
+            />
+          </div>
+        </div>
+      ) : null}
+    </section>
   )
 }

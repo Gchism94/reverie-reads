@@ -40,6 +40,7 @@ import { useAuth } from '../auth/AuthProvider'
 import { useIsDesktop, useIsWide } from '../hooks/useMediaQuery'
 import { useVoice } from '../skin/labels'
 import { SectionHeader, SignatureEmblem } from '../components/Structure'
+import { PageHeader } from '../components/PageHeader'
 
 function Centered({ children }: { children: ReactNode }) {
   return (
@@ -88,8 +89,8 @@ function EmptyState() {
 
 const COVER_GRID: React.CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fill, minmax(132px, 1fr))',
-  gap: '18px 16px',
+  gridTemplateColumns: 'repeat(auto-fill, minmax(144px, 1fr))',
+  gap: '24px 18px',
 }
 
 function DetailDrawer({
@@ -125,6 +126,7 @@ function PersonalLibraryScreen() {
   const sort = withIntensityHiddenSort(filters.sort, hideIntensity)
   const mode = useFilters((s) => s.mode)
   const panelOpen = useFilters((s) => s.panelOpen)
+  const togglePanel = useFilters((s) => s.togglePanel)
   const setShelf = useFilters((s) => s.setShelf)
   // The withheld-matches line REVEALS BY DRIVING THE CHIP — the same action ⊹ Show wishlist fires,
   // not a second switch beside it. A parallel piece of state would be free to disagree with the
@@ -141,7 +143,6 @@ function PersonalLibraryScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shelf])
   const isDesktop = useIsDesktop() // ≥ lg: select in place (rail), else navigate to the book route
-  const isWide = useIsWide() // ≥ xl: rail is a docked column, else an overlay drawer on selection
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [coverSheetId, setCoverSheetId] = useState<string | null>(null) // placeholder "add a cover"
   const voice = useVoice()
@@ -220,22 +221,15 @@ function PersonalLibraryScreen() {
 
   const selected = (selectedId && visible.find((b) => b.id === selectedId)) || null
   const coverSheetBook = (coverSheetId && books.find((b) => b.id === coverSheetId)) || null
-  // Docked rail (xl) is never empty — falls back to the first visible book. The overlay drawer (lg→xl)
-  // opens only on an explicit selection. The selection ring follows whichever is showing.
-  const dockedBook = selected ?? visible[0] ?? null
-  const highlightId = isWide ? dockedBook?.id : selectedId
-
   const center = (
-    <div className="min-w-0 px-4 py-6 sm:px-6 lg:px-7">
+    <div className="mx-auto min-w-0 w-full max-w-[1400px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
       <LibraryHeader
         scope="personal"
         readout={`${libraryBooks.length} books · ${libraryBooks.filter((b) => b.fave).length} faves`}
-        className="mb-3"
+        className="mb-5"
       />
 
-      <Toolbar filterToggleClass="lg:hidden" />
-      {/* Mobile filters are toggled inline; on desktop they live in the persistent left column. */}
-      <div className="lg:hidden">{panelOpen && <FilterPanel books={books} />}</div>
+      <Toolbar />
 
       {hiddenCount > 0 && (
         <p
@@ -294,7 +288,7 @@ function PersonalLibraryScreen() {
       )}
 
       <SectionHeader
-        className="mb-3"
+        className="mb-4 mt-6"
         label={mode === 'series' ? 'Series' : 'Your library'}
         readout={
           mode === 'series'
@@ -312,7 +306,7 @@ function PersonalLibraryScreen() {
               hideIntensity={hideIntensity}
               key={b.id}
               book={b}
-              selected={isDesktop && b.id === highlightId}
+              selected={isDesktop && b.id === selectedId}
               onOpen={() => activate(b.id)}
               onToggleFave={() => toggleFave(b.id, b.fave)}
               onAddCover={() => setCoverSheetId(b.id)}
@@ -327,37 +321,66 @@ function PersonalLibraryScreen() {
 
   return (
     <>
-      <section className="lg:grid lg:items-start lg:grid-cols-[200px_minmax(0,1fr)] xl:grid-cols-[236px_minmax(0,1fr)_360px]">
-        {/* Filters — docked left column on desktop */}
-        <aside
-          aria-label="Filters"
-          className="hidden lg:sticky lg:top-0 lg:block lg:h-dvh lg:overflow-y-auto lg:border-r lg:border-line lg:px-4 lg:py-6"
-        >
-          <div className="mb-3 text-[11px] uppercase tracking-[0.2em] text-muted">Filters</div>
-          <FilterPanel books={books} bare />
-        </aside>
+      {center}
 
-        {center}
-
-        {/* Detail — docked right rail at xl; between lg and xl it's the overlay drawer below */}
-        <aside
-          aria-label="Book details"
-          className="hidden xl:sticky xl:top-0 xl:block xl:h-dvh xl:border-l xl:border-line"
-        >
-          <BookDetailRail
-            book={dockedBook}
-            onToggleFave={(id) => toggleFave(id, dockedBook?.fave ?? false)}
-          />
-        </aside>
-      </section>
-
-      {isDesktop && !isWide && selected && (
+      {isDesktop && selected && (
         <DetailDrawer
           book={selected}
           onClose={() => setSelectedId(null)}
           onToggleFave={(id) => toggleFave(id, selected.fave)}
         />
       )}
+
+      {panelOpen ? (
+        <div
+          className="pointer-events-none fixed inset-0 z-40"
+          role="dialog"
+          aria-label="Library filters"
+        >
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0"
+            style={{ background: 'color-mix(in srgb, var(--bg0) 58%, transparent)' }}
+          />
+          <aside
+            className="pointer-events-auto absolute bottom-0 left-0 top-0 w-[min(390px,94vw)] overflow-y-auto border-r border-line p-5 pb-24 sm:pb-5"
+            style={{ background: 'var(--bg1)', boxShadow: 'var(--shadow)' }}
+          >
+            <div
+              className="sticky top-0 z-10 mb-4 flex items-center justify-between border-b border-line pb-4"
+              style={{ background: 'var(--bg1)' }}
+            >
+              <div>
+                <span className="skin-label text-[10px]" style={{ color: 'var(--accent-ink)' }}>
+                  Refine results
+                </span>
+                <h2
+                  className="mt-1 text-[24px] font-semibold text-ink"
+                  style={{ fontFamily: 'var(--font-display)' }}
+                >
+                  Filters
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={togglePanel}
+                className="skin-control skin-btn-icon grid h-9 w-9 place-items-center"
+                aria-label="Close filters"
+              >
+                ×
+              </button>
+            </div>
+            <FilterPanel books={books} bare />
+            <button
+              type="button"
+              onClick={togglePanel}
+              className="skin-control skin-btn-primary sticky bottom-[78px] mt-5 h-11 w-full px-5 text-[12px] sm:bottom-3"
+            >
+              Show {visible.length} books
+            </button>
+          </aside>
+        </div>
+      ) : null}
 
       {/* the placeholder's quiet "add a cover" affordance opens the same sheet as book detail */}
       {coverSheetBook && <CoverSheet book={coverSheetBook} onClose={() => setCoverSheetId(null)} />}
@@ -386,18 +409,29 @@ function LibraryHeader({
   className?: string
 }) {
   return (
-    <header className={`${className} flex flex-wrap items-center justify-between gap-3`}>
-      <div>
-        <h1
-          className="text-[22px] italic text-ink"
-          style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
-        >
-          Library
-        </h1>
-        <span className="text-[12.5px] text-muted">{readout}</span>
-      </div>
-      <ScopeSwitch scope={scope} />
-    </header>
+    <PageHeader
+      className={className}
+      eyebrow={readout}
+      title={scope === 'household' ? 'Household library' : 'Your library'}
+      description={
+        scope === 'household'
+          ? 'The books shared across your household, with every reader’s copy kept distinct.'
+          : 'Search, filter, and rediscover the books you’ve made part of your reading life.'
+      }
+      actions={
+        <>
+          <ScopeSwitch scope={scope} />
+          {scope === 'personal' ? (
+            <Link
+              to="/add"
+              className="skin-control skin-btn-primary flex h-10 items-center px-4 text-[12px]"
+            >
+              ＋ Add books
+            </Link>
+          ) : null}
+        </>
+      }
+    />
   )
 }
 

@@ -129,6 +129,10 @@ export function Toolbar({ filterToggleClass = '' }: { filterToggleClass?: string
 
         <button
           type="button"
+          // Keep the in-flow search panel mounted for the whole pointer gesture. Otherwise the
+          // input blurs on mousedown, the panel collapses, and this button moves before mouseup so
+          // the browser never dispatches its click (the same geometry as the hidden-match reveal).
+          onMouseDown={(e) => e.preventDefault()}
           onClick={togglePanel}
           aria-expanded={panelOpen}
           className={`skin-control flex h-10 items-center gap-1.5 border border-line px-4 text-[13px] text-ink ${filterToggleClass}`}

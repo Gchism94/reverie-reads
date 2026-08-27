@@ -26,6 +26,12 @@ const NAV = [
   { label: 'Indies', to: '/indie', icon: '☞' },
 ] as const
 
+const NAV_GROUPS = [
+  { label: 'Your books', items: NAV.slice(0, 5) },
+  { label: 'Reading life', items: NAV.slice(5, 8) },
+  { label: 'Explore', items: NAV.slice(8) },
+] as const
+
 const COLLAPSE_KEY = 'reverie.sidebar.collapsed'
 
 function readCollapsed(): boolean {
@@ -49,32 +55,41 @@ const navBase =
 function NavLinks({ collapsed }: { collapsed: boolean }) {
   return (
     <nav
-      className="flex flex-1 flex-col gap-0.5 overflow-y-auto overflow-x-hidden"
+      className="flex flex-1 flex-col gap-4 overflow-y-auto overflow-x-hidden"
       aria-label="Primary"
     >
-      {NAV.map((item) => (
-        <Link
-          key={item.to}
-          to={item.to}
-          activeOptions={{ exact: item.to === '/' }}
-          title={collapsed ? item.label : undefined}
-          aria-label={collapsed ? item.label : undefined}
-          className={`${navBase} ${collapsed ? 'justify-center' : ''}`}
-          style={{ color: 'var(--muted)' }}
-          activeProps={{
-            style: {
-              color: 'var(--ink)',
-              fontWeight: 600,
-              background: 'color-mix(in srgb, var(--primary) 16%, transparent)',
-              boxShadow: 'inset 2px 0 0 var(--primary)',
-            },
-          }}
-        >
-          <span className="grid w-5 shrink-0 place-items-center text-[14px]" aria-hidden>
-            {item.icon}
-          </span>
-          {!collapsed && <span className="skin-label truncate">{item.label}</span>}
-        </Link>
+      {NAV_GROUPS.map((group) => (
+        <div key={group.label} className="flex flex-col gap-0.5">
+          {!collapsed ? (
+            <div className="skin-label px-3 pb-1 text-[9px] text-muted opacity-70">
+              {group.label}
+            </div>
+          ) : null}
+          {group.items.map((item) => (
+            <Link
+              key={item.to}
+              to={item.to}
+              activeOptions={{ exact: item.to === '/' }}
+              title={collapsed ? item.label : undefined}
+              aria-label={collapsed ? item.label : undefined}
+              className={`${navBase} ${collapsed ? 'justify-center' : ''}`}
+              style={{ color: 'var(--muted)' }}
+              activeProps={{
+                style: {
+                  color: 'var(--ink)',
+                  fontWeight: 650,
+                  background: 'var(--chip)',
+                  boxShadow: 'inset 2px 0 0 var(--primary)',
+                },
+              }}
+            >
+              <span className="grid w-5 shrink-0 place-items-center text-[14px]" aria-hidden>
+                {item.icon}
+              </span>
+              {!collapsed ? <span className="truncate">{item.label}</span> : null}
+            </Link>
+          ))}
+        </div>
       ))}
     </nav>
   )
@@ -100,8 +115,8 @@ function Sidebar() {
     <div
       className="sticky top-0 hidden h-dvh shrink-0 flex-col px-3.5 py-4 backdrop-blur-lg transition-[width] duration-200 ease-out motion-reduce:transition-none lg:flex"
       style={{
-        width: collapsed ? 76 : 248,
-        background: 'color-mix(in srgb, var(--card) 64%, transparent)',
+        width: collapsed ? 76 : 232,
+        background: 'color-mix(in srgb, var(--bg1) 90%, transparent)',
         borderRight: '1px solid var(--line)',
       }}
     >
@@ -115,10 +130,12 @@ function Sidebar() {
         aria-label={`${APP_NAME} home`}
       >
         <span
-          className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-[9px] text-[18px] italic"
+          className="grid h-[36px] w-[36px] shrink-0 place-items-center text-[18px] italic"
           style={{
-            background: 'linear-gradient(135deg, var(--primary), var(--violet))',
-            color: 'var(--on-primary)',
+            background: 'var(--card)',
+            color: 'var(--gold)',
+            border: '1px solid var(--gold)',
+            borderRadius: 'var(--radius-card)',
             fontFamily: 'var(--font-display)',
             fontWeight: 600,
             boxShadow: 'var(--shadow)',
@@ -374,7 +391,7 @@ function MobileTabBar() {
               aria-label="Add a book"
               className="grid h-11 w-11 -translate-y-3 place-items-center rounded-full text-[20px]"
               style={{
-                background: 'linear-gradient(135deg, var(--primary), var(--gold))',
+                background: 'var(--accent-fill)',
                 color: 'var(--on-primary)',
                 boxShadow: 'var(--shadow)',
               }}
