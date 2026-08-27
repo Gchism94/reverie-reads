@@ -97,12 +97,29 @@ The required fresh read-only bypass review completed one cycle. Its confirmed fi
 corrected and re-exercised locally; the committed head still requires the normal exact-range
 integration review.
 
+The subsequent exact-range correctness review found two operator-integrity gaps. The corrected
+candidate now also:
+
+- creates every write-mode rollback artifact from one direct PostgreSQL `REPEATABLE READ`/`READ
+ONLY` snapshot instead of independently paginated HTTP reads, while retaining the established
+  artifact keys and row shapes; and
+- records the complete sorted household roster plus deterministic full-row fingerprints for the
+  reviewed account books and household-work memberships, then makes the mutation RPC reject a stale
+  artifact or an omitted/concurrently added household member before changing any row.
+
+Focused source-contract and pgTAP regressions cover the snapshot boundary, the complete-roster
+requirement, stale fingerprints, and a deterministic in-flight household extension that must win
+before reconciliation is refused.
+
 ## Reconciliation coupling
 
 The private owner CSV is interpreted only by the gitignored operator. Exact normalized title and
 full-author matching is required because the file has no ISBN column. Ambiguity or an unmatched row
 blocks the atomic write. Dry-run and backup artifacts must live outside the repository with mode
-`0600` files inside a mode `0700` directory.
+`0600` files inside a mode `0700` directory. Write mode also requires `SUPABASE_DB_URL`: the
+service-role HTTP client still performs the narrow RPC, but the rollback artifact and its mutation
+fence are captured over one read-only database snapshot. The operator verifies that the reviewed
+household roster contains exactly Account A and Account B before either dry-run or write planning.
 
 ## Required rollout order
 
@@ -119,9 +136,16 @@ blocks the atomic write. Dry-run and backup artifacts must live outside the repo
 ## Local verification — 2026-08-27
 
 - Clean database rebuild applied every migration through `20260831010000`.
-- Full pgTAP: 27 files and 629 assertions passed. The focused corpus administration, cover recovery,
-  host validation, and account-cascade contract passed all 62 assertions after the clean rebuild.
-- Core/web unit suites: 80 + 71 files and 2,409 + 622 assertions passed.
+- Full pgTAP: 27 files and 631 assertions passed. The focused corpus administration, cover recovery,
+  host validation, account-cascade, snapshot-fence, and complete-roster contract passed all 64
+  assertions after the clean rebuild.
+- Core/web unit suites: 80 + 71 files and 2,410 + 624 assertions passed.
+- The deterministic multi-session database harness passed its reconciliation edit, insert, and
+  complete-roster races, along with the existing authorization, ISBN, and final-unlink cases.
+- A disposable two-account CSV exercise ran the real dry-run and write operator end to end. It
+  created mode-`0700`/`0600` artifacts from the direct read-only snapshot, archived the one planned
+  personal and household extra, preserved corpus count, and converged to a zero-change post-check;
+  the local fixtures were then removed and the temporary artifacts moved to Trash.
 - TypeScript, ESLint, Prettier, production build, and `git diff --check` passed. Schema lint added no
   finding; its two reports are the existing temporary-table analysis limitations in
   `backfill_series_from_titles` and `merge_series`.

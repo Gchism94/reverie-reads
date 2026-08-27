@@ -1064,7 +1064,10 @@ grant execute on function public.remove_personal_book(uuid) to authenticated;
 create function public.reconcile_household_library_memberships(
   p_household uuid,
   p_personal_assignments jsonb,
-  p_household_work_ids uuid[]
+  p_household_work_ids uuid[],
+  p_expected_roster uuid[],
+  p_expected_books_fingerprint text,
+  p_expected_household_works_fingerprint text
 )
 returns jsonb
 language plpgsql
@@ -1075,7 +1078,9 @@ declare
   assignment jsonb;
   account_id uuid;
   assigned_accounts uuid[] := array[]::uuid[];
-  locked_members int := 0;
+  expected_roster uuid[] := array[]::uuid[];
+  locked_roster uuid[] := array[]::uuid[];
+  current_roster uuid[] := array[]::uuid[];
   desired_personal uuid[];
   desired_household uuid[] := array(
     select distinct work_id
@@ -1087,6 +1092,8 @@ declare
   archive_book uuid;
   locked_books uuid[] := array[]::uuid[];
   archive_books uuid[] := array[]::uuid[];
+  current_books_fingerprint text;
+  current_household_works_fingerprint text;
   personal_created int := 0;
   personal_restored int := 0;
   personal_archived int := 0;
@@ -1131,6 +1138,22 @@ begin
       raise exception 'personal assignment references an unknown corpus work' using errcode = '23503';
     end if;
   end loop;
+  select coalesce(array_agg(user_id order by user_id), array[]::uuid[])
+    into assigned_accounts
+  from unnest(assigned_accounts) as assigned(user_id);
+  select coalesce(array_agg(distinct user_id order by user_id), array[]::uuid[])
+    into expected_roster
+  from unnest(coalesce(p_expected_roster, array[]::uuid[])) as expected(user_id);
+  if cardinality(expected_roster) <> cardinality(coalesce(p_expected_roster, array[]::uuid[]))
+    or expected_roster is distinct from assigned_accounts then
+    raise exception 'personal assignments must name the complete reviewed household roster'
+      using errcode = '22023';
+  end if;
+  if coalesce(p_expected_books_fingerprint, '') !~ '^[0-9a-f]{32}$'
+    or coalesce(p_expected_household_works_fingerprint, '') !~ '^[0-9a-f]{32}$' then
+    raise exception 'valid reconciliation snapshot fingerprints are required'
+      using errcode = '22023';
+  end if;
 
   -- All ordinary household enrichment paths lock book -> membership -> household. Reconciliation
   -- touches the complete reviewed libraries, so prelock their existing books in UUID order before
@@ -1143,14 +1166,26 @@ begin
   loop
     locked_books := array_append(locked_books, archive_book);
   end loop;
+  select md5(coalesce(jsonb_agg(to_jsonb(b) order by b.id), '[]'::jsonb)::text)
+    into current_books_fingerprint
+  from public.books b
+  where b.owner_id = any(assigned_accounts);
+  if current_books_fingerprint <> p_expected_books_fingerprint then
+    raise exception 'assigned account books changed since the reviewed backup'
+      using errcode = '40001';
+  end if;
 
-  perform 1 from public.household_members hm
-  where hm.household_id = p_household and hm.user_id = any(assigned_accounts)
-  order by hm.user_id
-  for key share;
-  get diagnostics locked_members = row_count;
-  if locked_members <> cardinality(assigned_accounts) then
-    raise exception 'assigned account is not a member of the reviewed household'
+  select coalesce(array_agg(member.user_id order by member.user_id), array[]::uuid[])
+    into locked_roster
+  from (
+    select hm.user_id
+    from public.household_members hm
+    where hm.household_id = p_household
+    order by hm.user_id
+    for key share
+  ) member;
+  if locked_roster is distinct from expected_roster then
+    raise exception 'reviewed household roster does not match the complete current roster'
       using errcode = '42501';
   end if;
 
@@ -1192,6 +1227,30 @@ begin
     order by b.id
   ) then
     raise exception 'assigned account books changed during reconciliation' using errcode = '40001';
+  end if;
+  select md5(coalesce(jsonb_agg(to_jsonb(b) order by b.id), '[]'::jsonb)::text)
+    into current_books_fingerprint
+  from public.books b
+  where b.owner_id = any(assigned_accounts);
+  if current_books_fingerprint <> p_expected_books_fingerprint then
+    raise exception 'assigned account books changed during reconciliation'
+      using errcode = '40001';
+  end if;
+  select coalesce(array_agg(hm.user_id order by hm.user_id), array[]::uuid[])
+    into current_roster
+  from public.household_members hm
+  where hm.household_id = p_household;
+  if current_roster is distinct from expected_roster then
+    raise exception 'household roster changed during reconciliation'
+      using errcode = '40001';
+  end if;
+  select md5(coalesce(jsonb_agg(to_jsonb(hw) order by hw.work_id), '[]'::jsonb)::text)
+    into current_household_works_fingerprint
+  from public.household_works hw
+  where hw.household_id = p_household;
+  if current_household_works_fingerprint <> p_expected_household_works_fingerprint then
+    raise exception 'household works changed since the reviewed backup'
+      using errcode = '40001';
   end if;
 
   for assignment in select value from jsonb_array_elements(p_personal_assignments) value
@@ -1296,7 +1355,11 @@ begin
 end;
 $$;
 
-revoke all on function public.reconcile_household_library_memberships(uuid, jsonb, uuid[])
+revoke all on function public.reconcile_household_library_memberships(
+  uuid, jsonb, uuid[], uuid[], text, text
+)
   from public, anon, authenticated, service_role;
-grant execute on function public.reconcile_household_library_memberships(uuid, jsonb, uuid[])
+grant execute on function public.reconcile_household_library_memberships(
+  uuid, jsonb, uuid[], uuid[], text, text
+)
   to service_role;

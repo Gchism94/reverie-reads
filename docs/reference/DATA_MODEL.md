@@ -444,7 +444,12 @@ membership. The legacy `household_library_books()` RPC remains only for staged-d
 
 Membership linking/unlinking remains service-role, owner-run, dry-run-first operation through
 `link_household` and `unlink_household_member`. Runtime client mutations use narrow authenticated
-RPCs with no direct table grants.
+RPCs with no direct table grants. The one-off household CSV reconciliation additionally requires an
+exact complete-roster match. Its write-mode rollback artifact is captured in one `REPEATABLE
+READ`/`READ ONLY` database snapshot, including deterministic fingerprints of every reviewed account book
+row and household-work membership row; the mutation rechecks that fence under its normal serialization
+locks and refuses any intervening reader edit, book insertion, household change, or unreviewed
+member rather than applying a stale plan.
 
 ### Notes
 

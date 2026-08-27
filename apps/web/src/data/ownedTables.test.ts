@@ -179,7 +179,7 @@ describe('no user-owned table may go unregistered', () => {
     for (const entry of USER_OWNED_TABLES) {
       expect(
         RECONCILIATION_BACKUP_PRIMARY_KEYS[entry.table]?.length,
-        `${entry.table} cannot be safely paged without a total order`,
+        `${entry.table} cannot be deterministically serialized without a total order`,
       ).toBeGreaterThan(0)
     }
   })
@@ -202,28 +202,60 @@ describe('no user-owned table may go unregistered', () => {
     ])
   })
 
-  it('uses true primary keys—not mutable owner attribution—as rollback row identity', () => {
-    const start = RECONCILIATION_SCRIPT.indexOf('async function backupOwnerState')
-    const end = RECONCILIATION_SCRIPT.indexOf('const householdEntries = await Promise.all', start)
+  it('captures every rollback section inside one read-only repeatable-read snapshot', () => {
+    const start = RECONCILIATION_SCRIPT.indexOf('function backupOwnerState')
+    const end = RECONCILIATION_SCRIPT.indexOf('async function currentPlan', start)
     const block = RECONCILIATION_SCRIPT.slice(start, end)
     expect(start).toBeGreaterThan(-1)
     expect(end).toBeGreaterThan(start)
-    expect(block).toContain('pageQuery(`backup ${entry.table}`, primaryKey')
-    expect(block).not.toContain('[entry.owner, ...primaryKey]')
+    expect(block).toContain('begin isolation level repeatable read read only')
+    expect(block).toContain('execFileSync(')
+    expect(block).toContain('snapshotAggregateSql(')
+    expect(block).toContain("'ownerTables', jsonb_build_object")
+    expect(block).toContain("'household', jsonb_build_object")
+    expect(block).not.toContain('pageQuery(')
+    expect(block).not.toContain('Promise.all')
   })
 
-  it('routes collective household rollback rows through counted, ordered pagination', () => {
-    const start = RECONCILIATION_SCRIPT.indexOf('RECONCILIATION_HOUSEHOLD_BACKUP_SPECS.map')
-    const end = RECONCILIATION_SCRIPT.indexOf(
-      'const household = Object.fromEntries(householdEntries)',
-    )
+  it('uses true primary-key ordering for personal and collective snapshot rows', () => {
+    const start = RECONCILIATION_SCRIPT.indexOf('function backupOwnerState')
+    const end = RECONCILIATION_SCRIPT.indexOf('async function currentPlan', start)
     const block = RECONCILIATION_SCRIPT.slice(start, end)
     expect(start).toBeGreaterThan(-1)
     expect(end).toBeGreaterThan(start)
-    expect(block).toContain('`backup household ${entry.key}`')
-    expect(block).toContain('entry.primaryKey')
-    expect(block).toContain(".select('*', { count: 'exact' })")
-    expect(block).toContain('for (const column of entry.primaryKey) query = query.order(column)')
-    expect(block).toContain('return query.range(from, to)')
+    expect(block).toContain('orderColumns: [entry.owner, ...primaryKey]')
+    expect(block).toContain('orderColumns: entry.primaryKey')
+    expect(block).toContain('reconciliationFence')
+    expect(block).toContain('booksFingerprint')
+    expect(block).toContain('householdWorksFingerprint')
+  })
+
+  it('requires the complete displayed roster and passes the snapshot fence to the write RPC', () => {
+    expect(RECONCILIATION_SCRIPT).toContain(
+      'the reviewed household roster must contain exactly Account A and Account B',
+    )
+    expect(RECONCILIATION_SCRIPT).toContain(
+      'p_expected_roster: snapshot.reconciliationFence.roster',
+    )
+    expect(RECONCILIATION_SCRIPT).toContain(
+      'p_expected_books_fingerprint: snapshot.reconciliationFence.booksFingerprint',
+    )
+    expect(RECONCILIATION_SCRIPT).toContain(
+      'snapshot.reconciliationFence.householdWorksFingerprint',
+    )
+  })
+
+  it('binds the write plan to the same snapshot and refuses a changed preflight', () => {
+    expect(RECONCILIATION_SCRIPT).toContain("'planningWorks', ${snapshotPlanningWorksSql}")
+    expect(RECONCILIATION_SCRIPT).toContain('works: snapshotState.planningWorks')
+    expect(RECONCILIATION_SCRIPT).toContain('books: snapshot.ownerTables.books')
+    expect(RECONCILIATION_SCRIPT).toContain('householdWorks: snapshot.household.works')
+    expect(RECONCILIATION_SCRIPT).toContain(
+      'reconciliation inputs changed after preflight; review a new dry run',
+    )
+    expect(RECONCILIATION_SCRIPT).toContain('snapshotPlan.resolved')
+    expect(RECONCILIATION_SCRIPT).toContain('await main().catch')
+    expect(RECONCILIATION_SCRIPT).toContain('chmodSync(artifactDir, 0o700)')
+    expect(RECONCILIATION_SCRIPT).toContain('chmodSync(path, 0o600)')
   })
 })

@@ -135,7 +135,7 @@ describe('household reconciliation plan', () => {
   })
 })
 
-describe('household reconciliation rollback paging', () => {
+describe('household reconciliation read-only planning pagination', () => {
   const ranged =
     <Row extends Record<string, unknown>>(rows: Row[]) =>
     async (from: number, to: number) => ({
@@ -172,6 +172,21 @@ describe('household reconciliation rollback paging', () => {
         2,
       ),
     ).rejects.toThrow('repeated a primary key')
+  })
+
+  it('does not claim snapshot isolation for equal-count replacement between planning pages', async () => {
+    const pages = [
+      [{ id: 'a' }, { id: 'b' }],
+      [{ id: 'd' }, { id: 'e' }],
+    ]
+    await expect(
+      pageQuery(
+        'planning changed rows',
+        ['id'],
+        async (from) => ({ data: pages[from / 2] ?? [], error: null, count: 4 }),
+        2,
+      ),
+    ).resolves.toEqual([{ id: 'a' }, { id: 'b' }, { id: 'd' }, { id: 'e' }])
   })
 
   it('uses the complete composite primary-key tuple', async () => {

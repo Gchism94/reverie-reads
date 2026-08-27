@@ -65,10 +65,10 @@ export interface CountedPage<Row> {
   count: number | null
 }
 
-/** Read a counted, ranged result under a declared primary-key identity. Count changes, partial
- * pages, missing key columns, and repeated key tuples all fail closed; payload changes cannot hide
- * overlap between offset pages. `pageSize` is injectable only so the real helper can be exercised
- * at exact-page and cross-page boundaries without allocating 1,001 fixtures in unit tests. */
+/** Read a counted, ranged result under a declared primary-key identity for read-only planning.
+ * Count changes, partial pages, missing key columns, and repeated key tuples fail closed, but
+ * independent HTTP pages are not a database snapshot and this helper must never back a write.
+ * `pageSize` is injectable so the real helper can be exercised at page boundaries in unit tests. */
 export async function pageQuery<Row extends Record<string, unknown>>(
   label: string,
   primaryKey: readonly string[],

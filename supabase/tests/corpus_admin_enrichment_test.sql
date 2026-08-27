@@ -1,12 +1,14 @@
 begin;
-select plan(62);
+select plan(64);
 
 insert into auth.users (id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
 values
   ('81111111-1111-4111-8111-111111111111', 'authenticated', 'authenticated',
    'corpus-admin@example.com', '{}', '{"display_name":"Corpus Admin"}', now(), now()),
   ('82222222-2222-4222-8222-222222222222', 'authenticated', 'authenticated',
-   'corpus-reader@example.com', '{}', '{"display_name":"Corpus Reader"}', now(), now());
+   'corpus-reader@example.com', '{}', '{"display_name":"Corpus Reader"}', now(), now()),
+  ('83333333-3333-4333-8333-333333333333', 'authenticated', 'authenticated',
+   'corpus-third@example.com', '{}', '{"display_name":"Unexpected Third"}', now(), now());
 
 insert into public.corpus_admins (user_id)
 values ('81111111-1111-4111-8111-111111111111');
@@ -546,10 +548,10 @@ select ok(not has_table_privilege('authenticated', 'public.work_tropes', 'INSERT
   'authenticated readers cannot bypass promotion with direct work-trope inserts');
 
 select ok(not has_function_privilege('authenticated',
-  'public.reconcile_household_library_memberships(uuid,jsonb,uuid[])', 'EXECUTE'),
+  'public.reconcile_household_library_memberships(uuid,jsonb,uuid[],uuid[],text,text)', 'EXECUTE'),
   'a reader cannot run the cross-account reconciliation operator');
 select ok(has_function_privilege('service_role',
-  'public.reconcile_household_library_memberships(uuid,jsonb,uuid[])', 'EXECUTE'),
+  'public.reconcile_household_library_memberships(uuid,jsonb,uuid[],uuid[],text,text)', 'EXECUTE'),
   'the reviewed reconciliation operator is service-role-only');
 
 reset role;
@@ -559,7 +561,24 @@ select is(
   public.reconcile_household_library_memberships(
     '80000000-0000-4000-8000-000000000010',
     '[{"accountId":"81111111-1111-4111-8111-111111111111","workIds":["80000000-0000-4000-8000-000000000001"]},{"accountId":"82222222-2222-4222-8222-222222222222","workIds":[]}]'::jsonb,
-    array['80000000-0000-4000-8000-000000000001']::uuid[]
+    array['80000000-0000-4000-8000-000000000001']::uuid[],
+    array[
+      '81111111-1111-4111-8111-111111111111',
+      '82222222-2222-4222-8222-222222222222'
+    ]::uuid[],
+    (
+      select md5(coalesce(jsonb_agg(to_jsonb(b) order by b.id), '[]'::jsonb)::text)
+      from public.books b
+      where b.owner_id in (
+        '81111111-1111-4111-8111-111111111111',
+        '82222222-2222-4222-8222-222222222222'
+      )
+    ),
+    (
+      select md5(coalesce(jsonb_agg(to_jsonb(hw) order by hw.work_id), '[]'::jsonb)::text)
+      from public.household_works hw
+      where hw.household_id = '80000000-0000-4000-8000-000000000010'
+    )
   ) ->> 'personalCreated',
   '1',
   'the atomic operator creates the exact reviewed personal membership set'
@@ -571,6 +590,59 @@ select is(
      and removed_at is null and ownership = 'unowned' and read_status = 'Read'),
   1,
   'operator-created personal rows are read history, not invented ownership'
+);
+
+select throws_ok(
+  $$select public.reconcile_household_library_memberships(
+    '80000000-0000-4000-8000-000000000010',
+    '[{"accountId":"81111111-1111-4111-8111-111111111111","workIds":["80000000-0000-4000-8000-000000000001"]},{"accountId":"82222222-2222-4222-8222-222222222222","workIds":[]}]'::jsonb,
+    array['80000000-0000-4000-8000-000000000001']::uuid[],
+    array[
+      '81111111-1111-4111-8111-111111111111',
+      '82222222-2222-4222-8222-222222222222'
+    ]::uuid[],
+    '00000000000000000000000000000000',
+    (
+      select md5(coalesce(jsonb_agg(to_jsonb(hw) order by hw.work_id), '[]'::jsonb)::text)
+      from public.household_works hw
+      where hw.household_id = '80000000-0000-4000-8000-000000000010'
+    )
+  )$$,
+  '40001', null,
+  'the atomic operator refuses books that differ from the reviewed rollback snapshot'
+);
+
+insert into public.household_members (household_id, user_id, role)
+values (
+  '80000000-0000-4000-8000-000000000010',
+  '83333333-3333-4333-8333-333333333333',
+  'member'
+);
+select throws_ok(
+  $$select public.reconcile_household_library_memberships(
+    '80000000-0000-4000-8000-000000000010',
+    '[{"accountId":"81111111-1111-4111-8111-111111111111","workIds":["80000000-0000-4000-8000-000000000001"]},{"accountId":"82222222-2222-4222-8222-222222222222","workIds":[]}]'::jsonb,
+    array['80000000-0000-4000-8000-000000000001']::uuid[],
+    array[
+      '81111111-1111-4111-8111-111111111111',
+      '82222222-2222-4222-8222-222222222222'
+    ]::uuid[],
+    (
+      select md5(coalesce(jsonb_agg(to_jsonb(b) order by b.id), '[]'::jsonb)::text)
+      from public.books b
+      where b.owner_id in (
+        '81111111-1111-4111-8111-111111111111',
+        '82222222-2222-4222-8222-222222222222'
+      )
+    ),
+    (
+      select md5(coalesce(jsonb_agg(to_jsonb(hw) order by hw.work_id), '[]'::jsonb)::text)
+      from public.household_works hw
+      where hw.household_id = '80000000-0000-4000-8000-000000000010'
+    )
+  )$$,
+  '42501', null,
+  'the atomic operator refuses an unreviewed third household member'
 );
 
 reset role;
