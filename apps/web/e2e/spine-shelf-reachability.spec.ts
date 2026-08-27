@@ -352,7 +352,20 @@ test('scroll reach: sweeping picks EVERY book, and the extremes pick the termina
   await expect.poll(async () => pickedId(page)).toBe(big.bookIds[35])
   await expect(indicator).toHaveAttribute('data-spine-position', '35')
 
-  await page.locator('[data-spine-picked]').click({ timeout: 5_000 })
+  // `scrollToIndex` intentionally publishes the requested book immediately, then smoothly moves
+  // the reveal window to it. Wait on the physical terminal as well as the React selection before
+  // activating: a generic `[data-spine-picked]` locator can otherwise re-resolve to an interim
+  // book while Playwright waits for the transforming button to become stable.
+  await expect
+    .poll(() =>
+      track(page).evaluate(
+        (el) => Math.abs(el.scrollLeft - (el.scrollWidth - el.clientWidth)) <= 2,
+      ),
+    )
+    .toBe(true)
+  const terminal = page.locator(`[data-spine="${big.bookIds[35]}"]`)
+  await expect(terminal).toHaveAttribute('data-spine-picked', '')
+  await terminal.click({ timeout: 5_000 })
   await expect(page).toHaveURL(new RegExp(`/book/${big.bookIds[35]}`))
 })
 

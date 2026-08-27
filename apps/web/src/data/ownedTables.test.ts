@@ -202,6 +202,16 @@ describe('no user-owned table may go unregistered', () => {
     ])
   })
 
+  it('uses true primary keys—not mutable owner attribution—as rollback row identity', () => {
+    const start = RECONCILIATION_SCRIPT.indexOf('async function backupOwnerState')
+    const end = RECONCILIATION_SCRIPT.indexOf('const householdEntries = await Promise.all', start)
+    const block = RECONCILIATION_SCRIPT.slice(start, end)
+    expect(start).toBeGreaterThan(-1)
+    expect(end).toBeGreaterThan(start)
+    expect(block).toContain('pageQuery(`backup ${entry.table}`, primaryKey')
+    expect(block).not.toContain('[entry.owner, ...primaryKey]')
+  })
+
   it('routes collective household rollback rows through counted, ordered pagination', () => {
     const start = RECONCILIATION_SCRIPT.indexOf('RECONCILIATION_HOUSEHOLD_BACKUP_SPECS.map')
     const end = RECONCILIATION_SCRIPT.indexOf(
@@ -210,7 +220,8 @@ describe('no user-owned table may go unregistered', () => {
     const block = RECONCILIATION_SCRIPT.slice(start, end)
     expect(start).toBeGreaterThan(-1)
     expect(end).toBeGreaterThan(start)
-    expect(block).toContain('pageQuery(`backup household ${entry.key}`')
+    expect(block).toContain('`backup household ${entry.key}`')
+    expect(block).toContain('entry.primaryKey')
     expect(block).toContain(".select('*', { count: 'exact' })")
     expect(block).toContain('for (const column of entry.primaryKey) query = query.order(column)')
     expect(block).toContain('return query.range(from, to)')

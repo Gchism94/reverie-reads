@@ -19,6 +19,7 @@ import { USER_OWNED_TABLES } from '../apps/web/src/data/ownedTables.ts'
 import { parseCsv, toRecords, normalizeRecord } from './corpus-import-lib.ts'
 import {
   householdReconciliationCounts,
+  pageQuery,
   planHouseholdReconciliation,
   RECONCILIATION_BACKUP_PRIMARY_KEYS,
   RECONCILIATION_HOUSEHOLD_BACKUP_SPECS,
@@ -28,7 +29,6 @@ const LOCAL_URL = 'http://127.0.0.1:55321'
 const LOCAL_SERVICE_ROLE =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU'
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-const PAGE = 1000
 
 const args = process.argv.slice(2).filter((arg) => arg !== '--')
 const value = (name) =>
@@ -66,28 +66,8 @@ const supabase = createClient(url, service, {
 const dbError = (action, error) =>
   new Error(`${action}: ${error?.message ?? JSON.stringify(error)}`)
 
-async function pageQuery(label, makeQuery) {
-  const rows = []
-  let total = null
-  for (let from = 0; ; from += PAGE) {
-    const { data, error, count } = await makeQuery(from, from + PAGE - 1)
-    if (error) throw dbError(label, error)
-    const page = data ?? []
-    rows.push(...page)
-    if (count != null) total = count
-    if (page.length < PAGE || (total != null && rows.length >= total)) break
-  }
-  if (total != null && rows.length !== total) {
-    throw new Error(`${label}: read ${rows.length} of ${total}; refusing a partial snapshot`)
-  }
-  if (new Set(rows.map((row) => JSON.stringify(row))).size !== rows.length) {
-    throw new Error(`${label}: pagination repeated a row; refusing a partial snapshot`)
-  }
-  return rows
-}
-
 const fetchWorks = () =>
-  pageQuery('works lookup', (from, to) =>
+  pageQuery('works lookup', ['id'], (from, to) =>
     supabase
       .from('works')
       .select('id, title, author_text', { count: 'exact' })
@@ -96,7 +76,7 @@ const fetchWorks = () =>
   )
 
 const fetchBooks = () =>
-  pageQuery('account books', (from, to) =>
+  pageQuery('account books', ['id'], (from, to) =>
     supabase
       .from('books')
       .select('id, owner_id, corpus_work_id, removed_at', { count: 'exact' })
@@ -107,7 +87,7 @@ const fetchBooks = () =>
   )
 
 const fetchHouseholdWorks = (householdId) =>
-  pageQuery('household works', (from, to) =>
+  pageQuery('household works', ['work_id'], (from, to) =>
     supabase
       .from('household_works')
       .select('work_id, removed_at', { count: 'exact' })
@@ -146,16 +126,16 @@ async function resolveHousehold() {
 async function backupOwnerState(householdId) {
   const tables = {}
   for (const entry of USER_OWNED_TABLES) {
-    const rows = await pageQuery(`backup ${entry.table}`, (from, to) => {
+    const primaryKey = RECONCILIATION_BACKUP_PRIMARY_KEYS[entry.table]
+    if (!primaryKey?.length) {
+      throw new Error(`backup ${entry.table}: no stable primary-key ordering is declared`)
+    }
+    const rows = await pageQuery(`backup ${entry.table}`, primaryKey, (from, to) => {
       let query = supabase
         .from(entry.table)
         .select('*', { count: 'exact' })
         .in(entry.owner, [accountA, accountB])
         .order(entry.owner)
-      const primaryKey = RECONCILIATION_BACKUP_PRIMARY_KEYS[entry.table]
-      if (!primaryKey?.length) {
-        throw new Error(`backup ${entry.table}: no stable primary-key ordering is declared`)
-      }
       for (const column of primaryKey) query = query.order(column)
       return query.range(from, to)
     })
@@ -163,14 +143,18 @@ async function backupOwnerState(householdId) {
   }
   const householdEntries = await Promise.all(
     RECONCILIATION_HOUSEHOLD_BACKUP_SPECS.map(async (entry) => {
-      const rows = await pageQuery(`backup household ${entry.key}`, (from, to) => {
-        let query = supabase
-          .from(entry.table)
-          .select('*', { count: 'exact' })
-          .eq(entry.table === 'households' ? 'id' : 'household_id', householdId)
-        for (const column of entry.primaryKey) query = query.order(column)
-        return query.range(from, to)
-      })
+      const rows = await pageQuery(
+        `backup household ${entry.key}`,
+        entry.primaryKey,
+        (from, to) => {
+          let query = supabase
+            .from(entry.table)
+            .select('*', { count: 'exact' })
+            .eq(entry.table === 'households' ? 'id' : 'household_id', householdId)
+          for (const column of entry.primaryKey) query = query.order(column)
+          return query.range(from, to)
+        },
+      )
       return [entry.key, rows]
     }),
   )

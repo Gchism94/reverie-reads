@@ -20,10 +20,11 @@ import {
 } from '../lib/cropMath'
 import { Surface } from './Surface'
 
-// The cover sheet — the cover is the door. Four ways in, one pipeline out (the covers Edge
-// Function): shoot your own copy, upload an image, pick an edition (with context: format · year ·
-// publisher, never a bare image wall), or paste a direct image link. Camera + upload pass through
-// the 2:3 crop; an edition pick offers (never forces) syncing the book's edition fields.
+// The cover sheet — the cover is the door. Four ways in: shoot your own copy, upload an image, pick
+// an edition (with context: format · year · publisher, never a bare image wall), or paste a direct
+// image link. Durable sources use the covers Edge Function; arbitrary pasted hosts are validated as
+// renderable by the browser and kept as hotlinks, never fetched by the server. Camera + upload pass
+// through the 2:3 crop; an edition pick offers (never forces) syncing the book's edition fields.
 //
 // YOUR COPY LEADS (docs/reference/reverie-metadata-sourcing.md §Why camera capture matters more than it
 // looks). A photo of the book on your shelf is simultaneously the most defensible cover we can
@@ -46,6 +47,30 @@ const ERROR_COPY: Record<SetCoverError | string, string> = {
   failed: 'Couldn’t save that cover. Try again in a moment.',
 }
 
+const rendersAsImage = (raw: string): Promise<boolean> =>
+  new Promise((resolve) => {
+    try {
+      const parsed = new URL(raw)
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+        resolve(false)
+        return
+      }
+    } catch {
+      resolve(false)
+      return
+    }
+    const image = new Image()
+    const timeout = window.setTimeout(() => finish(false), 10_000)
+    const finish = (ok: boolean) => {
+      window.clearTimeout(timeout)
+      image.onload = image.onerror = null
+      resolve(ok)
+    }
+    image.onload = () => finish(image.naturalWidth > 0 && image.naturalHeight > 0)
+    image.onerror = () => finish(false)
+    image.src = raw
+  })
+
 function SectionLabel({ children }: { children: string }) {
   return (
     <div className="mb-1.5 mt-5 text-[11px] uppercase tracking-[0.2em] text-muted first:mt-0">
@@ -59,6 +84,7 @@ export function CoverSheet({ book, onClose }: { book: Book; onClose: () => void 
   const [synced, setSynced] = useState<EditionOption | null>(null) // last applied edition (sync offer)
   const [error, setError] = useState<string | null>(null)
   const [url, setUrl] = useState('')
+  const [checkingUrl, setCheckingUrl] = useState(false)
   const cameraRef = useRef<HTMLInputElement>(null)
   const uploadRef = useRef<HTMLInputElement>(null)
 
@@ -66,7 +92,7 @@ export function CoverSheet({ book, onClose }: { book: Book; onClose: () => void 
   const updateBook = useUpdateBook()
   const { data: editions, isLoading: editionsLoading } = useEditionOptions(book, !crop)
 
-  const saving = setCover.isPending
+  const saving = setCover.isPending || checkingUrl
 
   const apply = (
     input: { source: CoverSource; file?: Blob; url?: string; sourceUrl?: string },
@@ -237,10 +263,20 @@ export function CoverSheet({ book, onClose }: { book: Book; onClose: () => void 
       <SectionLabel>From a link</SectionLabel>
       <form
         className="flex gap-2"
-        onSubmit={(e) => {
+        onSubmit={async (e) => {
           e.preventDefault()
           const u = url.trim()
           if (!u) return
+          if (!mayIngestCover('url', u)) {
+            setCheckingUrl(true)
+            setError(null)
+            const renderable = await rendersAsImage(u)
+            setCheckingUrl(false)
+            if (!renderable) {
+              setError(ERROR_COPY.not_an_image ?? null)
+              return
+            }
+          }
           apply({ source: 'url', url: u, sourceUrl: u })
         }}
       >

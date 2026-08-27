@@ -26,13 +26,24 @@ describe('durable corpus cover boundary', () => {
   })
 
   it('revalidates the terminal redirect URL before reading or storing response bytes', () => {
-    const terminalAssignment = edge.indexOf('fetchedUrl = r.url || url')
+    const terminalAssignment = edge.indexOf('fetchedUrl ||= r.url || url')
     const terminalGoogleGate = edge.indexOf('isGoogleContentCover(fetchedUrl)')
     const bodyRead = edge.indexOf("tr.time('covers.readBody'")
     expect(terminalAssignment).toBeGreaterThan(-1)
     expect(terminalGoogleGate).toBeGreaterThan(terminalAssignment)
     expect(bodyRead).toBeGreaterThan(terminalGoogleGate)
     expect(edge.slice(terminalGoogleGate, bodyRead)).toContain("error: 'display_only_source'")
+  })
+
+  it('validates every reader-supplied network hop before the Edge runtime connects', () => {
+    const guardedFetch = edge.indexOf('fetchPublicRemote(')
+    const resolver = edge.indexOf('Deno.resolveDns(hostname, recordType)')
+    const bodyRead = edge.indexOf("tr.time('covers.readBody'")
+    expect(guardedFetch).toBeGreaterThan(-1)
+    expect(resolver).toBeGreaterThan(guardedFetch)
+    expect(bodyRead).toBeGreaterThan(resolver)
+    expect(edge).toContain('isTrustedCoverSourceUrl(candidate')
+    expect(edge).not.toContain("redirect: 'follow'")
   })
 
   it('the Edge mirror rejects host-boundary and parser tricks', () => {

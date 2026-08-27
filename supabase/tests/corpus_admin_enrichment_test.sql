@@ -254,7 +254,7 @@ select set_config('request.jwt.claims', '{}', true);
 insert into public.works (id, work_key, title, author_text, contributors)
 values (
   '80000000-0000-4000-8000-000000000003', 'deletedwork|writer', 'Deleted Work', 'C Writer',
-  '[]'::jsonb
+  '[{"name":"C Writer","role":"author","position":0}]'::jsonb
 );
 insert into public.books (
   id, owner_id, corpus_work_id, title, author_first, author_last, pages, isbn, ownership
@@ -275,16 +275,20 @@ values
   ('81000000-0000-4000-8000-000000000003', '83000000-0000-4000-8000-000000000001',
    '81111111-1111-4111-8111-111111111111', 0, 'author'),
   ('81000000-0000-4000-8000-000000000003', '83000000-0000-4000-8000-000000000002',
-   '81111111-1111-4111-8111-111111111111', 1, 'co_author');
+   '81111111-1111-4111-8111-111111111111', 1, 'co_author'),
+  ('81000000-0000-4000-8000-000000000003', '83000000-0000-4000-8000-000000000001',
+   '81111111-1111-4111-8111-111111111111', 2, 'narrator');
 delete from public.books where id = '81000000-0000-4000-8000-000000000003';
 select is((select pages from public.works where id = '80000000-0000-4000-8000-000000000003'),
   555, 'hard deletion and merge paths preserve objective metadata too');
 select is((select isbns[1] from public.works where id = '80000000-0000-4000-8000-000000000003'),
   '9780439023528', 'ISBN-10 is converted and retained as canonical ISBN-13 before deletion');
 select is(
-  (select concat_ws('|', jsonb_array_length(contributors), contributors -> 1 ->> 'role')
+  (select concat_ws('|', jsonb_array_length(contributors), contributors -> 1 ->> 'role',
+                    contributors -> 2 ->> 'role')
    from public.works where id = '80000000-0000-4000-8000-000000000003'),
-  '2|co_author', 'ordered multi-contributor identity and roles survive personal deletion'
+  '3|co_author|narrator',
+  'existing primary plus ordered secondary contributors and distinct same-name roles survive deletion'
 );
 
 insert into auth.users (id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
@@ -295,7 +299,8 @@ values (
 insert into public.works (id, work_key, title, author_text, contributors)
 values (
   '85000000-0000-4000-8000-000000000001', 'accountcascade|writer',
-  'Account Cascade', 'E Writer', '[]'::jsonb
+  'Account Cascade', 'E Writer',
+  '[{"name":"E Writer","role":"author","position":0}]'::jsonb
 );
 insert into public.books (id, owner_id, corpus_work_id, title, author_first, author_last, ownership)
 values (
@@ -319,7 +324,7 @@ select is(
   (select concat_ws('|', jsonb_array_length(contributors), contributors -> 1 ->> 'role')
    from public.works where id = '85000000-0000-4000-8000-000000000001'),
   '2|co_author',
-  'account deletion preserves the complete contributor graph before sibling cascades begin'
+  'account deletion idempotently appends the complete contributor graph before sibling cascades'
 );
 insert into public.books (
   id, owner_id, corpus_work_id, title, author_first, author_last, ownership

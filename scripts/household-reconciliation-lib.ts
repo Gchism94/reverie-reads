@@ -59,6 +59,60 @@ export const RECONCILIATION_HOUSEHOLD_BACKUP_SPECS = [
   },
 ] as const
 
+export interface CountedPage<Row> {
+  data: Row[] | null
+  error: { message?: string } | null
+  count: number | null
+}
+
+/** Read a counted, ranged result under a declared primary-key identity. Count changes, partial
+ * pages, missing key columns, and repeated key tuples all fail closed; payload changes cannot hide
+ * overlap between offset pages. `pageSize` is injectable only so the real helper can be exercised
+ * at exact-page and cross-page boundaries without allocating 1,001 fixtures in unit tests. */
+export async function pageQuery<Row extends Record<string, unknown>>(
+  label: string,
+  primaryKey: readonly string[],
+  makeQuery: (from: number, to: number) => PromiseLike<CountedPage<Row>>,
+  pageSize = 1000,
+): Promise<Row[]> {
+  if (!primaryKey.length) throw new Error(`${label}: no primary-key identity is declared`)
+  const rows: Row[] = []
+  let total: number | null = null
+  for (let from = 0; ; from += pageSize) {
+    const { data, error, count } = await makeQuery(from, from + pageSize - 1)
+    if (error) throw new Error(`${label}: ${error.message ?? JSON.stringify(error)}`)
+    if (!Number.isInteger(count) || count == null || count < 0) {
+      throw new Error(`${label}: exact row count is unavailable; refusing a partial snapshot`)
+    }
+    if (total == null) total = count
+    else if (count !== total) {
+      throw new Error(`${label}: row count changed during paging; refusing a partial snapshot`)
+    }
+    const page = data ?? []
+    rows.push(...page)
+    if (page.length < pageSize || rows.length >= total) break
+  }
+  if (rows.length !== total) {
+    throw new Error(`${label}: read ${rows.length} of ${total}; refusing a partial snapshot`)
+  }
+
+  const identities = new Set<string>()
+  for (const row of rows) {
+    const tuple = primaryKey.map((column) => {
+      if (!Object.hasOwn(row, column) || row[column] == null) {
+        throw new Error(`${label}: row is missing primary-key column ${column}`)
+      }
+      return row[column]
+    })
+    const identity = JSON.stringify(tuple)
+    if (identities.has(identity)) {
+      throw new Error(`${label}: pagination repeated a primary key; refusing a partial snapshot`)
+    }
+    identities.add(identity)
+  }
+  return rows
+}
+
 export interface ReconciliationWorkRow {
   id: string
   title: string

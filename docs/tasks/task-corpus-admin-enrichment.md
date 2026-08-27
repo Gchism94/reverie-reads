@@ -77,9 +77,25 @@ candidate now:
 
 Focused regressions cover account deletion with a secondary contributor, both SQL publication
 paths, TypeScript and Edge URL classification, terminal-response check ordering, and the complete
-collective-backup registry. A separate read-only bypass/regression review of the corrected working
-diff found no actionable issue; the committed head still requires the normal exact-range integration
-review.
+collective-backup registry.
+
+A later security-focused review found four additional defects, followed by three bypasses in the
+first correction. The final working candidate now also:
+
+- refuses every reader-controlled server-fetch origin before DNS and keeps arbitrary pasted URLs
+  usable as display-time hotlinks; only exact Open Library/Internet Archive, Hardcover asset, and
+  configured project-cover origins can supply durable bytes, with every redirect rechecked;
+- preserves missing secondary contributors additively by normalized name + role while keeping
+  corpus order/spelling and idempotently renumbering positions;
+- prelocks reviewed books, preserves the exact archive set before any household lock, revalidates
+  that no account book appeared meanwhile, and includes deterministic existing-edit and
+  concurrent-insert lock regressions; and
+- detects rollback-page overlap by immutable declared primary-key tuples, never by mutable payload
+  or owner attribution, while retaining exact-count and deterministic-order checks.
+
+The required fresh read-only bypass review completed one cycle. Its confirmed findings were
+corrected and re-exercised locally; the committed head still requires the normal exact-range
+integration review.
 
 ## Reconciliation coupling
 
@@ -105,18 +121,22 @@ blocks the atomic write. Dry-run and backup artifacts must live outside the repo
 - Clean database rebuild applied every migration through `20260831010000`.
 - Full pgTAP: 27 files and 629 assertions passed. The focused corpus administration, cover recovery,
   host validation, and account-cascade contract passed all 62 assertions after the clean rebuild.
-- Core/web unit suites: 79 + 71 files and 2,352 + 620 assertions passed.
+- Core/web unit suites: 80 + 71 files and 2,409 + 622 assertions passed.
 - TypeScript, ESLint, Prettier, production build, and `git diff --check` passed. Schema lint added no
   finding; its two reports are the existing temporary-table analysis limitations in
   `backfill_series_from_titles` and `merge_series`.
-- Browser matrix: 217 cases passed and 10 expected project-specific cases skipped. One unchanged
-  native shelf-drag case exposed a deterministic Playwright mid-drag auto-scroll failure: the trace
-  showed no `dragenter`, `drop`, RPC, or database request. Keeping both handles in the test viewport
-  preserved the real-drag assertion and the focused case then passed. No product shelf code changed.
-- The covers Edge Function's personal/corpus prefix separation, mixed-target refusal, and
-  service-managed admin lookup are guarded by source-contract tests; database tests independently
-  validate the real object path and administrator RPC boundary. The repository does not install a
-  standalone Deno test runtime.
+- Browser matrix from a fresh database, one default worker, and zero retries: 218 cases passed and
+  10 expected project-specific cases skipped. The first run exposed a test-only race after the
+  shelf range scrubber's `End` key: the React selection changed before its deliberate smooth scroll
+  settled, allowing Playwright's generic live locator to re-resolve to an interim book while it
+  waited for stability. The regression now waits for the physical end position and activates the
+  exact terminal book. The focused mobile case and both full-matrix copies passed; no product shelf
+  code changed.
+- The covers Edge Function's personal/corpus prefix separation, mixed-target refusal, trusted-origin
+  gate, and service-managed admin lookup are guarded by source-contract tests. The real local Edge
+  runtime also refused arbitrary and private targets before fetch, followed the legitimate Open
+  Library → Internet Archive chain, and stored the resulting image. Temporary accounts, books, and
+  objects were removed after the check.
 
 ## Completion gate
 

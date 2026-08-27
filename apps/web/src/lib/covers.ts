@@ -49,8 +49,9 @@ export async function fetchEditions(input: {
 
 /**
  * Ingest a chosen cover through the durable pipeline: pass `file` (camera/upload, post-crop) OR
- * `url` (edition pick / pasted link — fetched server-side). Returns the stored asset URLs + the
- * extracted dominant colour; the caller persists them via the normal RLS-checked book mutation.
+ * `url` (reviewed provider/edition link — fetched server-side). Arbitrary pasted hosts remain
+ * display-time hotlinks and never call this boundary. Returns the stored asset URLs + the extracted
+ * dominant colour; the caller persists them via the normal RLS-checked book mutation.
  */
 export async function ingestCover(input: {
   bookId: string

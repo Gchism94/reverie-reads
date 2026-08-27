@@ -832,9 +832,49 @@ begin
         ) then null
         else w.created_by
       end,
-      contributors = case when w.contributors = '[]'::jsonb
-        and candidate_contributors <> '[]'::jsonb then candidate_contributors
-        else w.contributors end,
+      -- Match core reconcileContributors: corpus order/spelling wins, missing personal entries append
+      -- in their personal order, identity is normalized name + role, and positions are renumbered.
+      -- This remains fill-only but does not discard a translator/co-author merely because the work
+      -- already had its primary author.
+      contributors = (
+        with existing_entries as (
+          select value, ordinality,
+            lower(btrim(regexp_replace(value ->> 'name', '\s+', ' ', 'g'))) as name_key,
+            coalesce(value ->> 'role', 'author') as role_key
+          from jsonb_array_elements(w.contributors) with ordinality as existing(value, ordinality)
+        ), candidate_entries as (
+          select value, ordinality,
+            lower(btrim(regexp_replace(value ->> 'name', '\s+', ' ', 'g'))) as name_key,
+            coalesce(value ->> 'role', 'author') as role_key,
+            row_number() over (
+              partition by
+                lower(btrim(regexp_replace(value ->> 'name', '\s+', ' ', 'g'))),
+                coalesce(value ->> 'role', 'author')
+              order by ordinality
+            ) as duplicate_order
+          from jsonb_array_elements(candidate_contributors)
+            with ordinality as candidate(value, ordinality)
+        ), combined as (
+          select value, 0 as source_order, ordinality from existing_entries
+          union all
+          select candidate.value, 1 as source_order, candidate.ordinality
+          from candidate_entries candidate
+          where candidate.name_key <> '' and candidate.duplicate_order = 1 and not exists (
+            select 1 from existing_entries existing
+            where existing.name_key = candidate.name_key
+              and existing.role_key = candidate.role_key
+          )
+        ), positioned as (
+          select value,
+            row_number() over (order by source_order, ordinality) - 1 as position
+          from combined
+        )
+        select coalesce(jsonb_agg(
+          jsonb_set(value, '{position}', to_jsonb(position), true)
+          order by position
+        ), '[]'::jsonb)
+        from positioned
+      ),
       author_text = case when nullif(trim(w.author_text), '') is null then author_name else w.author_text end,
       series = coalesce(w.series, b.series),
       position = coalesce(w.position, b.position),
@@ -1034,6 +1074,8 @@ as $$
 declare
   assignment jsonb;
   account_id uuid;
+  assigned_accounts uuid[] := array[]::uuid[];
+  locked_members int := 0;
   desired_personal uuid[];
   desired_household uuid[] := array(
     select distinct work_id
@@ -1043,6 +1085,8 @@ declare
   target_work uuid;
   restore_book uuid;
   archive_book uuid;
+  locked_books uuid[] := array[]::uuid[];
+  archive_books uuid[] := array[]::uuid[];
   personal_created int := 0;
   personal_restored int := 0;
   personal_archived int := 0;
@@ -1060,9 +1104,7 @@ begin
     raise exception 'household assignment references an unknown corpus work' using errcode = '23503';
   end if;
 
-  perform 1 from public.households h where h.id = p_household for update;
-  if not found then raise exception 'household not found' using errcode = 'P0002'; end if;
-
+  -- Validate the complete assignment envelope before taking any serialization locks.
   for assignment in select value from jsonb_array_elements(p_personal_assignments) value
   loop
     if jsonb_typeof(assignment) <> 'object'
@@ -1075,13 +1117,10 @@ begin
       raise exception 'invalid personal assignment shape' using errcode = '22023';
     end if;
     account_id := (assignment ->> 'accountId')::uuid;
-    if not exists (
-      select 1 from public.household_members hm
-      where hm.household_id = p_household and hm.user_id = account_id
-    ) then
-      raise exception 'assigned account is not a member of the reviewed household'
-        using errcode = '42501';
+    if account_id = any(assigned_accounts) then
+      raise exception 'personal assignments contain a duplicate account' using errcode = '22023';
     end if;
+    assigned_accounts := array_append(assigned_accounts, account_id);
     select coalesce(array_agg(distinct value::uuid order by value::uuid), '{}')
       into desired_personal
     from jsonb_array_elements_text(assignment -> 'workIds') value;
@@ -1091,6 +1130,41 @@ begin
     ) then
       raise exception 'personal assignment references an unknown corpus work' using errcode = '23503';
     end if;
+  end loop;
+
+  -- All ordinary household enrichment paths lock book -> membership -> household. Reconciliation
+  -- touches the complete reviewed libraries, so prelock their existing books in UUID order before
+  -- joining that shared order. This prevents a tag/trope edit from forming H -> B / B -> H.
+  for archive_book in
+    select b.id from public.books b
+    where b.owner_id = any(assigned_accounts)
+    order by b.id
+    for update
+  loop
+    locked_books := array_append(locked_books, archive_book);
+  end loop;
+
+  perform 1 from public.household_members hm
+  where hm.household_id = p_household and hm.user_id = any(assigned_accounts)
+  order by hm.user_id
+  for key share;
+  get diagnostics locked_members = row_count;
+  if locked_members <> cardinality(assigned_accounts) then
+    raise exception 'assigned account is not a member of the reviewed household'
+      using errcode = '42501';
+  end if;
+
+  -- Preserve the exact reviewed archive set before taking the household lock. Preservation takes
+  -- ISBN advisory locks and corpus-work locks; an ordinary insert takes those before its household
+  -- lock, so doing this afterward would recreate an ISBN/work -> household / household -> ISBN/work
+  -- cycle for a row that was still uncommitted during the book prelock. A book committed after this
+  -- snapshot is a later reader change and is deliberately outside this reconciliation transaction.
+  for assignment in select value from jsonb_array_elements(p_personal_assignments) value
+  loop
+    account_id := (assignment ->> 'accountId')::uuid;
+    select coalesce(array_agg(distinct value::uuid order by value::uuid), '{}')
+      into desired_personal
+    from jsonb_array_elements_text(assignment -> 'workIds') value;
     if exists (
       select 1 from public.books b
       where b.owner_id = account_id and b.removed_at is null
@@ -1099,7 +1173,6 @@ begin
     ) then
       raise exception 'personal assignment has duplicate active rows' using errcode = '23505';
     end if;
-
     for archive_book in
       select b.id from public.books b
       where b.owner_id = account_id and b.removed_at is null
@@ -1107,6 +1180,32 @@ begin
       order by b.id
     loop
       perform public.preserve_personal_book_objective_metadata(archive_book);
+      archive_books := array_append(archive_books, archive_book);
+    end loop;
+  end loop;
+
+  perform 1 from public.households h where h.id = p_household for update;
+  if not found then raise exception 'household not found' using errcode = 'P0002'; end if;
+  if locked_books is distinct from array(
+    select b.id from public.books b
+    where b.owner_id = any(assigned_accounts)
+    order by b.id
+  ) then
+    raise exception 'assigned account books changed during reconciliation' using errcode = '40001';
+  end if;
+
+  for assignment in select value from jsonb_array_elements(p_personal_assignments) value
+  loop
+    account_id := (assignment ->> 'accountId')::uuid;
+    select coalesce(array_agg(distinct value::uuid order by value::uuid), '{}')
+      into desired_personal
+    from jsonb_array_elements_text(assignment -> 'workIds') value;
+
+    for archive_book in
+      select b.id from public.books b
+      where b.owner_id = account_id and b.id = any(archive_books) and b.removed_at is null
+      order by b.id
+    loop
       update public.books set removed_at = now(), removed_by = account_id
       where id = archive_book and owner_id = account_id and removed_at is null;
       personal_archived := personal_archived + 1;

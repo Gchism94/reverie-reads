@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   collapseHouseholdRecords,
+  pageQuery,
   planHouseholdReconciliation,
 } from '../../../scripts/household-reconciliation-lib'
 import type { ImportRecord } from '../../../scripts/corpus-import-lib'
@@ -131,5 +132,82 @@ describe('household reconciliation plan', () => {
     expect(plan.canWrite).toBe(false)
     expect(plan.conflicts).toHaveLength(1)
     expect(plan.unmatched).toHaveLength(1)
+  })
+})
+
+describe('household reconciliation rollback paging', () => {
+  const ranged =
+    <Row extends Record<string, unknown>>(rows: Row[]) =>
+    async (from: number, to: number) => ({
+      data: rows.slice(from, to + 1),
+      error: null,
+      count: rows.length,
+    })
+
+  it('accepts healthy exact-page and cross-page boundaries through the production helper', async () => {
+    await expect(
+      pageQuery('exact boundary', ['id'], ranged([{ id: 'a' }, { id: 'b' }]), 2),
+    ).resolves.toHaveLength(2)
+    await expect(
+      pageQuery('cross boundary', ['id'], ranged([{ id: 'a' }, { id: 'b' }, { id: 'c' }]), 2),
+    ).resolves.toHaveLength(3)
+  })
+
+  it('rejects a repeated primary key even when its non-key payload changes', async () => {
+    const pages = [
+      [
+        { id: 'a', value: 'old-a' },
+        { id: 'b', value: 'old-b' },
+      ],
+      [
+        { id: 'b', value: 'new-b' },
+        { id: 'c', value: 'new-c' },
+      ],
+    ]
+    await expect(
+      pageQuery(
+        'changed duplicate',
+        ['id'],
+        async (from) => ({ data: pages[from / 2] ?? [], error: null, count: 4 }),
+        2,
+      ),
+    ).rejects.toThrow('repeated a primary key')
+  })
+
+  it('uses the complete composite primary-key tuple', async () => {
+    await expect(
+      pageQuery(
+        'composite duplicate',
+        ['household_id', 'work_id'],
+        ranged([
+          { household_id: 'h', work_id: 'a', value: 'old' },
+          { household_id: 'h', work_id: 'a', value: 'new' },
+        ]),
+        1,
+      ),
+    ).rejects.toThrow('repeated a primary key')
+    await expect(
+      pageQuery(
+        'same payload distinct key',
+        ['id'],
+        ranged([
+          { id: 'a', value: 'same' },
+          { id: 'b', value: 'same' },
+        ]),
+        1,
+      ),
+    ).resolves.toHaveLength(2)
+  })
+
+  it('fails closed for missing key columns, unavailable counts, and partial pages', async () => {
+    await expect(pageQuery('missing key', ['id'], ranged([{ value: 'row' }]), 2)).rejects.toThrow(
+      'missing primary-key column id',
+    )
+    await expect(
+      pageQuery('missing count', ['id'], async () => ({ data: [], error: null, count: null }), 2),
+    ).rejects.toThrow('exact row count is unavailable')
+    await expect(
+      pageQuery('partial', ['id'], async () => ({ data: [{ id: 'a' }], error: null, count: 2 }), 2),
+    ).rejects.toThrow('read 1 of 2')
   })
 })

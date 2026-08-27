@@ -158,7 +158,7 @@ async function stubCoversFunction(page: Page) {
     const url = body.url ?? ''
     if (url.includes('not-an-image'))
       return route.fulfill({ status: 415, json: { error: 'not_an_image' } })
-    if (url.includes('external-a'))
+    if (url.includes('covers.openlibrary.org'))
       return route.fulfill({
         json: { cover: STUB.backfill, thumb: STUB.backfill, color: '#2f5a8a', sourceUrl: url },
       })
@@ -177,10 +177,16 @@ async function stubCoversFunction(page: Page) {
   await page.route('**/functions/v1/releases**', (route) =>
     route.fulfill({ json: { authors: {}, pending: [], hits: [] } }),
   )
-  // The fixture's external hotlink: serve a real image so CoverImage renders it pre-backfill.
-  await page.route('**/covers.example/**', (route) =>
+  // Trusted provider backfill and browser-only arbitrary-link validation each receive real bytes.
+  await page.route('https://covers.openlibrary.org/**', (route) =>
     route.fulfill({ path: 'public/landing-covers/acotar.jpg' }),
   )
+  await page.route('**/covers.example/**', (route) => {
+    if (route.request().url().includes('not-an-image')) {
+      return route.fulfill({ contentType: 'text/plain', body: 'not an image' })
+    }
+    return route.fulfill({ path: 'public/landing-covers/acotar.jpg' })
+  })
 }
 
 test('cover sheet: backfill, editions pick + detail sync, URL paste, non-image failure, upload crop', async ({
@@ -189,7 +195,11 @@ test('cover sheet: backfill, editions pick + detail sync, URL paste, non-image f
   test.setTimeout(180_000)
   const TITLE = 'Cover Sheet Hotlinked'
   const dev = await devClient()
-  const hotlinkedId = await insertFixture(dev, TITLE, 'https://covers.example/external-a.jpg')
+  const hotlinkedId = await insertFixture(
+    dev,
+    TITLE,
+    'https://covers.openlibrary.org/b/id/999999-L.jpg',
+  )
   await stubCoversFunction(page)
   try {
     await signIn(page, dev.session)
@@ -239,7 +249,7 @@ test('cover sheet: backfill, editions pick + detail sync, URL paste, non-image f
     await sheet.getByLabel('Direct image URL').fill('https://covers.example/pasted.jpg')
     await sheet.getByRole('button', { name: 'Use' }).click()
     await expect(sheet).not.toBeVisible({ timeout: 15_000 })
-    await expect(detailCover).toHaveAttribute('src', new RegExp(STUB.pasted))
+    await expect(detailCover).toHaveAttribute('src', /covers\.example\/pasted\.jpg/)
 
     // ── upload path (same mechanics as camera): file → 2:3 crop → save ──
     await page.getByRole('button', { name: 'Change cover' }).click()

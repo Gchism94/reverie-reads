@@ -5,9 +5,9 @@
 //    back to title+author (the referrer-restricted key). Cached per book in enrichment_cache under
 //    an `editions:` key (7 days) so reopening the sheet costs zero external calls.
 //
-//  · action:'ingest' — EVERY chosen cover flows through here regardless of source (edition pick,
-//    camera, upload, pasted URL): receive the bytes (multipart) or fetch the URL (server-side, no
-//    client CORS), validate magic bytes + a sane size cap, normalize to webp (max ~1200px long edge)
+//  · action:'ingest' — every durable chosen cover flows through here (reviewed edition provider,
+//    camera, upload): receive the bytes (multipart) or fetch an exact trusted origin (server-side,
+//    no client CORS), validate magic bytes + a sane size cap, normalize to webp (max ~1200px long edge)
 //    plus a ~300px thumb, extract the dominant colour (spine tint), and store both in the public
 //    'covers' bucket. Personal cover paths are u/{uid}/{bookId}/{rev}.webp; authenticated corpus
 //    administrators may instead use w/{workId}/{rev}.webp so shared metadata never depends on a
@@ -29,6 +29,11 @@ import { captureEdgeError, logEvent } from '../_shared/observe.ts'
 import { Trace, wantsTrace } from '../_shared/trace.ts'
 import { isGoogleContentCover, isGoogleNoCoverArt, upgradeCoverUrl } from '../_shared/coverUrl.ts'
 import { olHeaders } from '../_shared/olIdentity.ts'
+import {
+  fetchPublicRemote,
+  isTrustedCoverSourceUrl,
+  UnsafeRemoteUrlError,
+} from '../_shared/publicRemoteUrl.ts'
 import { workIdentityPart } from '../_shared/workIdentity.ts'
 
 const cors = {
@@ -342,17 +347,45 @@ async function handleIngest(req: Request, uid: string, tr: Trace): Promise<Respo
       // olHeaders on EVERY source fetch, not just OL hosts: this URL is reader-supplied and can be
       // covers.openlibrary.org, and identifying our traffic to the other hosts costs nothing. One
       // anonymous OL request from this call site would re-classify the whole IP's tier.
-      r = await tr.time('covers.fetchSource', () =>
-        fetch(url, { headers: olHeaders({ Accept: 'image/*' }), redirect: 'follow' }),
+      const fetched = await tr.time('covers.fetchSource', () =>
+        fetchPublicRemote(
+          url,
+          { headers: olHeaders({ Accept: 'image/*' }) },
+          {
+            resolveDns: async (hostname, recordType) => {
+              try {
+                return await Deno.resolveDns(hostname, recordType)
+              } catch (error) {
+                // A legitimate hostname may publish only one address family. Absence of that DNS
+                // record is an empty answer; resolver/transport failures still propagate closed.
+                if (error instanceof Deno.errors.NotFound) return []
+                throw error
+              }
+            },
+            fetcher: (input, init) => fetch(input, init),
+            isAllowedUrl: (candidate) =>
+              isTrustedCoverSourceUrl(candidate, Deno.env.get('SUPABASE_URL')),
+          },
+        ),
       )
-    } catch {
+      r = fetched.response
+      fetchedUrl = fetched.finalUrl
+    } catch (error) {
+      if (error instanceof UnsafeRemoteUrlError) {
+        logEvent('warn', 'covers', 'ingest_refused_unsafe_url', {
+          uid,
+          source: fields.source,
+          reason: error.reason,
+        })
+        return json({ error: 'unsafe_url', reason: error.reason }, 422)
+      }
       return json({ error: 'fetch_failed' }, 422)
     }
     if (!r.ok) return json({ error: 'fetch_failed', status: r.status }, 422)
     // Redirects remain supported for ordinary provider/CDN URLs, but their terminal host is a new
     // validation boundary. A non-Google URL must not redirect Google Books bytes into permanent
     // personal or corpus Storage; reject before the response body is read.
-    fetchedUrl = r.url || url
+    fetchedUrl ||= r.url || url
     if (isGoogleContentCover(fetchedUrl)) {
       logEvent('info', 'covers', 'ingest_refused_display_only', {
         uid,

@@ -194,14 +194,16 @@ describe('ingest posture — Google is display-time only', () => {
     expect(mayIngestCover('openlibrary', GOOGLE)).toBe(false)
   })
 
-  it('allows the defensible sources', () => {
+  it('allows only the reviewed durable remote sources', () => {
     expect(isIngestibleCoverUrl(OL)).toBe(true)
     expect(mayIngestCover('openlibrary', OL)).toBe(true)
+    expect(isIngestibleCoverUrl('https://assets.hardcover.app/editions/1/cover.jpeg')).toBe(true)
     expect(mayIngestCover('camera')).toBe(true) // file upload, no URL
     expect(mayIngestCover('upload')).toBe(true)
     expect(
       mayIngestCover('url', 'https://books.google.evil.example/books/content?id=reader-choice'),
-    ).toBe(true)
+    ).toBe(false)
+    expect(mayIngestCover('url', 'https://reader-controlled.example/cover.webp')).toBe(false)
   })
 
   it('treats an already-stored URL as nothing to ingest', () => {

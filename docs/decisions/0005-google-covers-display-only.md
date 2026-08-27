@@ -5,9 +5,10 @@
 
 ## Decision
 
-A cover may be **ingested and stored** only from Open Library, reader upload, camera capture, a
-direct URL, or Hardcover. **Google Books is display-time only** — hotlinked at display size, never
-copied into our Storage.
+A cover may be **ingested and stored** only from Open Library, reader upload, camera capture, or
+Hardcover. A directly pasted URL is ingested only when its exact origin is one of those reviewed
+providers; every other pasted URL remains display-time only. **Google Books is display-time only** —
+hotlinked at display size, never copied into our Storage.
 
 The rule is expressed once, in `packages/core/src/covers.ts`, and read by every caller:
 
@@ -17,6 +18,11 @@ DISPLAY_ONLY_COVER_SOURCES = ['google']
 isIngestibleCoverUrl(url)   // host-based
 mayIngestCover(source, url?)
 ```
+
+`url` remains in the source enum because it records how the reader chose the cover; it is not a
+network trust grant. The Edge Function accepts only exact Open Library/Internet Archive redirect,
+Hardcover asset, and configured project-cover origins. This closes authenticated server-side URL
+fetching against reader-controlled DNS while preserving pasted artwork as a hotlink.
 
 `fetchCover` resolves from Open Library **only**. A miss returns empty rather than falling through
 to Google, because whatever it returns gets persisted.
@@ -71,6 +77,7 @@ query, so a future audit re-runs the same check rather than inventing one.
 - **Open Library becomes the quality floor for automated covers.** It has thinner coverage than
   Google, so more books resolve to no cover. That is the intended outcome: the skin-tokened
   placeholder is an honest absence, and it is a designed plate rather than a gray box.
-- Adding a new cover source means adding it to `INGESTIBLE_COVER_SOURCES` _and_ justifying it here.
+- Adding a new durable remote origin means extending both the client and Edge exact-origin gates
+  and justifying it here; adding a source label alone grants no network access.
 - **Hardcover's ingest posture is unchanged by this ADR.** `docs/reference/reverie-metadata-sourcing.md` flags
   its licence as asserted rather than granted; that is a separate open question, not settled here.
