@@ -10,6 +10,10 @@ const workTropesAclMigration = readFileSync(
   join(__dirname, '../../../supabase/migrations/20260901010000_work_tropes_acl.sql'),
   'utf8',
 )
+const householdCatalogMigration = readFileSync(
+  join(__dirname, '../../../supabase/migrations/20260902010000_household_catalog_entry.sql'),
+  'utf8',
+)
 
 function section(start: string, end: string): string {
   return sectionOf(migration, start, end)
@@ -158,5 +162,65 @@ describe('work-tropes forward ACL repair', () => {
       'grant all privileges on table public.work_tropes to service_role;',
     )
     expect(workTropesAclMigration.match(/^grant /gim)).toHaveLength(2)
+  })
+})
+
+describe('household-only catalog entry and explicit personal adoption', () => {
+  it('removes implicit personal-to-corpus promotion and retires its directly callable writer', () => {
+    const normalized = householdCatalogMigration.toLowerCase().replace(/\s+/g, ' ').trim()
+
+    expect(normalized).toContain(
+      'drop trigger books_sync_objective_metadata_to_corpus on public.books;',
+    )
+    expect(normalized).toContain(
+      'revoke all on function public.update_corpus_work_metadata( uuid, text, text, text[], text[], text, jsonb ) from public, anon, authenticated, service_role;',
+    )
+    expect(normalized).not.toContain(
+      'grant execute on function public.update_corpus_work_metadata(',
+    )
+  })
+
+  it('creates household membership without manufacturing a personal book', () => {
+    const createBoundary = sectionOf(
+      householdCatalogMigration,
+      'create function public.create_household_catalog_work(',
+      '-- The old RPC accepted any member',
+    )
+
+    expect(createBoundary).toContain('insert into public.works')
+    expect(createBoundary).toContain('insert into public.household_works')
+    expect(createBoundary).not.toMatch(/insert\s+into\s+public\.books/i)
+    expect(createBoundary).toContain("'household catalog creation'")
+  })
+
+  it('holds the exact administrator or owner authority row through a shared edit', () => {
+    const editBoundary = sectionOf(
+      householdCatalogMigration,
+      'create function public.edit_corpus_work_metadata(',
+      'revoke all on function public.edit_corpus_work_metadata(',
+    )
+
+    expect(editBoundary).toContain('from public.corpus_admins admin')
+    expect(editBoundary).toMatch(/from public\.corpus_admins admin[\s\S]*?for update;/)
+    expect(editBoundary).toMatch(/member\.role = 'owner'[\s\S]*?for update of member;/)
+    expect(editBoundary).not.toContain('if not public.can_edit_corpus_work(p_work)')
+  })
+
+  it('keeps personal identity and reader state outside the explicit adoption update', () => {
+    const adoption = sectionOf(
+      householdCatalogMigration,
+      'create function public.adopt_corpus_work_metadata(p_book uuid)',
+      'revoke all on function public.adopt_corpus_work_metadata(uuid)',
+    )
+    const update = sectionOf(adoption, 'update public.books book', 'from public.works work')
+
+    expect(update).toContain('genre = coalesce(work.genre')
+    expect(update).toContain('cover_url = work.cover_url')
+    expect(update).toContain('cover_thumb_url = null')
+    expect(update).not.toMatch(/\btitle\s*=/i)
+    expect(update).not.toMatch(/\bisbn\s*=/i)
+    expect(update).not.toMatch(/\bownership\s*=/i)
+    expect(update).not.toMatch(/\bread_status\s*=/i)
+    expect(update).not.toMatch(/\brating\s*=/i)
   })
 })

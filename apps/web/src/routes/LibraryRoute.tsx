@@ -26,6 +26,7 @@ import {
   HouseholdBookCard,
   HouseholdBookDetail,
   LibraryScopeControl,
+  type HouseholdCorpusEdit,
   type LibraryScope,
 } from '../components/HouseholdLibrary'
 import { Surface } from '../components/Surface'
@@ -34,6 +35,7 @@ import {
   useHouseholdBookSelection,
   useHouseholdLibraryAuthorization,
   useRemoveHouseholdWork,
+  useUpdateCorpusWorkMetadata,
   type HouseholdBook,
 } from '../data/household'
 import { useAuth } from '../auth/AuthProvider'
@@ -422,14 +424,13 @@ function LibraryHeader({
       actions={
         <>
           <ScopeSwitch scope={scope} />
-          {scope === 'personal' ? (
-            <Link
-              to="/add"
-              className="skin-control skin-btn-primary flex h-10 items-center px-4 text-[12px]"
-            >
-              ＋ Add books
-            </Link>
-          ) : null}
+          <Link
+            to="/add"
+            search={scope === 'household' ? { scope: 'household' } : {}}
+            className="skin-control skin-btn-primary flex h-10 items-center px-4 text-[12px]"
+          >
+            ＋ Add books
+          </Link>
         </>
       }
     />
@@ -457,6 +458,8 @@ function HouseholdDetailDrawer({
   removing,
   onAddCorpusTrope,
   addingCorpusTrope,
+  onEditCorpus,
+  editingCorpus,
 }: {
   book: HouseholdBook
   currentReaderId: string
@@ -465,6 +468,8 @@ function HouseholdDetailDrawer({
   removing: boolean
   onAddCorpusTrope?: (name: string) => Promise<void>
   addingCorpusTrope?: boolean
+  onEditCorpus?: (patch: HouseholdCorpusEdit) => Promise<void>
+  editingCorpus?: boolean
 }) {
   return (
     <DrawerDialog
@@ -479,6 +484,8 @@ function HouseholdDetailDrawer({
         removing={removing}
         onAddCorpusTrope={onAddCorpusTrope}
         addingCorpusTrope={addingCorpusTrope}
+        onEditCorpus={onEditCorpus}
+        editingCorpus={editingCorpus}
       />
     </DrawerDialog>
   )
@@ -489,6 +496,7 @@ function HouseholdLibraryScreen() {
   const currentReaderId = session?.user.id ?? ''
   const household = useHouseholdLibraryAuthorization()
   const removeWork = useRemoveHouseholdWork()
+  const updateCorpus = useUpdateCorpusWorkMetadata()
   const { data: isCorpusAdmin = false } = useCorpusAdminStatus()
   const addCorpusTrope = useAdminAddCorpusWorkTrope()
   const isWide = useIsWide()
@@ -500,6 +508,12 @@ function HouseholdLibraryScreen() {
   const members = labelled.members
   const books = labelled.books
   const hasHousehold = household.authorized && members.length > 0
+  const canEditCorpus =
+    isCorpusAdmin ||
+    members.some((member) => member.userId === currentReaderId && member.role === 'owner')
+  const editCorpus = async (book: HouseholdBook, patch: HouseholdCorpusEdit): Promise<void> => {
+    await updateCorpus.mutateAsync({ workId: book.id, ...patch })
+  }
   const availableBooks = useMemo(() => (hasHousehold ? books : []), [books, hasHousehold])
   const selection = useHouseholdBookSelection({
     householdId: household.householdId,
@@ -593,8 +607,8 @@ function HouseholdLibraryScreen() {
               </h2>
               <p className="mt-2">
                 {onlyCurrentMember
-                  ? 'Add an owned book, or explicitly share a borrowed book, to begin this household library.'
-                  : 'Owned books join automatically. Borrowed books join only when a member chooses to share them.'}
+                  ? 'Add a shared book directly, add an owned book, or explicitly share a borrowed copy.'
+                  : 'Add shared books directly. Owned copies join automatically; borrowed copies join only when a member chooses to share them.'}
               </p>
             </HouseholdCentered>
           ) : (
@@ -652,6 +666,8 @@ function HouseholdLibraryScreen() {
                   : undefined
               }
               addingCorpusTrope={addCorpusTrope.isPending}
+              onEditCorpus={canEditCorpus ? (patch) => editCorpus(dockedBook, patch) : undefined}
+              editingCorpus={updateCorpus.isPending}
             />
           </aside>
         ) : null}
@@ -675,6 +691,8 @@ function HouseholdLibraryScreen() {
               : undefined
           }
           addingCorpusTrope={addCorpusTrope.isPending}
+          onEditCorpus={canEditCorpus ? (patch) => editCorpus(selected, patch) : undefined}
+          editingCorpus={updateCorpus.isPending}
         />
       ) : null}
     </>

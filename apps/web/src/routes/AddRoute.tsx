@@ -16,8 +16,14 @@ import {
 } from '@reverie/core'
 import { useQueryClient } from '@tanstack/react-query'
 import { rootRoute } from './RootRoute'
+import { useAuth } from '../auth/AuthProvider'
 import { useIntake, type ReviewCandidate } from '../data/intake'
 import { useBooks } from '../data/books'
+import {
+  useAddCorpusWorkToHousehold,
+  useCreateHouseholdCatalogWork,
+  useHouseholdLibraryAuthorization,
+} from '../data/household'
 import { useWorksLookup, workToHit, type WorkRow } from '../data/works'
 import { resultIsbn, triageLabel, triageResults, type TriagedResult } from '../lib/addTriage'
 import { resolveCandidate, type ReviewAction } from '../data/duplicates'
@@ -851,8 +857,21 @@ function BulkAdd() {
  * "add a second copy" as the primary action, and would also have nested one interactive element
  * inside another.
  */
-function TriageRow({ t, onPick }: { t: TriagedResult; onPick: (p: Picked) => void }) {
+function TriageRow({
+  t,
+  onPick,
+  household = false,
+}: {
+  t: TriagedResult
+  onPick: (p: Picked) => void
+  household?: boolean
+}) {
   const r = t.result
+  const picked = t.work
+    ? pickedFromWork(t.work, r)
+    : household && t.book?.corpusWorkId
+      ? { ...hitOf(r), corpusWorkId: t.book.corpusWorkId }
+      : hitOf(r)
   const inner = (
     <>
       <span
@@ -876,7 +895,9 @@ function TriageRow({ t, onPick }: { t: TriagedResult; onPick: (p: Picked) => voi
           className="block truncate text-[12px] font-semibold text-muted"
           data-testid="triage-label"
         >
-          {triageLabel(t)}
+          {household && t.state === 'library'
+            ? 'In your personal library · can also join the household'
+            : triageLabel(t)}
         </span>
       </span>
     </>
@@ -892,7 +913,7 @@ function TriageRow({ t, onPick }: { t: TriagedResult; onPick: (p: Picked) => voi
       data-testid="add-result"
       data-triage={t.state}
     >
-      {t.state === 'library' && t.book ? (
+      {!household && t.state === 'library' && t.book ? (
         <>
           <span className="flex flex-1 items-center gap-3">{inner}</span>
           <Link
@@ -911,10 +932,101 @@ function TriageRow({ t, onPick }: { t: TriagedResult; onPick: (p: Picked) => voi
           // A corpus row is the better prefill: it carries the series, position and genre the
           // catalog result does not, so picking one fills them in rather than making the reader
           // retype what the corpus already knows.
-          onClick={() => onPick(t.work ? pickedFromWork(t.work, r) : hitOf(r))}
+          onClick={() => onPick(picked)}
           className="flex flex-1 items-center gap-3 text-left"
         >
           {inner}
+        </button>
+      )}
+    </Surface>
+  )
+}
+
+function HouseholdAddForm({ hit, onAdded }: { hit: Picked; onAdded: () => void }) {
+  const { session } = useAuth()
+  const household = useHouseholdLibraryAuthorization()
+  const addExisting = useAddCorpusWorkToHousehold()
+  const createWork = useCreateHouseholdCatalogWork()
+  const [title, setTitle] = useState(hit.title ?? '')
+  const [author, setAuthor] = useState(formatAuthors(contributorsFromAuthors(hit.authors ?? [])))
+  const [isbn, setIsbn] = useState(hit.isbn ?? '')
+  const currentMember = household.members.find((member) => member.userId === session?.user.id)
+  const canCreate = !!currentMember
+  const pending = addExisting.isPending || createWork.isPending
+
+  async function save() {
+    if (hit.corpusWorkId) await addExisting.mutateAsync(hit.corpusWorkId)
+    else
+      await createWork.mutateAsync({
+        title: title.trim(),
+        author: author.trim(),
+        isbn: isbn.trim(),
+      })
+    onAdded()
+  }
+
+  return (
+    <Surface radius="panel" tone="card" pad={3} className="mt-4">
+      <div className="flex gap-4">
+        <div className="aspect-[2/3] w-20 flex-none overflow-hidden rounded-lg border border-line">
+          <CoverImage book={{ title, cover: hit.cover ?? '' }} thumb />
+        </div>
+        <div className="min-w-0 flex-1 space-y-2">
+          <input
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            readOnly={!!hit.corpusWorkId}
+            placeholder="Title"
+            className="h-10 w-full skin-card border border-line px-3 text-[14px] text-ink outline-none read-only:opacity-75"
+            style={{ background: 'var(--field)' }}
+          />
+          <input
+            value={author}
+            onChange={(event) => setAuthor(event.target.value)}
+            readOnly={!!hit.corpusWorkId}
+            placeholder="Author"
+            aria-label="Author"
+            className="h-10 w-full skin-card border border-line px-3 text-[14px] text-ink outline-none read-only:opacity-75"
+            style={{ background: 'var(--field)' }}
+          />
+          {!hit.corpusWorkId ? (
+            <input
+              value={isbn}
+              onChange={(event) => setIsbn(event.target.value)}
+              placeholder="ISBN — optional"
+              aria-label="ISBN"
+              className="h-10 w-full skin-card border border-line px-3 text-[14px] text-ink outline-none"
+              style={{ background: 'var(--field)' }}
+            />
+          ) : null}
+        </div>
+      </div>
+
+      <p className="mt-3 text-[12.5px] text-muted">
+        This adds one shared household entry. It does not create a personal book or say that anyone
+        owns, borrowed, wants, or has read it.
+      </p>
+      {!household.authorized ? (
+        <p role="status" className="mt-3 text-[12.5px] text-muted">
+          Connect to a verified household before adding shared books.
+        </p>
+      ) : !hit.corpusWorkId && !canCreate ? (
+        <p role="status" className="mt-3 text-[12.5px] text-muted">
+          This title is not in the shared catalog yet. Reconnect with an active household membership
+          before creating its provisional shared record.
+        </p>
+      ) : (
+        <button
+          type="button"
+          disabled={pending || !title.trim()}
+          onClick={() => void save().catch(() => undefined)}
+          className="skin-control skin-btn-primary mt-4 h-11 w-full px-4 text-[14px] font-semibold disabled:opacity-50"
+        >
+          {pending
+            ? 'Adding…'
+            : hit.corpusWorkId
+              ? 'Add to household library'
+              : 'Create shared record and add'}
         </button>
       )}
     </Surface>
@@ -927,6 +1039,7 @@ function AddScreen() {
   // Deep-link prefill (?title=…&author=…): Discover — and anything else that finds a book
   // elsewhere in the app — lands here with the form already filled, one tap from saved.
   const prefill = addRoute.useSearch()
+  const householdScope = prefill.scope === 'household'
   const [q, setQ] = useState('')
   // SearchResult, not SearchHit: the triage classifier needs `series`/`seriesPosition`, which the
   // five-field hit drops. The truncation to a hit happens at the PICK, not at the search.
@@ -1034,10 +1147,12 @@ function AddScreen() {
         className="text-[22px] italic text-ink"
         style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
       >
-        Add a book
+        {householdScope ? 'Add to household' : 'Add a book'}
       </h1>
       <p className="mb-4 text-[13px] text-muted">
-        Scan a barcode, search by title or ISBN, or add manually.
+        {householdScope
+          ? 'Search the shared catalog, or create a missing record without adding it to a personal library.'
+          : 'Scan a barcode, search by title or ISBN, or add manually.'}
       </p>
 
       <div className="flex flex-wrap gap-2">
@@ -1108,6 +1223,7 @@ function AddScreen() {
                   key={`${t.result.isbn}|${t.result.title}|${i}`}
                   t={t}
                   onPick={setPicked}
+                  household={householdScope}
                 />
               ))}
             </ul>
@@ -1127,15 +1243,21 @@ function AddScreen() {
         </div>
       )}
 
-      {picked && (
-        <AddForm
-          hit={picked}
-          defaultUnowned={!!prefill.want}
-          onAdded={() => void navigate({ to: '/library' })}
-        />
-      )}
+      {picked &&
+        (householdScope ? (
+          <HouseholdAddForm
+            hit={picked}
+            onAdded={() => void navigate({ to: '/library', search: { scope: 'household' } })}
+          />
+        ) : (
+          <AddForm
+            hit={picked}
+            defaultUnowned={!!prefill.want}
+            onAdded={() => void navigate({ to: '/library' })}
+          />
+        ))}
 
-      {!picked && <BulkAdd />}
+      {!picked && !householdScope && <BulkAdd />}
     </section>
   )
 }
@@ -1145,6 +1267,8 @@ const str = (v: unknown): string | undefined => (typeof v === 'string' && v.trim
 /** All-optional prefill params — the explicit optional-key type keeps plain `to="/add"` links
  *  valid everywhere (no required `search` prop). */
 interface AddPrefill {
+  /** add to the collective household library without creating a personal book */
+  scope?: 'household'
   /** exact shared-work identity when the pick came from the Reverie corpus */
   work?: string
   title?: string
@@ -1157,19 +1281,22 @@ interface AddPrefill {
   want?: boolean
 }
 
+export const validateAddSearch = (s: Record<string, unknown>): AddPrefill => {
+  const out: AddPrefill = {}
+  if (s.scope === 'household') out.scope = 'household'
+  if (str(s.work)) out.work = str(s.work)
+  if (str(s.title)) out.title = str(s.title)
+  if (str(s.author)) out.author = str(s.author)
+  if (str(s.isbn)) out.isbn = str(s.isbn)
+  if (str(s.cover)) out.cover = str(s.cover)
+  if (str(s.pub)) out.pub = str(s.pub)
+  if (s.want === true || s.want === 'true') out.want = true
+  return out
+}
+
 export const addRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'add',
   component: AddScreen,
-  validateSearch: (s: Record<string, unknown>): AddPrefill => {
-    const out: AddPrefill = {}
-    if (str(s.work)) out.work = str(s.work)
-    if (str(s.title)) out.title = str(s.title)
-    if (str(s.author)) out.author = str(s.author)
-    if (str(s.isbn)) out.isbn = str(s.isbn)
-    if (str(s.cover)) out.cover = str(s.cover)
-    if (str(s.pub)) out.pub = str(s.pub)
-    if (s.want === true || s.want === 'true') out.want = true
-    return out
-  },
+  validateSearch: validateAddSearch,
 })

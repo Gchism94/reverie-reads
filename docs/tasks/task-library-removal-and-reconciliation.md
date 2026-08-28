@@ -1,12 +1,12 @@
 # Task: corpus-preserving library removal and owner reconciliation
 
-Status: **membership/removal foundation merged in PR #361 and its reviewed bounded-backfill plus
-corpus-admin follow-up merged in PR #364 at `0bd76a5`. The owner reports guarded production
-deployment applied `20260830010000` followed by `20260831010000`. The owner-run read-only report
-then found unintended anonymous/authenticated table privileges on `work_tropes`; the forward-only
-`20260901010000` ACL correction is locally verified but requires independent review and owner
-deployment before the report can pass. Private checksum-bound dry run, transaction-consistent
-backup approval, owner-executed reconciliation, and post-write smoke checks remain pending.**
+Status: **the membership/removal, bounded-backfill, corpus-admin, ACL, and operator histories are
+integrated through PR #366 at `1828968`. The owner deployed `20260830010000`, `20260831010000`, and
+`20260901010000`; the production report returned 43/43 invariants true, and the deployed covers
+function retained the selected personal cover across refresh. The first production reconciliation
+dry run wrote nothing and correctly blocked on 10 corpus-missing identities. A forward household-only
+catalog-entry candidate is now under local implementation/review; the dry-run checksum is not
+approvable, and backup, reconciliation write, and post-write smoke checks remain pending.**
 
 ## Production migration performance hotfix — 2026-08-26
 
@@ -137,9 +137,12 @@ The PR review hardening pass also closes the following privacy boundaries:
 
 Still pending and intentionally not performed:
 
-- inspection and dry-run classification of the private CSV;
-- owner execution and approval of the deterministic private dry run and rollback artifact;
-- the owner-run production postcondition report and owner-executed reconciliation;
+- independent review, integration, owner deployment, and smoke verification of the household-only
+  catalog-entry boundary;
+- resolution of the 10 aggregate corpus-missing dry-run rows through the normal app path, without
+  committing private title-level artifacts;
+- owner rerun and approval of a new deterministic private dry run and rollback artifact;
+- owner-executed reconciliation;
 - production Account A/B and household smoke verification.
 
 ## Stage 02 operator revalidation — 2026-08-28
@@ -315,6 +318,32 @@ always false; new UI must not derive household membership or personal intent fro
   household-removal plan explicitly says so. All remain in the corpus.
 - Match by stable ISBN/edition identity first, then exact normalized title/author. Fuzzy or conflicting
   matches require owner review and never write automatically.
+- An exact title/author missing from the corpus is resolved before reconciliation through Household
+  Library → Add books. Any active member may add an existing corpus work or create one attributed
+  provisional identity, matching the authority already available through a personal Add. The action
+  creates only `works` plus `household_works`; it never manufactures a personal `books` row or
+  possession. Editing an existing corpus work remains owner/admin-only.
+- An unmatched dry run remains non-approvable. After the missing catalog identities are created,
+  rerun from the same private CSV and review the new exact artifact before any backup or write phase.
+
+## Household-only catalog and explicit metadata adoption — 2026-08-28
+
+The first real production dry run exposed a product gap rather than a data-cleaning exception: ten
+aggregate rows were valid household entries but had no corpus identity. The durable candidate adds:
+
+- direct household membership for an existing corpus work, available to active members and
+  idempotent without creating a personal copy;
+- active-member creation of one attributed provisional corpus work plus household membership, using
+  unique ISBN first and one exact normalized title/full-author fallback while refusing ambiguity;
+- audited corpus editing for corpus administrators and household owners only;
+- removal of the old implicit personal-metadata-to-corpus trigger; and
+- an explicit personal “Use shared details” action that copies series, genres, cover, and publication
+  fields while preserving title, contributors, ISBN, ownership, reading history, rating, and private
+  annotations.
+
+This candidate is not deployed. Production reconciliation remains paused until independent review,
+integration, owner-guarded migration/web deployment, all 49 expanded rollout-report rows, and
+focused smoke verification pass.
 
 ## Owner handoff: production verification, private dry run, and backup
 

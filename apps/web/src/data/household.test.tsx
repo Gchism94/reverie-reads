@@ -26,7 +26,10 @@ import {
   useHouseholdBooks,
   useHouseholdLibraryAuthorization,
   useHouseholdRoster,
+  useAddCorpusWorkToHousehold,
   useAddPersonalBookToHousehold,
+  useCreateHouseholdCatalogWork,
+  useAdoptCorpusWorkMetadata,
   useRemoveHouseholdWork,
   useRemovePersonalBookFromHousehold,
   type HouseholdBook,
@@ -403,19 +406,37 @@ describe('household query identity and RPC boundary', () => {
     noReader.unmount()
   })
 
-  it('uses separate RPCs for a personal borrowed checkbox and collective household removal', async () => {
+  it('uses separate RPCs for personal, household-only, catalog, adoption, and removal actions', async () => {
     mocked.rpc.mockResolvedValue({ data: 'work-1', error: null })
     const { wrapper } = queryHarness()
     const add = renderHook(() => useAddPersonalBookToHousehold(), { wrapper })
+    const addWork = renderHook(() => useAddCorpusWorkToHousehold(), { wrapper })
+    const createWork = renderHook(() => useCreateHouseholdCatalogWork(), { wrapper })
+    const adoptWork = renderHook(() => useAdoptCorpusWorkMetadata(), { wrapper })
     const unshare = renderHook(() => useRemovePersonalBookFromHousehold(), { wrapper })
     const removeWork = renderHook(() => useRemoveHouseholdWork(), { wrapper })
 
     await act(() => add.result.current.mutateAsync('book-1'))
+    await act(() => addWork.result.current.mutateAsync('work-1'))
+    await act(() =>
+      createWork.result.current.mutateAsync({
+        title: 'Household only',
+        author: 'A Writer',
+        isbn: '',
+      }),
+    )
+    await act(() => adoptWork.result.current.mutateAsync('book-1'))
     await act(() => unshare.result.current.mutateAsync('book-1'))
     await act(() => removeWork.result.current.mutateAsync('work-1'))
 
     expect(mocked.rpc.mock.calls).toEqual([
       ['add_personal_book_to_household', { p_book: 'book-1' }],
+      ['add_corpus_work_to_household', { p_work: 'work-1' }],
+      [
+        'create_household_catalog_work',
+        { p_title: 'Household only', p_author: 'A Writer', p_isbn: null },
+      ],
+      ['adopt_corpus_work_metadata', { p_book: 'book-1' }],
       ['remove_personal_book_from_household', { p_book: 'book-1' }],
       ['remove_household_work', { p_work: 'work-1' }],
     ])

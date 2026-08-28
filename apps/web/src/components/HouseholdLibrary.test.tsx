@@ -110,6 +110,30 @@ describe('household Library presentation', () => {
     await waitFor(() => expect(screen.getByLabelText('Add a corpus trope')).toHaveValue(''))
   })
 
+  it('labels corpus editing as shared and leaves personal adoption explicit', async () => {
+    const edit = vi.fn().mockResolvedValue(undefined)
+    render(
+      <HouseholdBookDetail
+        book={book('reader-a', 'Avery')}
+        currentReaderId="reader-a"
+        onEditCorpus={edit}
+      />,
+    )
+
+    fireEvent.click(screen.getByText('Edit shared catalog details'))
+    expect(screen.getByText(/Personal copies keep their existing details/)).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('Shared primary genre'), {
+      target: { value: 'mystery' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save shared details' }))
+
+    await waitFor(() =>
+      expect(edit).toHaveBeenCalledWith(
+        expect.objectContaining({ genre: 'mystery', genres: ['mystery'] }),
+      ),
+    )
+  })
+
   it('uses a real pressed-state scope control', () => {
     const onChange = vi.fn()
     render(<LibraryScopeControl scope="personal" onChange={onChange} />)

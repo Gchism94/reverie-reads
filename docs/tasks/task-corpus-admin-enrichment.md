@@ -1,12 +1,12 @@
 # Task: corpus-administrator enrichment and durable corpus metadata
 
-Status: **the reviewed corpus-admin history and bounded membership backfill merged in PR #364 at
-`0bd76a5`. The owner reports guarded production deployment applied `20260830010000` followed by
-`20260831010000`. The owner-run read-only report found unintended anonymous/authenticated
-`work_tropes` table privileges. The forward-only `20260901010000` ACL correction is locally
-verified but still requires independent review and owner deployment. Administrator grants, private
-reconciliation, production writes, and post-write smoke checks remain owner-gated and unperformed
-by Code.**
+Status: **the reviewed corpus-admin, membership, ACL, and operator histories are integrated through
+PR #366 at `1828968`. The owner deployed `20260830010000`, `20260831010000`, and `20260901010000`;
+the production report returned 43/43 invariants true, and the covers function retained the selected
+personal cover across refresh. The first reconciliation dry run wrote nothing and stopped on 10
+corpus-missing identities. A household-only catalog-entry and explicit personal-adoption follow-up
+is locally under review. Administrator grants, reconciliation backup/write, and post-write smoke
+checks remain owner-gated and unperformed by Code.**
 
 ## Objective
 
@@ -175,17 +175,16 @@ contains exactly Account A and Account B before either dry-run or write planning
 ## Required rollout order
 
 1. **Complete:** independent review closed and PR #364 integrated the real-merge history to `main`.
-2. **Owner reports complete; ACL correction pending:** the guarded deployment applied
-   `20260830010000` followed by `20260831010000`, after which the read-only report found the
-   `work_tropes` privilege mismatch. Independently review and integrate `20260901010000`, then the
-   owner deploys that forward-only migration through `pnpm deploy:migrations` from clean `main`.
-3. Rerun `docs/queries/library-membership-rollout-verification.sql` against production and require
-   all 43 rows to report `ok = true`; command success alone does not prove the bindings, trigger
-   state, owner fences, RPCs, or privileges.
-4. Deploy and verify the covers function's personal/corpus authorization and storage boundaries.
-   Keep the web deployment staged until all three migrations, the membership/corpus RPCs, and this
-   function are verified in production.
-5. Dry-run both administrator grants and the CSV reconciliation. Run the reconciliation's separate
+2. **Complete:** the owner deployed all three migrations through the guard; the production report
+   returned all 43 rows true.
+3. **Complete for the exercised personal-cover path:** the owner deployed the covers function and
+   confirmed the selected cover survives refresh. The corpus-admin positive path remains part of
+   the later administrator smoke set.
+4. Independently review and integrate the forward household-only catalog-entry boundary. The owner
+   then deploys its migration and web surface through the guards and verifies that a household-only
+   add creates no personal copy. Rerun the expanded report and require all 49 rows true.
+5. Resolve the 10 aggregate missing-corpus dry-run rows through Household Add books, then dry-run
+   both administrator grants and the CSV reconciliation again. Run the reconciliation's separate
    backup-only phase and review the exact external title-level report and backup checksums; do not
    approve from aggregate counts alone.
 6. The owner executes both production writes and completes Account A, Account B, household-only,

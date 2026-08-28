@@ -456,20 +456,18 @@ async function exerciseAuthorizationRevocations({
   await relinkMember(ownerId, memberId)
 
   await runRevocationRace({
-    action: 'update-corpus-metadata',
+    action: 'add-existing-corpus-work',
     userId: memberId,
-    statement: `perform public.update_corpus_work_metadata(
-      '${ownerWorkId}'::uuid,
-      'unauthorized-race', null, array['unauthorized-race'], '{}', null, '[]'::jsonb
-    )`,
+    statement: `perform public.add_corpus_work_to_household('${ownerWorkId}'::uuid)`,
     verify: async () => {
       assert.equal(
         sqlScalar(
-          `select count(*) from public.works
-           where id = '${ownerWorkId}'::uuid and genre = 'unauthorized-race';`,
+          `select count(*) from public.household_works
+           where household_id = '${householdId}'::uuid and work_id = '${ownerWorkId}'::uuid
+             and removed_at is null;`,
         ),
-        '0',
-        'revoked corpus update changes no global metadata',
+        '1',
+        'revoked household add leaves the existing owner-backed membership unchanged',
       )
     },
   })

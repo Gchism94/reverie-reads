@@ -414,6 +414,44 @@ export function useAddPersonalBookToHousehold() {
   })
 }
 
+export function useAddCorpusWorkToHousehold() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    meta: { action: 'Adding to the household library' },
+    mutationFn: async (workId: string): Promise<string> => {
+      const { data, error } = await supabase.rpc('add_corpus_work_to_household', {
+        p_work: workId,
+      })
+      if (error) throw error
+      return data as string
+    },
+    onSuccess: () => invalidateLibraryMembership(queryClient),
+  })
+}
+
+export interface HouseholdCatalogWorkInput {
+  title: string
+  author: string
+  isbn: string
+}
+
+export function useCreateHouseholdCatalogWork() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    meta: { action: 'Creating a shared catalog book' },
+    mutationFn: async (input: HouseholdCatalogWorkInput): Promise<string> => {
+      const { data, error } = await supabase.rpc('create_household_catalog_work', {
+        p_title: input.title,
+        p_author: input.author,
+        p_isbn: input.isbn || null,
+      })
+      if (error) throw error
+      return data as string
+    },
+    onSuccess: () => invalidateLibraryMembership(queryClient),
+  })
+}
+
 export function useRemoveHouseholdWork() {
   const queryClient = useQueryClient()
   return useMutation({
@@ -482,7 +520,7 @@ export function useUpdateCorpusWorkMetadata() {
   return useMutation({
     meta: { action: 'Updating shared book details' },
     mutationFn: async (patch: CorpusMetadataPatch): Promise<string> => {
-      const { data, error } = await supabase.rpc('update_corpus_work_metadata', {
+      const { data, error } = await supabase.rpc('edit_corpus_work_metadata', {
         p_work: patch.workId,
         p_genre: patch.genre,
         p_subgenre: patch.subgenre,
@@ -490,6 +528,21 @@ export function useUpdateCorpusWorkMetadata() {
         p_subgenres: patch.subgenres,
         p_cover_url: patch.coverUrl,
         p_cover_options: patch.coverOptions,
+      })
+      if (error) throw error
+      return data as string
+    },
+    onSuccess: () => invalidateLibraryMembership(queryClient),
+  })
+}
+
+export function useAdoptCorpusWorkMetadata() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    meta: { action: 'Using shared book details' },
+    mutationFn: async (bookId: string): Promise<string> => {
+      const { data, error } = await supabase.rpc('adopt_corpus_work_metadata', {
+        p_book: bookId,
       })
       if (error) throw error
       return data as string

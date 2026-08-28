@@ -182,6 +182,82 @@ const publicationLabel = (book: HouseholdBook): string | null => {
     .join('-')
 }
 
+export interface HouseholdCorpusEdit {
+  genre: string
+  subgenre: string
+  genres: string[]
+  subgenres: string[]
+  coverUrl: string
+  coverOptions: HouseholdBook['coverOptions']
+}
+
+function CorpusEditForm({
+  book,
+  onSave,
+  saving,
+}: {
+  book: HouseholdBook
+  onSave: (patch: HouseholdCorpusEdit) => Promise<void>
+  saving: boolean
+}) {
+  const [genre, setGenre] = useState(book.primaryGenre)
+  const [subgenre, setSubgenre] = useState(book.subgenre)
+
+  return (
+    <details className="mt-4">
+      <summary className="cursor-pointer text-[12.5px] font-semibold text-primary">
+        Edit shared catalog details
+      </summary>
+      <p className="mt-2 text-[11.5px] text-muted">
+        This changes the shared catalog view. Personal copies keep their existing details until
+        their owner chooses to use the shared version.
+      </p>
+      <form
+        className="mt-2 space-y-2"
+        onSubmit={(event) => {
+          event.preventDefault()
+          const nextGenre = genre.trim()
+          const nextSubgenre = subgenre.trim()
+          void onSave({
+            genre: nextGenre,
+            subgenre: nextSubgenre,
+            genres: [nextGenre, ...book.genres.filter((value) => value !== book.primaryGenre)]
+              .filter(Boolean)
+              .filter((value, index, values) => values.indexOf(value) === index),
+            subgenres: [nextSubgenre, ...book.subgenres.filter((value) => value !== book.subgenre)]
+              .filter(Boolean)
+              .filter((value, index, values) => values.indexOf(value) === index),
+            coverUrl: book.cover,
+            coverOptions: book.coverOptions,
+          }).catch(() => undefined)
+        }}
+      >
+        <input
+          value={genre}
+          onChange={(event) => setGenre(event.target.value)}
+          placeholder="Primary genre"
+          aria-label="Shared primary genre"
+          className="skin-control h-10 w-full border border-line bg-field px-3 text-[13px] text-ink"
+        />
+        <input
+          value={subgenre}
+          onChange={(event) => setSubgenre(event.target.value)}
+          placeholder="Primary subgenre"
+          aria-label="Shared primary subgenre"
+          className="skin-control h-10 w-full border border-line bg-field px-3 text-[13px] text-ink"
+        />
+        <button
+          type="submit"
+          disabled={saving}
+          className="skin-control skin-btn-primary px-3 py-2 text-[12px] font-semibold disabled:opacity-50"
+        >
+          {saving ? 'Saving…' : 'Save shared details'}
+        </button>
+      </form>
+    </details>
+  )
+}
+
 export function HouseholdBookDetail({
   book,
   currentReaderId,
@@ -189,6 +265,8 @@ export function HouseholdBookDetail({
   removing = false,
   onAddCorpusTrope,
   addingCorpusTrope = false,
+  onEditCorpus,
+  editingCorpus = false,
 }: {
   book: HouseholdBook | null
   currentReaderId: string
@@ -196,6 +274,8 @@ export function HouseholdBookDetail({
   removing?: boolean
   onAddCorpusTrope?: (name: string) => Promise<void>
   addingCorpusTrope?: boolean
+  onEditCorpus?: (patch: HouseholdCorpusEdit) => Promise<void>
+  editingCorpus?: boolean
 }) {
   const [corpusTropeName, setCorpusTropeName] = useState('')
   if (!book) {
@@ -354,6 +434,10 @@ export function HouseholdBookDetail({
             </button>
           </div>
         </form>
+      ) : null}
+
+      {onEditCorpus ? (
+        <CorpusEditForm key={book.id} book={book} onSave={onEditCorpus} saving={editingCorpus} />
       ) : null}
 
       <Surface tone="field" radius="control" pad={2} className="mt-auto text-[12px] text-muted">
