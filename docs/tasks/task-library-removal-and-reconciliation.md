@@ -2,10 +2,11 @@
 
 Status: **membership/removal foundation merged in PR #361. Production migration `20260830010000`
 remains unapplied after its first attempt failed transactionally; the bounded-backfill hotfix and
-corpus-admin enrichment history are now combined on a fix branch. Independent review found
-pre-integration blockers that remain to be fixed and re-verified. Production reconciliation remains
-pending owner review, and no migration, function, or web deployment from this combined branch has
-occurred.**
+corpus-admin enrichment history are combined on `codex/fix-corpus-admin-reviewed-blockers`.
+Independent review found rollout-order, zero-binding, and performance-regression blockers; their
+corrections are complete and locally verified, pending independent re-review before integration.
+Production reconciliation remains pending owner review, and no migration, function, or web
+deployment from this combined branch has occurred.**
 
 ## Production migration performance hotfix — 2026-08-26
 

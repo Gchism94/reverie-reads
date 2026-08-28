@@ -507,7 +507,9 @@ where known.work_id is null;
 -- refuses to coalesce uncertain matches; an owner-reviewed, target-scoped repair can merge them
 -- later without deployment ever attaching a personal row to the wrong global work. Identity maps
 -- are materialized once: rescanning the whole corpus for every personal row exceeds the production
--- statement budget even though the same set-based decision completes comfortably within it.
+-- statement budget even though the same set-based decision completes comfortably within it. The
+-- zero-ISBN/zero-fallback case is also a refusal: it can occur when one fallback-group candidate is
+-- suppressed by its unique ISBN while a differently-ISBN'd sibling has no remaining target.
 with work_isbn_counts as materialized (
   select isbn, count(*)::int as match_count
   from library_work_isbn_owners
@@ -556,7 +558,7 @@ left join work_fallback_counts fallback_matches
 where coalesce(isbn_matches.match_count, 0) > 1
   or (
     coalesce(isbn_matches.match_count, 0) = 0
-    and coalesce(fallback_matches.match_count, 0) > 1
+    and coalesce(fallback_matches.match_count, 0) <> 1
   )
 on conflict (work_key) do nothing;
 

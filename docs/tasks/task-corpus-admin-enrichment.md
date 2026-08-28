@@ -1,8 +1,10 @@
 # Task: corpus-administrator enrichment and durable corpus metadata
 
-Status: **implementation and local verification complete on
-`codex/feat-corpus-admin-enrichment`; pending independent diff review and integration. No production
-data or deployment has been changed.**
+Status: **the corpus-admin history and bounded membership-backfill hotfix are combined on
+`codex/fix-corpus-admin-reviewed-blockers`. Independent review found rollout-order, zero-binding,
+and performance-regression blockers; their corrections are complete and locally verified, pending
+independent re-review before integration. Production migrations `20260830010000` and
+`20260831010000` remain unapplied, and no production function or web deployment has changed.**
 
 ## Objective
 
@@ -128,6 +130,30 @@ reconciliation reject its stale fingerprint, while an insert begun after final r
 proven blocked until reconciliation commits. Unit/source-contract coverage verifies encoded and
 query passwords, multi-host URI preservation, the snapshot count baseline, and secret-free argv.
 
+## Combined migration blocker closure — 2026-08-27
+
+The independently reviewed combined tree now closes all three pre-integration blockers:
+
+- the bounded legacy backfill creates a per-book reconciliation work when an identity has neither a
+  unique ISBN target nor a unique fallback target. Unique ISBN remains first priority,
+  reconciliation second, and unique fallback third;
+- the exact mixed-ISBN/fallback failure has a deterministic executable fixture: two personal rows
+  share title/full-author, the selected candidate's ISBN points to a differently keyed corpus work,
+  and the unmatched sibling safely receives its own reconciliation work;
+- the source regression now rejects any extra `public.works` scan in classification, including the
+  reviewer's differently spelled correlated lateral aggregate mutation. A separate bounded fixture
+  applies both migrations to 25,005 initial works and 5,012 personal books under a 20-second
+  per-migration PostgreSQL statement timeout.
+
+The scale fixture bound all 5,012 books, preserved the unique ISBN/fallback and ambiguous-refusal
+paths, retained `updated_at`/`enriched_at`, dropped every temporary identity table at commit,
+restored both temporarily disabled book triggers, installed both corpus-binding triggers, and found
+the shared insert and exclusive reconciliation owner fences in their final function definitions.
+The clean-schema pgTAP suite passed 635 assertions across 27 files; the complete unit suites passed
+2,416 core and 625 web assertions. TypeScript, ESLint, Prettier, production build, and
+`git diff --check` passed. Browser tests were not repeated because the combined correction changes
+only migration-time SQL, its executable fixture, source-contract coverage, and rollout docs.
+
 ## Reconciliation coupling
 
 The private owner CSV is interpreted only by the gitignored operator. Exact normalized title and
@@ -142,11 +168,17 @@ dry-run or write planning.
 
 ## Required rollout order
 
-1. Integrate and deploy the bounded-backfill hotfix for migration `20260830010000`.
-2. Apply `20260830010000` from clean synchronized `main` through the owner-confirmed deploy guard.
-3. Independently review and integrate this feature branch.
-4. Deploy the covers function and migration `20260831010000` from clean synchronized `main`; the
-   owner personally answers the migration guard because the migration changes write behavior.
+1. Complete local verification and independent review of the combined migration tree, then
+   integrate the real-merge history to `main`. Do not deploy either migration from either former
+   feature branch.
+2. From clean synchronized `main`, the owner applies `20260830010000` through the deploy guard and
+   verifies the migration version, complete non-null personal bindings, trigger state, and RPCs.
+3. Still from clean synchronized `main`, the owner applies `20260831010000` through the deploy guard
+   and verifies its corpus-administration, preservation, and reconciliation RPCs. The owner answers
+   both human gates; Code does not run either production deployment.
+4. Deploy and verify the covers function's personal/corpus authorization and storage boundaries.
+   Keep the web deployment staged until both migrations and their RPCs plus this function are
+   verified in production.
 5. Dry-run both administrator grants and the CSV reconciliation. Review the exact external reports
    and backup checksums; do not approve from aggregate counts alone.
 6. The owner executes both production writes and completes Account A, Account B, household-only,

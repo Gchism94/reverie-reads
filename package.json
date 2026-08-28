@@ -23,6 +23,7 @@
     "db:stop": "supabase stop",
     "db:reset": "bash scripts/stack-lock.sh supabase db reset",
     "db:test": "supabase test db",
+    "db:test:library-migration-scale": "bash scripts/stack-lock.sh bash scripts/test-library-membership-migration-scale.sh",
     "db:status": "supabase status",
     "db:seed": "bash scripts/stack-lock.sh node scripts/seed-dev.mjs",
     "deploy:functions": "bash scripts/deploy-guard.sh functions",
