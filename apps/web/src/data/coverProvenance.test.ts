@@ -36,7 +36,7 @@ vi.mock('../lib/covers', () => ({ ingestCover: (i: unknown) => ingestSpy(i) }))
 const { bulkComplete } = await import('./enrichLibrary')
 
 const OL = 'https://covers.openlibrary.org/b/id/42-M.jpg'
-const HC = 'https://storage.googleapis.com/hardcover/covers/9781649374042.jpg'
+const HC = 'https://assets.hardcover.app/editions/9781649374042/cover.jpg'
 const STORED = 'https://x.supabase.co/storage/v1/object/public/covers/u/1/b/abc.webp'
 
 const okIngest = () =>

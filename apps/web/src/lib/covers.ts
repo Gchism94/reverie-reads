@@ -49,8 +49,9 @@ export async function fetchEditions(input: {
 
 /**
  * Ingest a chosen cover through the durable pipeline: pass `file` (camera/upload, post-crop) OR
- * `url` (edition pick / pasted link — fetched server-side). Returns the stored asset URLs + the
- * extracted dominant colour; the caller persists them via the normal RLS-checked book mutation.
+ * `url` (reviewed provider/edition link — fetched server-side). Arbitrary pasted hosts remain
+ * display-time hotlinks and never call this boundary. Returns the stored asset URLs + the extracted
+ * dominant colour; the caller persists them via the normal RLS-checked book mutation.
  */
 export async function ingestCover(input: {
   bookId: string
@@ -83,6 +84,42 @@ export async function ingestCover(input: {
     const { data, error } = await supabase.functions.invoke('covers', { body })
     if (error) {
       // FunctionsHttpError carries the response; surface the server's error code for the sheet copy.
+      const ctx = (error as { context?: Response }).context
+      const code = ctx
+        ? ((await ctx.json().catch(() => null)) as { error?: string } | null)?.error
+        : undefined
+      return { status: 'error', code: code ?? 'failed' }
+    }
+    const d = data as IngestResult & { error?: string }
+    if (!d?.cover) return { status: 'error', code: d?.error ?? 'failed' }
+    return { status: 'ok', data: d }
+  } catch {
+    return { status: 'error', code: 'failed' }
+  }
+}
+
+/** Admin-only corpus ingest. The Edge Function verifies the caller's admin row and stores the
+ * asset under w/{workId}, so the shared cover has no dependency on a personal book or account. */
+export async function ingestCorpusCover(input: {
+  workId: string
+  source: CoverSource
+  url: string
+  sourceUrl?: string
+  trace?: boolean
+}): Promise<IngestOutcome> {
+  try {
+    const { data, error } = await supabase.functions.invoke('covers', {
+      body: {
+        action: 'ingest',
+        scope: 'corpus',
+        workId: input.workId,
+        source: input.source,
+        url: input.url,
+        sourceUrl: input.sourceUrl,
+        ...(input.trace ? { trace: true } : {}),
+      },
+    })
+    if (error) {
       const ctx = (error as { context?: Response }).context
       const code = ctx
         ? ((await ctx.json().catch(() => null)) as { error?: string } | null)?.error

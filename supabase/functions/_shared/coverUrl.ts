@@ -5,8 +5,19 @@
 
 const isStored = (url: string): boolean => url.includes('/storage/v1/object/public/covers/')
 
-const GOOGLE_CONTENT_RE = /(?:books\.google\.[a-z.]+|googleusercontent\.com)\/books\/content/i
-export const isGoogleContentCover = (url: string): boolean => GOOGLE_CONTENT_RE.test(url)
+const GOOGLE_CONTENT_HOSTS = new Set(['books.google.com', 'books.googleusercontent.com'])
+export function isGoogleContentCover(url: string): boolean {
+  try {
+    const parsed = new URL(url)
+    return (
+      (parsed.protocol === 'https:' || parsed.protocol === 'http:') &&
+      GOOGLE_CONTENT_HOSTS.has(parsed.hostname.toLowerCase()) &&
+      (parsed.pathname === '/books/content' || parsed.pathname.startsWith('/books/content/'))
+    )
+  } catch {
+    return false
+  }
+}
 
 /**
  * Google Books answers a missing cover with a generic "image not available" plate at HTTP 200 — a

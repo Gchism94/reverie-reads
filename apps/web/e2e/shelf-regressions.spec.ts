@@ -437,6 +437,10 @@ test('Shelves page: dragging a book cover does not move the shelf — only the g
   page,
 }) => {
   test.setTimeout(180_000)
+  // Keep both native-drag handles in one viewport. Playwright otherwise scrolls the second handle
+  // into the exact coordinates where it pressed the first, and Chromium emits no dragenter/drop.
+  // This still exercises a real handle drag; it only removes synthetic mid-drag auto-scrolling.
+  await page.setViewportSize({ width: 1280, height: 1000 })
   const c = await client()
   await reset(c)
   await shelfOf(c, 'Aaa Shelf', ['Alpha Book'])

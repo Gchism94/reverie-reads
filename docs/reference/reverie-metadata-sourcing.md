@@ -185,6 +185,11 @@ buried as a fallback.
 One rule, expressed once in `packages/core/src/covers.ts` and read by every caller:
 `INGESTIBLE_COVER_SOURCES` / `isIngestibleCoverUrl` / `mayIngestCover`.
 
+- **A pasted URL is not an egress grant.** Exact Open Library and Hardcover asset URLs may enter
+  the durable pipeline; Open Library's exact Internet Archive redirect chain and the configured
+  project cover origin are enforced again at the Edge boundary. Every other pasted URL remains a
+  working display-time hotlink, but the server never resolves or fetches its reader-controlled
+  hostname.
 - **Ingest chain prefers Open Library.** `fetchCover` resolves from Open Library only; a miss
   returns empty rather than falling back to Google, because whatever it returns is persisted.
   The enrich Edge Function already ordered `openlibrary,google`.

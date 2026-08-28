@@ -27,6 +27,9 @@ let householdId = null
 const BARRIER_CLASS = 1_608_202_608
 const BARRIER_ID = 1
 const ISBN_BARRIER_ID = 2
+const RECONCILIATION_INSERT_BARRIER_ID = 3
+const RECONCILIATION_ROSTER_BARRIER_ID = 4
+const RECONCILIATION_LATE_INSERT_BARRIER_ID = 5
 
 const sqlScalar = (statement) =>
   execFileSync('psql', [DATABASE_URL, '-X', '-qAt', '-v', 'ON_ERROR_STOP=1', '-c', statement], {
@@ -1002,6 +1005,20 @@ const concurrentBookInsert = ({ session, userId, bookId, title, isbn }) =>
     select 'isbn-book-committed';
   `)
 
+const reconciliationFenceArguments = (ownerId, memberId) => `
+  array['${ownerId}'::uuid, '${memberId}'::uuid],
+  (
+    select md5(coalesce(jsonb_agg(to_jsonb(b) order by b.id), '[]'::jsonb)::text)
+    from public.books b
+    where b.owner_id in ('${ownerId}'::uuid, '${memberId}'::uuid)
+  ),
+  (
+    select md5(coalesce(jsonb_agg(to_jsonb(hw) order by hw.work_id), '[]'::jsonb)::text)
+    from public.household_works hw
+    where hw.household_id = '${householdId}'::uuid
+  )
+`
+
 async function exerciseConcurrentIsbnResolution(firstUserId, secondUserId) {
   const isbn = isbn13Fixture()
   const bookIds = [randomUUID(), randomUUID()]
@@ -1092,6 +1109,644 @@ async function exerciseConcurrentIsbnResolution(firstUserId, secondUserId) {
   }
 }
 
+async function exerciseReconciliationLockOrdering(ownerId, memberId) {
+  const inserted = await admin
+    .from('books')
+    .insert({
+      owner_id: ownerId,
+      title: `Reconciliation lock fixture ${randomUUID()}`,
+      author_first: 'Local',
+      author_last: 'Locksmith',
+      authors_display: 'Local Locksmith',
+      status: 'standalone',
+      ownership: 'owned',
+    })
+    .select('id, corpus_work_id')
+    .single()
+  if (inserted.error || !inserted.data)
+    throw dbError('reconciliation lock fixture insert', inserted.error)
+  const bookId = inserted.data.id
+  const workId = inserted.data.corpus_work_id
+  const editor = new PsqlSession('reconciliation-editor')
+  const reconciler = new PsqlSession('reconciliation-worker')
+  let reconciliation = null
+
+  try {
+    const editorPid = Number(await editor.command('select pg_backend_pid();'))
+    const reconcilerPid = Number(await reconciler.command('select pg_backend_pid();'))
+    await editor.command(`
+      begin;
+      set local deadlock_timeout = '100ms';
+      select id from public.books where id = '${bookId}'::uuid for update;
+    `)
+
+    reconciliation = reconciler.command(`
+      begin;
+      set local deadlock_timeout = '100ms';
+      set local role service_role;
+      select set_config('request.jwt.claims', '{"role":"service_role"}', true);
+      do $reconcile$
+      begin
+        perform public.reconcile_household_library_memberships(
+          '${householdId}'::uuid,
+          jsonb_build_array(
+            jsonb_build_object(
+              'accountId', '${ownerId}',
+              'workIds', coalesce((
+                select jsonb_agg(b.corpus_work_id order by b.corpus_work_id)
+                from public.books b
+                where b.owner_id = '${ownerId}'::uuid and b.removed_at is null
+                  and b.id <> '${bookId}'::uuid
+              ), '[]'::jsonb)
+            ),
+            jsonb_build_object(
+              'accountId', '${memberId}',
+              'workIds', coalesce((
+                select jsonb_agg(b.corpus_work_id order by b.corpus_work_id)
+                from public.books b
+                where b.owner_id = '${memberId}'::uuid and b.removed_at is null
+              ), '[]'::jsonb)
+            )
+          ),
+          array(
+            select hw.work_id from public.household_works hw
+            where hw.household_id = '${householdId}'::uuid and hw.removed_at is null
+              and hw.work_id <> '${workId}'::uuid
+            order by hw.work_id
+          ),
+          ${reconciliationFenceArguments(ownerId, memberId)}
+        );
+        raise exception 'expected a changed-snapshot refusal';
+      exception when sqlstate '40001' then
+        null;
+      end;
+      $reconcile$;
+      commit;
+      select 'reconciliation-refused-after-book-edit';
+    `)
+    await waitForBlockedWorker(reconcilerPid, 'reconciliation book prelock')
+    const blockers = sqlScalar(
+      `select array_to_string(pg_catalog.pg_blocking_pids(${reconcilerPid}), ',');`,
+    )
+    assert.match(blockers, new RegExp(`(^|,)${editorPid}(,|$)`), 'reconciliation waits on the book')
+
+    const editResult = await editor.command(`
+      set local role authenticated;
+      select set_config(
+        'request.jwt.claims',
+        '{"sub":"${ownerId}","role":"authenticated"}',
+        true
+      );
+      update public.books set tags = array['reconciliation-lock-order']
+      where id = '${bookId}'::uuid;
+      commit;
+      select 'reader-edit-committed';
+    `)
+    assert.match(editResult, /reader-edit-committed/, 'the reader edit commits without a deadlock')
+    assert.match(
+      await reconciliation,
+      /reconciliation-refused-after-book-edit/,
+      'reconciliation refuses the edit that differs from the reviewed snapshot',
+    )
+    reconciliation = null
+    assert.equal(
+      sqlScalar(`select removed_at is not null from public.books where id = '${bookId}'::uuid;`),
+      'f',
+      'the snapshot refusal preserves the reader book',
+    )
+    console.log('✓ reconciliation serializes a tag edit and refuses its changed snapshot')
+  } finally {
+    if (reconciliation) await reconciliation.catch(() => {})
+    await editor.command('rollback;').catch(() => {})
+    await reconciler.command('rollback;').catch(() => {})
+    await Promise.allSettled([editor.close(), reconciler.close()])
+    sqlScalar(`
+      delete from public.books where id = '${bookId}'::uuid;
+      delete from public.household_works
+      where household_id = '${householdId}'::uuid and work_id = '${workId}'::uuid;
+      delete from public.works where id = '${workId}'::uuid;
+    `)
+  }
+}
+
+async function exerciseReconciliationInsertLockOrdering(ownerId, memberId) {
+  const isbn = isbn13Fixture()
+  const inserted = await admin
+    .from('books')
+    .insert({
+      owner_id: ownerId,
+      title: `Reconciliation insert fixture ${randomUUID()}`,
+      author_first: 'Local',
+      author_last: 'Inserter',
+      authors_display: 'Local Inserter',
+      isbn,
+      status: 'standalone',
+      ownership: 'owned',
+    })
+    .select('id, corpus_work_id')
+    .single()
+  if (inserted.error || !inserted.data)
+    throw dbError('reconciliation insert fixture create', inserted.error)
+  const existingBookId = inserted.data.id
+  const workId = inserted.data.corpus_work_id
+  const concurrentBookId = randomUUID()
+  const controller = new PsqlSession('reconciliation-insert-controller')
+  const inserter = new PsqlSession('reconciliation-insert-reader')
+  const reconciler = new PsqlSession('reconciliation-insert-worker')
+  let barrierHeld = false
+  let insertResult = null
+  let reconciliation = null
+  let triggerInstalled = false
+
+  try {
+    sqlScalar(`
+      create function public.reconciliation_insert_barrier_fixture()
+      returns trigger language plpgsql security definer set search_path = '' as $fixture$
+      begin
+        if new.id = '${concurrentBookId}'::uuid then
+          perform pg_catalog.pg_advisory_xact_lock_shared(
+            ${BARRIER_CLASS}, ${RECONCILIATION_INSERT_BARRIER_ID}
+          );
+        end if;
+        return new;
+      end;
+      $fixture$;
+      create trigger zz_reconciliation_insert_barrier_fixture
+      before insert on public.books
+      for each row execute function public.reconciliation_insert_barrier_fixture();
+    `)
+    triggerInstalled = true
+    await controller.command(
+      `select pg_catalog.pg_advisory_lock(${BARRIER_CLASS}, ${RECONCILIATION_INSERT_BARRIER_ID});`,
+    )
+    barrierHeld = true
+    const inserterPid = Number(await inserter.command('select pg_backend_pid();'))
+    const reconcilerPid = Number(await reconciler.command('select pg_backend_pid();'))
+
+    insertResult = inserter.command(`
+      begin;
+      set local deadlock_timeout = '100ms';
+      set local role authenticated;
+      select set_config(
+        'request.jwt.claims',
+        '{"sub":"${ownerId}","role":"authenticated"}',
+        true
+      );
+      insert into public.books (
+        id, owner_id, title, author_first, author_last, authors_display, isbn, status, ownership
+      ) values (
+        '${concurrentBookId}'::uuid, '${ownerId}'::uuid, 'Concurrent reconciliation insert',
+        'Local', 'Inserter', 'Local Inserter', '${isbn}', 'standalone', 'owned'
+      );
+      commit;
+      select 'reader-insert-committed';
+    `)
+    await waitForBlockedWorker(inserterPid, 'ordinary insert advisory barrier')
+
+    reconciliation = reconciler.command(`
+      begin;
+      set local deadlock_timeout = '100ms';
+      set local role service_role;
+      select set_config('request.jwt.claims', '{"role":"service_role"}', true);
+      do $reconcile$
+      begin
+        perform public.reconcile_household_library_memberships(
+          '${householdId}'::uuid,
+          jsonb_build_array(
+            jsonb_build_object(
+              'accountId', '${ownerId}',
+              'workIds', coalesce((
+                select jsonb_agg(b.corpus_work_id order by b.corpus_work_id)
+                from public.books b
+                where b.owner_id = '${ownerId}'::uuid and b.removed_at is null
+                  and b.corpus_work_id <> '${workId}'::uuid
+              ), '[]'::jsonb)
+            ),
+            jsonb_build_object(
+              'accountId', '${memberId}',
+              'workIds', coalesce((
+                select jsonb_agg(b.corpus_work_id order by b.corpus_work_id)
+                from public.books b
+                where b.owner_id = '${memberId}'::uuid and b.removed_at is null
+              ), '[]'::jsonb)
+            )
+          ),
+          array(
+            select hw.work_id from public.household_works hw
+            where hw.household_id = '${householdId}'::uuid and hw.removed_at is null
+              and hw.work_id <> '${workId}'::uuid
+            order by hw.work_id
+          ),
+          ${reconciliationFenceArguments(ownerId, memberId)}
+        );
+        raise exception 'expected a concurrent-book serialization refusal';
+      exception when sqlstate '40001' then
+        null;
+      end;
+      $reconcile$;
+      commit;
+      select 'reconciliation-refused-after-new-book';
+    `)
+    await waitForBlockedWorker(reconcilerPid, 'reconciliation owner-insert fence')
+    const blockers = sqlScalar(
+      `select array_to_string(pg_catalog.pg_blocking_pids(${reconcilerPid}), ',');`,
+    )
+    assert.match(
+      blockers,
+      new RegExp(`(^|,)${inserterPid}(,|$)`),
+      'reconciliation waits on the insert owner fence before taking any book row lock',
+    )
+
+    await controller.command(
+      `select pg_catalog.pg_advisory_unlock(${BARRIER_CLASS}, ${RECONCILIATION_INSERT_BARRIER_ID});`,
+    )
+    barrierHeld = false
+    assert.match(await insertResult, /reader-insert-committed/, 'the ordinary insert commits')
+    insertResult = null
+    assert.match(
+      await reconciliation,
+      /reconciliation-refused-after-new-book/,
+      'reconciliation refuses the changed book set without a deadlock',
+    )
+    reconciliation = null
+    assert.equal(
+      sqlScalar(
+        `select count(*) from public.books
+         where id in ('${existingBookId}'::uuid, '${concurrentBookId}'::uuid)
+           and removed_at is null;`,
+      ),
+      '2',
+      'the serialization refusal preserves both reader books',
+    )
+    console.log(
+      '✓ reconciliation waits for an earlier owner insert and refuses its changed snapshot',
+    )
+  } finally {
+    if (barrierHeld) {
+      await controller
+        .command(
+          `select pg_catalog.pg_advisory_unlock(${BARRIER_CLASS}, ${RECONCILIATION_INSERT_BARRIER_ID});`,
+        )
+        .catch(() => {})
+    }
+    await Promise.allSettled([insertResult, reconciliation])
+    await Promise.allSettled([controller.close(), inserter.close(), reconciler.close()])
+    if (triggerInstalled) {
+      sqlScalar(`
+        drop trigger if exists zz_reconciliation_insert_barrier_fixture on public.books;
+        drop function if exists public.reconciliation_insert_barrier_fixture();
+      `)
+    }
+    sqlScalar(`
+      delete from public.books
+      where id in ('${existingBookId}'::uuid, '${concurrentBookId}'::uuid);
+      delete from public.household_works
+      where household_id = '${householdId}'::uuid and work_id = '${workId}'::uuid;
+      delete from public.works where id = '${workId}'::uuid;
+    `)
+  }
+}
+
+async function exerciseReconciliationLateInsertFence(ownerId, memberId) {
+  const existing = await admin
+    .from('books')
+    .insert({
+      owner_id: ownerId,
+      title: `Late-insert archive fixture ${randomUUID()}`,
+      author_first: 'Local',
+      author_last: 'Archive',
+      authors_display: 'Local Archive',
+      isbn: isbn13Fixture(),
+      status: 'standalone',
+      ownership: 'unowned',
+    })
+    .select('id')
+    .single()
+  if (existing.error || !existing.data)
+    throw dbError('late-insert archive fixture create', existing.error)
+
+  const existingBookId = existing.data.id
+  const concurrentBookId = randomUUID()
+  const concurrentTitle = `Late reconciliation insert ${concurrentBookId}`
+  const concurrentIsbn = isbn13Fixture()
+  const controller = new PsqlSession('reconciliation-late-controller')
+  const reconciler = new PsqlSession('reconciliation-late-worker')
+  const inserter = new PsqlSession('reconciliation-late-reader')
+  let barrierHeld = false
+  let triggerInstalled = false
+  let reconciliation = null
+  let insertResult = null
+
+  try {
+    sqlScalar(`
+      create function public.reconciliation_late_insert_barrier_fixture()
+      returns trigger language plpgsql security definer set search_path = '' as $fixture$
+      begin
+        if new.id = '${existingBookId}'::uuid
+          and old.removed_at is null and new.removed_at is not null then
+          perform pg_catalog.pg_advisory_xact_lock_shared(
+            ${BARRIER_CLASS}, ${RECONCILIATION_LATE_INSERT_BARRIER_ID}
+          );
+        end if;
+        return new;
+      end;
+      $fixture$;
+      create trigger zz_reconciliation_late_insert_barrier_fixture
+      before update of removed_at on public.books
+      for each row execute function public.reconciliation_late_insert_barrier_fixture();
+    `)
+    triggerInstalled = true
+    await controller.command(
+      `select pg_catalog.pg_advisory_lock(${BARRIER_CLASS}, ${RECONCILIATION_LATE_INSERT_BARRIER_ID});`,
+    )
+    barrierHeld = true
+    const reconcilerPid = Number(await reconciler.command('select pg_backend_pid();'))
+    const inserterPid = Number(await inserter.command('select pg_backend_pid();'))
+
+    reconciliation = reconciler.command(`
+      begin;
+      set local deadlock_timeout = '100ms';
+      set local role service_role;
+      select set_config('request.jwt.claims', '{"role":"service_role"}', true);
+      select public.reconcile_household_library_memberships(
+        '${householdId}'::uuid,
+        jsonb_build_array(
+          jsonb_build_object(
+            'accountId', '${ownerId}',
+            'workIds', coalesce((
+              select jsonb_agg(b.corpus_work_id order by b.corpus_work_id)
+              from public.books b
+              where b.owner_id = '${ownerId}'::uuid and b.removed_at is null
+                and b.id <> '${existingBookId}'::uuid
+            ), '[]'::jsonb)
+          ),
+          jsonb_build_object(
+            'accountId', '${memberId}',
+            'workIds', coalesce((
+              select jsonb_agg(b.corpus_work_id order by b.corpus_work_id)
+              from public.books b
+              where b.owner_id = '${memberId}'::uuid and b.removed_at is null
+            ), '[]'::jsonb)
+          )
+        ),
+        array(
+          select hw.work_id from public.household_works hw
+          where hw.household_id = '${householdId}'::uuid and hw.removed_at is null
+          order by hw.work_id
+        ),
+        ${reconciliationFenceArguments(ownerId, memberId)}
+      );
+      commit;
+      select 'reconciliation-committed-before-late-insert';
+    `)
+    await waitForBlockedWorker(reconcilerPid, 'reconciliation postcheck archive barrier')
+
+    insertResult = inserter.command(`
+      begin;
+      set local deadlock_timeout = '100ms';
+      set local role authenticated;
+      select set_config(
+        'request.jwt.claims',
+        '{"sub":"${ownerId}","role":"authenticated"}',
+        true
+      );
+      insert into public.books (
+        id, owner_id, title, author_first, author_last, authors_display, isbn, status, ownership
+      ) values (
+        '${concurrentBookId}'::uuid, '${ownerId}'::uuid, '${concurrentTitle}',
+        'Local', 'Later', 'Local Later', '${concurrentIsbn}', 'standalone', 'unowned'
+      );
+      commit;
+      select 'late-reader-insert-committed';
+    `)
+    await waitForBlockedWorker(inserterPid, 'late insert owner fence')
+    const blockers = sqlScalar(
+      `select array_to_string(pg_catalog.pg_blocking_pids(${inserterPid}), ',');`,
+    )
+    assert.match(
+      blockers,
+      new RegExp(`(^|,)${reconcilerPid}(,|$)`),
+      'a postcheck insert waits for the active reconciliation transaction',
+    )
+
+    await controller.command(
+      `select pg_catalog.pg_advisory_unlock(${BARRIER_CLASS}, ${RECONCILIATION_LATE_INSERT_BARRIER_ID});`,
+    )
+    barrierHeld = false
+    assert.match(
+      await reconciliation,
+      /reconciliation-committed-before-late-insert/,
+      'the reviewed mutation commits first',
+    )
+    reconciliation = null
+    assert.match(
+      await insertResult,
+      /late-reader-insert-committed/,
+      'the later reader insert proceeds only after reconciliation commits',
+    )
+    insertResult = null
+    assert.equal(
+      sqlScalar(
+        `select (select removed_at is not null from public.books where id = '${existingBookId}'::uuid)
+           and (select removed_at is null from public.books where id = '${concurrentBookId}'::uuid);`,
+      ),
+      't',
+      'the approved archive and the later reader change are serialized in commit order',
+    )
+    console.log(
+      '✓ a book insert started after final revalidation waits until reconciliation commits',
+    )
+  } finally {
+    if (barrierHeld) {
+      await controller
+        .command(
+          `select pg_catalog.pg_advisory_unlock(${BARRIER_CLASS}, ${RECONCILIATION_LATE_INSERT_BARRIER_ID});`,
+        )
+        .catch(() => {})
+    }
+    await Promise.allSettled([reconciliation, insertResult])
+    await Promise.allSettled([controller.close(), reconciler.close(), inserter.close()])
+    if (triggerInstalled) {
+      sqlScalar(`
+        drop trigger if exists zz_reconciliation_late_insert_barrier_fixture on public.books;
+        drop function if exists public.reconciliation_late_insert_barrier_fixture();
+      `)
+    }
+    sqlScalar(`
+      do $cleanup$
+      declare
+        fixture_work_ids uuid[];
+      begin
+        select coalesce(array_agg(distinct corpus_work_id), '{}') into fixture_work_ids
+        from public.books
+        where id in ('${existingBookId}'::uuid, '${concurrentBookId}'::uuid);
+        delete from public.books
+        where id in ('${existingBookId}'::uuid, '${concurrentBookId}'::uuid);
+        delete from public.household_works
+        where household_id = '${householdId}'::uuid and work_id = any(fixture_work_ids);
+        delete from public.works where id = any(fixture_work_ids);
+      end;
+      $cleanup$;
+    `)
+  }
+}
+
+async function exerciseReconciliationRosterChange(ownerId, memberId) {
+  const thirdEmail = `household-roster-${randomUUID()}@reverie.local`
+  const created = await admin.auth.admin.createUser({
+    email: thirdEmail,
+    password: `local-${randomUUID()}`,
+    email_confirm: true,
+  })
+  if (created.error || !created.data.user)
+    throw dbError('reconciliation roster account create', created.error)
+  const thirdUserId = created.data.user.id
+  const profile = await admin
+    .from('profiles')
+    .upsert({ id: thirdUserId, display_name: 'Concurrent Roster Member' })
+  if (profile.error) throw dbError('reconciliation roster profile upsert', profile.error)
+
+  const controller = new PsqlSession('reconciliation-roster-controller')
+  const linker = new PsqlSession('reconciliation-roster-linker')
+  const reconciler = new PsqlSession('reconciliation-roster-worker')
+  let barrierHeld = false
+  let triggerInstalled = false
+  let linkResult = null
+  let reconciliation = null
+
+  try {
+    sqlScalar(`
+      create function public.reconciliation_roster_barrier_fixture()
+      returns trigger language plpgsql security definer set search_path = '' as $fixture$
+      begin
+        if new.user_id = '${thirdUserId}'::uuid then
+          perform pg_catalog.pg_advisory_xact_lock_shared(
+            ${BARRIER_CLASS}, ${RECONCILIATION_ROSTER_BARRIER_ID}
+          );
+        end if;
+        return new;
+      end;
+      $fixture$;
+      create trigger zz_reconciliation_roster_barrier_fixture
+      before insert on public.household_members
+      for each row execute function public.reconciliation_roster_barrier_fixture();
+    `)
+    triggerInstalled = true
+    await controller.command(
+      `select pg_catalog.pg_advisory_lock(${BARRIER_CLASS}, ${RECONCILIATION_ROSTER_BARRIER_ID});`,
+    )
+    barrierHeld = true
+    const linkerPid = Number(await linker.command('select pg_backend_pid();'))
+    const reconcilerPid = Number(await reconciler.command('select pg_backend_pid();'))
+
+    linkResult = linker.command(`
+      begin;
+      set local deadlock_timeout = '100ms';
+      set local role service_role;
+      select public.link_household(
+        'Concurrent final unlink fixture',
+        '${ownerId}'::uuid,
+        array['${memberId}'::uuid, '${thirdUserId}'::uuid]
+      );
+      commit;
+      select 'roster-link-committed';
+    `)
+    await waitForBlockedWorker(linkerPid, 'household roster advisory barrier')
+
+    reconciliation = reconciler.command(`
+      begin;
+      set local deadlock_timeout = '100ms';
+      set local role service_role;
+      select set_config('request.jwt.claims', '{"role":"service_role"}', true);
+      do $reconcile$
+      begin
+        perform public.reconcile_household_library_memberships(
+          '${householdId}'::uuid,
+          jsonb_build_array(
+            jsonb_build_object(
+              'accountId', '${ownerId}',
+              'workIds', coalesce((
+                select jsonb_agg(b.corpus_work_id order by b.corpus_work_id)
+                from public.books b
+                where b.owner_id = '${ownerId}'::uuid and b.removed_at is null
+              ), '[]'::jsonb)
+            ),
+            jsonb_build_object(
+              'accountId', '${memberId}',
+              'workIds', coalesce((
+                select jsonb_agg(b.corpus_work_id order by b.corpus_work_id)
+                from public.books b
+                where b.owner_id = '${memberId}'::uuid and b.removed_at is null
+              ), '[]'::jsonb)
+            )
+          ),
+          array(
+            select hw.work_id from public.household_works hw
+            where hw.household_id = '${householdId}'::uuid and hw.removed_at is null
+            order by hw.work_id
+          ),
+          ${reconciliationFenceArguments(ownerId, memberId)}
+        );
+        raise exception 'expected a changed-roster refusal';
+      exception when sqlstate '42501' or sqlstate '40001' then
+        null;
+      end;
+      $reconcile$;
+      commit;
+      select 'reconciliation-refused-after-roster-change';
+    `)
+    await waitForBlockedWorker(reconcilerPid, 'reconciliation complete-roster lock')
+    const blockers = sqlScalar(
+      `select array_to_string(pg_catalog.pg_blocking_pids(${reconcilerPid}), ',');`,
+    )
+    assert.match(
+      blockers,
+      new RegExp(`(^|,)${linkerPid}(,|$)`),
+      'reconciliation waits behind the in-flight complete-roster extension',
+    )
+
+    await controller.command(
+      `select pg_catalog.pg_advisory_unlock(${BARRIER_CLASS}, ${RECONCILIATION_ROSTER_BARRIER_ID});`,
+    )
+    barrierHeld = false
+    assert.match(await linkResult, /roster-link-committed/, 'the roster extension commits')
+    linkResult = null
+    assert.match(
+      await reconciliation,
+      /reconciliation-refused-after-roster-change/,
+      'reconciliation refuses the newly expanded complete roster',
+    )
+    reconciliation = null
+    assert.equal(
+      sqlScalar(
+        `select count(*) from public.household_members where household_id = '${householdId}'::uuid;`,
+      ),
+      '3',
+      'the refusal preserves all three household memberships',
+    )
+    console.log('✓ reconciliation waits for and refuses a concurrent complete-roster change')
+  } finally {
+    if (barrierHeld) {
+      await controller
+        .command(
+          `select pg_catalog.pg_advisory_unlock(${BARRIER_CLASS}, ${RECONCILIATION_ROSTER_BARRIER_ID});`,
+        )
+        .catch(() => {})
+    }
+    await Promise.allSettled([linkResult, reconciliation])
+    await Promise.allSettled([controller.close(), linker.close(), reconciler.close()])
+    if (triggerInstalled) {
+      sqlScalar(`
+        drop trigger if exists zz_reconciliation_roster_barrier_fixture
+          on public.household_members;
+        drop function if exists public.reconciliation_roster_barrier_fixture();
+      `)
+    }
+    sqlScalar(`delete from public.household_members where user_id = '${thirdUserId}'::uuid;`)
+    await admin.auth.admin.deleteUser(thirdUserId)
+  }
+}
+
 async function main() {
   const firstUserId = await fixtureAccount('first')
   const secondUserId = await fixtureAccount('second')
@@ -1132,6 +1787,10 @@ async function main() {
   await exerciseConcurrentRebindSuppression(firstUserId)
   await exerciseMovedTropeLockOrdering(firstUserId)
   await exerciseConcurrentIsbnResolution(firstUserId, secondUserId)
+  await exerciseReconciliationLockOrdering(firstUserId, secondUserId)
+  await exerciseReconciliationInsertLockOrdering(firstUserId, secondUserId)
+  await exerciseReconciliationLateInsertFence(firstUserId, secondUserId)
+  await exerciseReconciliationRosterChange(firstUserId, secondUserId)
 
   const controller = new PsqlSession('controller')
   const workers = [new PsqlSession('first'), new PsqlSession('second')]

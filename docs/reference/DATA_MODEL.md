@@ -249,6 +249,12 @@ tropes              (id pk, owner_id fk null → canonical, canonical_id fk, nam
 book_tropes         (book_id fk, trope_id fk, owner_id fk,
                      emphasis text not null default 'present',   -- 'pinned' | 'present'
                      added_at, primary key (book_id, trope_id))
+work_tropes         (work_id fk, trope_id fk, added_by fk, source_scope,
+                     added_at, primary key (work_id, trope_id))
+                     -- canonical, additive corpus associations. An administrator's new personal
+                     -- or household assignment promotes here; deleting the scoped assignment does
+                     -- not retract the accepted corpus fact. `vote` is reserved for the separately
+                     -- designed three-reader authorization mechanism.
 trope_suggestions   (book_id fk, trope_id fk, owner_id fk, source, state 'open'|'dismissed',
                      created_at, primary key (book_id, trope_id))
 
@@ -346,14 +352,18 @@ household_work_enrichment
 
 works                (id pk, work_key unique, work_id, title, contributors jsonb, author_text,
                      series/position/count/status, pages, publication date,
+                     publisher, language, description, edition_ids text[],
                      cover_url/source/source_url/color/confidence, cover_options jsonb,
                      genre, subgenre, genres text[], subgenres text[], tags text[], isbns text[],
+                     metadata_provenance jsonb, enrichment_confidence, enriched_at,
                      metadata_status, creation_source, created_by, created_at, updated_at)
                      -- work_key preserves Unicode letters/numbers after NFKD + mark removal;
                      -- creation_source may be reconciliation for an ambiguous safe refusal;
                      -- canonical ISBN-13 assignments serialize in sorted advisory-lock order
 work_metadata_edits  (id pk, work_id fk, editor_id, previous_value jsonb, next_value jsonb,
                      created_at)                      -- append-only corpus edit audit
+corpus_admins        (user_id pk fk→profiles, granted_at, granted_by fk→profiles)
+                     -- service-managed authorization; never restored from a reader backup
 
 clubs               (id pk, title, author, cover_url,
                      unit_type 'chapter'|'page'|'percent', unit_count, unit_label,
@@ -416,22 +426,33 @@ opposite-order deadlocks. The same boundary rejects future cross-work ISBN colli
 corpus writes. Duplicate ISBN ownership that predates the boundary is not rewritten: personal adds
 against that ambiguous data still receive a reconciliation work instead of an arbitrary match.
 
-Corpus cover publication reuses the existing cover ingestion boundary: a newly shared option must
-have the reviewed `url`/optional `source`/optional `sourceUrl` shape, resolve to the project origin
-derived from the signed JWT issuer, and correspond to a real `covers` object under
-`u/{owner}/{book}/`. Request Host headers are never trusted. Existing curated external options may be
-retained or selected, but arbitrary new remote URLs cannot be introduced by a personal edit or
-`update_corpus_work_metadata`. `COVER_PUBLIC_URL` must remain unset or use that same origin; a
-different CDN origin is safely rejected until it has an explicit database-controlled trust
-configuration. Membership and work eligibility are rechecked after the row locks in every
-household/corpus mutation so a concurrent unlink wins in the safe direction.
+Corpus cover publication reuses the existing cover ingestion boundary: a newly shared personal
+candidate must have the reviewed `url`/optional `source`/optional `sourceUrl` shape, resolve to the
+project origin derived from the signed JWT issuer, and correspond to a real `covers` object under
+`u/{owner}/{book}/`. That candidate may temporarily seed a missing canonical cover, but it is not
+the durable owner of shared artwork. The administrator corpus sweep re-ingests the exact selected
+image under `w/{work}/`, and only a real object on that path (or an allowlisted Google Books
+display-only URL) is accepted by the corpus completion RPC. Request Host headers are never trusted.
+Existing curated external options may be retained or selected, but arbitrary new remote URLs cannot
+be introduced by a personal edit or `update_corpus_work_metadata`. `COVER_PUBLIC_URL` must remain
+unset or use that same origin; a different CDN origin is safely rejected until it has an explicit
+database-controlled trust configuration. Membership and work eligibility are rechecked after the
+row locks in every household/corpus mutation so a concurrent unlink wins in the safe direction.
 Personal removal is a soft archive and cannot remove the household or corpus row. Household removal
 cannot remove personal or corpus rows and is refused while any active owned personal copy requires
 membership. The legacy `household_library_books()` RPC remains only for staged-deploy compatibility.
 
 Membership linking/unlinking remains service-role, owner-run, dry-run-first operation through
 `link_household` and `unlink_household_member`. Runtime client mutations use narrow authenticated
-RPCs with no direct table grants.
+RPCs with no direct table grants. The one-off household CSV reconciliation additionally requires an
+exact complete-roster match. Its write-mode rollback artifact is captured in one `REPEATABLE
+READ`/`READ ONLY` database snapshot, including deterministic fingerprints of every reviewed account book
+row and household-work membership row; the mutation rechecks that fence under its normal serialization
+locks and refuses any intervening reader edit, book insertion, household change, or unreviewed
+member rather than applying a stale plan. Every book insert first shares a transaction-scoped,
+per-owner advisory fence before taking ISBN/work locks. Reconciliation exclusively locks the two
+reviewed owner fences in UUID order before any book row, so an earlier insert becomes visible and
+invalidates the snapshot while a later insert waits until the reviewed transaction commits.
 
 ### Notes
 

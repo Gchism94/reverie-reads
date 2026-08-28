@@ -5,13 +5,14 @@
 //    back to title+author (the referrer-restricted key). Cached per book in enrichment_cache under
 //    an `editions:` key (7 days) so reopening the sheet costs zero external calls.
 //
-//  · action:'ingest' — EVERY chosen cover flows through here regardless of source (edition pick,
-//    camera, upload, pasted URL): receive the bytes (multipart) or fetch the URL (server-side, no
-//    client CORS), validate magic bytes + a sane size cap, normalize to webp (max ~1200px long edge)
-//    plus a ~300px thumb, extract the dominant colour (spine tint), and store both in the caller's
-//    user-scoped path in the public 'covers' bucket: u/{uid}/{bookId}/{rev}.webp (+ {rev}_t.webp).
-//    The DB row is patched by the CLIENT via the normal RLS-checked mutation — this function never
-//    writes books rows, so ownership enforcement stays in one place (RLS).
+//  · action:'ingest' — every durable chosen cover flows through here (reviewed edition provider,
+//    camera, upload): receive the bytes (multipart) or fetch an exact trusted origin (server-side,
+//    no client CORS), validate magic bytes + a sane size cap, normalize to webp (max ~1200px long edge)
+//    plus a ~300px thumb, extract the dominant colour (spine tint), and store both in the public
+//    'covers' bucket. Personal cover paths are u/{uid}/{bookId}/{rev}.webp; authenticated corpus
+//    administrators may instead use w/{workId}/{rev}.webp so shared metadata never depends on a
+//    reader-owned object. The DB row is patched by the CLIENT through its scoped RPC/mutation —
+//    this function never writes books or works rows, so write authorization stays at the DB edge.
 //
 // Image work uses magick-wasm (the Supabase-documented wasm path): proper filtered resize, webp
 // encode, and decode for jpeg/png/webp/gif/tiff inputs. No hotlinking survives ingest.
@@ -26,8 +27,13 @@ import {
 import { envInt, rateLimit, tooMany } from '../_shared/ratelimit.ts'
 import { captureEdgeError, logEvent } from '../_shared/observe.ts'
 import { Trace, wantsTrace } from '../_shared/trace.ts'
-import { isGoogleNoCoverArt, upgradeCoverUrl } from '../_shared/coverUrl.ts'
+import { isGoogleContentCover, isGoogleNoCoverArt, upgradeCoverUrl } from '../_shared/coverUrl.ts'
 import { olHeaders } from '../_shared/olIdentity.ts'
+import {
+  fetchPublicRemote,
+  isTrustedCoverSourceUrl,
+  UnsafeRemoteUrlError,
+} from '../_shared/publicRemoteUrl.ts'
 import { workIdentityPart } from '../_shared/workIdentity.ts'
 
 const cors = {
@@ -237,10 +243,27 @@ const publicUrl = (path: string): string => {
 // ── action: ingest ──
 
 interface IngestFields {
-  bookId: string
+  bookId?: string
+  /** Admin-only durable corpus target. Exactly one of bookId/workId is accepted. */
+  workId?: string
+  scope?: 'personal' | 'corpus'
   source: string
   sourceUrl?: string
   url?: string
+}
+
+async function isCorpusAdmin(uid: string): Promise<boolean> {
+  if (!DB_URL || !SERVICE) return false
+  try {
+    const r = await fetch(
+      `${DB_URL}/rest/v1/corpus_admins?user_id=eq.${encodeURIComponent(uid)}&select=user_id&limit=1`,
+      { headers: dbHeaders },
+    )
+    if (!r.ok) return false
+    return ((await r.json()) as { user_id?: string }[]).some((row) => row.user_id === uid)
+  } catch {
+    return false
+  }
 }
 
 /** Smallest edge a real cover can have. A 1x1 tracking/placeholder pixel is the artifact this
@@ -254,11 +277,6 @@ const SOURCES = new Set(['hardcover', 'google', 'openlibrary', 'upload', 'camera
 // Google image may be hotlinked at display size but never ingested. This is the authoritative gate —
 // the client refuses too, but the client is not the security boundary.
 const INGESTIBLE_SOURCES = new Set(['hardcover', 'openlibrary', 'upload', 'camera', 'url'])
-
-/** Host check, because the declared source is not sufficient: a Google URL wearing the label 'url'
- *  (the lazy backfill's label for pre-existing covers) is still a Google image. */
-const isGoogleHostedCover = (url: string): boolean =>
-  /(?:books\.google\.[a-z.]+|googleusercontent\.com)\/books\/content/i.test(url || '')
 
 async function handleIngest(req: Request, uid: string, tr: Trace): Promise<Response> {
   let file: Uint8Array | null = null
@@ -276,7 +294,9 @@ async function handleIngest(req: Request, uid: string, tr: Trace): Promise<Respo
       file = new Uint8Array(await f.arrayBuffer())
     }
     fields = {
-      bookId: String(form.get('bookId') ?? ''),
+      bookId: form.get('bookId') ? String(form.get('bookId')) : undefined,
+      workId: form.get('workId') ? String(form.get('workId')) : undefined,
+      scope: form.get('scope') === 'corpus' ? 'corpus' : 'personal',
       source: String(form.get('source') ?? ''),
       sourceUrl: form.get('sourceUrl') ? String(form.get('sourceUrl')) : undefined,
     }
@@ -286,8 +306,14 @@ async function handleIngest(req: Request, uid: string, tr: Trace): Promise<Respo
     tracing = wantsTrace(body)
   }
 
-  if (!fields.bookId || !/^[0-9a-f-]{16,64}$/i.test(fields.bookId))
-    return json({ error: 'bad_book_id' }, 400)
+  const corpusScope = fields.scope === 'corpus'
+  const targetId = corpusScope ? fields.workId : fields.bookId
+  if (!targetId || !/^[0-9a-f-]{16,64}$/i.test(targetId))
+    return json({ error: corpusScope ? 'bad_work_id' : 'bad_book_id' }, 400)
+  if ((corpusScope && fields.bookId) || (!corpusScope && fields.workId))
+    return json({ error: 'ambiguous_target' }, 400)
+  if (corpusScope && !(await isCorpusAdmin(uid)))
+    return json({ error: 'corpus_admin_required' }, 403)
   if (!SOURCES.has(fields.source)) return json({ error: 'bad_source' }, 400)
   // Refuse to persist a display-only source, by label OR by host.
   if (!INGESTIBLE_SOURCES.has(fields.source)) {
@@ -295,7 +321,7 @@ async function handleIngest(req: Request, uid: string, tr: Trace): Promise<Respo
     return json({ error: 'display_only_source' }, 422)
   }
   for (const candidate of [fields.url, fields.sourceUrl]) {
-    if (candidate && isGoogleHostedCover(candidate)) {
+    if (candidate && isGoogleContentCover(candidate)) {
       logEvent('info', 'covers', 'ingest_refused_display_only', {
         uid,
         source: fields.source,
@@ -315,20 +341,59 @@ async function handleIngest(req: Request, uid: string, tr: Trace): Promise<Respo
     // Fetch the LARGEST the source offers (Google zoom=0, OL -L) so the stored asset isn't a 128px
     // thumbnail; record the upgraded URL as provenance so a re-sharpen never re-fetches the small one.
     const url = upgradeCoverUrl(raw, 'full')
-    fetchedUrl = url
     sourceUrl = sourceUrl ? upgradeCoverUrl(sourceUrl, 'full') : url
     let r: Response
     try {
       // olHeaders on EVERY source fetch, not just OL hosts: this URL is reader-supplied and can be
       // covers.openlibrary.org, and identifying our traffic to the other hosts costs nothing. One
       // anonymous OL request from this call site would re-classify the whole IP's tier.
-      r = await tr.time('covers.fetchSource', () =>
-        fetch(url, { headers: olHeaders({ Accept: 'image/*' }), redirect: 'follow' }),
+      const fetched = await tr.time('covers.fetchSource', () =>
+        fetchPublicRemote(
+          url,
+          { headers: olHeaders({ Accept: 'image/*' }) },
+          {
+            resolveDns: async (hostname, recordType) => {
+              try {
+                return await Deno.resolveDns(hostname, recordType)
+              } catch (error) {
+                // A legitimate hostname may publish only one address family. Absence of that DNS
+                // record is an empty answer; resolver/transport failures still propagate closed.
+                if (error instanceof Deno.errors.NotFound) return []
+                throw error
+              }
+            },
+            fetcher: (input, init) => fetch(input, init),
+            isAllowedUrl: (candidate) =>
+              isTrustedCoverSourceUrl(candidate, Deno.env.get('SUPABASE_URL')),
+          },
+        ),
       )
-    } catch {
+      r = fetched.response
+      fetchedUrl = fetched.finalUrl
+    } catch (error) {
+      if (error instanceof UnsafeRemoteUrlError) {
+        logEvent('warn', 'covers', 'ingest_refused_unsafe_url', {
+          uid,
+          source: fields.source,
+          reason: error.reason,
+        })
+        return json({ error: 'unsafe_url', reason: error.reason }, 422)
+      }
       return json({ error: 'fetch_failed' }, 422)
     }
     if (!r.ok) return json({ error: 'fetch_failed', status: r.status }, 422)
+    // Redirects remain supported for ordinary provider/CDN URLs, but their terminal host is a new
+    // validation boundary. A non-Google URL must not redirect Google Books bytes into permanent
+    // personal or corpus Storage; reject before the response body is read.
+    fetchedUrl ||= r.url || url
+    if (isGoogleContentCover(fetchedUrl)) {
+      logEvent('info', 'covers', 'ingest_refused_display_only', {
+        uid,
+        source: fields.source,
+        host: 'google_redirect',
+      })
+      return json({ error: 'display_only_source' }, 422)
+    }
     const len = Number(r.headers.get('content-length') ?? 0)
     if (len > MAX_INPUT_BYTES) return json({ error: 'too_large', maxBytes: MAX_INPUT_BYTES }, 413)
     const buf = new Uint8Array(await tr.time('covers.readBody', () => r.arrayBuffer()))
@@ -342,7 +407,7 @@ async function handleIngest(req: Request, uid: string, tr: Trace): Promise<Respo
   if (!sniffed) return json({ error: 'not_an_image' }, 415)
 
   const rev = Date.now().toString(36)
-  const base = `u/${uid}/${fields.bookId}`
+  const base = corpusScope ? `w/${targetId}` : `u/${uid}/${targetId}`
 
   try {
     const n = await normalizeImage(file, tr)

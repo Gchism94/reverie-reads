@@ -26,7 +26,8 @@ export const isCoverSource = (s: unknown): s is CoverSource =>
  * Ingestible today:
  *   · openlibrary — the most defensible external source (CC0 record; see the doc's residual-risk note)
  *   · upload / camera — unambiguously the reader's own copy, in their own scoped path
- *   · url — a link the reader deliberately pasted, subject to the HOST check below
+ *   · url — a trusted-provider link, subject to the exact HOST check below; every other pasted
+ *     link remains a display-time hotlink and is never fetched by the server
  *   · hardcover — unchanged by this pass; the doc flags its license as asserted rather than granted,
  *     but that is a separate decision (remediation item 4), not this one's to make silently.
  */
@@ -53,7 +54,17 @@ export const isIngestibleCoverSource = (s: CoverSource): boolean =>
 export function isIngestibleCoverUrl(url: string): boolean {
   if (!url) return false
   if (isStoredCoverUrl(url)) return false // already ours; nothing to fetch
-  return !isGoogleContentCover(url)
+  try {
+    const parsed = new URL(url)
+    if (parsed.protocol !== 'https:') return false
+    const hostname = parsed.hostname.toLowerCase()
+    return (
+      (hostname === 'covers.openlibrary.org' && parsed.pathname.startsWith('/b/')) ||
+      hostname === 'assets.hardcover.app'
+    )
+  } catch {
+    return false
+  }
 }
 
 /** Both gates at once — what every ingest entry point should ask before calling the pipeline. */
@@ -65,9 +76,22 @@ export const isStoredCoverUrl = (url: string): boolean =>
   url.includes('/storage/v1/object/public/covers/')
 
 /** The Google Books `books/content` endpoint (its imageLinks host + the googleusercontent mirror) —
- *  the only cover host whose `zoom` we rewrite, and the one that serves a stock "no image" plate. */
-const GOOGLE_CONTENT_RE = /(?:books\.google\.[a-z.]+|googleusercontent\.com)\/books\/content/i
-export const isGoogleContentCover = (url: string): boolean => GOOGLE_CONTENT_RE.test(url)
+ *  the only cover host whose `zoom` we rewrite, and the one that serves a stock "no image" plate.
+ *  Parse the URL and allow exact observed hosts: substring/partial-host regexes would treat an
+ *  attacker-controlled lookalike such as books.google.evil.example as Google-owned artwork. */
+const GOOGLE_CONTENT_HOSTS = new Set(['books.google.com', 'books.googleusercontent.com'])
+export function isGoogleContentCover(url: string): boolean {
+  try {
+    const parsed = new URL(url)
+    return (
+      (parsed.protocol === 'https:' || parsed.protocol === 'http:') &&
+      GOOGLE_CONTENT_HOSTS.has(parsed.hostname.toLowerCase()) &&
+      (parsed.pathname === '/books/content' || parsed.pathname.startsWith('/books/content/'))
+    )
+  } catch {
+    return false
+  }
+}
 
 /**
  * Google Books answers a missing cover with a generic "image not available" plate served at **HTTP 200**

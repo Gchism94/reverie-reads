@@ -48,11 +48,11 @@ export type SetCoverError =
 /**
  * Set a book's cover. Two outcomes by design (docs/reference/reverie-metadata-sourcing.md §Covers):
  *
- *  · INGEST — Open Library, upload, camera, a pasted link, Hardcover: the bytes go through the
- *    pipeline and are stored in the reader's own Storage path, with provenance.
- *  · HOTLINK — Google Books: usable as an edition candidate and rendered at display size, but its
- *    terms forbid permanent copies, so we keep the URL and store nothing. The reader's pick still
- *    works and still counts as their choice; only the bytes stay where they are.
+ *  · INGEST — Open Library, upload, camera, and Hardcover: the bytes go through the pipeline and
+ *    are stored in the reader's own Storage path, with provenance.
+ *  · HOTLINK — Google Books and unreviewed pasted hosts are rendered at display size, but never
+ *    fetched by the server. The reader's pick still works and still counts as their choice; only
+ *    the bytes stay where they are.
  *
  * The hotlink branch is what keeps a Google edition from becoming a dead end in the sheet — the
  * alternative was offering a candidate that errors when picked.
@@ -65,8 +65,8 @@ export function useSetCover() {
     mutationFn: async ({ book, source, file, url, sourceUrl, userChosen = true }: SetCoverInput) => {
       const chosen = { coverUserChosen: true, coverConfidence: undefined } as const
 
-      // Display-only: record the reference, fetch nothing. Judged by host as well as by label,
-      // since the lazy backfill's 'url' label can carry a Google image.
+      // Display-only: record the reference, fetch nothing. Judged by exact host as well as by label,
+      // since the lazy backfill's 'url' label can carry Google or another unreviewed remote image.
       if (!file && !mayIngestCover(source, url)) {
         const display = upgradeCoverUrl(url ?? '', 'full')
         if (!display) throw new Error('failed')

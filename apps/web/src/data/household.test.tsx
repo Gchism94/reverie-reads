@@ -188,7 +188,7 @@ describe('household query identity and RPC boundary', () => {
           household_tags: ['found family'],
           household_tropes: [
             { id: 'trope-1', name: ' Only One Bed ', emphasis: 'pinned' },
-            { name: 'Found Family', emphasis: 'unexpected-value' },
+            { name: 'Found Family', emphasis: 'unexpected-value', scope: 'corpus' },
             { name: '   ' },
             'not-an-object',
           ],
@@ -217,7 +217,7 @@ describe('household query identity and RPC boundary', () => {
       householdTags: ['found family'],
       householdTropes: [
         { id: 'trope-1', name: 'Only One Bed', emphasis: 'pinned' },
-        { name: 'Found Family', emphasis: 'present' },
+        { name: 'Found Family', emphasis: 'present', scope: 'corpus' },
       ],
       owners: [{
         userId: 'reader-b',

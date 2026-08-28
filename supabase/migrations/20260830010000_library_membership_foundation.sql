@@ -40,6 +40,16 @@ $$;
 
 revoke all on function public.library_work_key(text, text)
   from public, anon, authenticated, service_role;
+-- `works_library_work_key_idx` evaluates this expression during every corpus insert. Corpus writes
+-- are service-managed, so the service role needs this narrow helper even when callers supply an
+-- explicit work_key; readers still receive no direct execute grant.
+grant execute on function public.library_work_key(text, text) to service_role;
+
+-- Fallback identity is intentionally non-unique: duplicate title/author pairs are reconciliation
+-- cases. Index the immutable expression so both this backfill and future one-book resolution avoid
+-- rebuilding every corpus key for each lookup as the shared catalog grows.
+create index works_library_work_key_idx
+  on public.works (public.library_work_key(title, author_text)) include (id);
 
 alter table public.books
   add column corpus_work_id uuid references public.works (id) on delete restrict,
@@ -203,6 +213,47 @@ $$;
 revoke all on function public.lock_library_isbns(text[])
   from public, anon, authenticated, service_role;
 
+-- A personal-book insert and the owner-run reconciliation must agree on whether the insert belongs
+-- to the reviewed snapshot. Ordinary inserts share a transaction-scoped owner fence, preserving
+-- normal same-reader concurrency. Reconciliation takes the exclusive form for its complete,
+-- sorted owner set before locking any book rows; an earlier insert therefore commits and is seen
+-- by the fingerprint, while a later insert waits until reconciliation has committed.
+create function public.lock_library_book_owner_insert(p_owner uuid)
+returns void
+language sql
+security definer
+set search_path = ''
+as $$
+  select pg_catalog.pg_advisory_xact_lock_shared(
+    pg_catalog.hashtextextended('reverie:book-owner:' || p_owner::text, 0)
+  );
+$$;
+
+revoke all on function public.lock_library_book_owner_insert(uuid)
+  from public, anon, authenticated, service_role;
+
+create function public.lock_library_book_owners_reconciliation(p_owners uuid[])
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  owner_id uuid;
+begin
+  for owner_id in
+    select distinct value from unnest(coalesce(p_owners, '{}')) value order by value
+  loop
+    perform pg_catalog.pg_advisory_xact_lock(
+      pg_catalog.hashtextextended('reverie:book-owner:' || owner_id::text, 0)
+    );
+  end loop;
+end;
+$$;
+
+revoke all on function public.lock_library_book_owners_reconciliation(uuid[])
+  from public, anon, authenticated, service_role;
+
 -- Keep direct corpus writers on the same boundary as personal-book resolution. Existing ambiguous
 -- ISBN data remains visible to the reconciliation resolver; only a new assignment that would add a
 -- second ordinary owner for an ISBN is refused.
@@ -316,34 +367,91 @@ revoke all on function public.rekey_legacy_library_work_keys()
 
 select public.rekey_legacy_library_work_keys();
 
+-- Reuse one corpus identity snapshot throughout the backfill. The expression index already paid
+-- the Unicode-normalization cost; the ordered index scan below reads that stored value rather than
+-- recomputing it in every later statement. Newly inserted provisional/reconciliation works are
+-- appended to the snapshot explicitly, so ambiguity counts remain identical to live-table counts.
+create temporary table library_work_fallback_owners (
+  work_id uuid primary key,
+  fallback_key text not null
+) on commit drop;
+create index library_work_fallback_owners_key_idx
+  on library_work_fallback_owners (fallback_key, work_id);
+
+set local enable_seqscan = off;
+insert into library_work_fallback_owners (work_id, fallback_key)
+select w.id, public.library_work_key(w.title, w.author_text)
+from public.works w
+order by public.library_work_key(w.title, w.author_text);
+set local enable_seqscan = on;
+
+create temporary table library_work_isbn_owners (
+  work_id uuid not null,
+  isbn text not null,
+  primary key (work_id, isbn)
+) on commit drop;
+create index library_work_isbn_owners_isbn_idx
+  on library_work_isbn_owners (isbn, work_id);
+
+insert into library_work_isbn_owners (work_id, isbn)
+select distinct w.id, identifier.isbn
+from public.works w
+cross join lateral unnest(w.isbns) identifier(isbn);
+
+-- Personal identity is likewise calculated once and then reused by all three decisions below.
+-- This also guarantees that every stage sees the same title/author/ISBN snapshot.
+create temporary table library_book_identities on commit drop as
+select
+  b.id as book_id,
+  b.owner_id,
+  b.title,
+  coalesce(
+    nullif(b.authors_display, ''), trim(concat_ws(' ', b.author_first, b.author_last))
+  ) as author,
+  b.series,
+  b.position,
+  b.series_count,
+  b.status,
+  b.pages,
+  b.pub_y,
+  b.pub_m,
+  b.pub_d,
+  b.genre,
+  b.subgenre,
+  b.subgenres,
+  b.genres,
+  b.updated_at,
+  regexp_replace(coalesce(b.isbn, ''), '[^0-9]', '', 'g') as normalized_isbn,
+  public.library_work_key(
+    b.title,
+    coalesce(
+      nullif(b.authors_display, ''), trim(concat_ws(' ', b.author_first, b.author_last))
+    )
+  ) as fallback_key
+from public.books b;
+alter table library_book_identities add primary key (book_id);
+create index library_book_identities_fallback_idx
+  on library_book_identities (fallback_key, book_id);
+create index library_book_identities_isbn_idx
+  on library_book_identities (normalized_isbn, book_id);
+
 -- Every legacy personal row gets a corpus anchor. This is deliberately INSERT-only for existing
 -- works: a reader copy never overwrites curated corpus metadata. Personal covers and tags are not
 -- published by deployment; only the objective bibliographic allowlist seeds a provisional work.
-with candidates as (
-  select distinct on (work_key)
-    b.owner_id,
-    public.library_work_key(
-      b.title,
-      coalesce(nullif(b.authors_display, ''), trim(concat_ws(' ', b.author_first, b.author_last)))
-    ) as work_key,
-    b.title,
-    coalesce(nullif(b.authors_display, ''), trim(concat_ws(' ', b.author_first, b.author_last))) as author,
-    b.series,
-    b.position,
-    b.series_count,
-    b.status,
-    b.pages,
-    b.pub_y,
-    b.pub_m,
-    b.pub_d,
-    b.genre,
-    b.subgenre,
-    b.subgenres,
-    b.genres,
-    b.isbn,
-    regexp_replace(coalesce(b.isbn, ''), '[^0-9]', '', 'g') as normalized_isbn
-  from public.books b
-  order by work_key, b.updated_at desc, b.id
+with candidates as materialized (
+  select distinct on (fallback_key)
+    identity.*,
+    identity.fallback_key as work_key
+  from library_book_identities identity
+  order by fallback_key, updated_at desc, book_id
+),
+existing_isbns as materialized (
+  select distinct isbn
+  from library_work_isbn_owners
+),
+existing_fallback_keys as materialized (
+  select distinct fallback_key as work_key
+  from library_work_fallback_owners
 )
 insert into public.works (
   work_key, title, contributors, author_text, series, position, series_count, status, pages,
@@ -378,32 +486,58 @@ select
   'legacy_personal_backfill',
   c.owner_id
 from candidates c
-where not exists (
-  select 1 from public.works existing
-  where (
-    c.normalized_isbn ~ '^[0-9]{13}$'
-    and c.normalized_isbn = any(existing.isbns)
-  ) or public.library_work_key(existing.title, existing.author_text) = c.work_key
-)
+left join existing_isbns isbn_match
+  on c.normalized_isbn ~ '^[0-9]{13}$'
+  and isbn_match.isbn = c.normalized_isbn
+left join existing_fallback_keys fallback_match on fallback_match.work_key = c.work_key
+where isbn_match.isbn is null and fallback_match.work_key is null
 on conflict (work_key) do nothing;
+
+insert into library_work_fallback_owners (work_id, fallback_key)
+select w.id, public.library_work_key(w.title, w.author_text)
+from public.works w
+left join library_work_fallback_owners known on known.work_id = w.id
+where known.work_id is null;
+
+insert into library_work_isbn_owners (work_id, isbn)
+select distinct w.id, identifier.isbn
+from public.works w
+cross join lateral unnest(w.isbns) identifier(isbn)
+left join library_work_isbn_owners known
+  on known.work_id = w.id and known.isbn = identifier.isbn
+where known.work_id is null;
 
 -- Ambiguous ISBN or title+author fallbacks get a per-row reconciliation anchor. This intentionally
 -- refuses to coalesce uncertain matches; an owner-reviewed, target-scoped repair can merge them
--- later without deployment ever attaching a personal row to the wrong global work.
+-- later without deployment ever attaching a personal row to the wrong global work. Identity maps
+-- are materialized once: rescanning the whole corpus for every personal row exceeds the production
+-- statement budget even though the same set-based decision completes comfortably within it. The
+-- zero-ISBN/zero-fallback case is also a refusal: it can occur when one fallback-group candidate is
+-- suppressed by its unique ISBN while a differently-ISBN'd sibling has no remaining target.
+with work_isbn_counts as materialized (
+  select isbn, count(*)::int as match_count
+  from library_work_isbn_owners
+  group by isbn
+),
+work_fallback_counts as materialized (
+  select fallback_key, count(*)::int as match_count
+  from library_work_fallback_owners
+  group by fallback_key
+)
 insert into public.works (
   work_key, title, contributors, author_text, series, position, series_count, status, pages,
   pub_y, pub_m, pub_d, genre, subgenre, subgenres, genres,
   metadata_status, creation_source, created_by
 )
 select
-  'reconcile:' || b.id::text,
+  'reconcile:' || b.book_id::text,
   b.title,
-  case when a.author = '' then '[]'::jsonb
+  case when b.author = '' then '[]'::jsonb
     else jsonb_build_array(jsonb_build_object(
-      'name', a.author, 'role', 'author', 'position', 0
+      'name', b.author, 'role', 'author', 'position', 0
     ))
   end,
-  a.author,
+  b.author,
   b.series,
   b.position,
   b.series_count,
@@ -419,53 +553,74 @@ select
   'provisional',
   'reconciliation',
   b.owner_id
-from public.books b
-cross join lateral (
-  select coalesce(
-    nullif(b.authors_display, ''), trim(concat_ws(' ', b.author_first, b.author_last))
-  ) as author
-) a
-cross join lateral (
-  select regexp_replace(coalesce(b.isbn, ''), '[^0-9]', '', 'g') as isbn,
-    public.library_work_key(b.title, a.author) as work_key
-) identity
-cross join lateral (
-  select
-    case when identity.isbn ~ '^[0-9]{13}$' then (
-      select count(*)::int from public.works w where identity.isbn = any(w.isbns)
-    ) else 0 end as isbn_matches,
-    (
-      select count(*)::int from public.works w
-      where public.library_work_key(w.title, w.author_text) = identity.work_key
-    ) as fallback_matches
-) matches
-where matches.isbn_matches > 1
-  or (matches.isbn_matches = 0 and matches.fallback_matches > 1)
+from library_book_identities b
+left join work_isbn_counts isbn_matches
+  on b.normalized_isbn ~ '^[0-9]{13}$'
+  and isbn_matches.isbn = b.normalized_isbn
+left join work_fallback_counts fallback_matches
+  on fallback_matches.fallback_key = b.fallback_key
+where coalesce(isbn_matches.match_count, 0) > 1
+  or (
+    coalesce(isbn_matches.match_count, 0) = 0
+    and coalesce(fallback_matches.match_count, 0) <> 1
+  )
 on conflict (work_key) do nothing;
 
-update public.books b
-set corpus_work_id = coalesce(
-    (
-      select (array_agg(w.id order by w.id))[1] from public.works w
-      where regexp_replace(coalesce(b.isbn, ''), '[^0-9]', '', 'g') ~ '^[0-9]{13}$'
-        and regexp_replace(b.isbn, '[^0-9]', '', 'g') = any(w.isbns)
-      having count(*) = 1
-    ),
-    (
-      select w.id from public.works w where w.work_key = 'reconcile:' || b.id::text
-    ),
-    (
-      select (array_agg(w.id order by w.id))[1] from public.works w
-      where public.library_work_key(w.title, w.author_text) = public.library_work_key(
-        b.title,
-        coalesce(
-          nullif(b.authors_display, ''), trim(concat_ws(' ', b.author_first, b.author_last))
-        )
-      )
-      having count(*) = 1
-    )
+insert into library_work_fallback_owners (work_id, fallback_key)
+select w.id, public.library_work_key(w.title, w.author_text)
+from public.works w
+left join library_work_fallback_owners known on known.work_id = w.id
+where known.work_id is null;
+
+-- Compute every binding separately from the write. Besides keeping the decision inspectable, this
+-- ensures neither the corpus aggregation nor the row update consumes the whole per-statement budget.
+create temporary table library_book_corpus_bindings (
+  book_id uuid primary key,
+  work_id uuid not null
+) on commit drop;
+
+with unique_isbn_targets as materialized (
+  select isbn, (array_agg(work_id order by work_id))[1] as work_id
+  from library_work_isbn_owners
+  group by isbn
+  having count(*) = 1
+),
+unique_fallback_targets as materialized (
+  select fallback_key, (array_agg(work_id order by work_id))[1] as work_id
+  from library_work_fallback_owners
+  group by fallback_key
+  having count(*) = 1
+)
+insert into library_book_corpus_bindings (book_id, work_id)
+select
+  identity.book_id,
+  coalesce(
+    isbn_target.work_id,
+    reconciliation_target.id,
+    fallback_target.work_id
   )
-where b.corpus_work_id is null;
+from library_book_identities identity
+left join unique_isbn_targets isbn_target
+  on identity.normalized_isbn ~ '^[0-9]{13}$'
+  and isbn_target.isbn = identity.normalized_isbn
+left join public.works reconciliation_target
+  on reconciliation_target.work_key = 'reconcile:' || identity.book_id::text
+left join unique_fallback_targets fallback_target
+  on fallback_target.fallback_key = identity.fallback_key;
+
+-- This is an internal identity link, not a reader edit. Avoid rewriting every book's recency stamp;
+-- the enrichment invalidator is also irrelevant because none of its title/author/ISBN keys change.
+-- A migration failure rolls these trigger-state changes back with the backfill transaction.
+alter table public.books disable trigger books_set_updated_at;
+alter table public.books disable trigger books_enriched_stamp_invalidate;
+
+update public.books b
+set corpus_work_id = binding.work_id
+from library_book_corpus_bindings binding
+where b.id = binding.book_id and b.corpus_work_id is null;
+
+alter table public.books enable trigger books_enriched_stamp_invalidate;
+alter table public.books enable trigger books_set_updated_at;
 
 alter table public.books alter column corpus_work_id set not null;
 
@@ -496,6 +651,10 @@ declare
   safe_cover text;
   safe_cover_option jsonb;
 begin
+  -- This is deliberately the first lock in every personal-book insert. It must precede the ISBN,
+  -- corpus-work, row/FK, and owned-household boundaries below.
+  perform public.lock_library_book_owner_insert(new.owner_id);
+
   author_name := coalesce(
     nullif(new.authors_display, ''),
     trim(concat_ws(' ', new.author_first, new.author_last))

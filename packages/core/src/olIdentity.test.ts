@@ -75,6 +75,15 @@ const REGISTRY: Record<
     fetches: 0,
     dataOnly: [{ marker: 'openlibrary.org', reason: 'the identity module’s own doc comment' }],
   },
+  '_shared/publicRemoteUrl.ts': {
+    fetches: 0,
+    dataOnly: [
+      {
+        marker: 'covers.openlibrary.org',
+        reason: 'the exact trusted-origin classifier; the actual fetch remains in covers/index.ts',
+      },
+    ],
+  },
 }
 
 /** Files under enrich/, covers/ and _shared/ — the scan surface the registry must cover. */
@@ -143,7 +152,7 @@ describe('every openlibrary.org occurrence is registered — fetch site or decla
   it('covers/index.ts: the source-image fetch carries olHeaders (it can hit covers.openlibrary.org)', () => {
     const src = read('covers/index.ts')
     expect(src).toMatch(
-      /fetch\(url, \{ headers: olHeaders\(\{ Accept: 'image\/\*' \}\), redirect: 'follow' \}\)/,
+      /fetchPublicRemote\([\s\S]*?url,[\s\S]*?\{ headers: olHeaders\(\{ Accept: 'image\/\*' \}\) \}/,
     )
   })
 

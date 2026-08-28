@@ -137,6 +137,24 @@ export const USER_OWNED_TABLES: OwnedTable[] = [
     },
   },
   {
+    table: 'corpus_admins',
+    owner: 'user_id',
+    collective: true,
+    plan: {
+      backup: false,
+      why: 'A service-managed authorization grant, not reader-authored data. Restoring it would let a personal backup self-elevate in another account or environment.',
+    },
+  },
+  {
+    table: 'work_tropes',
+    owner: 'added_by',
+    collective: true,
+    plan: {
+      backup: false,
+      why: 'An accepted corpus trope is shared, additive metadata with its own audit attribution. It stays with the work when the contributing reader removes a personal or household assignment.',
+    },
+  },
+  {
     table: 'clubs',
     owner: 'created_by',
     plan: { backup: false, why: 'A club is collective, not owned by one reader; recreating it on restore would fabricate a club its other members never joined.' },

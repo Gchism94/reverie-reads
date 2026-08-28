@@ -115,6 +115,18 @@ describe('Google "no image" plate detection (the #56 white-card regression)', ()
     )
     expect(isGoogleContentCover('https://covers.openlibrary.org/b/id/9-L.jpg')).toBe(false)
     expect(isGoogleContentCover('https://assets.hardcover.app/x.jpeg')).toBe(false)
+    expect(
+      isGoogleContentCover('https://books.google.evil.example/books/content?id=attacker'),
+    ).toBe(false)
+    expect(
+      isGoogleContentCover('https://books.googleusercontent.com.evil.example/books/content?id=x'),
+    ).toBe(false)
+    expect(isGoogleContentCover('https://evil.example/books.google.com/books/content?id=x')).toBe(
+      false,
+    )
+    expect(isGoogleContentCover('https://books.google.com@evil.example/books/content?id=x')).toBe(
+      false,
+    )
     expect(isGoogleContentCover('')).toBe(false)
   })
 
@@ -182,11 +194,16 @@ describe('ingest posture — Google is display-time only', () => {
     expect(mayIngestCover('openlibrary', GOOGLE)).toBe(false)
   })
 
-  it('allows the defensible sources', () => {
+  it('allows only the reviewed durable remote sources', () => {
     expect(isIngestibleCoverUrl(OL)).toBe(true)
     expect(mayIngestCover('openlibrary', OL)).toBe(true)
+    expect(isIngestibleCoverUrl('https://assets.hardcover.app/editions/1/cover.jpeg')).toBe(true)
     expect(mayIngestCover('camera')).toBe(true) // file upload, no URL
     expect(mayIngestCover('upload')).toBe(true)
+    expect(
+      mayIngestCover('url', 'https://books.google.evil.example/books/content?id=reader-choice'),
+    ).toBe(false)
+    expect(mayIngestCover('url', 'https://reader-controlled.example/cover.webp')).toBe(false)
   })
 
   it('treats an already-stored URL as nothing to ingest', () => {

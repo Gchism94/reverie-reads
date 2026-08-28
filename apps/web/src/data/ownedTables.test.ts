@@ -1,6 +1,10 @@
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import {
+  RECONCILIATION_BACKUP_PRIMARY_KEYS,
+  RECONCILIATION_HOUSEHOLD_BACKUP_SPECS,
+} from '../../../../scripts/household-reconciliation-lib'
 import { USER_OWNED_TABLES } from './ownedTables'
 
 // Structural guards over the SCHEMA, read from supabase/migrations rather than restated here — a
@@ -13,6 +17,10 @@ import { USER_OWNED_TABLES } from './ownedTables'
 // expected delete statements would ever notice.
 
 const MIGRATIONS = join(__dirname, '../../../../supabase/migrations')
+const RECONCILIATION_SCRIPT = readFileSync(
+  join(__dirname, '../../../../scripts/reconcile-chism-household.mjs'),
+  'utf8',
+)
 
 interface Fk {
   target: string
@@ -162,5 +170,106 @@ describe('no user-owned table may go unregistered', () => {
     for (const t of USER_OWNED_TABLES) {
       if (!t.plan.backup) expect(t.plan.why.length, `${t.table} is excluded without a reason`).toBeGreaterThan(20)
     }
+  })
+
+  it('gives every reconciliation-backup table a stable primary-key order', () => {
+    expect(Object.keys(RECONCILIATION_BACKUP_PRIMARY_KEYS).sort()).toEqual(
+      USER_OWNED_TABLES.map((entry) => entry.table).sort(),
+    )
+    for (const entry of USER_OWNED_TABLES) {
+      expect(
+        RECONCILIATION_BACKUP_PRIMARY_KEYS[entry.table]?.length,
+        `${entry.table} cannot be deterministically serialized without a total order`,
+      ).toBeGreaterThan(0)
+    }
+  })
+
+  it('declares a total order for every collective household rollback section', () => {
+    expect(RECONCILIATION_HOUSEHOLD_BACKUP_SPECS).toEqual([
+      { key: 'households', table: 'households', primaryKey: ['id'] },
+      {
+        key: 'members',
+        table: 'household_members',
+        primaryKey: ['household_id', 'user_id'],
+      },
+      { key: 'works', table: 'household_works', primaryKey: ['household_id', 'work_id'] },
+      { key: 'shares', table: 'household_book_shares', primaryKey: ['book_id'] },
+      {
+        key: 'enrichment',
+        table: 'household_work_enrichment',
+        primaryKey: ['household_id', 'work_id'],
+      },
+    ])
+  })
+
+  it('captures every rollback section inside one read-only repeatable-read snapshot', () => {
+    const start = RECONCILIATION_SCRIPT.indexOf('function backupOwnerState')
+    const end = RECONCILIATION_SCRIPT.indexOf('async function currentPlan', start)
+    const block = RECONCILIATION_SCRIPT.slice(start, end)
+    expect(start).toBeGreaterThan(-1)
+    expect(end).toBeGreaterThan(start)
+    expect(block).toContain('begin isolation level repeatable read read only')
+    expect(block).toContain('execFileSync(')
+    expect(block).toContain('snapshotAggregateSql(')
+    expect(block).toContain("'ownerTables', jsonb_build_object")
+    expect(block).toContain("'household', jsonb_build_object")
+    expect(block).not.toContain('pageQuery(')
+    expect(block).not.toContain('Promise.all')
+  })
+
+  it('uses true primary-key ordering for personal and collective snapshot rows', () => {
+    const start = RECONCILIATION_SCRIPT.indexOf('function backupOwnerState')
+    const end = RECONCILIATION_SCRIPT.indexOf('async function currentPlan', start)
+    const block = RECONCILIATION_SCRIPT.slice(start, end)
+    expect(start).toBeGreaterThan(-1)
+    expect(end).toBeGreaterThan(start)
+    expect(block).toContain('orderColumns: [entry.owner, ...primaryKey]')
+    expect(block).toContain('orderColumns: entry.primaryKey')
+    expect(block).toContain('reconciliationFence')
+    expect(block).toContain('booksFingerprint')
+    expect(block).toContain('householdWorksFingerprint')
+  })
+
+  it('requires the complete displayed roster and passes the snapshot fence to the write RPC', () => {
+    expect(RECONCILIATION_SCRIPT).toContain(
+      'the reviewed household roster must contain exactly Account A and Account B',
+    )
+    expect(RECONCILIATION_SCRIPT).toContain(
+      'p_expected_roster: snapshot.reconciliationFence.roster',
+    )
+    expect(RECONCILIATION_SCRIPT).toContain(
+      'p_expected_books_fingerprint: snapshot.reconciliationFence.booksFingerprint',
+    )
+    expect(RECONCILIATION_SCRIPT).toContain(
+      'snapshot.reconciliationFence.householdWorksFingerprint',
+    )
+  })
+
+  it('binds the write plan to the same snapshot and refuses a changed preflight', () => {
+    expect(RECONCILIATION_SCRIPT).toContain("'planningWorks', ${snapshotPlanningWorksSql}")
+    expect(RECONCILIATION_SCRIPT).toContain('works: snapshotState.planningWorks')
+    expect(RECONCILIATION_SCRIPT).toContain('books: snapshot.ownerTables.books')
+    expect(RECONCILIATION_SCRIPT).toContain('householdWorks: snapshot.household.works')
+    expect(RECONCILIATION_SCRIPT).toContain(
+      'reconciliation inputs changed after preflight; review a new dry run',
+    )
+    expect(RECONCILIATION_SCRIPT).toContain('snapshotPlan.resolved')
+    expect(RECONCILIATION_SCRIPT).toContain('await main().catch')
+    expect(RECONCILIATION_SCRIPT).toContain('chmodSync(artifactDir, 0o700)')
+    expect(RECONCILIATION_SCRIPT).toContain('chmodSync(path, 0o600)')
+  })
+
+  it('verifies snapshot work preservation and keeps database credentials out of psql argv', () => {
+    expect(RECONCILIATION_SCRIPT).toContain('missingSnapshotCorpusWorkIds')
+    expect(RECONCILIATION_SCRIPT).toContain('snapshotState.planningWorks')
+    expect(RECONCILIATION_SCRIPT).toContain('postWorkIds.has(workId)')
+    expect(RECONCILIATION_SCRIPT).toContain('corpusCountBefore: snapshot.corpusCount')
+    expect(RECONCILIATION_SCRIPT).toContain('corpusCountDelta: post.corpusCount - snapshot.corpusCount')
+    expect(RECONCILIATION_SCRIPT).not.toContain('post.corpusCount !== corpusCount')
+    expect(RECONCILIATION_SCRIPT).not.toContain('post.corpusCount !== snapshot.corpusCount')
+    expect(RECONCILIATION_SCRIPT).toContain('psqlConnectionBoundary(databaseUrl)')
+    expect(RECONCILIATION_SCRIPT).toContain('delete childEnvironment.SUPABASE_DB_URL')
+    expect(RECONCILIATION_SCRIPT).toContain('connection.databaseArgument')
+    expect(RECONCILIATION_SCRIPT).not.toMatch(/\[\s*databaseUrl,\s*['"]-X['"]/)
   })
 })
