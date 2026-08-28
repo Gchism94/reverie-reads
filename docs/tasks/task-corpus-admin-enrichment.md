@@ -2,9 +2,11 @@
 
 Status: **the reviewed corpus-admin history and bounded membership backfill merged in PR #364 at
 `0bd76a5`. The owner reports guarded production deployment applied `20260830010000` followed by
-`20260831010000`; current bindings, triggers, owner fences, RPCs, and privileges still require the
-owner-run read-only postcondition report. Administrator grants, private reconciliation, production
-writes, and post-write smoke checks remain owner-gated and unperformed by Code.**
+`20260831010000`. The owner-run read-only report found unintended anonymous/authenticated
+`work_tropes` table privileges. The forward-only `20260901010000` ACL correction is locally
+verified but still requires independent review and owner deployment. Administrator grants, private
+reconciliation, production writes, and post-write smoke checks remain owner-gated and unperformed
+by Code.**
 
 ## Objective
 
@@ -193,7 +195,7 @@ dry-run or write planning.
 - Full pgTAP: 27 files and 638 assertions passed. The focused corpus administration, cover recovery,
   host validation, account-cascade, snapshot-fence, and complete-roster contract passed all 68
   assertions after the clean rebuild.
-- Core/web unit suites: 81 + 71 files and 2,419 + 626 assertions passed.
+- Core/web unit suites: 81 + 71 files and 2,420 + 626 assertions passed.
 - The deterministic 17-scenario multi-session database harness passed reconciliation edit, earlier
   insert, post-revalidation insert, and complete-roster races, along with the existing
   authorization, ISBN, and final-unlink cases.
@@ -220,6 +222,18 @@ dry-run or write planning.
   runtime also refused arbitrary and private targets before fetch, followed the legitimate Open
   Library → Internet Archive chain, and stored the resulting image. Temporary accounts, books, and
   objects were removed after the check.
+
+### Forward ACL correction — 2026-08-28
+
+- Fresh reset applied `20260901010000` after the two already-deployed migrations.
+- The focused ACL pgTAP deliberately granted all four checked operations through the legacy
+  production exposure shape, re-applied the idempotent repair, and passed all 12 role/operation
+  assertions.
+- Full pgTAP passed 650 assertions across 28 files. The expanded owner-run report returned 43/43
+  invariants true and printed each `work_tropes` role's `SELECT`/`INSERT`/`UPDATE`/`DELETE` state.
+- The migration source contract passed and requires the exact four-role reset followed by only
+  authenticated `SELECT` and service-role `ALL`. Independent review and owner deployment remain
+  mandatory; Code did neither.
 
 ## Completion gate
 

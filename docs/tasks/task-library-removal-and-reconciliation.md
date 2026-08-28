@@ -2,10 +2,11 @@
 
 Status: **membership/removal foundation merged in PR #361 and its reviewed bounded-backfill plus
 corpus-admin follow-up merged in PR #364 at `0bd76a5`. The owner reports guarded production
-deployment applied `20260830010000` followed by `20260831010000`; that command result is not proof
-of database postconditions. The owner-run read-only rollout report, private checksum-bound dry run,
-transaction-consistent backup approval, owner-executed reconciliation, and post-write smoke checks
-remain pending.**
+deployment applied `20260830010000` followed by `20260831010000`. The owner-run read-only report
+then found unintended anonymous/authenticated table privileges on `work_tropes`; the forward-only
+`20260901010000` ACL correction is locally verified but requires independent review and owner
+deployment before the report can pass. Private checksum-bound dry run, transaction-consistent
+backup approval, owner-executed reconciliation, and post-write smoke checks remain pending.**
 
 ## Production migration performance hotfix — 2026-08-26
 
@@ -143,14 +144,19 @@ Still pending and intentionally not performed:
 
 ## Stage 02 operator revalidation — 2026-08-28
 
-- A clean local database rebuild applied every migration through `20260831010000`; the owner-run
-  rollout report returned 42/42 current-state invariants true locally.
-- Full pgTAP passed 638 assertions across 27 files. The deterministic multi-session harness passed
-  all 17 authorization, owner-fence, roster, fingerprint, ISBN, and final-unlink races.
+- A clean local database rebuild applied every migration through `20260831010000`; the initial
+  owner-run rollout report returned 42/42 current-state invariants true locally. Production exposed
+  a default-grant difference that the original one-operation pgTAP assertion did not cover; the
+  forward ACL correction and exact twelve-operation regression are the required follow-up.
+- The forward-only ACL correction then passed a fresh rebuild through `20260901010000`; the expanded
+  rollout report returned 43/43 invariants true. Full pgTAP passed 650 assertions across 28 files,
+  including the 12-operation ACL matrix after deliberately reproducing the legacy exposure first.
+- The deterministic multi-session harness passed all 17 authorization, owner-fence, roster,
+  fingerprint, ISBN, and final-unlink races.
 - The bounded migration fixture applied both migrations to 25,005 initial works and 5,012 personal
   books under its 20-second per-statement timeout, binding every personal row and safely retaining
   the reviewed ambiguity paths.
-- Core and web unit suites passed 2,419 and 626 assertions respectively. TypeScript, ESLint,
+- Core and web unit suites passed 2,420 and 626 assertions respectively. TypeScript, ESLint,
   Prettier, the production build, and `git diff --check` passed.
 - The complete browser matrix passed 218 runnable cases with 10 expected project skips, one worker,
   and zero retries from a fresh database.

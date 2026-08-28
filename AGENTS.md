@@ -211,6 +211,17 @@ function` + fresh `create` resets it to the PUBLIC-execute default — verified 
   first run. Caught by running the suite, not by re-reading the reasoning — a function's callers
   include its RLS policies, not just its own migration file and its obvious call sites.
 
+- **A new `public` table needs the same explicit ACL reset before its intended grants.** RLS limits
+  rows after the table privilege check; it does not remove a platform-supplied table grant. The
+  local stack's unset `api.auto_expose_new_tables` uses the newer non-auto-exposed default, while
+  this production project retained legacy auto-exposure. `20260831010000` created `work_tropes`,
+  enabled RLS, and added authenticated `SELECT` plus service-role `ALL`, but never revoked existing
+  grants; production verification found anonymous access and authenticated writes while the local
+  single-operation assertion stayed green. Reset `PUBLIC`, `anon`, `authenticated`, and
+  `service_role`, then grant back only the exact intended capabilities. A regression must dirty the
+  ACL first and assert `SELECT`/`INSERT`/`UPDATE`/`DELETE` separately for all three API roles; testing
+  only the clean local default proves nothing about the repair.
+
 - **A data-fix script is NOT a migration.** A one-time repair scoped to a single incident — row ids
   that mean nothing on another database, a backfill that must not run twice — lives in `docs/queries/`
   and is run by hand against the target, never in `supabase/migrations/`. `pnpm db:migrate` pushes

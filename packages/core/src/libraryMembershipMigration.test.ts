@@ -6,6 +6,10 @@ const migration = readFileSync(
   join(__dirname, '../../../supabase/migrations/20260830010000_library_membership_foundation.sql'),
   'utf8',
 )
+const workTropesAclMigration = readFileSync(
+  join(__dirname, '../../../supabase/migrations/20260901010000_work_tropes_acl.sql'),
+  'utf8',
+)
 
 function section(start: string, end: string): string {
   return sectionOf(migration, start, end)
@@ -139,5 +143,20 @@ left join public.works reconciliation_target`,
       'binding classification has an unbounded public.works reference',
       'binding classification contains a per-book lateral helper',
     ])
+  })
+})
+
+describe('work-tropes forward ACL repair', () => {
+  it('resets every API role before granting back only read-only and service capabilities', () => {
+    const normalized = workTropesAclMigration.toLowerCase().replace(/\s+/g, ' ').trim()
+
+    expect(normalized).toContain(
+      'revoke all privileges on table public.work_tropes from public, anon, authenticated, service_role;',
+    )
+    expect(normalized).toContain('grant select on table public.work_tropes to authenticated;')
+    expect(normalized).toContain(
+      'grant all privileges on table public.work_tropes to service_role;',
+    )
+    expect(workTropesAclMigration.match(/^grant /gim)).toHaveLength(2)
   })
 })

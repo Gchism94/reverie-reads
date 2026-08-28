@@ -1,8 +1,11 @@
--- Owner-run, read-only verification for the 20260830010000 + 20260831010000 rollout.
+-- Owner-run, read-only verification for the 20260830010000 + 20260831010000 rollout and the
+-- forward-only 20260901010000 work_tropes ACL correction.
 --
 -- Paste this whole file into the production Supabase SQL Editor and run it. It returns catalog
 -- metadata and aggregate counts only: no titles, account ids, library rows, or private annotations.
 -- Every row must report ok = true before the private reconciliation dry run is approved.
+-- Before 20260901010000 receives independent review and an owner-run deployment, its migration row
+-- and the work_tropes privilege row are expected blockers; do not approve a partial result.
 --
 -- This verifies CURRENT postconditions, not the historical migration event. Without a verified
 -- pre-migration snapshot it cannot prove that the backfill chose the same corpus identity each
@@ -13,7 +16,7 @@
 
 with
 expected_migrations(version) as (
-  values ('20260830010000'), ('20260831010000')
+  values ('20260830010000'), ('20260831010000'), ('20260901010000')
 ),
 expected_triggers(schema_name, table_name, trigger_name) as (
   values
@@ -249,21 +252,21 @@ table_privilege_checks as (
   select
     'table privilege',
     'public.work_tropes',
-    'anon=none authenticated=select-only service_role=all',
+    'anon S=f I=f U=f D=f; authenticated S=t I=f U=f D=f; service_role S=t I=t U=t D=t',
     format(
-      'anon=%s authenticated_select=%s authenticated_write=%s service_role=%s',
-      pg_catalog.has_table_privilege('anon', 'public.work_tropes', 'select')
-        or pg_catalog.has_table_privilege('anon', 'public.work_tropes', 'insert')
-        or pg_catalog.has_table_privilege('anon', 'public.work_tropes', 'update')
-        or pg_catalog.has_table_privilege('anon', 'public.work_tropes', 'delete'),
+      'anon S=%s I=%s U=%s D=%s; authenticated S=%s I=%s U=%s D=%s; service_role S=%s I=%s U=%s D=%s',
+      pg_catalog.has_table_privilege('anon', 'public.work_tropes', 'select'),
+      pg_catalog.has_table_privilege('anon', 'public.work_tropes', 'insert'),
+      pg_catalog.has_table_privilege('anon', 'public.work_tropes', 'update'),
+      pg_catalog.has_table_privilege('anon', 'public.work_tropes', 'delete'),
       pg_catalog.has_table_privilege('authenticated', 'public.work_tropes', 'select'),
-      pg_catalog.has_table_privilege('authenticated', 'public.work_tropes', 'insert')
-        or pg_catalog.has_table_privilege('authenticated', 'public.work_tropes', 'update')
-        or pg_catalog.has_table_privilege('authenticated', 'public.work_tropes', 'delete'),
-      pg_catalog.has_table_privilege('service_role', 'public.work_tropes', 'select')
-        and pg_catalog.has_table_privilege('service_role', 'public.work_tropes', 'insert')
-        and pg_catalog.has_table_privilege('service_role', 'public.work_tropes', 'update')
-        and pg_catalog.has_table_privilege('service_role', 'public.work_tropes', 'delete')
+      pg_catalog.has_table_privilege('authenticated', 'public.work_tropes', 'insert'),
+      pg_catalog.has_table_privilege('authenticated', 'public.work_tropes', 'update'),
+      pg_catalog.has_table_privilege('authenticated', 'public.work_tropes', 'delete'),
+      pg_catalog.has_table_privilege('service_role', 'public.work_tropes', 'select'),
+      pg_catalog.has_table_privilege('service_role', 'public.work_tropes', 'insert'),
+      pg_catalog.has_table_privilege('service_role', 'public.work_tropes', 'update'),
+      pg_catalog.has_table_privilege('service_role', 'public.work_tropes', 'delete')
     ),
     not (
       pg_catalog.has_table_privilege('anon', 'public.work_tropes', 'select')
