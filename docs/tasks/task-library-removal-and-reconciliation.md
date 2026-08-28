@@ -1,13 +1,53 @@
 # Task: corpus-preserving library removal and owner reconciliation
 
-Status: **membership/removal foundation merged in PR #361; production migration `20260830010000`
-awaits the reviewed bounded-backfill hotfix, and production reconciliation remains pending owner
-review. Corpus-admin preservation/enrichment is in progress on
-`codex/feat-corpus-admin-enrichment`.**
+Status: **membership/removal foundation merged in PR #361. Production migration `20260830010000`
+remains unapplied after its first attempt failed transactionally; the bounded-backfill hotfix and
+corpus-admin enrichment history are now combined on a fix branch. Independent review found
+pre-integration blockers that remain to be fixed and re-verified. Production reconciliation remains
+pending owner review, and no migration, function, or web deployment from this combined branch has
+occurred.**
+
+## Production migration performance hotfix — 2026-08-26
+
+The first owner-run deployment of `20260830010000_library_membership_foundation.sql` failed safely
+and transactionally before its migration-history row was recorded. The public web deployment was
+not promoted. Supabase's local CLI trace isolated the failure to the ambiguous reconciliation
+backfill: it spent 19.906 seconds running per-book correlated counts over the complete `works`
+table. The preceding missing-work backfill had already consumed 16.246 seconds with the same
+repeated identity work. No lock, competing long-running query, or network failure was present.
+
+The hotfix on `codex/fix-library-migration-performance` keeps the reviewed identity priority and
+safe-refusal behavior unchanged while replacing the repeated scans:
+
+- one non-unique expression index stores the immutable Unicode title/full-author fallback key;
+- transaction-local ISBN, fallback-key, and personal-book identity snapshots are built once and
+  reused by missing-work creation, ambiguity classification, and final binding;
+- newly created provisional and reconciliation works are appended to those snapshots so counts
+  remain equivalent to live-table counts;
+- binding decisions are staged separately from the row update, and the internal link backfill does
+  not rewrite reader-facing `updated_at` values or invalidate unchanged enrichment keys;
+- a lightweight source-shape regression prevents the per-row corpus-count and binding subqueries
+  from returning without adding another long-running CI lane.
+
+Verification completed before review:
+
+- clean local reset applied the modified migration and seed successfully;
+- all 567 pgTAP assertions passed across 26 files;
+- the core suite passed with the structural migration regression;
+- a pre-migration synthetic scale fixture used 25,004 corpus works and 5,012 personal books under a
+  20-second PostgreSQL statement timeout. The complete migration applied in 3.47 seconds, linked all
+  5,012 books, created the two expected reconciliation works, recorded the migration version, and
+  restored both temporarily suppressed `books` triggers.
+
+The production migration must not be retried from the previous merge commit. The combined migration
+tree must close independent review and land first. A later owner-run deployment must apply
+`20260830010000` before `20260831010000`; the web deployment remains staged until both migrations,
+their RPCs, and the covers function have been verified.
 
 ## Corpus-admin and reconciliation checkpoint — 2026-08-27
 
-Implemented and locally verified on the current feature branch, pending independent review:
+Implemented and locally verified on the corpus-admin feature history; independent review found
+blockers in the combined migration rollout that must close before integration:
 
 - service-managed corpus-administrator grants plus a dry-run-by-default owner operator;
 - an audited, fill-only corpus completion path for contributors, series identity when known, pages,
