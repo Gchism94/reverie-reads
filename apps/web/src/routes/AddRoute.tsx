@@ -25,6 +25,7 @@ import {
   useHouseholdLibraryAuthorization,
 } from '../data/household'
 import { useWorksLookup, workToHit, type WorkRow } from '../data/works'
+import { useCorpusAdminStatus } from '../data/enrichCorpus'
 import { resultIsbn, triageLabel, triageResults, type TriagedResult } from '../lib/addTriage'
 import { resolveCandidate, type ReviewAction } from '../data/duplicates'
 import { enrichBook, type CoverAlternate } from '../lib/enrich'
@@ -58,6 +59,7 @@ declare global {
 }
 
 interface SearchHit {
+  source: 'hardcover' | 'google'
   title: string
   authors: string[]
   cover: string
@@ -107,6 +109,7 @@ async function searchCatalog(q: string): Promise<SearchResult[]> {
 /** A catalog result as the form's prefill — `pub` takes the fn's `year`, and its ISBN-13-preferred
  *  `isbn` is already the field Add wanted. */
 const hitOf = (r: SearchResult): SearchHit => ({
+  source: r.source,
   title: r.title,
   authors: r.authors,
   cover: r.cover,
@@ -119,6 +122,7 @@ const hitOf = (r: SearchResult): SearchHit => ({
  *  the three corpus-only fields ride alongside. */
 const pickedFromWork = (w: WorkRow, result: SearchResult): Picked => ({
   ...workToHit(w, resultIsbn(result)),
+  source: result.source,
   series: w.series ?? '',
   position: w.position == null ? '' : String(w.position),
   genre: w.genre ?? '',
@@ -947,11 +951,14 @@ function HouseholdAddForm({ hit, onAdded }: { hit: Picked; onAdded: () => void }
   const household = useHouseholdLibraryAuthorization()
   const addExisting = useAddCorpusWorkToHousehold()
   const createWork = useCreateHouseholdCatalogWork()
+  const { data: isCorpusAdmin = false } = useCorpusAdminStatus()
   const [title, setTitle] = useState(hit.title ?? '')
   const [author, setAuthor] = useState(formatAuthors(contributorsFromAuthors(hit.authors ?? [])))
   const [isbn, setIsbn] = useState(hit.isbn ?? '')
   const currentMember = household.members.find((member) => member.userId === session?.user.id)
   const canCreate = !!currentMember
+  const canPersistPickedCover =
+    hit.source === 'google' || currentMember?.role === 'owner' || isCorpusAdmin
   const pending = addExisting.isPending || createWork.isPending
 
   async function save() {
@@ -961,6 +968,8 @@ function HouseholdAddForm({ hit, onAdded }: { hit: Picked; onAdded: () => void }
         title: title.trim(),
         author: author.trim(),
         isbn: isbn.trim(),
+        coverUrl: canPersistPickedCover ? hit.cover : undefined,
+        coverSource: canPersistPickedCover ? hit.source : undefined,
       })
     onAdded()
   }
@@ -1006,6 +1015,12 @@ function HouseholdAddForm({ hit, onAdded }: { hit: Picked; onAdded: () => void }
         This adds one shared household entry. It does not create a personal book or say that anyone
         owns, borrowed, wants, or has read it.
       </p>
+      {hit.cover && !canPersistPickedCover ? (
+        <p role="status" className="mt-3 text-[12.5px] text-muted">
+          This preview needs a household owner or corpus admin to save it as the shared cover. The
+          shared record can still be added without it.
+        </p>
+      ) : null}
       {!household.authorized ? (
         <p role="status" className="mt-3 text-[12.5px] text-muted">
           Connect to a verified household before adding shared books.
@@ -1275,6 +1290,7 @@ interface AddPrefill {
   author?: string
   isbn?: string
   cover?: string
+  source?: 'hardcover' | 'google'
   pub?: string
   /** arrival from a wanting context (Discover, a shelf/TBR) — the ownership toggle defaults to
    *  "I want to read this" instead of "I own this" */
@@ -1289,6 +1305,7 @@ export const validateAddSearch = (s: Record<string, unknown>): AddPrefill => {
   if (str(s.author)) out.author = str(s.author)
   if (str(s.isbn)) out.isbn = str(s.isbn)
   if (str(s.cover)) out.cover = str(s.cover)
+  if (s.source === 'hardcover' || s.source === 'google') out.source = s.source
   if (str(s.pub)) out.pub = str(s.pub)
   if (s.want === true || s.want === 'true') out.want = true
   return out

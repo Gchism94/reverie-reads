@@ -32,6 +32,7 @@ const RECONCILIATION_ROSTER_BARRIER_ID = 4
 const RECONCILIATION_LATE_INSERT_BARRIER_ID = 5
 const HOUSEHOLD_ADD_BARRIER_ID = 6
 const HOUSEHOLD_ISBN_BARRIER_ID = 7
+const CORPUS_EDIT_TAG_BARRIER_ID = 8
 
 const sqlScalar = (statement) =>
   execFileSync('psql', [DATABASE_URL, '-X', '-qAt', '-v', 'ON_ERROR_STOP=1', '-c', statement], {
@@ -471,6 +472,103 @@ async function exerciseWorkerFirstHouseholdAddLockOrdering(ownerId, memberId) {
       delete from public.household_works where work_id = '${workId}'::uuid;
       delete from public.works where id = '${workId}'::uuid;
     `)
+  }
+}
+
+async function exerciseOwnerCorpusEditTagLockOrdering(ownerId, ownerBookId) {
+  const workId = sqlScalar(
+    `select corpus_work_id from public.books where id = '${ownerBookId}'::uuid;`,
+  )
+  const controller = new PsqlSession('corpus-edit-tag-controller')
+  const tagger = new PsqlSession('corpus-edit-tag-worker')
+  const editor = new PsqlSession('corpus-edit-owner-worker')
+  let barrierHeld = false
+  let triggerInstalled = false
+  let tagResult = null
+  let editResult = null
+
+  try {
+    sqlScalar(`
+      create function public.corpus_edit_tag_barrier_fixture()
+      returns trigger language plpgsql security definer set search_path = '' as $fixture$
+      begin
+        if new.id = '${ownerBookId}'::uuid then
+          perform pg_catalog.pg_advisory_xact_lock_shared(
+            ${BARRIER_CLASS}, ${CORPUS_EDIT_TAG_BARRIER_ID}
+          );
+        end if;
+        return new;
+      end;
+      $fixture$;
+      create trigger zz_corpus_edit_tag_barrier_fixture
+      before update of tags on public.books
+      for each row execute function public.corpus_edit_tag_barrier_fixture();
+    `)
+    triggerInstalled = true
+    await controller.command(
+      `select pg_catalog.pg_advisory_lock(${BARRIER_CLASS}, ${CORPUS_EDIT_TAG_BARRIER_ID});`,
+    )
+    barrierHeld = true
+    const taggerPid = Number(await tagger.command('select pg_backend_pid();'))
+    const editorPid = Number(await editor.command('select pg_backend_pid();'))
+
+    tagResult = tagger.command(
+      authenticatedPersonalWrite(
+        ownerId,
+        `update public.books set tags = array['corpus-edit-lock-order']
+         where id = '${ownerBookId}'::uuid`,
+      ),
+    )
+    await waitForBlockedWorker(taggerPid, 'personal tag pre-trigger barrier')
+
+    editResult = editor.command(
+      authenticatedPersonalWrite(
+        ownerId,
+        `select public.edit_corpus_work_metadata(
+           work.id, work.series, work.position, work.series_count, work.status,
+           'fantasy', work.subgenre, array['fantasy'], work.subgenres,
+           work.cover_url, work.cover_options, work.pub_y, work.pub_m, work.pub_d
+         ) from public.works work where work.id = '${workId}'::uuid`,
+      ),
+    )
+    await waitForBlockedWorker(editorPid, 'owner corpus edit book-first lock')
+
+    await controller.command(
+      `select pg_catalog.pg_advisory_unlock(${BARRIER_CLASS}, ${CORPUS_EDIT_TAG_BARRIER_ID});`,
+    )
+    barrierHeld = false
+    assert.match(await tagResult, /personal-write-committed/, 'the personal tag update commits')
+    tagResult = null
+    assert.match(await editResult, /personal-write-committed/, 'the owner corpus edit commits')
+    editResult = null
+    assert.equal(
+      sqlScalar(`select array_to_string(tags, ',') from public.books
+        where id = '${ownerBookId}'::uuid;`),
+      'corpus-edit-lock-order',
+      'the serialized personal tag edit is preserved',
+    )
+    assert.equal(
+      sqlScalar(`select genre from public.works where id = '${workId}'::uuid;`),
+      'fantasy',
+      'the serialized owner corpus edit is preserved',
+    )
+    console.log('✓ owner corpus edit prelocks personal books before household membership')
+  } finally {
+    if (barrierHeld) {
+      await controller
+        .command(
+          `select pg_catalog.pg_advisory_unlock(${BARRIER_CLASS}, ${CORPUS_EDIT_TAG_BARRIER_ID});`,
+        )
+        .catch(() => {})
+    }
+    await Promise.allSettled([tagResult, editResult])
+    await Promise.allSettled([controller.close(), tagger.close(), editor.close()])
+    if (triggerInstalled) {
+      sqlScalar(`
+        drop trigger if exists zz_corpus_edit_tag_barrier_fixture on public.books;
+        drop function if exists public.corpus_edit_tag_barrier_fixture();
+      `)
+    }
   }
 }
 
@@ -1997,6 +2095,7 @@ async function main() {
     borrowedBookId: borrowed.data.id,
   })
   await exerciseWorkerFirstHouseholdAddLockOrdering(firstUserId, secondUserId)
+  await exerciseOwnerCorpusEditTagLockOrdering(firstUserId, ownerBookId)
   await exerciseConcurrentRebindSuppression(firstUserId)
   await exerciseMovedTropeLockOrdering(firstUserId)
   await exerciseConcurrentIsbnResolution(firstUserId, secondUserId)

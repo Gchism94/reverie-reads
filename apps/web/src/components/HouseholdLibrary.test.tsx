@@ -120,7 +120,7 @@ describe('household Library presentation', () => {
       />,
     )
 
-    fireEvent.click(screen.getByText('Edit shared series, genre, and publication'))
+    fireEvent.click(screen.getByText('Edit shared cover, series, genre, and publication'))
     expect(screen.getByText(/Personal copies keep their existing details/)).toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('Shared primary genre'), {
       target: { value: 'mystery' },
@@ -152,7 +152,7 @@ describe('household Library presentation', () => {
       />,
     )
 
-    fireEvent.click(screen.getByText('Edit shared series, genre, and publication'))
+    fireEvent.click(screen.getByText('Edit shared cover, series, genre, and publication'))
     fireEvent.change(screen.getByLabelText('Shared publication month'), {
       target: { value: '13' },
     })
@@ -160,6 +160,34 @@ describe('household Library presentation', () => {
 
     expect(screen.getByRole('alert')).toHaveTextContent('Month must be 12 or less.')
     expect(edit).not.toHaveBeenCalled()
+  })
+
+  it('lets an authorized editor select an existing reviewed shared cover', async () => {
+    const edit = vi.fn().mockResolvedValue(undefined)
+    const first = 'https://covers.example.test/first.jpg'
+    const second = 'https://covers.example.test/second.jpg'
+    render(
+      <HouseholdBookDetail
+        book={{
+          ...book('reader-a', 'Avery'),
+          cover: first,
+          coverOptions: [
+            { url: first, source: 'hardcover', sourceUrl: first },
+            { url: second, source: 'google', sourceUrl: second },
+          ],
+        }}
+        currentReaderId="reader-a"
+        onEditCorpus={edit}
+      />,
+    )
+
+    fireEvent.click(screen.getByText('Edit shared cover, series, genre, and publication'))
+    fireEvent.click(screen.getByRole('radio', { name: 'Google' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save shared details' }))
+
+    await waitFor(() =>
+      expect(edit).toHaveBeenCalledWith(expect.objectContaining({ coverUrl: second })),
+    )
   })
 
   it('uses a real pressed-state scope control', () => {

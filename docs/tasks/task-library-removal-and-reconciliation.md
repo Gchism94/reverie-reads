@@ -6,10 +6,11 @@ integrated through PR #366 at `1828968`. The owner deployed `20260830010000`, `2
 function retained the selected personal cover across refresh. The first production reconciliation
 dry run wrote nothing and correctly blocked on 10 corpus-missing identities. Independent review
 rejected the first household-only catalog-entry candidate for authorization, checksum, lock-order,
-structured-series, scope, and coverage gaps. The remediation is complete and verified locally but
-still requires independent re-review. The dry-run
-checksum is not approvable, and backup, reconciliation write, and post-write smoke checks remain
-pending.**
+structured-series, scope, and coverage gaps. Its first remediated re-review then found a stale
+series-length adoption, a deterministic owner-edit/tag-trigger deadlock, lost cover previews, and
+weak UI refresh coverage. Those findings are corrected and locally verified; final independent
+re-review remains required. The dry-run checksum is not approvable, and backup, reconciliation
+write, and post-write smoke checks remain pending.**
 
 ## Production migration performance hotfix — 2026-08-26
 
@@ -345,13 +346,13 @@ aggregate rows were valid household entries but had no corpus identity. The dura
   fields while preserving title, contributors, ISBN, ownership, reading history, rating, and private
   annotations.
 
-This remediated candidate is complete locally and is not deployed. Production reconciliation remains paused until independent re-review,
-integration, owner-guarded migration/web deployment, all 50 expanded rollout-report rows, and
+This twice-remediated candidate is complete locally and is not deployed. Production reconciliation remains paused until final independent re-review,
+integration, owner-guarded migration/web deployment, all 51 expanded rollout-report rows, and
 focused smoke verification pass.
 
-Local remediation verification passed a clean rebuild through `20260902010000`, all 707 pgTAP
-assertions across 29 files, 18 deterministic concurrency scenarios, the bounded
-25,005-work/5,012-book migration fixture, 2,432 core and 640 web unit assertions, typecheck, ESLint,
+Local remediation verification passed a clean rebuild through `20260902010000`, all 715 pgTAP
+assertions across 29 files, 20 deterministic concurrency scenarios, the bounded
+25,005-work/5,012-book migration fixture, 2,432 core and 643 web unit assertions, typecheck, ESLint,
 Prettier, production build, and `git diff --check`. The complete household browser spec passed 11
 cases with one expected project skip; the full browser matrix passed 220 cases with 10 expected
 project-specific skips, one worker, and zero retries. No production or remote state was touched.

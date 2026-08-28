@@ -9,12 +9,16 @@ describe('Add route library scope', () => {
         work: 'work-1',
         title: 'Household only',
         author: 'A Writer',
+        cover: 'https://assets.hardcover.app/cover.jpg',
+        source: 'hardcover',
       }),
     ).toEqual({
       scope: 'household',
       work: 'work-1',
       title: 'Household only',
       author: 'A Writer',
+      cover: 'https://assets.hardcover.app/cover.jpg',
+      source: 'hardcover',
     })
   })
 

@@ -6,8 +6,11 @@ the production report returned 43/43 invariants true, and the covers function re
 personal cover across refresh. The first reconciliation dry run wrote nothing and stopped on 10
 corpus-missing identities. Independent review rejected the first household-only catalog-entry
 candidate for authorization, checksum, lock-order, structured-series, scope, and coverage gaps.
-The remediation is complete and verified locally but still requires independent re-review. Administrator grants, reconciliation
-backup/write, and post-write smoke checks remain owner-gated and unperformed by Code.**
+The first remediation re-review then found a series-length adoption defect, a reproducible lock-order
+deadlock, a discarded catalog-cover preview, and UI assertions that proved only database state. The
+second remediation closes those findings and is locally verified; final independent re-review is
+still required. Administrator grants, reconciliation backup/write, and post-write smoke checks
+remain owner-gated and unperformed by Code.**
 
 ## Objective
 
@@ -183,7 +186,7 @@ contains exactly Account A and Account B before either dry-run or write planning
    the later administrator smoke set.
 4. Independently review and integrate the forward household-only catalog-entry boundary. The owner
    then deploys its migration and web surface through the guards and verifies that a household-only
-   add creates no personal copy. Rerun the expanded report and require all 50 rows true.
+   add creates no personal copy. Rerun the expanded report and require all 51 rows true.
 5. Resolve the 10 aggregate missing-corpus dry-run rows through Household Add books, then dry-run
    both administrator grants and the CSV reconciliation again. Run the reconciliation's separate
    backup-only phase and review the exact external title-level report and backup checksums; do not
@@ -193,21 +196,27 @@ contains exactly Account A and Account B before either dry-run or write planning
 
 ## Household catalog remediation verification — 2026-08-28
 
-The locally remediated candidate closes every finding from the first independent review: global
+The twice-remediated candidate closes every finding from both independent review passes: global
 corpus administrators can edit unrelated works through the audited writer; ISBN-10/13 checksums are
 validated; profile-first locking removes the add/unlink inversion; shared series adoption retires
-the prior structured entry atomically; persistent desktop/mobile Add controls preserve household
-scope; the shared editor covers canonical genre, subgenre, complete series metadata, cover options,
-and publication precision; and shared-detail comparison includes series length and status.
+the prior structured entry atomically and overwrites a stale pre-existing target series length;
+owner corpus edits prelock matching personal books before household membership, matching the
+book-trigger lock order; persistent desktop/mobile Add controls preserve household scope; Google
+preview covers are preserved directly, owner/admin Hardcover previews are made durable through the
+corpus cover pipeline, and the shared editor can select reviewed cover options; the editor covers
+canonical genre, subgenre, complete series metadata, and publication precision; and shared-detail
+comparison includes series length and status. Browser assertions now prove the post-write UI and
+ordinary-member editor denial, not merely service-role reads behind the page.
 
 - A clean database rebuild applied through `20260902010000`; the expanded read-only rollout report
-  returned 50/50 true.
-- Full pgTAP passed 707 assertions across 29 files. The deterministic concurrency harness passed all
-  18 scenarios, including the worker-first add/unlink race and concurrent same-ISBN household adds.
+  returned 51/51 true.
+- Full pgTAP passed 715 assertions across 29 files. The deterministic concurrency harness passed all
+  20 scenarios, including the worker-first add/unlink race, concurrent same-ISBN household adds, and
+  the exact owner-edit/personal-tag lock-order regression.
 - The bounded 25,005-work/5,012-book fixture completed both foundation migrations under the
   20-second statement timeout, bound all 5,012 personal books, and retained the exact mixed-ISBN
   reconciliation refusal.
-- Core unit tests passed 2,432 assertions across 81 files; web unit tests passed 640 assertions
+- Core unit tests passed 2,432 assertions across 81 files; web unit tests passed 643 assertions
   across 74 files.
 - The complete household browser spec passed 11 cases with one expected project skip. The full
   browser matrix passed 220 cases with 10 expected project-specific skips, one worker, and zero
@@ -216,7 +225,7 @@ and publication precision; and shared-detail comparison includes series length a
   no warning after the shared scope helper was separated from the component module.
 
 No production data, credentials, migration, function, web deployment, or remote repository state
-was touched. Independent re-review and integration remain the next gates.
+was touched. Final independent re-review and integration remain the next gates.
 
 ## Local verification — refreshed 2026-08-28
 

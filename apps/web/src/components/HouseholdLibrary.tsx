@@ -229,14 +229,18 @@ function CorpusEditForm({
   const [publicationYear, setPublicationYear] = useState(book.publicationYear?.toString() ?? '')
   const [publicationMonth, setPublicationMonth] = useState(book.publicationMonth?.toString() ?? '')
   const [publicationDay, setPublicationDay] = useState(book.publicationDay?.toString() ?? '')
+  const [coverUrl, setCoverUrl] = useState(book.cover)
   const [validationError, setValidationError] = useState('')
+  const coverChoices = book.coverOptions.filter(
+    (option): option is typeof option & { url: string } => !!option.url,
+  )
   const fieldClass =
     'skin-control h-10 w-full border border-line bg-field px-3 text-[13px] text-ink'
 
   return (
     <details className="mt-4">
       <summary className="cursor-pointer text-[12.5px] font-semibold text-primary">
-        Edit shared series, genre, and publication
+        Edit shared cover, series, genre, and publication
       </summary>
       <p className="mt-2 text-[11.5px] text-muted">
         This changes the shared catalog view. Personal copies keep their existing details until
@@ -273,7 +277,7 @@ function CorpusEditForm({
             subgenres: [nextSubgenre, ...book.subgenres.filter((value) => value !== book.subgenre)]
               .filter(Boolean)
               .filter((value, index, values) => values.indexOf(value) === index),
-            coverUrl: book.cover,
+            coverUrl,
             coverOptions: book.coverOptions,
             publicationYear: parsed.values.publicationYear,
             publicationMonth: parsed.values.publicationMonth,
@@ -338,6 +342,42 @@ function CorpusEditForm({
           aria-label="Shared primary subgenre"
           className={fieldClass}
         />
+        <fieldset>
+          <legend className="mb-1 text-[11px] uppercase tracking-[0.16em] text-muted">
+            Shared cover
+          </legend>
+          {coverChoices.length > 0 ? (
+            <div className="grid grid-cols-3 gap-2">
+              {coverChoices.map((option, index) => (
+                <label
+                  key={option.url}
+                  className="skin-control cursor-pointer border border-line p-1.5 text-center text-[10.5px] text-muted"
+                >
+                  <input
+                    type="radio"
+                    name={`shared-cover-${book.id}`}
+                    value={option.url}
+                    checked={coverUrl === option.url}
+                    onChange={() => setCoverUrl(option.url)}
+                    className="sr-only"
+                  />
+                  <img
+                    src={option.url}
+                    alt=""
+                    className="mx-auto aspect-[2/3] w-full rounded object-cover"
+                  />
+                  <span className="mt-1 block truncate">
+                    {option.source ? titleCase(option.source) : `Cover ${index + 1}`}
+                  </span>
+                </label>
+              ))}
+            </div>
+          ) : (
+            <p className="text-[11.5px] text-muted">
+              No alternate shared covers are available for this record yet.
+            </p>
+          )}
+        </fieldset>
         <fieldset>
           <legend className="mb-1 text-[11px] uppercase tracking-[0.16em] text-muted">
             Publication date

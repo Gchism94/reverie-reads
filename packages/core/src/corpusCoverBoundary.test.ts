@@ -5,7 +5,7 @@ import { isGoogleContentCover as isEdgeGoogleContentCover } from '../../../supab
 
 // The enforcing runtime is Deno, which this repository and CI do not install. Keep a narrow source
 // contract beside the pgTAP object/path checks so a future covers refactor cannot silently collapse
-// corpus storage back into a reader-owned prefix or drop the server-side administrator gate.
+// corpus storage back into a reader-owned prefix or drop the server-side exact-work editor gate.
 const edge = readFileSync(join(__dirname, '../../../supabase/functions/covers/index.ts'), 'utf8')
 const client = readFileSync(join(__dirname, '../../../apps/web/src/lib/covers.ts'), 'utf8')
 
@@ -14,11 +14,13 @@ describe('durable corpus cover boundary', () => {
     expect(edge).toContain('const base = corpusScope ? `w/${targetId}` : `u/${uid}/${targetId}`')
   })
 
-  it('checks the service-managed administrator grant before a corpus ingest', () => {
-    expect(edge).toMatch(/corpusScope && !\(await isCorpusAdmin\(uid\)\)/)
-    expect(edge.indexOf('corpusScope && !(await isCorpusAdmin(uid))')).toBeLessThan(
+  it('checks exact corpus edit authority before a corpus ingest', () => {
+    expect(edge).toMatch(/corpusScope && !\(await canEditCorpusWork\(req, targetId\)\)/)
+    expect(edge.indexOf('corpusScope && !(await canEditCorpusWork(req, targetId))')).toBeLessThan(
       edge.indexOf('const base = corpusScope'),
     )
+    expect(edge).toContain('/rest/v1/rpc/can_edit_corpus_work')
+    expect(edge).toContain('Authorization: authorization')
   })
 
   it('refuses mixed personal/corpus targets', () => {

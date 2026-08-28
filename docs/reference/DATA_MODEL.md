@@ -448,11 +448,14 @@ membership. The legacy `household_library_books()` RPC remains only for staged-d
 An existing corpus work can be added directly to `household_works` without creating a personal
 `books` row. An active member may create a missing attributed provisional `works` row, matching the
 authority already available through a personal Add; ambiguous ISBN or title/full-author identity is
-refused. Editing an existing corpus work remains limited to a household owner or corpus
-administrator. Corpus edits do not rewrite linked personal rows. A personal owner may
-explicitly call `adopt_corpus_work_metadata` to copy shared series, genre, cover, and publication
-details; title/contributors, ISBN, possession, reading state, rating, and private annotations remain
-untouched.
+refused. An allowlisted Google result may be retained as a display-only cover at creation. A
+Hardcover result is stored only after the existing ingestion boundary creates a corpus-owned
+`w/{work}/` object, and that path is limited to a household owner or corpus administrator for the
+exact work. Editing an existing corpus work remains limited to the same roles; the editor may select
+an already-reviewed cover option. Corpus edits do not rewrite linked personal rows. A personal owner
+may explicitly call `adopt_corpus_work_metadata` to copy shared series (including the reviewed
+length/status tuple), genre, cover, and publication details; title/contributors, ISBN, possession,
+reading state, rating, and private annotations remain untouched.
 
 Membership linking/unlinking remains service-role, owner-run, dry-run-first operation through
 `link_household` and `unlink_household_member`. Runtime client mutations use narrow authenticated

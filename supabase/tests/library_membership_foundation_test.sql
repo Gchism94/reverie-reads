@@ -460,6 +460,7 @@ select is(
       ('public.restore_personal_book(uuid)'),
       ('public.update_household_work_enrichment(uuid,text[],jsonb)'),
       ('public.edit_corpus_work_metadata(uuid,text,numeric,integer,text,text,text,text[],text[],text,jsonb,integer,integer,integer)'),
+      ('public.set_corpus_work_cover(uuid,text,text,text,text)'),
       ('public.household_library_works()')
   ) signatures(signature) where has_function_privilege('anon', signature, 'EXECUTE')),
   0,
@@ -475,9 +476,10 @@ select is(
       ('public.restore_personal_book(uuid)'),
       ('public.update_household_work_enrichment(uuid,text[],jsonb)'),
       ('public.edit_corpus_work_metadata(uuid,text,numeric,integer,text,text,text,text[],text[],text,jsonb,integer,integer,integer)'),
+      ('public.set_corpus_work_cover(uuid,text,text,text,text)'),
       ('public.household_library_works()')
   ) signatures(signature) where has_function_privilege('authenticated', signature, 'EXECUTE')),
-  8,
+  9,
   'authenticated readers receive exactly the reviewed membership RPC surface'
 );
 select is(
@@ -490,6 +492,7 @@ select is(
       ('public.restore_personal_book(uuid)'),
       ('public.update_household_work_enrichment(uuid,text[],jsonb)'),
       ('public.edit_corpus_work_metadata(uuid,text,numeric,integer,text,text,text,text[],text[],text,jsonb,integer,integer,integer)'),
+      ('public.set_corpus_work_cover(uuid,text,text,text,text)'),
       ('public.household_library_works()')
   ) signatures(signature) where has_function_privilege('service_role', signature, 'EXECUTE')),
   0,

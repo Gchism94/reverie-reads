@@ -511,15 +511,16 @@ function HouseholdLibraryScreen() {
   const canEditCorpus =
     isCorpusAdmin ||
     members.some((member) => member.userId === currentReaderId && member.role === 'owner')
-  const editCorpus = async (book: HouseholdBook, patch: HouseholdCorpusEdit): Promise<void> => {
-    await updateCorpus.mutateAsync({ workId: book.id, ...patch })
-  }
   const availableBooks = useMemo(() => (hasHousehold ? books : []), [books, hasHousehold])
   const selection = useHouseholdBookSelection({
     householdId: household.householdId,
     books: availableBooks,
     authorized: hasHousehold,
+    loading: household.loading,
   })
+  const editCorpus = async (book: HouseholdBook, patch: HouseholdCorpusEdit): Promise<void> => {
+    await updateCorpus.mutateAsync({ workId: book.id, ...patch })
+  }
   const selected = selection.selected
   const removeFromHousehold = (book: HouseholdBook) => {
     if (

@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 const mocked = vi.hoisted(() => ({
   readerId: 'reader-a',
   rpc: vi.fn(),
+  ingestCorpusCover: vi.fn(),
 }))
 
 vi.mock('../auth/AuthProvider', () => ({
@@ -16,6 +17,10 @@ vi.mock('../auth/AuthProvider', () => ({
 
 vi.mock('../lib/supabase', () => ({
   supabase: { rpc: mocked.rpc },
+}))
+
+vi.mock('../lib/covers', () => ({
+  ingestCorpusCover: mocked.ingestCorpusCover,
 }))
 
 import {
@@ -83,6 +88,7 @@ const householdBook = (id: string, ownerId = 'reader-a'): HouseholdBook => ({
 beforeEach(() => {
   mocked.readerId = 'reader-a'
   mocked.rpc.mockReset()
+  mocked.ingestCorpusCover.mockReset()
 })
 
 afterEach(() => {
@@ -392,6 +398,28 @@ describe('household query identity and RPC boundary', () => {
     expect(result.current.selected).toBeNull()
   })
 
+  it('preserves an explicit selection behind a routine authorization revalidation', () => {
+    const firstBook = householdBook('book-1')
+    const { result, rerender } = renderHook(
+      ({ householdId, books, authorized, loading }) =>
+        useHouseholdBookSelection({ householdId, books, authorized, loading }),
+      {
+        initialProps: {
+          householdId: 'house-a' as string | null,
+          books: [firstBook] as HouseholdBook[],
+          authorized: true,
+          loading: false,
+        },
+      },
+    )
+
+    act(() => result.current.open(firstBook.id))
+    rerender({ householdId: null, books: [], authorized: false, loading: true })
+    expect(result.current.selected).toBeNull()
+    rerender({ householdId: 'house-a', books: [firstBook], authorized: true, loading: false })
+    expect(result.current.selected?.id).toBe(firstBook.id)
+  })
+
   it('fails closed without both a readable signed-in reader and roster-established household', async () => {
     const { wrapper } = queryHarness()
     const noHousehold = renderHook(() => useHouseholdBooks(null), { wrapper })
@@ -454,7 +482,13 @@ describe('household query identity and RPC boundary', () => {
       ['add_corpus_work_to_household', { p_work: 'work-1' }],
       [
         'create_household_catalog_work',
-        { p_title: 'Household only', p_author: 'A Writer', p_isbn: null },
+        {
+          p_title: 'Household only',
+          p_author: 'A Writer',
+          p_isbn: null,
+          p_cover_url: null,
+          p_cover_source: null,
+        },
       ],
       ['adopt_corpus_work_metadata', { p_book: 'book-1' }],
       [
@@ -478,6 +512,62 @@ describe('household query identity and RPC boundary', () => {
       ],
       ['remove_personal_book_from_household', { p_book: 'book-1' }],
       ['remove_household_work', { p_work: 'work-1' }],
+    ])
+  })
+
+  it('ingests and selects a picked Hardcover cover for an authorized shared work', async () => {
+    mocked.rpc.mockResolvedValueOnce({ data: 'work-cover', error: null })
+    mocked.ingestCorpusCover.mockResolvedValue({
+      status: 'ok',
+      data: {
+        cover: 'http://127.0.0.1:55321/storage/v1/object/public/covers/w/work-cover/rev.webp',
+        thumb: 'http://127.0.0.1:55321/storage/v1/object/public/covers/w/work-cover/rev_t.webp',
+        color: '#123456',
+        sourceUrl: 'https://assets.hardcover.app/cover.jpg',
+      },
+    })
+    mocked.rpc.mockResolvedValueOnce({ data: 'work-cover', error: null })
+    const { wrapper } = queryHarness()
+    const createWork = renderHook(() => useCreateHouseholdCatalogWork(), { wrapper })
+
+    await act(() =>
+      createWork.result.current.mutateAsync({
+        title: 'Covered household book',
+        author: 'A Writer',
+        isbn: '',
+        coverUrl: 'https://assets.hardcover.app/cover.jpg',
+        coverSource: 'hardcover',
+      }),
+    )
+
+    expect(mocked.ingestCorpusCover).toHaveBeenCalledWith({
+      workId: 'work-cover',
+      source: 'hardcover',
+      url: 'https://assets.hardcover.app/cover.jpg',
+      sourceUrl: 'https://assets.hardcover.app/cover.jpg',
+    })
+    expect(mocked.rpc.mock.calls).toEqual([
+      [
+        'create_household_catalog_work',
+        {
+          p_title: 'Covered household book',
+          p_author: 'A Writer',
+          p_isbn: null,
+          p_cover_url: 'https://assets.hardcover.app/cover.jpg',
+          p_cover_source: 'hardcover',
+        },
+      ],
+      [
+        'set_corpus_work_cover',
+        {
+          p_work: 'work-cover',
+          p_cover_url:
+            'http://127.0.0.1:55321/storage/v1/object/public/covers/w/work-cover/rev.webp',
+          p_cover_source: 'hardcover',
+          p_cover_source_url: 'https://assets.hardcover.app/cover.jpg',
+          p_cover_color: '#123456',
+        },
+      ],
     ])
   })
 })

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { normalizeSeriesStatus, type SeriesStatus } from '@reverie/core'
 import { useAuth } from '../auth/AuthProvider'
+import { ingestCorpusCover } from '../lib/covers'
 import { supabase } from '../lib/supabase'
 
 export type HouseholdMemberRole = 'owner' | 'member'
@@ -260,10 +261,13 @@ export function useHouseholdBookSelection({
   householdId,
   books,
   authorized,
+  loading = false,
 }: {
   householdId: string | null
   books: readonly HouseholdBook[]
   authorized: boolean
+  /** A routine network revalidation hides data but is not an authorization loss. */
+  loading?: boolean
 }) {
   const [selection, setSelection] = useState<HouseholdBookSelection | null>(null)
   const selected =
@@ -274,13 +278,17 @@ export function useHouseholdBookSelection({
 
   useEffect(() => {
     if (!selection) return
+    // Keep the reader's explicit selection behind the loading screen during an ordinary
+    // revalidation. A paused, failed, revoked, or replacement authorization settles with
+    // `loading=false` and still clears it before anything can be rendered again.
+    if (!authorized && loading) return
     const remainsAuthorized =
       authorized &&
       !!householdId &&
       selection.householdId === householdId &&
       books.some((book) => book.id === selection.bookId)
     if (!remainsAuthorized) setSelection(null)
-  }, [authorized, books, householdId, selection])
+  }, [authorized, books, householdId, loading, selection])
 
   return {
     selected,
@@ -434,6 +442,8 @@ export interface HouseholdCatalogWorkInput {
   title: string
   author: string
   isbn: string
+  coverUrl?: string
+  coverSource?: 'hardcover' | 'google'
 }
 
 export function useCreateHouseholdCatalogWork() {
@@ -445,9 +455,29 @@ export function useCreateHouseholdCatalogWork() {
         p_title: input.title,
         p_author: input.author,
         p_isbn: input.isbn || null,
+        p_cover_url: input.coverUrl || null,
+        p_cover_source: input.coverSource || null,
       })
       if (error) throw error
-      return data as string
+      const workId = data as string
+      if (input.coverUrl && input.coverSource === 'hardcover') {
+        const ingest = await ingestCorpusCover({
+          workId,
+          source: 'hardcover',
+          url: input.coverUrl,
+          sourceUrl: input.coverUrl,
+        })
+        if (ingest.status === 'error') throw new Error(`Shared cover could not be saved: ${ingest.code}`)
+        const selected = await supabase.rpc('set_corpus_work_cover', {
+          p_work: workId,
+          p_cover_url: ingest.data.cover,
+          p_cover_source: 'hardcover',
+          p_cover_source_url: input.coverUrl,
+          p_cover_color: ingest.data.color,
+        })
+        if (selected.error) throw selected.error
+      }
+      return workId
     },
     onSuccess: () => invalidateLibraryMembership(queryClient),
   })

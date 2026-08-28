@@ -1,6 +1,6 @@
 -- Household-only membership, owner/admin corpus authority, and explicit personal adoption.
 begin;
-select plan(57);
+select plan(65);
 
 insert into auth.users (
   id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
@@ -79,13 +79,19 @@ insert into public.books (
   'owned', 'Read', 4
 );
 
-insert into public.series (id, owner_id, name, status)
-values (
-  '92000000-0000-4000-8000-000000000010',
-  '92222222-2222-4222-8222-222222222222',
-  'Personal Series',
-  'ongoing'
-);
+insert into public.series (id, owner_id, name, status) values
+  (
+    '92000000-0000-4000-8000-000000000010',
+    '92222222-2222-4222-8222-222222222222',
+    'Personal Series',
+    'ongoing'
+  ),
+  (
+    '92000000-0000-4000-8000-000000000012',
+    '92222222-2222-4222-8222-222222222222',
+    'Edited Shared Series',
+    'ongoing'
+  );
 insert into public.series_entries (
   id, series_id, owner_id, position, title, author, book_id, source, user_edited
 ) values (
@@ -116,11 +122,11 @@ select ok(has_function_privilege('authenticated', 'public.add_corpus_work_to_hou
 select ok(not has_function_privilege('service_role', 'public.add_corpus_work_to_household(uuid)', 'EXECUTE'),
   'service role has no household browser-add grant');
 
-select ok(not has_function_privilege('anon', 'public.create_household_catalog_work(text,text,text)', 'EXECUTE'),
+select ok(not has_function_privilege('anon', 'public.create_household_catalog_work(text,text,text,text,text)', 'EXECUTE'),
   'anon cannot create a household catalog work');
-select ok(has_function_privilege('authenticated', 'public.create_household_catalog_work(text,text,text)', 'EXECUTE'),
+select ok(has_function_privilege('authenticated', 'public.create_household_catalog_work(text,text,text,text,text)', 'EXECUTE'),
   'authenticated can reach the role-checked catalog creator');
-select ok(not has_function_privilege('service_role', 'public.create_household_catalog_work(text,text,text)', 'EXECUTE'),
+select ok(not has_function_privilege('service_role', 'public.create_household_catalog_work(text,text,text,text,text)', 'EXECUTE'),
   'service role has no household catalog creator grant');
 
 select ok(not has_function_privilege(
@@ -132,6 +138,16 @@ select ok(has_function_privilege(
 select ok(not has_function_privilege(
   'service_role', 'public.edit_corpus_work_metadata(uuid,text,numeric,integer,text,text,text,text[],text[],text,jsonb,integer,integer,integer)', 'EXECUTE'
 ), 'service role has no browser corpus edit grant');
+
+select ok(not has_function_privilege(
+  'anon', 'public.set_corpus_work_cover(uuid,text,text,text,text)', 'EXECUTE'
+), 'anon cannot select a corpus cover');
+select ok(has_function_privilege(
+  'authenticated', 'public.set_corpus_work_cover(uuid,text,text,text,text)', 'EXECUTE'
+), 'authenticated can reach the owner/admin corpus cover boundary');
+select ok(not has_function_privilege(
+  'service_role', 'public.set_corpus_work_cover(uuid,text,text,text,text)', 'EXECUTE'
+), 'service role has no browser corpus cover grant');
 
 select ok(not has_function_privilege(
   'anon', 'public.library_isbn_checksum_is_valid(text)', 'EXECUTE'
@@ -226,7 +242,8 @@ select set_config(
 select set_config(
   'test.created_household_work',
   public.create_household_catalog_work(
-    'Created for Household', 'F Writer', '978-0-306-40615-7'
+    'Created for Household', 'F Writer', '978-0-306-40615-7',
+    'https://books.google.com/books/content?id=household-cover', 'google'
   )::text,
   true
 );
@@ -246,6 +263,10 @@ select is((select count(*)::int from public.work_metadata_edits
   where work_id = current_setting('test.created_household_work')::uuid
     and next_value ->> 'event' = 'household catalog creation'),
   1, 'household catalog creation is audited');
+select is((select cover_url from public.works
+  where id = current_setting('test.created_household_work')::uuid),
+  'https://books.google.com/books/content?id=household-cover',
+  'household creation retains an allowlisted display-only catalog cover');
 
 set local role authenticated;
 select set_config(
@@ -308,6 +329,16 @@ select throws_ok(
     'horror', null, array['horror'], '{}', null, '[]'::jsonb, 2026, null, null
   )$$,
   '42501', null, 'the corpus edit boundary refuses an ordinary member'
+);
+select throws_ok(
+  $$select public.set_corpus_work_cover(
+    '90000000-0000-4000-8000-000000000012',
+    'https://books.google.com/books/content?id=member-refused',
+    'google',
+    'https://books.google.com/books/content?id=member-refused',
+    null
+  )$$,
+  '42501', null, 'the corpus cover boundary refuses an ordinary member'
 );
 reset role;
 
@@ -379,7 +410,26 @@ select throws_ok(
   )$$,
   '22023', null, 'the database refuses a noncanonical primary genre even for an owner'
 );
+select is(
+  public.set_corpus_work_cover(
+    '90000000-0000-4000-8000-000000000012',
+    'https://books.google.com/books/content?id=owner-selected',
+    'google',
+    'https://books.google.com/books/content?id=owner-selected',
+    null
+  ),
+  '90000000-0000-4000-8000-000000000012'::uuid,
+  'a household owner may select an allowlisted shared display cover'
+);
 reset role;
+select is((select cover_url from public.works
+  where id = '90000000-0000-4000-8000-000000000012'),
+  'https://books.google.com/books/content?id=owner-selected',
+  'the owner-selected shared cover is stored on the corpus work');
+select is((select count(*)::int from public.work_metadata_edits
+  where work_id = '90000000-0000-4000-8000-000000000012'
+    and next_value ->> 'coverUrl' = 'https://books.google.com/books/content?id=owner-selected'),
+  1, 'the shared cover selection is audited');
 
 -- Personal metadata also stays personal until the owner explicitly adopts the shared details.
 set local role authenticated;
@@ -399,10 +449,10 @@ reset role;
 select is((select genre from public.works
   where id = '90000000-0000-4000-8000-000000000012'),
   'mystery', 'a personal metadata edit does not promote into the corpus');
-select is((select concat_ws('|', genre, subgenre, series, position, pub_y)
+select is((select concat_ws('|', genre, subgenre, series, position, series_count, status, pub_y)
   from public.books where id = '92000000-0000-4000-8000-000000000001'),
-  'mystery|historical mystery|Edited Shared Series|3|2027',
-  'explicit adoption copies the reviewed shared descriptive fields');
+  'mystery|historical mystery|Edited Shared Series|3|5|completed|2027',
+  'explicit adoption copies the complete shared tuple when the target series already exists');
 select is((select count(*)::int from public.series_entries
   where id = '92000000-0000-4000-8000-000000000011'
     and removed_at is not null and book_id is null and user_edited),

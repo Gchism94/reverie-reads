@@ -191,6 +191,7 @@ describe('household-only catalog entry and explicit personal adoption', () => {
     expect(createBoundary).toContain('insert into public.household_works')
     expect(createBoundary).not.toMatch(/insert\s+into\s+public\.books/i)
     expect(createBoundary).toContain("'household catalog creation'")
+    expect(createBoundary).toContain('google_books_display_cover_url_is_valid')
   })
 
   it('holds the exact administrator or owner authority row through a shared edit', () => {
@@ -206,6 +207,9 @@ describe('household-only catalog entry and explicit personal adoption', () => {
       /member\.role = 'owner'[\s\S]*?for update of member, household_work;/,
     )
     expect(editBoundary).not.toContain('if not public.can_edit_corpus_work(p_work)')
+    expect(editBoundary.indexOf('from public.books book')).toBeLessThan(
+      editBoundary.indexOf('from public.household_members member'),
+    )
   })
 
   it('locks the added-by profile before any household row in both household-only add paths', () => {

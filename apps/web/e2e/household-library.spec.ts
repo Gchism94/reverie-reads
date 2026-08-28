@@ -277,6 +277,11 @@ test('scope controls remain available through personal and household loading fai
     await householdGate
     await route.fulfill({ status: 500, json: { message: 'forced household failure' } })
   })
+  await page.goto('/library')
+  await expect(page.locator('[data-testid="persistent-add"]:visible')).toHaveAttribute(
+    'aria-label',
+    'Add a book',
+  )
   await page.goto('/library?scope=household')
   await expect(page.getByText('Loading the household library…')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Personal' })).toBeVisible()
@@ -474,6 +479,7 @@ test('persistent Add creates a household-only work and explicit adoption updates
   let workId = ''
   let personalBookId = ''
   let personalSeriesId = ''
+  let targetSeriesId = ''
 
   try {
     const persistentAdd = page.locator('[data-testid="persistent-add"]:visible')
@@ -509,7 +515,7 @@ test('persistent Add creates a household-only work and explicit adoption updates
       testInfo.project.name === 'mobile'
         ? page.getByRole('dialog', { name: /household details/i })
         : page.locator('aside[aria-label="Household book details"]')
-    await detail.getByText('Edit shared series, genre, and publication').click()
+    await detail.getByText('Edit shared cover, series, genre, and publication').click()
     await detail.getByLabel('Shared series', { exact: true }).fill('Reviewed Shared Cycle')
     await detail.getByLabel('Shared series position', { exact: true }).fill('2.5')
     await detail.getByLabel('Shared series length', { exact: true }).fill('5')
@@ -531,6 +537,9 @@ test('persistent Add creates a household-only work and explicit adoption updates
         return `${row.series}|${row.position}|${row.series_count}|${row.status}|${row.genre}|${row.pub_y}`
       })
       .toBe('Reviewed Shared Cycle|2.5|5|ongoing|fantasy|2029')
+    await expect(detail).toContainText('Reviewed Shared Cycle · #2.5')
+    await expect(detail.getByRole('definition').filter({ hasText: /^Fantasy$/ })).toBeVisible()
+    await expect(detail.getByRole('definition').filter({ hasText: /^2029$/ })).toBeVisible()
 
     const personal = await okData(
       admin
@@ -564,6 +573,15 @@ test('persistent Add creates a household-only work and explicit adoption updates
       'household-only browser series fixture insert',
     )
     personalSeriesId = personalSeries.id
+    const targetSeries = await okData(
+      admin
+        .from('series')
+        .insert({ owner_id: owner.uid, name: 'Reviewed Shared Cycle', status: 'ongoing' })
+        .select('id')
+        .single(),
+      'household-only browser target series fixture insert',
+    )
+    targetSeriesId = targetSeries.id
     await ok(
       admin.from('series_entries').insert({
         series_id: personalSeriesId,
@@ -595,6 +613,9 @@ test('persistent Add creates a household-only work and explicit adoption updates
         return `${row.series}|${row.position}|${row.series_count}|${row.status}|${row.genre}|${row.pub_y}`
       })
       .toBe('Reviewed Shared Cycle|2.5|5|ongoing|fantasy|2029')
+    await expect(page.getByRole('button', { name: 'Use shared details' })).toHaveCount(0)
+    await expect(page.getByText('Your copy already matches the shared details.')).toBeVisible()
+    await expect(page.getByText('Reviewed Shared Cycle', { exact: false }).first()).toBeVisible()
     const retiredSeriesEntry = await okData(
       admin
         .from('series_entries')
@@ -610,6 +631,8 @@ test('persistent Add creates a household-only work and explicit adoption updates
       await ok(admin.from('books').delete().eq('id', personalBookId), 'flow book cleanup')
     if (personalSeriesId)
       await ok(admin.from('series').delete().eq('id', personalSeriesId), 'flow series cleanup')
+    if (targetSeriesId)
+      await ok(admin.from('series').delete().eq('id', targetSeriesId), 'flow target series cleanup')
     if (workId) {
       await ok(
         admin.from('household_works').delete().eq('work_id', workId),
@@ -643,6 +666,7 @@ test('the second reader gets the same household view with their own identity mar
     `Active copies: ${owner.displayName}, ${member.displayName} (you)`,
   )
   await expect(detail.getByRole('link')).toHaveCount(0)
+  await expect(detail.getByText('Edit shared cover, series, genre, and publication')).toHaveCount(0)
   if (seeded) {
     await expect(detail).toContainText(seeded.sentinels.tag)
     await expect(detail).toContainText(seeded.sentinels.trope)

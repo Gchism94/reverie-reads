@@ -150,7 +150,9 @@ grant execute on function public.add_corpus_work_to_household(uuid) to authentic
 create function public.create_household_catalog_work(
   p_title text,
   p_author text,
-  p_isbn text default null
+  p_isbn text default null,
+  p_cover_url text default null,
+  p_cover_source text default null
 )
 returns uuid
 language plpgsql
@@ -169,6 +171,12 @@ declare
   fallback_matches int := 0;
   created_work boolean := false;
   raw_isbn text := upper(regexp_replace(coalesce(p_isbn, ''), '[^0-9Xx]', '', 'g'));
+  safe_display_cover text := case
+    when lower(trim(coalesce(p_cover_source, ''))) = 'google'
+      and public.google_books_display_cover_url_is_valid(p_cover_url)
+      then trim(p_cover_url)
+    else null
+  end;
 begin
   if caller is null then
     raise exception 'authentication required' using errcode = '42501';
@@ -218,7 +226,8 @@ begin
   if isbn_matches = 0 and fallback_matches = 0 then
     insert into public.works (
       work_key, title, contributors, author_text, isbns,
-      metadata_status, creation_source, created_by
+      metadata_status, creation_source, created_by,
+      cover_url, cover_source, cover_source_url, cover_options
     ) values (
       target_key,
       clean_title,
@@ -231,7 +240,17 @@ begin
       case when clean_isbn is null then '{}'::text[] else array[clean_isbn] end,
       'provisional',
       'reader_add',
-      caller
+      caller,
+      safe_display_cover,
+      case when safe_display_cover is null then null else 'google' end,
+      safe_display_cover,
+      case when safe_display_cover is null then '[]'::jsonb
+        else jsonb_build_array(jsonb_build_object(
+          'url', safe_display_cover,
+          'source', 'google',
+          'sourceUrl', safe_display_cover
+        ))
+      end
     )
     on conflict (work_key) do nothing
     returning id into target_work;
@@ -288,7 +307,8 @@ begin
         'authorText', clean_author,
         'isbns', case when clean_isbn is null then '[]'::jsonb
           else jsonb_build_array(clean_isbn)
-        end
+        end,
+        'coverUrl', safe_display_cover
       )
     );
   end if;
@@ -297,9 +317,9 @@ begin
 end;
 $$;
 
-revoke all on function public.create_household_catalog_work(text, text, text)
+revoke all on function public.create_household_catalog_work(text, text, text, text, text)
   from public, anon, authenticated, service_role;
-grant execute on function public.create_household_catalog_work(text, text, text)
+grant execute on function public.create_household_catalog_work(text, text, text, text, text)
   to authenticated;
 
 -- The old RPC accepted any member with a personal/household relationship to the work. Remove that
@@ -346,6 +366,7 @@ declare
   normalized_subgenre text := nullif(lower(trim(p_subgenre)), '');
   normalized_genres text[];
   normalized_subgenres text[];
+  caller_is_admin boolean := false;
 begin
   if caller is null then
     raise exception 'authentication required' using errcode = '42501';
@@ -415,7 +436,20 @@ begin
   from public.corpus_admins admin
   where admin.user_id = caller
   for update;
-  if not found then
+  caller_is_admin := found;
+  if not caller_is_admin then
+    -- Personal tag/trope triggers take book -> membership -> household. Prelock every active
+    -- personal copy of this work before the owner-membership rows so a corpus edit cannot take the
+    -- reverse membership -> book path and deadlock with one of those triggers. Household-only
+    -- works have no matching book and proceed directly to the membership lock.
+    perform 1
+    from public.books book
+    where book.owner_id = caller
+      and book.corpus_work_id = p_work
+      and book.removed_at is null
+    order by book.id
+    for update;
+
     select member.household_id into target_household
     from public.household_members member
     join public.household_works household_work
@@ -557,6 +591,145 @@ grant execute on function public.edit_corpus_work_metadata(
   uuid, text, numeric, int, text, text, text, text[], text[], text, jsonb, int, int, int
 ) to authenticated;
 
+-- A cover ingest writes bytes but never mutates catalog rows. This narrow second phase selects the
+-- resulting corpus-owned object (or the explicit Google display-only exception) through the same
+-- owner/admin boundary as the complete metadata editor, without resending unrelated fields.
+create function public.set_corpus_work_cover(
+  p_work uuid,
+  p_cover_url text,
+  p_cover_source text,
+  p_cover_source_url text default null,
+  p_cover_color text default null
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  caller uuid := (select auth.uid());
+  target_household uuid;
+  caller_is_admin boolean := false;
+  safe_cover text := nullif(trim(p_cover_url), '');
+  safe_source text := nullif(lower(trim(p_cover_source)), '');
+  safe_source_url text := nullif(trim(p_cover_source_url), '');
+  safe_option jsonb;
+  before_value jsonb;
+  after_value jsonb;
+begin
+  if caller is null then
+    raise exception 'authentication required' using errcode = '42501';
+  end if;
+  if safe_cover is null or safe_source is null then
+    raise exception 'cover URL and source are required' using errcode = '22023';
+  end if;
+  if safe_source = 'google' then
+    if not public.google_books_display_cover_url_is_valid(safe_cover) then
+      raise exception 'Google display cover URL is not allowlisted' using errcode = '22023';
+    end if;
+  elsif safe_source not in ('hardcover', 'openlibrary', 'upload', 'camera', 'url')
+    or public.hosted_corpus_cover_object_name(safe_cover, p_work) is null then
+    raise exception 'shared covers must use the corpus cover ingestion pipeline'
+      using errcode = '22023';
+  end if;
+
+  safe_option := jsonb_strip_nulls(jsonb_build_object(
+    'url', safe_cover,
+    'source', safe_source,
+    'sourceUrl', safe_source_url
+  ));
+  if not public.corpus_cover_option_is_valid(safe_option) then
+    raise exception 'cover option is invalid' using errcode = '22023';
+  end if;
+
+  perform 1 from public.profiles profile where profile.id = caller for key share;
+  if not found then
+    raise exception 'profile not found' using errcode = 'P0002';
+  end if;
+
+  perform 1 from public.corpus_admins admin
+  where admin.user_id = caller
+  for update;
+  caller_is_admin := found;
+  if not caller_is_admin then
+    perform 1
+    from public.books book
+    where book.owner_id = caller
+      and book.corpus_work_id = p_work
+      and book.removed_at is null
+    order by book.id
+    for update;
+
+    select member.household_id into target_household
+    from public.household_members member
+    join public.household_works household_work
+      on household_work.household_id = member.household_id
+     and household_work.work_id = p_work
+     and household_work.removed_at is null
+    where member.user_id = caller
+      and member.role = 'owner'
+    for update of member, household_work;
+    if target_household is null then
+      raise exception 'corpus administrator or household owner required' using errcode = '42501';
+    end if;
+  end if;
+
+  select jsonb_build_object(
+    'coverUrl', work.cover_url,
+    'coverSource', work.cover_source,
+    'coverSourceUrl', work.cover_source_url,
+    'coverColor', work.cover_color,
+    'coverOptions', work.cover_options
+  ) into before_value
+  from public.works work
+  where work.id = p_work
+  for update;
+  if before_value is null then
+    raise exception 'corpus work not found' using errcode = 'P0002';
+  end if;
+
+  update public.works work
+  set cover_url = safe_cover,
+      cover_source = safe_source,
+      cover_source_url = safe_source_url,
+      cover_color = nullif(trim(p_cover_color), ''),
+      cover_options = (
+        select coalesce(jsonb_agg(option_value order by option_order), '[]'::jsonb)
+        from (
+          select safe_option as option_value, 0 as option_order
+          union all
+          select existing.value, existing.ordinality::int
+          from jsonb_array_elements(coalesce(work.cover_options, '[]'::jsonb))
+            with ordinality existing(value, ordinality)
+          where existing.value ->> 'url' is distinct from safe_cover
+        ) options
+      )
+  where work.id = p_work;
+
+  select jsonb_build_object(
+    'coverUrl', work.cover_url,
+    'coverSource', work.cover_source,
+    'coverSourceUrl', work.cover_source_url,
+    'coverColor', work.cover_color,
+    'coverOptions', work.cover_options
+  ) into after_value
+  from public.works work where work.id = p_work;
+
+  if after_value is distinct from before_value then
+    insert into public.work_metadata_edits (
+      work_id, editor_id, previous_value, next_value
+    ) values (p_work, caller, before_value, after_value);
+  end if;
+
+  return p_work;
+end;
+$$;
+
+revoke all on function public.set_corpus_work_cover(uuid, text, text, text, text)
+  from public, anon, authenticated, service_role;
+grant execute on function public.set_corpus_work_cover(uuid, text, text, text, text)
+  to authenticated;
+
 -- Personal edits are private by default. This trigger previously promoted every reader's genre
 -- and cover edits into the shared work; removing it closes that implicit write path. The function
 -- remains for historical migrations, but no future personal update invokes it.
@@ -606,7 +779,8 @@ begin
   );
 
   update public.books book
-  set status = coalesce(work.status, 'standalone'),
+  set series_count = shared_series_count,
+      status = coalesce(work.status, 'standalone'),
       genre = coalesce(work.genre, ''),
       subgenre = coalesce(work.subgenre, ''),
       genres = coalesce(work.genres, '{}'),
