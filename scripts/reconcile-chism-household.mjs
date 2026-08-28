@@ -22,6 +22,7 @@ import {
   householdReconciliationCounts,
   pageQuery,
   planHouseholdReconciliation,
+  psqlConnectionBoundary,
   RECONCILIATION_BACKUP_PRIMARY_KEYS,
   RECONCILIATION_HOUSEHOLD_BACKUP_SPECS,
 } from './household-reconciliation-lib.ts'
@@ -214,12 +215,17 @@ function backupOwnerState(householdId) {
     )
   }
 
+  const connection = psqlConnectionBoundary(databaseUrl)
+  const childEnvironment = { ...process.env }
+  delete childEnvironment.SUPABASE_DB_URL
+  if (connection.password !== undefined) childEnvironment.PGPASSWORD = connection.password
+
   let output
   try {
     output = execFileSync(
       'psql',
       [
-        databaseUrl,
+        connection.databaseArgument,
         '-X',
         '-qAt',
         '-v',
@@ -252,7 +258,12 @@ function backupOwnerState(householdId) {
           commit;
         `,
       ],
-      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 256 * 1024 * 1024 },
+      {
+        encoding: 'utf8',
+        env: childEnvironment,
+        stdio: ['ignore', 'pipe', 'pipe'],
+        maxBuffer: 256 * 1024 * 1024,
+      },
     ).trim()
   } catch (error) {
     const stderr =
@@ -299,6 +310,7 @@ async function currentPlan(records, householdId) {
       accountB,
     }),
     corpusCount: works.length,
+    corpusWorkIds: works.map((work) => work.id).sort(),
   }
 }
 
@@ -388,6 +400,10 @@ async function main() {
 
   const post = await currentPlan(records, householdId)
   const postCounts = householdReconciliationCounts(post.plan)
+  const postWorkIds = new Set(post.corpusWorkIds)
+  const missingSnapshotCorpusWorkIds = snapshotState.planningWorks
+    .map((work) => work.id)
+    .filter((workId) => !postWorkIds.has(workId))
   if (
     !post.plan.canWrite ||
     postCounts.personalCreate ||
@@ -396,15 +412,17 @@ async function main() {
     postCounts.householdCreate ||
     postCounts.householdRestore ||
     postCounts.householdArchive ||
-    post.corpusCount !== corpusCount
+    missingSnapshotCorpusWorkIds.length
   ) {
     throw new Error('post-write verification did not converge exactly to the approved plan')
   }
   const verified = writePrivateJson('postchange-verification.json', {
     createdAt: new Date().toISOString(),
     rpcResult: result,
-    corpusCountBefore: corpusCount,
+    corpusCountBefore: snapshot.corpusCount,
     corpusCountAfter: post.corpusCount,
+    corpusCountDelta: post.corpusCount - snapshot.corpusCount,
+    missingSnapshotCorpusWorkIds,
     counts: postCounts,
   })
   console.log(

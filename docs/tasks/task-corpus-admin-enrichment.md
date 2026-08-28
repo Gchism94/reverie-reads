@@ -111,6 +111,23 @@ Focused source-contract and pgTAP regressions cover the snapshot boundary, the c
 requirement, stale fingerprints, and a deterministic in-flight household extension that must win
 before reconciliation is refused.
 
+The final exact-range review found three reconciliation/operator gaps. The corrected candidate now
+also:
+
+- places a shared transaction fence at the start of every personal-book insert and takes the
+  exclusive form for both reviewed owners before reconciliation locks any book row, closing the
+  late predicate-insert window without blocking unrelated readers;
+- verifies that every corpus work in the authoritative snapshot still exists after the write,
+  while recording count changes only as audit information, so an unrelated concurrent corpus
+  addition cannot turn a successful write into a false verification failure; and
+- removes the database password from `psql` argv, supplies it only through the child environment,
+  and omits the original secret-bearing `SUPABASE_DB_URL` from that environment.
+
+The deterministic harness exercises both owner-fence orders: an earlier insert commits and makes
+reconciliation reject its stale fingerprint, while an insert begun after final revalidation is
+proven blocked until reconciliation commits. Unit/source-contract coverage verifies encoded and
+query passwords, multi-host URI preservation, the snapshot count baseline, and secret-free argv.
+
 ## Reconciliation coupling
 
 The private owner CSV is interpreted only by the gitignored operator. Exact normalized title and
@@ -118,8 +135,10 @@ full-author matching is required because the file has no ISBN column. Ambiguity 
 blocks the atomic write. Dry-run and backup artifacts must live outside the repository with mode
 `0600` files inside a mode `0700` directory. Write mode also requires `SUPABASE_DB_URL`: the
 service-role HTTP client still performs the narrow RPC, but the rollback artifact and its mutation
-fence are captured over one read-only database snapshot. The operator verifies that the reviewed
-household roster contains exactly Account A and Account B before either dry-run or write planning.
+fence are captured over one read-only database snapshot. The password is removed from the `psql`
+argument and the original connection URL is not inherited by that child process. The operator
+verifies that the reviewed household roster contains exactly Account A and Account B before either
+dry-run or write planning.
 
 ## Required rollout order
 
@@ -136,16 +155,20 @@ household roster contains exactly Account A and Account B before either dry-run 
 ## Local verification — 2026-08-27
 
 - Clean database rebuild applied every migration through `20260831010000`.
-- Full pgTAP: 27 files and 631 assertions passed. The focused corpus administration, cover recovery,
-  host validation, account-cascade, snapshot-fence, and complete-roster contract passed all 64
+- Full pgTAP: 27 files and 635 assertions passed. The focused corpus administration, cover recovery,
+  host validation, account-cascade, snapshot-fence, and complete-roster contract passed all 68
   assertions after the clean rebuild.
-- Core/web unit suites: 80 + 71 files and 2,410 + 624 assertions passed.
-- The deterministic multi-session database harness passed its reconciliation edit, insert, and
-  complete-roster races, along with the existing authorization, ISBN, and final-unlink cases.
+- Core/web unit suites: 80 + 71 files and 2,412 + 625 assertions passed.
+- The deterministic 17-scenario multi-session database harness passed reconciliation edit, earlier
+  insert, post-revalidation insert, and complete-roster races, along with the existing
+  authorization, ISBN, and final-unlink cases.
 - A disposable two-account CSV exercise ran the real dry-run and write operator end to end. It
   created mode-`0700`/`0600` artifacts from the direct read-only snapshot, archived the one planned
   personal and household extra, preserved corpus count, and converged to a zero-change post-check;
   the local fixtures were then removed and the temporary artifacts moved to Trash.
+- The real libpq option probe preserved `%20` in `options` and reported the configured `5s`
+  statement timeout. A fresh read-only bypass review of the complete corrective patch found no
+  remaining actionable finding after the URI and post-verification edge corrections.
 - TypeScript, ESLint, Prettier, production build, and `git diff --check` passed. Schema lint added no
   finding; its two reports are the existing temporary-table analysis limitations in
   `backfill_series_from_titles` and `merge_series`.

@@ -258,4 +258,18 @@ describe('no user-owned table may go unregistered', () => {
     expect(RECONCILIATION_SCRIPT).toContain('chmodSync(artifactDir, 0o700)')
     expect(RECONCILIATION_SCRIPT).toContain('chmodSync(path, 0o600)')
   })
+
+  it('verifies snapshot work preservation and keeps database credentials out of psql argv', () => {
+    expect(RECONCILIATION_SCRIPT).toContain('missingSnapshotCorpusWorkIds')
+    expect(RECONCILIATION_SCRIPT).toContain('snapshotState.planningWorks')
+    expect(RECONCILIATION_SCRIPT).toContain('postWorkIds.has(workId)')
+    expect(RECONCILIATION_SCRIPT).toContain('corpusCountBefore: snapshot.corpusCount')
+    expect(RECONCILIATION_SCRIPT).toContain('corpusCountDelta: post.corpusCount - snapshot.corpusCount')
+    expect(RECONCILIATION_SCRIPT).not.toContain('post.corpusCount !== corpusCount')
+    expect(RECONCILIATION_SCRIPT).not.toContain('post.corpusCount !== snapshot.corpusCount')
+    expect(RECONCILIATION_SCRIPT).toContain('psqlConnectionBoundary(databaseUrl)')
+    expect(RECONCILIATION_SCRIPT).toContain('delete childEnvironment.SUPABASE_DB_URL')
+    expect(RECONCILIATION_SCRIPT).toContain('connection.databaseArgument')
+    expect(RECONCILIATION_SCRIPT).not.toMatch(/\[\s*databaseUrl,\s*['"]-X['"]/)
+  })
 })

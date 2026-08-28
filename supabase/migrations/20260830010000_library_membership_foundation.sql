@@ -203,6 +203,47 @@ $$;
 revoke all on function public.lock_library_isbns(text[])
   from public, anon, authenticated, service_role;
 
+-- A personal-book insert and the owner-run reconciliation must agree on whether the insert belongs
+-- to the reviewed snapshot. Ordinary inserts share a transaction-scoped owner fence, preserving
+-- normal same-reader concurrency. Reconciliation takes the exclusive form for its complete,
+-- sorted owner set before locking any book rows; an earlier insert therefore commits and is seen
+-- by the fingerprint, while a later insert waits until reconciliation has committed.
+create function public.lock_library_book_owner_insert(p_owner uuid)
+returns void
+language sql
+security definer
+set search_path = ''
+as $$
+  select pg_catalog.pg_advisory_xact_lock_shared(
+    pg_catalog.hashtextextended('reverie:book-owner:' || p_owner::text, 0)
+  );
+$$;
+
+revoke all on function public.lock_library_book_owner_insert(uuid)
+  from public, anon, authenticated, service_role;
+
+create function public.lock_library_book_owners_reconciliation(p_owners uuid[])
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  owner_id uuid;
+begin
+  for owner_id in
+    select distinct value from unnest(coalesce(p_owners, '{}')) value order by value
+  loop
+    perform pg_catalog.pg_advisory_xact_lock(
+      pg_catalog.hashtextextended('reverie:book-owner:' || owner_id::text, 0)
+    );
+  end loop;
+end;
+$$;
+
+revoke all on function public.lock_library_book_owners_reconciliation(uuid[])
+  from public, anon, authenticated, service_role;
+
 -- Keep direct corpus writers on the same boundary as personal-book resolution. Existing ambiguous
 -- ISBN data remains visible to the reconciliation resolver; only a new assignment that would add a
 -- second ordinary owner for an ISBN is refused.
@@ -496,6 +537,10 @@ declare
   safe_cover text;
   safe_cover_option jsonb;
 begin
+  -- This is deliberately the first lock in every personal-book insert. It must precede the ISBN,
+  -- corpus-work, row/FK, and owned-household boundaries below.
+  perform public.lock_library_book_owner_insert(new.owner_id);
+
   author_name := coalesce(
     nullif(new.authors_display, ''),
     trim(concat_ws(' ', new.author_first, new.author_last))

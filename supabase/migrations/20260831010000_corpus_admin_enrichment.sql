@@ -1155,6 +1155,13 @@ begin
       using errcode = '22023';
   end if;
 
+  -- Every personal-book insert first shares its owner's transaction fence. Take the exclusive
+  -- fences in UUID order before any row or metadata lock: an earlier insert must commit and become
+  -- visible to the reviewed fingerprint, while a later insert waits until this transaction ends.
+  -- This also keeps reconciliation aligned with the ordinary insert order of owner -> ISBN/work ->
+  -- household and closes the predicate-phantom window that row locks alone cannot cover.
+  perform public.lock_library_book_owners_reconciliation(assigned_accounts);
+
   -- All ordinary household enrichment paths lock book -> membership -> household. Reconciliation
   -- touches the complete reviewed libraries, so prelock their existing books in UUID order before
   -- joining that shared order. This prevents a tag/trope edit from forming H -> B / B -> H.

@@ -1,5 +1,5 @@
 begin;
-select plan(64);
+select plan(68);
 
 insert into auth.users (id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
 values
@@ -553,6 +553,18 @@ select ok(not has_function_privilege('authenticated',
 select ok(has_function_privilege('service_role',
   'public.reconcile_household_library_memberships(uuid,jsonb,uuid[],uuid[],text,text)', 'EXECUTE'),
   'the reviewed reconciliation operator is service-role-only');
+select ok(not has_function_privilege('authenticated',
+  'public.lock_library_book_owner_insert(uuid)', 'EXECUTE'),
+  'readers cannot take the internal shared owner-insert fence directly');
+select ok(not has_function_privilege('service_role',
+  'public.lock_library_book_owner_insert(uuid)', 'EXECUTE'),
+  'service role reaches the shared owner-insert fence only through the trusted trigger');
+select ok(not has_function_privilege('authenticated',
+  'public.lock_library_book_owners_reconciliation(uuid[])', 'EXECUTE'),
+  'readers cannot take the exclusive reconciliation fence directly');
+select ok(not has_function_privilege('service_role',
+  'public.lock_library_book_owners_reconciliation(uuid[])', 'EXECUTE'),
+  'service role reaches the exclusive owner fence only through the reviewed RPC');
 
 reset role;
 set local role service_role;

@@ -3,6 +3,7 @@ import {
   collapseHouseholdRecords,
   pageQuery,
   planHouseholdReconciliation,
+  psqlConnectionBoundary,
 } from '../../../scripts/household-reconciliation-lib'
 import type { ImportRecord } from '../../../scripts/corpus-import-lib'
 
@@ -224,5 +225,37 @@ describe('household reconciliation read-only planning pagination', () => {
     await expect(
       pageQuery('partial', ['id'], async () => ({ data: [{ id: 'a' }], error: null, count: 2 }), 2),
     ).rejects.toThrow('read 1 of 2')
+  })
+})
+
+describe('household reconciliation psql credential boundary', () => {
+  it('removes an encoded authority password while preserving multi-host and query semantics', () => {
+    const result = psqlConnectionBoundary(
+      'postgresql://reader:p%40ss@host1:5432,host2:5433/db?sslmode=verify-full&application_name=reverie&options=-c%20statement_timeout%3D5s',
+    )
+    expect(result.password).toBe('p@ss')
+    expect(result.databaseArgument).not.toContain('p%40ss')
+    expect(result.databaseArgument).not.toContain('p@ss')
+    expect(result.databaseArgument).toBe(
+      'postgresql://reader@host1:5432,host2:5433/db?sslmode=verify-full&application_name=reverie&options=-c%20statement_timeout%3D5s',
+    )
+  })
+
+  it('extracts a query password and rejects ambiguous or malformed credential input', () => {
+    expect(
+      psqlConnectionBoundary('postgres://reader@db.test/app?password=p%40ss&sslmode=require'),
+    ).toEqual({
+      databaseArgument: 'postgres://reader@db.test/app?sslmode=require',
+      password: 'p@ss',
+    })
+    expect(() => psqlConnectionBoundary('postgres://reader:one@db.test/app?password=two')).toThrow(
+      'ambiguous password',
+    )
+    expect(() =>
+      psqlConnectionBoundary('postgres://reader@db.test/app?sslpassword=client-key-secret'),
+    ).toThrow('sslpassword cannot be passed')
+    expect(() => psqlConnectionBoundary('https://reader:secret@db.test/app')).toThrow(
+      'postgres:// or postgresql://',
+    )
   })
 })

@@ -113,6 +113,81 @@ export async function pageQuery<Row extends Record<string, unknown>>(
   return rows
 }
 
+export interface PsqlConnectionBoundary {
+  databaseArgument: string
+  password: string | undefined
+}
+
+/** Keep database credentials out of the child process argument list while preserving libpq URI
+ * semantics, including multi-host authorities and non-password query options. The extracted secret
+ * is supplied to only the child through PGPASSWORD; callers must also remove the original URL from
+ * the inherited child environment. */
+export function psqlConnectionBoundary(connectionUrl: string): PsqlConnectionBoundary {
+  const match = /^(postgres(?:ql)?):\/\/([^/?#]*)([^#]*)$/i.exec(connectionUrl)
+  if (!match) throw new Error('database URL must be a postgres:// or postgresql:// URI')
+
+  const [, scheme, authority, originalSuffix] = match
+  let safeAuthority = authority!
+  let password: string | undefined
+  const at = authority!.lastIndexOf('@')
+  if (at >= 0) {
+    const userInfo = authority!.slice(0, at)
+    const passwordSeparator = userInfo.indexOf(':')
+    if (passwordSeparator >= 0) {
+      try {
+        password = decodeURIComponent(userInfo.slice(passwordSeparator + 1))
+      } catch {
+        throw new Error('database URL contains an invalid encoded password')
+      }
+      safeAuthority = `${userInfo.slice(0, passwordSeparator)}@${authority!.slice(at + 1)}`
+    }
+  }
+
+  let safeSuffix = originalSuffix!
+  const queryStart = originalSuffix!.indexOf('?')
+  if (queryStart >= 0) {
+    const path = originalSuffix!.slice(0, queryStart)
+    const safeParameters: string[] = []
+    const queryPasswords: string[] = []
+    for (const parameter of originalSuffix!.slice(queryStart + 1).split('&')) {
+      const separator = parameter.indexOf('=')
+      const rawKey = separator >= 0 ? parameter.slice(0, separator) : parameter
+      let key: string
+      try {
+        key = decodeURIComponent(rawKey)
+      } catch {
+        throw new Error('database URL contains an invalid encoded query key')
+      }
+      if (key === 'sslpassword') {
+        throw new Error(
+          'database URL sslpassword cannot be passed without exposing a credential in psql argv',
+        )
+      }
+      if (key !== 'password') {
+        safeParameters.push(parameter)
+        continue
+      }
+      const rawPassword = separator >= 0 ? parameter.slice(separator + 1) : ''
+      try {
+        queryPasswords.push(decodeURIComponent(rawPassword))
+      } catch {
+        throw new Error('database URL contains an invalid encoded password')
+      }
+    }
+    if (queryPasswords.length > 1 || (queryPasswords.length === 1 && password !== undefined)) {
+      throw new Error('database URL contains ambiguous password parameters')
+    }
+    if (queryPasswords.length === 1) password = queryPasswords[0]!
+    const safeQuery = safeParameters.join('&')
+    safeSuffix = `${path}${safeQuery ? `?${safeQuery}` : ''}`
+  }
+
+  return {
+    databaseArgument: `${scheme}://${safeAuthority}${safeSuffix}`,
+    password,
+  }
+}
+
 export interface ReconciliationWorkRow {
   id: string
   title: string

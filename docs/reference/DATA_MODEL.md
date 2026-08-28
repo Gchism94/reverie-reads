@@ -449,7 +449,10 @@ exact complete-roster match. Its write-mode rollback artifact is captured in one
 READ`/`READ ONLY` database snapshot, including deterministic fingerprints of every reviewed account book
 row and household-work membership row; the mutation rechecks that fence under its normal serialization
 locks and refuses any intervening reader edit, book insertion, household change, or unreviewed
-member rather than applying a stale plan.
+member rather than applying a stale plan. Every book insert first shares a transaction-scoped,
+per-owner advisory fence before taking ISBN/work locks. Reconciliation exclusively locks the two
+reviewed owner fences in UUID order before any book row, so an earlier insert becomes visible and
+invalidates the snapshot while a later insert waits until the reviewed transaction commits.
 
 ### Notes
 
