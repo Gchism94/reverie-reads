@@ -346,9 +346,13 @@ aggregate rows were valid household entries but had no corpus identity. The dura
   fields while preserving title, contributors, ISBN, ownership, reading history, rating, and private
   annotations.
 
-This twice-remediated candidate is complete locally and is not deployed. Production reconciliation remains paused until final independent re-review,
-integration, owner-guarded migration/web deployment, all 51 expanded rollout-report rows, and
-focused smoke verification pass.
+This twice-remediated candidate is complete locally and is not deployed. Production reconciliation
+remains paused until final independent re-review and integration, followed in exact order by the
+owner-guarded `20260902010000` deployment, all 51 expanded rollout-report rows, the guarded `covers`
+function deployment plus owner/admin authorization smoke, and only then the guarded web deployment
+plus household-only add/cover-refresh smoke. Shipping the web first would leave household owners on
+the already-deployed administrator-only function. The focused smoke verification must pass before
+reconciliation resumes.
 
 Local remediation verification passed a clean rebuild through `20260902010000`, all 715 pgTAP
 assertions across 29 files, 20 deterministic concurrency scenarios, the bounded

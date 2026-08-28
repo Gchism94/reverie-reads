@@ -185,8 +185,12 @@ contains exactly Account A and Account B before either dry-run or write planning
    confirmed the selected cover survives refresh. The corpus-admin positive path remains part of
    the later administrator smoke set.
 4. Independently review and integrate the forward household-only catalog-entry boundary. The owner
-   then deploys its migration and web surface through the guards and verifies that a household-only
-   add creates no personal copy. Rerun the expanded report and require all 51 rows true.
+   then deploys `20260902010000` through the migration guard and reruns the expanded report, requiring
+   all 51 rows true. Only after that report passes, deploy the `covers` function through its guard and
+   smoke both exact-work owner authorization and administrator authorization. Deploy the web surface
+   last, then verify that a household-only add creates no personal copy and that an owner-picked
+   Hardcover cover survives refresh. Do not ship the new web path against the previously deployed
+   administrator-only `covers` function.
 5. Resolve the 10 aggregate missing-corpus dry-run rows through Household Add books, then dry-run
    both administrator grants and the CSV reconciliation again. Run the reconciliation's separate
    backup-only phase and review the exact external title-level report and backup checksums; do not
