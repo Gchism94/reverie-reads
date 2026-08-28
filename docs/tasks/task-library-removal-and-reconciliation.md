@@ -156,7 +156,7 @@ Still pending and intentionally not performed:
 - The bounded migration fixture applied both migrations to 25,005 initial works and 5,012 personal
   books under its 20-second per-statement timeout, binding every personal row and safely retaining
   the reviewed ambiguity paths.
-- Core and web unit suites passed 2,423 and 626 assertions respectively. TypeScript, ESLint,
+- Core and web unit suites passed 2,426 and 626 assertions respectively. TypeScript, ESLint,
   Prettier, the production build, and `git diff --check` passed.
 - The complete browser matrix passed 218 runnable cases with 10 expected project skips, one worker,
   and zero retries from a fresh database.
@@ -337,10 +337,11 @@ inferring them from current non-null bindings.
 ### 2. Produce and approve the deterministic private dry run
 
 Set `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` only in the owner's private shell. Keep the CSV
-and artifact directory outside Git. Use a new or empty mode-`0700` directory; the operator marks it
-as dedicated to this reconciliation and later phases refuse an unmarked non-empty directory. It
-never changes an existing directory's permissions. Artifacts are mode `0600`, and repository paths
-and symbolic links are refused.
+and artifact directory outside Git. Use a new directory below an existing parent, or an existing
+owner-private mode-`0700` directory. The operator never changes an existing directory's permissions.
+Filesystem root, home, temp roots, and repository paths are refused. A symbolic-link final
+directory is refused; ancestors are canonicalized, and any path resolving inside the repository is
+also refused. Artifacts are mode `0600`.
 
 ```sh
 pnpm household:reconcile -- /absolute/private/path/library-reconciliation.csv \

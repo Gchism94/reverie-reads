@@ -168,16 +168,16 @@ blocks the atomic write. Dry-run and backup artifacts must live outside the repo
 `0600` files inside a mode `0700` directory. Write mode also requires `SUPABASE_DB_URL`: the
 service-role HTTP client still performs the narrow RPC, but the rollback artifact and its mutation
 fence are captured over one read-only database snapshot. The password is removed from the `psql`
-argument and the original connection URL is not inherited by that child process. The operator
-verifies that the reviewed household roster contains exactly Account A and Account B before either
-dry-run or write planning.
+argument and supplied through a minimal child environment that excludes the original URL, ambient
+libpq overrides, and unrelated secrets. The operator verifies that the reviewed household roster
+contains exactly Account A and Account B before either dry-run or write planning.
 
 ## Required rollout order
 
 1. **Complete:** independent review closed and PR #364 integrated the real-merge history to `main`.
 2. **Owner reports complete; ACL correction pending:** the guarded deployment applied
    `20260830010000` followed by `20260831010000`, after which the read-only report found the
-   `work_tropes` privilege mismatch. Integrate and independently review `20260901010000`, then the
+   `work_tropes` privilege mismatch. Independently review and integrate `20260901010000`, then the
    owner deploys that forward-only migration through `pnpm deploy:migrations` from clean `main`.
 3. Rerun `docs/queries/library-membership-rollout-verification.sql` against production and require
    all 43 rows to report `ok = true`; command success alone does not prove the bindings, trigger
@@ -197,7 +197,7 @@ dry-run or write planning.
 - Full pgTAP: 27 files and 638 assertions passed. The focused corpus administration, cover recovery,
   host validation, account-cascade, snapshot-fence, and complete-roster contract passed all 68
   assertions after the clean rebuild.
-- Core/web unit suites: 81 + 71 files and 2,423 + 626 assertions passed.
+- Core/web unit suites: 81 + 71 files and 2,426 + 626 assertions passed.
 - The deterministic 17-scenario multi-session database harness passed reconciliation edit, earlier
   insert, post-revalidation insert, and complete-roster races, along with the existing
   authorization, ISBN, and final-unlink cases.

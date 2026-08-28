@@ -1,10 +1,22 @@
-import { chmodSync, mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import {
+  chmodSync,
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  statSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs'
+import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
   collapseHouseholdRecords,
   ensurePrivateArtifactDirectory,
+  executePsql,
   pageQuery,
   planHouseholdReconciliation,
   psqlChildEnvironment,
@@ -35,11 +47,10 @@ const record = (over: Partial<ImportRecord>): ImportRecord => ({
 })
 
 describe('household reconciliation operator boundaries', () => {
-  it('drops hostile libpq overrides and unrelated secrets from the psql child environment', () => {
+  it('builds a minimal psql environment without stale credentials or libpq overrides', () => {
     const child = psqlChildEnvironment(
       {
         PATH: '/usr/local/bin:/usr/bin',
-        LANG: 'C',
         PGHOSTADDR: '127.0.0.2',
         PGHOST: 'redirect.invalid',
         PGSERVICE: 'unreviewed-service',
@@ -54,51 +65,179 @@ describe('household reconciliation operator boundaries', () => {
 
     expect(child).toEqual({
       PATH: '/usr/local/bin:/usr/bin',
-      LANG: 'C',
       PGPASSWORD: 'reviewed-uri-password',
     })
+    expect(
+      psqlChildEnvironment({ PATH: '/usr/bin', PGPASSWORD: 'stale-password' }, undefined),
+    ).toEqual({ PATH: '/usr/bin' })
   })
 
-  it('creates a dedicated private artifact directory and reuses only its valid marker', () => {
+  it('executes the psql child without allowing hostile PGHOSTADDR to override the URI host', () => {
     const root = mkdtempSync(join(tmpdir(), 'reverie-artifacts-'))
     try {
-      const repository = join(root, 'repo')
-      const artifactDirectory = join(root, 'private', 'reconciliation')
-      mkdirSync(repository, { mode: 0o700 })
+      const fakePsql = join(root, 'fake-psql.mjs')
+      writeFileSync(
+        fakePsql,
+        `#!/usr/bin/env node
+const connection = new URL(process.argv[2])
+process.stdout.write(JSON.stringify({
+  argv: process.argv.slice(2),
+  destination: process.env.PGHOSTADDR ?? connection.hostname,
+  environment: process.env,
+}))
+`,
+        { mode: 0o700 },
+      )
+      chmodSync(fakePsql, 0o700)
 
-      expect(ensurePrivateArtifactDirectory(artifactDirectory, repository)).toBe(artifactDirectory)
-      expect(statSync(artifactDirectory).mode & 0o777).toBe(0o700)
-      expect(
-        statSync(join(artifactDirectory, '.reverie-reconciliation-artifacts')).mode & 0o777,
-      ).toBe(0o600)
-      expect(ensurePrivateArtifactDirectory(artifactDirectory, repository)).toBe(artifactDirectory)
+      const output = executePsql(
+        'postgresql://reader:reviewed%2Dpassword@db.reviewed.test:5432/reverie?sslmode=require',
+        ['--hostile-environment-probe'],
+        {
+          executable: fakePsql,
+          sourceEnvironment: {
+            PATH: process.env.PATH ?? '/usr/bin:/bin',
+            PGHOSTADDR: '192.0.2.123',
+            PGHOST: 'redirect.invalid',
+            PGSERVICE: 'unreviewed-service',
+            PGSERVICEFILE: '/tmp/unreviewed-service.conf',
+            PGSSLMODE: 'disable',
+            PGPASSWORD: 'stale-password',
+            SUPABASE_DB_URL: 'postgresql://unreviewed.invalid/postgres',
+            SUPABASE_SERVICE_ROLE_KEY: 'unrelated-secret',
+          },
+        },
+      )
+      const observed = JSON.parse(output) as {
+        argv: string[]
+        destination: string
+        environment: NodeJS.ProcessEnv
+      }
+
+      expect(observed.destination).toBe('db.reviewed.test')
+      expect(observed.argv).toEqual([
+        'postgresql://reader@db.reviewed.test:5432/reverie?sslmode=require',
+        '--hostile-environment-probe',
+      ])
+      expect(observed.environment).toMatchObject({
+        PATH: process.env.PATH ?? '/usr/bin:/bin',
+        PGPASSWORD: 'reviewed-password',
+      })
+      expect(observed.environment).not.toHaveProperty('PGHOSTADDR')
+      expect(observed.environment).not.toHaveProperty('PGHOST')
+      expect(observed.environment).not.toHaveProperty('PGSERVICE')
+      expect(observed.environment).not.toHaveProperty('PGSERVICEFILE')
+      expect(observed.environment).not.toHaveProperty('PGSSLMODE')
+      expect(observed.environment).not.toHaveProperty('SUPABASE_DB_URL')
+      expect(observed.environment).not.toHaveProperty('SUPABASE_SERVICE_ROLE_KEY')
+      expect(output).not.toContain('unrelated-secret')
+      expect(output).not.toContain('192.0.2.123')
     } finally {
       rmSync(root, { recursive: true, force: true })
     }
   })
 
-  it('refuses unsafe existing artifact paths without changing their permissions', () => {
+  it('creates a new private artifact directory below an existing canonical parent', () => {
+    const root = mkdtempSync(join(tmpdir(), 'reverie-artifacts-'))
+    try {
+      const repository = join(root, 'repo')
+      const artifactDirectory = join(root, 'reconciliation')
+      mkdirSync(repository, { mode: 0o700 })
+
+      expect(ensurePrivateArtifactDirectory(artifactDirectory, repository)).toBe(
+        realpathSync(artifactDirectory),
+      )
+      expect(statSync(artifactDirectory).mode & 0o777).toBe(0o700)
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it('reuses an existing owner-private artifact directory unchanged, including its contents', () => {
+    const root = mkdtempSync(join(tmpdir(), 'reverie-artifacts-'))
+    try {
+      const repository = join(root, 'repo')
+      const privateDirectory = join(root, 'existing-private')
+      mkdirSync(repository, { mode: 0o700 })
+      mkdirSync(privateDirectory, { mode: 0o700 })
+      chmodSync(privateDirectory, 0o700)
+      const existing = join(privateDirectory, 'unrelated.txt')
+      writeFileSync(existing, 'keep me\n', { mode: 0o600 })
+      const before = lstatSync(privateDirectory)
+
+      expect(ensurePrivateArtifactDirectory(privateDirectory, repository)).toBe(
+        realpathSync(privateDirectory),
+      )
+      const after = lstatSync(privateDirectory)
+      expect(after.mode).toBe(before.mode)
+      expect(after.mtimeMs).toBe(before.mtimeMs)
+      expect(readFileSync(existing, 'utf8')).toBe('keep me\n')
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it('refuses broad or permissive existing artifact paths without changing their permissions', () => {
     const root = mkdtempSync(join(tmpdir(), 'reverie-artifacts-'))
     try {
       const repository = join(root, 'repo')
       const permissive = join(root, 'permissive')
-      const unrelatedPrivate = join(root, 'unrelated-private')
+      const broadSystemPaths = [...new Set(['/tmp', tmpdir(), homedir()])]
       mkdirSync(repository, { mode: 0o700 })
       mkdirSync(permissive, { mode: 0o755 })
       chmodSync(permissive, 0o755)
-      mkdirSync(unrelatedPrivate, { mode: 0o700 })
-      writeFileSync(join(unrelatedPrivate, 'unrelated.txt'), 'keep me\n', { mode: 0o600 })
       const permissiveMode = statSync(permissive).mode & 0o777
-      const privateMode = statSync(unrelatedPrivate).mode & 0o777
+      const broadModes = broadSystemPaths.map((path) => [path, lstatSync(path).mode] as const)
 
       expect(() => ensurePrivateArtifactDirectory(permissive, repository)).toThrow(
-        'artifact directory must not be accessible by group or others',
+        'existing artifact directory must have permissions 0700',
       )
-      expect(() => ensurePrivateArtifactDirectory(unrelatedPrivate, repository)).toThrow(
-        'existing artifact directory is not an initialized reconciliation directory',
-      )
+      for (const broadPath of broadSystemPaths) {
+        expect(() => ensurePrivateArtifactDirectory(broadPath, repository)).toThrow()
+      }
       expect(statSync(permissive).mode & 0o777).toBe(permissiveMode)
-      expect(statSync(unrelatedPrivate).mode & 0o777).toBe(privateMode)
+      for (const [broadPath, mode] of broadModes) {
+        expect(lstatSync(broadPath).mode).toBe(mode)
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it('rejects a symlinked parent into the repository before creating the artifact directory', () => {
+    const root = mkdtempSync(join(tmpdir(), 'reverie-artifacts-'))
+    try {
+      const repository = join(root, 'repo')
+      const alias = join(root, 'repository-alias')
+      const artifactDirectory = join(alias, 'private-artifacts')
+      mkdirSync(repository, { mode: 0o700 })
+      symlinkSync(repository, alias)
+
+      expect(() => ensurePrivateArtifactDirectory(artifactDirectory, repository)).toThrow(
+        'artifact directory would be created inside the repository',
+      )
+      expect(() => statSync(join(repository, 'private-artifacts'))).toThrow()
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it('canonicalizes an external symlinked parent before creating the artifact directory', () => {
+    const root = mkdtempSync(join(tmpdir(), 'reverie-artifacts-'))
+    try {
+      const repository = join(root, 'repo')
+      const privateParent = join(root, 'private-parent')
+      const alias = join(root, 'private-parent-alias')
+      const artifactDirectory = join(alias, 'reconciliation')
+      mkdirSync(repository, { mode: 0o700 })
+      mkdirSync(privateParent, { mode: 0o700 })
+      symlinkSync(privateParent, alias)
+
+      const canonical = ensurePrivateArtifactDirectory(artifactDirectory, repository)
+
+      expect(canonical).toBe(join(realpathSync(privateParent), 'reconciliation'))
+      expect(realpathSync(artifactDirectory)).toBe(canonical)
+      expect(statSync(canonical).mode & 0o777).toBe(0o700)
     } finally {
       rmSync(root, { recursive: true, force: true })
     }

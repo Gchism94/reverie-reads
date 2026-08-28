@@ -19,7 +19,6 @@
 //     --approved-backup=/private/path/reverie-reconciliation/prechange-backup-...json \
 //     --approved-backup-sha256=<reviewed backup checksum>
 
-import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { existsSync, lstatSync, readFileSync, realpathSync, writeFileSync } from 'node:fs'
 import { dirname, relative, resolve } from 'node:path'
@@ -30,11 +29,10 @@ import { USER_OWNED_TABLES } from '../apps/web/src/data/ownedTables.ts'
 import { parseCsv, toRecords, normalizeRecord } from './corpus-import-lib.ts'
 import {
   ensurePrivateArtifactDirectory,
+  executePsql,
   householdReconciliationCounts,
   pageQuery,
   planHouseholdReconciliation,
-  psqlChildEnvironment,
-  psqlConnectionBoundary,
   reconciliationRollbackScope,
   RECONCILIATION_BACKUP_PRIMARY_KEYS,
   RECONCILIATION_HOUSEHOLD_BACKUP_SPECS,
@@ -157,9 +155,9 @@ const fetchHouseholdWorks = (householdId) =>
   )
 
 function writePrivateJson(name, value, { reuseIdentical = false } = {}) {
-  ensurePrivateArtifactDirectory(artifactDir, repo)
+  const privateArtifactDirectory = ensurePrivateArtifactDirectory(artifactDir, repo)
   const body = `${JSON.stringify(value, null, 2)}\n`
-  const path = resolve(artifactDir, name)
+  const path = resolve(privateArtifactDirectory, name)
   assertPrivatePath(path, 'private artifact')
   if (existsSync(path)) {
     const info = lstatSync(path)
@@ -291,15 +289,11 @@ function backupOwnerState(householdId) {
     )
   }
 
-  const connection = psqlConnectionBoundary(databaseUrl)
-  const childEnvironment = psqlChildEnvironment(process.env, connection.password)
-
   let output
   try {
-    output = execFileSync(
-      'psql',
+    output = executePsql(
+      databaseUrl,
       [
-        connection.databaseArgument,
         '-X',
         '-qAt',
         '-v',
@@ -333,9 +327,6 @@ function backupOwnerState(householdId) {
         `,
       ],
       {
-        encoding: 'utf8',
-        env: childEnvironment,
-        stdio: ['ignore', 'pipe', 'pipe'],
         maxBuffer: 256 * 1024 * 1024,
       },
     ).trim()
