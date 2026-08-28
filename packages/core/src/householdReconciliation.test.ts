@@ -221,6 +221,27 @@ process.stdout.write(JSON.stringify({
       rmSync(root, { recursive: true, force: true })
     }
   })
+
+  it('canonicalizes an external symlinked parent before creating the artifact directory', () => {
+    const root = mkdtempSync(join(tmpdir(), 'reverie-artifacts-'))
+    try {
+      const repository = join(root, 'repo')
+      const privateParent = join(root, 'private-parent')
+      const alias = join(root, 'private-parent-alias')
+      const artifactDirectory = join(alias, 'reconciliation')
+      mkdirSync(repository, { mode: 0o700 })
+      mkdirSync(privateParent, { mode: 0o700 })
+      symlinkSync(privateParent, alias)
+
+      const canonical = ensurePrivateArtifactDirectory(artifactDirectory, repository)
+
+      expect(canonical).toBe(join(realpathSync(privateParent), 'reconciliation'))
+      expect(realpathSync(artifactDirectory)).toBe(canonical)
+      expect(statSync(canonical).mode & 0o777).toBe(0o700)
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
 })
 
 describe('household CSV duplicate rules', () => {

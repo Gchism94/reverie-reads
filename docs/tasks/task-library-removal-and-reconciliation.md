@@ -339,8 +339,9 @@ inferring them from current non-null bindings.
 Set `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` only in the owner's private shell. Keep the CSV
 and artifact directory outside Git. Use a new directory below an existing parent, or an existing
 owner-private mode-`0700` directory. The operator never changes an existing directory's permissions.
-Filesystem root, home, temp roots, repository paths, and symbolic links are refused. Artifacts are
-mode `0600`.
+Filesystem root, home, temp roots, and repository paths are refused. A symbolic-link final
+directory is refused; ancestors are canonicalized, and any path resolving inside the repository is
+also refused. Artifacts are mode `0600`.
 
 ```sh
 pnpm household:reconcile -- /absolute/private/path/library-reconciliation.csv \
