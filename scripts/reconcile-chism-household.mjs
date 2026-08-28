@@ -21,15 +21,7 @@
 
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import {
-  chmodSync,
-  existsSync,
-  lstatSync,
-  mkdirSync,
-  readFileSync,
-  realpathSync,
-  writeFileSync,
-} from 'node:fs'
+import { existsSync, lstatSync, readFileSync, realpathSync, writeFileSync } from 'node:fs'
 import { dirname, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { isDeepStrictEqual } from 'node:util'
@@ -37,9 +29,11 @@ import { createClient } from '@supabase/supabase-js'
 import { USER_OWNED_TABLES } from '../apps/web/src/data/ownedTables.ts'
 import { parseCsv, toRecords, normalizeRecord } from './corpus-import-lib.ts'
 import {
+  ensurePrivateArtifactDirectory,
   householdReconciliationCounts,
   pageQuery,
   planHouseholdReconciliation,
+  psqlChildEnvironment,
   psqlConnectionBoundary,
   reconciliationRollbackScope,
   RECONCILIATION_BACKUP_PRIMARY_KEYS,
@@ -163,15 +157,13 @@ const fetchHouseholdWorks = (householdId) =>
   )
 
 function writePrivateJson(name, value, { reuseIdentical = false } = {}) {
-  mkdirSync(artifactDir, { recursive: true, mode: 0o700 })
-  assertPrivatePath(artifactDir, 'artifact directory', true)
-  chmodSync(artifactDir, 0o700)
+  ensurePrivateArtifactDirectory(artifactDir, repo)
   const body = `${JSON.stringify(value, null, 2)}\n`
   const path = resolve(artifactDir, name)
   assertPrivatePath(path, 'private artifact')
   if (existsSync(path)) {
     const info = lstatSync(path)
-    if (info.isSymbolicLink() || !info.isFile() || info.nlink !== 1) {
+    if (info.isSymbolicLink() || !info.isFile() || info.nlink !== 1 || (info.mode & 0o077) !== 0) {
       throw new Error(`private artifact already exists and is not a private regular file: ${path}`)
     }
     const existing = readFileSync(path, 'utf8')
@@ -181,7 +173,9 @@ function writePrivateJson(name, value, { reuseIdentical = false } = {}) {
   } else {
     writeFileSync(path, body, { mode: 0o600, flag: 'wx' })
   }
-  chmodSync(path, 0o600)
+  if ((lstatSync(path).mode & 0o077) !== 0) {
+    throw new Error(`private artifact permissions are broader than 0600: ${path}`)
+  }
   const persisted = readFileSync(path)
   return { path, sha256: sha256(persisted) }
 }
@@ -298,9 +292,7 @@ function backupOwnerState(householdId) {
   }
 
   const connection = psqlConnectionBoundary(databaseUrl)
-  const childEnvironment = { ...process.env }
-  delete childEnvironment.SUPABASE_DB_URL
-  if (connection.password !== undefined) childEnvironment.PGPASSWORD = connection.password
+  const childEnvironment = psqlChildEnvironment(process.env, connection.password)
 
   let output
   try {

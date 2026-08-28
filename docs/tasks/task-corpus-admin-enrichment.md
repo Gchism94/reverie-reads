@@ -124,8 +124,8 @@ also:
 - verifies that every corpus work in the authoritative snapshot still exists after the write,
   while recording count changes only as audit information, so an unrelated concurrent corpus
   addition cannot turn a successful write into a false verification failure; and
-- removes the database password from `psql` argv, supplies it only through the child environment,
-  and omits the original secret-bearing `SUPABASE_DB_URL` from that environment.
+- removes the database password from `psql` argv, supplies it only through a minimal child
+  environment, and excludes the original URL, libpq routing/TLS overrides, and unrelated secrets.
 
 The deterministic harness exercises both owner-fence orders: an earlier insert commits and makes
 reconciliation reject its stale fingerprint, while an insert begun after final revalidation is
@@ -175,18 +175,20 @@ dry-run or write planning.
 ## Required rollout order
 
 1. **Complete:** independent review closed and PR #364 integrated the real-merge history to `main`.
-2. **Owner reports complete; postconditions pending:** the guarded deployment applied
-   `20260830010000` followed by `20260831010000`. Run
-   `docs/queries/library-membership-rollout-verification.sql` against production and require every
-   row to report `ok = true`; command success alone does not prove the bindings, trigger state,
-   owner fences, RPCs, or privileges.
-3. Deploy and verify the covers function's personal/corpus authorization and storage boundaries.
-   Keep the web deployment staged until both migrations and their RPCs plus this function are
-   verified in production.
-4. Dry-run both administrator grants and the CSV reconciliation. Run the reconciliation's separate
+2. **Owner reports complete; ACL correction pending:** the guarded deployment applied
+   `20260830010000` followed by `20260831010000`, after which the read-only report found the
+   `work_tropes` privilege mismatch. Integrate and independently review `20260901010000`, then the
+   owner deploys that forward-only migration through `pnpm deploy:migrations` from clean `main`.
+3. Rerun `docs/queries/library-membership-rollout-verification.sql` against production and require
+   all 43 rows to report `ok = true`; command success alone does not prove the bindings, trigger
+   state, owner fences, RPCs, or privileges.
+4. Deploy and verify the covers function's personal/corpus authorization and storage boundaries.
+   Keep the web deployment staged until all three migrations, the membership/corpus RPCs, and this
+   function are verified in production.
+5. Dry-run both administrator grants and the CSV reconciliation. Run the reconciliation's separate
    backup-only phase and review the exact external title-level report and backup checksums; do not
    approve from aggregate counts alone.
-5. The owner executes both production writes and completes Account A, Account B, household-only,
+6. The owner executes both production writes and completes Account A, Account B, household-only,
    corpus-only, removal, cover-completion, and trope-promotion smoke checks.
 
 ## Local verification — refreshed 2026-08-28
@@ -195,7 +197,7 @@ dry-run or write planning.
 - Full pgTAP: 27 files and 638 assertions passed. The focused corpus administration, cover recovery,
   host validation, account-cascade, snapshot-fence, and complete-roster contract passed all 68
   assertions after the clean rebuild.
-- Core/web unit suites: 81 + 71 files and 2,420 + 626 assertions passed.
+- Core/web unit suites: 81 + 71 files and 2,423 + 626 assertions passed.
 - The deterministic 17-scenario multi-session database harness passed reconciliation edit, earlier
   insert, post-revalidation insert, and complete-roster races, along with the existing
   authorization, ISBN, and final-unlink cases.

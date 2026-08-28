@@ -1,5 +1,18 @@
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  realpathSync,
+  writeFileSync,
+} from 'node:fs'
+import { dirname, relative, resolve } from 'node:path'
 import { workKeyOf } from '../packages/core/src/normalize'
 import type { ImportRecord } from './corpus-import-lib'
+
+const PRIVATE_ARTIFACT_MARKER = '.reverie-reconciliation-artifacts'
+const PRIVATE_ARTIFACT_MARKER_BODY = 'reverie-reconciliation-artifacts-v1\n'
 
 /** Stable total ordering for every table copied into the pre-reconciliation rollback snapshot.
  * PostgREST pagination over only the owner column is nondeterministic when one owner has more than
@@ -118,10 +131,85 @@ export interface PsqlConnectionBoundary {
   password: string | undefined
 }
 
+/** Give psql only the execution/locale variables it needs plus the password extracted from the
+ * reviewed URI. In particular, never inherit libpq routing, TLS, service-file, or stale credential
+ * variables that can override the URI or expose unrelated process secrets to the child. */
+export function psqlChildEnvironment(
+  source: NodeJS.ProcessEnv,
+  password: string | undefined,
+): NodeJS.ProcessEnv {
+  const child: NodeJS.ProcessEnv = {}
+  for (const key of ['PATH', 'LANG', 'LC_ALL', 'LC_CTYPE'] as const) {
+    if (source[key]) child[key] = source[key]
+  }
+  if (password !== undefined) child.PGPASSWORD = password
+  return child
+}
+
+/** Prepare a dedicated owner-private artifact directory without changing permissions on an
+ * arbitrary existing path. A new or empty private directory receives a marker; later phases must
+ * present that same marker, so broad paths such as /, the home directory, or /tmp are refused. */
+export function ensurePrivateArtifactDirectory(
+  artifactDirectory: string,
+  repositoryRoot: string,
+): string {
+  const directory = resolve(artifactDirectory)
+  const repository = realpathSync(repositoryRoot)
+  const lexicalRelative = relative(repository, directory)
+  if (!lexicalRelative.startsWith('..') || lexicalRelative === '') {
+    throw new Error('artifact directory must be outside the repository')
+  }
+
+  let existingAncestor = directory
+  while (!existsSync(existingAncestor)) {
+    const parent = dirname(existingAncestor)
+    if (parent === existingAncestor) break
+    existingAncestor = parent
+  }
+  const ancestorRelative = relative(repository, realpathSync(existingAncestor))
+  if (!ancestorRelative.startsWith('..') || ancestorRelative === '') {
+    throw new Error('artifact directory would be created inside the repository')
+  }
+
+  if (!existsSync(directory)) mkdirSync(directory, { recursive: true, mode: 0o700 })
+  const info = lstatSync(directory)
+  if (info.isSymbolicLink() || !info.isDirectory()) {
+    throw new Error('artifact directory must be a private directory, not a symbolic link')
+  }
+  const realRelative = relative(repository, realpathSync(directory))
+  if (!realRelative.startsWith('..') || realRelative === '') {
+    throw new Error('artifact directory resolves inside the repository')
+  }
+  if ((info.mode & 0o077) !== 0) {
+    throw new Error('artifact directory must not be accessible by group or others')
+  }
+  if (typeof process.getuid === 'function' && info.uid !== process.getuid()) {
+    throw new Error('artifact directory must be owned by the current operator')
+  }
+
+  const marker = resolve(directory, PRIVATE_ARTIFACT_MARKER)
+  if (!existsSync(marker)) {
+    if (readdirSync(directory).length !== 0) {
+      throw new Error('existing artifact directory is not an initialized reconciliation directory')
+    }
+    writeFileSync(marker, PRIVATE_ARTIFACT_MARKER_BODY, { mode: 0o600, flag: 'wx' })
+  }
+  const markerInfo = lstatSync(marker)
+  if (
+    markerInfo.isSymbolicLink() ||
+    !markerInfo.isFile() ||
+    markerInfo.nlink !== 1 ||
+    (markerInfo.mode & 0o077) !== 0 ||
+    readFileSync(marker, 'utf8') !== PRIVATE_ARTIFACT_MARKER_BODY
+  ) {
+    throw new Error('artifact directory marker is invalid or not private')
+  }
+  return directory
+}
+
 /** Keep database credentials out of the child process argument list while preserving libpq URI
  * semantics, including multi-host authorities and non-password query options. The extracted secret
- * is supplied to only the child through PGPASSWORD; callers must also remove the original URL from
- * the inherited child environment. */
+ * is supplied only through the allowlisted child environment built by psqlChildEnvironment. */
 export function psqlConnectionBoundary(connectionUrl: string): PsqlConnectionBoundary {
   const match = /^(postgres(?:ql)?):\/\/([^/?#]*)([^#]*)$/i.exec(connectionUrl)
   if (!match) throw new Error('database URL must be a postgres:// or postgresql:// URI')

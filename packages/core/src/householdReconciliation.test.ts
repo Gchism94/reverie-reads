@@ -1,8 +1,13 @@
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
   collapseHouseholdRecords,
+  ensurePrivateArtifactDirectory,
   pageQuery,
   planHouseholdReconciliation,
+  psqlChildEnvironment,
   psqlConnectionBoundary,
   reconciliationRollbackScope,
   requireApprovedSha256,
@@ -27,6 +32,77 @@ const record = (over: Partial<ImportRecord>): ImportRecord => ({
   tcRead: false,
   duplicate: false,
   ...over,
+})
+
+describe('household reconciliation operator boundaries', () => {
+  it('drops hostile libpq overrides and unrelated secrets from the psql child environment', () => {
+    const child = psqlChildEnvironment(
+      {
+        PATH: '/usr/local/bin:/usr/bin',
+        LANG: 'C',
+        PGHOSTADDR: '127.0.0.2',
+        PGHOST: 'redirect.invalid',
+        PGSERVICE: 'unreviewed-service',
+        PGSERVICEFILE: '/tmp/unreviewed-service.conf',
+        PGSSLMODE: 'disable',
+        PGPASSWORD: 'stale-password',
+        SUPABASE_DB_URL: 'postgresql://unreviewed.invalid/postgres',
+        SUPABASE_SERVICE_ROLE_KEY: 'unrelated-secret',
+      },
+      'reviewed-uri-password',
+    )
+
+    expect(child).toEqual({
+      PATH: '/usr/local/bin:/usr/bin',
+      LANG: 'C',
+      PGPASSWORD: 'reviewed-uri-password',
+    })
+  })
+
+  it('creates a dedicated private artifact directory and reuses only its valid marker', () => {
+    const root = mkdtempSync(join(tmpdir(), 'reverie-artifacts-'))
+    try {
+      const repository = join(root, 'repo')
+      const artifactDirectory = join(root, 'private', 'reconciliation')
+      mkdirSync(repository, { mode: 0o700 })
+
+      expect(ensurePrivateArtifactDirectory(artifactDirectory, repository)).toBe(artifactDirectory)
+      expect(statSync(artifactDirectory).mode & 0o777).toBe(0o700)
+      expect(
+        statSync(join(artifactDirectory, '.reverie-reconciliation-artifacts')).mode & 0o777,
+      ).toBe(0o600)
+      expect(ensurePrivateArtifactDirectory(artifactDirectory, repository)).toBe(artifactDirectory)
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it('refuses unsafe existing artifact paths without changing their permissions', () => {
+    const root = mkdtempSync(join(tmpdir(), 'reverie-artifacts-'))
+    try {
+      const repository = join(root, 'repo')
+      const permissive = join(root, 'permissive')
+      const unrelatedPrivate = join(root, 'unrelated-private')
+      mkdirSync(repository, { mode: 0o700 })
+      mkdirSync(permissive, { mode: 0o755 })
+      chmodSync(permissive, 0o755)
+      mkdirSync(unrelatedPrivate, { mode: 0o700 })
+      writeFileSync(join(unrelatedPrivate, 'unrelated.txt'), 'keep me\n', { mode: 0o600 })
+      const permissiveMode = statSync(permissive).mode & 0o777
+      const privateMode = statSync(unrelatedPrivate).mode & 0o777
+
+      expect(() => ensurePrivateArtifactDirectory(permissive, repository)).toThrow(
+        'artifact directory must not be accessible by group or others',
+      )
+      expect(() => ensurePrivateArtifactDirectory(unrelatedPrivate, repository)).toThrow(
+        'existing artifact directory is not an initialized reconciliation directory',
+      )
+      expect(statSync(permissive).mode & 0o777).toBe(permissiveMode)
+      expect(statSync(unrelatedPrivate).mode & 0o777).toBe(privateMode)
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
 })
 
 describe('household CSV duplicate rules', () => {

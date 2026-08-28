@@ -156,7 +156,7 @@ Still pending and intentionally not performed:
 - The bounded migration fixture applied both migrations to 25,005 initial works and 5,012 personal
   books under its 20-second per-statement timeout, binding every personal row and safely retaining
   the reviewed ambiguity paths.
-- Core and web unit suites passed 2,420 and 626 assertions respectively. TypeScript, ESLint,
+- Core and web unit suites passed 2,423 and 626 assertions respectively. TypeScript, ESLint,
   Prettier, the production build, and `git diff --check` passed.
 - The complete browser matrix passed 218 runnable cases with 10 expected project skips, one worker,
   and zero retries from a fresh database.
@@ -337,8 +337,10 @@ inferring them from current non-null bindings.
 ### 2. Produce and approve the deterministic private dry run
 
 Set `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` only in the owner's private shell. Keep the CSV
-and artifact directory outside Git. The operator creates the directory as mode `0700` and artifacts
-as mode `0600`; it refuses repository paths and symbolic links.
+and artifact directory outside Git. Use a new or empty mode-`0700` directory; the operator marks it
+as dedicated to this reconciliation and later phases refuse an unmarked non-empty directory. It
+never changes an existing directory's permissions. Artifacts are mode `0600`, and repository paths
+and symbolic links are refused.
 
 ```sh
 pnpm household:reconcile -- /absolute/private/path/library-reconciliation.csv \
@@ -362,8 +364,9 @@ Any CSV edit or database plan change requires a new dry run and approval.
 ### 3. Capture and approve the transaction-consistent backup without writing
 
 Also set `SUPABASE_DB_URL` in the owner's private shell. The password is removed from the child
-process argument list and the original URL is not inherited by that child. This phase opens one
-direct PostgreSQL `REPEATABLE READ READ ONLY` snapshot and does not call the mutation RPC.
+process argument list and supplied through a minimal environment; ambient libpq routing/TLS
+overrides, the original URL, and unrelated secrets are not inherited. This phase opens one direct
+PostgreSQL `REPEATABLE READ READ ONLY` snapshot and does not call the mutation RPC.
 
 ```sh
 pnpm household:reconcile -- /absolute/private/path/library-reconciliation.csv \
