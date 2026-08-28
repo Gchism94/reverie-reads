@@ -149,8 +149,9 @@ export function toRecords(rows: string[][]): CsvRecord[] {
       genreRaw: cell(r, 'genre'),
       tagsRaw: cell(r, 'tags'),
       gcRead: truthyFlag(cell(r, 'gcRead')),
-      // TC Read is ANOTHER PERSON'S reading data. It is parsed ONLY so the report can count what
-      // is being deliberately left behind; nothing downstream of the report ever sees it.
+      // TC Read is ANOTHER PERSON'S reading data. The generic corpus importer uses it only for
+      // diagnostics; the separate owner-run household reconciliation operator deliberately maps
+      // it to Account A. The source file and every title-level artifact therefore stay private.
       tcRead: truthyFlag(cell(r, 'tcRead')),
       duplicate: truthyFlag(cell(r, 'duplicate')),
     })

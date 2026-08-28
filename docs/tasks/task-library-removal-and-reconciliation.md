@@ -1,12 +1,11 @@
 # Task: corpus-preserving library removal and owner reconciliation
 
-Status: **membership/removal foundation merged in PR #361. Production migration `20260830010000`
-remains unapplied after its first attempt failed transactionally; the bounded-backfill hotfix and
-corpus-admin enrichment history are combined on `codex/fix-corpus-admin-reviewed-blockers`.
-Independent review found rollout-order, zero-binding, and performance-regression blockers; their
-corrections are complete, locally verified, and clean on independent re-review before integration.
-Production reconciliation remains pending owner review, and no migration, function, or web
-deployment from this combined branch has occurred.**
+Status: **membership/removal foundation merged in PR #361 and its reviewed bounded-backfill plus
+corpus-admin follow-up merged in PR #364 at `0bd76a5`. The owner reports guarded production
+deployment applied `20260830010000` followed by `20260831010000`; that command result is not proof
+of database postconditions. The owner-run read-only rollout report, private checksum-bound dry run,
+transaction-consistent backup approval, owner-executed reconciliation, and post-write smoke checks
+remain pending.**
 
 ## Production migration performance hotfix — 2026-08-26
 
@@ -40,15 +39,14 @@ Verification completed before review:
   5,012 books, created the two expected reconciliation works, recorded the migration version, and
   restored both temporarily suppressed `books` triggers.
 
-The production migration must not be retried from the previous merge commit. The combined migration
-tree must close independent review and land first. A later owner-run deployment must apply
-`20260830010000` before `20260831010000`; the web deployment remains staged until both migrations,
-their RPCs, and the covers function have been verified.
+This incident was closed by the reviewed combined history merged in PR #364. The owner reports that
+the guarded production deployment subsequently applied `20260830010000` before `20260831010000`.
+The web deployment remains staged until the owner-run read-only report verifies both migrations,
+their RPCs and boundaries, and the covers function is separately verified.
 
 ## Corpus-admin and reconciliation checkpoint — 2026-08-27
 
-Implemented and locally verified on the corpus-admin feature history; independent review found
-blockers in the combined migration rollout that must close before integration:
+Implemented, independently reviewed, and integrated through PR #364:
 
 - service-managed corpus-administrator grants plus a dry-run-by-default owner operator;
 - an audited, fill-only corpus completion path for contributors, series identity when known, pages,
@@ -139,11 +137,29 @@ The PR review hardening pass also closes the following privacy boundaries:
 Still pending and intentionally not performed:
 
 - inspection and dry-run classification of the private CSV;
-- the deterministic reconciliation operator and verified rollback artifact;
-- owner approval and owner-executed production migration/reconciliation;
+- owner execution and approval of the deterministic private dry run and rollback artifact;
+- the owner-run production postcondition report and owner-executed reconciliation;
 - production Account A/B and household smoke verification.
 
-Verification completed on the feature branch:
+## Stage 02 operator revalidation — 2026-08-28
+
+- A clean local database rebuild applied every migration through `20260831010000`; the owner-run
+  rollout report returned 42/42 current-state invariants true locally.
+- Full pgTAP passed 638 assertions across 27 files. The deterministic multi-session harness passed
+  all 17 authorization, owner-fence, roster, fingerprint, ISBN, and final-unlink races.
+- The bounded migration fixture applied both migrations to 25,005 initial works and 5,012 personal
+  books under its 20-second per-statement timeout, binding every personal row and safely retaining
+  the reviewed ambiguity paths.
+- Core and web unit suites passed 2,419 and 626 assertions respectively. TypeScript, ESLint,
+  Prettier, the production build, and `git diff --check` passed.
+- The complete browser matrix passed 218 runnable cases with 10 expected project skips, one worker,
+  and zero retries from a fresh database.
+- A disposable two-account fixture exercised the real three-phase operator: deterministic dry run,
+  independently checksum-verified read-only backup, checksum-bound write, exact convergence, and a
+  subsequent stale-backup refusal before the RPC. Files were mode `0600` under a mode `0700`
+  directory; the synthetic fixture and artifacts were moved to Trash afterward.
+
+Historical integration verification:
 
 - 2,952 unit assertions passed across 146 test files;
 - 567 pgTAP assertions passed across 26 files after a clean local database reset;
@@ -293,6 +309,94 @@ always false; new UI must not derive household membership or personal intent fro
   household-removal plan explicitly says so. All remain in the corpus.
 - Match by stable ISBN/edition identity first, then exact normalized title/author. Fuzzy or conflicting
   matches require owner review and never write automatically.
+
+## Owner handoff: production verification, private dry run, and backup
+
+All commands in this section are owner-run from a clean checkout of the reviewed commit. Code does
+not receive production credentials, run these commands against production, inspect the private
+artifacts, or perform the write.
+
+### 1. Verify the deployed database without reading private rows
+
+Run the complete `docs/queries/library-membership-rollout-verification.sql` file in the production
+Supabase SQL Editor. It reports catalog facts and aggregate binding counts only. Every returned row
+must have `ok = true`. Stop on any false row; guarded deploy command success is not evidence that
+the database reached the required state.
+
+The report cannot prove claims that require a pre-migration baseline: the exact correctness of each
+legacy binding choice, preservation of former `updated_at`/`enriched_at` values, unchanged historical
+row counts and private annotations, or production runtime. Record those as unavailable rather than
+inferring them from current non-null bindings.
+
+### 2. Produce and approve the deterministic private dry run
+
+Set `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` only in the owner's private shell. Keep the CSV
+and artifact directory outside Git. The operator creates the directory as mode `0700` and artifacts
+as mode `0600`; it refuses repository paths and symbolic links.
+
+```sh
+pnpm household:reconcile -- /absolute/private/path/library-reconciliation.csv \
+  --account-a-id=<ACCOUNT_A_UUID> \
+  --account-b-id=<ACCOUNT_B_UUID> \
+  --artifact-dir=/absolute/private/path/reverie-reconciliation
+```
+
+Review the exact title-level `dry-run-detail-<prefix>.json`, not aggregate counts alone. Confirm the
+endpoint and two-account roster, every duplicate/unmatched/conflicting row, both-marker behavior,
+household-only rows, personal archives, household archives, and historically private enrichment.
+The file deliberately contains no timestamp, so unchanged inputs reproduce the same SHA-256.
+Record the exact printed dry-run checksum after independently confirming it against the file:
+
+```sh
+shasum -a 256 -- /absolute/private/path/reverie-reconciliation/dry-run-detail-<prefix>.json
+```
+
+Any CSV edit or database plan change requires a new dry run and approval.
+
+### 3. Capture and approve the transaction-consistent backup without writing
+
+Also set `SUPABASE_DB_URL` in the owner's private shell. The password is removed from the child
+process argument list and the original URL is not inherited by that child. This phase opens one
+direct PostgreSQL `REPEATABLE READ READ ONLY` snapshot and does not call the mutation RPC.
+
+```sh
+pnpm household:reconcile -- /absolute/private/path/library-reconciliation.csv \
+  --account-a-id=<ACCOUNT_A_UUID> \
+  --account-b-id=<ACCOUNT_B_UUID> \
+  --artifact-dir=/absolute/private/path/reverie-reconciliation \
+  --backup-only \
+  --approved-dry-run-sha256=<APPROVED_DRY_RUN_SHA256>
+```
+
+Review the exact `prechange-backup-<timestamp>.json` and independently verify its printed checksum
+with `shasum -a 256 -- <absolute-backup-path>`. The backup contains both accounts' registered
+owner-scoped rows plus the complete household, roster, works, shares, and enrichment state. It is a
+private row-level recovery source, not an automatic restore button; do not authorize production
+write until the owner accepts its recovery scope and the exact checksum.
+
+### 4. Owner-only write after both exact approvals
+
+Write mode requires the static confirmation plus both approved checksums and the exact reviewed
+backup path. It takes a fresh read-only snapshot, rejects a changed dry-run plan, rejects any scoped
+row difference from the approved backup, passes the full-row/roster fingerprints into the atomic
+RPC, and verifies convergence afterward.
+
+```sh
+pnpm household:reconcile -- /absolute/private/path/library-reconciliation.csv \
+  --account-a-id=<ACCOUNT_A_UUID> \
+  --account-b-id=<ACCOUNT_B_UUID> \
+  --artifact-dir=/absolute/private/path/reverie-reconciliation \
+  --write \
+  --confirm=RECONCILE_CHISM_HOUSEHOLD \
+  --approved-dry-run-sha256=<APPROVED_DRY_RUN_SHA256> \
+  --approved-backup=/absolute/private/path/reverie-reconciliation/prechange-backup-<timestamp>.json \
+  --approved-backup-sha256=<APPROVED_BACKUP_SHA256>
+```
+
+After success, retain the backup, dry-run detail, and `postchange-verification.json` under owner-only
+access. Complete Account A, Account B, household-only, corpus-preservation, owner-label, scoped-edit,
+cache-invalidation, personal-removal, and household-removal smoke checks before declaring this task
+complete or unblocking the CI/release stage.
 
 ## Required sequence
 

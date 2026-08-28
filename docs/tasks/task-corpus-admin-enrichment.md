@@ -1,10 +1,10 @@
 # Task: corpus-administrator enrichment and durable corpus metadata
 
-Status: **the corpus-admin history and bounded membership-backfill hotfix are combined on
-`codex/fix-corpus-admin-reviewed-blockers`. Independent review found rollout-order, zero-binding,
-and performance-regression blockers; their corrections are complete, locally verified, and clean
-on independent re-review. Production migrations `20260830010000` and
-`20260831010000` remain unapplied, and no production function or web deployment has changed.**
+Status: **the reviewed corpus-admin history and bounded membership backfill merged in PR #364 at
+`0bd76a5`. The owner reports guarded production deployment applied `20260830010000` followed by
+`20260831010000`; current bindings, triggers, owner fences, RPCs, and privileges still require the
+owner-run read-only postcondition report. Administrator grants, private reconciliation, production
+writes, and post-write smoke checks remain owner-gated and unperformed by Code.**
 
 ## Objective
 
@@ -172,36 +172,36 @@ dry-run or write planning.
 
 ## Required rollout order
 
-1. Complete local verification and independent review of the combined migration tree, then
-   integrate the real-merge history to `main`. Do not deploy either migration from either former
-   feature branch.
-2. From clean synchronized `main`, the owner applies `20260830010000` through the deploy guard and
-   verifies the migration version, complete non-null personal bindings, trigger state, and RPCs.
-3. Still from clean synchronized `main`, the owner applies `20260831010000` through the deploy guard
-   and verifies its corpus-administration, preservation, and reconciliation RPCs. The owner answers
-   both human gates; Code does not run either production deployment.
-4. Deploy and verify the covers function's personal/corpus authorization and storage boundaries.
+1. **Complete:** independent review closed and PR #364 integrated the real-merge history to `main`.
+2. **Owner reports complete; postconditions pending:** the guarded deployment applied
+   `20260830010000` followed by `20260831010000`. Run
+   `docs/queries/library-membership-rollout-verification.sql` against production and require every
+   row to report `ok = true`; command success alone does not prove the bindings, trigger state,
+   owner fences, RPCs, or privileges.
+3. Deploy and verify the covers function's personal/corpus authorization and storage boundaries.
    Keep the web deployment staged until both migrations and their RPCs plus this function are
    verified in production.
-5. Dry-run both administrator grants and the CSV reconciliation. Review the exact external reports
-   and backup checksums; do not approve from aggregate counts alone.
-6. The owner executes both production writes and completes Account A, Account B, household-only,
+4. Dry-run both administrator grants and the CSV reconciliation. Run the reconciliation's separate
+   backup-only phase and review the exact external title-level report and backup checksums; do not
+   approve from aggregate counts alone.
+5. The owner executes both production writes and completes Account A, Account B, household-only,
    corpus-only, removal, cover-completion, and trope-promotion smoke checks.
 
-## Local verification — 2026-08-27
+## Local verification — refreshed 2026-08-28
 
 - Clean database rebuild applied every migration through `20260831010000`.
 - Full pgTAP: 27 files and 638 assertions passed. The focused corpus administration, cover recovery,
   host validation, account-cascade, snapshot-fence, and complete-roster contract passed all 68
   assertions after the clean rebuild.
-- Core/web unit suites: 80 + 71 files and 2,412 + 625 assertions passed.
+- Core/web unit suites: 81 + 71 files and 2,419 + 626 assertions passed.
 - The deterministic 17-scenario multi-session database harness passed reconciliation edit, earlier
   insert, post-revalidation insert, and complete-roster races, along with the existing
   authorization, ISBN, and final-unlink cases.
-- A disposable two-account CSV exercise ran the real dry-run and write operator end to end. It
-  created mode-`0700`/`0600` artifacts from the direct read-only snapshot, archived the one planned
-  personal and household extra, preserved corpus count, and converged to a zero-change post-check;
-  the local fixtures were then removed and the temporary artifacts moved to Trash.
+- A disposable two-account CSV exercise ran the real three-phase operator end to end. It created a
+  deterministic dry run, captured and independently checksum-verified a direct read-only snapshot,
+  accepted only those exact two approvals for write, converged to a zero-change post-check, and then
+  refused a stale approved backup before the RPC. The mode-`0700`/`0600` fixtures and artifacts were
+  moved to Trash afterward.
 - The real libpq option probe preserved `%20` in `options` and reported the configured `5s`
   statement timeout. A fresh read-only bypass review of the complete corrective patch found no
   remaining actionable finding after the URI and post-verification edge corrections.

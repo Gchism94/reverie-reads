@@ -257,6 +257,27 @@ describe('no user-owned table may go unregistered', () => {
     expect(RECONCILIATION_SCRIPT).toContain('await main().catch')
     expect(RECONCILIATION_SCRIPT).toContain('chmodSync(artifactDir, 0o700)')
     expect(RECONCILIATION_SCRIPT).toContain('chmodSync(path, 0o600)')
+    expect(RECONCILIATION_SCRIPT).toContain("flag: 'wx'")
+    expect(RECONCILIATION_SCRIPT).toContain('must not be a symbolic link')
+    expect(RECONCILIATION_SCRIPT).toContain('info.nlink !== 1')
+  })
+
+  it('separates dry-run approval, read-only backup, and write approval into three phases', () => {
+    expect(RECONCILIATION_SCRIPT).toContain("args.includes('--backup-only')")
+    expect(RECONCILIATION_SCRIPT).toContain(
+      "requireApprovedSha256('dry-run', approvedDryRunSha256, detail.sha256)",
+    )
+    expect(RECONCILIATION_SCRIPT).toContain(
+      "const approved = readApprovedBackup(approvedBackupInput)",
+    )
+    expect(RECONCILIATION_SCRIPT).toContain('reconciliationRollbackScope(snapshot)')
+    expect(RECONCILIATION_SCRIPT).toContain('reconciliationRollbackScope(approved.backup)')
+    expect(RECONCILIATION_SCRIPT).toContain(
+      'approved backup is stale; create and review a new read-only backup',
+    )
+    expect(RECONCILIATION_SCRIPT.indexOf('verifiedApprovedBackup')).toBeLessThan(
+      RECONCILIATION_SCRIPT.indexOf("supabase.rpc('reconcile_household_library_memberships'"),
+    )
   })
 
   it('verifies snapshot work preservation and keeps database credentials out of psql argv', () => {

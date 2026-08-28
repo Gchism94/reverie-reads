@@ -4,6 +4,8 @@ import {
   pageQuery,
   planHouseholdReconciliation,
   psqlConnectionBoundary,
+  reconciliationRollbackScope,
+  requireApprovedSha256,
 } from '../../../scripts/household-reconciliation-lib'
 import type { ImportRecord } from '../../../scripts/corpus-import-lib'
 
@@ -256,6 +258,47 @@ describe('household reconciliation psql credential boundary', () => {
     ).toThrow('sslpassword cannot be passed')
     expect(() => psqlConnectionBoundary('https://reader:secret@db.test/app')).toThrow(
       'postgres:// or postgresql://',
+    )
+  })
+})
+
+describe('household reconciliation approval boundaries', () => {
+  it('requires the exact reviewed SHA-256 value', () => {
+    const checksum = 'a'.repeat(64)
+    expect(() => requireApprovedSha256('dry-run', checksum.toUpperCase(), checksum)).not.toThrow()
+    expect(() => requireApprovedSha256('dry-run', '', checksum)).toThrow(
+      '--approved-dry-run-sha256',
+    )
+    expect(() => requireApprovedSha256('backup', 'b'.repeat(64), checksum)).toThrow(
+      'checksum does not match',
+    )
+  })
+
+  it('compares only rollback-scoped state and excludes audit-only corpus fields', () => {
+    const base = {
+      createdAt: 'before',
+      endpoint: 'https://project.test',
+      accounts: ['a', 'b'],
+      householdId: 'h',
+      ownerTables: { books: [{ id: 'book' }] },
+      household: { works: [{ work_id: 'work' }] },
+      reconciliationFence: { roster: ['a', 'b'] },
+      corpusCount: 10,
+      planningWorks: [{ id: 'work' }],
+    }
+    expect(reconciliationRollbackScope(base)).toEqual(
+      reconciliationRollbackScope({
+        ...base,
+        createdAt: 'after',
+        corpusCount: 11,
+        planningWorks: [{ id: 'work' }, { id: 'unrelated' }],
+      }),
+    )
+    expect(reconciliationRollbackScope(base)).not.toEqual(
+      reconciliationRollbackScope({
+        ...base,
+        ownerTables: { books: [{ id: 'changed' }] },
+      }),
     )
   })
 })

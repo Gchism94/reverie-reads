@@ -188,6 +188,34 @@ export function psqlConnectionBoundary(connectionUrl: string): PsqlConnectionBou
   }
 }
 
+const SHA256 = /^[0-9a-f]{64}$/
+
+/** Bind an owner-approved private artifact to the exact bytes produced by the operator. Checksums
+ * are approval identifiers, not secrets, so a constant-time comparison is unnecessary. */
+export function requireApprovedSha256(label: string, approved: string, actual: string): void {
+  const normalized = approved.trim().toLowerCase()
+  if (!SHA256.test(normalized)) {
+    throw new Error(`${label} requires a 64-character --approved-${label}-sha256 value`)
+  }
+  if (normalized !== actual.toLowerCase()) {
+    throw new Error(`${label} checksum does not match the reviewed artifact`)
+  }
+}
+
+/** Only the rows the reconciliation can change belong to the rollback-state comparison. Corpus
+ * count and planning works are separately verified, so an unrelated corpus addition does not make
+ * a still-valid personal/household backup look stale. */
+export function reconciliationRollbackScope(snapshot: Record<string, unknown>) {
+  return {
+    endpoint: snapshot.endpoint,
+    accounts: snapshot.accounts,
+    householdId: snapshot.householdId,
+    ownerTables: snapshot.ownerTables,
+    household: snapshot.household,
+    reconciliationFence: snapshot.reconciliationFence,
+  }
+}
+
 export interface ReconciliationWorkRow {
   id: string
   title: string
