@@ -1,18 +1,9 @@
-import {
-  existsSync,
-  lstatSync,
-  mkdirSync,
-  readFileSync,
-  readdirSync,
-  realpathSync,
-  writeFileSync,
-} from 'node:fs'
-import { dirname, relative, resolve } from 'node:path'
+import { execFileSync } from 'node:child_process'
+import { existsSync, lstatSync, mkdirSync, realpathSync } from 'node:fs'
+import { homedir, tmpdir } from 'node:os'
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { workKeyOf } from '../packages/core/src/normalize'
 import type { ImportRecord } from './corpus-import-lib'
-
-const PRIVATE_ARTIFACT_MARKER = '.reverie-reconciliation-artifacts'
-const PRIVATE_ARTIFACT_MARKER_BODY = 'reverie-reconciliation-artifacts-v1\n'
 
 /** Stable total ordering for every table copied into the pre-reconciliation rollback snapshot.
  * PostgREST pagination over only the owner column is nondeterministic when one owner has more than
@@ -131,7 +122,7 @@ export interface PsqlConnectionBoundary {
   password: string | undefined
 }
 
-/** Give psql only the execution/locale variables it needs plus the password extracted from the
+/** Give psql only the executable lookup it needs plus the password extracted from the
  * reviewed URI. In particular, never inherit libpq routing, TLS, service-file, or stale credential
  * variables that can override the URI or expose unrelated process secrets to the child. */
 export function psqlChildEnvironment(
@@ -139,72 +130,102 @@ export function psqlChildEnvironment(
   password: string | undefined,
 ): NodeJS.ProcessEnv {
   const child: NodeJS.ProcessEnv = {}
-  for (const key of ['PATH', 'LANG', 'LC_ALL', 'LC_CTYPE'] as const) {
-    if (source[key]) child[key] = source[key]
-  }
+  if (source.PATH) child.PATH = source.PATH
   if (password !== undefined) child.PGPASSWORD = password
   return child
 }
 
-/** Prepare a dedicated owner-private artifact directory without changing permissions on an
- * arbitrary existing path. A new or empty private directory receives a marker; later phases must
- * present that same marker, so broad paths such as /, the home directory, or /tmp are refused. */
+export interface PsqlExecutionOptions {
+  executable?: string
+  sourceEnvironment?: NodeJS.ProcessEnv
+  maxBuffer?: number
+}
+
+/** Execute the actual psql child behind the same URI and environment boundary exercised by tests.
+ * Keeping process creation here prevents callers from accidentally restoring inherited libpq
+ * overrides while retaining the reviewed password-free argv. */
+export function executePsql(
+  connectionUrl: string,
+  args: readonly string[],
+  options: PsqlExecutionOptions = {},
+): string {
+  const connection = psqlConnectionBoundary(connectionUrl)
+  return execFileSync(options.executable ?? 'psql', [connection.databaseArgument, ...args], {
+    encoding: 'utf8',
+    env: psqlChildEnvironment(options.sourceEnvironment ?? process.env, connection.password),
+    stdio: ['ignore', 'pipe', 'pipe'],
+    maxBuffer: options.maxBuffer,
+  })
+}
+
+function isInside(root: string, candidate: string): boolean {
+  const pathFromRoot = relative(root, candidate)
+  return (
+    pathFromRoot === '' ||
+    (!pathFromRoot.startsWith(`..${sep}`) && pathFromRoot !== '..' && !isAbsolute(pathFromRoot))
+  )
+}
+
+function validateExistingPrivateDirectory(directory: string, repository: string): string {
+  const info = lstatSync(directory)
+  if (info.isSymbolicLink() || !info.isDirectory()) {
+    throw new Error('artifact directory must be a private directory, not a symbolic link')
+  }
+  const canonicalDirectory = realpathSync(directory)
+  if (isInside(repository, canonicalDirectory)) {
+    throw new Error('artifact directory resolves inside the repository')
+  }
+  const broadDirectories = new Set(
+    [resolve('/'), homedir(), tmpdir(), '/tmp']
+      .filter((candidate) => existsSync(candidate))
+      .map((candidate) => realpathSync(candidate)),
+  )
+  if (broadDirectories.has(canonicalDirectory)) {
+    throw new Error('artifact directory must not be a broad system or user directory')
+  }
+  if ((info.mode & 0o7777) !== 0o700) {
+    throw new Error('existing artifact directory must have permissions 0700')
+  }
+  if (typeof process.getuid === 'function' && info.uid !== process.getuid()) {
+    throw new Error('artifact directory must be owned by the current operator')
+  }
+  return canonicalDirectory
+}
+
+/** Prepare an owner-private artifact directory without changing permissions on any caller-supplied
+ * existing path. Existing directories must already be owned by the operator and exactly 0700. A
+ * missing final component is created non-recursively below a canonical, existing parent. */
 export function ensurePrivateArtifactDirectory(
   artifactDirectory: string,
   repositoryRoot: string,
 ): string {
   const directory = resolve(artifactDirectory)
   const repository = realpathSync(repositoryRoot)
-  const lexicalRelative = relative(repository, directory)
-  if (!lexicalRelative.startsWith('..') || lexicalRelative === '') {
+  if (isInside(repository, directory)) {
     throw new Error('artifact directory must be outside the repository')
   }
 
-  let existingAncestor = directory
-  while (!existsSync(existingAncestor)) {
-    const parent = dirname(existingAncestor)
-    if (parent === existingAncestor) break
-    existingAncestor = parent
+  if (existsSync(directory)) {
+    return validateExistingPrivateDirectory(directory, repository)
   }
-  const ancestorRelative = relative(repository, realpathSync(existingAncestor))
-  if (!ancestorRelative.startsWith('..') || ancestorRelative === '') {
+
+  const parent = dirname(directory)
+  if (!existsSync(parent)) {
+    throw new Error('artifact directory parent must already exist')
+  }
+  const canonicalDirectory = join(realpathSync(parent), basename(directory))
+  if (isInside(repository, canonicalDirectory)) {
     throw new Error('artifact directory would be created inside the repository')
   }
 
-  if (!existsSync(directory)) mkdirSync(directory, { recursive: true, mode: 0o700 })
-  const info = lstatSync(directory)
-  if (info.isSymbolicLink() || !info.isDirectory()) {
-    throw new Error('artifact directory must be a private directory, not a symbolic link')
-  }
-  const realRelative = relative(repository, realpathSync(directory))
-  if (!realRelative.startsWith('..') || realRelative === '') {
-    throw new Error('artifact directory resolves inside the repository')
-  }
-  if ((info.mode & 0o077) !== 0) {
-    throw new Error('artifact directory must not be accessible by group or others')
-  }
-  if (typeof process.getuid === 'function' && info.uid !== process.getuid()) {
-    throw new Error('artifact directory must be owned by the current operator')
-  }
-
-  const marker = resolve(directory, PRIVATE_ARTIFACT_MARKER)
-  if (!existsSync(marker)) {
-    if (readdirSync(directory).length !== 0) {
-      throw new Error('existing artifact directory is not an initialized reconciliation directory')
+  try {
+    mkdirSync(canonicalDirectory, { mode: 0o700 })
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'EEXIST') {
+      throw error
     }
-    writeFileSync(marker, PRIVATE_ARTIFACT_MARKER_BODY, { mode: 0o600, flag: 'wx' })
   }
-  const markerInfo = lstatSync(marker)
-  if (
-    markerInfo.isSymbolicLink() ||
-    !markerInfo.isFile() ||
-    markerInfo.nlink !== 1 ||
-    (markerInfo.mode & 0o077) !== 0 ||
-    readFileSync(marker, 'utf8') !== PRIVATE_ARTIFACT_MARKER_BODY
-  ) {
-    throw new Error('artifact directory marker is invalid or not private')
-  }
-  return directory
+  return validateExistingPrivateDirectory(canonicalDirectory, repository)
 }
 
 /** Keep database credentials out of the child process argument list while preserving libpq URI

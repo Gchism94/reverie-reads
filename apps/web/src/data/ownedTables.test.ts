@@ -209,7 +209,7 @@ describe('no user-owned table may go unregistered', () => {
     expect(start).toBeGreaterThan(-1)
     expect(end).toBeGreaterThan(start)
     expect(block).toContain('begin isolation level repeatable read read only')
-    expect(block).toContain('execFileSync(')
+    expect(block).toContain('executePsql(')
     expect(block).toContain('snapshotAggregateSql(')
     expect(block).toContain("'ownerTables', jsonb_build_object")
     expect(block).toContain("'household', jsonb_build_object")
@@ -290,11 +290,8 @@ describe('no user-owned table may go unregistered', () => {
     expect(RECONCILIATION_SCRIPT).toContain('corpusCountDelta: post.corpusCount - snapshot.corpusCount')
     expect(RECONCILIATION_SCRIPT).not.toContain('post.corpusCount !== corpusCount')
     expect(RECONCILIATION_SCRIPT).not.toContain('post.corpusCount !== snapshot.corpusCount')
-    expect(RECONCILIATION_SCRIPT).toContain('psqlConnectionBoundary(databaseUrl)')
-    expect(RECONCILIATION_SCRIPT).toContain(
-      'psqlChildEnvironment(process.env, connection.password)',
-    )
-    expect(RECONCILIATION_SCRIPT).toContain('connection.databaseArgument')
-    expect(RECONCILIATION_SCRIPT).not.toMatch(/\[\s*databaseUrl,\s*['"]-X['"]/)
+    expect(RECONCILIATION_SCRIPT).toContain('executePsql(')
+    expect(RECONCILIATION_SCRIPT).toContain('databaseUrl,')
+    expect(RECONCILIATION_SCRIPT).not.toContain("[databaseUrl, '-X'")
   })
 })
