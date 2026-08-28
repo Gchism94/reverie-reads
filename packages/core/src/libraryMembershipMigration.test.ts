@@ -22,6 +22,11 @@ function sectionOf(source: string, start: string, end: string): string {
 
 function boundedClassificationViolations(source: string): string[] {
   const violations: string[] = []
+  const missingWork = sectionOf(
+    source,
+    '-- Every legacy personal row gets a corpus anchor.',
+    'on conflict (work_key) do nothing;',
+  )
   const reconciliation = sectionOf(
     source,
     '-- Ambiguous ISBN or title+author fallbacks get a per-row reconciliation anchor.',
@@ -33,6 +38,12 @@ function boundedClassificationViolations(source: string): string[] {
     '-- This is an internal identity link, not a reader edit.',
   )
 
+  if (/\b(?:from|join)\s+public\.works\b/i.test(missingWork)) {
+    violations.push('missing-work classification rescans public.works')
+  }
+  if (/\blateral\b/i.test(missingWork)) {
+    violations.push('missing-work classification contains a per-book lateral helper')
+  }
   if (/\b(?:from|join)\s+public\.works\b/i.test(reconciliation)) {
     violations.push('reconciliation classification rescans public.works')
   }
@@ -68,7 +79,7 @@ describe('library membership migration backfill shape', () => {
     expect(setup).toContain('create temporary table library_book_identities')
   })
 
-  it('matches existing identities through materialized sets instead of a correlated OR scan', () => {
+  it('matches existing identities through materialized sets instead of a correlated corpus scan', () => {
     const backfill = section(
       '-- Every legacy personal row gets a corpus anchor.',
       '-- Ambiguous ISBN or title+author fallbacks get a per-row reconciliation anchor.',
@@ -76,7 +87,26 @@ describe('library membership migration backfill shape', () => {
 
     expect(backfill).toContain('existing_isbns as materialized')
     expect(backfill).toContain('existing_fallback_keys as materialized')
-    expect(backfill).not.toContain('select 1 from public.works existing')
+    expect(boundedClassificationViolations(migration)).toEqual([])
+  })
+
+  it('rejects the reviewed mutation in missing-work candidate classification', () => {
+    const mutation = migration.replace(
+      'from candidates c\nleft join existing_isbns isbn_match',
+      `from candidates c
+cross join lateral (
+  select coalesce(sum(1), 0)::int as reviewer_match_count
+  from public.works reviewer_work
+  where c.normalized_isbn = any(reviewer_work.isbns)
+) reviewer_correlated_count
+left join existing_isbns isbn_match`,
+    )
+
+    expect(mutation).not.toBe(migration)
+    expect(boundedClassificationViolations(mutation)).toEqual([
+      'missing-work classification rescans public.works',
+      'missing-work classification contains a per-book lateral helper',
+    ])
   })
 
   it('classifies reconciliation and bindings only from bounded identity snapshots', () => {

@@ -2,8 +2,8 @@
 
 Status: **the corpus-admin history and bounded membership-backfill hotfix are combined on
 `codex/fix-corpus-admin-reviewed-blockers`. Independent review found rollout-order, zero-binding,
-and performance-regression blockers; their corrections are complete and locally verified, pending
-independent re-review before integration. Production migrations `20260830010000` and
+and performance-regression blockers; their corrections are complete, locally verified, and clean
+on independent re-review. Production migrations `20260830010000` and
 `20260831010000` remain unapplied, and no production function or web deployment has changed.**
 
 ## Objective
@@ -143,14 +143,14 @@ The independently reviewed combined tree now closes all three pre-integration bl
 - the source regression now rejects any extra `public.works` scan in classification, including the
   reviewer's differently spelled correlated lateral aggregate mutation. A separate bounded fixture
   applies both migrations to 25,005 initial works and 5,012 personal books under a 20-second
-  per-migration PostgreSQL statement timeout.
+  per-statement PostgreSQL timeout.
 
 The scale fixture bound all 5,012 books, preserved the unique ISBN/fallback and ambiguous-refusal
 paths, retained `updated_at`/`enriched_at`, dropped every temporary identity table at commit,
 restored both temporarily disabled book triggers, installed both corpus-binding triggers, and found
 the shared insert and exclusive reconciliation owner fences in their final function definitions.
 The clean-schema pgTAP suite passed 635 assertions across 27 files; the complete unit suites passed
-2,416 core and 625 web assertions. TypeScript, ESLint, Prettier, production build, and
+2,417 core and 625 web assertions. TypeScript, ESLint, Prettier, production build, and
 `git diff --check` passed. Browser tests were not repeated because the combined correction changes
 only migration-time SQL, its executable fixture, source-contract coverage, and rollout docs.
 

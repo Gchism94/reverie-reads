@@ -3,8 +3,10 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-DATABASE_URL="${REVERIE_LOCAL_DB_URL:-postgresql://postgres:postgres@127.0.0.1:55322/postgres}"
-STATEMENT_TIMEOUT="${REVERIE_MIGRATION_STATEMENT_TIMEOUT:-20s}"
+# env -i is load-bearing: libpq accepts ambient PGHOSTADDR/PGSERVICE independently of --host,
+# which could otherwise redirect this destructive synthetic fixture away from the local stack.
+PSQL=(env -i PATH="$PATH" PGPASSWORD=postgres psql \
+  --host=127.0.0.1 --port=55322 --username=postgres --dbname=postgres)
 
 command -v supabase >/dev/null || {
   echo "library migration fixture: supabase CLI is required" >&2
@@ -21,20 +23,11 @@ echo "library migration fixture: resetting locally through 20260829010000"
 supabase db reset --local --version 20260829010000 --no-seed
 
 echo "library migration fixture: loading 25,005 works and 5,012 personal books"
-psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 \
+"${PSQL[@]}" -X -q -v ON_ERROR_STOP=1 \
   -f scripts/fixtures/library-membership-migration-scale-setup.sql
 
-for migration in \
-  supabase/migrations/20260830010000_library_membership_foundation.sql \
-  supabase/migrations/20260831010000_corpus_admin_enrichment.sql
-do
-  echo "library migration fixture: applying $(basename "$migration") with statement_timeout=$STATEMENT_TIMEOUT"
-  psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 --single-transaction \
-    -c "set local statement_timeout = '$STATEMENT_TIMEOUT'" \
-    -f "$migration"
-done
-
-psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 \
-  -f scripts/fixtures/library-membership-migration-scale-assert.sql
+echo "library migration fixture: applying 20260830010000 then 20260831010000 with a 20s per-statement timeout"
+"${PSQL[@]}" -X -q -v ON_ERROR_STOP=1 \
+  -f scripts/fixtures/library-membership-migration-scale-run.sql
 
 echo "library migration fixture: PASS (run pnpm db:reset before normal local development)"
