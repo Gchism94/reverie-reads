@@ -459,7 +459,7 @@ select is(
       ('public.remove_personal_book(uuid)'),
       ('public.restore_personal_book(uuid)'),
       ('public.update_household_work_enrichment(uuid,text[],jsonb)'),
-      ('public.edit_corpus_work_metadata(uuid,text,text,text[],text[],text,jsonb)'),
+      ('public.edit_corpus_work_metadata(uuid,text,numeric,integer,text,text,text,text[],text[],text,jsonb,integer,integer,integer)'),
       ('public.household_library_works()')
   ) signatures(signature) where has_function_privilege('anon', signature, 'EXECUTE')),
   0,
@@ -474,7 +474,7 @@ select is(
       ('public.remove_personal_book(uuid)'),
       ('public.restore_personal_book(uuid)'),
       ('public.update_household_work_enrichment(uuid,text[],jsonb)'),
-      ('public.edit_corpus_work_metadata(uuid,text,text,text[],text[],text,jsonb)'),
+      ('public.edit_corpus_work_metadata(uuid,text,numeric,integer,text,text,text,text[],text[],text,jsonb,integer,integer,integer)'),
       ('public.household_library_works()')
   ) signatures(signature) where has_function_privilege('authenticated', signature, 'EXECUTE')),
   8,
@@ -489,7 +489,7 @@ select is(
       ('public.remove_personal_book(uuid)'),
       ('public.restore_personal_book(uuid)'),
       ('public.update_household_work_enrichment(uuid,text[],jsonb)'),
-      ('public.edit_corpus_work_metadata(uuid,text,text,text[],text[],text,jsonb)'),
+      ('public.edit_corpus_work_metadata(uuid,text,numeric,integer,text,text,text,text[],text[],text,jsonb,integer,integer,integer)'),
       ('public.household_library_works()')
   ) signatures(signature) where has_function_privilege('service_role', signature, 'EXECUTE')),
   0,
@@ -1041,9 +1041,11 @@ select is(
 select throws_ok(
   $$select public.edit_corpus_work_metadata(
     (select corpus_work_id from public.books where id = '71000000-0000-4000-8000-000000000003'),
+    null, null, null, 'standalone',
     'Mystery', 'Gothic', array['mystery'], array['gothic'],
     'https://attacker.example/lookalike.webp',
-    '[{"url":"https://attacker.example/lookalike.webp","source":"url"}]'::jsonb
+    '[{"url":"https://attacker.example/lookalike.webp","source":"url"}]'::jsonb,
+    null, null, null
   )$$,
   '22023',
   null,
@@ -1052,8 +1054,9 @@ select throws_ok(
 select throws_ok(
   $$select public.edit_corpus_work_metadata(
     (select corpus_work_id from public.books where id = '71000000-0000-4000-8000-000000000003'),
+    null, null, null, 'standalone',
     'Mystery', 'Gothic', array['mystery'], array['gothic'], null,
-    '[{"url":42,"unexpected":true}]'::jsonb
+    '[{"url":42,"unexpected":true}]'::jsonb, null, null, null
   )$$,
   '22023',
   null,
@@ -1062,8 +1065,9 @@ select throws_ok(
 select throws_ok(
   $$select public.edit_corpus_work_metadata(
     (select corpus_work_id from public.books where id = '71000000-0000-4000-8000-000000000003'),
+    null, null, null, 'standalone',
     'Mystery', 'Gothic', array['mystery'], array['gothic'], null,
-    '["not-an-object"]'::jsonb
+    '["not-an-object"]'::jsonb, null, null, null
   )$$,
   '22023',
   null,
@@ -1073,12 +1077,14 @@ select throws_ok(
 select lives_ok(
   $$select public.edit_corpus_work_metadata(
     (select corpus_work_id from public.books where id = '71000000-0000-4000-8000-000000000003'),
+    null, null, null, 'standalone',
     'Romance',
     'Contemporary',
     array['Romance', 'romance'],
     array['Contemporary'],
     'http://127.0.0.1:55321/storage/v1/object/public/covers/u/71111111-1111-4111-8111-111111111111/71000000-0000-4000-8000-000000000003/direct.webp',
-    '[{"url":"http://127.0.0.1:55321/storage/v1/object/public/covers/u/71111111-1111-4111-8111-111111111111/71000000-0000-4000-8000-000000000003/direct.webp","source":"upload"}]'::jsonb
+    '[{"url":"http://127.0.0.1:55321/storage/v1/object/public/covers/u/71111111-1111-4111-8111-111111111111/71000000-0000-4000-8000-000000000003/direct.webp","source":"upload"}]'::jsonb,
+    null, null, null
   )$$,
   'a household owner can explicitly update the reviewed objective corpus fields'
 );
@@ -1197,7 +1203,8 @@ select throws_ok(
 select throws_ok(
   $$select public.edit_corpus_work_metadata(
     current_setting('test.absent_work_id')::uuid,
-    'Fantasy', null, array['fantasy'], '{}', null, '[]'::jsonb
+    null, null, null, 'standalone',
+    'Fantasy', null, array['fantasy'], '{}', null, '[]'::jsonb, null, null, null
   )$$,
   '42501',
   null,

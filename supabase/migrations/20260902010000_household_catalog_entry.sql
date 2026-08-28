@@ -34,6 +34,47 @@ revoke all on function public.can_edit_corpus_work(uuid)
   from public, anon, authenticated, service_role;
 grant execute on function public.can_edit_corpus_work(uuid) to authenticated;
 
+-- Shape alone is not validity: canonical_library_isbn intentionally normalizes both ISBN forms,
+-- but household catalog creation must also refuse a correctly sized bad checksum before it becomes
+-- a shared identity.
+create function public.library_isbn_checksum_is_valid(p_isbn text)
+returns boolean
+language plpgsql
+immutable
+set search_path = ''
+as $$
+declare
+  candidate text := upper(regexp_replace(coalesce(p_isbn, ''), '[^0-9Xx]', '', 'g'));
+  checksum int := 0;
+  digit int;
+  index int;
+begin
+  if candidate ~ '^[0-9]{13}$' then
+    for index in 1..13 loop
+      digit := substr(candidate, index, 1)::int;
+      checksum := checksum + digit * case when index % 2 = 0 then 3 else 1 end;
+    end loop;
+    return checksum % 10 = 0;
+  end if;
+
+  if candidate ~ '^[0-9]{9}[0-9X]$' then
+    for index in 1..10 loop
+      digit := case
+        when index = 10 and substr(candidate, index, 1) = 'X' then 10
+        else substr(candidate, index, 1)::int
+      end;
+      checksum := checksum + digit * (11 - index);
+    end loop;
+    return checksum % 11 = 0;
+  end if;
+
+  return false;
+end;
+$$;
+
+revoke all on function public.library_isbn_checksum_is_valid(text)
+  from public, anon, authenticated, service_role;
+
 -- Any active member may add an existing catalog work. This changes only collective membership;
 -- it never creates or updates a personal book.
 create function public.add_corpus_work_to_household(p_work uuid)
@@ -50,13 +91,22 @@ begin
     raise exception 'authentication required' using errcode = '42501';
   end if;
 
+  -- Match owner unlink's profile-first order. The added_by FK otherwise takes this lock only after
+  -- the household lock, which can deadlock with unlink's profile -> household order.
+  perform 1 from public.profiles profile where profile.id = caller for key share;
+  if not found then
+    raise exception 'profile not found' using errcode = 'P0002';
+  end if;
+
   select member.household_id into target_household
   from public.household_members member
-  where member.user_id = caller;
+  where member.user_id = caller
+  for key share;
   if target_household is null then
     raise exception 'account is not linked to a household' using errcode = 'P0002';
   end if;
-  if not exists (select 1 from public.works work where work.id = p_work) then
+  perform 1 from public.works work where work.id = p_work for key share;
+  if not found then
     raise exception 'corpus work not found' using errcode = 'P0002';
   end if;
 
@@ -118,6 +168,7 @@ declare
   isbn_matches int := 0;
   fallback_matches int := 0;
   created_work boolean := false;
+  raw_isbn text := upper(regexp_replace(coalesce(p_isbn, ''), '[^0-9Xx]', '', 'g'));
 begin
   if caller is null then
     raise exception 'authentication required' using errcode = '42501';
@@ -125,14 +176,19 @@ begin
   if clean_title is null then
     raise exception 'title is required' using errcode = '22023';
   end if;
-  if nullif(regexp_replace(coalesce(p_isbn, ''), '[^0-9Xx]', '', 'g'), '') is not null
-    and clean_isbn is null then
+  if raw_isbn <> '' and not public.library_isbn_checksum_is_valid(p_isbn) then
     raise exception 'ISBN must be a valid ISBN-10 or ISBN-13' using errcode = '22023';
+  end if;
+
+  perform 1 from public.profiles profile where profile.id = caller for key share;
+  if not found then
+    raise exception 'profile not found' using errcode = 'P0002';
   end if;
 
   select member.household_id into target_household
   from public.household_members member
-  where member.user_id = caller;
+  where member.user_id = caller
+  for key share;
   if target_household is null then
     raise exception 'account is not linked to a household' using errcode = 'P0002';
   end if;
@@ -247,20 +303,28 @@ grant execute on function public.create_household_catalog_work(text, text, text)
   to authenticated;
 
 -- The old RPC accepted any member with a personal/household relationship to the work. Remove that
--- client grant, retain the implementation as an internal validated writer, and expose the same
--- narrow patch only through the explicit administrator/household-owner authorization boundary.
+-- client grant and expose one complete, audited shared-details writer through the explicit
+-- administrator/household-owner boundary. Covers retain the hosted-object allowlist; series,
+-- classification, and flexible publication precision are validated as one operation.
 revoke all on function public.update_corpus_work_metadata(
   uuid, text, text, text[], text[], text, jsonb
 ) from public, anon, authenticated, service_role;
 
 create function public.edit_corpus_work_metadata(
   p_work uuid,
+  p_series text,
+  p_position numeric,
+  p_series_count int,
+  p_status text,
   p_genre text,
   p_subgenre text,
   p_genres text[],
   p_subgenres text[],
   p_cover_url text,
-  p_cover_options jsonb
+  p_cover_options jsonb,
+  p_pub_y int,
+  p_pub_m int,
+  p_pub_d int
 )
 returns uuid
 language plpgsql
@@ -270,49 +334,227 @@ as $$
 declare
   caller uuid := (select auth.uid());
   target_household uuid;
+  target_book uuid;
+  before_value jsonb;
+  after_value jsonb;
+  option jsonb;
+  option_url text;
+  desired_cover text := nullif(trim(p_cover_url), '');
+  normalized_series text := nullif(trim(p_series), '');
+  normalized_status text := nullif(lower(trim(p_status)), '');
+  normalized_genre text := nullif(lower(trim(p_genre)), '');
+  normalized_subgenre text := nullif(lower(trim(p_subgenre)), '');
+  normalized_genres text[];
+  normalized_subgenres text[];
 begin
   if caller is null then
     raise exception 'authentication required' using errcode = '42501';
   end if;
+  if jsonb_typeof(coalesce(p_cover_options, '[]'::jsonb)) <> 'array' then
+    raise exception 'cover options must be a JSON array' using errcode = '22023';
+  end if;
+  if p_position is not null and (p_position < 0 or p_position > 9999) then
+    raise exception 'series position must be between 0 and 9999' using errcode = '22023';
+  end if;
+  if p_series_count is not null and (p_series_count < 1 or p_series_count > 999) then
+    raise exception 'series count must be between 1 and 999' using errcode = '22023';
+  end if;
+  if normalized_status is not null and normalized_status <> all(array[
+    'standalone', 'ongoing', 'completed', 'on_hiatus', 'cancelled',
+    'interconnected_standalone', 'interconnected_series'
+  ]) then
+    raise exception 'series status is not canonical' using errcode = '22023';
+  end if;
+  if p_pub_y is not null and (p_pub_y < 1 or p_pub_y > 9999) then
+    raise exception 'publication year must be between 1 and 9999' using errcode = '22023';
+  end if;
+  if p_pub_m is not null and (p_pub_m < 1 or p_pub_m > 12) then
+    raise exception 'publication month must be between 1 and 12' using errcode = '22023';
+  end if;
+  if p_pub_d is not null and (p_pub_d < 1 or p_pub_d > 31) then
+    raise exception 'publication day must be between 1 and 31' using errcode = '22023';
+  end if;
 
-  -- Hold the exact authority row for the whole delegated edit. The helper above is useful for UI
-  -- affordances, but a preflight boolean must never be the write boundary: an administrator could
-  -- be revoked or an owner membership could change after that read. Row locks make either change
-  -- wait, and the legacy writer below independently rechecks that the work remains active.
+  normalized_genres := array(
+    select distinct lower(trim(value))
+    from unnest(coalesce(p_genres, '{}')) value
+    where trim(value) <> '' and lower(trim(value)) is distinct from normalized_genre
+    order by lower(trim(value))
+  );
+  if normalized_genre is not null then
+    normalized_genres := array_prepend(normalized_genre, normalized_genres);
+  end if;
+  if exists (
+    select 1 from unnest(normalized_genres) value
+    where value <> all(array[
+      'romance', 'fantasy', 'science fiction', 'horror', 'mystery', 'literary', 'cozy',
+      'nonfiction', 'young adult'
+    ])
+  ) then
+    raise exception 'genres must use the canonical library vocabulary' using errcode = '22023';
+  end if;
+
+  normalized_subgenres := array(
+    select distinct lower(trim(value))
+    from unnest(coalesce(p_subgenres, '{}')) value
+    where trim(value) <> '' and lower(trim(value)) is distinct from normalized_subgenre
+    order by lower(trim(value))
+  );
+  if normalized_subgenre is not null then
+    normalized_subgenres := array_prepend(normalized_subgenre, normalized_subgenres);
+  end if;
+
+  -- added_by/editor_id and unlink all reference the profile. Taking this first gives every
+  -- household mutation the same profile -> membership -> household/work order.
+  perform 1 from public.profiles profile where profile.id = caller for key share;
+  if not found then
+    raise exception 'profile not found' using errcode = 'P0002';
+  end if;
+
   perform 1
   from public.corpus_admins admin
   where admin.user_id = caller
   for update;
-  if found then
-    return public.update_corpus_work_metadata(
-      p_work, p_genre, p_subgenre, p_genres, p_subgenres, p_cover_url, p_cover_options
-    );
+  if not found then
+    select member.household_id into target_household
+    from public.household_members member
+    join public.household_works household_work
+      on household_work.household_id = member.household_id
+     and household_work.work_id = p_work
+     and household_work.removed_at is null
+    where member.user_id = caller
+      and member.role = 'owner'
+    for update of member, household_work;
+    if target_household is null then
+      raise exception 'corpus administrator or household owner required' using errcode = '42501';
+    end if;
   end if;
 
-  select member.household_id into target_household
-  from public.household_members member
-  join public.household_works household_work
-    on household_work.household_id = member.household_id
-   and household_work.work_id = p_work
-   and household_work.removed_at is null
-  where member.user_id = caller
-    and member.role = 'owner'
-  for update of member;
-  if target_household is null then
-    raise exception 'corpus administrator or household owner required' using errcode = '42501';
+  -- A newly proposed cover must still originate from this caller's hosted personal object. Global
+  -- administrators may select or retain reviewed corpus options without a personal copy.
+  select book.id into target_book
+  from public.books book
+  where book.owner_id = caller and book.corpus_work_id = p_work and book.removed_at is null
+    and public.book_corpus_binding_is_unambiguous(
+      book.corpus_work_id,
+      book.title,
+      coalesce(
+        nullif(book.authors_display, ''),
+        trim(concat_ws(' ', book.author_first, book.author_last))
+      ),
+      book.isbn
+    )
+  order by book.id
+  limit 1
+  for update;
+
+  select jsonb_build_object(
+    'series', work.series,
+    'position', work.position,
+    'seriesCount', work.series_count,
+    'status', work.status,
+    'genre', work.genre,
+    'subgenre', work.subgenre,
+    'genres', work.genres,
+    'subgenres', work.subgenres,
+    'coverUrl', work.cover_url,
+    'coverOptions', work.cover_options,
+    'pubY', work.pub_y,
+    'pubM', work.pub_m,
+    'pubD', work.pub_d
+  ) into before_value
+  from public.works work
+  where work.id = p_work
+  for update;
+  if before_value is null then
+    raise exception 'corpus work not found' using errcode = 'P0002';
   end if;
 
-  return public.update_corpus_work_metadata(
-    p_work, p_genre, p_subgenre, p_genres, p_subgenres, p_cover_url, p_cover_options
-  );
+  if (
+    select count(*) <> count(distinct value ->> 'url')
+    from jsonb_array_elements(coalesce(p_cover_options, '[]'::jsonb)) value
+  ) then
+    raise exception 'cover option URLs must be unique' using errcode = '22023';
+  end if;
+
+  for option in select value from jsonb_array_elements(coalesce(p_cover_options, '[]'::jsonb))
+  loop
+    if not public.corpus_cover_option_is_valid(option) then
+      raise exception 'cover options must use the reviewed url/source/sourceUrl schema'
+        using errcode = '22023';
+    end if;
+    option_url := trim(option ->> 'url');
+    if not exists (
+      select 1 from jsonb_array_elements(before_value -> 'coverOptions') current_option
+      where current_option = option
+    ) and not exists (
+      select 1 from public.books book
+      where target_book is not null and book.id = target_book
+        and book.owner_id = caller and book.corpus_work_id = p_work and book.removed_at is null
+        and public.hosted_book_cover_object_name(option_url, caller, book.id) is not null
+    ) then
+      raise exception 'new corpus covers must come from the hosted cover ingestion pipeline'
+        using errcode = '22023';
+    end if;
+  end loop;
+
+  if desired_cover is not null
+    and desired_cover is distinct from (before_value ->> 'coverUrl')
+    and not exists (
+      select 1 from jsonb_array_elements(coalesce(p_cover_options, '[]'::jsonb)) value
+      where value ->> 'url' = desired_cover
+    ) then
+    raise exception 'the canonical cover must be an accepted cover option' using errcode = '22023';
+  end if;
+
+  update public.works work
+  set series = normalized_series,
+      position = p_position,
+      series_count = p_series_count,
+      status = normalized_status,
+      genre = normalized_genre,
+      subgenre = normalized_subgenre,
+      genres = normalized_genres,
+      subgenres = normalized_subgenres,
+      cover_url = desired_cover,
+      cover_options = coalesce(p_cover_options, '[]'::jsonb),
+      pub_y = p_pub_y,
+      pub_m = p_pub_m,
+      pub_d = p_pub_d
+  where work.id = p_work;
+
+  select jsonb_build_object(
+    'series', work.series,
+    'position', work.position,
+    'seriesCount', work.series_count,
+    'status', work.status,
+    'genre', work.genre,
+    'subgenre', work.subgenre,
+    'genres', work.genres,
+    'subgenres', work.subgenres,
+    'coverUrl', work.cover_url,
+    'coverOptions', work.cover_options,
+    'pubY', work.pub_y,
+    'pubM', work.pub_m,
+    'pubD', work.pub_d
+  ) into after_value
+  from public.works work where work.id = p_work;
+
+  if after_value is distinct from before_value then
+    insert into public.work_metadata_edits (
+      work_id, editor_id, previous_value, next_value
+    ) values (p_work, caller, before_value, after_value);
+  end if;
+
+  return p_work;
 end;
 $$;
 
 revoke all on function public.edit_corpus_work_metadata(
-  uuid, text, text, text[], text[], text, jsonb
+  uuid, text, numeric, int, text, text, text, text[], text[], text, jsonb, int, int, int
 ) from public, anon, authenticated, service_role;
 grant execute on function public.edit_corpus_work_metadata(
-  uuid, text, text, text[], text[], text, jsonb
+  uuid, text, numeric, int, text, text, text, text[], text[], text, jsonb, int, int, int
 ) to authenticated;
 
 -- Personal edits are private by default. This trigger previously promoted every reader's genre
@@ -332,6 +574,9 @@ as $$
 declare
   caller uuid := (select auth.uid());
   target_work uuid;
+  shared_series text;
+  shared_position numeric;
+  shared_series_count int;
 begin
   if caller is null then
     raise exception 'authentication required' using errcode = '42501';
@@ -345,16 +590,27 @@ begin
     raise exception 'active personal book not found' using errcode = 'P0002';
   end if;
 
+  select work.series, work.position, work.series_count
+  into shared_series, shared_position, shared_series_count
+  from public.works work
+  where work.id = target_work
+  for share;
+  if not found then
+    raise exception 'corpus work not found' using errcode = 'P0002';
+  end if;
+
+  -- Reuse the established atomic reader series transition. Directly assigning books.series would
+  -- leave the former live series_entries row behind and make two structured series claims true.
+  perform public.sync_book_series(
+    p_book, shared_series, shared_position, shared_series_count
+  );
+
   update public.books book
-  set series = work.series,
-      position = work.position,
-      series_count = work.series_count,
-      status = work.status,
-      series_user_chosen = true,
+  set status = coalesce(work.status, 'standalone'),
       genre = coalesce(work.genre, ''),
-      subgenre = work.subgenre,
-      genres = work.genres,
-      subgenres = work.subgenres,
+      subgenre = coalesce(work.subgenre, ''),
+      genres = coalesce(work.genres, '{}'),
+      subgenres = coalesce(work.subgenres, '{}'),
       cover_url = work.cover_url,
       cover_thumb_url = null,
       cover_source = work.cover_source,

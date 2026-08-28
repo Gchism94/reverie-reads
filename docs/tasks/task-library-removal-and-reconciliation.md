@@ -4,9 +4,12 @@ Status: **the membership/removal, bounded-backfill, corpus-admin, ACL, and opera
 integrated through PR #366 at `1828968`. The owner deployed `20260830010000`, `20260831010000`, and
 `20260901010000`; the production report returned 43/43 invariants true, and the deployed covers
 function retained the selected personal cover across refresh. The first production reconciliation
-dry run wrote nothing and correctly blocked on 10 corpus-missing identities. A forward household-only
-catalog-entry candidate is now under local implementation/review; the dry-run checksum is not
-approvable, and backup, reconciliation write, and post-write smoke checks remain pending.**
+dry run wrote nothing and correctly blocked on 10 corpus-missing identities. Independent review
+rejected the first household-only catalog-entry candidate for authorization, checksum, lock-order,
+structured-series, scope, and coverage gaps. The remediation is complete and verified locally but
+still requires independent re-review. The dry-run
+checksum is not approvable, and backup, reconciliation write, and post-write smoke checks remain
+pending.**
 
 ## Production migration performance hotfix — 2026-08-26
 
@@ -254,8 +257,9 @@ Additional rules derived from that contract:
    path; no household action may delete or rewrite another member's personal row.
 8. **Data edits have one explicit scope.** Do not copy a mutable `books` row between scopes.
    - **Corpus:** canonical bibliographic identity and standard catalog data. At minimum, genre,
-     subgenre, available cover options, and accepted canonical tropes are corpus changes and must
-     flow to every linked view.
+     subgenre, available cover options, and accepted canonical tropes are corpus changes. Corpus and
+     household views read those shared facts directly; an existing personal copy changes only when
+     its owner explicitly chooses **Use shared details**.
      Cover options are shared candidates; a personal or household display choice may remain a scoped
      preference without deleting or overwriting the corpus options.
    - **Household:** shared descriptive enrichment such as household tags and tropes. Editing it from
@@ -341,9 +345,16 @@ aggregate rows were valid household entries but had no corpus identity. The dura
   fields while preserving title, contributors, ISBN, ownership, reading history, rating, and private
   annotations.
 
-This candidate is not deployed. Production reconciliation remains paused until independent review,
-integration, owner-guarded migration/web deployment, all 49 expanded rollout-report rows, and
+This remediated candidate is complete locally and is not deployed. Production reconciliation remains paused until independent re-review,
+integration, owner-guarded migration/web deployment, all 50 expanded rollout-report rows, and
 focused smoke verification pass.
+
+Local remediation verification passed a clean rebuild through `20260902010000`, all 707 pgTAP
+assertions across 29 files, 18 deterministic concurrency scenarios, the bounded
+25,005-work/5,012-book migration fixture, 2,432 core and 640 web unit assertions, typecheck, ESLint,
+Prettier, production build, and `git diff --check`. The complete household browser spec passed 11
+cases with one expected project skip; the full browser matrix passed 220 cases with 10 expected
+project-specific skips, one worker, and zero retries. No production or remote state was touched.
 
 ## Owner handoff: production verification, private dry run, and backup
 
@@ -447,8 +458,9 @@ complete or unblocking the CI/release stage.
 3. Design and migrate first-class household-work membership plus the household enrichment overlay.
    Define stable links to corpus work/edition identity, RLS/RPC permissions, provenance, duplicate
    behavior, removal recovery, and a safe backfill from the shipped derived view.
-4. Route writes by scope and prove their propagation: corpus genre/subgenre/cover options to every
-   linked view; household tags/tropes to every household member; personal state only to its owner.
+4. Route writes by scope and prove their propagation: corpus genre/subgenre/cover options to corpus
+   and household views, explicit owner adoption into an existing personal copy, household
+   tags/tropes to every household member, and personal state only to its owner.
 5. Build the two independent removal paths and a deterministic reconciliation operator. Dry-run is
    the default; production write mode requires an explicit flag and owner confirmation.
 6. Produce an owner-facing dry-run with exact counts for unchanged, added, reassigned, duplicated,

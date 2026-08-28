@@ -32,6 +32,7 @@ import {
   useAdoptCorpusWorkMetadata,
   useRemoveHouseholdWork,
   useRemovePersonalBookFromHousehold,
+  useUpdateCorpusWorkMetadata,
   type HouseholdBook,
 } from './household'
 
@@ -53,7 +54,7 @@ const householdBook = (id: string, ownerId = 'reader-a'): HouseholdBook => ({
   series: '',
   position: null,
   seriesCount: null,
-  seriesStatus: '',
+  seriesStatus: 'standalone',
   primaryGenre: '',
   genres: [],
   subgenre: '',
@@ -265,7 +266,7 @@ describe('household query identity and RPC boundary', () => {
       series: '',
       position: null,
       seriesCount: null,
-      seriesStatus: '',
+      seriesStatus: 'standalone' as const,
       primaryGenre: '',
       genres: [],
       subgenre: '',
@@ -412,6 +413,7 @@ describe('household query identity and RPC boundary', () => {
     const add = renderHook(() => useAddPersonalBookToHousehold(), { wrapper })
     const addWork = renderHook(() => useAddCorpusWorkToHousehold(), { wrapper })
     const createWork = renderHook(() => useCreateHouseholdCatalogWork(), { wrapper })
+    const editWork = renderHook(() => useUpdateCorpusWorkMetadata(), { wrapper })
     const adoptWork = renderHook(() => useAdoptCorpusWorkMetadata(), { wrapper })
     const unshare = renderHook(() => useRemovePersonalBookFromHousehold(), { wrapper })
     const removeWork = renderHook(() => useRemoveHouseholdWork(), { wrapper })
@@ -426,6 +428,24 @@ describe('household query identity and RPC boundary', () => {
       }),
     )
     await act(() => adoptWork.result.current.mutateAsync('book-1'))
+    await act(() =>
+      editWork.result.current.mutateAsync({
+        workId: 'work-1',
+        series: 'Shared Series',
+        position: 2,
+        seriesCount: 4,
+        seriesStatus: 'ongoing',
+        genre: 'fantasy',
+        subgenre: 'epic fantasy',
+        genres: ['fantasy'],
+        subgenres: ['epic fantasy'],
+        coverUrl: '',
+        coverOptions: [],
+        publicationYear: 2026,
+        publicationMonth: null,
+        publicationDay: null,
+      }),
+    )
     await act(() => unshare.result.current.mutateAsync('book-1'))
     await act(() => removeWork.result.current.mutateAsync('work-1'))
 
@@ -437,6 +457,25 @@ describe('household query identity and RPC boundary', () => {
         { p_title: 'Household only', p_author: 'A Writer', p_isbn: null },
       ],
       ['adopt_corpus_work_metadata', { p_book: 'book-1' }],
+      [
+        'edit_corpus_work_metadata',
+        {
+          p_work: 'work-1',
+          p_series: 'Shared Series',
+          p_position: 2,
+          p_series_count: 4,
+          p_status: 'ongoing',
+          p_genre: 'fantasy',
+          p_subgenre: 'epic fantasy',
+          p_genres: ['fantasy'],
+          p_subgenres: ['epic fantasy'],
+          p_cover_url: '',
+          p_cover_options: [],
+          p_pub_y: 2026,
+          p_pub_m: null,
+          p_pub_d: null,
+        },
+      ],
       ['remove_personal_book_from_household', { p_book: 'book-1' }],
       ['remove_household_work', { p_work: 'work-1' }],
     ])

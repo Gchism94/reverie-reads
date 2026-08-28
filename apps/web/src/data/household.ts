@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { normalizeSeriesStatus, type SeriesStatus } from '@reverie/core'
 import { useAuth } from '../auth/AuthProvider'
 import { supabase } from '../lib/supabase'
 
@@ -23,7 +24,7 @@ export interface HouseholdBook {
   series: string
   position: number | null
   seriesCount: number | null
-  seriesStatus: string
+  seriesStatus: SeriesStatus
   primaryGenre: string
   genres: string[]
   subgenre: string
@@ -154,7 +155,7 @@ export const toHouseholdBook = (row: HouseholdBookRow): HouseholdBook => ({
   series: row.series_name ?? '',
   position: numericPosition(row.series_position),
   seriesCount: row.series_count,
-  seriesStatus: row.series_status ?? '',
+  seriesStatus: normalizeSeriesStatus(row.series_status, !!row.series_name),
   primaryGenre: row.primary_genre ?? '',
   genres: row.genres ?? [],
   subgenre: row.subgenre ?? '',
@@ -507,12 +508,19 @@ export function useUpdateHouseholdWorkEnrichment() {
 
 export interface CorpusMetadataPatch {
   workId: string
+  series: string
+  position: number | null
+  seriesCount: number | null
+  seriesStatus: SeriesStatus
   genre: string
   subgenre: string
   genres: string[]
   subgenres: string[]
   coverUrl: string
   coverOptions: { url?: string; source?: string; sourceUrl?: string }[]
+  publicationYear: number | null
+  publicationMonth: number | null
+  publicationDay: number | null
 }
 
 export function useUpdateCorpusWorkMetadata() {
@@ -522,12 +530,19 @@ export function useUpdateCorpusWorkMetadata() {
     mutationFn: async (patch: CorpusMetadataPatch): Promise<string> => {
       const { data, error } = await supabase.rpc('edit_corpus_work_metadata', {
         p_work: patch.workId,
+        p_series: patch.series,
+        p_position: patch.position,
+        p_series_count: patch.seriesCount,
+        p_status: patch.seriesStatus,
         p_genre: patch.genre,
         p_subgenre: patch.subgenre,
         p_genres: patch.genres,
         p_subgenres: patch.subgenres,
         p_cover_url: patch.coverUrl,
         p_cover_options: patch.coverOptions,
+        p_pub_y: patch.publicationYear,
+        p_pub_m: patch.publicationMonth,
+        p_pub_d: patch.publicationDay,
       })
       if (error) throw error
       return data as string

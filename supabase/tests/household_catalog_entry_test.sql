@@ -1,6 +1,6 @@
 -- Household-only membership, owner/admin corpus authority, and explicit personal adoption.
 begin;
-select plan(47);
+select plan(57);
 
 insert into auth.users (
   id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
@@ -79,6 +79,27 @@ insert into public.books (
   'owned', 'Read', 4
 );
 
+insert into public.series (id, owner_id, name, status)
+values (
+  '92000000-0000-4000-8000-000000000010',
+  '92222222-2222-4222-8222-222222222222',
+  'Personal Series',
+  'ongoing'
+);
+insert into public.series_entries (
+  id, series_id, owner_id, position, title, author, book_id, source, user_edited
+) values (
+  '92000000-0000-4000-8000-000000000011',
+  '92000000-0000-4000-8000-000000000010',
+  '92222222-2222-4222-8222-222222222222',
+  1,
+  'Shared Catalog Details',
+  'B Writer',
+  '92000000-0000-4000-8000-000000000001',
+  'manual',
+  true
+);
+
 -- Every new browser RPC has an exact effective ACL. The retired implicit corpus writer stays
 -- unreachable even though its implementation remains available to the reviewed wrapper.
 select ok(not has_function_privilege('anon', 'public.can_edit_corpus_work(uuid)', 'EXECUTE'),
@@ -103,14 +124,24 @@ select ok(not has_function_privilege('service_role', 'public.create_household_ca
   'service role has no household catalog creator grant');
 
 select ok(not has_function_privilege(
-  'anon', 'public.edit_corpus_work_metadata(uuid,text,text,text[],text[],text,jsonb)', 'EXECUTE'
+  'anon', 'public.edit_corpus_work_metadata(uuid,text,numeric,integer,text,text,text,text[],text[],text,jsonb,integer,integer,integer)', 'EXECUTE'
 ), 'anon cannot edit corpus metadata');
 select ok(has_function_privilege(
-  'authenticated', 'public.edit_corpus_work_metadata(uuid,text,text,text[],text[],text,jsonb)', 'EXECUTE'
+  'authenticated', 'public.edit_corpus_work_metadata(uuid,text,numeric,integer,text,text,text,text[],text[],text,jsonb,integer,integer,integer)', 'EXECUTE'
 ), 'authenticated can reach the owner/admin corpus edit boundary');
 select ok(not has_function_privilege(
-  'service_role', 'public.edit_corpus_work_metadata(uuid,text,text,text[],text[],text,jsonb)', 'EXECUTE'
+  'service_role', 'public.edit_corpus_work_metadata(uuid,text,numeric,integer,text,text,text,text[],text[],text,jsonb,integer,integer,integer)', 'EXECUTE'
 ), 'service role has no browser corpus edit grant');
+
+select ok(not has_function_privilege(
+  'anon', 'public.library_isbn_checksum_is_valid(text)', 'EXECUTE'
+), 'anon cannot call the internal ISBN checksum helper');
+select ok(not has_function_privilege(
+  'authenticated', 'public.library_isbn_checksum_is_valid(text)', 'EXECUTE'
+), 'authenticated cannot bypass catalog creation through the ISBN helper');
+select ok(not has_function_privilege(
+  'service_role', 'public.library_isbn_checksum_is_valid(text)', 'EXECUTE'
+), 'service role has no direct ISBN checksum helper grant');
 
 select ok(not has_function_privilege('anon', 'public.adopt_corpus_work_metadata(uuid)', 'EXECUTE'),
   'anon cannot adopt corpus details into a personal book');
@@ -233,6 +264,17 @@ select throws_ok(
   $$select public.create_household_catalog_work('Invalid ISBN', 'G Writer', '123')$$,
   '22023', null, 'invalid ISBN input is refused instead of silently discarded'
 );
+select is(
+  public.create_household_catalog_work(
+    'Created for Household', 'F Writer', '0-306-40615-2'
+  ),
+  current_setting('test.created_household_work')::uuid,
+  'a valid ISBN-10 checksum converts to and reuses the canonical ISBN-13 work'
+);
+select throws_ok(
+  $$select public.create_household_catalog_work('Bad Checksum', 'G Writer', '9780306406158')$$,
+  '22023', null, 'a shaped ISBN-13 with an invalid checksum is refused'
+);
 select throws_ok(
   $$select public.create_household_catalog_work('Ambiguous Catalog', 'D Writer', null)$$,
   '23505', null, 'an ambiguous normalized identity is refused'
@@ -262,7 +304,8 @@ select is(
 select throws_ok(
   $$select public.edit_corpus_work_metadata(
     '90000000-0000-4000-8000-000000000012',
-    'horror', null, array['horror'], '{}', null, '[]'::jsonb
+    'Shared Series', 2, 4, 'ongoing',
+    'horror', null, array['horror'], '{}', null, '[]'::jsonb, 2026, null, null
   )$$,
   '42501', null, 'the corpus edit boundary refuses an ordinary member'
 );
@@ -279,7 +322,25 @@ select is(
   true,
   'a corpus administrator has global corpus edit authority'
 );
+select is(
+  public.edit_corpus_work_metadata(
+    '90000000-0000-4000-8000-000000000013',
+    'Global Series', 1.5, 6, 'ongoing',
+    'science fiction', 'space opera', array['science fiction'], array['space opera'],
+    null, '[]'::jsonb, 2028, 9, null
+  ),
+  '90000000-0000-4000-8000-000000000013'::uuid,
+  'a corpus administrator can edit a work outside every personal and household library'
+);
 reset role;
+select is((select concat_ws('|', series, position, series_count, status, genre, subgenre, pub_y, pub_m)
+  from public.works where id = '90000000-0000-4000-8000-000000000013'),
+  'Global Series|1.5|6|ongoing|science fiction|space opera|2028|9',
+  'the global administrator edit writes the complete reviewed shared metadata');
+select is((select count(*)::int from public.work_metadata_edits
+  where work_id = '90000000-0000-4000-8000-000000000013'
+    and editor_id = '94444444-4444-4444-8444-444444444444'),
+  1, 'the global administrator edit is audited');
 
 set local role authenticated;
 select set_config(
@@ -290,8 +351,9 @@ select set_config(
 select is(
   public.edit_corpus_work_metadata(
     '90000000-0000-4000-8000-000000000012',
+    'Edited Shared Series', 3, 5, 'completed',
     'mystery', 'historical mystery', array['mystery'], array['historical mystery'],
-    null, '[]'::jsonb
+    null, '[]'::jsonb, 2027, 6, 1
   ),
   '90000000-0000-4000-8000-000000000012'::uuid,
   'the household owner can edit canonical metadata through the audited boundary'
@@ -303,6 +365,21 @@ select is((select genre from public.works
 select is((select genre from public.books
   where id = '92000000-0000-4000-8000-000000000001'),
   'romance', 'a corpus edit does not rewrite a member personal book');
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"91111111-1111-4111-8111-111111111111","role":"authenticated"}',
+  true
+);
+select throws_ok(
+  $$select public.edit_corpus_work_metadata(
+    '90000000-0000-4000-8000-000000000012',
+    'Edited Shared Series', 3, 5, 'completed',
+    'romantasy', null, array['romantasy'], '{}', null, '[]'::jsonb, 2027, 6, 1
+  )$$,
+  '22023', null, 'the database refuses a noncanonical primary genre even for an owner'
+);
+reset role;
 
 -- Personal metadata also stays personal until the owner explicitly adopts the shared details.
 set local role authenticated;
@@ -324,8 +401,12 @@ select is((select genre from public.works
   'mystery', 'a personal metadata edit does not promote into the corpus');
 select is((select concat_ws('|', genre, subgenre, series, position, pub_y)
   from public.books where id = '92000000-0000-4000-8000-000000000001'),
-  'mystery|historical mystery|Shared Series|2|2026',
+  'mystery|historical mystery|Edited Shared Series|3|2027',
   'explicit adoption copies the reviewed shared descriptive fields');
+select is((select count(*)::int from public.series_entries
+  where id = '92000000-0000-4000-8000-000000000011'
+    and removed_at is not null and book_id is null and user_edited),
+  1, 'adoption atomically retires the former structured series entry');
 select is((select concat_ws('|', ownership, read_status, rating)
   from public.books where id = '92000000-0000-4000-8000-000000000001'),
   'owned|Read|4.0', 'adoption preserves possession, reading state, and rating');

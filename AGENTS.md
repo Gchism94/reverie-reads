@@ -105,10 +105,12 @@ wishlist` was the pre-#68 model and is long wrong. Format flags **suppress, neve
 - **Household catalog membership is not a personal copy.** An active household member may add an
   existing corpus work—or create one attributed provisional identity—directly to `household_works`
   without creating `books` or implying owned/borrowed/wishlist/read state. Existing corpus metadata
-  is editable only by a household owner or corpus administrator. Personal metadata edits stay
-  personal; a personal owner must explicitly choose “Use shared details” to adopt shared series,
-  genre, cover, and publication fields, and that adoption never changes title/contributors, ISBN,
-  possession, reading history, rating, or private annotations.
+  is editable only by a household owner or corpus administrator. Routine edits to an active
+  personal row stay personal; the existing fill-only removal/account-deletion preservation may
+  still populate missing objective corpus gaps before the last source disappears. A personal owner
+  must explicitly choose “Use shared details” to adopt shared series, genre, cover, and publication
+  fields, and that adoption never changes title/contributors, ISBN, possession, reading history,
+  rating, or private annotations.
 - **`isBookRead` and `hasReadingHistory` disagree on DNF on purpose.** `isBookRead` feeds series
   progress, taste and stats, where an abandoned book must not count as read. `hasReadingHistory`
   adds DNF and feeds **visibility only** (`inDefaultLibrary`), so a book you started and gave up

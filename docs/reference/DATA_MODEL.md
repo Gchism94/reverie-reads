@@ -434,8 +434,10 @@ the durable owner of shared artwork. The administrator corpus sweep re-ingests t
 image under `w/{work}/`, and only a real object on that path (or an allowlisted Google Books
 display-only URL) is accepted by the corpus completion RPC. Request Host headers are never trusted.
 Existing curated external options may be retained or selected, but arbitrary new remote URLs cannot
-be introduced by `edit_corpus_work_metadata`. Personal metadata edits remain personal and never
-publish a corpus cover implicitly. `COVER_PUBLIC_URL` must remain unset or use that same origin; a
+be introduced by `edit_corpus_work_metadata`. Routine edits to an active personal row remain
+personal and never publish a corpus cover implicitly. The existing fill-only preservation invoked
+before personal removal, merge deletion, or account deletion may still populate objective corpus
+gaps so the final source is not lost. `COVER_PUBLIC_URL` must remain unset or use that same origin; a
 different CDN origin is safely rejected until it has an explicit database-controlled trust
 configuration. Membership and work eligibility are rechecked after the row locks in every
 household/corpus mutation so a concurrent unlink wins in the safe direction.

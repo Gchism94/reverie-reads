@@ -1,5 +1,18 @@
 import { useState } from 'react'
-import { coverCandidates, isDegenerateGoogleCoverRender } from '@reverie/core'
+import {
+  CORE_GENRES,
+  PUB_DAY,
+  PUB_MONTH,
+  PUB_YEAR,
+  SERIES_COUNT,
+  SERIES_POSITION,
+  SERIES_STATUS_LABELS,
+  SERIES_STATUS_VALUES,
+  coverCandidates,
+  isDegenerateGoogleCoverRender,
+  parseNumericFields,
+  type SeriesStatus,
+} from '@reverie/core'
 import type { HouseholdBook, HouseholdBookOwner } from '../data/household'
 import { subgenreGradient } from '../library/constants'
 import { CoverPlaceholder } from './CoverPlaceholder'
@@ -183,12 +196,19 @@ const publicationLabel = (book: HouseholdBook): string | null => {
 }
 
 export interface HouseholdCorpusEdit {
+  series: string
+  position: number | null
+  seriesCount: number | null
+  seriesStatus: SeriesStatus
   genre: string
   subgenre: string
   genres: string[]
   subgenres: string[]
   coverUrl: string
   coverOptions: HouseholdBook['coverOptions']
+  publicationYear: number | null
+  publicationMonth: number | null
+  publicationDay: number | null
 }
 
 function CorpusEditForm({
@@ -200,13 +220,23 @@ function CorpusEditForm({
   onSave: (patch: HouseholdCorpusEdit) => Promise<void>
   saving: boolean
 }) {
+  const [series, setSeries] = useState(book.series)
+  const [position, setPosition] = useState(book.position?.toString() ?? '')
+  const [seriesCount, setSeriesCount] = useState(book.seriesCount?.toString() ?? '')
+  const [seriesStatus, setSeriesStatus] = useState<SeriesStatus>(book.seriesStatus)
   const [genre, setGenre] = useState(book.primaryGenre)
   const [subgenre, setSubgenre] = useState(book.subgenre)
+  const [publicationYear, setPublicationYear] = useState(book.publicationYear?.toString() ?? '')
+  const [publicationMonth, setPublicationMonth] = useState(book.publicationMonth?.toString() ?? '')
+  const [publicationDay, setPublicationDay] = useState(book.publicationDay?.toString() ?? '')
+  const [validationError, setValidationError] = useState('')
+  const fieldClass =
+    'skin-control h-10 w-full border border-line bg-field px-3 text-[13px] text-ink'
 
   return (
     <details className="mt-4">
       <summary className="cursor-pointer text-[12.5px] font-semibold text-primary">
-        Edit shared catalog details
+        Edit shared series, genre, and publication
       </summary>
       <p className="mt-2 text-[11.5px] text-muted">
         This changes the shared catalog view. Personal copies keep their existing details until
@@ -216,9 +246,25 @@ function CorpusEditForm({
         className="mt-2 space-y-2"
         onSubmit={(event) => {
           event.preventDefault()
+          const parsed = parseNumericFields({
+            position: { raw: position, spec: SERIES_POSITION },
+            seriesCount: { raw: seriesCount, spec: SERIES_COUNT },
+            publicationYear: { raw: publicationYear, spec: PUB_YEAR },
+            publicationMonth: { raw: publicationMonth, spec: PUB_MONTH },
+            publicationDay: { raw: publicationDay, spec: PUB_DAY },
+          })
+          if (!parsed.ok) {
+            setValidationError(Object.values(parsed.errors)[0] ?? 'Check the numeric fields.')
+            return
+          }
+          setValidationError('')
           const nextGenre = genre.trim()
           const nextSubgenre = subgenre.trim()
           void onSave({
+            series: series.trim(),
+            position: parsed.values.position,
+            seriesCount: parsed.values.seriesCount,
+            seriesStatus,
             genre: nextGenre,
             subgenre: nextSubgenre,
             genres: [nextGenre, ...book.genres.filter((value) => value !== book.primaryGenre)]
@@ -229,23 +275,105 @@ function CorpusEditForm({
               .filter((value, index, values) => values.indexOf(value) === index),
             coverUrl: book.cover,
             coverOptions: book.coverOptions,
+            publicationYear: parsed.values.publicationYear,
+            publicationMonth: parsed.values.publicationMonth,
+            publicationDay: parsed.values.publicationDay,
           }).catch(() => undefined)
         }}
       >
         <input
+          value={series}
+          onChange={(event) => setSeries(event.target.value)}
+          placeholder="Series"
+          aria-label="Shared series"
+          className={fieldClass}
+        />
+        <div className="grid grid-cols-2 gap-2">
+          <input
+            value={position}
+            onChange={(event) => setPosition(event.target.value)}
+            inputMode="decimal"
+            placeholder="Position"
+            aria-label="Shared series position"
+            className={fieldClass}
+          />
+          <input
+            value={seriesCount}
+            onChange={(event) => setSeriesCount(event.target.value)}
+            inputMode="numeric"
+            placeholder="Series length"
+            aria-label="Shared series length"
+            className={fieldClass}
+          />
+        </div>
+        <select
+          value={seriesStatus}
+          onChange={(event) => setSeriesStatus(event.target.value as SeriesStatus)}
+          aria-label="Shared series status"
+          className={fieldClass}
+        >
+          {SERIES_STATUS_VALUES.map((status) => (
+            <option key={status} value={status}>
+              {SERIES_STATUS_LABELS[status]}
+            </option>
+          ))}
+        </select>
+        <select
           value={genre}
           onChange={(event) => setGenre(event.target.value)}
-          placeholder="Primary genre"
           aria-label="Shared primary genre"
-          className="skin-control h-10 w-full border border-line bg-field px-3 text-[13px] text-ink"
-        />
+          className={fieldClass}
+        >
+          <option value="">No primary genre</option>
+          {CORE_GENRES.map((value) => (
+            <option key={value} value={value.toLowerCase()}>
+              {value}
+            </option>
+          ))}
+        </select>
         <input
           value={subgenre}
           onChange={(event) => setSubgenre(event.target.value)}
           placeholder="Primary subgenre"
           aria-label="Shared primary subgenre"
-          className="skin-control h-10 w-full border border-line bg-field px-3 text-[13px] text-ink"
+          className={fieldClass}
         />
+        <fieldset>
+          <legend className="mb-1 text-[11px] uppercase tracking-[0.16em] text-muted">
+            Publication date
+          </legend>
+          <div className="grid grid-cols-3 gap-2">
+            <input
+              value={publicationYear}
+              onChange={(event) => setPublicationYear(event.target.value)}
+              inputMode="numeric"
+              placeholder="Year"
+              aria-label="Shared publication year"
+              className={fieldClass}
+            />
+            <input
+              value={publicationMonth}
+              onChange={(event) => setPublicationMonth(event.target.value)}
+              inputMode="numeric"
+              placeholder="Month"
+              aria-label="Shared publication month"
+              className={fieldClass}
+            />
+            <input
+              value={publicationDay}
+              onChange={(event) => setPublicationDay(event.target.value)}
+              inputMode="numeric"
+              placeholder="Day"
+              aria-label="Shared publication day"
+              className={fieldClass}
+            />
+          </div>
+        </fieldset>
+        {validationError ? (
+          <p role="alert" className="text-[12px] text-accent-ink">
+            {validationError}
+          </p>
+        ) : null}
         <button
           type="submit"
           disabled={saving}

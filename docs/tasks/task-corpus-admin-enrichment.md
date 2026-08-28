@@ -4,9 +4,10 @@ Status: **the reviewed corpus-admin, membership, ACL, and operator histories are
 PR #366 at `1828968`. The owner deployed `20260830010000`, `20260831010000`, and `20260901010000`;
 the production report returned 43/43 invariants true, and the covers function retained the selected
 personal cover across refresh. The first reconciliation dry run wrote nothing and stopped on 10
-corpus-missing identities. A household-only catalog-entry and explicit personal-adoption follow-up
-is locally under review. Administrator grants, reconciliation backup/write, and post-write smoke
-checks remain owner-gated and unperformed by Code.**
+corpus-missing identities. Independent review rejected the first household-only catalog-entry
+candidate for authorization, checksum, lock-order, structured-series, scope, and coverage gaps.
+The remediation is complete and verified locally but still requires independent re-review. Administrator grants, reconciliation
+backup/write, and post-write smoke checks remain owner-gated and unperformed by Code.**
 
 ## Objective
 
@@ -182,13 +183,40 @@ contains exactly Account A and Account B before either dry-run or write planning
    the later administrator smoke set.
 4. Independently review and integrate the forward household-only catalog-entry boundary. The owner
    then deploys its migration and web surface through the guards and verifies that a household-only
-   add creates no personal copy. Rerun the expanded report and require all 49 rows true.
+   add creates no personal copy. Rerun the expanded report and require all 50 rows true.
 5. Resolve the 10 aggregate missing-corpus dry-run rows through Household Add books, then dry-run
    both administrator grants and the CSV reconciliation again. Run the reconciliation's separate
    backup-only phase and review the exact external title-level report and backup checksums; do not
    approve from aggregate counts alone.
 6. The owner executes both production writes and completes Account A, Account B, household-only,
    corpus-only, removal, cover-completion, and trope-promotion smoke checks.
+
+## Household catalog remediation verification — 2026-08-28
+
+The locally remediated candidate closes every finding from the first independent review: global
+corpus administrators can edit unrelated works through the audited writer; ISBN-10/13 checksums are
+validated; profile-first locking removes the add/unlink inversion; shared series adoption retires
+the prior structured entry atomically; persistent desktop/mobile Add controls preserve household
+scope; the shared editor covers canonical genre, subgenre, complete series metadata, cover options,
+and publication precision; and shared-detail comparison includes series length and status.
+
+- A clean database rebuild applied through `20260902010000`; the expanded read-only rollout report
+  returned 50/50 true.
+- Full pgTAP passed 707 assertions across 29 files. The deterministic concurrency harness passed all
+  18 scenarios, including the worker-first add/unlink race and concurrent same-ISBN household adds.
+- The bounded 25,005-work/5,012-book fixture completed both foundation migrations under the
+  20-second statement timeout, bound all 5,012 personal books, and retained the exact mixed-ISBN
+  reconciliation refusal.
+- Core unit tests passed 2,432 assertions across 81 files; web unit tests passed 640 assertions
+  across 74 files.
+- The complete household browser spec passed 11 cases with one expected project skip. The full
+  browser matrix passed 220 cases with 10 expected project-specific skips, one worker, and zero
+  retries.
+- TypeScript, ESLint, Prettier, the production build, and `git diff --check` passed. ESLint emitted
+  no warning after the shared scope helper was separated from the component module.
+
+No production data, credentials, migration, function, web deployment, or remote repository state
+was touched. Independent re-review and integration remain the next gates.
 
 ## Local verification — refreshed 2026-08-28
 

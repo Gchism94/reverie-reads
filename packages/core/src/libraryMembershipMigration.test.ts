@@ -202,8 +202,29 @@ describe('household-only catalog entry and explicit personal adoption', () => {
 
     expect(editBoundary).toContain('from public.corpus_admins admin')
     expect(editBoundary).toMatch(/from public\.corpus_admins admin[\s\S]*?for update;/)
-    expect(editBoundary).toMatch(/member\.role = 'owner'[\s\S]*?for update of member;/)
+    expect(editBoundary).toMatch(
+      /member\.role = 'owner'[\s\S]*?for update of member, household_work;/,
+    )
     expect(editBoundary).not.toContain('if not public.can_edit_corpus_work(p_work)')
+  })
+
+  it('locks the added-by profile before any household row in both household-only add paths', () => {
+    for (const [start, end] of [
+      [
+        'create function public.add_corpus_work_to_household(',
+        'revoke all on function public.add_corpus_work_to_household(',
+      ],
+      [
+        'create function public.create_household_catalog_work(',
+        'revoke all on function public.create_household_catalog_work(',
+      ],
+    ] as const) {
+      const boundary = sectionOf(householdCatalogMigration, start, end)
+      const profileLock = boundary.indexOf('from public.profiles profile')
+      const householdLock = boundary.indexOf('from public.households household')
+      expect(profileLock).toBeGreaterThan(-1)
+      expect(householdLock).toBeGreaterThan(profileLock)
+    }
   })
 
   it('keeps personal identity and reader state outside the explicit adoption update', () => {
@@ -214,6 +235,7 @@ describe('household-only catalog entry and explicit personal adoption', () => {
     )
     const update = sectionOf(adoption, 'update public.books book', 'from public.works work')
 
+    expect(adoption).toContain('perform public.sync_book_series(')
     expect(update).toContain('genre = coalesce(work.genre')
     expect(update).toContain('cover_url = work.cover_url')
     expect(update).toContain('cover_thumb_url = null')

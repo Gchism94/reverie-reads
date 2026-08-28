@@ -56,6 +56,7 @@ import { workKeyFor } from '../data/reviews'
 import { useProfile } from '../data/profile'
 import { BookmarkGlyph } from '../components/BookmarkGlyph'
 import { Surface } from '../components/Surface'
+import { sharedCorpusDetailsDiffer } from './sharedCorpusDetails'
 
 function fmtDate(d: string): string {
   if (!d) return 'Date not set'
@@ -268,18 +269,7 @@ function BookDetailScreen() {
   const personalHouseholdShare = householdWork?.owners.find(
     (owner) => owner.bookId === book.id && owner.shared,
   )
-  const sharedDetailsDiffer =
-    !!householdWork &&
-    (book.series !== householdWork.series ||
-      book.position !== (householdWork.position ?? '') ||
-      book.genre !== householdWork.primaryGenre ||
-      book.subgenre !== householdWork.subgenre ||
-      JSON.stringify(book.genres) !== JSON.stringify(householdWork.genres) ||
-      JSON.stringify(book.subgenres) !== JSON.stringify(householdWork.subgenres) ||
-      book.cover !== householdWork.cover ||
-      book.pub.y !== householdWork.publicationYear ||
-      book.pub.m !== householdWork.publicationMonth ||
-      book.pub.d !== householdWork.publicationDay)
+  const sharedDetailsDiffer = sharedCorpusDetailsDiffer(book, householdWork)
   const reviewerName = profile?.displayName || 'Reader'
   const setOwned = (owned: Owned) => updateBook.mutate({ id: book.id, patch: { owned } })
   // Four-state possession WORD over five independent flags (docs/archive/task-shelf-model.md): picking one

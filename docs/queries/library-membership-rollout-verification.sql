@@ -44,6 +44,8 @@ expected_functions(
   values
     -- Immutable index helper: service-managed corpus inserts need only this narrow direct grant.
     ('public.library_work_key(text,text)', false, false, false, true),
+    -- Internal checksum guard: household creation calls it through its definer boundary only.
+    ('public.library_isbn_checksum_is_valid(text)', false, false, false, false),
     -- Internal owner fences: callable only from their security-definer parents.
     ('public.lock_library_book_owner_insert(uuid)', true, false, false, false),
     ('public.lock_library_book_owners_reconciliation(uuid[])', true, false, false, false),
@@ -59,7 +61,7 @@ expected_functions(
     ('public.can_edit_corpus_work(uuid)', true, false, true, false),
     ('public.add_corpus_work_to_household(uuid)', true, false, true, false),
     ('public.create_household_catalog_work(text,text,text)', true, false, true, false),
-    ('public.edit_corpus_work_metadata(uuid,text,text,text[],text[],text,jsonb)', true, false, true, false),
+    ('public.edit_corpus_work_metadata(uuid,text,numeric,integer,text,text,text,text[],text[],text,jsonb,integer,integer,integer)', true, false, true, false),
     ('public.adopt_corpus_work_metadata(uuid)', true, false, true, false),
     ('public.household_library_works()', true, false, true, false),
     ('public.household_library_books()', true, false, true, false),
