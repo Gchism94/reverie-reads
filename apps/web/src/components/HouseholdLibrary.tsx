@@ -349,27 +349,30 @@ function CorpusEditForm({
           {coverChoices.length > 0 ? (
             <div className="grid grid-cols-3 gap-2">
               {coverChoices.map((option, index) => (
-                <label
-                  key={option.url}
-                  className="skin-control cursor-pointer border border-line p-1.5 text-center text-[10.5px] text-muted"
-                >
+                <div key={option.url}>
                   <input
+                    id={`shared-cover-${book.id}-${index}`}
                     type="radio"
                     name={`shared-cover-${book.id}`}
                     value={option.url}
                     checked={coverUrl === option.url}
                     onChange={() => setCoverUrl(option.url)}
-                    className="sr-only"
+                    className="peer sr-only"
                   />
-                  <img
-                    src={option.url}
-                    alt=""
-                    className="mx-auto aspect-[2/3] w-full rounded object-cover"
-                  />
-                  <span className="mt-1 block truncate">
-                    {option.source ? titleCase(option.source) : `Cover ${index + 1}`}
-                  </span>
-                </label>
+                  <label
+                    htmlFor={`shared-cover-${book.id}-${index}`}
+                    className="skin-control block cursor-pointer border border-line p-1.5 text-center text-[10.5px] text-muted peer-checked:border-primary peer-checked:ring-2 peer-checked:ring-primary peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary"
+                  >
+                    <img
+                      src={option.url}
+                      alt=""
+                      className="mx-auto aspect-[2/3] w-full rounded object-cover"
+                    />
+                    <span className="mt-1 block truncate">
+                      {option.source ? titleCase(option.source) : 'Shared'} cover {index + 1}
+                    </span>
+                  </label>
+                </div>
               ))}
             </div>
           ) : (

@@ -1,6 +1,6 @@
 -- Household-only membership, owner/admin corpus authority, and explicit personal adoption.
 begin;
-select plan(65);
+select plan(67);
 
 insert into auth.users (
   id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
@@ -363,6 +363,17 @@ select is(
   '90000000-0000-4000-8000-000000000013'::uuid,
   'a corpus administrator can edit a work outside every personal and household library'
 );
+select is(
+  public.set_corpus_work_cover(
+    '90000000-0000-4000-8000-000000000013',
+    'https://books.google.com/books/content?id=admin-selected',
+    'google',
+    'https://books.google.com/books/content?id=admin-selected',
+    null
+  ),
+  '90000000-0000-4000-8000-000000000013'::uuid,
+  'a corpus administrator can select a cover for a work outside every household'
+);
 reset role;
 select is((select concat_ws('|', series, position, series_count, status, genre, subgenre, pub_y, pub_m)
   from public.works where id = '90000000-0000-4000-8000-000000000013'),
@@ -371,7 +382,11 @@ select is((select concat_ws('|', series, position, series_count, status, genre, 
 select is((select count(*)::int from public.work_metadata_edits
   where work_id = '90000000-0000-4000-8000-000000000013'
     and editor_id = '94444444-4444-4444-8444-444444444444'),
-  1, 'the global administrator edit is audited');
+  2, 'the global administrator metadata and cover edits are both audited');
+select is((select cover_url from public.works
+  where id = '90000000-0000-4000-8000-000000000013'),
+  'https://books.google.com/books/content?id=admin-selected',
+  'the global administrator cover selection is stored');
 
 set local role authenticated;
 select set_config(

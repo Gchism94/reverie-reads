@@ -21,6 +21,9 @@ describe('durable corpus cover boundary', () => {
     )
     expect(edge).toContain('/rest/v1/rpc/can_edit_corpus_work')
     expect(edge).toContain('Authorization: authorization')
+    expect(edge).toContain('body: JSON.stringify({ p_work: workId })')
+    expect(edge).toContain('if (!r.ok) return false')
+    expect(edge).toContain('return (await r.json()) === true')
   })
 
   it('refuses mixed personal/corpus targets', () => {

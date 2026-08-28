@@ -446,11 +446,17 @@ export interface HouseholdCatalogWorkInput {
   coverSource?: 'hardcover' | 'google'
 }
 
+export interface HouseholdCatalogCreateResult {
+  workId: string
+  /** The shared record committed, but its optional durable cover did not. */
+  coverWarning: string | null
+}
+
 export function useCreateHouseholdCatalogWork() {
   const queryClient = useQueryClient()
   return useMutation({
     meta: { action: 'Creating a shared catalog book' },
-    mutationFn: async (input: HouseholdCatalogWorkInput): Promise<string> => {
+    mutationFn: async (input: HouseholdCatalogWorkInput): Promise<HouseholdCatalogCreateResult> => {
       const { data, error } = await supabase.rpc('create_household_catalog_work', {
         p_title: input.title,
         p_author: input.author,
@@ -460,6 +466,7 @@ export function useCreateHouseholdCatalogWork() {
       })
       if (error) throw error
       const workId = data as string
+      let coverWarning: string | null = null
       if (input.coverUrl && input.coverSource === 'hardcover') {
         const ingest = await ingestCorpusCover({
           workId,
@@ -467,17 +474,22 @@ export function useCreateHouseholdCatalogWork() {
           url: input.coverUrl,
           sourceUrl: input.coverUrl,
         })
-        if (ingest.status === 'error') throw new Error(`Shared cover could not be saved: ${ingest.code}`)
-        const selected = await supabase.rpc('set_corpus_work_cover', {
-          p_work: workId,
-          p_cover_url: ingest.data.cover,
-          p_cover_source: 'hardcover',
-          p_cover_source_url: input.coverUrl,
-          p_cover_color: ingest.data.color,
-        })
-        if (selected.error) throw selected.error
+        if (ingest.status === 'error') {
+          coverWarning = `The shared record was added, but its cover could not be saved (${ingest.code}).`
+        } else {
+          const selected = await supabase.rpc('set_corpus_work_cover', {
+            p_work: workId,
+            p_cover_url: ingest.data.cover,
+            p_cover_source: 'hardcover',
+            p_cover_source_url: input.coverUrl,
+            p_cover_color: ingest.data.color,
+          })
+          if (selected.error) {
+            coverWarning = 'The shared record was added, but its cover could not be selected.'
+          }
+        }
       }
-      return workId
+      return { workId, coverWarning }
     },
     onSuccess: () => invalidateLibraryMembership(queryClient),
   })

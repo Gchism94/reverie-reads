@@ -214,13 +214,13 @@ ordinary-member editor denial, not merely service-role reads behind the page.
 
 - A clean database rebuild applied through `20260902010000`; the expanded read-only rollout report
   returned 51/51 true.
-- Full pgTAP passed 715 assertions across 29 files. The deterministic concurrency harness passed all
+- Full pgTAP passed 717 assertions across 29 files. The deterministic concurrency harness passed all
   20 scenarios, including the worker-first add/unlink race, concurrent same-ISBN household adds, and
   the exact owner-edit/personal-tag lock-order regression.
 - The bounded 25,005-work/5,012-book fixture completed both foundation migrations under the
   20-second statement timeout, bound all 5,012 personal books, and retained the exact mixed-ISBN
   reconciliation refusal.
-- Core unit tests passed 2,432 assertions across 81 files; web unit tests passed 643 assertions
+- Core unit tests passed 2,432 assertions across 81 files; web unit tests passed 645 assertions
   across 74 files.
 - The complete household browser spec passed 11 cases with one expected project skip. The full
   browser matrix passed 220 cases with 10 expected project-specific skips, one worker, and zero

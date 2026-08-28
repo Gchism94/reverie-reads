@@ -570,4 +570,30 @@ describe('household query identity and RPC boundary', () => {
       ],
     ])
   })
+
+  it('returns a partial-success warning and still invalidates after cover ingest fails', async () => {
+    mocked.rpc.mockResolvedValueOnce({ data: 'work-without-cover', error: null })
+    mocked.ingestCorpusCover.mockResolvedValue({ status: 'error', code: 'provider_unavailable' })
+    const { client, wrapper } = queryHarness()
+    const invalidate = vi.spyOn(client, 'invalidateQueries')
+    const createWork = renderHook(() => useCreateHouseholdCatalogWork(), { wrapper })
+
+    const result = await act(() =>
+      createWork.result.current.mutateAsync({
+        title: 'Saved before cover failure',
+        author: 'A Writer',
+        isbn: '',
+        coverUrl: 'https://assets.hardcover.app/unavailable.jpg',
+        coverSource: 'hardcover',
+      }),
+    )
+
+    expect(result).toEqual({
+      workId: 'work-without-cover',
+      coverWarning:
+        'The shared record was added, but its cover could not be saved (provider_unavailable).',
+    })
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['household'] })
+    expect(mocked.rpc).toHaveBeenCalledTimes(1)
+  })
 })

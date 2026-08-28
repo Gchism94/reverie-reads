@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { validateAddSearch } from './AddRoute'
+import { pickedFromAddPrefill, validateAddSearch } from './AddRoute'
 
 describe('Add route library scope', () => {
   it('accepts only the explicit household scope while preserving catalog identity', () => {
@@ -17,6 +17,21 @@ describe('Add route library scope', () => {
       work: 'work-1',
       title: 'Household only',
       author: 'A Writer',
+      cover: 'https://assets.hardcover.app/cover.jpg',
+      source: 'hardcover',
+    })
+  })
+
+  it('carries validated cover provenance into the household form pick', () => {
+    const prefill = validateAddSearch({
+      scope: 'household',
+      title: 'Deep-linked cover',
+      cover: 'https://assets.hardcover.app/cover.jpg',
+      source: 'hardcover',
+    })
+
+    expect(pickedFromAddPrefill(prefill)).toMatchObject({
+      title: 'Deep-linked cover',
       cover: 'https://assets.hardcover.app/cover.jpg',
       source: 'hardcover',
     })

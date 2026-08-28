@@ -182,7 +182,10 @@ describe('household Library presentation', () => {
     )
 
     fireEvent.click(screen.getByText('Edit shared cover, series, genre, and publication'))
-    fireEvent.click(screen.getByRole('radio', { name: 'Google' }))
+    const secondChoice = screen.getByRole('radio', { name: 'Google cover 2' })
+    fireEvent.click(secondChoice)
+    expect(secondChoice).toBeChecked()
+    expect(screen.getByRole('radio', { name: 'Hardcover cover 1' })).not.toBeChecked()
     fireEvent.click(screen.getByRole('button', { name: 'Save shared details' }))
 
     await waitFor(() =>

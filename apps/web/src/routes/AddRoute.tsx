@@ -955,6 +955,7 @@ function HouseholdAddForm({ hit, onAdded }: { hit: Picked; onAdded: () => void }
   const [title, setTitle] = useState(hit.title ?? '')
   const [author, setAuthor] = useState(formatAuthors(contributorsFromAuthors(hit.authors ?? [])))
   const [isbn, setIsbn] = useState(hit.isbn ?? '')
+  const [coverWarning, setCoverWarning] = useState('')
   const currentMember = household.members.find((member) => member.userId === session?.user.id)
   const canCreate = !!currentMember
   const canPersistPickedCover =
@@ -963,14 +964,19 @@ function HouseholdAddForm({ hit, onAdded }: { hit: Picked; onAdded: () => void }
 
   async function save() {
     if (hit.corpusWorkId) await addExisting.mutateAsync(hit.corpusWorkId)
-    else
-      await createWork.mutateAsync({
+    else {
+      const result = await createWork.mutateAsync({
         title: title.trim(),
         author: author.trim(),
         isbn: isbn.trim(),
         coverUrl: canPersistPickedCover ? hit.cover : undefined,
         coverSource: canPersistPickedCover ? hit.source : undefined,
       })
+      if (result.coverWarning) {
+        setCoverWarning(result.coverWarning)
+        return
+      }
+    }
     onAdded()
   }
 
@@ -1021,6 +1027,18 @@ function HouseholdAddForm({ hit, onAdded }: { hit: Picked; onAdded: () => void }
           shared record can still be added without it.
         </p>
       ) : null}
+      {coverWarning ? (
+        <p role="status" className="mt-3 text-[12.5px] text-accent-ink">
+          {coverWarning}{' '}
+          <Link
+            to="/library"
+            search={{ scope: 'household' }}
+            className="font-semibold underline underline-offset-2"
+          >
+            View household library
+          </Link>
+        </p>
+      ) : null}
       {!household.authorized ? (
         <p role="status" className="mt-3 text-[12.5px] text-muted">
           Connect to a verified household before adding shared books.
@@ -1064,18 +1082,7 @@ function AddScreen() {
   // the corpus lookup must follow what was SEARCHED, or a half-typed query refetches the corpus on
   // every character and labels the visible results against a term nobody asked for.
   const [searched, setSearched] = useState('')
-  const [picked, setPicked] = useState<Picked | null>(() =>
-    prefill.title
-      ? {
-          corpusWorkId: prefill.work,
-          title: prefill.title,
-          authors: prefill.author ? [prefill.author] : [],
-          cover: prefill.cover ?? '',
-          isbn: prefill.isbn ?? '',
-          pub: prefill.pub ?? '',
-        }
-      : null,
-  )
+  const [picked, setPicked] = useState<Picked | null>(() => pickedFromAddPrefill(prefill))
   const [scanStatus, setScanStatus] = useState<string | null>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
@@ -1295,6 +1302,19 @@ interface AddPrefill {
   /** arrival from a wanting context (Discover, a shelf/TBR) — the ownership toggle defaults to
    *  "I want to read this" instead of "I own this" */
   want?: boolean
+}
+
+export function pickedFromAddPrefill(prefill: AddPrefill): Picked | null {
+  if (!prefill.title) return null
+  return {
+    corpusWorkId: prefill.work,
+    title: prefill.title,
+    authors: prefill.author ? [prefill.author] : [],
+    cover: prefill.cover ?? '',
+    source: prefill.source,
+    isbn: prefill.isbn ?? '',
+    pub: prefill.pub ?? '',
+  }
 }
 
 export const validateAddSearch = (s: Record<string, unknown>): AddPrefill => {
