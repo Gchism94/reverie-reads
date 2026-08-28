@@ -3,28 +3,42 @@
 // The write is one service-role RPC transaction after an exact dry run has no unresolved identity.
 //
 //   pnpm household:reconcile -- chism-books-library.csv \
-//     --account-a-id=<TC account> --account-b-id=<GC account> \
+//     --account-a-id=<Account A> --account-b-id=<Account B> \
 //     --artifact-dir=/private/path/reverie-reconciliation
 //
 //   pnpm household:reconcile -- chism-books-library.csv \
-//     --account-a-id=<TC account> --account-b-id=<GC account> \
+//     --account-a-id=<Account A> --account-b-id=<Account B> \
 //     --artifact-dir=/private/path/reverie-reconciliation \
-//     --write --confirm=RECONCILE_CHISM_HOUSEHOLD
+//     --backup-only --approved-dry-run-sha256=<reviewed dry-run checksum>
+//
+//   pnpm household:reconcile -- chism-books-library.csv \
+//     --account-a-id=<Account A> --account-b-id=<Account B> \
+//     --artifact-dir=/private/path/reverie-reconciliation \
+//     --write --confirm=RECONCILE_CHISM_HOUSEHOLD \
+//     --approved-dry-run-sha256=<reviewed dry-run checksum> \
+//     --approved-backup=/private/path/reverie-reconciliation/prechange-backup-...json \
+//     --approved-backup-sha256=<reviewed backup checksum>
 
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { chmodSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { relative, resolve } from 'node:path'
+import { existsSync, lstatSync, readFileSync, realpathSync, writeFileSync } from 'node:fs'
+import { dirname, relative, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { isDeepStrictEqual } from 'node:util'
 import { createClient } from '@supabase/supabase-js'
 import { USER_OWNED_TABLES } from '../apps/web/src/data/ownedTables.ts'
 import { parseCsv, toRecords, normalizeRecord } from './corpus-import-lib.ts'
 import {
+  ensurePrivateArtifactDirectory,
   householdReconciliationCounts,
   pageQuery,
   planHouseholdReconciliation,
+  psqlChildEnvironment,
   psqlConnectionBoundary,
+  reconciliationRollbackScope,
   RECONCILIATION_BACKUP_PRIMARY_KEYS,
   RECONCILIATION_HOUSEHOLD_BACKUP_SPECS,
+  requireApprovedSha256,
 } from './household-reconciliation-lib.ts'
 
 const LOCAL_URL = 'http://127.0.0.1:55321'
@@ -41,20 +55,28 @@ const accountA = value('account-a-id').trim().toLowerCase()
 const accountB = value('account-b-id').trim().toLowerCase()
 const artifactDir = resolve(value('artifact-dir'))
 const write = args.includes('--write')
+const backupOnly = args.includes('--backup-only')
 const confirm = value('confirm')
+const approvedDryRunSha256 = value('approved-dry-run-sha256')
+const approvedBackupInput = value('approved-backup')
+const approvedBackupSha256 = value('approved-backup-sha256')
 
 if (!csvPath) throw new Error('pass the private CSV path')
 if (!UUID.test(accountA) || !UUID.test(accountB) || accountA === accountB) {
   throw new Error('pass two distinct valid --account-a-id and --account-b-id UUIDs')
 }
 if (!value('artifact-dir')) throw new Error('pass --artifact-dir outside the repository')
-const repo = resolve(process.cwd())
+if (write && backupOnly) throw new Error('--write and --backup-only are mutually exclusive')
+const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const artifactRelative = relative(repo, artifactDir)
 if (!artifactRelative.startsWith('..') || artifactRelative === '') {
   throw new Error('artifact directory must be outside the repository')
 }
 if (write && confirm !== 'RECONCILE_CHISM_HOUSEHOLD') {
   throw new Error('write requires --confirm=RECONCILE_CHISM_HOUSEHOLD after dry-run approval')
+}
+if (write && !approvedBackupInput) {
+  throw new Error('write requires --approved-backup=<reviewed private backup path>')
 }
 
 const hasUrl = !!process.env.SUPABASE_URL
@@ -63,9 +85,9 @@ if (hasUrl !== hasService) throw new Error('set both SUPABASE_URL and SUPABASE_S
 const url = process.env.SUPABASE_URL ?? LOCAL_URL
 const service = process.env.SUPABASE_SERVICE_ROLE_KEY ?? LOCAL_SERVICE_ROLE
 const databaseUrl = process.env.SUPABASE_DB_URL ?? (!hasUrl ? LOCAL_DATABASE_URL : '')
-if (write && !databaseUrl) {
+if ((write || backupOnly) && !databaseUrl) {
   throw new Error(
-    'write requires SUPABASE_DB_URL for one transaction-consistent, read-only rollback snapshot',
+    'backup/write requires SUPABASE_DB_URL for one transaction-consistent, read-only rollback snapshot',
   )
 }
 const supabase = createClient(url, service, {
@@ -85,7 +107,22 @@ const parseJson = (label, value) => {
   try {
     return JSON.parse(value)
   } catch {
-    throw new Error(`${label}: database did not return valid JSON`)
+    throw new Error(`${label}: invalid JSON`)
+  }
+}
+const sha256 = (value) => createHash('sha256').update(value).digest('hex')
+
+function assertPrivatePath(path, label, mustExist = false) {
+  const lexicalRelative = relative(repo, path)
+  if (!lexicalRelative.startsWith('..') || lexicalRelative === '') {
+    throw new Error(`${label} must be outside the repository`)
+  }
+  if (!mustExist && !existsSync(path)) return
+  const info = lstatSync(path)
+  if (info.isSymbolicLink()) throw new Error(`${label} must not be a symbolic link`)
+  const realRelative = relative(realpathSync(repo), realpathSync(path))
+  if (!realRelative.startsWith('..') || realRelative === '') {
+    throw new Error(`${label} resolves inside the repository`)
   }
 }
 
@@ -119,14 +156,53 @@ const fetchHouseholdWorks = (householdId) =>
       .range(from, to),
   )
 
-function writePrivateJson(name, value) {
-  mkdirSync(artifactDir, { recursive: true, mode: 0o700 })
-  chmodSync(artifactDir, 0o700)
+function writePrivateJson(name, value, { reuseIdentical = false } = {}) {
+  ensurePrivateArtifactDirectory(artifactDir, repo)
   const body = `${JSON.stringify(value, null, 2)}\n`
   const path = resolve(artifactDir, name)
-  writeFileSync(path, body, { mode: 0o600 })
-  chmodSync(path, 0o600)
-  return { path, sha256: createHash('sha256').update(body).digest('hex') }
+  assertPrivatePath(path, 'private artifact')
+  if (existsSync(path)) {
+    const info = lstatSync(path)
+    if (info.isSymbolicLink() || !info.isFile() || info.nlink !== 1 || (info.mode & 0o077) !== 0) {
+      throw new Error(`private artifact already exists and is not a private regular file: ${path}`)
+    }
+    const existing = readFileSync(path, 'utf8')
+    if (!reuseIdentical || existing !== body) {
+      throw new Error(`private artifact already exists with different content: ${path}`)
+    }
+  } else {
+    writeFileSync(path, body, { mode: 0o600, flag: 'wx' })
+  }
+  if ((lstatSync(path).mode & 0o077) !== 0) {
+    throw new Error(`private artifact permissions are broader than 0600: ${path}`)
+  }
+  const persisted = readFileSync(path)
+  return { path, sha256: sha256(persisted) }
+}
+
+function readApprovedBackup(pathInput) {
+  const path = resolve(pathInput)
+  assertPrivatePath(path, 'approved backup', true)
+  const info = lstatSync(path)
+  if (!info.isFile() || info.nlink !== 1) {
+    throw new Error('approved backup must be a private regular file with one link')
+  }
+  if ((info.mode & 0o077) !== 0) {
+    throw new Error('approved backup must not be readable or writable by group/others')
+  }
+  const body = readFileSync(path)
+  requireApprovedSha256('backup', approvedBackupSha256, sha256(body))
+  const backup = parseJson('approved backup', body.toString('utf8'))
+  if (
+    !backup ||
+    typeof backup !== 'object' ||
+    !backup.ownerTables ||
+    !backup.household ||
+    !backup.reconciliationFence
+  ) {
+    throw new Error('approved backup is missing reconciliation rollback sections')
+  }
+  return { path, backup }
 }
 
 async function resolveHousehold() {
@@ -216,9 +292,7 @@ function backupOwnerState(householdId) {
   }
 
   const connection = psqlConnectionBoundary(databaseUrl)
-  const childEnvironment = { ...process.env }
-  delete childEnvironment.SUPABASE_DB_URL
-  if (connection.password !== undefined) childEnvironment.PGPASSWORD = connection.password
+  const childEnvironment = psqlChildEnvironment(process.env, connection.password)
 
   let output
   try {
@@ -319,17 +393,27 @@ async function main() {
   const { householdId, profiles, memberships } = await resolveHousehold()
   const { plan, corpusCount } = await currentPlan(records, householdId)
   const counts = householdReconciliationCounts(plan)
-  const detail = writePrivateJson('dry-run-detail.json', {
-    createdAt: new Date().toISOString(),
+  const review = {
+    version: 1,
     endpoint: url,
     householdId,
-    accounts: { accountA, accountB },
+    accounts: [...profiles].sort((a, b) => a.id.localeCompare(b.id)),
+    roster: memberships,
     plan,
+  }
+  const reviewBody = `${JSON.stringify(review, null, 2)}\n`
+  const reviewSha256 = sha256(reviewBody)
+  const detail = writePrivateJson(`dry-run-detail-${reviewSha256.slice(0, 12)}.json`, review, {
+    reuseIdentical: true,
   })
   console.log(
     JSON.stringify(
       {
-        mode: write ? 'WRITE' : 'DRY RUN — nothing written',
+        mode: write
+          ? 'WRITE — approval checks required before mutation'
+          : backupOnly
+            ? 'BACKUP ONLY — nothing written to the database'
+            : 'DRY RUN — nothing written',
         endpoint: url,
         accounts: profiles,
         householdId,
@@ -346,10 +430,11 @@ async function main() {
   if (!plan.canWrite) {
     throw new Error('write blocked: resolve every unmatched, ambiguous, or duplicate-active row')
   }
-  if (!write) {
+  if (!write && !backupOnly) {
     console.log('\nDry run complete. Review the private artifact and checksum before any write.')
     return
   }
+  requireApprovedSha256('dry-run', approvedDryRunSha256, detail.sha256)
 
   const snapshotState = backupOwnerState(householdId)
   const snapshot = snapshotState.artifact
@@ -361,11 +446,6 @@ async function main() {
     accountA,
     accountB,
   })
-  const backup = writePrivateJson(
-    `prechange-backup-${new Date().toISOString().replace(/[:.]/g, '-')}.json`,
-    snapshot,
-  )
-  console.log(JSON.stringify({ verifiedPrechangeBackup: backup }, null, 2))
   const expectedRoster = [accountA, accountB].sort()
   if (JSON.stringify(snapshot.reconciliationFence.roster) !== JSON.stringify(expectedRoster)) {
     throw new Error('household roster changed after preflight; review a new dry run')
@@ -373,6 +453,46 @@ async function main() {
   if (JSON.stringify(snapshotPlan) !== JSON.stringify(plan)) {
     throw new Error('reconciliation inputs changed after preflight; review a new dry run')
   }
+
+  if (backupOnly) {
+    const backup = writePrivateJson(
+      `prechange-backup-${new Date().toISOString().replace(/[:.]/g, '-')}.json`,
+      snapshot,
+    )
+    console.log(
+      JSON.stringify(
+        {
+          verifiedPrechangeBackup: backup,
+          next: 'Review this exact private backup and checksum before authorizing write mode.',
+        },
+        null,
+        2,
+      ),
+    )
+    return
+  }
+
+  const approved = readApprovedBackup(approvedBackupInput)
+  if (
+    !isDeepStrictEqual(
+      reconciliationRollbackScope(snapshot),
+      reconciliationRollbackScope(approved.backup),
+    )
+  ) {
+    throw new Error('approved backup is stale; create and review a new read-only backup')
+  }
+  console.log(
+    JSON.stringify(
+      {
+        verifiedApprovedBackup: {
+          path: approved.path,
+          sha256: approvedBackupSha256.toLowerCase(),
+        },
+      },
+      null,
+      2,
+    ),
+  )
 
   const desiredA = [
     ...new Set(
