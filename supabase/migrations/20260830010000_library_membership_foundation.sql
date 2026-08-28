@@ -40,6 +40,10 @@ $$;
 
 revoke all on function public.library_work_key(text, text)
   from public, anon, authenticated, service_role;
+-- `works_library_work_key_idx` evaluates this expression during every corpus insert. Corpus writes
+-- are service-managed, so the service role needs this narrow helper even when callers supply an
+-- explicit work_key; readers still receive no direct execute grant.
+grant execute on function public.library_work_key(text, text) to service_role;
 
 -- Fallback identity is intentionally non-unique: duplicate title/author pairs are reconciliation
 -- cases. Index the immutable expression so both this backfill and future one-book resolution avoid

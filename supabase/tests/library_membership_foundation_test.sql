@@ -1,6 +1,19 @@
 -- Personal, household, and corpus membership have independent lifecycles.
 begin;
-select plan(107);
+select plan(110);
+
+select ok(
+  not has_function_privilege('anon', 'public.library_work_key(text,text)', 'EXECUTE'),
+  'anonymous clients cannot execute the corpus identity helper'
+);
+select ok(
+  not has_function_privilege('authenticated', 'public.library_work_key(text,text)', 'EXECUTE'),
+  'authenticated readers cannot execute the corpus identity helper directly'
+);
+select ok(
+  has_function_privilege('service_role', 'public.library_work_key(text,text)', 'EXECUTE'),
+  'service-managed corpus inserts can evaluate the work-key expression index'
+);
 
 select is((select count(*)::int from public.household_work_enrichment), 0,
   'deploying the migration does not publish historical personal tags or tropes');

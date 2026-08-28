@@ -149,10 +149,14 @@ The scale fixture bound all 5,012 books, preserved the unique ISBN/fallback and 
 paths, retained `updated_at`/`enriched_at`, dropped every temporary identity table at commit,
 restored both temporarily disabled book triggers, installed both corpus-binding triggers, and found
 the shared insert and exclusive reconciliation owner fences in their final function definitions.
-The clean-schema pgTAP suite passed 635 assertions across 27 files; the complete unit suites passed
+Pre-integration browser CI then caught that service-managed corpus inserts could not evaluate the
+`works_library_work_key_idx` expression after direct helper execution was revoked. The final grant
+allows only `service_role` to execute that immutable identity helper; anonymous and authenticated
+roles remain denied, and an exact service-role corpus insert now succeeds.
+The clean-schema pgTAP suite passed 638 assertions across 27 files; the complete unit suites passed
 2,417 core and 625 web assertions. TypeScript, ESLint, Prettier, production build, and
-`git diff --check` passed. Browser tests were not repeated because the combined correction changes
-only migration-time SQL, its executable fixture, source-contract coverage, and rollout docs.
+`git diff --check` passed. The browser matrices remain an integration gate because the combined
+migration changes service-managed corpus seeding behavior.
 
 ## Reconciliation coupling
 
@@ -187,7 +191,7 @@ dry-run or write planning.
 ## Local verification — 2026-08-27
 
 - Clean database rebuild applied every migration through `20260831010000`.
-- Full pgTAP: 27 files and 635 assertions passed. The focused corpus administration, cover recovery,
+- Full pgTAP: 27 files and 638 assertions passed. The focused corpus administration, cover recovery,
   host validation, account-cascade, snapshot-fence, and complete-roster contract passed all 68
   assertions after the clean rebuild.
 - Core/web unit suites: 80 + 71 files and 2,412 + 625 assertions passed.
