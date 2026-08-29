@@ -51,7 +51,8 @@ declare
   digit int;
   index int;
 begin
-  if candidate ~ '^[0-9]{13}$' then
+  -- A checksum-valid EAN-13 is an ISBN only inside the 978/979 Bookland prefixes.
+  if candidate ~ '^97[89][0-9]{10}$' then
     for index in 1..13 loop
       digit := substr(candidate, index, 1)::int;
       checksum := checksum + digit * case when index % 2 = 0 then 3 else 1 end;

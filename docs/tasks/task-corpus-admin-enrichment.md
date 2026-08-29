@@ -216,7 +216,7 @@ ordinary-member editor denial, not merely service-role reads behind the page.
 
 - A clean database rebuild applied through `20260902010000`; the expanded read-only rollout report
   returned 51/51 true.
-- Full pgTAP passed 720 assertions across 29 files. The deterministic concurrency harness passed all
+- Full pgTAP passed 722 assertions across 29 files. The deterministic concurrency harness passed all
   22 scenarios, including the worker-first add/unlink race, concurrent same-ISBN household adds,
   the owner-edit/personal-tag lock-order regression, and the exact cross-member administrator trope
   topology against both metadata and cover edits.

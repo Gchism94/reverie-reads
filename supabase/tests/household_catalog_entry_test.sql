@@ -1,6 +1,6 @@
 -- Household-only membership, owner/admin corpus authority, and explicit personal adoption.
 begin;
-select plan(70);
+select plan(72);
 
 insert into auth.users (
   id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
@@ -267,6 +267,10 @@ select is((select cover_url from public.works
   where id = current_setting('test.created_household_work')::uuid),
   'https://books.google.com/books/content?id=household-cover',
   'household creation retains an allowlisted display-only catalog cover');
+select is((select isbns from public.works
+  where id = current_setting('test.created_household_work')::uuid),
+  array['9780306406157']::text[],
+  'household creation stores the canonical ISBN-13 identity');
 
 set local role authenticated;
 select set_config(
@@ -296,6 +300,10 @@ select throws_ok(
 select throws_ok(
   $$select public.create_household_catalog_work('Suffixed ISBN', 'G Writer', '9780306406157abc')$$,
   '22023', null, 'an alphabetic ISBN suffix is not stripped into a valid shared identity'
+);
+select throws_ok(
+  $$select public.create_household_catalog_work('Retail EAN', 'G Writer', '4006381333931')$$,
+  '22023', null, 'a checksum-valid non-Bookland EAN-13 is refused as an ISBN'
 );
 select is(
   public.create_household_catalog_work(
