@@ -2,14 +2,14 @@
 
 Status: **PR #367 integrated the independently reviewed household-only catalog boundary. The owner
 deployed `20260902010000`, received 51/51 true from the production report, and deployed the updated
-`covers` function. Production web remained held. Pre-web smoke then exposed one final scope gap:
-eligible personal-copy covers were absent from the new work-level household read model, and active
-corpus-administrator personal covers required a manual sweep before becoming corpus options. A
-forward-only `20260903010000` candidate now projects only already-authorized copy covers to the
-household and restores additive, fill-only, audited promotion for an administrator's own reviewed
-cover. It is local and requires independent review, integration, owner deployment, and the expanded
-55-row report before web deployment. The dry-run checksum remains unapprovable; backup,
-reconciliation write, and post-write smoke checks remain pending.**
+`covers` function. Production web remained held. Pre-web smoke exposed the personal-cover scope
+gap, and independent review of the first forward fix found three release blockers: unreviewed
+automatic administrator publication, arbitrary peer hotlinks, and inverted book/administrator lock
+order. The corrected local `20260903010000` keeps trusted eligible covers in Household, starts the
+administrator review switch off, publishes only after that explicit action, and uses the established
+corpus lock order. It requires re-review, integration, owner deployment, and the 55-row report before
+web deployment. The dry-run checksum remains unapprovable; backup, reconciliation write, and
+post-write smoke checks remain pending.**
 
 ## Production migration performance hotfix — 2026-08-26
 
@@ -350,10 +350,12 @@ current rollout checks passed. Production web remains held. Pre-web smoke found 
 work-level household projection omitted eligible personal-copy covers; it also confirmed that an
 administrator's active personal cover reached the corpus only through the manual recovery sweep.
 The narrow forward fix is `20260903010000`: household display receives copy covers only through the
-existing owned/exact-share eligibility boundary, while administrator promotion is allowlisted,
-additive, fill-only, and audited. Reconciliation remains paused until this fix is independently
-reviewed and integrated, the owner deploys it, all 55 expanded report rows pass, and the final web
-deployment proves household-only Add plus personal-cover fallback and admin option/default behavior.
+existing owned/exact-share eligibility boundary, and peer URLs are additionally limited to real
+hosted objects or the exact Google Books allowlist. Administrator publication is explicit,
+allowlisted, additive, fill-only, and audited; its switch starts off. Reconciliation remains paused
+until this corrected fix is independently reviewed and integrated, the owner deploys it, all 55
+expanded report rows pass, and the final web deployment proves household-only Add plus personal-
+cover fallback and explicit admin option/default behavior.
 
 Local remediation verification passed a clean rebuild through `20260902010000`, all 722 pgTAP
 assertions across 29 files, 22 deterministic concurrency scenarios, the bounded
@@ -369,6 +371,16 @@ household browser spec passed 11 cases with one expected mobile-project skip and
 personal-cover fallback and the household-only Add path. TypeScript, ESLint, Prettier, production
 build, and `git diff --check` passed. The migration has no data backfill; production and remote state
 remain untouched by this correction.
+
+That first candidate was subsequently rejected by independent review for the three blockers above.
+Those results remain implementation history, not release approval. The corrected candidate adds a
+27-assertion focused pgTAP, the exact hostile peer-browser request regression, and a deterministic
+two-session reproduction of the former book-lock/administrator-lock cycle. Re-review remains a hard
+gate; production is unchanged. The corrected local tree passed two clean rebuilds through
+`20260903010000`, 749/749 full pgTAP assertions, all 55 rollout invariants, 23/23 concurrency
+scenarios, the bounded 25,005-work/5,012-book fixture, 2,435 + 653 core/web unit assertions, 8/8
+desktop and 7/7 mobile focused browser cases with one expected skip, TypeScript, ESLint, Prettier,
+production build, and `git diff --check`.
 
 ## Owner handoff: production verification, private dry run, and backup
 

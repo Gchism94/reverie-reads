@@ -281,16 +281,17 @@ describe('household-only catalog entry and explicit personal adoption', () => {
 })
 
 describe('personal cover scope projection', () => {
-  it('projects only already-eligible copy covers into the household read model', () => {
+  it('projects only already-eligible, peer-safe copy covers into the household read model', () => {
     const readModel = sectionOf(
       personalCoverProjectionMigration,
       'create or replace function public.household_library_works()',
       'revoke all on function public.household_library_works()',
     )
 
-    expect(readModel).toContain("'coverUrl', book.cover_url")
-    expect(readModel).toContain("'coverThumbUrl', book.cover_thumb_url")
-    expect(readModel).toContain("'coverColor', book.cover_color")
+    expect(readModel).toContain('book.owner_id = (select auth.uid())')
+    expect(readModel).toContain('hosted_book_cover_object_name')
+    expect(readModel).toContain('google_books_display_cover_url_is_valid')
+    expect(readModel).not.toContain("'coverUrl', book.cover_url")
     expect(readModel).toMatch(
       /book\.ownership = 'owned'[\s\S]*?household_book_shares admitted_share/,
     )
@@ -298,17 +299,17 @@ describe('personal cover scope projection', () => {
     expect(readModel).toContain('admitted_share.work_id = household_work.work_id')
   })
 
-  it('keeps administrator promotion additive, fill-only, and behind the hosted-cover boundary', () => {
+  it('keeps explicit administrator review additive, fill-only, and lock ordered', () => {
     const promotion = sectionOf(
       personalCoverProjectionMigration,
-      'create function public.promote_admin_personal_cover_to_corpus()',
-      'revoke all on function public.promote_admin_personal_cover_to_corpus()',
+      'create function public.admin_review_personal_cover_for_corpus(p_book uuid)',
+      'revoke all on function public.admin_review_personal_cover_for_corpus(uuid)',
     )
 
-    expect(promotion).toContain('caller <> new.owner_id')
     expect(promotion).toMatch(
-      /from public\.corpus_admins admin[\s\S]*?admin\.user_id = caller[\s\S]*?for key share;/,
+      /from public\.profiles profile[\s\S]*?from public\.corpus_admins admin[\s\S]*?from public\.books book[\s\S]*?from public\.works work/,
     )
+    expect(promotion).toContain('book.owner_id = caller')
     expect(promotion).toContain('book_corpus_binding_is_unambiguous')
     expect(promotion).toContain('hosted_book_cover_object_name')
     expect(promotion).toContain('google_books_display_cover_url_is_valid')
@@ -322,7 +323,8 @@ describe('personal cover scope projection', () => {
     expect(personalCoverProjectionMigration).not.toContain(
       'books_sync_objective_metadata_to_corpus',
     )
-    expect(personalCoverProjectionMigration).toContain('books_promote_admin_cover_after_insert')
-    expect(personalCoverProjectionMigration).toContain('books_promote_admin_cover_after_update')
+    expect(personalCoverProjectionMigration).not.toContain('books_promote_admin_cover_after_insert')
+    expect(personalCoverProjectionMigration).not.toContain('books_promote_admin_cover_after_update')
+    expect(personalCoverProjectionMigration).not.toContain('returns trigger')
   })
 })

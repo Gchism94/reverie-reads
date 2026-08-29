@@ -57,6 +57,12 @@ import { useProfile } from '../data/profile'
 import { BookmarkGlyph } from '../components/BookmarkGlyph'
 import { Surface } from '../components/Surface'
 import { sharedCorpusDetailsDiffer } from './sharedCorpusDetails'
+import { Switch } from '../components/Switch'
+import {
+  useAdminReviewPersonalCoverForCorpus,
+  useCorpusAdminStatus,
+  usePersonalCoverCorpusReview,
+} from '../data/enrichCorpus'
 
 function fmtDate(d: string): string {
   if (!d) return 'Date not set'
@@ -168,6 +174,43 @@ function Pill({ children, muted = false }: { children: ReactNode; muted?: boolea
   )
 }
 
+export function CorpusCoverReviewToggle({
+  reviewed,
+  loading,
+  saving,
+  onReview,
+}: {
+  reviewed: boolean
+  loading: boolean
+  saving: boolean
+  onReview: () => void
+}) {
+  return (
+    <Surface tone="field" radius="control" pad={2} className="mt-4">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <div className="text-[12.5px] font-semibold text-ink">Corpus cover review</div>
+          <p className="mt-0.5 text-[11.5px] text-muted">
+            {reviewed
+              ? 'Reviewed and available as a shared cover option.'
+              : 'Off until an administrator explicitly reviews this cover. If the corpus has no cover, approval also makes this the default.'}
+          </p>
+        </div>
+        <Switch
+          checked={reviewed}
+          disabled={loading || saving || reviewed}
+          label={
+            reviewed ? 'Personal cover reviewed for corpus' : 'Review personal cover for corpus'
+          }
+          onChange={(next) => {
+            if (next) onReview()
+          }}
+        />
+      </div>
+    </Surface>
+  )
+}
+
 export function ProgressSlider({ book }: { book: Pick<Book, 'id' | 'progress'> }) {
   const updateBook = useUpdateBook(book.id)
   const [value, setValue] = useState(book.progress)
@@ -245,6 +288,14 @@ function BookDetailScreen() {
   }
 
   const book = books?.find((b) => b.id === bookId)
+  const { data: isCorpusAdmin = false } = useCorpusAdminStatus()
+  const coverReview = usePersonalCoverCorpusReview({
+    bookId: book?.id ?? '',
+    workId: book?.corpusWorkId ?? '',
+    coverUrl: book?.cover ?? '',
+    enabled: isCorpusAdmin,
+  })
+  const reviewPersonalCover = useAdminReviewPersonalCoverForCorpus()
 
   const voice = useVoice()
   // Lazy backfill: an externally-hotlinked cover moves into owned Storage on first view (task §3).
@@ -468,6 +519,15 @@ function BookDetailScreen() {
           onPossessionChange={setPossession}
         />
       </div>
+
+      {isCorpusAdmin && book.cover ? (
+        <CorpusCoverReviewToggle
+          reviewed={coverReview.data === true}
+          loading={coverReview.isLoading}
+          saving={reviewPersonalCover.isPending}
+          onReview={() => reviewPersonalCover.mutate(book.id)}
+        />
+      ) : null}
 
       {/* buy at an indie (discover + support — not live inventory) */}
       <BuyAtIndie book={book} />

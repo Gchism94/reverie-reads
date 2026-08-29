@@ -34,6 +34,7 @@ const HOUSEHOLD_ADD_BARRIER_ID = 6
 const HOUSEHOLD_ISBN_BARRIER_ID = 7
 const CORPUS_EDIT_TAG_BARRIER_ID = 8
 const CROSS_MEMBER_CORPUS_EDIT_BARRIER_ID = 9
+const PERSONAL_COVER_CORPUS_EDIT_BARRIER_ID = 10
 
 const sqlScalar = (statement) =>
   execFileSync('psql', [DATABASE_URL, '-X', '-qAt', '-v', 'ON_ERROR_STOP=1', '-c', statement], {
@@ -573,6 +574,117 @@ async function exerciseOwnerCorpusEditTagLockOrdering(ownerId, ownerBookId) {
     sqlScalar(`
       delete from public.work_metadata_edits
       where work_id = '${workId}'::uuid and editor_id = '${ownerId}'::uuid;
+    `)
+  }
+}
+
+async function exercisePersonalCoverAdminCorpusEditLockOrdering(ownerId, ownerBookId) {
+  const workId = sqlScalar(
+    `select corpus_work_id from public.books where id = '${ownerBookId}'::uuid;`,
+  )
+  const controller = new PsqlSession('personal-cover-controller')
+  const coverEditor = new PsqlSession('personal-cover-worker')
+  const corpusEditor = new PsqlSession('personal-cover-corpus-worker')
+  let barrierHeld = false
+  let triggerInstalled = false
+  let coverResult = null
+  let corpusResult = null
+
+  try {
+    sqlScalar(`
+      insert into public.corpus_admins (user_id) values ('${ownerId}'::uuid)
+      on conflict (user_id) do nothing;
+      create function public.personal_cover_edit_barrier_fixture()
+      returns trigger language plpgsql security definer set search_path = '' as $fixture$
+      begin
+        if new.id = '${ownerBookId}'::uuid then
+          perform pg_catalog.pg_advisory_xact_lock_shared(
+            ${BARRIER_CLASS}, ${PERSONAL_COVER_CORPUS_EDIT_BARRIER_ID}
+          );
+        end if;
+        return new;
+      end;
+      $fixture$;
+      create trigger zz_personal_cover_edit_barrier_fixture
+      before update of cover_url on public.books
+      for each row execute function public.personal_cover_edit_barrier_fixture();
+    `)
+    triggerInstalled = true
+    await controller.command(
+      `select pg_catalog.pg_advisory_lock(
+        ${BARRIER_CLASS}, ${PERSONAL_COVER_CORPUS_EDIT_BARRIER_ID}
+      );`,
+    )
+    barrierHeld = true
+    const coverPid = Number(await coverEditor.command('select pg_backend_pid();'))
+    const corpusPid = Number(await corpusEditor.command('select pg_backend_pid();'))
+
+    coverResult = coverEditor.command(
+      authenticatedPersonalWrite(
+        ownerId,
+        `update public.books
+         set cover_url = 'https://personal-only.invalid/${ownerBookId}.jpg', cover_source = 'url'
+         where id = '${ownerBookId}'::uuid`,
+      ),
+    )
+    await waitForBlockedWorker(coverPid, 'personal cover row-lock barrier')
+
+    corpusResult = corpusEditor.command(
+      authenticatedPersonalWrite(
+        ownerId,
+        `select public.edit_corpus_work_metadata(
+           work.id, work.series, work.position, work.series_count, work.status,
+           work.genre, work.subgenre, work.genres, work.subgenres,
+           work.cover_url, work.cover_options, work.pub_y, work.pub_m, work.pub_d
+         ) from public.works work where work.id = '${workId}'::uuid`,
+      ),
+    )
+    await waitForBlockedWorker(corpusPid, 'administrator corpus edit waiting on personal book')
+
+    await controller.command(
+      `select pg_catalog.pg_advisory_unlock(
+        ${BARRIER_CLASS}, ${PERSONAL_COVER_CORPUS_EDIT_BARRIER_ID}
+      );`,
+    )
+    barrierHeld = false
+    assert.match(await coverResult, /personal-write-committed/, 'the personal cover edit commits')
+    coverResult = null
+    assert.match(
+      await corpusResult,
+      /personal-write-committed/,
+      'the administrator corpus edit commits without a deadlock',
+    )
+    corpusResult = null
+    assert.equal(
+      sqlScalar(`select cover_url from public.books where id = '${ownerBookId}'::uuid;`),
+      `https://personal-only.invalid/${ownerBookId}.jpg`,
+      'the personal cover remains personal after the serialized edits',
+    )
+    console.log('✓ personal cover writes do not invert administrator corpus-edit lock order')
+  } finally {
+    if (barrierHeld) {
+      await controller
+        .command(
+          `select pg_catalog.pg_advisory_unlock(
+            ${BARRIER_CLASS}, ${PERSONAL_COVER_CORPUS_EDIT_BARRIER_ID}
+          );`,
+        )
+        .catch(() => {})
+    }
+    await Promise.allSettled([coverResult, corpusResult])
+    await Promise.allSettled([controller.close(), coverEditor.close(), corpusEditor.close()])
+    if (triggerInstalled) {
+      sqlScalar(`
+        drop trigger if exists zz_personal_cover_edit_barrier_fixture on public.books;
+        drop function if exists public.personal_cover_edit_barrier_fixture();
+      `)
+    }
+    sqlScalar(`
+      update public.books set cover_url = null, cover_source = null
+      where id = '${ownerBookId}'::uuid;
+      delete from public.work_metadata_edits
+      where work_id = '${workId}'::uuid and editor_id = '${ownerId}'::uuid;
+      delete from public.corpus_admins where user_id = '${ownerId}'::uuid;
     `)
   }
 }
@@ -2282,6 +2394,7 @@ async function main() {
   })
   await exerciseWorkerFirstHouseholdAddLockOrdering(firstUserId, secondUserId)
   await exerciseOwnerCorpusEditTagLockOrdering(firstUserId, ownerBookId)
+  await exercisePersonalCoverAdminCorpusEditLockOrdering(firstUserId, ownerBookId)
   await exerciseCrossMemberAdminCorpusEditLockOrdering(firstUserId, secondUserId, ownerBookId)
   await exerciseConcurrentRebindSuppression(firstUserId)
   await exerciseMovedTropeLockOrdering(firstUserId)

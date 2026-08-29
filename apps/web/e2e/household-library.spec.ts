@@ -470,6 +470,146 @@ test('two linked personal libraries appear together without exposing personal co
   await expect(page).toHaveURL(/\/library\?scope=household$/)
 })
 
+test('an administrator explicitly reviews a personal cover before it becomes a corpus option', async ({
+  page,
+}) => {
+  if (!seeded) throw new Error('household cover review fixture missing')
+  const book = await okData(
+    admin.from('books').select('id, corpus_work_id').eq('id', seeded.ownerBookId).single(),
+    'administrator cover review personal book read',
+  )
+  const objectName = `u/${owner.uid}/${book.id}/review.png`
+  const uploaded = await admin.storage
+    .from('covers')
+    .upload(
+      objectName,
+      Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+        'base64',
+      ),
+      { contentType: 'image/png', upsert: true },
+    )
+  if (uploaded.error) throw uploaded.error
+  const coverUrl = admin.storage.from('covers').getPublicUrl(objectName).data.publicUrl
+
+  try {
+    await ok(
+      admin.from('corpus_admins').upsert({ user_id: owner.uid }),
+      'administrator cover review grant',
+    )
+    await ok(
+      admin
+        .from('books')
+        .update({ cover_url: coverUrl, cover_source: 'upload', cover_user_chosen: true })
+        .eq('id', book.id),
+      'administrator cover review personal cover update',
+    )
+
+    const before = await okData(
+      admin.from('works').select('cover_url, cover_options').eq('id', book.corpus_work_id).single(),
+      'administrator cover review initial corpus read',
+    )
+    expect(before.cover_url).toBeNull()
+    expect(before.cover_options).toEqual([])
+
+    await signIn(page, owner.session)
+    await page.goto(`/book/${book.id}`)
+    const review = page.getByRole('switch', { name: 'Review personal cover for corpus' })
+    await expect(review).toHaveAttribute('aria-checked', 'false')
+    await review.click()
+    const reviewed = page.getByRole('switch', { name: 'Personal cover reviewed for corpus' })
+    await expect(reviewed).toHaveAttribute('aria-checked', 'true')
+    await expect(reviewed).toBeDisabled()
+
+    const after = await okData(
+      admin.from('works').select('cover_url, cover_options').eq('id', book.corpus_work_id).single(),
+      'administrator cover review resulting corpus read',
+    )
+    expect(after.cover_url).toBe(coverUrl)
+    expect(after.cover_options).toEqual([expect.objectContaining({ url: coverUrl })])
+  } finally {
+    await ok(
+      admin
+        .from('work_metadata_edits')
+        .delete()
+        .eq('work_id', book.corpus_work_id)
+        .eq('editor_id', owner.uid),
+      'administrator cover review audit cleanup',
+    )
+    await ok(
+      admin
+        .from('works')
+        .update({
+          cover_url: null,
+          cover_source: null,
+          cover_source_url: null,
+          cover_color: null,
+          cover_options: [],
+        })
+        .eq('id', book.corpus_work_id),
+      'administrator cover review corpus cleanup',
+    )
+    await ok(
+      admin
+        .from('books')
+        .update({ cover_url: PERSONAL_COVER, cover_source: null, cover_user_chosen: false })
+        .eq('id', book.id),
+      'administrator cover review personal cleanup',
+    )
+    await ok(
+      admin.from('corpus_admins').delete().eq('user_id', owner.uid),
+      'administrator cover review grant cleanup',
+    )
+    const removed = await admin.storage.from('covers').remove([objectName])
+    expect(removed.error).toBeNull()
+  }
+})
+
+test('a member never receives or requests another reader’s arbitrary cover hotlink', async ({
+  page,
+}) => {
+  if (!seeded) throw new Error('household peer-cover fixture missing')
+  const hostileCover = 'https://attacker.example/household-tracker.jpg'
+  let hostileRequests = 0
+  await page.route('https://attacker.example/**', async (route) => {
+    hostileRequests += 1
+    await route.abort()
+  })
+
+  try {
+    await ok(
+      admin
+        .from('books')
+        .update({ cover_url: hostileCover, cover_source: 'url' })
+        .eq('id', seeded.ownerBookId),
+      'household peer-cover hostile fixture update',
+    )
+    await signIn(page, member.session)
+    await page.goto('/library?scope=household')
+    const card = page.getByTestId('household-book-card')
+    await expect(card).toBeVisible()
+    await expect(card.locator(`img[src="${hostileCover}"]`)).toHaveCount(0)
+    expect(hostileRequests).toBe(0)
+
+    const memberClient = createClient(SUPABASE_URL, ANON, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
+    await memberClient.auth.setSession(member.session)
+    const payload = await memberClient.rpc('household_library_works')
+    if (payload.error) throw payload.error
+    expect(JSON.stringify(payload.data)).not.toContain(hostileCover)
+  } finally {
+    await ok(
+      admin
+        .from('books')
+        .update({ cover_url: PERSONAL_COVER, cover_source: null })
+        .eq('id', seeded.ownerBookId),
+      'household peer-cover fixture cleanup',
+    )
+    await page.unroute('https://attacker.example/**')
+  }
+})
+
 test('persistent Add creates a household-only work and explicit adoption updates one personal copy', async ({
   page,
 }, testInfo) => {

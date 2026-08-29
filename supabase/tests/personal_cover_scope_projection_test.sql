@@ -1,7 +1,7 @@
--- Eligible copy covers reach the household read model, while only a corpus administrator's own
--- reviewed cover becomes an additive corpus candidate.
+-- Trusted eligible copy covers reach the household read model. Corpus publication is an explicit,
+-- audited administrator review action and never a side effect of a personal-book write.
 begin;
-select plan(17);
+select plan(27);
 
 insert into auth.users (
   id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
@@ -99,15 +99,15 @@ insert into storage.objects (bucket_id, name, owner) values
 
 select ok(
   not has_function_privilege(
-    'anon', 'public.promote_admin_personal_cover_to_corpus()', 'EXECUTE'
+    'anon', 'public.admin_review_personal_cover_for_corpus(uuid)', 'EXECUTE'
+  )
+  and has_function_privilege(
+    'authenticated', 'public.admin_review_personal_cover_for_corpus(uuid)', 'EXECUTE'
   )
   and not has_function_privilege(
-    'authenticated', 'public.promote_admin_personal_cover_to_corpus()', 'EXECUTE'
-  )
-  and not has_function_privilege(
-    'service_role', 'public.promote_admin_personal_cover_to_corpus()', 'EXECUTE'
+    'service_role', 'public.admin_review_personal_cover_for_corpus(uuid)', 'EXECUTE'
   ),
-  'the internal promotion trigger has no direct API grant'
+  'only authenticated callers can reach the administrator review boundary'
 );
 select is(
   (
@@ -118,11 +118,10 @@ select is(
         'books_promote_admin_cover_after_insert',
         'books_promote_admin_cover_after_update'
       )
-      and trigger.tgenabled = 'O'
       and not trigger.tgisinternal
   ),
-  2,
-  'both administrator cover promotion triggers are installed and enabled'
+  0,
+  'personal cover writes install no implicit corpus-promotion trigger'
 );
 
 set local role authenticated;
@@ -140,12 +139,9 @@ set cover_url = 'http://127.0.0.1:55321/storage/v1/object/public/covers/u/b22222
 where id = 'e5555555-5555-4555-8555-555555555551';
 
 select is(
-  (
-    select cover_url from public.works
-    where id = 'd4444444-4444-4444-8444-444444444441'
-  ),
+  (select cover_url from public.works where id = 'd4444444-4444-4444-8444-444444444441'),
   null::text,
-  'an ordinary member personal cover does not become corpus metadata'
+  'an ordinary personal cover write does not become corpus metadata'
 );
 select is(
   (
@@ -153,7 +149,7 @@ select is(
     where work_id = 'd4444444-4444-4444-8444-444444444441'
   ),
   null::text,
-  'the household contract keeps the canonical cover separate from copy fallbacks'
+  'the canonical household cover remains separate from copy fallbacks'
 );
 select is(
   (
@@ -164,7 +160,7 @@ select is(
       and owner ->> 'bookId' = 'e5555555-5555-4555-8555-555555555551'
   ),
   'http://127.0.0.1:55321/storage/v1/object/public/covers/u/b2222222-2222-4222-8222-222222222222/e5555555-5555-4555-8555-555555555551/member.webp',
-  'the eligible personal cover is present in the household copy projection'
+  'a reader sees their own eligible personal cover in the household projection'
 );
 select is(
   (
@@ -175,7 +171,7 @@ select is(
       and owner ->> 'bookId' = 'e5555555-5555-4555-8555-555555555551'
   ),
   'http://127.0.0.1:55321/storage/v1/object/public/covers/u/b2222222-2222-4222-8222-222222222222/e5555555-5555-4555-8555-555555555551/member_t.webp',
-  'the eligible personal thumbnail is present in the household copy projection'
+  'a reader sees their own eligible personal thumbnail'
 );
 select is(
   (
@@ -204,6 +200,102 @@ select set_config(
   '{"sub":"a1111111-1111-4111-8111-111111111111","role":"authenticated","iss":"http://127.0.0.1:55321/auth/v1"}',
   true
 );
+select is(
+  (
+    select owner ->> 'coverUrl'
+    from public.household_library_works() household_work
+    cross join lateral jsonb_array_elements(household_work.owners) owner
+    where household_work.work_id = 'd4444444-4444-4444-8444-444444444441'
+      and owner ->> 'bookId' = 'e5555555-5555-4555-8555-555555555551'
+  ),
+  'http://127.0.0.1:55321/storage/v1/object/public/covers/u/b2222222-2222-4222-8222-222222222222/e5555555-5555-4555-8555-555555555551/member.webp',
+  'a peer sees a real hosted personal cover'
+);
+
+reset role;
+update public.books
+set cover_url = 'https://attacker.example/tracker.jpg',
+    cover_thumb_url = 'https://attacker.example/tracker-thumb.jpg',
+    cover_source = 'url',
+    cover_color = '#badbad'
+where id = 'e5555555-5555-4555-8555-555555555551';
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"a1111111-1111-4111-8111-111111111111","role":"authenticated","iss":"http://127.0.0.1:55321/auth/v1"}',
+  true
+);
+select is(
+  (
+    select owner ->> 'coverUrl'
+    from public.household_library_works() household_work
+    cross join lateral jsonb_array_elements(household_work.owners) owner
+    where household_work.work_id = 'd4444444-4444-4444-8444-444444444441'
+      and owner ->> 'bookId' = 'e5555555-5555-4555-8555-555555555551'
+  ),
+  null::text,
+  'an arbitrary peer hotlink never reaches the household browser contract'
+);
+select is(
+  (
+    select concat_ws('|', owner ->> 'coverThumbUrl', owner ->> 'coverColor')
+    from public.household_library_works() household_work
+    cross join lateral jsonb_array_elements(household_work.owners) owner
+    where household_work.work_id = 'd4444444-4444-4444-8444-444444444441'
+      and owner ->> 'bookId' = 'e5555555-5555-4555-8555-555555555551'
+  ),
+  '',
+  'the arbitrary peer thumbnail and its presentation color are withheld too'
+);
+
+reset role;
+update public.books
+set cover_url = 'https://books.google.evil.example/books/content?id=tracker',
+    cover_thumb_url = null,
+    cover_source = 'google'
+where id = 'e5555555-5555-4555-8555-555555555551';
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"a1111111-1111-4111-8111-111111111111","role":"authenticated","iss":"http://127.0.0.1:55321/auth/v1"}',
+  true
+);
+select is(
+  (
+    select owner ->> 'coverUrl'
+    from public.household_library_works() household_work
+    cross join lateral jsonb_array_elements(household_work.owners) owner
+    where household_work.work_id = 'd4444444-4444-4444-8444-444444444441'
+      and owner ->> 'bookId' = 'e5555555-5555-4555-8555-555555555551'
+  ),
+  null::text,
+  'a Google-lookalike hostname cannot bypass the peer hotlink boundary'
+);
+
+reset role;
+update public.books
+set cover_url = 'https://books.google.com/books/content?id=trusted',
+    cover_source = 'google',
+    cover_color = '#456789'
+where id = 'e5555555-5555-4555-8555-555555555551';
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"a1111111-1111-4111-8111-111111111111","role":"authenticated","iss":"http://127.0.0.1:55321/auth/v1"}',
+  true
+);
+select is(
+  (
+    select owner ->> 'coverUrl'
+    from public.household_library_works() household_work
+    cross join lateral jsonb_array_elements(household_work.owners) owner
+    where household_work.work_id = 'd4444444-4444-4444-8444-444444444441'
+      and owner ->> 'bookId' = 'e5555555-5555-4555-8555-555555555551'
+  ),
+  'https://books.google.com/books/content?id=trusted',
+  'the explicit Google Books display allowlist remains available to peers'
+);
+
 update public.books
 set cover_url = 'http://127.0.0.1:55321/storage/v1/object/public/covers/u/a1111111-1111-4111-8111-111111111111/e5555555-5555-4555-8555-555555555552/adminone.webp',
     cover_source = 'upload',
@@ -212,28 +304,54 @@ where id = 'e5555555-5555-4555-8555-555555555552';
 reset role;
 
 select is(
-  (
-    select cover_url from public.works
-    where id = 'd4444444-4444-4444-8444-444444444442'
-  ),
-  'http://127.0.0.1:55321/storage/v1/object/public/covers/u/a1111111-1111-4111-8111-111111111111/e5555555-5555-4555-8555-555555555552/adminone.webp',
-  'the first reviewed administrator cover fills a missing corpus default'
+  (select cover_url from public.works where id = 'd4444444-4444-4444-8444-444444444442'),
+  null::text,
+  'an administrator personal-cover write remains unreviewed and does not publish'
 );
 select is(
   (
-    select concat_ws('|', cover_source, cover_color) from public.works
-    where id = 'd4444444-4444-4444-8444-444444444442'
+    select jsonb_array_length(cover_options)
+    from public.works where id = 'd4444444-4444-4444-8444-444444444442'
+  ),
+  0,
+  'the unreviewed administrator cover starts with the review toggle off'
+);
+
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"a1111111-1111-4111-8111-111111111111","role":"authenticated","iss":"http://127.0.0.1:55321/auth/v1"}',
+  true
+);
+select is(
+  public.admin_review_personal_cover_for_corpus(
+    'e5555555-5555-4555-8555-555555555552'
+  )::text,
+  'd4444444-4444-4444-8444-444444444442',
+  'the explicit administrator review returns the bound corpus work'
+);
+reset role;
+
+select is(
+  (select cover_url from public.works where id = 'd4444444-4444-4444-8444-444444444442'),
+  'http://127.0.0.1:55321/storage/v1/object/public/covers/u/a1111111-1111-4111-8111-111111111111/e5555555-5555-4555-8555-555555555552/adminone.webp',
+  'the first explicitly reviewed administrator cover fills a missing corpus default'
+);
+select is(
+  (
+    select concat_ws('|', cover_source, cover_color)
+    from public.works where id = 'd4444444-4444-4444-8444-444444444442'
   ),
   'upload|#abcdef',
-  'the fill-only default retains its source and color'
+  'the fill-only default retains its reviewed source and color'
 );
 select is(
   (
-    select jsonb_array_length(cover_options) from public.works
-    where id = 'd4444444-4444-4444-8444-444444444442'
+    select jsonb_array_length(cover_options)
+    from public.works where id = 'd4444444-4444-4444-8444-444444444442'
   ),
   1,
-  'the first administrator cover is also a corpus option'
+  'the reviewed administrator cover becomes one corpus option'
 );
 select is(
   (
@@ -242,7 +360,27 @@ select is(
       and editor_id = 'a1111111-1111-4111-8111-111111111111'
   ),
   1,
-  'the administrator cover promotion is audited'
+  'the explicit administrator review is audited'
+);
+
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"a1111111-1111-4111-8111-111111111111","role":"authenticated","iss":"http://127.0.0.1:55321/auth/v1"}',
+  true
+);
+select public.admin_review_personal_cover_for_corpus(
+  'e5555555-5555-4555-8555-555555555552'
+);
+reset role;
+select is(
+  (
+    select count(*)::int from public.work_metadata_edits
+    where work_id = 'd4444444-4444-4444-8444-444444444442'
+      and editor_id = 'a1111111-1111-4111-8111-111111111111'
+  ),
+  1,
+  'reviewing the same exact cover again is idempotent'
 );
 
 set local role authenticated;
@@ -266,31 +404,13 @@ insert into public.books (
   '#fedcba'
 );
 reset role;
-
 select is(
   (
-    select cover_url from public.works
-    where id = 'd4444444-4444-4444-8444-444444444442'
+    select jsonb_array_length(cover_options)
+    from public.works where id = 'd4444444-4444-4444-8444-444444444442'
   ),
-  'http://127.0.0.1:55321/storage/v1/object/public/covers/u/a1111111-1111-4111-8111-111111111111/e5555555-5555-4555-8555-555555555552/adminone.webp',
-  'a later administrator option does not replace the established corpus default'
-);
-select is(
-  (
-    select jsonb_array_length(cover_options) from public.works
-    where id = 'd4444444-4444-4444-8444-444444444442'
-  ),
-  2,
-  'a later administrator personal cover remains available as an option'
-);
-select is(
-  (
-    select count(*)::int from public.work_metadata_edits
-    where work_id = 'd4444444-4444-4444-8444-444444444442'
-      and editor_id = 'a1111111-1111-4111-8111-111111111111'
-  ),
-  2,
-  'each distinct administrator candidate addition is audited once'
+  1,
+  'inserting another administrator cover does not bypass explicit review'
 );
 
 set local role authenticated;
@@ -299,6 +419,48 @@ select set_config(
   '{"sub":"a1111111-1111-4111-8111-111111111111","role":"authenticated","iss":"http://127.0.0.1:55321/auth/v1"}',
   true
 );
+select public.admin_review_personal_cover_for_corpus(
+  'e5555555-5555-4555-8555-555555555553'
+);
+reset role;
+select is(
+  (
+    select concat_ws('|', cover_url, jsonb_array_length(cover_options))
+    from public.works where id = 'd4444444-4444-4444-8444-444444444442'
+  ),
+  'http://127.0.0.1:55321/storage/v1/object/public/covers/u/a1111111-1111-4111-8111-111111111111/e5555555-5555-4555-8555-555555555552/adminone.webp|2',
+  'a later reviewed option is additive and does not replace the established default'
+);
+
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"b2222222-2222-4222-8222-222222222222","role":"authenticated","iss":"http://127.0.0.1:55321/auth/v1"}',
+  true
+);
+select throws_ok(
+  $$select public.admin_review_personal_cover_for_corpus(
+    'e5555555-5555-4555-8555-555555555551'
+  )$$,
+  '42501',
+  'corpus administrator required',
+  'an ordinary reader cannot review their own cover for the corpus'
+);
+
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"a1111111-1111-4111-8111-111111111111","role":"authenticated","iss":"http://127.0.0.1:55321/auth/v1"}',
+  true
+);
+select throws_ok(
+  $$select public.admin_review_personal_cover_for_corpus(
+    'e5555555-5555-4555-8555-555555555551'
+  )$$,
+  'P0002',
+  'active personal book not found',
+  'an administrator cannot publish another reader''s personal cover'
+);
+
 insert into public.books (
   id, owner_id, corpus_work_id, title, authors_display, ownership,
   cover_url, cover_source
@@ -312,23 +474,22 @@ insert into public.books (
   'https://attacker.example/not-ingested.jpg',
   'url'
 );
-reset role;
-
-select is(
-  (
-    select cover_url from public.works
-    where id = 'd4444444-4444-4444-8444-444444444443'
-  ),
-  null::text,
-  'administrator status does not bypass the reviewed cover-ingestion boundary'
+select throws_ok(
+  $$select public.admin_review_personal_cover_for_corpus(
+    'e5555555-5555-4555-8555-555555555554'
+  )$$,
+  '22023',
+  'personal cover must use the reviewed cover-ingestion boundary',
+  'administrator review cannot approve an arbitrary remote URL'
 );
+reset role;
 select is(
   (
-    select jsonb_array_length(cover_options) from public.works
-    where id = 'd4444444-4444-4444-8444-444444444443'
+    select concat_ws('|', coalesce(cover_url, ''), jsonb_array_length(cover_options))
+    from public.works where id = 'd4444444-4444-4444-8444-444444444443'
   ),
-  0,
-  'an unreviewed administrator URL is not retained as a corpus option'
+  '|0',
+  'a refused remote URL leaves the corpus unchanged'
 );
 
 select * from finish();

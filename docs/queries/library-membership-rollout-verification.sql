@@ -1,11 +1,11 @@
 -- Owner-run, read-only verification for the membership/corpus rollout through the forward-only
--- 20260903010000 personal-cover household projection and administrator promotion boundary.
+-- 20260903010000 trusted personal-cover projection and explicit administrator review boundary.
 --
 -- Paste this whole file into the production Supabase SQL Editor and run it. It returns catalog
 -- metadata and aggregate counts only: no titles, account ids, library rows, or private annotations.
 -- Every row must report ok = true before the private reconciliation dry run is approved.
 -- Before 20260903010000 receives independent review and an owner-run deployment, its migration,
--- trigger, and projection rows are expected blockers; do not approve a partial result.
+-- review-RPC and projection rows are expected blockers; do not approve a partial result.
 --
 -- This verifies CURRENT postconditions, not the historical migration event. Without a verified
 -- pre-migration snapshot it cannot prove that the backfill chose the same corpus identity each
@@ -33,8 +33,6 @@ expected_triggers(schema_name, table_name, trigger_name) as (
     ('public', 'book_tropes', 'book_tropes_promote_admin_to_corpus'),
     ('public', 'household_work_enrichment', 'household_tropes_promote_admin_to_corpus'),
     ('public', 'books', 'books_preserve_objective_metadata_before_delete'),
-    ('public', 'books', 'books_promote_admin_cover_after_insert'),
-    ('public', 'books', 'books_promote_admin_cover_after_update'),
     ('auth', 'users', 'auth_users_preserve_account_books_before_delete')
 ),
 expected_functions(
@@ -52,8 +50,8 @@ expected_functions(
     -- Internal owner fences: callable only from their security-definer parents.
     ('public.lock_library_book_owner_insert(uuid)', true, false, false, false),
     ('public.lock_library_book_owners_reconciliation(uuid[])', true, false, false, false),
-    ('public.promote_admin_personal_cover_to_corpus()', true, false, false, false),
     -- Authenticated reader/admin RPCs.
+    ('public.admin_review_personal_cover_for_corpus(uuid)', true, false, true, false),
     ('public.add_personal_book_to_household(uuid)', true, false, true, false),
     ('public.remove_personal_book_from_household(uuid)', true, false, true, false),
     ('public.remove_household_work(uuid)', true, false, true, false),
@@ -160,14 +158,20 @@ trigger_checks as (
 retired_trigger_checks as (
   select
     'trigger'::text as area,
-    'public.books.books_sync_objective_metadata_to_corpus'::text as invariant,
+    format('public.books.%s', retired.trigger_name)::text as invariant,
     'absent'::text as expected,
     case when count(t.oid) = 0 then 'absent' else 'present' end as observed,
     count(t.oid) = 0 as ok
-  from pg_catalog.pg_trigger t
-  where t.tgrelid = 'public.books'::regclass
-    and t.tgname = 'books_sync_objective_metadata_to_corpus'
-    and not t.tgisinternal
+  from (values
+    ('books_sync_objective_metadata_to_corpus'),
+    ('books_promote_admin_cover_after_insert'),
+    ('books_promote_admin_cover_after_update')
+  ) retired(trigger_name)
+  left join pg_catalog.pg_trigger t
+    on t.tgrelid = 'public.books'::regclass
+   and t.tgname = retired.trigger_name
+   and not t.tgisinternal
+  group by retired.trigger_name
 ),
 resolved_functions as (
   select e.*, pg_catalog.to_regprocedure(e.signature) as function_oid

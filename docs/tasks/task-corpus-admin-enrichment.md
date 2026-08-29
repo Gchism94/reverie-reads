@@ -2,12 +2,12 @@
 
 Status: **PR #367 integrated the reviewed household-only catalog boundary. The owner deployed
 `20260902010000`, verified 51/51 production invariants, and deployed the updated `covers` function;
-production web stayed held. Pre-web smoke exposed a final cover-scope omission: eligible personal
-covers were not projected into the household work view, and an administrator's active personal
-cover became a corpus option only when the manual recovery sweep ran. Forward migration
-`20260903010000` reuses the reviewed cover validators to make admin promotion automatic, additive,
-fill-only, and audited, while ordinary personal covers remain outside the corpus. It also exposes
-eligible copy covers only inside the authorized household projection. Independent review,
+production web stayed held. Pre-web smoke exposed the personal-cover scope omission. Independent
+review of the first `20260903010000` candidate then found three release blockers: implicit
+publication of unreviewed administrator covers, arbitrary peer hotlinks in the household payload,
+and a book-lock/administrator-lock inversion. The local correction removes automatic publication,
+adds an explicit administrator review switch that starts off, filters peer covers through the
+hosted/Google allowlist, and follows profile → administrator → book → work locking. Re-review,
 integration, owner deployment, the 55-row report, and final web smoke remain required.**
 
 ## Objective
@@ -187,9 +187,9 @@ contains exactly Account A and Account B before either dry-run or write planning
    smoke correctly kept production web held after exposing the personal-cover projection gap.
 5. Independently review and integrate `20260903010000`. The owner deploys it through the migration
    guard and requires all 55 expanded report rows true. Deploy the web surface last, then verify
-   Household-only Add creates no personal copy, eligible personal covers display in Household,
-   administrator covers become corpus options without replacing an existing default, and the first
-   administrator option fills a missing default.
+   Household-only Add creates no personal copy, trusted eligible personal covers display in
+   Household, the administrator switch starts off, explicit review adds the option without
+   replacing an existing default, and the first reviewed option fills a missing default.
 6. Resolve the 10 aggregate missing-corpus dry-run rows through Household Add books, then dry-run
    both administrator grants and the CSV reconciliation again. Run the reconciliation's separate
    backup-only phase and review the exact external title-level report and backup checksums; do not
@@ -230,7 +230,7 @@ ordinary-member editor denial, not merely service-role reads behind the page.
 - TypeScript, ESLint, Prettier, the production build, and `git diff --check` passed. ESLint emitted
   no warning after the shared scope helper was separated from the component module.
 
-### Personal-cover scope correction verification — 2026-08-28
+### Superseded first personal-cover candidate verification — 2026-08-28
 
 - A second clean rebuild applied every migration through `20260903010000`; the focused cover-scope
   pgTAP passed 17/17 and the full suite passed 739 assertions across 30 files.
@@ -239,11 +239,42 @@ ordinary-member editor denial, not merely service-role reads behind the page.
 - Core/web unit suites passed 2,435 + 647 assertions. The household browser spec passed 11 cases
   with one expected mobile-project skip, including the rendered personal-cover fallback and the
   household-only Add path.
-- TypeScript, ESLint, Prettier, production build, and `git diff --check` passed. This forward
-  migration defines a trigger and read projection only; it performs no automatic cover backfill.
+- TypeScript, ESLint, Prettier, production build, and `git diff --check` passed. That first candidate
+  defined a trigger and read projection only and performed no automatic cover backfill. Independent
+  review later rejected the trigger design for the three blockers below; these results are retained
+  as implementation history, not release approval.
 
 No production data, credentials, migration, function, web deployment, or remote repository state
 was touched. Integration remains the next gate.
+
+### Three-blocker remediation — 2026-08-28
+
+The first cover-scope candidate did not pass independent review. Its automatic book trigger could
+publish an enrichment-selected administrator cover with no review gesture, projected arbitrary
+member-controlled URLs into a peer browser, and took book → administrator locks opposite the
+administrator corpus editor. The corrected candidate replaces that trigger with the explicit
+`admin_review_personal_cover_for_corpus` RPC and personal-book switch. The RPC is restricted to an
+authenticated corpus administrator's own active book, accepts only the established hosted/Google
+cover boundary, remains additive/fill-only/audited, and uses profile → administrator → book → work
+locks. Household peers receive only hosted or exactly allowlisted Google URLs; a reader may still
+see their own personal fallback.
+
+Local verification of this correction is recorded before re-review; no production or remote state
+was changed. The candidate is not deployable until the refreshed independent review passes.
+
+- Two clean database rebuilds applied every migration through `20260903010000`. The focused
+  correction pgTAP passed 27/27; the full suite passed 749 assertions across 30 files; and all 55
+  read-only rollout invariants returned true.
+- The deterministic concurrency harness passed 23/23 scenarios. Its new two-session fixture holds
+  the personal-book row while an administrator corpus edit waits, then proves both commits complete
+  with no `40P01`; the old book-trigger design deadlocked in that topology.
+- The bounded 25,005-work/5,012-book fixture passed its 20-second per-statement timeout, bound all
+  personal books, and preserved the exact mixed-ISBN reconciliation refusal.
+- Core/web unit suites passed 2,435 + 653 assertions. The focused household browser run passed 8/8
+  desktop and 7/7 mobile with one expected project skip, including the off → reviewed switch and a
+  zero-request assertion for an arbitrary peer hotlink.
+- TypeScript, ESLint, Prettier, production build, and `git diff --check` passed. No production data,
+  credentials, deployments, or remote repository state were touched.
 
 ## Local verification — refreshed 2026-08-28
 
