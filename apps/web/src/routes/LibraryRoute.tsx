@@ -502,8 +502,8 @@ function HouseholdLibraryScreen() {
   const isWide = useIsWide()
 
   const labelled = useMemo(
-    () => labelHouseholdData(household.members, household.books),
-    [household.members, household.books],
+    () => labelHouseholdData(household.members, household.books, currentReaderId),
+    [currentReaderId, household.members, household.books],
   )
   const members = labelled.members
   const books = labelled.books

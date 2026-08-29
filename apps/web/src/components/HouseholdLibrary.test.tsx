@@ -9,6 +9,8 @@ const book = (ownerId: string, ownerName: string): HouseholdBook => ({
   author: 'Quill Marrowbane',
   cover: 'https://covers.example.test/duplicate.jpg',
   coverColor: '',
+  corpusCover: 'https://covers.example.test/duplicate.jpg',
+  corpusCoverColor: '',
   coverOptions: [],
   series: 'Household Cycle',
   position: 2,
@@ -30,6 +32,9 @@ const book = (ownerId: string, ownerName: string): HouseholdBook => ({
       ownedEbook: true,
       ownedAudiobook: false,
       bookFormat: '',
+      cover: 'https://covers.example.test/personal.jpg',
+      coverThumb: '',
+      coverColor: '',
       shared: false,
     },
   ],
@@ -139,6 +144,32 @@ describe('household Library presentation', () => {
           publicationYear: 2026,
         }),
       ),
+    )
+  })
+
+  it('does not submit a personal display fallback as the canonical shared cover', async () => {
+    const edit = vi.fn().mockResolvedValue(undefined)
+    render(
+      <HouseholdBookDetail
+        book={{
+          ...book('reader-a', 'Avery'),
+          cover: 'https://covers.example.test/personal-fallback.jpg',
+          corpusCover: '',
+          corpusCoverColor: '',
+        }}
+        currentReaderId="reader-a"
+        onEditCorpus={edit}
+      />,
+    )
+
+    fireEvent.click(screen.getByText('Edit shared cover, series, genre, and publication'))
+    fireEvent.change(screen.getByLabelText('Shared primary genre'), {
+      target: { value: 'mystery' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save shared details' }))
+
+    await waitFor(() =>
+      expect(edit).toHaveBeenCalledWith(expect.objectContaining({ coverUrl: '' })),
     )
   })
 

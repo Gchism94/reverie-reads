@@ -118,9 +118,89 @@ export async function fetchCorpusAdminStatus(): Promise<boolean> {
 
 export const corpusAdminKey = ['corpus-admin'] as const
 export const corpusEnrichmentCandidatesKey = ['corpus-enrichment-candidates'] as const
+export const personalCoverCorpusReviewKey = (
+  bookId: string,
+  workId: string,
+  coverUrl: string,
+) => ['personal-cover-corpus-review', bookId, workId, coverUrl] as const
+
+export function personalCoverIsReviewed(options: unknown, coverUrl: string): boolean {
+  return (
+    !!coverUrl &&
+    Array.isArray(options) &&
+    options.some(
+      (option) =>
+        !!option &&
+        typeof option === 'object' &&
+        (option as { url?: unknown }).url === coverUrl,
+    )
+  )
+}
 
 export function useCorpusAdminStatus() {
   return useQuery({ queryKey: corpusAdminKey, queryFn: fetchCorpusAdminStatus, staleTime: 60_000 })
+}
+
+/** A personal cover is reviewed only when its exact URL is already an accepted corpus option. */
+export function usePersonalCoverCorpusReview({
+  bookId,
+  workId,
+  coverUrl,
+  enabled,
+}: {
+  bookId: string
+  workId: string
+  coverUrl: string
+  enabled: boolean
+}) {
+  return useQuery({
+    queryKey: personalCoverCorpusReviewKey(bookId, workId, coverUrl),
+    enabled: enabled && !!bookId && !!workId && !!coverUrl,
+    queryFn: async (): Promise<boolean> => {
+      const { data, error } = await supabase
+        .from('works')
+        .select('cover_options')
+        .eq('id', workId)
+        .single()
+      if (error) throw error
+      const options = (data as { cover_options?: unknown }).cover_options
+      return personalCoverIsReviewed(options, coverUrl)
+    },
+  })
+}
+
+export function useAdminReviewPersonalCoverForCorpus() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    meta: { action: 'Reviewing a personal cover for the corpus' },
+    mutationFn: async ({
+      bookId,
+      workId,
+      coverUrl,
+    }: {
+      bookId: string
+      workId: string
+      coverUrl: string
+    }): Promise<string> => {
+      const { data, error } = await supabase.rpc('admin_review_personal_cover_for_corpus', {
+        p_book: bookId,
+        p_expected_work: workId,
+        p_expected_cover_url: coverUrl,
+      })
+      if (error) throw error
+      return data as string
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['personal-cover-corpus-review'] }),
+        queryClient.invalidateQueries({ queryKey: ['household'] }),
+        queryClient.invalidateQueries({ queryKey: ['works-browse'] }),
+        queryClient.invalidateQueries({ queryKey: ['works-lookup'] }),
+        queryClient.invalidateQueries({ queryKey: ['works-lookup-isbns'] }),
+        queryClient.invalidateQueries({ queryKey: corpusEnrichmentCandidatesKey }),
+      ])
+    },
+  })
 }
 
 export function useAdminAddCorpusWorkTrope() {

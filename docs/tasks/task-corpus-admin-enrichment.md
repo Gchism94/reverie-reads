@@ -1,17 +1,15 @@
 # Task: corpus-administrator enrichment and durable corpus metadata
 
-Status: **the reviewed corpus-admin, membership, ACL, and operator histories are integrated through
-PR #366 at `1828968`. The owner deployed `20260830010000`, `20260831010000`, and `20260901010000`;
-the production report returned 43/43 invariants true, and the covers function retained the selected
-personal cover across refresh. The first reconciliation dry run wrote nothing and stopped on 10
-corpus-missing identities. Independent review rejected the first household-only catalog-entry
-candidate for authorization, checksum, lock-order, structured-series, scope, and coverage gaps.
-The first remediation re-review then found a series-length adoption defect, a reproducible lock-order
-deadlock, a discarded catalog-cover preview, and UI assertions that proved only database state. The
-final remediation closes those findings, and independent database/security, verification, and
-web/product re-reviews passed at `a7ac983`. The household-only catalog entry is ready for integration
-but remains undeployed. Administrator grants, reconciliation backup/write, and post-write smoke
-checks remain owner-gated and unperformed by Code.**
+Status: **PR #367 and owner deployment stop at `20260902010000` plus the updated `covers`
+function; production web stayed held. The local branch stacks corrected `20260903010000` behavior
+and the forward-only `20260904010000` release-gate repair. Fresh review of the first correction
+found a stale exact-cover approval race, authenticated accepted-option retraction, six incomplete
+table ACLs, dead cache invalidation, and a fail-open review-status error state. The current repair
+binds review to the locked work and URL, preserves accepted options across authenticated edits,
+resets the table ACLs, invalidates every real consumer, and disables the switch when status is
+unknown. Independent re-review found no remaining issue. Integration, owner deployment, the
+71-row report, and final web smoke remain required. Production has not received either local
+migration.**
 
 ## Objective
 
@@ -185,18 +183,19 @@ contains exactly Account A and Account B before either dry-run or write planning
 3. **Complete for the exercised personal-cover path:** the owner deployed the covers function and
    confirmed the selected cover survives refresh. The corpus-admin positive path remains part of
    the later administrator smoke set.
-4. Independently review and integrate the forward household-only catalog-entry boundary. The owner
-   then deploys `20260902010000` through the migration guard and reruns the expanded report, requiring
-   all 51 rows true. Only after that report passes, deploy the `covers` function through its guard and
-   smoke both exact-work owner authorization and administrator authorization. Deploy the web surface
-   last, then verify that a household-only add creates no personal copy and that an owner-picked
-   Hardcover cover survives refresh. Do not ship the new web path against the previously deployed
-   administrator-only `covers` function.
-5. Resolve the 10 aggregate missing-corpus dry-run rows through Household Add books, then dry-run
+4. **Complete through the held web gate:** PR #367 integrated; the owner deployed
+   `20260902010000`; all 51 report rows passed; and the updated `covers` function deployed. Pre-web
+   smoke correctly kept production web held after exposing the personal-cover projection gap.
+5. Independently review and integrate `20260903010000`. The owner deploys it through the migration
+   guard and requires all 55 expanded report rows true. Deploy the web surface last, then verify
+   Household-only Add creates no personal copy, trusted eligible personal covers display in
+   Household, the administrator switch starts off, explicit review adds the option without
+   replacing an existing default, and the first reviewed option fills a missing default.
+6. Resolve the 10 aggregate missing-corpus dry-run rows through Household Add books, then dry-run
    both administrator grants and the CSV reconciliation again. Run the reconciliation's separate
    backup-only phase and review the exact external title-level report and backup checksums; do not
    approve from aggregate counts alone.
-6. The owner executes both production writes and completes Account A, Account B, household-only,
+7. The owner executes both production writes and completes Account A, Account B, household-only,
    corpus-only, removal, cover-completion, and trope-promotion smoke checks.
 
 ## Household catalog remediation verification — 2026-08-28
@@ -232,8 +231,94 @@ ordinary-member editor denial, not merely service-role reads behind the page.
 - TypeScript, ESLint, Prettier, the production build, and `git diff --check` passed. ESLint emitted
   no warning after the shared scope helper was separated from the component module.
 
+### Superseded first personal-cover candidate verification — 2026-08-28
+
+- A second clean rebuild applied every migration through `20260903010000`; the focused cover-scope
+  pgTAP passed 17/17 and the full suite passed 739 assertions across 30 files.
+- The expanded local rollout report returned 55/55 true, and all 22 deterministic concurrency
+  scenarios remained green.
+- Core/web unit suites passed 2,435 + 647 assertions. The household browser spec passed 11 cases
+  with one expected mobile-project skip, including the rendered personal-cover fallback and the
+  household-only Add path.
+- TypeScript, ESLint, Prettier, production build, and `git diff --check` passed. That first candidate
+  defined a trigger and read projection only and performed no automatic cover backfill. Independent
+  review later rejected the trigger design for the three blockers below; these results are retained
+  as implementation history, not release approval.
+
 No production data, credentials, migration, function, web deployment, or remote repository state
 was touched. Integration remains the next gate.
+
+### Three-blocker remediation — 2026-08-28
+
+The first cover-scope candidate did not pass independent review. Its automatic book trigger could
+publish an enrichment-selected administrator cover with no review gesture, projected arbitrary
+member-controlled URLs into a peer browser, and took book → administrator locks opposite the
+administrator corpus editor. The corrected candidate replaces that trigger with the explicit
+`admin_review_personal_cover_for_corpus` RPC and personal-book switch. The RPC is restricted to an
+authenticated corpus administrator's own active book, accepts only the established hosted/Google
+cover boundary, remains additive/fill-only/audited, and uses profile → administrator → book → work
+locks. Household peers receive only hosted or exactly allowlisted Google URLs; a reader may still
+see their own personal fallback.
+
+Local verification of this correction is recorded before re-review; no production or remote state
+was changed. The candidate is not deployable until the refreshed independent review passes.
+
+- Two clean database rebuilds applied every migration through `20260903010000`. The focused
+  correction pgTAP passed 27/27; the full suite passed 749 assertions across 30 files; and all 55
+  read-only rollout invariants returned true.
+- The deterministic concurrency harness passed 23/23 scenarios. Its new two-session fixture holds
+  the personal-book row while an administrator corpus edit waits, then proves both commits complete
+  with no `40P01`; the old book-trigger design deadlocked in that topology.
+- The bounded 25,005-work/5,012-book fixture passed its 20-second per-statement timeout, bound all
+  personal books, and preserved the exact mixed-ISBN reconciliation refusal.
+- Core/web unit suites passed 2,435 + 653 assertions. The focused household browser run passed 8/8
+  desktop and 7/7 mobile with one expected project skip, including the off → reviewed switch and a
+  zero-request assertion for an arbitrary peer hotlink.
+- TypeScript, ESLint, Prettier, production build, and `git diff --check` passed. No production data,
+  credentials, deployments, or remote repository state were touched.
+
+### Fresh release review and forward correction — 2026-08-29
+
+The next independent review accepted the original peer-cover and lock-order corrections but found
+five remaining release gates. The UUID-only review RPC approved whichever cover was current when it
+finally locked the book; the shared editor could replace `cover_options` with a stale snapshot and
+retract a newly accepted option; review success invalidated an unused `['works']` cache namespace;
+six household tables had never reset legacy platform grants; and a failed review-state query showed
+an actionable “off” switch.
+
+`20260904010000` is a forward-only repair because neither the already-deployed
+`20260902010000` nor either `20260903010000` candidate may be rewritten. It revokes the UUID-only
+review signature, exposes an exact `(book, expected work, expected cover URL)` replacement, and
+rechecks both expected values after the established profile → administrator → book lock sequence.
+An authenticated works trigger preserves every accepted option URL omitted by a stale writer while
+still allowing validated additions, same-URL provenance refreshes, and complete-set reordering;
+service-role maintenance remains the explicit governance escape hatch. The same migration resets
+PUBLIC, anon, authenticated, and service-role table grants before restoring authenticated SELECT
+only on household roster tables and service-role ALL on all six implementation tables.
+
+Verification completed before the final re-review:
+
+- a clean rebuild applied every migration through `20260904010000`; full pgTAP passed 827
+  assertions across 31 files, including a 72-operation dirty-ACL fixture and 33 cover-scope
+  assertions;
+- both original rollback-only proof scripts now stop at the retired RPC privilege boundary, while
+  the replacement regression refuses stale work/URL context and preserves a reviewed option from
+  the exact stale editor call;
+- the deterministic concurrency harness passed 25 scenarios, including a queued review that waits
+  for a concurrent personal-cover update and then refuses the stale browser context, plus a
+  competing ISBN identity claim that must win before review can publish;
+- the bounded 25,005-work/5,012-book migration fixture passed its 20-second per-statement timeout,
+  bound all 5,012 books, and retained the mixed-ISBN reconciliation refusal;
+- the owner-run local report returned 71/71 true; core and web unit suites passed 2,438 and 656
+  assertions; TypeScript, ESLint, Prettier, production build, and `git diff --check` passed;
+- the full Playwright matrix ran with one worker and zero retries: 224 passed and 10 expected
+  project-specific cases skipped, including desktop and mobile household-only add, personal
+  adoption, hostile peer-cover withholding, and explicit administrator review flows;
+- a fresh independent bypass review of the final candidate found no remaining issue.
+
+No production data or credentials were accessed, and no migration, function, web, remote branch,
+or pull-request state was changed. The owner-run deployment and smoke sequence remains blocked on
+review, integration, and an in-sync clean `main`.
 
 ## Local verification — refreshed 2026-08-28
 

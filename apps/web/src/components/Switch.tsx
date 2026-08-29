@@ -3,10 +3,12 @@ export function Switch({
   checked,
   onChange,
   label,
+  disabled = false,
 }: {
   checked: boolean
   onChange: (next: boolean) => void
   label: string
+  disabled?: boolean
 }) {
   return (
     <button
@@ -14,8 +16,9 @@ export function Switch({
       role="switch"
       aria-checked={checked}
       aria-label={label}
+      disabled={disabled}
       onClick={() => onChange(!checked)}
-      className="relative h-6 w-11 flex-none border border-line transition-colors motion-reduce:transition-none"
+      className="relative h-6 w-11 flex-none border border-line transition-colors disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transition-none"
       style={{
         borderRadius: 'var(--radius-control)',
         background: checked

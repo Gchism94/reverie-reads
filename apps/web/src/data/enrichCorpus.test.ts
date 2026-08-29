@@ -5,6 +5,8 @@ import {
   corpusPatchFromEnrichment,
   corpusWorkIsIncomplete,
   corpusWorkShouldCheck,
+  personalCoverIsReviewed,
+  personalCoverCorpusReviewKey,
   type CorpusEnrichmentWork,
 } from './enrichCorpus'
 
@@ -91,6 +93,34 @@ describe('corpus enrichment eligibility', () => {
     ).toBe(true)
     expect(corpusWorkShouldCheck(completeWork({ description: '', enrichedAt: twentyDaysAgo }), now)).toBe(false)
     expect(corpusWorkShouldCheck(completeWork({ description: '', enrichedAt: fortyDaysAgo }), now)).toBe(true)
+  })
+})
+
+describe('personal cover corpus review state', () => {
+  it('scopes cached review state to the exact book, corpus work, and cover', () => {
+    expect(personalCoverCorpusReviewKey('book-a', 'work-a', 'cover-a')).toEqual([
+      'personal-cover-corpus-review',
+      'book-a',
+      'work-a',
+      'cover-a',
+    ])
+  })
+
+  it('turns on only when the exact personal cover URL is an accepted option', () => {
+    const options = [
+      { url: 'https://covers.example/first.webp', source: 'upload' },
+      { url: 'https://covers.example/second.webp', source: 'camera' },
+    ]
+
+    expect(personalCoverIsReviewed(options, 'https://covers.example/second.webp')).toBe(true)
+    expect(personalCoverIsReviewed(options, 'https://covers.example/unreviewed.webp')).toBe(false)
+    expect(personalCoverIsReviewed(options, '')).toBe(false)
+  })
+
+  it('fails closed on malformed cover-option state', () => {
+    expect(personalCoverIsReviewed(null, 'https://covers.example/first.webp')).toBe(false)
+    expect(personalCoverIsReviewed({ url: 'https://covers.example/first.webp' }, 'https://covers.example/first.webp')).toBe(false)
+    expect(personalCoverIsReviewed([null, 'url', { source: 'upload' }], 'https://covers.example/first.webp')).toBe(false)
   })
 })
 

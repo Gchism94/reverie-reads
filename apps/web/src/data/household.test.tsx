@@ -55,6 +55,8 @@ const householdBook = (id: string, ownerId = 'reader-a'): HouseholdBook => ({
   author: '',
   cover: '',
   coverColor: '',
+  corpusCover: '',
+  corpusCoverColor: '',
   coverOptions: [],
   series: '',
   position: null,
@@ -75,6 +77,9 @@ const householdBook = (id: string, ownerId = 'reader-a'): HouseholdBook => ({
     ownedEbook: false,
     ownedAudiobook: false,
     bookFormat: '',
+    cover: '',
+    coverThumb: '',
+    coverColor: '',
     shared: false,
   }],
   householdTags: [],
@@ -193,6 +198,11 @@ describe('household query identity and RPC boundary', () => {
             ownedEbook: false,
             ownedAudiobook: true,
             format: 'hardcover',
+            coverUrl: 'https://covers.example.test/blake-personal.jpg',
+            coverThumbUrl: 'https://covers.example.test/blake-personal-thumb.jpg',
+            coverColor: '#123456',
+            coverSource: 'upload',
+            coverSourceUrl: null,
             shared: true,
           }],
           household_tags: ['found family'],
@@ -235,6 +245,8 @@ describe('household query identity and RPC boundary', () => {
         ownership: 'owned',
         borrowed: true,
         ownedPhysical: 'hardcover',
+        cover: 'https://covers.example.test/blake-personal.jpg',
+        coverThumb: 'https://covers.example.test/blake-personal-thumb.jpg',
       }],
     })
     expect(result.current.data?.[0]).not.toHaveProperty('rating')
@@ -268,6 +280,8 @@ describe('household query identity and RPC boundary', () => {
       author: '',
       cover: '',
       coverColor: '',
+      corpusCover: '',
+      corpusCoverColor: '',
       coverOptions: [],
       series: '',
       position: null,
@@ -289,6 +303,9 @@ describe('household query identity and RPC boundary', () => {
           ownedEbook: false,
           ownedAudiobook: false,
           bookFormat: '',
+          cover: 'https://covers.example.test/avery.jpg',
+          coverThumb: '',
+          coverColor: '#abcdef',
           shared: false,
         },
         {
@@ -301,6 +318,9 @@ describe('household query identity and RPC boundary', () => {
           ownedEbook: false,
           ownedAudiobook: false,
           bookFormat: '',
+          cover: 'https://covers.example.test/outside.jpg',
+          coverThumb: '',
+          coverColor: '#000000',
           shared: false,
         },
       ],
@@ -312,7 +332,7 @@ describe('household query identity and RPC boundary', () => {
       addedAt: '2026-08-25T00:00:00Z',
     }
 
-    const labelled = labelHouseholdData(members, [baseBook])
+    const labelled = labelHouseholdData(members, [baseBook], firstId)
 
     expect(labelled.members.map((member) => member.displayName)).toEqual([
       'Avery · aaaaaaaa-1',
@@ -322,6 +342,53 @@ describe('household query identity and RPC boundary', () => {
     expect(labelled.books[0]?.owners).toEqual([
       expect.objectContaining({ userId: firstId, displayName: labelled.members[0]?.displayName }),
     ])
+    expect(labelled.books[0]).toMatchObject({
+      cover: 'https://covers.example.test/avery.jpg',
+      coverColor: '#abcdef',
+    })
+  })
+
+  it('uses the current reader copy as a household fallback but never over a corpus cover', () => {
+    const members = [
+      {
+        householdId: 'house-1',
+        householdName: 'Readers',
+        userId: 'reader-a',
+        displayName: 'Avery',
+        role: 'owner' as const,
+      },
+      {
+        householdId: 'house-1',
+        householdName: 'Readers',
+        userId: 'reader-b',
+        displayName: 'Blake',
+        role: 'member' as const,
+      },
+    ]
+    const a = householdBook('work-1', 'reader-a').owners[0]!
+    const b = householdBook('work-1', 'reader-b').owners[0]!
+    const personalOnly = {
+      ...householdBook('work-1'),
+      owners: [
+        { ...a, cover: 'https://covers.example.test/a.jpg', coverColor: '#aaaaaa' },
+        { ...b, cover: 'https://covers.example.test/b.jpg', coverColor: '#bbbbbb' },
+      ],
+    }
+
+    expect(labelHouseholdData(members, [personalOnly], 'reader-b').books[0]).toMatchObject({
+      cover: 'https://covers.example.test/b.jpg',
+      coverColor: '#bbbbbb',
+    })
+
+    const corpusCover = {
+      ...personalOnly,
+      corpusCover: 'https://covers.example.test/corpus.jpg',
+      corpusCoverColor: '#cccccc',
+    }
+    expect(labelHouseholdData(members, [corpusCover], 'reader-b').books[0]).toMatchObject({
+      cover: 'https://covers.example.test/corpus.jpg',
+      coverColor: '#cccccc',
+    })
   })
 
   it('removes authorization-sensitive roster data on unmount and fetches again on remount', async () => {
