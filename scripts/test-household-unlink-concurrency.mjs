@@ -33,6 +33,7 @@ const RECONCILIATION_LATE_INSERT_BARRIER_ID = 5
 const HOUSEHOLD_ADD_BARRIER_ID = 6
 const HOUSEHOLD_ISBN_BARRIER_ID = 7
 const CORPUS_EDIT_TAG_BARRIER_ID = 8
+const CROSS_MEMBER_CORPUS_EDIT_BARRIER_ID = 9
 
 const sqlScalar = (statement) =>
   execFileSync('psql', [DATABASE_URL, '-X', '-qAt', '-v', 'ON_ERROR_STOP=1', '-c', statement], {
@@ -569,6 +570,186 @@ async function exerciseOwnerCorpusEditTagLockOrdering(ownerId, ownerBookId) {
         drop function if exists public.corpus_edit_tag_barrier_fixture();
       `)
     }
+    sqlScalar(`
+      delete from public.work_metadata_edits
+      where work_id = '${workId}'::uuid and editor_id = '${ownerId}'::uuid;
+    `)
+  }
+}
+
+async function exerciseCrossMemberAdminCorpusEditLockOrdering(ownerId, memberId, ownerBookId) {
+  const workId = sqlScalar(
+    `select corpus_work_id from public.books where id = '${ownerBookId}'::uuid;`,
+  )
+  const memberBookId = randomUUID()
+  const tropeId = sqlScalar(
+    `select id from public.tropes where owner_id is null order by id limit 1;`,
+  )
+  let triggerInstalled = false
+
+  try {
+    sqlScalar(`
+      insert into public.corpus_admins (user_id) values ('${memberId}'::uuid)
+      on conflict (user_id) do nothing;
+      insert into public.books (
+        id, owner_id, title, authors_display, status, ownership, corpus_work_id
+      )
+      select
+        '${memberBookId}'::uuid, '${memberId}'::uuid, work.title, work.author_text,
+        'standalone', 'owned', work.id
+      from public.works work
+      where work.id = '${workId}'::uuid;
+
+      create function public.corpus_edit_cross_member_barrier_fixture()
+      returns trigger language plpgsql security definer set search_path = '' as $fixture$
+      begin
+        if new.book_id = '${memberBookId}'::uuid then
+          perform pg_catalog.pg_advisory_xact_lock_shared(
+            ${BARRIER_CLASS}, ${CROSS_MEMBER_CORPUS_EDIT_BARRIER_ID}
+          );
+        end if;
+        return new;
+      end;
+      $fixture$;
+      create trigger book_tropes_q_deadlock_barrier
+      after insert on public.book_tropes
+      for each row execute function public.corpus_edit_cross_member_barrier_fixture();
+    `)
+    triggerInstalled = true
+
+    const operations = [
+      {
+        name: 'metadata',
+        statement: `select public.edit_corpus_work_metadata(
+          work.id, work.series, work.position, work.series_count, work.status,
+          'literary', work.subgenre, array['literary'], work.subgenres,
+          work.cover_url, work.cover_options, work.pub_y, work.pub_m, work.pub_d
+        ) from public.works work where work.id = '${workId}'::uuid`,
+        verify: () =>
+          assert.equal(
+            sqlScalar(`select genre from public.works where id = '${workId}'::uuid;`),
+            'literary',
+            'the cross-member serialized metadata edit is preserved',
+          ),
+      },
+      {
+        name: 'cover',
+        statement: `select public.set_corpus_work_cover(
+          '${workId}'::uuid,
+          'https://books.google.com/books/content?id=cross-member-lock-order',
+          'google', null, null
+        )`,
+        verify: () =>
+          assert.equal(
+            sqlScalar(`select cover_url from public.works where id = '${workId}'::uuid;`),
+            'https://books.google.com/books/content?id=cross-member-lock-order',
+            'the cross-member serialized cover edit is preserved',
+          ),
+      },
+    ]
+
+    for (const operation of operations) {
+      const controller = new PsqlSession(`cross-member-${operation.name}-controller`)
+      const tagger = new PsqlSession(`cross-member-${operation.name}-tagger`)
+      const editor = new PsqlSession(`cross-member-${operation.name}-editor`)
+      let barrierHeld = false
+      let tropeResult = null
+      let editResult = null
+      try {
+        await controller.command(
+          `select pg_catalog.pg_advisory_lock(
+            ${BARRIER_CLASS}, ${CROSS_MEMBER_CORPUS_EDIT_BARRIER_ID}
+          );`,
+        )
+        barrierHeld = true
+        const taggerPid = Number(await tagger.command('select pg_backend_pid();'))
+        const editorPid = Number(await editor.command('select pg_backend_pid();'))
+
+        tropeResult = tagger.command(
+          authenticatedPersonalWrite(
+            memberId,
+            `insert into public.book_tropes (book_id, trope_id, owner_id, emphasis)
+             values (
+               '${memberBookId}'::uuid, '${tropeId}'::uuid, '${memberId}'::uuid, 'present'
+             )`,
+          ),
+        )
+        await waitForBlockedWorker(taggerPid, `cross-member ${operation.name} trope barrier`)
+
+        editResult = editor.command(authenticatedPersonalWrite(ownerId, operation.statement))
+        await waitForBlockedWorker(editorPid, `cross-member ${operation.name} all-book prelock`)
+
+        // This is the defect itself, not a proxy: while the editor waits for the member's book it
+        // must not yet hold the household-work row needed by the trope synchronization FK.
+        assert.equal(
+          sqlScalar(`
+            begin;
+            select work_id from public.household_works
+            where household_id = '${householdId}'::uuid and work_id = '${workId}'::uuid
+              and removed_at is null
+            for update nowait;
+            rollback;
+            select 'household-work-unlocked';
+          `),
+          `${workId}\nhousehold-work-unlocked`,
+          `${operation.name} waits on every active personal copy before household-work`,
+        )
+
+        await controller.command(
+          `select pg_catalog.pg_advisory_unlock(
+            ${BARRIER_CLASS}, ${CROSS_MEMBER_CORPUS_EDIT_BARRIER_ID}
+          );`,
+        )
+        barrierHeld = false
+        assert.match(
+          await tropeResult,
+          /personal-write-committed/,
+          'the admin trope insert commits',
+        )
+        tropeResult = null
+        assert.match(
+          await editResult,
+          /personal-write-committed/,
+          `the owner ${operation.name} commits`,
+        )
+        editResult = null
+        operation.verify()
+        console.log(
+          `✓ owner corpus ${operation.name} serializes before cross-member admin trope promotion`,
+        )
+
+        sqlScalar(`
+          delete from public.book_tropes
+          where book_id = '${memberBookId}'::uuid and trope_id = '${tropeId}'::uuid;
+        `)
+      } finally {
+        if (barrierHeld) {
+          await controller
+            .command(
+              `select pg_catalog.pg_advisory_unlock(
+                ${BARRIER_CLASS}, ${CROSS_MEMBER_CORPUS_EDIT_BARRIER_ID}
+              );`,
+            )
+            .catch(() => {})
+        }
+        await Promise.allSettled([tropeResult, editResult])
+        await Promise.allSettled([controller.close(), tagger.close(), editor.close()])
+      }
+    }
+  } finally {
+    if (triggerInstalled) {
+      sqlScalar(`
+        drop trigger if exists book_tropes_q_deadlock_barrier on public.book_tropes;
+        drop function if exists public.corpus_edit_cross_member_barrier_fixture();
+      `)
+    }
+    sqlScalar(`
+      delete from public.book_tropes where book_id = '${memberBookId}'::uuid;
+      delete from public.books where id = '${memberBookId}'::uuid;
+      delete from public.corpus_admins where user_id = '${memberId}'::uuid;
+      delete from public.work_metadata_edits
+      where work_id = '${workId}'::uuid and editor_id = '${ownerId}'::uuid;
+    `)
   }
 }
 
@@ -2096,6 +2277,7 @@ async function main() {
   })
   await exerciseWorkerFirstHouseholdAddLockOrdering(firstUserId, secondUserId)
   await exerciseOwnerCorpusEditTagLockOrdering(firstUserId, ownerBookId)
+  await exerciseCrossMemberAdminCorpusEditLockOrdering(firstUserId, secondUserId, ownerBookId)
   await exerciseConcurrentRebindSuppression(firstUserId)
   await exerciseMovedTropeLockOrdering(firstUserId)
   await exerciseConcurrentIsbnResolution(firstUserId, secondUserId)

@@ -202,10 +202,12 @@ contains exactly Account A and Account B before either dry-run or write planning
 
 The twice-remediated candidate closes every finding from both independent review passes: global
 corpus administrators can edit unrelated works through the audited writer; ISBN-10/13 checksums are
-validated; profile-first locking removes the add/unlink inversion; shared series adoption retires
+validated and nonblank inputs containing characters beyond digits, spaces, hyphens, or a checksum
+`X` are refused; profile-first locking removes the add/unlink inversion; shared series adoption retires
 the prior structured entry atomically and overwrites a stale pre-existing target series length;
-owner corpus edits prelock matching personal books before household membership, matching the
-book-trigger lock order; persistent desktop/mobile Add controls preserve household scope; Google
+owner corpus edits prelock every active personal copy before household membership, matching the
+cross-member administrator trope-trigger lock order; persistent desktop/mobile Add controls preserve
+household scope; Google
 preview covers are preserved directly, owner/admin Hardcover previews are made durable through the
 corpus cover pipeline, and the shared editor can select reviewed cover options; the editor covers
 canonical genre, subgenre, complete series metadata, and publication precision; and shared-detail
@@ -214,9 +216,10 @@ ordinary-member editor denial, not merely service-role reads behind the page.
 
 - A clean database rebuild applied through `20260902010000`; the expanded read-only rollout report
   returned 51/51 true.
-- Full pgTAP passed 717 assertions across 29 files. The deterministic concurrency harness passed all
-  20 scenarios, including the worker-first add/unlink race, concurrent same-ISBN household adds, and
-  the exact owner-edit/personal-tag lock-order regression.
+- Full pgTAP passed 720 assertions across 29 files. The deterministic concurrency harness passed all
+  22 scenarios, including the worker-first add/unlink race, concurrent same-ISBN household adds,
+  the owner-edit/personal-tag lock-order regression, and the exact cross-member administrator trope
+  topology against both metadata and cover edits.
 - The bounded 25,005-work/5,012-book fixture completed both foundation migrations under the
   20-second statement timeout, bound all 5,012 personal books, and retained the exact mixed-ISBN
   reconciliation refusal.

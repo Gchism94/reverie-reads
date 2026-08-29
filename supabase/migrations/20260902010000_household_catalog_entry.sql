@@ -44,7 +44,9 @@ immutable
 set search_path = ''
 as $$
 declare
-  candidate text := upper(regexp_replace(coalesce(p_isbn, ''), '[^0-9Xx]', '', 'g'));
+  -- Only the separators accepted by the household catalog form are normalization noise. Removing
+  -- arbitrary characters would turn prose such as `ISBN: ...` into a seemingly valid identifier.
+  candidate text := upper(regexp_replace(trim(coalesce(p_isbn, '')), '[ -]', '', 'g'));
   checksum int := 0;
   digit int;
   index int;
@@ -170,7 +172,7 @@ declare
   isbn_matches int := 0;
   fallback_matches int := 0;
   created_work boolean := false;
-  raw_isbn text := upper(regexp_replace(coalesce(p_isbn, ''), '[^0-9Xx]', '', 'g'));
+  supplied_isbn text := trim(coalesce(p_isbn, ''));
   safe_display_cover text := case
     when lower(trim(coalesce(p_cover_source, ''))) = 'google'
       and public.google_books_display_cover_url_is_valid(p_cover_url)
@@ -184,7 +186,10 @@ begin
   if clean_title is null then
     raise exception 'title is required' using errcode = '22023';
   end if;
-  if raw_isbn <> '' and not public.library_isbn_checksum_is_valid(p_isbn) then
+  if supplied_isbn <> '' and (
+    supplied_isbn !~ '^[0-9Xx -]+$'
+    or not public.library_isbn_checksum_is_valid(supplied_isbn)
+  ) then
     raise exception 'ISBN must be a valid ISBN-10 or ISBN-13' using errcode = '22023';
   end if;
 
@@ -432,24 +437,12 @@ begin
     raise exception 'profile not found' using errcode = 'P0002';
   end if;
 
-  perform 1
-  from public.corpus_admins admin
-  where admin.user_id = caller
-  for update;
+  -- The locking lookup both classifies and holds administrator authority through the audit write.
+  perform 1 from public.corpus_admins admin where admin.user_id = caller for update;
   caller_is_admin := found;
   if not caller_is_admin then
-    -- Personal tag/trope triggers take book -> membership -> household. Prelock every active
-    -- personal copy of this work before the owner-membership rows so a corpus edit cannot take the
-    -- reverse membership -> book path and deadlock with one of those triggers. Household-only
-    -- works have no matching book and proceed directly to the membership lock.
-    perform 1
-    from public.books book
-    where book.owner_id = caller
-      and book.corpus_work_id = p_work
-      and book.removed_at is null
-    order by book.id
-    for update;
-
+    -- Probe authority without taking a household lock. A later locking recheck prevents a
+    -- concurrent role/removal change from authorizing the edit after this point.
     select member.household_id into target_household
     from public.household_members member
     join public.household_works household_work
@@ -457,10 +450,34 @@ begin
      and household_work.work_id = p_work
      and household_work.removed_at is null
     where member.user_id = caller
-      and member.role = 'owner'
-    for update of member, household_work;
+      and member.role = 'owner';
     if target_household is null then
       raise exception 'corpus administrator or household owner required' using errcode = '42501';
+    end if;
+
+    -- Personal tag/trope triggers take their own book before work and household rows. Prelock every
+    -- active personal copy of this work, across all readers, in UUID order before taking
+    -- the owner-membership/household-work rows. Restricting this to the caller's copy leaves a
+    -- cross-member admin trope promotion able to invert work -> household against this edit.
+    perform 1
+    from public.books book
+    where book.corpus_work_id = p_work
+      and book.removed_at is null
+    order by book.id
+    for update;
+
+    perform 1
+    from public.household_members member
+    join public.household_works household_work
+      on household_work.household_id = member.household_id
+     and household_work.work_id = p_work
+     and household_work.removed_at is null
+    where member.household_id = target_household
+      and member.user_id = caller
+      and member.role = 'owner'
+    for update of member, household_work;
+    if not found then
+      raise exception 'household corpus authority changed during update' using errcode = '40001';
     end if;
   end if;
 
@@ -647,19 +664,9 @@ begin
     raise exception 'profile not found' using errcode = 'P0002';
   end if;
 
-  perform 1 from public.corpus_admins admin
-  where admin.user_id = caller
-  for update;
+  perform 1 from public.corpus_admins admin where admin.user_id = caller for update;
   caller_is_admin := found;
   if not caller_is_admin then
-    perform 1
-    from public.books book
-    where book.owner_id = caller
-      and book.corpus_work_id = p_work
-      and book.removed_at is null
-    order by book.id
-    for update;
-
     select member.household_id into target_household
     from public.household_members member
     join public.household_works household_work
@@ -667,10 +674,30 @@ begin
      and household_work.work_id = p_work
      and household_work.removed_at is null
     where member.user_id = caller
-      and member.role = 'owner'
-    for update of member, household_work;
+      and member.role = 'owner';
     if target_household is null then
       raise exception 'corpus administrator or household owner required' using errcode = '42501';
+    end if;
+
+    perform 1
+    from public.books book
+    where book.corpus_work_id = p_work
+      and book.removed_at is null
+    order by book.id
+    for update;
+
+    perform 1
+    from public.household_members member
+    join public.household_works household_work
+      on household_work.household_id = member.household_id
+     and household_work.work_id = p_work
+     and household_work.removed_at is null
+    where member.household_id = target_household
+      and member.user_id = caller
+      and member.role = 'owner'
+    for update of member, household_work;
+    if not found then
+      raise exception 'household corpus authority changed during update' using errcode = '40001';
     end if;
   end if;
 

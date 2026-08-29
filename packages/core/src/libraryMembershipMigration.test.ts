@@ -192,24 +192,46 @@ describe('household-only catalog entry and explicit personal adoption', () => {
     expect(createBoundary).not.toMatch(/insert\s+into\s+public\.books/i)
     expect(createBoundary).toContain("'household catalog creation'")
     expect(createBoundary).toContain('google_books_display_cover_url_is_valid')
+    expect(createBoundary).toContain("supplied_isbn !~ '^[0-9Xx -]+$'")
   })
 
   it('holds the exact administrator or owner authority row through a shared edit', () => {
-    const editBoundary = sectionOf(
-      householdCatalogMigration,
-      'create function public.edit_corpus_work_metadata(',
-      'revoke all on function public.edit_corpus_work_metadata(',
-    )
+    for (const [start, end] of [
+      [
+        'create function public.edit_corpus_work_metadata(',
+        'revoke all on function public.edit_corpus_work_metadata(',
+      ],
+      [
+        'create function public.set_corpus_work_cover(',
+        'revoke all on function public.set_corpus_work_cover(',
+      ],
+    ] as const) {
+      const editBoundary = sectionOf(householdCatalogMigration, start, end)
 
-    expect(editBoundary).toContain('from public.corpus_admins admin')
-    expect(editBoundary).toMatch(/from public\.corpus_admins admin[\s\S]*?for update;/)
-    expect(editBoundary).toMatch(
-      /member\.role = 'owner'[\s\S]*?for update of member, household_work;/,
-    )
-    expect(editBoundary).not.toContain('if not public.can_edit_corpus_work(p_work)')
-    expect(editBoundary.indexOf('from public.books book')).toBeLessThan(
-      editBoundary.indexOf('from public.household_members member'),
-    )
+      expect(editBoundary).toContain('from public.corpus_admins admin')
+      expect(editBoundary).toMatch(/from public\.corpus_admins admin[\s\S]*?for update;/)
+      expect(editBoundary).toMatch(
+        /member\.household_id = target_household[\s\S]*?for update of member, household_work;/,
+      )
+      expect(editBoundary).not.toContain('if not public.can_edit_corpus_work(p_work)')
+      const authorityProbe = editBoundary.indexOf(
+        'select member.household_id into target_household',
+      )
+      const allBookLockStart = editBoundary.indexOf('from public.books book', authorityProbe)
+      const authorityRecheck = editBoundary.indexOf(
+        'member.household_id = target_household',
+        allBookLockStart,
+      )
+      expect(authorityProbe).toBeGreaterThan(-1)
+      expect(allBookLockStart).toBeGreaterThan(authorityProbe)
+      expect(authorityRecheck).toBeGreaterThan(allBookLockStart)
+      const allBookLock = editBoundary.slice(
+        allBookLockStart,
+        editBoundary.indexOf('for update;', allBookLockStart) + 'for update;'.length,
+      )
+      expect(allBookLock).toContain('book.corpus_work_id = p_work')
+      expect(allBookLock).not.toContain('book.owner_id = caller')
+    }
   })
 
   it('locks the added-by profile before any household row in both household-only add paths', () => {

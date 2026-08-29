@@ -354,8 +354,8 @@ plus household-only add/cover-refresh smoke. Shipping the web first would leave 
 the already-deployed administrator-only function. The focused smoke verification must pass before
 reconciliation resumes.
 
-Local remediation verification passed a clean rebuild through `20260902010000`, all 717 pgTAP
-assertions across 29 files, 20 deterministic concurrency scenarios, the bounded
+Local remediation verification passed a clean rebuild through `20260902010000`, all 720 pgTAP
+assertions across 29 files, 22 deterministic concurrency scenarios, the bounded
 25,005-work/5,012-book migration fixture, 2,432 core and 645 web unit assertions, typecheck, ESLint,
 Prettier, production build, and `git diff --check`. The complete household browser spec passed 11
 cases with one expected project skip; the full browser matrix passed 220 cases with 10 expected

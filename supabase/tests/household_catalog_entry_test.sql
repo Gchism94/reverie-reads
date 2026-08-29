@@ -1,6 +1,6 @@
 -- Household-only membership, owner/admin corpus authority, and explicit personal adoption.
 begin;
-select plan(67);
+select plan(70);
 
 insert into auth.users (
   id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
@@ -284,6 +284,18 @@ select is(
 select throws_ok(
   $$select public.create_household_catalog_work('Invalid ISBN', 'G Writer', '123')$$,
   '22023', null, 'invalid ISBN input is refused instead of silently discarded'
+);
+select throws_ok(
+  $$select public.create_household_catalog_work('Garbage ISBN', 'G Writer', 'not-an-isbn')$$,
+  '22023', null, 'nonblank alphabetic ISBN garbage is refused instead of becoming no ISBN'
+);
+select throws_ok(
+  $$select public.create_household_catalog_work('Prefixed ISBN', 'G Writer', 'ISBN: 9780306406157')$$,
+  '22023', null, 'an alphabetic ISBN prefix is not stripped into a valid shared identity'
+);
+select throws_ok(
+  $$select public.create_household_catalog_work('Suffixed ISBN', 'G Writer', '9780306406157abc')$$,
+  '22023', null, 'an alphabetic ISBN suffix is not stripped into a valid shared identity'
 );
 select is(
   public.create_household_catalog_work(
