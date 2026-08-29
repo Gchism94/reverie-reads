@@ -3,7 +3,9 @@
 --
 -- Paste this whole file into the production Supabase SQL Editor and run it. It returns catalog
 -- metadata and aggregate counts only: no titles, account ids, library rows, or private annotations.
--- Every row must report ok = true before the private reconciliation dry run is approved.
+-- Every row must report ok = true before the private reconciliation dry run is approved. The
+-- runtime administrator assignment check deliberately fails after a clean schema-only migration:
+-- run the owner-reviewed corpus:admins operator before treating this as a rollout pass.
 -- Before 20260904010000 receives independent review and an owner-run deployment, its migration,
 -- exact review RPC, accepted-option trigger, and ACL rows are expected blockers; do not approve a
 -- partial result.
@@ -320,6 +322,15 @@ table_privilege_checks as (
       and pg_catalog.has_table_privilege('service_role', 'public.work_tropes', 'update')
       and pg_catalog.has_table_privilege('service_role', 'public.work_tropes', 'delete')
 ),
+runtime_assignment_checks as (
+  select
+    'runtime assignment'::text as area,
+    'public.corpus_admins'::text as invariant,
+    'at least one service-reviewed administrator'::text as expected,
+    format('%s assigned', count(*)) as observed,
+    count(*) > 0 as ok
+  from public.corpus_admins
+),
 household_table_privilege_checks as (
   select
     'table privilege'::text as area,
@@ -399,6 +410,7 @@ checks as (
   union all select * from function_checks
   union all select * from owner_fence_checks
   union all select * from table_privilege_checks
+  union all select * from runtime_assignment_checks
   union all select * from household_table_privilege_checks
   union all select * from rls_checks
 )

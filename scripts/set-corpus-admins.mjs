@@ -1,6 +1,7 @@
 // Owner-run corpus administrator grants. Dry-run is the default and writes nothing.
 //
 //   pnpm corpus:admins -- --user-id=<account-a> --user-id=<account-b>
+//   pnpm corpus:admins -- --user-id=<account-a> --require-exact
 //   pnpm corpus:admins -- --user-id=<account-a> --user-id=<account-b> \
 //     --write --confirm=GRANT_CORPUS_ADMIN
 //
@@ -24,6 +25,7 @@ const ids = [
   ),
 ]
 const write = args.includes('--write')
+const requireExact = args.includes('--require-exact')
 const confirm = args.find((arg) => arg.startsWith('--confirm='))?.slice('--confirm='.length)
 
 const hasUrl = !!process.env.SUPABASE_URL
@@ -46,16 +48,29 @@ const dbError = (action, error) =>
   new Error(`${action}: ${error?.message ?? JSON.stringify(error)}`)
 
 async function main() {
-  const [profilesResult, grantsResult] = await Promise.all([
-    supabase.from('profiles').select('id, display_name').in('id', ids),
-    supabase.from('corpus_admins').select('user_id, granted_at').in('user_id', ids),
-  ])
-  if (profilesResult.error) throw dbError('profile lookup failed', profilesResult.error)
+  // Read the complete service-managed roster. Querying only the requested ids allowed an operator
+  // to call a subset "complete" while an unexpected administrator remained invisible.
+  const grantsResult = await supabase
+    .from('corpus_admins')
+    .select('user_id, granted_at')
+    .order('user_id')
   if (grantsResult.error) throw dbError('admin lookup failed', grantsResult.error)
+  const currentIds = (grantsResult.data ?? []).map((grant) => grant.user_id)
+  const profileIds = [...new Set([...ids, ...currentIds])]
+  const profilesResult = await supabase
+    .from('profiles')
+    .select('id, display_name')
+    .in('id', profileIds)
+  if (profilesResult.error) throw dbError('profile lookup failed', profilesResult.error)
   const profiles = profilesResult.data ?? []
   const missing = ids.filter((id) => !profiles.some((profile) => profile.id === id))
   if (missing.length) throw new Error(`no profile for: ${missing.join(', ')}`)
-  const current = new Set((grantsResult.data ?? []).map((grant) => grant.user_id))
+  const current = new Set(currentIds)
+  const unexpected = currentIds.filter((id) => !ids.includes(id))
+  const assignment = (id) => ({
+    id,
+    displayName: profiles.find((profile) => profile.id === id)?.display_name ?? null,
+  })
   console.log(
     JSON.stringify(
       {
@@ -67,6 +82,9 @@ async function main() {
           currentRole: current.has(id) ? 'corpus_admin' : 'reader',
           proposedRole: 'corpus_admin',
         })),
+        requireExact,
+        unexpectedAccounts: unexpected.map(assignment),
+        readyForWrite: !requireExact || unexpected.length === 0,
         additions: ids.filter((id) => !current.has(id)).length,
         unchanged: ids.filter((id) => current.has(id)).length,
       },
@@ -76,9 +94,15 @@ async function main() {
   )
   if (!write) {
     console.log(
-      '\nDry run complete. Review both accounts, then repeat with --write and confirmation.',
+      '\nDry run complete. Review the requested account roster, then repeat with --write and confirmation.',
     )
+    if (requireExact && unexpected.length) process.exitCode = 2
     return
+  }
+  if (requireExact && unexpected.length) {
+    throw new Error(
+      `exact roster refused: ${unexpected.length} unexpected administrator grant(s) require separate review`,
+    )
   }
 
   const { error } = await supabase.from('corpus_admins').upsert(
@@ -92,13 +116,22 @@ async function main() {
   const { data: verified, error: verifyError } = await supabase
     .from('corpus_admins')
     .select('user_id, granted_at')
-    .in('user_id', ids)
+    .order('user_id')
   if (verifyError) throw dbError('admin verification failed', verifyError)
   const verifiedIds = new Set((verified ?? []).map((grant) => grant.user_id))
   const absent = ids.filter((id) => !verifiedIds.has(id))
   if (absent.length)
     throw new Error(`post-write verification missing grants for: ${absent.join(', ')}`)
-  console.log(`\nVerified ${verifiedIds.size} corpus administrator grant(s).`)
+  const unexpectedAfter = [...verifiedIds].filter((id) => !ids.includes(id))
+  if (requireExact && unexpectedAfter.length) {
+    throw new Error(
+      `post-write verification found ${unexpectedAfter.length} unexpected administrator grant(s)`,
+    )
+  }
+  console.log(
+    `\nVerified ${ids.length} requested corpus administrator grant(s)` +
+      (requireExact ? ' and the exact roster.' : '.'),
+  )
 }
 
 main().catch((error) => {

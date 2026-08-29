@@ -21,10 +21,9 @@ import {
   type BulkProgress,
 } from '../data/enrichLibrary'
 import {
-  bulkCompleteCorpus,
+  corpusCoverRecoverySummary,
   corpusEnrichmentCandidatesKey,
-  fetchCorpusEnrichmentCandidates,
-  recoverAdminPersonalCorpusCovers,
+  runCorpusCompletionPipeline,
   useCorpusAdminStatus,
   useCorpusEnrichmentCandidates,
   type CorpusBulkProgress,
@@ -32,6 +31,7 @@ import {
 import { resharpenCovers, resharpenSource, type ResharpenProgress } from '../data/resharpenCovers'
 import { sweepCountText } from '../data/sweepProgress'
 import { DuplicateReview } from '../components/DuplicateReview'
+import { CorpusCompleteControl } from '../components/CorpusCompleteControl'
 import { fileToCsvText } from '../data/xlsxAdapter'
 import type { ReviewCandidate } from '../data/intake'
 import { APP_NAME, SKIN_LIST, type Mode } from '@reverie/core'
@@ -357,18 +357,11 @@ function SettingsScreen() {
   }
 
   async function runCorpusComplete() {
-    if (!corpusCandidates?.length) return
     corpusStopRef.current = false
     setCorpusCompleting(true)
-    setCorpusProgress({ scanned: 0, total: corpusCandidates.length, filled: 0 })
+    setCorpusProgress(null)
     try {
-      // Keep the reader's exact selected artwork before source lookup can offer another edition.
-      // Refetch after the RPC because newly recovered u/ covers now need immediate w/ relocation.
-      const recovery = await recoverAdminPersonalCorpusCovers()
-      const freshCandidates = await fetchCorpusEnrichmentCandidates()
-      setCorpusProgress({ scanned: 0, total: freshCandidates.length, filled: 0 })
-      const result = await bulkCompleteCorpus(
-        freshCandidates,
+      const { recovery, result } = await runCorpusCompletionPipeline(
         setCorpusProgress,
         () => corpusStopRef.current,
       )
@@ -385,9 +378,7 @@ function SettingsScreen() {
       const failed = result.failed
         ? ` · ${result.failed} couldn’t be checked and remain eligible to retry`
         : ''
-      const recovered = recovery.recoveredCovers
-        ? ` · recovered ${recovery.recoveredCovers} exact personal cover${recovery.recoveredCovers === 1 ? '' : 's'}`
-        : ''
+      const recovered = corpusCoverRecoverySummary(recovery)
       setStatus(
         `${prefix}checked ${result.scanned} of ${result.total} · filled ${result.filled} · ${result.nothing} had nothing new${recovered}${failed}${result.errorMessage ? ` · ${result.errorMessage}` : ''}.`,
       )
@@ -626,34 +617,15 @@ function SettingsScreen() {
                 eligible again after the recheck window (3 days, 30 once cover and series are in).
               </p>
             )}
-            {isCorpusAdmin &&
-              (corpusCompleting ? (
-                <button
-                  type="button"
-                  onClick={() => (corpusStopRef.current = true)}
-                  className="skin-control border border-line px-4 py-2 text-[13px] font-semibold text-ink"
-                  style={{ background: 'var(--field)' }}
-                >
-                  ⏹ Stop shared corpus (
-                  {corpusProgress
-                    ? `${corpusProgress.scanned}/${corpusProgress.total}`
-                    : 'starting…'}
-                  )
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => void runCorpusComplete()}
-                  disabled={!corpusEligibleCount}
-                  className="skin-control border border-line px-4 py-2 text-[13px] font-semibold text-ink disabled:opacity-50"
-                  style={{ background: 'var(--field)' }}
-                >
-                  ✨ Complete shared corpus covers &amp; info
-                  {corpusEligibleCount !== null && corpusEligibleCount > 0
-                    ? ` (${corpusEligibleCount})`
-                    : ''}
-                </button>
-              ))}
+            {isCorpusAdmin && (
+              <CorpusCompleteControl
+                completing={corpusCompleting}
+                progress={corpusProgress}
+                eligibleCount={corpusEligibleCount}
+                onRun={() => void runCorpusComplete()}
+                onStop={() => (corpusStopRef.current = true)}
+              />
+            )}
             {isCorpusAdmin && !corpusCompleting && (
               <p className="w-full text-[12px] text-muted">
                 Admin tool · fills objective gaps for personal, household-only, and corpus-only
