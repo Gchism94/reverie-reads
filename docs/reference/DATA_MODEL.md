@@ -444,10 +444,14 @@ Existing curated external options may be retained or selected, but arbitrary new
 be introduced by `edit_corpus_work_metadata`. Routine edits to an active personal row remain
 personal and never publish a corpus cover implicitly. A corpus administrator may explicitly turn on
 the review switch for their own hosted or allowlisted Google cover. That authenticated action is
-the narrow exception: it appends an audited corpus option and fills the canonical cover only when
-none exists. The switch is off until that action succeeds; accepted options stay additive while a
-future reviewer-quorum model is designed. It never replaces an established default, and an ordinary
-reader's personal cover never crosses that corpus boundary. The existing fill-only preservation invoked
+the narrow exception: the RPC binds the gesture to the exact work ID and cover URL displayed in the
+browser, rechecks both after locking the personal book, appends an audited corpus option, and fills
+the canonical cover only when none exists. A changed binding or cover is refused and must be
+reviewed again from fresh state. The switch is unavailable when accepted-option state cannot be
+loaded and is otherwise off until the action succeeds. Accepted option URLs stay additive across
+authenticated metadata edits while a future reviewer-quorum model is designed; only deliberate
+service-role maintenance can remove one. Review never replaces an established default, and an
+ordinary reader's personal cover never crosses that corpus boundary. The existing fill-only preservation invoked
 before personal removal, merge deletion, or account deletion may still populate objective corpus
 gaps so the final source is not lost. `COVER_PUBLIC_URL` must remain unset or use that same origin; a
 different CDN origin is safely rejected until it has an explicit database-controlled trust

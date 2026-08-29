@@ -177,11 +177,13 @@ function Pill({ children, muted = false }: { children: ReactNode; muted?: boolea
 export function CorpusCoverReviewToggle({
   reviewed,
   loading,
+  unavailable,
   saving,
   onReview,
 }: {
   reviewed: boolean
   loading: boolean
+  unavailable: boolean
   saving: boolean
   onReview: () => void
 }) {
@@ -191,16 +193,22 @@ export function CorpusCoverReviewToggle({
         <div>
           <div className="text-[12.5px] font-semibold text-ink">Corpus cover review</div>
           <p className="mt-0.5 text-[11.5px] text-muted">
-            {reviewed
-              ? 'Reviewed and available as a shared cover option.'
-              : 'Off until an administrator explicitly reviews this cover. If the corpus has no cover, approval also makes this the default.'}
+            {unavailable
+              ? 'Review status is unavailable. Refresh before reviewing this cover.'
+              : reviewed
+                ? 'Reviewed and available as a shared cover option.'
+                : 'Off until an administrator explicitly reviews this cover. If the corpus has no cover, approval also makes this the default.'}
           </p>
         </div>
         <Switch
           checked={reviewed}
-          disabled={loading || saving || reviewed}
+          disabled={loading || unavailable || saving || reviewed}
           label={
-            reviewed ? 'Personal cover reviewed for corpus' : 'Review personal cover for corpus'
+            unavailable
+              ? 'Personal cover review status unavailable'
+              : reviewed
+                ? 'Personal cover reviewed for corpus'
+                : 'Review personal cover for corpus'
           }
           onChange={(next) => {
             if (next) onReview()
@@ -209,6 +217,20 @@ export function CorpusCoverReviewToggle({
       </div>
     </Surface>
   )
+}
+
+export function corpusCoverReviewIsUnavailable({
+  data,
+  isFetching,
+  isError,
+  fetchStatus,
+}: {
+  data: boolean | undefined
+  isFetching: boolean
+  isError: boolean
+  fetchStatus: 'fetching' | 'paused' | 'idle'
+}) {
+  return isError || fetchStatus === 'paused' || (data === undefined && !isFetching)
 }
 
 export function ProgressSlider({ book }: { book: Pick<Book, 'id' | 'progress'> }) {
@@ -314,8 +336,10 @@ function BookDetailScreen() {
   const levelPills = visibleLevelPills(book, profile?.hideIntensity ?? false)
   const [g0, g1] = subgenreGradient(book.subgenre, book.genre)
   const workKey = workKeyFor(book)
-  const householdWork = book.corpusWorkId
-    ? household.books.find((candidate) => candidate.id === book.corpusWorkId)
+  const corpusWorkId = book.corpusWorkId
+  const coverReviewUnavailable = corpusCoverReviewIsUnavailable(coverReview)
+  const householdWork = corpusWorkId
+    ? household.books.find((candidate) => candidate.id === corpusWorkId)
     : undefined
   const personalHouseholdShare = householdWork?.owners.find(
     (owner) => owner.bookId === book.id && owner.shared,
@@ -520,12 +544,19 @@ function BookDetailScreen() {
         />
       </div>
 
-      {isCorpusAdmin && book.cover ? (
+      {isCorpusAdmin && book.cover && corpusWorkId ? (
         <CorpusCoverReviewToggle
           reviewed={coverReview.data === true}
-          loading={coverReview.isLoading}
+          loading={coverReview.isFetching}
+          unavailable={coverReviewUnavailable}
           saving={reviewPersonalCover.isPending}
-          onReview={() => reviewPersonalCover.mutate(book.id)}
+          onReview={() =>
+            reviewPersonalCover.mutate({
+              bookId: book.id,
+              workId: corpusWorkId,
+              coverUrl: book.cover,
+            })
+          }
         />
       ) : null}
 

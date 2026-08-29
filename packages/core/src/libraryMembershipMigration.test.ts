@@ -21,6 +21,10 @@ const personalCoverProjectionMigration = readFileSync(
   ),
   'utf8',
 )
+const coverReviewReleaseGatesMigration = readFileSync(
+  join(__dirname, '../../../supabase/migrations/20260904010000_cover_review_release_gates.sql'),
+  'utf8',
+)
 
 function section(start: string, end: string): string {
   return sectionOf(migration, start, end)
@@ -326,5 +330,80 @@ describe('personal cover scope projection', () => {
     expect(personalCoverProjectionMigration).not.toContain('books_promote_admin_cover_after_insert')
     expect(personalCoverProjectionMigration).not.toContain('books_promote_admin_cover_after_update')
     expect(personalCoverProjectionMigration).not.toContain('returns trigger')
+  })
+})
+
+describe('cover-review forward release gates', () => {
+  it('repairs all six household table ACLs before granting only the intended capabilities', () => {
+    const normalized = coverReviewReleaseGatesMigration.toLowerCase().replace(/\s+/g, ' ').trim()
+
+    expect(normalized).toContain(
+      'revoke all privileges on table public.households, public.household_members, public.household_works, public.household_book_shares, public.household_work_enrichment, public.work_metadata_edits from public, anon, authenticated, service_role;',
+    )
+    expect(normalized).toContain(
+      'grant select on table public.households, public.household_members to authenticated;',
+    )
+    expect(normalized).toContain(
+      'grant all privileges on table public.households, public.household_members, public.household_works, public.household_book_shares, public.household_work_enrichment, public.work_metadata_edits to service_role;',
+    )
+    expect(coverReviewReleaseGatesMigration.match(/^grant .*table/gim)).toHaveLength(2)
+  })
+
+  it('retires the UUID-only review grant and binds the replacement to the locked work and URL', () => {
+    const normalized = coverReviewReleaseGatesMigration.toLowerCase().replace(/\s+/g, ' ').trim()
+    const review = sectionOf(
+      coverReviewReleaseGatesMigration,
+      'create function public.admin_review_personal_cover_for_corpus(',
+      'revoke all on function public.admin_review_personal_cover_for_corpus(uuid, uuid, text)',
+    )
+
+    expect(normalized).toContain(
+      'revoke all on function public.admin_review_personal_cover_for_corpus(uuid) from public, anon, authenticated, service_role;',
+    )
+    expect(review).toContain('p_expected_work uuid')
+    expect(review).toContain('p_expected_cover_url text')
+    expect(review).toMatch(
+      /from public\.profiles profile[\s\S]*?from public\.corpus_admins admin[\s\S]*?from public\.books book[\s\S]*?from public\.works work/,
+    )
+    expect(review).toContain('target_book.corpus_work_id is distinct from p_expected_work')
+    expect(review).toContain('target_book.cover_url is distinct from expected_cover')
+    expect(review).toContain("using errcode = '40001'")
+    const workLock = review.indexOf('from public.works work')
+    const isbnLock = review.indexOf('perform public.lock_library_isbns')
+    const bindingCheck = review.indexOf('public.book_corpus_binding_is_unambiguous')
+    expect(isbnLock).toBeGreaterThan(-1)
+    expect(workLock).toBeGreaterThan(isbnLock)
+    expect(bindingCheck).toBeGreaterThan(workLock)
+    expect(review).toContain('normalized_isbn := public.canonical_library_isbn(target_book.isbn)')
+    expect(review).toContain("normalized_isbn ~ '^[0-9]{13}$'")
+    expect(review).toContain('normalized_isbn = any(coalesce(target_work_isbns')
+    expect(review).toContain(
+      'target_book.corpus_work_id, target_book.title, author_name, normalized_isbn',
+    )
+    expect(normalized).toContain(
+      'grant execute on function public.admin_review_personal_cover_for_corpus(uuid, uuid, text) to authenticated;',
+    )
+  })
+
+  it('preserves accepted cover URLs at the shared authenticated write boundary', () => {
+    const guard = sectionOf(
+      coverReviewReleaseGatesMigration,
+      'create function public.preserve_authenticated_corpus_cover_options()',
+      'revoke all on function public.preserve_authenticated_corpus_cover_options()',
+    )
+
+    expect(guard).toContain('(select auth.uid()) is null')
+    expect(guard).toContain('old.cover_options')
+    expect(guard).toContain('new.cover_options')
+    expect(guard).toContain("proposed ->> 'url' = previous ->> 'url'")
+    expect(coverReviewReleaseGatesMigration).toContain(
+      'create trigger works_preserve_authenticated_cover_options',
+    )
+    expect(coverReviewReleaseGatesMigration).toContain(
+      'before update of cover_options on public.works',
+    )
+    expect(coverReviewReleaseGatesMigration).toContain(
+      'revoke all on function public.preserve_authenticated_corpus_cover_options()\n  from public, anon, authenticated, service_role;',
+    )
   })
 })

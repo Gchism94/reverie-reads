@@ -1,7 +1,7 @@
 -- Trusted eligible copy covers reach the household read model. Corpus publication is an explicit,
 -- audited administrator review action and never a side effect of a personal-book write.
 begin;
-select plan(27);
+select plan(33);
 
 insert into auth.users (
   id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
@@ -101,13 +101,25 @@ select ok(
   not has_function_privilege(
     'anon', 'public.admin_review_personal_cover_for_corpus(uuid)', 'EXECUTE'
   )
-  and has_function_privilege(
+  and not has_function_privilege(
     'authenticated', 'public.admin_review_personal_cover_for_corpus(uuid)', 'EXECUTE'
   )
   and not has_function_privilege(
     'service_role', 'public.admin_review_personal_cover_for_corpus(uuid)', 'EXECUTE'
   ),
-  'only authenticated callers can reach the administrator review boundary'
+  'the stale UUID-only administrator review boundary is unavailable to every API role'
+);
+select ok(
+  not has_function_privilege(
+    'anon', 'public.admin_review_personal_cover_for_corpus(uuid,uuid,text)', 'EXECUTE'
+  )
+  and has_function_privilege(
+    'authenticated', 'public.admin_review_personal_cover_for_corpus(uuid,uuid,text)', 'EXECUTE'
+  )
+  and not has_function_privilege(
+    'service_role', 'public.admin_review_personal_cover_for_corpus(uuid,uuid,text)', 'EXECUTE'
+  ),
+  'only authenticated callers can reach the exact-context administrator review boundary'
 );
 select is(
   (
@@ -323,9 +335,47 @@ select set_config(
   '{"sub":"a1111111-1111-4111-8111-111111111111","role":"authenticated","iss":"http://127.0.0.1:55321/auth/v1"}',
   true
 );
+select throws_ok(
+  $$select public.admin_review_personal_cover_for_corpus(
+    'e5555555-5555-4555-8555-555555555552',
+    'd4444444-4444-4444-8444-444444444443',
+    'http://127.0.0.1:55321/storage/v1/object/public/covers/u/a1111111-1111-4111-8111-111111111111/e5555555-5555-4555-8555-555555555552/adminone.webp'
+  )$$,
+  '40001',
+  'personal cover context changed before review; refresh and try again',
+  'review refuses when the personal book is no longer bound to the displayed corpus work'
+);
+select throws_ok(
+  $$select public.admin_review_personal_cover_for_corpus(
+    'e5555555-5555-4555-8555-555555555552',
+    'd4444444-4444-4444-8444-444444444442',
+    'https://books.google.com/books/content?id=stale-display'
+  )$$,
+  '40001',
+  'personal cover context changed before review; refresh and try again',
+  'review refuses when the personal cover differs from the one displayed to the administrator'
+);
+update public.books
+set isbn = '0306406152'
+where id = 'e5555555-5555-4555-8555-555555555552';
+select throws_ok(
+  $$select public.admin_review_personal_cover_for_corpus(
+    'e5555555-5555-4555-8555-555555555552',
+    'd4444444-4444-4444-8444-444444444442',
+    'http://127.0.0.1:55321/storage/v1/object/public/covers/u/a1111111-1111-4111-8111-111111111111/e5555555-5555-4555-8555-555555555552/adminone.webp'
+  )$$,
+  '40001',
+  'personal book ISBN is not established on the displayed corpus work; refresh after identity reconciliation',
+  'review canonicalizes ISBN-10 and refuses a fallback-only binding whose identity is unestablished'
+);
+update public.books
+set isbn = null
+where id = 'e5555555-5555-4555-8555-555555555552';
 select is(
   public.admin_review_personal_cover_for_corpus(
-    'e5555555-5555-4555-8555-555555555552'
+    'e5555555-5555-4555-8555-555555555552',
+    'd4444444-4444-4444-8444-444444444442',
+    'http://127.0.0.1:55321/storage/v1/object/public/covers/u/a1111111-1111-4111-8111-111111111111/e5555555-5555-4555-8555-555555555552/adminone.webp'
   )::text,
   'd4444444-4444-4444-8444-444444444442',
   'the explicit administrator review returns the bound corpus work'
@@ -363,6 +413,30 @@ select is(
   'the explicit administrator review is audited'
 );
 
+-- Reproduce the reviewed finding: a stale owner form omits the newly accepted option. The shared
+-- works trigger keeps the reviewed URL at the table boundary instead of silently retracting it.
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"a1111111-1111-4111-8111-111111111111","role":"authenticated","iss":"http://127.0.0.1:55321/auth/v1"}',
+  true
+);
+select public.edit_corpus_work_metadata(
+  'd4444444-4444-4444-8444-444444444442',
+  null, null, null, null, null, null, '{}', '{}',
+  'http://127.0.0.1:55321/storage/v1/object/public/covers/u/a1111111-1111-4111-8111-111111111111/e5555555-5555-4555-8555-555555555552/adminone.webp',
+  '[]'::jsonb, null, null, null
+);
+reset role;
+select is(
+  (
+    select jsonb_array_length(cover_options)
+    from public.works where id = 'd4444444-4444-4444-8444-444444444442'
+  ),
+  1,
+  'an authenticated stale metadata edit cannot retract an accepted corpus cover option'
+);
+
 set local role authenticated;
 select set_config(
   'request.jwt.claims',
@@ -370,7 +444,9 @@ select set_config(
   true
 );
 select public.admin_review_personal_cover_for_corpus(
-  'e5555555-5555-4555-8555-555555555552'
+  'e5555555-5555-4555-8555-555555555552',
+  'd4444444-4444-4444-8444-444444444442',
+  'http://127.0.0.1:55321/storage/v1/object/public/covers/u/a1111111-1111-4111-8111-111111111111/e5555555-5555-4555-8555-555555555552/adminone.webp'
 );
 reset role;
 select is(
@@ -378,6 +454,7 @@ select is(
     select count(*)::int from public.work_metadata_edits
     where work_id = 'd4444444-4444-4444-8444-444444444442'
       and editor_id = 'a1111111-1111-4111-8111-111111111111'
+      and not previous_value ? 'series'
   ),
   1,
   'reviewing the same exact cover again is idempotent'
@@ -420,7 +497,9 @@ select set_config(
   true
 );
 select public.admin_review_personal_cover_for_corpus(
-  'e5555555-5555-4555-8555-555555555553'
+  'e5555555-5555-4555-8555-555555555553',
+  'd4444444-4444-4444-8444-444444444442',
+  'http://127.0.0.1:55321/storage/v1/object/public/covers/u/a1111111-1111-4111-8111-111111111111/e5555555-5555-4555-8555-555555555553/admintwo.webp'
 );
 reset role;
 select is(
@@ -435,12 +514,46 @@ select is(
 set local role authenticated;
 select set_config(
   'request.jwt.claims',
+  '{"sub":"a1111111-1111-4111-8111-111111111111","role":"authenticated","iss":"http://127.0.0.1:55321/auth/v1"}',
+  true
+);
+select public.edit_corpus_work_metadata(
+  'd4444444-4444-4444-8444-444444444442',
+  null, null, null, null, null, null, '{}', '{}',
+  'http://127.0.0.1:55321/storage/v1/object/public/covers/u/a1111111-1111-4111-8111-111111111111/e5555555-5555-4555-8555-555555555552/adminone.webp',
+  (
+    select jsonb_agg(option order by ordinality desc)
+    from public.works work
+    cross join lateral jsonb_array_elements(work.cover_options) with ordinality options(option, ordinality)
+    where work.id = 'd4444444-4444-4444-8444-444444444442'
+      and ordinality = 2
+  ),
+  null, null, null
+);
+reset role;
+select is(
+  (
+    select string_agg(option ->> 'url', '|' order by ordinality)
+    from public.works work
+    cross join lateral jsonb_array_elements(work.cover_options)
+      with ordinality options(option, ordinality)
+    where work.id = 'd4444444-4444-4444-8444-444444444442'
+  ),
+  'http://127.0.0.1:55321/storage/v1/object/public/covers/u/a1111111-1111-4111-8111-111111111111/e5555555-5555-4555-8555-555555555553/admintwo.webp|http://127.0.0.1:55321/storage/v1/object/public/covers/u/a1111111-1111-4111-8111-111111111111/e5555555-5555-4555-8555-555555555552/adminone.webp',
+  'a stale authorized reorder keeps its submitted order and appends the omitted accepted option'
+);
+
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
   '{"sub":"b2222222-2222-4222-8222-222222222222","role":"authenticated","iss":"http://127.0.0.1:55321/auth/v1"}',
   true
 );
 select throws_ok(
   $$select public.admin_review_personal_cover_for_corpus(
-    'e5555555-5555-4555-8555-555555555551'
+    'e5555555-5555-4555-8555-555555555551',
+    'd4444444-4444-4444-8444-444444444441',
+    'https://books.google.com/books/content?id=trusted'
   )$$,
   '42501',
   'corpus administrator required',
@@ -454,7 +567,9 @@ select set_config(
 );
 select throws_ok(
   $$select public.admin_review_personal_cover_for_corpus(
-    'e5555555-5555-4555-8555-555555555551'
+    'e5555555-5555-4555-8555-555555555551',
+    'd4444444-4444-4444-8444-444444444441',
+    'https://books.google.com/books/content?id=trusted'
   )$$,
   'P0002',
   'active personal book not found',
@@ -476,7 +591,9 @@ insert into public.books (
 );
 select throws_ok(
   $$select public.admin_review_personal_cover_for_corpus(
-    'e5555555-5555-4555-8555-555555555554'
+    'e5555555-5555-4555-8555-555555555554',
+    'd4444444-4444-4444-8444-444444444443',
+    'https://attacker.example/not-ingested.jpg'
   )$$,
   '22023',
   'personal cover must use the reviewed cover-ingestion boundary',

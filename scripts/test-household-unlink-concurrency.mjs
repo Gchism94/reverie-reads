@@ -35,6 +35,7 @@ const HOUSEHOLD_ISBN_BARRIER_ID = 7
 const CORPUS_EDIT_TAG_BARRIER_ID = 8
 const CROSS_MEMBER_CORPUS_EDIT_BARRIER_ID = 9
 const PERSONAL_COVER_CORPUS_EDIT_BARRIER_ID = 10
+const COVER_REVIEW_IDENTITY_BARRIER_ID = 11
 
 const sqlScalar = (statement) =>
   execFileSync('psql', [DATABASE_URL, '-X', '-qAt', '-v', 'ON_ERROR_STOP=1', '-c', statement], {
@@ -578,7 +579,7 @@ async function exerciseOwnerCorpusEditTagLockOrdering(ownerId, ownerBookId) {
   }
 }
 
-async function exercisePersonalCoverAdminCorpusEditLockOrdering(ownerId, ownerBookId) {
+async function exercisePersonalCoverAdminCorpusEditLockOrdering(ownerId, memberId, ownerBookId) {
   const workId = sqlScalar(
     `select corpus_work_id from public.books where id = '${ownerBookId}'::uuid;`,
   )
@@ -587,6 +588,8 @@ async function exercisePersonalCoverAdminCorpusEditLockOrdering(ownerId, ownerBo
   const corpusEditor = new PsqlSession('personal-cover-corpus-worker')
   let barrierHeld = false
   let triggerInstalled = false
+  let identityTriggerInstalled = false
+  let identityIsbn = null
   let coverResult = null
   let corpusResult = null
 
@@ -661,12 +664,182 @@ async function exercisePersonalCoverAdminCorpusEditLockOrdering(ownerId, ownerBo
       'the personal cover remains personal after the serialized edits',
     )
     console.log('✓ personal cover writes do not invert administrator corpus-edit lock order')
+
+    const displayedCover = `https://books.google.com/books/content?id=displayed-${ownerBookId}`
+    const replacementCover = `https://books.google.com/books/content?id=replacement-${ownerBookId}`
+    sqlScalar(`update public.books
+      set cover_url = '${displayedCover}', cover_source = 'google'
+      where id = '${ownerBookId}'::uuid;`)
+    await controller.command(
+      `select pg_catalog.pg_advisory_lock(
+        ${BARRIER_CLASS}, ${PERSONAL_COVER_CORPUS_EDIT_BARRIER_ID}
+      );`,
+    )
+    barrierHeld = true
+
+    coverResult = coverEditor.command(
+      authenticatedPersonalWrite(
+        ownerId,
+        `update public.books
+         set cover_url = '${replacementCover}', cover_source = 'google'
+         where id = '${ownerBookId}'::uuid`,
+      ),
+    )
+    await waitForBlockedWorker(coverPid, 'personal cover replacement barrier')
+
+    corpusResult = corpusEditor.command(`
+      begin;
+      set local deadlock_timeout = '100ms';
+      set local role authenticated;
+      select set_config(
+        'request.jwt.claims',
+        '{"sub":"${ownerId}","role":"authenticated"}',
+        true
+      );
+      do $review$
+      begin
+        perform public.admin_review_personal_cover_for_corpus(
+          '${ownerBookId}'::uuid, '${workId}'::uuid, '${displayedCover}'
+        );
+        raise exception 'expected stale exact-cover review refusal';
+      exception when sqlstate '40001' then
+        null;
+      end;
+      $review$;
+      commit;
+      select 'stale-exact-cover-review-refused';
+    `)
+    await waitForBlockedWorker(corpusPid, 'exact-cover review waiting on personal book')
+
+    await controller.command(
+      `select pg_catalog.pg_advisory_unlock(
+        ${BARRIER_CLASS}, ${PERSONAL_COVER_CORPUS_EDIT_BARRIER_ID}
+      );`,
+    )
+    barrierHeld = false
+    assert.match(await coverResult, /personal-write-committed/, 'the newer personal cover commits')
+    coverResult = null
+    assert.match(
+      await corpusResult,
+      /stale-exact-cover-review-refused/,
+      'the waiting review refuses the cover that is no longer selected',
+    )
+    corpusResult = null
+    assert.equal(
+      sqlScalar(`select exists (
+        select 1 from public.works work
+        cross join lateral jsonb_array_elements(work.cover_options) option
+        where work.id = '${workId}'::uuid
+          and option ->> 'url' in ('${displayedCover}', '${replacementCover}')
+      );`),
+      'f',
+      'neither the stale nor replacement cover publishes without a fresh review gesture',
+    )
+    console.log('✓ exact-cover review waits for a personal edit and refuses stale browser context')
+
+    identityIsbn = isbn13Fixture()
+    sqlScalar(`
+      update public.books
+      set isbn = '${identityIsbn}', cover_url = '${replacementCover}', cover_source = 'google'
+      where id = '${ownerBookId}'::uuid;
+      create function public.cover_review_identity_barrier_fixture()
+      returns trigger language plpgsql security definer set search_path = '' as $fixture$
+      begin
+        if '${identityIsbn}' = any(new.isbns) then
+          perform pg_catalog.pg_advisory_xact_lock_shared(
+            ${BARRIER_CLASS}, ${COVER_REVIEW_IDENTITY_BARRIER_ID}
+          );
+        end if;
+        return new;
+      end;
+      $fixture$;
+      create trigger zz_cover_review_identity_barrier_fixture
+      before insert on public.works
+      for each row execute function public.cover_review_identity_barrier_fixture();
+    `)
+    identityTriggerInstalled = true
+    await controller.command(
+      `select pg_catalog.pg_advisory_lock(
+        ${BARRIER_CLASS}, ${COVER_REVIEW_IDENTITY_BARRIER_ID}
+      );`,
+    )
+    barrierHeld = true
+
+    coverResult = coverEditor.command(`
+      begin;
+      set local deadlock_timeout = '100ms';
+      set local role authenticated;
+      select set_config(
+        'request.jwt.claims',
+        '{"sub":"${memberId}","role":"authenticated"}',
+        true
+      );
+      select public.create_household_catalog_work(
+        'Competing ISBN identity ${ownerBookId}', 'Different Fixture', '${identityIsbn}', null, null
+      );
+      commit;
+      select 'competing-isbn-work-committed';
+    `)
+    await waitForBlockedWorker(coverPid, 'competing ISBN work creation barrier')
+
+    corpusResult = corpusEditor.command(`
+      begin;
+      set local deadlock_timeout = '100ms';
+      set local role authenticated;
+      select set_config(
+        'request.jwt.claims',
+        '{"sub":"${ownerId}","role":"authenticated"}',
+        true
+      );
+      do $review$
+      begin
+        perform public.admin_review_personal_cover_for_corpus(
+          '${ownerBookId}'::uuid, '${workId}'::uuid, '${replacementCover}'
+        );
+        raise exception 'expected unresolved ISBN identity refusal';
+      exception when sqlstate '40001' then
+        null;
+      end;
+      $review$;
+      commit;
+      select 'competing-isbn-review-refused';
+    `)
+    await waitForBlockedWorker(corpusPid, 'cover review waiting on canonical ISBN identity')
+
+    await controller.command(
+      `select pg_catalog.pg_advisory_unlock(
+        ${BARRIER_CLASS}, ${COVER_REVIEW_IDENTITY_BARRIER_ID}
+      );`,
+    )
+    barrierHeld = false
+    assert.match(
+      await coverResult,
+      /competing-isbn-work-committed/,
+      'the earlier competing ISBN identity commits',
+    )
+    coverResult = null
+    assert.match(
+      await corpusResult,
+      /competing-isbn-review-refused/,
+      'the waiting review refuses the now-conflicting corpus identity',
+    )
+    corpusResult = null
+    assert.equal(
+      sqlScalar(`select jsonb_array_length(cover_options)
+        from public.works where id = '${workId}'::uuid;`),
+      '0',
+      'the identity race publishes no cover to the stale fallback work',
+    )
+    console.log('✓ exact-cover review serializes and refuses a competing ISBN identity claim')
   } finally {
     if (barrierHeld) {
       await controller
         .command(
           `select pg_catalog.pg_advisory_unlock(
             ${BARRIER_CLASS}, ${PERSONAL_COVER_CORPUS_EDIT_BARRIER_ID}
+          );
+          select pg_catalog.pg_advisory_unlock(
+            ${BARRIER_CLASS}, ${COVER_REVIEW_IDENTITY_BARRIER_ID}
           );`,
         )
         .catch(() => {})
@@ -679,9 +852,22 @@ async function exercisePersonalCoverAdminCorpusEditLockOrdering(ownerId, ownerBo
         drop function if exists public.personal_cover_edit_barrier_fixture();
       `)
     }
+    if (identityTriggerInstalled) {
+      sqlScalar(`
+        drop trigger if exists zz_cover_review_identity_barrier_fixture on public.works;
+        drop function if exists public.cover_review_identity_barrier_fixture();
+      `)
+    }
     sqlScalar(`
-      update public.books set cover_url = null, cover_source = null
+      update public.books set isbn = null, cover_url = null, cover_source = null
       where id = '${ownerBookId}'::uuid;
+      delete from public.household_works household_work
+      using public.works work
+      where household_work.work_id = work.id and '${identityIsbn ?? ''}' = any(work.isbns);
+      delete from public.work_metadata_edits metadata_edit
+      using public.works work
+      where metadata_edit.work_id = work.id and '${identityIsbn ?? ''}' = any(work.isbns);
+      delete from public.works where '${identityIsbn ?? ''}' = any(isbns);
       delete from public.work_metadata_edits
       where work_id = '${workId}'::uuid and editor_id = '${ownerId}'::uuid;
       delete from public.corpus_admins where user_id = '${ownerId}'::uuid;
@@ -2394,7 +2580,7 @@ async function main() {
   })
   await exerciseWorkerFirstHouseholdAddLockOrdering(firstUserId, secondUserId)
   await exerciseOwnerCorpusEditTagLockOrdering(firstUserId, ownerBookId)
-  await exercisePersonalCoverAdminCorpusEditLockOrdering(firstUserId, ownerBookId)
+  await exercisePersonalCoverAdminCorpusEditLockOrdering(firstUserId, secondUserId, ownerBookId)
   await exerciseCrossMemberAdminCorpusEditLockOrdering(firstUserId, secondUserId, ownerBookId)
   await exerciseConcurrentRebindSuppression(firstUserId)
   await exerciseMovedTropeLockOrdering(firstUserId)

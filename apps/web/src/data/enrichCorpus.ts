@@ -173,9 +173,19 @@ export function useAdminReviewPersonalCoverForCorpus() {
   const queryClient = useQueryClient()
   return useMutation({
     meta: { action: 'Reviewing a personal cover for the corpus' },
-    mutationFn: async (bookId: string): Promise<string> => {
+    mutationFn: async ({
+      bookId,
+      workId,
+      coverUrl,
+    }: {
+      bookId: string
+      workId: string
+      coverUrl: string
+    }): Promise<string> => {
       const { data, error } = await supabase.rpc('admin_review_personal_cover_for_corpus', {
         p_book: bookId,
+        p_expected_work: workId,
+        p_expected_cover_url: coverUrl,
       })
       if (error) throw error
       return data as string
@@ -184,7 +194,10 @@ export function useAdminReviewPersonalCoverForCorpus() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['personal-cover-corpus-review'] }),
         queryClient.invalidateQueries({ queryKey: ['household'] }),
-        queryClient.invalidateQueries({ queryKey: ['works'] }),
+        queryClient.invalidateQueries({ queryKey: ['works-browse'] }),
+        queryClient.invalidateQueries({ queryKey: ['works-lookup'] }),
+        queryClient.invalidateQueries({ queryKey: ['works-lookup-isbns'] }),
+        queryClient.invalidateQueries({ queryKey: corpusEnrichmentCandidatesKey }),
       ])
     },
   })

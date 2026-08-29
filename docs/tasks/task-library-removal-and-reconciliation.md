@@ -1,15 +1,16 @@
 # Task: corpus-preserving library removal and owner reconciliation
 
-Status: **PR #367 integrated the independently reviewed household-only catalog boundary. The owner
-deployed `20260902010000`, received 51/51 true from the production report, and deployed the updated
-`covers` function. Production web remained held. Pre-web smoke exposed the personal-cover scope
-gap, and independent review of the first forward fix found three release blockers: unreviewed
-automatic administrator publication, arbitrary peer hotlinks, and inverted book/administrator lock
-order. The corrected local `20260903010000` keeps trusted eligible covers in Household, starts the
-administrator review switch off, publishes only after that explicit action, and uses the established
-corpus lock order. It requires re-review, integration, owner deployment, and the 55-row report before
-web deployment. The dry-run checksum remains unapprovable; backup, reconciliation write, and
-post-write smoke checks remain pending.**
+Status: **Production remains at the owner-deployed `20260902010000` plus the updated `covers`
+function; production web remains held. The local branch stacks the corrected
+`20260903010000` personal-cover projection and forward-only `20260904010000` release-gate repair
+on PR #367. Fresh review found that the first correction still allowed a stale review gesture,
+authenticated retraction of an accepted option, legacy table grants, dead cache invalidation, and a
+false actionable “off” state after a review-status error. The forward repair binds review to the
+displayed work and URL, preserves accepted options across authenticated edits, resets all six
+household table ACLs, invalidates the real caches, and fails the switch closed. Independent
+re-review found no remaining issue. Integration, owner deployment, and the expanded 71-row report
+remain required before web deployment. The private reconciliation dry-run checksum remains unapproved; backup,
+reconciliation write, and post-write smoke checks remain pending.**
 
 ## Production migration performance hotfix — 2026-08-26
 

@@ -1,11 +1,12 @@
 -- Owner-run, read-only verification for the membership/corpus rollout through the forward-only
--- 20260903010000 trusted personal-cover projection and explicit administrator review boundary.
+-- 20260904010000 exact-context cover review and forward ACL/accepted-option repair.
 --
 -- Paste this whole file into the production Supabase SQL Editor and run it. It returns catalog
 -- metadata and aggregate counts only: no titles, account ids, library rows, or private annotations.
 -- Every row must report ok = true before the private reconciliation dry run is approved.
--- Before 20260903010000 receives independent review and an owner-run deployment, its migration,
--- review-RPC and projection rows are expected blockers; do not approve a partial result.
+-- Before 20260904010000 receives independent review and an owner-run deployment, its migration,
+-- exact review RPC, accepted-option trigger, and ACL rows are expected blockers; do not approve a
+-- partial result.
 --
 -- This verifies CURRENT postconditions, not the historical migration event. Without a verified
 -- pre-migration snapshot it cannot prove that the backfill chose the same corpus identity each
@@ -18,11 +19,12 @@ with
 expected_migrations(version) as (
   values
     ('20260830010000'), ('20260831010000'), ('20260901010000'), ('20260902010000'),
-    ('20260903010000')
+    ('20260903010000'), ('20260904010000')
 ),
 expected_triggers(schema_name, table_name, trigger_name) as (
   values
     ('public', 'works', 'works_validate_isbn_assignment'),
+    ('public', 'works', 'works_preserve_authenticated_cover_options'),
     ('public', 'books', 'books_ensure_corpus_work'),
     ('public', 'books', 'books_validate_corpus_rebind'),
     ('public', 'household_work_enrichment', 'household_work_enrichment_set_updated_at'),
@@ -51,7 +53,11 @@ expected_functions(
     ('public.lock_library_book_owner_insert(uuid)', true, false, false, false),
     ('public.lock_library_book_owners_reconciliation(uuid[])', true, false, false, false),
     -- Authenticated reader/admin RPCs.
-    ('public.admin_review_personal_cover_for_corpus(uuid)', true, false, true, false),
+    -- Retained compatibility tombstone: the UUID-only form cannot bind the reviewed gesture.
+    ('public.admin_review_personal_cover_for_corpus(uuid)', true, false, false, false),
+    ('public.admin_review_personal_cover_for_corpus(uuid,uuid,text)', true, false, true, false),
+    -- Trigger-only accepted-option guard: no API role calls it directly.
+    ('public.preserve_authenticated_corpus_cover_options()', false, false, false, false),
     ('public.add_personal_book_to_household(uuid)', true, false, true, false),
     ('public.remove_personal_book_from_household(uuid)', true, false, true, false),
     ('public.remove_household_work(uuid)', true, false, true, false),
@@ -314,6 +320,57 @@ table_privilege_checks as (
       and pg_catalog.has_table_privilege('service_role', 'public.work_tropes', 'update')
       and pg_catalog.has_table_privilege('service_role', 'public.work_tropes', 'delete')
 ),
+household_table_privilege_checks as (
+  select
+    'table privilege'::text as area,
+    format('public.%s', expected.table_name) as invariant,
+    format(
+      'anon S=f I=f U=f D=f; authenticated S=%s I=f U=f D=f; service_role S=t I=t U=t D=t',
+      expected.auth_select
+    ) as expected,
+    format(
+      'anon S=%s I=%s U=%s D=%s; authenticated S=%s I=%s U=%s D=%s; service_role S=%s I=%s U=%s D=%s',
+      pg_catalog.has_table_privilege('anon', format('public.%I', expected.table_name), 'select'),
+      pg_catalog.has_table_privilege('anon', format('public.%I', expected.table_name), 'insert'),
+      pg_catalog.has_table_privilege('anon', format('public.%I', expected.table_name), 'update'),
+      pg_catalog.has_table_privilege('anon', format('public.%I', expected.table_name), 'delete'),
+      pg_catalog.has_table_privilege('authenticated', format('public.%I', expected.table_name), 'select'),
+      pg_catalog.has_table_privilege('authenticated', format('public.%I', expected.table_name), 'insert'),
+      pg_catalog.has_table_privilege('authenticated', format('public.%I', expected.table_name), 'update'),
+      pg_catalog.has_table_privilege('authenticated', format('public.%I', expected.table_name), 'delete'),
+      pg_catalog.has_table_privilege('service_role', format('public.%I', expected.table_name), 'select'),
+      pg_catalog.has_table_privilege('service_role', format('public.%I', expected.table_name), 'insert'),
+      pg_catalog.has_table_privilege('service_role', format('public.%I', expected.table_name), 'update'),
+      pg_catalog.has_table_privilege('service_role', format('public.%I', expected.table_name), 'delete')
+    ) as observed,
+    not (
+      pg_catalog.has_table_privilege('anon', format('public.%I', expected.table_name), 'select')
+      or pg_catalog.has_table_privilege('anon', format('public.%I', expected.table_name), 'insert')
+      or pg_catalog.has_table_privilege('anon', format('public.%I', expected.table_name), 'update')
+      or pg_catalog.has_table_privilege('anon', format('public.%I', expected.table_name), 'delete')
+    )
+      and pg_catalog.has_table_privilege(
+        'authenticated', format('public.%I', expected.table_name), 'select'
+      ) = expected.auth_select
+      and not (
+        pg_catalog.has_table_privilege('authenticated', format('public.%I', expected.table_name), 'insert')
+        or pg_catalog.has_table_privilege('authenticated', format('public.%I', expected.table_name), 'update')
+        or pg_catalog.has_table_privilege('authenticated', format('public.%I', expected.table_name), 'delete')
+      )
+      and pg_catalog.has_table_privilege('service_role', format('public.%I', expected.table_name), 'select')
+      and pg_catalog.has_table_privilege('service_role', format('public.%I', expected.table_name), 'insert')
+      and pg_catalog.has_table_privilege('service_role', format('public.%I', expected.table_name), 'update')
+      and pg_catalog.has_table_privilege('service_role', format('public.%I', expected.table_name), 'delete')
+      as ok
+  from (values
+    ('households', true),
+    ('household_members', true),
+    ('household_works', false),
+    ('household_book_shares', false),
+    ('household_work_enrichment', false),
+    ('work_metadata_edits', false)
+  ) expected(table_name, auth_select)
+),
 rls_checks as (
   select
     'row-level security'::text as area,
@@ -321,7 +378,16 @@ rls_checks as (
     'enabled'::text as expected,
     case when c.oid is null then 'missing' else c.relrowsecurity::text end as observed,
     coalesce(c.relrowsecurity, false) as ok
-  from (values ('corpus_admins'), ('work_tropes')) as e(table_name)
+  from (values
+    ('corpus_admins'),
+    ('work_tropes'),
+    ('households'),
+    ('household_members'),
+    ('household_works'),
+    ('household_book_shares'),
+    ('household_work_enrichment'),
+    ('work_metadata_edits')
+  ) as e(table_name)
   left join pg_catalog.pg_class c
     on c.relnamespace = 'public'::regnamespace and c.relname = e.table_name
 ),
@@ -333,6 +399,7 @@ checks as (
   union all select * from function_checks
   union all select * from owner_fence_checks
   union all select * from table_privilege_checks
+  union all select * from household_table_privilege_checks
   union all select * from rls_checks
 )
 select area, invariant, expected, observed, ok

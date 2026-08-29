@@ -1,14 +1,15 @@
 # Task: corpus-administrator enrichment and durable corpus metadata
 
-Status: **PR #367 integrated the reviewed household-only catalog boundary. The owner deployed
-`20260902010000`, verified 51/51 production invariants, and deployed the updated `covers` function;
-production web stayed held. Pre-web smoke exposed the personal-cover scope omission. Independent
-review of the first `20260903010000` candidate then found three release blockers: implicit
-publication of unreviewed administrator covers, arbitrary peer hotlinks in the household payload,
-and a book-lock/administrator-lock inversion. The local correction removes automatic publication,
-adds an explicit administrator review switch that starts off, filters peer covers through the
-hosted/Google allowlist, and follows profile → administrator → book → work locking. Re-review,
-integration, owner deployment, the 55-row report, and final web smoke remain required.**
+Status: **PR #367 and owner deployment stop at `20260902010000` plus the updated `covers`
+function; production web stayed held. The local branch stacks corrected `20260903010000` behavior
+and the forward-only `20260904010000` release-gate repair. Fresh review of the first correction
+found a stale exact-cover approval race, authenticated accepted-option retraction, six incomplete
+table ACLs, dead cache invalidation, and a fail-open review-status error state. The current repair
+binds review to the locked work and URL, preserves accepted options across authenticated edits,
+resets the table ACLs, invalidates every real consumer, and disables the switch when status is
+unknown. Independent re-review found no remaining issue. Integration, owner deployment, the
+71-row report, and final web smoke remain required. Production has not received either local
+migration.**
 
 ## Objective
 
@@ -275,6 +276,49 @@ was changed. The candidate is not deployable until the refreshed independent rev
   zero-request assertion for an arbitrary peer hotlink.
 - TypeScript, ESLint, Prettier, production build, and `git diff --check` passed. No production data,
   credentials, deployments, or remote repository state were touched.
+
+### Fresh release review and forward correction — 2026-08-29
+
+The next independent review accepted the original peer-cover and lock-order corrections but found
+five remaining release gates. The UUID-only review RPC approved whichever cover was current when it
+finally locked the book; the shared editor could replace `cover_options` with a stale snapshot and
+retract a newly accepted option; review success invalidated an unused `['works']` cache namespace;
+six household tables had never reset legacy platform grants; and a failed review-state query showed
+an actionable “off” switch.
+
+`20260904010000` is a forward-only repair because neither the already-deployed
+`20260902010000` nor either `20260903010000` candidate may be rewritten. It revokes the UUID-only
+review signature, exposes an exact `(book, expected work, expected cover URL)` replacement, and
+rechecks both expected values after the established profile → administrator → book lock sequence.
+An authenticated works trigger preserves every accepted option URL omitted by a stale writer while
+still allowing validated additions, same-URL provenance refreshes, and complete-set reordering;
+service-role maintenance remains the explicit governance escape hatch. The same migration resets
+PUBLIC, anon, authenticated, and service-role table grants before restoring authenticated SELECT
+only on household roster tables and service-role ALL on all six implementation tables.
+
+Verification completed before the final re-review:
+
+- a clean rebuild applied every migration through `20260904010000`; full pgTAP passed 827
+  assertions across 31 files, including a 72-operation dirty-ACL fixture and 33 cover-scope
+  assertions;
+- both original rollback-only proof scripts now stop at the retired RPC privilege boundary, while
+  the replacement regression refuses stale work/URL context and preserves a reviewed option from
+  the exact stale editor call;
+- the deterministic concurrency harness passed 25 scenarios, including a queued review that waits
+  for a concurrent personal-cover update and then refuses the stale browser context, plus a
+  competing ISBN identity claim that must win before review can publish;
+- the bounded 25,005-work/5,012-book migration fixture passed its 20-second per-statement timeout,
+  bound all 5,012 books, and retained the mixed-ISBN reconciliation refusal;
+- the owner-run local report returned 71/71 true; core and web unit suites passed 2,438 and 656
+  assertions; TypeScript, ESLint, Prettier, production build, and `git diff --check` passed;
+- the full Playwright matrix ran with one worker and zero retries: 224 passed and 10 expected
+  project-specific cases skipped, including desktop and mobile household-only add, personal
+  adoption, hostile peer-cover withholding, and explicit administrator review flows;
+- a fresh independent bypass review of the final candidate found no remaining issue.
+
+No production data or credentials were accessed, and no migration, function, web, remote branch,
+or pull-request state was changed. The owner-run deployment and smoke sequence remains blocked on
+review, integration, and an in-sync clean `main`.
 
 ## Local verification — refreshed 2026-08-28
 
