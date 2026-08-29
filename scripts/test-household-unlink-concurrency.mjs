@@ -745,6 +745,11 @@ async function exerciseCrossMemberAdminCorpusEditLockOrdering(ownerId, memberId,
     }
     sqlScalar(`
       delete from public.book_tropes where book_id = '${memberBookId}'::uuid;
+      delete from public.work_tropes
+      where work_id = '${workId}'::uuid
+        and trope_id = '${tropeId}'::uuid
+        and added_by = '${memberId}'::uuid
+        and source_scope = 'personal';
       delete from public.books where id = '${memberBookId}'::uuid;
       delete from public.corpus_admins where user_id = '${memberId}'::uuid;
       delete from public.work_metadata_edits
