@@ -277,6 +277,11 @@ test('scope controls remain available through personal and household loading fai
     await householdGate
     await route.fulfill({ status: 500, json: { message: 'forced household failure' } })
   })
+  await page.goto('/library')
+  await expect(page.locator('[data-testid="persistent-add"]:visible')).toHaveAttribute(
+    'aria-label',
+    'Add a book',
+  )
   await page.goto('/library?scope=household')
   await expect(page.getByText('Loading the household library…')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Personal' })).toBeVisible()
@@ -455,6 +460,193 @@ test('two linked personal libraries appear together without exposing personal co
   await expect(page).toHaveURL(/\/library\?scope=household$/)
 })
 
+test('persistent Add creates a household-only work and explicit adoption updates one personal copy', async ({
+  page,
+}, testInfo) => {
+  await signIn(page, owner.session)
+  if (!householdId) {
+    householdId = await okData(
+      admin.rpc('link_household', {
+        p_name: `Household Library ${projectName}`,
+        p_owner: owner.uid,
+        p_members: [member.uid],
+      }),
+      'household-only browser household link',
+    )
+  }
+  await page.goto('/library?scope=household')
+  const title = `Household Only Flow ${projectName}`
+  let workId = ''
+  let personalBookId = ''
+  let personalSeriesId = ''
+  let targetSeriesId = ''
+
+  try {
+    const persistentAdd = page.locator('[data-testid="persistent-add"]:visible')
+    await expect(persistentAdd).toHaveAttribute('aria-label', 'Add to household')
+    await persistentAdd.click()
+    await expect(page).toHaveURL(/\/add\?scope=household$/)
+    await expect(page.getByRole('heading', { name: 'Add to household' })).toBeVisible()
+
+    await page.getByLabel('Search for a book').fill(title)
+    await page.getByRole('button', { name: 'Add manually' }).click()
+    await page.getByLabel('Author').fill('Flow Reviewer')
+    await page.getByRole('button', { name: 'Create shared record and add' }).click()
+    await expect(page).toHaveURL(/\/library\?scope=household$/)
+    const householdOnlyCard = page.getByRole('button', {
+      name: `View ${title} in the household library`,
+    })
+    await expect(householdOnlyCard).toBeVisible()
+
+    const work = await okData(
+      admin.from('works').select('id').eq('title', title).single(),
+      'household-only browser work read',
+    )
+    workId = work.id
+    expect(
+      await ok(
+        admin.from('books').select('id').eq('corpus_work_id', workId),
+        'household-only browser personal-copy check',
+      ),
+    ).toHaveLength(0)
+
+    await householdOnlyCard.click()
+    const detail =
+      testInfo.project.name === 'mobile'
+        ? page.getByRole('dialog', { name: /household details/i })
+        : page.locator('aside[aria-label="Household book details"]')
+    await detail.getByText('Edit shared cover, series, genre, and publication').click()
+    await detail.getByLabel('Shared series', { exact: true }).fill('Reviewed Shared Cycle')
+    await detail.getByLabel('Shared series position', { exact: true }).fill('2.5')
+    await detail.getByLabel('Shared series length', { exact: true }).fill('5')
+    await detail.getByLabel('Shared series status', { exact: true }).selectOption('ongoing')
+    await detail.getByLabel('Shared primary genre', { exact: true }).selectOption('fantasy')
+    await detail.getByLabel('Shared primary subgenre', { exact: true }).fill('epic fantasy')
+    await detail.getByLabel('Shared publication year', { exact: true }).fill('2029')
+    await detail.getByRole('button', { name: 'Save shared details' }).click()
+    await expect
+      .poll(async () => {
+        const row = await okData(
+          admin
+            .from('works')
+            .select('series, position, series_count, status, genre, pub_y')
+            .eq('id', workId)
+            .single(),
+          'household-only browser corpus edit read',
+        )
+        return `${row.series}|${row.position}|${row.series_count}|${row.status}|${row.genre}|${row.pub_y}`
+      })
+      .toBe('Reviewed Shared Cycle|2.5|5|ongoing|fantasy|2029')
+    await expect(detail).toContainText('Reviewed Shared Cycle · #2.5')
+    await expect(detail.getByRole('definition').filter({ hasText: /^Fantasy$/ })).toBeVisible()
+    await expect(detail.getByRole('definition').filter({ hasText: /^2029$/ })).toBeVisible()
+
+    const personal = await okData(
+      admin
+        .from('books')
+        .insert({
+          owner_id: owner.uid,
+          corpus_work_id: workId,
+          title,
+          author_first: 'Flow',
+          author_last: 'Reviewer',
+          authors_display: 'Flow Reviewer',
+          series: 'Former Personal Cycle',
+          position: 1,
+          series_count: 3,
+          status: 'ongoing',
+          genre: 'literary',
+          ownership: 'unowned',
+          read_status: 'unset',
+        })
+        .select('id')
+        .single(),
+      'household-only browser personal fixture insert',
+    )
+    personalBookId = personal.id
+    const personalSeries = await okData(
+      admin
+        .from('series')
+        .insert({ owner_id: owner.uid, name: 'Former Personal Cycle', status: 'ongoing' })
+        .select('id')
+        .single(),
+      'household-only browser series fixture insert',
+    )
+    personalSeriesId = personalSeries.id
+    const targetSeries = await okData(
+      admin
+        .from('series')
+        .insert({ owner_id: owner.uid, name: 'Reviewed Shared Cycle', status: 'ongoing' })
+        .select('id')
+        .single(),
+      'household-only browser target series fixture insert',
+    )
+    targetSeriesId = targetSeries.id
+    await ok(
+      admin.from('series_entries').insert({
+        series_id: personalSeriesId,
+        owner_id: owner.uid,
+        position: 1,
+        title,
+        author: 'Flow Reviewer',
+        book_id: personalBookId,
+        source: 'manual',
+        user_edited: true,
+      }),
+      'household-only browser series entry fixture insert',
+    )
+
+    await page.goto(`/book/${personalBookId}`)
+    await expect(page.getByRole('button', { name: 'Use shared details' })).toBeVisible()
+    page.once('dialog', (dialog) => dialog.accept())
+    await page.getByRole('button', { name: 'Use shared details' }).click()
+    await expect
+      .poll(async () => {
+        const row = await okData(
+          admin
+            .from('books')
+            .select('series, position, series_count, status, genre, pub_y')
+            .eq('id', personalBookId)
+            .single(),
+          'household-only browser adoption read',
+        )
+        return `${row.series}|${row.position}|${row.series_count}|${row.status}|${row.genre}|${row.pub_y}`
+      })
+      .toBe('Reviewed Shared Cycle|2.5|5|ongoing|fantasy|2029')
+    await expect(page.getByRole('button', { name: 'Use shared details' })).toHaveCount(0)
+    await expect(page.getByText('Your copy already matches the shared details.')).toBeVisible()
+    await expect(page.getByText('Reviewed Shared Cycle', { exact: false }).first()).toBeVisible()
+    const retiredSeriesEntry = await okData(
+      admin
+        .from('series_entries')
+        .select('book_id, removed_at, user_edited')
+        .eq('series_id', personalSeriesId)
+        .single(),
+      'household-only browser retired series entry read',
+    )
+    expect(retiredSeriesEntry).toMatchObject({ book_id: null, user_edited: true })
+    expect(retiredSeriesEntry.removed_at).not.toBeNull()
+  } finally {
+    if (personalBookId)
+      await ok(admin.from('books').delete().eq('id', personalBookId), 'flow book cleanup')
+    if (personalSeriesId)
+      await ok(admin.from('series').delete().eq('id', personalSeriesId), 'flow series cleanup')
+    if (targetSeriesId)
+      await ok(admin.from('series').delete().eq('id', targetSeriesId), 'flow target series cleanup')
+    if (workId) {
+      await ok(
+        admin.from('household_works').delete().eq('work_id', workId),
+        'flow household membership cleanup',
+      )
+      await ok(
+        admin.from('work_metadata_edits').delete().eq('work_id', workId),
+        'flow audit cleanup',
+      )
+      await ok(admin.from('works').delete().eq('id', workId), 'flow work cleanup')
+    }
+  }
+})
+
 test('the second reader gets the same household view with their own identity marked', async ({
   page,
 }, testInfo) => {
@@ -474,6 +666,7 @@ test('the second reader gets the same household view with their own identity mar
     `Active copies: ${owner.displayName}, ${member.displayName} (you)`,
   )
   await expect(detail.getByRole('link')).toHaveCount(0)
+  await expect(detail.getByText('Edit shared cover, series, genre, and publication')).toHaveCount(0)
   if (seeded) {
     await expect(detail).toContainText(seeded.sentinels.tag)
     await expect(detail).toContainText(seeded.sentinels.trope)

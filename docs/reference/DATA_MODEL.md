@@ -434,13 +434,28 @@ the durable owner of shared artwork. The administrator corpus sweep re-ingests t
 image under `w/{work}/`, and only a real object on that path (or an allowlisted Google Books
 display-only URL) is accepted by the corpus completion RPC. Request Host headers are never trusted.
 Existing curated external options may be retained or selected, but arbitrary new remote URLs cannot
-be introduced by a personal edit or `update_corpus_work_metadata`. `COVER_PUBLIC_URL` must remain
-unset or use that same origin; a different CDN origin is safely rejected until it has an explicit
-database-controlled trust configuration. Membership and work eligibility are rechecked after the
-row locks in every household/corpus mutation so a concurrent unlink wins in the safe direction.
+be introduced by `edit_corpus_work_metadata`. Routine edits to an active personal row remain
+personal and never publish a corpus cover implicitly. The existing fill-only preservation invoked
+before personal removal, merge deletion, or account deletion may still populate objective corpus
+gaps so the final source is not lost. `COVER_PUBLIC_URL` must remain unset or use that same origin; a
+different CDN origin is safely rejected until it has an explicit database-controlled trust
+configuration. Membership and work eligibility are rechecked after the row locks in every
+household/corpus mutation so a concurrent unlink wins in the safe direction.
 Personal removal is a soft archive and cannot remove the household or corpus row. Household removal
 cannot remove personal or corpus rows and is refused while any active owned personal copy requires
 membership. The legacy `household_library_books()` RPC remains only for staged-deploy compatibility.
+
+An existing corpus work can be added directly to `household_works` without creating a personal
+`books` row. An active member may create a missing attributed provisional `works` row, matching the
+authority already available through a personal Add; ambiguous ISBN or title/full-author identity is
+refused. An allowlisted Google result may be retained as a display-only cover at creation. A
+Hardcover result is stored only after the existing ingestion boundary creates a corpus-owned
+`w/{work}/` object, and that path is limited to a household owner or corpus administrator for the
+exact work. Editing an existing corpus work remains limited to the same roles; the editor may select
+an already-reviewed cover option. Corpus edits do not rewrite linked personal rows. A personal owner
+may explicitly call `adopt_corpus_work_metadata` to copy shared series (including the reviewed
+length/status tuple), genre, cover, and publication details; title/contributors, ISBN, possession,
+reading state, rating, and private annotations remain untouched.
 
 Membership linking/unlinking remains service-role, owner-run, dry-run-first operation through
 `link_household` and `unlink_household_member`. Runtime client mutations use narrow authenticated

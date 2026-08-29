@@ -30,6 +30,10 @@ const ISBN_BARRIER_ID = 2
 const RECONCILIATION_INSERT_BARRIER_ID = 3
 const RECONCILIATION_ROSTER_BARRIER_ID = 4
 const RECONCILIATION_LATE_INSERT_BARRIER_ID = 5
+const HOUSEHOLD_ADD_BARRIER_ID = 6
+const HOUSEHOLD_ISBN_BARRIER_ID = 7
+const CORPUS_EDIT_TAG_BARRIER_ID = 8
+const CROSS_MEMBER_CORPUS_EDIT_BARRIER_ID = 9
 
 const sqlScalar = (statement) =>
   execFileSync('psql', [DATABASE_URL, '-X', '-qAt', '-v', 'ON_ERROR_STOP=1', '-c', statement], {
@@ -192,11 +196,11 @@ const authenticatedCall = (userId, statement) => `
   begin
     begin
       ${statement};
-    exception when sqlstate '40001' then
+    exception when sqlstate '40001' or sqlstate 'P0002' then
       rejected := true;
     end;
     if not rejected then
-      raise exception 'expected serialization refusal after concurrent membership revocation';
+      raise exception 'expected safe refusal after concurrent membership revocation';
     end if;
   end;
   $race$;
@@ -358,6 +362,402 @@ async function relinkMember(ownerId, memberId) {
   }
 }
 
+async function exerciseWorkerFirstHouseholdAddLockOrdering(ownerId, memberId) {
+  const workId = randomUUID()
+  const suffix = randomUUID()
+  const controller = new PsqlSession('household-add-controller')
+  const worker = new PsqlSession('household-add-worker')
+  const revoker = new PsqlSession('household-add-revoker')
+  let barrierHeld = false
+  let workerResult = null
+  let revokerResult = null
+
+  try {
+    sqlScalar(`
+      drop trigger if exists household_add_barrier_fixture on public.household_works;
+      drop function if exists public.household_add_barrier_fixture();
+      insert into public.works (id, work_key, title, author_text, contributors, status)
+      values (
+        '${workId}'::uuid,
+        'worker-first-household-add-${suffix}',
+        'Worker first household add ${suffix}',
+        'Concurrent Fixture',
+        '[{"name":"Concurrent Fixture","role":"author","position":0}]'::jsonb,
+        'standalone'
+      );
+      create function public.household_add_barrier_fixture()
+      returns trigger
+      language plpgsql
+      set search_path = ''
+      as $fixture$
+      begin
+        if new.work_id = '${workId}'::uuid then
+          perform pg_catalog.pg_advisory_xact_lock_shared(
+            ${BARRIER_CLASS}, ${HOUSEHOLD_ADD_BARRIER_ID}
+          );
+        end if;
+        return new;
+      end;
+      $fixture$;
+      create trigger household_add_barrier_fixture
+        before insert on public.household_works
+        for each row execute function public.household_add_barrier_fixture();
+    `)
+
+    await controller.command(
+      `select pg_catalog.pg_advisory_lock(${BARRIER_CLASS}, ${HOUSEHOLD_ADD_BARRIER_ID});`,
+    )
+    barrierHeld = true
+    const workerPid = Number(await worker.command('select pg_backend_pid();'))
+    const revokerPid = Number(await revoker.command('select pg_backend_pid();'))
+
+    workerResult = worker.command(
+      authenticatedPersonalWrite(
+        memberId,
+        `select public.add_corpus_work_to_household('${workId}'::uuid)`,
+      ),
+    )
+    await waitForBlockedWorker(workerPid, 'worker-first household add barrier')
+
+    revokerResult = revoker.command(`
+      begin;
+      set local role service_role;
+      select public.unlink_household_member('${memberId}'::uuid, '${householdId}'::uuid);
+      reset role;
+      commit;
+      select 'member-unlinked';
+    `)
+    await waitForBlockedWorker(revokerPid, 'worker-first household unlink')
+
+    await controller.command(
+      `select pg_catalog.pg_advisory_unlock(${BARRIER_CLASS}, ${HOUSEHOLD_ADD_BARRIER_ID});`,
+    )
+    barrierHeld = false
+    assert.match(await workerResult, /personal-write-committed/, 'the earlier add commits')
+    assert.match(
+      await revokerResult,
+      /member-unlinked/,
+      'the later unlink commits without deadlock',
+    )
+    assert.equal(
+      sqlScalar(
+        `select count(*) from public.household_members where user_id = '${memberId}'::uuid;`,
+      ),
+      '0',
+      'the serialized unlink removes the member after the add',
+    )
+    assert.equal(
+      sqlScalar(`
+        select count(*) from public.household_works
+        where household_id = '${householdId}'::uuid and work_id = '${workId}'::uuid
+          and removed_at is null;
+      `),
+      '1',
+      'the completed household-only add remains collective after that member leaves',
+    )
+    console.log('✓ worker-first household add and unlink follow profile-first lock ordering')
+    await relinkMember(ownerId, memberId)
+  } finally {
+    if (barrierHeld) {
+      await controller
+        .command(
+          `select pg_catalog.pg_advisory_unlock(${BARRIER_CLASS}, ${HOUSEHOLD_ADD_BARRIER_ID});`,
+        )
+        .catch(() => {})
+    }
+    await Promise.allSettled([workerResult, revokerResult])
+    await Promise.allSettled([controller.close(), worker.close(), revoker.close()])
+    sqlScalar(`
+      drop trigger if exists household_add_barrier_fixture on public.household_works;
+      drop function if exists public.household_add_barrier_fixture();
+      delete from public.household_works where work_id = '${workId}'::uuid;
+      delete from public.works where id = '${workId}'::uuid;
+    `)
+  }
+}
+
+async function exerciseOwnerCorpusEditTagLockOrdering(ownerId, ownerBookId) {
+  const workId = sqlScalar(
+    `select corpus_work_id from public.books where id = '${ownerBookId}'::uuid;`,
+  )
+  const controller = new PsqlSession('corpus-edit-tag-controller')
+  const tagger = new PsqlSession('corpus-edit-tag-worker')
+  const editor = new PsqlSession('corpus-edit-owner-worker')
+  let barrierHeld = false
+  let triggerInstalled = false
+  let tagResult = null
+  let editResult = null
+
+  try {
+    sqlScalar(`
+      create function public.corpus_edit_tag_barrier_fixture()
+      returns trigger language plpgsql security definer set search_path = '' as $fixture$
+      begin
+        if new.id = '${ownerBookId}'::uuid then
+          perform pg_catalog.pg_advisory_xact_lock_shared(
+            ${BARRIER_CLASS}, ${CORPUS_EDIT_TAG_BARRIER_ID}
+          );
+        end if;
+        return new;
+      end;
+      $fixture$;
+      create trigger zz_corpus_edit_tag_barrier_fixture
+      before update of tags on public.books
+      for each row execute function public.corpus_edit_tag_barrier_fixture();
+    `)
+    triggerInstalled = true
+    await controller.command(
+      `select pg_catalog.pg_advisory_lock(${BARRIER_CLASS}, ${CORPUS_EDIT_TAG_BARRIER_ID});`,
+    )
+    barrierHeld = true
+    const taggerPid = Number(await tagger.command('select pg_backend_pid();'))
+    const editorPid = Number(await editor.command('select pg_backend_pid();'))
+
+    tagResult = tagger.command(
+      authenticatedPersonalWrite(
+        ownerId,
+        `update public.books set tags = array['corpus-edit-lock-order']
+         where id = '${ownerBookId}'::uuid`,
+      ),
+    )
+    await waitForBlockedWorker(taggerPid, 'personal tag pre-trigger barrier')
+
+    editResult = editor.command(
+      authenticatedPersonalWrite(
+        ownerId,
+        `select public.edit_corpus_work_metadata(
+           work.id, work.series, work.position, work.series_count, work.status,
+           'fantasy', work.subgenre, array['fantasy'], work.subgenres,
+           work.cover_url, work.cover_options, work.pub_y, work.pub_m, work.pub_d
+         ) from public.works work where work.id = '${workId}'::uuid`,
+      ),
+    )
+    await waitForBlockedWorker(editorPid, 'owner corpus edit book-first lock')
+
+    await controller.command(
+      `select pg_catalog.pg_advisory_unlock(${BARRIER_CLASS}, ${CORPUS_EDIT_TAG_BARRIER_ID});`,
+    )
+    barrierHeld = false
+    assert.match(await tagResult, /personal-write-committed/, 'the personal tag update commits')
+    tagResult = null
+    assert.match(await editResult, /personal-write-committed/, 'the owner corpus edit commits')
+    editResult = null
+    assert.equal(
+      sqlScalar(`select array_to_string(tags, ',') from public.books
+        where id = '${ownerBookId}'::uuid;`),
+      'corpus-edit-lock-order',
+      'the serialized personal tag edit is preserved',
+    )
+    assert.equal(
+      sqlScalar(`select genre from public.works where id = '${workId}'::uuid;`),
+      'fantasy',
+      'the serialized owner corpus edit is preserved',
+    )
+    console.log('✓ owner corpus edit prelocks personal books before household membership')
+  } finally {
+    if (barrierHeld) {
+      await controller
+        .command(
+          `select pg_catalog.pg_advisory_unlock(${BARRIER_CLASS}, ${CORPUS_EDIT_TAG_BARRIER_ID});`,
+        )
+        .catch(() => {})
+    }
+    await Promise.allSettled([tagResult, editResult])
+    await Promise.allSettled([controller.close(), tagger.close(), editor.close()])
+    if (triggerInstalled) {
+      sqlScalar(`
+        drop trigger if exists zz_corpus_edit_tag_barrier_fixture on public.books;
+        drop function if exists public.corpus_edit_tag_barrier_fixture();
+      `)
+    }
+    sqlScalar(`
+      delete from public.work_metadata_edits
+      where work_id = '${workId}'::uuid and editor_id = '${ownerId}'::uuid;
+    `)
+  }
+}
+
+async function exerciseCrossMemberAdminCorpusEditLockOrdering(ownerId, memberId, ownerBookId) {
+  const workId = sqlScalar(
+    `select corpus_work_id from public.books where id = '${ownerBookId}'::uuid;`,
+  )
+  const memberBookId = randomUUID()
+  const tropeId = sqlScalar(
+    `select id from public.tropes where owner_id is null order by id limit 1;`,
+  )
+  let triggerInstalled = false
+
+  try {
+    sqlScalar(`
+      insert into public.corpus_admins (user_id) values ('${memberId}'::uuid)
+      on conflict (user_id) do nothing;
+      insert into public.books (
+        id, owner_id, title, authors_display, status, ownership, corpus_work_id
+      )
+      select
+        '${memberBookId}'::uuid, '${memberId}'::uuid, work.title, work.author_text,
+        'standalone', 'owned', work.id
+      from public.works work
+      where work.id = '${workId}'::uuid;
+
+      create function public.corpus_edit_cross_member_barrier_fixture()
+      returns trigger language plpgsql security definer set search_path = '' as $fixture$
+      begin
+        if new.book_id = '${memberBookId}'::uuid then
+          perform pg_catalog.pg_advisory_xact_lock_shared(
+            ${BARRIER_CLASS}, ${CROSS_MEMBER_CORPUS_EDIT_BARRIER_ID}
+          );
+        end if;
+        return new;
+      end;
+      $fixture$;
+      create trigger book_tropes_q_deadlock_barrier
+      after insert on public.book_tropes
+      for each row execute function public.corpus_edit_cross_member_barrier_fixture();
+    `)
+    triggerInstalled = true
+
+    const operations = [
+      {
+        name: 'metadata',
+        statement: `select public.edit_corpus_work_metadata(
+          work.id, work.series, work.position, work.series_count, work.status,
+          'literary', work.subgenre, array['literary'], work.subgenres,
+          work.cover_url, work.cover_options, work.pub_y, work.pub_m, work.pub_d
+        ) from public.works work where work.id = '${workId}'::uuid`,
+        verify: () =>
+          assert.equal(
+            sqlScalar(`select genre from public.works where id = '${workId}'::uuid;`),
+            'literary',
+            'the cross-member serialized metadata edit is preserved',
+          ),
+      },
+      {
+        name: 'cover',
+        statement: `select public.set_corpus_work_cover(
+          '${workId}'::uuid,
+          'https://books.google.com/books/content?id=cross-member-lock-order',
+          'google', null, null
+        )`,
+        verify: () =>
+          assert.equal(
+            sqlScalar(`select cover_url from public.works where id = '${workId}'::uuid;`),
+            'https://books.google.com/books/content?id=cross-member-lock-order',
+            'the cross-member serialized cover edit is preserved',
+          ),
+      },
+    ]
+
+    for (const operation of operations) {
+      const controller = new PsqlSession(`cross-member-${operation.name}-controller`)
+      const tagger = new PsqlSession(`cross-member-${operation.name}-tagger`)
+      const editor = new PsqlSession(`cross-member-${operation.name}-editor`)
+      let barrierHeld = false
+      let tropeResult = null
+      let editResult = null
+      try {
+        await controller.command(
+          `select pg_catalog.pg_advisory_lock(
+            ${BARRIER_CLASS}, ${CROSS_MEMBER_CORPUS_EDIT_BARRIER_ID}
+          );`,
+        )
+        barrierHeld = true
+        const taggerPid = Number(await tagger.command('select pg_backend_pid();'))
+        const editorPid = Number(await editor.command('select pg_backend_pid();'))
+
+        tropeResult = tagger.command(
+          authenticatedPersonalWrite(
+            memberId,
+            `insert into public.book_tropes (book_id, trope_id, owner_id, emphasis)
+             values (
+               '${memberBookId}'::uuid, '${tropeId}'::uuid, '${memberId}'::uuid, 'present'
+             )`,
+          ),
+        )
+        await waitForBlockedWorker(taggerPid, `cross-member ${operation.name} trope barrier`)
+
+        editResult = editor.command(authenticatedPersonalWrite(ownerId, operation.statement))
+        await waitForBlockedWorker(editorPid, `cross-member ${operation.name} all-book prelock`)
+
+        // This is the defect itself, not a proxy: while the editor waits for the member's book it
+        // must not yet hold the household-work row needed by the trope synchronization FK.
+        assert.equal(
+          sqlScalar(`
+            begin;
+            select work_id from public.household_works
+            where household_id = '${householdId}'::uuid and work_id = '${workId}'::uuid
+              and removed_at is null
+            for update nowait;
+            rollback;
+            select 'household-work-unlocked';
+          `),
+          `${workId}\nhousehold-work-unlocked`,
+          `${operation.name} waits on every active personal copy before household-work`,
+        )
+
+        await controller.command(
+          `select pg_catalog.pg_advisory_unlock(
+            ${BARRIER_CLASS}, ${CROSS_MEMBER_CORPUS_EDIT_BARRIER_ID}
+          );`,
+        )
+        barrierHeld = false
+        assert.match(
+          await tropeResult,
+          /personal-write-committed/,
+          'the admin trope insert commits',
+        )
+        tropeResult = null
+        assert.match(
+          await editResult,
+          /personal-write-committed/,
+          `the owner ${operation.name} commits`,
+        )
+        editResult = null
+        operation.verify()
+        console.log(
+          `✓ owner corpus ${operation.name} serializes before cross-member admin trope promotion`,
+        )
+
+        sqlScalar(`
+          delete from public.book_tropes
+          where book_id = '${memberBookId}'::uuid and trope_id = '${tropeId}'::uuid;
+        `)
+      } finally {
+        if (barrierHeld) {
+          await controller
+            .command(
+              `select pg_catalog.pg_advisory_unlock(
+                ${BARRIER_CLASS}, ${CROSS_MEMBER_CORPUS_EDIT_BARRIER_ID}
+              );`,
+            )
+            .catch(() => {})
+        }
+        await Promise.allSettled([tropeResult, editResult])
+        await Promise.allSettled([controller.close(), tagger.close(), editor.close()])
+      }
+    }
+  } finally {
+    if (triggerInstalled) {
+      sqlScalar(`
+        drop trigger if exists book_tropes_q_deadlock_barrier on public.book_tropes;
+        drop function if exists public.corpus_edit_cross_member_barrier_fixture();
+      `)
+    }
+    sqlScalar(`
+      delete from public.book_tropes where book_id = '${memberBookId}'::uuid;
+      delete from public.work_tropes
+      where work_id = '${workId}'::uuid
+        and trope_id = '${tropeId}'::uuid
+        and added_by = '${memberId}'::uuid
+        and source_scope = 'personal';
+      delete from public.books where id = '${memberBookId}'::uuid;
+      delete from public.corpus_admins where user_id = '${memberId}'::uuid;
+      delete from public.work_metadata_edits
+      where work_id = '${workId}'::uuid and editor_id = '${ownerId}'::uuid;
+    `)
+  }
+}
+
 async function exerciseAuthorizationRevocations({
   ownerId,
   memberId,
@@ -456,20 +856,18 @@ async function exerciseAuthorizationRevocations({
   await relinkMember(ownerId, memberId)
 
   await runRevocationRace({
-    action: 'update-corpus-metadata',
+    action: 'add-existing-corpus-work',
     userId: memberId,
-    statement: `perform public.update_corpus_work_metadata(
-      '${ownerWorkId}'::uuid,
-      'unauthorized-race', null, array['unauthorized-race'], '{}', null, '[]'::jsonb
-    )`,
+    statement: `perform public.add_corpus_work_to_household('${ownerWorkId}'::uuid)`,
     verify: async () => {
       assert.equal(
         sqlScalar(
-          `select count(*) from public.works
-           where id = '${ownerWorkId}'::uuid and genre = 'unauthorized-race';`,
+          `select count(*) from public.household_works
+           where household_id = '${householdId}'::uuid and work_id = '${ownerWorkId}'::uuid
+             and removed_at is null;`,
         ),
-        '0',
-        'revoked corpus update changes no global metadata',
+        '1',
+        'revoked household add leaves the existing owner-backed membership unchanged',
       )
     },
   })
@@ -1004,6 +1402,104 @@ const concurrentBookInsert = ({ session, userId, bookId, title, isbn }) =>
     commit;
     select 'isbn-book-committed';
   `)
+
+const concurrentHouseholdCatalogCreate = ({ session, userId, title, isbn }) =>
+  session.command(`
+    begin;
+    set local role authenticated;
+    select set_config(
+      'request.jwt.claims',
+      '{"sub":"${userId}","role":"authenticated"}',
+      true
+    );
+    select set_config(
+      'test.household_catalog_work',
+      public.create_household_catalog_work('${title}', 'Concurrent Catalog', '${isbn}')::text,
+      false
+    );
+    reset role;
+    select pg_catalog.pg_advisory_xact_lock_shared(
+      ${BARRIER_CLASS}, ${HOUSEHOLD_ISBN_BARRIER_ID}
+    );
+    commit;
+    select current_setting('test.household_catalog_work') || '|household-catalog-committed';
+  `)
+
+async function exerciseConcurrentHouseholdIsbnResolution(firstUserId, secondUserId) {
+  const isbn = isbn13Fixture()
+  const controller = new PsqlSession('household-isbn-controller')
+  const workers = [
+    new PsqlSession('household-isbn-first'),
+    new PsqlSession('household-isbn-second'),
+  ]
+  let results = []
+  let barrierHeld = false
+  try {
+    await controller.command(
+      `select pg_catalog.pg_advisory_lock(${BARRIER_CLASS}, ${HOUSEHOLD_ISBN_BARRIER_ID});`,
+    )
+    barrierHeld = true
+    const workerPids = await Promise.all(
+      workers.map(async (worker) => Number(await worker.command('select pg_backend_pid();'))),
+    )
+    results = [
+      concurrentHouseholdCatalogCreate({
+        session: workers[0],
+        userId: firstUserId,
+        title: 'Concurrent household ISBN alpha',
+        isbn,
+      }),
+      concurrentHouseholdCatalogCreate({
+        session: workers[1],
+        userId: secondUserId,
+        title: 'Concurrent household ISBN beta',
+        isbn,
+      }),
+    ]
+    const state = await waitForConcurrentState(workerPids, HOUSEHOLD_ISBN_BARRIER_ID)
+    assert.equal(state.barrierWaiters, 1, 'the ISBN lock serializes household catalog creation')
+    await controller.command(
+      `select pg_catalog.pg_advisory_unlock(${BARRIER_CLASS}, ${HOUSEHOLD_ISBN_BARRIER_ID});`,
+    )
+    barrierHeld = false
+    const outputs = await Promise.all(results)
+    const workIds = outputs.map(
+      (output) => output.match(/([0-9a-f-]{36})\|household-catalog-committed/)?.[1],
+    )
+    assert.ok(workIds.every(Boolean), 'both household catalog creators return a work ID')
+    assert.equal(workIds[0], workIds[1], 'both household creators reuse the same ISBN work')
+    assert.equal(
+      sqlScalar(`select count(*) from public.works where '${isbn}' = any(isbns);`),
+      '1',
+      'concurrent household creation stores one canonical ISBN identity',
+    )
+    assert.equal(
+      sqlScalar(`
+        select count(*) from public.household_works
+        where household_id = '${householdId}'::uuid and work_id = '${workIds[0]}'::uuid
+          and removed_at is null;
+      `),
+      '1',
+      'concurrent household creation stores one collective membership',
+    )
+    console.log('✓ concurrent household catalog ISBN creation reuses one work and membership')
+    sqlScalar(`
+      delete from public.household_works where work_id = '${workIds[0]}'::uuid;
+      delete from public.work_metadata_edits where work_id = '${workIds[0]}'::uuid;
+      delete from public.works where id = '${workIds[0]}'::uuid;
+    `)
+  } finally {
+    if (barrierHeld) {
+      await controller
+        .command(
+          `select pg_catalog.pg_advisory_unlock(${BARRIER_CLASS}, ${HOUSEHOLD_ISBN_BARRIER_ID});`,
+        )
+        .catch(() => {})
+    }
+    await Promise.allSettled(results)
+    await Promise.allSettled([...workers.map((worker) => worker.close()), controller.close()])
+  }
+}
 
 const reconciliationFenceArguments = (ownerId, memberId) => `
   array['${ownerId}'::uuid, '${memberId}'::uuid],
@@ -1784,9 +2280,13 @@ async function main() {
     ownerBookId,
     borrowedBookId: borrowed.data.id,
   })
+  await exerciseWorkerFirstHouseholdAddLockOrdering(firstUserId, secondUserId)
+  await exerciseOwnerCorpusEditTagLockOrdering(firstUserId, ownerBookId)
+  await exerciseCrossMemberAdminCorpusEditLockOrdering(firstUserId, secondUserId, ownerBookId)
   await exerciseConcurrentRebindSuppression(firstUserId)
   await exerciseMovedTropeLockOrdering(firstUserId)
   await exerciseConcurrentIsbnResolution(firstUserId, secondUserId)
+  await exerciseConcurrentHouseholdIsbnResolution(firstUserId, secondUserId)
   await exerciseReconciliationLockOrdering(firstUserId, secondUserId)
   await exerciseReconciliationInsertLockOrdering(firstUserId, secondUserId)
   await exerciseReconciliationLateInsertFence(firstUserId, secondUserId)

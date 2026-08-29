@@ -1,12 +1,17 @@
 # Task: corpus-administrator enrichment and durable corpus metadata
 
-Status: **the reviewed corpus-admin history and bounded membership backfill merged in PR #364 at
-`0bd76a5`. The owner reports guarded production deployment applied `20260830010000` followed by
-`20260831010000`. The owner-run read-only report found unintended anonymous/authenticated
-`work_tropes` table privileges. The forward-only `20260901010000` ACL correction is locally
-verified but still requires independent review and owner deployment. Administrator grants, private
-reconciliation, production writes, and post-write smoke checks remain owner-gated and unperformed
-by Code.**
+Status: **the reviewed corpus-admin, membership, ACL, and operator histories are integrated through
+PR #366 at `1828968`. The owner deployed `20260830010000`, `20260831010000`, and `20260901010000`;
+the production report returned 43/43 invariants true, and the covers function retained the selected
+personal cover across refresh. The first reconciliation dry run wrote nothing and stopped on 10
+corpus-missing identities. Independent review rejected the first household-only catalog-entry
+candidate for authorization, checksum, lock-order, structured-series, scope, and coverage gaps.
+The first remediation re-review then found a series-length adoption defect, a reproducible lock-order
+deadlock, a discarded catalog-cover preview, and UI assertions that proved only database state. The
+final remediation closes those findings, and independent database/security, verification, and
+web/product re-reviews passed at `a7ac983`. The household-only catalog entry is ready for integration
+but remains undeployed. Administrator grants, reconciliation backup/write, and post-write smoke
+checks remain owner-gated and unperformed by Code.**
 
 ## Objective
 
@@ -175,21 +180,60 @@ contains exactly Account A and Account B before either dry-run or write planning
 ## Required rollout order
 
 1. **Complete:** independent review closed and PR #364 integrated the real-merge history to `main`.
-2. **Owner reports complete; ACL correction pending:** the guarded deployment applied
-   `20260830010000` followed by `20260831010000`, after which the read-only report found the
-   `work_tropes` privilege mismatch. Independently review and integrate `20260901010000`, then the
-   owner deploys that forward-only migration through `pnpm deploy:migrations` from clean `main`.
-3. Rerun `docs/queries/library-membership-rollout-verification.sql` against production and require
-   all 43 rows to report `ok = true`; command success alone does not prove the bindings, trigger
-   state, owner fences, RPCs, or privileges.
-4. Deploy and verify the covers function's personal/corpus authorization and storage boundaries.
-   Keep the web deployment staged until all three migrations, the membership/corpus RPCs, and this
-   function are verified in production.
-5. Dry-run both administrator grants and the CSV reconciliation. Run the reconciliation's separate
+2. **Complete:** the owner deployed all three migrations through the guard; the production report
+   returned all 43 rows true.
+3. **Complete for the exercised personal-cover path:** the owner deployed the covers function and
+   confirmed the selected cover survives refresh. The corpus-admin positive path remains part of
+   the later administrator smoke set.
+4. Independently review and integrate the forward household-only catalog-entry boundary. The owner
+   then deploys `20260902010000` through the migration guard and reruns the expanded report, requiring
+   all 51 rows true. Only after that report passes, deploy the `covers` function through its guard and
+   smoke both exact-work owner authorization and administrator authorization. Deploy the web surface
+   last, then verify that a household-only add creates no personal copy and that an owner-picked
+   Hardcover cover survives refresh. Do not ship the new web path against the previously deployed
+   administrator-only `covers` function.
+5. Resolve the 10 aggregate missing-corpus dry-run rows through Household Add books, then dry-run
+   both administrator grants and the CSV reconciliation again. Run the reconciliation's separate
    backup-only phase and review the exact external title-level report and backup checksums; do not
    approve from aggregate counts alone.
 6. The owner executes both production writes and completes Account A, Account B, household-only,
    corpus-only, removal, cover-completion, and trope-promotion smoke checks.
+
+## Household catalog remediation verification — 2026-08-28
+
+The independently reviewed candidate closes every finding from the review passes: global
+corpus administrators can edit unrelated works through the audited writer; ISBN-10/13 checksums are
+validated and nonblank inputs containing characters beyond digits, spaces, hyphens, or a checksum
+`X` are refused; profile-first locking removes the add/unlink inversion; shared series adoption retires
+the prior structured entry atomically and overwrites a stale pre-existing target series length;
+owner corpus edits prelock every active personal copy before household membership, matching the
+cross-member administrator trope-trigger lock order; persistent desktop/mobile Add controls preserve
+household scope; Google
+preview covers are preserved directly, owner/admin Hardcover previews are made durable through the
+corpus cover pipeline, and the shared editor can select reviewed cover options; the editor covers
+canonical genre, subgenre, complete series metadata, and publication precision; and shared-detail
+comparison includes series length and status. Browser assertions now prove the post-write UI and
+ordinary-member editor denial, not merely service-role reads behind the page.
+
+- A clean database rebuild applied through `20260902010000`; the expanded read-only rollout report
+  returned 51/51 true.
+- Full pgTAP passed 722 assertions across 29 files. The deterministic concurrency harness passed all
+  22 scenarios, including the worker-first add/unlink race, concurrent same-ISBN household adds,
+  the owner-edit/personal-tag lock-order regression, and the exact cross-member administrator trope
+  topology against both metadata and cover edits.
+- The bounded 25,005-work/5,012-book fixture completed both foundation migrations under the
+  20-second statement timeout, bound all 5,012 personal books, and retained the exact mixed-ISBN
+  reconciliation refusal.
+- Core unit tests passed 2,432 assertions across 81 files; web unit tests passed 645 assertions
+  across 74 files.
+- The complete household browser spec passed 11 cases with one expected project skip. The full
+  browser matrix passed 220 cases with 10 expected project-specific skips, one worker, and zero
+  retries.
+- TypeScript, ESLint, Prettier, the production build, and `git diff --check` passed. ESLint emitted
+  no warning after the shared scope helper was separated from the component module.
+
+No production data, credentials, migration, function, web deployment, or remote repository state
+was touched. Integration remains the next gate.
 
 ## Local verification — refreshed 2026-08-28
 

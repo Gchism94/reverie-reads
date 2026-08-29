@@ -98,7 +98,7 @@ export async function ingestCover(input: {
   }
 }
 
-/** Admin-only corpus ingest. The Edge Function verifies the caller's admin row and stores the
+/** Owner/admin corpus ingest. The Edge Function verifies exact work-edit authority and stores the
  * asset under w/{workId}, so the shared cover has no dependency on a personal book or account. */
 export async function ingestCorpusCover(input: {
   workId: string

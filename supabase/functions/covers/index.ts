@@ -10,8 +10,9 @@
 //    no client CORS), validate magic bytes + a sane size cap, normalize to webp (max ~1200px long edge)
 //    plus a ~300px thumb, extract the dominant colour (spine tint), and store both in the public
 //    'covers' bucket. Personal cover paths are u/{uid}/{bookId}/{rev}.webp; authenticated corpus
-//    administrators may instead use w/{workId}/{rev}.webp so shared metadata never depends on a
-//    reader-owned object. The DB row is patched by the CLIENT through its scoped RPC/mutation —
+//    administrators and household owners for the exact work may instead use w/{workId}/{rev}.webp
+//    so shared metadata never depends on a reader-owned object. The DB row is patched by the CLIENT
+//    through its scoped RPC/mutation —
 //    this function never writes books or works rows, so write authorization stays at the DB edge.
 //
 // Image work uses magick-wasm (the Supabase-documented wasm path): proper filtered resize, webp
@@ -244,7 +245,7 @@ const publicUrl = (path: string): string => {
 
 interface IngestFields {
   bookId?: string
-  /** Admin-only durable corpus target. Exactly one of bookId/workId is accepted. */
+  /** Owner/admin durable corpus target. Exactly one of bookId/workId is accepted. */
   workId?: string
   scope?: 'personal' | 'corpus'
   source: string
@@ -252,15 +253,22 @@ interface IngestFields {
   url?: string
 }
 
-async function isCorpusAdmin(uid: string): Promise<boolean> {
+async function canEditCorpusWork(req: Request, workId: string): Promise<boolean> {
   if (!DB_URL || !SERVICE) return false
+  const authorization = req.headers.get('Authorization') ?? ''
+  if (!authorization) return false
   try {
-    const r = await fetch(
-      `${DB_URL}/rest/v1/corpus_admins?user_id=eq.${encodeURIComponent(uid)}&select=user_id&limit=1`,
-      { headers: dbHeaders },
-    )
+    const r = await fetch(`${DB_URL}/rest/v1/rpc/can_edit_corpus_work`, {
+      method: 'POST',
+      headers: {
+        apikey: SERVICE,
+        Authorization: authorization,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ p_work: workId }),
+    })
     if (!r.ok) return false
-    return ((await r.json()) as { user_id?: string }[]).some((row) => row.user_id === uid)
+    return (await r.json()) === true
   } catch {
     return false
   }
@@ -312,8 +320,8 @@ async function handleIngest(req: Request, uid: string, tr: Trace): Promise<Respo
     return json({ error: corpusScope ? 'bad_work_id' : 'bad_book_id' }, 400)
   if ((corpusScope && fields.bookId) || (!corpusScope && fields.workId))
     return json({ error: 'ambiguous_target' }, 400)
-  if (corpusScope && !(await isCorpusAdmin(uid)))
-    return json({ error: 'corpus_admin_required' }, 403)
+  if (corpusScope && !(await canEditCorpusWork(req, targetId)))
+    return json({ error: 'corpus_editor_required' }, 403)
   if (!SOURCES.has(fields.source)) return json({ error: 'bad_source' }, 400)
   // Refuse to persist a display-only source, by label OR by host.
   if (!INGESTIBLE_SOURCES.has(fields.source)) {

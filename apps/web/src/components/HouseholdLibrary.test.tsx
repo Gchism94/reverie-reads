@@ -110,6 +110,89 @@ describe('household Library presentation', () => {
     await waitFor(() => expect(screen.getByLabelText('Add a corpus trope')).toHaveValue(''))
   })
 
+  it('labels corpus editing as shared and leaves personal adoption explicit', async () => {
+    const edit = vi.fn().mockResolvedValue(undefined)
+    render(
+      <HouseholdBookDetail
+        book={book('reader-a', 'Avery')}
+        currentReaderId="reader-a"
+        onEditCorpus={edit}
+      />,
+    )
+
+    fireEvent.click(screen.getByText('Edit shared cover, series, genre, and publication'))
+    expect(screen.getByText(/Personal copies keep their existing details/)).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('Shared primary genre'), {
+      target: { value: 'mystery' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save shared details' }))
+
+    await waitFor(() =>
+      expect(edit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          series: 'Household Cycle',
+          position: 2,
+          seriesCount: 3,
+          seriesStatus: 'ongoing',
+          genre: 'mystery',
+          genres: ['mystery'],
+          publicationYear: 2026,
+        }),
+      ),
+    )
+  })
+
+  it('refuses invalid shared numeric metadata before invoking the corpus writer', () => {
+    const edit = vi.fn().mockResolvedValue(undefined)
+    render(
+      <HouseholdBookDetail
+        book={book('reader-a', 'Avery')}
+        currentReaderId="reader-a"
+        onEditCorpus={edit}
+      />,
+    )
+
+    fireEvent.click(screen.getByText('Edit shared cover, series, genre, and publication'))
+    fireEvent.change(screen.getByLabelText('Shared publication month'), {
+      target: { value: '13' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save shared details' }))
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Month must be 12 or less.')
+    expect(edit).not.toHaveBeenCalled()
+  })
+
+  it('lets an authorized editor select an existing reviewed shared cover', async () => {
+    const edit = vi.fn().mockResolvedValue(undefined)
+    const first = 'https://covers.example.test/first.jpg'
+    const second = 'https://covers.example.test/second.jpg'
+    render(
+      <HouseholdBookDetail
+        book={{
+          ...book('reader-a', 'Avery'),
+          cover: first,
+          coverOptions: [
+            { url: first, source: 'hardcover', sourceUrl: first },
+            { url: second, source: 'google', sourceUrl: second },
+          ],
+        }}
+        currentReaderId="reader-a"
+        onEditCorpus={edit}
+      />,
+    )
+
+    fireEvent.click(screen.getByText('Edit shared cover, series, genre, and publication'))
+    const secondChoice = screen.getByRole('radio', { name: 'Google cover 2' })
+    fireEvent.click(secondChoice)
+    expect(secondChoice).toBeChecked()
+    expect(screen.getByRole('radio', { name: 'Hardcover cover 1' })).not.toBeChecked()
+    fireEvent.click(screen.getByRole('button', { name: 'Save shared details' }))
+
+    await waitFor(() =>
+      expect(edit).toHaveBeenCalledWith(expect.objectContaining({ coverUrl: second })),
+    )
+  })
+
   it('uses a real pressed-state scope control', () => {
     const onChange = vi.fn()
     render(<LibraryScopeControl scope="personal" onChange={onChange} />)

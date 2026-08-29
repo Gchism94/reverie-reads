@@ -10,6 +10,7 @@ import { SkinEvolveReveal } from './SkinEvolveReveal'
 import { ThemeToggle } from './ThemeToggle'
 import { Surface } from './Surface'
 import { PowerGlyph } from './PowerGlyph'
+import { isHouseholdAddContext } from './appShellScope'
 
 // Primary navigation. Glyph icons (token-coloured, no raster) echo the desktop design's rail.
 const NAV = [
@@ -96,7 +97,7 @@ function NavLinks({ collapsed }: { collapsed: boolean }) {
 }
 
 /** Persistent desktop rail: brand, primary nav, and skin / theme / account controls. */
-function Sidebar() {
+function Sidebar({ householdAdd }: { householdAdd: boolean }) {
   const { signOut } = useAuth()
   const skinLabel = useSkinLabel()
   const effective = useEffectiveSkin()
@@ -163,14 +164,16 @@ function Sidebar() {
       {/* Add — primary action */}
       <Link
         to="/add"
-        title={collapsed ? 'Add a book' : undefined}
-        aria-label="Add a book"
+        data-testid="persistent-add"
+        search={householdAdd ? { scope: 'household' } : {}}
+        title={collapsed ? (householdAdd ? 'Add to household' : 'Add a book') : undefined}
+        aria-label={householdAdd ? 'Add to household' : 'Add a book'}
         className={`skin-control skin-btn-primary mb-3 flex h-10 items-center justify-center gap-1.5 text-[13px] ${
           collapsed ? 'px-0' : 'px-4'
         }`}
       >
         <span aria-hidden>＋</span>
-        {!collapsed && <span>Add a book</span>}
+        {!collapsed && <span>{householdAdd ? 'Add to household' : 'Add a book'}</span>}
       </Link>
 
       <NavLinks collapsed={collapsed} />
@@ -294,7 +297,7 @@ function TabLink({ item }: { item: { label: string; to: string; icon: string } }
 
 /** Bottom tab bar for narrow screens — the app-like navigation a PWA install expects. The old
  *  scrollable pill row clipped nine of ten destinations invisibly behind the Add button. */
-function MobileTabBar() {
+function MobileTabBar({ householdAdd }: { householdAdd: boolean }) {
   const { signOut } = useAuth()
   const [moreOpen, setMoreOpen] = useState(false)
   const pathname = useRouterState({ select: (s) => s.location.pathname })
@@ -388,7 +391,9 @@ function MobileTabBar() {
           <div className="flex items-start justify-center">
             <Link
               to="/add"
-              aria-label="Add a book"
+              data-testid="persistent-add"
+              search={householdAdd ? { scope: 'household' } : {}}
+              aria-label={householdAdd ? 'Add to household' : 'Add a book'}
               className="grid h-11 w-11 -translate-y-3 place-items-center rounded-full text-[20px]"
               style={{
                 background: 'var(--accent-fill)',
@@ -422,7 +427,9 @@ function MobileTabBar() {
 export function AppShell({ children }: { children: ReactNode }) {
   useSkinSync() // reconcile skin/mode from the signed-in profile (cross-device)
   const mainRef = useRef<HTMLElement>(null)
-  const pathname = useRouterState({ select: (s) => s.location.pathname })
+  const location = useRouterState({ select: (s) => s.location })
+  const pathname = location.pathname
+  const householdAdd = isHouseholdAddContext(pathname, location.search)
 
   // Move focus to the main content on navigation so keyboard/screen-reader users land there.
   useEffect(() => {
@@ -439,7 +446,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         Skip to content
       </a>
 
-      <Sidebar />
+      <Sidebar householdAdd={householdAdd} />
 
       <div className="flex min-w-0 flex-1 flex-col">
         <MobileBar />
@@ -456,7 +463,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </main>
       </div>
 
-      <MobileTabBar />
+      <MobileTabBar householdAdd={householdAdd} />
     </div>
   )
 }

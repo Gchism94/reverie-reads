@@ -1,5 +1,18 @@
 import { useState } from 'react'
-import { coverCandidates, isDegenerateGoogleCoverRender } from '@reverie/core'
+import {
+  CORE_GENRES,
+  PUB_DAY,
+  PUB_MONTH,
+  PUB_YEAR,
+  SERIES_COUNT,
+  SERIES_POSITION,
+  SERIES_STATUS_LABELS,
+  SERIES_STATUS_VALUES,
+  coverCandidates,
+  isDegenerateGoogleCoverRender,
+  parseNumericFields,
+  type SeriesStatus,
+} from '@reverie/core'
 import type { HouseholdBook, HouseholdBookOwner } from '../data/household'
 import { subgenreGradient } from '../library/constants'
 import { CoverPlaceholder } from './CoverPlaceholder'
@@ -182,6 +195,240 @@ const publicationLabel = (book: HouseholdBook): string | null => {
     .join('-')
 }
 
+export interface HouseholdCorpusEdit {
+  series: string
+  position: number | null
+  seriesCount: number | null
+  seriesStatus: SeriesStatus
+  genre: string
+  subgenre: string
+  genres: string[]
+  subgenres: string[]
+  coverUrl: string
+  coverOptions: HouseholdBook['coverOptions']
+  publicationYear: number | null
+  publicationMonth: number | null
+  publicationDay: number | null
+}
+
+function CorpusEditForm({
+  book,
+  onSave,
+  saving,
+}: {
+  book: HouseholdBook
+  onSave: (patch: HouseholdCorpusEdit) => Promise<void>
+  saving: boolean
+}) {
+  const [series, setSeries] = useState(book.series)
+  const [position, setPosition] = useState(book.position?.toString() ?? '')
+  const [seriesCount, setSeriesCount] = useState(book.seriesCount?.toString() ?? '')
+  const [seriesStatus, setSeriesStatus] = useState<SeriesStatus>(book.seriesStatus)
+  const [genre, setGenre] = useState(book.primaryGenre)
+  const [subgenre, setSubgenre] = useState(book.subgenre)
+  const [publicationYear, setPublicationYear] = useState(book.publicationYear?.toString() ?? '')
+  const [publicationMonth, setPublicationMonth] = useState(book.publicationMonth?.toString() ?? '')
+  const [publicationDay, setPublicationDay] = useState(book.publicationDay?.toString() ?? '')
+  const [coverUrl, setCoverUrl] = useState(book.cover)
+  const [validationError, setValidationError] = useState('')
+  const coverChoices = book.coverOptions.filter(
+    (option): option is typeof option & { url: string } => !!option.url,
+  )
+  const fieldClass =
+    'skin-control h-10 w-full border border-line bg-field px-3 text-[13px] text-ink'
+
+  return (
+    <details className="mt-4">
+      <summary className="cursor-pointer text-[12.5px] font-semibold text-primary">
+        Edit shared cover, series, genre, and publication
+      </summary>
+      <p className="mt-2 text-[11.5px] text-muted">
+        This changes the shared catalog view. Personal copies keep their existing details until
+        their owner chooses to use the shared version.
+      </p>
+      <form
+        className="mt-2 space-y-2"
+        onSubmit={(event) => {
+          event.preventDefault()
+          const parsed = parseNumericFields({
+            position: { raw: position, spec: SERIES_POSITION },
+            seriesCount: { raw: seriesCount, spec: SERIES_COUNT },
+            publicationYear: { raw: publicationYear, spec: PUB_YEAR },
+            publicationMonth: { raw: publicationMonth, spec: PUB_MONTH },
+            publicationDay: { raw: publicationDay, spec: PUB_DAY },
+          })
+          if (!parsed.ok) {
+            setValidationError(Object.values(parsed.errors)[0] ?? 'Check the numeric fields.')
+            return
+          }
+          setValidationError('')
+          const nextGenre = genre.trim()
+          const nextSubgenre = subgenre.trim()
+          void onSave({
+            series: series.trim(),
+            position: parsed.values.position,
+            seriesCount: parsed.values.seriesCount,
+            seriesStatus,
+            genre: nextGenre,
+            subgenre: nextSubgenre,
+            genres: [nextGenre, ...book.genres.filter((value) => value !== book.primaryGenre)]
+              .filter(Boolean)
+              .filter((value, index, values) => values.indexOf(value) === index),
+            subgenres: [nextSubgenre, ...book.subgenres.filter((value) => value !== book.subgenre)]
+              .filter(Boolean)
+              .filter((value, index, values) => values.indexOf(value) === index),
+            coverUrl,
+            coverOptions: book.coverOptions,
+            publicationYear: parsed.values.publicationYear,
+            publicationMonth: parsed.values.publicationMonth,
+            publicationDay: parsed.values.publicationDay,
+          }).catch(() => undefined)
+        }}
+      >
+        <input
+          value={series}
+          onChange={(event) => setSeries(event.target.value)}
+          placeholder="Series"
+          aria-label="Shared series"
+          className={fieldClass}
+        />
+        <div className="grid grid-cols-2 gap-2">
+          <input
+            value={position}
+            onChange={(event) => setPosition(event.target.value)}
+            inputMode="decimal"
+            placeholder="Position"
+            aria-label="Shared series position"
+            className={fieldClass}
+          />
+          <input
+            value={seriesCount}
+            onChange={(event) => setSeriesCount(event.target.value)}
+            inputMode="numeric"
+            placeholder="Series length"
+            aria-label="Shared series length"
+            className={fieldClass}
+          />
+        </div>
+        <select
+          value={seriesStatus}
+          onChange={(event) => setSeriesStatus(event.target.value as SeriesStatus)}
+          aria-label="Shared series status"
+          className={fieldClass}
+        >
+          {SERIES_STATUS_VALUES.map((status) => (
+            <option key={status} value={status}>
+              {SERIES_STATUS_LABELS[status]}
+            </option>
+          ))}
+        </select>
+        <select
+          value={genre}
+          onChange={(event) => setGenre(event.target.value)}
+          aria-label="Shared primary genre"
+          className={fieldClass}
+        >
+          <option value="">No primary genre</option>
+          {CORE_GENRES.map((value) => (
+            <option key={value} value={value.toLowerCase()}>
+              {value}
+            </option>
+          ))}
+        </select>
+        <input
+          value={subgenre}
+          onChange={(event) => setSubgenre(event.target.value)}
+          placeholder="Primary subgenre"
+          aria-label="Shared primary subgenre"
+          className={fieldClass}
+        />
+        <fieldset>
+          <legend className="mb-1 text-[11px] uppercase tracking-[0.16em] text-muted">
+            Shared cover
+          </legend>
+          {coverChoices.length > 0 ? (
+            <div className="grid grid-cols-3 gap-2">
+              {coverChoices.map((option, index) => (
+                <div key={option.url}>
+                  <input
+                    id={`shared-cover-${book.id}-${index}`}
+                    type="radio"
+                    name={`shared-cover-${book.id}`}
+                    value={option.url}
+                    checked={coverUrl === option.url}
+                    onChange={() => setCoverUrl(option.url)}
+                    className="peer sr-only"
+                  />
+                  <label
+                    htmlFor={`shared-cover-${book.id}-${index}`}
+                    className="skin-control block cursor-pointer border border-line p-1.5 text-center text-[10.5px] text-muted peer-checked:border-primary peer-checked:ring-2 peer-checked:ring-primary peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary"
+                  >
+                    <img
+                      src={option.url}
+                      alt=""
+                      className="mx-auto aspect-[2/3] w-full rounded object-cover"
+                    />
+                    <span className="mt-1 block truncate">
+                      {option.source ? titleCase(option.source) : 'Shared'} cover {index + 1}
+                    </span>
+                  </label>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-[11.5px] text-muted">
+              No alternate shared covers are available for this record yet.
+            </p>
+          )}
+        </fieldset>
+        <fieldset>
+          <legend className="mb-1 text-[11px] uppercase tracking-[0.16em] text-muted">
+            Publication date
+          </legend>
+          <div className="grid grid-cols-3 gap-2">
+            <input
+              value={publicationYear}
+              onChange={(event) => setPublicationYear(event.target.value)}
+              inputMode="numeric"
+              placeholder="Year"
+              aria-label="Shared publication year"
+              className={fieldClass}
+            />
+            <input
+              value={publicationMonth}
+              onChange={(event) => setPublicationMonth(event.target.value)}
+              inputMode="numeric"
+              placeholder="Month"
+              aria-label="Shared publication month"
+              className={fieldClass}
+            />
+            <input
+              value={publicationDay}
+              onChange={(event) => setPublicationDay(event.target.value)}
+              inputMode="numeric"
+              placeholder="Day"
+              aria-label="Shared publication day"
+              className={fieldClass}
+            />
+          </div>
+        </fieldset>
+        {validationError ? (
+          <p role="alert" className="text-[12px] text-accent-ink">
+            {validationError}
+          </p>
+        ) : null}
+        <button
+          type="submit"
+          disabled={saving}
+          className="skin-control skin-btn-primary px-3 py-2 text-[12px] font-semibold disabled:opacity-50"
+        >
+          {saving ? 'Saving…' : 'Save shared details'}
+        </button>
+      </form>
+    </details>
+  )
+}
+
 export function HouseholdBookDetail({
   book,
   currentReaderId,
@@ -189,6 +436,8 @@ export function HouseholdBookDetail({
   removing = false,
   onAddCorpusTrope,
   addingCorpusTrope = false,
+  onEditCorpus,
+  editingCorpus = false,
 }: {
   book: HouseholdBook | null
   currentReaderId: string
@@ -196,6 +445,8 @@ export function HouseholdBookDetail({
   removing?: boolean
   onAddCorpusTrope?: (name: string) => Promise<void>
   addingCorpusTrope?: boolean
+  onEditCorpus?: (patch: HouseholdCorpusEdit) => Promise<void>
+  editingCorpus?: boolean
 }) {
   const [corpusTropeName, setCorpusTropeName] = useState('')
   if (!book) {
@@ -354,6 +605,10 @@ export function HouseholdBookDetail({
             </button>
           </div>
         </form>
+      ) : null}
+
+      {onEditCorpus ? (
+        <CorpusEditForm key={book.id} book={book} onSave={onEditCorpus} saving={editingCorpus} />
       ) : null}
 
       <Surface tone="field" radius="control" pad={2} className="mt-auto text-[12px] text-muted">

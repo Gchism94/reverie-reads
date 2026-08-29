@@ -1,11 +1,11 @@
--- Owner-run, read-only verification for the 20260830010000 + 20260831010000 rollout and the
--- forward-only 20260901010000 work_tropes ACL correction.
+-- Owner-run, read-only verification for the membership/corpus rollout through the forward-only
+-- 20260902010000 household catalog-entry and explicit-adoption boundary.
 --
 -- Paste this whole file into the production Supabase SQL Editor and run it. It returns catalog
 -- metadata and aggregate counts only: no titles, account ids, library rows, or private annotations.
 -- Every row must report ok = true before the private reconciliation dry run is approved.
--- Before 20260901010000 receives independent review and an owner-run deployment, its migration row
--- and the work_tropes privilege row are expected blockers; do not approve a partial result.
+-- Before 20260902010000 receives independent review and an owner-run deployment, its migration,
+-- RPC, and retired-trigger rows are expected blockers; do not approve a partial result.
 --
 -- This verifies CURRENT postconditions, not the historical migration event. Without a verified
 -- pre-migration snapshot it cannot prove that the backfill chose the same corpus identity each
@@ -16,14 +16,14 @@
 
 with
 expected_migrations(version) as (
-  values ('20260830010000'), ('20260831010000'), ('20260901010000')
+  values
+    ('20260830010000'), ('20260831010000'), ('20260901010000'), ('20260902010000')
 ),
 expected_triggers(schema_name, table_name, trigger_name) as (
   values
     ('public', 'works', 'works_validate_isbn_assignment'),
     ('public', 'books', 'books_ensure_corpus_work'),
     ('public', 'books', 'books_validate_corpus_rebind'),
-    ('public', 'books', 'books_sync_objective_metadata_to_corpus'),
     ('public', 'household_work_enrichment', 'household_work_enrichment_set_updated_at'),
     ('public', 'books', 'books_sync_owned_household_work'),
     ('public', 'household_members', 'household_members_sync_owned_books'),
@@ -44,6 +44,8 @@ expected_functions(
   values
     -- Immutable index helper: service-managed corpus inserts need only this narrow direct grant.
     ('public.library_work_key(text,text)', false, false, false, true),
+    -- Internal checksum guard: household creation calls it through its definer boundary only.
+    ('public.library_isbn_checksum_is_valid(text)', false, false, false, false),
     -- Internal owner fences: callable only from their security-definer parents.
     ('public.lock_library_book_owner_insert(uuid)', true, false, false, false),
     ('public.lock_library_book_owners_reconciliation(uuid[])', true, false, false, false),
@@ -54,7 +56,14 @@ expected_functions(
     ('public.remove_personal_book(uuid)', true, false, true, false),
     ('public.restore_personal_book(uuid)', true, false, true, false),
     ('public.update_household_work_enrichment(uuid,text[],jsonb)', true, false, true, false),
-    ('public.update_corpus_work_metadata(uuid,text,text,text[],text[],text,jsonb)', true, false, true, false),
+    -- Retained internal implementation: authenticated callers must use the owner/admin wrapper.
+    ('public.update_corpus_work_metadata(uuid,text,text,text[],text[],text,jsonb)', true, false, false, false),
+    ('public.can_edit_corpus_work(uuid)', true, false, true, false),
+    ('public.add_corpus_work_to_household(uuid)', true, false, true, false),
+    ('public.create_household_catalog_work(text,text,text,text,text)', true, false, true, false),
+    ('public.edit_corpus_work_metadata(uuid,text,numeric,integer,text,text,text,text[],text[],text,jsonb,integer,integer,integer)', true, false, true, false),
+    ('public.set_corpus_work_cover(uuid,text,text,text,text)', true, false, true, false),
+    ('public.adopt_corpus_work_metadata(uuid)', true, false, true, false),
     ('public.household_library_works()', true, false, true, false),
     ('public.household_library_books()', true, false, true, false),
     ('public.is_corpus_admin()', true, false, true, false),
@@ -143,6 +152,18 @@ trigger_checks as (
   left join pg_catalog.pg_trigger t
     on t.tgrelid = c.oid and t.tgname = e.trigger_name and not t.tgisinternal
   group by e.schema_name, e.table_name, e.trigger_name
+),
+retired_trigger_checks as (
+  select
+    'trigger'::text as area,
+    'public.books.books_sync_objective_metadata_to_corpus'::text as invariant,
+    'absent'::text as expected,
+    case when count(t.oid) = 0 then 'absent' else 'present' end as observed,
+    count(t.oid) = 0 as ok
+  from pg_catalog.pg_trigger t
+  where t.tgrelid = 'public.books'::regclass
+    and t.tgname = 'books_sync_objective_metadata_to_corpus'
+    and not t.tgisinternal
 ),
 resolved_functions as (
   select e.*, pg_catalog.to_regprocedure(e.signature) as function_oid
@@ -300,6 +321,7 @@ checks as (
   select * from migration_checks
   union all select * from binding_checks
   union all select * from trigger_checks
+  union all select * from retired_trigger_checks
   union all select * from function_checks
   union all select * from owner_fence_checks
   union all select * from table_privilege_checks

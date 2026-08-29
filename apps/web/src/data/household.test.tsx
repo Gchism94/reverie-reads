@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 const mocked = vi.hoisted(() => ({
   readerId: 'reader-a',
   rpc: vi.fn(),
+  ingestCorpusCover: vi.fn(),
 }))
 
 vi.mock('../auth/AuthProvider', () => ({
@@ -18,6 +19,10 @@ vi.mock('../lib/supabase', () => ({
   supabase: { rpc: mocked.rpc },
 }))
 
+vi.mock('../lib/covers', () => ({
+  ingestCorpusCover: mocked.ingestCorpusCover,
+}))
+
 import {
   householdBooksKey,
   labelHouseholdData,
@@ -26,9 +31,13 @@ import {
   useHouseholdBooks,
   useHouseholdLibraryAuthorization,
   useHouseholdRoster,
+  useAddCorpusWorkToHousehold,
   useAddPersonalBookToHousehold,
+  useCreateHouseholdCatalogWork,
+  useAdoptCorpusWorkMetadata,
   useRemoveHouseholdWork,
   useRemovePersonalBookFromHousehold,
+  useUpdateCorpusWorkMetadata,
   type HouseholdBook,
 } from './household'
 
@@ -50,7 +59,7 @@ const householdBook = (id: string, ownerId = 'reader-a'): HouseholdBook => ({
   series: '',
   position: null,
   seriesCount: null,
-  seriesStatus: '',
+  seriesStatus: 'standalone',
   primaryGenre: '',
   genres: [],
   subgenre: '',
@@ -79,6 +88,7 @@ const householdBook = (id: string, ownerId = 'reader-a'): HouseholdBook => ({
 beforeEach(() => {
   mocked.readerId = 'reader-a'
   mocked.rpc.mockReset()
+  mocked.ingestCorpusCover.mockReset()
 })
 
 afterEach(() => {
@@ -262,7 +272,7 @@ describe('household query identity and RPC boundary', () => {
       series: '',
       position: null,
       seriesCount: null,
-      seriesStatus: '',
+      seriesStatus: 'standalone' as const,
       primaryGenre: '',
       genres: [],
       subgenre: '',
@@ -388,6 +398,28 @@ describe('household query identity and RPC boundary', () => {
     expect(result.current.selected).toBeNull()
   })
 
+  it('preserves an explicit selection behind a routine authorization revalidation', () => {
+    const firstBook = householdBook('book-1')
+    const { result, rerender } = renderHook(
+      ({ householdId, books, authorized, loading }) =>
+        useHouseholdBookSelection({ householdId, books, authorized, loading }),
+      {
+        initialProps: {
+          householdId: 'house-a' as string | null,
+          books: [firstBook] as HouseholdBook[],
+          authorized: true,
+          loading: false,
+        },
+      },
+    )
+
+    act(() => result.current.open(firstBook.id))
+    rerender({ householdId: null, books: [], authorized: false, loading: true })
+    expect(result.current.selected).toBeNull()
+    rerender({ householdId: 'house-a', books: [firstBook], authorized: true, loading: false })
+    expect(result.current.selected?.id).toBe(firstBook.id)
+  })
+
   it('fails closed without both a readable signed-in reader and roster-established household', async () => {
     const { wrapper } = queryHarness()
     const noHousehold = renderHook(() => useHouseholdBooks(null), { wrapper })
@@ -403,21 +435,165 @@ describe('household query identity and RPC boundary', () => {
     noReader.unmount()
   })
 
-  it('uses separate RPCs for a personal borrowed checkbox and collective household removal', async () => {
+  it('uses separate RPCs for personal, household-only, catalog, adoption, and removal actions', async () => {
     mocked.rpc.mockResolvedValue({ data: 'work-1', error: null })
     const { wrapper } = queryHarness()
     const add = renderHook(() => useAddPersonalBookToHousehold(), { wrapper })
+    const addWork = renderHook(() => useAddCorpusWorkToHousehold(), { wrapper })
+    const createWork = renderHook(() => useCreateHouseholdCatalogWork(), { wrapper })
+    const editWork = renderHook(() => useUpdateCorpusWorkMetadata(), { wrapper })
+    const adoptWork = renderHook(() => useAdoptCorpusWorkMetadata(), { wrapper })
     const unshare = renderHook(() => useRemovePersonalBookFromHousehold(), { wrapper })
     const removeWork = renderHook(() => useRemoveHouseholdWork(), { wrapper })
 
     await act(() => add.result.current.mutateAsync('book-1'))
+    await act(() => addWork.result.current.mutateAsync('work-1'))
+    await act(() =>
+      createWork.result.current.mutateAsync({
+        title: 'Household only',
+        author: 'A Writer',
+        isbn: '',
+      }),
+    )
+    await act(() => adoptWork.result.current.mutateAsync('book-1'))
+    await act(() =>
+      editWork.result.current.mutateAsync({
+        workId: 'work-1',
+        series: 'Shared Series',
+        position: 2,
+        seriesCount: 4,
+        seriesStatus: 'ongoing',
+        genre: 'fantasy',
+        subgenre: 'epic fantasy',
+        genres: ['fantasy'],
+        subgenres: ['epic fantasy'],
+        coverUrl: '',
+        coverOptions: [],
+        publicationYear: 2026,
+        publicationMonth: null,
+        publicationDay: null,
+      }),
+    )
     await act(() => unshare.result.current.mutateAsync('book-1'))
     await act(() => removeWork.result.current.mutateAsync('work-1'))
 
     expect(mocked.rpc.mock.calls).toEqual([
       ['add_personal_book_to_household', { p_book: 'book-1' }],
+      ['add_corpus_work_to_household', { p_work: 'work-1' }],
+      [
+        'create_household_catalog_work',
+        {
+          p_title: 'Household only',
+          p_author: 'A Writer',
+          p_isbn: null,
+          p_cover_url: null,
+          p_cover_source: null,
+        },
+      ],
+      ['adopt_corpus_work_metadata', { p_book: 'book-1' }],
+      [
+        'edit_corpus_work_metadata',
+        {
+          p_work: 'work-1',
+          p_series: 'Shared Series',
+          p_position: 2,
+          p_series_count: 4,
+          p_status: 'ongoing',
+          p_genre: 'fantasy',
+          p_subgenre: 'epic fantasy',
+          p_genres: ['fantasy'],
+          p_subgenres: ['epic fantasy'],
+          p_cover_url: '',
+          p_cover_options: [],
+          p_pub_y: 2026,
+          p_pub_m: null,
+          p_pub_d: null,
+        },
+      ],
       ['remove_personal_book_from_household', { p_book: 'book-1' }],
       ['remove_household_work', { p_work: 'work-1' }],
     ])
+  })
+
+  it('ingests and selects a picked Hardcover cover for an authorized shared work', async () => {
+    mocked.rpc.mockResolvedValueOnce({ data: 'work-cover', error: null })
+    mocked.ingestCorpusCover.mockResolvedValue({
+      status: 'ok',
+      data: {
+        cover: 'http://127.0.0.1:55321/storage/v1/object/public/covers/w/work-cover/rev.webp',
+        thumb: 'http://127.0.0.1:55321/storage/v1/object/public/covers/w/work-cover/rev_t.webp',
+        color: '#123456',
+        sourceUrl: 'https://assets.hardcover.app/cover.jpg',
+      },
+    })
+    mocked.rpc.mockResolvedValueOnce({ data: 'work-cover', error: null })
+    const { wrapper } = queryHarness()
+    const createWork = renderHook(() => useCreateHouseholdCatalogWork(), { wrapper })
+
+    await act(() =>
+      createWork.result.current.mutateAsync({
+        title: 'Covered household book',
+        author: 'A Writer',
+        isbn: '',
+        coverUrl: 'https://assets.hardcover.app/cover.jpg',
+        coverSource: 'hardcover',
+      }),
+    )
+
+    expect(mocked.ingestCorpusCover).toHaveBeenCalledWith({
+      workId: 'work-cover',
+      source: 'hardcover',
+      url: 'https://assets.hardcover.app/cover.jpg',
+      sourceUrl: 'https://assets.hardcover.app/cover.jpg',
+    })
+    expect(mocked.rpc.mock.calls).toEqual([
+      [
+        'create_household_catalog_work',
+        {
+          p_title: 'Covered household book',
+          p_author: 'A Writer',
+          p_isbn: null,
+          p_cover_url: 'https://assets.hardcover.app/cover.jpg',
+          p_cover_source: 'hardcover',
+        },
+      ],
+      [
+        'set_corpus_work_cover',
+        {
+          p_work: 'work-cover',
+          p_cover_url:
+            'http://127.0.0.1:55321/storage/v1/object/public/covers/w/work-cover/rev.webp',
+          p_cover_source: 'hardcover',
+          p_cover_source_url: 'https://assets.hardcover.app/cover.jpg',
+          p_cover_color: '#123456',
+        },
+      ],
+    ])
+  })
+
+  it('returns a partial-success warning and still invalidates after cover ingest fails', async () => {
+    mocked.rpc.mockResolvedValueOnce({ data: 'work-without-cover', error: null })
+    mocked.ingestCorpusCover.mockResolvedValue({ status: 'error', code: 'provider_unavailable' })
+    const { client, wrapper } = queryHarness()
+    const invalidate = vi.spyOn(client, 'invalidateQueries')
+    const createWork = renderHook(() => useCreateHouseholdCatalogWork(), { wrapper })
+
+    const result = await act(() =>
+      createWork.result.current.mutateAsync({
+        title: 'Saved before cover failure',
+        author: 'A Writer',
+        isbn: '',
+        coverUrl: 'https://assets.hardcover.app/unavailable.jpg',
+        coverSource: 'hardcover',
+      }),
+    )
+
+    expect(result).toEqual({
+      workId: 'work-without-cover',
+      coverWarning:
+        'The shared record was added, but its cover could not be saved (provider_unavailable).',
+    })
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['household'] })
+    expect(mocked.rpc).toHaveBeenCalledTimes(1)
   })
 })

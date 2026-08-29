@@ -419,7 +419,9 @@ async function main() {
     ),
   )
   if (!plan.canWrite) {
-    throw new Error('write blocked: resolve every unmatched, ambiguous, or duplicate-active row')
+    throw new Error(
+      'write blocked: add exact missing identities through Household Add books, and resolve every ambiguous or duplicate-active row, then rerun the dry run',
+    )
   }
   if (!write && !backupOnly) {
     console.log('\nDry run complete. Review the private artifact and checksum before any write.')

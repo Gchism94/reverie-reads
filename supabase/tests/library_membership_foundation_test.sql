@@ -459,7 +459,8 @@ select is(
       ('public.remove_personal_book(uuid)'),
       ('public.restore_personal_book(uuid)'),
       ('public.update_household_work_enrichment(uuid,text[],jsonb)'),
-      ('public.update_corpus_work_metadata(uuid,text,text,text[],text[],text,jsonb)'),
+      ('public.edit_corpus_work_metadata(uuid,text,numeric,integer,text,text,text,text[],text[],text,jsonb,integer,integer,integer)'),
+      ('public.set_corpus_work_cover(uuid,text,text,text,text)'),
       ('public.household_library_works()')
   ) signatures(signature) where has_function_privilege('anon', signature, 'EXECUTE')),
   0,
@@ -474,10 +475,11 @@ select is(
       ('public.remove_personal_book(uuid)'),
       ('public.restore_personal_book(uuid)'),
       ('public.update_household_work_enrichment(uuid,text[],jsonb)'),
-      ('public.update_corpus_work_metadata(uuid,text,text,text[],text[],text,jsonb)'),
+      ('public.edit_corpus_work_metadata(uuid,text,numeric,integer,text,text,text,text[],text[],text,jsonb,integer,integer,integer)'),
+      ('public.set_corpus_work_cover(uuid,text,text,text,text)'),
       ('public.household_library_works()')
   ) signatures(signature) where has_function_privilege('authenticated', signature, 'EXECUTE')),
-  8,
+  9,
   'authenticated readers receive exactly the reviewed membership RPC surface'
 );
 select is(
@@ -489,7 +491,8 @@ select is(
       ('public.remove_personal_book(uuid)'),
       ('public.restore_personal_book(uuid)'),
       ('public.update_household_work_enrichment(uuid,text[],jsonb)'),
-      ('public.update_corpus_work_metadata(uuid,text,text,text[],text[],text,jsonb)'),
+      ('public.edit_corpus_work_metadata(uuid,text,numeric,integer,text,text,text,text[],text[],text,jsonb,integer,integer,integer)'),
+      ('public.set_corpus_work_cover(uuid,text,text,text,text)'),
       ('public.household_library_works()')
   ) signatures(signature) where has_function_privilege('service_role', signature, 'EXECUTE')),
   0,
@@ -980,16 +983,17 @@ select lives_ok(
         subgenres = array['gothic'], cover_url = 'https://attacker.example/personal-choice.jpg',
         cover_source = 'url'
     where id = '71000000-0000-4000-8000-000000000003'$$,
-  'an unsafe personal cover remains personal while other reviewed objective fields synchronize'
+  'a personal genre and unsafe cover edit remains personal'
 );
 select is(
-  (select genre || '|' || subgenre || '|' || coalesce(cover_url, 'none') || '|' ||
+  (select coalesce(genre, 'none') || '|' || coalesce(subgenre, 'none') || '|' ||
+          coalesce(cover_url, 'none') || '|' ||
           jsonb_array_length(cover_options)::text
    from public.works
    where id = (select corpus_work_id from public.books
                where id = '71000000-0000-4000-8000-000000000003')),
-  'mystery|gothic|none|0',
-  'an arbitrary personal URL is never published for peer browsers to load'
+  'none|none|none|0',
+  'personal objective metadata is not implicitly published to the corpus'
 );
 select set_config('request.headers', '{"host":"attacker.example"}', true);
 select lives_ok(
@@ -1027,42 +1031,46 @@ select lives_ok(
     set cover_url = 'http://127.0.0.1:55321/storage/v1/object/public/covers/u/71111111-1111-4111-8111-111111111111/71000000-0000-4000-8000-000000000003/personal.webp',
         cover_source = 'upload', cover_source_url = null
     where id = '71000000-0000-4000-8000-000000000003'$$,
-  'a cover produced by the existing hosted ingestion path can become a corpus option'
+  'a hosted personal cover remains private without an explicit corpus edit'
 );
 select is(
-  (select cover_options -> -1 ->> 'url' from public.works
+  (select coalesce(cover_options -> -1 ->> 'url', 'none') from public.works
    where id = (select corpus_work_id from public.books
                where id = '71000000-0000-4000-8000-000000000003')),
-  'http://127.0.0.1:55321/storage/v1/object/public/covers/u/71111111-1111-4111-8111-111111111111/71000000-0000-4000-8000-000000000003/personal.webp',
-  'the corpus accepts the canonical local hosted URL only after its storage object exists'
+  'none',
+  'a valid hosted personal object still requires an explicit corpus edit'
 );
 
 select throws_ok(
-  $$select public.update_corpus_work_metadata(
+  $$select public.edit_corpus_work_metadata(
     (select corpus_work_id from public.books where id = '71000000-0000-4000-8000-000000000003'),
+    null, null, null, 'standalone',
     'Mystery', 'Gothic', array['mystery'], array['gothic'],
     'https://attacker.example/lookalike.webp',
-    '[{"url":"https://attacker.example/lookalike.webp","source":"url"}]'::jsonb
+    '[{"url":"https://attacker.example/lookalike.webp","source":"url"}]'::jsonb,
+    null, null, null
   )$$,
   '22023',
   null,
   'the scoped corpus RPC rejects an arbitrary peer-loaded cover URL'
 );
 select throws_ok(
-  $$select public.update_corpus_work_metadata(
+  $$select public.edit_corpus_work_metadata(
     (select corpus_work_id from public.books where id = '71000000-0000-4000-8000-000000000003'),
+    null, null, null, 'standalone',
     'Mystery', 'Gothic', array['mystery'], array['gothic'], null,
-    '[{"url":42,"unexpected":true}]'::jsonb
+    '[{"url":42,"unexpected":true}]'::jsonb, null, null, null
   )$$,
   '22023',
   null,
   'the scoped corpus RPC rejects cover options outside the reviewed object schema'
 );
 select throws_ok(
-  $$select public.update_corpus_work_metadata(
+  $$select public.edit_corpus_work_metadata(
     (select corpus_work_id from public.books where id = '71000000-0000-4000-8000-000000000003'),
+    null, null, null, 'standalone',
     'Mystery', 'Gothic', array['mystery'], array['gothic'], null,
-    '["not-an-object"]'::jsonb
+    '["not-an-object"]'::jsonb, null, null, null
   )$$,
   '22023',
   null,
@@ -1070,16 +1078,18 @@ select throws_ok(
 );
 
 select lives_ok(
-  $$select public.update_corpus_work_metadata(
+  $$select public.edit_corpus_work_metadata(
     (select corpus_work_id from public.books where id = '71000000-0000-4000-8000-000000000003'),
+    null, null, null, 'standalone',
     'Romance',
     'Contemporary',
     array['Romance', 'romance'],
     array['Contemporary'],
     'http://127.0.0.1:55321/storage/v1/object/public/covers/u/71111111-1111-4111-8111-111111111111/71000000-0000-4000-8000-000000000003/direct.webp',
-    '[{"url":"http://127.0.0.1:55321/storage/v1/object/public/covers/u/71111111-1111-4111-8111-111111111111/71000000-0000-4000-8000-000000000003/direct.webp","source":"upload"}]'::jsonb
+    '[{"url":"http://127.0.0.1:55321/storage/v1/object/public/covers/u/71111111-1111-4111-8111-111111111111/71000000-0000-4000-8000-000000000003/direct.webp","source":"upload"}]'::jsonb,
+    null, null, null
   )$$,
-  'a reader can update only the reviewed objective corpus fields for an active library work'
+  'a household owner can explicitly update the reviewed objective corpus fields'
 );
 select is(
   (select genre || '|' || subgenre from public.works
@@ -1089,8 +1099,8 @@ select is(
   'genre and subgenre are stored on the shared corpus work'
 );
 reset role;
-select is((select count(*)::int from public.work_metadata_edits), 3,
-  'unsafe-cover filtering, hosted-cover promotion, and direct corpus changes stay auditable');
+select is((select count(*)::int from public.work_metadata_edits), 1,
+  'only the explicit corpus change reaches the append-only audit');
 
 set local role authenticated;
 select set_config(
@@ -1194,9 +1204,10 @@ select throws_ok(
   'another reader cannot remove a personal row they do not own'
 );
 select throws_ok(
-  $$select public.update_corpus_work_metadata(
+  $$select public.edit_corpus_work_metadata(
     current_setting('test.absent_work_id')::uuid,
-    'Fantasy', null, array['fantasy'], '{}', null, '[]'::jsonb
+    null, null, null, 'standalone',
+    'Fantasy', null, array['fantasy'], '{}', null, '[]'::jsonb, null, null, null
   )$$,
   '42501',
   null,

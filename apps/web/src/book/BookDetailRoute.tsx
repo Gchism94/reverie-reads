@@ -27,6 +27,7 @@ import { SeriesStrip } from '../components/SeriesStrip'
 import { CoverImage } from '../components/CoverImage'
 import { useBooks, useDeleteBook, useUpdateBook } from '../data/books'
 import {
+  useAdoptCorpusWorkMetadata,
   useAddPersonalBookToHousehold,
   useHouseholdLibraryAuthorization,
   useRemovePersonalBookFromHousehold,
@@ -55,6 +56,7 @@ import { workKeyFor } from '../data/reviews'
 import { useProfile } from '../data/profile'
 import { BookmarkGlyph } from '../components/BookmarkGlyph'
 import { Surface } from '../components/Surface'
+import { sharedCorpusDetailsDiffer } from './sharedCorpusDetails'
 
 function fmtDate(d: string): string {
   if (!d) return 'Date not set'
@@ -227,6 +229,7 @@ function BookDetailScreen() {
   const updateBook = useUpdateBook(bookId)
   const deleteBook = useDeleteBook()
   const household = useHouseholdLibraryAuthorization()
+  const adoptCorpusDetails = useAdoptCorpusWorkMetadata()
   const shareWithHousehold = useAddPersonalBookToHousehold()
   const unshareFromHousehold = useRemovePersonalBookFromHousehold()
   const deleteRead = useDeleteRead(bookId)
@@ -266,6 +269,7 @@ function BookDetailScreen() {
   const personalHouseholdShare = householdWork?.owners.find(
     (owner) => owner.bookId === book.id && owner.shared,
   )
+  const sharedDetailsDiffer = sharedCorpusDetailsDiffer(book, householdWork)
   const reviewerName = profile?.displayName || 'Reader'
   const setOwned = (owned: Owned) => updateBook.mutate({ id: book.id, patch: { owned } })
   // Four-state possession WORD over five independent flags (docs/archive/task-shelf-model.md): picking one
@@ -750,6 +754,36 @@ function BookDetailScreen() {
           </span>
           <span aria-hidden>{personalHouseholdShare ? '✓' : '○'}</span>
         </button>
+      ) : null}
+
+      {householdWork ? (
+        <Surface tone="field" radius="control" pad={2} className="mt-4 text-[12.5px] text-muted">
+          <p>
+            Shared catalog edits do not change your personal copy automatically. Ownership, reading
+            history, rating, ISBN, and private notes are never part of this merge.
+          </p>
+          {sharedDetailsDiffer ? (
+            <button
+              type="button"
+              disabled={adoptCorpusDetails.isPending}
+              onClick={() => {
+                if (
+                  !window.confirm(
+                    'Use the shared catalog’s series, genre, cover, and publication details for your personal copy? Your ownership, reading history, rating, ISBN, and private notes stay unchanged.',
+                  )
+                )
+                  return
+                adoptCorpusDetails.mutate(book.id)
+              }}
+              className="skin-control mt-2 border border-line px-3 py-2 text-[12px] font-semibold text-ink disabled:opacity-50"
+              style={{ background: 'var(--card)' }}
+            >
+              {adoptCorpusDetails.isPending ? 'Using shared details…' : 'Use shared details'}
+            </button>
+          ) : (
+            <p className="mt-1.5 text-[11.5px]">Your copy already matches the shared details.</p>
+          )}
+        </Surface>
       ) : null}
 
       {/* actions */}
