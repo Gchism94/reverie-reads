@@ -1,16 +1,14 @@
 # Task: corpus-preserving library removal and owner reconciliation
 
-Status: **the membership/removal, bounded-backfill, corpus-admin, ACL, and operator histories are
-integrated through PR #366 at `1828968`. The owner deployed `20260830010000`, `20260831010000`, and
-`20260901010000`; the production report returned 43/43 invariants true, and the deployed covers
-function retained the selected personal cover across refresh. The first production reconciliation
-dry run wrote nothing and correctly blocked on 10 corpus-missing identities. Independent review
-rejected the first household-only catalog-entry candidate for authorization, checksum, lock-order,
-structured-series, scope, and coverage gaps. Its first remediated re-review then found a stale
-series-length adoption, a deterministic owner-edit/tag-trigger deadlock, lost cover previews, and
-weak UI refresh coverage. Those findings are corrected, and independent database/security,
-verification, and web/product re-reviews passed at `a7ac983`. The household-only catalog entry is
-ready for integration but remains undeployed. The dry-run checksum is not approvable, and backup,
+Status: **PR #367 integrated the independently reviewed household-only catalog boundary. The owner
+deployed `20260902010000`, received 51/51 true from the production report, and deployed the updated
+`covers` function. Production web remained held. Pre-web smoke then exposed one final scope gap:
+eligible personal-copy covers were absent from the new work-level household read model, and active
+corpus-administrator personal covers required a manual sweep before becoming corpus options. A
+forward-only `20260903010000` candidate now projects only already-authorized copy covers to the
+household and restores additive, fill-only, audited promotion for an administrator's own reviewed
+cover. It is local and requires independent review, integration, owner deployment, and the expanded
+55-row report before web deployment. The dry-run checksum remains unapprovable; backup,
 reconciliation write, and post-write smoke checks remain pending.**
 
 ## Production migration performance hotfix — 2026-08-26
@@ -347,13 +345,15 @@ aggregate rows were valid household entries but had no corpus identity. The dura
   fields while preserving title, contributors, ISBN, ownership, reading history, rating, and private
   annotations.
 
-This independently reviewed candidate is complete locally and is not deployed. Production
-reconciliation remains paused until integration, followed in exact order by the
-owner-guarded `20260902010000` deployment, all 51 expanded rollout-report rows, the guarded `covers`
-function deployment plus owner/admin authorization smoke, and only then the guarded web deployment
-plus household-only add/cover-refresh smoke. Shipping the web first would leave household owners on
-the already-deployed administrator-only function. The focused smoke verification must pass before
-reconciliation resumes.
+The owner deployed the reviewed database boundary and updated `covers` function, and all 51 then-
+current rollout checks passed. Production web remains held. Pre-web smoke found that the new
+work-level household projection omitted eligible personal-copy covers; it also confirmed that an
+administrator's active personal cover reached the corpus only through the manual recovery sweep.
+The narrow forward fix is `20260903010000`: household display receives copy covers only through the
+existing owned/exact-share eligibility boundary, while administrator promotion is allowlisted,
+additive, fill-only, and audited. Reconciliation remains paused until this fix is independently
+reviewed and integrated, the owner deploys it, all 55 expanded report rows pass, and the final web
+deployment proves household-only Add plus personal-cover fallback and admin option/default behavior.
 
 Local remediation verification passed a clean rebuild through `20260902010000`, all 722 pgTAP
 assertions across 29 files, 22 deterministic concurrency scenarios, the bounded
@@ -361,6 +361,14 @@ assertions across 29 files, 22 deterministic concurrency scenarios, the bounded
 Prettier, production build, and `git diff --check`. The complete household browser spec passed 11
 cases with one expected project skip; the full browser matrix passed 220 cases with 10 expected
 project-specific skips, one worker, and zero retries. No production or remote state was touched.
+
+The forward cover-scope correction then passed a second clean rebuild through `20260903010000`, the
+focused 17-assertion cover regression, all 739 pgTAP assertions across 30 files, all 55 local rollout
+checks, and all 22 concurrency scenarios. Core/web suites passed 2,435 + 647 assertions. The final
+household browser spec passed 11 cases with one expected mobile-project skip and proves both the
+personal-cover fallback and the household-only Add path. TypeScript, ESLint, Prettier, production
+build, and `git diff --check` passed. The migration has no data backfill; production and remote state
+remain untouched by this correction.
 
 ## Owner handoff: production verification, private dry run, and backup
 

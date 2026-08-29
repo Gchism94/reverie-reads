@@ -229,7 +229,7 @@ function CorpusEditForm({
   const [publicationYear, setPublicationYear] = useState(book.publicationYear?.toString() ?? '')
   const [publicationMonth, setPublicationMonth] = useState(book.publicationMonth?.toString() ?? '')
   const [publicationDay, setPublicationDay] = useState(book.publicationDay?.toString() ?? '')
-  const [coverUrl, setCoverUrl] = useState(book.cover)
+  const [coverUrl, setCoverUrl] = useState(book.corpusCover)
   const [validationError, setValidationError] = useState('')
   const coverChoices = book.coverOptions.filter(
     (option): option is typeof option & { url: string } => !!option.url,

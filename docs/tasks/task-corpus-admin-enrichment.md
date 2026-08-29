@@ -1,17 +1,14 @@
 # Task: corpus-administrator enrichment and durable corpus metadata
 
-Status: **the reviewed corpus-admin, membership, ACL, and operator histories are integrated through
-PR #366 at `1828968`. The owner deployed `20260830010000`, `20260831010000`, and `20260901010000`;
-the production report returned 43/43 invariants true, and the covers function retained the selected
-personal cover across refresh. The first reconciliation dry run wrote nothing and stopped on 10
-corpus-missing identities. Independent review rejected the first household-only catalog-entry
-candidate for authorization, checksum, lock-order, structured-series, scope, and coverage gaps.
-The first remediation re-review then found a series-length adoption defect, a reproducible lock-order
-deadlock, a discarded catalog-cover preview, and UI assertions that proved only database state. The
-final remediation closes those findings, and independent database/security, verification, and
-web/product re-reviews passed at `a7ac983`. The household-only catalog entry is ready for integration
-but remains undeployed. Administrator grants, reconciliation backup/write, and post-write smoke
-checks remain owner-gated and unperformed by Code.**
+Status: **PR #367 integrated the reviewed household-only catalog boundary. The owner deployed
+`20260902010000`, verified 51/51 production invariants, and deployed the updated `covers` function;
+production web stayed held. Pre-web smoke exposed a final cover-scope omission: eligible personal
+covers were not projected into the household work view, and an administrator's active personal
+cover became a corpus option only when the manual recovery sweep ran. Forward migration
+`20260903010000` reuses the reviewed cover validators to make admin promotion automatic, additive,
+fill-only, and audited, while ordinary personal covers remain outside the corpus. It also exposes
+eligible copy covers only inside the authorized household projection. Independent review,
+integration, owner deployment, the 55-row report, and final web smoke remain required.**
 
 ## Objective
 
@@ -185,18 +182,19 @@ contains exactly Account A and Account B before either dry-run or write planning
 3. **Complete for the exercised personal-cover path:** the owner deployed the covers function and
    confirmed the selected cover survives refresh. The corpus-admin positive path remains part of
    the later administrator smoke set.
-4. Independently review and integrate the forward household-only catalog-entry boundary. The owner
-   then deploys `20260902010000` through the migration guard and reruns the expanded report, requiring
-   all 51 rows true. Only after that report passes, deploy the `covers` function through its guard and
-   smoke both exact-work owner authorization and administrator authorization. Deploy the web surface
-   last, then verify that a household-only add creates no personal copy and that an owner-picked
-   Hardcover cover survives refresh. Do not ship the new web path against the previously deployed
-   administrator-only `covers` function.
-5. Resolve the 10 aggregate missing-corpus dry-run rows through Household Add books, then dry-run
+4. **Complete through the held web gate:** PR #367 integrated; the owner deployed
+   `20260902010000`; all 51 report rows passed; and the updated `covers` function deployed. Pre-web
+   smoke correctly kept production web held after exposing the personal-cover projection gap.
+5. Independently review and integrate `20260903010000`. The owner deploys it through the migration
+   guard and requires all 55 expanded report rows true. Deploy the web surface last, then verify
+   Household-only Add creates no personal copy, eligible personal covers display in Household,
+   administrator covers become corpus options without replacing an existing default, and the first
+   administrator option fills a missing default.
+6. Resolve the 10 aggregate missing-corpus dry-run rows through Household Add books, then dry-run
    both administrator grants and the CSV reconciliation again. Run the reconciliation's separate
    backup-only phase and review the exact external title-level report and backup checksums; do not
    approve from aggregate counts alone.
-6. The owner executes both production writes and completes Account A, Account B, household-only,
+7. The owner executes both production writes and completes Account A, Account B, household-only,
    corpus-only, removal, cover-completion, and trope-promotion smoke checks.
 
 ## Household catalog remediation verification — 2026-08-28
@@ -231,6 +229,18 @@ ordinary-member editor denial, not merely service-role reads behind the page.
   retries.
 - TypeScript, ESLint, Prettier, the production build, and `git diff --check` passed. ESLint emitted
   no warning after the shared scope helper was separated from the component module.
+
+### Personal-cover scope correction verification — 2026-08-28
+
+- A second clean rebuild applied every migration through `20260903010000`; the focused cover-scope
+  pgTAP passed 17/17 and the full suite passed 739 assertions across 30 files.
+- The expanded local rollout report returned 55/55 true, and all 22 deterministic concurrency
+  scenarios remained green.
+- Core/web unit suites passed 2,435 + 647 assertions. The household browser spec passed 11 cases
+  with one expected mobile-project skip, including the rendered personal-cover fallback and the
+  household-only Add path.
+- TypeScript, ESLint, Prettier, production build, and `git diff --check` passed. This forward
+  migration defines a trigger and read projection only; it performs no automatic cover backfill.
 
 No production data, credentials, migration, function, web deployment, or remote repository state
 was touched. Integration remains the next gate.

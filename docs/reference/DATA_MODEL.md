@@ -392,6 +392,10 @@ checks the household control. Wishlist and reading state never create household 
 attribution. It deliberately omits ratings, favourites, read state/logs, notes, intensity/darkness,
 plans/progress, wishlist, moods, and lists. Household tags/tropes live in the household overlay;
 genre, subgenre, and cover candidates flow to the corpus through an attributable allowlisted path.
+An eligible copy's personal cover URL, thumbnail, and color are included inside that copy's
+already-authorized owner projection; its original source URL stays private. The client renders the canonical corpus cover first,
+then the current reader's eligible copy, then the first eligible household copy. This is a display
+fallback only: it never becomes the canonical cover merely because a household member viewed it.
 An owned row is visible as a copy; a borrowed row is visible only when an active
 `household_book_shares` row exists for that exact book, work, and household. A different copy that
 admits the same work cannot reveal it. The legacy `household_library_books()` compatibility RPC uses
@@ -435,7 +439,10 @@ image under `w/{work}/`, and only a real object on that path (or an allowlisted 
 display-only URL) is accepted by the corpus completion RPC. Request Host headers are never trusted.
 Existing curated external options may be retained or selected, but arbitrary new remote URLs cannot
 be introduced by `edit_corpus_work_metadata`. Routine edits to an active personal row remain
-personal and never publish a corpus cover implicitly. The existing fill-only preservation invoked
+personal and never publish a corpus cover implicitly. A corpus administrator's own reviewed hosted
+or allowlisted Google cover is the narrow exception: it is appended as an audited corpus option and
+fills the canonical cover only when none exists. It never replaces an established default, and an
+ordinary reader's personal cover never crosses that corpus boundary. The existing fill-only preservation invoked
 before personal removal, merge deletion, or account deletion may still populate objective corpus
 gaps so the final source is not lost. `COVER_PUBLIC_URL` must remain unset or use that same origin; a
 different CDN origin is safely rejected until it has an explicit database-controlled trust

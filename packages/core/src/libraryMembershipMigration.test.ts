@@ -14,6 +14,13 @@ const householdCatalogMigration = readFileSync(
   join(__dirname, '../../../supabase/migrations/20260902010000_household_catalog_entry.sql'),
   'utf8',
 )
+const personalCoverProjectionMigration = readFileSync(
+  join(
+    __dirname,
+    '../../../supabase/migrations/20260903010000_personal_cover_scope_projection.sql',
+  ),
+  'utf8',
+)
 
 function section(start: string, end: string): string {
   return sectionOf(migration, start, end)
@@ -270,5 +277,52 @@ describe('household-only catalog entry and explicit personal adoption', () => {
     expect(update).not.toMatch(/\bownership\s*=/i)
     expect(update).not.toMatch(/\bread_status\s*=/i)
     expect(update).not.toMatch(/\brating\s*=/i)
+  })
+})
+
+describe('personal cover scope projection', () => {
+  it('projects only already-eligible copy covers into the household read model', () => {
+    const readModel = sectionOf(
+      personalCoverProjectionMigration,
+      'create or replace function public.household_library_works()',
+      'revoke all on function public.household_library_works()',
+    )
+
+    expect(readModel).toContain("'coverUrl', book.cover_url")
+    expect(readModel).toContain("'coverThumbUrl', book.cover_thumb_url")
+    expect(readModel).toContain("'coverColor', book.cover_color")
+    expect(readModel).toMatch(
+      /book\.ownership = 'owned'[\s\S]*?household_book_shares admitted_share/,
+    )
+    expect(readModel).toContain('admitted_share.book_id = book.id')
+    expect(readModel).toContain('admitted_share.work_id = household_work.work_id')
+  })
+
+  it('keeps administrator promotion additive, fill-only, and behind the hosted-cover boundary', () => {
+    const promotion = sectionOf(
+      personalCoverProjectionMigration,
+      'create function public.promote_admin_personal_cover_to_corpus()',
+      'revoke all on function public.promote_admin_personal_cover_to_corpus()',
+    )
+
+    expect(promotion).toContain('caller <> new.owner_id')
+    expect(promotion).toMatch(
+      /from public\.corpus_admins admin[\s\S]*?admin\.user_id = caller[\s\S]*?for key share;/,
+    )
+    expect(promotion).toContain('book_corpus_binding_is_unambiguous')
+    expect(promotion).toContain('hosted_book_cover_object_name')
+    expect(promotion).toContain('google_books_display_cover_url_is_valid')
+    expect(promotion).toContain('cover_url = coalesce(work.cover_url, safe_cover)')
+    expect(promotion).toContain('work.cover_options || jsonb_build_array(safe_cover_option)')
+    expect(promotion).toContain('insert into public.work_metadata_edits')
+    expect(promotion).not.toMatch(/\bdelete\b/i)
+  })
+
+  it('does not restore the retired general personal-metadata trigger', () => {
+    expect(personalCoverProjectionMigration).not.toContain(
+      'books_sync_objective_metadata_to_corpus',
+    )
+    expect(personalCoverProjectionMigration).toContain('books_promote_admin_cover_after_insert')
+    expect(personalCoverProjectionMigration).toContain('books_promote_admin_cover_after_update')
   })
 })

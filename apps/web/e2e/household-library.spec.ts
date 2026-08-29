@@ -10,6 +10,8 @@ const ANON =
 const SERVICE =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU'
 const PASSWORD = 'household-library-e2e-password'
+const PERSONAL_COVER =
+  'data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%222%22%20height%3D%223%22%3E%3Crect%20width%3D%222%22%20height%3D%223%22%20fill%3D%22%23123456%22%2F%3E%3C%2Fsvg%3E'
 
 test.describe.configure({ mode: 'serial' })
 
@@ -113,6 +115,9 @@ async function seedDuplicateBooks(): Promise<NonNullable<typeof seeded>> {
     darkness: null as number | null,
     progress: null as number | null,
     plan_y: null as number | null,
+    cover_url: null as string | null,
+    cover_thumb_url: null as string | null,
+    cover_color: null as string | null,
   }
   const sentinels = {
     tag: `HOUSEHOLD_TAG_${projectName}`,
@@ -138,6 +143,8 @@ async function seedDuplicateBooks(): Promise<NonNullable<typeof seeded>> {
           darkness: 5,
           progress: 100,
           plan_y: 2027,
+          cover_url: PERSONAL_COVER,
+          cover_color: '#123456',
         },
         {
           ...base,
@@ -343,6 +350,8 @@ test('two linked personal libraries appear together without exposing personal co
   const serializedPayload = JSON.stringify(sharedPayload.data)
   expect(serializedPayload).toContain(seeded.sentinels.tag)
   expect(serializedPayload).toContain(seeded.sentinels.trope)
+  expect(sharedPayload.data?.[0]?.cover_url).toBeNull()
+  expect(serializedPayload).toContain(PERSONAL_COVER)
   expect(serializedPayload).not.toContain(seeded.sentinels.note)
   expect(serializedPayload).not.toContain(seeded.sentinels.mood)
 
@@ -359,6 +368,7 @@ test('two linked personal libraries appear together without exposing personal co
   await expect(ownerCard).toContainText(`${owner.displayName} (you)`)
   await expect(memberCard).toContainText(member.displayName)
   await expect(ownerCard).toContainText(`Household Duplicate ${projectName}`)
+  await expect(ownerCard.locator('img')).toHaveAttribute('src', PERSONAL_COVER)
   await expect(page.getByText(seeded.sentinels.note, { exact: false })).toHaveCount(0)
   await expect(page.getByText(seeded.sentinels.mood, { exact: false })).toHaveCount(0)
 

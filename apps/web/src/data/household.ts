@@ -19,8 +19,12 @@ export interface HouseholdBook {
   id: string
   title: string
   author: string
+  /** Display cover: canonical corpus artwork first, then an eligible personal-copy fallback. */
   cover: string
   coverColor: string
+  /** Canonical values stay separate so a display fallback never becomes an implicit corpus edit. */
+  corpusCover: string
+  corpusCoverColor: string
   coverOptions: { url?: string; source?: string; sourceUrl?: string }[]
   series: string
   position: number | null
@@ -57,6 +61,9 @@ export interface HouseholdBookOwner {
   ownedEbook: boolean
   ownedAudiobook: boolean
   bookFormat: string
+  cover: string
+  coverThumb: string
+  coverColor: string
   shared: boolean
 }
 
@@ -108,6 +115,9 @@ interface HouseholdBookOwnerRow {
   ownedEbook?: boolean | null
   ownedAudiobook?: boolean | null
   format?: string | null
+  coverUrl?: string | null
+  coverThumbUrl?: string | null
+  coverColor?: string | null
   shared?: boolean | null
 }
 
@@ -152,6 +162,8 @@ export const toHouseholdBook = (row: HouseholdBookRow): HouseholdBook => ({
   author: row.author?.trim() ?? '',
   cover: row.cover_url ?? '',
   coverColor: row.cover_color ?? '',
+  corpusCover: row.cover_url ?? '',
+  corpusCoverColor: row.cover_color ?? '',
   coverOptions: row.cover_options ?? [],
   series: row.series_name ?? '',
   position: numericPosition(row.series_position),
@@ -174,6 +186,9 @@ export const toHouseholdBook = (row: HouseholdBookRow): HouseholdBook => ({
           ownedEbook: owner.ownedEbook ?? false,
           ownedAudiobook: owner.ownedAudiobook ?? false,
           bookFormat: owner.format ?? '',
+          cover: owner.coverUrl ?? '',
+          coverThumb: owner.coverThumbUrl ?? '',
+          coverColor: owner.coverColor ?? '',
           shared: owner.shared ?? false,
         }]
       : [],
@@ -232,6 +247,7 @@ export function householdOwnerLabels(
 export function labelHouseholdData(
   members: readonly HouseholdMember[],
   books: readonly HouseholdBook[],
+  currentReaderId = '',
 ): { members: HouseholdMember[]; books: HouseholdBook[] } {
   const labels = householdOwnerLabels(members)
   return {
@@ -242,13 +258,21 @@ export function labelHouseholdData(
     // Owner copy data is roster-authorized independently of household membership. An unknown
     // owner is dropped, while the work itself remains: household membership survives personal
     // removal and therefore legitimately has no active owner copy.
-    books: books.map((book) => ({
-      ...book,
-      owners: book.owners.flatMap((owner) => {
+    books: books.map((book) => {
+      const owners = book.owners.flatMap((owner) => {
         const displayName = labels.get(owner.userId)
         return displayName ? [{ ...owner, displayName }] : []
-      }),
-    })),
+      })
+      const personalCover =
+        owners.find((owner) => owner.userId === currentReaderId && owner.cover) ??
+        owners.find((owner) => owner.cover)
+      return {
+        ...book,
+        cover: book.corpusCover || personalCover?.cover || '',
+        coverColor: book.corpusCover ? book.corpusCoverColor : (personalCover?.coverColor ?? ''),
+        owners,
+      }
+    }),
   }
 }
 
