@@ -8,9 +8,10 @@ dry run wrote nothing and correctly blocked on 10 corpus-missing identities. Ind
 rejected the first household-only catalog-entry candidate for authorization, checksum, lock-order,
 structured-series, scope, and coverage gaps. Its first remediated re-review then found a stale
 series-length adoption, a deterministic owner-edit/tag-trigger deadlock, lost cover previews, and
-weak UI refresh coverage. Those findings are corrected and locally verified; final independent
-re-review remains required. The dry-run checksum is not approvable, and backup, reconciliation
-write, and post-write smoke checks remain pending.**
+weak UI refresh coverage. Those findings are corrected, and independent database/security,
+verification, and web/product re-reviews passed at `a7ac983`. The household-only catalog entry is
+ready for integration but remains undeployed. The dry-run checksum is not approvable, and backup,
+reconciliation write, and post-write smoke checks remain pending.**
 
 ## Production migration performance hotfix — 2026-08-26
 
@@ -346,8 +347,8 @@ aggregate rows were valid household entries but had no corpus identity. The dura
   fields while preserving title, contributors, ISBN, ownership, reading history, rating, and private
   annotations.
 
-This twice-remediated candidate is complete locally and is not deployed. Production reconciliation
-remains paused until final independent re-review and integration, followed in exact order by the
+This independently reviewed candidate is complete locally and is not deployed. Production
+reconciliation remains paused until integration, followed in exact order by the
 owner-guarded `20260902010000` deployment, all 51 expanded rollout-report rows, the guarded `covers`
 function deployment plus owner/admin authorization smoke, and only then the guarded web deployment
 plus household-only add/cover-refresh smoke. Shipping the web first would leave household owners on

@@ -8,9 +8,10 @@ corpus-missing identities. Independent review rejected the first household-only 
 candidate for authorization, checksum, lock-order, structured-series, scope, and coverage gaps.
 The first remediation re-review then found a series-length adoption defect, a reproducible lock-order
 deadlock, a discarded catalog-cover preview, and UI assertions that proved only database state. The
-second remediation closes those findings and is locally verified; final independent re-review is
-still required. Administrator grants, reconciliation backup/write, and post-write smoke checks
-remain owner-gated and unperformed by Code.**
+final remediation closes those findings, and independent database/security, verification, and
+web/product re-reviews passed at `a7ac983`. The household-only catalog entry is ready for integration
+but remains undeployed. Administrator grants, reconciliation backup/write, and post-write smoke
+checks remain owner-gated and unperformed by Code.**
 
 ## Objective
 
@@ -200,7 +201,7 @@ contains exactly Account A and Account B before either dry-run or write planning
 
 ## Household catalog remediation verification — 2026-08-28
 
-The twice-remediated candidate closes every finding from both independent review passes: global
+The independently reviewed candidate closes every finding from the review passes: global
 corpus administrators can edit unrelated works through the audited writer; ISBN-10/13 checksums are
 validated and nonblank inputs containing characters beyond digits, spaces, hyphens, or a checksum
 `X` are refused; profile-first locking removes the add/unlink inversion; shared series adoption retires
@@ -232,7 +233,7 @@ ordinary-member editor denial, not merely service-role reads behind the page.
   no warning after the shared scope helper was separated from the component module.
 
 No production data, credentials, migration, function, web deployment, or remote repository state
-was touched. Final independent re-review and integration remain the next gates.
+was touched. Integration remains the next gate.
 
 ## Local verification — refreshed 2026-08-28
 
