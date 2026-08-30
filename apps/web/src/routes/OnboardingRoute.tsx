@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { createRoute, useNavigate } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { APP_NAME, SKIN_LIST, SKINS, type SkinId } from '@reverie/core'
@@ -16,6 +16,10 @@ import { SkinDivider } from '../components/SkinDivider'
 import { DuplicateReview } from '../components/DuplicateReview'
 import { ImportSummary } from '../components/ImportSummary'
 import { Surface } from '../components/Surface'
+import { useAuth } from '../auth/AuthProvider'
+import { useHouseholdLibraryAuthorization } from '../data/household'
+import { AddDestinationPicker } from '../components/AddDestinationPicker'
+import type { AddDestination } from '../components/addDestination'
 
 // First-run flag — honor-based / client-side (the project's v1 default), so a finished or skipped
 // onboarding never reappears. The trigger that sends a brand-new reader here lives in HomeRoute.
@@ -75,12 +79,21 @@ function OnboardingFlow() {
   const voice = useVoice()
   const isAdaptive = useSkin((s) => s.skin) === 'adaptive'
   const qc = useQueryClient()
+  const { session } = useAuth()
+  const household = useHouseholdLibraryAuthorization()
   const existing = useBooks().data ?? []
   const csvRef = useRef<HTMLInputElement>(null)
   const [step, setStep] = useState(0)
   const [picked, setPicked] = useState<SkinId | null>(null)
   const [imp, setImp] = useState<ImportState>(null)
   const [impErr, setImpErr] = useState<string | null>(null)
+  const [importDestination, setImportDestination] = useState<AddDestination>('mine')
+  const importDestinationChosen = useRef(false)
+  useEffect(() => {
+    if (!importDestinationChosen.current && household.authorized && household.members.length) {
+      setImportDestination('both')
+    }
+  }, [household.authorized, household.members.length])
 
   const skinLabel = isAdaptive ? 'Adaptive' : SKINS[activeSkin].label
   const skinTagline = SKINS[activeSkin].tagline
@@ -97,7 +110,10 @@ function OnboardingFlow() {
     void (async () => {
       try {
         const text = await fileToCsvText(file)
-        const r = await importDetectedExport(existing, text, { autoMerge: true })
+        const r = await importDetectedExport(existing, text, {
+          autoMerge: true,
+          addToHousehold: importDestination === 'both',
+        })
         await qc.invalidateQueries()
         markOnboarded() // they've brought a library in — don't re-onboard
         setImp({ phase: 'done', r })
@@ -350,6 +366,19 @@ function OnboardingFlow() {
           Already track your books somewhere? Move them over in seconds. Starting fresh is just as
           welcome.
         </p>
+
+        <div className="mt-5">
+          <AddDestinationPicker
+            value={importDestination}
+            onChange={(next) => {
+              importDestinationChosen.current = true
+              setImportDestination(next)
+            }}
+            members={household.authorized ? household.members : []}
+            currentReaderId={session?.user.id ?? ''}
+            importOnly
+          />
+        </div>
 
         <div className="mt-5 flex flex-col gap-3">
           {options.map((o) => (

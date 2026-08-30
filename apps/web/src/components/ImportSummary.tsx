@@ -44,6 +44,17 @@ export function ImportSummary({
           ))}
         </ul>
       )}
+      {(r.householdAdded ?? 0) > 0 ? (
+        <p className="mt-3 text-[13px] leading-relaxed text-muted">
+          Added {r.householdAdded} resolved book{r.householdAdded === 1 ? '' : 's'} to the household
+          library too.
+        </p>
+      ) : null}
+      {r.householdWarning ? (
+        <p role="status" className="mt-3 text-[13px] leading-relaxed text-accent-ink">
+          {r.householdWarning}
+        </p>
+      ) : null}
       {children}
     </div>
   )

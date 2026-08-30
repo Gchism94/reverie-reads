@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createRoute, Link } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { findDuplicateGroups, planTitleCleanup, richness, type Book } from '@reverie/core'
@@ -42,6 +42,9 @@ import { useSkinControls } from '../skin/controls'
 import { useAuth } from '../auth/AuthProvider'
 import { todayLocalDate } from '../lib/localDate'
 import { Surface } from '../components/Surface'
+import { useHouseholdLibraryAuthorization } from '../data/household'
+import { AddDestinationPicker } from '../components/AddDestinationPicker'
+import type { AddDestination } from '../components/addDestination'
 
 const YEAR = new Date().getFullYear()
 
@@ -77,6 +80,14 @@ function SettingsScreen() {
   const activeMode = useSkin((s) => s.mode)
   const { setSkin, setMode } = useSkinControls()
   const { session, signOut } = useAuth()
+  const household = useHouseholdLibraryAuthorization()
+  const [importDestination, setImportDestination] = useState<AddDestination>('mine')
+  const importDestinationChosen = useRef(false)
+  useEffect(() => {
+    if (!importDestinationChosen.current && household.authorized && household.members.length) {
+      setImportDestination('both')
+    }
+  }, [household.authorized, household.members.length])
   const [deleteText, setDeleteText] = useState('')
   const [deleting, setDeleting] = useState(false)
 
@@ -794,6 +805,16 @@ function SettingsScreen() {
         </Section>
 
         <Section title="Backup & import">
+          <AddDestinationPicker
+            value={importDestination}
+            onChange={(next) => {
+              importDestinationChosen.current = true
+              setImportDestination(next)
+            }}
+            members={household.authorized ? household.members : []}
+            currentReaderId={session?.user.id ?? ''}
+            importOnly
+          />
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
@@ -867,7 +888,10 @@ function SettingsScreen() {
               hidden
               onChange={(e) =>
                 readFile(e.currentTarget, async (text) => {
-                  const r = await importDetectedExport(all, text, { autoMerge })
+                  const r = await importDetectedExport(all, text, {
+                    autoMerge,
+                    addToHousehold: importDestination === 'both',
+                  })
                   setReview(r.review)
                   setImportResult(r)
                   // Stash the per-book outcomes so the Import review screen can build its read-model.

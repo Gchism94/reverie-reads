@@ -76,24 +76,25 @@ export async function resolveCandidate(
   action: ReviewAction,
   /** Per-field overrides from DuplicateReview's picker; absent = the engine's own answer. */
   picks?: MergeFieldPicks,
-): Promise<void> {
+): Promise<string | null> {
   const ownerId = await currentUserId()
   const inc = candidate.incoming
   switch (action) {
     case 'merge':
       await foldIn(await hydrateReads(existing), inc, ownerId, picks)
-      return
+      return existing.id
     case 'always_merge':
       await foldIn(await hydrateReads(existing), inc, ownerId, picks)
       await rememberVerdict(existing.id, inc, 'always_merge')
-      return
-    case 'keep_both':
-      await insertNewBook(inc, ownerId)
+      return existing.id
+    case 'keep_both': {
+      const created = await insertNewBook(inc, ownerId)
       await rememberVerdict(existing.id, inc, 'keep_separate')
-      return
+      return created.id
+    }
     case 'dismiss':
       await rememberVerdict(existing.id, inc, 'keep_separate')
-      return
+      return null
   }
 }
 

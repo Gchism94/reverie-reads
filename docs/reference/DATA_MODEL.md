@@ -339,7 +339,8 @@ parent, and "not yet positioned" is a state many rows legitimately share at once
 and CSV import wrote whole batches of them).
 
 households           (id pk, name, created_at, updated_at)
-household_members    (household_id fk, user_id fk unique, role 'owner'|'member', joined_at,
+household_members    (household_id fk, user_id fk unique, role 'owner'|'member',
+                     allow_member_library_adds boolean default false, joined_at,
                      primary key (household_id, user_id))
 household_works      (household_id fk, work_id fk→works, added_by, inclusion_source,
                      added_at, removed_at, removed_by,
@@ -472,6 +473,17 @@ an already-reviewed cover option. Corpus edits do not rewrite linked personal ro
 may explicitly call `adopt_corpus_work_metadata` to copy shared series (including the reviewed
 length/status tuple), genre, cover, and publication details; title/contributors, ISBN, possession,
 reading state, rating, and private annotations remain untouched.
+
+Every Add and import surface names its destination. For a linked member the default is the reader's
+personal library plus the household catalog; personal-only and household-only remain explicit
+choices. Imports publish their resolved personal book IDs to the household in one checked batch and
+never infer publication from wishlist or reading state. A member may separately opt in through
+`allow_member_library_adds` to let peers add a corpus work to their personal library. That delegated
+RPC requires both accounts in the same household and an active household work, and creates only a
+neutral bibliographic personal row: unowned, not borrowed, not wishlisted, unread state unset, with
+no rating, favourite, intensity/darkness, plan, progress, tags, tropes, moods, or private notes. The
+recipient can revoke permission at any time; the permission setter can update only the caller's own
+membership row.
 
 Membership linking/unlinking remains service-role, owner-run, dry-run-first operation through
 `link_household` and `unlink_household_member`. Runtime client mutations use narrow authenticated

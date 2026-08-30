@@ -225,8 +225,8 @@ select is(
      select distinct jsonb_object_keys(to_jsonb(h)) as key
      from public.household_roster() h
    ) keys),
-  'display_name,household_id,household_name,member_role,user_id',
-  'the roster RPC exposes exactly its five reviewed fields'
+  'allow_member_library_adds,display_name,household_id,household_name,member_role,user_id',
+  'the roster RPC exposes exactly its six reviewed fields'
 );
 
 select is((select count(*)::int from public.household_library_books()), 2,

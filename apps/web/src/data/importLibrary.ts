@@ -58,6 +58,37 @@ export interface ImportExportResult {
   extras: ImportExtras
   /** every resolved book id (added or merged) — the enrichment kickoff scopes its first pass to these */
   bookIds: string[]
+  /** resolved personal books explicitly published to the household catalog */
+  householdAdded?: number
+  /** personal import committed, but its requested household publication did not */
+  householdWarning?: string
+}
+
+async function householdImportResult(
+  bookIds: string[],
+  enabled: boolean,
+): Promise<{ householdAdded: number; householdWarning?: string }> {
+  try {
+    return { householdAdded: await addImportedBooksToHousehold(bookIds, enabled) }
+  } catch {
+    return {
+      householdAdded: 0,
+      householdWarning:
+        'The personal books were imported, but the household entries could not be added. Reconnect and import again with My library + Household; duplicates will fold safely.',
+    }
+  }
+}
+
+export async function addImportedBooksToHousehold(
+  bookIds: string[],
+  enabled: boolean,
+): Promise<number> {
+  if (!enabled || !bookIds.length) return 0
+  const { data, error } = await supabase.rpc('add_personal_books_to_household', {
+    p_books: [...new Set(bookIds)],
+  })
+  if (error) throw error
+  return data as number
 }
 
 
@@ -71,7 +102,7 @@ export interface ImportExportResult {
 export async function importDetectedExport(
   currentBooks: Book[],
   text: string,
-  opts: { autoMerge: boolean },
+  opts: { autoMerge: boolean; addToHousehold?: boolean },
 ): Promise<ImportExportResult> {
   const { profile, rows } = parseImport(text)
   // Read-only, shared by both importers: count likely-truncated ISBNs off the raw header+values, so
@@ -82,6 +113,10 @@ export async function importDetectedExport(
   // carry the row extras: Imported TBR, custom shelves, and the bulk-empty facts for the summary).
   if (profile.name === 'generic') {
     const r = await importCsvToBackend(currentBooks, text, { autoMerge: opts.autoMerge })
+    const householdResult = await householdImportResult(
+      r.bookIds,
+      opts.addToHousehold ?? false,
+    )
     return {
       profile: profile.name,
       added: r.added,
@@ -93,6 +128,7 @@ export async function importDetectedExport(
       truncatedIsbns,
       extras: r.extras,
       bookIds: r.bookIds,
+      ...householdResult,
     }
   }
 
@@ -132,6 +168,11 @@ export async function importDetectedExport(
   // series position is the one ordering mechanism. Count what the reader supplied so the summary can
   // say so — a column that silently vanishes is worse than one we admit we ignored.
   const ignoredGlobalOrder = ingested.filter(({ row }) => row.globalOrder != null).length
+  const bookIds = ingested.map((i) => i.bookId)
+  const householdResult = await householdImportResult(
+    bookIds,
+    opts.addToHousehold ?? false,
+  )
 
   return {
     profile: profile.name,
@@ -143,6 +184,7 @@ export async function importDetectedExport(
     outcomes,
     truncatedIsbns,
     extras: EMPTY_EXTRAS,
-    bookIds: ingested.map((i) => i.bookId),
+    bookIds,
+    ...householdResult,
   }
 }
