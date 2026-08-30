@@ -1,16 +1,14 @@
 # Task: corpus-preserving library removal and owner reconciliation
 
-Status: **Production remains at the owner-deployed `20260902010000` plus the updated `covers`
-function; production web remains held. The local branch stacks the corrected
-`20260903010000` personal-cover projection and forward-only `20260904010000` release-gate repair
-on PR #367. Fresh review found that the first correction still allowed a stale review gesture,
-authenticated retraction of an accepted option, legacy table grants, dead cache invalidation, and a
-false actionable “off” state after a review-status error. The forward repair binds review to the
-displayed work and URL, preserves accepted options across authenticated edits, resets all six
-household table ACLs, invalidates the real caches, and fails the switch closed. Independent
-re-review found no remaining issue. Integration, owner deployment, and the expanded 71-row report
-remain required before web deployment. The private reconciliation dry-run checksum remains unapproved; backup,
-reconciliation write, and post-write smoke checks remain pending.**
+Status: **The prerequisite cover and household rollout is live. The owner deployed migrations
+through `20260905010000`, the production report returned 74/74 true, and web build `e7a6809` is
+promoted at `reveriereads.app`. The owner-run exact-roster administrator dry run found one existing
+grant, one addition, and no unexpected account; the reviewed write then verified both requested
+grants and the exact roster. The first private reconciliation dry run found 10 missing exact
+title/author identities. Rerun it now and resolve any that remain through Household Add, then
+produce and approve a fresh deterministic dry run and transaction-consistent backup. The
+reconciliation write and post-write Account A/B, household, removal, corpus-preservation, cover,
+and trope smoke checks remain owner-only and pending.**
 
 ## Production migration performance hotfix — 2026-08-26
 

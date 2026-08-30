@@ -1,15 +1,14 @@
 # Task: corpus-administrator enrichment and durable corpus metadata
 
-Status: **PR #367 and owner deployment stop at `20260902010000` plus the updated `covers`
-function; production web stayed held. The local branch stacks corrected `20260903010000` behavior
-and the forward-only `20260904010000` release-gate repair. Fresh review of the first correction
-found a stale exact-cover approval race, authenticated accepted-option retraction, six incomplete
-table ACLs, dead cache invalidation, and a fail-open review-status error state. The current repair
-binds review to the locked work and URL, preserves accepted options across authenticated edits,
-resets the table ACLs, invalidates every real consumer, and disables the switch when status is
-unknown. Independent re-review found no remaining issue. Integration, owner deployment, the
-71-row report, and final web smoke remain required. Production has not received either local
-migration.**
+Status: **The cover and household rollout is live through PR #371. The owner deployed migrations
+through `20260905010000`; the read-only production report returned 74/74 true; and web build
+`e7a6809` is promoted at `reveriereads.app`. PRs #368–#370 provide exact personal and household
+cover review, fail-closed unavailable status, additive missing-default promotion, owner-scoped
+bulk recovery, and the responsive shared-details editor. The report initially observed one
+assigned corpus administrator. The owner-run exact-roster dry run then found one existing grant,
+one addition, and no unexpected account; the reviewed write verified both requested grants and the
+exact roster. Private CSV reconciliation, backup approval, owner write, and post-write smoke checks
+remain pending.**
 
 ## Objective
 
