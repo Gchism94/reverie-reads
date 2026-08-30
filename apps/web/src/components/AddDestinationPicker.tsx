@@ -82,9 +82,7 @@ export function AddDestinationPicker({
                 <span className="block text-[13px] font-semibold leading-tight">
                   {choice.label}
                 </span>
-                <span className="mt-1 block text-[11.5px] leading-snug opacity-80">
-                  {choice.detail}
-                </span>
+                <span className="mt-1 block text-[11.5px] leading-snug">{choice.detail}</span>
               </span>
             </label>
           )

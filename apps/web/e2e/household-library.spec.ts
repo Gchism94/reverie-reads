@@ -380,8 +380,11 @@ test('two linked personal libraries appear together without exposing personal co
       })),
     ).toEqual({ client: 390, scroll: 390 })
 
-    const initialScrollY = await page.evaluate(() => window.scrollY)
+    // A reader scrolls this now-lower card into view before activating it. Without this explicit
+    // user step Playwright performs the same scroll inside click(), after the baseline is recorded.
+    await memberCard.evaluate((element) => element.scrollIntoView({ block: 'center' }))
     await memberCard.focus()
+    const initialScrollY = await page.evaluate(() => window.scrollY)
     await memberCard.click()
     const detail = page.getByRole('dialog', { name: /household details/i })
     const close = detail.getByRole('button', { name: 'Close household details' })
@@ -734,7 +737,8 @@ test('persistent Add creates a household-only work and explicit adoption updates
     await expect(persistentAdd).toHaveAttribute('aria-label', 'Add to household')
     await persistentAdd.click()
     await expect(page).toHaveURL(/\/add\?scope=household$/)
-    await expect(page.getByRole('heading', { name: 'Add to household' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Add a book' })).toBeVisible()
+    await expect(page.getByRole('radio', { name: /Household only/ })).toBeChecked()
 
     await page.getByLabel('Search for a book').fill(title)
     await page.getByRole('button', { name: 'Add manually' }).click()
