@@ -33,7 +33,7 @@ vi.mock('../lib/supabase', () => ({
 import {
   bulkCompleteCorpus,
   corpusCoverRecoverySummary,
-  recoverAdminPersonalCorpusCovers,
+  recoverAdminHouseholdCorpusCovers,
   runCorpusCompletionPipeline,
   type CorpusEnrichmentWork,
 } from './enrichCorpus'
@@ -71,7 +71,7 @@ describe('corpus cover recovery', () => {
       error: null,
     })
 
-    await expect(recoverAdminPersonalCorpusCovers()).resolves.toEqual({
+    await expect(recoverAdminHouseholdCorpusCovers()).resolves.toEqual({
       scanned: 12,
       recoveredCovers: 7,
       recoveredOptions: 9,
@@ -82,10 +82,10 @@ describe('corpus cover recovery', () => {
   it('reports published alternatives even when the corpus already had a default cover', () => {
     expect(
       corpusCoverRecoverySummary({ scanned: 3, recoveredCovers: 0, recoveredOptions: 2 }),
-    ).toBe(' · published 2 personal cover options')
+    ).toBe(' · published 2 household cover options')
     expect(
       corpusCoverRecoverySummary({ scanned: 3, recoveredCovers: 1, recoveredOptions: 1 }),
-    ).toBe(' · filled 1 missing corpus cover · published 1 personal cover option')
+    ).toBe(' · filled 1 missing corpus cover · published 1 household cover option')
   })
 
   it('relocates the exact current cover before a failed metadata lookup', async () => {

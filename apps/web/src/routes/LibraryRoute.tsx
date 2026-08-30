@@ -32,11 +32,13 @@ import {
 import { Surface } from '../components/Surface'
 import {
   labelHouseholdData,
+  useAdminReviewHouseholdCoverForCorpus,
   useHouseholdBookSelection,
   useHouseholdLibraryAuthorization,
   useRemoveHouseholdWork,
   useUpdateCorpusWorkMetadata,
   type HouseholdBook,
+  type HouseholdBookOwner,
 } from '../data/household'
 import { useAuth } from '../auth/AuthProvider'
 import { useIsDesktop, useIsWide } from '../hooks/useMediaQuery'
@@ -93,7 +95,8 @@ function EmptyState() {
 const COVER_GRID: React.CSSProperties = {
   display: 'grid',
   gridTemplateColumns: 'repeat(auto-fill, minmax(144px, 1fr))',
-  gap: '24px 18px',
+  columnGap: '18px',
+  rowGap: '40px',
 }
 
 function DetailDrawer({
@@ -460,6 +463,8 @@ function HouseholdDetailDrawer({
   addingCorpusTrope,
   onEditCorpus,
   editingCorpus,
+  onReviewCover,
+  reviewingCoverBookId,
 }: {
   book: HouseholdBook
   currentReaderId: string
@@ -470,6 +475,8 @@ function HouseholdDetailDrawer({
   addingCorpusTrope?: boolean
   onEditCorpus?: (patch: HouseholdCorpusEdit) => Promise<void>
   editingCorpus?: boolean
+  onReviewCover?: (owner: HouseholdBookOwner) => Promise<void>
+  reviewingCoverBookId?: string | null
 }) {
   return (
     <DrawerDialog
@@ -486,6 +493,8 @@ function HouseholdDetailDrawer({
         addingCorpusTrope={addingCorpusTrope}
         onEditCorpus={onEditCorpus}
         editingCorpus={editingCorpus}
+        onReviewCover={onReviewCover}
+        reviewingCoverBookId={reviewingCoverBookId}
       />
     </DrawerDialog>
   )
@@ -497,6 +506,7 @@ function HouseholdLibraryScreen() {
   const household = useHouseholdLibraryAuthorization()
   const removeWork = useRemoveHouseholdWork()
   const updateCorpus = useUpdateCorpusWorkMetadata()
+  const reviewHouseholdCover = useAdminReviewHouseholdCoverForCorpus()
   const { data: isCorpusAdmin = false } = useCorpusAdminStatus()
   const addCorpusTrope = useAdminAddCorpusWorkTrope()
   const isWide = useIsWide()
@@ -520,6 +530,15 @@ function HouseholdLibraryScreen() {
   })
   const editCorpus = async (book: HouseholdBook, patch: HouseholdCorpusEdit): Promise<void> => {
     await updateCorpus.mutateAsync({ workId: book.id, ...patch })
+  }
+  const reviewCover = async (book: HouseholdBook, owner: HouseholdBookOwner): Promise<void> => {
+    if (!household.householdId || !owner.cover) return
+    await reviewHouseholdCover.mutateAsync({
+      householdId: household.householdId,
+      bookId: owner.bookId,
+      workId: book.id,
+      coverUrl: owner.cover,
+    })
   }
   const selected = selection.selected
   const removeFromHousehold = (book: HouseholdBook) => {
@@ -669,6 +688,12 @@ function HouseholdLibraryScreen() {
               addingCorpusTrope={addCorpusTrope.isPending}
               onEditCorpus={canEditCorpus ? (patch) => editCorpus(dockedBook, patch) : undefined}
               editingCorpus={updateCorpus.isPending}
+              onReviewCover={isCorpusAdmin ? (owner) => reviewCover(dockedBook, owner) : undefined}
+              reviewingCoverBookId={
+                reviewHouseholdCover.isPending
+                  ? (reviewHouseholdCover.variables?.bookId ?? null)
+                  : null
+              }
             />
           </aside>
         ) : null}
@@ -694,6 +719,10 @@ function HouseholdLibraryScreen() {
           addingCorpusTrope={addCorpusTrope.isPending}
           onEditCorpus={canEditCorpus ? (patch) => editCorpus(selected, patch) : undefined}
           editingCorpus={updateCorpus.isPending}
+          onReviewCover={isCorpusAdmin ? (owner) => reviewCover(selected, owner) : undefined}
+          reviewingCoverBookId={
+            reviewHouseholdCover.isPending ? (reviewHouseholdCover.variables?.bookId ?? null) : null
+          }
         />
       ) : null}
     </>

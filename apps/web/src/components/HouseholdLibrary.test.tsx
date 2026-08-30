@@ -12,6 +12,7 @@ const book = (ownerId: string, ownerName: string): HouseholdBook => ({
   corpusCover: 'https://covers.example.test/duplicate.jpg',
   corpusCoverColor: '',
   coverOptions: [],
+  coverOptionsAvailable: true,
   series: 'Household Cycle',
   position: 2,
   seriesCount: 3,
@@ -85,6 +86,41 @@ describe('household Library presentation', () => {
     ).not.toBeInTheDocument()
   })
 
+  it('lets an administrator review an active household copy cover', async () => {
+    const review = vi.fn().mockResolvedValue(undefined)
+    const householdBook = book('reader-a', 'Avery')
+    render(
+      <HouseholdBookDetail
+        book={householdBook}
+        currentReaderId="reader-a"
+        onReviewCover={review}
+      />,
+    )
+
+    const toggle = screen.getByRole('switch', { name: 'Review household cover for corpus' })
+    expect(toggle).toHaveAttribute('aria-checked', 'false')
+    fireEvent.click(toggle)
+    await waitFor(() => expect(review).toHaveBeenCalledWith(householdBook.owners[0]))
+  })
+
+  it('fails household cover review closed when accepted-option state is unavailable', () => {
+    const review = vi.fn().mockResolvedValue(undefined)
+    render(
+      <HouseholdBookDetail
+        book={{ ...book('reader-a', 'Avery'), coverOptionsAvailable: false }}
+        currentReaderId="reader-a"
+        onReviewCover={review}
+      />,
+    )
+
+    const toggle = screen.getByRole('switch', {
+      name: 'Household cover review status unavailable',
+    })
+    expect(toggle).toBeDisabled()
+    fireEvent.click(toggle)
+    expect(review).not.toHaveBeenCalled()
+  })
+
   it('renders a trope-only household overlay in the detail DOM', () => {
     const tropeOnly = {
       ...book('reader-a', 'Avery'),
@@ -125,7 +161,8 @@ describe('household Library presentation', () => {
       />,
     )
 
-    fireEvent.click(screen.getByText('Edit shared cover, series, genre, and publication'))
+    fireEvent.click(screen.getByRole('button', { name: 'Edit shared details' }))
+    expect(screen.getByRole('dialog', { name: 'Edit shared details' })).toBeInTheDocument()
     expect(screen.getByText(/Personal copies keep their existing details/)).toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('Shared primary genre'), {
       target: { value: 'mystery' },
@@ -162,7 +199,7 @@ describe('household Library presentation', () => {
       />,
     )
 
-    fireEvent.click(screen.getByText('Edit shared cover, series, genre, and publication'))
+    fireEvent.click(screen.getByRole('button', { name: 'Edit shared details' }))
     fireEvent.change(screen.getByLabelText('Shared primary genre'), {
       target: { value: 'mystery' },
     })
@@ -183,7 +220,7 @@ describe('household Library presentation', () => {
       />,
     )
 
-    fireEvent.click(screen.getByText('Edit shared cover, series, genre, and publication'))
+    fireEvent.click(screen.getByRole('button', { name: 'Edit shared details' }))
     fireEvent.change(screen.getByLabelText('Shared publication month'), {
       target: { value: '13' },
     })
@@ -212,7 +249,7 @@ describe('household Library presentation', () => {
       />,
     )
 
-    fireEvent.click(screen.getByText('Edit shared cover, series, genre, and publication'))
+    fireEvent.click(screen.getByRole('button', { name: 'Edit shared details' }))
     const secondChoice = screen.getByRole('radio', { name: 'Google cover 2' })
     fireEvent.click(secondChoice)
     expect(secondChoice).toBeChecked()

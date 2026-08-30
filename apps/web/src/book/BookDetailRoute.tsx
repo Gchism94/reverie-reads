@@ -57,7 +57,7 @@ import { useProfile } from '../data/profile'
 import { BookmarkGlyph } from '../components/BookmarkGlyph'
 import { Surface } from '../components/Surface'
 import { sharedCorpusDetailsDiffer } from './sharedCorpusDetails'
-import { Switch } from '../components/Switch'
+import { CorpusCoverReviewToggle } from '../components/CorpusCoverReviewToggle'
 import {
   useAdminReviewPersonalCoverForCorpus,
   useCorpusAdminStatus,
@@ -171,51 +171,6 @@ function Pill({ children, muted = false }: { children: ReactNode; muted?: boolea
     >
       {children}
     </span>
-  )
-}
-
-export function CorpusCoverReviewToggle({
-  reviewed,
-  loading,
-  unavailable,
-  saving,
-  onReview,
-}: {
-  reviewed: boolean
-  loading: boolean
-  unavailable: boolean
-  saving: boolean
-  onReview: () => void
-}) {
-  return (
-    <Surface tone="field" radius="control" pad={2} className="mt-4">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <div className="text-[12.5px] font-semibold text-ink">Corpus cover review</div>
-          <p className="mt-0.5 text-[11.5px] text-muted">
-            {unavailable
-              ? 'Review status is unavailable. Refresh before reviewing this cover.'
-              : reviewed
-                ? 'Reviewed and available as a shared cover option.'
-                : 'Off until an administrator explicitly reviews this cover. If the corpus has no cover, approval also makes this the default.'}
-          </p>
-        </div>
-        <Switch
-          checked={reviewed}
-          disabled={loading || unavailable || saving || reviewed}
-          label={
-            unavailable
-              ? 'Personal cover review status unavailable'
-              : reviewed
-                ? 'Personal cover reviewed for corpus'
-                : 'Review personal cover for corpus'
-          }
-          onChange={(next) => {
-            if (next) onReview()
-          }}
-        />
-      </div>
-    </Surface>
   )
 }
 

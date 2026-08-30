@@ -333,8 +333,40 @@ That proxy could be zero while the signed-in administrator still had exact perso
 from otherwise complete corpus works, so the owner-scoped recovery RPC never ran. **Complete shared
 corpus covers & info** now remains actionable for a corpus administrator, always runs personal-cover
 recovery first, refetches the resulting corpus candidates, and only then starts ordinary enrichment.
-The recovery boundary remains the same signed-in profile; this correction does not inspect or
-publish another household member's personal library.
+The first correction retained the same signed-in-profile boundary. Production smoke testing then
+showed why that boundary was incomplete: the designated administrator had no personal books, while
+the household library's 1,000 covers belonged to the other active member.
+
+## Household-cover follow-up — 2026-08-29
+
+`20260905010000` adds an exact household review boundary that binds the administrator gesture to
+the displayed household, personal copy, corpus work, and cover URL. It accepts only an active owned
+copy or exact live borrowed share from an active member of the caller's household, retains the
+hosted/Google ingestion allowlist and unambiguous identity checks, fills only a missing default,
+adds the reviewed option without replacement, and records the administrator in the corpus edit
+audit. The existing completion RPC name remains stable, but its preflight now includes these safe
+active household-peer covers; it still exposes neither unrelated households nor arbitrary cover
+hotlinks.
+
+The web follow-up renders the same fail-closed one-way review control beside each eligible household
+copy. Shared metadata editing moves out of the narrow desktop detail rail into a responsive dialog,
+and personal/household cover grids share a larger row gap and a consistent metadata baseline.
+Production database deployment and authenticated write smoke tests remain owner-run operations.
+
+### Household-cover follow-up verification — 2026-08-29
+
+- The focused corpus-cover pgTAP contract passed all 45 assertions, including the exact-context
+  household review, missing-default promotion, additive option behavior, audit row, unrelated-
+  household refusal, and peer-cover bulk recovery for an administrator with no personal books.
+- Core/web unit suites passed 2,440 + 663 assertions; TypeScript, ESLint, the production build, and
+  `git diff --check` also passed.
+- The authenticated household browser flow passed 17 desktop/mobile cases with one expected skip.
+  Chrome inspection at 1440px and 390px confirmed the shared editor opens in the native top layer,
+  remains usable over the mobile detail drawer, has no horizontal overflow, and preserves the
+  revised cover-card baselines and row rhythm in personal and household libraries.
+- A full pgTAP attempt was not accepted as clean evidence because the existing local stack contained
+  unrelated browser fixtures, including a retained ISBN-owning work. The focused transaction rolled
+  back cleanly; no destructive database reset was used to manufacture a full-suite result.
 
 ## Local verification — refreshed 2026-08-28
 
