@@ -620,7 +620,7 @@ select throws_ok(
       where hw.household_id = '80000000-0000-4000-8000-000000000010'
     )
   )$$,
-  '40001', null,
+  'PT409', null,
   'the atomic operator refuses books that differ from the reviewed rollback snapshot'
 );
 

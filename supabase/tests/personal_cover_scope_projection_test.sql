@@ -341,7 +341,7 @@ select throws_ok(
     'd4444444-4444-4444-8444-444444444443',
     'http://127.0.0.1:55321/storage/v1/object/public/covers/u/a1111111-1111-4111-8111-111111111111/e5555555-5555-4555-8555-555555555552/adminone.webp'
   )$$,
-  '40001',
+  'PT409',
   'personal cover context changed before review; refresh and try again',
   'review refuses when the personal book is no longer bound to the displayed corpus work'
 );
@@ -351,7 +351,7 @@ select throws_ok(
     'd4444444-4444-4444-8444-444444444442',
     'https://books.google.com/books/content?id=stale-display'
   )$$,
-  '40001',
+  'PT409',
   'personal cover context changed before review; refresh and try again',
   'review refuses when the personal cover differs from the one displayed to the administrator'
 );
@@ -364,7 +364,7 @@ select throws_ok(
     'd4444444-4444-4444-8444-444444444442',
     'http://127.0.0.1:55321/storage/v1/object/public/covers/u/a1111111-1111-4111-8111-111111111111/e5555555-5555-4555-8555-555555555552/adminone.webp'
   )$$,
-  '40001',
+  'PT409',
   'personal book ISBN is not established on the displayed corpus work; refresh after identity reconciliation',
   'review canonicalizes ISBN-10 and refuses a fallback-only binding whose identity is unestablished'
 );
@@ -696,7 +696,7 @@ select throws_ok(
     'd4444444-4444-4444-8444-444444444441',
     'https://books.google.com/books/content?id=trusted'
   )$$,
-  '40001',
+  'PT409',
   'household cover is no longer available for review; refresh and try again',
   'administrator status does not expose a copy from an unrelated household'
 );

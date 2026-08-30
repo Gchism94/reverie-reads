@@ -362,7 +362,7 @@ select throws_ok(
     '65555555-5555-4555-8555-555555555555',
     (select id from public.households where name = 'Second household')
   )$$,
-  '40001',
+  'PT409',
   null,
   'unlink refuses a household different from the operator-reviewed household'
 );
