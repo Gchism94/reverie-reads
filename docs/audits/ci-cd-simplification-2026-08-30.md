@@ -101,6 +101,19 @@ clean `results.sarif` report into the checkout, so placing it before Prettier ma
 on generated output. The scan now runs last with `always()`. Its report cannot contaminate a later
 step, and it still executes when another gate boundary is already red.
 
+Corrected live run `33334335752` then passed every boundary on PR #374:
+
+| Check        | Result | Whole-job time | Relocated boundary observed                         |
+| ------------ | ------ | -------------: | --------------------------------------------------- |
+| `gate`       | pass   |          2m03s | final always-run full-history secret scan passed    |
+| `e2e`        | pass   |         17m41s | pgTAP passed before the desktop Playwright project  |
+| `e2e-a11y`   | pass   |          7m52s | pgTAP step skipped; accessibility project ran alone |
+| `e2e-mobile` | pass   |          6m41s | pgTAP step skipped; mobile project ran alone        |
+
+The repository ruleset (`19911612`) was then read back with exactly five required contexts:
+`gate`, `e2e`, `e2e-a11y`, `e2e-mobile`, and `cla`. The old `pgtap` and `secrets` contexts were
+removed only after their replacement steps had passed live.
+
 ## Backlog residues reviewed, not conflated
 
 - **Bounded Supabase startup recovery:** no recurrence in the fresh 30-run window. Adding a retry to
