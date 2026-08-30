@@ -268,9 +268,11 @@ function HomeScreen() {
                 </button>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="truncate text-[14px] font-semibold text-ink">{b.title}</div>
-                      <div className="truncate text-[12px] text-muted">{authorOf(b)}</div>
+                    <div className="min-w-0 flex-1">
+                      <div className="break-words text-[14px] font-semibold text-ink">
+                        {b.title}
+                      </div>
+                      <div className="break-words text-[12px] text-muted">{authorOf(b)}</div>
                     </div>
                     <span className="flex flex-none items-center gap-0.5">
                       {reading.length > 1 && (
@@ -399,7 +401,7 @@ function HomeScreen() {
                 >
                   <CoverImage book={b} />
                 </div>
-                <div className="mt-2 truncate text-[12px] font-semibold text-ink">{b.title}</div>
+                <div className="mt-2 break-words text-[12px] font-semibold text-ink">{b.title}</div>
                 <div className="mt-0.5 text-[11px] text-primary">
                   {b.pub.m ? `${MONTHS[b.pub.m - 1]} ` : ''}
                   {b.pub.y}

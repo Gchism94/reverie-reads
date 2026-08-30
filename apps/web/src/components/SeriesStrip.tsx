@@ -78,7 +78,7 @@ export function SeriesStrip({ book }: { book: Book }) {
       {neighbour(prev, 'prev')}
       <span className="min-w-0 flex-1">
         <span
-          className="block truncate text-[13.5px] font-semibold text-ink"
+          className="block break-words text-[13.5px] font-semibold text-ink"
           style={{ fontFamily: 'var(--font-display)' }}
         >
           {book.series}

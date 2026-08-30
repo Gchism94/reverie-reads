@@ -373,9 +373,9 @@ function SeriesScreen() {
                     >
                       <CoverImage book={book} thumb ghost={state === 'wishlist'} />
                     </div>
-                    <span className="min-w-0">
+                    <span className="min-w-0 flex-1">
                       <span
-                        className="block truncate text-[15px] font-semibold text-ink"
+                        className="block break-words text-[15px] font-semibold text-ink"
                         style={{ fontFamily: 'var(--font-display)' }}
                       >
                         {book.title}
@@ -391,9 +391,9 @@ function SeriesScreen() {
                     >
                       ⊹
                     </div>
-                    <span className="min-w-0">
+                    <span className="min-w-0 flex-1">
                       <span
-                        className="block truncate text-[15px] font-semibold text-muted"
+                        className="block break-words text-[15px] font-semibold text-muted"
                         style={{ fontFamily: 'var(--font-display)' }}
                       >
                         {e.title}

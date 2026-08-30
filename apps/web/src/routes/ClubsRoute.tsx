@@ -292,8 +292,8 @@ function ClubsScreen() {
                 <CoverImage book={{ id: c.id, title: c.title, cover: c.cover }} />
               </div>
               <div className="min-w-0 flex-1">
-                <div className="truncate text-[14px] font-semibold text-ink">{c.title}</div>
-                <div className="truncate text-[12px] text-muted">
+                <div className="break-words text-[14px] font-semibold text-ink">{c.title}</div>
+                <div className="break-words text-[12px] text-muted">
                   Read-along · code {c.joinCode}
                 </div>
               </div>
@@ -347,8 +347,8 @@ function ClubsScreen() {
               style={{ background: 'var(--card)' }}
             >
               <div className="min-w-0 flex-1">
-                <div className="truncate text-[14px] font-semibold text-ink">{l.name}</div>
-                <div className="truncate text-[12px] text-muted">
+                <div className="break-words text-[14px] font-semibold text-ink">{l.name}</div>
+                <div className="break-words text-[12px] text-muted">
                   {l.kind === 'clubtbr' ? 'Book-club TBR' : 'Shared list'} · code {l.code}
                 </div>
               </div>

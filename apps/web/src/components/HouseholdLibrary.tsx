@@ -154,7 +154,7 @@ export function HouseholdBookCard({
       >
         <HouseholdCover book={book} thumb />
         <span
-          className="absolute left-1.5 top-1.5 max-w-[calc(100%-12px)] truncate px-2 py-1 text-[10px] font-semibold"
+          className="absolute left-1.5 top-1.5 max-w-[calc(100%-12px)] break-words px-2 py-1 text-center text-[10px] font-semibold leading-tight"
           style={{
             background: 'var(--card-solid)',
             color: 'var(--ink)',
@@ -166,7 +166,7 @@ export function HouseholdBookCard({
         </span>
         {possession.length > 0 && (
           <span
-            className="absolute bottom-1.5 right-1.5 max-w-[calc(100%-12px)] truncate px-2 py-1 text-[10px] font-semibold"
+            className="absolute bottom-1.5 right-1.5 max-w-[calc(100%-12px)] break-words px-2 py-1 text-center text-[10px] font-semibold leading-tight"
             style={{
               background: 'var(--card-solid)',
               color: 'var(--ink)',
@@ -177,13 +177,13 @@ export function HouseholdBookCard({
           </span>
         )}
       </div>
-      <span className="mt-2.5 block min-h-10 line-clamp-2 text-[12.5px] font-semibold leading-5 text-ink">
+      <span className="mt-2.5 block break-words text-[12.5px] font-semibold leading-5 text-ink">
         {book.title}
       </span>
-      <span className="block min-h-5 truncate text-[11.5px] leading-5 text-muted">
-        {book.author || '\u00a0'}
-      </span>
-      <span className="block min-h-5 truncate text-[11px] font-semibold leading-5 text-muted">
+      {book.author ? (
+        <span className="block break-words text-[11.5px] leading-5 text-muted">{book.author}</span>
+      ) : null}
+      <span className="block break-words text-[11px] font-semibold leading-5 text-muted">
         {book.owners.length ? members : 'Kept in the household'}
       </span>
     </button>
@@ -437,7 +437,7 @@ function CorpusEditForm({
                           alt=""
                           className="mx-auto aspect-[2/3] w-full rounded object-cover"
                         />
-                        <span className="mt-1 block truncate">
+                        <span className="mt-1 block break-words">
                           {option.source ? titleCase(option.source) : 'Shared'} cover {index + 1}
                         </span>
                       </label>

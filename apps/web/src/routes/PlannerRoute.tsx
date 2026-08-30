@@ -323,7 +323,7 @@ function Releases({ books, openBook }: { books: Book[]; openBook: (id: string) =
               >
                 <CoverImage book={b} />
               </div>
-              <div className="mt-1 truncate text-[12px] font-semibold text-ink">{b.title}</div>
+              <div className="mt-1 break-words text-[12px] font-semibold text-ink">{b.title}</div>
               <div className="text-[11px] text-primary">📅 {formatPartialDate(b.pub)}</div>
             </button>
           ))}

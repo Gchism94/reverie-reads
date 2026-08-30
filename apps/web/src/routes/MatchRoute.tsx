@@ -443,12 +443,12 @@ function MatchScreen() {
               >
                 <CoverImage book={b} />
               </div>
-              <div className="mt-1 truncate text-[12px] font-semibold text-ink">{b.title}</div>
+              <div className="mt-1 break-words text-[12px] font-semibold text-ink">{b.title}</div>
               <div className="text-[11px] font-bold text-primary">
                 {s}% match{isRead ? ' · reread' : ''}
               </div>
               {/* the honest why — every pick can say what earned it (Tier 0) */}
-              <div className="truncate text-[11px] text-muted">{why}</div>
+              <div className="break-words text-[11px] text-muted">{why}</div>
             </button>
             {/* feedback capture: "not tonight" floors this book for ~60 days (Tier 1).
                 pointer-coarse:opacity-100: same touch-invisibility fix as CoverCard's fave toggle

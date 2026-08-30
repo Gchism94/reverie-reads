@@ -511,12 +511,12 @@ export function SpineShelf({
                 Volume {String(shownIndex + 1).padStart(2, '0')} · {books.length}
               </span>
               <h3
-                className="mt-1 line-clamp-2 text-[20px] font-semibold leading-[1.08] text-ink sm:text-[25px]"
+                className="mt-1 break-words text-[20px] font-semibold leading-[1.08] text-ink sm:text-[25px]"
                 style={{ fontFamily: 'var(--font-display)' }}
               >
                 {shownBook.title}
               </h3>
-              <p className="mt-1 truncate text-[12px] text-muted">
+              <p className="mt-1 break-words text-[12px] text-muted">
                 {authorOf(shownBook) || 'Author not set'}
               </p>
               <div className="mt-3 max-w-[360px]">

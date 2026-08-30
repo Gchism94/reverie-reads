@@ -78,7 +78,7 @@ export function SeriesRow({
           </span>
           <span className="min-w-0 flex-1">
             <span
-              className="block truncate text-[14px] font-semibold text-ink"
+              className="block break-words text-[14px] font-semibold text-ink"
               style={{ fontFamily: 'var(--font-display)' }}
             >
               {name}

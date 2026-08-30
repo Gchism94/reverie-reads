@@ -66,18 +66,10 @@ function Card({
         <CoverImage book={{ title: hit.title, first, last, cover: hit.cover }} thumb />
       </div>
       <div className="mt-2 min-w-0">
-        <div
-          className="text-[13px] font-semibold leading-snug text-ink"
-          style={{
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-          }}
-        >
+        <div className="break-words text-[13px] font-semibold leading-snug text-ink">
           {hit.title}
         </div>
-        <div className="truncate text-[12px] text-muted">
+        <div className="break-words text-[12px] text-muted">
           {author}
           {year ? <span style={{ color: 'var(--faint, var(--muted))' }}> · {year}</span> : null}
         </div>

@@ -95,6 +95,9 @@ function EmptyState() {
 const COVER_GRID: React.CSSProperties = {
   display: 'grid',
   gridTemplateColumns: 'repeat(auto-fill, minmax(144px, 1fr))',
+  // Metadata is intentionally natural-height. Pin grid items to the row start so a two-line title
+  // cannot baseline-align its shorter neighbours and shift their cover tops out of line.
+  alignItems: 'start',
   columnGap: '18px',
   rowGap: '40px',
 }

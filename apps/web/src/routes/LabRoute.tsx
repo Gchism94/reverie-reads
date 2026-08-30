@@ -86,8 +86,8 @@ function LabCard() {
           🌶🌶🌶
         </div>
       </div>
-      <div className="mt-1.5 truncate text-[12.5px] font-semibold text-ink">Crimson Letters</div>
-      <div className="truncate text-[11.5px] text-muted">Delphine Marchand</div>
+      <div className="mt-1.5 break-words text-[12.5px] font-semibold text-ink">Crimson Letters</div>
+      <div className="break-words text-[11.5px] text-muted">Delphine Marchand</div>
     </div>
   )
 }

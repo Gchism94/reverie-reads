@@ -87,7 +87,7 @@ function NavLinks({ collapsed }: { collapsed: boolean }) {
               <span className="grid w-5 shrink-0 place-items-center text-[14px]" aria-hidden>
                 {item.icon}
               </span>
-              {!collapsed ? <span className="truncate">{item.label}</span> : null}
+              {!collapsed ? <span className="break-words">{item.label}</span> : null}
             </Link>
           ))}
         </div>
@@ -145,14 +145,17 @@ function Sidebar({ householdAdd }: { householdAdd: boolean }) {
           {APP_NAME.charAt(0)}
         </span>
         {!collapsed && (
-          <span className="overflow-hidden">
+          <span className="min-w-0 flex-1">
             <span
-              className="block truncate text-[17px] leading-none text-ink"
+              className="block text-[17px] leading-none text-ink"
               style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
             >
               {APP_NAME}
             </span>
-            <span className="skin-label mt-1 block truncate text-[10px] text-muted">
+            <span
+              data-testid="sidebar-chrome-line"
+              className="skin-label mt-1 block break-words text-[10px] leading-[1.35] text-muted"
+            >
               {chromeLine}
             </span>
           </span>
@@ -188,7 +191,7 @@ function Sidebar({ householdAdd }: { householdAdd: boolean }) {
             to="/skins"
             title="Choose skin"
             aria-label="Choose skin"
-            className={`flex h-9 items-center justify-center gap-2 skin-control border border-line text-[12px] text-ink ${
+            className={`flex min-h-9 items-center justify-center gap-2 skin-control border border-line py-1 text-[12px] text-ink ${
               collapsed ? 'w-9' : 'flex-1'
             }`}
             style={{ background: 'color-mix(in srgb, var(--card) 70%, transparent)' }}
@@ -198,7 +201,9 @@ function Sidebar({ householdAdd }: { householdAdd: boolean }) {
               className="h-3 w-3 shrink-0 rounded-[4px]"
               style={{ background: 'linear-gradient(135deg, var(--primary), var(--gold))' }}
             />
-            {!collapsed && <span className="truncate">{skinLabel}</span>}
+            {!collapsed && (
+              <span className="break-words text-center leading-tight">{skinLabel}</span>
+            )}
           </Link>
           <ThemeToggle compact />
         </div>

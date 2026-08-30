@@ -249,6 +249,52 @@ async function assertNoViewportOverflow(page: Page, label: string) {
   ).toBeLessThanOrEqual(d.clientWidth + 1)
 }
 
+test('the shell brand text remains fully visible', async ({ page }) => {
+  const c = await client()
+  await stub(page)
+  await signIn(page, c.session)
+
+  if ((page.viewportSize()?.width ?? 0) >= 1024) {
+    const line = page.getByTestId('sidebar-chrome-line')
+    await expect(line).toBeVisible()
+    const box = await line.evaluate((el) => ({
+      clientWidth: el.clientWidth,
+      scrollWidth: el.scrollWidth,
+      clientHeight: el.clientHeight,
+      scrollHeight: el.scrollHeight,
+      textOverflow: getComputedStyle(el).textOverflow,
+    }))
+    expect(
+      box.scrollWidth,
+      'the desktop skin subtitle must not be cut horizontally',
+    ).toBeLessThanOrEqual(box.clientWidth + 1)
+    expect(
+      box.scrollHeight,
+      'the desktop skin subtitle must not be cut vertically',
+    ).toBeLessThanOrEqual(box.clientHeight + 1)
+    expect(
+      box.textOverflow,
+      'the desktop skin subtitle must not fall back to an ellipsis',
+    ).not.toBe('ellipsis')
+    return
+  }
+
+  const mobileName = page.locator('header a[aria-label="Reverie home"] span')
+  await expect(mobileName).toBeVisible()
+  const box = await mobileName.evaluate((el) => ({
+    clientWidth: el.clientWidth,
+    scrollWidth: el.scrollWidth,
+    clientHeight: el.clientHeight,
+    scrollHeight: el.scrollHeight,
+  }))
+  expect(box.scrollWidth, 'the mobile brand name must not be cut horizontally').toBeLessThanOrEqual(
+    box.clientWidth + 1,
+  )
+  expect(box.scrollHeight, 'the mobile brand name must not be cut vertically').toBeLessThanOrEqual(
+    box.clientHeight + 1,
+  )
+})
+
 test('every route lays out at the viewport — no page-level horizontal overflow', async ({
   page,
 }) => {
