@@ -74,10 +74,10 @@ export function LibraryPicker({
                   <CoverImage book={b} />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[13.5px] font-semibold text-ink">
+                  <span className="block break-words text-[13.5px] font-semibold text-ink">
                     {b.title}
                   </span>
-                  <span className="block truncate text-[11.5px] text-muted">
+                  <span className="block break-words text-[11.5px] text-muted">
                     {authorOf(b)}
                     {possessionState(b) === 'wishlist' && ' · ⊹ wishlist'}
                     {possessionState(b) === 'borrowed' && ' · ⇄ borrowed'}

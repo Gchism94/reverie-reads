@@ -53,8 +53,8 @@ function TriageTile({
       >
         <CoverImage book={coverBook} />
       </div>
-      <div className="mt-1.5 truncate text-[12.5px] font-semibold text-ink">{item.title}</div>
-      {item.author && <div className="truncate text-[11px] text-muted">{item.author}</div>}
+      <div className="mt-1.5 break-words text-[12.5px] font-semibold text-ink">{item.title}</div>
+      {item.author && <div className="break-words text-[11px] text-muted">{item.author}</div>}
       <Surface
         tone="bare"
         radius="control"
@@ -97,7 +97,7 @@ function ListBucket({ title, items }: { title: string; items: NeedsLookItem[] })
       <ul className="mt-2 flex flex-col gap-1.5">
         {items.map((i) => (
           <Surface as="li" key={i.ref} tone="card" radius="card" pad={0} className="px-3 py-2">
-            <div className="truncate text-[13.5px] font-semibold text-ink">{i.title}</div>
+            <div className="break-words text-[13.5px] font-semibold text-ink">{i.title}</div>
             <div className="text-[12px] text-muted">
               {i.author ? `${i.author} · ` : ''}
               {i.detail}

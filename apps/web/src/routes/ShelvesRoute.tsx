@@ -139,12 +139,12 @@ function ListModal({
                   className="min-w-0 flex-1 text-left"
                 >
                   <span
-                    className="block truncate text-[14px] font-semibold text-ink"
+                    className="block break-words text-[14px] font-semibold text-ink"
                     style={{ fontFamily: 'var(--font-display)' }}
                   >
                     {b.title}
                   </span>
-                  <span className="block truncate text-[12px] text-muted">{authorOf(b)}</span>
+                  <span className="block break-words text-[12px] text-muted">{authorOf(b)}</span>
                 </button>
                 <button
                   type="button"

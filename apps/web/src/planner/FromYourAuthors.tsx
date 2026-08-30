@@ -46,8 +46,8 @@ function ReleaseCard({ r }: { r: AuthorRelease }) {
         {/* CoverImage handles dead links AND the Google "no image" plate, degrading to the placeholder */}
         <CoverImage book={{ title: r.title, first, last, cover: r.cover }} thumb />
       </div>
-      <div className="mt-1 truncate text-[12px] font-semibold text-ink">{r.title}</div>
-      <div className="truncate text-[11px] text-muted">{r.author}</div>
+      <div className="mt-1 break-words text-[12px] font-semibold text-ink">{r.title}</div>
+      <div className="break-words text-[11px] text-muted">{r.author}</div>
       <div className="text-[11px] text-primary">📅 {r.pub}</div>
     </button>
   )

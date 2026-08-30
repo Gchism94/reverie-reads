@@ -47,7 +47,7 @@ export function MoreLikeThis({ bookId }: { bookId: string }) {
             >
               <CoverImage book={book} />
             </div>
-            <div className="mt-1 truncate text-[11.5px] text-muted group-hover:text-ink">
+            <div className="mt-1 break-words text-[11.5px] text-muted group-hover:text-ink">
               {book.title}
             </div>
             <TasteTier

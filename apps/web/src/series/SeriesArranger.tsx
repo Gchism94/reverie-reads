@@ -143,12 +143,12 @@ function Row({
       <span className="min-w-0 flex-1">
         <span
           data-testid="row-title"
-          className="block truncate text-[13.5px] font-semibold"
+          className="block break-words text-[13.5px] font-semibold"
           style={{ color: TOK.title }}
         >
           {title}
         </span>
-        <span className="block truncate text-[12px]" style={{ color: TOK.meta }}>
+        <span className="block break-words text-[12px]" style={{ color: TOK.meta }}>
           {state === 'ghost' ? entry.author || 'Not in your library' : (entry.label ?? '')}
         </span>
       </span>

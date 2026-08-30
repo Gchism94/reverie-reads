@@ -13,7 +13,7 @@ function ResultMeta({ result }: { result: SearchResult }) {
   const author = result.authors[0] ?? ''
   return (
     <>
-      <div className="truncate text-[12px] text-muted">
+      <div className="break-words text-[12px] text-muted">
         {author}
         {result.year ? (
           <span style={{ color: 'var(--faint, var(--muted))' }}> · {result.year}</span>
@@ -21,7 +21,7 @@ function ResultMeta({ result }: { result: SearchResult }) {
       </div>
       {result.series && (
         <div
-          className="truncate text-[11px] italic"
+          className="break-words text-[11px] italic"
           style={{ color: 'var(--faint, var(--muted))', fontFamily: 'var(--font-display)' }}
         >
           {result.series}
@@ -83,7 +83,7 @@ export function SearchResults({
                 <CoverImage book={coverBook(r)} thumb />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-[13.5px] font-semibold text-ink">
+                <span className="block break-words text-[13.5px] font-semibold text-ink">
                   {r.title}
                 </span>
                 <ResultMeta result={r} />
@@ -111,15 +111,7 @@ export function SearchResults({
               <CoverImage book={coverBook(r)} thumb />
             </div>
             <div className="mt-2 min-w-0">
-              <div
-                className="text-[13px] font-semibold leading-snug text-ink"
-                style={{
-                  display: '-webkit-box',
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: 'vertical',
-                  overflow: 'hidden',
-                }}
-              >
+              <div className="break-words text-[13px] font-semibold leading-snug text-ink">
                 {r.title}
               </div>
               <ResultMeta result={r} />

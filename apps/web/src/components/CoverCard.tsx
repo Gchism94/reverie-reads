@@ -199,12 +199,12 @@ export function CoverCard({
       </div>
 
       <button type="button" onClick={onOpen} className="mt-2.5 block w-full text-left">
-        <div className="min-h-5 truncate text-[12.5px] font-semibold leading-5 text-ink">
+        <div className="break-words text-[12.5px] font-semibold leading-5 text-ink">
           {book.title}
         </div>
-        <div className="min-h-5 truncate text-[11.5px] leading-5 text-muted">
-          {author || '\u00a0'}
-        </div>
+        {author ? (
+          <div className="break-words text-[11.5px] leading-5 text-muted">{author}</div>
+        ) : null}
       </button>
     </div>
   )

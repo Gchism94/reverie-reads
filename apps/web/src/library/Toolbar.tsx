@@ -67,8 +67,10 @@ function SearchResultsPanel({ q, onPick }: { q: string; onPick: (b: Book) => voi
               className="flex w-full items-baseline justify-between gap-3 px-2 py-1.5 text-left hover:bg-[var(--chip)]"
               style={{ borderRadius: 'calc(var(--radius-control) / 3)' }}
             >
-              <span className="truncate text-[13.5px] font-semibold text-ink">{b.title}</span>
-              <span className="skin-label flex-none text-[11px] text-muted">
+              <span className="min-w-0 flex-1 break-words text-[13.5px] font-semibold text-ink">
+                {b.title}
+              </span>
+              <span className="skin-label min-w-0 max-w-[45%] break-words text-right text-[11px] text-muted">
                 {formatAuthors(b.contributors) || [b.first, b.last].filter(Boolean).join(' ')}
               </span>
             </button>

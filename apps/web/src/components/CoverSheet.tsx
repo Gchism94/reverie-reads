@@ -239,10 +239,10 @@ export function CoverSheet({ book, onClose }: { book: Book; onClose: () => void 
                   <img src={e.cover} alt="" loading="lazy" className="h-full w-full object-cover" />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[13.5px] font-semibold text-ink">
+                  <span className="block break-words text-[13.5px] font-semibold text-ink">
                     {[e.format, e.year].filter(Boolean).join(' · ') || 'Edition'}
                   </span>
-                  <span className="block truncate text-[12px] text-muted">
+                  <span className="block break-words text-[12px] text-muted">
                     {[e.publisher, e.pages ? `${e.pages} pp` : null].filter(Boolean).join(' · ') ||
                       e.title}
                   </span>

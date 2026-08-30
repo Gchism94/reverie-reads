@@ -886,8 +886,8 @@ function TriageRow({
         {r.cover && <CoverImage book={{ title: r.title, cover: r.cover }} thumb />}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[14px] font-semibold text-ink">{r.title}</span>
-        <span className="block truncate text-[12px] text-muted">
+        <span className="block break-words text-[14px] font-semibold text-ink">{r.title}</span>
+        <span className="block break-words text-[12px] text-muted">
           {r.authors.join(', ')}
           {r.year ? ` \u00b7 ${r.year.slice(0, 4)}` : ''}
         </span>
@@ -896,7 +896,7 @@ function TriageRow({
             `--muted` is the carrier (4.51:1 at worst across all eighteen skin x mode combinations);
             `--accent-fill` is not, at 1.00:1 against `--card` in almanac/dark. */}
         <span
-          className="block truncate text-[12px] font-semibold text-muted"
+          className="block break-words text-[12px] font-semibold text-muted"
           data-testid="triage-label"
         >
           {household && t.state === 'library'

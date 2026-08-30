@@ -584,7 +584,7 @@ export function Spine({
         {/* head labels */}
         {call && s.label === 'callsign' && (
           <span
-            className="flex-none px-1 py-0.5 text-center"
+            className="flex-none px-0.5 py-0.5 text-center"
             style={{
               background: 'var(--plate)',
               border: '1px solid color-mix(in srgb, var(--accent) 55%, transparent)',

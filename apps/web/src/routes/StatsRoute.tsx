@@ -28,9 +28,7 @@ function Bars({ entries }: { entries: [string, number][] }) {
     <div className="flex flex-col gap-1.5">
       {entries.map(([label, n]) => (
         <div key={label} className="flex items-center gap-2 text-[13px]">
-          <span className="w-28 flex-none truncate text-muted" title={label}>
-            {label}
-          </span>
+          <span className="w-28 flex-none break-words text-muted">{label}</span>
           <span
             className="skin-meter h-2.5 flex-1 overflow-hidden"
             style={{ background: 'var(--chip)' }}
