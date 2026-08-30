@@ -1,7 +1,7 @@
 -- Trusted eligible copy covers reach the household read model. Corpus publication is an explicit,
 -- audited administrator review action and never a side effect of a personal-book write.
 begin;
-select plan(45);
+select plan(46);
 
 insert into auth.users (
   id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
@@ -358,15 +358,42 @@ select throws_ok(
 update public.books
 set isbn = '0306406152'
 where id = 'e5555555-5555-4555-8555-555555555552';
+select is(
+  public.admin_review_personal_cover_for_corpus(
+    'e5555555-5555-4555-8555-555555555552',
+    'd4444444-4444-4444-8444-444444444442',
+    'http://127.0.0.1:55321/storage/v1/object/public/covers/u/a1111111-1111-4111-8111-111111111111/e5555555-5555-4555-8555-555555555552/adminone.webp'
+  )::text,
+  'd4444444-4444-4444-8444-444444444442',
+  'review canonicalizes ISBN-10 and accepts an unclaimed ISBN under one unique title-author binding'
+);
+
+reset role;
+insert into public.works (
+  id, work_key, title, author_text, contributors, isbns
+) values (
+  'd4444444-4444-4444-8444-444444444446',
+  public.library_work_key('Conflicting ISBN Cover', 'Writer Six'),
+  'Conflicting ISBN Cover',
+  'Writer Six',
+  '[{"name":"Writer Six","role":"author","position":0}]'::jsonb,
+  array['9780306406157']
+);
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"a1111111-1111-4111-8111-111111111111","role":"authenticated","iss":"http://127.0.0.1:55321/auth/v1"}',
+  true
+);
 select throws_ok(
   $$select public.admin_review_personal_cover_for_corpus(
     'e5555555-5555-4555-8555-555555555552',
     'd4444444-4444-4444-8444-444444444442',
     'http://127.0.0.1:55321/storage/v1/object/public/covers/u/a1111111-1111-4111-8111-111111111111/e5555555-5555-4555-8555-555555555552/adminone.webp'
   )$$,
-  'PT409',
-  'personal book ISBN is not established on the displayed corpus work; refresh after identity reconciliation',
-  'review canonicalizes ISBN-10 and refuses a fallback-only binding whose identity is unestablished'
+  '22023',
+  'personal book corpus binding is ambiguous',
+  'review still refuses an ISBN already claimed by a different corpus work'
 );
 update public.books
 set isbn = null
@@ -622,6 +649,9 @@ select ok(
   'only authenticated callers can reach the exact household-cover review boundary'
 );
 
+update public.books
+set isbn = '9780141036144'
+where id = 'e5555555-5555-4555-8555-555555555551';
 set local role authenticated;
 select set_config(
   'request.jwt.claims',
@@ -653,7 +683,7 @@ select is(
     'https://books.google.com/books/content?id=trusted'
   )::text,
   'd4444444-4444-4444-8444-444444444441',
-  'an administrator can review the exact safe cover displayed from a household peer'
+  'an administrator can review the exact safe household cover when its unclaimed ISBN has one unique title-author binding'
 );
 reset role;
 select is(

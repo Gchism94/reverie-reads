@@ -32,10 +32,9 @@ select is(
     join pg_namespace namespace on namespace.oid = function.pronamespace
     where namespace.nspname = 'public'
   ),
-  25,
-  'all twenty-five stale-context paths use the non-retryable conflict code'
+  23,
+  'all twenty-three remaining stale-context paths use the non-retryable conflict code'
 );
 
 select * from finish();
 rollback;
-

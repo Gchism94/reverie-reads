@@ -92,6 +92,12 @@ export function readableWriteError(error: unknown): string {
     return 'Two books can’t share the same number in a series.'
   if (/does not name a live entry/.test(raw))
     return 'That slot isn’t in this series any more — reopen the series and try again.'
+  if (/personal book corpus binding is ambiguous/.test(raw))
+    return 'This book’s shared identity needs reconciliation before its cover can be reviewed.'
+  if (/cover context changed before review|cover is no longer available for review/.test(raw))
+    return 'That cover changed — refresh the library before reviewing it again.'
+  if (/cover must use the reviewed cover-ingestion boundary/.test(raw))
+    return 'Save this image through the cover picker before sharing it with the corpus.'
   if (/duplicate key|already exists|_uidx/.test(raw)) return 'That already exists.'
   if (/row-level security|permission denied|JWT|401|403/i.test(raw))
     return 'You’re signed out, or that isn’t yours to change.'

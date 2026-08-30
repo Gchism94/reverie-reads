@@ -87,4 +87,20 @@ describe('readableWriteError — the new branch has not widened into a catch-all
       }),
     ).toBe('One of those values isn’t allowed.')
   })
+
+  it('names the remaining cover-review refusals with an actionable next step', () => {
+    expect(readableWriteError({ message: 'personal book corpus binding is ambiguous' })).toBe(
+      'This book’s shared identity needs reconciliation before its cover can be reviewed.',
+    )
+    expect(
+      readableWriteError({
+        message: 'household cover is no longer available for review; refresh and try again',
+      }),
+    ).toBe('That cover changed — refresh the library before reviewing it again.')
+    expect(
+      readableWriteError({
+        message: 'household cover must use the reviewed cover-ingestion boundary',
+      }),
+    ).toBe('Save this image through the cover picker before sharing it with the corpus.')
+  })
 })

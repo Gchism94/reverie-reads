@@ -448,8 +448,11 @@ the review switch for their own hosted or allowlisted Google cover. That authent
 the narrow exception: the RPC binds the gesture to the exact work ID and cover URL displayed in the
 browser, rechecks both after locking the personal book, appends an audited corpus option, and fills
 the canonical cover only when none exists. A changed binding or cover is refused and must be
-reviewed again from fresh state. The switch is unavailable when accepted-option state cannot be
-loaded and is otherwise off until the action succeeds. Accepted option URLs stay additive across
+reviewed again from fresh state. A valid personal ISBN does not have to be present in the linked
+work's `isbns` array before review: the ISBN advisory lock plus the unique binding resolver still
+refuse an ISBN claimed by another work and any ambiguous title/full-author fallback, while allowing
+an unclaimed edition ISBN under one unique linked work. The switch is unavailable when
+accepted-option state cannot be loaded and is otherwise off until the action succeeds. Accepted option URLs stay additive across
 authenticated metadata edits while a future reviewer-quorum model is designed; only deliberate
 service-role maintenance can remove one. Review never replaces an established default, and an
 ordinary reader's personal cover never crosses that corpus boundary. The existing fill-only preservation invoked
