@@ -25,6 +25,10 @@ const coverReviewReleaseGatesMigration = readFileSync(
   join(__dirname, '../../../supabase/migrations/20260904010000_cover_review_release_gates.sql'),
   'utf8',
 )
+const nonretryableRpcConflictsMigration = readFileSync(
+  join(__dirname, '../../../supabase/migrations/20260907010000_nonretryable_rpc_conflicts.sql'),
+  'utf8',
+)
 const rolloutVerification = readFileSync(
   join(__dirname, '../../../docs/queries/library-membership-rollout-verification.sql'),
   'utf8',
@@ -402,7 +406,9 @@ describe('cover-review forward release gates', () => {
     )
     expect(review).toContain('target_book.corpus_work_id is distinct from p_expected_work')
     expect(review).toContain('target_book.cover_url is distinct from expected_cover')
-    expect(review).toContain("using errcode = '40001'")
+    expect(review).toContain(
+      "raise exception 'personal cover context changed before review; refresh and try again'",
+    )
     const workLock = review.indexOf('from public.works work')
     const isbnLock = review.indexOf('perform public.lock_library_isbns')
     const bindingCheck = review.indexOf('public.book_corpus_binding_is_unambiguous')
@@ -417,6 +423,21 @@ describe('cover-review forward release gates', () => {
     )
     expect(normalized).toContain(
       'grant execute on function public.admin_review_personal_cover_for_corpus(uuid, uuid, text) to authenticated;',
+    )
+  })
+
+  it('reclassifies every stale write refusal as a bounded HTTP conflict', () => {
+    expect(nonretryableRpcConflictsMigration).toContain(
+      "'public.admin_review_personal_cover_for_corpus(uuid,uuid,text)'",
+    )
+    expect(nonretryableRpcConflictsMigration).toContain(
+      "'public.admin_review_household_cover_for_corpus(uuid,uuid,uuid,text)'",
+    )
+    expect(nonretryableRpcConflictsMigration).toContain(
+      "execute replace(definition, '''40001''', '''PT409''')",
+    )
+    expect(nonretryableRpcConflictsMigration).toContain(
+      "raise exception 'an unclassified public function still raises retryable SQLSTATE 40001'",
     )
   })
 
