@@ -4,8 +4,9 @@
 -- dashboard SQL Editor (Project -> SQL Editor -> New query) and run it.
 --
 -- WHY THIS FILE EXISTS
--- Nothing in .github/workflows/ deploys migrations: CI runs changes/secrets/gate/e2e/e2e-a11y/
--- e2e-mobile/pgtap and never touches Supabase. Migrations reach production ONLY when someone runs
+-- Nothing in .github/workflows/ deploys migrations: CI runs changes/gate and the
+-- e2e/e2e-a11y/e2e-mobile matrix against local Supabase only. Migrations reach production ONLY
+-- when someone runs
 -- `pnpm deploy:migrations`, which wraps `supabase db push` behind scripts/deploy-guard.sh. So
 -- merging to main does NOT apply anything, and the repo alone cannot say what production has.
 --

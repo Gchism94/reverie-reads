@@ -28,8 +28,8 @@
 #   4. Per §4 above, the signal cannot reach what people actually worry about on phones anyway.
 # A dispatched run always has a hypothesis or a diff attached, which dissolves 1 and 3 at once.
 #
-# NOT a required check, by design not omission: the ruleset's seven contexts (gate, e2e, e2e-a11y,
-# e2e-mobile, pgtap, secrets, cla) are the PR gate; this is a pointable instrument.
+# NOT a required check, by design not omission: the ruleset's five contexts (gate, e2e, e2e-a11y,
+# e2e-mobile, cla) are the PR gate; gate carries secrets and e2e carries pgTAP.
 
 name: layout-sweep-390
 

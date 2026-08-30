@@ -1,9 +1,7 @@
 name: Setup Playwright browsers
 description: >
   Cache-or-download Playwright's chromium, with ZERO apt in the path. The one copy of a procedure
-  that used to exist three times (e2e / e2e-a11y / e2e-mobile) — triplication is the staleness
-  mechanism this file replaces: three comment blocks in ci.yml once asserted a required-check state
-  that had gone false.
+  shared by the three browser-matrix entries (e2e / e2e-a11y / e2e-mobile).
 
 # ── WHY THERE IS NO apt HERE, AND WHY IT MUST NOT COME BACK ──────────────────────────────────────
 #
@@ -43,11 +41,10 @@ description: >
 # keeps the single-shot generosity for the attempt whose trip is a red build. Composite steps
 # cannot carry timeout-minutes — the shell `timeout`s bound the attempts, the job caps backstop.
 #
-# CACHING: all three e2e jobs cache under the SAME key on purpose — they must run identical
+# CACHING: all three browser-matrix entries cache under the SAME key on purpose — they run identical
 # browsers, and a per-job key would triple the storage. When several jobs miss together, the
-# losers of the save race log "Cache already exists" — EXPECTED, not a defect. The warm-cache job
-# (ci.yml, push to main) keeps this key populated so branch runs normally hit and make no network
-# call at all.
+# losers of the save race log "Cache already exists" — EXPECTED, not a defect. Gate's main-push
+# warm step keeps this key populated so branch runs normally hit and make no network call at all.
 
 runs:
   using: composite

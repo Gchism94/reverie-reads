@@ -27,20 +27,20 @@ jobs:
   #   (docs/** or any *.md). There is no partial matrix — no "only mobile", no "only a11y" — and
   #   no other safe class: e2e specs, playwright config, workflows, scripts/, data/ (seed input!)
   #   and design/ all fail closed to the full trio, because each can change what the suite tests
-  #   or how it tests it. The gate and secrets jobs are NOT part of this filter: they run on
-  #   every branch, always.
+  #   or how it tests it. The gate (including its secret scan) is NOT part of this filter: it runs
+  #   on every branch, always.
   #
   # FAIL CLOSED is structural, not aspirational:
   #   - the classifier defaults docs_only=false and only flips it after successfully walking an
   #     explicit diff — an unresolvable base (new branch, force-push, empty diff) never reaches
   #     the flip;
   #   - the consumers gate on `!= 'true'`, so a missing/garbled output runs everything;
-  #   - the mechanism is a JOB-level `if:` rather than workflow-level `on.paths`, deliberately:
-  #     a job skipped by `if:` reports conclusion "skipped", which branch-protection's required
-  #     checks treat as satisfied — whereas a workflow filtered out by `on.paths` reports
-  #     nothing, and a required check named `e2e` would sit "Expected" forever, blocking every
-  #     docs-only merge. The required-check names (`gate`, `e2e`) are load-bearing; see the e2e
-  #     job's own comment.
+  #   - the matrix job still expands on a docs-only PR, but every expensive step is skipped. That
+  #     publishes all three successful required contexts without starting Supabase or Playwright.
+  #     A job-level skip happens before matrix expansion and may publish only one unresolved matrix
+  #     context; a workflow-level `on.paths` filter publishes none. Either shape can leave the
+  #     required `e2e`/`e2e-a11y`/`e2e-mobile` checks "Expected" forever. Their exact names are
+  #     load-bearing.
   changes:
     name: changes
     runs-on: ubuntu-latest
@@ -83,22 +83,6 @@ jobs:
           # Overwrite the fail-closed default set above.
           echo "docs_only=true" >> "$GITHUB_OUTPUT"
 
-  # Full-history secret scan — FAILS the build on any leak (pre-public audit follow-up). gitleaks
-  # auto-loads .gitleaks.toml from the checkout root; the allowlist there names exactly the four
-  # audited-safe values, each with its reason, so a fifth committed credential goes red. fetch-depth
-  # 0 makes this scan every commit reachable from the ref, not just the tip.
-  secrets:
-    name: secrets
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
   gate:
     name: gate
     runs-on: ubuntu-latest
@@ -120,7 +104,16 @@ jobs:
       VITE_SUPABASE_URL: http://127.0.0.1:55321
       VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
     steps:
+      # Full history serves both the stranded-stack guard and the secret scan below. Keeping the
+      # scan in this already-required job removes a separate runner without removing its boundary.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Full-history secret scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # ── STRANDED-STACK GUARD ────────────────────────────────────────────────────────────────
       # Fails a PR whose base branch has ALREADY merged into main. That is the exact condition
@@ -136,8 +129,7 @@ jobs:
       # The script detects it and AGENTS.md documents it, and it happened anyway. That is the
       # safe-revert.sh / MIN_OBSERVATIONS argument a third time: the merge button is a moment of NO
       # DELIBERATION, and a PR-body note is read before the work, not at the click. So enforcement
-      # lives here, as a step on the one job branch protection already requires (ci.yml notes the
-      # ruleset requires exactly `gate` and `e2e`) — no new job, no ruleset change.
+      # lives here, as a step on an already-required job — no new runner or status context.
       #
       # WHY THIS TEST AND NOT "base must be main". A blunt base != main rule with an override label
       # would have caught NONE of the three: each was a deliberate, correct-at-creation stack (the
@@ -145,10 +137,10 @@ jobs:
       # not stacking — it is stacking and then not retargeting once the parent lands. This checks
       # that condition directly, and leaves live stacks alone.
       #
-      # Uses the compare API rather than git: actions/checkout leaves a shallow clone, so
-      # `merge-base --is-ancestor` would need an unshallow fetch to be trustworthy. `status` is
-      # `behind` or `identical` exactly when every commit of the base is already in main.
-      # `set -euo pipefail` makes an API failure fail the step — closed, not open.
+      # Uses the compare API rather than a local ref comparison because it reads the current remote
+      # base/main relationship directly, without relying on which branch refs checkout happened to
+      # fetch. `status` is `behind` or `identical` exactly when every commit of the base is already
+      # in main. `set -euo pipefail` makes an API failure fail the step — closed, not open.
       #
       # RESIDUAL GAP, stated rather than hidden: this re-evaluates only when the job runs. If a
       # parent merges and the child is never pushed to again, the last green run stays green. The
@@ -177,8 +169,8 @@ jobs:
         with:
           # >=20.11 satisfies package.json engines, but scripts/seed-dev.mjs imports TypeScript
           # source directly and needs >=22.18 to do it — a11y.spec.ts invokes that script directly
-          # (test/trio-migration), so the e2e job still depends on this. Both jobs pin the same
-          # major to keep the pnpm cache key aligned.
+          # (test/trio-migration), so the browser matrix still depends on this. Gate and the matrix
+          # entries pin the same major to keep the pnpm cache key aligned.
           node-version: '22'
           cache: pnpm
 
@@ -209,31 +201,40 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ci-placeholder-anon-key
         run: pnpm build
 
-  # a11y is split into its own job (ci/throughput stage 2) — it was ~55-58% of the suite's wall
-  # clock, so running it in parallel with everything else, on its own runner with its own Supabase
-  # stack and database, is the actual throughput lever; E2E_WORKERS and job-internal parallelism
-  # were not (see playwright.config.ts). NOT bundled with raising E2E_WORKERS or any other change —
-  # that's its own stage, measured on its own, so a result here proves only what the split did.
-  #
-  # BOTH jobs below are still named starting with `e2e` / literally `e2e` on purpose: the repo's
-  # branch-protection ruleset requires status checks named exactly `gate` and `e2e`. Keeping that
-  # name on the rest-of-suite job (the closer descendant of the job it replaces) means the existing
-  # required check keeps working unmodified. `e2e-a11y` is a NEW check — it runs and reports, but
-  # it is not yet in the required list, so a red a11y job does not currently block merge. That's a
-  # ruleset change, which is the owner's to make, not something to route around here.
-  e2e:
-    name: e2e
+      # Main is the cache parent of every PR branch. Warming here reuses gate's checkout, pnpm,
+      # Node and install instead of starting a fourth main-push runner solely for the same setup.
+      - name: Warm Playwright browser cache after merge
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: ./.github/actions/setup-browsers
+
+  # One definition, three parallel runners. A matrix removes the triplicated setup without
+  # serialising the projects: rest remains the critical path, while mobile and accessibility keep
+  # their own status checks, databases, timeouts and trace artifacts. fail-fast=false preserves all
+  # three diagnostic results when one project fails.
+  browser:
+    name: ${{ matrix.name }}
     needs: [changes]
-    # `!= 'true'` (not `== 'false'`): an absent or garbled classifier output must RUN this job.
-    if: github.event_name == 'pull_request' && needs.changes.outputs.docs_only != 'true'
+    # Keep this condition independent of docs_only so a PR always expands all three matrix entries.
+    # Their step-level conditions make a docs-only run a near-empty success with exact check names.
+    if: github.event_name == 'pull_request'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: e2e
+            project: rest
+            timeout: 25
+            artifact: playwright-traces
+          - name: e2e-a11y
+            project: a11y
+            timeout: 14
+            artifact: playwright-traces-a11y
+          - name: e2e-mobile
+            project: mobile
+            timeout: 12
+            artifact: playwright-traces-mobile
     runs-on: ubuntu-latest
-    # Cap re-derived from PR #361 (2026-08-26): its 18m9s cache-hit job comprised a 16m21s suite,
-    # an 8s browser-cache step, and about 1m40s of other setup/cleanup. The browser action's hard
-    # recovery bound is 5m30s: a 1m first download and 4m retry, each with a 15s kill grace.
-    # Replacing the 8s hit with that path yields about 23m31s → 25. The former 19m cap could not fit
-    # the recovery path it claimed to bound. This remains a tight tripwire and changes no green-run
-    # work: no new retry, sleep, job, or suite split. See .github/actions/setup-browsers.
-    timeout-minutes: 25
+    timeout-minutes: ${{ matrix.timeout }}
     env:
       # The LOCAL Supabase stack's well-known demo values — already hardcoded in every e2e spec
       # file (the same values the committed apps/web/.env now carries), not a secret. Deliberately the
@@ -243,17 +244,21 @@ jobs:
       E2E_WORKERS: 1
     steps:
       - uses: actions/checkout@v4
+        if: needs.changes.outputs.docs_only != 'true'
 
       - uses: pnpm/action-setup@v4
+        if: needs.changes.outputs.docs_only != 'true'
         with:
           version: 11.9.0
 
       - uses: actions/setup-node@v4
+        if: needs.changes.outputs.docs_only != 'true'
         with:
           node-version: '22'
           cache: pnpm
 
       - name: Install dependencies
+        if: needs.changes.outputs.docs_only != 'true'
         run: pnpm install --frozen-lockfile
 
       # Cache + CDN-only download via ONE composite (.github/actions/setup-browsers) — the
@@ -263,13 +268,17 @@ jobs:
       # audit found no evidence it would help, and GitHub's cache would store multiple GB and
       # restore near the pull cost anyway).
       - name: Set up Playwright browsers (cached, apt-free)
+        if: needs.changes.outputs.docs_only != 'true'
         uses: ./.github/actions/setup-browsers
 
       - uses: supabase/setup-cli@v1
+        if: needs.changes.outputs.docs_only != 'true'
         with:
           version: 2.109.0
 
       - name: Start Supabase
+        id: supabase
+        if: needs.changes.outputs.docs_only != 'true'
         # Only studio/vector/edge-runtime reliably exclude via -x on this CLI version — verified by
         # isolated testing, not assumed from the Phase 1 prose. `analytics` (the audit's "logflare")
         # does NOT actually exclude; passing it is a harmless no-op, kept out here rather than left
@@ -280,241 +289,25 @@ jobs:
         # No `db:seed` step, and no separate `db:reset` — Docker volumes are never cached between
         # runs, so this is already a genuinely fresh database. Nothing reads dev@reverie.local any
         # more (test/trio-migration): a11y seeds its OWN user by invoking scripts/seed-dev.mjs
-        # directly from the spec (with DEV_EMAIL overridden) — in the OTHER job below, since a11y
-        # itself no longer runs here.
+        # directly from the spec (with DEV_EMAIL overridden) in the a11y matrix entry.
         run: supabase start -x studio,vector,edge-runtime,imgproxy
 
-      - name: e2e (rest of suite)
-        run: pnpm --filter @reverie/web e2e --project=rest
-
-      - name: Upload Playwright traces
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-traces
-          path: apps/web/test-results/
-          retention-days: 7
-
-  e2e-a11y:
-    name: e2e-a11y
-    needs: [changes]
-    if: github.event_name == 'pull_request' && needs.changes.outputs.docs_only != 'true'
-    runs-on: ubuntu-latest
-    # 15 — DOWN from 30, and now BELOW the 20 the sibling e2e jobs carry.
-    #
-    # The 30 was a stopgap against what looked like a runner getting slower for an unchanged spec
-    # (8m36s -> 12.9m -> 15.1m). It was not a slower runner. #262 found the sweep was waiting out
-    # ~200 live third-party cover requests per full-route pass, 55 of them to hosts that had stopped
-    # answering, and the "growth" was the two timeout raises being measured rather than any work.
-    #
-    # The comment this replaces predicted the shape of the fix correctly — "splitting turns one 18m
-    # budget into ten small ones and makes both of these numbers shrink rather than grow" — so this
-    # is that prediction being cashed, one step later than expected: the split made the failure
-    # legible, the image stub made it go away.
-    #
-    # MEASURED: 8.4m for the whole job on CI run 31994806370, of which 1.1m is Supabase start and
-    # 6.6m is the sweep. 15 is ~1.8x that. Proportionally looser than the 3.1x on the per-pass
-    # budgets in a11y.spec.ts, deliberately: this ceiling also covers fixed setup (checkout, pnpm
-    # install, Playwright download, Supabase start, migrations, seed) that does not scale with a
-    # starved worker pool, so sizing it by the same ratio would make it the thing that fires first
-    # and mask which pass actually went slow. The per-pass budgets are the sharp tripwire; this one
-    # is the backstop that stops a hung job from burning a 30m runner slot.
-    # Cap re-derived post-apt (2026-08-19): 1m install trip + 4m CDN retry + 8.62m measured max suite = 13.62 → 14. The old 15 was sized around an apt hang that can no longer happen; see .github/actions/setup-browsers.
-    timeout-minutes: 14
-    env:
-      VITE_SUPABASE_URL: http://127.0.0.1:55321
-      VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
-      E2E_WORKERS: 1
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 11.9.0
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      # Cache + CDN-only download via ONE composite (.github/actions/setup-browsers) — the
-      # apt-free install path, its history, and the no-fallback ruling all live there. apt is
-      # deliberately OUT of the browser path; do not reintroduce --with-deps/install-deps here.
-      # Deliberately NOT caching the Supabase Docker images (docs/archive/task-ci.md item 4's
-      # audit found no evidence it would help, and GitHub's cache would store multiple GB and
-      # restore near the pull cost anyway).
-      - name: Set up Playwright browsers (cached, apt-free)
-        uses: ./.github/actions/setup-browsers
-
-      - uses: supabase/setup-cli@v1
-        with:
-          version: 2.109.0
-
-      - name: Start Supabase
-        run: supabase start -x studio,vector,edge-runtime,imgproxy
-
-      - name: e2e (a11y)
-        run: pnpm --filter @reverie/web e2e --project=a11y
-
-      - name: Upload Playwright traces
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-traces-a11y
-          path: apps/web/test-results/
-          retention-days: 7
-
-  # Third parallel runner, same reasoning as the a11y split above: measured locally at ~2.5m
-  # (workers=1, 72 tests), which is shorter than e2e-a11y's own ~3-4m — so on its own runner this
-  # does not become the pipeline's critical path, it rides alongside it. NOT added to the required
-  # checks (same as e2e-a11y at introduction) — that's a branch-protection ruleset change, the
-  # owner's to make once this project has run for real on a few PRs.
-  e2e-mobile:
-    name: e2e-mobile
-    needs: [changes]
-    if: github.event_name == 'pull_request' && needs.changes.outputs.docs_only != 'true'
-    runs-on: ubuntu-latest
-    # Cap re-derived post-apt (2026-08-19): 1m install trip + 4m CDN retry + 6.20m measured max suite = 11.20 → 12. The old 20 was sized around an apt hang that can no longer happen; see .github/actions/setup-browsers.
-    timeout-minutes: 12
-    env:
-      VITE_SUPABASE_URL: http://127.0.0.1:55321
-      VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
-      E2E_WORKERS: 1
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 11.9.0
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      # Cache + CDN-only download via ONE composite (.github/actions/setup-browsers) — the
-      # apt-free install path, its history, and the no-fallback ruling all live there. apt is
-      # deliberately OUT of the browser path; do not reintroduce --with-deps/install-deps here.
-      # Deliberately NOT caching the Supabase Docker images (docs/archive/task-ci.md item 4's
-      # audit found no evidence it would help, and GitHub's cache would store multiple GB and
-      # restore near the pull cost anyway).
-      - name: Set up Playwright browsers (cached, apt-free)
-        uses: ./.github/actions/setup-browsers
-
-      - uses: supabase/setup-cli@v1
-        with:
-          version: 2.109.0
-
-      - name: Start Supabase
-        run: supabase start -x studio,vector,edge-runtime,imgproxy
-
-      - name: e2e (mobile)
-        run: pnpm --filter @reverie/web e2e --project=mobile
-
-      - name: Upload Playwright traces
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-traces-mobile
-          path: apps/web/test-results/
-          retention-days: 7
-
-  # pgTAP — the database's own guards, finally running somewhere automatic.
-  #
-  # WHY THIS EXISTS. `supabase/tests/` holds 21 files / 291 assertions covering the things nothing
-  # else can reach: RLS policies, the `revoke execute` grant boundary (SQLSTATE 42501, not a
-  # body-level P0001), `user_edited` protection, set_series_order's park-then-write pass, and the
-  # live-position uniqueness index. Until now `pnpm db:test` ran in no workflow at all, so every one
-  # of those was on the honor system — a guard that only executes when someone remembers is a guard
-  # you cannot cite. #172 made the cost concrete: its index had to be verified by hand, twice,
-  # because nothing in CI proved the constraint did what its migration claimed. e2e going green is
-  # evidence the schema did not BREAK the app; it is not evidence the constraint FIRES.
-  #
-  # WHY IT IS SHAPED NOTHING LIKE THE THREE e2e JOBS ABOVE. `db:test` is `supabase test db` — a bare
-  # CLI passthrough with no Node in the path. No pnpm install, no setup-node, no Playwright browsers,
-  # no ~/.cache/ms-playwright restore: this job is checkout + CLI + database, and it finishes in
-  # about a minute where the e2e jobs take eight to twelve. The CLI is invoked directly rather than
-  # through `pnpm db:test`, because installing pnpm and Node purely to shell out to a binary would
-  # cost more setup than the whole job. Named trade-off: if `db:test`'s definition in package.json
-  # ever changes, this line does not follow it automatically — keep the two in step by hand.
-  #
-  # THE EXCLUSION LIST IS ONE SERVICE TIGHTER THAN THE e2e JOBS', AND THE DIFFERENCE IS MEASURED.
-  # Probed against a genuinely fresh local stack on CLI 2.109.0, each claim verified by reading
-  # `docker ps` after the start rather than trusting the flag:
-  #   · `realtime`  DOES exclude, and all 21 files / 291 tests still pass without it. pgTAP talks to
-  #                 Postgres directly and never opens a realtime channel, so it is added here. This
-  #                 is the "unverified is unverified" caveat in the e2e job above being resolved for
-  #                 this job only — it says nothing about what the e2e specs need.
-  #   · `storage`   is a NO-OP on this CLI version: passing it leaves supabase_storage running
-  #                 anyway. Deliberately NOT listed, on the same principle as `analytics` above —
-  #                 a flag that does nothing should not sit in the command implying it does.
-  #   · `kong`/`rest` CANNOT be excluded. `supabase start` health-checks itself through kong
-  #                 (`HEAD /rest-admin/v1/ready` on the API port); excluding either aborts the start
-  #                 outright with a connection-refused and tears the stack back down. Measured, not
-  #                 assumed — the fully-minimal `-x everything-but-db` run failed exactly there.
-  #
-  # NOT IN THE REQUIRED-CHECKS RULESET, deliberately, and the same way `e2e-a11y` and `e2e-mobile`
-  # were introduced: it runs and reports, a red run does not block merge yet. Adding it is a
-  # branch-protection change and the owner's to make once this has run for real on a few PRs.
-  #
-  # The tests need nothing but a migrated database: every file wraps itself in `begin; … rollback;`
-  # and builds its own auth.users + fixture rows, none reads `db:seed` output or a dev account, and
-  # `supabase/seed.sql` is intentionally empty. So a fresh `supabase start` is the entire setup.
-  pgtap:
-    name: pgtap
-    needs: [changes]
-    # Same condition as the three e2e jobs — `!= 'true'` so a missing or garbled classifier output
-    # runs this rather than skipping it. Deliberately NOT a tighter supabase/**-only filter: a
-    # migration is not the only way to break these assertions (an RLS policy, a grant, or a function
-    # body reached through any path can), and a finer classifier is its own decision, not this one.
-    if: github.event_name == 'pull_request' && needs.changes.outputs.docs_only != 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: supabase/setup-cli@v1
-        with:
-          version: 2.109.0
-
-      - name: Start Supabase
-        run: supabase start -x studio,vector,edge-runtime,imgproxy,realtime
-
+      # The rest runner already paid for the exact migrated database pgTAP needs. This keeps every
+      # assertion but removes the duplicate checkout, CLI setup and Supabase startup. The browser
+      # step uses always() so a database assertion failure does not hide its independent result.
       - name: pgTAP (supabase/tests)
+        id: pgtap
+        if: needs.changes.outputs.docs_only != 'true' && matrix.project == 'rest'
         run: supabase test db
 
-  # Correction #51's fix, identified 2026-08-17 and built once apt left the path: on push to main,
-  # populate the browser cache so every branch's first run HITS instead of downloading — and a hit,
-  # post-apt, means the browser path makes ZERO network calls. This deliberately revisits an older
-  # recorded decision here ("not worth a main-triggered warming job", written when the eighth job
-  # would have joined the PR run's seven-sibling burst and a miss cost only ~0.4m): this job runs on
-  # PUSH TO MAIN only — outside that burst entirely — and its point is risk removal (misses are the
-  # only remaining network call in the browser path), not minutes. Cache keys are branch-scoped
-  # upward, so a cache saved on main is restorable by every branch.
-  warm-browser-cache:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    timeout-minutes: 8
-    steps:
-      - uses: actions/checkout@v4
+      - name: e2e (${{ matrix.project }})
+        if: always() && needs.changes.outputs.docs_only != 'true' && steps.supabase.outcome == 'success'
+        run: pnpm --filter @reverie/web e2e --project=${{ matrix.project }}
 
-      - uses: pnpm/action-setup@v4
+      - name: Upload Playwright traces
+        if: failure() && needs.changes.outputs.docs_only != 'true'
+        uses: actions/upload-artifact@v4
         with:
-          version: 11.9.0
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Set up Playwright browsers (cached, apt-free)
-        uses: ./.github/actions/setup-browsers
+          name: ${{ matrix.artifact }}
+          path: apps/web/test-results/
+          retention-days: 7
