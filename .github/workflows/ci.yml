@@ -110,11 +110,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Full-history secret scan
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       # ── STRANDED-STACK GUARD ────────────────────────────────────────────────────────────────
       # Fails a PR whose base branch has ALREADY merged into main. That is the exact condition
       # under which merging strands the work: GitHub reports "Merged", CI is green, nothing errors,
@@ -206,6 +201,15 @@ jobs:
       - name: Warm Playwright browser cache after merge
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: ./.github/actions/setup-browsers
+
+      # gitleaks-action writes results.sarif into the checkout even on a clean pass. Run it last so
+      # that generated report cannot contaminate Prettier or the build; always() preserves the
+      # independent secret boundary when an earlier gate step is already red.
+      - name: Full-history secret scan
+        if: always()
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # One definition, three parallel runners. A matrix removes the triplicated setup without
   # serialising the projects: rest remains the critical path, while mobile and accessibility keep

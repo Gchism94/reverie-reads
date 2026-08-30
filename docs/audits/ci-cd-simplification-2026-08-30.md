@@ -96,6 +96,11 @@ The browser step uses `always()` after a successful Supabase start, so a pgTAP a
 does not hide the independent desktop-browser result. A source-level unit test guards the exact
 matrix names and relocated boundaries because those strings are also the branch-protection API.
 
+The first live rollout run found one deterministic ordering interaction: `gitleaks-action` writes a
+clean `results.sarif` report into the checkout, so placing it before Prettier made the formatter fail
+on generated output. The scan now runs last with `always()`. Its report cannot contaminate a later
+step, and it still executes when another gate boundary is already red.
+
 ## Backlog residues reviewed, not conflated
 
 - **Bounded Supabase startup recovery:** no recurrence in the fresh 30-run window. Adding a retry to

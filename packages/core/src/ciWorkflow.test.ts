@@ -25,12 +25,16 @@ describe('CI workflow topology', () => {
 
   it('keeps secrets in gate and pgTAP on the already-migrated rest database', () => {
     const gate = jobs.slice(jobs.indexOf('  gate:'), jobs.indexOf('  browser:'))
+    const prettier = gate.indexOf('      - name: Prettier')
+    const secretScan = gate.indexOf('      - name: Full-history secret scan')
     const start = jobs.indexOf('      - name: Start Supabase')
     const pgtap = jobs.indexOf('      - name: pgTAP (supabase/tests)')
     const browser = jobs.indexOf('      - name: e2e (${{ matrix.project }})')
 
     expect(gate).toContain('fetch-depth: 0')
     expect(gate).toContain('uses: gitleaks/gitleaks-action@v2')
+    expect(secretScan).toBeGreaterThan(prettier)
+    expect(gate.slice(secretScan)).toContain('if: always()')
     expect(start).toBeGreaterThan(-1)
     expect(pgtap).toBeGreaterThan(start)
     expect(browser).toBeGreaterThan(pgtap)
