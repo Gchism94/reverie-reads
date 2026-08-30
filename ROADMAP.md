@@ -84,8 +84,10 @@ These are ordered within P2, but they do not block the P0/P1 sequence above.
 2. **iOS barcode fallback:** revisit when tester/browser evidence justifies shipping a WASM decoder;
    the current unsupported-browser fallback is deliberate.
 3. **Year heatmap, dedicated Wrapped experience, Cover Studio, author following, bulk trope tagging,
-   writable/whole-library household sync, app-store packaging, social discovery, and premium corpus
-   freshness:** separate product decisions, not launch blockers.
+   unattended bidirectional whole-library household sync, app-store packaging, social discovery,
+   and premium corpus freshness:** separate product decisions, not launch blockers. Explicit Add and
+   import destinations plus opt-in neutral peer-library additions are implemented; the deferred item
+   is automatic synchronization, not reader-chosen placement.
 4. **Dead-code/tooling sweep:** consider a narrowly configured `knip` pass after CI simplification;
    do not add another permanent gate merely because a one-time audit is useful.
 5. **Historical global-cover objects and licence review:** owner/data decisions; code sessions must

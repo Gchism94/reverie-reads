@@ -36,6 +36,7 @@ import {
   useHouseholdBookSelection,
   useHouseholdLibraryAuthorization,
   useRemoveHouseholdWork,
+  useSetHouseholdMemberLibraryAdds,
   useUpdateCorpusWorkMetadata,
   type HouseholdBook,
   type HouseholdBookOwner,
@@ -507,6 +508,7 @@ function HouseholdLibraryScreen() {
   const { session } = useAuth()
   const currentReaderId = session?.user.id ?? ''
   const household = useHouseholdLibraryAuthorization()
+  const setMemberLibraryAdds = useSetHouseholdMemberLibraryAdds()
   const removeWork = useRemoveHouseholdWork()
   const updateCorpus = useUpdateCorpusWorkMetadata()
   const reviewHouseholdCover = useAdminReviewHouseholdCoverForCorpus()
@@ -520,6 +522,7 @@ function HouseholdLibraryScreen() {
   )
   const members = labelled.members
   const books = labelled.books
+  const currentMember = members.find((member) => member.userId === currentReaderId)
   const hasHousehold = household.authorized && members.length > 0
   const canEditCorpus =
     isCorpusAdmin ||
@@ -608,6 +611,24 @@ function HouseholdLibraryScreen() {
                 ))}
               </div>
             </div>
+            {currentMember ? (
+              <label className="mt-3 flex items-start gap-2.5 border-t border-line pt-3 text-[12.5px] text-ink">
+                <input
+                  type="checkbox"
+                  className="mt-0.5"
+                  checked={currentMember.allowMemberLibraryAdds}
+                  disabled={setMemberLibraryAdds.isPending}
+                  onChange={(event) => setMemberLibraryAdds.mutate(event.target.checked)}
+                />
+                <span>
+                  Let household members add books to my personal library
+                  <span className="mt-0.5 block text-[11.5px] leading-snug text-muted">
+                    Adds neutral book records only. They cannot set ownership, reading history,
+                    ratings, or private details for you.
+                  </span>
+                </span>
+              </label>
+            ) : null}
           </Surface>
 
           {onlyCurrentMember ? (

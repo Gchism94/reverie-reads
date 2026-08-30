@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createRoute, Link, useNavigate } from '@tanstack/react-router'
 import {
   contributorsFromAuthors,
@@ -21,6 +21,8 @@ import { useIntake, type ReviewCandidate } from '../data/intake'
 import { useBooks } from '../data/books'
 import {
   useAddCorpusWorkToHousehold,
+  useAddCorpusWorkToMemberLibrary,
+  useAddPersonalBooksToHousehold,
   useCreateHouseholdCatalogWork,
   useHouseholdLibraryAuthorization,
 } from '../data/household'
@@ -48,6 +50,8 @@ import {
 import { CORE_GENRES } from '@reverie/core'
 import { Surface } from '../components/Surface'
 import { LevelPicker } from '../components/LevelPicker'
+import { AddDestinationPicker } from '../components/AddDestinationPicker'
+import { delegatedMemberId, type AddDestination } from '../components/addDestination'
 
 interface BarcodeDetectorLike {
   detect(source: CanvasImageSource): Promise<{ rawValue: string }[]>
@@ -141,7 +145,15 @@ function parsePub(s: string): Book['pub'] {
  * gesture writes book_tropes; suggestions query by id), so they can only bind to a saved book — this
  * refine step is how Add reaches full parity with Edit without a parallel implementation.
  */
-function RefineAdded({ bookId, onDone }: { bookId: string; onDone: () => void }) {
+function RefineAdded({
+  bookId,
+  householdWarning,
+  onDone,
+}: {
+  bookId: string
+  householdWarning?: string | null
+  onDone: () => void
+}) {
   const labels = useLabels()
   const { data: books } = useBooks()
   const book = books?.find((b) => b.id === bookId)
@@ -166,6 +178,11 @@ function RefineAdded({ bookId, onDone }: { bookId: string; onDone: () => void })
 
   return (
     <Surface radius="panel" tone="card" pad={3} className="mt-4">
+      {householdWarning ? (
+        <p role="status" className="mb-3 text-[12.5px] text-accent-ink">
+          {householdWarning}
+        </p>
+      ) : null}
       <h2
         className="text-[16px] italic text-ink"
         style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
@@ -223,13 +240,16 @@ function RefineAdded({ bookId, onDone }: { bookId: string; onDone: () => void })
 function AddForm({
   hit,
   defaultUnowned = false,
+  addToHousehold = false,
   onAdded,
 }: {
   hit: Picked
   defaultUnowned?: boolean
+  addToHousehold?: boolean
   onAdded: () => void
 }) {
   const intake = useIntake()
+  const addPersonalBooksToHousehold = useAddPersonalBooksToHousehold()
   const voice = useVoice()
   // Context-sensitive default: arriving from a wanting context (Discover) assumes wishlist; a plain
   // catalog add leaves possession UNSET rather than forcing "owned" (docs/archive/task-ownership-v2.md).
@@ -246,6 +266,7 @@ function AddForm({
   const [dup, setDup] = useState<ReviewCandidate | null>(null)
   // Once the record is created we hand off to the refine step (cover + tropes) instead of leaving.
   const [addedId, setAddedId] = useState<string | null>(null)
+  const [householdWarning, setHouseholdWarning] = useState<string | null>(null)
   const [contribs, setContribs] = useState<Contributor[]>(
     contributorsFromAuthors(hit.authors ?? []),
   )
@@ -434,6 +455,15 @@ function AddForm({
     }
     // Added or merged — hand off to the refine step against the real book (cover + tropes).
     if (res.bookId) {
+      if (addToHousehold) {
+        try {
+          await addPersonalBooksToHousehold.mutateAsync([res.bookId])
+        } catch {
+          setHouseholdWarning(
+            'The personal book was saved, but the household entry could not be added. Try Household only after reconnecting.',
+          )
+        }
+      }
       setAddedId(res.bookId)
       return
     }
@@ -443,14 +473,28 @@ function AddForm({
   async function resolveDup(action: ReviewAction) {
     if (!dup) return
     const existing = (books ?? []).find((b) => b.id === dup.existingId)
-    if (existing) await resolveCandidate(dup, existing, action)
+    const resolvedBookId = existing ? await resolveCandidate(dup, existing, action) : null
+    if (addToHousehold && resolvedBookId) {
+      try {
+        await addPersonalBooksToHousehold.mutateAsync([resolvedBookId])
+      } catch {
+        setHouseholdWarning(
+          'The personal book was saved, but the household entry could not be added. Try Household only after reconnecting.',
+        )
+      }
+    }
     await qc.invalidateQueries({ queryKey: ['books'] })
     await qc.invalidateQueries({ queryKey: ['reads', 'all'] })
     setDup(null)
+    if (resolvedBookId) {
+      setAddedId(resolvedBookId)
+      return
+    }
     onAdded()
   }
 
-  if (addedId) return <RefineAdded bookId={addedId} onDone={onAdded} />
+  if (addedId)
+    return <RefineAdded bookId={addedId} householdWarning={householdWarning} onDone={onAdded} />
 
   return (
     <Surface radius="panel" tone="card" pad={3} className="mt-4">
@@ -744,14 +788,15 @@ function AddForm({
           color: 'var(--on-primary)',
         }}
       >
-        Add to my library
+        {addToHousehold ? 'Add to my library + Household' : 'Add to my library'}
       </button>
     </Surface>
   )
 }
 
-function BulkAdd() {
+function BulkAdd({ addToHousehold }: { addToHousehold: boolean }) {
   const intake = useIntake()
+  const addPersonalBooksToHousehold = useAddPersonalBooksToHousehold()
   const skinGenre = SKINS[useEffectiveSkin()].genre.toLowerCase()
   const bulkSub = subgenresForGenre(skinGenre)[0] ?? 'Other' // genre's primary subgenre (always defined)
   const [text, setText] = useState('')
@@ -767,6 +812,7 @@ function BulkAdd() {
     setBusy(true)
     let added = 0
     let merged = 0
+    const bookIds: string[] = []
     for (const [i, line] of lines.entries()) {
       setStatus(`Looking up ${i + 1}/${lines.length}…`)
       try {
@@ -799,13 +845,27 @@ function BulkAdd() {
         )
         if (res.outcome === 'merged') merged++
         else added++
+        if (res.bookId) bookIds.push(res.bookId)
       } catch {
         /* skip lines that fail */
       }
     }
+    if (addToHousehold && bookIds.length) {
+      try {
+        await addPersonalBooksToHousehold.mutateAsync([...new Set(bookIds)])
+      } catch {
+        setBusy(false)
+        setStatus(
+          `Added the personal books, but the household entries could not be added. Reconnect and try Household only.`,
+        )
+        return
+      }
+    }
     setBusy(false)
     setStatus(
-      `Added ${added}${merged ? ` · merged ${merged} into existing` : ''} of ${lines.length}.`,
+      `Added ${added}${merged ? ` · merged ${merged} into existing` : ''} of ${lines.length}${
+        addToHousehold ? ' to your library + Household' : ''
+      }.`,
     )
     setText('')
   }
@@ -946,24 +1006,37 @@ function TriageRow({
   )
 }
 
-function HouseholdAddForm({ hit, onAdded }: { hit: Picked; onAdded: () => void }) {
+function HouseholdAddForm({
+  hit,
+  targetMemberId,
+  targetMemberName,
+  onAdded,
+}: {
+  hit: Picked
+  targetMemberId?: string | null
+  targetMemberName?: string
+  onAdded: () => void
+}) {
   const { session } = useAuth()
   const household = useHouseholdLibraryAuthorization()
   const addExisting = useAddCorpusWorkToHousehold()
+  const addToMember = useAddCorpusWorkToMemberLibrary()
   const createWork = useCreateHouseholdCatalogWork()
   const { data: isCorpusAdmin = false } = useCorpusAdminStatus()
   const [title, setTitle] = useState(hit.title ?? '')
   const [author, setAuthor] = useState(formatAuthors(contributorsFromAuthors(hit.authors ?? [])))
   const [isbn, setIsbn] = useState(hit.isbn ?? '')
   const [coverWarning, setCoverWarning] = useState('')
+  const [saveError, setSaveError] = useState('')
   const currentMember = household.members.find((member) => member.userId === session?.user.id)
   const canCreate = !!currentMember
   const canPersistPickedCover =
     hit.source === 'google' || currentMember?.role === 'owner' || isCorpusAdmin
-  const pending = addExisting.isPending || createWork.isPending
+  const pending = addExisting.isPending || createWork.isPending || addToMember.isPending
 
   async function save() {
-    if (hit.corpusWorkId) await addExisting.mutateAsync(hit.corpusWorkId)
+    let workId = hit.corpusWorkId
+    if (workId) await addExisting.mutateAsync(workId)
     else {
       const result = await createWork.mutateAsync({
         title: title.trim(),
@@ -974,10 +1047,29 @@ function HouseholdAddForm({ hit, onAdded }: { hit: Picked; onAdded: () => void }
       })
       if (result.coverWarning) {
         setCoverWarning(result.coverWarning)
-        return
+        // The shared work already committed. A delegated personal add is independent of its
+        // optional cover ingest, so finish that requested destination before pausing on the warning.
+        if (!targetMemberId) return
       }
+      workId = result.workId
+    }
+    if (targetMemberId && workId) {
+      await addToMember.mutateAsync({ workId, memberId: targetMemberId })
     }
     onAdded()
+  }
+
+  async function handleSave() {
+    setSaveError('')
+    try {
+      await save()
+    } catch {
+      setSaveError(
+        targetMemberId
+          ? `The shared entry may have been added, but ${targetMemberName ?? 'the selected member'}’s personal book could not be created. Reconnect and try that destination again.`
+          : 'The household entry could not be added. Reconnect and try again.',
+      )
+    }
   }
 
   return (
@@ -1018,8 +1110,9 @@ function HouseholdAddForm({ hit, onAdded }: { hit: Picked; onAdded: () => void }
       </div>
 
       <p className="mt-3 text-[12.5px] text-muted">
-        This adds one shared household entry. It does not create a personal book or say that anyone
-        owns, borrowed, wants, or has read it.
+        {targetMemberId
+          ? `This adds one shared entry and a neutral personal book for ${targetMemberName ?? 'the selected member'}. It does not say they own, borrowed, want, or have read it.`
+          : 'This adds one shared household entry. It does not create a personal book or say that anyone owns, borrowed, wants, or has read it.'}
       </p>
       {hit.cover && !canPersistPickedCover ? (
         <p role="status" className="mt-3 text-[12.5px] text-muted">
@@ -1039,6 +1132,11 @@ function HouseholdAddForm({ hit, onAdded }: { hit: Picked; onAdded: () => void }
           </Link>
         </p>
       ) : null}
+      {saveError ? (
+        <p role="alert" className="mt-3 text-[12.5px] text-accent-ink">
+          {saveError}
+        </p>
+      ) : null}
       {!household.authorized ? (
         <p role="status" className="mt-3 text-[12.5px] text-muted">
           Connect to a verified household before adding shared books.
@@ -1052,14 +1150,18 @@ function HouseholdAddForm({ hit, onAdded }: { hit: Picked; onAdded: () => void }
         <button
           type="button"
           disabled={pending || !title.trim()}
-          onClick={() => void save().catch(() => undefined)}
+          onClick={() => void handleSave()}
           className="skin-control skin-btn-primary mt-4 h-11 w-full px-4 text-[14px] font-semibold disabled:opacity-50"
         >
           {pending
             ? 'Adding…'
             : hit.corpusWorkId
-              ? 'Add to household library'
-              : 'Create shared record and add'}
+              ? targetMemberId
+                ? `Add to ${targetMemberName ?? 'member'} + Household`
+                : 'Add to household library'
+              : targetMemberId
+                ? `Create shared record and add to ${targetMemberName ?? 'member'}`
+                : 'Create shared record and add'}
         </button>
       )}
     </Surface>
@@ -1072,7 +1174,21 @@ function AddScreen() {
   // Deep-link prefill (?title=…&author=…): Discover — and anything else that finds a book
   // elsewhere in the app — lands here with the form already filled, one tap from saved.
   const prefill = addRoute.useSearch()
-  const householdScope = prefill.scope === 'household'
+  const { session } = useAuth()
+  const household = useHouseholdLibraryAuthorization()
+  const [destination, setDestination] = useState<AddDestination>(
+    prefill.scope === 'household' ? 'household' : 'mine',
+  )
+  const destinationChosen = useRef(prefill.scope === 'household')
+  useEffect(() => {
+    if (!destinationChosen.current && household.authorized && household.members.length) {
+      setDestination('both')
+    }
+  }, [household.authorized, household.members.length])
+  const targetMemberId = delegatedMemberId(destination)
+  const targetMember = household.members.find((member) => member.userId === targetMemberId)
+  const householdOnly = destination === 'household' || !!targetMemberId
+  const collectiveDestination = destination !== 'mine'
   const [q, setQ] = useState('')
   // SearchResult, not SearchHit: the triage classifier needs `series`/`seriesPosition`, which the
   // five-field hit drops. The truncation to a hit happens at the PICK, not at the search.
@@ -1169,13 +1285,22 @@ function AddScreen() {
         className="text-[22px] italic text-ink"
         style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
       >
-        {householdScope ? 'Add to household' : 'Add a book'}
+        Add a book
       </h1>
       <p className="mb-4 text-[13px] text-muted">
-        {householdScope
-          ? 'Search the shared catalog, or create a missing record without adding it to a personal library.'
-          : 'Scan a barcode, search by title or ISBN, or add manually.'}
+        Scan a barcode, search by title or ISBN, or add manually. Choose the destination before you
+        save.
       </p>
+
+      <AddDestinationPicker
+        value={destination}
+        onChange={(next) => {
+          destinationChosen.current = true
+          setDestination(next)
+        }}
+        members={household.authorized ? household.members : []}
+        currentReaderId={session?.user.id ?? ''}
+      />
 
       <div className="flex flex-wrap gap-2">
         <input
@@ -1245,7 +1370,7 @@ function AddScreen() {
                   key={`${t.result.isbn}|${t.result.title}|${i}`}
                   t={t}
                   onPick={setPicked}
-                  household={householdScope}
+                  household={collectiveDestination}
                 />
               ))}
             </ul>
@@ -1266,20 +1391,28 @@ function AddScreen() {
       )}
 
       {picked &&
-        (householdScope ? (
+        (householdOnly ? (
           <HouseholdAddForm
             hit={picked}
+            targetMemberId={targetMemberId}
+            targetMemberName={targetMember?.displayName}
             onAdded={() => void navigate({ to: '/library', search: { scope: 'household' } })}
           />
         ) : (
           <AddForm
             hit={picked}
             defaultUnowned={!!prefill.want}
-            onAdded={() => void navigate({ to: '/library' })}
+            addToHousehold={destination === 'both'}
+            onAdded={() =>
+              void navigate({
+                to: '/library',
+                search: destination === 'both' ? { scope: 'household' } : {},
+              })
+            }
           />
         ))}
 
-      {!picked && !householdScope && <BulkAdd />}
+      {!picked && !householdOnly && <BulkAdd addToHousehold={destination === 'both'} />}
     </section>
   )
 }

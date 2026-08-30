@@ -335,7 +335,7 @@ function BookDetailScreen() {
           type="button"
           onClick={() => setDialog('cover')}
           aria-label={book.cover ? 'Change cover' : 'Add a cover'}
-          className="skin-card relative aspect-[2/3] w-28 flex-none overflow-hidden border border-line sm:w-44"
+          className="skin-card relative aspect-[2/3] w-28 flex-none self-start overflow-hidden border border-line sm:w-44"
           style={{
             background: `linear-gradient(150deg, ${g0}, ${g1})`,
             filter: 'drop-shadow(0 18px 22px rgba(0, 0, 0, 0.3))',

@@ -36,6 +36,16 @@ describe('external-cover surfaces route through CoverImage (no raw <img> plate l
   }
 })
 
+describe('book-detail cover geometry', () => {
+  it('keeps the cover at its own 2:3 aspect instead of stretching with a long title', () => {
+    const src = readFileSync(join(__dirname, '../book/BookDetailRoute.tsx'), 'utf8')
+    const coverButton = src.match(/<button[\s\S]*?aria-label=\{book\.cover[\s\S]*?<\/button>/)?.[0]
+    expect(coverButton, 'book-detail cover button not found').toBeDefined()
+    expect(coverButton).toContain('aspect-[2/3]')
+    expect(coverButton).toContain('self-start')
+  })
+})
+
 // ── The Discover licensing boundary: candidate covers are HOTLINK-ONLY, never ingested ─────────
 // Discover surfaces books the reader does not own; storing their cover bytes is the same line that
 // killed the global cover cache (BACKLOG, decision 2026-08). The boundary has three layers —

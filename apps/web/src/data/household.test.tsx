@@ -32,12 +32,15 @@ import {
   useHouseholdLibraryAuthorization,
   useHouseholdRoster,
   useAddCorpusWorkToHousehold,
+  useAddCorpusWorkToMemberLibrary,
+  useAddPersonalBooksToHousehold,
   useAddPersonalBookToHousehold,
   useAdminReviewHouseholdCoverForCorpus,
   useCreateHouseholdCatalogWork,
   useAdoptCorpusWorkMetadata,
   useRemoveHouseholdWork,
   useRemovePersonalBookFromHousehold,
+  useSetHouseholdMemberLibraryAdds,
   useUpdateCorpusWorkMetadata,
   type HouseholdBook,
 } from './household'
@@ -122,6 +125,7 @@ describe('household query identity and RPC boundary', () => {
           user_id: 'reader-a',
           display_name: 'Avery',
           member_role: 'owner',
+          allow_member_library_adds: true,
         },
         {
           household_id: 'house-1',
@@ -129,6 +133,7 @@ describe('household query identity and RPC boundary', () => {
           user_id: 'reader-b',
           display_name: 'Avery',
           member_role: 'member',
+          allow_member_library_adds: false,
         },
         {
           household_id: 'house-1',
@@ -136,6 +141,7 @@ describe('household query identity and RPC boundary', () => {
           user_id: 'reader-c',
           display_name: null,
           member_role: 'member',
+          allow_member_library_adds: false,
         },
       ],
       error: null,
@@ -153,6 +159,7 @@ describe('household query identity and RPC boundary', () => {
         userId: 'reader-a',
         displayName: 'Avery',
         role: 'owner',
+        allowMemberLibraryAdds: true,
       },
       {
         householdId: 'house-1',
@@ -160,6 +167,7 @@ describe('household query identity and RPC boundary', () => {
         userId: 'reader-b',
         displayName: 'Avery',
         role: 'member',
+        allowMemberLibraryAdds: false,
       },
       {
         householdId: 'house-1',
@@ -167,6 +175,7 @@ describe('household query identity and RPC boundary', () => {
         userId: 'reader-c',
         displayName: 'Reader',
         role: 'member',
+        allowMemberLibraryAdds: false,
       },
     ])
   })
@@ -267,6 +276,7 @@ describe('household query identity and RPC boundary', () => {
         userId: firstId,
         displayName: 'Avery',
         role: 'owner' as const,
+        allowMemberLibraryAdds: false,
       },
       {
         householdId: 'house-1',
@@ -274,6 +284,7 @@ describe('household query identity and RPC boundary', () => {
         userId: secondId,
         displayName: 'avery',
         role: 'member' as const,
+        allowMemberLibraryAdds: false,
       },
     ]
     const baseBook = {
@@ -359,6 +370,7 @@ describe('household query identity and RPC boundary', () => {
         userId: 'reader-a',
         displayName: 'Avery',
         role: 'owner' as const,
+        allowMemberLibraryAdds: false,
       },
       {
         householdId: 'house-1',
@@ -366,6 +378,7 @@ describe('household query identity and RPC boundary', () => {
         userId: 'reader-b',
         displayName: 'Blake',
         role: 'member' as const,
+        allowMemberLibraryAdds: false,
       },
     ]
     const a = householdBook('work-1', 'reader-a').owners[0]!
@@ -417,6 +430,7 @@ describe('household query identity and RPC boundary', () => {
       userId: 'reader-a',
       displayName: 'Avery',
       role: 'owner' as const,
+      allowMemberLibraryAdds: false,
     }
     const cachedBook = householdBook('cached-book')
     const { client, wrapper } = queryHarness()
@@ -510,6 +524,9 @@ describe('household query identity and RPC boundary', () => {
     const { wrapper } = queryHarness()
     const add = renderHook(() => useAddPersonalBookToHousehold(), { wrapper })
     const addWork = renderHook(() => useAddCorpusWorkToHousehold(), { wrapper })
+    const addBooks = renderHook(() => useAddPersonalBooksToHousehold(), { wrapper })
+    const addToMember = renderHook(() => useAddCorpusWorkToMemberLibrary(), { wrapper })
+    const setMemberAdds = renderHook(() => useSetHouseholdMemberLibraryAdds(), { wrapper })
     const createWork = renderHook(() => useCreateHouseholdCatalogWork(), { wrapper })
     const editWork = renderHook(() => useUpdateCorpusWorkMetadata(), { wrapper })
     const adoptWork = renderHook(() => useAdoptCorpusWorkMetadata(), { wrapper })
@@ -518,6 +535,11 @@ describe('household query identity and RPC boundary', () => {
 
     await act(() => add.result.current.mutateAsync('book-1'))
     await act(() => addWork.result.current.mutateAsync('work-1'))
+    await act(() => addBooks.result.current.mutateAsync(['book-1', 'book-2']))
+    await act(() =>
+      addToMember.result.current.mutateAsync({ workId: 'work-1', memberId: 'reader-b' }),
+    )
+    await act(() => setMemberAdds.result.current.mutateAsync(true))
     await act(() =>
       createWork.result.current.mutateAsync({
         title: 'Household only',
@@ -550,6 +572,12 @@ describe('household query identity and RPC boundary', () => {
     expect(mocked.rpc.mock.calls).toEqual([
       ['add_personal_book_to_household', { p_book: 'book-1' }],
       ['add_corpus_work_to_household', { p_work: 'work-1' }],
+      ['add_personal_books_to_household', { p_books: ['book-1', 'book-2'] }],
+      [
+        'add_corpus_work_to_member_library',
+        { p_work: 'work-1', p_member: 'reader-b' },
+      ],
+      ['set_household_member_library_adds', { p_allow: true }],
       [
         'create_household_catalog_work',
         {

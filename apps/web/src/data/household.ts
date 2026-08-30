@@ -13,6 +13,7 @@ export interface HouseholdMember {
   userId: string
   displayName: string
   role: HouseholdMemberRole
+  allowMemberLibraryAdds: boolean
 }
 
 export interface HouseholdBook {
@@ -80,6 +81,7 @@ interface HouseholdRosterRow {
   user_id: string
   display_name: string | null
   member_role: HouseholdMemberRole
+  allow_member_library_adds: boolean
 }
 
 interface HouseholdBookRow {
@@ -156,6 +158,7 @@ export const toHouseholdMember = (row: HouseholdRosterRow): HouseholdMember => (
   userId: row.user_id,
   displayName: readerName(row.display_name),
   role: row.member_role,
+  allowMemberLibraryAdds: row.allow_member_library_adds ?? false,
 })
 
 export const toHouseholdBook = (row: HouseholdBookRow): HouseholdBook => ({
@@ -460,6 +463,52 @@ export function useAddCorpusWorkToHousehold() {
       })
       if (error) throw error
       return data as string
+    },
+    onSuccess: () => invalidateLibraryMembership(queryClient),
+  })
+}
+
+export function useAddPersonalBooksToHousehold() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    meta: { action: 'Adding books to the household library' },
+    mutationFn: async (bookIds: string[]): Promise<number> => {
+      const { data, error } = await supabase.rpc('add_personal_books_to_household', {
+        p_books: bookIds,
+      })
+      if (error) throw error
+      return data as number
+    },
+    onSuccess: () => invalidateLibraryMembership(queryClient),
+  })
+}
+
+export function useAddCorpusWorkToMemberLibrary() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    meta: { action: 'Adding to a household member’s library' },
+    mutationFn: async ({ workId, memberId }: { workId: string; memberId: string }): Promise<string> => {
+      const { data, error } = await supabase.rpc('add_corpus_work_to_member_library', {
+        p_work: workId,
+        p_member: memberId,
+      })
+      if (error) throw error
+      return data as string
+    },
+    onSuccess: () => invalidateLibraryMembership(queryClient),
+  })
+}
+
+export function useSetHouseholdMemberLibraryAdds() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    meta: { action: 'Updating household add permission' },
+    mutationFn: async (allow: boolean): Promise<boolean> => {
+      const { data, error } = await supabase.rpc('set_household_member_library_adds', {
+        p_allow: allow,
+      })
+      if (error) throw error
+      return data as boolean
     },
     onSuccess: () => invalidateLibraryMembership(queryClient),
   })
