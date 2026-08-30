@@ -4,10 +4,11 @@ Status: **The cover and household rollout is live through PR #371. The owner dep
 through `20260905010000`; the read-only production report returned 74/74 true; and web build
 `e7a6809` is promoted at `reveriereads.app`. PRs #368–#370 provide exact personal and household
 cover review, fail-closed unavailable status, additive missing-default promotion, owner-scoped
-bulk recovery, and the responsive shared-details editor. The report observed one assigned corpus
-administrator, which satisfies only its non-empty runtime check. The requested exact two-profile
-administrator roster still requires the owner-run `--require-exact` dry run. Private CSV
-reconciliation, backup approval, owner write, and post-write smoke checks remain pending.**
+bulk recovery, and the responsive shared-details editor. The report initially observed one
+assigned corpus administrator. The owner-run exact-roster dry run then found one existing grant,
+one addition, and no unexpected account; the reviewed write verified both requested grants and the
+exact roster. Private CSV reconciliation, backup approval, owner write, and post-write smoke checks
+remain pending.**
 
 ## Objective
 

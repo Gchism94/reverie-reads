@@ -2,13 +2,13 @@
 
 Status: **The prerequisite cover and household rollout is live. The owner deployed migrations
 through `20260905010000`, the production report returned 74/74 true, and web build `e7a6809` is
-promoted at `reveriereads.app`. The structural report observed one corpus administrator; it does
-not prove the requested exact two-profile roster, which remains an owner-run `--require-exact`
-gate. The first private reconciliation dry run found 10 missing exact title/author identities.
-Resolve any that remain through Household Add, then produce and approve a fresh deterministic dry
-run and transaction-consistent backup. The reconciliation write and post-write Account A/B,
-household, removal, corpus-preservation, cover, and trope smoke checks remain owner-only and
-pending.**
+promoted at `reveriereads.app`. The owner-run exact-roster administrator dry run found one existing
+grant, one addition, and no unexpected account; the reviewed write then verified both requested
+grants and the exact roster. The first private reconciliation dry run found 10 missing exact
+title/author identities. Rerun it now and resolve any that remain through Household Add, then
+produce and approve a fresh deterministic dry run and transaction-consistent backup. The
+reconciliation write and post-write Account A/B, household, removal, corpus-preservation, cover,
+and trope smoke checks remain owner-only and pending.**
 
 ## Production migration performance hotfix — 2026-08-26
 
