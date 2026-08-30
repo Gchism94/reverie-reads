@@ -1,7 +1,7 @@
 -- Trusted eligible copy covers reach the household read model. Corpus publication is an explicit,
 -- audited administrator review action and never a side effect of a personal-book write.
 begin;
-select plan(33);
+select plan(45);
 
 insert into auth.users (
   id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
@@ -607,6 +607,192 @@ select is(
   ),
   '|0',
   'a refused remote URL leaves the corpus unchanged'
+);
+
+select ok(
+  not has_function_privilege(
+    'anon', 'public.admin_review_household_cover_for_corpus(uuid,uuid,uuid,text)', 'EXECUTE'
+  )
+  and has_function_privilege(
+    'authenticated', 'public.admin_review_household_cover_for_corpus(uuid,uuid,uuid,text)', 'EXECUTE'
+  )
+  and not has_function_privilege(
+    'service_role', 'public.admin_review_household_cover_for_corpus(uuid,uuid,uuid,text)', 'EXECUTE'
+  ),
+  'only authenticated callers can reach the exact household-cover review boundary'
+);
+
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"b2222222-2222-4222-8222-222222222222","role":"authenticated","iss":"http://127.0.0.1:55321/auth/v1"}',
+  true
+);
+select throws_ok(
+  $$select public.admin_review_household_cover_for_corpus(
+    'c3333333-3333-4333-8333-333333333333',
+    'e5555555-5555-4555-8555-555555555551',
+    'd4444444-4444-4444-8444-444444444441',
+    'https://books.google.com/books/content?id=trusted'
+  )$$,
+  '42501',
+  'corpus administrator required',
+  'an ordinary household member cannot review their cover for the corpus'
+);
+
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"a1111111-1111-4111-8111-111111111111","role":"authenticated","iss":"http://127.0.0.1:55321/auth/v1"}',
+  true
+);
+select is(
+  public.admin_review_household_cover_for_corpus(
+    'c3333333-3333-4333-8333-333333333333',
+    'e5555555-5555-4555-8555-555555555551',
+    'd4444444-4444-4444-8444-444444444441',
+    'https://books.google.com/books/content?id=trusted'
+  )::text,
+  'd4444444-4444-4444-8444-444444444441',
+  'an administrator can review the exact safe cover displayed from a household peer'
+);
+reset role;
+select is(
+  (select cover_url from public.works where id = 'd4444444-4444-4444-8444-444444444441'),
+  'https://books.google.com/books/content?id=trusted',
+  'the first reviewed household cover fills the missing corpus default'
+);
+select ok(
+  exists (
+    select 1
+    from public.works work
+    cross join lateral jsonb_array_elements(work.cover_options) option
+    where work.id = 'd4444444-4444-4444-8444-444444444441'
+      and option ->> 'url' = 'https://books.google.com/books/content?id=trusted'
+  ),
+  'the reviewed household cover becomes an accepted corpus option'
+);
+select is(
+  (
+    select count(*)::int from public.work_metadata_edits
+    where work_id = 'd4444444-4444-4444-8444-444444444441'
+      and editor_id = 'a1111111-1111-4111-8111-111111111111'
+  ),
+  1,
+  'the household-cover review is audited as the administrator action'
+);
+
+insert into public.households (id, name)
+values ('c3333333-3333-4333-8333-333333333334', 'Unrelated household');
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"a1111111-1111-4111-8111-111111111111","role":"authenticated","iss":"http://127.0.0.1:55321/auth/v1"}',
+  true
+);
+select throws_ok(
+  $$select public.admin_review_household_cover_for_corpus(
+    'c3333333-3333-4333-8333-333333333334',
+    'e5555555-5555-4555-8555-555555555551',
+    'd4444444-4444-4444-8444-444444444441',
+    'https://books.google.com/books/content?id=trusted'
+  )$$,
+  '40001',
+  'household cover is no longer available for review; refresh and try again',
+  'administrator status does not expose a copy from an unrelated household'
+);
+reset role;
+
+insert into public.works (
+  id, work_key, title, author_text, contributors, cover_url
+) values
+  (
+    'd4444444-4444-4444-8444-444444444444',
+    public.library_work_key('Established Household Cover', 'Writer Four'),
+    'Established Household Cover', 'Writer Four',
+    '[{"name":"Writer Four","role":"author","position":0}]'::jsonb,
+    'https://books.google.com/books/content?id=established'
+  ),
+  (
+    'd4444444-4444-4444-8444-444444444445',
+    public.library_work_key('Recoverable Household Cover', 'Writer Five'),
+    'Recoverable Household Cover', 'Writer Five',
+    '[{"name":"Writer Five","role":"author","position":0}]'::jsonb,
+    null
+  );
+insert into public.books (
+  id, owner_id, corpus_work_id, title, authors_display, ownership, cover_url, cover_source
+) values
+  (
+    'e5555555-5555-4555-8555-555555555555',
+    'b2222222-2222-4222-8222-222222222222',
+    'd4444444-4444-4444-8444-444444444444',
+    'Established Household Cover', 'Writer Four', 'owned',
+    'https://books.google.com/books/content?id=alternate', 'google'
+  ),
+  (
+    'e5555555-5555-4555-8555-555555555556',
+    'b2222222-2222-4222-8222-222222222222',
+    'd4444444-4444-4444-8444-444444444445',
+    'Recoverable Household Cover', 'Writer Five', 'owned',
+    'https://books.google.com/books/content?id=recoverable', 'google'
+  );
+
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"a1111111-1111-4111-8111-111111111111","role":"authenticated","iss":"http://127.0.0.1:55321/auth/v1"}',
+  true
+);
+select public.admin_review_household_cover_for_corpus(
+  'c3333333-3333-4333-8333-333333333333',
+  'e5555555-5555-4555-8555-555555555555',
+  'd4444444-4444-4444-8444-444444444444',
+  'https://books.google.com/books/content?id=alternate'
+);
+reset role;
+select is(
+  (select cover_url from public.works where id = 'd4444444-4444-4444-8444-444444444444'),
+  'https://books.google.com/books/content?id=established',
+  'a reviewed household option does not replace an established corpus default'
+);
+select ok(
+  exists (
+    select 1
+    from public.works work
+    cross join lateral jsonb_array_elements(work.cover_options) option
+    where work.id = 'd4444444-4444-4444-8444-444444444444'
+      and option ->> 'url' = 'https://books.google.com/books/content?id=alternate'
+  ),
+  'the later household cover remains available as an additive option'
+);
+
+update public.books
+set removed_at = now()
+where owner_id = 'a1111111-1111-4111-8111-111111111111' and removed_at is null;
+select is(
+  (
+    select count(*)::int from public.books
+    where owner_id = 'a1111111-1111-4111-8111-111111111111' and removed_at is null
+  ),
+  0,
+  'the recovery fixture administrator has no active personal books'
+);
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"a1111111-1111-4111-8111-111111111111","role":"authenticated","iss":"http://127.0.0.1:55321/auth/v1"}',
+  true
+);
+select is(
+  public.admin_recover_personal_corpus_covers() ->> 'recoveredCovers',
+  '1',
+  'bulk recovery fills one missing corpus cover from the administrator household library'
+);
+reset role;
+select is(
+  (select cover_url from public.works where id = 'd4444444-4444-4444-8444-444444444445'),
+  'https://books.google.com/books/content?id=recoverable',
+  'the administrator with no personal books recovers the peer household cover'
 );
 
 select * from finish();

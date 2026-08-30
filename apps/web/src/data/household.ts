@@ -26,6 +26,8 @@ export interface HouseholdBook {
   corpusCover: string
   corpusCoverColor: string
   coverOptions: { url?: string; source?: string; sourceUrl?: string }[]
+  /** False makes administrator review fail closed when accepted-option state was not returned. */
+  coverOptionsAvailable: boolean
   series: string
   position: number | null
   seriesCount: number | null
@@ -165,6 +167,7 @@ export const toHouseholdBook = (row: HouseholdBookRow): HouseholdBook => ({
   corpusCover: row.cover_url ?? '',
   corpusCoverColor: row.cover_color ?? '',
   coverOptions: row.cover_options ?? [],
+  coverOptionsAvailable: Array.isArray(row.cover_options),
   series: row.series_name ?? '',
   position: numericPosition(row.series_position),
   seriesCount: row.series_count,
@@ -609,6 +612,34 @@ export function useUpdateCorpusWorkMetadata() {
         p_pub_y: patch.publicationYear,
         p_pub_m: patch.publicationMonth,
         p_pub_d: patch.publicationDay,
+      })
+      if (error) throw error
+      return data as string
+    },
+    onSuccess: () => invalidateLibraryMembership(queryClient),
+  })
+}
+
+export function useAdminReviewHouseholdCoverForCorpus() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    meta: { action: 'Reviewing a household cover for the corpus' },
+    mutationFn: async ({
+      householdId,
+      bookId,
+      workId,
+      coverUrl,
+    }: {
+      householdId: string
+      bookId: string
+      workId: string
+      coverUrl: string
+    }): Promise<string> => {
+      const { data, error } = await supabase.rpc('admin_review_household_cover_for_corpus', {
+        p_household: householdId,
+        p_book: bookId,
+        p_expected_work: workId,
+        p_expected_cover_url: coverUrl,
       })
       if (error) throw error
       return data as string

@@ -33,6 +33,7 @@ import {
   useHouseholdRoster,
   useAddCorpusWorkToHousehold,
   useAddPersonalBookToHousehold,
+  useAdminReviewHouseholdCoverForCorpus,
   useCreateHouseholdCatalogWork,
   useAdoptCorpusWorkMetadata,
   useRemoveHouseholdWork,
@@ -58,6 +59,7 @@ const householdBook = (id: string, ownerId = 'reader-a'): HouseholdBook => ({
   corpusCover: '',
   corpusCoverColor: '',
   coverOptions: [],
+  coverOptionsAvailable: true,
   series: '',
   position: null,
   seriesCount: null,
@@ -283,6 +285,7 @@ describe('household query identity and RPC boundary', () => {
       corpusCover: '',
       corpusCoverColor: '',
       coverOptions: [],
+      coverOptionsAvailable: true,
       series: '',
       position: null,
       seriesCount: null,
@@ -580,6 +583,31 @@ describe('household query identity and RPC boundary', () => {
       ['remove_personal_book_from_household', { p_book: 'book-1' }],
       ['remove_household_work', { p_work: 'work-1' }],
     ])
+  })
+
+  it('binds household cover review to the displayed household, copy, work, and cover', async () => {
+    mocked.rpc.mockResolvedValue({ data: 'work-1', error: null })
+    const { client, wrapper } = queryHarness()
+    const invalidate = vi.spyOn(client, 'invalidateQueries')
+    const review = renderHook(() => useAdminReviewHouseholdCoverForCorpus(), { wrapper })
+
+    await act(() =>
+      review.result.current.mutateAsync({
+        householdId: 'house-1',
+        bookId: 'book-2',
+        workId: 'work-1',
+        coverUrl: 'https://books.google.com/books/content?id=reviewed&printsec=frontcover&img=1&zoom=2&source=gbs_api',
+      }),
+    )
+
+    expect(mocked.rpc).toHaveBeenCalledWith('admin_review_household_cover_for_corpus', {
+      p_household: 'house-1',
+      p_book: 'book-2',
+      p_expected_work: 'work-1',
+      p_expected_cover_url:
+        'https://books.google.com/books/content?id=reviewed&printsec=frontcover&img=1&zoom=2&source=gbs_api',
+    })
+    expect(invalidate).toHaveBeenCalled()
   })
 
   it('ingests and selects a picked Hardcover cover for an authorized shared work', async () => {

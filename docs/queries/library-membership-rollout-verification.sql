@@ -1,14 +1,13 @@
 -- Owner-run, read-only verification for the membership/corpus rollout through the forward-only
--- 20260904010000 exact-context cover review and forward ACL/accepted-option repair.
+-- 20260905010000 household-cover administrator review and recovery repair.
 --
 -- Paste this whole file into the production Supabase SQL Editor and run it. It returns catalog
 -- metadata and aggregate counts only: no titles, account ids, library rows, or private annotations.
 -- Every row must report ok = true before the private reconciliation dry run is approved. The
 -- runtime administrator assignment check deliberately fails after a clean schema-only migration:
 -- run the owner-reviewed corpus:admins operator before treating this as a rollout pass.
--- Before 20260904010000 receives independent review and an owner-run deployment, its migration,
--- exact review RPC, accepted-option trigger, and ACL rows are expected blockers; do not approve a
--- partial result.
+-- Before 20260905010000 receives independent review and an owner-run deployment, its migration and
+-- exact household-cover review RPC are expected blockers; do not approve a partial result.
 --
 -- This verifies CURRENT postconditions, not the historical migration event. Without a verified
 -- pre-migration snapshot it cannot prove that the backfill chose the same corpus identity each
@@ -21,7 +20,7 @@ with
 expected_migrations(version) as (
   values
     ('20260830010000'), ('20260831010000'), ('20260901010000'), ('20260902010000'),
-    ('20260903010000'), ('20260904010000')
+    ('20260903010000'), ('20260904010000'), ('20260905010000')
 ),
 expected_triggers(schema_name, table_name, trigger_name) as (
   values
@@ -58,6 +57,7 @@ expected_functions(
     -- Retained compatibility tombstone: the UUID-only form cannot bind the reviewed gesture.
     ('public.admin_review_personal_cover_for_corpus(uuid)', true, false, false, false),
     ('public.admin_review_personal_cover_for_corpus(uuid,uuid,text)', true, false, true, false),
+    ('public.admin_review_household_cover_for_corpus(uuid,uuid,uuid,text)', true, false, true, false),
     -- Trigger-only accepted-option guard: no API role calls it directly.
     ('public.preserve_authenticated_corpus_cover_options()', false, false, false, false),
     ('public.add_personal_book_to_household(uuid)', true, false, true, false),

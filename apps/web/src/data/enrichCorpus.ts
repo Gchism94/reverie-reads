@@ -347,16 +347,16 @@ export function corpusCoverRecoverySummary(recovery: CorpusCoverRecoveryResult):
   }
   if (recovery.recoveredOptions) {
     parts.push(
-      `published ${recovery.recoveredOptions} personal cover option${recovery.recoveredOptions === 1 ? '' : 's'}`,
+      `published ${recovery.recoveredOptions} household cover option${recovery.recoveredOptions === 1 ? '' : 's'}`,
     )
   }
   return parts.length ? ` · ${parts.join(' · ')}` : ''
 }
 
-/** Preserve this administrator's exact selected personal covers before asking external sources for
- * alternatives. The RPC is owner-scoped even for administrators and validates every stored object
- * against the authenticated project's issuer. */
-export async function recoverAdminPersonalCorpusCovers(): Promise<CorpusCoverRecoveryResult> {
+/** Preserve the administrator's own covers plus safe, active copy covers from their household
+ * before asking external sources for alternatives. The RPC remains household-scoped and validates
+ * every stored object against the authenticated project's issuer. */
+export async function recoverAdminHouseholdCorpusCovers(): Promise<CorpusCoverRecoveryResult> {
   const { data, error } = await supabase.rpc('admin_recover_personal_corpus_covers')
   if (error) throw error
   const result = (data ?? {}) as Partial<CorpusCoverRecoveryResult>
@@ -523,7 +523,7 @@ export async function runCorpusCompletionPipeline(
   onProgress: (progress: CorpusBulkProgress) => void,
   shouldStop: () => boolean,
   dependencies: CorpusCompletionPipelineDependencies = {
-    recover: recoverAdminPersonalCorpusCovers,
+    recover: recoverAdminHouseholdCorpusCovers,
     fetchCandidates: fetchCorpusEnrichmentCandidates,
     complete: bulkCompleteCorpus,
   },

@@ -394,7 +394,7 @@ test('two linked personal libraries appear together without exposing personal co
     await expect(detail).toContainText(seeded.sentinels.tag)
     await expect(detail).toContainText(seeded.sentinels.trope)
     await expect(
-      detail.getByRole('button', { name: /favourite|favorite|cover|shelf|edit/i }),
+      detail.getByRole('button', { name: /favourite|favorite|personal cover|shelf/i }),
     ).toHaveCount(0)
     await expect(detail.getByRole('link')).toHaveCount(0)
     await expect(detail.getByText(seeded.sentinels.note, { exact: false })).toHaveCount(0)
@@ -565,6 +565,104 @@ test('an administrator explicitly reviews a personal cover before it becomes a c
   }
 })
 
+test('an administrator explicitly reviews a cover from the same household library', async ({
+  page,
+}, testInfo) => {
+  if (!seeded) throw new Error('household peer-cover review fixture missing')
+  const book = await okData(
+    admin.from('books').select('id, corpus_work_id').eq('id', seeded.memberBookId).single(),
+    'administrator household cover review book read',
+  )
+  // A reader uses the ingestion UI, which generates this alphanumeric revision name. The fixture
+  // uploads its one-pixel image directly, so it mirrors that reviewed storage contract itself.
+  const objectName = `u/${member.uid}/${book.id}/householdreview.png`
+  const uploaded = await admin.storage
+    .from('covers')
+    .upload(
+      objectName,
+      Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+        'base64',
+      ),
+      { contentType: 'image/png', upsert: true },
+    )
+  if (uploaded.error) throw uploaded.error
+  const coverUrl = admin.storage.from('covers').getPublicUrl(objectName).data.publicUrl
+
+  try {
+    await ok(
+      admin.from('corpus_admins').upsert({ user_id: owner.uid }),
+      'administrator household cover review grant',
+    )
+    await ok(
+      admin
+        .from('books')
+        .update({ cover_url: coverUrl, cover_source: 'upload', cover_user_chosen: true })
+        .eq('id', book.id),
+      'administrator household cover review personal cover update',
+    )
+
+    await signIn(page, owner.session)
+    await page.goto('/library?scope=household')
+    await page.locator(`[data-owners~="${member.uid}"]`).click()
+    const detail =
+      testInfo.project.name === 'mobile'
+        ? page.getByRole('dialog', { name: /household details/i })
+        : page.locator('aside[aria-label="Household book details"]')
+    const memberCopy = detail.locator(`[data-household-copy-book-id="${book.id}"]`)
+    const review = memberCopy.getByRole('switch', { name: 'Review household cover for corpus' })
+    await expect(review).toHaveAttribute('aria-checked', 'false')
+    await review.click()
+    const reviewed = memberCopy.getByRole('switch', {
+      name: 'Household cover reviewed for corpus',
+    })
+    await expect(reviewed).toHaveAttribute('aria-checked', 'true')
+    await expect(reviewed).toBeDisabled()
+
+    const after = await okData(
+      admin.from('works').select('cover_url, cover_options').eq('id', book.corpus_work_id).single(),
+      'administrator household cover review resulting corpus read',
+    )
+    expect(after.cover_url).toBe(coverUrl)
+    expect(after.cover_options).toEqual([expect.objectContaining({ url: coverUrl })])
+  } finally {
+    await ok(
+      admin
+        .from('work_metadata_edits')
+        .delete()
+        .eq('work_id', book.corpus_work_id)
+        .eq('editor_id', owner.uid),
+      'administrator household cover review audit cleanup',
+    )
+    await ok(
+      admin
+        .from('works')
+        .update({
+          cover_url: null,
+          cover_source: null,
+          cover_source_url: null,
+          cover_color: null,
+          cover_options: [],
+        })
+        .eq('id', book.corpus_work_id),
+      'administrator household cover review corpus cleanup',
+    )
+    await ok(
+      admin
+        .from('books')
+        .update({ cover_url: null, cover_source: null, cover_user_chosen: false })
+        .eq('id', book.id),
+      'administrator household cover review personal cleanup',
+    )
+    await ok(
+      admin.from('corpus_admins').delete().eq('user_id', owner.uid),
+      'administrator household cover review grant cleanup',
+    )
+    const removed = await admin.storage.from('covers').remove([objectName])
+    expect(removed.error).toBeNull()
+  }
+})
+
 test('a member never receives or requests another reader’s arbitrary cover hotlink', async ({
   page,
 }) => {
@@ -665,15 +763,24 @@ test('persistent Add creates a household-only work and explicit adoption updates
       testInfo.project.name === 'mobile'
         ? page.getByRole('dialog', { name: /household details/i })
         : page.locator('aside[aria-label="Household book details"]')
-    await detail.getByText('Edit shared cover, series, genre, and publication').click()
-    await detail.getByLabel('Shared series', { exact: true }).fill('Reviewed Shared Cycle')
-    await detail.getByLabel('Shared series position', { exact: true }).fill('2.5')
-    await detail.getByLabel('Shared series length', { exact: true }).fill('5')
-    await detail.getByLabel('Shared series status', { exact: true }).selectOption('ongoing')
-    await detail.getByLabel('Shared primary genre', { exact: true }).selectOption('fantasy')
-    await detail.getByLabel('Shared primary subgenre', { exact: true }).fill('epic fantasy')
-    await detail.getByLabel('Shared publication year', { exact: true }).fill('2029')
-    await detail.getByRole('button', { name: 'Save shared details' }).click()
+    await detail.getByRole('button', { name: 'Edit shared details' }).click()
+    const editor = page.getByRole('dialog', { name: 'Edit shared details' })
+    await expect(editor).toBeVisible()
+    expect(await editor.evaluate((dialog) => dialog.matches(':modal'))).toBe(true)
+    if (testInfo.project.name === 'mobile') {
+      const editorBox = await editor.boundingBox()
+      expect(editorBox).not.toBeNull()
+      expect(editorBox!.width).toBeGreaterThanOrEqual(380)
+    }
+    await editor.getByLabel('Shared series', { exact: true }).fill('Reviewed Shared Cycle')
+    await editor.getByLabel('Shared series position', { exact: true }).fill('2.5')
+    await editor.getByLabel('Shared series length', { exact: true }).fill('5')
+    await editor.getByLabel('Shared series status', { exact: true }).selectOption('ongoing')
+    await editor.getByLabel('Shared primary genre', { exact: true }).selectOption('fantasy')
+    await editor.getByLabel('Shared primary subgenre', { exact: true }).fill('epic fantasy')
+    await editor.getByLabel('Shared publication year', { exact: true }).fill('2029')
+    await editor.getByRole('button', { name: 'Save shared details' }).click()
+    await expect(editor).toHaveCount(0)
     await expect
       .poll(async () => {
         const row = await okData(
@@ -816,7 +923,7 @@ test('the second reader gets the same household view with their own identity mar
     `Active copies: ${owner.displayName}, ${member.displayName} (you)`,
   )
   await expect(detail.getByRole('link')).toHaveCount(0)
-  await expect(detail.getByText('Edit shared cover, series, genre, and publication')).toHaveCount(0)
+  await expect(detail.getByRole('button', { name: 'Edit shared details' })).toHaveCount(0)
   if (seeded) {
     await expect(detail).toContainText(seeded.sentinels.tag)
     await expect(detail).toContainText(seeded.sentinels.trope)

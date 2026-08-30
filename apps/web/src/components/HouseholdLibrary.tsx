@@ -16,6 +16,8 @@ import {
 import type { HouseholdBook, HouseholdBookOwner } from '../data/household'
 import { subgenreGradient } from '../library/constants'
 import { CoverPlaceholder } from './CoverPlaceholder'
+import { CorpusCoverReviewToggle } from './CorpusCoverReviewToggle'
+import { Modal } from './Modal'
 import { Nameplate } from './Nameplate'
 import { Surface } from './Surface'
 
@@ -175,13 +177,13 @@ export function HouseholdBookCard({
           </span>
         )}
       </div>
-      <span className="mt-1.5 block overflow-hidden text-ellipsis text-[12.5px] font-semibold text-ink">
+      <span className="mt-2.5 block min-h-10 line-clamp-2 text-[12.5px] font-semibold leading-5 text-ink">
         {book.title}
       </span>
-      {book.author && (
-        <span className="block truncate text-[11.5px] text-muted">{book.author}</span>
-      )}
-      <span className="mt-0.5 block truncate text-[11px] font-semibold text-muted">
+      <span className="block min-h-5 truncate text-[11.5px] leading-5 text-muted">
+        {book.author || '\u00a0'}
+      </span>
+      <span className="block min-h-5 truncate text-[11px] font-semibold leading-5 text-muted">
         {book.owners.length ? members : 'Kept in the household'}
       </span>
     </button>
@@ -220,6 +222,7 @@ function CorpusEditForm({
   onSave: (patch: HouseholdCorpusEdit) => Promise<void>
   saving: boolean
 }) {
+  const [open, setOpen] = useState(false)
   const [series, setSeries] = useState(book.series)
   const [position, setPosition] = useState(book.position?.toString() ?? '')
   const [seriesCount, setSeriesCount] = useState(book.seriesCount?.toString() ?? '')
@@ -238,194 +241,274 @@ function CorpusEditForm({
     'skin-control h-10 w-full border border-line bg-field px-3 text-[13px] text-ink'
 
   return (
-    <details className="mt-4">
-      <summary className="cursor-pointer text-[12.5px] font-semibold text-primary">
-        Edit shared cover, series, genre, and publication
-      </summary>
-      <p className="mt-2 text-[11.5px] text-muted">
-        This changes the shared catalog view. Personal copies keep their existing details until
-        their owner chooses to use the shared version.
-      </p>
-      <form
-        className="mt-2 space-y-2"
-        onSubmit={(event) => {
-          event.preventDefault()
-          const parsed = parseNumericFields({
-            position: { raw: position, spec: SERIES_POSITION },
-            seriesCount: { raw: seriesCount, spec: SERIES_COUNT },
-            publicationYear: { raw: publicationYear, spec: PUB_YEAR },
-            publicationMonth: { raw: publicationMonth, spec: PUB_MONTH },
-            publicationDay: { raw: publicationDay, spec: PUB_DAY },
-          })
-          if (!parsed.ok) {
-            setValidationError(Object.values(parsed.errors)[0] ?? 'Check the numeric fields.')
-            return
-          }
+    <div className="mt-4">
+      <button
+        type="button"
+        onClick={() => {
+          setSeries(book.series)
+          setPosition(book.position?.toString() ?? '')
+          setSeriesCount(book.seriesCount?.toString() ?? '')
+          setSeriesStatus(book.seriesStatus)
+          setGenre(book.primaryGenre)
+          setSubgenre(book.subgenre)
+          setPublicationYear(book.publicationYear?.toString() ?? '')
+          setPublicationMonth(book.publicationMonth?.toString() ?? '')
+          setPublicationDay(book.publicationDay?.toString() ?? '')
+          setCoverUrl(book.corpusCover)
           setValidationError('')
-          const nextGenre = genre.trim()
-          const nextSubgenre = subgenre.trim()
-          void onSave({
-            series: series.trim(),
-            position: parsed.values.position,
-            seriesCount: parsed.values.seriesCount,
-            seriesStatus,
-            genre: nextGenre,
-            subgenre: nextSubgenre,
-            genres: [nextGenre, ...book.genres.filter((value) => value !== book.primaryGenre)]
-              .filter(Boolean)
-              .filter((value, index, values) => values.indexOf(value) === index),
-            subgenres: [nextSubgenre, ...book.subgenres.filter((value) => value !== book.subgenre)]
-              .filter(Boolean)
-              .filter((value, index, values) => values.indexOf(value) === index),
-            coverUrl,
-            coverOptions: book.coverOptions,
-            publicationYear: parsed.values.publicationYear,
-            publicationMonth: parsed.values.publicationMonth,
-            publicationDay: parsed.values.publicationDay,
-          }).catch(() => undefined)
+          setOpen(true)
         }}
+        className="skin-control w-full border border-line px-3 py-2.5 text-left text-[12.5px] font-semibold text-primary"
+        style={{ background: 'var(--field)' }}
       >
-        <input
-          value={series}
-          onChange={(event) => setSeries(event.target.value)}
-          placeholder="Series"
-          aria-label="Shared series"
-          className={fieldClass}
-        />
-        <div className="grid grid-cols-2 gap-2">
-          <input
-            value={position}
-            onChange={(event) => setPosition(event.target.value)}
-            inputMode="decimal"
-            placeholder="Position"
-            aria-label="Shared series position"
-            className={fieldClass}
-          />
-          <input
-            value={seriesCount}
-            onChange={(event) => setSeriesCount(event.target.value)}
-            inputMode="numeric"
-            placeholder="Series length"
-            aria-label="Shared series length"
-            className={fieldClass}
-          />
-        </div>
-        <select
-          value={seriesStatus}
-          onChange={(event) => setSeriesStatus(event.target.value as SeriesStatus)}
-          aria-label="Shared series status"
-          className={fieldClass}
-        >
-          {SERIES_STATUS_VALUES.map((status) => (
-            <option key={status} value={status}>
-              {SERIES_STATUS_LABELS[status]}
-            </option>
-          ))}
-        </select>
-        <select
-          value={genre}
-          onChange={(event) => setGenre(event.target.value)}
-          aria-label="Shared primary genre"
-          className={fieldClass}
-        >
-          <option value="">No primary genre</option>
-          {CORE_GENRES.map((value) => (
-            <option key={value} value={value.toLowerCase()}>
-              {value}
-            </option>
-          ))}
-        </select>
-        <input
-          value={subgenre}
-          onChange={(event) => setSubgenre(event.target.value)}
-          placeholder="Primary subgenre"
-          aria-label="Shared primary subgenre"
-          className={fieldClass}
-        />
-        <fieldset>
-          <legend className="mb-1 text-[11px] uppercase tracking-[0.16em] text-muted">
-            Shared cover
-          </legend>
-          {coverChoices.length > 0 ? (
-            <div className="grid grid-cols-3 gap-2">
-              {coverChoices.map((option, index) => (
-                <div key={option.url}>
-                  <input
-                    id={`shared-cover-${book.id}-${index}`}
-                    type="radio"
-                    name={`shared-cover-${book.id}`}
-                    value={option.url}
-                    checked={coverUrl === option.url}
-                    onChange={() => setCoverUrl(option.url)}
-                    className="peer sr-only"
-                  />
-                  <label
-                    htmlFor={`shared-cover-${book.id}-${index}`}
-                    className="skin-control block cursor-pointer border border-line p-1.5 text-center text-[10.5px] text-muted peer-checked:border-primary peer-checked:ring-2 peer-checked:ring-primary peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary"
-                  >
-                    <img
-                      src={option.url}
-                      alt=""
-                      className="mx-auto aspect-[2/3] w-full rounded object-cover"
-                    />
-                    <span className="mt-1 block truncate">
-                      {option.source ? titleCase(option.source) : 'Shared'} cover {index + 1}
-                    </span>
-                  </label>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-[11.5px] text-muted">
-              No alternate shared covers are available for this record yet.
-            </p>
-          )}
-        </fieldset>
-        <fieldset>
-          <legend className="mb-1 text-[11px] uppercase tracking-[0.16em] text-muted">
-            Publication date
-          </legend>
-          <div className="grid grid-cols-3 gap-2">
-            <input
-              value={publicationYear}
-              onChange={(event) => setPublicationYear(event.target.value)}
-              inputMode="numeric"
-              placeholder="Year"
-              aria-label="Shared publication year"
-              className={fieldClass}
-            />
-            <input
-              value={publicationMonth}
-              onChange={(event) => setPublicationMonth(event.target.value)}
-              inputMode="numeric"
-              placeholder="Month"
-              aria-label="Shared publication month"
-              className={fieldClass}
-            />
-            <input
-              value={publicationDay}
-              onChange={(event) => setPublicationDay(event.target.value)}
-              inputMode="numeric"
-              placeholder="Day"
-              aria-label="Shared publication day"
-              className={fieldClass}
-            />
-          </div>
-        </fieldset>
-        {validationError ? (
-          <p role="alert" className="text-[12px] text-accent-ink">
-            {validationError}
+        Edit shared details
+      </button>
+      {open ? (
+        <Modal title="Edit shared details" onClose={() => setOpen(false)} wide>
+          <p className="text-[13px] font-semibold text-ink">{book.title}</p>
+          <p className="mt-1 max-w-[62ch] text-[12px] leading-relaxed text-muted">
+            Changes update the shared catalog. Personal copies keep their existing details until
+            their owner chooses to use the shared version.
           </p>
-        ) : null}
-        <button
-          type="submit"
-          disabled={saving}
-          className="skin-control skin-btn-primary px-3 py-2 text-[12px] font-semibold disabled:opacity-50"
-        >
-          {saving ? 'Saving…' : 'Save shared details'}
-        </button>
-      </form>
-    </details>
+          <form
+            className="mt-5 space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault()
+              const parsed = parseNumericFields({
+                position: { raw: position, spec: SERIES_POSITION },
+                seriesCount: { raw: seriesCount, spec: SERIES_COUNT },
+                publicationYear: { raw: publicationYear, spec: PUB_YEAR },
+                publicationMonth: { raw: publicationMonth, spec: PUB_MONTH },
+                publicationDay: { raw: publicationDay, spec: PUB_DAY },
+              })
+              if (!parsed.ok) {
+                setValidationError(Object.values(parsed.errors)[0] ?? 'Check the numeric fields.')
+                return
+              }
+              setValidationError('')
+              const nextGenre = genre.trim()
+              const nextSubgenre = subgenre.trim()
+              void onSave({
+                series: series.trim(),
+                position: parsed.values.position,
+                seriesCount: parsed.values.seriesCount,
+                seriesStatus,
+                genre: nextGenre,
+                subgenre: nextSubgenre,
+                genres: [nextGenre, ...book.genres.filter((value) => value !== book.primaryGenre)]
+                  .filter(Boolean)
+                  .filter((value, index, values) => values.indexOf(value) === index),
+                subgenres: [
+                  nextSubgenre,
+                  ...book.subgenres.filter((value) => value !== book.subgenre),
+                ]
+                  .filter(Boolean)
+                  .filter((value, index, values) => values.indexOf(value) === index),
+                coverUrl,
+                coverOptions: book.coverOptions,
+                publicationYear: parsed.values.publicationYear,
+                publicationMonth: parsed.values.publicationMonth,
+                publicationDay: parsed.values.publicationDay,
+              })
+                .then(() => setOpen(false))
+                .catch(() => undefined)
+            }}
+          >
+            <fieldset>
+              <legend className="mb-3 text-[11px] uppercase tracking-[0.18em] text-muted">
+                Series
+              </legend>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="sm:col-span-2">
+                  <span className="mb-1.5 block text-[11.5px] font-semibold text-ink">
+                    Series name
+                  </span>
+                  <input
+                    value={series}
+                    onChange={(event) => setSeries(event.target.value)}
+                    placeholder="No series"
+                    aria-label="Shared series"
+                    className={fieldClass}
+                  />
+                </label>
+                <label>
+                  <span className="mb-1.5 block text-[11.5px] font-semibold text-ink">
+                    Position
+                  </span>
+                  <input
+                    value={position}
+                    onChange={(event) => setPosition(event.target.value)}
+                    inputMode="decimal"
+                    placeholder="—"
+                    aria-label="Shared series position"
+                    className={fieldClass}
+                  />
+                </label>
+                <label>
+                  <span className="mb-1.5 block text-[11.5px] font-semibold text-ink">
+                    Series length
+                  </span>
+                  <input
+                    value={seriesCount}
+                    onChange={(event) => setSeriesCount(event.target.value)}
+                    inputMode="numeric"
+                    placeholder="—"
+                    aria-label="Shared series length"
+                    className={fieldClass}
+                  />
+                </label>
+                <label className="sm:col-span-2">
+                  <span className="mb-1.5 block text-[11.5px] font-semibold text-ink">Status</span>
+                  <select
+                    value={seriesStatus}
+                    onChange={(event) => setSeriesStatus(event.target.value as SeriesStatus)}
+                    aria-label="Shared series status"
+                    className={fieldClass}
+                  >
+                    {SERIES_STATUS_VALUES.map((status) => (
+                      <option key={status} value={status}>
+                        {SERIES_STATUS_LABELS[status]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend className="mb-3 text-[11px] uppercase tracking-[0.18em] text-muted">
+                Classification
+              </legend>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label>
+                  <span className="mb-1.5 block text-[11.5px] font-semibold text-ink">
+                    Primary genre
+                  </span>
+                  <select
+                    value={genre}
+                    onChange={(event) => setGenre(event.target.value)}
+                    aria-label="Shared primary genre"
+                    className={fieldClass}
+                  >
+                    <option value="">No primary genre</option>
+                    {CORE_GENRES.map((value) => (
+                      <option key={value} value={value.toLowerCase()}>
+                        {value}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  <span className="mb-1.5 block text-[11.5px] font-semibold text-ink">
+                    Primary subgenre
+                  </span>
+                  <input
+                    value={subgenre}
+                    onChange={(event) => setSubgenre(event.target.value)}
+                    placeholder="No subgenre"
+                    aria-label="Shared primary subgenre"
+                    className={fieldClass}
+                  />
+                </label>
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend className="mb-3 text-[11px] uppercase tracking-[0.18em] text-muted">
+                Shared cover
+              </legend>
+              {coverChoices.length > 0 ? (
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  {coverChoices.map((option, index) => (
+                    <div key={option.url}>
+                      <input
+                        id={`shared-cover-${book.id}-${index}`}
+                        type="radio"
+                        name={`shared-cover-${book.id}`}
+                        value={option.url}
+                        checked={coverUrl === option.url}
+                        onChange={() => setCoverUrl(option.url)}
+                        className="peer sr-only"
+                      />
+                      <label
+                        htmlFor={`shared-cover-${book.id}-${index}`}
+                        className="skin-control block cursor-pointer border border-line p-1.5 text-center text-[10.5px] text-muted peer-checked:border-primary peer-checked:ring-2 peer-checked:ring-primary peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary"
+                      >
+                        <img
+                          src={option.url}
+                          alt=""
+                          className="mx-auto aspect-[2/3] w-full rounded object-cover"
+                        />
+                        <span className="mt-1 block truncate">
+                          {option.source ? titleCase(option.source) : 'Shared'} cover {index + 1}
+                        </span>
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-[11.5px] text-muted">
+                  No alternate shared covers are available for this record yet.
+                </p>
+              )}
+            </fieldset>
+            <fieldset>
+              <legend className="mb-3 text-[11px] uppercase tracking-[0.18em] text-muted">
+                Publication date
+              </legend>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <input
+                  value={publicationYear}
+                  onChange={(event) => setPublicationYear(event.target.value)}
+                  inputMode="numeric"
+                  placeholder="Year"
+                  aria-label="Shared publication year"
+                  className={fieldClass}
+                />
+                <input
+                  value={publicationMonth}
+                  onChange={(event) => setPublicationMonth(event.target.value)}
+                  inputMode="numeric"
+                  placeholder="Month"
+                  aria-label="Shared publication month"
+                  className={fieldClass}
+                />
+                <input
+                  value={publicationDay}
+                  onChange={(event) => setPublicationDay(event.target.value)}
+                  inputMode="numeric"
+                  placeholder="Day"
+                  aria-label="Shared publication day"
+                  className={fieldClass}
+                />
+              </div>
+            </fieldset>
+            {validationError ? (
+              <p role="alert" className="text-[12px] text-accent-ink">
+                {validationError}
+              </p>
+            ) : null}
+            <div
+              className="sticky -bottom-5 flex justify-end gap-2 border-t border-line py-3"
+              style={{ background: 'var(--card-solid)' }}
+            >
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="skin-control border border-line px-4 py-2.5 text-[12px] font-semibold text-ink"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={saving}
+                className="skin-control skin-btn-primary px-4 py-2.5 text-[12px] font-semibold disabled:opacity-50"
+              >
+                {saving ? 'Saving…' : 'Save shared details'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      ) : null}
+    </div>
   )
 }
 
@@ -438,6 +521,8 @@ export function HouseholdBookDetail({
   addingCorpusTrope = false,
   onEditCorpus,
   editingCorpus = false,
+  onReviewCover,
+  reviewingCoverBookId = null,
 }: {
   book: HouseholdBook | null
   currentReaderId: string
@@ -447,6 +532,8 @@ export function HouseholdBookDetail({
   addingCorpusTrope?: boolean
   onEditCorpus?: (patch: HouseholdCorpusEdit) => Promise<void>
   editingCorpus?: boolean
+  onReviewCover?: (owner: HouseholdBookOwner) => Promise<void>
+  reviewingCoverBookId?: string | null
 }) {
   const [corpusTropeName, setCorpusTropeName] = useState('')
   if (!book) {
@@ -498,14 +585,45 @@ export function HouseholdBookDetail({
           <div className="space-y-2">
             {book.owners.map((owner) => {
               const details = [...householdPossessionLabels(owner), ...householdFormatLabels(owner)]
+              const reviewed =
+                book.coverOptionsAvailable &&
+                !!owner.cover &&
+                book.coverOptions.some((option) => option.url === owner.cover)
               return (
-                <Surface key={owner.userId} tone="field" radius="control" pad={2}>
-                  <div className="text-[12.5px] font-semibold text-ink">
-                    {ownerLabel(owner, currentReaderId)}
+                <Surface
+                  key={owner.bookId}
+                  tone="field"
+                  radius="control"
+                  pad={2}
+                  data-household-copy-book-id={owner.bookId}
+                >
+                  <div className="flex items-start gap-2.5">
+                    {owner.cover ? (
+                      <img
+                        src={owner.coverThumb || owner.cover}
+                        alt=""
+                        className="aspect-[2/3] w-10 shrink-0 rounded object-cover"
+                      />
+                    ) : null}
+                    <div className="min-w-0">
+                      <div className="text-[12.5px] font-semibold text-ink">
+                        {ownerLabel(owner, currentReaderId)}
+                      </div>
+                      {details.length > 0 && (
+                        <div className="mt-0.5 text-[11.5px] text-muted">{details.join(' · ')}</div>
+                      )}
+                    </div>
                   </div>
-                  {details.length > 0 && (
-                    <div className="mt-0.5 text-[11.5px] text-muted">{details.join(' · ')}</div>
-                  )}
+                  {onReviewCover && owner.cover ? (
+                    <CorpusCoverReviewToggle
+                      scope="household"
+                      reviewed={reviewed}
+                      loading={false}
+                      unavailable={!book.coverOptionsAvailable}
+                      saving={reviewingCoverBookId === owner.bookId}
+                      onReview={() => void onReviewCover(owner).catch(() => undefined)}
+                    />
+                  ) : null}
                 </Surface>
               )
             })}
