@@ -320,6 +320,22 @@ No production data or credentials were accessed, and no migration, function, web
 or pull-request state was changed. The owner-run deployment and smoke sequence remains blocked on
 review, integration, and an in-sync clean `main`.
 
+## Post-rollout operator correction — 2026-08-29
+
+Production proved that the structural rollout report could return 71/71 while the service-managed
+`corpus_admins` table was empty. The report now carries a separate runtime-assignment row and cannot
+be called a rollout pass until at least one administrator grant exists. The grant operator reads the
+complete roster and supports `--require-exact`; it refuses unexpected grants rather than silently
+revoking another account.
+
+The Settings action also used the ordinary corpus-enrichment candidate count as its enablement gate.
+That proxy could be zero while the signed-in administrator still had exact personal covers missing
+from otherwise complete corpus works, so the owner-scoped recovery RPC never ran. **Complete shared
+corpus covers & info** now remains actionable for a corpus administrator, always runs personal-cover
+recovery first, refetches the resulting corpus candidates, and only then starts ordinary enrichment.
+The recovery boundary remains the same signed-in profile; this correction does not inspect or
+publish another household member's personal library.
+
 ## Local verification — refreshed 2026-08-28
 
 - Clean database rebuild applied every migration through `20260831010000`.

@@ -32,7 +32,9 @@ vi.mock('../lib/supabase', () => ({
 
 import {
   bulkCompleteCorpus,
+  corpusCoverRecoverySummary,
   recoverAdminPersonalCorpusCovers,
+  runCorpusCompletionPipeline,
   type CorpusEnrichmentWork,
 } from './enrichCorpus'
 
@@ -77,6 +79,15 @@ describe('corpus cover recovery', () => {
     expect(mocks.rpc).toHaveBeenCalledWith('admin_recover_personal_corpus_covers')
   })
 
+  it('reports published alternatives even when the corpus already had a default cover', () => {
+    expect(
+      corpusCoverRecoverySummary({ scanned: 3, recoveredCovers: 0, recoveredOptions: 2 }),
+    ).toBe(' · published 2 personal cover options')
+    expect(
+      corpusCoverRecoverySummary({ scanned: 3, recoveredCovers: 1, recoveredOptions: 1 }),
+    ).toBe(' · filled 1 missing corpus cover · published 1 personal cover option')
+  })
+
   it('relocates the exact current cover before a failed metadata lookup', async () => {
     const personalCover =
       'https://project.test/storage/v1/object/public/covers/u/reader/book/rev1.webp'
@@ -103,5 +114,39 @@ describe('corpus cover recovery', () => {
       p_checked_at: null,
     })
     expect(result).toMatchObject({ failed: 1, stopReason: 'done' })
+  })
+
+  it('runs owner-scoped recovery before completing an empty candidate set', async () => {
+    const order: string[] = []
+    const progress = vi.fn()
+    const complete = vi.fn(async (candidates, onProgress) => {
+      order.push('complete')
+      expect(candidates).toEqual([])
+      onProgress({ scanned: 0, total: 0, filled: 0 })
+      return {
+        scanned: 0,
+        total: 0,
+        filled: 0,
+        failed: 0,
+        nothing: 0,
+        stopReason: 'done' as const,
+      }
+    })
+
+    const outcome = await runCorpusCompletionPipeline(progress, () => false, {
+      recover: async () => {
+        order.push('recover')
+        return { scanned: 3, recoveredCovers: 0, recoveredOptions: 2 }
+      },
+      fetchCandidates: async () => {
+        order.push('fetch')
+        return []
+      },
+      complete,
+    })
+
+    expect(order).toEqual(['recover', 'fetch', 'complete'])
+    expect(progress).toHaveBeenCalledWith({ scanned: 0, total: 0, filled: 0 })
+    expect(outcome.recovery).toEqual({ scanned: 3, recoveredCovers: 0, recoveredOptions: 2 })
   })
 })

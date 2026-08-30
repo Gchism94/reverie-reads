@@ -25,6 +25,14 @@ const coverReviewReleaseGatesMigration = readFileSync(
   join(__dirname, '../../../supabase/migrations/20260904010000_cover_review_release_gates.sql'),
   'utf8',
 )
+const rolloutVerification = readFileSync(
+  join(__dirname, '../../../docs/queries/library-membership-rollout-verification.sql'),
+  'utf8',
+)
+const corpusAdminOperator = readFileSync(
+  join(__dirname, '../../../scripts/set-corpus-admins.mjs'),
+  'utf8',
+)
 
 function section(start: string, end: string): string {
   return sectionOf(migration, start, end)
@@ -173,6 +181,33 @@ describe('work-tropes forward ACL repair', () => {
       'grant all privileges on table public.work_tropes to service_role;',
     )
     expect(workTropesAclMigration.match(/^grant /gim)).toHaveLength(2)
+  })
+})
+
+describe('corpus administrator rollout gate', () => {
+  it('does not call a schema-only rollout complete while the runtime roster is empty', () => {
+    const assignmentCheck = sectionOf(
+      rolloutVerification,
+      'runtime_assignment_checks as (',
+      'household_table_privilege_checks as (',
+    )
+
+    expect(assignmentCheck).toContain("'public.corpus_admins'::text as invariant")
+    expect(assignmentCheck).toContain('count(*) > 0 as ok')
+    expect(rolloutVerification).toContain('union all select * from runtime_assignment_checks')
+  })
+
+  it('can require the requested administrator ids to be the complete reviewed roster', () => {
+    expect(corpusAdminOperator).toContain("const requireExact = args.includes('--require-exact')")
+    expect(corpusAdminOperator).toContain(
+      ".from('corpus_admins')\n    .select('user_id, granted_at')",
+    )
+    expect(corpusAdminOperator).not.toContain(
+      ".from('corpus_admins').select('user_id, granted_at').in('user_id', ids)",
+    )
+    expect(corpusAdminOperator).toContain('unexpectedAccounts: unexpected.map(assignment)')
+    expect(corpusAdminOperator).toContain('exact roster refused:')
+    expect(corpusAdminOperator).not.toMatch(/\.delete\s*\(/)
   })
 })
 

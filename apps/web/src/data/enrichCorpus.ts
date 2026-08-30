@@ -338,6 +338,21 @@ export interface CorpusCoverRecoveryResult {
   recoveredOptions: number
 }
 
+export function corpusCoverRecoverySummary(recovery: CorpusCoverRecoveryResult): string {
+  const parts: string[] = []
+  if (recovery.recoveredCovers) {
+    parts.push(
+      `filled ${recovery.recoveredCovers} missing corpus cover${recovery.recoveredCovers === 1 ? '' : 's'}`,
+    )
+  }
+  if (recovery.recoveredOptions) {
+    parts.push(
+      `published ${recovery.recoveredOptions} personal cover option${recovery.recoveredOptions === 1 ? '' : 's'}`,
+    )
+  }
+  return parts.length ? ` · ${parts.join(' · ')}` : ''
+}
+
 /** Preserve this administrator's exact selected personal covers before asking external sources for
  * alternatives. The RPC is owner-scoped even for administrators and validates every stored object
  * against the authenticated project's issuer. */
@@ -485,4 +500,36 @@ export async function bulkCompleteCorpus(
     onProgress({ scanned, total, filled })
   }
   return { scanned, total, filled, failed, nothing, stopReason, errorMessage }
+}
+
+export interface CorpusCompletionPipelineResult {
+  recovery: CorpusCoverRecoveryResult
+  result: CorpusBulkResult
+}
+
+interface CorpusCompletionPipelineDependencies {
+  recover: () => Promise<CorpusCoverRecoveryResult>
+  fetchCandidates: () => Promise<CorpusEnrichmentWork[]>
+  complete: typeof bulkCompleteCorpus
+}
+
+/**
+ * Recover the signed-in administrator's exact personal covers before deciding whether the shared
+ * corpus has any ordinary enrichment work left. A zero-length metadata candidate list must not
+ * suppress this owner-scoped recovery: accepted alternatives can still be missing from otherwise
+ * complete works.
+ */
+export async function runCorpusCompletionPipeline(
+  onProgress: (progress: CorpusBulkProgress) => void,
+  shouldStop: () => boolean,
+  dependencies: CorpusCompletionPipelineDependencies = {
+    recover: recoverAdminPersonalCorpusCovers,
+    fetchCandidates: fetchCorpusEnrichmentCandidates,
+    complete: bulkCompleteCorpus,
+  },
+): Promise<CorpusCompletionPipelineResult> {
+  const recovery = await dependencies.recover()
+  const candidates = await dependencies.fetchCandidates()
+  const result = await dependencies.complete(candidates, onProgress, shouldStop)
+  return { recovery, result }
 }
