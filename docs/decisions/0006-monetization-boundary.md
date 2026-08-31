@@ -15,6 +15,9 @@ did not explicitly choose to share.**
 
 - All shelf, series, trope, mood, and ownership tracking. The tracker is the
   front door and is never degraded to upsell.
+- Basic series tracking includes one series' membership, order, gaps, progress,
+  and reader editing. A reader never has to pay to keep an ordinary series
+  accurate.
 - The nine skins as shipped, both modes.
 - Taste calibration and Match. The recommender is the thesis made executable;
   a free tier without it is a shelf tracker competing on someone else's turf.
@@ -49,6 +52,37 @@ Ranked by effort-to-revenue as currently understood.
    combined opt-in signal, spoiler-gating by reading position.
 7. **Collection and provenance tools.** Editions, signed copies, lending
    records. Pure tracking depth, zero thesis exposure.
+8. **Connected-series universes.** Grouping several intact series into a
+   reader-owned universe; publication/chronological/custom order variants;
+   universe-wide import review, progress, and gap planning. This is paid depth,
+   not a toll on ordinary series tracking: every constituent series remains
+   fully usable in the free app. The implementation contract is recorded in
+   `docs/decisions/0007-series-universes.md`.
+
+## Corpus-administrator entitlement
+
+Every service-managed corpus administrator receives the reader-tier premium
+entitlement while the administrator grant is active. This is a product-testing
+and corpus-maintenance override, not a subscription row and not a billing
+mutation. Revoking corpus administration revokes the override unless the reader
+also has an active paid entitlement.
+
+The effective server-side rule is therefore:
+
+`has_reader_pro = active_reader_subscription OR is_corpus_admin()`
+
+Premium writes must enforce that rule at the server boundary and fail closed if
+entitlement state cannot be established. Hiding a control in the client is not
+authorization. The client may use the same effective value to decide which
+private-module surfaces to load, but it must not maintain an independent second
+definition of who is Pro.
+
+The rule is evaluated as two positive proofs, not as “subscription lookup must
+finish before administrator access works.” A confirmed administrator grant is
+enough even if the billing provider is unavailable; a confirmed active
+subscription is enough without an administrator grant. If neither is confirmed
+true and either source is unavailable, the answer is unavailable and premium
+writes fail closed. Two confirmed false results mean not entitled.
 
 ## Repo boundary
 
@@ -57,6 +91,14 @@ complete and honest without it: entitlement checks and feature seams are
 acceptable; stubs that exist only to advertise a wall are not. Nothing moves
 from public to private later — code that has been public cannot be recalled —
 so anything in doubt starts private and opens deliberately.
+
+Connected-series universe implementation belongs in that private module. The
+open app may define a narrow host contract (session identity, effective
+entitlement, book/series projections, and navigation slots), but universe
+ordering, editing, import review, and premium presentation do not land here
+first as a prototype. The public build remains complete when the module is
+absent: ordinary series pages continue to work and no dead universe tab or
+advertising-only shell is rendered.
 
 ## The bookstore product (Indie Book Store profile)
 
