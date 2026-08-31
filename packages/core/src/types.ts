@@ -105,6 +105,22 @@ export interface Review {
   date: string
 }
 
+/** Why the current personal series claim exists. `unknown` is the deliberate migration default:
+ * historical rows are not reclassified merely because the new field exists. */
+export type SeriesClaimOrigin = 'unknown' | 'reader' | 'import' | 'enrichment' | 'corpus'
+export type SeriesClaimConfidence = 'high' | 'medium' | 'low' | 'none'
+
+/** Field-level provenance for the personal compatibility series tuple. Structured membership will
+ * become canonical in a later slice; until then this record prevents unlike writers from collapsing
+ * into the same unflagged string. */
+export interface SeriesClaim {
+  origin: SeriesClaimOrigin
+  source?: string
+  sourceRef?: string
+  confidence?: SeriesClaimConfidence
+  at?: string
+}
+
 export interface Book {
   id: string
   /** Shared-corpus identity. Optional only for pre-migration backups and in-memory fixtures. */
@@ -122,6 +138,9 @@ export interface Book {
   seriesCount: number | null // null => length not set ("None set" filter)
   /** the reader named/cleared this series (any gesture) — enrichment NEVER overwrites it (non-overwrite rule, mirrors coverUserChosen) */
   seriesUserChosen?: boolean
+  /** Why the current series tuple exists. Missing means a pre-migration/rolling-deploy row and is
+   * read as `{ origin: 'unknown' }`; absence never licenses an inferred backfill. */
+  seriesClaim?: SeriesClaim
   status: SeriesStatus
   /** Primary genre (lowercased CORE_GENRES key; drives skin + adaptive logic and picks the
    *  subgenre/trope vocabularies). '' = not chosen yet — the edit form prompts, never guesses. */

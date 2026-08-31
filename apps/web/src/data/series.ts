@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   matchEntryForBook,
+  makeSeriesClaim,
   seriesNameKey,
   mergeSourceEntries,
   seedSeriesPositions,
@@ -410,7 +411,16 @@ export function useUpdateSeries(name: string) {
       if (error) throw error
       // a rename re-points every library book that carried the old series string
       if (input.name !== undefined && input.name !== name) {
-        const { error: bErr } = await supabase.from('books').update({ series: input.name }).eq('series', name)
+        const { error: bErr } = await supabase
+          .from('books')
+          .update({
+            series: input.name,
+            series_user_chosen: true,
+            series_claim: makeSeriesClaim('reader', 'series_rename', {
+              at: new Date().toISOString(),
+            }),
+          })
+          .eq('series', name)
         if (bErr) throw bErr
       }
     },
@@ -685,13 +695,17 @@ export function useAddSeriesEntries(name: string) {
       }
       // membership implies the book carries the series name
       for (const b of input.books) {
-        if (b.series !== name) {
-          const { error: bErr } = await supabase
-            .from('books')
-            .update({ series: name, series_user_chosen: true })
-            .eq('id', b.id)
-          if (bErr) throw bErr
-        }
+        const { error: bErr } = await supabase
+          .from('books')
+          .update({
+            series: name,
+            series_user_chosen: true,
+            series_claim: makeSeriesClaim('reader', 'series_builder', {
+              at: new Date().toISOString(),
+            }),
+          })
+          .eq('id', b.id)
+        if (bErr) throw bErr
       }
     },
     onSuccess: () => {
@@ -746,6 +760,9 @@ export function useAcquireGhost(name: string) {
           author_last: last || null,
           series: name,
           series_user_chosen: true,
+          series_claim: makeSeriesClaim('reader', 'ghost_acquire', {
+            at: new Date().toISOString(),
+          }),
           position: input.entry.position,
           ownership: 'unowned',
           wishlist: true,

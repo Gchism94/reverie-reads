@@ -1,6 +1,6 @@
 -- Explicit household destinations and opt-in peer-library additions.
 begin;
-select plan(30);
+select plan(31);
 
 insert into auth.users (
   id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
@@ -206,6 +206,12 @@ select is(
    where id = current_setting('test.destination_delegated_book')::uuid),
   'D. Writer',
   'the delegated row copies objective contributor display metadata'
+);
+select is(
+  (select concat_ws('|', series_claim ->> 'origin', series_claim ->> 'source', series_claim ->> 'sourceRef')
+   from public.books where id = current_setting('test.destination_delegated_book')::uuid),
+  'corpus|delegated_add|a0000000-0000-4000-8000-000000000011',
+  'the delegated row attributes its series tuple to the exact shared work'
 );
 
 set local role authenticated;

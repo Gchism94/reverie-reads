@@ -101,8 +101,17 @@ export function mergeBooks(
   // has or wants, so the merge only ever adds.
   Object.assign(p, mergePossession(all))
 
-  // First non-empty value wins for these descriptive fields.
-  if (!p.series) p.series = all.map((b) => b.series).find(Boolean) ?? p.series
+  // First non-empty value wins for these descriptive fields. Series provenance is part of the
+  // winning value, not an independent field: taking a loser's series while retaining the
+  // primary's claim would confidently describe the wrong source.
+  if (!p.series) {
+    const winner = all.find((b) => b.series)
+    if (winner) {
+      p.series = winner.series
+      p.seriesClaim = winner.seriesClaim
+      p.seriesUserChosen = winner.seriesUserChosen
+    }
+  }
   if (!p.position) p.position = all.map((b) => b.position).find(Boolean) ?? p.position
   if (!p.genre) p.genre = all.map((b) => b.genre).find(Boolean) ?? p.genre
   if (!p.subgenre) p.subgenre = all.map((b) => b.subgenre).find(Boolean) ?? p.subgenre

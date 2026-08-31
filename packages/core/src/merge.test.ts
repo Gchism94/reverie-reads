@@ -152,6 +152,52 @@ describe('merge unions subgenres', () => {
   })
 })
 
+describe('merge keeps series provenance attached to the winning value', () => {
+  it('takes the loser claim when its series fills a blank primary', () => {
+    const primary = makeBook({
+      id: 'p',
+      title: 'Duplicate',
+      series: '',
+      seriesClaim: { origin: 'unknown' },
+    })
+    const loser = makeBook({
+      id: 'l',
+      title: 'Duplicate',
+      series: 'Imported Saga',
+      seriesClaim: { origin: 'import', source: 'series_column', confidence: 'high' },
+    })
+
+    const merged = mergeBooks({ books: [primary, loser], tbrs: [], collections: [] }, 'p', ['l'])
+      .books[0]!
+
+    expect(merged.series).toBe('Imported Saga')
+    expect(merged.seriesClaim).toEqual({
+      origin: 'import',
+      source: 'series_column',
+      confidence: 'high',
+    })
+  })
+
+  it('keeps the primary claim when its series survives', () => {
+    const primary = makeBook({
+      id: 'p',
+      title: 'Duplicate',
+      series: 'Reader Saga',
+      seriesClaim: { origin: 'reader', source: 'book_edit' },
+    })
+    const loser = makeBook({
+      id: 'l',
+      title: 'Duplicate',
+      series: 'Imported Saga',
+      seriesClaim: { origin: 'import', source: 'series_column' },
+    })
+
+    const merged = mergeBooks({ books: [primary, loser], tbrs: [], collections: [] }, 'p', ['l'])
+      .books[0]!
+    expect(merged.seriesClaim).toEqual({ origin: 'reader', source: 'book_edit' })
+  })
+})
+
 describe('plan union — one object, never assembled from parts', () => {
   // Only the plan varies across these cases, so the helper takes just that — no spread over
   // `makeBook`'s required id/title, which is what tsc objected to when this was written loosely.

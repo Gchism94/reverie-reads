@@ -137,7 +137,11 @@ standalone/unknown state and is never treated as a gap to fill.
 - [x] Define a conservative, non-destructive classification.
 - [x] Stage an owner-run, aggregate-only, read-only inventory.
 - [ ] Record the query's aggregate output (never title-level rows) and validate the classification
-      against the production-shaped distribution.
-- [ ] Choose the Phase 2 schema/write-path slice from that evidence.
+      against the production-shaped distribution. This remains required before historical
+      classification or canonicalization.
+- [x] Choose a Phase 2 schema/write-path slice. On 2026-08-30 the owner directed Phase 2 to proceed;
+      Phase 2A is forward-only provenance and corrected writers, with no historical inference.
 
-No migration or production write should be prepared until the final two checks are complete.
+No historical cleanup, admission-rule migration, or production data write should proceed until the
+aggregate output is reviewed. The additive Phase 2A provenance migration may be prepared and tested,
+but still follows the normal owner-only production deployment gate after merge.

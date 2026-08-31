@@ -34,7 +34,7 @@
 -- and one that committed the first write independently would leave removed_at stamped.
 
 begin;
-select plan(29);
+select plan(30);
 
 -- Two readers. The on_auth_user_created trigger gives each a profile, which books.owner_id needs.
 insert into auth.users (id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
@@ -103,6 +103,9 @@ select ok(
   (select series_user_chosen from public.books where id = 'dddddddd-0000-0000-0000-000000000001'),
   'removal marks series_user_chosen alongside the clear — the audit''s actual finding: without it, '
   || 'the next enrich sweep sees a blank series it still matches and re-fills what was just removed');
+select is(
+  (select series_claim ->> 'source' from public.books where id = 'dddddddd-0000-0000-0000-000000000001'),
+  'series_remove', 'removal records the explicit refusal instead of an unexplained blank');
 
 -- ── Repeat removal: calling the RPC again on a slot it already tombstoned is harmless. A real
 --    client scenario once S3b lands — a double-tap, or a retry after a failed toast. book_id is

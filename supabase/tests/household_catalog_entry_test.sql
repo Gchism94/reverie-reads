@@ -1,6 +1,6 @@
 -- Household-only membership, owner/admin corpus authority, and explicit personal adoption.
 begin;
-select plan(72);
+select plan(73);
 
 insert into auth.users (
   id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
@@ -488,6 +488,10 @@ select is((select concat_ws('|', genre, subgenre, series, position, series_count
   from public.books where id = '92000000-0000-4000-8000-000000000001'),
   'mystery|historical mystery|Edited Shared Series|3|5|completed|2027',
   'explicit adoption copies the complete shared tuple when the target series already exists');
+select is((select concat_ws('|', series_claim ->> 'origin', series_claim ->> 'source', series_claim ->> 'sourceRef')
+  from public.books where id = '92000000-0000-4000-8000-000000000001'),
+  'corpus|shared_adoption|90000000-0000-4000-8000-000000000012',
+  'explicit adoption attributes the current series to the exact shared work');
 select is((select count(*)::int from public.series_entries
   where id = '92000000-0000-4000-8000-000000000011'
     and removed_at is not null and book_id is null and user_edited),

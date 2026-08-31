@@ -2,10 +2,12 @@
 
 Priority: **P1 after CI/CD simplification**.
 
-Status: **Phase 1 in progress on `codex/series-truth-phase-1`**. The code-path audit is recorded in
-`docs/audits/series-truth-phase-1.md`; the aggregate-only owner-run inventory is staged in
-`docs/queries/series-truth-audit.sql`. No admission-rule or data migration begins until that output
-is reviewed.
+Status: **Phase 2A in progress on `codex/series-truth-phase-2a`**. Phase 1's code-path audit is
+recorded in `docs/audits/series-truth-phase-1.md`; the aggregate-only owner-run inventory remains
+staged in `docs/queries/series-truth-audit.sql`. On 2026-08-30 the owner directed Phase 2 to begin
+without supplying that output, so the selected slice is deliberately forward-only: typed personal
+series provenance, corrected writers, and fail-closed legacy writes. It does not infer or rewrite a
+single historical series value.
 
 ## Problem statement
 
@@ -27,6 +29,24 @@ authority, defaults, and presentation are correct as a whole.
   decisions only where the current model still supports them.
 
 ## Phase 2 — authority and admission rules
+
+### Phase 2A — provenance foundation
+
+- Add a typed current-value claim to personal books: `unknown`, `reader`, `import`, `enrichment`,
+  or `corpus`, with optional source/ref/confidence/timestamp detail.
+- Leave every pre-migration row `unknown`; `series_user_chosen=false` is not evidence of a source.
+- Carry the winning claim through Add, import, enrichment, series editing/building/removal, shared
+  adoption, delegated household Add, and client-side duplicate selection.
+- At the database boundary, any uninstrumented series rewrite fails closed to `unknown` instead of
+  retaining a stale claim about a replaced value.
+- This phase does **not** canonicalize old rows, introduce automatic admission/removal, or make the
+  scalar string canonical. Those require the private aggregate inventory and the remaining Phase 2
+  decisions.
+
+Rollout order is schema first, application second. After merge, the owner deploys migration
+`20260909010000` through the guarded, interactive migration command; only after it succeeds should
+the matching Vercel build be promoted to production. The application writes `series_claim`, so
+reversing that order would make series-bearing Add/edit requests fail against the old schema.
 
 - Default to **no series membership** unless a trusted source or the reader positively establishes
   it. Absence is not an error to fill.

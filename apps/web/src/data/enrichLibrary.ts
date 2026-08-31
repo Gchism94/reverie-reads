@@ -1,4 +1,13 @@
-import { contributorsFromAuthors, enrichmentCoverFill, enrichmentSeriesFill, mergeImport, type Book, type CoverSource, type Incoming } from '@reverie/core'
+import {
+  contributorsFromAuthors,
+  enrichmentCoverFill,
+  enrichmentSeriesFill,
+  makeSeriesClaim,
+  mergeImport,
+  type Book,
+  type CoverSource,
+  type Incoming,
+} from '@reverie/core'
 import { supabase } from '../lib/supabase'
 import { pageAll } from './paging'
 import { toBookRow } from './mappers'
@@ -93,6 +102,21 @@ function toIncoming(e: EnrichResult, b: Book): Incoming {
   return {
     title: b.title,
     series,
+    ...(series
+      ? {
+          seriesClaim: makeSeriesClaim(
+            'enrichment',
+            e.provenance?.series?.source ?? 'catalog',
+            {
+              ...(e.workId || e.editionId
+                ? { sourceRef: e.workId || e.editionId }
+                : {}),
+              ...(e.confidence ? { confidence: e.confidence } : {}),
+              ...(e.provenance?.series?.at ? { at: e.provenance.series.at } : {}),
+            },
+          ),
+        }
+      : {}),
     position: series ? (e.seriesPosition ?? '') : '',
     isbn: e.isbn13 || e.isbn || e.isbn10 || '',
     // The non-overwrite rule: a user-chosen cover is never replaced (and never re-offered after the

@@ -66,6 +66,11 @@ describe('parseImport — Chism shape', () => {
   })
   it('maps series + read status (X→Read, IP→Reading, blank→Unread)', () => {
     expect(rows[0]!.incoming.series).toBe('Twisted')
+    expect(rows[0]!.incoming.seriesClaim).toEqual({
+      origin: 'import',
+      source: 'series_column',
+      confidence: 'high',
+    })
     expect(rows[0]!.incoming.status).toBe('ongoing')
     expect(rows[0]!.incoming.readStatus).toBe('Read') // GC Read X
     expect(rows[1]!.incoming.readStatus).toBe('Reading') // IP
@@ -220,6 +225,11 @@ describe('a dirty title lands clean on every profile, not just generic', () => {
     expect(rows[0]!.incoming.title).toBe('A Court of Thorns and Roses')
     expect(rows[0]!.incoming.series).toBe('A Court of Thorns and Roses')
     expect(rows[0]!.incoming.position).toBe(1)
+    expect(rows[0]!.incoming.seriesClaim).toEqual({
+      origin: 'import',
+      source: 'title_parenthetical',
+      confidence: 'high',
+    })
   })
 
   it('Library shape: same dirty title, same clean result', () => {
