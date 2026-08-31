@@ -69,7 +69,7 @@ export function useMergeSeries() {
   return useMutation({
     meta: { action: 'The series merge' },
     mutationFn: async (c: ConsolidationCandidate) => {
-      const { error } = await supabase.rpc('merge_series', {
+      const { error } = await supabase.rpc('merge_series_authoritative', {
         p_primary: c.primary.id,
         p_loser: c.loser.id,
         p_name_key_a: c.nameKeyA,

@@ -3,28 +3,12 @@ import { renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ReactNode } from 'react'
 
-// TIER 1 PREVENTION, at the call site — the part packages/core cannot see.
-//
-// `seriesNameKey` is unit-tested next door against the eleven production sets; what it CANNOT
-// prove is that `useSeriesDetail` actually consults it before minting a row, or that a near-match
-// hit changes which books get reconciled. Both are decisions made in this file's subject, and both
-// are the defect: lazy find-or-create with an exact-name lookup is what minted the ACOTAR row
-// minutes before the screenshots that reported it.
-//
-// The scope claim under test is as important as the prevention: this branch must not merge, rename
-// or delete anything. So the assertions below are about (1) whether an INSERT happens and (2) which
-// name the book reconciliation keys off — never about moving data between records.
-
-interface Insert {
-  table: string
-  rows: Record<string, unknown>[]
-}
-const inserts: Insert[] = []
-const bookQueries: string[] = []
+const writes: { table: string; kind: 'insert' | 'update' | 'delete' }[] = []
 let seriesRows: Record<string, unknown>[] = []
+let entryRows: Record<string, unknown>[] = []
 
-const SERIES_ROW = (name: string, id = `id-${name}`) => ({
-  id,
+const SERIES_ROW = (name: string) => ({
+  id: `id-${name}`,
   owner_id: 'owner-1',
   name,
   status: null,
@@ -33,150 +17,184 @@ const SERIES_ROW = (name: string, id = `id-${name}`) => ({
   refreshed_at: null,
 })
 
-/**
- * A thenable query builder that records the filters it was given AND applies the ones that matter.
- *
- * `.eq('name', …)` on `series` really filters, and that is load-bearing rather than fussiness: an
- * earlier version of this mock ignored it, so the EXACT-name lookup matched any stored row and
- * "does not create a second row" passed without the guard running at all — green for exactly the
- * wrong reason. The two must-still-create cases (initialism, sibling) are what caught it.
- */
 function chain(table: string, result: () => unknown): Record<string, unknown> {
-  const c: Record<string, unknown> = {}
-  const filters: { col: string; val: string }[] = []
-  for (const m of ['select', 'limit', 'order', 'is', 'not', 'single', 'maybeSingle'])
-    c[m] = () => c
-  c.eq = (col: string, val: string) => {
-    // The assertion this whole file exists for: which series name the BOOK fetch filters on.
-    if (table === 'books' && col === 'series') bookQueries.push(val)
-    filters.push({ col, val })
-    return c
+  const query: Record<string, unknown> = {}
+  const filters: { column: string; value: unknown }[] = []
+  for (const method of ['select', 'limit', 'order', 'is', 'not', 'single', 'maybeSingle'])
+    query[method] = () => query
+  query.eq = (column: string, value: unknown) => {
+    filters.push({ column, value })
+    return query
   }
-  c.then = (resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) => {
+  query.then = (resolve: (value: unknown) => unknown, reject?: (error: unknown) => unknown) => {
     const raw = result() as { data: unknown; error: unknown }
-    const nameFilter = filters.find((f) => f.col === 'name')
+    const name = filters.find((filter) => filter.column === 'name')?.value
     const data =
-      table === 'series' && nameFilter && Array.isArray(raw.data)
-        ? (raw.data as Record<string, unknown>[]).filter((r) => r.name === nameFilter.val)
+      table === 'series' && typeof name === 'string' && Array.isArray(raw.data)
+        ? (raw.data as Record<string, unknown>[]).filter((row) => row.name === name)
         : raw.data
     return Promise.resolve({ ...raw, data }).then(resolve, reject)
   }
-  return c
+  return query
 }
 
 vi.mock('../lib/supabase', () => ({
   supabase: {
-    auth: { getUser: async () => ({ data: { user: { id: 'owner-1' } } }) },
     from: (table: string) => ({
       select: () =>
-        chain(table, () => {
-          if (table === 'series') return { data: seriesRows, error: null }
-          return { data: [], error: null } // series_entries + books: empty, we assert the FILTER
-        }),
-      insert: (rows: Record<string, unknown> | Record<string, unknown>[]) => {
-        const list = Array.isArray(rows) ? rows : [rows]
-        inserts.push({ table, rows: list })
-        const stored = list.map((r, i) => ({ ...SERIES_ROW(String(r.name)), ...r, id: `new-${i}` }))
-        const res = { data: stored[0], error: null }
-        return {
-          ...chain(table, () => res),
-          select: () => ({ single: () => Promise.resolve(res), then: undefined }),
-        }
+        chain(table, () => ({
+          data: table === 'series' ? seriesRows : table === 'series_entries' ? entryRows : [],
+          error: null,
+        })),
+      insert: () => {
+        writes.push({ table, kind: 'insert' })
+        return chain(table, () => ({ data: [], error: null }))
       },
-      update: () => chain(table, () => ({ data: [], error: null })),
+      update: () => {
+        writes.push({ table, kind: 'update' })
+        return chain(table, () => ({ data: [], error: null }))
+      },
+      delete: () => {
+        writes.push({ table, kind: 'delete' })
+        return chain(table, () => ({ data: [], error: null }))
+      },
     }),
   },
 }))
 
-const { useSeriesDetail } = await import('./series')
+const { fetchBookSeriesMemberships, useSeriesDetail } = await import('./series')
 
 function wrapper() {
-  const qc = new QueryClient({
+  const client = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 }, mutations: { retry: false } },
   })
   return ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={qc}>{children}</QueryClientProvider>
+    <QueryClientProvider client={client}>{children}</QueryClientProvider>
   )
 }
 
-const seriesInserts = () => inserts.filter((i) => i.table === 'series')
-
 beforeEach(() => {
-  inserts.length = 0
-  bookQueries.length = 0
+  writes.length = 0
   seriesRows = []
+  entryRows = []
 })
 
-describe('lazy creation refuses a normalized-duplicate name', () => {
-  it('creates a row when nothing matches — the guard does not block ordinary use', async () => {
+describe('series detail is a read, never an admission event', () => {
+  it('returns null and performs no write when no exact series row exists', async () => {
     const { result } = renderHook(() => useSeriesDetail('The Empyrean'), { wrapper: wrapper() })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(seriesInserts()).toHaveLength(1)
-    expect(seriesInserts()[0]!.rows[0]!.name).toBe('The Empyrean')
+    expect(result.current.data).toBeNull()
+    expect(writes).toEqual([])
   })
 
-  it('does NOT create a second row when a normalized match exists', async () => {
-    // The live shape: a row exists under one spelling, the reader opens the other.
+  it('does not absorb a normalized variant into an existing series', async () => {
     seriesRows = [SERIES_ROW('The Freckled Fate')]
     const { result } = renderHook(() => useSeriesDetail('The Freckled Fate Series'), {
       wrapper: wrapper(),
     })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(seriesInserts(), 'a duplicate series row was minted').toHaveLength(0)
-    // and the reader lands on the surviving record, not a new empty one
-    expect(result.current.data?.series.name).toBe('The Freckled Fate')
+    expect(result.current.data).toBeNull()
+    expect(writes).toEqual([])
   })
 
-  it('still creates for an INITIALISM — that pair is Tier 3, not this guard', async () => {
-    // ACOTAR is the duplicate the screenshots reported, and this PR deliberately does not fix it:
-    // auto-collapsing an initialism is an identity judgment made without asking.
-    seriesRows = [SERIES_ROW('A Court of Thorns and Roses')]
-    const { result } = renderHook(() => useSeriesDetail('ACOTAR'), { wrapper: wrapper() })
-    await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(seriesInserts()).toHaveLength(1)
-  })
-
-  it('still creates for a SIBLING series sharing a prefix', async () => {
-    seriesRows = [SERIES_ROW('Sinners')]
-    const { result } = renderHook(() => useSeriesDetail('Sinners and Saints'), {
-      wrapper: wrapper(),
-    })
-    await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(seriesInserts(), 'a sibling series was silently absorbed').toHaveLength(1)
-  })
-})
-
-describe('the guard changes nothing about existing rows (option (a) scope)', () => {
-  it('reconciles books under the SURVIVING row name, never the URL name', async () => {
-    // Keying off the URL name would seed the variant name's books as entries INTO this record —
-    // a membership merge performed silently by a page view. That is PR 2's job, done deliberately,
-    // with ghosts/tombstones/positions preserved.
-    seriesRows = [SERIES_ROW('The Freckled Fate')]
-    const { result } = renderHook(() => useSeriesDetail('The Freckled Fate Series'), {
-      wrapper: wrapper(),
-    })
-    await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(bookQueries).toContain('The Freckled Fate')
-    expect(bookQueries, 'books were fetched under the variant name — that is a silent merge').not.toContain(
-      'The Freckled Fate Series',
-    )
-  })
-
-  it('reconciles under the URL name in the ordinary case, where they are the same', async () => {
+  it('returns only confirmed entries and exposes unknown rows for review', async () => {
     seriesRows = [SERIES_ROW('The Empyrean')]
+    entryRows = [
+      {
+        id: 'confirmed',
+        series_id: 'id-The Empyrean',
+        position: 1,
+        label: null,
+        title: 'Fourth Wing',
+        author: 'Rebecca Yarros',
+        book_id: 'book-1',
+        source: 'manual',
+        user_edited: true,
+        removed_at: null,
+        membership_claim: { origin: 'reader' },
+      },
+      {
+        id: 'unknown',
+        series_id: 'id-The Empyrean',
+        position: 2,
+        label: null,
+        title: 'Iron Flame',
+        author: 'Rebecca Yarros',
+        book_id: 'book-2',
+        source: 'manual',
+        user_edited: false,
+        removed_at: null,
+        membership_claim: { origin: 'unknown' },
+      },
+    ]
     const { result } = renderHook(() => useSeriesDetail('The Empyrean'), { wrapper: wrapper() })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(bookQueries).toContain('The Empyrean')
+    expect(result.current.data?.entries.map((entry) => entry.id)).toEqual(['confirmed'])
+    expect(result.current.data?.unreviewed.map((entry) => entry.id)).toEqual(['unknown'])
+    expect(writes).toEqual([])
   })
+})
 
-  it('performs no update or delete against series rows on the read path', async () => {
-    seriesRows = [SERIES_ROW('The Freckled Fate')]
-    const { result } = renderHook(() => useSeriesDetail('The Freckled Fate Series'), {
-      wrapper: wrapper(),
-    })
-    await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    // nothing was inserted; the surviving row's own name is untouched in the returned detail
-    expect(seriesInserts()).toHaveLength(0)
-    expect(result.current.data?.series.name).toBe('The Freckled Fate')
+describe('book membership projection', () => {
+  it('returns every confirmed membership with the selected primary first', async () => {
+    entryRows = [
+      {
+        id: 'secondary',
+        series_id: 'series-b',
+        series: { id: 'series-b', name: 'Companion Stories' },
+        position: 0.5,
+        label: 'prequel',
+        title: 'A Shared Book',
+        author: 'An Author',
+        book_id: 'book-1',
+        source: 'manual',
+        user_edited: true,
+        removed_at: null,
+        is_primary: false,
+        membership_claim: { origin: 'reader', source: 'series_builder' },
+        position_claim: { origin: 'reader', source: 'series_order' },
+      },
+      {
+        id: 'primary',
+        series_id: 'series-a',
+        series: { id: 'series-a', name: 'Main Saga' },
+        position: 2,
+        label: null,
+        title: 'A Shared Book',
+        author: 'An Author',
+        book_id: 'book-1',
+        source: 'manual',
+        user_edited: true,
+        removed_at: null,
+        is_primary: true,
+        membership_claim: { origin: 'reader', source: 'book_edit' },
+        position_claim: { origin: 'reader', source: 'book_edit' },
+      },
+      {
+        id: 'unknown',
+        series_id: 'series-c',
+        series: { id: 'series-c', name: 'Unreviewed Guess' },
+        position: 9,
+        label: null,
+        title: 'A Shared Book',
+        author: 'An Author',
+        book_id: 'book-1',
+        source: 'manual',
+        user_edited: false,
+        removed_at: null,
+        is_primary: false,
+        membership_claim: { origin: 'unknown' },
+        position_claim: { origin: 'unknown' },
+      },
+    ]
+
+    const memberships = await fetchBookSeriesMemberships('book-1')
+    expect(memberships.map(({ series }) => series.name)).toEqual([
+      'Main Saga',
+      'Companion Stories',
+    ])
+    expect(memberships[0]?.entry.isPrimary).toBe(true)
+    expect(memberships[1]?.entry.positionClaim?.source).toBe('series_order')
+    expect(writes).toEqual([])
   })
 })

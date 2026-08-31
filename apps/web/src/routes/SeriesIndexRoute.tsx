@@ -31,15 +31,15 @@ import { SeriesArranger } from '../series/SeriesArranger'
  * Series are ordered by name within each author, and authors by display name. One order, no toggle.
  *
  * Everything on a collapsed row comes from data already in the cache — `useBooks` (which embeds the
- * contributor join) and the widened `useSeriesList`. No query was added. Expanding a row mounts
- * `SeriesArranger`, whose `useSeriesDetail` materializes that one series' entries; doing that for
- * every series at page load would be a write storm, which is why the index itself reads only.
+ * contributor join) and the widened `useSeriesList`. No query was added. Expanding a row mounts a
+ * side-effect-free structured read; legacy claims go to the explicit review on the full page.
  */
 
 export function SeriesRow({
   name,
   books,
   entries,
+  needsReview = false,
   byId,
   tbrBookIds,
   expanded,
@@ -49,6 +49,7 @@ export function SeriesRow({
   name: string
   books: readonly Book[]
   entries: readonly SeriesEntry[]
+  needsReview?: boolean
   byId: ReadonlyMap<string, Book>
   tbrBookIds: ReadonlySet<string>
   expanded: boolean
@@ -84,8 +85,14 @@ export function SeriesRow({
               {name}
             </span>
             <span className="block text-[12px] text-muted">
-              {progressLine(progress)}
-              {total ? ` · ${total} in all` : ''}
+              {needsReview ? (
+                'Membership review needed'
+              ) : (
+                <>
+                  {progressLine(progress)}
+                  {total ? ` · ${total} in all` : ''}
+                </>
+              )}
             </span>
           </span>
         </button>
@@ -99,8 +106,7 @@ export function SeriesRow({
         </Link>
       </div>
       <div id={panelId} hidden={!expanded} className="border-t border-line px-2.5 py-2">
-        {/* Mounted only while expanded, so useSeriesDetail's reconciliation runs for one series on a
-            deliberate gesture rather than for every series on page load. */}
+        {/* The arranger never manufactures entries. Unknown membership is reviewed on the page. */}
         {expanded && <SeriesArranger name={name} books={byId} tbrBookIds={tbrBookIds} />}
       </div>
     </li>
@@ -201,6 +207,10 @@ function SeriesIndexScreen() {
                       name={s.name}
                       books={s.books}
                       entries={entriesBySeries.get(s.name) ?? []}
+                      needsReview={
+                        !seriesList?.has(s.name.toLowerCase()) ||
+                        (seriesList.get(s.name.toLowerCase())?.unreviewed ?? 0) > 0
+                      }
                       byId={byId}
                       tbrBookIds={tbrBookIds}
                       expanded={open.has(rowKey)}

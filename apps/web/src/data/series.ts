@@ -2,11 +2,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   matchEntryForBook,
   makeSeriesClaim,
-  seriesNameKey,
   mergeSourceEntries,
-  seedSeriesPositions,
+  normalizeSeriesClaim,
   sortEntries,
-  unlinkedEntries,
   type Book,
   type SeriesEntry,
   type SeriesStatus,
@@ -18,14 +16,14 @@ import { allListItemsKey, nextItemPositionFor } from './listItems'
 
 /**
  * Series + series_entries — the series-membership relation behind the series page (the page IS
- * the reading order). Series are identified by NAME app-wide (books carry a series string); the
- * row is created lazily the first time a series is opened, and RECONCILED against the library:
- * every book naming this series gets an entry, ghosts adopt matching imports. Source (Hardcover)
- * data only ever FILLS GAPS — a user_edited entry is never touched, and `user_edited` means a
- * READER placed the row, never that reconciliation created it.
+ * the reading order). Structured rows are authoritative; books.series is only the primary
+ * membership's compatibility projection. Opening a page is read-only. Trusted Add/import/edit
+ * writes materialize membership transactionally, while historical unknown claims wait for an
+ * explicit review. Source (Hardcover) data only ever fills gaps and never overwrites reader order.
  *
- * REMOVAL means one thing on both surfaces (book page and series page): the slot is gone and the
- * book stops naming the series. It is a SOFT delete — the row survives with `removed_at` stamped —
+ * REMOVAL means one thing on both surfaces (book page and series page): that membership is gone.
+ * Removing the selected primary clears the compatibility projection; removing a secondary leaves
+ * the book's primary untouched. It is a SOFT delete — the row survives with `removed_at` stamped —
  * because a canonical source refresh would otherwise re-insert the ghost the reader just dismissed.
  * Tombstones are invisible to every read below; only the source merge is shown them.
  */
@@ -60,11 +58,17 @@ interface SeriesEntryRowT {
   source: string
   user_edited: boolean
   removed_at: string | null
+  is_primary?: boolean
+  membership_claim?: Record<string, unknown>
+  position_claim?: Record<string, unknown>
 }
 
 export interface SeriesDetail {
   series: UiSeries
+  /** Confirmed live membership. Unknown historical rows never feed progress or gaps. */
   entries: SeriesEntry[]
+  /** Live pre-Phase-2B rows awaiting one explicit reader review. */
+  unreviewed: SeriesEntry[]
   /** Slots the reader removed. Never rendered — carried so a source refresh can't resurrect them. */
   removed: SeriesEntry[]
 }
@@ -87,6 +91,9 @@ const toEntry = (row: SeriesEntryRowT): SeriesEntry => ({
   bookId: row.book_id,
   source: row.source === 'hardcover' ? 'hardcover' : 'manual',
   userEdited: row.user_edited,
+  isPrimary: row.is_primary ?? false,
+  membershipClaim: normalizeSeriesClaim(row.membership_claim),
+  positionClaim: normalizeSeriesClaim(row.position_claim),
 })
 
 export const seriesKey = (name: string) => ['series', name.toLowerCase()] as const
@@ -114,10 +121,8 @@ async function ownerId(): Promise<string> {
  * COUNTED here instead of needing a second query. `total` and `ghosts` still mean live-only, exactly
  * as before — `SeriesView` reads `total` and nothing else, so its behaviour is unchanged.
  *
- * READ-ONLY, and that is load-bearing. `useSeriesDetail` reconciles the library into `series_entries`
- * as a side effect of reading, which is right for one series the reader opened and would be a write
- * storm across every series on an index page load. The index renders what exists; expanding a row
- * mounts `useSeriesDetail` for that one series, which materializes it on a deliberate gesture.
+ * READ-ONLY, and that is load-bearing. The index renders only confirmed structured entries; legacy
+ * scalar claims and unknown historical slots are counted separately for explicit review.
  */
 export interface SeriesListRow {
   series: UiSeries
@@ -127,6 +132,8 @@ export interface SeriesListRow {
   ghosts: number
   /** tombstones — removed slots, invisible to every other read */
   removed: number
+  /** live historical slots that have not been reviewed into structured authority */
+  unreviewed: number
   /** live entries in reading order */
   entries: SeriesEntry[]
 }
@@ -147,12 +154,23 @@ export function useSeriesList() {
       ])
       const byId = new Map<string, SeriesListRow>()
       for (const r of (rows ?? []) as SeriesRowT[])
-        byId.set(r.id, { series: toUiSeries(r), total: 0, ghosts: 0, removed: 0, entries: [] })
+        byId.set(r.id, {
+          series: toUiSeries(r),
+          total: 0,
+          ghosts: 0,
+          removed: 0,
+          unreviewed: 0,
+          entries: [],
+        })
       for (const e of (ents ?? []) as SeriesEntryRowT[]) {
         const s = byId.get(e.series_id)
         if (!s) continue
         if (e.removed_at) {
           s.removed++
+          continue
+        }
+        if (e.membership_claim?.origin === 'unknown') {
+          s.unreviewed++
           continue
         }
         s.total++
@@ -169,217 +187,119 @@ export function useSeriesList() {
   })
 }
 
+
 /**
- * The series page's query: find-or-create the row by name, reconcile the library into the
- * entries (idempotent — safe to re-run), return the detail. Library books naming this series
- * always have an entry.
- *
- * Seeded entries are NOT user data and are written `user_edited: false`, so a source refresh may
- * still correct their positions. They become the reader's the moment the reader moves one. The
- * comment here used to claim the opposite ("their arranged positions are USER data"), which is how
- * the defect read as intentional for four months.
+ * The production series read is deliberately side-effect-free. A page view is not evidence that a
+ * legacy books.series string is true, so it cannot create a series row, adopt a ghost, revive a
+ * tombstone, assign an order, or seed status. Explicit review and trusted mutation paths own those
+ * transitions.
  */
 export function useSeriesDetail(name: string) {
   return useQuery({
     queryKey: seriesKey(name),
     enabled: !!name.trim(),
-    queryFn: async (): Promise<SeriesDetail> => {
-      const uid = await ownerId()
-      const { data: rows, error } = await supabase.from('series').select('*').eq('name', name).limit(1)
+    queryFn: async (): Promise<SeriesDetail | null> => {
+      const { data: rows, error } = await supabase
+        .from('series')
+        .select('*')
+        .eq('name', name)
+        .limit(1)
       if (error) throw error
-      let row = (rows as SeriesRowT[])[0]
-      if (!row) {
-        // ── TIER 1 PREVENTION (fix/series-consolidation) ────────────────────────────────────────
-        // Before minting a row, look for one whose NORMALIZED name already matches. Lazy
-        // find-or-create with an exact-name lookup is what generates duplicates: the series
-        // backfill rewrote `books.series` to long parsed forms, so opening a page under the old
-        // short name found nothing and minted a permanent second record. The ACOTAR row was born
-        // that way, minutes before the screenshots that reported it.
-        //
-        // REFUSING TO CREATE DESTROYS NOTHING, which is the whole reason this half is safe to
-        // automate while merging is not. This branch cannot merge, rename or delete: it only
-        // decides whether an INSERT happens, and every row that already exists is untouched.
-        //
-        // `seriesNameKey` collapses only the same name written differently (case, punctuation, a
-        // leading article, a trailing "Series"). It deliberately does NOT match initialisms —
-        // ACOTAR is not prevented here — because that is an identity judgment and belongs in a
-        // queued proposal, not an automatic path (see the key's own note).
-        const { data: allRows, error: aErr } = await supabase.from('series').select('*')
-        if (aErr) throw aErr
-        const key = seriesNameKey(name)
-        row = ((allRows ?? []) as SeriesRowT[]).find((r) => seriesNameKey(r.name) === key) as
-          | SeriesRowT
-          | undefined
-        if (!row) {
-          const { data: created, error: cErr } = await supabase
-            .from('series')
-            .insert({ owner_id: uid, name })
-            .select()
-            .single()
-          if (cErr) throw cErr
-          row = created as SeriesRowT
-        }
-      }
-      const seriesRow: SeriesRowT = row
-      // The books this page reconciles are the ones naming the SURVIVING row, not the name in the
-      // URL. When the guard above returned a near-match, those differ — and keying off the URL name
-      // would seed the other name's books as entries INTO this record, which is a membership merge
-      // performed silently by a page view. Merging is PR 2's job and has to preserve ghosts,
-      // tombstones and positions deliberately; this PR reads what the row already owns and writes
-      // no cross-name membership. A reader who opens the variant name therefore sees the surviving
-      // series page, and books still filed under the variant name stay visible in the Library's
-      // Series view until that merge lands.
-      const reconcileName = seriesRow.name
+      const seriesRow = (rows as SeriesRowT[])[0]
+      if (!seriesRow) return null
 
-      const [{ data: entRows, error: eErr }, { data: libRows, error: bErr }] = await Promise.all([
-        // ORDERED, deliberately. Revive used to take the FIRST same-title tombstone out of whatever
-        // order Postgres happened to return, so with two candidates the winner could differ between
-        // runs — a bug that cannot be reproduced reliably is a bug that survives investigation.
-        // `position` is the reader's own arrangement and the only field with meaning here; `id`
-        // breaks the remaining tie so the sequence is total rather than merely mostly-stable.
-        supabase
-          .from('series_entries')
-          .select('*')
-          .eq('series_id', seriesRow.id)
-          .order('position', { ascending: true })
-          .order('id', { ascending: true }),
-        // Deterministic order matters: these rows SEED the reading order, and an unordered fetch
-        // made a null-position library number itself by whatever order Postgres happened to return.
-        // Numbered books first (ascending), then the unnumbered ones alphabetically.
-        supabase
-          .from('books')
-          .select('id, title, author_first, author_last, position, status')
-          .eq('series', reconcileName)
-          .order('position', { ascending: true, nullsFirst: false })
-          .order('title', { ascending: true }),
-      ])
-      if (eErr) throw eErr
-      if (bErr) throw bErr
+      const { data: entRows, error: entryError } = await supabase
+        .from('series_entries')
+        .select('*')
+        .eq('series_id', seriesRow.id)
+        .order('position', { ascending: true })
+        .order('id', { ascending: true })
+      if (entryError) throw entryError
       const allRows = (entRows ?? []) as SeriesEntryRowT[]
-      let entries = allRows.filter((r) => !r.removed_at).map(toEntry)
-      const removed = allRows.filter((r) => r.removed_at).map(toEntry)
-      const lib = (libRows ?? []) as { id: string; title: string; author_first: string | null; author_last: string | null; position: number | null; status: string | null }[]
-
-      // 1) ghosts adopt matching library books (an import landed after the ghost was seeded).
-      //
-      //    WHICH ghost is `matchEntryForBook`'s call — the same rule revive uses below, because it is
-      //    the same question. Adopting the wrong ghost links the book to a slot meant for a different
-      //    edition AND consumes the book from `linked`, so the corrected revive pass beneath this one
-      //    never gets a say: an earlier step that guesses can override a later step that doesn't.
-      //    An undiscriminatable tie therefore adopts nothing and lets the book fall through.
-      //
-      //    `unlinkedEntries` is load-bearing, not decoration: it is the `bookId == null` guard that
-      //    used to live inside `ghostMatchesBook`. Without it a book could claim an entry that
-      //    already belongs to a DIFFERENT book, re-pointing that entry and orphaning the first
-      //    book's slot.
-      const linked = new Set(entries.filter((e) => e.bookId).map((e) => e.bookId as string))
-      for (const b of lib) {
-        if (linked.has(b.id)) continue
-        const match = matchEntryForBook(unlinkedEntries(entries), {
-          title: b.title,
-          first: b.author_first ?? '',
-          last: b.author_last ?? '',
-        })
-        if (match.kind !== 'match') continue
-        const ghost = entries.find((e) => e.id === match.entry.id)
-        if (!ghost) continue
-        await supabase.from('series_entries').update({ book_id: b.id }).eq('id', ghost.id)
-        ghost.bookId = b.id
-        linked.add(b.id)
+      const live = allRows.filter((row) => !row.removed_at)
+      return {
+        series: toUiSeries(seriesRow),
+        entries: sortEntries(
+          live.filter((row) => row.membership_claim?.origin !== 'unknown').map(toEntry),
+        ),
+        unreviewed: sortEntries(
+          live.filter((row) => row.membership_claim?.origin === 'unknown').map(toEntry),
+        ),
+        removed: allRows.filter((row) => row.removed_at).map(toEntry),
       }
-      // 2) every library book naming this series gets an entry. A book that names the series is the
-      //    reader asking for it back, so a matching tombstone REVIVES rather than blocking — removal
-      //    outlives a source refresh, not a deliberate re-add.
-      //
-      //    WHICH tombstone is `matchEntryForBook`'s call, not this loop's: title first, author
-      //    only to break a tie between same-title tombstones, and nothing revived when the tie can't
-      //    be broken. Reviving the wrong slot resurrects a removal the reader made deliberately, in
-      //    the reading order, silently — strictly worse than a missed revive they can see and redo.
-      //    A tombstone this refuses stays a tombstone, so the book falls through to `fresh` below and
-      //    gets a NEW slot: the reader sees their book in the series either way.
-      const joining = lib.filter((b) => !linked.has(b.id))
-      // Tombstones are consumed as they revive, so two same-title books can't both claim one slot.
-      const available = [...removed]
-      // A REVIVE RE-ENTERS THE LIVE POSITION SPACE, and its stored number may no longer be free —
-      // the slot was removed, something else took position 2, and now the reader adds the book back.
-      // Before series_entries_position_uidx that made a silent duplicate; with it, an un-tombstoning
-      // UPDATE at a taken position raises 23505. This loop runs inside `useSeriesDetail`, which is a
-      // READ, so an unhandled raise there does not fail one write — it takes the whole series page
-      // down. The tombstone keeps its number when it is still free (that number is the reader's own
-      // arrangement, worth preserving) and otherwise goes to the end, the same answer every other
-      // path here gives for a book whose place is not known.
-      const taken = new Set(entries.map((e) => e.position))
-      let reviveEnd = Math.floor(Math.max(0, ...entries.map((e) => e.position)))
-      for (const b of joining) {
-        const bookLike = { title: b.title, first: b.author_first ?? '', last: b.author_last ?? '' }
-        const match = matchEntryForBook(available, bookLike)
-        if (match.kind !== 'match') continue
-        const t = match.entry
-        // `matchEntryForBook` answers with the narrow {id, title, author} shape it takes, so the
-        // stored position comes back off the SeriesEntry `available` actually holds.
-        const stored = available.find((x) => x.id === t.id)?.position ?? 0
-        const position = taken.has(stored) ? ++reviveEnd : stored
-        taken.add(position)
-        const { data: back } = await supabase
-          .from('series_entries')
-          .update({ removed_at: null, book_id: b.id, position })
-          .eq('id', t.id)
-          .select()
-        const row = ((back ?? []) as SeriesEntryRowT[])[0]
-        if (row) entries = [...entries, toEntry(row)]
-        available.splice(
-          available.findIndex((x) => x.id === t.id),
-          1,
-        )
-        linked.add(b.id)
-      }
-      // Positions come from the core seeder, not raw books.position: imports park global-order
-      // numbers there (412, 1290) and seeding those verbatim is what made positions look random.
-      const fresh = joining.filter((b) => !linked.has(b.id))
-      const seeded = seedSeriesPositions(
-        fresh.map((b) => ({ id: b.id, title: b.title, position: b.position })),
-        Math.max(0, ...entries.map((e) => e.position)),
-      )
-      // `?? 0` was a collision generator, flagged by the Phase 1 migration and fixed here: every
-      // book the seeder had no answer for landed on slot 0 together, so the first took it and the
-      // rest duplicated it — invisibly before Phase 2, and as a rejected insert once
-      // series_entries_position_uidx lands. A book with no known place goes to the END instead,
-      // one slot each, which is the rule the cleared-number and source-insert paths already follow.
-      let seedFallback = Math.floor(Math.max(0, ...entries.map((e) => e.position), ...seeded.values()))
-      const inserts = fresh.map((b) => ({
-        series_id: seriesRow.id,
-        owner_id: uid,
-        position: seeded.get(b.id) ?? ++seedFallback,
-        title: b.title,
-        author: [b.author_first, b.author_last].filter(Boolean).join(' '),
-        book_id: b.id,
-        source: 'manual',
-        // MACHINE SEEDING IS NOT A READER GESTURE. This wrote `true` from ab9e1fe (#77) until
-        // fix/series-seed-provenance, which made every row reconciliation ever created permanently
-        // immune to `mergeSourceEntries` — so "Fetch series data" could not correct a position on
-        // any series whose page had been opened once. These positions come from
-        // `seedSeriesPositions`, a heuristic over `books.position`; they are exactly the numbers a
-        // catalog fetch SHOULD be allowed to replace. A reader who then drags this row writes
-        // `true` through `useMoveEntry`, and from that moment the source can no longer touch it.
-        user_edited: false,
-      }))
-      if (inserts.length) {
-        const { data: added, error: iErr } = await supabase.from('series_entries').insert(inserts).select()
-        if (iErr) throw iErr
-        entries = [...entries, ...((added ?? []) as SeriesEntryRowT[]).map(toEntry)]
-      }
-      // 3) series-level status: seed once from the books' own status field
-      if (!seriesRow.status) {
-        const votes = lib.map((b) => b.status).filter((s) => s && s !== 'standalone')
-        const seed = votes[0]
-        if (seed) {
-          await supabase.from('series').update({ status: seed }).eq('id', seriesRow.id)
-          Object.assign(seriesRow, { status: seed })
-        }
-      }
-      return { series: toUiSeries(seriesRow), entries: sortEntries(entries), removed }
     },
   })
+}
+
+export function useReviewSeriesClaims(name: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    meta: { action: 'The series review' },
+    mutationFn: async (seriesId?: string) => {
+      const { data, error } = await supabase.rpc('admit_series_compatibility_claims', {
+        p_series: seriesId ?? null,
+        p_series_name: name,
+      })
+      if (error) throw error
+      return data as { series_id: string; books_admitted: number; entries_reviewed: number }
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: seriesKey(name) })
+      void qc.invalidateQueries({ queryKey: seriesListKey })
+      void qc.invalidateQueries({ queryKey: booksKey })
+    },
+  })
+}
+
+/** Promote one already-confirmed membership to the book's primary compatibility projection. */
+export function useSetPrimarySeriesMembership(name: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    meta: { action: 'The primary series' },
+    mutationFn: async (entryId: string) => {
+      const { error } = await supabase.rpc('set_primary_series_membership', {
+        p_entry: entryId,
+      })
+      if (error) throw error
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: seriesKey(name) })
+      void qc.invalidateQueries({ queryKey: seriesListKey })
+      void qc.invalidateQueries({ queryKey: booksKey })
+      void qc.invalidateQueries({ queryKey: ['series-strip'] })
+      void qc.invalidateQueries({ queryKey: ['book-series-memberships'] })
+    },
+  })
+}
+
+export interface BookSeriesMembership {
+  series: Pick<UiSeries, 'id' | 'name'>
+  entry: SeriesEntry
+}
+
+interface BookSeriesMembershipRowT extends SeriesEntryRowT {
+  series: { id: string; name: string } | { id: string; name: string }[]
+}
+
+/** Every confirmed live series membership for one book, primary first. */
+export async function fetchBookSeriesMemberships(bookId: string): Promise<BookSeriesMembership[]> {
+  const { data, error } = await supabase
+    .from('series_entries')
+    .select('*, series:series_id(id, name)')
+    .eq('book_id', bookId)
+    .is('removed_at', null)
+  if (error) throw error
+  return ((data ?? []) as BookSeriesMembershipRowT[])
+    .filter((row) => row.membership_claim?.origin !== 'unknown')
+    .flatMap((row) => {
+      const series = Array.isArray(row.series) ? row.series[0] : row.series
+      return series ? [{ series, entry: toEntry(row) }] : []
+    })
+    .sort(
+      (a, b) =>
+        Number(!!b.entry.isPrimary) - Number(!!a.entry.isPrimary) ||
+        a.series.name.localeCompare(b.series.name),
+    )
 }
 
 /** Read-only peek for the book-detail strip and the chain prompt — never creates rows. */
@@ -388,7 +308,11 @@ export async function fetchSeriesEntries(name: string): Promise<SeriesEntry[] | 
   const row = (rows ?? [])[0] as { id: string } | undefined
   if (!row) return null
   const { data: ents } = await supabase.from('series_entries').select('*').eq('series_id', row.id).is('removed_at', null)
-  return sortEntries(((ents ?? []) as SeriesEntryRowT[]).map(toEntry))
+  return sortEntries(
+    ((ents ?? []) as SeriesEntryRowT[])
+      .filter((entry) => entry.membership_claim?.origin !== 'unknown')
+      .map(toEntry),
+  )
 }
 
 function useSeriesInvalidate(name: string) {
@@ -404,24 +328,19 @@ export function useUpdateSeries(name: string) {
   return useMutation({
     meta: { action: 'The series' },
     mutationFn: async (input: { id: string; name?: string; status?: SeriesStatus | null }) => {
-      const patch: Record<string, unknown> = {}
-      if (input.name !== undefined) patch.name = input.name
-      if (input.status !== undefined) patch.status = input.status
-      const { error } = await supabase.from('series').update(patch).eq('id', input.id)
-      if (error) throw error
-      // a rename re-points every library book that carried the old series string
       if (input.name !== undefined && input.name !== name) {
-        const { error: bErr } = await supabase
-          .from('books')
-          .update({
-            series: input.name,
-            series_user_chosen: true,
-            series_claim: makeSeriesClaim('reader', 'series_rename', {
-              at: new Date().toISOString(),
-            }),
-          })
-          .eq('series', name)
-        if (bErr) throw bErr
+        const { error } = await supabase.rpc('rename_personal_series', {
+          p_series: input.id,
+          p_name: input.name,
+        })
+        if (error) throw error
+      }
+      if (input.status !== undefined) {
+        const { error } = await supabase
+          .from('series')
+          .update({ status: input.status })
+          .eq('id', input.id)
+        if (error) throw error
       }
     },
     onSuccess: (_d, input) => {
@@ -478,7 +397,7 @@ async function writeSeriesOrder(input: {
   length?: number | null
   setLength?: boolean
 }): Promise<SeriesOrderResult> {
-  const { data, error } = await supabase.rpc('set_series_order', {
+  const { data, error } = await supabase.rpc('set_series_order_claimed', {
     p_series: input.seriesId,
     p_slots: (input.slots ?? []).map((s) => ({
       entry_id: s.entryId,
@@ -540,10 +459,9 @@ export function useUpdateEntry(name: string) {
 }
 
 /**
- * Remove a slot — the series page's ✕ (docs/archive/task-series-defects.md §Removal, revised). The slot goes
- * and, when a book was linked, that book stops naming the series so reconciliation can't re-add it.
- * The row is soft-deleted rather than dropped so a later Hardcover refresh can't resurrect what the
- * reader dismissed.
+ * Remove one membership — the series page's ✕. The row is soft-deleted so a later Hardcover
+ * refresh cannot resurrect what the reader dismissed. Removing the selected primary also clears
+ * the compatibility tuple; removing a secondary leaves the book's other membership untouched.
  *
  * ONE RPC, ATOMICALLY (`remove_series_entry`, 20260731010000). This used to be two sequential,
  * independently-committed writes — tombstone the entry, then null `books.series` — and a failure
@@ -565,13 +483,16 @@ export function useRemoveEntry(name: string) {
   return useMutation({
     meta: { action: 'The series' },
     mutationFn: async (input: { entryId: string }) => {
-      const { error } = await supabase.rpc('remove_series_entry', { p_entry: input.entryId })
+      const { error } = await supabase.rpc('remove_series_membership', {
+        p_entry: input.entryId,
+      })
       if (error) throw error
     },
     onSuccess: () => {
       invalidate()
       void qc.invalidateQueries({ queryKey: booksKey })
       void qc.invalidateQueries({ queryKey: ['series-strip'] })
+      void qc.invalidateQueries({ queryKey: ['book-series-memberships'] })
     },
   })
 }
@@ -609,11 +530,19 @@ export function useSyncBookSeries() {
       newPosition: number | null
       newSeriesCount?: number | null
     }) => {
-      const { error } = await supabase.rpc('sync_book_series', {
+      const membershipClaim = makeSeriesClaim('reader', 'book_edit', {
+        at: new Date().toISOString(),
+      })
+      const { error } = await supabase.rpc('set_book_series_membership', {
         p_book: book.id,
-        p_new_series: newSeries,
+        p_series: null,
+        p_series_name: newSeries,
         p_position: newPosition,
         p_length: newSeriesCount ?? null,
+        p_make_primary: true,
+        p_membership_claim: membershipClaim,
+        p_position_claim:
+          newPosition == null ? { origin: 'unknown' } : membershipClaim,
       })
       if (error) throw error
     },
@@ -621,6 +550,7 @@ export function useSyncBookSeries() {
       void qc.invalidateQueries({ queryKey: seriesListKey })
       void qc.invalidateQueries({ queryKey: booksKey })
       void qc.invalidateQueries({ queryKey: ['series-strip'] })
+      void qc.invalidateQueries({ queryKey: ['book-series-memberships'] })
       // REMOVE rather than invalidate: the series query is persisted to IndexedDB and staleTime keeps
       // a restored copy "fresh", so an invalidated query still PAINTS the old badges for a beat before
       // the refetch lands. Dropping it means the series page opens on its loading line and the first
@@ -659,7 +589,19 @@ async function revivedTombstone(
   if (match.kind !== 'match') return false
   const { error } = await supabase
     .from('series_entries')
-    .update({ removed_at: null, book_id: bookId, position, user_edited: true })
+    .update({
+      removed_at: null,
+      book_id: bookId,
+      position,
+      is_primary: false,
+      membership_claim: makeSeriesClaim('reader', 'series_builder', {
+        at: new Date().toISOString(),
+      }),
+      position_claim: makeSeriesClaim('reader', 'series_order', {
+        at: new Date().toISOString(),
+      }),
+      user_edited: true,
+    })
     .eq('id', match.entry.id)
   return !error
 }
@@ -671,46 +613,35 @@ export function useAddSeriesEntries(name: string) {
   return useMutation({
     meta: { action: 'The series' },
     mutationFn: async (input: { seriesId: string; books: Book[]; after: number }) => {
-      const uid = await ownerId()
       let at = Math.floor(input.after)
-      const rows: Record<string, unknown>[] = []
       for (const b of input.books) {
         const position = ++at
-        const byline = [b.first, b.last].filter(Boolean).join(' ')
-        if (await revivedTombstone(input.seriesId, b.title, byline, position, b.id)) continue
-        rows.push({
-          series_id: input.seriesId,
-          owner_id: uid,
-          position,
-          title: b.title,
-          author: [b.first, b.last].filter(Boolean).join(' '),
-          book_id: b.id,
-          source: 'manual',
-          user_edited: true,
+        const membershipClaim = makeSeriesClaim('reader', 'series_builder', {
+          at: new Date().toISOString(),
         })
-      }
-      if (rows.length) {
-        const { error } = await supabase.from('series_entries').insert(rows)
+        const { error } = await supabase.rpc('set_book_series_membership', {
+          p_book: b.id,
+          p_series: input.seriesId,
+          p_series_name: name,
+          p_position: position,
+          p_length: null,
+          // Adding from a second series page means "also belongs here", not "replace the primary".
+          // A book without a primary compatibility series adopts this one; otherwise the existing
+          // primary stays selected until the reader explicitly presses Make primary.
+          p_make_primary: !b.series.trim() || b.series.trim() === name.trim(),
+          p_membership_claim: membershipClaim,
+          p_position_claim: makeSeriesClaim('reader', 'series_order', {
+            at: new Date().toISOString(),
+          }),
+        })
         if (error) throw error
-      }
-      // membership implies the book carries the series name
-      for (const b of input.books) {
-        const { error: bErr } = await supabase
-          .from('books')
-          .update({
-            series: name,
-            series_user_chosen: true,
-            series_claim: makeSeriesClaim('reader', 'series_builder', {
-              at: new Date().toISOString(),
-            }),
-          })
-          .eq('id', b.id)
-        if (bErr) throw bErr
       }
     },
     onSuccess: () => {
       invalidate()
       void qc.invalidateQueries({ queryKey: booksKey })
+      void qc.invalidateQueries({ queryKey: ['series-strip'] })
+      void qc.invalidateQueries({ queryKey: ['book-series-memberships'] })
     },
   })
 }
@@ -732,6 +663,13 @@ export function useAddGhostEntry(name: string) {
         author: input.author,
         source: 'manual',
         user_edited: true,
+        is_primary: false,
+        membership_claim: makeSeriesClaim('reader', 'series_builder', {
+          at: new Date().toISOString(),
+        }),
+        position_claim: makeSeriesClaim('reader', 'series_order', {
+          at: new Date().toISOString(),
+        }),
       })
       if (error) throw error
     },
@@ -758,12 +696,10 @@ export function useAcquireGhost(name: string) {
           title: input.entry.title,
           author_first: first || null,
           author_last: last || null,
-          series: name,
-          series_user_chosen: true,
-          series_claim: makeSeriesClaim('reader', 'ghost_acquire', {
-            at: new Date().toISOString(),
-          }),
-          position: input.entry.position,
+          series: null,
+          series_user_chosen: false,
+          series_claim: { origin: 'unknown' },
+          position: null,
           ownership: 'unowned',
           wishlist: true,
           borrowed: false,
@@ -774,7 +710,14 @@ export function useAcquireGhost(name: string) {
         .single()
       if (error) throw error
       const bookId = (book as { id: string }).id
-      const { error: linkErr } = await supabase.from('series_entries').update({ book_id: bookId }).eq('id', input.entry.id)
+      const { error: linkErr } = await supabase.rpc('link_series_entry_to_book', {
+        p_entry: input.entry.id,
+        p_book: bookId,
+        p_make_primary: true,
+        p_membership_claim: makeSeriesClaim('reader', 'ghost_acquire', {
+          at: new Date().toISOString(),
+        }),
+      })
       if (linkErr) throw linkErr
       if (input.tbrId) {
         const after = await nextItemPositionFor(input.tbrId)
@@ -789,6 +732,8 @@ export function useAcquireGhost(name: string) {
       invalidate()
       void qc.invalidateQueries({ queryKey: booksKey })
       void qc.invalidateQueries({ queryKey: allListItemsKey })
+      void qc.invalidateQueries({ queryKey: ['series-strip'] })
+      void qc.invalidateQueries({ queryKey: ['book-series-memberships'] })
     },
   })
 }
@@ -817,7 +762,10 @@ export function useApplySeriesSource(name: string) {
       const { detail } = input
       // Tombstones join `existing` so a removed slot MATCHES and is therefore never re-inserted —
       // the whole point of keeping them. They carry user_edited, so the merge can't try to move one.
-      const { inserts, moves } = mergeSourceEntries([...detail.entries, ...detail.removed], src)
+      const { inserts, moves } = mergeSourceEntries(
+        [...detail.entries, ...detail.unreviewed, ...detail.removed],
+        src,
+      )
       // ONE batched call, `origin: 'source'`. Two things change here beyond atomicity. The moves
       // used to go one row at a time, so a catalog reshuffle that passed entries through each
       // other's positions committed colliding intermediates. And `mergeSourceEntries` decided the
@@ -843,7 +791,13 @@ export function useApplySeriesSource(name: string) {
       // collided with it — silently before Phase 2, and as a rejected insert once
       // series_entries_position_uidx lands. The end of the order is where a book whose place isn't
       // known belongs; it is the same rule the seeder and the cleared-number path already use.
-      let nextFree = Math.floor(Math.max(0, ...detail.entries.map((e) => e.position)))
+      let nextFree = Math.floor(
+        Math.max(
+          0,
+          ...detail.entries.map((e) => e.position),
+          ...detail.unreviewed.map((e) => e.position),
+        ),
+      )
       let added = 0
       for (const s of inserts) {
         const { error: iErr } = await supabase.from('series_entries').insert({
@@ -854,6 +808,17 @@ export function useApplySeriesSource(name: string) {
           author: s.author,
           source: 'hardcover',
           user_edited: false,
+          is_primary: false,
+          membership_claim: makeSeriesClaim('enrichment', 'hardcover_series', {
+            sourceRef: payload.sourceRef ?? undefined,
+            confidence: 'high',
+            at: new Date().toISOString(),
+          }),
+          position_claim: makeSeriesClaim('enrichment', 'hardcover_series', {
+            sourceRef: payload.sourceRef ?? undefined,
+            confidence: 'high',
+            at: new Date().toISOString(),
+          }),
         })
         if (!iErr) added++
       }

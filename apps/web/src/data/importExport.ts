@@ -232,6 +232,32 @@ export interface BackupTombstone {
   removed_at: string
 }
 
+export interface BackupSeriesRow {
+  id: string
+  name: string
+  status: string | null
+  source: string
+  source_ref: string | null
+  refreshed_at: string | null
+  length: number | null
+}
+
+export interface BackupSeriesEntryRow {
+  id: string
+  series_id: string
+  position: number
+  label: string | null
+  title: string
+  author: string
+  book_id: string | null
+  source: string
+  user_edited: boolean
+  removed_at: string | null
+  is_primary: boolean
+  membership_claim: Record<string, unknown>
+  position_claim: Record<string, unknown>
+}
+
 interface TombstoneJoinRow {
   position: number
   label: string | null
@@ -433,7 +459,7 @@ export function seriesRulingRows(
 }
 
 /**
- * Serialize the WHOLE account to a JSON backup (v5): books (incl. genre/tags/intensity/owned
+ * Serialize the WHOLE account to a JSON backup (v7): books (incl. genre/tags/intensity/owned
  * formats), per-book contributors, assigned tropes (with emphasis) and moods, reads, lists +
  * memberships, the user's reviews, merge verdicts, followed/muted authors,
  * the reader's REFUSALS (removed series slots and dismissed trope suggestions), and the profile
@@ -470,7 +496,7 @@ export async function buildBackup(): Promise<string> {
   // here it is both true and the first thing a reader needs to know, because the alternative they
   // will assume is a half-written file.
   return backupAborted(async () => {
-  const [books, contribs, bookTropes, bookMoods, reads, lists, items, reviews, verdicts, follows, rulings, tombstones, dismissals, profile] =
+  const [books, contribs, bookTropes, bookMoods, reads, lists, items, reviews, verdicts, follows, rulings, seriesRows, seriesEntries, tombstones, dismissals, profile] =
     await Promise.all([
       pageAll<BookRow>('books', (from, to) =>
         supabase.from('books').select('*', { count: 'exact' }).order('id').range(from, to),
@@ -547,6 +573,22 @@ export async function buildBackup(): Promise<string> {
           .order('id')
           .range(from, to),
       ),
+      pageAll<BackupSeriesRow>('series', (from, to) =>
+        supabase
+          .from('series')
+          .select('id, name, status, source, source_ref, refreshed_at, length', { count: 'exact' })
+          .order('id')
+          .range(from, to),
+      ),
+      pageAll<BackupSeriesEntryRow>('series_entries', (from, to) =>
+        supabase
+          .from('series_entries')
+          .select('id, series_id, position, label, title, author, book_id, source, user_edited, removed_at, is_primary, membership_claim, position_claim', { count: 'exact' })
+          .order('series_id')
+          .order('position')
+          .order('id')
+          .range(from, to),
+      ),
       // The two refusals — see the note above. Tombstones key on the series NAME; dismissals on
       // the trope name, for the same reason every other taxonomy reference does.
       pageAll<TombstoneJoinRow>('series_entries', (from, to) =>
@@ -589,7 +631,7 @@ export async function buildBackup(): Promise<string> {
   const trope_dismissals = dismissalsByBook(dismissals)
 
   return JSON.stringify({
-    v: 6,
+    v: 7,
     app: 'reverie',
     exportedAt: new Date().toISOString(),
     // The file's own completeness check — see BackupCounts. Written LAST in spirit: every number
@@ -607,6 +649,8 @@ export async function buildBackup(): Promise<string> {
       merge_verdicts: verdicts.length,
       author_follows: follows.length,
       series_merge_decisions: rulings.length,
+      series: seriesRows.length,
+      series_entries: seriesEntries.length,
       series_tombstones: series_tombstones.length,
       trope_dismissals: nested(trope_dismissals),
     } satisfies BackupCounts,
@@ -621,6 +665,8 @@ export async function buildBackup(): Promise<string> {
     merge_verdicts: verdicts,
     author_follows: follows,
     series_merge_decisions: rulings,
+    series: seriesRows,
+    series_entries: seriesEntries,
     series_tombstones,
     trope_dismissals,
     profile: profile.data ?? null,
@@ -664,6 +710,8 @@ export function countMismatches(data: BackupShape): string[] {
     merge_verdicts: (data.merge_verdicts ?? []).length,
     author_follows: (data.author_follows ?? []).length,
     series_merge_decisions: (data.series_merge_decisions ?? []).length,
+    series: (data.series ?? []).length,
+    series_entries: (data.series_entries ?? []).length,
     series_tombstones: (data.series_tombstones ?? []).length,
     trope_dismissals: nested(data.trope_dismissals ?? {}),
   }
@@ -706,10 +754,180 @@ interface BackupShape {
   /** v5+: the reader's refusals on candidate duplicate series pairs — 'distinct' or
    *  'related_but_separate' only. A 'same' ruling never appears here; see buildBackup. */
   series_merge_decisions?: { name_key_a: string; name_key_b: string; ruling: string }[]
+  /** v7+: complete structured series authority, including primary/secondary memberships, ghosts,
+   *  tombstones, and the independent membership/order claims. */
+  series?: BackupSeriesRow[]
+  series_entries?: BackupSeriesEntryRow[]
   /** v5+: the reader's refusals. */
   series_tombstones?: BackupTombstone[]
   trope_dismissals?: Record<string, string[]>
   profile?: Record<string, unknown> | null
+}
+
+/** Restore v7's complete structured authority. Trusted book rows may already have materialized
+ * their primary entry through the database trigger during the books pass; reuse and overwrite that
+ * exact entry from the backup rather than inserting a duplicate. Secondary memberships, ghosts,
+ * unknown historical rows, and tombstones then replay independently. */
+async function restoreStructuredSeries(
+  seriesRows: readonly BackupSeriesRow[],
+  entries: readonly BackupSeriesEntryRow[],
+  bookIdMap: ReadonlyMap<string, string>,
+  ownerId: string,
+): Promise<{ entries: number; tombstones: number }> {
+  if (!seriesRows.length && !entries.length) return { entries: 0, tombstones: 0 }
+
+  const existing = await pageAll<{ id: string; name: string }>('series', (from, to) =>
+    supabase.from('series').select('id, name', { count: 'exact' }).order('id').range(from, to),
+  )
+  const byName = new Map(existing.map((row) => [row.name, row.id]))
+  const seriesIdMap = new Map<string, string>()
+
+  for (const row of seriesRows) {
+    let id = byName.get(row.name)
+    if (!id) {
+      const { data, error } = await supabase
+        .from('series')
+        .insert({
+          owner_id: ownerId,
+          name: row.name,
+          status: row.status,
+          source: row.source === 'hardcover' ? 'hardcover' : 'manual',
+          source_ref: row.source_ref,
+          refreshed_at: row.refreshed_at,
+          length: row.length,
+        })
+        .select('id')
+        .single()
+      if (error) throw error
+      id = (data as { id: string }).id
+      byName.set(row.name, id)
+    } else {
+      const { error } = await supabase
+        .from('series')
+        .update({
+          status: row.status,
+          source: row.source === 'hardcover' ? 'hardcover' : 'manual',
+          source_ref: row.source_ref,
+          refreshed_at: row.refreshed_at,
+          length: row.length,
+        })
+        .eq('id', id)
+      if (error) throw error
+    }
+    seriesIdMap.set(row.id, id)
+  }
+
+  const occupied = await pageAll<{
+    id: string
+    series_id: string
+    position: number
+    title: string
+    removed_at: string | null
+  }>('series_entries', (from, to) =>
+    supabase
+      .from('series_entries')
+      .select('id, series_id, position, title, removed_at', { count: 'exact' })
+      .order('id')
+      .range(from, to),
+  )
+
+  let restored = 0
+  let restoredTombstones = 0
+  for (const entry of entries) {
+    const seriesId = seriesIdMap.get(entry.series_id)
+    if (!seriesId) throw new Error('A series entry in the backup has no parent series.')
+    const bookId = entry.book_id ? bookIdMap.get(entry.book_id) : null
+    if (entry.book_id && !bookId)
+      throw new Error('A series entry in the backup points to a missing book.')
+
+    if (
+      entry.removed_at &&
+      occupied.some(
+        (slot) =>
+          slot.series_id === seriesId &&
+          slotKey(seriesId, slot.title, slot.position) ===
+            slotKey(seriesId, entry.title, entry.position),
+      )
+    )
+      continue
+
+    let existingEntryId: string | undefined
+    if (bookId && !entry.removed_at) {
+      const { data, error } = await supabase
+        .from('series_entries')
+        .select('id')
+        .eq('series_id', seriesId)
+        .eq('book_id', bookId)
+        .is('removed_at', null)
+        .maybeSingle()
+      if (error) throw error
+      existingEntryId = (data as { id: string } | null)?.id
+    }
+
+    let restoredPosition = entry.position
+    let restoredPositionClaim = entry.position_claim ?? { origin: 'unknown' }
+    if (
+      !entry.removed_at &&
+      occupied.some(
+        (slot) =>
+          slot.series_id === seriesId &&
+          !slot.removed_at &&
+          slot.position === restoredPosition &&
+          slot.id !== existingEntryId,
+      )
+    ) {
+      restoredPosition =
+        Math.floor(
+          Math.max(
+            0,
+            ...occupied
+              .filter((slot) => slot.series_id === seriesId && !slot.removed_at)
+              .map((slot) => slot.position),
+          ),
+        ) + 1
+      restoredPositionClaim = { origin: 'unknown' }
+    }
+
+    const payload = {
+      series_id: seriesId,
+      owner_id: ownerId,
+      position: restoredPosition,
+      label: entry.label,
+      title: entry.title,
+      author: entry.author,
+      book_id: bookId,
+      source: entry.source === 'hardcover' ? 'hardcover' : 'manual',
+      user_edited: entry.user_edited,
+      removed_at: entry.removed_at,
+      is_primary: entry.is_primary,
+      membership_claim: entry.membership_claim ?? { origin: 'unknown' },
+      position_claim: restoredPositionClaim,
+    }
+    if (existingEntryId) {
+      const { owner_id: _owner, series_id: _series, ...patch } = payload
+      const { error } = await supabase
+        .from('series_entries')
+        .update(patch)
+        .eq('id', existingEntryId)
+      if (error) throw error
+    } else {
+      const { error } = await supabase.from('series_entries').insert(payload)
+      if (error) throw error
+    }
+    const at = occupied.findIndex((slot) => slot.id === existingEntryId)
+    const occupiedRow = {
+      id: existingEntryId ?? `restored-${restored}`,
+      series_id: seriesId,
+      position: restoredPosition,
+      title: entry.title,
+      removed_at: entry.removed_at,
+    }
+    if (at >= 0) occupied[at] = occupiedRow
+    else occupied.push(occupiedRow)
+    restored++
+    if (entry.removed_at) restoredTombstones++
+  }
+  return { entries: restored, tombstones: restoredTombstones }
 }
 
 /**
@@ -959,6 +1177,13 @@ export async function restoreBackup(
     }
   }
 
+  const structuredSeries = await restoreStructuredSeries(
+    data.series ?? [],
+    data.series_entries ?? [],
+    bookIdMap,
+    ownerId,
+  )
+
   // Reads + memberships, remapped onto the new ids.
   const reads = (data.reads ?? [])
     .map((r) => {
@@ -1056,7 +1281,11 @@ export async function restoreBackup(
 
   // The reader's refusals (v5): removed series slots stay removed, dismissed suggestions stay
   // dismissed. After books, so the tombstones' series sit alongside the restored library.
-  const tombstoneCount = await restoreTombstones(data.series_tombstones ?? [], ownerId)
+  // v7 already restored every tombstone with its full claim fields. The name-keyed refusal section
+  // remains in the file for older builds and is used only for v6-and-earlier archives.
+  const tombstoneCount = data.series_entries?.length
+    ? structuredSeries.tombstones
+    : await restoreTombstones(data.series_tombstones ?? [], ownerId)
 
   // Profile: restore appearance + adaptive taste state + goal onto the current account.
   if (data.profile) {

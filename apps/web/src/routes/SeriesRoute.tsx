@@ -29,6 +29,8 @@ import {
   useApplySeriesSource,
   useMoveEntry,
   useRemoveEntry,
+  useReviewSeriesClaims,
+  useSetPrimarySeriesMembership,
   useSeriesDetail,
   useUpdateEntry,
   useUpdateSeries,
@@ -50,6 +52,8 @@ function SeriesScreen() {
   const { data: lists } = useLists()
   const { data: items } = useAllListItems()
   const { data: detail, isLoading } = useSeriesDetail(name)
+  const reviewClaims = useReviewSeriesClaims(name)
+  const setPrimary = useSetPrimarySeriesMembership(name)
   const updateSeries = useUpdateSeries(name)
   const moveEntry = useMoveEntry(name)
   const updateEntry = useUpdateEntry(name)
@@ -81,6 +85,22 @@ function SeriesScreen() {
   }, [items, tbrs])
 
   const entries = useMemo(() => sortEntries(detail?.entries ?? []), [detail])
+  const structuredBookIds = useMemo(
+    () =>
+      new Set(
+        [...(detail?.entries ?? []), ...(detail?.unreviewed ?? [])].flatMap((e) =>
+          e.bookId ? [e.bookId] : [],
+        ),
+      ),
+    [detail],
+  )
+  const legacyBooks = useMemo(
+    () =>
+      (books ?? []).filter(
+        (book) => book.series.trim() === name.trim() && !structuredBookIds.has(book.id),
+      ),
+    [books, name, structuredBookIds],
+  )
   const progress = useMemo(() => seriesProgress(entries, byId), [entries, byId])
   const next = useMemo(() => nextUp(entries, byId), [entries, byId])
   const memberIds = useMemo(
@@ -91,12 +111,61 @@ function SeriesScreen() {
   const siblingGenre =
     entries.map((e) => (e.bookId ? byId.get(e.bookId)?.genre : '')).find(Boolean) ?? ''
 
-  if (isLoading || !detail)
+  if (isLoading)
     return (
       <div className="px-6 py-16 text-center text-muted">
         <p>Opening the series…</p>
       </div>
     )
+
+  if (!detail) {
+    return (
+      <section className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6">
+        <BackLink fallback="/library" className="text-[13px] text-muted hover:text-ink">
+          ← Back
+        </BackLink>
+        <div
+          className="mt-5 rounded-2xl border border-line p-5"
+          style={{ background: 'var(--card)' }}
+        >
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">
+            Series review
+          </p>
+          <h1
+            className="mt-2 break-words text-[26px] italic leading-tight text-ink"
+            style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+          >
+            {name}
+          </h1>
+          {legacyBooks.length ? (
+            <>
+              <p className="mt-3 text-[14px] leading-relaxed text-muted">
+                {legacyBooks.length} {legacyBooks.length === 1 ? 'book names' : 'books name'} this
+                series, but that older library text has not been confirmed as structured membership.
+                Review it once before Reverie uses it for order, progress, or gaps.
+              </p>
+              <button
+                type="button"
+                onClick={() => reviewClaims.mutate(undefined)}
+                disabled={reviewClaims.isPending}
+                className="mt-4 skin-control px-4 py-2.5 text-[13.5px] font-semibold disabled:opacity-50"
+                style={{ background: 'var(--accent-fill)', color: 'var(--on-primary)' }}
+              >
+                {reviewClaims.isPending
+                  ? 'Confirming…'
+                  : `Confirm ${legacyBooks.length === 1 ? 'this membership' : 'these memberships'}`}
+              </button>
+            </>
+          ) : (
+            <p className="mt-3 text-[14px] text-muted">
+              No confirmed books or series record was found. Nothing was created by opening this
+              page.
+            </p>
+          )}
+        </div>
+      </section>
+    )
+  }
 
   const openBook = (id: string) => void navigate({ to: '/book/$bookId', params: { bookId: id } })
 
@@ -286,6 +355,34 @@ function SeriesScreen() {
         {sourceNote && <p className="mt-2 text-[12.5px] text-muted">{sourceNote}</p>}
       </header>
 
+      {(detail.unreviewed.length > 0 || legacyBooks.length > 0) && (
+        <div
+          className="mt-5 rounded-2xl border border-line p-4"
+          style={{ background: 'var(--card)' }}
+        >
+          <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-primary">
+            Membership review
+          </p>
+          <p className="mt-1.5 text-[13.5px] leading-relaxed text-muted">
+            {detail.unreviewed.length + legacyBooks.length}{' '}
+            {detail.unreviewed.length + legacyBooks.length === 1
+              ? 'item still uses'
+              : 'items still use'}{' '}
+            older, unconfirmed series data. They are excluded from progress and gaps until you
+            confirm them; their existing slots and removals stay intact.
+          </p>
+          <button
+            type="button"
+            onClick={() => reviewClaims.mutate(detail.series.id)}
+            disabled={reviewClaims.isPending}
+            className="mt-3 skin-control border border-line px-3.5 py-2 text-[12.5px] font-semibold text-ink disabled:opacity-50"
+            style={{ background: 'var(--chip)' }}
+          >
+            {reviewClaims.isPending ? 'Confirming…' : 'Confirm these memberships'}
+          </button>
+        </div>
+      )}
+
       {/* THE order — every canonical slot, ghosts included, reader state inline */}
       <ol className="mt-5 flex flex-col gap-2">
         {entries.map((e, i) => {
@@ -381,6 +478,9 @@ function SeriesScreen() {
                         {book.title}
                       </span>
                       <span className="block text-[12px] text-muted">{stateLine}</span>
+                      <span className="mt-0.5 block text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">
+                        {e.isPrimary ? 'Primary series' : 'Also in this series'}
+                      </span>
                     </span>
                   </button>
                 ) : (
@@ -407,6 +507,17 @@ function SeriesScreen() {
                 )}
 
                 <div className="flex flex-none items-center gap-1">
+                  {book && !e.isPrimary && (
+                    <button
+                      type="button"
+                      onClick={() => setPrimary.mutate(e.id)}
+                      disabled={setPrimary.isPending}
+                      className="skin-control px-2.5 py-1.5 text-[11.5px] font-semibold text-muted disabled:opacity-50"
+                      style={{ background: 'var(--chip)' }}
+                    >
+                      Make primary
+                    </button>
+                  )}
                   {!book && (
                     <button
                       type="button"
@@ -478,8 +589,8 @@ function SeriesScreen() {
         />
       )}
 
-      {/* Removal is one act with one meaning on both surfaces: the slot goes, and a linked book stops
-          naming the series. Confirmed because it discards the slot's place in the order. */}
+      {/* Removal always removes this membership. Only a primary removal clears the compatibility
+          series fields; secondary memberships never overwrite or clear another series. */}
       {removing && (
         <Modal title="Remove from this series?" onClose={() => setRemoving(null)}>
           <p className="-mt-2 mb-4 text-[13px] text-muted">
@@ -488,7 +599,9 @@ function SeriesScreen() {
             </span>{' '}
             leaves {detail.series.name} and its place in the order goes with it.
             {removing.bookId
-              ? ' The book stays in your library — it just stops belonging to this series.'
+              ? removing.isPrimary
+                ? ' The book stays in your library. Its primary series is cleared; another membership is not promoted automatically.'
+                : ' The book stays in your library, and its primary series is unchanged.'
               : ' Fetching the series data again won’t bring it back.'}
           </p>
           <div className="flex gap-2">

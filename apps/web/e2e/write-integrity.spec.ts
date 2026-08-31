@@ -111,13 +111,14 @@ const rowOf = async (c: Client, id: string) =>
   (
     await c.sb
       .from('books')
-      .select('pub_y, pub_m, pub_d, rating, series_count, read_status, position')
+      .select('pub_y, pub_m, pub_d, pages, rating, series_count, read_status, position')
       .eq('id', id)
       .single()
   ).data as {
     pub_y: number | null
     pub_m: number | null
     pub_d: number | null
+    pages: number | null
     rating: number | null
     series_count: number | null
     read_status: string | null
@@ -185,7 +186,9 @@ test('an out-of-range month is refused in the form, and takes nothing else down 
     })
     const dlg = await openEdit(page)
     await field(dlg, 'Month').fill('13')
-    await field(dlg, 'Series length').fill('7') // the canary: pre-fix this was discarded too
+    // The canary must be an unrelated book field. Series length is now deliberately a projection
+    // of a confirmed primary series membership, so a standalone book cannot retain it.
+    await field(dlg, 'Pages').fill('777')
     await dlg.getByRole('button', { name: /Save details/i }).click()
 
     // Refused locally: the dialog stays open, the bad field says why, nothing is sent.
@@ -202,7 +205,7 @@ test('an out-of-range month is refused in the form, and takes nothing else down 
     await expect(dlg).toBeHidden({ timeout: 15_000 })
     await expect
       .poll(async () => await rowOf(c, id), { timeout: 15_000 })
-      .toMatchObject({ pub_m: 6, series_count: 7 })
+      .toMatchObject({ pub_m: 6, pages: 777 })
   } finally {
     await reset(c)
   }

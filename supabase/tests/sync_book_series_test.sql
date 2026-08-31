@@ -56,8 +56,7 @@ values
   ('eeeeeeee-0000-0000-0000-000000000001', 'cccccccc-1111-1111-1111-111111111111', 'aaaaaaaa-1111-1111-1111-111111111111', 2, 'Book One', '', 'dddddddd-0000-0000-0000-000000000001', false),
   ('eeeeeeee-0000-0000-0000-000000000002', 'cccccccc-1111-1111-1111-111111111111', 'aaaaaaaa-1111-1111-1111-111111111111', 1, 'Book Two', '', 'dddddddd-0000-0000-0000-000000000002', false),
   ('eeeeeeee-0000-0000-0000-000000000003', 'cccccccc-1111-1111-1111-111111111111', 'aaaaaaaa-1111-1111-1111-111111111111', 3, 'Book Three', '', 'dddddddd-0000-0000-0000-000000000003', false),
-  ('eeeeeeee-0000-0000-0000-000000000004', 'cccccccc-3333-3333-3333-333333333333', 'aaaaaaaa-1111-1111-1111-111111111111', 4, 'Book Four', '', 'dddddddd-0000-0000-0000-000000000004', false),
-  ('eeeeeeee-0000-0000-0000-000000000006', 'cccccccc-1111-1111-1111-111111111111', 'bbbbbbbb-2222-2222-2222-222222222222', 6, 'Book Five', '', 'dddddddd-0000-0000-0000-000000000005', false);
+  ('eeeeeeee-0000-0000-0000-000000000004', 'cccccccc-3333-3333-3333-333333333333', 'aaaaaaaa-1111-1111-1111-111111111111', 4, 'Book Four', '', 'dddddddd-0000-0000-0000-000000000004', false);
 
 -- ── Guard 0: shape ──
 select is(
@@ -121,11 +120,8 @@ select is(
   (select series_claim ->> 'origin' from public.books where id = 'dddddddd-0000-0000-0000-000000000002'),
   'reader', 'CLEAR records a positive reader refusal rather than an unexplained blank');
 
--- ── Guard 2b: a book that NEVER named a series is not a CLEAR just because the new value is empty
---    too — position/length on it are ordinary claims, not synced copies to wipe. Caught live: the
---    first cut of this function wiped both to null here, silently discarding a bare "Series
---    length" typed on a book with no series membership at all
---    (write-integrity.spec.ts's month-refusal test's own canary, re-broken and re-caught). ──
+-- ── Guard 2b: Phase 2B makes position/length compatibility projections of a primary membership,
+--    so a book that still has no series cannot retain orphaned numeric series fields. ──
 set local role authenticated;
 select set_config('request.jwt.claims',
   '{"sub":"aaaaaaaa-1111-1111-1111-111111111111","role":"authenticated"}', true);
@@ -134,9 +130,9 @@ select lives_ok(
   'a no-series book, saved with number/length set, succeeds');
 reset role;
 select ok(
-  (select series is null and position = 4 and series_count = 7
+  (select series is null and position is null and series_count is null
      from public.books where id = 'dddddddd-0000-0000-0000-000000000006'),
-  'position and series_count land as CLAIMS, not wiped — this book was never in a series to leave');
+  'a no-series save cannot leave orphaned compatibility position or length values');
 select ok(
   (select series_user_chosen from public.books where id = 'dddddddd-0000-0000-0000-000000000006'),
   'the "never had one" CLEAR branch marks series_user_chosen too — a reader-driven save either way');
@@ -157,7 +153,7 @@ select ok(
   'the old slot is tombstoned even though the new series has no row yet');
 select is(
   (select count(*)::int from public.series where name = 'Brand New Series'),
-  0, 'no series row is created — that stays client-side (getOrCreateSeries, Tier-1 near-match)');
+  1, 'a trusted reader claim materializes its structured series row in the same transaction');
 select ok(
   (select series = 'Brand New Series' and position = 1 and series_count = 12
      from public.books where id = 'dddddddd-0000-0000-0000-000000000003'),

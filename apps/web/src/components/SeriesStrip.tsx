@@ -3,7 +3,7 @@ import { Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { isPossessed, sortEntries, stateSuffix, type Book, type SeriesEntry } from '@reverie/core'
 import { CoverImage } from './CoverImage'
-import { fetchSeriesEntries } from '../data/series'
+import { fetchBookSeriesMemberships, fetchSeriesEntries } from '../data/series'
 import { useBooks } from '../data/books'
 
 /**
@@ -18,6 +18,10 @@ export function SeriesStrip({ book }: { book: Book }) {
     queryKey: ['series-strip', book.series.toLowerCase()],
     enabled: !!book.series,
     queryFn: () => fetchSeriesEntries(book.series),
+  })
+  const { data: memberships } = useQuery({
+    queryKey: ['book-series-memberships', book.id],
+    queryFn: () => fetchBookSeriesMemberships(book.id),
   })
 
   const entries: SeriesEntry[] = useMemo(() => {
@@ -39,7 +43,6 @@ export function SeriesStrip({ book }: { book: Book }) {
     )
   }, [fetched, books, book.series])
 
-  if (!book.series) return null
   const byId = new Map((books ?? []).map((b) => [b.id, b]))
   const idx = entries.findIndex((e) => e.bookId === book.id)
   const prev = idx > 0 ? entries[idx - 1] : undefined
@@ -67,29 +70,70 @@ export function SeriesStrip({ book }: { book: Book }) {
     )
   }
 
+  const secondary = (memberships ?? []).filter((membership) => !membership.entry.isPrimary)
+
+  if (!book.series) {
+    if (!secondary.length) return null
+    return (
+      <div className="mt-2 space-y-1.5">
+        {secondary.map((membership) => (
+          <Link
+            key={membership.entry.id}
+            to="/series/$seriesName"
+            params={{ seriesName: encodeURIComponent(membership.series.name) }}
+            className="flex min-h-11 items-center justify-between gap-3 skin-tile border border-line px-3 py-2 text-[12.5px]"
+            style={{ background: 'var(--chip)' }}
+            aria-label={`Open the ${membership.series.name} series page`}
+          >
+            <span className="min-w-0 break-words font-semibold text-ink">
+              Also in {membership.series.name}
+            </span>
+            <span className="flex-none text-muted">#{membership.entry.position} →</span>
+          </Link>
+        ))}
+      </div>
+    )
+  }
+
   return (
-    <Link
-      to="/series/$seriesName"
-      params={{ seriesName: encodeURIComponent(book.series) }}
-      className="mt-2 flex items-center gap-2.5 skin-tile border border-line p-2 pr-3"
-      style={{ background: 'var(--card)' }}
-      aria-label={`Open the ${book.series} series page`}
-    >
-      {neighbour(prev, 'prev')}
-      <span className="min-w-0 flex-1">
-        <span
-          className="block break-words text-[13.5px] font-semibold text-ink"
-          style={{ fontFamily: 'var(--font-display)' }}
+    <div className="mt-2 space-y-1.5">
+      <Link
+        to="/series/$seriesName"
+        params={{ seriesName: encodeURIComponent(book.series) }}
+        className="flex items-center gap-2.5 skin-tile border border-line p-2 pr-3"
+        style={{ background: 'var(--card)' }}
+        aria-label={`Open the ${book.series} series page`}
+      >
+        {neighbour(prev, 'prev')}
+        <span className="min-w-0 flex-1">
+          <span
+            className="block break-words text-[13.5px] font-semibold text-ink"
+            style={{ fontFamily: 'var(--font-display)' }}
+          >
+            {book.series}
+          </span>
+          <span className="block text-[12px] text-muted">
+            {posText}
+            {entries.length ? `${posText ? ' of ' : ''}${entries.length}` : ''} · primary series →
+          </span>
+        </span>
+        {neighbour(next, 'next')}
+      </Link>
+      {secondary.map((membership) => (
+        <Link
+          key={membership.entry.id}
+          to="/series/$seriesName"
+          params={{ seriesName: encodeURIComponent(membership.series.name) }}
+          className="flex min-h-11 items-center justify-between gap-3 skin-tile border border-line px-3 py-2 text-[12.5px]"
+          style={{ background: 'var(--chip)' }}
+          aria-label={`Open the ${membership.series.name} series page`}
         >
-          {book.series}
-        </span>
-        <span className="block text-[12px] text-muted">
-          {posText}
-          {entries.length ? `${posText ? ' of ' : ''}${entries.length}` : ''} · see the whole series
-          →
-        </span>
-      </span>
-      {neighbour(next, 'next')}
-    </Link>
+          <span className="min-w-0 break-words font-semibold text-ink">
+            Also in {membership.series.name}
+          </span>
+          <span className="flex-none text-muted">#{membership.entry.position} →</span>
+        </Link>
+      ))}
+    </div>
   )
 }

@@ -111,6 +111,14 @@ wishlist` was the pre-#68 model and is long wrong. Format flags **suppress, neve
   must explicitly choose “Use shared details” to adopt shared series, genre, cover, and publication
   fields, and that adoption never changes title/contributors, ISBN, possession, reading history,
   rating, or private annotations.
+- **Structured rows own personal series membership.** `series` + live `series_entries` are the
+  authority; `books.series`, `position`, and `series_count` are a compatibility projection of one
+  explicit `is_primary` entry. A book may have multiple live memberships, but at most one primary;
+  secondary membership/order never rewrites the primary projection. Membership provenance and
+  position provenance are separate claims. Historical rows stay `origin=unknown` and non-primary
+  until explicit review—opening a series page is always read-only and never creates, revives,
+  orders, merges, or promotes anything. Removing a secondary leaves the primary intact; removing
+  the primary clears the compatibility tuple and never guesses a replacement.
 - **`isBookRead` and `hasReadingHistory` disagree on DNF on purpose.** `isBookRead` feeds series
   progress, taste and stats, where an abandoned book must not count as read. `hasReadingHistory`
   adds DNF and feeds **visibility only** (`inDefaultLibrary`), so a book you started and gave up

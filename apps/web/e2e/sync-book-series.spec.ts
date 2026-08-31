@@ -94,17 +94,11 @@ async function stub(page: Page) {
   await page.route('**/books/v1/volumes**', (r) => r.fulfill({ json: { items: [] } }))
 }
 
-/** A series row plus one book, with a live entry linking them at `position`. */
+/** One trusted book write atomically creates its series row and primary live entry. */
 async function seedLinkedBook(
   c: Client,
   { series, title, position }: { series: string; title: string; position: number },
 ): Promise<{ bookId: string; seriesId: string; entryId: string }> {
-  const { data: sRow } = await c.sb
-    .from('series')
-    .upsert({ owner_id: c.uid, name: series }, { onConflict: 'owner_id,name' })
-    .select('id')
-    .single()
-  const seriesId = (sRow as { id: string }).id
   const { data: bRow } = await c.sb
     .from('books')
     .insert({
@@ -113,6 +107,7 @@ async function seedLinkedBook(
       author_first: 'Nell',
       author_last: 'Marrow',
       series,
+      series_claim: { origin: 'reader', source: 'e2e_fixture' },
       position,
       status: 'ongoing',
       genre: 'fantasy',
@@ -121,22 +116,22 @@ async function seedLinkedBook(
     .select('id')
     .single()
   const bookId = (bRow as { id: string }).id
+  const { data: sRow } = await c.sb
+    .from('series')
+    .select('id')
+    .eq('owner_id', c.uid)
+    .eq('name', series)
+    .single()
+  const seriesId = (sRow as { id: string }).id
   const { data: eRow } = await c.sb
     .from('series_entries')
-    .insert({ series_id: seriesId, owner_id: c.uid, position, title, author: '', book_id: bookId })
     .select('id')
+    .eq('series_id', seriesId)
+    .eq('book_id', bookId)
+    .is('removed_at', null)
     .single()
   return { bookId, seriesId, entryId: (eRow as { id: string }).id }
 }
-
-const entryRow = async (c: Client, entryId: string) =>
-  (
-    await c.sb
-      .from('series_entries')
-      .select('removed_at, book_id, user_edited')
-      .eq('id', entryId)
-      .single()
-  ).data as { removed_at: string | null; book_id: string | null; user_edited: boolean }
 
 const bookSeries = async (c: Client, bookId: string) =>
   (
@@ -144,11 +139,6 @@ const bookSeries = async (c: Client, bookId: string) =>
       series: string | null
     } | null
   )?.series ?? null
-
-const openSeries = async (page: Page, name: string) => {
-  await page.goto(`/series/${encodeURIComponent(name)}`)
-  await expect(page.locator('ol li').first()).toBeVisible({ timeout: 20_000 })
-}
 
 const openEdit = async (page: Page) => {
   await page.getByRole('button', { name: /^Edit details$/i }).click()
@@ -199,10 +189,10 @@ test('a book-page series reassign issues one atomic RPC, and only ONE (unrelated
       await expect(dlg).toBeHidden({ timeout: 15_000 })
     })
 
-    expect(writes.filter((w) => w === 'POST rpc/sync_book_series')).toHaveLength(1)
+    expect(writes.filter((w) => w === 'POST rpc/set_book_series_membership')).toHaveLength(1)
     // The one PATCH books that DOES fire is updateBook's own — title/isbn/pages/etc, unrelated to
     // series. The old two-write sequence's fingerprint was a SECOND, series-shaped write on top of
-    // this one; sync_book_series folds that second write inside itself instead of issuing it here.
+    // this one; the authority RPC folds that transition inside itself instead of issuing it here.
     expect(writes.filter((w) => w.startsWith('PATCH books'))).toHaveLength(1)
     expect(writes.filter((w) => w.startsWith('PATCH series_entries'))).toEqual([])
 
@@ -212,7 +202,7 @@ test('a book-page series reassign issues one atomic RPC, and only ONE (unrelated
   }
 })
 
-test('a half-committed reassign is never healed by reconciliation; the real save path never leaves one', async ({
+test('opening an unreviewed series is read-only until the reader confirms membership', async ({
   page,
 }) => {
   test.setTimeout(180_000)
@@ -221,65 +211,66 @@ test('a half-committed reassign is never healed by reconciliation; the real save
   await stub(page)
   try {
     await signIn(page, c.session)
+    const { data: sRow } = await c.sb
+      .from('series')
+      .insert({ owner_id: c.uid, name: OLD_SAGA })
+      .select('id')
+      .single()
+    const seriesId = (sRow as { id: string }).id
+    const { data: bRow } = await c.sb
+      .from('books')
+      .insert({ owner_id: c.uid, title: 'Historical Probe', series: OLD_SAGA, position: 2 })
+      .select('id')
+      .single()
+    const bookId = (bRow as { id: string }).id
+    const { data: eRow } = await c.sb
+      .from('series_entries')
+      .insert({
+        series_id: seriesId,
+        owner_id: c.uid,
+        position: 2,
+        title: 'Historical Probe',
+        author: '',
+        book_id: bookId,
+      })
+      .select('id')
+      .single()
+    const entryId = (eRow as { id: string }).id
 
-    // ── Part 1: the historical defect, reconstructed BY HAND — the app can no longer produce this,
-    //    which is the point. This is exactly what a crash between the old two writes left behind:
-    //    updateBook had already run (books.series says the NEW name); syncBookSeries's retirement
-    //    (keyed off the OLD name) never got the chance to.
-    const { bookId: halfId, entryId: halfEntryId } = await seedLinkedBook(c, {
-      series: OLD_SAGA,
-      title: 'Half Committed Probe',
-      position: 2,
+    const writes = await recordWrites(page, async () => {
+      await page.goto(`/series/${encodeURIComponent(OLD_SAGA)}`)
+      await expect(page.getByText('Membership review', { exact: true })).toBeVisible({
+        timeout: 20_000,
+      })
+      await expect(page.locator('ol li')).toHaveCount(0)
     })
-    await ok(
-      c.sb.from('books').update({ series: NEW_SAGA }).eq('id', halfId),
-      'sync-book-series half-committed books update',
-    )
-    // Sanity: the corruption is exactly what it claims to be — the entry untouched, the book moved.
-    const before = await entryRow(c, halfEntryId)
-    expect(before.removed_at).toBeNull()
-    expect(before.book_id).toBe(halfId)
-    expect(await bookSeries(c, halfId)).toBe(NEW_SAGA)
+    expect(writes).toEqual([])
 
-    // Opening Old Saga's page runs reconciliation. Unlike remove_series_entry's defect (a LOUD
-    // revive), this one is silent: nothing prunes a live entry whose linked book stopped naming the
-    // series, so the phantom slot simply persists — worse than revive, because there is no event to
-    // notice. Demonstrated, not assumed.
-    await openSeries(page, OLD_SAGA)
-    await expect(page.locator('ol li').filter({ hasText: 'Half Committed Probe' })).toBeVisible({
+    const before = (
+      await c.sb
+        .from('series_entries')
+        .select('membership_claim, is_primary')
+        .eq('id', entryId)
+        .single()
+    ).data as { membership_claim: { origin: string }; is_primary: boolean }
+    expect(before).toEqual({ membership_claim: { origin: 'unknown' }, is_primary: false })
+
+    await page.getByRole('button', { name: 'Confirm these memberships' }).click()
+    await expect(page.locator('ol li').filter({ hasText: 'Historical Probe' })).toBeVisible({
       timeout: 20_000,
     })
-    const after = await entryRow(c, halfEntryId)
-    expect(after.removed_at, 'reconciliation must not have healed the phantom slot').toBeNull()
-    expect(after.book_id).toBe(halfId)
-
-    // ── Part 2: the SAME transition, on a different book, through the real save path.
-    const { bookId: realId, entryId: realEntryId } = await seedLinkedBook(c, {
-      series: OLD_SAGA,
-      title: 'Reassign Through UI',
-      position: 3,
-    })
-    await page.goto(`/book/${realId}`)
-    const dlg = await openEdit(page)
-    await dlg.getByLabel('Series', { exact: true }).fill(NEW_SAGA)
-    await dlg.getByRole('button', { name: /^Save details$/i }).click()
-    await dlg.getByRole('button', { name: /^Save and remove$/i }).click()
-    await expect(dlg).toBeHidden({ timeout: 15_000 })
-
-    // The old slot is retired ATOMICALLY with the book write — not left dangling like Part 1's.
     await expect
-      .poll(async () => (await entryRow(c, realEntryId)).removed_at, { timeout: 15_000 })
-      .not.toBeNull()
-    const realAfter = await entryRow(c, realEntryId)
-    expect(realAfter.book_id).toBeNull()
-    expect(realAfter.user_edited).toBe(true)
-    expect(await bookSeries(c, realId)).toBe(NEW_SAGA)
-
-    // ...and it stays gone across a full reload — the proof S3b established for remove_series_entry,
-    // carried over to this RPC.
-    await page.reload()
-    await openSeries(page, OLD_SAGA)
-    await expect(page.locator('ol li').filter({ hasText: 'Reassign Through UI' })).toHaveCount(0)
+      .poll(async () => {
+        const row = (
+          await c.sb
+            .from('series_entries')
+            .select('membership_claim, is_primary')
+            .eq('id', entryId)
+            .single()
+        ).data as { membership_claim: { source?: string }; is_primary: boolean }
+        return { source: row.membership_claim.source, primary: row.is_primary }
+      })
+      .toEqual({ source: 'series_review', primary: true })
   } finally {
     await reset(c)
   }
