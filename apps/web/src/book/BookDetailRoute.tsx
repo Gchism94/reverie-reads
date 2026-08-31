@@ -406,7 +406,7 @@ function BookDetailScreen() {
               <span>{authorOf(book) || 'Unknown author'}</span>
             )}
           </div>
-          {book.series && <SeriesStrip book={book} />}
+          <SeriesStrip book={book} />
           <div className="mt-4 flex flex-wrap gap-1.5">
             {bookGenres(book).map((g) => (
               <Pill key={g}>{CORE_GENRES.find((cg) => cg.toLowerCase() === g) ?? g}</Pill>

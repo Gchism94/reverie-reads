@@ -51,10 +51,10 @@ select is(
 
 update public.books set series = 'Legacy Rewrite'
 where id = 'db000000-0000-0000-0000-000000000001';
-select is(
-  (select series_claim ->> 'origin' from public.books
-    where id = 'db000000-0000-0000-0000-000000000001'),
-  'unknown', 'a series-only rewrite cannot retain a stale claim about the replaced value');
+select ok(
+  (select series = 'Reader Saga' and series_claim ->> 'source' = 'book_edit'
+   from public.books where id = 'db000000-0000-0000-0000-000000000001'),
+  'a series-only rewrite cannot override an established structured primary membership');
 
 select throws_ok(
   $$set local role authenticated;

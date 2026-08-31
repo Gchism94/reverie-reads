@@ -286,8 +286,20 @@ series              (id pk, owner_id fk, name, status, source 'manual'|'hardcove
 series_entries      (id pk, series_id fk, owner_id fk, position numeric, label,
                      title, author,       -- ghost display fields; a linked entry renders the book
                      book_id fk null, source, user_edited bool,
+                     is_primary bool,
+                     membership_claim jsonb, -- unknown|reader|import|enrichment|corpus
+                     position_claim jsonb,   -- independent provenance for the numeric order
                      removed_at timestamptz,      -- SOFT-DELETE TOMBSTONE — see below
                      created_at)
+
+`series` + `series_entries` are the personal membership authority. A book may have several live
+entries in different series, but exactly one may be `is_primary`; that entry projects its series
+name, position, and series length back to `books.series/position/series_count` for legacy consumers.
+A secondary membership never changes those scalar fields. Existing pre-Phase-2B entries default to
+`is_primary=false` with both claims `origin=unknown` and stay excluded from progress/gaps until an
+explicit review. Trusted forward Add/import/corpus claims and high-confidence enrichment claims
+materialize transactionally; opening a series page performs no write. Membership provenance and
+position provenance are separate because knowing that a book belongs does not prove its number.
 
 lists               (id pk, owner_id fk, name, kind 'tbr'|'collection', is_priority bool,
                      sort_order numeric, description, created_at)
@@ -536,13 +548,15 @@ invalidates the snapshot while a later insert waits until the reviewed transacti
   FK; deleting the account that first linked it therefore does not destroy the remaining members'
   relationship.
 - **`series_entries.removed_at` is a tombstone, not a delete.** Removing a book from a series
-  soft-deletes the entry (`removed_at = now()`, `book_id = null`, `user_edited = true`) rather
+  soft-deletes the entry (`removed_at = now()`, `book_id = null`, `is_primary = false`,
+  `user_edited = true`) rather
   than dropping the row, so a later Hardcover refresh cannot resurrect a slot the reader
   deliberately removed. Every live-entry query filters `removed_at is null` (partial index
-  `series_entries_live_idx`). Re-adding the same book revives the tombstone instead of
-  inserting a duplicate.
-- **Removal is one operation on both surfaces.** The series screen's ✕ and clearing the series
-  field on the book both take the same path — soft-delete the entry _and_ clear `books.series`.
+  `series_entries_live_idx`).
+- **Removal respects primary vs. secondary membership.** Removing a secondary tombstones only that
+  membership. Removing or clearing the primary also clears the scalar compatibility tuple and does
+  not silently promote an arbitrary remaining secondary; selecting another primary is an explicit
+  reader action.
   See `docs/decisions/0004-series-removal-semantics.md`.
 - `series_count IS NULL` drives the **"None set"** filter ("what needs completing").
 - `pub_y/m/d` keep flexible publish-date precision; `pub_m`/`pub_d` are range-checked in the

@@ -303,10 +303,13 @@ Keep `data/fixtures/library_connected_series.csv` as the standing representative
 
 1. **Public prerequisite — series truth Phase 2B.** Make structured membership the reliable
    authority, decide multiple membership, and stop page views from materializing unproven series.
-   Historical changes still wait for the owner-run aggregate inventory.
+   **Implemented in the Phase 2B follow-up branch; production rollout pending.** Historical changes
+   still wait for the owner-run aggregate inventory.
 2. **Private platform prerequisite.** Select the subscription source and implement one server-side
    effective Pro entitlement with the corpus-administrator override. Expose only the narrow host
-   contract the public app needs.
+   contract the public app needs. **The public positive-proof combiner and provider registration
+   seam are implemented; subscription selection and server-side premium-write enforcement remain
+   private work.**
 3. **Private universe model.** Add the four owner-scoped relations and RPCs, with model and database
    tests. Additive schema only; no historical backfill.
 4. **Private creation/editor and import review.** Ship behind entitlement, test Chrome desktop and

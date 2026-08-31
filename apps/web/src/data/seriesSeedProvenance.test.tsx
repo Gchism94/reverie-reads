@@ -1,7 +1,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { renderHook, waitFor } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ReactNode } from 'react'
+import type { Book } from '@reverie/core'
 
 // WHO PLACED THIS ROW — the provenance `user_edited` is supposed to record.
 //
@@ -84,7 +85,8 @@ vi.mock('../lib/supabase', () => ({
   },
 }))
 
-const { useSeriesDetail, useMoveEntry, useAddGhostEntry, useUpdateEntry } = await import('./series')
+const { useSeriesDetail, useMoveEntry, useAddGhostEntry, useAddSeriesEntries, useUpdateEntry } =
+  await import('./series')
 
 function wrapper() {
   const qc = new QueryClient({
@@ -116,22 +118,33 @@ beforeEach(() => {
   ]
 })
 
-describe('reconciliation seeds machine rows, not reader gestures', () => {
-  it('writes user_edited: false on a seeded entry', async () => {
+describe('opening a series cannot seed membership', () => {
+  it('performs no series-entry insert for a legacy library string', async () => {
     const { result } = renderHook(() => useSeriesDetail('The Empyrean'), { wrapper: wrapper() })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    // Assert the row was sent at all before asserting about its contents: a `?.` on a row that was
-    // never inserted would read `undefined !== true` and pass this by never having run the code.
-    expect(seededRow()).toBeDefined()
-    expect(seededRow()?.user_edited).toBe(false)
+    expect(seededRow()).toBeUndefined()
   })
 
-  it('still links the seeded entry to its book — provenance changed, nothing else did', async () => {
+  it('does not link a book as a side effect of the read', async () => {
     const { result } = renderHook(() => useSeriesDetail('The Empyrean'), { wrapper: wrapper() })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(seededRow()?.book_id).toBe('book-1')
-    expect(seededRow()?.source).toBe('manual')
-    expect(seededRow()?.position).toBe(1)
+    expect(inserted.filter((capture) => capture.table === 'series_entries')).toEqual([])
+  })
+})
+
+describe('adding a library book to another series', () => {
+  it('creates a secondary membership without replacing its existing primary', async () => {
+    const book = { id: 'book-1', title: 'Fourth Wing', series: 'The Empyrean' } as Book
+    const { result } = renderHook(() => useAddSeriesEntries('Fly or Die'), {
+      wrapper: wrapper(),
+    })
+    await act(async () => {
+      await result.current.mutateAsync({ seriesId: 'ser-2', books: [book], after: 0 })
+    })
+    expect(rpcCalls.at(-1)).toMatchObject({
+      fn: 'set_book_series_membership',
+      args: { p_series: 'ser-2', p_make_primary: false },
+    })
   })
 })
 
@@ -142,11 +155,11 @@ describe('every reader gesture still claims the row', () => {
   // is the input the server's rule turns on. Asserting the absence of a client-side
   // `user_edited: true` patch would be the proxy: it would pass just as well if the drag stopped
   // writing anything at all.
-  it('a drag goes through set_series_order as a reader gesture', async () => {
+  it('a drag goes through the provenance-aware order RPC as a reader gesture', async () => {
     const { result } = renderHook(() => useMoveEntry('The Empyrean'), { wrapper: wrapper() })
     result.current.mutate({ seriesId: 'ser-1', slots: [{ entryId: 'e1', position: 2 }] })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    const call = rpcCalls.find((c) => c.fn === 'set_series_order')
+    const call = rpcCalls.find((c) => c.fn === 'set_series_order_claimed')
     expect(call).toBeDefined()
     expect(call?.args.p_origin).toBe('reader')
     expect(call?.args.p_slots).toEqual([{ entry_id: 'e1', position: 2 }])

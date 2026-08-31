@@ -88,7 +88,7 @@ export const USER_OWNED_TABLES: OwnedTable[] = [
   {
     table: 'series',
     owner: 'owner_id',
-    plan: { backup: false, why: 'Reconciled from the library on read — the series shelf query rewrites it on every run, so a restored copy is a snapshot of a derived view. Restore DOES create rows here, but only as the parent a removal tombstone hangs off; no series data is carried.' },
+    plan: { backup: true },
   },
 
   // ── shared/social: restoring these into another account would fabricate history ──
@@ -188,9 +188,9 @@ export const USER_OWNED_TABLES: OwnedTable[] = [
     },
   },
 
-  // ── refusals: the reader said NO, and that must survive too ──
-  // Only the negative half of each table travels. The positive half is genuinely derived and
-  // regenerates on its own; the refusal cannot, and losing it makes the app overrule the reader.
+  // ── structured series authority + refusals ──
+  // Primary/secondary membership and its two provenance claims are reader data now, not a view
+  // reconstructed by opening a page. Tombstones remain positive refusals and travel too.
   {
     table: 'series_entries',
     owner: 'owner_id',

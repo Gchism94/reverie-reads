@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { tombstoneRows } from './importExport'
+import type { BackupSeriesEntryRow } from './importExport'
 
 // A tiny in-memory stand-in for the PostgREST client. It is NOT a PostgREST implementation — it
 // understands exactly the queries importExport.ts issues, and resolves the two embedded selects
@@ -159,6 +160,10 @@ class Query implements PromiseLike<{ data: Row[] | Row | null; error: unknown }>
     this.filters.push([col, val])
     return this
   }
+  is(col: string, val: unknown) {
+    this.filters.push([col, val])
+    return this
+  }
   in(col: string, values: unknown[]) {
     this.inclusions.push([col, values])
     return this
@@ -299,6 +304,13 @@ const handMade = (parsed: Record<string, unknown>): string => {
   return JSON.stringify(parsed)
 }
 
+const legacySeriesBackup = (parsed: Record<string, unknown>): string => {
+  delete parsed.series
+  delete parsed.series_entries
+  parsed.v = 6
+  return handMade(parsed)
+}
+
 vi.mock('../lib/supabase', () => ({
   supabase: {
     auth: { getUser: async () => ({ data: { user: { id: currentUser } } }) },
@@ -349,9 +361,9 @@ function seedOldAccount() {
     series: [{ id: 'ser1', owner_id: OWNER, name: 'Empyrean' }],
     series_entries: [
       // A LIVE slot (removed_at null) — must NOT be exported; it is derived and reconciles itself.
-      { id: 'se-live', series_id: 'ser1', owner_id: OWNER, position: 1, title: 'Fourth Wing', author: 'Rebecca Yarros', label: null, source: 'hardcover', book_id: 'book-a', user_edited: false, removed_at: null },
+      { id: 'se-live', series_id: 'ser1', owner_id: OWNER, position: 1, title: 'Fourth Wing', author: 'Rebecca Yarros', label: null, source: 'hardcover', book_id: 'book-a', user_edited: false, removed_at: null, is_primary: true, membership_claim: { origin: 'reader', source: 'series_review' }, position_claim: { origin: 'corpus', source: 'hardcover' } },
       // A TOMBSTONE — the reader deleted this slot and a refresh must never resurrect it.
-      { id: 'se-dead', series_id: 'ser1', owner_id: OWNER, position: 3, title: 'Onyx Storm', author: 'Rebecca Yarros', label: 'Book 3', source: 'hardcover', book_id: null, user_edited: true, removed_at: '2026-07-01T10:00:00.000Z' },
+      { id: 'se-dead', series_id: 'ser1', owner_id: OWNER, position: 3, title: 'Onyx Storm', author: 'Rebecca Yarros', label: 'Book 3', source: 'hardcover', book_id: null, user_edited: true, removed_at: '2026-07-01T10:00:00.000Z', is_primary: false, membership_claim: { origin: 'reader', source: 'series_remove' }, position_claim: { origin: 'unknown' } },
     ],
     trope_suggestions: [
       // OPEN — a pending question, not a decision; must NOT travel.
@@ -566,12 +578,15 @@ describe('backup round trip — the data v4 dropped on the floor', () => {
     expect(db.book_tropes.length).toBe(tropesAfterFirst * 2) // second set of books, still 1:1
     expect(db.author_follows).toHaveLength(2)
 
-    // TOMBSTONES DO NOT DOUBLE. Unlike the join tables, series_entries has a synthetic PK and the
-    // parent series is resolved BY NAME rather than recreated, so the second restore used to append
-    // a byte-identical second tombstone to the same series at the same position.
-    expect(db.series_entries).toHaveLength(1)
-    const slots = db.series_entries.map((r) => `${str(r, 'series_id')}@${r.position}`)
-    expect(new Set(slots).size).toBe(slots.length)
+    // Each restored book keeps a live membership. The negative ghost tombstone remains one refusal,
+    // and the second live copy appends rather than colliding with the first copy's position.
+    expect(db.series_entries).toHaveLength(3)
+    const dead = db.series_entries.filter((row) => !!row.removed_at)
+    expect(dead).toHaveLength(1)
+    const livePositions = db.series_entries
+      .filter((row) => !row.removed_at)
+      .map((row) => `${str(row, 'series_id')}@${row.position}`)
+    expect(new Set(livePositions).size).toBe(livePositions.length)
     expect(db.series).toHaveLength(1) // and the parent series was reused, not duplicated
 
     // Dismissals DO get a row per restored book copy — that is the same additive semantics as
@@ -583,7 +598,7 @@ describe('backup round trip — the data v4 dropped on the floor', () => {
   })
 
   it('a tombstone is not added beside a LIVE slot the account already has at that position', async () => {
-    const json = await buildBackup()
+    const parsed = JSON.parse(await buildBackup()) as Record<string, unknown>
     wipeToFreshAccount()
     // The new account re-added the book the backup says was removed — a later decision than the
     // backup's, so it must win.
@@ -593,7 +608,7 @@ describe('backup round trip — the data v4 dropped on the floor', () => {
       title: 'Onyx Storm', author: 'Rebecca Yarros', book_id: 'some-book', user_edited: false, removed_at: null,
     })
 
-    const result = await restoreBackup(json)
+    const result = await restoreBackup(legacySeriesBackup(parsed))
 
     expect(result.tombstones).toBe(0)
     expect(db.series_entries).toHaveLength(1)
@@ -605,7 +620,7 @@ describe('backup round trip — the data v4 dropped on the floor', () => {
     parsed.series_tombstones = [parsed.series_tombstones[0], parsed.series_tombstones[0]]
     wipeToFreshAccount()
 
-    const result = await restoreBackup(handMade(parsed))
+    const result = await restoreBackup(legacySeriesBackup(parsed as Record<string, unknown>))
 
     expect(result.tombstones).toBe(1)
     expect(db.series_entries).toHaveLength(1)
@@ -621,7 +636,7 @@ describe('backup round trip — the data v4 dropped on the floor', () => {
     wipeToFreshAccount()
 
     // A genuine v4 file predates the counts manifest entirely — see handMade.
-    const result = await restoreBackup(handMade(v4))
+    const result = await restoreBackup(legacySeriesBackup(v4))
 
     expect(result.books).toBe(2)
     expect(result).toMatchObject({ tropes: 0, moods: 0, follows: 0 })
@@ -652,7 +667,7 @@ describe('backup round trip — the data v4 dropped on the floor', () => {
     ]
     wipeToFreshAccount()
 
-    const result = await restoreBackup(handMade(parsed))
+    const result = await restoreBackup(legacySeriesBackup(parsed as Record<string, unknown>))
 
     // Everything else lands intact…
     expect(result.books).toBe(2)
@@ -691,7 +706,7 @@ describe('backup round trip — the data v4 dropped on the floor', () => {
     }))
     wipeToFreshAccount()
 
-    const result = await restoreBackup(handMade(parsed))
+    const result = await restoreBackup(legacySeriesBackup(parsed as Record<string, unknown>))
 
     // It restores rather than throwing — the archive predates the drop and must still be readable.
     expect(result.books).toBe(2)
@@ -709,14 +724,14 @@ describe('backup round trip — the data v4 dropped on the floor', () => {
     }
   })
 
-  it('exports v6 with the new sections keyed by book id', async () => {
+  it('exports v7 with taxonomy and complete structured series authority', async () => {
     const parsed = JSON.parse(await buildBackup()) as {
       v: number
       tropes: Record<string, { name: string; emphasis: string }[]>
       moods: Record<string, { name: string }[]>
       author_follows: { author_name: string; state: string }[]
     }
-    expect(parsed.v).toBe(6)
+    expect(parsed.v).toBe(7)
     expect((parsed.tropes['book-a'] ?? []).map((t) => t.name).sort()).toEqual(['Dragons With Opinions', 'Enemies to Lovers'])
     expect(parsed.moods['book-a']).toEqual([{ name: 'Devastating' }])
     expect(parsed.author_follows).toHaveLength(2)
@@ -824,14 +839,16 @@ describe('backup coverage matches the ownedTables registry', () => {
 
 // ── the refusals: negative space that must survive a round trip ──
 describe('backup round trip — the reader’s refusals', () => {
-  it('a removed series slot stays removed, and a live slot is not exported', async () => {
+  it('a removed slot stays removed while confirmed live authority also survives', async () => {
     const parsed = JSON.parse(await buildBackup()) as {
       series_tombstones: { series: string; position: number; title: string; removed_at: string }[]
+      series_entries: BackupSeriesEntryRow[]
     }
-    // Only the tombstone travels. Exporting the live slot would restore a DERIVED row as if it
-    // were authored, and the series shelf rebuilds those on its own.
+    // The portable refusal remains for old restores; v7 additionally carries the complete
+    // structured relation because confirmed primary/secondary membership is no longer derived.
     expect(parsed.series_tombstones).toHaveLength(1)
     expect(parsed.series_tombstones[0]).toMatchObject({ series: 'Empyrean', position: 3, title: 'Onyx Storm' })
+    expect(parsed.series_entries).toHaveLength(2)
 
     wipeToFreshAccount()
     const result = await restoreBackup(handMade(parsed))
@@ -842,8 +859,8 @@ describe('backup round trip — the reader’s refusals', () => {
     expect(series).toBeDefined()
     expect(str(series, 'owner_id')).toBe(NEW_OWNER)
 
-    expect(db.series_entries).toHaveLength(1)
-    const dead = db.series_entries[0]!
+    expect(db.series_entries).toHaveLength(2)
+    const dead = db.series_entries.find((entry) => !!entry.removed_at)!
     expect(str(dead, 'series_id')).toBe(str(series, 'id'))
     expect(dead.removed_at).toBe('2026-07-01T10:00:00.000Z')
     // A tombstone is by definition an unlinked slot the reader touched.
@@ -891,7 +908,9 @@ describe('backup round trip — the reader’s refusals', () => {
     parsed.series_tombstones = [{ series: '   ' } as { series: string }]
     wipeToFreshAccount()
 
-    const result = await restoreBackup(handMade(parsed))
+    const result = await restoreBackup(
+      legacySeriesBackup(parsed as Record<string, unknown>),
+    )
 
     expect(result.tombstones).toBe(0)
     expect(db.series_entries).toHaveLength(0)

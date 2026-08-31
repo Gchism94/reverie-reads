@@ -73,7 +73,7 @@ describe('usePerformMerge p_fields', () => {
     const { result } = renderHook(() => usePerformMerge(), { wrapper })
     result.current.mutate({ primary: primary(), loser: loser() })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(supabase.rpc).toHaveBeenCalledWith('merge_books', {
+    expect(supabase.rpc).toHaveBeenCalledWith('merge_books_authoritative', {
       p_primary: 'p',
       p_loser: 'l',
       p_fields: toBookRow(applyBookMergePicks(primary(), loser())),

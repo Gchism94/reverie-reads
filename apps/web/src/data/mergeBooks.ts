@@ -28,7 +28,7 @@ export function usePerformMerge() {
       picks?: MergeFieldPicks
     }): Promise<void> => {
       const merged = applyBookMergePicks(primary, loser, picks)
-      const { error } = await supabase.rpc('merge_books', {
+      const { error } = await supabase.rpc('merge_books_authoritative', {
         p_primary: primary.id,
         p_loser: loser.id,
         p_fields: toBookRow(merged),

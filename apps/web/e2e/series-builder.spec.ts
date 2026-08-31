@@ -15,9 +15,8 @@ import { ok, okUser } from './support/ok'
 //
 // PERSISTENCE IS ASSERTED ACROSS A RELOAD, not against the in-memory list. The list re-renders from
 // the mutation's own cache invalidation, so reading it back proves the optimistic path and nothing
-// about the write. Only a reload proves the position reached Postgres — and reconciliation runs on
-// that reload, so it also proves the new order survives being reconciled rather than being quietly
-// re-seeded. The mutation-check for this is in the completion report.
+// about the write. Only a reload proves the position reached Postgres. Series reads are deliberately
+// side-effect-free in Phase 2B, so the reload must reproduce structured authority without seeding.
 
 const SUPABASE_URL = 'http://127.0.0.1:55321'
 const ANON =
@@ -129,6 +128,7 @@ async function seed(c: Client, series: string, titles: string[]) {
         author_first: 'Nell',
         author_last: 'Marrow',
         series,
+        series_claim: { origin: 'reader', source: 'e2e_fixture' },
         position: i + 1,
         status: 'ongoing',
         genre: 'fantasy',
@@ -222,9 +222,8 @@ test('a drag reorders the series and the new order persists across a reload', as
       .poll(async () => dbOrder(c, ALPHA), { timeout: 20_000 })
       .toEqual(['Alpha Three', 'Alpha One', 'Alpha Two'])
 
-    // The reload is the assertion: it re-reads from Postgres AND re-runs reconciliation, so a
-    // position that only ever existed in the query cache fails here, and so would one that
-    // reconciliation re-seeded over.
+    // The reload is the assertion: it re-reads from Postgres, so a position that only ever existed
+    // in the query cache fails here.
     await page.reload()
     await openIndex(page)
     await expand(page, ALPHA, 3)
@@ -270,8 +269,8 @@ test('a ghost slot reorders alongside real books and keeps its new place', async
   await stubBackends(page)
   try {
     await signIn(page, c.session)
-    // Materialize the entries through the series page, then add the ghost there — the index arranges
-    // slots, it does not create them.
+    // Trusted fixture writes materialize entries; add the ghost on the full page because the index
+    // arranges slots and does not create them.
     await page.goto(`/series/${encodeURIComponent(ALPHA)}`)
     await expect(page.locator('ol li').first()).toBeVisible({ timeout: 20_000 })
     const prompts = ['Alpha Ghost', 'Nell Marrow']

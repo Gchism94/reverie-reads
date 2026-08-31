@@ -7,7 +7,7 @@
 // orders (publication vs chronological) are deferred; an `order_variant` dimension would attach
 // to the series-membership relation later.
 
-import type { Book } from './types'
+import type { Book, SeriesClaim } from './types'
 import { isBookRead } from './filters'
 import { isPossessed } from './ownership'
 import { normalizeName } from './contributors'
@@ -36,6 +36,12 @@ export interface SeriesEntry {
    * to source correction: opening a series page was enough to pin it forever.
    */
   userEdited: boolean
+  /** The one membership projected to the legacy Book.series fields. Ghosts are never primary. */
+  isPrimary?: boolean
+  /** Independent evidence that this book belongs to this series. */
+  membershipClaim?: SeriesClaim
+  /** Independent evidence for the numeric reading-order position. */
+  positionClaim?: SeriesClaim
 }
 
 /** Entries in reading order (position, then title for stable ties). */

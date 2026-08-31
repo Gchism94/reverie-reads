@@ -48,10 +48,8 @@ insert into public.series (id, owner_id, name)
 values ('cccccccc-3333-3333-3333-333333333333', 'aaaaaaaa-1111-1111-1111-111111111111', 'Test Series');
 
 -- Book One   → the happy path.       Book Two → the non-owner refusal.
--- Book Three → the forced failure.   B Book   → owned by the OTHER reader, linked from an entry the
---                                               first reader owns. Legal: series_entries' insert
---                                               policy constrains the entry's owner and its parent
---                                               series, and says nothing about book_id's owner.
+-- Book Three → the forced failure.   B Book   → owned by the OTHER reader, used to prove a
+--                                               cross-owner link is now structurally impossible.
 insert into public.books (id, owner_id, title, series)
 values
   ('dddddddd-0000-0000-0000-000000000001', 'aaaaaaaa-1111-1111-1111-111111111111', 'Book One', 'Test Series'),
@@ -65,8 +63,7 @@ values
   ('eeeeeeee-0000-0000-0000-000000000001', 'cccccccc-3333-3333-3333-333333333333', 'aaaaaaaa-1111-1111-1111-111111111111', 1, 'Book One', 'A Author', 'dddddddd-0000-0000-0000-000000000001', false),
   ('eeeeeeee-0000-0000-0000-000000000002', 'cccccccc-3333-3333-3333-333333333333', 'aaaaaaaa-1111-1111-1111-111111111111', 2, 'Book Two', 'A Author', 'dddddddd-0000-0000-0000-000000000002', false),
   ('eeeeeeee-0000-0000-0000-000000000003', 'cccccccc-3333-3333-3333-333333333333', 'aaaaaaaa-1111-1111-1111-111111111111', 3, 'Book Three', 'A Author', 'dddddddd-0000-0000-0000-000000000003', false),
-  ('eeeeeeee-0000-0000-0000-000000000004', 'cccccccc-3333-3333-3333-333333333333', 'aaaaaaaa-1111-1111-1111-111111111111', 4, 'Ghost Slot', 'A Author', null, false),
-  ('eeeeeeee-0000-0000-0000-000000000005', 'cccccccc-3333-3333-3333-333333333333', 'aaaaaaaa-1111-1111-1111-111111111111', 5, 'B Book', 'B Author', 'dddddddd-0000-0000-0000-000000000005', false);
+  ('eeeeeeee-0000-0000-0000-000000000004', 'cccccccc-3333-3333-3333-333333333333', 'aaaaaaaa-1111-1111-1111-111111111111', 4, 'Ghost Slot', 'A Author', null, false);
 
 -- ── The function's shape. security definer is the reason the ownership checks are the only boundary
 --    that exists here, so a later `create or replace` dropping it has to fail on this line. ──
@@ -147,17 +144,19 @@ select is(
   (select series from public.books where id = 'dddddddd-0000-0000-0000-000000000002'),
   'Test Series', 'the refused book still names the series — no second write applied');
 
--- ── Guard 2b: an entry the caller owns, linking a book they do NOT own, is refused outright ──
-set local role authenticated;
-select set_config('request.jwt.claims',
-  '{"sub":"aaaaaaaa-1111-1111-1111-111111111111","role":"authenticated"}', true);
+-- ── Guard 2b: the invalid cross-owner relation is refused before an RPC can ever see it ──
 select throws_ok(
-  $$ select public.remove_series_entry('eeeeeeee-0000-0000-0000-000000000005') $$,
-  null, 'not owner of linked book', 'an entry linking someone else''s book is refused');
-reset role;
-select ok(
-  (select removed_at is null from public.series_entries where id = 'eeeeeeee-0000-0000-0000-000000000005'),
-  'the cross-owner entry is still live — no tombstone applied');
+  $$insert into public.series_entries
+      (id, series_id, owner_id, position, title, author, book_id, user_edited)
+    values
+      ('eeeeeeee-0000-0000-0000-000000000005', 'cccccccc-3333-3333-3333-333333333333',
+       'aaaaaaaa-1111-1111-1111-111111111111', 5, 'B Book', 'B Author',
+       'dddddddd-0000-0000-0000-000000000005', false)$$,
+  '23514', null, 'an entry cannot link someone else''s book');
+select is(
+  (select count(*)::int from public.series_entries
+   where id = 'eeeeeeee-0000-0000-0000-000000000005'),
+  0, 'the invalid cross-owner entry does not exist');
 select is(
   (select series from public.books where id = 'dddddddd-0000-0000-0000-000000000005'),
   'Test Series', 'the other reader''s book is untouched');

@@ -142,7 +142,7 @@ describe('the Tier 3 queue, rendered', () => {
     await userEvent.click(screen.getByRole('radio', { name: /^ACOTAR/ }))
     await userEvent.click(screen.getByRole('button', { name: 'Same series — merge' }))
     await waitFor(() => {
-      const call = rpcCalls.find((c) => c.fn === 'merge_series')
+      const call = rpcCalls.find((c) => c.fn === 'merge_series_authoritative')
       expect(call).toBeDefined()
       expect(call!.args.p_primary).toBe('s-a')
       expect(call!.args.p_loser).toBe('s-b')
@@ -159,7 +159,7 @@ describe('Tier 2, from the same mount', () => {
     // The anchor for the silence claim is the rpc call itself: once the merge has provably fired,
     // an empty container means "silent", not "not loaded".
     await waitFor(() => {
-      const call = rpcCalls.find((c) => c.fn === 'merge_series')
+      const call = rpcCalls.find((c) => c.fn === 'merge_series_authoritative')
       expect(call).toBeDefined()
       expect(call!.args.p_primary).toBe('s-f1')
       expect(call!.args.p_loser).toBe('s-f2')
@@ -170,7 +170,7 @@ describe('Tier 2, from the same mount', () => {
     // prop never changes, so the candidate is still there). Wait for that refetch to have
     // OBSERVABLY happened, then assert the call count held.
     await waitFor(() => expect(rulingSelects).toBeGreaterThanOrEqual(2))
-    expect(rpcCalls.filter((c) => c.fn === 'merge_series')).toHaveLength(1)
+    expect(rpcCalls.filter((c) => c.fn === 'merge_series_authoritative')).toHaveLength(1)
   })
 
   it('a ruling on the exact-variant pair blocks even the automatic merge', async () => {

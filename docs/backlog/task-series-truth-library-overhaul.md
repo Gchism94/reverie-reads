@@ -9,8 +9,11 @@ Status: **Phase 2A merged and live on 2026-08-30** (`a40464d`, migration
 provenance, corrected writers, and fail-closed legacy writes. It inferred or rewrote no historical
 series value.
 
-The next public slice is **Phase 2B: structured membership authority and multiple-membership
-semantics**. The connected-series universe blueprint is recorded in
+**Phase 2B is implemented on `codex/series-truth-phase-2b-membership`, pending review and
+rollout.** It makes structured rows authoritative, adds explicit primary/secondary membership,
+separates membership/order provenance, removes write-on-read admission, carries the model through
+merge and backup/restore, and adds the narrow public effective-Pro host seam. It deliberately
+classifies no historical row. The connected-series universe blueprint is recorded in
 `docs/tasks/task-series-universes.md`; its Pro implementation is sequenced after Phase 2B and after
 the private subscription/entitlement seam exists. Designing the universe now does not authorize a
 historical series backfill or move premium implementation into this public repository.
@@ -68,6 +71,12 @@ matching `a40464dcba97` build.
 - Bring conflicting or low-confidence claims to a review queue rather than auto-assigning them.
 
 ### Phase 2B — structured membership authority
+
+Implementation status: **complete in the Phase 2B follow-up branch; production pending.** Database
+coverage exercises trusted forward admission, unknown-history review, multiple membership,
+primary selection/removal, scalar projection repair, merge preservation, owner boundaries, and
+anonymous refusal. The app exposes primary/secondary membership coherently on series and book
+details, and backup v7 preserves the full structured graph.
 
 - Make `series` + `series_entries` the reliable personal membership authority; a page view must not
   manufacture a structured claim from an unproven compatibility string.

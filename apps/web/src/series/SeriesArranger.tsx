@@ -246,10 +246,17 @@ export function SeriesArranger({
     placeAt(r.from, r.to)
   }
 
-  if (isLoading || !detail)
+  if (isLoading)
     return (
       <p className="px-2 py-3 text-[13px] text-muted" role="status">
         Opening {name}…
+      </p>
+    )
+
+  if (!detail || detail.unreviewed.length > 0)
+    return (
+      <p className="px-2 py-3 text-[13px] text-muted">
+        Review this series on its full page before arranging its order.
       </p>
     )
 

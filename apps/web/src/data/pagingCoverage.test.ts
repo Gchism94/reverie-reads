@@ -69,7 +69,6 @@ const BOUNDED_BY_PARENT: Record<string, string> = {
   'reviews.ts:reviews': 'one work’s reviews',
   'listItems.ts:list_items': 'one book’s shelf memberships — bounded by shelf count, not library size',
   'series.ts:series_entries': 'one series’ slots',
-  'series.ts:books': 'one series’ books',
   'clubs.ts:club_members': 'one club’s members',
   'clubs.ts:club_comments': 'one club’s comments',
   'tropes.ts:trope_suggestions': 'one book’s suggestions',
