@@ -17,7 +17,7 @@ describe('CorpusCompleteControl', () => {
     )
 
     const button = screen.getByRole('button', {
-      name: '✨ Complete shared corpus covers & info',
+      name: '✨ Complete shared corpus & series info',
     })
     expect(button).toBeEnabled()
     fireEvent.click(button)

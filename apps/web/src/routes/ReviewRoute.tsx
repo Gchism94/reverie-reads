@@ -8,6 +8,12 @@ import { CoverImage } from '../components/CoverImage'
 import { CoverPicker } from '../components/CoverPicker'
 import { useVoice } from '../skin/labels'
 import { Surface } from '../components/Surface'
+import {
+  useCorpusAdminStatus,
+  useCorpusSeriesSuggestions,
+  useReviewCorpusSeriesSuggestion,
+  type CorpusSeriesSuggestion,
+} from '../data/enrichCorpus'
 
 const REASON_LABEL: Record<NeedsLookReason, string> = {
   missing_cover: 'No cover',
@@ -109,6 +115,77 @@ function ListBucket({ title, items }: { title: string; items: NeedsLookItem[] })
   )
 }
 
+export function CorpusSeriesReview({ suggestions }: { suggestions: CorpusSeriesSuggestion[] }) {
+  const review = useReviewCorpusSeriesSuggestion()
+  if (!suggestions.length) return null
+  return (
+    <section className="mt-6">
+      <h2
+        className="text-[15px] font-semibold text-ink"
+        style={{ fontFamily: 'var(--font-display)' }}
+      >
+        Corpus series matches <span className="text-muted">· {suggestions.length}</span>
+      </h2>
+      <p className="mb-2 text-[12px] leading-relaxed text-muted">
+        These catalog matches were not certain enough to change shared series information. Accept
+        only when the proposed series and position belong to this work.
+      </p>
+      <ul className="space-y-2">
+        {suggestions.map((suggestion) => (
+          <Surface as="li" key={suggestion.id} tone="card" radius="card" pad={3}>
+            <div className="break-words text-[13.5px] font-semibold text-ink">
+              {suggestion.title}
+            </div>
+            {suggestion.author && (
+              <div className="break-words text-[12px] text-muted">{suggestion.author}</div>
+            )}
+            <div className="mt-2 grid gap-1 text-[12.5px] sm:grid-cols-2 sm:gap-3">
+              <div>
+                <span className="text-muted">Current: </span>
+                <span className="text-ink">
+                  {suggestion.currentSeries || 'No series set'}
+                  {!suggestion.currentSeries || suggestion.currentPosition == null
+                    ? ''
+                    : ` · #${suggestion.currentPosition}`}
+                </span>
+              </div>
+              <div>
+                <span className="text-muted">Proposed: </span>
+                <span className="text-ink">
+                  {suggestion.proposedSeries}
+                  {suggestion.proposedPosition == null ? '' : ` · #${suggestion.proposedPosition}`}
+                </span>
+              </div>
+            </div>
+            <div className="mt-1 text-[11px] text-muted">
+              {suggestion.source} · {suggestion.confidence} confidence
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={review.isPending}
+                onClick={() => review.mutate({ suggestionId: suggestion.id, decision: 'accept' })}
+                className="skin-control min-h-11 px-3 py-2 text-[12.5px] font-semibold disabled:opacity-50"
+                style={{ background: 'var(--accent-fill)', color: 'var(--on-primary)' }}
+              >
+                Accept shared series
+              </button>
+              <button
+                type="button"
+                disabled={review.isPending}
+                onClick={() => review.mutate({ suggestionId: suggestion.id, decision: 'dismiss' })}
+                className="skin-control min-h-11 border border-line px-3 py-2 text-[12.5px] font-semibold text-ink disabled:opacity-50"
+              >
+                Dismiss
+              </button>
+            </div>
+          </Surface>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
 function ReviewScreen() {
   const voice = useVoice()
   const model = useImportReviewModel()
@@ -116,18 +193,20 @@ function ReviewScreen() {
   const byId = useMemo(() => new Map((books ?? []).map((b) => [b.id, b])), [books])
   const [dismissed, setDismissed] = useState<ReadonlySet<string>>(new Set())
   const dismiss = (ref: string) => setDismissed((prev) => new Set(prev).add(ref))
+  const { data: isCorpusAdmin = false } = useCorpusAdminStatus()
+  const { data: seriesSuggestions = [] } = useCorpusSeriesSuggestions(isCorpusAdmin)
 
-  if (!model) {
+  if (!model && !seriesSuggestions.length) {
     return (
       <section className="mx-auto w-full max-w-2xl px-4 py-10 text-center sm:px-6">
         <h1
           className="text-[22px] italic text-ink"
           style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
         >
-          Import review
+          Review
         </h1>
         <p className="mt-2 text-[13px] text-muted">
-          Nothing to review yet. Import a library export to see what came in and what needs a look.
+          Nothing needs review right now. Import a library export to inspect its uncertain matches.
         </p>
         <Link
           to="/settings"
@@ -136,6 +215,20 @@ function ReviewScreen() {
         >
           Go to import
         </Link>
+      </section>
+    )
+  }
+
+  if (!model) {
+    return (
+      <section className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6">
+        <h1
+          className="text-[22px] italic text-ink"
+          style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+        >
+          Administrator review
+        </h1>
+        <CorpusSeriesReview suggestions={seriesSuggestions} />
       </section>
     )
   }
@@ -155,6 +248,8 @@ function ReviewScreen() {
       <p className="mb-4 text-[13px] text-muted">
         What came in, and what needs a look. Covers fill in as enrichment runs.
       </p>
+
+      <CorpusSeriesReview suggestions={seriesSuggestions} />
 
       {/* summary */}
       <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">

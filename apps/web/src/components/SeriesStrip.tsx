@@ -1,7 +1,15 @@
 import { useMemo } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
-import { isPossessed, sortEntries, stateSuffix, type Book, type SeriesEntry } from '@reverie/core'
+import {
+  claimedSeriesLength,
+  displayTotal,
+  isPossessed,
+  sortEntries,
+  stateSuffix,
+  type Book,
+  type SeriesEntry,
+} from '@reverie/core'
 import { CoverImage } from './CoverImage'
 import { fetchBookSeriesMemberships, fetchSeriesEntries } from '../data/series'
 import { useBooks } from '../data/books'
@@ -24,26 +32,36 @@ export function SeriesStrip({ book }: { book: Book }) {
     queryFn: () => fetchBookSeriesMemberships(book.id),
   })
 
+  const libraryMembers = useMemo(
+    () => (books ?? []).filter((candidate) => candidate.series === book.series),
+    [books, book.series],
+  )
+
   const entries: SeriesEntry[] = useMemo(() => {
     if (fetched?.length) return fetched
     // no series row yet — the library's own copies stand in
     return sortEntries(
-      (books ?? [])
-        .filter((b) => b.series === book.series)
-        .map((b) => ({
-          id: b.id,
-          position: typeof b.position === 'number' ? b.position : 0,
-          label: null,
-          title: b.title,
-          author: '',
-          bookId: b.id,
-          source: 'manual' as const,
-          userEdited: true,
-        })),
+      libraryMembers.map((b) => ({
+        id: b.id,
+        position: typeof b.position === 'number' ? b.position : 0,
+        label: null,
+        title: b.title,
+        author: '',
+        bookId: b.id,
+        source: 'manual' as const,
+        userEdited: true,
+      })),
     )
-  }, [fetched, books, book.series])
+  }, [fetched, libraryMembers])
 
   const byId = new Map((books ?? []).map((b) => [b.id, b]))
+  // One structured row means one slot is known; it does not mean the catalog is complete. Before
+  // this guard, one owned book from an otherwise-unseeded series rendered “#3 of 1”.
+  const total = displayTotal(
+    claimedSeriesLength(libraryMembers),
+    fetched?.length ? fetched.length : null,
+    libraryMembers.length,
+  )
   const idx = entries.findIndex((e) => e.bookId === book.id)
   const prev = idx > 0 ? entries[idx - 1] : undefined
   const next = idx >= 0 && idx < entries.length - 1 ? entries[idx + 1] : undefined
@@ -114,7 +132,7 @@ export function SeriesStrip({ book }: { book: Book }) {
           </span>
           <span className="block text-[12px] text-muted">
             {posText}
-            {entries.length ? `${posText ? ' of ' : ''}${entries.length}` : ''} · primary series →
+            {total ? `${posText ? ' of ' : ''}${total}` : ''} · primary series →
           </span>
         </span>
         {neighbour(next, 'next')}

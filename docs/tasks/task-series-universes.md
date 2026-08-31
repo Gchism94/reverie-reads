@@ -310,6 +310,9 @@ Keep `data/fixtures/library_connected_series.csv` as the standing representative
    contract the public app needs. **The public positive-proof combiner and provider registration
    seam are implemented; subscription selection and server-side premium-write enforcement remain
    private work.**
+   The shared series-metadata seeder is implemented separately in
+   `docs/tasks/task-series-metadata-seeder.md`; universe work may consume reviewed structured series
+   truth but must not bypass its personal/shared adoption boundary.
 3. **Private universe model.** Add the four owner-scoped relations and RPCs, with model and database
    tests. Additive schema only; no historical backfill.
 4. **Private creation/editor and import review.** Ship behind entitlement, test Chrome desktop and

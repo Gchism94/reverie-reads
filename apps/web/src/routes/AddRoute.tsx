@@ -12,6 +12,7 @@ import {
   workKeyOf,
   type Book,
   type Contributor,
+  type Incoming,
   type Owned,
   type PossessionState,
   type SeriesClaim,
@@ -816,6 +817,51 @@ function AddForm({
   )
 }
 
+/**
+ * Preserve the catalog series evidence already returned by bulk search. The old inline mapper
+ * narrowed SearchResult through `hitOf` (which intentionally has no series fields), then wrote
+ * every result as standalone. A large bulk add consequently turned reliable Hardcover series
+ * names and positions into manual repair work.
+ */
+export function bulkIncomingFromSearch(
+  result: SearchResult,
+  skinGenre: string,
+  bulkSub: string,
+): Incoming {
+  const hit = hitOf(result)
+  const authorParts = (hit.authors[0] ?? '').trim().split(/\s+/)
+  const series = result.series?.trim() ?? ''
+  return {
+    title: hit.title,
+    first: authorParts.length > 1 ? (authorParts[0] ?? '') : '',
+    last: authorParts.length > 1 ? authorParts.slice(1).join(' ') : (authorParts[0] ?? ''),
+    series,
+    ...(series
+      ? {
+          seriesClaim: makeSeriesClaim('enrichment', `${result.source}_search`, {
+            confidence: 'high',
+          }),
+        }
+      : {}),
+    position: series ? (result.seriesPosition ?? '') : '',
+    status: series ? 'ongoing' : 'standalone',
+    genre: skinGenre,
+    subgenre: bulkSub,
+    subgenres: [bulkSub],
+    // Same bug as single Add (see save() above): this held the subgenre, not the genre.
+    genres: [skinGenre],
+    tags: [],
+    intensity: null,
+    darkness: null,
+    owned: { physical: 'paperback', ebook: false, audiobook: false },
+    cover: hit.cover,
+    isbn: hit.isbn,
+    readStatus: 'Unread',
+    source: 'Owned',
+    pub: parsePub(hit.pub),
+  }
+}
+
 function BulkAdd({ addToHousehold }: { addToHousehold: boolean }) {
   const intake = useIntake()
   const addPersonalBooksToHousehold = useAddPersonalBooksToHousehold()
@@ -840,31 +886,7 @@ function BulkAdd({ addToHousehold }: { addToHousehold: boolean }) {
       try {
         const top = (await searchCatalog(line))[0]
         if (!top) continue
-        const hit = hitOf(top)
-        const np = (hit.authors[0] ?? '').trim().split(/\s+/)
-        const res = await intake(
-          {
-            title: hit.title,
-            first: np.length > 1 ? (np[0] ?? '') : '',
-            last: np.length > 1 ? np.slice(1).join(' ') : (np[0] ?? ''),
-            status: 'standalone',
-            genre: skinGenre,
-            subgenre: bulkSub,
-            subgenres: [bulkSub],
-            // Same bug as single Add (see save() above): this held the subgenre, not the genre.
-            genres: [skinGenre],
-            tags: [],
-            intensity: null,
-            darkness: null,
-            owned: { physical: 'paperback', ebook: false, audiobook: false },
-            cover: hit.cover,
-            isbn: hit.isbn,
-            readStatus: 'Unread',
-            source: 'Owned',
-            pub: parsePub(hit.pub),
-          },
-          'add',
-        )
+        const res = await intake(bulkIncomingFromSearch(top, skinGenre, bulkSub), 'add')
         if (res.outcome === 'merged') merged++
         else added++
         if (res.bookId) bookIds.push(res.bookId)

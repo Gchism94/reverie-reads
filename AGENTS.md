@@ -119,6 +119,13 @@ wishlist` was the pre-#68 model and is long wrong. Format flags **suppress, neve
   until explicit review—opening a series page is always read-only and never creates, revives,
   orders, merges, or promotes anything. Removing a secondary leaves the primary intact; removing
   the primary clears the compatibility tuple and never guesses a replacement.
+- **Missing series metadata is unknown, never evidence of a one-book series.** Shared corpus series
+  discovery has its own state and recheck clock (`works.series_check_*`): a matched catalog record
+  that returns no series becomes `no_series`, not a standalone assertion. Only high-confidence
+  positive evidence may fill a blank; medium-confidence matches and every conflict wait in
+  `work_series_suggestions` for corpus-administrator review. Personal copies still adopt reviewed
+  shared series details explicitly. On reader surfaces, the count of currently known/owned entries
+  is not the series length—render “of N” only from an explicit length or additional canonical slots.
 - **`isBookRead` and `hasReadingHistory` disagree on DNF on purpose.** `isBookRead` feeds series
   progress, taste and stats, where an abandoned book must not count as read. `hasReadingHistory`
   adds DNF and feeds **visibility only** (`inDefaultLibrary`), so a book you started and gave up
