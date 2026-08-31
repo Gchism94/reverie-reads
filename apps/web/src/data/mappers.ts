@@ -5,6 +5,7 @@ import {
   sortBookTropes,
   sortBookMoods,
   normalizeSeriesStatus,
+  normalizeSeriesClaim,
   toFirstLast,
   type Book,
   type Contributor,
@@ -45,6 +46,7 @@ export function toBook(row: BookRow): Book {
     position: row.position ?? '',
     seriesCount: row.series_count,
     seriesUserChosen: row.series_user_chosen || undefined,
+    seriesClaim: normalizeSeriesClaim(row.series_claim),
     // Legacy spellings ('Standalone'/'Series'/'Complete') normalize until the migration lands.
     status: normalizeSeriesStatus(row.status, !!row.series),
     // '' = no primary chosen — the edit form prompts; nothing defaults to romance anymore.
@@ -123,6 +125,7 @@ export function toBookRow(patch: Partial<Book>): Partial<BookRow> {
   if (patch.position !== undefined) row.position = patch.position === '' ? null : patch.position
   if (patch.seriesCount !== undefined) row.series_count = patch.seriesCount
   if (patch.seriesUserChosen !== undefined) row.series_user_chosen = patch.seriesUserChosen
+  if (patch.seriesClaim !== undefined) row.series_claim = patch.seriesClaim
   if (patch.status !== undefined) row.status = patch.status
   if (patch.genre !== undefined) row.genre = patch.genre // '' = no primary chosen (column is NOT NULL)
   // subgenres[] and the denormalized-first `subgenre` stay in sync whichever one a writer sends.

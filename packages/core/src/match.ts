@@ -374,7 +374,20 @@ const str =
 export const FILL_BLANK_FIELDS: readonly FillBlankField[] = [
   text('first', 'author first', str('first')),
   text('last', 'author last', str('last')),
-  text('series', 'series', str('series')),
+  {
+    key: 'series',
+    label: 'series',
+    existingBlank: (b) => !b.series,
+    incomingHas: (inc) => !!inc.series,
+    apply: (patch, inc) => {
+      patch.series = inc.series
+      // The claim travels with the value that won. Omitting this made manual Add, explicit import,
+      // and enrichment indistinguishable as soon as they filled an existing blank row.
+      if (inc.seriesClaim) patch.seriesClaim = inc.seriesClaim
+      if (inc.seriesUserChosen !== undefined) patch.seriesUserChosen = inc.seriesUserChosen
+    },
+    show: str('series'),
+  },
   text('genre', 'genre', str('genre')),
   text('subgenre', 'subgenre', str('subgenre')),
   text('format', 'format', str('format')),

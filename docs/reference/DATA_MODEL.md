@@ -48,6 +48,13 @@ comments. Reproduced here with the parts that most often get guessed wrong calle
   series,
   position: number | '',       // fractional positions exist (3.5); '' = unset
   seriesCount: number | null,  // null => "length not set" (drives the "None set" filter)
+  seriesUserChosen?: boolean,  // compatibility reader-gesture guard; provenance below is richer
+  seriesClaim?: {              // current source of the personal series value (including a clear)
+    origin: 'unknown' | 'reader' | 'import' | 'enrichment' | 'corpus',
+    source?: string, sourceRef?: string,
+    confidence?: 'high' | 'medium' | 'low' | 'none',
+    at?: string
+  },
   status: SeriesStatus,        // the SERIES' publication status — NOT the reader's position:
                                // 'standalone' | 'ongoing' | 'completed' | 'on_hiatus'
                                // | 'cancelled' | 'interconnected_standalone'
@@ -206,6 +213,8 @@ profiles            (id pk = auth user, display_name, created_at,
 books               (id pk, owner_id fk→profiles, corpus_work_id fk→works not null, title,
                      author_first, author_last, authors_display,
                      series, position numeric, series_count smallint,
+                     series_user_chosen boolean, series_claim jsonb not null,
+                                          -- current field provenance; old rows are origin=unknown
                      status text,          -- books_status_check: the 7 SeriesStatus values
                      genre text not null default 'romance',
                      subgenre text, subgenres text[] not null default '{}',

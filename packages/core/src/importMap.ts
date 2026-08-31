@@ -13,6 +13,7 @@ import { cleanIsbn, type Incoming } from './match'
 import { emptyOwned, possessionPatch } from './ownership'
 import { contributorsFromAuthors, fromFirstLast } from './contributors'
 import { normalizeImportGenres } from './genreNormalize'
+import { makeSeriesClaim } from './seriesClaim'
 
 /** Which headers feed which field. Each entry is a list of accepted header names (case-insensitive). */
 export interface ColumnProfile {
@@ -309,6 +310,15 @@ export function rowToImported(row: string[], idx: Record<string, number>): Impor
     last,
     contributors,
     series: seriesName,
+    ...(seriesName
+      ? {
+          seriesClaim: makeSeriesClaim(
+            'import',
+            seriesColumn ? 'series_column' : 'title_parenthetical',
+            { confidence: 'high' },
+          ),
+        }
+      : {}),
     position,
     status: seriesName ? 'ongoing' : 'standalone',
     genre: genre ?? undefined,

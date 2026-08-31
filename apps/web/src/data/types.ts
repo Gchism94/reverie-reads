@@ -12,6 +12,8 @@ export interface BookRow {
   position: number | null
   series_count: number | null
   series_user_chosen: boolean
+  /** Optional during the migration/web rolling window; the mapper fails closed to unknown. */
+  series_claim?: unknown
   status: string | null
   genre: string | null
   subgenre: string | null

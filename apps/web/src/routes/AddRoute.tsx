@@ -3,6 +3,7 @@ import { createRoute, Link, useNavigate } from '@tanstack/react-router'
 import {
   contributorsFromAuthors,
   formatAuthors,
+  makeSeriesClaim,
   parseNumericField,
   possessionPatch,
   SERIES_POSITION,
@@ -13,6 +14,7 @@ import {
   type Contributor,
   type Owned,
   type PossessionState,
+  type SeriesClaim,
 } from '@reverie/core'
 import { useQueryClient } from '@tanstack/react-query'
 import { rootRoute } from './RootRoute'
@@ -87,6 +89,7 @@ interface Picked extends Partial<SearchHit> {
   series?: string
   position?: string
   genre?: string
+  seriesClaim?: SeriesClaim
 }
 
 /** How many catalog results Add shows. */
@@ -128,6 +131,9 @@ const pickedFromWork = (w: WorkRow, result: SearchResult): Picked => ({
   ...workToHit(w, resultIsbn(result)),
   source: result.source,
   series: w.series ?? '',
+  ...(w.series
+    ? { seriesClaim: makeSeriesClaim('corpus', 'catalog_prefill', { sourceRef: w.id }) }
+    : {}),
   position: w.position == null ? '' : String(w.position),
   genre: w.genre ?? '',
 })
@@ -308,6 +314,9 @@ function AddForm({
   // Same tracking for series: typed -> seriesUserChosen true; left as the enrichment-prefilled
   // value (or never touched) -> false, so a later enrich sweep can still treat it as fill-only.
   const seriesEdited = useRef(false)
+  const [seriesClaim, setSeriesClaim] = useState<SeriesClaim>(
+    hit.seriesClaim ?? { origin: 'unknown' },
+  )
   // Distinct contributor names across the library, for the editor's autocomplete.
   const authorSuggestions = [
     ...new Set((books ?? []).flatMap((b) => b.contributors.map((c) => c.name)).filter(Boolean)),
@@ -350,6 +359,16 @@ function AddForm({
       setContribs(contributorsFromAuthors(res.authors))
     // Fill only blanks — never overwrite what the user typed. genre is the mapped primary genre
     // (C1 fill); only applied if the user hasn't edited the genre field themselves.
+    const fillsSeries = !form.series && !!res.series
+    if (fillsSeries) {
+      setSeriesClaim(
+        makeSeriesClaim('enrichment', res.provenance?.series?.source ?? 'catalog', {
+          ...(res.workId || res.editionId ? { sourceRef: res.workId || res.editionId } : {}),
+          ...(res.confidence ? { confidence: res.confidence } : {}),
+          ...(res.provenance?.series?.at ? { at: res.provenance.series.at } : {}),
+        }),
+      )
+    }
     setForm((p) => ({
       ...p,
       series: p.series || res.series,
@@ -411,6 +430,9 @@ function AddForm({
       contributors: contribs.filter((c) => c.name.trim()),
       series: form.series.trim(),
       seriesUserChosen: seriesEdited.current,
+      seriesClaim: seriesEdited.current
+        ? makeSeriesClaim('reader', 'add', { at: new Date().toISOString() })
+        : seriesClaim,
       position: parsedPosition.value ?? '',
       seriesCount: null,
       status: form.series.trim() ? 'ongoing' : 'standalone',

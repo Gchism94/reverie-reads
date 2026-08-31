@@ -21,7 +21,7 @@
 -- one transaction).
 
 begin;
-select plan(32);
+select plan(37);
 
 insert into auth.users (id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
 values
@@ -93,6 +93,9 @@ select ok(
 select ok(
   (select series_user_chosen from public.books where id = 'dddddddd-0000-0000-0000-000000000001'),
   'REASSIGN marks series_user_chosen — a reader-driven save, never re-offered by enrichment');
+select is(
+  (select series_claim ->> 'source' from public.books where id = 'dddddddd-0000-0000-0000-000000000001'),
+  'book_edit', 'REASSIGN records the reader edit as the source of the current series');
 
 -- ── Guard 2: CLEAR ──
 set local role authenticated;
@@ -114,6 +117,9 @@ select ok(
   (select series_user_chosen from public.books where id = 'dddddddd-0000-0000-0000-000000000002'),
   'CLEAR marks series_user_chosen — the gap this migration closes: without it, the next enrich '
   || 'sweep sees a blank series it still matches and re-fills what the reader just removed');
+select is(
+  (select series_claim ->> 'origin' from public.books where id = 'dddddddd-0000-0000-0000-000000000002'),
+  'reader', 'CLEAR records a positive reader refusal rather than an unexplained blank');
 
 -- ── Guard 2b: a book that NEVER named a series is not a CLEAR just because the new value is empty
 --    too — position/length on it are ordinary claims, not synced copies to wipe. Caught live: the
@@ -134,6 +140,9 @@ select ok(
 select ok(
   (select series_user_chosen from public.books where id = 'dddddddd-0000-0000-0000-000000000006'),
   'the "never had one" CLEAR branch marks series_user_chosen too — a reader-driven save either way');
+select is(
+  (select series_claim ->> 'source' from public.books where id = 'dddddddd-0000-0000-0000-000000000006'),
+  'book_edit', 'the no-series save still records its explicit reader source');
 
 -- ── Guard 3: REASSIGN into a series with NO row at all — claim path, both fields ──
 set local role authenticated;
@@ -156,6 +165,9 @@ select ok(
 select ok(
   (select series_user_chosen from public.books where id = 'dddddddd-0000-0000-0000-000000000003'),
   'REASSIGN into a brand-new series also marks series_user_chosen');
+select is(
+  (select series_claim ->> 'origin' from public.books where id = 'dddddddd-0000-0000-0000-000000000003'),
+  'reader', 'a brand-new series claim is attributed to the reader');
 
 -- ── Guard 4: UNCHANGED name — delegates through set_series_order, no retirement ──
 set local role authenticated;
@@ -180,6 +192,9 @@ select ok(
 select ok(
   (select series_user_chosen from public.books where id = 'dddddddd-0000-0000-0000-000000000004'),
   'the unchanged-name save still marks series_user_chosen — the final books UPDATE runs regardless');
+select is(
+  (select series_claim ->> 'source' from public.books where id = 'dddddddd-0000-0000-0000-000000000004'),
+  'book_edit', 'an unchanged-name save confirms the reader source too');
 
 -- ── Guard 5: a non-owner is refused, and NEITHER table is touched ──
 set local role authenticated;

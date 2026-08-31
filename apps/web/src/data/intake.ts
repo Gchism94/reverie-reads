@@ -56,6 +56,8 @@ export function incomingToBook(inc: Incoming): Book {
     series: inc.series ?? '',
     position: inc.position ?? '',
     seriesCount: inc.seriesCount ?? null,
+    seriesUserChosen: inc.seriesUserChosen,
+    seriesClaim: inc.seriesClaim,
     status: inc.status ?? 'standalone',
     genre: inc.genre ?? '',
     subgenre,
