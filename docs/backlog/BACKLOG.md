@@ -1637,9 +1637,13 @@ aspect` at 9.1s. `e2e` failed exactly once in the surrounding 60 runs.
 > source and no stamp to add. Recorded explicitly so a later pass does not read the missing stamp as
 > "not yet audited".
 
-Calendar cluster; multi-series universe layer; borrowed-as-subsystem; Match
+Calendar cluster; borrowed-as-subsystem; Match
 approach (b), library-signal-driven; opt-in genre-gradient personalization;
 onboarding Stages B–D.
+
+The multi-series universe layer moved out of this parked list on 2026-08-30. Its accepted model,
+Pro boundary, responsive design, and test plan are in
+[`docs/tasks/task-series-universes.md`](../tasks/task-series-universes.md).
 
 ## Open decisions
 

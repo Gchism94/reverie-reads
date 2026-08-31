@@ -2,12 +2,18 @@
 
 Priority: **P1 after CI/CD simplification**.
 
-Status: **Phase 2A in progress on `codex/series-truth-phase-2a`**. Phase 1's code-path audit is
-recorded in `docs/audits/series-truth-phase-1.md`; the aggregate-only owner-run inventory remains
-staged in `docs/queries/series-truth-audit.sql`. On 2026-08-30 the owner directed Phase 2 to begin
-without supplying that output, so the selected slice is deliberately forward-only: typed personal
-series provenance, corrected writers, and fail-closed legacy writes. It does not infer or rewrite a
-single historical series value.
+Status: **Phase 2A merged and live on 2026-08-30** (`a40464d`, migration
+`20260909010000`, main-domain build `a40464dcba97`). Phase 1's code-path audit is recorded in
+`docs/audits/series-truth-phase-1.md`; the aggregate-only owner-run inventory remains staged in
+`docs/queries/series-truth-audit.sql`. Phase 2A was deliberately forward-only: typed personal series
+provenance, corrected writers, and fail-closed legacy writes. It inferred or rewrote no historical
+series value.
+
+The next public slice is **Phase 2B: structured membership authority and multiple-membership
+semantics**. The connected-series universe blueprint is recorded in
+`docs/tasks/task-series-universes.md`; its Pro implementation is sequenced after Phase 2B and after
+the private subscription/entitlement seam exists. Designing the universe now does not authorize a
+historical series backfill or move premium implementation into this public repository.
 
 ## Problem statement
 
@@ -48,6 +54,9 @@ Rollout order is schema first, application second. After merge, the owner deploy
 the matching Vercel build be promoted to production. The application writes `series_claim`, so
 reversing that order would make series-bearing Add/edit requests fail against the old schema.
 
+**Rollout complete:** production has the migration and `reveriereads.app/version.json` reports the
+matching `a40464dcba97` build.
+
 - Default to **no series membership** unless a trusted source or the reader positively establishes
   it. Absence is not an error to fill.
 - Record source, confidence, and reader override provenance. Never silently overwrite a
@@ -57,6 +66,23 @@ reversing that order would make series-bearing Add/edit requests fail against th
 - Handle multiple-series membership, companion/spinoff relationships, omnibuses, novellas, decimal
   order, unknown order, and editions without pretending one total order answers every case.
 - Bring conflicting or low-confidence claims to a review queue rather than auto-assigning them.
+
+### Phase 2B — structured membership authority
+
+- Make `series` + `series_entries` the reliable personal membership authority; a page view must not
+  manufacture a structured claim from an unproven compatibility string.
+- Decide the explicit primary projection back to `books.series` while legacy consumers remain.
+- Support more than one justified series membership without pretending the scalar string can carry
+  all of them.
+- Keep membership provenance separate from entry-order provenance: learning where a book belongs
+  must not claim that its numeric position is trusted.
+- Preserve ghosts, tombstones, reader order, and existing consolidation rulings.
+- Do not classify or rewrite historical `unknown` claims until the owner-run aggregate inventory is
+  reviewed.
+
+This phase is the public data prerequisite for the Pro connected-series universe layer. A universe
+will reference structured entries and leave their in-series positions unchanged; it must not build
+on the legacy scalar as if Phase 1 had proven it authoritative.
 
 ## Phase 3 — Library and detail experience
 

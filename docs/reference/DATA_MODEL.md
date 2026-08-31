@@ -391,7 +391,12 @@ shared_refs         (owner_id fk, code, kind 'list'|'clubtbr', name, created_at,
 Also present, supporting features rather than the core library: `book_embeddings` and
 `match_feedback` (taste/semantic search, pgvector), `enrichment_cache` / `cover_cache` /
 `geo_cache` / `releases_cache`, `rate_limits`, `content_reports`, `merge_verdicts`,
-`reading_orders` / `reading_order_items`, `author_follows`.
+`author_follows`.
+
+`reading_orders` / `reading_order_items` are **not present**. They were dropped by
+`20260730010000_drop_reading_orders.sql` after their product surface was retired. Proposed
+connected-series universes are documented separately in `docs/decisions/0007-series-universes.md`;
+they are not part of the built schema described here.
 
 **Personal, household, and corpus membership are independent.** `books` is owner-only reader state;
 `household_works` is collective membership; `works` is shared catalog identity. Owned personal
