@@ -15,19 +15,13 @@ const result = (over: Partial<SearchResult> = {}): SearchResult => ({
 })
 
 describe('bulk Add series evidence', () => {
-  it('keeps a Hardcover series name, position, and trusted provenance', () => {
+  it('withholds a search label until the corpus classifier proves relational membership', () => {
     const incoming = bulkIncomingFromSearch(result(), 'fantasy', 'Epic fantasy')
 
-    expect(incoming).toMatchObject({
-      series: 'The Empyrean',
-      position: 1,
-      status: 'ongoing',
-      seriesClaim: {
-        origin: 'enrichment',
-        source: 'hardcover_search',
-        confidence: 'high',
-      },
-    })
+    expect(incoming.series).toBe('')
+    expect(incoming.position).toBe('')
+    expect(incoming.status).toBe('standalone')
+    expect(incoming.seriesClaim).toBeUndefined()
   })
 
   it('keeps a result with no series unknown instead of inventing membership', () => {

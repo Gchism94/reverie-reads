@@ -373,7 +373,8 @@ household_work_enrichment
                      primary key (household_id, work_id))
 
 works                (id pk, work_key unique, work_id, title, contributors jsonb, author_text,
-                     series/position/count/status, pages, publication date,
+                     series/position/count/status, series_check_state/checked_at/source,
+                     series_check_evidence jsonb, series_check_reason, pages, publication date,
                      publisher, language, description, edition_ids text[],
                      cover_url/source/source_url/color/confidence, cover_options jsonb,
                      genre, subgenre, genres text[], subgenres text[], tags text[], isbns text[],
@@ -384,6 +385,11 @@ works                (id pk, work_key unique, work_id, title, contributors jsonb
                      -- canonical ISBN-13 assignments serialize in sorted advisory-lock order
 work_metadata_edits  (id pk, work_id fk, editor_id, previous_value jsonb, next_value jsonb,
                      created_at)                      -- append-only corpus edit audit
+work_series_suggestions
+                    (id pk, work_id fk, proposed_series/position/count, source/source_ref,
+                     identity_confidence, membership confidence, evidence jsonb, reason,
+                     status, checked/review fields)
+                     -- singleton/conflicting relational evidence waits for an administrator
 corpus_admins        (user_id pk fk→profiles, granted_at, granted_by fk→profiles)
                      -- service-managed authorization; never restored from a reader backup
 
@@ -483,7 +489,8 @@ authenticated metadata edits while a future reviewer-quorum model is designed; o
 service-role maintenance can remove one. Review never replaces an established default, and an
 ordinary reader's personal cover never crosses that corpus boundary. The existing fill-only preservation invoked
 before personal removal, merge deletion, or account deletion may still populate objective corpus
-gaps so the final source is not lost. `COVER_PUBLIC_URL` must remain unset or use that same origin; a
+gaps so the final source is not lost, but series/position/count are excluded because a personal
+label is not relational membership evidence. `COVER_PUBLIC_URL` must remain unset or use that same origin; a
 different CDN origin is safely rejected until it has an explicit database-controlled trust
 configuration. Membership and work eligibility are rechecked after the row locks in every
 household/corpus mutation so a concurrent unlink wins in the safe direction.
@@ -498,10 +505,28 @@ refused. An allowlisted Google result may be retained as a display-only cover at
 Hardcover result is stored only after the existing ingestion boundary creates a corpus-owned
 `w/{work}/` object, and that path is limited to a household owner or corpus administrator for the
 exact work. Editing an existing corpus work remains limited to the same roles; the editor may select
-an already-reviewed cover option. Corpus edits do not rewrite linked personal rows. A personal owner
-may explicitly call `adopt_corpus_work_metadata` to copy shared series (including the reviewed
-length/status tuple), genre, cover, and publication details; title/contributors, ISBN, possession,
-reading state, rating, and private annotations remain untouched.
+an already-reviewed cover option. Routine non-series corpus edits do not rewrite linked personal
+rows. A personal owner may explicitly call `adopt_corpus_work_metadata` to copy genre, cover,
+publication details, and deliberately replace a personal series choice with the shared series;
+title/contributors, ISBN, possession, reading state, rating, and private annotations remain
+untouched.
+
+**Series classification is corpus-first and evidence-bearing.** A generic search document's series
+label is only a candidate; it cannot write `works.series` or a personal membership. The classifier
+must find the exact title/author inside a provider's series relationship and records identity and
+membership confidence separately. Multi-book/later-position relational context may fill a blank;
+singletons and cross-source conflicts enter `work_series_suggestions`. A source outage stays
+`unresolved`, and a matched record with no label stays a dated `no_series` observation rather than
+becoming a permanent standalone claim. Fantastic Fiction evidence is limited to membership, series,
+order, source URL, and observation time and is never sufficient for automatic promotion.
+
+When canonical series/position/count changes, household views receive it directly from `works` and
+eligible active personal rows receive it as an `origin=corpus` default. Only rows whose current
+origin is `unknown`, `enrichment`, or `corpus` and whose reader-choice guard is false are eligible;
+reader and CSV-import choices remain private authority. Conflicting old automatic structured entries
+are tombstoned before the trusted corpus membership materializes. An authorized shared editor's
+direct change becomes high-confidence manual corpus evidence and seeds through the same default
+path. It does not overwrite personal reader/import choices.
 
 Every Add and import surface names its destination. For a linked member the default is the reader's
 personal library plus the household catalog; personal-only and household-only remain explicit

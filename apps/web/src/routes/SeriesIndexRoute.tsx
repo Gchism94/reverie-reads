@@ -3,6 +3,7 @@ import { createRoute } from '@tanstack/react-router'
 import { Link } from '@tanstack/react-router'
 import {
   claimedSeriesLength,
+  confirmedSeriesBooks,
   displayTotal,
   groupSeriesByAuthor,
   isBookRead,
@@ -139,9 +140,18 @@ function SeriesIndexScreen() {
     return m
   }, [seriesList])
 
-  const sections = useMemo(
-    () => groupSeriesByAuthor(books ?? [], entriesBySeries),
+  const confirmedBooks = useMemo(
+    () => confirmedSeriesBooks(books ?? [], entriesBySeries),
     [books, entriesBySeries],
+  )
+  const sections = useMemo(
+    () => groupSeriesByAuthor(confirmedBooks, entriesBySeries),
+    [confirmedBooks, entriesBySeries],
+  )
+
+  const unreviewedSeries = useMemo(
+    () => [...(seriesList ?? new Map()).values()].filter((row) => row.unreviewed > 0),
+    [seriesList],
   )
 
   // The consolidation engine's view of the SERIES ROWS (not the author-grouped display): id, name,
@@ -150,7 +160,7 @@ function SeriesIndexScreen() {
   const consolidationRows = useMemo<ConsolidationSeries[]>(() => {
     if (!books || !seriesList) return []
     const bookCount = new Map<string, number>()
-    for (const b of books) {
+    for (const b of confirmedBooks) {
       const name = (b.series ?? '').trim()
       if (name) bookCount.set(name, (bookCount.get(name) ?? 0) + 1)
     }
@@ -160,7 +170,7 @@ function SeriesIndexScreen() {
       liveEntries: row.total,
       memberBooks: bookCount.get(row.series.name) ?? 0,
     }))
-  }, [books, seriesList])
+  }, [books, confirmedBooks, seriesList])
 
   return (
     <section className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6">
@@ -179,6 +189,30 @@ function SeriesIndexScreen() {
       {/* Tier 3's quiet queue + Tier 2's silent mount point. Inline and dismissible — the page's
           sections render identically with or without it (never modal, never blocking). */}
       <ConsolidationQueue rows={consolidationRows} />
+
+      {!!unreviewedSeries.length && (
+        <section className="mt-5 border border-line p-3" aria-labelledby="series-membership-review">
+          <h2 id="series-membership-review" className="text-[13px] font-semibold text-ink">
+            Membership review · {unreviewedSeries.reduce((sum, row) => sum + row.unreviewed, 0)}
+          </h2>
+          <p className="mt-1 text-[12px] leading-relaxed text-muted">
+            These older series labels are not used for progress or the main index until you confirm
+            them.
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {unreviewedSeries.map((row) => (
+              <Link
+                key={row.series.id}
+                to="/series/$seriesName"
+                params={{ seriesName: encodeURIComponent(row.series.name) }}
+                className="skin-control min-h-11 border border-line px-3 py-2 text-[12px] font-semibold text-ink"
+              >
+                Review {row.series.name} · {row.unreviewed}
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {!sections.length ? (
         <p className="mt-8 text-[13.5px] text-muted">

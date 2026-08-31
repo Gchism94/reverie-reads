@@ -1,5 +1,5 @@
 begin;
-select plan(31);
+select plan(38);
 
 insert into auth.users (id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
 values
@@ -18,7 +18,23 @@ values
   ('b2000000-0000-4000-8000-000000000003', 'high-series|writer', 'High Match', 'A Writer', '[]', null, 9),
   ('b2000000-0000-4000-8000-000000000004', 'medium-series|writer', 'Medium Match', 'A Writer', '[]', null, null),
   ('b2000000-0000-4000-8000-000000000005', 'conflict-series|writer', 'Conflict Match', 'A Writer', '[]', 'Curated Saga', 4),
-  ('b2000000-0000-4000-8000-000000000006', 'position-conflict|writer', 'Position Conflict', 'A Writer', '[]', 'Same Saga', 4);
+  ('b2000000-0000-4000-8000-000000000006', 'position-conflict|writer', 'Position Conflict', 'A Writer', '[]', 'Same Saga', 4),
+  ('b2000000-0000-4000-8000-000000000007', 'ff-match|writer', 'FF Match', 'A Writer', '[]', null, null);
+
+-- One automatic personal value should follow the trusted corpus default; an explicit reader value
+-- on the same work must remain private authority.
+insert into public.books (
+  id, owner_id, corpus_work_id, title, authors_display, series, position,
+  status, series_user_chosen, series_claim
+) values
+  ('b3000000-0000-4000-8000-000000000001', 'b1000000-0000-4000-8000-000000000002',
+   'b2000000-0000-4000-8000-000000000003', 'High Match', 'A Writer',
+   'Bogus Search Label', 9, 'standalone', false,
+   '{"origin":"enrichment","source":"catalog","confidence":"high"}'::jsonb),
+  ('b3000000-0000-4000-8000-000000000002', 'b1000000-0000-4000-8000-000000000002',
+   'b2000000-0000-4000-8000-000000000003', 'High Match', 'A Writer',
+   'My Reading Order', 7, 'ongoing', true,
+   '{"origin":"reader","source":"book_edit"}'::jsonb);
 
 select has_column('public', 'works', 'series_check_state',
   'works store a series observation separately from publication status');
@@ -26,6 +42,8 @@ select has_column('public', 'works', 'series_checked_at',
   'series discovery has its own recheck clock');
 select has_table('public', 'work_series_suggestions',
   'uncertain corpus series matches have an explicit review queue');
+select has_column('public', 'work_series_suggestions', 'identity_confidence',
+  'series review retains book-identity confidence separately from membership confidence');
 
 select is(
   (select series_check_state from public.works where id = 'b2000000-0000-4000-8000-000000000001'),
@@ -99,7 +117,7 @@ select ok(
 select is(
   public.record_corpus_series_discovery(
     'b2000000-0000-4000-8000-000000000003',
-    '{"matched":true,"confidence":"high","source":"hardcover","sourceRef":"hc-3","series":"The Sequence","position":2}'::jsonb,
+    '{"matched":true,"identityConfidence":"high","membershipConfidence":"high","source":"hardcover","sourceRef":"hc-series-3","series":"The Sequence","position":2,"count":3,"reason":"matched relational membership","evidence":[{"source":"hardcover","kind":"relational_membership","sourceRef":"hc-series-3","series":"The Sequence","position":2,"memberCount":3}]}'::jsonb,
     '2026-09-11T01:02:00Z'
   ) ->> 'outcome',
   'applied', 'high-confidence positive evidence fills a blank shared series');
@@ -110,12 +128,36 @@ select ok(
 select is(
   (select metadata_provenance -> 'series' ->> 'sourceRef'
    from public.works where id = 'b2000000-0000-4000-8000-000000000003'),
-  'hc-3', 'applied series evidence retains source identity');
+  'hc-series-3', 'applied series evidence retains source identity');
+
+-- Assert the cross-owner default as the unrestricted test role. An administrator is not the
+-- personal owner, so asserting through books RLS would turn both present and missing rows into the
+-- same NULL and certify nothing.
+reset role;
+select ok(
+  (select series = 'The Sequence' and position = 2 and series_count = 3 and status = 'ongoing'
+     and series_claim ->> 'origin' = 'corpus'
+   from public.books where id = 'b3000000-0000-4000-8000-000000000001'),
+  'trusted corpus classification seeds the eligible personal default');
+select ok(
+  (select series = 'My Reading Order' and position = 7
+     and series_claim ->> 'origin' = 'reader'
+   from public.books where id = 'b3000000-0000-4000-8000-000000000002'),
+  'trusted corpus classification preserves an explicit reader series');
+select is(
+  (select count(*)::int from public.series_entries entry
+   join public.series series_row on series_row.id = entry.series_id
+   where series_row.name = 'Bogus Search Label' and entry.removed_at is null),
+  0, 'replacing an automatic default retires its conflicting structured membership');
+
+set local role authenticated;
+select set_config('request.jwt.claims',
+  '{"sub":"b1000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
 
 select is(
   public.record_corpus_series_discovery(
     'b2000000-0000-4000-8000-000000000004',
-    '{"matched":true,"confidence":"medium","source":"hardcover","series":"Possible Saga","position":1}'::jsonb,
+    '{"matched":true,"identityConfidence":"high","membershipConfidence":"medium","source":"hardcover","series":"Possible Saga","position":1,"count":1,"reason":"singleton needs review","evidence":[{"source":"hardcover","kind":"relational_membership","sourceRef":"hc-series-4","series":"Possible Saga","position":1,"memberCount":1}]}'::jsonb,
     '2026-09-11T01:03:00Z'
   ) ->> 'outcome',
   'review', 'medium-confidence positive evidence waits for administrator review');
@@ -127,6 +169,28 @@ select is(
   (select count(*)::int from public.work_series_suggestions
    where work_id = 'b2000000-0000-4000-8000-000000000004' and status = 'pending'),
   1, 'the uncertain match appears once in the administrator queue');
+
+select is(
+  public.record_corpus_series_discovery(
+    'b2000000-0000-4000-8000-000000000007',
+    '{"matched":true,"identityConfidence":"high","membershipConfidence":"medium","source":"fantasticfiction","sourceRef":"https://www.fantasticfiction.com/w/a-writer/ff-saga/","series":"FF Saga","position":1,"count":8,"evidence":[{"source":"fantasticfiction","kind":"relational_membership","sourceRef":"https://www.fantasticfiction.com/w/a-writer/ff-saga/","series":"FF Saga","position":1,"memberCount":8,"orderType":"publication","description":"must not be retained"}]}'::jsonb,
+    '2026-09-11T01:03:30Z'
+  ) ->> 'outcome',
+  'review', 'Fantastic Fiction membership may surface for administrator review');
+select ok(
+  (select proposed_count is null
+     and not (evidence -> 0 ? 'memberCount')
+     and not (evidence -> 0 ? 'description')
+   from public.work_series_suggestions
+   where work_id = 'b2000000-0000-4000-8000-000000000007' and status = 'pending'),
+  'Fantastic Fiction retains neither series size nor arbitrary page content');
+select ok(
+  (select evidence -> 0 ->> 'series' = 'FF Saga'
+     and evidence -> 0 ->> 'position' = '1'
+     and evidence -> 0 ->> 'orderType' = 'publication'
+   from public.work_series_suggestions
+   where work_id = 'b2000000-0000-4000-8000-000000000007' and status = 'pending'),
+  'Fantastic Fiction retains only the allowed membership, series, and order facts');
 
 select lives_ok(
   $$select public.review_corpus_series_suggestion(
@@ -147,7 +211,7 @@ select is(
 select is(
   public.record_corpus_series_discovery(
     'b2000000-0000-4000-8000-000000000005',
-    '{"matched":true,"confidence":"high","source":"hardcover","series":"Conflicting Saga","position":1}'::jsonb,
+    '{"matched":true,"identityConfidence":"high","membershipConfidence":"high","source":"hardcover","series":"Conflicting Saga","position":1,"count":3,"evidence":[{"source":"hardcover","kind":"relational_membership","sourceRef":"hc-series-5","series":"Conflicting Saga","position":1,"memberCount":3}]}'::jsonb,
     '2026-09-11T01:04:00Z'
   ) ->> 'outcome',
   'review', 'high-confidence evidence still cannot replace a conflicting curated series silently');
@@ -170,7 +234,7 @@ select is(
 select is(
   public.record_corpus_series_discovery(
     'b2000000-0000-4000-8000-000000000006',
-    '{"matched":true,"confidence":"high","source":"hardcover","series":"Same Saga","position":1}'::jsonb,
+    '{"matched":true,"identityConfidence":"high","membershipConfidence":"high","source":"hardcover","series":"Same Saga","position":1,"count":3,"evidence":[{"source":"hardcover","kind":"relational_membership","sourceRef":"hc-series-6","series":"Same Saga","position":1,"memberCount":3}]}'::jsonb,
     '2026-09-11T01:05:00Z'
   ) ->> 'outcome',
   'review', 'a high-confidence position conflict still waits for administrator review');

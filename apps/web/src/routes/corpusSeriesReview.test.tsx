@@ -23,8 +23,22 @@ const suggestion: CorpusSeriesSuggestion = {
   currentPosition: 1,
   proposedSeries: 'The Stranger Cycle',
   proposedPosition: 2,
+  proposedCount: 4,
   source: 'hardcover',
-  confidence: 'medium',
+  identityConfidence: 'high',
+  membershipConfidence: 'medium',
+  reason: 'The relationship is plausible but needs review.',
+  evidence: [
+    {
+      source: 'publisher',
+      kind: 'relational_membership',
+      sourceRef: 'https://publisher.example/stranger-cycle',
+      series: 'The Stranger Cycle',
+      position: 2,
+      memberCount: 4,
+      orderType: 'publication',
+    },
+  ],
   checkedAt: '2026-09-11T00:00:00Z',
 }
 
@@ -35,8 +49,15 @@ describe('corpus series administrator review', () => {
     expect(screen.getByText('A Child Alone with Strangers')).toBeInTheDocument()
     expect(screen.getByText('No series set')).toBeInTheDocument()
     expect(screen.queryByText('No series set · #1')).not.toBeInTheDocument()
-    expect(screen.getByText('The Stranger Cycle · #2')).toBeInTheDocument()
-    expect(screen.getByText('hardcover · medium confidence')).toBeInTheDocument()
+    expect(screen.getByText('The Stranger Cycle · #2 · 4 books')).toBeInTheDocument()
+    expect(screen.getByText('hardcover · identity high · membership medium')).toBeInTheDocument()
+    expect(screen.getByText('The relationship is plausible but needs review.')).toBeInTheDocument()
+    expect(screen.getByText('Evidence · 1 observation')).toBeInTheDocument()
+    const sourceLink = screen.getByRole('link', { name: 'View source' })
+    expect(sourceLink.closest('li')).toHaveTextContent(
+      'publisher · membership · #2 · publication order · 4 books',
+    )
+    expect(sourceLink).toHaveAttribute('href', 'https://publisher.example/stranger-cycle')
   })
 
   it('sends an explicit accept or dismiss decision', () => {
