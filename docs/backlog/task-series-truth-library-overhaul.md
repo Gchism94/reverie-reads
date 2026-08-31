@@ -2,6 +2,11 @@
 
 Priority: **P1 after CI/CD simplification**.
 
+Status: **Phase 1 in progress on `codex/series-truth-phase-1`**. The code-path audit is recorded in
+`docs/audits/series-truth-phase-1.md`; the aggregate-only owner-run inventory is staged in
+`docs/queries/series-truth-audit.sql`. No admission-rule or data migration begins until that output
+is reviewed.
+
 ## Problem statement
 
 Books appear to acquire series membership too readily, even when the source does not justify it,
