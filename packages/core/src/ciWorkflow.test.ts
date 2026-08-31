@@ -16,6 +16,7 @@ describe('CI workflow topology', () => {
     expect(matrixNames).toEqual(['e2e', 'e2e-a11y', 'e2e-mobile'])
     expect(workflow).toContain('name: ${{ matrix.name }}')
     expect(workflow).toContain('fail-fast: false')
+    expect(workflow).toMatch(/- name: e2e\n\s+project: rest\n(?:\s+#.*\n)+\s+timeout: 35/)
     expect(workflow).toContain("if: github.event_name == 'pull_request'")
     expect(workflow).not.toContain(
       "if: github.event_name == 'pull_request' && needs.changes.outputs.docs_only != 'true'",
@@ -32,7 +33,13 @@ describe('CI workflow topology', () => {
     const browser = jobs.indexOf('      - name: e2e (${{ matrix.project }})')
 
     expect(gate).toContain('fetch-depth: 0')
-    expect(gate).toContain('uses: gitleaks/gitleaks-action@v2')
+    expect(gate).toContain('GITLEAKS_VERSION: 8.30.1')
+    expect(gate).toContain(
+      'GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb',
+    )
+    expect(gate).toContain('sha256sum --check -')
+    expect(gate).toContain('gitleaks" git --config .gitleaks.toml --redact --no-color --verbose .')
+    expect(gate).not.toContain('uses: gitleaks/gitleaks-action@v2')
     expect(secretScan).toBeGreaterThan(prettier)
     expect(gate.slice(secretScan)).toContain('if: always()')
     expect(start).toBeGreaterThan(-1)

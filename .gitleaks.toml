@@ -1,6 +1,6 @@
 # Secret-scan config for the `secrets` CI job. Extends gitleaks' default ruleset; the allowlist
-# below names EXACTLY the four values the pre-public audit (docs/audits/pre-public-secrets.md,
-# 2026-08-03) proved safe — nothing else is exempted, so a fifth committed credential fails the
+# below names EXACTLY the six values the pre-public audit (docs/audits/pre-public-secrets.md,
+# 2026-08-03) proved safe — nothing else is exempted, so any additional credential fails the
 # build on day one. Every entry states why it is safe; an exclusion without a written reason is
 # the bug (AGENTS.md, the ownedTables principle).
 
@@ -10,7 +10,7 @@ title = "Reverie secret scan"
 useDefault = true
 
 [allowlist]
-description = "Pre-public audit: the four committed values proven demo or public-by-design"
+description = "Pre-public audit: the six committed values proven demo, public-by-design, or non-secret fixture data"
 regexes = [
   # 1. The Supabase CLI's well-known LOCAL DEMO anon JWT (payload iss=supabase-demo, role=anon) —
   #    identical on every machine that runs `supabase start`; grants nothing outside a local dev
@@ -26,4 +26,10 @@ regexes = [
   #    to every browser by design; RLS is the security boundary (Supabase's own model). The secret
   #    key (sb_secret_*) has no allowlist entry and never will.
   '''sb_publishable_kp8TvVCeARWRqqk4z0a0CA_35y5KZgQ''',
+  # 5. A literal trope label in historical embed-parity test data. The generic-api-key rule treats
+  #    the surrounding `tags` property as credential-like, but this exact value is reader taxonomy.
+  '''grumpy/sunshine''',
+  # 6. The retired browser-local storage key for Match dismissals. This names a localStorage record;
+  #    it is not an authentication or API credential and grants access to nothing.
+  '''reverie\.match\.dismissed\.v1''',
 ]

@@ -202,14 +202,24 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: ./.github/actions/setup-browsers
 
-      # gitleaks-action writes results.sarif into the checkout even on a clean pass. Run it last so
-      # that generated report cannot contaminate Prettier or the build; always() preserves the
-      # independent secret boundary when an earlier gate step is already red.
+      # Run the open-source CLI directly: gitleaks-action requires a paid license for organization
+      # repositories even though the scanner itself does not. Pin and checksum the release archive
+      # so this security boundary cannot silently change underneath the workflow. Run it last and
+      # preserve it with always() when an earlier gate step is already red.
       - name: Full-history secret scan
         if: always()
-        uses: gitleaks/gitleaks-action@v2
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_VERSION: 8.30.1
+          GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+        run: |
+          set -euo pipefail
+          archive="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          url="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${archive}"
+          curl --fail --location --retry 3 --proto '=https' --tlsv1.2 \
+            --output "${RUNNER_TEMP}/${archive}" "${url}"
+          echo "${GITLEAKS_SHA256}  ${RUNNER_TEMP}/${archive}" | sha256sum --check -
+          tar -xzf "${RUNNER_TEMP}/${archive}" -C "${RUNNER_TEMP}" gitleaks
+          "${RUNNER_TEMP}/gitleaks" git --config .gitleaks.toml --redact --no-color --verbose .
 
   # One definition, three parallel runners. A matrix removes the triplicated setup without
   # serialising the projects: rest remains the critical path, while mobile and accessibility keep
@@ -227,7 +237,11 @@ jobs:
         include:
           - name: e2e
             project: rest
-            timeout: 25
+            # The full 167-test suite takes about 21 minutes without retries; a legitimate retry
+            # pushed the 2026-08-31 org-transfer run to 25.7 minutes after every test had passed.
+            # This is a ceiling, not a delay: leave enough room for Playwright to report its final
+            # result and for GitHub to finish cleanup instead of cancelling a passing run.
+            timeout: 35
             artifact: playwright-traces
           - name: e2e-a11y
             project: a11y
