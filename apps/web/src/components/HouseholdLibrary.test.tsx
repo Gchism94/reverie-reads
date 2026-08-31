@@ -265,12 +265,16 @@ describe('household Library presentation', () => {
     const onChange = vi.fn()
     render(<LibraryScopeControl scope="personal" onChange={onChange} />)
 
-    expect(screen.getByRole('button', { name: 'Personal' })).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByRole('button', { name: 'Household' })).toHaveAttribute(
-      'aria-pressed',
-      'false',
-    )
-    fireEvent.click(screen.getByRole('button', { name: 'Household' }))
+    const personal = screen.getByRole('button', { name: 'Personal' })
+    const household = screen.getByRole('button', { name: 'Household' })
+    expect(personal).toHaveAttribute('aria-pressed', 'true')
+    expect(personal).toHaveStyle({
+      background: 'var(--accent-fill)',
+      color: 'var(--on-primary)',
+    })
+    expect(household).toHaveAttribute('aria-pressed', 'false')
+    expect(household).toHaveStyle({ background: 'transparent', color: 'var(--ink)' })
+    fireEvent.click(household)
     expect(onChange).toHaveBeenCalledWith('household')
   })
 })

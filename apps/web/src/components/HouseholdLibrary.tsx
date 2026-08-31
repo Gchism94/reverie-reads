@@ -49,7 +49,7 @@ export function LibraryScopeControl({
           style={
             scope === value
               ? { background: 'var(--accent-fill)', color: 'var(--on-primary)' }
-              : { background: 'transparent', color: 'var(--muted)' }
+              : { background: 'transparent', color: 'var(--ink)' }
           }
         >
           {value.charAt(0).toUpperCase() + value.slice(1)}
