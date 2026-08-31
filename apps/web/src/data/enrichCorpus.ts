@@ -33,6 +33,8 @@ export interface CorpusEnrichmentWork {
   genres: string[]
   cover: string
   enrichedAt: string | null
+  seriesCheckState: 'unknown' | 'unresolved' | 'no_series' | 'found' | 'review'
+  seriesCheckedAt: string | null
 }
 
 interface CorpusEnrichmentRow {
@@ -52,6 +54,8 @@ interface CorpusEnrichmentRow {
   genres: string[] | null
   cover_url: string | null
   enriched_at: string | null
+  series_check_state: CorpusEnrichmentWork['seriesCheckState']
+  series_checked_at: string | null
 }
 
 const toWork = (row: CorpusEnrichmentRow): CorpusEnrichmentWork => ({
@@ -71,11 +75,13 @@ const toWork = (row: CorpusEnrichmentRow): CorpusEnrichmentWork => ({
   genres: row.genres ?? [],
   cover: row.cover_url ?? '',
   enrichedAt: row.enriched_at,
+  seriesCheckState: row.series_check_state,
+  seriesCheckedAt: row.series_checked_at,
 })
 
-/** Objective gaps the aggregator can actually fill. A missing series is not itself a gap: most
- * books are standalones, and enrichment must not manufacture series membership from absence. */
-export function corpusWorkIsIncomplete(work: CorpusEnrichmentWork): boolean {
+/** Objective gaps handled by the ordinary fill-only metadata pass. Series has its own evidence
+ * clock below: absence is not a gap because most books really are standalones. */
+function corpusWorkHasMetadataGap(work: CorpusEnrichmentWork): boolean {
   return (
     !work.cover ||
     corpusCoverNeedsDurableOwnership(work.cover) ||
@@ -91,6 +97,30 @@ export function corpusWorkIsIncomplete(work: CorpusEnrichmentWork): boolean {
   )
 }
 
+const SERIES_UNRESOLVED_RECHECK_DAYS = 30
+const SERIES_STABLE_RECHECK_DAYS = 180
+
+/**
+ * Series discovery has an independent clock. A generic metadata check must not suppress it, and
+ * “no series returned” is rechecked rather than promoted into a permanent standalone assertion.
+ */
+export function corpusSeriesCheckDue(
+  work: Pick<CorpusEnrichmentWork, 'seriesCheckState' | 'seriesCheckedAt'>,
+  now = Date.now(),
+): boolean {
+  if (work.seriesCheckState === 'review') return false
+  if (!work.seriesCheckedAt || work.seriesCheckState === 'unknown') return true
+  const days =
+    work.seriesCheckState === 'unresolved'
+      ? SERIES_UNRESOLVED_RECHECK_DAYS
+      : SERIES_STABLE_RECHECK_DAYS
+  return Date.parse(work.seriesCheckedAt) < now - days * DAY
+}
+
+export function corpusWorkIsIncomplete(work: CorpusEnrichmentWork, now = Date.now()): boolean {
+  return corpusWorkHasMetadataGap(work) || corpusSeriesCheckDue(work, now)
+}
+
 /** Google is display-only by policy. Every other shared cover must be a corpus-owned object; a
  * personal `u/` object remains reader-deletable and an upstream hotlink remains source-deletable. */
 export function corpusCoverNeedsDurableOwnership(url: string): boolean {
@@ -104,7 +134,8 @@ const corpusWorkHasHighValue = (work: CorpusEnrichmentWork): boolean =>
   !!work.cover && !corpusCoverNeedsDurableOwnership(work.cover) && work.isbns.length > 0
 
 export function corpusWorkShouldCheck(work: CorpusEnrichmentWork, now = Date.now()): boolean {
-  if (!corpusWorkIsIncomplete(work)) return false
+  if (corpusSeriesCheckDue(work, now)) return true
+  if (!corpusWorkHasMetadataGap(work)) return false
   if (!work.enrichedAt) return true
   const days = corpusWorkHasHighValue(work) ? COMPLETE_RECHECK_DAYS : PARTIAL_RETRY_DAYS
   return Date.parse(work.enrichedAt) < now - days * DAY
@@ -118,6 +149,7 @@ export async function fetchCorpusAdminStatus(): Promise<boolean> {
 
 export const corpusAdminKey = ['corpus-admin'] as const
 export const corpusEnrichmentCandidatesKey = ['corpus-enrichment-candidates'] as const
+export const corpusSeriesSuggestionsKey = ['corpus-series-suggestions'] as const
 export const personalCoverCorpusReviewKey = (
   bookId: string,
   workId: string,
@@ -139,6 +171,98 @@ export function personalCoverIsReviewed(options: unknown, coverUrl: string): boo
 
 export function useCorpusAdminStatus() {
   return useQuery({ queryKey: corpusAdminKey, queryFn: fetchCorpusAdminStatus, staleTime: 60_000 })
+}
+
+export interface CorpusSeriesSuggestion {
+  id: string
+  workId: string
+  title: string
+  author: string
+  currentSeries: string
+  currentPosition: number | null
+  proposedSeries: string
+  proposedPosition: number | null
+  source: string
+  confidence: 'high' | 'medium'
+  checkedAt: string
+}
+
+interface CorpusSeriesSuggestionRow {
+  id: string
+  work_id: string
+  proposed_series: string
+  proposed_position: number | string | null
+  source: string
+  confidence: 'high' | 'medium'
+  checked_at: string
+  works:
+    | { title: string; author_text: string | null; series: string | null; position: number | string | null }
+    | { title: string; author_text: string | null; series: string | null; position: number | string | null }[]
+}
+
+export async function fetchCorpusSeriesSuggestions(): Promise<CorpusSeriesSuggestion[]> {
+  const rows = await pageAll<CorpusSeriesSuggestionRow>('corpus series suggestions', (from, to) =>
+    supabase
+      .from('work_series_suggestions')
+      .select(
+        'id, work_id, proposed_series, proposed_position, source, confidence, checked_at, works:work_id(title, author_text, series, position)',
+        { count: 'exact' },
+      )
+      .eq('status', 'pending')
+      .order('checked_at')
+      .order('id')
+      .range(from, to),
+  )
+  return rows.flatMap((row) => {
+    const work = Array.isArray(row.works) ? row.works[0] : row.works
+    if (!work) return []
+    return [
+      {
+        id: row.id,
+        workId: row.work_id,
+        title: work.title,
+        author: work.author_text?.trim() ?? '',
+        currentSeries: work.series?.trim() ?? '',
+        currentPosition: work.position == null ? null : Number(work.position),
+        proposedSeries: row.proposed_series,
+        proposedPosition: row.proposed_position == null ? null : Number(row.proposed_position),
+        source: row.source,
+        confidence: row.confidence,
+        checkedAt: row.checked_at,
+      },
+    ]
+  })
+}
+
+export function useCorpusSeriesSuggestions(enabled: boolean) {
+  return useQuery({
+    queryKey: corpusSeriesSuggestionsKey,
+    enabled,
+    queryFn: fetchCorpusSeriesSuggestions,
+    staleTime: 30_000,
+  })
+}
+
+export function useReviewCorpusSeriesSuggestion() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    meta: { action: 'The corpus series review' },
+    mutationFn: async (input: { suggestionId: string; decision: 'accept' | 'dismiss' }) => {
+      const { error } = await supabase.rpc('review_corpus_series_suggestion', {
+        p_suggestion: input.suggestionId,
+        p_decision: input.decision,
+      })
+      if (error) throw error
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: corpusSeriesSuggestionsKey }),
+        queryClient.invalidateQueries({ queryKey: corpusEnrichmentCandidatesKey }),
+        queryClient.invalidateQueries({ queryKey: ['works'] }),
+        queryClient.invalidateQueries({ queryKey: ['household'] }),
+      ])
+    },
+  })
 }
 
 /** A personal cover is reviewed only when its exact URL is already an accepted corpus option. */
@@ -231,7 +355,7 @@ export async function fetchCorpusEnrichmentCandidates(): Promise<CorpusEnrichmen
     supabase
       .from('works')
       .select(
-        'id, title, author_text, contributors, series, position, pages, pub_y, publisher, language, description, isbns, genre, genres, cover_url, enriched_at',
+        'id, title, author_text, contributors, series, position, pages, pub_y, publisher, language, description, isbns, genre, genres, cover_url, enriched_at, series_check_state, series_checked_at',
         { count: 'exact' },
       )
       .order('id')
@@ -298,8 +422,8 @@ export function corpusPatchFromEnrichment(result: EnrichResult): CorpusMetadataP
           authorText: authors.join(', '),
         }
       : {}),
-    ...(result.series ? { series: result.series } : {}),
-    ...(result.seriesPosition !== null ? { position: result.seriesPosition } : {}),
+    // Series is deliberately absent. It has a separate positive-evidence/review RPC; routing it
+    // through this generic fill-only patch would let a soft catalog match bypass that boundary.
     ...(result.pageCount !== null ? { pages: result.pageCount } : {}),
     ...(result.pubY !== null ? { pubY: result.pubY } : {}),
     ...(result.pubM !== null ? { pubM: result.pubM } : {}),
@@ -380,6 +504,40 @@ const writeCorpusPatch = async (
   if (error) throw error
 }
 
+export interface CorpusSeriesDiscoveryResult {
+  outcome: 'applied' | 'confirmed' | 'review' | 'no_series' | 'unresolved'
+  suggestion_id?: string
+}
+
+/** The exact catalog evidence the server evaluates. Confidence decides whether the result may
+ * fill a blank, must wait for review, or is merely recheckable unresolved evidence. */
+export function corpusSeriesDiscoveryPayload(result: EnrichResult): Record<string, unknown> {
+  const confidence = result.confidence ?? 'none'
+  const seriesProvenance = result.provenance?.series
+  return {
+    matched: confidence === 'high' || confidence === 'medium',
+    series: result.series || null,
+    position: result.seriesPosition,
+    confidence,
+    source: seriesProvenance?.source ?? result.source ?? 'catalog',
+    sourceRef: result.workId || result.editionId || null,
+  }
+}
+
+async function recordCorpusSeriesDiscovery(
+  workId: string,
+  payload: Record<string, unknown>,
+  checkedAt: string,
+): Promise<CorpusSeriesDiscoveryResult> {
+  const { data, error } = await supabase.rpc('record_corpus_series_discovery', {
+    p_work: workId,
+    p_result: payload,
+    p_checked_at: checkedAt,
+  })
+  if (error) throw error
+  return data as CorpusSeriesDiscoveryResult
+}
+
 export async function bulkCompleteCorpus(
   candidates: readonly CorpusEnrichmentWork[],
   onProgress: (progress: CorpusBulkProgress) => void,
@@ -456,8 +614,15 @@ export async function bulkCompleteCorpus(
     consecutiveFailures = 0
     const checkedAt = new Date().toISOString()
     let patch: CorpusMetadataPatch = {}
+    let seriesChanged = false
+    let seriesPayload: Record<string, unknown> = {
+      matched: false,
+      confidence: 'none',
+      source: 'catalog',
+    }
     if (outcome.status === 'ok') {
       patch = corpusPatchFromEnrichment(outcome.data)
+      seriesPayload = corpusSeriesDiscoveryPayload(outcome.data)
       if (
         !relocatedCover &&
         outcome.data.cover &&
@@ -489,12 +654,14 @@ export async function bulkCompleteCorpus(
     }
     try {
       await writeCorpusPatch(work.id, patch, checkedAt)
+      const seriesResult = await recordCorpusSeriesDiscovery(work.id, seriesPayload, checkedAt)
+      seriesChanged = seriesResult.outcome === 'applied' || seriesResult.outcome === 'review'
     } catch (error) {
       stopReason = 'error'
       errorMessage = error instanceof Error ? error.message : String(error)
       break
     }
-    if (relocatedCover || Object.keys(patch).length) filled++
+    if (relocatedCover || Object.keys(patch).length || seriesChanged) filled++
     else nothing++
     scanned++
     onProgress({ scanned, total, filled })

@@ -33,7 +33,7 @@ export function CorpusCompleteControl({
       className="skin-control border border-line px-4 py-2 text-[13px] font-semibold text-ink"
       style={{ background: 'var(--field)' }}
     >
-      ✨ Complete shared corpus covers &amp; info
+      ✨ Complete shared corpus &amp; series info
       {eligibleCount !== null && eligibleCount > 0 ? ` (${eligibleCount})` : ''}
     </button>
   )

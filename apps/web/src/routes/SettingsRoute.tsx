@@ -640,7 +640,8 @@ function SettingsScreen() {
             {isCorpusAdmin && !corpusCompleting && (
               <p className="w-full text-[12px] text-muted">
                 Admin tool · fills objective gaps for personal, household-only, and corpus-only
-                books. Shared covers are stored independently of every reader account.
+                books, and checks shared series information once for the whole corpus. Uncertain
+                series matches go to Review; a catalog miss never becomes a standalone claim.
               </p>
             )}
             {!completing && (

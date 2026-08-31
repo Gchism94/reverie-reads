@@ -55,6 +55,8 @@ const work = (cover: string): CorpusEnrichmentWork => ({
   genres: [],
   cover,
   enrichedAt: null,
+  seriesCheckState: 'unknown',
+  seriesCheckedAt: null,
 })
 
 beforeEach(() => {
@@ -114,6 +116,68 @@ describe('corpus cover recovery', () => {
       p_checked_at: null,
     })
     expect(result).toMatchObject({ failed: 1, stopReason: 'done' })
+  })
+
+  it('routes series evidence through its review-aware RPC instead of the generic patch', async () => {
+    mocks.enrich.mockResolvedValue({
+      status: 'ok',
+      data: {
+        title: 'Recovered Work',
+        authors: ['A Writer'],
+        author: 'A Writer',
+        series: 'Recovered Saga',
+        seriesPosition: 2,
+        publisher: '',
+        pubY: null,
+        pubM: null,
+        pubD: null,
+        pageCount: null,
+        isbn10: '',
+        isbn13: '',
+        isbn: '',
+        language: '',
+        genres: [],
+        description: '',
+        cover: '',
+        workId: 'hc-work-1',
+        source: 'hardcover',
+        confidence: 'high',
+        provenance: {
+          series: { source: 'hardcover', at: '2026-09-11T00:00:00Z' },
+        },
+      },
+    })
+    mocks.rpc.mockImplementation(async (name: string) => ({
+      data: name === 'record_corpus_series_discovery' ? { outcome: 'applied' } : null,
+      error: null,
+    }))
+
+    const result = await bulkCompleteCorpus([work('')], () => undefined, () => false)
+
+    expect(mocks.rpc).toHaveBeenNthCalledWith(
+      1,
+      'complete_corpus_work_metadata',
+      expect.objectContaining({
+        p_work: '11111111-1111-4111-8111-111111111111',
+        p_patch: expect.not.objectContaining({ series: expect.anything() }),
+      }),
+    )
+    expect(mocks.rpc).toHaveBeenNthCalledWith(
+      2,
+      'record_corpus_series_discovery',
+      expect.objectContaining({
+        p_work: '11111111-1111-4111-8111-111111111111',
+        p_result: {
+          matched: true,
+          series: 'Recovered Saga',
+          position: 2,
+          confidence: 'high',
+          source: 'hardcover',
+          sourceRef: 'hc-work-1',
+        },
+      }),
+    )
+    expect(result).toMatchObject({ scanned: 1, filled: 1, stopReason: 'done' })
   })
 
   it('runs owner-scoped recovery before completing an empty candidate set', async () => {

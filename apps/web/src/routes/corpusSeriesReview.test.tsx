@@ -1,0 +1,56 @@
+import { fireEvent, render, screen } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
+import type { CorpusSeriesSuggestion } from '../data/enrichCorpus'
+
+const mocks = vi.hoisted(() => ({ mutate: vi.fn() }))
+
+vi.mock('../data/enrichCorpus', () => ({
+  useCorpusAdminStatus: () => ({ data: true }),
+  useCorpusSeriesSuggestions: () => ({ data: [] }),
+  useReviewCorpusSeriesSuggestion: () => ({ isPending: false, mutate: mocks.mutate }),
+}))
+
+const { CorpusSeriesReview } = await import('./ReviewRoute')
+
+const suggestion: CorpusSeriesSuggestion = {
+  id: 'suggestion-1',
+  workId: 'work-1',
+  title: 'A Child Alone with Strangers',
+  author: 'Philip Fracassi',
+  currentSeries: '',
+  // Some legacy imports preserved a position even though no series identity was known. That
+  // number must not be presented as meaningful membership evidence.
+  currentPosition: 1,
+  proposedSeries: 'The Stranger Cycle',
+  proposedPosition: 2,
+  source: 'hardcover',
+  confidence: 'medium',
+  checkedAt: '2026-09-11T00:00:00Z',
+}
+
+describe('corpus series administrator review', () => {
+  it('shows current and proposed facts instead of hiding the judgment in a toggle', () => {
+    render(<CorpusSeriesReview suggestions={[suggestion]} />)
+
+    expect(screen.getByText('A Child Alone with Strangers')).toBeInTheDocument()
+    expect(screen.getByText('No series set')).toBeInTheDocument()
+    expect(screen.queryByText('No series set · #1')).not.toBeInTheDocument()
+    expect(screen.getByText('The Stranger Cycle · #2')).toBeInTheDocument()
+    expect(screen.getByText('hardcover · medium confidence')).toBeInTheDocument()
+  })
+
+  it('sends an explicit accept or dismiss decision', () => {
+    render(<CorpusSeriesReview suggestions={[suggestion]} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Accept shared series' }))
+    expect(mocks.mutate).toHaveBeenLastCalledWith({
+      suggestionId: 'suggestion-1',
+      decision: 'accept',
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
+    expect(mocks.mutate).toHaveBeenLastCalledWith({
+      suggestionId: 'suggestion-1',
+      decision: 'dismiss',
+    })
+  })
+})

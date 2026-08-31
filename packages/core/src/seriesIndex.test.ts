@@ -234,5 +234,7 @@ describe('display total — SeriesView’s rule, not a fourth source', () => {
   it('falls back to series_count, and to null when nothing knows', () => {
     expect(displayTotal(5, null, 2)).toBe(5)
     expect(displayTotal(null, null, 2)).toBeNull()
+    // One known membership is not evidence that this is a one-book series.
+    expect(displayTotal(null, 1, 1)).toBeNull()
   })
 })

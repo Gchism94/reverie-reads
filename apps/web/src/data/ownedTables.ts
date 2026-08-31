@@ -155,6 +155,15 @@ export const USER_OWNED_TABLES: OwnedTable[] = [
     },
   },
   {
+    table: 'work_series_suggestions',
+    owner: 'reviewed_by',
+    collective: true,
+    plan: {
+      backup: false,
+      why: 'Shared corpus review workflow and its audit attribution, not reader-authored library data. Pending rows have no owner; reviewed rows stay with the corpus work and must not replay through a personal restore.',
+    },
+  },
+  {
     table: 'clubs',
     owner: 'created_by',
     plan: { backup: false, why: 'A club is collective, not owned by one reader; recreating it on restore would fabricate a club its other members never joined.' },

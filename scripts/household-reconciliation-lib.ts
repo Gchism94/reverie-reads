@@ -33,6 +33,7 @@ export const RECONCILIATION_BACKUP_PRIMARY_KEYS: Record<string, readonly string[
   work_metadata_edits: ['id'],
   corpus_admins: ['user_id'],
   work_tropes: ['work_id', 'trope_id'],
+  work_series_suggestions: ['id'],
   clubs: ['id'],
   club_members: ['club_id', 'user_id'],
   club_comments: ['id'],

@@ -3,6 +3,8 @@ import type { EnrichResult } from '../lib/enrich'
 import {
   corpusCoverNeedsDurableOwnership,
   corpusPatchFromEnrichment,
+  corpusSeriesCheckDue,
+  corpusSeriesDiscoveryPayload,
   corpusWorkIsIncomplete,
   corpusWorkShouldCheck,
   personalCoverIsReviewed,
@@ -28,6 +30,8 @@ const completeWork = (over: Partial<CorpusEnrichmentWork> = {}): CorpusEnrichmen
   cover:
     'https://project.test/storage/v1/object/public/covers/w/11111111-1111-4111-8111-111111111111/rev1.webp',
   enrichedAt: null,
+  seriesCheckState: 'no_series',
+  seriesCheckedAt: '2026-08-31T12:00:00Z',
   ...over,
 })
 
@@ -50,8 +54,36 @@ describe('corpus enrichment eligibility', () => {
     }
   })
 
-  it('does not call an absent series a gap, because standalone is the safe default', () => {
+  it('does not call an absent series a metadata gap after sources were checked', () => {
     expect(corpusWorkIsIncomplete(completeWork({ series: '', position: null }))).toBe(false)
+  })
+
+  it('uses an independent, recheckable series-discovery clock', () => {
+    const now = Date.parse('2026-08-31T12:00:00Z')
+    expect(
+      corpusSeriesCheckDue(
+        { seriesCheckState: 'unknown', seriesCheckedAt: null },
+        now,
+      ),
+    ).toBe(true)
+    expect(
+      corpusSeriesCheckDue(
+        { seriesCheckState: 'unresolved', seriesCheckedAt: '2026-07-31T12:00:00Z' },
+        now,
+      ),
+    ).toBe(true)
+    expect(
+      corpusSeriesCheckDue(
+        { seriesCheckState: 'no_series', seriesCheckedAt: '2026-07-31T12:00:00Z' },
+        now,
+      ),
+    ).toBe(false)
+    expect(
+      corpusSeriesCheckDue(
+        { seriesCheckState: 'review', seriesCheckedAt: '2020-01-01T00:00:00Z' },
+        now,
+      ),
+    ).toBe(false)
   })
 
   it('distinguishes durable corpus covers from reader-owned and upstream URLs', () => {
@@ -161,8 +193,6 @@ describe('corpus enrichment patch', () => {
         { name: 'Bea Writer', role: 'author', position: 1 },
       ],
       authorText: 'Ada Reader, Bea Writer',
-      series: 'The Sequence',
-      position: 2,
       pages: 321,
       pubY: 2025,
       pubM: 6,
@@ -177,6 +207,14 @@ describe('corpus enrichment patch', () => {
       editionId: 'OLE1',
       provenance: result.provenance,
       confidence: 'high',
+    })
+    expect(corpusSeriesDiscoveryPayload(result)).toEqual({
+      matched: true,
+      series: 'The Sequence',
+      position: 2,
+      confidence: 'high',
+      source: 'openlibrary',
+      sourceRef: 'OLW1',
     })
   })
 })
