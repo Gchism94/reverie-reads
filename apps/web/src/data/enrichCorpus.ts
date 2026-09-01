@@ -3,9 +3,11 @@ import {
   isIngestibleCoverUrl,
   type Contributor,
   type CoverSource,
+  type SeriesEvidenceRecord,
 } from '@reverie/core'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { enrichBookOutcome, type EnrichResult } from '../lib/enrich'
+import { classifyEnrichedSeries } from '../lib/seriesClassification'
 import { ingestCorpusCover } from '../lib/covers'
 import { supabase } from '../lib/supabase'
 import { pageAll } from './paging'
@@ -182,8 +184,12 @@ export interface CorpusSeriesSuggestion {
   currentPosition: number | null
   proposedSeries: string
   proposedPosition: number | null
+  proposedCount: number | null
   source: string
-  confidence: 'high' | 'medium'
+  identityConfidence: 'high' | 'medium' | 'low' | 'none'
+  membershipConfidence: 'high' | 'medium'
+  reason: string
+  evidence: SeriesEvidenceRecord[]
   checkedAt: string
 }
 
@@ -192,12 +198,52 @@ interface CorpusSeriesSuggestionRow {
   work_id: string
   proposed_series: string
   proposed_position: number | string | null
+  proposed_count: number | null
   source: string
+  identity_confidence: 'high' | 'medium' | 'low' | 'none'
   confidence: 'high' | 'medium'
+  reason: string | null
+  evidence: unknown
   checked_at: string
   works:
     | { title: string; author_text: string | null; series: string | null; position: number | string | null }
     | { title: string; author_text: string | null; series: string | null; position: number | string | null }[]
+}
+
+const normalizeSeriesEvidence = (value: unknown): SeriesEvidenceRecord[] => {
+  if (!Array.isArray(value)) return []
+  return value.flatMap((item) => {
+    if (!item || typeof item !== 'object') return []
+    const row = item as Record<string, unknown>
+    const kind = row.kind
+    if (
+      kind !== 'relational_membership' &&
+      kind !== 'candidate_label' &&
+      kind !== 'provider_unavailable'
+    )
+      return []
+    const source = typeof row.source === 'string' ? row.source.trim() : ''
+    if (!source) return []
+    const position = Number(row.position)
+    const memberCount = Number(row.memberCount)
+    const orderType =
+      row.orderType === 'publication' ||
+      row.orderType === 'recommended' ||
+      row.orderType === 'narrative'
+        ? row.orderType
+        : 'unspecified'
+    return [
+      {
+        source,
+        kind,
+        sourceRef: typeof row.sourceRef === 'string' ? row.sourceRef : null,
+        series: typeof row.series === 'string' ? row.series : null,
+        position: Number.isFinite(position) && position > 0 ? position : null,
+        memberCount: Number.isInteger(memberCount) && memberCount > 0 ? memberCount : null,
+        orderType,
+      },
+    ]
+  })
 }
 
 export async function fetchCorpusSeriesSuggestions(): Promise<CorpusSeriesSuggestion[]> {
@@ -205,7 +251,7 @@ export async function fetchCorpusSeriesSuggestions(): Promise<CorpusSeriesSugges
     supabase
       .from('work_series_suggestions')
       .select(
-        'id, work_id, proposed_series, proposed_position, source, confidence, checked_at, works:work_id(title, author_text, series, position)',
+        'id, work_id, proposed_series, proposed_position, proposed_count, source, identity_confidence, confidence, reason, evidence, checked_at, works:work_id(title, author_text, series, position)',
         { count: 'exact' },
       )
       .eq('status', 'pending')
@@ -226,8 +272,12 @@ export async function fetchCorpusSeriesSuggestions(): Promise<CorpusSeriesSugges
         currentPosition: work.position == null ? null : Number(work.position),
         proposedSeries: row.proposed_series,
         proposedPosition: row.proposed_position == null ? null : Number(row.proposed_position),
+        proposedCount: row.proposed_count,
         source: row.source,
-        confidence: row.confidence,
+        identityConfidence: row.identity_confidence,
+        membershipConfidence: row.confidence,
+        reason: row.reason?.trim() ?? '',
+        evidence: normalizeSeriesEvidence(row.evidence),
         checkedAt: row.checked_at,
       },
     ]
@@ -509,19 +559,19 @@ export interface CorpusSeriesDiscoveryResult {
   suggestion_id?: string
 }
 
-/** The exact catalog evidence the server evaluates. Confidence decides whether the result may
- * fill a blank, must wait for review, or is merely recheckable unresolved evidence. */
-export function corpusSeriesDiscoveryPayload(result: EnrichResult): Record<string, unknown> {
-  const confidence = result.confidence ?? 'none'
-  const seriesProvenance = result.provenance?.series
-  return {
-    matched: confidence === 'high' || confidence === 'medium',
-    series: result.series || null,
-    position: result.seriesPosition,
-    confidence,
-    source: seriesProvenance?.source ?? result.source ?? 'catalog',
-    sourceRef: result.workId || result.editionId || null,
-  }
+/** Series membership is classified independently from the title/author match. The relational
+ * source's position and count replace the search document's hints only after it contains this
+ * exact book. */
+export async function corpusSeriesDiscoveryPayload(
+  work: Pick<CorpusEnrichmentWork, 'title' | 'authorText'>,
+  result: EnrichResult,
+): Promise<Record<string, unknown>> {
+  const classification = await classifyEnrichedSeries({
+    title: work.title,
+    author: work.authorText,
+    result,
+  })
+  return { ...classification }
 }
 
 async function recordCorpusSeriesDiscovery(
@@ -622,7 +672,7 @@ export async function bulkCompleteCorpus(
     }
     if (outcome.status === 'ok') {
       patch = corpusPatchFromEnrichment(outcome.data)
-      seriesPayload = corpusSeriesDiscoveryPayload(outcome.data)
+      seriesPayload = await corpusSeriesDiscoveryPayload(work, outcome.data)
       if (
         !relocatedCover &&
         outcome.data.cover &&

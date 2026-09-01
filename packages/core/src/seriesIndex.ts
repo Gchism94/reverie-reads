@@ -62,6 +62,20 @@ export interface AuthorSection {
   series: SeriesInSection[]
 }
 
+/** Keep the normal series index on structured authority. A compatibility `books.series` string is
+ * not membership evidence: it appears only when a confirmed live primary entry for that exact
+ * series points back to the book. Unknown legacy claims remain available to the review queue. */
+export function confirmedSeriesBooks(
+  books: readonly Book[],
+  entriesBySeries: ReadonlyMap<string, readonly SeriesEntry[]>,
+): Book[] {
+  return books.filter((book) => {
+    const name = (book.series ?? '').trim()
+    if (!name) return false
+    return (entriesBySeries.get(name) ?? []).some((entry) => entry.bookId === book.id)
+  })
+}
+
 /**
  * Which authors a series files under.
  *

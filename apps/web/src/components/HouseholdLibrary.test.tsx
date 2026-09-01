@@ -163,7 +163,10 @@ describe('household Library presentation', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Edit shared details' }))
     expect(screen.getByRole('dialog', { name: 'Edit shared details' })).toBeInTheDocument()
-    expect(screen.getByText(/Personal copies keep their existing details/)).toBeInTheDocument()
+    expect(screen.getByText(/Verified series fills personal copies/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/Covers, genre, and publication details stay personal/),
+    ).toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('Shared primary genre'), {
       target: { value: 'mystery' },
     })

@@ -107,10 +107,23 @@ wishlist` was the pre-#68 model and is long wrong. Format flags **suppress, neve
   without creating `books` or implying owned/borrowed/wishlist/read state. Existing corpus metadata
   is editable only by a household owner or corpus administrator. Routine edits to an active
   personal row stay personal; the existing fill-only removal/account-deletion preservation may
-  still populate missing objective corpus gaps before the last source disappears. A personal owner
-  must explicitly choose “Use shared details” to adopt shared series, genre, cover, and publication
-  fields, and that adoption never changes title/contributors, ISBN, possession, reading history,
-  rating, or private annotations.
+  still populate missing objective corpus gaps before the last source disappears, but series is no
+  longer treated as objective without relational evidence. Trusted corpus
+  series/position/count is a default for personal rows only while their claim remains
+  unknown/enrichment/corpus and the reader-choice guard is false; reader and CSV-import choices are
+  never overwritten. A personal owner must explicitly choose “Use shared details” for genre, cover,
+  and publication fields; that same deliberate action may replace a personal series choice with the
+  shared series. Neither path changes title/contributors, ISBN, possession, reading history, rating,
+  or private annotations.
+- **Series classification is corpus-first, relational, and default-only.** A search result's series
+  label is never membership evidence. Automatic classification must find the exact work inside a
+  provider relationship, keep book-identity confidence separate from membership confidence, and
+  retain its evidence/reason. A singleton or source conflict waits for corpus-administrator review;
+  unavailable is unresolved; a missing label is an observation, never proof of standalone status.
+  Trusted corpus series seeds household display directly and only replaces personal
+  unknown/enrichment/corpus defaults—never a reader or CSV-import choice. Fantastic Fiction may be
+  retained only as membership/name/order corroboration and never auto-promotes by itself; do not
+  scrape it without written permission or a supported feed. See `docs/reference/DATA_SOURCES.md`.
 - **Structured rows own personal series membership.** `series` + live `series_entries` are the
   authority; `books.series`, `position`, and `series_count` are a compatibility projection of one
   explicit `is_primary` entry. A book may have multiple live memberships, but at most one primary;

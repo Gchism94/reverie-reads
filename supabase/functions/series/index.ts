@@ -1,7 +1,8 @@
 // Canonical series data (docs/archive/task-series-experience.md §2) — the releases fn's sibling.
 // One mode: { name, author? } → the canonical entry list for that series, seeded from Hardcover
 // (GraphQL, free Bearer token, 60 req/min) and cached per series daily in the shared
-// releases_cache (key `series:<norm-name>`), so one upstream lookup serves every reader.
+// releases_cache (key `series:<norm-name>|<norm-author>`), so one upstream lookup serves every
+// reader without letting two authors' identically named series share the wrong cached graph.
 //
 // The CLIENT owns the merge: source entries only fill gaps in series_entries and never touch a
 // user_edited row — this function just returns what the catalog knows. No token configured
@@ -53,6 +54,9 @@ interface SourceEntry {
 interface SeriesPayload {
   name: string
   sourceRef: string | null
+  /** Provider cardinality. This can exceed entries.length when unavailable/retired books are
+   * filtered from the public graph, so consumers keep both values. */
+  memberCount: number | null
   entries: SourceEntry[]
   unavailable?: boolean
 }
@@ -82,7 +86,13 @@ async function cacheSet(key: string, payload: SeriesPayload): Promise<void> {
 /** Hardcover GraphQL: find the series by name, pull its books in position order. Parsed
  *  defensively — the schema drifts, and a miss must degrade to "no data", never a 500. */
 async function fetchHardcoverSeries(name: string, author: string): Promise<SeriesPayload> {
-  const empty: SeriesPayload = { name, sourceRef: null, entries: [], unavailable: true }
+  const empty: SeriesPayload = {
+    name,
+    sourceRef: null,
+    memberCount: null,
+    entries: [],
+    unavailable: true,
+  }
   if (!HARDCOVER_TOKEN) return empty
   const query = `
     query ($name: String!) {
@@ -143,6 +153,7 @@ async function fetchHardcoverSeries(name: string, author: string): Promise<Serie
     return {
       name: String(best.s.name ?? name),
       sourceRef: String(best.s.id ?? ''),
+      memberCount: Number(best.s.books_count) || positioned.length || null,
       entries: positioned,
     }
   } catch {
@@ -252,7 +263,7 @@ Deno.serve(async (req: Request) => {
   if (!name) return json({ error: 'missing name' }, 400)
 
   try {
-    const key = `series:${norm(name)}`
+    const key = `series:${norm(name)}|${norm(body.author ?? '')}`
     const cached = await cacheGet(key)
     if (cached) return json(cached)
     const payload = await fetchHardcoverSeries(name, (body.author ?? '').trim())
@@ -260,6 +271,6 @@ Deno.serve(async (req: Request) => {
     return json(payload)
   } catch (e) {
     captureEdgeError('series', e)
-    return json({ name, sourceRef: null, entries: [], unavailable: true })
+    return json({ name, sourceRef: null, memberCount: null, entries: [], unavailable: true })
   }
 })

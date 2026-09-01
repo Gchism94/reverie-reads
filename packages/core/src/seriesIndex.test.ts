@@ -3,6 +3,7 @@ import { makeBook } from './book.fixture'
 import type { Book } from './types'
 import {
   bylineAuthors,
+  confirmedSeriesBooks,
   displayTotal,
   groupSeriesByAuthor,
   resolveReorder,
@@ -190,6 +191,21 @@ describe('the author-grouped index', () => {
     const idx = groupSeriesByAuthor([a, b])
     expect(idx[0]!.series).toHaveLength(1)
     expect(idx[0]!.series[0]!.books.map((x) => x.id)).toEqual(['x', 'y'])
+  })
+
+  it('keeps unreviewed scalar claims out of the confirmed index projection', () => {
+    const confirmed = bk({ id: 'confirmed', series: 'Real Saga', first: 'Ada', last: 'Reader' })
+    const legacy = bk({ id: 'legacy', series: 'Search Label', first: 'Ada', last: 'Reader' })
+    const entries = new Map<string, SeriesEntry[]>([
+      [
+        'Real Saga',
+        [entry({ id: 'slot', position: 1, title: confirmed.title, bookId: confirmed.id })],
+      ],
+    ])
+
+    expect(confirmedSeriesBooks([confirmed, legacy], entries).map((book) => book.id)).toEqual([
+      'confirmed',
+    ])
   })
 })
 

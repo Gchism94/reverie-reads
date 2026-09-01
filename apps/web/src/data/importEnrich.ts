@@ -2,6 +2,7 @@ import type { Book } from '@reverie/core'
 import { supabase } from '../lib/supabase'
 import { pageAll } from './paging'
 import { bulkComplete } from './enrichLibrary'
+import { bulkCompleteCorpus, fetchCorpusEnrichmentCandidates } from './enrichCorpus'
 import { booksKey } from './books'
 import type { QueryClient } from '@tanstack/react-query'
 
@@ -20,6 +21,23 @@ export async function enrichImported(qc: QueryClient, importedIds: string[]): Pr
   const batch = all.filter((b) => wanted.has(b.id))
   if (!batch.length) return
   await bulkComplete(batch, () => {}, () => false)
+
+  // Corpus administrators run the shared classifier automatically for the works this import just
+  // touched. Ordinary readers cannot write canonical evidence; their works remain in the same
+  // resumable administrator queue instead of turning an unverified personal search label into
+  // shared truth. The global enrichment/series caches make this follow-up reuse the provider work.
+  const { data: isAdmin, error: adminError } = await supabase.rpc('is_corpus_admin')
+  if (!adminError && isAdmin === true) {
+    const workIds = new Set(
+      batch.map((book) => book.corpusWorkId).filter((id): id is string => !!id),
+    )
+    if (workIds.size) {
+      const candidates = (await fetchCorpusEnrichmentCandidates()).filter((work) =>
+        workIds.has(work.id),
+      )
+      if (candidates.length) await bulkCompleteCorpus(candidates, () => {}, () => false)
+    }
+  }
   await qc.invalidateQueries({ queryKey: booksKey })
 }
 

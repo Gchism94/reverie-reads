@@ -267,8 +267,9 @@ function CorpusEditForm({
         <Modal title="Edit shared details" onClose={() => setOpen(false)} wide>
           <p className="text-[13px] font-semibold text-ink">{book.title}</p>
           <p className="mt-1 max-w-[62ch] text-[12px] leading-relaxed text-muted">
-            Changes update the shared catalog. Personal copies keep their existing details until
-            their owner chooses to use the shared version.
+            Changes update the shared catalog. Verified series fills personal copies that still use
+            an automatic default. Covers, genre, and publication details stay personal until their
+            owner chooses the shared version.
           </p>
           <form
             className="mt-5 space-y-4"

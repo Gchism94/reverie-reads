@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   enrich: vi.fn(),
   ingest: vi.fn(),
   rpc: vi.fn(),
+  classify: vi.fn(),
 }))
 
 vi.mock('../lib/enrich', () => ({
@@ -19,6 +20,10 @@ vi.mock('../lib/covers', () => ({
     mocks.calls.push('ingest')
     return mocks.ingest(...args)
   },
+}))
+
+vi.mock('../lib/seriesClassification', () => ({
+  classifyEnrichedSeries: (...args: unknown[]) => mocks.classify(...args),
 }))
 
 vi.mock('../lib/supabase', () => ({
@@ -64,6 +69,7 @@ beforeEach(() => {
   mocks.enrich.mockReset()
   mocks.ingest.mockReset()
   mocks.rpc.mockReset()
+  mocks.classify.mockReset()
 })
 
 describe('corpus cover recovery', () => {
@@ -151,6 +157,28 @@ describe('corpus cover recovery', () => {
       data: name === 'record_corpus_series_discovery' ? { outcome: 'applied' } : null,
       error: null,
     }))
+    mocks.classify.mockResolvedValue({
+      outcome: 'found',
+      matched: true,
+      series: 'Recovered Saga',
+      position: 2,
+      count: 3,
+      identityConfidence: 'high',
+      membershipConfidence: 'high',
+      source: 'hardcover',
+      sourceRef: 'hc-series-1',
+      reason: 'Relational membership matched.',
+      evidence: [
+        {
+          source: 'hardcover',
+          kind: 'relational_membership',
+          sourceRef: 'hc-series-1',
+          series: 'Recovered Saga',
+          position: 2,
+          memberCount: 3,
+        },
+      ],
+    })
 
     const result = await bulkCompleteCorpus([work('')], () => undefined, () => false)
 
@@ -168,12 +196,26 @@ describe('corpus cover recovery', () => {
       expect.objectContaining({
         p_work: '11111111-1111-4111-8111-111111111111',
         p_result: {
+          outcome: 'found',
           matched: true,
           series: 'Recovered Saga',
           position: 2,
-          confidence: 'high',
+          count: 3,
+          identityConfidence: 'high',
+          membershipConfidence: 'high',
           source: 'hardcover',
-          sourceRef: 'hc-work-1',
+          sourceRef: 'hc-series-1',
+          reason: 'Relational membership matched.',
+          evidence: [
+            {
+              source: 'hardcover',
+              kind: 'relational_membership',
+              sourceRef: 'hc-series-1',
+              series: 'Recovered Saga',
+              position: 2,
+              memberCount: 3,
+            },
+          ],
         },
       }),
     )

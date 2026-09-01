@@ -213,11 +213,11 @@ select is(
   '81000000-0000-4000-8000-000000000002'::uuid,
   'the owner can remove the personal membership'
 );
-select is(
-  (select concat_ws('|', series, position, pages, pub_y, isbns[1])
+select ok(
+  (select series is null and position is null
+     and pages = 444 and pub_y = 2024 and isbns[1] = '9780140328721'
    from public.works where id = '80000000-0000-4000-8000-000000000002'),
-  'Leaving Series|2|444|2024|9780140328721',
-  'soft removal first preserves every available objective gap in the corpus'
+  'soft removal preserves objective gaps but cannot publish an unverified personal series'
 );
 select is(
   (select cover_url from public.works where id = '80000000-0000-4000-8000-000000000002'),

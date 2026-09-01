@@ -4,7 +4,6 @@ import {
   corpusCoverNeedsDurableOwnership,
   corpusPatchFromEnrichment,
   corpusSeriesCheckDue,
-  corpusSeriesDiscoveryPayload,
   corpusWorkIsIncomplete,
   corpusWorkShouldCheck,
   personalCoverIsReviewed,
@@ -207,14 +206,6 @@ describe('corpus enrichment patch', () => {
       editionId: 'OLE1',
       provenance: result.provenance,
       confidence: 'high',
-    })
-    expect(corpusSeriesDiscoveryPayload(result)).toEqual({
-      matched: true,
-      series: 'The Sequence',
-      position: 2,
-      confidence: 'high',
-      source: 'openlibrary',
-      sourceRef: 'OLW1',
     })
   })
 })

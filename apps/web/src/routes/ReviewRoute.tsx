@@ -154,12 +154,62 @@ export function CorpusSeriesReview({ suggestions }: { suggestions: CorpusSeriesS
                 <span className="text-ink">
                   {suggestion.proposedSeries}
                   {suggestion.proposedPosition == null ? '' : ` · #${suggestion.proposedPosition}`}
+                  {suggestion.proposedCount == null ? '' : ` · ${suggestion.proposedCount} books`}
                 </span>
               </div>
             </div>
             <div className="mt-1 text-[11px] text-muted">
-              {suggestion.source} · {suggestion.confidence} confidence
+              {suggestion.source} · identity {suggestion.identityConfidence} · membership{' '}
+              {suggestion.membershipConfidence}
             </div>
+            {suggestion.reason && (
+              <p className="mt-1 text-[12px] leading-relaxed text-muted">{suggestion.reason}</p>
+            )}
+            {!!suggestion.evidence.length && (
+              <details className="mt-2 text-[12px] text-muted">
+                <summary className="min-h-11 cursor-pointer py-2 font-semibold text-ink">
+                  Evidence · {suggestion.evidence.length}{' '}
+                  {suggestion.evidence.length === 1 ? 'observation' : 'observations'}
+                </summary>
+                <ul className="space-y-1 border-l border-line pl-3">
+                  {suggestion.evidence.map((evidence, index) => {
+                    const label =
+                      evidence.kind === 'relational_membership'
+                        ? 'membership'
+                        : evidence.kind === 'candidate_label'
+                          ? 'search candidate'
+                          : 'source unavailable'
+                    const order =
+                      evidence.position == null
+                        ? ''
+                        : ` · #${evidence.position} · ${evidence.orderType === 'unspecified' ? 'order type unknown' : `${evidence.orderType} order`}`
+                    const count =
+                      evidence.memberCount == null ? '' : ` · ${evidence.memberCount} books`
+                    const refIsUrl = /^https?:\/\//i.test(evidence.sourceRef ?? '')
+                    return (
+                      <li key={`${evidence.source}-${evidence.kind}-${index}`}>
+                        {evidence.source} · {label}
+                        {order}
+                        {count}
+                        {refIsUrl && (
+                          <>
+                            {' · '}
+                            <a
+                              href={evidence.sourceRef ?? undefined}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="underline underline-offset-2"
+                            >
+                              View source
+                            </a>
+                          </>
+                        )}
+                      </li>
+                    )
+                  })}
+                </ul>
+              </details>
+            )}
             <div className="mt-3 flex flex-wrap gap-2">
               <button
                 type="button"

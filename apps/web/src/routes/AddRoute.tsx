@@ -312,12 +312,10 @@ function AddForm({
   const [positionError, setPositionError] = useState<string | null>(null)
   // Track whether the user edited genre, so enrichment fills it but never overrides their choice.
   const genreEdited = useRef(false)
-  // Same tracking for series: typed -> seriesUserChosen true; left as the enrichment-prefilled
-  // value (or never touched) -> false, so a later enrich sweep can still treat it as fill-only.
+  // Same tracking for series: typed -> seriesUserChosen true; left as the verified corpus-prefilled
+  // value (or never touched) -> false, so later corpus corrections remain default-only.
   const seriesEdited = useRef(false)
-  const [seriesClaim, setSeriesClaim] = useState<SeriesClaim>(
-    hit.seriesClaim ?? { origin: 'unknown' },
-  )
+  const [seriesClaim] = useState<SeriesClaim>(hit.seriesClaim ?? { origin: 'unknown' })
   // Distinct contributor names across the library, for the editor's autocomplete.
   const authorSuggestions = [
     ...new Set((books ?? []).flatMap((b) => b.contributors.map((c) => c.name)).filter(Boolean)),
@@ -360,20 +358,10 @@ function AddForm({
       setContribs(contributorsFromAuthors(res.authors))
     // Fill only blanks — never overwrite what the user typed. genre is the mapped primary genre
     // (C1 fill); only applied if the user hasn't edited the genre field themselves.
-    const fillsSeries = !form.series && !!res.series
-    if (fillsSeries) {
-      setSeriesClaim(
-        makeSeriesClaim('enrichment', res.provenance?.series?.source ?? 'catalog', {
-          ...(res.workId || res.editionId ? { sourceRef: res.workId || res.editionId } : {}),
-          ...(res.confidence ? { confidence: res.confidence } : {}),
-          ...(res.provenance?.series?.at ? { at: res.provenance.series.at } : {}),
-        }),
-      )
-    }
     setForm((p) => ({
       ...p,
-      series: p.series || res.series,
-      position: p.position || (res.seriesPosition != null ? String(res.seriesPosition) : ''),
+      // A resolved book search is not series-membership evidence. Corpus classification fills this
+      // later when a relational source contains the book; readers can still enter it explicitly.
       genre: genreEdited.current ? p.genre : res.genre || p.genre,
     }))
     // Cover — honor the match confidence the backend already scores (ISBN, exact title, author
@@ -817,12 +805,9 @@ function AddForm({
   )
 }
 
-/**
- * Preserve the catalog series evidence already returned by bulk search. The old inline mapper
- * narrowed SearchResult through `hitOf` (which intentionally has no series fields), then wrote
- * every result as standalone. A large bulk add consequently turned reliable Hardcover series
- * names and positions into manual repair work.
- */
+/** Generic search results identify books; they do not independently prove membership. Bulk Add
+ * creates a neutral personal row and the shared corpus classifier seeds a series only after a
+ * relational source contains the exact book. */
 export function bulkIncomingFromSearch(
   result: SearchResult,
   skinGenre: string,
@@ -830,21 +815,13 @@ export function bulkIncomingFromSearch(
 ): Incoming {
   const hit = hitOf(result)
   const authorParts = (hit.authors[0] ?? '').trim().split(/\s+/)
-  const series = result.series?.trim() ?? ''
   return {
     title: hit.title,
     first: authorParts.length > 1 ? (authorParts[0] ?? '') : '',
     last: authorParts.length > 1 ? authorParts.slice(1).join(' ') : (authorParts[0] ?? ''),
-    series,
-    ...(series
-      ? {
-          seriesClaim: makeSeriesClaim('enrichment', `${result.source}_search`, {
-            confidence: 'high',
-          }),
-        }
-      : {}),
-    position: series ? (result.seriesPosition ?? '') : '',
-    status: series ? 'ongoing' : 'standalone',
+    series: '',
+    position: '',
+    status: 'standalone',
     genre: skinGenre,
     subgenre: bulkSub,
     subgenres: [bulkSub],

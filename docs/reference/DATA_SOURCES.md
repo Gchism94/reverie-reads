@@ -46,6 +46,46 @@ including indie and Kindle Unlimited titles, _and_ being usable from a personal 
 cover-URL / upload field for ASIN-only stragglers. The app already does this chain at runtime;
 `scripts/enrich_covers.mjs` and `scripts/enrich_hardcover.mjs` pre-bake it into the seed.
 
+## Series membership and order
+
+Series classification is a separate evidence problem from matching a book. A provider may identify
+the correct title, author, and ISBN while still attaching a search-only label that is not a real
+series. Reverie therefore stores identity confidence and membership confidence independently and
+accepts an automatic corpus default only when a relationship source actually contains that work.
+
+Use this hierarchy by question:
+
+| Question                              | Preferred evidence                                                                                                                                                                                                                                              |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Has the book actually been published? | A live publisher product page, issued ISBN/ONIX distributor data, or a post-publication national-library record. A product announcement or Library of Congress CIP record may be prepublication evidence, not proof of release.                                 |
+| Is the series complete or continuing? | An explicit, dated author statement, then the publisher/imprint or rights catalog. “Latest release” and the current number of known books never prove completion.                                                                                               |
+| What is the exact order?              | The author's recommended-order page, then a publisher series page, then corroborating relational databases. Preserve whether the value means `publication`, `recommended`, `narrative`, or `unspecified`; never silently collapse those into one kind of order. |
+| Which edition/history is involved?    | National-library and ISBN/ONIX records; ISFDB is useful corroboration for speculative fiction. Edition publication does not by itself prove work-level series membership.                                                                                       |
+| What breaks a tie?                    | Two independent sources, with author/publisher evidence controlling. A disagreement remains an administrator review item rather than being decided by source count alone.                                                                                       |
+
+Current automatic classification uses Hardcover's structured series-to-book relationship and its
+provider cardinality. Candidate labels returned during ordinary Google Books/Open Library/Hardcover
+search are not relationship evidence. The evidence model also accepts author, publisher,
+ISBN/ONIX, national-library, Wikidata, ISFDB, and Open Library observations as supported connectors
+are added; unavailable sources remain retryable and cannot become a negative ruling. Open Library's
+own guidance reserves its APIs for low-volume real-time use and points bulk consumers to monthly
+dumps, so a future corpus-wide connector must use the dumps rather than request every work live.
+
+### Fantastic Fiction boundary
+
+Fantastic Fiction is conflict/omission discovery and administrator corroboration only. Reverie may
+retain only the fact that this corpus work is a member, the series name, the order value/type, the
+page URL, and the observation time. It does not retain the site's series-size count and must not
+ingest descriptions, covers, reviews, biographies, lists, or other site content. Fantastic Fiction
+never promotes a singleton or overrides an
+author/publisher source by itself. There is no supported public API in use, so the background worker
+does not scrape it; automation requires written permission or a supported licensed feed.
+
+Public accessibility is not blanket scraping authorization. In the Ninth Circuit, _hiQ v.
+LinkedIn_ limits one CFAA theory for public pages, but contract, copyright/compilation, state-law,
+technical-control, and non-U.S. database-right questions remain separate. Site terms and robots
+rules are checked before any connector is enabled, and a technical refusal remains a refusal.
+
 ## Future / upcoming releases
 
 There is **no reliable free feed of upcoming romance** — indie/KU release dates live as Amazon

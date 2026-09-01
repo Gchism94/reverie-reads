@@ -1,8 +1,6 @@
 import {
   contributorsFromAuthors,
   enrichmentCoverFill,
-  enrichmentSeriesFill,
-  makeSeriesClaim,
   mergeImport,
   type Book,
   type CoverSource,
@@ -95,29 +93,11 @@ function coverOriginOf(e: EnrichResult): CoverSource {
  *  genre is the mapped primary genre (the C1 fill); mergeImport fills it only when blank, so the
  *  romance seed (genre='romance') is never overwritten. */
 function toIncoming(e: EnrichResult, b: Book): Incoming {
-  // Same non-overwrite rule as cover: a reader-chosen (or reader-cleared) series is never replaced
-  // or re-offered. A bare position number is meaningless without the series name it belongs to, so
-  // it's withheld along with series rather than gated independently.
-  const series = enrichmentSeriesFill(b, e.series)
   return {
     title: b.title,
-    series,
-    ...(series
-      ? {
-          seriesClaim: makeSeriesClaim(
-            'enrichment',
-            e.provenance?.series?.source ?? 'catalog',
-            {
-              ...(e.workId || e.editionId
-                ? { sourceRef: e.workId || e.editionId }
-                : {}),
-              ...(e.confidence ? { confidence: e.confidence } : {}),
-              ...(e.provenance?.series?.at ? { at: e.provenance.series.at } : {}),
-            },
-          ),
-        }
-      : {}),
-    position: series ? (e.seriesPosition ?? '') : '',
+    // Generic enrichment may identify the book but does not prove its series. The corpus
+    // classifier owns automatic series defaults and its work trigger seeds eligible personal rows.
+    // Explicit CSV series columns and reader edits still arrive through their own trusted paths.
     isbn: e.isbn13 || e.isbn || e.isbn10 || '',
     // The non-overwrite rule: a user-chosen cover is never replaced (and never re-offered after the
     // reader clears it); otherwise fill-only, same as every other field mergeImport touches.
