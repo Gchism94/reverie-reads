@@ -222,6 +222,60 @@ describe('corpus cover recovery', () => {
     expect(result).toMatchObject({ scanned: 1, filled: 1, stopReason: 'done' })
   })
 
+  it('counts a confirmed corpus series replay as a filled reconciliation', async () => {
+    mocks.enrich.mockResolvedValue({
+      status: 'ok',
+      data: {
+        title: 'Recovered Work',
+        authors: [],
+        author: 'A Writer',
+        series: 'Recovered Saga',
+        seriesPosition: 2,
+        publisher: '',
+        pubY: null,
+        pubM: null,
+        pubD: null,
+        pageCount: null,
+        isbn10: '',
+        isbn13: '',
+        isbn: '',
+        language: '',
+        genres: [],
+        description: '',
+        cover: '',
+        source: 'hardcover',
+      },
+    })
+    mocks.classify.mockResolvedValue({
+      matched: true,
+      identityConfidence: 'high',
+      membershipConfidence: 'high',
+      source: 'hardcover',
+      series: 'Recovered Saga',
+      position: 2,
+      evidence: [
+        {
+          source: 'hardcover',
+          kind: 'relational_membership',
+          series: 'Recovered Saga',
+          position: 2,
+        },
+      ],
+    })
+    mocks.rpc.mockImplementation(async (name: string) => ({
+      data: name === 'record_corpus_series_discovery' ? { outcome: 'confirmed' } : null,
+      error: null,
+    }))
+
+    const result = await bulkCompleteCorpus(
+      [{ ...work(''), series: 'Recovered Saga', position: 2 }],
+      () => undefined,
+      () => false,
+    )
+
+    expect(result).toMatchObject({ scanned: 1, filled: 1, nothing: 0, stopReason: 'done' })
+  })
+
   it('runs owner-scoped recovery before completing an empty candidate set', async () => {
     const order: string[] = []
     const progress = vi.fn()

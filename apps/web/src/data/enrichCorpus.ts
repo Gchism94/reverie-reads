@@ -705,7 +705,12 @@ export async function bulkCompleteCorpus(
     try {
       await writeCorpusPatch(work.id, patch, checkedAt)
       const seriesResult = await recordCorpusSeriesDiscovery(work.id, seriesPayload, checkedAt)
-      seriesChanged = seriesResult.outcome === 'applied' || seriesResult.outcome === 'review'
+      // A confirmed tuple is still a material reconciliation: the database replays that trusted
+      // default into eligible personal rows and materializes any missing structured membership.
+      seriesChanged =
+        seriesResult.outcome === 'applied' ||
+        seriesResult.outcome === 'confirmed' ||
+        seriesResult.outcome === 'review'
     } catch (error) {
       stopReason = 'error'
       errorMessage = error instanceof Error ? error.message : String(error)

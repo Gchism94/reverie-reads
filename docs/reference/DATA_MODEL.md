@@ -533,7 +533,9 @@ origin is `unknown`, `enrichment`, or `corpus` and whose reader-choice guard is 
 reader and CSV-import choices remain private authority. Conflicting old automatic structured entries
 are tombstoned before the trusted corpus membership materializes. An authorized shared editor's
 direct change becomes high-confidence manual corpus evidence and seeds through the same default
-path. It does not overwrite personal reader/import choices.
+path. A later high-confidence confirmation of the same canonical tuple replays this default path so
+an eligible legacy personal scalar cannot remain detached from structured membership. It does not
+overwrite personal reader/import choices.
 
 Every Add and import surface names its destination. For a linked member the default is the reader's
 personal library plus the household catalog; personal-only and household-only remain explicit

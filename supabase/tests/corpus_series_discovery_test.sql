@@ -1,5 +1,5 @@
 begin;
-select plan(38);
+select plan(41);
 
 insert into auth.users (id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
 values
@@ -11,15 +11,18 @@ values
 insert into public.corpus_admins (user_id)
 values ('b1000000-0000-4000-8000-000000000001');
 
-insert into public.works (id, work_key, title, author_text, contributors, series, position)
+insert into public.works (
+  id, work_key, title, author_text, contributors, series, position, series_count
+)
 values
-  ('b2000000-0000-4000-8000-000000000001', 'unknown-series|writer', 'Unknown Series', 'A Writer', '[]', null, null),
-  ('b2000000-0000-4000-8000-000000000002', 'no-series|writer', 'No Series Result', 'A Writer', '[]', null, null),
-  ('b2000000-0000-4000-8000-000000000003', 'high-series|writer', 'High Match', 'A Writer', '[]', null, 9),
-  ('b2000000-0000-4000-8000-000000000004', 'medium-series|writer', 'Medium Match', 'A Writer', '[]', null, null),
-  ('b2000000-0000-4000-8000-000000000005', 'conflict-series|writer', 'Conflict Match', 'A Writer', '[]', 'Curated Saga', 4),
-  ('b2000000-0000-4000-8000-000000000006', 'position-conflict|writer', 'Position Conflict', 'A Writer', '[]', 'Same Saga', 4),
-  ('b2000000-0000-4000-8000-000000000007', 'ff-match|writer', 'FF Match', 'A Writer', '[]', null, null);
+  ('b2000000-0000-4000-8000-000000000001', 'unknown-series|writer', 'Unknown Series', 'A Writer', '[]', null, null, null),
+  ('b2000000-0000-4000-8000-000000000002', 'no-series|writer', 'No Series Result', 'A Writer', '[]', null, null, null),
+  ('b2000000-0000-4000-8000-000000000003', 'high-series|writer', 'High Match', 'A Writer', '[]', null, 9, null),
+  ('b2000000-0000-4000-8000-000000000004', 'medium-series|writer', 'Medium Match', 'A Writer', '[]', null, null, null),
+  ('b2000000-0000-4000-8000-000000000005', 'conflict-series|writer', 'Conflict Match', 'A Writer', '[]', 'Curated Saga', 4, null),
+  ('b2000000-0000-4000-8000-000000000006', 'position-conflict|writer', 'Position Conflict', 'A Writer', '[]', 'Same Saga', 4, null),
+  ('b2000000-0000-4000-8000-000000000007', 'ff-match|writer', 'FF Match', 'A Writer', '[]', null, null, null),
+  ('b2000000-0000-4000-8000-000000000008', 'confirmed-series|writer', 'Confirmed Match', 'A Writer', '[]', 'The Empyrean', 2, 5);
 
 -- One automatic personal value should follow the trusted corpus default; an explicit reader value
 -- on the same work must remain private authority.
@@ -34,7 +37,11 @@ insert into public.books (
   ('b3000000-0000-4000-8000-000000000002', 'b1000000-0000-4000-8000-000000000002',
    'b2000000-0000-4000-8000-000000000003', 'High Match', 'A Writer',
    'My Reading Order', 7, 'ongoing', true,
-   '{"origin":"reader","source":"book_edit"}'::jsonb);
+   '{"origin":"reader","source":"book_edit"}'::jsonb),
+  ('b3000000-0000-4000-8000-000000000003', 'b1000000-0000-4000-8000-000000000002',
+   'b2000000-0000-4000-8000-000000000008', 'Confirmed Match', 'A Writer',
+   'The Empyrean', 2, 'standalone', false,
+   '{"origin":"unknown","source":"legacy_scalar"}'::jsonb);
 
 select has_column('public', 'works', 'series_check_state',
   'works store a series observation separately from publication status');
@@ -149,6 +156,34 @@ select is(
    join public.series series_row on series_row.id = entry.series_id
    where series_row.name = 'Bogus Search Label' and entry.removed_at is null),
   0, 'replacing an automatic default retires its conflicting structured membership');
+
+set local role authenticated;
+select set_config('request.jwt.claims',
+  '{"sub":"b1000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
+
+select is(
+  public.record_corpus_series_discovery(
+    'b2000000-0000-4000-8000-000000000008',
+    '{"matched":true,"identityConfidence":"high","membershipConfidence":"high","source":"hardcover","sourceRef":"hc-series-8","series":"The Empyrean","position":2,"count":5,"reason":"confirmed relational membership","evidence":[{"source":"hardcover","kind":"relational_membership","sourceRef":"hc-series-8","series":"The Empyrean","position":2,"memberCount":5}]}'::jsonb,
+    '2026-09-11T01:02:30Z'
+  ) ->> 'outcome',
+  'confirmed', 'same-tuple high-confidence evidence reports a reconciliation');
+
+reset role;
+select ok(
+  (select series = 'The Empyrean' and position = 2 and series_count = 5
+     and status = 'ongoing' and series_claim ->> 'origin' = 'corpus'
+   from public.books where id = 'b3000000-0000-4000-8000-000000000003'),
+  'same-tuple confirmation repairs the eligible personal default');
+select ok(
+  (select count(*) = 1
+   from public.series_entries entry
+   join public.series series_row on series_row.id = entry.series_id
+   where entry.book_id = 'b3000000-0000-4000-8000-000000000003'
+     and entry.removed_at is null
+     and series_row.name = 'The Empyrean'
+     and entry.membership_claim ->> 'origin' = 'corpus'),
+  'same-tuple confirmation materializes the missing structured membership');
 
 set local role authenticated;
 select set_config('request.jwt.claims',

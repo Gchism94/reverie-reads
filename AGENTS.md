@@ -123,7 +123,10 @@ wishlist` was the pre-#68 model and is long wrong. Format flags **suppress, neve
   Trusted corpus series seeds household display directly and only replaces personal
   unknown/enrichment/corpus defaults—never a reader or CSV-import choice. Fantastic Fiction may be
   retained only as membership/name/order corroboration and never auto-promotes by itself; do not
-  scrape it without written permission or a supported feed. See `docs/reference/DATA_SOURCES.md`.
+  scrape it without written permission or a supported feed. Re-confirming an unchanged trusted
+  corpus tuple is still a reconciliation event: it must repair eligible personal defaults and their
+  structured membership rather than becoming a tuple-equality no-op. See
+  `docs/reference/DATA_SOURCES.md`.
 - **Structured rows own personal series membership.** `series` + live `series_entries` are the
   authority; `books.series`, `position`, and `series_count` are a compatibility projection of one
   explicit `is_primary` entry. A book may have multiple live memberships, but at most one primary;

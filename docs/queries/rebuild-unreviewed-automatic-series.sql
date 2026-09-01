@@ -8,8 +8,9 @@
 --
 -- Apply: inspect the inventory, change the one approval literal below from REVIEW_ONLY to
 -- RESET_UNREVIEWED_AUTOMATIC_SERIES, and run the whole file again. Run this only after migration
--- 20260913010000 is live. Then use the administrator corpus-completion control until its resumable
--- queue is empty; that pass reclassifies these works with relational evidence.
+-- 20260917010000 is live. Then use the administrator corpus-completion control until its resumable
+-- queue is empty; that pass reclassifies these works with relational evidence and replays every
+-- trusted confirmation into eligible personal defaults and structured membership.
 
 begin;
 
