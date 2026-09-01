@@ -4,7 +4,6 @@ import { bookTropeNames } from './tropes'
 import { authorOf } from './normalize'
 import { normalizeName } from './contributors'
 import { isOwnedBook, isPossessed, isWanted } from './ownership'
-import { claimedSeriesLength } from './seriesIndex'
 
 export type LibrarySort =
   | 'az'
@@ -15,7 +14,6 @@ export type LibrarySort =
   | 'recent'
   | 'series'
 export type SeriesLenBucket = 'Any' | '1' | '2' | '3' | '4' | '5+' | 'Unknown'
-export type LibraryMode = 'grid' | 'series'
 /** Mirrors the /shelves derived-shelf sections (ShelfSectionKey in shelves.ts), for the Library link
  *  each section header carries. Kept as its own facet rather than overloading `read`/`wishlist`
  *  because it must replicate the shelf's own predicate exactly (e.g. the Read shelf's unsplit count
@@ -278,41 +276,6 @@ export function activeFilterCount(f: LibraryFilters): number {
   if (f.wishlist) n++
   if (f.shelf !== 'All') n++
   return n
-}
-
-export interface SeriesGroup {
-  name: string
-  books: Book[] // sorted by position
-  total: number | null // series length, if known
-  owned: number
-  read: number
-}
-
-/** Group books by series for the Series view, with owned-of-total and read counts. */
-export function groupSeries(books: readonly Book[]): SeriesGroup[] {
-  const groups = new Map<string, Book[]>()
-  for (const b of books) {
-    if (!b.series) continue
-    const g = groups.get(b.series) ?? []
-    g.push(b)
-    groups.set(b.series, g)
-  }
-  return [...groups.entries()]
-    .map(([name, bs]) => {
-      const sorted = [...bs].sort((a, b) => positionOf(a, 99) - positionOf(b, 99))
-      // Same order-dependent read as SeriesIndexRoute carried, and the doc named only that one:
-      // both surfaces have to change together or the Library Series view and the Series index
-      // disagree about the same series. See claimedSeriesLength for why MAX.
-      const total = claimedSeriesLength(sorted)
-      return {
-        name,
-        books: sorted,
-        total,
-        owned: sorted.length,
-        read: sorted.filter(isBookRead).length,
-      }
-    })
-    .sort((a, b) => a.name.localeCompare(b.name))
 }
 
 /**

@@ -434,7 +434,7 @@ export const SORTS: { value: LibrarySort; label: string }[] = [
  * family, the first subgenre only modulates lightness/saturation within it.
  *
  * Kept under its old name and shape as the single seam every surface already calls — CoverCard,
- * SeriesView, BookDetailRail, the book page, Add's preview and RefineAdded. The signature gained
+ * BookDetailRail, the book page, Add's preview and RefineAdded. The signature gained
  * `genre` rather than sprouting a second function, so there is one tint rule, not two.
  */
 export function subgenreGradient(subgenre: string, genre = ''): [string, string] {

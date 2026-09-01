@@ -1,14 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { makeBook } from './book.fixture'
 import type { Book } from './types'
-import {
-  bylineAuthors,
-  confirmedSeriesBooks,
-  displayTotal,
-  groupSeriesByAuthor,
-  resolveReorder,
-  seriesAuthorKeys,
-} from './seriesIndex'
+import { bylineAuthors, displayTotal, resolveReorder, seriesAuthorKeys } from './seriesIndex'
 import type { SeriesEntry } from './seriesShelf'
 
 /** makeBook requires a title; none of these assertions care what it is, so it defaults to the id. */
@@ -123,92 +116,6 @@ describe('which authors a series files under', () => {
   })
 })
 
-describe('the author-grouped index', () => {
-  const solo = bk({
-    id: 'b1',
-    title: 'Solo One',
-    series: 'Alpha',
-    contributors: [{ name: 'Zed Author', role: 'author', position: 0 }],
-  })
-  const shared = bk({
-    id: 'b2',
-    title: 'Shared One',
-    series: 'Beta',
-    contributors: [
-      { name: 'Zed Author', role: 'author', position: 0 },
-      { name: 'Ann Coauthor', role: 'co_author', position: 1 },
-    ],
-  })
-  const standalone = bk({ id: 'b3', title: 'No Series', series: '' })
-
-  it('groups by author, sorts authors and series by name, and skips standalones', () => {
-    const idx = groupSeriesByAuthor([solo, shared, standalone])
-    expect(idx.map((a) => a.name)).toEqual(['Ann Coauthor', 'Zed Author'])
-    expect(idx.find((a) => a.name === 'Zed Author')!.series.map((s) => s.name)).toEqual([
-      'Alpha',
-      'Beta',
-    ])
-    expect(idx.find((a) => a.name === 'Ann Coauthor')!.series.map((s) => s.name)).toEqual(['Beta'])
-  })
-
-  it('a book appears under EACH of its authors — the same series in two sections', () => {
-    const idx = groupSeriesByAuthor([shared])
-    expect(idx).toHaveLength(2)
-    for (const section of idx) {
-      expect(section.series[0]!.books.map((b) => b.id)).toEqual(['b2'])
-    }
-  })
-
-  it('includes a series that has entries but no library books yet', () => {
-    const idx = groupSeriesByAuthor(
-      [],
-      new Map([['Ghosted', [entry({ id: 'g1', position: 1, author: 'Nell Marrow' })]]]),
-    )
-    expect(idx.map((a) => a.name)).toEqual(['Nell Marrow'])
-    expect(idx[0]!.series.map((s) => s.name)).toEqual(['Ghosted'])
-    expect(idx[0]!.series[0]!.books).toEqual([])
-  })
-
-  it('groups two spellings of one author into a single section', () => {
-    const a = bk({
-      id: 'x',
-      series: 'One',
-      contributors: [{ name: 'Nell Marrow', role: 'author', position: 0 }],
-    })
-    const b = bk({
-      id: 'y',
-      series: 'Two',
-      contributors: [{ name: 'nell  marrow', role: 'author', position: 0 }],
-    })
-    const idx = groupSeriesByAuthor([a, b])
-    expect(idx).toHaveLength(1)
-    expect(idx[0]!.series.map((s) => s.name)).toEqual(['One', 'Two'])
-  })
-
-  it('a book whose series differs only by surrounding space groups as one series', () => {
-    const a = bk({ id: 'x', series: 'Trimmed', first: 'N', last: 'M' })
-    const b = bk({ id: 'y', series: '  Trimmed  ', first: 'N', last: 'M' })
-    const idx = groupSeriesByAuthor([a, b])
-    expect(idx[0]!.series).toHaveLength(1)
-    expect(idx[0]!.series[0]!.books.map((x) => x.id)).toEqual(['x', 'y'])
-  })
-
-  it('keeps unreviewed scalar claims out of the confirmed index projection', () => {
-    const confirmed = bk({ id: 'confirmed', series: 'Real Saga', first: 'Ada', last: 'Reader' })
-    const legacy = bk({ id: 'legacy', series: 'Search Label', first: 'Ada', last: 'Reader' })
-    const entries = new Map<string, SeriesEntry[]>([
-      [
-        'Real Saga',
-        [entry({ id: 'slot', position: 1, title: confirmed.title, bookId: confirmed.id })],
-      ],
-    ])
-
-    expect(confirmedSeriesBooks([confirmed, legacy], entries).map((book) => book.id)).toEqual([
-      'confirmed',
-    ])
-  })
-})
-
 describe('a drop resolves to a reorder, a no-op, or an explicit refusal', () => {
   const ids = ['a', 'b', 'c']
 
@@ -238,7 +145,7 @@ describe('a drop resolves to a reorder, a no-op, or an explicit refusal', () => 
   })
 })
 
-describe('display total — SeriesView’s rule, not a fourth source', () => {
+describe('display total — compact structured strip', () => {
   it('prefers the entry count when it exceeds what the shelf holds', () => {
     expect(displayTotal(5, 7, 3)).toBe(7)
   })

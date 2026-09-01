@@ -1,7 +1,5 @@
-// The /series index's grouping logic (feat/series-builder). The index is author-grouped: a series
-// files under every author who wrote any of its books, so a co-authored series appears twice, once
-// under each name. Browsing (Library's Series mode) and ARRANGING (this) are different jobs and both
-// exist by decision — this module is only the derivation under the arranging surface.
+// The /series index's author and order logic. The canonical browser files a structured series under
+// every author who wrote any of its confirmed linked books, so a co-authored series appears twice.
 //
 // Everything here is a pure derivation over data the books cache and series list already hold. There
 // is deliberately no query: `useBooks` already embeds `book_authors(position, role, authors(name))`,
@@ -47,35 +45,6 @@ export function bylineAuthors(b: Book): { key: string; name: string }[] {
  *  a contributor join, so this is all there is to match on. */
 const ghostAuthorKey = (e: SeriesEntry): string => normalizeName(e.author)
 
-export interface SeriesInSection {
-  /** the series NAME — series are identified by name app-wide */
-  name: string
-  /** library books in this series that carry this section's author */
-  books: Book[]
-}
-
-export interface AuthorSection {
-  /** normalized author name — the grouping key, stable across capitalisation and spacing */
-  key: string
-  /** display name, taken from the first spelling encountered in byline order */
-  name: string
-  series: SeriesInSection[]
-}
-
-/** Keep the normal series index on structured authority. A compatibility `books.series` string is
- * not membership evidence: it appears only when a confirmed live primary entry for that exact
- * series points back to the book. Unknown legacy claims remain available to the review queue. */
-export function confirmedSeriesBooks(
-  books: readonly Book[],
-  entriesBySeries: ReadonlyMap<string, readonly SeriesEntry[]>,
-): Book[] {
-  return books.filter((book) => {
-    const name = (book.series ?? '').trim()
-    if (!name) return false
-    return (entriesBySeries.get(name) ?? []).some((entry) => entry.bookId === book.id)
-  })
-}
-
 /**
  * Which authors a series files under.
  *
@@ -114,45 +83,6 @@ export function seriesAuthorKeys(
     fromGhosts.push({ key, name: e.author.trim() })
   }
   return fromGhosts
-}
-
-/**
- * The index: every author who has a series, each with their series sorted by name.
- *
- * `seriesNames` carries series that exist as rows but have no library books yet (an all-ghost series
- * seeded from the catalog), with their entries, so those are not invisible here. Series are sorted
- * by name and authors by display name — one order, no toggle.
- */
-export function groupSeriesByAuthor(
-  books: readonly Book[],
-  entriesBySeries: ReadonlyMap<string, readonly SeriesEntry[]> = new Map(),
-): AuthorSection[] {
-  // series name (as written) -> its library books
-  const booksBySeries = new Map<string, Book[]>()
-  for (const b of books) {
-    const name = (b.series ?? '').trim()
-    if (!name) continue
-    const list = booksBySeries.get(name)
-    if (list) list.push(b)
-    else booksBySeries.set(name, [b])
-  }
-  // series rows with entries but no library books still belong in the index
-  for (const name of entriesBySeries.keys())
-    if (!booksBySeries.has(name)) booksBySeries.set(name, [])
-
-  const byAuthor = new Map<string, AuthorSection>()
-  for (const [name, seriesBooks] of booksBySeries) {
-    const entries = entriesBySeries.get(name) ?? []
-    for (const a of seriesAuthorKeys(seriesBooks, entries)) {
-      const section = byAuthor.get(a.key) ?? { key: a.key, name: a.name, series: [] }
-      section.series.push({ name, books: seriesBooks })
-      byAuthor.set(a.key, section)
-    }
-  }
-
-  return [...byAuthor.values()]
-    .map((s) => ({ ...s, series: [...s.series].sort((x, y) => x.name.localeCompare(y.name)) }))
-    .sort((x, y) => x.name.localeCompare(y.name))
 }
 
 /**
@@ -206,14 +136,11 @@ export function resolveReorder(
 }
 
 /**
- * The total a series row displays, by SeriesView's rule — `canonicalTotal ?? group.total` — so the
- * two surfaces cannot disagree about how long a series is.
+ * The total a compact book-detail strip displays from its structured slots and explicit length.
  *
  * There is no single canonical total in the schema: `books.series_count` (per book), the live entry
  * count, and nothing at all on the `series` row are three sources that can each answer differently.
- * SeriesView already reconciles them this way and this defers to it rather than inventing a fourth.
- * `canonicalTotal` is the entry count, and only counts when it EXCEEDS what the shelf holds — the
- * same guard SeriesView applies at its call site.
+ * `canonicalTotal` is the entry count, and only counts when it exceeds what the linked shelf holds.
  */
 export function displayTotal(
   seriesCountFromBooks: number | null,
