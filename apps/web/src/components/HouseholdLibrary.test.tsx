@@ -274,9 +274,14 @@ describe('household Library presentation', () => {
     expect(personal).toHaveStyle({
       background: 'var(--accent-fill)',
       color: 'var(--on-primary)',
+      transition: 'none',
     })
     expect(household).toHaveAttribute('aria-pressed', 'false')
-    expect(household).toHaveStyle({ background: 'transparent', color: 'var(--ink)' })
+    expect(household).toHaveStyle({
+      background: 'transparent',
+      color: 'var(--ink)',
+      transition: 'none',
+    })
     fireEvent.click(household)
     expect(onChange).toHaveBeenCalledWith('household')
   })
