@@ -10,6 +10,14 @@ const rebuild = readFileSync(
   join(__dirname, '../../../docs/queries/rebuild-unreviewed-automatic-series.sql'),
   'utf8',
 )
+const reconciliation = readFileSync(
+  join(__dirname, '../../../supabase/migrations/20260917010000_reconcile_confirmed_series.sql'),
+  'utf8',
+)
+const trustedRepair = readFileSync(
+  join(__dirname, '../../../docs/queries/reconcile-trusted-corpus-series-defaults.sql'),
+  'utf8',
+)
 
 describe('series classification evidence migration', () => {
   it('stores durable evidence on both the work and administrator review proposal', () => {
@@ -46,6 +54,18 @@ describe('series classification evidence migration', () => {
     expect(migration).toContain('order by book.id\n    for update;')
   })
 
+  it('replays a trusted same-tuple confirmation into eligible personal rows', () => {
+    expect(reconciliation).toContain("current_setting('reverie.series_classifier', true)")
+    expect(reconciliation).toMatch(
+      /row\(new\.series, new\.position, new\.series_count\)[\s\S]*is not distinct from[\s\S]*row\(old\.series, old\.position, old\.series_count\)[\s\S]*<> 'on'/,
+    )
+    expect(reconciliation).toContain("'unknown', 'enrichment', 'corpus'")
+    expect(reconciliation).toContain('not coalesce(book.series_user_chosen, false)')
+    expect(reconciliation).toContain(
+      'revoke all on function public.seed_personal_series_from_corpus()',
+    )
+  })
+
   it('revokes every API role before regranting the two callable RPCs', () => {
     for (const signature of [
       'public.record_corpus_series_discovery(uuid, jsonb, timestamptz)',
@@ -69,5 +89,15 @@ describe('series classification evidence migration', () => {
       /work_series_suggestions suggestion[\s\S]*order by suggestion\.work_id, suggestion\.id[\s\S]*public\.books book[\s\S]*order by book\.id[\s\S]*public\.works work[\s\S]*order by work\.id/,
     )
     expect(rebuild).not.toMatch(/'reader'\s*,\s*'import'/)
+  })
+
+  it('keeps the trusted same-tuple repair reviewable and limited to eligible defaults', () => {
+    expect(trustedRepair).toContain("approval constant text := 'REVIEW_ONLY'")
+    expect(trustedRepair).toContain("approval <> 'RECONCILE_TRUSTED_CORPUS_SERIES'")
+    expect(trustedRepair).toContain("item ->> 'kind' = 'relational_membership'")
+    expect(trustedRepair).toContain("'unknown', 'enrichment', 'corpus'")
+    expect(trustedRepair).toContain('not coalesce(book.series_user_chosen, false)')
+    expect(trustedRepair).toContain("set_config('reverie.series_classifier', 'on', true)")
+    expect(trustedRepair).not.toMatch(/'reader'\s*,\s*'import'/)
   })
 })
