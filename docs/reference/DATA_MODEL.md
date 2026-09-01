@@ -282,11 +282,13 @@ reviews             (id pk, work_key text, reviewer_id fk, reviewer_name, rating
 -- series: a first-class record with an ordered entry list that may contain GHOSTS
 -- (a slot for a book the reader doesn't own yet).
 series              (id pk, owner_id fk, name, status, source 'manual'|'hardcover',
-                     source_ref, refreshed_at, created_at, unique (owner_id, name))
+                     source_ref, refreshed_at, archived_at, created_at,
+                     unique (owner_id, name))
 series_entries      (id pk, series_id fk, owner_id fk, position numeric, label,
                      title, author,       -- ghost display fields; a linked entry renders the book
                      book_id fk null, source, user_edited bool,
                      is_primary bool,
+                     archive_primary_intent bool,
                      membership_claim jsonb, -- unknown|reader|import|enrichment|corpus
                      position_claim jsonb,   -- independent provenance for the numeric order
                      removed_at timestamptz,      -- SOFT-DELETE TOMBSTONE — see below
@@ -300,6 +302,11 @@ A secondary membership never changes those scalar fields. Existing pre-Phase-2B 
 explicit review. Trusted forward Add/import/corpus claims and high-confidence enrichment claims
 materialize transactionally; opening a series page performs no write. Membership provenance and
 position provenance are separate because knowing that a book belongs does not prove its number.
+User-facing series deletion is a reversible archive: `series.archived_at` hides the series and all
+of its entries from ordinary authenticated reads without deleting the series, books, reading
+history, live slots, ghosts, or removal tombstones. `archive_primary_intent` remembers the exact
+memberships whose compatibility projection was suspended. Restore promotes one only when the book
+has no newer active primary choice; otherwise that restored membership remains secondary.
 
 lists               (id pk, owner_id fk, name, kind 'tbr'|'collection', is_priority bool,
                      sort_order numeric, description, created_at)
@@ -583,6 +590,12 @@ invalidates the snapshot while a later insert waits until the reviewed transacti
   not silently promote an arbitrary remaining secondary; selecting another primary is an explicit
   reader action.
   See `docs/decisions/0004-series-removal-semantics.md`.
+- **The application removes a series by archiving it, not by deleting it.**
+  `archive_personal_series` preserves every child row and suspends its primary projections;
+  `restore_personal_series` restores saved primary intent only where no newer primary exists.
+  Ordinary RLS-backed series reads exclude archived parents and their entries.
+  `list_archived_personal_series` is the explicit owner-scoped recovery read. The separate merge
+  path may still retire its loser only after re-parenting every live, ghost, and tombstone entry.
 - `series_count IS NULL` drives the **"None set"** filter ("what needs completing").
 - `pub_y/m/d` keep flexible publish-date precision; `pub_m`/`pub_d` are range-checked in the
   DB and parsed through `parseNumericField` in the client, so a bad value is refused in the

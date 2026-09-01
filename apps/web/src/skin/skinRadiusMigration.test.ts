@@ -78,8 +78,6 @@ const ALLOW: Record<string, string> = {
     'the series progress TRACK at 3px — border-radius clamps to 1.5px, so this renders pixel-identical to rounded-full in every skin that is not marrow',
   'routes/SeriesRoute.tsx|h-full rounded-full':
     'the fill inside that same 3px track — same clamp, same pixel-identical result',
-  'library/SeriesView.tsx|h-12 w-3':
-    'a 3px-wide spine sliver in the series strip — rounded-sm is glyph geometry on artwork, not a control silhouette',
   // The two Landing nav links below are CONTROL-SHAPED but must not take control TYPOGRAPHY: three
   // skins set --control-transform: uppercase, which would rewrite "Log in" as "LOG IN" on the landing
   // page. They want a radius without the type rider — the same gap the non-interactive chips below

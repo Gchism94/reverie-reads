@@ -45,12 +45,10 @@ function SearchResultsPanel({ q, onPick }: { q: string; onPick: (b: Book) => voi
       // never moved anything.
       //
       // `mt-1.5` is the 6px the dead calc was asking for, taken through a property that works in
-      // flow. Deliberately NOT the overlay: making the panel truly absolute needs `.skin-plate`
+      // flow. Deliberately NOT an overlay: making the panel truly absolute needs `.skin-plate`
       // changed too (it sets `position: relative` in skin-kit.css, so Frame alone leaves tryst
-      // in flow while the other eight skins float), and it covers both the withheld-matches line
-      // and the Grid/Series toggle — two relocations and a nine-skin sweep. That is a design task,
-      // not this one. The guard in search-withheld-matches.spec.ts is what makes that decision
-      // visible if anyone takes it.
+      // in flow while the other eight skins float) and would cover the withheld-matches line.
+      // The guard in search-withheld-matches.spec.ts keeps that layout decision visible.
       className="mt-1.5 overflow-hidden p-2 shadow-lg"
       style={{ boxShadow: 'var(--shadow)' }}
     >
@@ -92,10 +90,8 @@ function SearchResultsPanel({ q, onPick }: { q: string; onPick: (b: Book) => voi
 
 export function Toolbar({ filterToggleClass = '' }: { filterToggleClass?: string }) {
   const filters = useFilters((s) => s.filters)
-  const mode = useFilters((s) => s.mode)
   const setQuery = useFilters((s) => s.setQuery)
   const setSort = useFilters((s) => s.setSort)
-  const setMode = useFilters((s) => s.setMode)
   const togglePanel = useFilters((s) => s.togglePanel)
   const panelOpen = useFilters((s) => s.panelOpen)
   const setAuthor = useFilters((s) => s.setAuthor)
@@ -159,34 +155,6 @@ export function Toolbar({ filterToggleClass = '' }: { filterToggleClass?: string
             </option>
           ))}
         </select>
-
-        <div
-          role="group"
-          aria-label="View mode"
-          className="skin-control flex h-10 items-center border border-line p-1"
-          style={{ background: 'var(--card)' }}
-        >
-          {(['grid', 'series'] as const).map((m) => (
-            <button
-              key={m}
-              type="button"
-              onClick={() => setMode(m)}
-              aria-pressed={mode === m}
-              className="h-full px-3 text-[12.5px] font-semibold capitalize transition-colors"
-              style={
-                mode === m
-                  ? {
-                      borderRadius: 'var(--radius-control)',
-                      background: 'var(--accent-fill)',
-                      color: 'var(--on-primary)',
-                    }
-                  : { borderRadius: 'var(--radius-control)', color: 'var(--muted)' }
-              }
-            >
-              {m}
-            </button>
-          ))}
-        </div>
       </div>
       {filters.author && (
         <div className="flex flex-wrap items-center gap-2">

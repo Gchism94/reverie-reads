@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { createRoute, Link, useNavigate } from '@tanstack/react-router'
 import {
-  groupSeries,
   hiddenMatchCount,
   inDefaultLibrary,
   matchesFilters,
@@ -17,7 +16,6 @@ import { useHideIntensity } from '../data/profile'
 import { useFilters } from '../library/filterStore'
 import { Toolbar } from '../library/Toolbar'
 import { FilterPanel } from '../library/FilterPanel'
-import { SeriesView } from '../library/SeriesView'
 import { CoverCard } from '../components/CoverCard'
 import { CoverSheet } from '../components/CoverSheet'
 import { BookDetailRail } from '../components/BookDetailRail'
@@ -134,7 +132,6 @@ function PersonalLibraryScreen() {
     [rawFilters, hideIntensity],
   )
   const sort = withIntensityHiddenSort(filters.sort, hideIntensity)
-  const mode = useFilters((s) => s.mode)
   const panelOpen = useFilters((s) => s.panelOpen)
   const togglePanel = useFilters((s) => s.togglePanel)
   const setShelf = useFilters((s) => s.setShelf)
@@ -299,17 +296,11 @@ function PersonalLibraryScreen() {
 
       <SectionHeader
         className="mb-4 mt-6"
-        label={mode === 'series' ? 'Series' : 'Your library'}
-        readout={
-          mode === 'series'
-            ? groupSeries(visible).length
-            : `${visible.length}${visible.length !== baseCount ? ` / ${baseCount}` : ''}`
-        }
+        label="Your library"
+        readout={`${visible.length}${visible.length !== baseCount ? ` / ${baseCount}` : ''}`}
       />
 
-      {mode === 'series' ? (
-        <SeriesView groups={groupSeries(visible)} allBooks={books} />
-      ) : visible.length ? (
+      {visible.length ? (
         <div style={COVER_GRID}>
           {visible.map((b) => (
             <CoverCard
@@ -409,7 +400,7 @@ function ScopeSwitch({ scope }: { scope: LibraryScope }) {
   return <LibraryScopeControl scope={scope} onChange={setScope} />
 }
 
-function LibraryHeader({
+export function LibraryHeader({
   scope,
   readout,
   className = '',
@@ -431,6 +422,14 @@ function LibraryHeader({
       actions={
         <>
           <ScopeSwitch scope={scope} />
+          {scope === 'personal' ? (
+            <Link
+              to="/series"
+              className="skin-control skin-btn-primary flex h-10 items-center px-4 text-[12px]"
+            >
+              Browse series
+            </Link>
+          ) : null}
           <Link
             to="/add"
             search={scope === 'household' ? { scope: 'household' } : {}}

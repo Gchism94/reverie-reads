@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { createRoute, useNavigate } from '@tanstack/react-router'
 import {
   entryState,
+  isPossessed,
   nextUp,
   positionBetween,
   progressLine,
@@ -19,6 +20,7 @@ import { BackLink } from '../components/BackLink'
 import { CoverImage } from '../components/CoverImage'
 import { LibraryPicker } from '../components/LibraryPicker'
 import { Modal } from '../components/Modal'
+import { RenameSeriesDialog, type SeriesManagementRow } from '../series/SeriesManagement'
 import { useBooks } from '../data/books'
 import { useAllListItems } from '../data/listItems'
 import { useLists } from '../data/lists'
@@ -70,6 +72,7 @@ function SeriesScreen() {
   const [removing, setRemoving] = useState<SeriesEntry | null>(null)
   const [dragIdx, setDragIdx] = useState<number | null>(null)
   const [sourceNote, setSourceNote] = useState<string | null>(null)
+  const [renaming, setRenaming] = useState(false)
 
   const byId = useMemo(() => new Map((books ?? []).map((b) => [b.id, b])), [books])
   const tbrs = useMemo(() => (lists ?? []).filter((l) => l.kind === 'tbr'), [lists])
@@ -198,22 +201,6 @@ function SeriesScreen() {
     updateEntry.mutate({ entryId: e.id, label: label.trim() || null })
   }
 
-  const rename = () => {
-    const newName = window.prompt('Rename this series', detail.series.name)?.trim()
-    if (!newName || newName === detail.series.name) return
-    updateSeries.mutate(
-      { id: detail.series.id, name: newName },
-      {
-        onSuccess: () =>
-          void navigate({
-            to: '/series/$seriesName',
-            params: { seriesName: encodeURIComponent(newName) },
-            replace: true,
-          }),
-      },
-    )
-  }
-
   const addGhostSlot = () => {
     const title = window.prompt('Which book is missing? Its title:')?.trim()
     if (!title) return
@@ -260,6 +247,23 @@ function SeriesScreen() {
       },
     )
 
+  const linkedBooks = entries.flatMap((entry) => {
+    const book = entry.bookId ? byId.get(entry.bookId) : undefined
+    return book ? [book] : []
+  })
+  const managementRow: SeriesManagementRow = {
+    id: detail.series.id,
+    name: detail.series.name,
+    liveEntries: entries.length,
+    memberBooks: new Set(linkedBooks.map((book) => book.id)).size,
+    series: detail.series,
+    entries,
+    possessedBooks: new Set(linkedBooks.filter(isPossessed).map((book) => book.id)).size,
+    ghostEntries: entries.filter((entry) => !entry.bookId).length,
+    unreviewedEntries: detail.unreviewed.length,
+    removedEntries: detail.removed.length,
+  }
+
   return (
     <section className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6">
       <BackLink fallback="/library" className="text-[13px] text-muted hover:text-ink">
@@ -275,7 +279,7 @@ function SeriesScreen() {
             {detail.series.name}
             <button
               type="button"
-              onClick={rename}
+              onClick={() => setRenaming(true)}
               aria-label="Rename series"
               className="ml-2 align-middle text-[13px] not-italic text-muted hover:text-ink"
             >
@@ -669,6 +673,20 @@ function SeriesScreen() {
           </div>
         </Modal>
       )}
+
+      {renaming ? (
+        <RenameSeriesDialog
+          row={managementRow}
+          onClose={() => setRenaming(false)}
+          onRenamed={(newName) => {
+            void navigate({
+              to: '/series/$seriesName',
+              params: { seriesName: encodeURIComponent(newName) },
+              replace: true,
+            })
+          }}
+        />
+      ) : null}
     </section>
   )
 }

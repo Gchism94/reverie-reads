@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import {
   activeFilterCount,
   defaultFilters,
-  groupSeries,
   hasReadingHistory,
   hiddenMatchCount,
   inDefaultLibrary,
@@ -125,23 +124,6 @@ describe('sortBooks', () => {
   it('sorts A–Z by title', () => {
     const books = [makeBook({ id: '1', title: 'Zodiac' }), makeBook({ id: '2', title: 'Apple' })]
     expect(sortBooks(books, 'az').map((b) => b.title)).toEqual(['Apple', 'Zodiac'])
-  })
-})
-
-describe('groupSeries', () => {
-  it('groups by series with owned/total/read and position order', () => {
-    const books = [
-      makeBook({ id: '1', title: 'Book 2', series: 'S', position: 2, readStatus: 'Read' }),
-      makeBook({ id: '2', title: 'Book 1', series: 'S', position: 1, seriesCount: 4 }),
-      makeBook({ id: '3', title: 'Standalone', series: '' }),
-    ]
-    const groups = groupSeries(books)
-    expect(groups).toHaveLength(1)
-    expect(groups[0]?.name).toBe('S')
-    expect(groups[0]?.books.map((b) => b.title)).toEqual(['Book 1', 'Book 2'])
-    expect(groups[0]?.total).toBe(4)
-    expect(groups[0]?.owned).toBe(2)
-    expect(groups[0]?.read).toBe(1)
   })
 })
 

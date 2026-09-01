@@ -46,8 +46,8 @@ import { useMoveEntry, useSeriesDetail } from '../data/series'
  * `series_entries` directly: `useMoveEntry` goes through `set_series_order`, which mirrors a linked
  * entry's position onto `books.position` in the same transaction, and five surfaces read that
  * mirror — the book page's "#N of M" eyebrow, BookDetailRail, the edit dialog's prefill, the merge
- * preview, and `groupSeries`' cover order in Library's Series mode. Bypassing it would leave all
- * five disagreeing with this list.
+ * preview, the book-detail series strip, and the canonical Series browser. Bypassing it would leave
+ * those surfaces disagreeing with this list.
  */
 
 /** Ghost slots ARE draggable — a ghost is a position with no book yet, and its place in the reading

@@ -1,48 +1,39 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import type { Book } from '@reverie/core'
-
-// THE TOTAL A READER SEES IS STABLE ACROSS MEMBER-BOOK FETCH ORDER — at rendered output.
-//
-// The original defect (task-series-consolidation.md, defect #1): displayTotal read
-// `books.find(b => b.seriesCount != null)`, so "N in all" came from whichever member the array
-// handed over first and could change between page loads with no write occurring. A Court of Thorns
-// and Roses carried members claiming 6 and 7 and displayed "6 in all". claimedSeriesLength (MAX)
-// closed it in core — but a core unit test cannot prove the ROW still routes through it, so this
-// renders the actual SeriesRow twice, with the same members in opposite orders, and asserts the
-// displayed line is identical and is the max.
-//
-// Named mutant, run by hand against this test (revert via scripts/safe-revert.sh):
-//   MUTANT first-non-null-total — in claimedSeriesLength (packages/core/src/seriesIndex.ts),
-//     replace the max fold with `return books.find((b) => b.seriesCount != null)?.seriesCount ??
-//     null`. The reversed render below displays "6 in all" and the toEqual fails.
+import type { Book, SeriesEntry } from '@reverie/core'
+import type { SeriesListRow } from '../data/series'
+import type { SeriesManagementRow } from '../series/SeriesManagement'
 
 vi.mock('@tanstack/react-router', () => ({
-  createRoute: (opts: unknown) => opts,
+  createRoute: (options: unknown) => options,
   Link: ({ children }: { children?: React.ReactNode }) => <a href="#mock">{children}</a>,
 }))
 vi.mock('./RootRoute', () => ({ rootRoute: {} }))
 vi.mock('../series/SeriesArranger', () => ({ SeriesArranger: () => null }))
 vi.mock('../series/ConsolidationQueue', () => ({ ConsolidationQueue: () => null }))
+vi.mock('../series/SeriesManagement', () => ({
+  ArchivedSeriesPanel: () => null,
+  DeleteSeriesDialog: () => null,
+  MergeSeriesDialog: () => null,
+  RenameSeriesDialog: () => null,
+}))
 vi.mock('../lib/supabase', () => ({ supabase: {} }))
 
-const { SeriesRow } = await import('./SeriesIndexRoute')
+const { SeriesCard, buildStructuredSeriesSections } = await import('./SeriesIndexRoute')
 
-// Full literal rather than an `as` cast, so a Book shape change fails typecheck here instead of
-// letting this file drift (the plan-precision lesson: casts pass Vitest and lie to tsc).
-const member = (id: string, seriesCount: number): Book => ({
+const member = (id: string, seriesCount: number, ownership: Book['ownership'] = 'owned'): Book => ({
   id,
   title: id,
-  first: '',
-  last: '',
-  contributors: [],
+  first: 'Ada',
+  last: 'Reader',
+  contributors: [{ name: 'Ada Reader', role: 'author', position: 0 }],
   series: 'A Court of Thorns and Roses',
   position: '',
   seriesCount,
   status: 'ongoing',
-  genre: 'romance',
-  subgenre: 'Romance',
-  subgenres: ['Romance'],
+  genre: 'fantasy',
+  subgenre: 'Fantasy',
+  subgenres: ['Fantasy'],
   genres: [],
   tags: [],
   tropes: [],
@@ -53,9 +44,9 @@ const member = (id: string, seriesCount: number): Book => ({
   pages: null,
   isbn: '',
   fave: false,
-  ownership: 'owned',
+  ownership,
   borrowed: false,
-  wishlist: false,
+  wishlist: ownership === 'unowned',
   owned: { physical: false, ebook: false, audiobook: false },
   format: 'Paperback',
   rating: 0,
@@ -68,35 +59,126 @@ const member = (id: string, seriesCount: number): Book => ({
   addedTs: 0,
 })
 
-function renderRow(books: Book[]): string {
+const entry = (id: string, bookId: string | null, position: number): SeriesEntry => ({
+  id,
+  position,
+  label: null,
+  title: id,
+  author: 'Ada Reader',
+  bookId,
+  source: 'manual',
+  userEdited: false,
+  isPrimary: true,
+  membershipClaim: { origin: 'reader' },
+})
+
+const seriesRow = (
+  id: string,
+  name: string,
+  entries: SeriesEntry[],
+  unreviewed = 0,
+  length: number | null = null,
+): SeriesListRow => ({
+  series: {
+    id,
+    name,
+    status: 'ongoing',
+    length,
+    source: 'manual',
+    sourceRef: null,
+    refreshedAt: null,
+  },
+  total: entries.length,
+  ghosts: entries.filter((item) => !item.bookId).length,
+  removed: 0,
+  unreviewed,
+  entries,
+})
+
+const management = (row: SeriesListRow, possessedBooks: number): SeriesManagementRow => ({
+  id: row.series.id,
+  name: row.series.name,
+  liveEntries: row.total,
+  memberBooks: row.entries.filter((item) => item.bookId).length,
+  series: row.series,
+  entries: row.entries,
+  possessedBooks,
+  ghostEntries: row.ghosts,
+  unreviewedEntries: row.unreviewed,
+  removedEntries: row.removed,
+})
+
+function renderedMeta(books: Book[], entries: SeriesEntry[], length: number | null = null): string {
+  const row = seriesRow('series-1', 'A Court of Thorns and Roses', entries, 0, length)
   const { unmount } = render(
     <ul>
-      <SeriesRow
-        name="A Court of Thorns and Roses"
-        books={books}
-        entries={[]}
-        byId={new Map(books.map((b) => [b.id, b]))}
+      <SeriesCard
+        row={row}
+        management={management(row, books.filter((book) => book.ownership === 'owned').length)}
+        byId={new Map(books.map((book) => [book.id, book]))}
         tbrBookIds={new Set()}
         expanded={false}
         onToggle={() => {}}
-        panelId="p1"
+        onRename={() => {}}
+        onDelete={() => {}}
+        panelId="series-order"
       />
     </ul>,
   )
-  const line = screen.getByText(/in all/).textContent ?? ''
+  const text = screen.getByText(/in hand/).textContent ?? ''
   unmount()
-  return line
+  return text
 }
 
-describe('the series row’s displayed total', () => {
-  it('is identical whichever order the member books arrive in, and is the MAX claim', () => {
-    const claims6then7 = [member('b1', 6), member('b2', 7), member('b3', 6)]
-    const claims7then6 = [...claims6then7].reverse()
+describe('the canonical series browser', () => {
+  it('uses the maximum explicit series length and actual possession, regardless of fetch order', () => {
+    const books = [member('b1', 6), member('b2', 7, 'unowned'), member('b3', 6)]
+    const entries = [entry('e1', 'b1', 1), entry('e2', 'b2', 2), entry('e3', 'b3', 3)]
 
-    const forward = renderRow(claims6then7)
-    const reversed = renderRow(claims7then6)
+    const forward = renderedMeta(books, entries)
+    const reversed = renderedMeta([...books].reverse(), [...entries].reverse())
 
-    expect(forward).toContain('7 in all')
+    expect(forward).toContain('2 in hand')
+    expect(forward).toContain('7 in series')
     expect(reversed).toEqual(forward)
+  })
+
+  it('keeps a canonical length when linked books have no usable projection', () => {
+    const books = [member('b1', 0)]
+    const entries = [entry('e1', 'b1', 1), entry('ghost-2', null, 2)]
+
+    expect(renderedMeta(books, entries, 8)).toContain('8 in series')
+  })
+
+  it('keeps unreviewed legacy labels out of browse cards', () => {
+    const confirmedBook = member('confirmed-book', 4)
+    const confirmed = seriesRow('confirmed-series', 'Confirmed Cycle', [
+      entry('confirmed-entry', confirmedBook.id, 1),
+    ])
+    const unreviewed = seriesRow('legacy-series', 'Legacy Guess', [], 2)
+    const sections = buildStructuredSeriesSections(
+      new Map([
+        ['confirmed cycle', confirmed],
+        ['legacy guess', unreviewed],
+      ]),
+      new Map([[confirmedBook.id, confirmedBook]]),
+    )
+
+    expect(sections.flatMap((section) => section.rows.map((row) => row.series.name))).toEqual([
+      'Confirmed Cycle',
+    ])
+  })
+
+  it('includes a confirmed secondary membership even when the book projects another primary name', () => {
+    const book = { ...member('shared-book', 5), series: 'Primary Saga' }
+    const secondary = seriesRow('secondary-series', 'Secondary Saga', [
+      entry('secondary-entry', book.id, 2),
+    ])
+    const sections = buildStructuredSeriesSections(
+      new Map([['secondary saga', secondary]]),
+      new Map([[book.id, book]]),
+    )
+
+    expect(sections[0]?.rows[0]?.series.name).toBe('Secondary Saga')
   })
 })

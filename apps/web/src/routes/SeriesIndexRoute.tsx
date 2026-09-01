@@ -1,152 +1,305 @@
 import { useMemo, useState } from 'react'
-import { createRoute } from '@tanstack/react-router'
-import { Link } from '@tanstack/react-router'
+import { createRoute, Link } from '@tanstack/react-router'
 import {
   claimedSeriesLength,
-  confirmedSeriesBooks,
-  displayTotal,
-  groupSeriesByAuthor,
-  isBookRead,
-  progressLine,
+  isPossessed,
+  seriesAuthorKeys,
   seriesProgress,
+  SERIES_STATUS_LABELS,
   type Book,
   type ConsolidationSeries,
-  type SeriesEntry,
 } from '@reverie/core'
 import { rootRoute } from './RootRoute'
+import { Button } from '../components/Button'
+import { CoverImage } from '../components/CoverImage'
+import { Surface } from '../components/Surface'
 import { useBooks } from '../data/books'
 import { useLists } from '../data/lists'
 import { useAllListItems } from '../data/listItems'
-import { useSeriesList } from '../data/series'
+import { useSeriesList, type SeriesListRow } from '../data/series'
 import { ConsolidationQueue } from '../series/ConsolidationQueue'
 import { SeriesArranger } from '../series/SeriesArranger'
+import {
+  ArchivedSeriesPanel,
+  DeleteSeriesDialog,
+  MergeSeriesDialog,
+  RenameSeriesDialog,
+  type SeriesManagementRow,
+} from '../series/SeriesManagement'
 
-/**
- * /series — the series INDEX, author-grouped (feat/series-builder).
- *
- * This COEXISTS with Library's Series mode by decision, and the split is the reason it exists:
- * Library's strips are for browsing — covers, progress, a door into one series — while this is for
- * ARRANGING, which wants every series a reader owns in one place, grouped by who wrote it, with the
- * reading order editable in situ. Two jobs, two surfaces; neither replaces the other.
- *
- * Series are ordered by name within each author, and authors by display name. One order, no toggle.
- *
- * Everything on a collapsed row comes from data already in the cache — `useBooks` (which embeds the
- * contributor join) and the widened `useSeriesList`. No query was added. Expanding a row mounts a
- * side-effect-free structured read; legacy claims go to the explicit review on the full page.
- */
+interface StructuredSeriesSection {
+  key: string
+  name: string
+  rows: SeriesListRow[]
+}
 
-export function SeriesRow({
-  name,
-  books,
-  entries,
-  needsReview = false,
+/** Build the browse index from confirmed structured entries only. A books.series compatibility
+ * string never creates a card; an unreviewed row remains solely in Membership review. Linked
+ * secondary memberships still appear because the entry, not the book's primary projection, owns
+ * the relationship. */
+export function buildStructuredSeriesSections(
+  seriesList: ReadonlyMap<string, SeriesListRow>,
+  booksById: ReadonlyMap<string, Book>,
+): StructuredSeriesSection[] {
+  const byAuthor = new Map<string, StructuredSeriesSection>()
+  for (const row of seriesList.values()) {
+    if (!row.entries.length) continue
+    const linkedBooks = row.entries.flatMap((entry) => {
+      const book = entry.bookId ? booksById.get(entry.bookId) : undefined
+      return book ? [book] : []
+    })
+    const authors = seriesAuthorKeys(linkedBooks, row.entries)
+    const filing = authors.length ? authors : [{ key: 'author-not-set', name: 'Author not set' }]
+    for (const author of filing) {
+      const section = byAuthor.get(author.key) ?? {
+        key: author.key,
+        name: author.name,
+        rows: [],
+      }
+      section.rows.push(row)
+      byAuthor.set(author.key, section)
+    }
+  }
+  return [...byAuthor.values()]
+    .map((section) => ({
+      ...section,
+      rows: [...section.rows].sort((a, b) => a.series.name.localeCompare(b.series.name)),
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name))
+}
+
+const uniqueLinkedBooks = (row: SeriesListRow, byId: ReadonlyMap<string, Book>): Book[] => {
+  const seen = new Set<string>()
+  const out: Book[] = []
+  for (const entry of row.entries) {
+    if (!entry.bookId || seen.has(entry.bookId)) continue
+    const book = byId.get(entry.bookId)
+    if (!book) continue
+    seen.add(entry.bookId)
+    out.push(book)
+  }
+  return out
+}
+
+function CoverRun({ row, byId }: { row: SeriesListRow; byId: ReadonlyMap<string, Book> }) {
+  const entries = row.entries.slice(0, 6)
+  return (
+    <div className="mt-4 flex min-h-[86px] items-end gap-1.5 overflow-hidden" aria-hidden>
+      {entries.map((entry) => {
+        const book = entry.bookId ? byId.get(entry.bookId) : undefined
+        return (
+          <span
+            key={entry.id}
+            className="relative h-[84px] w-14 flex-none overflow-hidden rounded-[calc(var(--radius-control)/2)] border border-line"
+            style={
+              book
+                ? { background: 'var(--field)' }
+                : { background: 'var(--chip)', borderStyle: 'dashed' }
+            }
+            title={book?.title ?? entry.title}
+          >
+            {book ? (
+              <CoverImage book={book} thumb ghost={!isPossessed(book)} />
+            ) : (
+              <span className="flex h-full flex-col items-center justify-center gap-1 px-1 text-center text-muted">
+                <span className="text-[13px]">⊹</span>
+                <span className="text-[9px] font-semibold tabular-nums">#{entry.position}</span>
+              </span>
+            )}
+          </span>
+        )
+      })}
+      {row.entries.length > entries.length ? (
+        <span className="flex h-[84px] w-10 flex-none items-center justify-center text-[11px] font-semibold text-muted">
+          +{row.entries.length - entries.length}
+        </span>
+      ) : null}
+    </div>
+  )
+}
+
+export function SeriesCard({
+  row,
+  management,
   byId,
   tbrBookIds,
   expanded,
   onToggle,
+  onRename,
+  onDelete,
   panelId,
 }: {
-  name: string
-  books: readonly Book[]
-  entries: readonly SeriesEntry[]
-  needsReview?: boolean
+  row: SeriesListRow
+  management: SeriesManagementRow
   byId: ReadonlyMap<string, Book>
   tbrBookIds: ReadonlySet<string>
   expanded: boolean
   onToggle: () => void
+  onRename: () => void
+  onDelete: () => void
   panelId: string
 }) {
-  // Progress from entries when the series has been materialized (ghosts count as "to get"); from the
-  // library books alone before that, which is all there is to count.
-  const progress = entries.length
-    ? seriesProgress(entries, byId)
-    : { read: books.filter(isBookRead).length, total: books.length, toGet: 0 }
-  const seriesCount = claimedSeriesLength(books)
-  const total = displayTotal(seriesCount, entries.length || null, books.length)
+  const linkedBooks = uniqueLinkedBooks(row, byId)
+  const progress = seriesProgress(row.entries, byId)
+  const claimedLength = claimedSeriesLength(linkedBooks)
+  const knownLength = row.entries.length
+  const explicitLength = Math.max(row.series.length ?? 0, claimedLength ?? 0)
+  // Confirmed slots keep a stale explicit total from understating the series, but do not turn an
+  // unknown singleton into a claimed one-book series.
+  const seriesLength = explicitLength ? Math.max(explicitLength, knownLength) : null
+  const barTotal = seriesLength ?? knownLength
+  const percent = barTotal ? Math.min(100, Math.round((progress.read / barTotal) * 100)) : 0
 
   return (
-    <li className="rounded-xl border border-line" style={{ background: 'var(--card)' }}>
-      <div className="flex items-center gap-2 px-3 py-2.5">
-        <button
-          type="button"
-          onClick={onToggle}
-          aria-expanded={expanded}
-          aria-controls={panelId}
-          className="flex min-w-0 flex-1 items-center gap-2 text-left"
+    <Surface
+      as="li"
+      tone="card"
+      radius="card"
+      pad={3}
+      className="flex min-w-0 flex-col"
+      data-testid="series-browser-card"
+      data-series-name={row.series.name}
+    >
+      <div className="flex min-w-0 items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3
+            className="break-words text-[19px] italic leading-tight text-ink"
+            style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+          >
+            {row.series.name}
+          </h3>
+          <p className="mt-1 text-[12px] leading-relaxed text-muted">
+            {management.possessedBooks} in hand · {progress.read} read · {knownLength} known
+            {seriesLength ? ` · ${seriesLength} in series` : ''}
+            {progress.toGet ? ` · ${progress.toGet} to get` : ''}
+          </p>
+        </div>
+        {row.series.status ? (
+          <span
+            className="skin-control-quiet flex-none border border-line px-2 py-1 text-[10px] font-semibold text-ink"
+            style={{ background: 'var(--chip)' }}
+          >
+            {SERIES_STATUS_LABELS[row.series.status]}
+          </span>
+        ) : null}
+      </div>
+
+      <CoverRun row={row} byId={byId} />
+
+      <div className="mt-4">
+        <div
+          role="progressbar"
+          aria-label={`${row.series.name} reading progress`}
+          aria-valuemin={0}
+          aria-valuemax={barTotal}
+          aria-valuenow={progress.read}
+          className="h-1.5 w-full overflow-hidden rounded-full"
+          style={{ background: 'var(--chip)' }}
         >
-          <span className="w-4 flex-none text-[11px]" style={{ color: 'var(--muted)' }} aria-hidden>
-            {expanded ? '▾' : '▸'}
-          </span>
-          <span className="min-w-0 flex-1">
-            <span
-              className="block break-words text-[14px] font-semibold text-ink"
-              style={{ fontFamily: 'var(--font-display)' }}
-            >
-              {name}
-            </span>
-            <span className="block text-[12px] text-muted">
-              {needsReview ? (
-                'Membership review needed'
-              ) : (
-                <>
-                  {progressLine(progress)}
-                  {total ? ` · ${total} in all` : ''}
-                </>
-              )}
-            </span>
-          </span>
-        </button>
+          <div
+            className="h-full rounded-full motion-reduce:transition-none"
+            style={{
+              width: `${percent}%`,
+              background: 'linear-gradient(90deg, var(--primary), var(--gold))',
+            }}
+          />
+        </div>
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
         <Link
           to="/series/$seriesName"
-          params={{ seriesName: encodeURIComponent(name) }}
-          className="skin-control flex-none border border-line px-2.5 py-1 text-[12px] font-semibold text-ink"
-          aria-label={`Open the ${name} series page`}
+          params={{ seriesName: encodeURIComponent(row.series.name) }}
+          className="skin-control skin-btn-primary inline-flex h-10 w-full items-center justify-center px-4 text-[12px] sm:w-auto"
+          aria-label={`Open the ${row.series.name} series page`}
         >
-          Open
+          Open series
         </Link>
+        <Button
+          variant="secondary"
+          aria-expanded={expanded}
+          aria-controls={panelId}
+          aria-label={`Arrange ${row.series.name}`}
+          onClick={onToggle}
+          className="w-full justify-center px-3 text-[12px] sm:w-auto"
+        >
+          {expanded ? 'Close order' : 'Arrange'}
+        </Button>
+        <Button
+          variant="ghost"
+          onClick={onRename}
+          className="w-full justify-center px-2 text-[12px] sm:w-auto"
+        >
+          Rename
+        </Button>
+        <Button
+          variant="ghost"
+          onClick={onDelete}
+          className="w-full justify-center px-2 text-[12px] sm:w-auto"
+        >
+          Delete
+        </Button>
       </div>
-      <div id={panelId} hidden={!expanded} className="border-t border-line px-2.5 py-2">
-        {/* The arranger never manufactures entries. Unknown membership is reviewed on the page. */}
-        {expanded && <SeriesArranger name={name} books={byId} tbrBookIds={tbrBookIds} />}
+
+      <div id={panelId} hidden={!expanded} className="mt-4 border-t border-line pt-3">
+        {expanded ? (
+          <SeriesArranger name={row.series.name} books={byId} tbrBookIds={tbrBookIds} />
+        ) : null}
       </div>
-    </li>
+    </Surface>
   )
 }
 
-function SeriesIndexScreen() {
+export function SeriesIndexScreen() {
   const { data: books } = useBooks()
   const { data: seriesList } = useSeriesList()
   const { data: lists } = useLists()
   const { data: items } = useAllListItems()
-  // A SET, not one open row: arranging often means comparing two series, and a cross-series drag has
-  // to be ATTEMPTABLE for its refusal to be a real guard rather than a structural impossibility.
   const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set())
+  const [renaming, setRenaming] = useState<SeriesManagementRow | null>(null)
+  const [deleting, setDeleting] = useState<SeriesManagementRow | null>(null)
+  const [merging, setMerging] = useState(false)
 
-  const byId = useMemo(() => new Map((books ?? []).map((b) => [b.id, b])), [books])
+  const byId = useMemo(() => new Map((books ?? []).map((book) => [book.id, book])), [books])
 
   const tbrBookIds = useMemo(() => {
-    const tbrIds = new Set((lists ?? []).filter((l) => l.kind === 'tbr').map((l) => l.id))
+    const tbrIds = new Set(
+      (lists ?? []).filter((list) => list.kind === 'tbr').map((list) => list.id),
+    )
     const out = new Set<string>()
-    for (const it of items ?? []) if (tbrIds.has(it.list_id)) out.add(it.book_id)
+    for (const item of items ?? []) if (tbrIds.has(item.list_id)) out.add(item.book_id)
     return out
   }, [lists, items])
 
-  // Series NAME (as written on the series row) -> its live entries. Keyed by the row's own name so
-  // the index and the entries agree on spelling; groupSeriesByAuthor trims book-side names to match.
-  const entriesBySeries = useMemo(() => {
-    const m = new Map<string, SeriesEntry[]>()
-    for (const row of (seriesList ?? new Map()).values()) m.set(row.series.name, row.entries)
-    return m
-  }, [seriesList])
-
-  const confirmedBooks = useMemo(
-    () => confirmedSeriesBooks(books ?? [], entriesBySeries),
-    [books, entriesBySeries],
-  )
   const sections = useMemo(
-    () => groupSeriesByAuthor(confirmedBooks, entriesBySeries),
-    [confirmedBooks, entriesBySeries],
+    () => buildStructuredSeriesSections(seriesList ?? new Map(), byId),
+    [seriesList, byId],
+  )
+
+  const managementRows = useMemo<SeriesManagementRow[]>(() => {
+    if (!seriesList) return []
+    return [...seriesList.values()]
+      .map((row) => {
+        const linkedBooks = uniqueLinkedBooks(row, byId)
+        return {
+          id: row.series.id,
+          name: row.series.name,
+          liveEntries: row.total,
+          memberBooks: linkedBooks.length,
+          series: row.series,
+          entries: row.entries,
+          possessedBooks: linkedBooks.filter(isPossessed).length,
+          ghostEntries: row.ghosts,
+          unreviewedEntries: row.unreviewed,
+          removedEntries: row.removed,
+        }
+      })
+      .sort((a, b) => a.name.localeCompare(b.name))
+  }, [seriesList, byId])
+
+  const managementById = useMemo(
+    () => new Map(managementRows.map((row) => [row.id, row])),
+    [managementRows],
   )
 
   const unreviewedSeries = useMemo(
@@ -154,40 +307,47 @@ function SeriesIndexScreen() {
     [seriesList],
   )
 
-  // The consolidation engine's view of the SERIES ROWS (not the author-grouped display): id, name,
-  // live-entry count and how many library books carry the name. Empty until both queries settle —
-  // proposals over half-loaded data would auto-merge on a partial picture.
-  const consolidationRows = useMemo<ConsolidationSeries[]>(() => {
-    if (!books || !seriesList) return []
-    const bookCount = new Map<string, number>()
-    for (const b of confirmedBooks) {
-      const name = (b.series ?? '').trim()
-      if (name) bookCount.set(name, (bookCount.get(name) ?? 0) + 1)
-    }
-    return [...seriesList.values()].map((row) => ({
-      id: row.series.id,
-      name: row.series.name,
-      liveEntries: row.total,
-      memberBooks: bookCount.get(row.series.name) ?? 0,
-    }))
-  }, [books, confirmedBooks, seriesList])
+  const consolidationRows = useMemo<ConsolidationSeries[]>(
+    () =>
+      managementRows.map(({ id, name, liveEntries, memberBooks }) => ({
+        id,
+        name,
+        liveEntries,
+        memberBooks,
+      })),
+    [managementRows],
+  )
 
   return (
-    <section className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6">
-      <header>
-        <h1
-          className="text-[26px] italic leading-tight text-ink"
-          style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
-        >
-          Series
-        </h1>
-        <p className="mt-1 text-[13px] text-muted">
-          Every series you have, by author. Open one to arrange its reading order.
-        </p>
+    <section className="mx-auto w-full max-w-[1180px] px-4 py-6 sm:px-6 lg:py-8">
+      <header className="flex flex-wrap items-end justify-between gap-4 border-b border-line pb-5">
+        <div>
+          <p className="skin-label text-[10.5px]" style={{ color: 'var(--accent-ink)' }}>
+            Reading order · collection progress
+          </p>
+          <h1
+            className="mt-1 text-[30px] italic leading-tight text-ink sm:text-[38px]"
+            style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+          >
+            Series
+          </h1>
+          <p className="mt-2 max-w-[60ch] text-[13.5px] leading-relaxed text-muted">
+            Browse confirmed series, see what you have in hand, and arrange each reading order.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            to="/library"
+            className="skin-control skin-btn-secondary inline-flex h-10 items-center px-4 text-[12px]"
+          >
+            View books
+          </Link>
+          <Button disabled={managementRows.length < 2} onClick={() => setMerging(true)}>
+            Merge series
+          </Button>
+        </div>
       </header>
 
-      {/* Tier 3's quiet queue + Tier 2's silent mount point. Inline and dismissible — the page's
-          sections render identically with or without it (never modal, never blocking). */}
       <ConsolidationQueue rows={consolidationRows} />
 
       {!!unreviewedSeries.length && (
@@ -196,8 +356,7 @@ function SeriesIndexScreen() {
             Membership review · {unreviewedSeries.reduce((sum, row) => sum + row.unreviewed, 0)}
           </h2>
           <p className="mt-1 text-[12px] leading-relaxed text-muted">
-            These older series labels are not used for progress or the main index until you confirm
-            them.
+            These older labels are excluded from browsing and progress until you confirm them.
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
             {unreviewedSeries.map((row) => (
@@ -216,46 +375,46 @@ function SeriesIndexScreen() {
 
       {!sections.length ? (
         <p className="mt-8 text-[13.5px] text-muted">
-          No series yet. Give a book a series name and it appears here.
+          No confirmed series yet. Add a series through a book’s details, or review an older label
+          above.
         </p>
       ) : (
-        <div className="mt-5 flex flex-col gap-6">
+        <div className="mt-7 flex flex-col gap-8" data-testid="confirmed-series-browser">
           {sections.map((section) => (
             <section
               key={section.key}
-              aria-labelledby={`author-${section.key.replace(/\s+/g, '-')}`}
+              aria-labelledby={`author-${section.key.replace(/[^a-zA-Z0-9]+/g, '-')}`}
             >
               <h2
-                id={`author-${section.key.replace(/\s+/g, '-')}`}
-                className="mb-2 text-[13px] font-semibold uppercase tracking-wide"
-                style={{ color: 'var(--muted)' }}
+                id={`author-${section.key.replace(/[^a-zA-Z0-9]+/g, '-')}`}
+                className="mb-3 text-[12px] font-semibold uppercase tracking-[0.14em] text-muted"
               >
                 {section.name}
               </h2>
-              <ul className="flex flex-col gap-2">
-                {section.series.map((s) => {
-                  const rowKey = `${section.key}::${s.name}`
+              <ul className="grid items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {section.rows.map((row) => {
+                  const management = managementById.get(row.series.id)
+                  if (!management) return null
+                  const rowKey = `${section.key}::${row.series.id}`
+                  const panelId = `arrange-panel-${rowKey.replace(/[^a-zA-Z0-9]+/g, '-')}`
                   return (
-                    <SeriesRow
+                    <SeriesCard
                       key={rowKey}
-                      name={s.name}
-                      books={s.books}
-                      entries={entriesBySeries.get(s.name) ?? []}
-                      needsReview={
-                        !seriesList?.has(s.name.toLowerCase()) ||
-                        (seriesList.get(s.name.toLowerCase())?.unreviewed ?? 0) > 0
-                      }
+                      row={row}
+                      management={management}
                       byId={byId}
                       tbrBookIds={tbrBookIds}
                       expanded={open.has(rowKey)}
                       onToggle={() =>
-                        setOpen((cur) => {
-                          const next = new Set(cur)
+                        setOpen((current) => {
+                          const next = new Set(current)
                           if (!next.delete(rowKey)) next.add(rowKey)
                           return next
                         })
                       }
-                      panelId={`arrange-panel-${rowKey.replace(/[^a-zA-Z0-9]+/g, '-')}`}
+                      onRename={() => setRenaming(management)}
+                      onDelete={() => setDeleting(management)}
+                      panelId={panelId}
                     />
                   )
                 })}
@@ -264,6 +423,14 @@ function SeriesIndexScreen() {
           ))}
         </div>
       )}
+
+      <ArchivedSeriesPanel />
+
+      {renaming ? <RenameSeriesDialog row={renaming} onClose={() => setRenaming(null)} /> : null}
+      {deleting ? <DeleteSeriesDialog row={deleting} onClose={() => setDeleting(null)} /> : null}
+      {merging ? (
+        <MergeSeriesDialog rows={managementRows} onClose={() => setMerging(false)} />
+      ) : null}
     </section>
   )
 }

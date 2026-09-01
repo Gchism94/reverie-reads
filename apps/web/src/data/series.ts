@@ -32,6 +32,8 @@ export interface UiSeries {
   id: string
   name: string
   status: SeriesStatus | null
+  /** Canonical total when known. Null means unknown, never a one-book-series inference. */
+  length?: number | null
   source: 'manual' | 'hardcover'
   sourceRef: string | null
   refreshedAt: string | null
@@ -42,6 +44,7 @@ interface SeriesRowT {
   owner_id: string
   name: string
   status: string | null
+  length: number | null
   source: string
   source_ref: string | null
   refreshed_at: string | null
@@ -77,6 +80,7 @@ const toUiSeries = (row: SeriesRowT): UiSeries => ({
   id: row.id,
   name: row.name,
   status: (row.status as SeriesStatus) ?? null,
+  length: row.length,
   source: row.source === 'hardcover' ? 'hardcover' : 'manual',
   sourceRef: row.source_ref,
   refreshedAt: row.refreshed_at,
@@ -98,6 +102,7 @@ const toEntry = (row: SeriesEntryRowT): SeriesEntry => ({
 
 export const seriesKey = (name: string) => ['series', name.toLowerCase()] as const
 export const seriesListKey = ['seriesList'] as const
+export const archivedSeriesListKey = ['archivedSeriesList'] as const
 
 const splitName = (full: string): { first: string; last: string } => {
   const parts = full.trim().split(/\s+/)
@@ -113,13 +118,11 @@ async function ownerId(): Promise<string> {
 }
 
 /**
- * Every series row with its entries — the library Series strips' overlay, and the /series index's
- * whole read.
+ * Every active series row with its entries — the /series index's whole read.
  *
  * WIDENED for the index (feat/series-builder), additively: the entry select carries the full row
  * rather than three columns, and the `removed_at is null` filter is gone so tombstones can be
- * COUNTED here instead of needing a second query. `total` and `ghosts` still mean live-only, exactly
- * as before — `SeriesView` reads `total` and nothing else, so its behaviour is unchanged.
+ * COUNTED here instead of needing a second query. `total` and `ghosts` mean confirmed live entries.
  *
  * READ-ONLY, and that is load-bearing. The index renders only confirmed structured entries; legacy
  * scalar claims and unknown historical slots are counted separately for explicit review.
@@ -183,6 +186,94 @@ export function useSeriesList() {
         byName.set(v.series.name.toLowerCase(), v)
       }
       return byName
+    },
+  })
+}
+
+export interface ArchivedSeries {
+  id: string
+  name: string
+  status: SeriesStatus | null
+  length: number | null
+  archivedAt: string
+  entryCount: number
+  linkedBookCount: number
+  ghostCount: number
+}
+
+interface ArchivedSeriesRowT {
+  id: string
+  name: string
+  status: string | null
+  length: number | string | null
+  archived_at: string
+  entry_count: number | string
+  linked_book_count: number | string
+  ghost_count: number | string
+}
+
+/** Archived series are intentionally absent from normal RLS reads. This explicit, owner-scoped
+ * RPC is the only restore inventory, so the ordinary index cannot accidentally render them. */
+export function useArchivedSeriesList() {
+  return useQuery({
+    queryKey: archivedSeriesListKey,
+    queryFn: async (): Promise<ArchivedSeries[]> => {
+      const { data, error } = await supabase.rpc('list_archived_personal_series')
+      if (error) throw error
+      return ((data ?? []) as ArchivedSeriesRowT[]).map((row) => ({
+        id: row.id,
+        name: row.name,
+        status: (row.status as SeriesStatus) ?? null,
+        length: row.length == null ? null : Number(row.length),
+        archivedAt: row.archived_at,
+        entryCount: Number(row.entry_count) || 0,
+        linkedBookCount: Number(row.linked_book_count) || 0,
+        ghostCount: Number(row.ghost_count) || 0,
+      }))
+    },
+  })
+}
+
+export function useArchiveSeries() {
+  const qc = useQueryClient()
+  return useMutation({
+    meta: { action: 'The series deletion' },
+    mutationFn: async (series: Pick<UiSeries, 'id' | 'name'>) => {
+      const { data, error } = await supabase.rpc('archive_personal_series', {
+        p_series: series.id,
+      })
+      if (error) throw error
+      return data as { series_id: string; entries_preserved: number; books_cleared: number }
+    },
+    onSuccess: (_data, series) => {
+      void qc.invalidateQueries({ queryKey: seriesListKey })
+      void qc.invalidateQueries({ queryKey: archivedSeriesListKey })
+      void qc.invalidateQueries({ queryKey: seriesKey(series.name) })
+      void qc.invalidateQueries({ queryKey: booksKey })
+      void qc.invalidateQueries({ queryKey: ['series-strip'] })
+      void qc.invalidateQueries({ queryKey: ['book-series-memberships'] })
+    },
+  })
+}
+
+export function useRestoreSeries() {
+  const qc = useQueryClient()
+  return useMutation({
+    meta: { action: 'The series restoration' },
+    mutationFn: async (series: Pick<ArchivedSeries, 'id' | 'name'>) => {
+      const { data, error } = await supabase.rpc('restore_personal_series', {
+        p_series: series.id,
+      })
+      if (error) throw error
+      return data as { series_id: string; primaries_restored: number; primaries_skipped: number }
+    },
+    onSuccess: (_data, series) => {
+      void qc.invalidateQueries({ queryKey: seriesListKey })
+      void qc.invalidateQueries({ queryKey: archivedSeriesListKey })
+      void qc.invalidateQueries({ queryKey: seriesKey(series.name) })
+      void qc.invalidateQueries({ queryKey: booksKey })
+      void qc.invalidateQueries({ queryKey: ['series-strip'] })
+      void qc.invalidateQueries({ queryKey: ['book-series-memberships'] })
     },
   })
 }

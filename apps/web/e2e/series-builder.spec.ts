@@ -77,6 +77,17 @@ async function client(): Promise<Client> {
 }
 
 async function reset(c: Client) {
+  const admin = createClient(SUPABASE_URL, SERVICE, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  })
+  const { data: archived, error: archivedError } = await c.sb.rpc('list_archived_personal_series')
+  if (archivedError) throw archivedError
+  for (const row of (archived ?? []) as { id: string }[]) {
+    await ok(
+      c.sb.rpc('restore_personal_series', { p_series: row.id }),
+      'series-builder archived series restore',
+    )
+  }
   const { data: books } = await c.sb.from('books').select('id').eq('owner_id', c.uid)
   const ids = ((books as { id: string }[]) ?? []).map((b) => b.id)
   if (ids.length) {
@@ -89,7 +100,28 @@ async function reset(c: Client) {
   const { data: ser } = await c.sb.from('series').select('id').eq('owner_id', c.uid)
   const sids = ((ser as { id: string }[]) ?? []).map((s) => s.id)
   if (sids.length) await c.sb.from('series_entries').delete().in('series_id', sids)
-  await ok(c.sb.from('series').delete().eq('owner_id', c.uid), 'series-builder series delete')
+  const { error: seriesDeleteError } = await c.sb.from('series').delete().eq('owner_id', c.uid)
+  if (seriesDeleteError) {
+    // A successful merge deliberately leaves a protected survivor ruling. Raw access to that
+    // history is denied even to the API service role, so fixture cleanup uses the same auth-admin
+    // account cascade as real account deletion, then recreates this reusable local test identity.
+    const { error: userDeleteError } = await admin.auth.admin.deleteUser(c.uid)
+    if (userDeleteError) throw userDeleteError
+    shared = null
+    await ensureUser()
+    const sb = createClient(SUPABASE_URL, ANON)
+    const { data, error } = await sb.auth.signInWithPassword({
+      email: TEST_EMAIL,
+      password: TEST_PASSWORD,
+    })
+    if (error || !data.session)
+      throw new Error(authFailure('series-builder reset', TEST_EMAIL, error))
+    c.sb = sb
+    c.session = data.session
+    c.uid = data.session.user.id
+    shared = c
+    return
+  }
   await ok(c.sb.from('lists').delete().eq('owner_id', c.uid), 'series-builder lists delete')
 }
 
@@ -191,6 +223,10 @@ async function dbOrder(c: Client, series: string) {
 async function dragRow(page: Page, series: string, from: number, to: number) {
   const rows = page.locator(`[data-testid="arrange-${series}"] li`)
   const grip = rows.nth(from).getByRole('button', { name: /^Reorder / })
+  // A reader scrolls until the handle they intend to grab is on screen. The canonical Series card
+  // now carries covers and progress above its arranger, so the last row can begin just below a
+  // 720px test viewport; raw page.mouse coordinates cannot start a gesture outside that viewport.
+  await grip.scrollIntoViewIfNeeded()
   const g = await grip.boundingBox()
   const t = await rows.nth(to).boundingBox()
   if (!g || !t) throw new Error('row not measurable')
@@ -364,6 +400,67 @@ test('a cross-series drop is refused — neither series reorders and nothing is 
     expect(writes.filter((w) => w.startsWith('PATCH books'))).toEqual([])
     expect(await dbOrder(c, ALPHA)).toEqual(before.alpha)
     expect(await dbOrder(c, BETA)).toEqual(before.beta)
+  } finally {
+    await reset(c)
+  }
+})
+
+// ── Guard 5: the canonical browser owns the complete reversible record lifecycle ──
+test('rename, merge, delete, and restore preserve every series entry through the real UI', async ({
+  page,
+}) => {
+  test.setTimeout(180_000)
+  const c = await client()
+  await reset(c)
+  await seed(c, ALPHA, ['Alpha One', 'Alpha Two'])
+  await seed(c, BETA, ['Beta One', 'Beta Two'])
+  await stubBackends(page)
+  const renamed = `${ALPHA} Renamed`
+
+  try {
+    await signIn(page, c.session)
+    await openIndex(page)
+
+    const alphaCard = page.locator('[data-testid="series-browser-card"]', { hasText: ALPHA })
+    await alphaCard.getByRole('button', { name: 'Rename' }).click()
+    const renameDialog = page.getByRole('dialog', { name: `Rename ${ALPHA}` })
+    await renameDialog.getByLabel('Series name').fill(renamed)
+    await renameDialog.getByRole('button', { name: 'Rename series' }).click()
+    await expect
+      .poll(async () => dbOrder(c, renamed), { timeout: 20_000 })
+      .toEqual(['Alpha One', 'Alpha Two'])
+
+    await page.getByRole('button', { name: 'Merge series' }).click()
+    const mergeDialog = page.getByRole('dialog', { name: 'Merge series' })
+    await mergeDialog.getByLabel('First series').selectOption({ label: renamed })
+    await mergeDialog.getByLabel('Second series').selectOption({ label: BETA })
+    await mergeDialog.getByRole('radio', { name: renamed }).check()
+    await mergeDialog.getByRole('button', { name: 'Merge series' }).click()
+    await expect
+      .poll(async () => dbOrder(c, renamed), { timeout: 20_000 })
+      .toEqual(['Alpha One', 'Alpha Two', 'Beta One', 'Beta Two'])
+    expect(await dbOrder(c, BETA)).toEqual([])
+
+    const mergedCard = page.locator('[data-testid="series-browser-card"]', { hasText: renamed })
+    await mergedCard.getByRole('button', { name: 'Delete' }).click()
+    const deleteDialog = page.getByRole('dialog', { name: `Delete ${renamed}?` })
+    await deleteDialog.getByRole('button', { name: 'Delete series' }).click()
+
+    await expect
+      .poll(async () => {
+        const { data } = await c.sb.rpc('list_archived_personal_series')
+        return ((data ?? []) as { name: string; entry_count: number }[]).map((row) => [
+          row.name,
+          Number(row.entry_count),
+        ])
+      })
+      .toEqual([[renamed, 4]])
+
+    await page.getByRole('button', { name: 'View' }).click()
+    await page.getByRole('button', { name: 'Restore' }).click()
+    await expect
+      .poll(async () => dbOrder(c, renamed), { timeout: 20_000 })
+      .toEqual(['Alpha One', 'Alpha Two', 'Beta One', 'Beta Two'])
   } finally {
     await reset(c)
   }
