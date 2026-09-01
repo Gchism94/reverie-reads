@@ -105,6 +105,7 @@ function SettingsScreen() {
   const stopRef = useRef(false)
   const [corpusCompleting, setCorpusCompleting] = useState(false)
   const [corpusProgress, setCorpusProgress] = useState<CorpusBulkProgress | null>(null)
+  const [corpusStatus, setCorpusStatus] = useState<string | null>(null)
   const corpusStopRef = useRef(false)
   const [sharpening, setSharpening] = useState(false)
   const [sharpProgress, setSharpProgress] = useState<ResharpenProgress | null>(null)
@@ -371,26 +372,27 @@ function SettingsScreen() {
     corpusStopRef.current = false
     setCorpusCompleting(true)
     setCorpusProgress(null)
+    setCorpusStatus(null)
     try {
       const { recovery, result } = await runCorpusCompletionPipeline(
         setCorpusProgress,
         () => corpusStopRef.current,
       )
-      const prefix =
-        result.stopReason === 'error'
-          ? '⚠ Corpus sweep stopped early — '
-          : result.stopReason === 'rate_limited'
-            ? 'Corpus sweep paused — the book data sources are busy. '
-            : result.stopReason === 'limit'
-              ? 'Corpus sweep paused at the per-run limit — run it again to continue. '
-              : result.stopReason === 'user'
-                ? 'Corpus sweep stopped — '
-                : 'Corpus sweep complete — '
+      let prefix = 'Corpus sweep complete — '
+      if (result.stopReason === 'error') prefix = '⚠ Corpus sweep stopped early — '
+      else if (result.stopReason === 'rate_limited') {
+        prefix = 'Corpus sweep paused — the book data sources are busy. '
+      } else if (result.stopReason === 'limit') {
+        prefix = 'Corpus sweep paused at the per-run limit — run it again to continue. '
+      } else if (result.stopReason === 'user') prefix = 'Corpus sweep stopped — '
+      else if (recovery.failedBatches) {
+        prefix = 'Corpus classification complete; cover recovery paused — '
+      }
       const failed = result.failed
         ? ` · ${result.failed} couldn’t be checked and remain eligible to retry`
         : ''
       const recovered = corpusCoverRecoverySummary(recovery)
-      setStatus(
+      setCorpusStatus(
         `${prefix}checked ${result.scanned} of ${result.total} · filled ${result.filled} · ${result.nothing} had nothing new${recovered}${failed}${result.errorMessage ? ` · ${result.errorMessage}` : ''}.`,
       )
       await Promise.all([
@@ -399,7 +401,7 @@ function SettingsScreen() {
         qc.invalidateQueries({ queryKey: ['household'] }),
       ])
     } catch (error) {
-      setStatus(`Couldn’t finish the corpus sweep: ${(error as Error).message}`)
+      setCorpusStatus(`Couldn’t finish the corpus sweep: ${(error as Error).message}`)
     } finally {
       setCorpusCompleting(false)
       setCorpusProgress(null)
@@ -633,6 +635,7 @@ function SettingsScreen() {
                 completing={corpusCompleting}
                 progress={corpusProgress}
                 eligibleCount={corpusEligibleCount}
+                status={corpusStatus}
                 onRun={() => void runCorpusComplete()}
                 onStop={() => (corpusStopRef.current = true)}
               />

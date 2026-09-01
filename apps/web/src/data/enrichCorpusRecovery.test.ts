@@ -64,6 +64,12 @@ const work = (cover: string): CorpusEnrichmentWork => ({
   seriesCheckedAt: null,
 })
 
+const workAt = (index: number): CorpusEnrichmentWork => ({
+  ...work(''),
+  id: `00000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
+  title: `Recovered Work ${index}`,
+})
+
 beforeEach(() => {
   mocks.calls.length = 0
   mocks.enrich.mockReset()
@@ -75,25 +81,52 @@ beforeEach(() => {
 describe('corpus cover recovery', () => {
   it('normalizes the owner-scoped recovery result', async () => {
     mocks.rpc.mockResolvedValue({
-      data: { scanned: 12, recoveredCovers: 7, recoveredOptions: 9 },
+      data: {
+        scanned: 12,
+        failed: 1,
+        recoveredCovers: 7,
+        recoveredOptions: 9,
+        maybeMore: true,
+        errorMessage: 'one source was invalid',
+      },
       error: null,
     })
 
     await expect(recoverAdminHouseholdCorpusCovers()).resolves.toEqual({
       scanned: 12,
+      failed: 1,
+      failedBatches: 0,
       recoveredCovers: 7,
       recoveredOptions: 9,
+      maybeMore: true,
+      errorMessage: 'one source was invalid',
     })
-    expect(mocks.rpc).toHaveBeenCalledWith('admin_recover_personal_corpus_covers')
+    expect(mocks.rpc).toHaveBeenCalledWith('admin_recover_corpus_cover_batch', { p_limit: 25 })
   })
 
   it('reports published alternatives even when the corpus already had a default cover', () => {
     expect(
-      corpusCoverRecoverySummary({ scanned: 3, recoveredCovers: 0, recoveredOptions: 2 }),
-    ).toBe(' · published 2 household cover options')
+      corpusCoverRecoverySummary({
+        scanned: 3,
+        failed: 0,
+        failedBatches: 0,
+        recoveredCovers: 0,
+        recoveredOptions: 2,
+        maybeMore: false,
+      }),
+    ).toBe(' · checked 3 local cover sources · published 2 household cover options')
     expect(
-      corpusCoverRecoverySummary({ scanned: 3, recoveredCovers: 1, recoveredOptions: 1 }),
-    ).toBe(' · filled 1 missing corpus cover · published 1 household cover option')
+      corpusCoverRecoverySummary({
+        scanned: 3,
+        failed: 0,
+        failedBatches: 0,
+        recoveredCovers: 1,
+        recoveredOptions: 1,
+        maybeMore: false,
+      }),
+    ).toBe(
+      ' · checked 3 local cover sources · filled 1 missing corpus cover · published 1 household cover option',
+    )
   })
 
   it('relocates the exact current cover before a failed metadata lookup', async () => {
@@ -276,37 +309,170 @@ describe('corpus cover recovery', () => {
     expect(result).toMatchObject({ scanned: 1, filled: 1, nothing: 0, stopReason: 'done' })
   })
 
-  it('runs owner-scoped recovery before completing an empty candidate set', async () => {
+  it('still runs one bounded recovery batch when no metadata candidates are waiting', async () => {
     const order: string[] = []
     const progress = vi.fn()
-    const complete = vi.fn(async (candidates, onProgress) => {
-      order.push('complete')
-      expect(candidates).toEqual([])
-      onProgress({ scanned: 0, total: 0, filled: 0 })
+    const complete = vi.fn()
+
+    const outcome = await runCorpusCompletionPipeline(progress, () => false, {
+      recover: async () => {
+        order.push('recover')
+        return {
+          scanned: 3,
+          failed: 0,
+          failedBatches: 0,
+          recoveredCovers: 0,
+          recoveredOptions: 2,
+          maybeMore: false,
+        }
+      },
+      fetchCandidates: async () => {
+        order.push('fetch')
+        return []
+      },
+      refreshCandidates: vi.fn(),
+      complete,
+    })
+
+    expect(order).toEqual(['fetch', 'recover'])
+    expect(complete).not.toHaveBeenCalled()
+    expect(progress).toHaveBeenCalledWith({
+      scanned: 0,
+      total: 0,
+      filled: 0,
+      recoveryScanned: 0,
+      phase: 'recovering',
+    })
+    expect(outcome.recovery).toMatchObject({
+      scanned: 3,
+      recoveredCovers: 0,
+      recoveredOptions: 2,
+      maybeMore: false,
+    })
+  })
+
+  it('interleaves cover recovery and refreshed classification in groups of 25', async () => {
+    const order: string[] = []
+    const candidates = Array.from({ length: 26 }, (_, index) => workAt(index + 1))
+    const recoveryResults = [
+      {
+        scanned: 25,
+        failed: 0,
+        failedBatches: 0,
+        recoveredCovers: 4,
+        recoveredOptions: 6,
+        maybeMore: true,
+      },
+      {
+        scanned: 2,
+        failed: 0,
+        failedBatches: 0,
+        recoveredCovers: 1,
+        recoveredOptions: 1,
+        maybeMore: false,
+      },
+    ]
+    const progress = vi.fn()
+    const complete = vi.fn(async (batch, onProgress) => {
+      order.push(`complete:${batch.length}`)
+      onProgress({
+        scanned: batch.length,
+        total: batch.length,
+        filled: batch.length,
+        recoveryScanned: 0,
+        phase: 'classifying',
+      })
       return {
-        scanned: 0,
-        total: 0,
-        filled: 0,
+        scanned: batch.length,
+        total: batch.length,
+        filled: batch.length,
         failed: 0,
         nothing: 0,
         stopReason: 'done' as const,
+        recoveryScanned: 0,
+        phase: 'classifying' as const,
       }
     })
 
     const outcome = await runCorpusCompletionPipeline(progress, () => false, {
       recover: async () => {
         order.push('recover')
-        return { scanned: 3, recoveredCovers: 0, recoveredOptions: 2 }
+        return recoveryResults.shift()!
       },
       fetchCandidates: async () => {
         order.push('fetch')
-        return []
+        return candidates
+      },
+      refreshCandidates: async (ids) => {
+        order.push(`refresh:${ids.length}`)
+        return ids.map((id) => ({ ...candidates.find((candidate) => candidate.id === id)! }))
       },
       complete,
     })
 
-    expect(order).toEqual(['recover', 'fetch', 'complete'])
-    expect(progress).toHaveBeenCalledWith({ scanned: 0, total: 0, filled: 0 })
-    expect(outcome.recovery).toEqual({ scanned: 3, recoveredCovers: 0, recoveredOptions: 2 })
+    expect(order).toEqual([
+      'fetch',
+      'recover',
+      'refresh:25',
+      'complete:25',
+      'recover',
+      'refresh:1',
+      'complete:1',
+    ])
+    expect(outcome.result).toMatchObject({ scanned: 26, total: 26, filled: 26 })
+    expect(outcome.recovery).toMatchObject({
+      scanned: 27,
+      recoveredCovers: 5,
+      recoveredOptions: 7,
+      maybeMore: false,
+    })
+    expect(progress).toHaveBeenCalledWith({
+      scanned: 25,
+      total: 26,
+      filled: 25,
+      recoveryScanned: 25,
+      phase: 'recovering',
+    })
+  })
+
+  it('continues classification when a recovery batch is unavailable', async () => {
+    const candidate = workAt(1)
+    const complete = vi.fn(async (batch, onProgress) => {
+      expect(batch).toEqual([candidate])
+      onProgress({
+        scanned: 1,
+        total: 1,
+        filled: 0,
+        recoveryScanned: 0,
+        phase: 'classifying',
+      })
+      return {
+        scanned: 1,
+        total: 1,
+        filled: 0,
+        failed: 0,
+        nothing: 1,
+        stopReason: 'done' as const,
+        recoveryScanned: 0,
+        phase: 'classifying' as const,
+      }
+    })
+
+    const outcome = await runCorpusCompletionPipeline(vi.fn(), () => false, {
+      recover: async () => {
+        throw new Error('canceling statement due to statement timeout')
+      },
+      fetchCandidates: async () => [candidate],
+      refreshCandidates: async () => [candidate],
+      complete,
+    })
+
+    expect(complete).toHaveBeenCalledOnce()
+    expect(outcome.result).toMatchObject({ scanned: 1, stopReason: 'done' })
+    expect(outcome.recovery).toMatchObject({
+      failedBatches: 1,
+      maybeMore: true,
+      errorMessage: 'canceling statement due to statement timeout',
+    })
   })
 })

@@ -399,6 +399,10 @@ work_series_suggestions
                      -- singleton/conflicting relational evidence waits for an administrator
 corpus_admins        (user_id pk fk→profiles, granted_at, granted_by fk→profiles)
                      -- service-managed authorization; never restored from a reader backup
+corpus_cover_recovery_marks
+                    (book_id pk fk→books, source_fingerprint, succeeded, error_message,
+                     retry_after, attempt_count, recovered_by fk→profiles, recovered_at)
+                     -- internal resumability state; API roles have no direct table access
 
 clubs               (id pk, title, author, cover_url,
                      unit_type 'chapter'|'page'|'percent', unit_count, unit_label,
@@ -480,6 +484,13 @@ project origin derived from the signed JWT issuer, and correspond to a real `cov
 the durable owner of shared artwork. The administrator corpus sweep re-ingests the exact selected
 image under `w/{work}/`, and only a real object on that path (or an allowlisted Google Books
 display-only URL) is accepted by the corpus completion RPC. Request Host headers are never trusted.
+Source preservation is a durable queue rather than one unbounded preflight:
+`admin_recover_corpus_cover_batch` handles at most 25 changed personal or eligible household
+sources, and `corpus_cover_recovery_marks` stores the objective/cover fingerprint and outcome.
+Successful fingerprints are idempotent. A failed fingerprint is deferred for 15 minutes so later
+sources continue, while any source change retries immediately. The client interleaves one recovery
+batch with each metadata/series group, re-reads that group before classification, and continues
+classification when recovery is temporarily unavailable.
 Existing curated external options may be retained or selected, but arbitrary new remote URLs cannot
 be introduced by `edit_corpus_work_metadata`. Routine edits to an active personal row remain
 personal and never publish a corpus cover implicitly. A corpus administrator may explicitly turn on

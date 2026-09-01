@@ -13,6 +13,8 @@ import { supabase } from '../lib/supabase'
 import { pageAll } from './paging'
 
 const MAX_PER_RUN = 400
+const CORPUS_RECOVERY_BATCH_SIZE = 25
+const CORPUS_PIPELINE_BATCH_LIMIT = Math.ceil(MAX_PER_RUN / CORPUS_RECOVERY_BATCH_SIZE)
 const FAILURE_STREAK_LIMIT = 5
 const COMPLETE_RECHECK_DAYS = 30
 const PARTIAL_RETRY_DAYS = 3
@@ -400,18 +402,46 @@ export function useAdminAddCorpusWorkTrope() {
   })
 }
 
+const corpusEnrichmentSelect =
+  'id, title, author_text, contributors, series, position, pages, pub_y, publisher, language, description, isbns, genre, genres, cover_url, enriched_at, series_check_state, series_checked_at'
+
 export async function fetchCorpusEnrichmentCandidates(): Promise<CorpusEnrichmentWork[]> {
   const rows = await pageAll<CorpusEnrichmentRow>('corpus enrichment candidates', (from, to) =>
     supabase
       .from('works')
-      .select(
-        'id, title, author_text, contributors, series, position, pages, pub_y, publisher, language, description, isbns, genre, genres, cover_url, enriched_at, series_check_state, series_checked_at',
-        { count: 'exact' },
-      )
+      .select(corpusEnrichmentSelect, { count: 'exact' })
       .order('id')
       .range(from, to),
   )
   return rows.map(toWork).filter((work) => corpusWorkShouldCheck(work))
+}
+
+/** Re-read only the next bounded group after cover recovery. This prevents the classifier from
+ * working from the stale pre-recovery snapshot while keeping the query below URL-size limits. */
+export async function fetchCorpusEnrichmentWorksByIds(
+  ids: readonly string[],
+): Promise<CorpusEnrichmentWork[]> {
+  if (!ids.length) return []
+  if (ids.length > CORPUS_RECOVERY_BATCH_SIZE) {
+    throw new Error(`corpus refresh is limited to ${CORPUS_RECOVERY_BATCH_SIZE} works`)
+  }
+  const { data, error } = await supabase
+    .from('works')
+    .select(corpusEnrichmentSelect)
+    .in('id', [...ids])
+    .order('id')
+    .limit(CORPUS_RECOVERY_BATCH_SIZE)
+  if (error) throw error
+  const byId = new Map(
+    ((data ?? []) as CorpusEnrichmentRow[]).map((row) => {
+      const normalized = toWork(row)
+      return [normalized.id, normalized] as const
+    }),
+  )
+  return ids.flatMap((id) => {
+    const refreshed = byId.get(id)
+    return refreshed ? [refreshed] : []
+  })
 }
 
 export function useCorpusEnrichmentCandidates(enabled: boolean) {
@@ -495,6 +525,8 @@ export interface CorpusBulkProgress {
   scanned: number
   total: number
   filled: number
+  recoveryScanned: number
+  phase: 'recovering' | 'classifying'
 }
 
 export type CorpusBulkStopReason = 'done' | 'user' | 'rate_limited' | 'limit' | 'error'
@@ -508,12 +540,21 @@ export interface CorpusBulkResult extends CorpusBulkProgress {
 
 export interface CorpusCoverRecoveryResult {
   scanned: number
+  failed: number
+  failedBatches: number
   recoveredCovers: number
   recoveredOptions: number
+  maybeMore: boolean
+  errorMessage?: string
 }
 
 export function corpusCoverRecoverySummary(recovery: CorpusCoverRecoveryResult): string {
   const parts: string[] = []
+  if (recovery.scanned) {
+    parts.push(
+      `checked ${recovery.scanned} local cover source${recovery.scanned === 1 ? '' : 's'}`,
+    )
+  }
   if (recovery.recoveredCovers) {
     parts.push(
       `filled ${recovery.recoveredCovers} missing corpus cover${recovery.recoveredCovers === 1 ? '' : 's'}`,
@@ -524,6 +565,16 @@ export function corpusCoverRecoverySummary(recovery: CorpusCoverRecoveryResult):
       `published ${recovery.recoveredOptions} household cover option${recovery.recoveredOptions === 1 ? '' : 's'}`,
     )
   }
+  if (recovery.failed) {
+    parts.push(
+      `${recovery.failed} cover source${recovery.failed === 1 ? '' : 's'} deferred to retry`,
+    )
+  }
+  if (recovery.failedBatches) {
+    parts.push(
+      `cover recovery paused${recovery.errorMessage ? `: ${recovery.errorMessage}` : ''}`,
+    )
+  }
   return parts.length ? ` · ${parts.join(' · ')}` : ''
 }
 
@@ -531,13 +582,21 @@ export function corpusCoverRecoverySummary(recovery: CorpusCoverRecoveryResult):
  * before asking external sources for alternatives. The RPC remains household-scoped and validates
  * every stored object against the authenticated project's issuer. */
 export async function recoverAdminHouseholdCorpusCovers(): Promise<CorpusCoverRecoveryResult> {
-  const { data, error } = await supabase.rpc('admin_recover_personal_corpus_covers')
+  const { data, error } = await supabase.rpc('admin_recover_corpus_cover_batch', {
+    p_limit: CORPUS_RECOVERY_BATCH_SIZE,
+  })
   if (error) throw error
   const result = (data ?? {}) as Partial<CorpusCoverRecoveryResult>
   return {
     scanned: Number(result.scanned ?? 0),
+    failed: Number(result.failed ?? 0),
+    failedBatches: 0,
     recoveredCovers: Number(result.recoveredCovers ?? 0),
     recoveredOptions: Number(result.recoveredOptions ?? 0),
+    maybeMore: result.maybeMore === true,
+    ...(typeof result.errorMessage === 'string' && result.errorMessage
+      ? { errorMessage: result.errorMessage }
+      : {}),
   }
 }
 
@@ -601,7 +660,7 @@ export async function bulkCompleteCorpus(
   let consecutiveFailures = 0
   let stopReason: CorpusBulkStopReason = 'done'
   let errorMessage: string | undefined
-  onProgress({ scanned, total, filled })
+  onProgress({ scanned, total, filled, recoveryScanned: 0, phase: 'classifying' })
 
   for (const work of candidates) {
     if (shouldStop()) {
@@ -719,9 +778,19 @@ export async function bulkCompleteCorpus(
     if (relocatedCover || Object.keys(patch).length || seriesChanged) filled++
     else nothing++
     scanned++
-    onProgress({ scanned, total, filled })
+    onProgress({ scanned, total, filled, recoveryScanned: 0, phase: 'classifying' })
   }
-  return { scanned, total, filled, failed, nothing, stopReason, errorMessage }
+  return {
+    scanned,
+    total,
+    filled,
+    failed,
+    nothing,
+    stopReason,
+    errorMessage,
+    recoveryScanned: 0,
+    phase: 'classifying',
+  }
 }
 
 export interface CorpusCompletionPipelineResult {
@@ -732,14 +801,15 @@ export interface CorpusCompletionPipelineResult {
 interface CorpusCompletionPipelineDependencies {
   recover: () => Promise<CorpusCoverRecoveryResult>
   fetchCandidates: () => Promise<CorpusEnrichmentWork[]>
+  refreshCandidates: (ids: readonly string[]) => Promise<CorpusEnrichmentWork[]>
   complete: typeof bulkCompleteCorpus
 }
 
 /**
- * Recover the signed-in administrator's exact personal covers before deciding whether the shared
- * corpus has any ordinary enrichment work left. A zero-length metadata candidate list must not
- * suppress this owner-scoped recovery: accepted alternatives can still be missing from otherwise
- * complete works.
+ * Interleave bounded cover recovery with bounded metadata/series classification. Cover recovery
+ * is useful even when no classification candidates remain, but an unavailable recovery batch must
+ * never prevent classification from advancing. Each recovered chunk is re-read before providers
+ * are queried so the classifier sees the newly preserved shared cover and objective fields.
  */
 export async function runCorpusCompletionPipeline(
   onProgress: (progress: CorpusBulkProgress) => void,
@@ -747,11 +817,117 @@ export async function runCorpusCompletionPipeline(
   dependencies: CorpusCompletionPipelineDependencies = {
     recover: recoverAdminHouseholdCorpusCovers,
     fetchCandidates: fetchCorpusEnrichmentCandidates,
+    refreshCandidates: fetchCorpusEnrichmentWorksByIds,
     complete: bulkCompleteCorpus,
   },
 ): Promise<CorpusCompletionPipelineResult> {
-  const recovery = await dependencies.recover()
   const candidates = await dependencies.fetchCandidates()
-  const result = await dependencies.complete(candidates, onProgress, shouldStop)
+  const scheduled = candidates.slice(0, MAX_PER_RUN)
+  const recovery: CorpusCoverRecoveryResult = {
+    scanned: 0,
+    failed: 0,
+    failedBatches: 0,
+    recoveredCovers: 0,
+    recoveredOptions: 0,
+    maybeMore: true,
+  }
+  const result: CorpusBulkResult = {
+    scanned: 0,
+    total: candidates.length,
+    filled: 0,
+    failed: 0,
+    nothing: 0,
+    stopReason: 'done',
+    recoveryScanned: 0,
+    phase: 'classifying',
+  }
+  let candidateOffset = 0
+  let recoveryActive = true
+  let batchCount = 0
+
+  while (
+    batchCount < CORPUS_PIPELINE_BATCH_LIMIT &&
+    (candidateOffset < scheduled.length || recoveryActive)
+  ) {
+    if (shouldStop()) {
+      result.stopReason = 'user'
+      break
+    }
+
+    if (recoveryActive) {
+      onProgress({
+        scanned: result.scanned,
+        total: result.total,
+        filled: result.filled,
+        recoveryScanned: recovery.scanned,
+        phase: 'recovering',
+      })
+      try {
+        const batchRecovery = await dependencies.recover()
+        recovery.scanned += batchRecovery.scanned
+        recovery.failed += batchRecovery.failed
+        recovery.recoveredCovers += batchRecovery.recoveredCovers
+        recovery.recoveredOptions += batchRecovery.recoveredOptions
+        recovery.maybeMore = batchRecovery.maybeMore
+        recovery.errorMessage ??= batchRecovery.errorMessage
+        recoveryActive = batchRecovery.maybeMore
+      } catch (error) {
+        recovery.failedBatches++
+        recovery.maybeMore = true
+        recovery.errorMessage ??= error instanceof Error ? error.message : String(error)
+        // Do not hammer an unavailable recovery path in this run. Classification below still
+        // advances, and the durable queue resumes from its marks on the next run.
+        recoveryActive = false
+      }
+    }
+
+    if (candidateOffset < scheduled.length) {
+      const originalBatch = scheduled.slice(
+        candidateOffset,
+        candidateOffset + CORPUS_RECOVERY_BATCH_SIZE,
+      )
+      let refreshedBatch = originalBatch
+      try {
+        const refreshed = await dependencies.refreshCandidates(originalBatch.map(({ id }) => id))
+        const refreshedById = new Map(refreshed.map((work) => [work.id, work]))
+        refreshedBatch = originalBatch.map((work) => refreshedById.get(work.id) ?? work)
+      } catch {
+        // Recovery and provider completion are independently useful. A transient refresh failure
+        // falls back to the already fetched candidate snapshot instead of discarding the batch.
+      }
+
+      const batchResult = await dependencies.complete(
+        refreshedBatch,
+        (batchProgress) =>
+          onProgress({
+            scanned: result.scanned + batchProgress.scanned,
+            total: result.total,
+            filled: result.filled + batchProgress.filled,
+            recoveryScanned: recovery.scanned,
+            phase: 'classifying',
+          }),
+        shouldStop,
+      )
+      result.scanned += batchResult.scanned
+      result.filled += batchResult.filled
+      result.failed += batchResult.failed
+      result.nothing += batchResult.nothing
+      result.errorMessage ??= batchResult.errorMessage
+      candidateOffset += originalBatch.length
+      if (batchResult.stopReason !== 'done') {
+        result.stopReason = batchResult.stopReason
+        break
+      }
+    }
+
+    batchCount++
+  }
+
+  if (
+    result.stopReason === 'done' &&
+    (candidates.length > scheduled.length || recoveryActive)
+  ) {
+    result.stopReason = 'limit'
+  }
   return { recovery, result }
 }
