@@ -146,6 +146,15 @@ export const USER_OWNED_TABLES: OwnedTable[] = [
     },
   },
   {
+    table: 'corpus_cover_recovery_marks',
+    owner: 'recovered_by',
+    collective: true,
+    plan: {
+      backup: false,
+      why: 'Derived internal queue state for shared cover recovery. Source fingerprints are rebuilt by later administrator runs; replaying them could incorrectly suppress recovery in another database.',
+    },
+  },
+  {
     table: 'work_tropes',
     owner: 'added_by',
     collective: true,

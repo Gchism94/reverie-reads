@@ -127,6 +127,13 @@ wishlist` was the pre-#68 model and is long wrong. Format flags **suppress, neve
   corpus tuple is still a reconciliation event: it must repair eligible personal defaults and their
   structured membership rather than becoming a tuple-equality no-op. See
   `docs/reference/DATA_SOURCES.md`.
+- **Corpus cover recovery is bounded, resumable, and independent of classification.** The
+  administrator completion pipeline never walks the whole household library in one RPC. It calls
+  `admin_recover_corpus_cover_batch` in groups of at most 25, records a source fingerprint after
+  every success or deferred failure, and interleaves those batches with metadata/series work. A
+  failed or timed-out recovery batch is reported beside the control but must not prevent the
+  classification batch from advancing. Failed rows receive a retry window so one bad source cannot
+  starve the queue; changing its objective or cover fields makes it eligible immediately.
 - **Structured rows own personal series membership.** `series` + live `series_entries` are the
   authority; `books.series`, `position`, and `series_count` are a compatibility projection of one
   explicit `is_primary` entry. A book may have multiple live memberships, but at most one primary;
