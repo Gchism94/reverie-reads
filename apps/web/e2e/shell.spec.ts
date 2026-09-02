@@ -6,8 +6,10 @@ import { expect, test } from './support/fixtures'
 
 test('signed-out landing shows the gold front door', async ({ page }) => {
   await page.goto('/')
-  await expect(page.getByRole('heading', { name: /beautifully kept/i })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Get started' }).first()).toBeVisible()
+  await expect(
+    page.getByRole('heading', { name: 'Keep the whole story of your reading life.' }),
+  ).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Begin your library' })).toBeVisible()
 })
 
 // Fraunces is Tryst's #1 character lever and the landing's display face. The css2 era asserted the
@@ -21,7 +23,7 @@ test('signed-out landing shows the gold front door', async ({ page }) => {
 // the all-nine-skins matrix lives in src/skin/fontConfig.test.ts.
 test('the landing asks for Fraunces and applies it to the display face', async ({ page }) => {
   await page.goto('/')
-  const heading = page.getByRole('heading', { name: /beautifully kept/i })
+  const heading = page.getByTestId('landing-display-heading')
   await expect(heading).toBeVisible()
 
   // Requested: the pre-paint boot script injected tryst's self-hosted pairing…

@@ -1,6 +1,6 @@
 # Reverie Reads roadmap
 
-Current as of 2026-08-30. This file is the ordered project status. Historical briefs remain in
+Current as of 2026-09-01. This file is the ordered project status. Historical briefs remain in
 `docs/archive/`; detailed proposals that are not yet active remain in `docs/backlog/`; only work
 actually in flight belongs in `docs/tasks/`.
 
@@ -19,12 +19,13 @@ imports and exports, corpus-backed works and edition identity, enrichment and co
 search and discovery, shelves, series tooling, planner/calendar, stats, Match, nine skins,
 accessibility coverage, offline read caching, clubs/shared lists, and a read-only household view.
 
-Repository `origin/main` is now `8669ed4`. PRs #368–#376 closed the personal/household cover-review
-release gates, added exact household-cover review and explicit Add/import destinations, fixed
-responsive text clipping plus library-cover alignment, simplified CI, stopped non-retryable
-PostgREST conflict storms, and repaired administrator cover review for an unclaimed ISBN under one
-unambiguous work. The owner deployed migrations through `20260908010000`, promoted the current
-artifact, and confirmed the original administrator-review failure is resolved.
+Public repository `origin/main` is now `b36c7f1`. PRs #377–#387 established structured series
+authority and source provenance, added safe corpus series classification and review, unified series
+browsing with rename/merge/reversible removal, reconciled confirmed canonical defaults, and made
+corpus cover recovery bounded and resumable. The private Pro overlay shipped connected-series
+universes with braided timelines and lifecycle editing, then synced the cover-recovery release in
+private PR #6. The owner deployed migrations through `20260919010000`; Vercel Production points at
+private merge `85286f6`.
 
 The structural report's runtime row initially observed one assigned corpus administrator. The
 owner then ran the exact-roster operator for the two approved profiles: its dry run found one
@@ -46,8 +47,8 @@ not change the same state or bypass the earlier item's completion gate.
 |     4 |    P0    | Build independent, corpus-preserving library membership  | Complete               | PRs #364–#366 integrated the reviewed bounded backfill, corpus-admin preservation, ACL repair, and operator boundaries. All three migrations are deployed; the production report returned 43/43 true, and the covers function passed the owner’s refresh-persistence smoke check. See `docs/queries/library-membership-rollout-verification.sql`, `docs/tasks/task-library-removal-and-reconciliation.md`, and `docs/tasks/task-corpus-admin-enrichment.md`.                                                                                                                                                                                               |
 |     5 |    P0    | Owner-library backup and CSV reconciliation              | Reconciliation pending | The cover and household prerequisites are live: migrations through `20260908010000`, the exact two-profile administrator roster, explicit Add/import destinations, and repaired administrator cover review are complete. The first reconciliation dry run found 10 exact title/author identities absent from the corpus; rerun it now and resolve any identities that still remain through Household Add. Then produce and approve a new exact private dry run and transaction-consistent backup. Only the owner executes the checksum-bound write and completes Account A/B, household-only, removal, corpus-preservation, cover, and trope smoke checks. |
 |     6 |    P1    | CI/CD value and reliability review, then simplification  | Complete               | PR #374 reduced active pull-request checks from eight to six while preserving types, formatting, secrets, database/RLS, accessibility, and critical browser behavior. The corrected live run passed every retained boundary. See `docs/audits/ci-cd-simplification-2026-08-30.md`.                                                                                                                                                                                                                                                                                                                                                                         |
-|     7 |    P1    | Series truth and library-experience overhaul             | Phase 2A in progress   | The owner directed the forward-only provenance slice to proceed while item 5 still awaits its owner-only reconciliation. Phase 2A adds typed current-value provenance and fail-closed writers but performs no historical inference, admission/removal, or production-data cleanup; those remain gated on the aggregate owner query and the P0 reconciliation. See `docs/audits/series-truth-phase-1.md` and `docs/backlog/task-series-truth-library-overhaul.md`.                                                                                                                                                                                          |
-|     8 |    P1    | Landing-page capability and brand redesign               | Blocked on 7           | Re-audit the shipped capability set and build a warm, personal, Reverie-voiced landing page derived from the authenticated product. Use curated fixtures—never private production data—and show only real, current behavior across responsive and accessible layouts. See `docs/backlog/task-landing-capability-brand-redesign.md`.                                                                                                                                                                                                                                                                                                                        |
+|     7 |    P1    | Series truth and library-experience overhaul             | Complete               | PRs #377–#386 shipped provenance, structured membership authority, source-backed corpus classification and review, a dedicated series experience, rename/merge/reversible removal, and confirmed-default reconciliation. The private Pro overlay adds connected-series universes without weakening public series truth.                                                                                                                                                                                                                                                                                                                                    |
+|     8 |    P1    | Landing-page capability and brand redesign               | Ready for review       | The claims audit and implementation are complete on `codex/landing-capability-redesign`, with 219 browser checks passing and no failures across the full 229-check matrix. The page uses curated fixtures—never private production data—and leads with personal context, household identity, reviewed series truth, and taste-led discovery across responsive and accessible layouts. See `docs/audits/landing-capability-claims-2026-09.md` and `docs/backlog/task-landing-capability-brand-redesign.md`.                                                                                                                                                 |
 
 ## P2 — planned product and reliability work
 

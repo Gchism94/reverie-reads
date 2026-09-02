@@ -38,7 +38,8 @@ test('the app loads its self-hosted skin stylesheet, and the real face arrives',
 }) => {
   // No interception in this direction — the entire point is that the real, shipped files serve.
   await page.goto('/')
-  await expect(page.getByRole('heading', { name: /beautifully kept/i })).toBeVisible()
+  const heading = page.getByTestId('landing-display-heading')
+  await expect(heading).toBeVisible()
 
   // (a) OUR markup: the pre-paint boot script injected the active skin's pairing, pointing at the
   //     app's own /fonts path — never a third-party host.
@@ -66,9 +67,7 @@ test('the app loads its self-hosted skin stylesheet, and the real face arrives',
     .toBe(true)
 
   // (d) …and the intended stack is applied to the element that carries the skin's voice.
-  const stack = await page
-    .getByRole('heading', { name: /beautifully kept/i })
-    .evaluate((el) => getComputedStyle(el).fontFamily)
+  const stack = await heading.evaluate((el) => getComputedStyle(el).fontFamily)
   expect(stack).toContain(TRYST_DISPLAY)
 })
 
@@ -81,7 +80,7 @@ test('a dead font path degrades to the declared fallback — readable, never tof
 
   // The page still renders. Fonts are a decoration, not a dependency — that contract does not
   // weaken just because the files moved in-house.
-  const heading = page.getByRole('heading', { name: /beautifully kept/i })
+  const heading = page.getByTestId('landing-display-heading')
   await expect(heading).toBeVisible()
 
   // The webfont genuinely did not arrive. Asserted on REGISTRATION, not `fonts.check()`: with the
