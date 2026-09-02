@@ -23,6 +23,23 @@ select has_function('public', 'save_corpus_series_entry',
   'administrator slot save RPC exists');
 select has_function('public', 'remove_corpus_series_entry', array['uuid', 'bigint'],
   'administrator slot removal RPC exists');
+select has_function('public', 'detach_corpus_series_work_before_delete', array[]::text[],
+  'work deletion has an explicit catalog detachment boundary');
+select has_trigger('public', 'works', 'works_detach_corpus_series_before_delete',
+  'work deletion detaches canonical membership before the foreign key runs');
+select ok(
+  not has_function_privilege('anon', 'public.detach_corpus_series_work_before_delete()', 'EXECUTE'),
+  'anon cannot invoke the work-detachment trigger helper directly');
+select ok(
+  not has_function_privilege(
+    'authenticated', 'public.detach_corpus_series_work_before_delete()', 'EXECUTE'
+  ),
+  'authenticated cannot invoke the work-detachment trigger helper directly');
+select ok(
+  not has_function_privilege(
+    'service_role', 'public.detach_corpus_series_work_before_delete()', 'EXECUTE'
+  ),
+  'service role cannot invoke the work-detachment trigger helper directly');
 
 -- Reproduce the legacy production project's auto-exposure, then replay the exact repair contract.
 grant select, insert, update, delete on table public.corpus_series,
@@ -172,6 +189,41 @@ select is(
   ) ->> 'outcome',
   'applied', 'a distinct provider id creates a distinct canonical series');
 reset role;
+
+-- Deleting a provisional corpus work must preserve a known reading-order hint without leaving an
+-- impossible primary membership behind. This is the real household Add cleanup path.
+insert into public.works (id, work_key, title, author_text, contributors)
+values (
+  'cb000000-0000-4000-8000-000000000004', 'catalog-detach|writer',
+  'Catalog Detach', 'A Writer', '[]'
+);
+set local role authenticated;
+select set_config('request.jwt.claims',
+  '{"sub":"ca000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
+select is(
+  public.record_corpus_series_discovery(
+    'cb000000-0000-4000-8000-000000000004',
+    '{"matched":true,"identityConfidence":"high","membershipConfidence":"high","source":"hardcover","sourceRef":"hc-detach","series":"Detach Series","position":1,"count":1,"evidence":[{"source":"hardcover","kind":"relational_membership","sourceRef":"hc-detach","series":"Detach Series","position":1,"memberCount":1}]}'::jsonb,
+    '2026-09-20T01:03:00Z'
+  ) ->> 'outcome',
+  'applied', 'the deletion fixture first becomes a reviewed canonical membership');
+reset role;
+delete from public.work_metadata_edits
+where work_id = 'cb000000-0000-4000-8000-000000000004';
+delete from public.works where id = 'cb000000-0000-4000-8000-000000000004';
+select ok(
+  (select work_id is null and not is_primary and title = 'Catalog Detach'
+     from public.corpus_series_entries e
+     join public.corpus_series s on s.id = e.series_id
+    where s.name = 'Detach Series'),
+  'work deletion converts its reviewed membership into a valid unbound slot');
+select is(
+  (select count(*)::int
+     from public.corpus_series_edits e
+     join public.corpus_series s on s.id = e.series_id
+    where s.name = 'Detach Series' and e.action = 'work_detach'),
+  1, 'work deletion leaves one explicit detachment audit event');
+delete from public.corpus_series where name = 'Detach Series';
 
 select is((select count(*)::int from public.corpus_series), 2,
   'provider identity groups two works without collapsing another series');

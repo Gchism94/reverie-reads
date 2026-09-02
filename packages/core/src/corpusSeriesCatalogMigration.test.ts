@@ -89,4 +89,15 @@ describe('canonical shared-series catalog migration boundaries', () => {
     expect(management).toContain('update public.works w')
     expect(schema).not.toContain('update public.books')
   })
+
+  it('turns a deleted work membership into a non-primary unbound slot before the FK runs', () => {
+    expect(schema).toContain('create function public.detach_corpus_series_work_before_delete()')
+    expect(schema).toContain('before delete on public.works')
+    expect(schema).toContain('set work_id = null,')
+    expect(schema).toContain('is_primary = false,')
+    expect(schema).toContain("'work_detach'")
+    expect(schema).toContain(
+      'revoke all on function public.detach_corpus_series_work_before_delete()\n  from public, anon, authenticated, service_role;',
+    )
+  })
 })

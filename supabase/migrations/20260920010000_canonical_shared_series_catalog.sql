@@ -145,7 +145,7 @@ create table public.corpus_series_edits (
   editor_id uuid references public.profiles (id) on delete set null,
   action text not null check (action in (
     'seed', 'sync', 'update', 'rename', 'merge', 'archive', 'restore',
-    'entry_add', 'entry_update', 'entry_remove'
+    'entry_add', 'entry_update', 'entry_remove', 'work_detach'
   )),
   previous_value jsonb,
   next_value jsonb,
@@ -154,6 +154,73 @@ create table public.corpus_series_edits (
 
 create index corpus_series_edits_series_idx
   on public.corpus_series_edits (series_id, created_at desc, id);
+
+-- A provisional corpus work may be removed after its last household membership disappears. Keep
+-- its reviewed series position as an unbound bibliographic slot, but clear primary intent before
+-- the works FK performs its own SET NULL action. Without this explicit transition, SET NULL would
+-- leave is_primary=true and fail the entry identity constraint during otherwise-valid cleanup.
+create function public.detach_corpus_series_work_before_delete()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $fn$
+declare
+  affected_series uuid[];
+begin
+  select array_agg(distinct e.series_id order by e.series_id)
+    into affected_series
+    from public.corpus_series_entries e
+   where e.work_id = old.id;
+
+  if affected_series is null then
+    return old;
+  end if;
+
+  -- The work row is already locked by DELETE. Take catalog locks only after it, in stable order,
+  -- matching every administrator lifecycle RPC.
+  perform 1
+    from public.corpus_series c
+   where c.id = any(affected_series)
+   order by c.id
+   for update;
+
+  update public.corpus_series_entries e
+     set work_id = null,
+         title = case when nullif(trim(e.title), '') is null then old.title else e.title end,
+         author_text = case
+           when nullif(trim(e.author_text), '') is null then old.author_text
+           else e.author_text
+         end,
+         is_primary = false,
+         archive_primary_intent = false
+   where e.work_id = old.id;
+
+  update public.corpus_series c
+     set revision = c.revision + 1
+   where c.id = any(affected_series);
+
+  insert into public.corpus_series_edits (
+    series_id, editor_id, action, previous_value, next_value
+  )
+  select
+    series_id,
+    auth.uid(),
+    'work_detach',
+    jsonb_build_object('workId', old.id, 'title', old.title),
+    jsonb_build_object('unbound', true)
+  from unnest(affected_series) as detached(series_id);
+
+  return old;
+end
+$fn$;
+
+revoke all on function public.detach_corpus_series_work_before_delete()
+  from public, anon, authenticated, service_role;
+
+create trigger works_detach_corpus_series_before_delete
+before delete on public.works
+for each row execute function public.detach_corpus_series_work_before_delete();
 
 -- Shared objective metadata is readable to signed-in readers. Archived recovery and every write
 -- remain RPC-only. Reset all API ACLs first because production retained legacy auto-exposure.

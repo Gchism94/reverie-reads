@@ -21,6 +21,7 @@ expected_tables(table_name) as (
 expected_functions(signature, authenticated_execute, service_execute) as (
   values
     ('public.corpus_series_identity_key(text)', false, true),
+    ('public.detach_corpus_series_work_before_delete()', false, false),
     ('public.sync_corpus_series_catalog_work(uuid,text)', false, false),
     ('public.sync_corpus_series_catalog_work_trigger()', false, false),
     ('public.update_corpus_series(uuid,bigint,text,text,integer,text[])', true, false),
@@ -35,6 +36,7 @@ expected_triggers(table_name, trigger_name) as (
   values
     ('corpus_series', 'corpus_series_set_updated_at'),
     ('corpus_series_entries', 'corpus_series_entries_set_updated_at'),
+    ('works', 'works_detach_corpus_series_before_delete'),
     ('works', 'works_sync_corpus_series_catalog')
 ),
 migration_checks as (
