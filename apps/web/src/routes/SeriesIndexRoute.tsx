@@ -26,6 +26,7 @@ import {
   RenameSeriesDialog,
   type SeriesManagementRow,
 } from '../series/SeriesManagement'
+import { SharedSeriesCatalogBrowser } from '../series/SharedSeriesCatalogBrowser'
 
 interface StructuredSeriesSection {
   key: string
@@ -259,6 +260,7 @@ export function SeriesIndexScreen() {
   const [renaming, setRenaming] = useState<SeriesManagementRow | null>(null)
   const [deleting, setDeleting] = useState<SeriesManagementRow | null>(null)
   const [merging, setMerging] = useState(false)
+  const [scope, setScope] = useState<'personal' | 'shared'>('personal')
 
   const byId = useMemo(() => new Map((books ?? []).map((book) => [book.id, book])), [books])
 
@@ -332,99 +334,134 @@ export function SeriesIndexScreen() {
             Series
           </h1>
           <p className="mt-2 max-w-[60ch] text-[13.5px] leading-relaxed text-muted">
-            Browse confirmed series, see what you have in hand, and arrange each reading order.
+            {scope === 'personal'
+              ? 'Browse your confirmed series, see what you have in hand, and arrange each reading order.'
+              : 'Browse reviewed series identities and reading-order slots shared across Reverie.'}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <div className="flex border border-line p-1" aria-label="Series catalog scope">
+            {(
+              [
+                ['personal', 'Yours'],
+                ['shared', 'Shared'],
+              ] as const
+            ).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={scope === value}
+                onClick={() => setScope(value)}
+                className="skin-control min-h-10 px-3 text-[12px] font-semibold text-ink"
+                style={{
+                  background: scope === value ? 'var(--accent-fill)' : 'transparent',
+                  color: scope === value ? 'var(--on-primary)' : 'var(--ink)',
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           <Link
             to="/library"
             className="skin-control skin-btn-secondary inline-flex h-10 items-center px-4 text-[12px]"
           >
             View books
           </Link>
-          <Button disabled={managementRows.length < 2} onClick={() => setMerging(true)}>
-            Merge series
-          </Button>
+          {scope === 'personal' ? (
+            <Button disabled={managementRows.length < 2} onClick={() => setMerging(true)}>
+              Merge series
+            </Button>
+          ) : null}
         </div>
       </header>
 
-      <ConsolidationQueue rows={consolidationRows} />
-
-      {!!unreviewedSeries.length && (
-        <section className="mt-5 border border-line p-3" aria-labelledby="series-membership-review">
-          <h2 id="series-membership-review" className="text-[13px] font-semibold text-ink">
-            Membership review · {unreviewedSeries.reduce((sum, row) => sum + row.unreviewed, 0)}
-          </h2>
-          <p className="mt-1 text-[12px] leading-relaxed text-muted">
-            These older labels are excluded from browsing and progress until you confirm them.
-          </p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {unreviewedSeries.map((row) => (
-              <Link
-                key={row.series.id}
-                to="/series/$seriesName"
-                params={{ seriesName: encodeURIComponent(row.series.name) }}
-                className="skin-control min-h-11 border border-line px-3 py-2 text-[12px] font-semibold text-ink"
-              >
-                Review {row.series.name} · {row.unreviewed}
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {!sections.length ? (
-        <p className="mt-8 text-[13.5px] text-muted">
-          No confirmed series yet. Add a series through a book’s details, or review an older label
-          above.
-        </p>
+      {scope === 'shared' ? (
+        <SharedSeriesCatalogBrowser />
       ) : (
-        <div className="mt-7 flex flex-col gap-8" data-testid="confirmed-series-browser">
-          {sections.map((section) => (
-            <section
-              key={section.key}
-              aria-labelledby={`author-${section.key.replace(/[^a-zA-Z0-9]+/g, '-')}`}
-            >
-              <h2
-                id={`author-${section.key.replace(/[^a-zA-Z0-9]+/g, '-')}`}
-                className="mb-3 text-[12px] font-semibold uppercase tracking-[0.14em] text-muted"
-              >
-                {section.name}
-              </h2>
-              <ul className="grid items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {section.rows.map((row) => {
-                  const management = managementById.get(row.series.id)
-                  if (!management) return null
-                  const rowKey = `${section.key}::${row.series.id}`
-                  const panelId = `arrange-panel-${rowKey.replace(/[^a-zA-Z0-9]+/g, '-')}`
-                  return (
-                    <SeriesCard
-                      key={rowKey}
-                      row={row}
-                      management={management}
-                      byId={byId}
-                      tbrBookIds={tbrBookIds}
-                      expanded={open.has(rowKey)}
-                      onToggle={() =>
-                        setOpen((current) => {
-                          const next = new Set(current)
-                          if (!next.delete(rowKey)) next.add(rowKey)
-                          return next
-                        })
-                      }
-                      onRename={() => setRenaming(management)}
-                      onDelete={() => setDeleting(management)}
-                      panelId={panelId}
-                    />
-                  )
-                })}
-              </ul>
-            </section>
-          ))}
-        </div>
-      )}
+        <>
+          <ConsolidationQueue rows={consolidationRows} />
 
-      <ArchivedSeriesPanel />
+          {!!unreviewedSeries.length && (
+            <section
+              className="mt-5 border border-line p-3"
+              aria-labelledby="series-membership-review"
+            >
+              <h2 id="series-membership-review" className="text-[13px] font-semibold text-ink">
+                Membership review · {unreviewedSeries.reduce((sum, row) => sum + row.unreviewed, 0)}
+              </h2>
+              <p className="mt-1 text-[12px] leading-relaxed text-muted">
+                These older labels are excluded from browsing and progress until you confirm them.
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {unreviewedSeries.map((row) => (
+                  <Link
+                    key={row.series.id}
+                    to="/series/$seriesName"
+                    params={{ seriesName: encodeURIComponent(row.series.name) }}
+                    className="skin-control min-h-11 border border-line px-3 py-2 text-[12px] font-semibold text-ink"
+                  >
+                    Review {row.series.name} · {row.unreviewed}
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {!sections.length ? (
+            <p className="mt-8 text-[13.5px] text-muted">
+              No confirmed series yet. Add a series through a book’s details, or review an older
+              label above.
+            </p>
+          ) : (
+            <div className="mt-7 flex flex-col gap-8" data-testid="confirmed-series-browser">
+              {sections.map((section) => (
+                <section
+                  key={section.key}
+                  aria-labelledby={`author-${section.key.replace(/[^a-zA-Z0-9]+/g, '-')}`}
+                >
+                  <h2
+                    id={`author-${section.key.replace(/[^a-zA-Z0-9]+/g, '-')}`}
+                    className="mb-3 text-[12px] font-semibold uppercase tracking-[0.14em] text-muted"
+                  >
+                    {section.name}
+                  </h2>
+                  <ul className="grid items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    {section.rows.map((row) => {
+                      const management = managementById.get(row.series.id)
+                      if (!management) return null
+                      const rowKey = `${section.key}::${row.series.id}`
+                      const panelId = `arrange-panel-${rowKey.replace(/[^a-zA-Z0-9]+/g, '-')}`
+                      return (
+                        <SeriesCard
+                          key={rowKey}
+                          row={row}
+                          management={management}
+                          byId={byId}
+                          tbrBookIds={tbrBookIds}
+                          expanded={open.has(rowKey)}
+                          onToggle={() =>
+                            setOpen((current) => {
+                              const next = new Set(current)
+                              if (!next.delete(rowKey)) next.add(rowKey)
+                              return next
+                            })
+                          }
+                          onRename={() => setRenaming(management)}
+                          onDelete={() => setDeleting(management)}
+                          panelId={panelId}
+                        />
+                      )
+                    })}
+                  </ul>
+                </section>
+              ))}
+            </div>
+          )}
+
+          <ArchivedSeriesPanel />
+        </>
+      )}
 
       {renaming ? <RenameSeriesDialog row={renaming} onClose={() => setRenaming(null)} /> : null}
       {deleting ? <DeleteSeriesDialog row={deleting} onClose={() => setDeleting(null)} /> : null}

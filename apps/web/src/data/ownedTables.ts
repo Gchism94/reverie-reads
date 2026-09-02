@@ -173,6 +173,51 @@ export const USER_OWNED_TABLES: OwnedTable[] = [
     },
   },
   {
+    table: 'corpus_series',
+    owner: 'reviewed_by',
+    collective: true,
+    plan: {
+      backup: false,
+      why: 'Canonical series identity is shared corpus state. Creator/reviewer ids are audit attribution, not ownership, and a personal restore must not overwrite the live catalog.',
+    },
+  },
+  {
+    table: 'corpus_series_names',
+    owner: 'series_id',
+    collective: true,
+    plan: {
+      backup: false,
+      why: 'Canonical names and aliases belong to a shared corpus series and travel with that catalog record, never with one reviewer’s personal backup.',
+    },
+  },
+  {
+    table: 'corpus_series_sources',
+    owner: 'series_id',
+    collective: true,
+    plan: {
+      backup: false,
+      why: 'Provider identities and evidence are shared corpus provenance. Replaying them from one account could corrupt the destination catalog identity.',
+    },
+  },
+  {
+    table: 'corpus_series_entries',
+    owner: 'series_id',
+    collective: true,
+    plan: {
+      backup: false,
+      why: 'Shared linked and unbound reading-order slots belong to the canonical corpus series. Personal series entries are backed up separately.',
+    },
+  },
+  {
+    table: 'corpus_series_edits',
+    owner: 'editor_id',
+    collective: true,
+    plan: {
+      backup: false,
+      why: 'Canonical series edits are an append-only shared audit. Restoring one reviewer’s copy would duplicate or falsify corpus history.',
+    },
+  },
+  {
     table: 'clubs',
     owner: 'created_by',
     plan: { backup: false, why: 'A club is collective, not owned by one reader; recreating it on restore would fabricate a club its other members never joined.' },

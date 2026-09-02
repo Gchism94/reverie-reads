@@ -397,6 +397,21 @@ work_series_suggestions
                      identity_confidence, membership confidence, evidence jsonb, reason,
                      status, checked/review fields)
                      -- singleton/conflicting relational evidence waits for an administrator
+corpus_series       (id pk, name/name_key, creator_key, status, declared_count,
+                     catalog_state, evidence jsonb, revision, reviewed_by,
+                     archived_at, merged_into, timestamps)
+corpus_series_names (id pk, series_id fk, name/name_key, creator_key,
+                     kind canonical|alias, source/source_ref, created_at)
+corpus_series_sources
+                    (id pk, series_id fk, source/source_ref unique, evidence, observed_at)
+corpus_series_entries
+                    (id pk, series_id fk, work_id fk null, position, label, title/author_text,
+                     is_primary, archive_primary_intent, membership_claim, position_claim,
+                     evidence, source/source_ref, removed_at, timestamps)
+                     -- unbound slots retain known books not yet represented by a corpus work
+corpus_series_edits (id pk, series_id/editor_id fk null, action,
+                     previous_value/next_value jsonb, created_at)
+                     -- append-only administrator and synchronization audit
 corpus_admins        (user_id pk fk→profiles, granted_at, granted_by fk→profiles)
                      -- service-managed authorization; never restored from a reader backup
 corpus_cover_recovery_marks
@@ -537,6 +552,22 @@ singletons and cross-source conflicts enter `work_series_suggestions`. A source 
 `unresolved`, and a matched record with no label stays a dated `no_series` observation rather than
 becoming a permanent standalone claim. Fantastic Fiction evidence is limited to membership, series,
 order, source URL, and observation time and is never sufficient for automatic promotion.
+
+**Canonical shared series are relational and separate from personal series.** `corpus_series` owns
+the reviewed identity, aliases, provider ids, status, declared length, and revision;
+`corpus_series_entries` owns shared order and may link a `works` row or retain an unbound known-book
+slot. Provider identity wins over text matching. Name plus creator is a fallback only when it
+resolves to one active catalog record, so homonymous series are not guessed together. Only reviewed
+`found`/`review` work tuples seed the initial graph; unknown legacy strings do not. Signed-in readers
+may browse active catalog rows but cannot write them directly. Corpus administrators rename, merge,
+archive/restore, and maintain order through revision-checked RPCs; every decision is appended to
+`corpus_series_edits`. Archive and slot removal are tombstones, not destructive deletion.
+
+`works.series/position/series_count/status` remains the compatibility projection for household
+surfaces and automatic personal defaults. A catalog change goes through that projection rather than
+writing personal tables directly. Consequently, an eligible `unknown`/`enrichment`/`corpus` default
+may follow a correction, while reader and CSV-import memberships remain unchanged. Personal
+`series`/`series_entries` and private Pro universe links remain reader-authored overlays.
 
 When canonical series/position/count changes, household views receive it directly from `works` and
 eligible active personal rows receive it as an `origin=corpus` default. Only rows whose current

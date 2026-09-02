@@ -1,6 +1,6 @@
 # Shared series metadata seeder
 
-Status: implemented on `codex/series-metadata-seeder`; production rollout pending.
+Status: source discovery is deployed; canonical shared-catalog integration is in implementation.
 
 ## Problem
 
@@ -45,10 +45,13 @@ computed from both the ordinary metadata clock and the independent series clock.
 matches appear under **Review → Corpus series matches**.
 
 This deliberately does not fabricate a complete reading order from the books one household owns.
-Canonical missing-book slots still come from the established per-series Hardcover refresh or manual
-series builder. A later shared canonical-series catalog may eliminate that remaining per-series
-refresh, but it must preserve source provenance, tombstones, reader order, and the explicit
-personal/shared adoption boundary before replacing it.
+The canonical shared-series catalog now consumes reviewed corpus facts once, groups them by stable
+provider identity (or one unambiguous name-plus-creator fallback), and retains linked and unbound
+reading-order slots. Administrators maintain that graph in Review; readers browse it under the
+Shared scope on Series. The existing completion control remains the freshness mechanism: new
+reviewed classifier results synchronize into the catalog, while unresolved or ambiguous results
+continue to wait for explicit review. Personal reader/import series choices and Pro universes remain
+separate overlays.
 
 ## Verification
 
