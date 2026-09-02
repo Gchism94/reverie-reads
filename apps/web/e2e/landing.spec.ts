@@ -9,11 +9,13 @@ test.describe('signed-out landing', () => {
     await expect(
       page.getByRole('heading', { level: 1, name: 'Keep the whole story of your reading life.' }),
     ).toBeVisible()
+    await expect(page.getByTestId('landing-desktop-screen').first()).toBeVisible()
+    await expect(page.getByTestId('landing-mobile-screen').first()).toBeVisible()
     for (const heading of [
-      'A library that remembers the context.',
-      'Share a shelf, not an identity.',
-      'Series belong in an order you can trust.',
-      'Discovery begins with your shelves.',
+      'The whole room changes with the shelf.',
+      'Keep every version of the story.',
+      'Share a shelf without merging lives.',
+      'Connect series without flattening them.',
     ]) {
       await expect(page.getByRole('heading', { level: 2, name: heading })).toBeAttached()
     }
@@ -69,7 +71,8 @@ test.describe('signed-out landing', () => {
     expect(await menu.boundingBox()).toMatchObject({ width: 44, height: 44 })
 
     await menu.click()
-    await expect(nav.getByRole('link', { name: 'Household' })).toBeVisible()
+    await expect(nav.getByRole('link', { name: 'Rooms' })).toBeVisible()
+    await expect(nav.getByRole('link', { name: 'Connect it' })).toBeVisible()
     await expect(nav.getByRole('link', { name: 'Log in' })).toBeVisible()
 
     const width = await page.evaluate(() => ({
@@ -84,7 +87,9 @@ test.describe('signed-out landing', () => {
     await page.emulateMedia({ reducedMotion: 'reduce' })
     await page.goto('/')
 
-    await expect(page.getByRole('heading', { name: 'Reverie speaks your genre.' })).toBeAttached()
+    await expect(
+      page.getByRole('heading', { name: 'The whole room changes with the shelf.' }),
+    ).toBeAttached()
     const animations = await page.locator('.rv-anim').evaluateAll((nodes) =>
       nodes.map((node) => ({
         name: getComputedStyle(node).animationName,
@@ -94,5 +99,26 @@ test.describe('signed-out landing', () => {
     expect(animations.every(({ name, duration }) => name === 'none' || duration === '0s')).toBe(
       true,
     )
+  })
+
+  test('the nine-room atlas changes the complete product stage and its mode', async ({ page }) => {
+    await page.goto('/')
+
+    const rooms = page.getByRole('tablist', { name: 'Reverie reading rooms' })
+    await expect(rooms.getByRole('tab')).toHaveCount(9)
+
+    await rooms.getByRole('tab', { name: /Gaslight/i }).click()
+    const stage = page.getByTestId('active-reading-room')
+    await expect(stage).toHaveAttribute('data-active-skin', 'umbra')
+    await expect(stage.getByRole('heading', { name: 'The Gaslight room' })).toBeVisible()
+    await expect(stage.getByTestId('landing-desktop-screen')).toBeVisible()
+    await expect(stage.getByTestId('landing-mobile-screen')).toBeVisible()
+
+    await stage.getByRole('button', { name: 'Day' }).click()
+    await expect(stage).toHaveAttribute('data-active-mode', 'light')
+
+    await rooms.getByRole('tab', { name: /Gaslight/i }).press('ArrowRight')
+    await expect(stage).toHaveAttribute('data-active-skin', 'folio')
+    await expect(rooms.getByRole('tab', { name: /Marginalia/i })).toBeFocused()
   })
 })

@@ -60,10 +60,27 @@ test('the app loads its self-hosted skin stylesheet, and the real face arrives',
   //     whose url() points at a woff2 that 404s. (The old CDN-era spec could not make this claim:
   //     it never let a real binary into the test. Locally the binary is ours, so its absence is a
   //     product defect and exactly what this spec exists to catch.)
+  //
+  // Probe the face the heading ACTUALLY renders, including weight and style. A bare
+  // `16px 'Fraunces'` asks FontFaceSet for the default 400/normal face instead; when the page only
+  // uses 600, that unused face correctly remains unloaded and the proxy reports false even though
+  // the rendered face and its bytes are present.
+  const renderedFace = await heading.evaluate((el) => {
+    const style = getComputedStyle(el)
+    return { fontStyle: style.fontStyle, fontWeight: style.fontWeight }
+  })
   await expect
-    .poll(() => page.evaluate((fam) => document.fonts.check(`16px '${fam}'`), TRYST_DISPLAY), {
-      message: `the ${TRYST_DISPLAY} face never finished loading from /fonts/files/`,
-    })
+    .poll(
+      () =>
+        page.evaluate(
+          ({ family, fontStyle, fontWeight }) =>
+            document.fonts.check(`${fontStyle} ${fontWeight} 16px '${family}'`, 'Reverie'),
+          { family: TRYST_DISPLAY, ...renderedFace },
+        ),
+      {
+        message: `the rendered ${TRYST_DISPLAY} face never finished loading from /fonts/files/`,
+      },
+    )
     .toBe(true)
 
   // (d) …and the intended stack is applied to the element that carries the skin's voice.

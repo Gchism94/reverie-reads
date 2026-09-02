@@ -47,9 +47,9 @@ const ARTWORK_FILES = [
   'components/Structure.tsx',
   'components/Nameplate.tsx',
   'auth/Wordmark.tsx',
+  'auth/landing/ProductStage.tsx',
   'auth/landing/SkinShowcase.tsx',
   'auth/landing/below-fold.tsx',
-  'auth/landing/Mockup.tsx',
   'routes/LabRoute.tsx',
   'routes/LabStructureRoute.tsx',
 ]
