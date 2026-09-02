@@ -617,7 +617,7 @@ function SettingsScreen() {
                 type="button"
                 onClick={() => void runComplete()}
                 disabled={!eligibleCount}
-                className="skin-control border border-line px-4 py-2 text-[13px] font-semibold text-ink disabled:opacity-50"
+                className="skin-control border border-line px-4 py-2 text-[13px] font-semibold text-ink disabled:cursor-not-allowed disabled:border-dashed"
                 style={{ background: 'var(--field)' }}
               >
                 ✨ Complete missing covers &amp; info
@@ -660,7 +660,7 @@ function SettingsScreen() {
                 }
                 disabled={!eligibleCount}
                 title="Runs the sweep over 10 never-checked books, bypassing the shared enrichment cache so the sources are actually queried, and records per-stage timings to sweep_traces. Deliberately a worst case, not an average."
-                className="skin-control border border-line px-4 py-2 text-[13px] font-semibold text-ink disabled:opacity-50"
+                className="skin-control border border-line px-4 py-2 text-[13px] font-semibold text-ink disabled:cursor-not-allowed disabled:border-dashed"
                 style={{ background: 'var(--field)' }}
               >
                 ⏱ Trace 10 books
@@ -680,7 +680,7 @@ function SettingsScreen() {
                 type="button"
                 onClick={() => void runResharpen()}
                 disabled={!sharpenableCount}
-                className="skin-control border border-line px-4 py-2 text-[13px] font-semibold text-ink disabled:opacity-50"
+                className="skin-control border border-line px-4 py-2 text-[13px] font-semibold text-ink disabled:cursor-not-allowed disabled:border-dashed"
                 style={{ background: 'var(--field)' }}
               >
                 🔍 Sharpen covers{sharpenableCount ? ` (${sharpenableCount})` : ''}
@@ -690,7 +690,7 @@ function SettingsScreen() {
               type="button"
               onClick={() => setShowSweep((v) => !v)}
               disabled={!titleCleanups.length}
-              className="skin-control border border-line px-4 py-2 text-[13px] font-semibold text-ink disabled:opacity-50"
+              className="skin-control border border-line px-4 py-2 text-[13px] font-semibold text-ink disabled:cursor-not-allowed disabled:border-dashed"
               style={{ background: 'var(--field)' }}
             >
               🧹 Clean up legacy titles{titleCleanups.length ? ` (${titleCleanups.length})` : ''}
@@ -715,7 +715,7 @@ function SettingsScreen() {
                   type="button"
                   onClick={() => void mergeAllGroups()}
                   disabled={performMerge.isPending}
-                  className="self-start skin-control px-4 py-2 text-[13px] font-semibold disabled:opacity-50"
+                  className="self-start skin-control px-4 py-2 text-[13px] font-semibold disabled:cursor-not-allowed disabled:border-dashed"
                   style={{
                     background: 'linear-gradient(135deg, var(--primary), var(--gold))',
                     color: 'var(--on-primary)',
@@ -743,7 +743,7 @@ function SettingsScreen() {
                       type="button"
                       onClick={() => void mergeGroup(g)}
                       disabled={performMerge.isPending}
-                      className="skin-control px-3 py-1.5 text-[12.5px] font-semibold disabled:opacity-50"
+                      className="skin-control px-3 py-1.5 text-[12.5px] font-semibold disabled:cursor-not-allowed disabled:border-dashed"
                       style={{ background: 'var(--accent-fill)', color: 'var(--on-primary)' }}
                     >
                       Merge these {g.length}
@@ -794,7 +794,7 @@ function SettingsScreen() {
                 type="button"
                 onClick={() => void applySweep()}
                 disabled={sweeping}
-                className="skin-control px-4 py-2 text-[13px] font-semibold disabled:opacity-50"
+                className="skin-control px-4 py-2 text-[13px] font-semibold disabled:cursor-not-allowed disabled:border-dashed"
                 style={{
                   background: 'linear-gradient(135deg, var(--primary), var(--gold))',
                   color: 'var(--on-primary)',
@@ -836,7 +836,7 @@ function SettingsScreen() {
               data-testid="export-library-csv"
               onClick={() => void exportLibraryCsv()}
               disabled={csvBusy}
-              className="skin-control border border-line px-4 py-2 text-[13px] font-semibold text-ink disabled:opacity-50"
+              className="skin-control border border-line px-4 py-2 text-[13px] font-semibold text-ink disabled:cursor-not-allowed disabled:border-dashed"
               style={{ background: 'var(--field)' }}
             >
               {csvBusy ? 'Exporting…' : '⬇ Export for spreadsheet (CSV)'}
@@ -866,7 +866,7 @@ function SettingsScreen() {
                * dialog, so it is the real control.
                */
               disabled={!libraryLoaded}
-              className="skin-control border border-line px-4 py-2 text-[13px] font-semibold text-ink disabled:opacity-50"
+              className="skin-control border border-line px-4 py-2 text-[13px] font-semibold text-ink disabled:cursor-not-allowed disabled:border-dashed"
               style={{ background: 'var(--field)' }}
             >
               {libraryLoaded ? IMPORT_LABEL : IMPORT_LOADING_LABEL}
