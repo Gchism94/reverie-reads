@@ -1,133 +1,225 @@
-import { useState } from 'react'
-import { SKINS, SKIN_LIST, type SkinId } from '@reverie/core'
-import { Mockup } from './Mockup'
+import { useState, type CSSProperties } from 'react'
+import { SKINS, SKIN_LIST, type ResolvedMode, type SkinId } from '@reverie/core'
+import { ProductStage, RoomThumbnail } from './ProductStage'
 
-/** "Reverie speaks your genre" — the differentiator. A row of skin tabs re-themes a single live app
- *  mockup IN PLACE by scoping it to that skin's real `data-skin` tokens (no faked screenshots, no
- *  hardcoded palette). Default Tryst. The Tryst pink lives here, in its own skin card — never on the
- *  landing's gold brand. Plus the real Adaptive (Tier-2) skin. */
+const display = { fontFamily: 'var(--font-display)', fontWeight: 600 } as const
+
+/** Nine Reading Rooms makes skins legible as complete places. Every tile and the expanded stage
+ * reads the real registry-driven token bundle: palette, type, radii, control silhouette, material,
+ * and light/dark mode. The synthetic shelf is identical in every room so the skin is the variable. */
 export function SkinShowcase() {
   const [active, setActive] = useState<SkinId>('tryst')
+  const [mode, setMode] = useState<ResolvedMode>('dark')
   const skin = SKINS[active]
 
   return (
-    <section id="skins" className="relative mx-auto max-w-[1180px] px-6 py-20 text-center sm:py-28">
-      <p
-        className="text-[12px] font-semibold uppercase tracking-[0.22em]"
-        style={{ color: 'var(--eyebrow)' }}
-      >
-        The differentiator
-      </p>
-      <h2
-        className="mx-auto mt-3 max-w-[18ch] text-balance text-[clamp(30px,5vw,46px)] leading-[1.05] text-ink"
-        style={display}
-      >
-        Reverie speaks your genre.
-      </h2>
-      <p className="mx-auto mt-4 max-w-[58ch] text-[15px] leading-relaxed text-muted">
-        One library, many moods. Choose a skin and your whole collection — shelves, type, the night
-        sky itself — shifts to match the world you’re reading in.
-      </p>
-
-      {/* tabs — each themed by its own real skin tokens */}
-      <div
-        role="tablist"
-        aria-label="Skins"
-        className="mt-8 flex flex-wrap items-center justify-center gap-2.5"
-      >
-        {SKIN_LIST.map((s) => {
-          const on = s.id === active
-          return (
-            <button
-              key={s.id}
-              role="tab"
-              aria-selected={on}
-              data-skin={s.id}
-              data-mode="dark"
-              onClick={() => setActive(s.id)}
-              className="flex items-center gap-2 rounded-full px-4 py-2 text-[13px] font-semibold transition-colors motion-reduce:transition-none"
-              style={
-                on
-                  ? {
-                      background: 'var(--accent-fill)',
-                      color: 'var(--on-primary)',
-                      boxShadow:
-                        '0 8px 22px color-mix(in srgb, var(--accent-fill) 40%, transparent)',
-                    }
-                  : // the pill carries its own skin's SURFACE, not just its ink — Marginalia's dark
-                    // mode keeps bond paper (dark ink), which ghosts on the landing's night bg
-                    // without it. Every pill honestly previews its skin: paper + ink + primary dot.
-                    {
-                      background: 'var(--bg0)',
-                      color: 'var(--ink)',
-                      border: '1px solid var(--line)',
-                    }
-              }
+    <section id="skins" className="scroll-mt-20 border-y border-line py-20 sm:py-28">
+      <div className="mx-auto max-w-[1180px] px-6">
+        <div className="grid gap-6 lg:grid-cols-[0.72fr_1.28fr] lg:items-end">
+          <div>
+            <p
+              className="text-[11px] font-semibold uppercase tracking-[0.22em]"
+              style={{ color: 'var(--eyebrow)' }}
             >
-              <span
-                aria-hidden
-                className="h-2.5 w-2.5 rounded-full"
-                style={{ background: 'var(--primary)' }}
-              />
-              {s.label}
-              <span
-                className="text-[10px] font-medium uppercase tracking-[0.14em]"
-                style={{ opacity: 0.7 }}
-              >
-                {s.genre}
-              </span>
-            </button>
-          )
-        })}
-      </div>
-
-      {/* live mockup, re-themed in place. The caption is landing chrome, so it stays on the
-          landing's own tokens — inside the skin scope, a non-inverting skin's dark ink (Marginalia)
-          would ghost against the landing's night background. */}
-      <div className="mx-auto mt-8 max-w-[680px] text-left">
-        <div className="mb-3 flex items-baseline justify-between gap-3">
-          <span className="text-[15px] text-ink" style={display}>
-            {skin.label}{' '}
-            <span className="text-[12px] font-normal uppercase tracking-[0.14em] text-muted">
-              · {skin.genre}
-            </span>
-          </span>
-          <span className="text-[12.5px] text-muted">{skin.tagline}</span>
+              Nine reading rooms
+            </p>
+            <h2
+              className="mt-3 max-w-[13ch] text-balance text-[clamp(34px,5vw,56px)] leading-[1.01] text-ink"
+              style={display}
+            >
+              The whole room changes with the shelf.
+            </h2>
+          </div>
+          <p className="max-w-[58ch] text-[15px] leading-relaxed text-muted lg:justify-self-end">
+            These are not color swatches. Each room changes the typography, materials, controls,
+            spacing, cover treatment, and atmosphere of the same Reverie library. Pick one, then
+            inspect the actual desktop and phone composition below.
+          </p>
         </div>
+
         <div
-          data-skin={active}
-          data-mode="dark"
-          className="transition-colors motion-reduce:transition-none"
+          role="tablist"
+          aria-label="Reverie reading rooms"
+          className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4"
         >
-          <Mockup ariaLabel={`Reverie in the ${skin.label} skin`} skin={active} />
+          {SKIN_LIST.map((room) => {
+            const selected = room.id === active
+            return (
+              <button
+                key={room.id}
+                id={`room-tab-${room.id}`}
+                type="button"
+                role="tab"
+                aria-selected={selected}
+                aria-controls="active-reading-room"
+                tabIndex={selected ? 0 : -1}
+                data-skin={room.id}
+                data-mode="dark"
+                onClick={() => setActive(room.id)}
+                onKeyDown={(event) => {
+                  const currentIndex = SKIN_LIST.findIndex((candidate) => candidate.id === room.id)
+                  let nextIndex: number | null = null
+                  if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+                    nextIndex = (currentIndex + 1) % SKIN_LIST.length
+                  } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+                    nextIndex = (currentIndex - 1 + SKIN_LIST.length) % SKIN_LIST.length
+                  } else if (event.key === 'Home') {
+                    nextIndex = 0
+                  } else if (event.key === 'End') {
+                    nextIndex = SKIN_LIST.length - 1
+                  }
+
+                  if (nextIndex === null) return
+                  event.preventDefault()
+                  const nextRoom = SKIN_LIST[nextIndex]!
+                  setActive(nextRoom.id)
+                  document.getElementById(`room-tab-${nextRoom.id}`)?.focus()
+                }}
+                className="group min-w-0 overflow-hidden border p-2.5 text-left transition-transform motion-reduce:transition-none sm:p-3"
+                style={{
+                  background: 'var(--bg0)',
+                  borderColor: selected ? 'var(--primary)' : 'var(--line)',
+                  borderRadius: 'var(--radius-panel)',
+                  boxShadow: selected
+                    ? '0 0 0 2px color-mix(in srgb, var(--primary) 45%, transparent), var(--shadow)'
+                    : 'none',
+                  transform: selected ? 'translateY(-2px)' : undefined,
+                }}
+              >
+                <RoomThumbnail />
+                <span className="mt-3 flex min-w-0 items-start justify-between gap-2 px-1 pb-0.5">
+                  <span className="min-w-0">
+                    <span
+                      className="block truncate text-[17px] leading-none text-ink"
+                      style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+                    >
+                      {room.label}
+                    </span>
+                    <span className="mt-1 block text-[9px] font-semibold uppercase tracking-[0.12em] text-muted">
+                      {room.genre}
+                    </span>
+                  </span>
+                  <span
+                    aria-hidden
+                    className="mt-0.5 h-4 w-4 flex-none rounded-full border border-line"
+                    style={{ background: 'var(--primary)' }}
+                  />
+                </span>
+              </button>
+            )
+          })}
         </div>
       </div>
 
-      {/* adaptive */}
       <div
-        className="mx-auto mt-7 flex max-w-[680px] items-center gap-4 rounded-2xl border p-5 text-left"
-        style={{ borderColor: 'var(--line)', background: 'var(--card)' }}
+        id="active-reading-room"
+        role="tabpanel"
+        aria-labelledby={`room-tab-${active}`}
+        data-testid="active-reading-room"
+        data-active-skin={active}
+        data-active-mode={mode}
+        data-skin={active}
+        data-mode={mode}
+        className="relative mx-auto mt-10 max-w-[1380px] overflow-hidden border-y border-line px-4 py-12 text-left transition-colors motion-reduce:transition-none sm:px-8 sm:py-16 lg:px-14"
+        style={
+          {
+            background: 'var(--bg0)',
+            color: 'var(--ink)',
+            '--stage-action-fill': 'var(--accent-fill)',
+          } as CSSProperties
+        }
       >
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0"
+          style={{
+            backgroundImage: 'var(--ambient-texture)',
+            backgroundSize: 'var(--ambient-texture-size)',
+            mixBlendMode: 'var(--ambient-texture-blend)' as CSSProperties['mixBlendMode'],
+            opacity: 'var(--ambient-texture-opacity)',
+            maskImage: 'var(--ambient-texture-mask)',
+          }}
+        />
+        <div className="relative z-[1] mx-auto max-w-[1180px]">
+          <div className="flex flex-wrap items-start justify-between gap-5">
+            <div>
+              <p className="skin-label text-[10px]" style={{ color: 'var(--accent-ink)' }}>
+                {skin.genre} · {skin.chromeLine}
+              </p>
+              <h3
+                className="mt-2 text-[clamp(32px,5vw,54px)] leading-none text-ink"
+                style={display}
+              >
+                The {skin.label} room
+              </h3>
+              <p className="mt-3 max-w-[48ch] text-[14px] leading-relaxed text-muted">
+                {skin.tagline} The books stay the same; the place they live becomes unmistakably its
+                own.
+              </p>
+            </div>
+            <div
+              role="group"
+              aria-label="Room appearance"
+              className="flex border border-line p-1"
+              style={{ borderRadius: 'var(--radius-control)', background: 'var(--card)' }}
+            >
+              {(['dark', 'light'] as const).map((nextMode) => (
+                <button
+                  key={nextMode}
+                  type="button"
+                  onClick={() => setMode(nextMode)}
+                  aria-pressed={mode === nextMode}
+                  className="skin-control min-h-10 px-4 text-[11px] font-semibold"
+                  style={
+                    mode === nextMode
+                      ? { background: 'var(--accent-fill)', color: 'var(--on-primary)' }
+                      : { color: 'var(--muted)' }
+                  }
+                >
+                  {nextMode === 'dark' ? 'Night' : 'Day'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-9">
+            <ProductStage compact />
+          </div>
+
+          <dl
+            className="mt-9 grid gap-px overflow-hidden border border-line bg-line sm:grid-cols-3"
+            style={{ borderRadius: 'var(--radius-panel)' }}
+          >
+            {[
+              ['Display voice', skin.displayFont],
+              ['Room signature', skin.chromeLine],
+              ['Shelf language', `${skin.genre} · ${skin.labels.tags}`],
+            ].map(([term, value]) => (
+              <div key={term} className="min-w-0 bg-card p-4">
+                <dt className="skin-label text-[8px] text-muted">{term}</dt>
+                <dd className="mt-2 break-words text-[13px] text-ink" style={display}>
+                  {value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      </div>
+
+      <div className="mx-auto mt-6 flex max-w-[760px] items-center gap-4 px-6 text-left">
         <span
           aria-hidden
-          className="h-12 w-12 shrink-0 rounded-full"
+          className="h-11 w-11 flex-none rounded-full"
           style={{
             background:
               'conic-gradient(from 210deg, var(--gold), var(--violet), var(--primary), var(--gold))',
           }}
         />
-        <div>
-          <h3 className="text-[16px] text-ink" style={display}>
-            Or don’t choose — meet the Adaptive skin
-          </h3>
-          <p className="mt-1 text-[13.5px] leading-relaxed text-muted">
-            It reads what you read and lets your library quietly evolve with your taste, season by
-            season.
-          </p>
-        </div>
+        <p className="text-[13px] leading-relaxed text-muted">
+          Prefer not to choose? Adaptive quietly evolves from the same nine rooms as your reading
+          changes, without changing the books or data underneath them.
+        </p>
       </div>
     </section>
   )
 }
-
-const display = { fontFamily: 'var(--font-display)', fontWeight: 600 } as const

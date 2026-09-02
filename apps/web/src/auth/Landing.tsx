@@ -3,17 +3,17 @@ import { Link } from '@tanstack/react-router'
 import { APP_NAME } from '@reverie/core'
 import { Wordmark } from './Wordmark'
 import { ChunkBoundary } from '../components/ChunkBoundary'
-import { Mockup } from './landing/Mockup'
+import { ProductStage } from './landing/ProductStage'
 
 // Below-the-fold sections are a separate chunk so the hero paints first for new visitors.
 const LandingBelowFold = lazy(() => import('./landing/below-fold'))
 
 const display = { fontFamily: 'var(--font-display)', fontWeight: 600 } as const
 const NAV = [
-  ['Library', '#library'],
-  ['Household', '#household'],
-  ['Series', '#series'],
-  ['The skins', '#skins'],
+  ['Rooms', '#skins'],
+  ['Keep it', '#keep'],
+  ['Share it', '#share'],
+  ['Connect it', '#connect'],
   ['Privacy', '#privacy'],
 ] as const
 
@@ -151,9 +151,12 @@ function Nav() {
 
 function Hero() {
   return (
-    <header id="top" className="relative mx-auto max-w-[1180px] px-6 pb-20 pt-14 sm:pb-28 sm:pt-24">
-      <div className="grid items-center gap-14 lg:grid-cols-[0.94fr_1.06fr]">
-        <div className="text-center lg:text-left">
+    <header
+      id="top"
+      className="relative mx-auto max-w-[1380px] overflow-hidden px-4 pb-20 pt-14 sm:px-6 sm:pb-28 sm:pt-24"
+    >
+      <div className="mx-auto max-w-[950px] text-center">
+        <div>
           <p
             className="text-[12px] font-semibold uppercase tracking-[0.22em]"
             style={{ color: 'var(--eyebrow)' }}
@@ -162,7 +165,7 @@ function Hero() {
           </p>
           <h1
             data-testid="landing-display-heading"
-            className="mx-auto mt-4 max-w-[13ch] text-balance text-[clamp(42px,7vw,66px)] leading-[0.99] text-ink lg:mx-0"
+            className="mx-auto mt-4 max-w-[15ch] text-balance text-[clamp(46px,8vw,82px)] leading-[0.94] text-ink"
             style={display}
           >
             Keep the whole story of your{' '}
@@ -170,11 +173,11 @@ function Hero() {
               reading life.
             </span>
           </h1>
-          <p className="mx-auto mt-6 max-w-[48ch] text-[16px] leading-relaxed text-muted lg:mx-0">
+          <p className="mx-auto mt-7 max-w-[58ch] text-[16px] leading-relaxed text-muted sm:text-[18px]">
             Books, rereads, series, plans, and the people you share a shelf with—organized without
             losing what makes the library yours.
           </p>
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3 lg:justify-start">
+          <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
             <Link
               to="/auth"
               search={{ mode: 'signup' }}
@@ -188,45 +191,39 @@ function Hero() {
               Begin your library
             </Link>
             <a
-              href="#library"
+              href="#skins"
               className="skin-control flex h-12 items-center px-6 text-[15px] font-semibold text-ink"
               style={{ border: '1px solid var(--line)' }}
             >
-              See what it keeps
+              Enter the reading rooms
             </a>
           </div>
           <p className="mt-5 text-[13px]" style={{ color: 'var(--faint)' }}>
             Private by default · export anytime · installs as an app
           </p>
         </div>
+      </div>
 
-        <div className="relative mx-auto w-full max-w-[560px] lg:rotate-[0.5deg]">
-          <Mockup ariaLabel="Reverie app preview" />
-          <div
-            aria-hidden
-            className="absolute -left-3 top-[22%] hidden border px-3 py-2 text-[10px] font-semibold shadow-xl sm:block lg:-left-8"
-            style={{
-              background: 'color-mix(in srgb, var(--bg1) 96%, transparent)',
-              borderColor: 'var(--line)',
-              color: 'var(--ink)',
-              borderRadius: 'var(--radius-card)',
-            }}
-          >
-            Personal details stay personal
-          </div>
-          <div
-            aria-hidden
-            className="absolute -bottom-4 right-3 hidden border px-3 py-2 text-[10px] font-semibold shadow-xl sm:block lg:-right-5"
-            style={{
-              background: 'color-mix(in srgb, var(--bg1) 96%, transparent)',
-              borderColor: 'color-mix(in srgb, var(--gold) 50%, var(--line))',
-              color: 'var(--gold)',
-              borderRadius: 'var(--radius-card)',
-            }}
-          >
-            Series order · progress · gaps
-          </div>
+      <div className="relative mx-auto mt-14 max-w-[1240px] sm:mt-20">
+        <div
+          aria-hidden
+          className="absolute inset-x-[10%] bottom-0 h-2/3 blur-3xl"
+          style={{ background: 'color-mix(in srgb, var(--gold) 12%, transparent)' }}
+        />
+        <div className="relative">
+          <ProductStage />
         </div>
+      </div>
+
+      <div className="mx-auto mt-10 grid max-w-[980px] grid-cols-2 border-y border-line sm:grid-cols-5">
+        {['Library', 'Household', 'Series', 'Universes', 'Nine rooms'].map((item) => (
+          <span
+            key={item}
+            className="flex min-h-14 items-center justify-center border-line px-3 text-center text-[10px] font-semibold uppercase tracking-[0.14em] text-muted [&:not(:last-child)]:border-r"
+          >
+            {item}
+          </span>
+        ))}
       </div>
     </header>
   )
