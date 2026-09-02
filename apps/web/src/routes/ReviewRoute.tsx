@@ -8,6 +8,7 @@ import { CoverImage } from '../components/CoverImage'
 import { CoverPicker } from '../components/CoverPicker'
 import { useVoice } from '../skin/labels'
 import { Surface } from '../components/Surface'
+import { CorpusSeriesCatalog } from '../series/CorpusSeriesCatalog'
 import {
   useCorpusAdminStatus,
   useCorpusSeriesSuggestions,
@@ -246,7 +247,7 @@ function ReviewScreen() {
   const { data: isCorpusAdmin = false } = useCorpusAdminStatus()
   const { data: seriesSuggestions = [] } = useCorpusSeriesSuggestions(isCorpusAdmin)
 
-  if (!model && !seriesSuggestions.length) {
+  if (!model && !seriesSuggestions.length && !isCorpusAdmin) {
     return (
       <section className="mx-auto w-full max-w-2xl px-4 py-10 text-center sm:px-6">
         <h1
@@ -271,7 +272,7 @@ function ReviewScreen() {
 
   if (!model) {
     return (
-      <section className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6">
+      <section className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6">
         <h1
           className="text-[22px] italic text-ink"
           style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
@@ -279,6 +280,7 @@ function ReviewScreen() {
           Administrator review
         </h1>
         <CorpusSeriesReview suggestions={seriesSuggestions} />
+        <CorpusSeriesCatalog />
       </section>
     )
   }
@@ -288,7 +290,9 @@ function ReviewScreen() {
   const genreChips = Object.entries(summary.genres).sort((a, b) => b[1] - a[1])
 
   return (
-    <section className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6">
+    <section
+      className={`mx-auto w-full px-4 py-6 sm:px-6 ${isCorpusAdmin ? 'max-w-6xl' : 'max-w-3xl'}`}
+    >
       <h1
         className="text-[22px] italic text-ink"
         style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
@@ -366,6 +370,7 @@ function ReviewScreen() {
             Nothing needs a look — every book came in clean. {voice.motif}
           </Surface>
         )}
+      {isCorpusAdmin ? <CorpusSeriesCatalog /> : null}
     </section>
   )
 }

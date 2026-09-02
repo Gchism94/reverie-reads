@@ -21,8 +21,8 @@ select is(
     join pg_namespace namespace on namespace.oid = function.pronamespace
     where namespace.nspname = 'public' and function.prosrc like '%PT409%'
   ),
-  17,
-  'all seventeen conflict-bearing functions return a bounded HTTP conflict'
+  23,
+  'all twenty-three conflict-bearing functions return a bounded HTTP conflict'
 );
 
 select is(
@@ -32,8 +32,8 @@ select is(
     join pg_namespace namespace on namespace.oid = function.pronamespace
     where namespace.nspname = 'public'
   ),
-  23,
-  'all twenty-three remaining stale-context paths use the non-retryable conflict code'
+  29,
+  'all twenty-nine remaining stale-context paths use the non-retryable conflict code'
 );
 
 select * from finish();
