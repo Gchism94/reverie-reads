@@ -189,6 +189,11 @@ test('deleting a personal trope confirms first, then removes it from every book'
   await expect(page.getByRole('heading', { name: 'Doomed Coinage' })).toBeVisible({
     timeout: 20_000,
   })
+  const deleteButton = page.getByRole('button', { name: /^Delete$/ })
+  await expect(
+    deleteButton,
+    'deletion must stay unavailable until the carrier inventory is confirmed',
+  ).toBeEnabled()
 
   // FIRST: dismissing the confirm must delete nothing. A destructive action that fires on cancel is
   // the failure worth catching, and it is invisible if the test only ever accepts.
@@ -197,7 +202,7 @@ test('deleting a personal trope confirms first, then removes it from every book'
     seenMessage = d.message()
     void d.dismiss()
   })
-  await page.getByRole('button', { name: /^Delete$/ }).click()
+  await deleteButton.click()
   await page.waitForTimeout(600)
   expect(
     seenMessage,
@@ -210,7 +215,7 @@ test('deleting a personal trope confirms first, then removes it from every book'
 
   // THEN: accepting removes the trope and, by the on-delete-cascade, its assignments.
   page.once('dialog', (d) => void d.accept())
-  await page.getByRole('button', { name: /^Delete$/ }).click()
+  await deleteButton.click()
 
   await expect
     .poll(

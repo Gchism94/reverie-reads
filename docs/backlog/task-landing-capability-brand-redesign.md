@@ -2,8 +2,17 @@
 
 Priority: **P1 after the series truth and Library experience overhaul**.
 
-The current landing page remains shipped and supported until this replacement passes its full gate.
-This task is a redesign, not a claim that the production page is broken.
+Status: **implemented and locally verified on `codex/landing-capability-redesign`; awaiting pull
+request review**. The current shipped
+capability and claims inventory is recorded in
+`docs/audits/landing-capability-claims-2026-09.md`; it is the evidence boundary for the new copy and
+curated previews. The redesign leads with personal context, distinct household identity, reviewed
+series truth, and taste-led discovery, then retains the practical capabilities in a quieter ledger.
+It uses no production account data or screenshots.
+
+The current landing page remains shipped and supported until this replacement is reviewed and
+merged. The replacement passed its complete 229-check browser matrix with no failures. This task is
+a redesign, not a claim that the production page is broken.
 
 ## Discovery
 

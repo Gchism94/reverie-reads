@@ -10,9 +10,10 @@ const LandingBelowFold = lazy(() => import('./landing/below-fold'))
 
 const display = { fontFamily: 'var(--font-display)', fontWeight: 600 } as const
 const NAV = [
+  ['Library', '#library'],
+  ['Household', '#household'],
+  ['Series', '#series'],
   ['The skins', '#skins'],
-  ['Features', '#features'],
-  ['For every reader', '#readers'],
   ['Privacy', '#privacy'],
 ] as const
 
@@ -57,6 +58,7 @@ function Nav() {
   const [open, setOpen] = useState(false)
   return (
     <nav
+      aria-label="Landing"
       className="sticky top-0 z-20 backdrop-blur-lg"
       style={{
         background: 'color-mix(in srgb, var(--bg0) 72%, transparent)',
@@ -68,7 +70,7 @@ function Nav() {
           <Wordmark />
         </Link>
 
-        <div className="hidden items-center gap-7 md:flex">
+        <div className="hidden items-center gap-5 md:flex lg:gap-7">
           {NAV.map(([label, href]) => (
             <a
               key={href}
@@ -103,7 +105,7 @@ function Nav() {
           onClick={() => setOpen((v) => !v)}
           aria-label="Menu"
           aria-expanded={open}
-          className="grid h-10 w-10 place-items-center rounded-lg border border-line text-[18px] text-ink md:hidden"
+          className="grid h-11 w-11 place-items-center rounded-lg border border-line text-[18px] text-ink md:hidden"
         >
           <span aria-hidden>{open ? '✕' : '≡'}</span>
         </button>
@@ -120,7 +122,7 @@ function Nav() {
                 key={href}
                 href={href}
                 onClick={() => setOpen(false)}
-                className="rounded-lg px-2 py-2 text-[14px] font-medium text-muted hover:text-ink"
+                className="flex min-h-11 items-center rounded-lg px-2 py-2 text-[14px] font-medium text-muted hover:text-ink"
               >
                 {label}
               </a>
@@ -128,7 +130,7 @@ function Nav() {
             <Link
               to="/auth"
               search={{ mode: 'signin' }}
-              className="rounded-lg px-2 py-2 text-[14px] font-semibold text-ink"
+              className="flex min-h-11 items-center rounded-lg px-2 py-2 text-[14px] font-semibold text-ink"
             >
               Log in
             </Link>
@@ -149,27 +151,28 @@ function Nav() {
 
 function Hero() {
   return (
-    <header id="top" className="relative mx-auto max-w-[1180px] px-6 py-16 sm:py-24">
-      <div className="grid items-center gap-12 lg:grid-cols-[1.04fr_0.96fr]">
+    <header id="top" className="relative mx-auto max-w-[1180px] px-6 pb-20 pt-14 sm:pb-28 sm:pt-24">
+      <div className="grid items-center gap-14 lg:grid-cols-[0.94fr_1.06fr]">
         <div className="text-center lg:text-left">
           <p
             className="text-[12px] font-semibold uppercase tracking-[0.22em]"
             style={{ color: 'var(--eyebrow)' }}
           >
-            {APP_NAME} · your reading life
+            Your library · in all its detail
           </p>
           <h1
-            className="mx-auto mt-4 max-w-[15ch] text-balance text-[clamp(40px,7vw,62px)] leading-[1.02] text-ink lg:mx-0"
+            data-testid="landing-display-heading"
+            className="mx-auto mt-4 max-w-[13ch] text-balance text-[clamp(42px,7vw,66px)] leading-[0.99] text-ink lg:mx-0"
             style={display}
           >
-            A reading life,{' '}
+            Keep the whole story of your{' '}
             <span className="italic" style={{ color: 'var(--gold)' }}>
-              beautifully kept.
+              reading life.
             </span>
           </h1>
-          <p className="mx-auto mt-5 max-w-[46ch] text-[16px] leading-relaxed text-muted lg:mx-0">
-            Reverie organizes everything you’ve read, everything you mean to, and dresses your whole
-            collection in a look that fits what you love.
+          <p className="mx-auto mt-6 max-w-[48ch] text-[16px] leading-relaxed text-muted lg:mx-0">
+            Books, rereads, series, plans, and the people you share a shelf with—organized without
+            losing what makes the library yours.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3 lg:justify-start">
             <Link
@@ -182,23 +185,47 @@ function Hero() {
                 boxShadow: '0 10px 26px color-mix(in srgb, var(--gold) 36%, transparent)',
               }}
             >
-              Get started
+              Begin your library
             </Link>
             <a
-              href="#skins"
+              href="#library"
               className="skin-control flex h-12 items-center px-6 text-[15px] font-semibold text-ink"
               style={{ border: '1px solid var(--line)' }}
             >
-              See how it works
+              See what it keeps
             </a>
           </div>
           <p className="mt-5 text-[13px]" style={{ color: 'var(--faint)' }}>
-            Runs in your browser · installs as an app · your data stays yours
+            Private by default · export anytime · installs as an app
           </p>
         </div>
 
-        <div className="mx-auto w-full max-w-[520px] lg:rotate-[0.6deg]">
+        <div className="relative mx-auto w-full max-w-[560px] lg:rotate-[0.5deg]">
           <Mockup ariaLabel="Reverie app preview" />
+          <div
+            aria-hidden
+            className="absolute -left-3 top-[22%] hidden border px-3 py-2 text-[10px] font-semibold shadow-xl sm:block lg:-left-8"
+            style={{
+              background: 'color-mix(in srgb, var(--bg1) 96%, transparent)',
+              borderColor: 'var(--line)',
+              color: 'var(--ink)',
+              borderRadius: 'var(--radius-card)',
+            }}
+          >
+            Personal details stay personal
+          </div>
+          <div
+            aria-hidden
+            className="absolute -bottom-4 right-3 hidden border px-3 py-2 text-[10px] font-semibold shadow-xl sm:block lg:-right-5"
+            style={{
+              background: 'color-mix(in srgb, var(--bg1) 96%, transparent)',
+              borderColor: 'color-mix(in srgb, var(--gold) 50%, var(--line))',
+              color: 'var(--gold)',
+              borderRadius: 'var(--radius-card)',
+            }}
+          >
+            Series order · progress · gaps
+          </div>
         </div>
       </div>
     </header>

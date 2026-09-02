@@ -35,11 +35,13 @@ function TropeScreen() {
   const rename = useRenamePersonalTrope()
   const deleteTrope = useDeletePersonalTrope()
   const labels = useLabels()
-  const { data: books } = useBooks()
+  const booksQuery = useBooks()
+  const books = booksQuery.data
   const tropesQuery = useTropes()
   const tropes = tropesQuery.data
   const voice = useVoice()
-  const { data: assignments } = useAllBookTropes()
+  const assignmentsQuery = useAllBookTropes()
+  const assignments = assignmentsQuery.data
   const assign = useAssignTrope()
   const unassign = useUnassignTrope()
   const [sweep, setSweep] = useState(false)
@@ -60,6 +62,11 @@ function TropeScreen() {
     () => (books ?? []).filter((b) => carrierIds.has(b.id)),
     [books, carrierIds],
   )
+  // Tropes, books, and assignments load independently. The trope heading can therefore be ready
+  // while its carrier inventory is not. Deletion must fail closed during that window: treating
+  // missing query data as an empty inventory would tell a reader the tag is on no books and let
+  // them erase assignments they have not yet been shown.
+  const carrierInventoryReady = booksQuery.isSuccess && assignmentsQuery.isSuccess
   const kin = useMemo(
     () =>
       tropeKin(
@@ -129,6 +136,7 @@ function TropeScreen() {
             <div className="mt-2 flex flex-wrap gap-2">
               <button
                 type="button"
+                disabled={!carrierInventoryReady || deleteTrope.isPending}
                 onClick={() => {
                   const next = window.prompt(`Rename “${trope.name}” to:`, trope.name)
                   if (next?.trim()) rename.mutate({ id: trope.id, name: next })
@@ -155,10 +163,10 @@ function TropeScreen() {
                       onSuccess: () => void navigate({ to: '/tropes' }),
                     })
                 }}
-                className="skin-control border border-line px-3 py-1.5 text-[12.5px] font-semibold text-primary"
+                className="skin-control border border-line px-3 py-1.5 text-[12.5px] font-semibold text-primary disabled:cursor-not-allowed disabled:opacity-50"
                 style={{ background: 'var(--card)' }}
               >
-                Delete
+                {carrierInventoryReady ? 'Delete' : 'Checking books…'}
               </button>
             </div>
           )}

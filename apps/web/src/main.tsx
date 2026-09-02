@@ -6,7 +6,6 @@ import { createRoot } from 'react-dom/client'
 import { RouterProvider } from '@tanstack/react-router'
 import { defaultShouldDehydrateQuery, MutationCache, QueryClient } from '@tanstack/react-query'
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client'
-import { APP_NAME } from '@reverie/core'
 import { AuthProvider } from './auth/AuthProvider'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { initErrorMonitoring } from './lib/sentry'
@@ -23,7 +22,6 @@ import './styles/globals.css'
 import './styles/brand.css'
 import './styles/skin-kit.css'
 
-document.title = APP_NAME
 initErrorMonitoring()
 installPreloadErrorReload()
 
