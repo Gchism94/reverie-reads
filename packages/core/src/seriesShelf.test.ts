@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { makeBook } from './book.fixture'
 import {
   entryAfterBook,
+  isStandardSeriesVolume,
   mergeSourceEntries,
   entryState,
   nextUp,
@@ -49,6 +50,15 @@ describe('entry ordering and state', () => {
     expect(ids).toEqual(['b', 'd', 'c', 'a'])
   })
 
+  it('sorts by reading order without rewriting canonical volume numbers', () => {
+    const ids = sortEntries([
+      entry({ id: 'volume-four', position: 4, sortOrder: 5 }),
+      entry({ id: 'novella', position: 3.5, sortOrder: 4 }),
+      entry({ id: 'volume-three', position: 3, sortOrder: 3 }),
+    ]).map((e) => e.id)
+    expect(ids).toEqual(['volume-three', 'novella', 'volume-four'])
+  })
+
   it('names every state the page renders', () => {
     expect(entryState(undefined, false)).toBe('ghost')
     expect(entryState(read, false)).toBe('read')
@@ -57,6 +67,16 @@ describe('entry ordering and state', () => {
     expect(entryState(unread, false)).toBe('unread')
     expect(entryState(wished, false)).toBe('wishlist')
     expect(entryState(borrowed, false)).toBe('unread') // borrowed = in hand, not "to get"
+  })
+})
+
+describe('canonical volume numbers', () => {
+  it('offers only positive whole and half steps for new edits', () => {
+    expect(isStandardSeriesVolume(3)).toBe(true)
+    expect(isStandardSeriesVolume(3.5)).toBe(true)
+    expect(isStandardSeriesVolume(5.8)).toBe(false)
+    expect(isStandardSeriesVolume(2.25)).toBe(false)
+    expect(isStandardSeriesVolume(0)).toBe(false)
   })
 })
 

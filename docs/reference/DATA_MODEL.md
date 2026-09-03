@@ -284,13 +284,17 @@ reviews             (id pk, work_key text, reviewer_id fk, reviewer_name, rating
 series              (id pk, owner_id fk, name, status, source 'manual'|'hardcover',
                      source_ref, refreshed_at, archived_at, created_at,
                      unique (owner_id, name))
-series_entries      (id pk, series_id fk, owner_id fk, position numeric, label,
+series_entries      (id pk, series_id fk, owner_id fk,
+                     position numeric,      -- canonical volume number, e.g. 3.5
+                     sort_order numeric,    -- private reader shelf order; never displayed as volume
+                     sort_user_edited bool,
+                     label,
                      title, author,       -- ghost display fields; a linked entry renders the book
                      book_id fk null, source, user_edited bool,
                      is_primary bool,
                      archive_primary_intent bool,
                      membership_claim jsonb, -- unknown|reader|import|enrichment|corpus
-                     position_claim jsonb,   -- independent provenance for the numeric order
+                     position_claim jsonb,   -- independent provenance for the canonical volume
                      removed_at timestamptz,      -- SOFT-DELETE TOMBSTONE — see below
                      created_at)
 
@@ -302,6 +306,10 @@ A secondary membership never changes those scalar fields. Existing pre-Phase-2B 
 explicit review. Trusted forward Add/import/corpus claims and high-confidence enrichment claims
 materialize transactionally; opening a series page performs no write. Membership provenance and
 position provenance are separate because knowing that a book belongs does not prove its number.
+`sort_order` is a third, private fact: moving a title earlier or later changes only the shelf order,
+never `position` or `books.position`. The interface can therefore render an item as fourth in the
+reading order while retaining its canonical volume number 3.5. Midpoint decimals used to persist a
+drag are implementation details and are never presented to the reader.
 User-facing series deletion is a reversible archive: `series.archived_at` hides the series and all
 of its entries from ordinary authenticated reads without deleting the series, books, reading
 history, live slots, ghosts, or removal tombstones. `archive_primary_intent` remembers the exact
