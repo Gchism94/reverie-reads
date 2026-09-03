@@ -134,6 +134,10 @@ wishlist` was the pre-#68 model and is long wrong. Format flags **suppress, neve
   failed or timed-out recovery batch is reported beside the control but must not prevent the
   classification batch from advancing. Failed rows receive a retry window so one bad source cannot
   starve the queue; changing its objective or cover fields makes it eligible immediately.
+  Workflow step proxies must be called as standalone bindings, never as methods on an injected
+  callback object: WDK serializes a step call's `this` receiver, and a receiver containing another
+  function fails before the first checkpoint. Keep the compiler-backed Workflow integration test in
+  the ordinary web test command; unit calls treat `use step` as a no-op and cannot catch this class.
 - **Structured rows own personal series membership.** `series` + live `series_entries` are the
   authority; `books.series`, `position`, and `series_count` are a compatibility projection of one
   explicit `is_primary` entry. A book may have multiple live memberships, but at most one primary;
