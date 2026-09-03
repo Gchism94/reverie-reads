@@ -594,9 +594,6 @@
 .rv-mobile-tab-active .rv-mobile-tab-glyph {
   opacity: 1;
 }
-.rv-sidebar-utility {
-  background: color-mix(in srgb, var(--card-solid) 76%, transparent) !important;
-}
 .rv-mobile-header {
   position: relative;
   border-bottom: 1px solid var(--line);

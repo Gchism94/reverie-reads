@@ -16,6 +16,7 @@ import {
   MOBILE_TAB_ITEMS,
   MORE_NAVIGATION_ITEMS,
   NAVIGATION_GROUPS,
+  navigationLabelForPath,
   type NavigationItem,
 } from './navigation'
 
@@ -167,10 +168,9 @@ function Sidebar({ householdAdd }: { householdAdd: boolean }) {
             to="/skins"
             title="Choose skin"
             aria-label="Choose skin"
-            className={`rv-sidebar-utility flex min-h-9 items-center justify-center gap-2 skin-control border border-line py-1 text-[12.5px] text-ink ${
+            className={`rv-sidebar-utility skin-control skin-btn-secondary flex min-h-9 items-center justify-center gap-2 py-1 text-[12.5px] ${
               collapsed ? 'w-9' : 'flex-1'
             }`}
-            style={{ background: 'color-mix(in srgb, var(--card) 70%, transparent)' }}
           >
             <span
               aria-hidden
@@ -189,10 +189,9 @@ function Sidebar({ householdAdd }: { householdAdd: boolean }) {
             to="/settings"
             title="Settings"
             aria-label="Settings"
-            className={`rv-sidebar-utility flex h-9 items-center justify-center gap-2 skin-control border border-line text-[12.5px] text-ink ${
+            className={`rv-sidebar-utility skin-control skin-btn-secondary flex h-9 items-center justify-center gap-2 text-[12.5px] ${
               collapsed ? 'w-9' : 'flex-1'
             }`}
-            style={{ background: 'color-mix(in srgb, var(--card) 70%, transparent)' }}
           >
             <span aria-hidden>⚙</span>
             {!collapsed && <span>Settings</span>}
@@ -202,10 +201,9 @@ function Sidebar({ householdAdd }: { householdAdd: boolean }) {
             onClick={() => void signOut()}
             title="Sign out"
             aria-label="Sign out"
-            className={`rv-sidebar-utility flex h-9 items-center justify-center skin-control border border-line text-[12.5px] text-muted hover:text-ink ${
+            className={`rv-sidebar-utility skin-control skin-btn-secondary flex h-9 items-center justify-center text-[12.5px] ${
               collapsed ? 'w-9' : 'px-3'
             }`}
-            style={{ background: 'color-mix(in srgb, var(--card) 70%, transparent)' }}
           >
             <span className={collapsed ? '' : 'hidden'}>
               <PowerGlyph />
@@ -217,7 +215,7 @@ function Sidebar({ householdAdd }: { householdAdd: boolean }) {
         <button
           type="button"
           onClick={() => setCollapsed((v) => !v)}
-          className={`flex items-center gap-2 rounded-[10px] px-2 py-1.5 text-[12px] text-muted hover:text-ink ${
+          className={`skin-control skin-btn-secondary flex items-center gap-2 px-2 py-1.5 text-[12px] ${
             collapsed ? 'justify-center' : ''
           }`}
           aria-pressed={collapsed}
@@ -232,15 +230,21 @@ function Sidebar({ householdAdd }: { householdAdd: boolean }) {
 }
 
 /** Compact top bar for narrow screens — brand and theme only. Navigation lives in the tab bar. */
-function MobileBar() {
+function MobileBar({ pathname }: { pathname: string }) {
+  const skinLabel = useSkinLabel()
+  const pageLabel = navigationLabelForPath(pathname)
+
   return (
-    <header className="rv-mobile-header flex min-h-[60px] items-center justify-between gap-3 px-4 py-3 lg:hidden">
-      <Link to="/" className="shrink-0" aria-label={`${APP_NAME} home`}>
+    <header className="rv-mobile-header flex min-h-[66px] items-center justify-between gap-3 px-4 py-2.5 lg:hidden">
+      <Link to="/" className="min-w-0" aria-label={`${APP_NAME} home`}>
         <span
-          className="rv-mobile-wordmark text-[25px] italic leading-none text-ink"
+          className="rv-mobile-wordmark block text-[24px] italic leading-none text-ink"
           style={{ fontFamily: 'var(--font-display)', fontWeight: 600, letterSpacing: '0.5px' }}
         >
           {APP_NAME}
+        </span>
+        <span className="skin-label mt-1 block break-words text-[10.5px] leading-[1.25] text-muted">
+          {pageLabel} · {skinLabel}
         </span>
       </Link>
       <ThemeToggle compact />
@@ -323,16 +327,16 @@ function MobileTabBar({ householdAdd }: { householdAdd: boolean }) {
               <Link
                 key={item.to}
                 to={item.to}
-                className="flex flex-col items-center gap-1.5 rounded-xl px-2 py-3 text-[13px] font-medium"
+                className="rv-nav-item flex min-h-[62px] flex-col items-center justify-center gap-1.5 px-2 py-2.5 text-[13px] font-medium"
                 style={{ color: 'var(--muted)' }}
                 activeProps={{
+                  className: 'rv-nav-item-active',
                   style: {
                     color: 'var(--ink)',
-                    background: 'color-mix(in srgb, var(--primary) 14%, transparent)',
                   },
                 }}
               >
-                <span className="leading-none" aria-hidden>
+                <span className="rv-nav-glyph leading-none" aria-hidden>
                   <NavigationGlyph name={item.icon} className="h-5 w-5" />
                 </span>
                 <span className="skin-label">{item.label}</span>
@@ -343,7 +347,7 @@ function MobileTabBar({ householdAdd }: { householdAdd: boolean }) {
             <button
               type="button"
               onClick={() => void signOut()}
-              className="skin-control flex w-full items-center justify-center gap-2 px-2 py-2.5 text-[13px] font-semibold text-muted"
+              className="skin-control skin-btn-secondary flex w-full items-center justify-center gap-2 px-2 py-2.5 text-[13px] font-semibold"
             >
               <PowerGlyph /> Sign out
             </button>
@@ -417,7 +421,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <Sidebar householdAdd={householdAdd} />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <MobileBar />
+        <MobileBar pathname={pathname} />
         <div className="relative z-[1] px-4 lg:px-5">
           <SkinEvolveReveal />
         </div>

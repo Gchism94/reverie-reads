@@ -387,8 +387,8 @@ export function ReadingRecordStage() {
           <div>
             <Cover book={book} eager className="mx-auto w-full max-w-[190px] md:max-w-none" />
             <div className="mt-3 grid grid-cols-2 gap-2 text-center text-[8px] font-semibold sm:text-[10px]">
-              <span className="border border-line px-2 py-2 text-ink">♡ Favourite</span>
-              <span className="border border-line px-2 py-2 text-ink">Edit details</span>
+              <span className="skin-control skin-btn-secondary px-2 py-2">♡ Favourite</span>
+              <span className="skin-control skin-btn-primary px-2 py-2">Edit details</span>
             </div>
           </div>
 
@@ -683,45 +683,6 @@ export function ConnectedStage() {
             </li>
           ))}
         </ol>
-      </div>
-    </div>
-  )
-}
-
-export function RoomThumbnail() {
-  return (
-    <div
-      aria-hidden
-      className="overflow-hidden border border-line bg-bg0"
-      style={{ borderRadius: 'var(--radius-card)' }}
-    >
-      <div className="flex h-6 items-center border-b border-line bg-card px-2">
-        <span className="text-[7px] font-medium text-muted">reverie · library</span>
-      </div>
-      <div className="grid grid-cols-[38px_1fr]">
-        <div className="rv-nav-surface flex flex-col border-r border-line p-1.5">
-          <div
-            className="rv-nav-monogram grid h-4 w-4 place-items-center text-[7px] italic"
-            style={display}
-          >
-            R
-          </div>
-          <div className="mt-2 space-y-1">
-            <div className="rv-nav-item rv-nav-item-active h-2.5 w-6" />
-            <div className="rv-nav-item h-1.5 w-5 bg-muted opacity-30" />
-            <div className="rv-nav-item h-1.5 w-6 bg-muted opacity-30" />
-          </div>
-        </div>
-        <div className="p-2">
-          <div className="text-[8px] text-ink" style={display}>
-            Your library
-          </div>
-          <div className="mt-2 flex gap-1">
-            {BOOKS.slice(0, 4).map((book) => (
-              <Cover key={book.id} book={book} className="w-[24px] flex-none" />
-            ))}
-          </div>
-        </div>
       </div>
     </div>
   )

@@ -1,7 +1,8 @@
 import { useState, type CSSProperties } from 'react'
 import { SKINS, SKIN_LIST, type ResolvedMode, type SkinId } from '@reverie/core'
 import { SkinAtmosphereCanvas } from '../../components/SkinAtmosphereCanvas'
-import { ProductStage, RoomThumbnail } from './ProductStage'
+import { AppRoomPreview } from '../../components/AppRoomPreview'
+import { ProductStage } from './ProductStage'
 
 const display = { fontFamily: 'var(--font-display)', fontWeight: 600 } as const
 
@@ -99,7 +100,7 @@ export function SkinShowcase() {
                   transform: selected ? 'translateY(-2px)' : undefined,
                 }}
               >
-                <RoomThumbnail />
+                <AppRoomPreview />
                 <span className="mt-3 flex min-w-0 items-start justify-between gap-2 px-1 pb-0.5">
                   <span className="min-w-0">
                     <span

@@ -53,3 +53,31 @@ export const MORE_NAVIGATION_ITEMS = [
   { label: 'Skins', to: '/skins', icon: 'skins' },
   { label: 'Settings', to: '/settings', icon: 'settings' },
 ] as const satisfies readonly NavigationItem[]
+
+const DETAIL_DESTINATIONS = [
+  ['/book/', 'Book record'],
+  ['/shelf/', 'Shelf'],
+  ['/series/', 'Series'],
+  ['/tropes/', 'Trope'],
+  ['/moods/', 'Mood'],
+  ['/club/', 'Club'],
+  ['/list/', 'Shared list'],
+  ['/review', 'Review books'],
+  ['/add', 'Add a book'],
+] as const
+
+/** A compact, human label for mobile chrome. The persistent tabs communicate destination; the
+ * header names the place the reader has actually reached, including detail routes outside the
+ * primary navigation model. */
+export function navigationLabelForPath(pathname: string): string {
+  const primary = NAVIGATION_ITEMS.find((item) => pathname === item.to)
+  if (primary) return primary.label
+
+  const detail = DETAIL_DESTINATIONS.find(([prefix]) => pathname.startsWith(prefix))
+  if (detail) return detail[1]
+
+  return (
+    NAVIGATION_ITEMS.find((item) => item.to !== '/' && pathname.startsWith(`${item.to}/`))?.label ??
+    'Reading room'
+  )
+}

@@ -7,6 +7,7 @@ import {
   MORE_NAVIGATION_ITEMS,
   NAVIGATION_GROUPS,
   NAVIGATION_ITEMS,
+  navigationLabelForPath,
 } from './navigation'
 
 describe('navigation contract', () => {
@@ -29,5 +30,15 @@ describe('navigation contract', () => {
       )
       expect(css, `${skin}: mobile dock`).toContain(`[data-skin='${skin}'] .rv-mobile-dock`)
     }
+  })
+
+  it('names primary and detail destinations in compact mobile chrome', () => {
+    expect(navigationLabelForPath('/')).toBe('Home')
+    expect(navigationLabelForPath('/library')).toBe('Library')
+    expect(navigationLabelForPath('/series/the-court')).toBe('Series')
+    expect(navigationLabelForPath('/tropes/slow-burn')).toBe('Trope')
+    expect(navigationLabelForPath('/book/abc-123')).toBe('Book record')
+    expect(navigationLabelForPath('/add')).toBe('Add a book')
+    expect(navigationLabelForPath('/something-new')).toBe('Reading room')
   })
 })
