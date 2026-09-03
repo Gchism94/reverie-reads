@@ -39,6 +39,28 @@ const json = (body: unknown, status = 200) =>
     headers: { ...cors, 'Content-Type': 'application/json' },
   })
 
+async function authorizeSweep(
+  runId: string,
+  workId: string,
+  authorization: string,
+): Promise<boolean> {
+  try {
+    const response = await fetch(`${DB_URL}/rest/v1/rpc/service_authorize_corpus_sweep_work`, {
+      method: 'POST',
+      headers: {
+        apikey: SERVICE,
+        Authorization: authorization,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ p_run: runId, p_work: workId }),
+    })
+    if (!response.ok) return false
+    return typeof (await response.json()) === 'string'
+  } catch {
+    return false
+  }
+}
+
 const norm = (s: string): string =>
   s
     .toLowerCase()
@@ -226,19 +248,33 @@ Deno.serve(async (req: Request) => {
   if (req.method !== 'POST') return json({ error: 'method not allowed' }, 405)
   if (!DB_URL || !ANON || !SERVICE) return json({ error: 'missing service env' }, 500)
 
-  // any signed-in reader may query (public catalog data; the cache is shared on purpose)
-  const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '')
-  if (!token) return json({ error: 'not authenticated' }, 401)
-  const ures = await fetch(`${DB_URL}/auth/v1/user`, {
-    headers: { apikey: ANON, Authorization: `Bearer ${token}` },
-  })
-  if (!ures.ok) return json({ error: 'not authenticated' }, 401)
-
-  let body: { mode?: string; name?: string; author?: string; title?: string }
+  let body: {
+    mode?: string
+    name?: string
+    author?: string
+    title?: string
+    sweepRunId?: string
+    workId?: string
+  }
   try {
     body = await req.json()
   } catch {
     return json({ error: 'bad json' }, 400)
+  }
+
+  // Any signed-in reader may query. A service-role call is accepted only for the exact work
+  // currently claimed by a durable sweep; possessing the service key alone is not an actor id.
+  const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '')
+  if (!token) return json({ error: 'not authenticated' }, 401)
+  if (body.sweepRunId && body.workId) {
+    if (!(await authorizeSweep(body.sweepRunId, body.workId, `Bearer ${token}`))) {
+      return json({ error: 'corpus sweep not authorized' }, 403)
+    }
+  } else {
+    const ures = await fetch(`${DB_URL}/auth/v1/user`, {
+      headers: { apikey: ANON, Authorization: `Bearer ${token}` },
+    })
+    if (!ures.ok) return json({ error: 'not authenticated' }, 401)
   }
 
   // book-tags: Hardcover's community descriptors for one book — treated as factual metadata

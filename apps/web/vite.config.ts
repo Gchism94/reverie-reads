@@ -3,6 +3,8 @@ import { defineConfig, type Plugin } from 'vitest/config'
 import { loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import { nitro } from 'nitro/vite'
+import { workflow } from 'workflow/vite'
 
 // One id per deploy: Vercel's commit SHA in CI, the local git SHA otherwise. Baked into the bundle
 // (VITE_BUILD_ID — the update watcher compares against it; VITE_RELEASE — Sentry release tagging)
@@ -52,7 +54,17 @@ export default defineConfig(({ command, mode }) => {
   }
 
   return {
-    plugins: [react(), tailwindcss(), emitVersion],
+    plugins: [nitro(), workflow({ runtime: 'nodejs22.x' }), react(), tailwindcss(), emitVersion],
+    nitro: {
+      // Keep the existing Vite SPA at the project root while adding Nitro's file-based `api/`
+      // routes. Workflow scans the sibling `workflows/` directory by default.
+      serverDir: './',
+      routeRules: {
+        '/fonts/files/**': {
+          headers: { 'cache-control': 'public, max-age=31536000, immutable' },
+        },
+      },
+    },
     define: {
       'import.meta.env.VITE_BUILD_ID': JSON.stringify(buildId),
       'import.meta.env.VITE_RELEASE': JSON.stringify(buildId),

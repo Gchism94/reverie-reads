@@ -1,8 +1,5 @@
 import {
-  isGoogleContentCover,
   isIngestibleCoverUrl,
-  type Contributor,
-  type CoverSource,
   type SeriesEvidenceRecord,
 } from '@reverie/core'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -10,140 +7,38 @@ import { enrichBookOutcome, type EnrichResult } from '../lib/enrich'
 import { classifyEnrichedSeries } from '../lib/seriesClassification'
 import { ingestCorpusCover } from '../lib/covers'
 import { supabase } from '../lib/supabase'
+import {
+  CORPUS_SWEEP_COVER_BATCH_SIZE,
+  CORPUS_SWEEP_MAX_WORKS,
+  corpusCoverNeedsDurableOwnership,
+  corpusCoverSourceOf,
+  corpusEnrichmentSelect,
+  corpusPatchFromEnrichment,
+  corpusSeriesCheckDue,
+  corpusSweepCandidateSnapshot,
+  corpusWorkFromRow,
+  corpusWorkIsIncomplete,
+  corpusWorkShouldCheck,
+  type CorpusEnrichmentRow,
+  type CorpusEnrichmentWork,
+  type CorpusMetadataPatch,
+} from '../lib/corpusSweepPolicy'
 import { pageAll } from './paging'
 
-const MAX_PER_RUN = 400
-const CORPUS_RECOVERY_BATCH_SIZE = 25
-const CORPUS_PIPELINE_BATCH_LIMIT = Math.ceil(MAX_PER_RUN / CORPUS_RECOVERY_BATCH_SIZE)
+export {
+  corpusCoverNeedsDurableOwnership,
+  corpusPatchFromEnrichment,
+  corpusSeriesCheckDue,
+  corpusSweepCandidateSnapshot,
+  corpusWorkIsIncomplete,
+  corpusWorkShouldCheck,
+}
+export type { CorpusEnrichmentWork, CorpusMetadataPatch }
+
+const CORPUS_PIPELINE_BATCH_LIMIT = Math.ceil(
+  CORPUS_SWEEP_MAX_WORKS / CORPUS_SWEEP_COVER_BATCH_SIZE,
+)
 const FAILURE_STREAK_LIMIT = 5
-const COMPLETE_RECHECK_DAYS = 30
-const PARTIAL_RETRY_DAYS = 3
-const DAY = 86_400_000
-
-export interface CorpusEnrichmentWork {
-  id: string
-  title: string
-  authorText: string
-  contributors: Contributor[]
-  series: string
-  position: number | null
-  pages: number | null
-  publicationYear: number | null
-  publisher: string
-  language: string
-  description: string
-  isbns: string[]
-  genre: string
-  genres: string[]
-  cover: string
-  enrichedAt: string | null
-  seriesCheckState: 'unknown' | 'unresolved' | 'no_series' | 'found' | 'review'
-  seriesCheckedAt: string | null
-}
-
-interface CorpusEnrichmentRow {
-  id: string
-  title: string
-  author_text: string | null
-  contributors: Contributor[] | null
-  series: string | null
-  position: number | string | null
-  pages: number | null
-  pub_y: number | null
-  publisher: string | null
-  language: string | null
-  description: string | null
-  isbns: string[] | null
-  genre: string | null
-  genres: string[] | null
-  cover_url: string | null
-  enriched_at: string | null
-  series_check_state: CorpusEnrichmentWork['seriesCheckState']
-  series_checked_at: string | null
-}
-
-const toWork = (row: CorpusEnrichmentRow): CorpusEnrichmentWork => ({
-  id: row.id,
-  title: row.title,
-  authorText: row.author_text?.trim() ?? '',
-  contributors: row.contributors ?? [],
-  series: row.series?.trim() ?? '',
-  position: row.position === null ? null : Number(row.position),
-  pages: row.pages,
-  publicationYear: row.pub_y,
-  publisher: row.publisher?.trim() ?? '',
-  language: row.language?.trim() ?? '',
-  description: row.description?.trim() ?? '',
-  isbns: row.isbns ?? [],
-  genre: row.genre?.trim() ?? '',
-  genres: row.genres ?? [],
-  cover: row.cover_url ?? '',
-  enrichedAt: row.enriched_at,
-  seriesCheckState: row.series_check_state,
-  seriesCheckedAt: row.series_checked_at,
-})
-
-/** Objective gaps handled by the ordinary fill-only metadata pass. Series has its own evidence
- * clock below: absence is not a gap because most books really are standalones. */
-function corpusWorkHasMetadataGap(work: CorpusEnrichmentWork): boolean {
-  return (
-    !work.cover ||
-    corpusCoverNeedsDurableOwnership(work.cover) ||
-    !work.isbns.length ||
-    !work.publicationYear ||
-    !work.pages ||
-    !work.genre ||
-    !work.publisher ||
-    !work.language ||
-    !work.description ||
-    !work.contributors.length ||
-    (!!work.series && work.position === null)
-  )
-}
-
-const SERIES_UNRESOLVED_RECHECK_DAYS = 30
-const SERIES_STABLE_RECHECK_DAYS = 180
-
-/**
- * Series discovery has an independent clock. A generic metadata check must not suppress it, and
- * “no series returned” is rechecked rather than promoted into a permanent standalone assertion.
- */
-export function corpusSeriesCheckDue(
-  work: Pick<CorpusEnrichmentWork, 'seriesCheckState' | 'seriesCheckedAt'>,
-  now = Date.now(),
-): boolean {
-  if (work.seriesCheckState === 'review') return false
-  if (!work.seriesCheckedAt || work.seriesCheckState === 'unknown') return true
-  const days =
-    work.seriesCheckState === 'unresolved'
-      ? SERIES_UNRESOLVED_RECHECK_DAYS
-      : SERIES_STABLE_RECHECK_DAYS
-  return Date.parse(work.seriesCheckedAt) < now - days * DAY
-}
-
-export function corpusWorkIsIncomplete(work: CorpusEnrichmentWork, now = Date.now()): boolean {
-  return corpusWorkHasMetadataGap(work) || corpusSeriesCheckDue(work, now)
-}
-
-/** Google is display-only by policy. Every other shared cover must be a corpus-owned object; a
- * personal `u/` object remains reader-deletable and an upstream hotlink remains source-deletable. */
-export function corpusCoverNeedsDurableOwnership(url: string): boolean {
-  if (!url) return false
-  if (/\/storage\/v1\/object\/public\/covers\/w\//i.test(url)) return false
-  if (isGoogleContentCover(url)) return false
-  return true
-}
-
-const corpusWorkHasHighValue = (work: CorpusEnrichmentWork): boolean =>
-  !!work.cover && !corpusCoverNeedsDurableOwnership(work.cover) && work.isbns.length > 0
-
-export function corpusWorkShouldCheck(work: CorpusEnrichmentWork, now = Date.now()): boolean {
-  if (corpusSeriesCheckDue(work, now)) return true
-  if (!corpusWorkHasMetadataGap(work)) return false
-  if (!work.enrichedAt) return true
-  const days = corpusWorkHasHighValue(work) ? COMPLETE_RECHECK_DAYS : PARTIAL_RETRY_DAYS
-  return Date.parse(work.enrichedAt) < now - days * DAY
-}
 
 export async function fetchCorpusAdminStatus(): Promise<boolean> {
   const { data, error } = await supabase.rpc('is_corpus_admin')
@@ -402,9 +297,6 @@ export function useAdminAddCorpusWorkTrope() {
   })
 }
 
-const corpusEnrichmentSelect =
-  'id, title, author_text, contributors, series, position, pages, pub_y, publisher, language, description, isbns, genre, genres, cover_url, enriched_at, series_check_state, series_checked_at'
-
 export async function fetchCorpusEnrichmentCandidates(): Promise<CorpusEnrichmentWork[]> {
   const rows = await pageAll<CorpusEnrichmentRow>('corpus enrichment candidates', (from, to) =>
     supabase
@@ -413,7 +305,7 @@ export async function fetchCorpusEnrichmentCandidates(): Promise<CorpusEnrichmen
       .order('id')
       .range(from, to),
   )
-  return rows.map(toWork).filter((work) => corpusWorkShouldCheck(work))
+  return rows.map(corpusWorkFromRow).filter((work) => corpusWorkShouldCheck(work))
 }
 
 /** Re-read only the next bounded group after cover recovery. This prevents the classifier from
@@ -422,19 +314,19 @@ export async function fetchCorpusEnrichmentWorksByIds(
   ids: readonly string[],
 ): Promise<CorpusEnrichmentWork[]> {
   if (!ids.length) return []
-  if (ids.length > CORPUS_RECOVERY_BATCH_SIZE) {
-    throw new Error(`corpus refresh is limited to ${CORPUS_RECOVERY_BATCH_SIZE} works`)
+  if (ids.length > CORPUS_SWEEP_COVER_BATCH_SIZE) {
+    throw new Error(`corpus refresh is limited to ${CORPUS_SWEEP_COVER_BATCH_SIZE} works`)
   }
   const { data, error } = await supabase
     .from('works')
     .select(corpusEnrichmentSelect)
     .in('id', [...ids])
     .order('id')
-    .limit(CORPUS_RECOVERY_BATCH_SIZE)
+    .limit(CORPUS_SWEEP_COVER_BATCH_SIZE)
   if (error) throw error
   const byId = new Map(
     ((data ?? []) as CorpusEnrichmentRow[]).map((row) => {
-      const normalized = toWork(row)
+      const normalized = corpusWorkFromRow(row)
       return [normalized.id, normalized] as const
     }),
   )
@@ -451,74 +343,6 @@ export function useCorpusEnrichmentCandidates(enabled: boolean) {
     queryFn: fetchCorpusEnrichmentCandidates,
     staleTime: 30_000,
   })
-}
-
-const coverSourceOf = (result: EnrichResult): CoverSource => {
-  const source = result.provenance?.cover?.source
-  return source === 'openlibrary' || source === 'hardcover' || source === 'google'
-    ? source
-    : 'url'
-}
-
-export interface CorpusMetadataPatch {
-  contributors?: Contributor[]
-  authorText?: string
-  series?: string
-  position?: number
-  pages?: number
-  pubY?: number
-  pubM?: number
-  pubD?: number
-  publisher?: string
-  language?: string
-  description?: string
-  isbns?: string[]
-  genre?: string
-  genres?: string[]
-  coverUrl?: string
-  coverSource?: CoverSource
-  coverSourceUrl?: string
-  coverColor?: string
-  externalWorkId?: string
-  editionId?: string
-  provenance?: EnrichResult['provenance']
-  confidence?: EnrichResult['confidence']
-}
-
-/** Preserve every objective field returned by enrichment; the RPC remains the authoritative
- * fill-only merge and ignores values where the corpus already has curated data. */
-export function corpusPatchFromEnrichment(result: EnrichResult): CorpusMetadataPatch {
-  const authors = (result.authors ?? []).map((name) => name.trim()).filter(Boolean)
-  const isbns = [
-    ...(result.isbns ?? []),
-    result.isbn13,
-    result.isbn,
-    result.isbn10,
-  ].filter(Boolean)
-  return {
-    ...(authors.length
-      ? {
-          contributors: authors.map((name, position) => ({ name, role: 'author', position })),
-          authorText: authors.join(', '),
-        }
-      : {}),
-    // Series is deliberately absent. It has a separate positive-evidence/review RPC; routing it
-    // through this generic fill-only patch would let a soft catalog match bypass that boundary.
-    ...(result.pageCount !== null ? { pages: result.pageCount } : {}),
-    ...(result.pubY !== null ? { pubY: result.pubY } : {}),
-    ...(result.pubM !== null ? { pubM: result.pubM } : {}),
-    ...(result.pubD !== null ? { pubD: result.pubD } : {}),
-    ...(result.publisher ? { publisher: result.publisher } : {}),
-    ...(result.language ? { language: result.language } : {}),
-    ...(result.description ? { description: result.description } : {}),
-    ...(isbns.length ? { isbns } : {}),
-    ...(result.genre ? { genre: result.genre } : {}),
-    ...(result.genres?.length ? { genres: result.genres } : {}),
-    ...(result.workId ? { externalWorkId: result.workId } : {}),
-    ...(result.editionId ? { editionId: result.editionId } : {}),
-    ...(result.provenance ? { provenance: result.provenance } : {}),
-    ...(result.confidence ? { confidence: result.confidence } : {}),
-  }
 }
 
 export interface CorpusBulkProgress {
@@ -583,7 +407,7 @@ export function corpusCoverRecoverySummary(recovery: CorpusCoverRecoveryResult):
  * every stored object against the authenticated project's issuer. */
 export async function recoverAdminHouseholdCorpusCovers(): Promise<CorpusCoverRecoveryResult> {
   const { data, error } = await supabase.rpc('admin_recover_corpus_cover_batch', {
-    p_limit: CORPUS_RECOVERY_BATCH_SIZE,
+    p_limit: CORPUS_SWEEP_COVER_BATCH_SIZE,
   })
   if (error) throw error
   const result = (data ?? {}) as Partial<CorpusCoverRecoveryResult>
@@ -667,7 +491,7 @@ export async function bulkCompleteCorpus(
       stopReason = 'user'
       break
     }
-    if (scanned >= MAX_PER_RUN) {
+    if (scanned >= CORPUS_SWEEP_MAX_WORKS) {
       stopReason = 'limit'
       break
     }
@@ -738,7 +562,7 @@ export async function bulkCompleteCorpus(
         (!work.cover || corpusCoverNeedsDurableOwnership(work.cover)) &&
         !patch.coverUrl
       ) {
-        const source = coverSourceOf(outcome.data)
+        const source = corpusCoverSourceOf(outcome.data)
         if (isIngestibleCoverUrl(outcome.data.cover)) {
           const ingest = await ingestCorpusCover({
             workId: work.id,
@@ -822,7 +646,7 @@ export async function runCorpusCompletionPipeline(
   },
 ): Promise<CorpusCompletionPipelineResult> {
   const candidates = await dependencies.fetchCandidates()
-  const scheduled = candidates.slice(0, MAX_PER_RUN)
+  const scheduled = candidates.slice(0, CORPUS_SWEEP_MAX_WORKS)
   const recovery: CorpusCoverRecoveryResult = {
     scanned: 0,
     failed: 0,
@@ -884,7 +708,7 @@ export async function runCorpusCompletionPipeline(
     if (candidateOffset < scheduled.length) {
       const originalBatch = scheduled.slice(
         candidateOffset,
-        candidateOffset + CORPUS_RECOVERY_BATCH_SIZE,
+        candidateOffset + CORPUS_SWEEP_COVER_BATCH_SIZE,
       )
       let refreshedBatch = originalBatch
       try {

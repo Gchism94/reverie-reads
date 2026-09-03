@@ -2,7 +2,6 @@ packages:
   - 'apps/*'
   - 'packages/*'
 allowBuilds:
+  '@swc/core': true
+  cbor-extract: true
   esbuild: true
-
-overrides:
-  vite: ^6.0.7

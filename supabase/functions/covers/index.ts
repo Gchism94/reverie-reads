@@ -247,6 +247,8 @@ interface IngestFields {
   bookId?: string
   /** Owner/admin durable corpus target. Exactly one of bookId/workId is accepted. */
   workId?: string
+  /** Internal durable-run capability. Valid only with the service-role JWT and a running item. */
+  sweepRunId?: string
   scope?: 'personal' | 'corpus'
   source: string
   sourceUrl?: string
@@ -274,6 +276,30 @@ async function canEditCorpusWork(req: Request, workId: string): Promise<boolean>
   }
 }
 
+async function corpusSweepActor(
+  req: Request,
+  runId: string,
+  workId: string,
+): Promise<string | null> {
+  if (!DB_URL || !SERVICE) return null
+  try {
+    const r = await fetch(`${DB_URL}/rest/v1/rpc/service_authorize_corpus_sweep_work`, {
+      method: 'POST',
+      headers: {
+        apikey: SERVICE,
+        Authorization: req.headers.get('Authorization') ?? '',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ p_run: runId, p_work: workId }),
+    })
+    if (!r.ok) return null
+    const actor = await r.json()
+    return typeof actor === 'string' && /^[0-9a-f-]{36}$/i.test(actor) ? actor : null
+  } catch {
+    return null
+  }
+}
+
 /** Smallest edge a real cover can have. A 1x1 tracking/placeholder pixel is the artifact this
  *  excludes; the smallest genuine thumbnail any source serves is an order of magnitude above it. */
 const MIN_COVER_EDGE_PX = 50
@@ -286,7 +312,8 @@ const SOURCES = new Set(['hardcover', 'google', 'openlibrary', 'upload', 'camera
 // the client refuses too, but the client is not the security boundary.
 const INGESTIBLE_SOURCES = new Set(['hardcover', 'openlibrary', 'upload', 'camera', 'url'])
 
-async function handleIngest(req: Request, uid: string, tr: Trace): Promise<Response> {
+async function handleIngest(req: Request, callerId: string, tr: Trace): Promise<Response> {
+  let uid = callerId
   let file: Uint8Array | null = null
   let fields: IngestFields
   // Multipart (camera/upload) never traces: it is a reader action, not the sweep.
@@ -320,8 +347,15 @@ async function handleIngest(req: Request, uid: string, tr: Trace): Promise<Respo
     return json({ error: corpusScope ? 'bad_work_id' : 'bad_book_id' }, 400)
   if ((corpusScope && fields.bookId) || (!corpusScope && fields.workId))
     return json({ error: 'ambiguous_target' }, 400)
-  if (corpusScope && !(await canEditCorpusWork(req, targetId)))
-    return json({ error: 'corpus_editor_required' }, 403)
+  if (corpusScope) {
+    if (fields.sweepRunId) {
+      const actor = await corpusSweepActor(req, fields.sweepRunId, targetId)
+      if (!actor) return json({ error: 'corpus_sweep_required' }, 403)
+      uid = actor
+    } else if (!(await canEditCorpusWork(req, targetId))) {
+      return json({ error: 'corpus_editor_required' }, 403)
+    }
+  }
   if (!SOURCES.has(fields.source)) return json({ error: 'bad_source' }, 400)
   // Refuse to persist a display-only source, by label OR by host.
   if (!INGESTIBLE_SOURCES.has(fields.source)) {
@@ -414,7 +448,10 @@ async function handleIngest(req: Request, uid: string, tr: Trace): Promise<Respo
   const sniffed = sniffImage(file)
   if (!sniffed) return json({ error: 'not_an_image' }, 415)
 
-  const rev = Date.now().toString(36)
+  // A Workflow step can commit this upload and still lose its response. The run/work capability
+  // is unique for this sweep item, so reuse it as the object revision; Storage upsert then turns a
+  // retry into replacement of the same object instead of leaking a second timestamped object.
+  const rev = fields.sweepRunId ? `sweep-${fields.sweepRunId}` : Date.now().toString(36)
   const base = corpusScope ? `w/${targetId}` : `u/${uid}/${targetId}`
 
   try {
@@ -741,16 +778,27 @@ Deno.serve(async (req: Request) => {
   )
   if (!rl.allowed) return tooMany(rl.retryAfter, cors)
 
-  const uid = jwtSub(req)
-  if (!uid) return json({ error: 'unauthorized' }, 401) // gateway verifies; this derives the path scope
-
   try {
     const contentType = req.headers.get('content-type') ?? ''
-    if (contentType.includes('multipart/form-data')) return await handleIngest(req, uid, tr)
+    const preview = contentType.includes('multipart/form-data')
+      ? null
+      : ((await req.clone().json()) as Partial<IngestFields> & { action?: string })
+    const internalSweepIngest =
+      preview?.action === 'ingest' &&
+      preview.scope === 'corpus' &&
+      typeof preview.sweepRunId === 'string' &&
+      typeof preview.workId === 'string'
+    const uid = jwtSub(req)
+    // Supabase service-role JWTs do not necessarily carry a subject. The exact durable-run target
+    // is still authorized inside handleIngest by a service-only RPC before any storage write.
+    if (!uid && !internalSweepIngest) return json({ error: 'unauthorized' }, 401)
+    const callerId = uid ?? 'corpus-sweep-service'
 
-    const body = (await req.clone().json()) as { action?: string }
-    if (body.action === 'editions') return await handleEditions((await req.json()) as EditionsInput)
-    if (body.action === 'ingest') return await handleIngest(req, uid, tr)
+    if (contentType.includes('multipart/form-data')) return await handleIngest(req, callerId, tr)
+
+    if (preview?.action === 'editions')
+      return await handleEditions((await req.json()) as EditionsInput)
+    if (preview?.action === 'ingest') return await handleIngest(req, callerId, tr)
     return json({ error: 'bad_action' }, 400)
   } catch (e) {
     captureEdgeError('covers', e)

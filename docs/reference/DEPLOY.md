@@ -20,6 +20,19 @@ VITE_SUPABASE_ANON_KEY=sb_publishable_kp8TvVCeARWRqqk4z0a0CA_35y5KZgQ   # publis
 # optional: VITE_SENTRY_DSN, VITE_SOCIAL_AUTH_ENABLED, VITE_BUY_ATTRIBUTION_MODE + affiliate ids
 ```
 
+The durable administrator corpus sweep also needs two **server-only** Vercel variables. Never add
+either to a `VITE_` name or commit the service key:
+
+```
+SUPABASE_SERVICE_ROLE_KEY=<hosted project's service-role key>
+CORPUS_SWEEP_WORKFLOW_ENABLED=false
+```
+
+Keep the workflow flag false through the web merge/deploy. After the owner has installed the paired
+database migration and `covers`/`series` Edge Functions from clean, updated `main`, change it to
+`true` and redeploy/promote the web app. While false, status reads are inert and start/cancel return
+503, so an automatic Vercel deploy cannot create a half-configured run.
+
 ## Shipping changes
 
 Every prod deploy goes through the **deploy guard** (`scripts/deploy-guard.sh`, wired to the pnpm
@@ -42,6 +55,25 @@ sync with `origin/main`; it then prints exactly what it will touch and waits for
 > re-ran and errored; and a `covers` function was deployed from a feature branch when a heredoc in a
 > PR body evaluated an un-quoted `supabase functions deploy covers` — see the heredoc rule in
 > `AGENTS.md`.)
+
+### Durable corpus-sweep rollout order
+
+This change alters an administrator write path, so Codex prepares it but does not execute these
+production steps or answer the deploy guard's confirmation:
+
+1. In Vercel, add `SUPABASE_SERVICE_ROLE_KEY` as a server-only secret and set
+   `CORPUS_SWEEP_WORKFLOW_ENABLED=false`.
+2. Merge the reviewed PR, update local `main`, and verify the worktree is clean and synchronized.
+3. Run `pnpm deploy:migrations` and answer its human `y/N` prompt. Confirm migration
+   `20260921010000_durable_corpus_sweeps.sql` is recorded in production history.
+4. Run `pnpm deploy:functions covers`, then `pnpm deploy:functions series`, each through the guard
+   with the owner at the keyboard.
+5. Set `CORPUS_SWEEP_WORKFLOW_ENABLED=true`, deploy/promote the web app, and confirm its deployed
+   commit contains the migration's branch commit.
+6. As a corpus administrator, start one sweep, leave Settings, return, and verify the same run and
+   counters reconnect. Request stop only if needed; it completes the current work before cancelling.
+7. Confirm the run reaches `completed`, deferred works remain eligible for another run, and the
+   historical personal/household corpus and reviewed Series surfaces are unchanged.
 
 ## Post-deploy configuration checklist (dashboard tasks)
 

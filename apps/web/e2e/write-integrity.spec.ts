@@ -27,6 +27,7 @@ test.describe.configure({ mode: 'serial' })
 
 type Client = {
   sb: SupabaseClient
+  admin: SupabaseClient
   session: { access_token: string; refresh_token: string }
   uid: string
 }
@@ -54,11 +55,22 @@ async function client(): Promise<Client> {
   const sb = createClient(SUPABASE_URL, ANON)
   const { data: s, error } = await sb.auth.signInWithPassword({ email: EMAIL, password: PASSWORD })
   if (error || !s.session) throw new Error(authFailure('write-integrity', EMAIL, error))
-  shared = { sb, session: s.session, uid: s.session.user.id }
+  shared = { sb, admin, session: s.session, uid: s.session.user.id }
   return shared
 }
 
 async function reset(c: Client) {
+  // Deleting a series book deliberately preserves an empty canonical slot. This serial fixture
+  // reuses one owner and series name, so remove its own prior series artifacts before recreating
+  // the position-0 case; otherwise a second run conflicts with the ghost the first run preserved.
+  const { data: seriesRows } = await c.admin.from('series').select('id').eq('owner_id', c.uid)
+  const seriesIds = ((seriesRows as { id: string }[]) ?? []).map(({ id }) => id)
+  if (seriesIds.length) {
+    await ok(
+      c.admin.from('series_entries').delete().in('series_id', seriesIds),
+      'write-integrity series_entries delete',
+    )
+  }
   const { data: books } = await c.sb.from('books').select('id').eq('owner_id', c.uid)
   const ids = ((books as { id: string }[]) ?? []).map((b) => b.id)
   if (ids.length) {
@@ -68,6 +80,9 @@ async function reset(c: Client) {
       'write-integrity list_items delete',
     )
     await ok(c.sb.from('books').delete().in('id', ids), 'write-integrity books delete')
+  }
+  if (seriesIds.length) {
+    await ok(c.admin.from('series').delete().in('id', seriesIds), 'write-integrity series delete')
   }
 }
 

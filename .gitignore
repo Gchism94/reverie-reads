@@ -4,6 +4,8 @@ node_modules/
 
 # Build output
 dist/
+apps/web/.output/
+apps/web/.swc/
 *.tsbuildinfo
 .vite/
 
