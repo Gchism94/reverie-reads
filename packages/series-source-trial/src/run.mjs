@@ -10,6 +10,28 @@ import { wikidata } from './providers/wikidata.mjs'
 import { renderScoreMarkdown, scoreProvider } from './score.mjs'
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+
+const loadLocalEnvironment = async () => {
+  let contents
+  try {
+    contents = await readFile(resolve(packageRoot, '.env.local'), 'utf8')
+  } catch (error) {
+    if (error?.code === 'ENOENT') return
+    throw error
+  }
+  for (const line of contents.split(/\r?\n/)) {
+    const match = line.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/)
+    if (!match || process.env[match[1]] !== undefined) continue
+    const value = match[2].trim()
+    process.env[match[1]] =
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+        ? value.slice(1, -1)
+        : value
+  }
+}
+
+await loadLocalEnvironment()
 const adapters = new Map(
   [openLibrary, wikidata, googleBooks, hardcover].map((adapter) => [adapter.name, adapter]),
 )

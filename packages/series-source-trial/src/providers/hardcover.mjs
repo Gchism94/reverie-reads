@@ -28,18 +28,22 @@ export const selectHardcoverCandidate = (testCase, hits = []) =>
 export const hardcoverRelationshipClaims = (book, sourceRef) =>
   (book?.book_series ?? [])
     .filter((membership) => membership?.series?.name)
-    .map((membership) => ({
-      evidenceKind: 'relational_membership',
-      providerSeriesId:
-        membership.series.id === null || membership.series.id === undefined
-          ? null
-          : String(membership.series.id),
-      series: String(membership.series.name),
-      position: numeric(membership.position),
-      orderType: 'unspecified',
-      role: 'unknown',
-      sourceRef,
-    }))
+    .map((membership) => {
+      const memberCount = numeric(membership.series.books_count)
+      return {
+        evidenceKind: memberCount === 1 ? 'singleton_relation' : 'relational_membership',
+        providerSeriesId:
+          membership.series.id === null || membership.series.id === undefined
+            ? null
+            : String(membership.series.id),
+        series: String(membership.series.name),
+        position: numeric(membership.position),
+        memberCount,
+        orderType: 'unspecified',
+        role: 'unknown',
+        sourceRef,
+      }
+    })
 
 const searchQuery = `
   query SearchBooks($query: String!, $limit: Int!) {
@@ -60,6 +64,7 @@ const relationshipQuery = `
         series {
           id
           name
+          books_count
         }
       }
     }
@@ -110,8 +115,7 @@ export const hardcover = {
       const startedAt = Date.now()
 
       try {
-        const query = `${testCase.title} ${testCase.authors[0] ?? ''}`.trim()
-        const searchResponse = await graphql(searchQuery, { query, limit: 5 })
+        const searchResponse = await graphql(searchQuery, { query: testCase.title, limit: 5 })
         const hits = searchResponse.body?.data?.search?.results?.hits ?? []
         const best = selectHardcoverCandidate(testCase, hits)
         const matched = Boolean(best?.ranking.acceptable && numeric(best.document.id) !== null)

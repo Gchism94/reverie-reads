@@ -42,6 +42,8 @@ pnpm series:trial -- --scope all --providers google-books
 ```
 
 Keys are read from the environment, are never written to reports, and must not be committed.
+The runner also loads `packages/series-source-trial/.env.local` when present; that path is ignored
+by Git.
 For reliable trials, use a dedicated Google Cloud project and Books-only key, monitor its daily
 query quota, and request a quota increase before a full run. A browser-restricted production key is
 not a general server credential. Google-derived content remains live/short-cache metadata because
@@ -60,7 +62,8 @@ search document's `series_names` field is never counted as membership evidence. 
 a backend-only personal token and limits the beta API to 60 requests per minute, so the adapter
 paces all requests at slightly over one second apart. Its published API documentation does not
 grant commercial use or persistent-storage rights; both procurement gates remain unresolved until
-Hardcover provides written terms for Reverie's use.
+Hardcover provides written terms for Reverie's use. A relation whose series contains only one known
+book is retained as review-only evidence and never counted as an automatic membership.
 
 ## Score a commercial sample
 

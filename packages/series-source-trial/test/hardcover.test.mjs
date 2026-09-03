@@ -37,7 +37,10 @@ test('emits only relationships from the exact book row', () => {
     {
       id: 2,
       book_series: [
-        { position: 5, series: { id: 42, name: 'A Court of Thorns and Roses' } },
+        {
+          position: 5,
+          series: { id: 42, name: 'A Court of Thorns and Roses', books_count: 7 },
+        },
         { position: 1, series: null },
       ],
     },
@@ -50,6 +53,7 @@ test('emits only relationships from the exact book row', () => {
       providerSeriesId: '42',
       series: 'A Court of Thorns and Roses',
       position: 5,
+      memberCount: 7,
       orderType: 'unspecified',
       role: 'unknown',
       sourceRef: 'https://hardcover.app/books/a-court-of-silver-flames',
@@ -72,4 +76,18 @@ test('does not turn a search-only series label into a relationship claim', () =>
 
   assert.equal(selected.ranking.acceptable, true)
   assert.deepEqual(hardcoverRelationshipClaims(null, 'hardcover:book:2'), [])
+})
+
+test('retains a singleton as review-only evidence', () => {
+  const claims = hardcoverRelationshipClaims(
+    {
+      book_series: [
+        { position: 1, series: { id: 7, name: 'Manufactured Singleton', books_count: 1 } },
+      ],
+    },
+    'hardcover:book:7',
+  )
+
+  assert.equal(claims[0].evidenceKind, 'singleton_relation')
+  assert.equal(claims[0].memberCount, 1)
 })
