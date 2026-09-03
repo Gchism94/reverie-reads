@@ -76,13 +76,13 @@ describe('durable corpus sweep orchestration', () => {
     expect(steps.finish).toHaveBeenCalledWith('run-independent-cover')
   })
 
-  it('stops cover recovery at the established sixteen 25-item batches', async () => {
+  it('stops cover recovery at the bounded eighty five-item batches', async () => {
     steps.recoverCovers.mockResolvedValue(true)
     steps.claimWork.mockResolvedValue(null)
 
     await runCorpusSweepLoop('run-bounded-recovery', steps)
 
-    expect(steps.recoverCovers).toHaveBeenCalledTimes(16)
+    expect(steps.recoverCovers).toHaveBeenCalledTimes(80)
     expect(steps.finish).toHaveBeenCalledWith('run-bounded-recovery')
   })
 

@@ -8,7 +8,10 @@ const SERIES_STABLE_RECHECK_DAYS = 180
 const DAY = 86_400_000
 
 export const CORPUS_SWEEP_MAX_WORKS = 400
-export const CORPUS_SWEEP_COVER_BATCH_SIZE = 25
+// Cover preservation calls can fan out into validation and storage work. Five sharply reduces the
+// work exposed to one hosted statement timeout while the durable loop still checkpoints each batch
+// and interleaves classification work between them.
+export const CORPUS_SWEEP_COVER_BATCH_SIZE = 5
 
 export interface CorpusEnrichmentWork {
   id: string

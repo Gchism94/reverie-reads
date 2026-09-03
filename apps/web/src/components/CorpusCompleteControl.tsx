@@ -15,10 +15,25 @@ export function CorpusCompleteControl({
   onRun: () => void
   onStop: () => void
 }) {
+  const activeIssues = progress
+    ? [
+        progress.failed
+          ? `${progress.failed} ${progress.failed === 1 ? 'work' : 'works'} deferred to retry`
+          : '',
+        progress.recoveryFailed
+          ? `${progress.recoveryFailed} cover ${progress.recoveryFailed === 1 ? 'source' : 'sources'} deferred`
+          : '',
+        progress.recoveryFailedBatches
+          ? `${progress.recoveryFailedBatches} cover recovery ${progress.recoveryFailedBatches === 1 ? 'batch has' : 'batches have'} failed`
+          : '',
+      ]
+        .filter(Boolean)
+        .join(' · ')
+    : ''
   const activeStatus = progress
     ? progress.phase === 'recovering'
-      ? `Recovering household covers in small batches · ${progress.recoveryScanned} cover sources checked · ${progress.scanned} of ${progress.total} shared works classified.`
-      : `Classifying shared metadata and series · ${progress.scanned} of ${progress.total} shared works classified.`
+      ? `Recovering household covers in small batches · ${progress.recoveryScanned} cover sources checked · ${progress.scanned} of ${progress.total} shared works classified${activeIssues ? ` · ${activeIssues}` : ''}.`
+      : `Classifying shared metadata and series · ${progress.scanned} of ${progress.total} shared works classified${activeIssues ? ` · ${activeIssues}` : ''}.`
     : 'Starting the shared corpus sweep…'
 
   if (completing) {

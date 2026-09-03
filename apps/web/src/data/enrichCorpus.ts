@@ -350,6 +350,11 @@ export interface CorpusBulkProgress {
   total: number
   filled: number
   recoveryScanned: number
+  /** Durable-run failures are deferred for a later run, not included in `scanned`. */
+  failed?: number
+  recoveryFailed?: number
+  recoveryFailedBatches?: number
+  errorMessage?: string | null
   phase: 'recovering' | 'classifying'
 }
 
