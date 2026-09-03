@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "hardGates": {
+    "commercialUsePermitted": true,
+    "persistentStoragePermitted": true,
+    "claimLevelProvenance": true,
+    "relationalMembershipEvidence": true,
+    "minimumReviewedCases": 200,
+    "minimumReviewedPositiveCases": 100,
+    "minimumReviewedStandaloneCases": 10,
+    "minimumMembershipPrecision": 0.99,
+    "maximumFalseStandaloneRate": 0.005
+  },
+  "eligibleProviderWeights": {
+    "seriesCoverage": 0.25,
+    "relationshipAndOrderRichness": 0.2,
+    "totalOperatingCost": 0.15,
+    "integrationUsability": 0.15,
+    "freshness": 0.1,
+    "resilienceAndPortability": 0.1,
+    "supportAndSla": 0.05
+  },
+  "notes": [
+    "Accuracy is a hard gate, not a weighted dimension.",
+    "Only authority-reviewed cases contribute to precision, recall, and order accuracy.",
+    "Candidate references contribute to coverage diagnostics only.",
+    "A search-result series label is not relational membership evidence."
+  ]
+}

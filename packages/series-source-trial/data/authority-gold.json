@@ -1,0 +1,395 @@
+{
+  "schemaVersion": 1,
+  "reviewedAt": "2026-09-03",
+  "cases": [
+    {
+      "id": "gold-a-court-of-silver-flames",
+      "title": "A Court of Silver Flames",
+      "authors": ["Sarah J. Maas"],
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "A Court of Thorns and Roses",
+            "aliases": ["ACOTAR"],
+            "role": "primary",
+            "positions": [{ "value": 5, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          {
+            "kind": "publisher",
+            "url": "https://www.bloomsbury.com/uk/court-of-silver-flames-9781526602305/"
+          }
+        ]
+      }
+    },
+    {
+      "id": "gold-a-curse-carved-in-bone",
+      "title": "A Curse Carved in Bone",
+      "authors": ["Danielle L. Jensen"],
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Saga of the Unfated",
+            "aliases": [],
+            "role": "primary",
+            "positions": [{ "value": 2, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          {
+            "kind": "publisher",
+            "url": "https://www.penguinrandomhouse.ca/series/SU4/saga-of-the-unfated"
+          }
+        ]
+      }
+    },
+    {
+      "id": "gold-divine-rivals",
+      "title": "Divine Rivals",
+      "authors": ["Rebecca Ross"],
+      "identifiers": { "isbn13": ["9781250857446"] },
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Letters of Enchantment",
+            "aliases": [],
+            "role": "primary",
+            "positions": [{ "value": 1, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          {
+            "kind": "publisher",
+            "url": "https://us.macmillan.com/books/9781250857446/divinerivals/"
+          }
+        ]
+      }
+    },
+    {
+      "id": "gold-fifty-shades-darker",
+      "title": "Fifty Shades Darker",
+      "authors": ["E. L. James"],
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Fifty Shades Trilogy",
+            "aliases": ["Fifty Shades", "Fifty Shades of Grey"],
+            "role": "primary",
+            "positions": [{ "value": 2, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          {
+            "kind": "author",
+            "url": "https://www.eljamesauthor.com/books/fifty-shades-darker/"
+          }
+        ]
+      }
+    },
+    {
+      "id": "gold-grey",
+      "title": "Grey",
+      "authors": ["E. L. James"],
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Fifty Shades as Told by Christian",
+            "aliases": ["Fifty Shades by Christian", "Fifty Shades"],
+            "role": "primary",
+            "positions": [{ "value": 1, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          { "kind": "author", "url": "https://www.eljamesauthor.com/books/grey/" },
+          { "kind": "author", "url": "https://www.eljamesauthor.com/books/" }
+        ]
+      }
+    },
+    {
+      "id": "gold-hunting-adeline",
+      "title": "Hunting Adeline",
+      "authors": ["H. D. Carlton"],
+      "identifiers": { "isbn13": ["9781638932475"] },
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Cat & Mouse Duet",
+            "aliases": ["Cat and Mouse Duet", "Cat and Mouse"],
+            "role": "primary",
+            "positions": [{ "value": 2, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          {
+            "kind": "publisher",
+            "url": "https://www.penguinrandomhouseretail.com/book/?isbn=9781638932475"
+          }
+        ]
+      }
+    },
+    {
+      "id": "gold-king-of-envy",
+      "title": "King of Envy",
+      "authors": ["Ana Huang"],
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Kings of Sin",
+            "aliases": [],
+            "role": "primary",
+            "positions": [{ "value": 5, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          { "kind": "author", "url": "https://anahuang.com/books/king-of-envy/" }
+        ]
+      }
+    },
+    {
+      "id": "gold-kingdom-of-ash",
+      "title": "Kingdom of Ash",
+      "authors": ["Sarah J. Maas"],
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Throne of Glass",
+            "aliases": [],
+            "role": "primary",
+            "positions": []
+          }
+        ],
+        "sources": [
+          { "kind": "author", "url": "https://sarahjmaas.com/reading-guide/" },
+          { "kind": "author", "url": "https://sarahjmaas.com/books/kingdom-of-ash/" }
+        ]
+      }
+    },
+    {
+      "id": "gold-onyx-storm",
+      "title": "Onyx Storm",
+      "authors": ["Rebecca Yarros"],
+      "identifiers": { "asin": ["B0CW1GZXZT"] },
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Empyrean",
+            "aliases": ["The Empyrean"],
+            "role": "primary",
+            "positions": [{ "value": 3, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          { "kind": "author", "url": "https://rebeccayarros.com/onyxstorm" }
+        ]
+      }
+    },
+    {
+      "id": "gold-two-twisted-crowns",
+      "title": "Two Twisted Crowns",
+      "authors": ["Rachel Gillig"],
+      "identifiers": { "isbn13": ["9780356528762"] },
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "The Shepherd King",
+            "aliases": ["Shepherd King", "The Shepherd King Duology"],
+            "role": "primary",
+            "positions": [{ "value": 2, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          {
+            "kind": "publisher",
+            "url": "https://www.hachette.co.uk/titles/rachel-gillig/two-twisted-crowns/9780356528762/"
+          }
+        ]
+      }
+    },
+    {
+      "id": "gold-twisted-lies",
+      "title": "Twisted Lies",
+      "authors": ["Ana Huang"],
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Twisted",
+            "aliases": ["Twisted Series"],
+            "role": "primary",
+            "positions": [{ "value": 4, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          { "kind": "author", "url": "https://anahuang.com/reading-order/" }
+        ]
+      }
+    },
+    {
+      "id": "gold-when-the-moon-hatched",
+      "title": "When the Moon Hatched",
+      "authors": ["Sarah A. Parker"],
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Moonfall",
+            "aliases": ["The Moonfall Series", "Moonfall Series"],
+            "role": "primary",
+            "positions": [{ "value": 1, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          { "kind": "author", "url": "https://sarahaparker.net/pages/news" },
+          {
+            "kind": "publisher_catalog",
+            "url": "https://www.harperreach.com/wp-content/uploads/sites/70/2025/03/2025_LBF_Catalogue_SCREENspreads.pdf"
+          }
+        ]
+      }
+    },
+    {
+      "id": "gold-standalone-salvation-day",
+      "title": "Salvation Day",
+      "authors": ["Kali Wallace"],
+      "sampleOrigin": "authority_negative_control",
+      "stratum": "standalone_negative",
+      "truth": { "status": "reviewed", "standalone": true, "memberships": [], "sources": [] }
+    },
+    {
+      "id": "gold-standalone-stranger-in-a-strange-land",
+      "title": "Stranger in a Strange Land",
+      "authors": ["Robert A. Heinlein"],
+      "sampleOrigin": "authority_negative_control",
+      "stratum": "standalone_negative",
+      "truth": { "status": "reviewed", "standalone": true, "memberships": [], "sources": [] }
+    },
+    {
+      "id": "gold-standalone-we-are-satellites",
+      "title": "We Are Satellites",
+      "authors": ["Sarah Pinsker"],
+      "sampleOrigin": "authority_negative_control",
+      "stratum": "standalone_negative",
+      "truth": { "status": "reviewed", "standalone": true, "memberships": [], "sources": [] }
+    },
+    {
+      "id": "gold-standalone-mexican-gothic",
+      "title": "Mexican Gothic",
+      "authors": ["Silvia Moreno-Garcia"],
+      "sampleOrigin": "authority_negative_control",
+      "stratum": "standalone_negative",
+      "truth": { "status": "reviewed", "standalone": true, "memberships": [], "sources": [] }
+    },
+    {
+      "id": "gold-standalone-uprooted",
+      "title": "Uprooted",
+      "authors": ["Naomi Novik"],
+      "sampleOrigin": "authority_negative_control",
+      "stratum": "standalone_negative",
+      "truth": { "status": "reviewed", "standalone": true, "memberships": [], "sources": [] }
+    },
+    {
+      "id": "gold-standalone-snow-crash",
+      "title": "Snow Crash",
+      "authors": ["Neal Stephenson"],
+      "sampleOrigin": "authority_negative_control",
+      "stratum": "standalone_negative",
+      "truth": { "status": "reviewed", "standalone": true, "memberships": [], "sources": [] }
+    },
+    {
+      "id": "gold-standalone-black-water-sister",
+      "title": "Black Water Sister",
+      "authors": ["Zen Cho"],
+      "sampleOrigin": "authority_negative_control",
+      "stratum": "standalone_negative",
+      "truth": { "status": "reviewed", "standalone": true, "memberships": [], "sources": [] }
+    },
+    {
+      "id": "gold-standalone-fevre-dream",
+      "title": "Fevre Dream",
+      "authors": ["George R. R. Martin"],
+      "sampleOrigin": "authority_negative_control",
+      "stratum": "standalone_negative",
+      "truth": { "status": "reviewed", "standalone": true, "memberships": [], "sources": [] }
+    },
+    {
+      "id": "gold-standalone-a-brightness-long-ago",
+      "title": "A Brightness Long Ago",
+      "authors": ["Guy Gavriel Kay"],
+      "sampleOrigin": "authority_negative_control",
+      "stratum": "standalone_negative",
+      "truth": { "status": "reviewed", "standalone": true, "memberships": [], "sources": [] }
+    },
+    {
+      "id": "gold-standalone-the-space-between-worlds",
+      "title": "The Space Between Worlds",
+      "authors": ["Micaiah Johnson"],
+      "sampleOrigin": "authority_negative_control",
+      "stratum": "standalone_negative",
+      "truth": { "status": "reviewed", "standalone": true, "memberships": [], "sources": [] }
+    },
+    {
+      "id": "gold-standalone-version-zero",
+      "title": "Version Zero",
+      "authors": ["David Yoon"],
+      "sampleOrigin": "authority_negative_control",
+      "stratum": "standalone_negative",
+      "truth": { "status": "reviewed", "standalone": true, "memberships": [], "sources": [] }
+    }
+  ],
+  "sharedSources": {
+    "standalone_negative": [
+      {
+        "kind": "publisher",
+        "url": "https://www.penguinrandomhouse.com/the-read-down/standalone-scifi-fantasy-books",
+        "note": "The publisher explicitly describes every listed title as a stand-alone work."
+      }
+    ]
+  }
+}
