@@ -42,6 +42,25 @@ pnpm series:trial -- --scope all --providers google-books
 ```
 
 Keys are read from the environment, are never written to reports, and must not be committed.
+For reliable trials, use a dedicated Google Cloud project and Books-only key, monitor its daily
+query quota, and request a quota increase before a full run. A browser-restricted production key is
+not a general server credential. Google-derived content remains live/short-cache metadata because
+Google's API terms prohibit building a permanent copy of returned content unless separately
+permitted.
+
+Hardcover is supported as a relational series source:
+
+```sh
+HARDCOVER_TOKEN=your-personal-token \
+pnpm series:trial -- --scope all --providers hardcover
+```
+
+The adapter first searches for the exact book, then queries that book's `book_series` rows. The
+search document's `series_names` field is never counted as membership evidence. Hardcover requires
+a backend-only personal token and limits the beta API to 60 requests per minute, so the adapter
+paces all requests at slightly over one second apart. Its published API documentation does not
+grant commercial use or persistent-storage rights; both procurement gates remain unresolved until
+Hardcover provides written terms for Reverie's use.
 
 ## Score a commercial sample
 
@@ -74,10 +93,20 @@ The intended 200-case stratification is:
 Overlap should be resolved while preserving the intended stratum counts. A work with multiple
 memberships needs every in-scope membership annotated before claim-level precision is fair.
 
+When both Open Library and Wikidata are in one run, the report also scores their combined baseline.
+Google Books and Hardcover each receive a separate marginal-lift strategy, plus an all-four strategy
+when both supplements are present. Only relational claims are combined. Agreement on a position
+keeps the position; disagreement keeps the series membership but leaves its order blank for review.
+Google can improve exact-work coverage, but cannot create a series membership without relational
+evidence from another provider.
+
 ## Provider boundaries
 
-- Open Library and Wikidata are live adapters. Only Open Library's structured `series_name`
-  relationship counts as membership; its legacy `series` field is retained as a candidate label.
+- Open Library, Wikidata, and Hardcover are live adapters. For Open Library, only the structured
+  `series_name` relationship counts as membership; its legacy `series` field is retained as a
+  candidate label.
+- Hardcover labels count only after the exact matched book's `book_series` relationship confirms
+  them.
 - Google Books is an identity comparison, not a durable corpus source.
 - LibraryThing/Bowker and NielsenIQ enter through offline sample imports until commercial access is
   negotiated.

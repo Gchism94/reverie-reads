@@ -2,14 +2,16 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { loadTrialCases, selectCases } from './cases.mjs'
+import { supplementalEnsembles } from './ensemble.mjs'
 import { googleBooks } from './providers/google-books.mjs'
+import { hardcover } from './providers/hardcover.mjs'
 import { openLibrary } from './providers/openlibrary.mjs'
 import { wikidata } from './providers/wikidata.mjs'
 import { renderScoreMarkdown, scoreProvider } from './score.mjs'
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const adapters = new Map(
-  [openLibrary, wikidata, googleBooks].map((adapter) => [adapter.name, adapter]),
+  [openLibrary, wikidata, googleBooks, hardcover].map((adapter) => [adapter.name, adapter]),
 )
 
 const parseArgs = (argv) => {
@@ -68,6 +70,8 @@ const selectedSet = {
   cases: selected,
 }
 const scores = runs.map((run) => scoreProvider(selectedSet, run, policy))
+const ensembleRuns = supplementalEnsembles(runs)
+scores.push(...ensembleRuns.map((run) => scoreProvider(selectedSet, run, policy)))
 const basePath = resolve(
   packageRoot,
   options.out ?? `reports/series-source-trial_${options.scope}_${timestamp()}`,
@@ -76,7 +80,7 @@ await mkdir(dirname(basePath), { recursive: true })
 await Promise.all([
   writeFile(
     `${basePath}.json`,
-    `${JSON.stringify({ schemaVersion: 1, caseSet: selectedSet, runs, scores }, null, 2)}\n`,
+    `${JSON.stringify({ schemaVersion: 1, caseSet: selectedSet, runs, ensembleRuns, scores }, null, 2)}\n`,
   ),
   writeFile(`${basePath}.md`, renderScoreMarkdown(scores, selectedSet)),
 ])
