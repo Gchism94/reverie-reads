@@ -9,7 +9,7 @@ test('signed-out landing shows the gold front door', async ({ page }) => {
   await expect(
     page.getByRole('heading', { name: 'Keep the whole story of your reading life.' }),
   ).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Begin your library' })).toBeVisible()
+  await expect(page.locator('#top').getByRole('link', { name: 'Begin your library' })).toBeVisible()
 })
 
 // Fraunces is Tryst's #1 character lever and the landing's display face. The css2 era asserted the
