@@ -69,3 +69,6 @@ apps/web/audit-output/
 # person's reading data is in the same CSV the import reads, so these never get committed.
 corpus-dump/
 *-corpus-dump/
+/.swc
+/apps/web/.workflow-data/
+/apps/web/.workflow-vitest/

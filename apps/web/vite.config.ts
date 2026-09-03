@@ -54,7 +54,16 @@ export default defineConfig(({ command, mode }) => {
   }
 
   return {
-    plugins: [nitro(), workflow({ runtime: 'nodejs22.x' }), react(), tailwindcss(), emitVersion],
+    // Vitest imports the workflow module as ordinary TypeScript for the fast orchestration unit
+    // suite. Starting Nitro and the production Workflow builder there creates file watchers that
+    // are unrelated to the test and can exhaust macOS's per-process descriptor limit. The separate
+    // compiler-backed Workflow suite owns its purpose-built transform and backend.
+    plugins: [
+      ...(mode === 'test' ? [] : [nitro(), workflow({ runtime: 'nodejs22.x' })]),
+      react(),
+      tailwindcss(),
+      emitVersion,
+    ],
     nitro: {
       // Keep the existing Vite SPA at the project root while adding Nitro's file-based `api/`
       // routes. Workflow scans the sibling `workflows/` directory by default.

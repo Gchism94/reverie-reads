@@ -29,10 +29,21 @@ export interface CorpusSweepWorkflowSteps {
  * unit-tested without a Workflow backend. Every injected production operation is a durable step. */
 export async function runCorpusSweepLoop(
   runId: string,
-  steps: CorpusSweepWorkflowSteps,
+  {
+    initialize,
+    recoverCovers: recoverCoversStep,
+    deferRecovery,
+    claimWork,
+    processWork,
+    deferWork,
+    finish,
+    pause,
+  }: CorpusSweepWorkflowSteps,
 ): Promise<{ runId: string }> {
+  // WDK serializes a step call's `this` receiver. Keep every callback in a standalone binding:
+  // calling `steps.initialize()` would make the whole function-bearing steps object an argument.
   try {
-    await steps.initialize(runId)
+    await initialize(runId)
     let coverRecoveryMore = true
     let coverRecoveryBatches = 0
     let sinceRecovery = COVER_INTERLEAVE_SIZE
@@ -40,10 +51,10 @@ export async function runCorpusSweepLoop(
 
     const recoverCovers = async (batchNumber: number): Promise<boolean> => {
       try {
-        return await steps.recoverCovers(runId, batchNumber)
+        return await recoverCoversStep(runId, batchNumber)
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
-        await steps.deferRecovery(runId, batchNumber, message)
+        await deferRecovery(runId, batchNumber, message)
         // Cover recovery is independent. Stop that leg for this bounded run while metadata and
         // series classification continue from their own durable checkpoints.
         return false
@@ -61,7 +72,7 @@ export async function runCorpusSweepLoop(
         sinceRecovery = 0
       }
 
-      const workId = await steps.claimWork(runId)
+      const workId = await claimWork(runId)
       if (!workId) {
         if (coverRecoveryMore && coverRecoveryBatches < COVER_RECOVERY_BATCH_LIMIT) {
           coverRecoveryMore = await recoverCovers(coverRecoveryBatches + 1)
@@ -72,27 +83,27 @@ export async function runCorpusSweepLoop(
       }
 
       try {
-        await steps.processWork(runId, workId)
+        await processWork(runId, workId)
         consecutiveFailures = 0
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
-        await steps.deferWork(runId, workId, message)
+        await deferWork(runId, workId, message)
         consecutiveFailures++
         // The old browser loop stopped permanently here. A durable run instead suspends without
         // consuming compute, then continues from the next checkpoint.
         if (consecutiveFailures >= 5) {
-          await steps.pause(SYSTEMIC_FAILURE_PAUSE)
+          await pause(SYSTEMIC_FAILURE_PAUSE)
           consecutiveFailures = 0
         }
       }
       sinceRecovery++
     }
 
-    await steps.finish(runId)
+    await finish(runId)
     return { runId }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
-    await steps.finish(runId, message)
+    await finish(runId, message)
     return { runId }
   }
 }
