@@ -26,6 +26,7 @@ import {
   RenameSeriesDialog,
   type SeriesManagementRow,
 } from '../series/SeriesManagement'
+import { isSeriesMergeEligible } from '../series/seriesManagementPolicy'
 import { SharedSeriesCatalogBrowser } from '../series/SharedSeriesCatalogBrowser'
 
 interface StructuredSeriesSection {
@@ -304,6 +305,11 @@ export function SeriesIndexScreen() {
     [managementRows],
   )
 
+  const mergeEligibleRows = useMemo(
+    () => managementRows.filter(isSeriesMergeEligible),
+    [managementRows],
+  )
+
   const unreviewedSeries = useMemo(
     () => [...(seriesList ?? new Map()).values()].filter((row) => row.unreviewed > 0),
     [seriesList],
@@ -311,13 +317,13 @@ export function SeriesIndexScreen() {
 
   const consolidationRows = useMemo<ConsolidationSeries[]>(
     () =>
-      managementRows.map(({ id, name, liveEntries, memberBooks }) => ({
+      mergeEligibleRows.map(({ id, name, liveEntries, memberBooks }) => ({
         id,
         name,
         liveEntries,
         memberBooks,
       })),
-    [managementRows],
+    [mergeEligibleRows],
   )
 
   return (
@@ -369,7 +375,7 @@ export function SeriesIndexScreen() {
             View books
           </Link>
           {scope === 'personal' ? (
-            <Button disabled={managementRows.length < 2} onClick={() => setMerging(true)}>
+            <Button disabled={mergeEligibleRows.length < 2} onClick={() => setMerging(true)}>
               Merge series
             </Button>
           ) : null}

@@ -17,6 +17,7 @@ import {
   type UiSeries,
 } from '../data/series'
 import { useMergeSeries } from '../data/seriesConsolidation'
+import { isSeriesMergeEligible } from './seriesManagementPolicy'
 
 export interface SeriesManagementRow extends ConsolidationSeries {
   series: UiSeries
@@ -106,12 +107,14 @@ export function MergeSeriesDialog({
   rows: readonly SeriesManagementRow[]
   onClose: () => void
 }) {
-  const [firstId, setFirstId] = useState(rows[0]?.id ?? '')
-  const [secondId, setSecondId] = useState(rows.find((row) => row.id !== firstId)?.id ?? '')
-  const [keepId, setKeepId] = useState(firstId)
+  const eligibleRows = useMemo(() => rows.filter(isSeriesMergeEligible), [rows])
+  const excludedCount = rows.length - eligibleRows.length
+  const [firstId, setFirstId] = useState('')
+  const [secondId, setSecondId] = useState('')
+  const [keepId, setKeepId] = useState('')
   const merge = useMergeSeries()
-  const first = rows.find((row) => row.id === firstId)
-  const second = rows.find((row) => row.id === secondId)
+  const first = eligibleRows.find((row) => row.id === firstId)
+  const second = eligibleRows.find((row) => row.id === secondId)
 
   const preview = useMemo(() => {
     if (!first || !second || first.id === second.id) return null
@@ -130,23 +133,17 @@ export function MergeSeriesDialog({
 
   const chooseFirst = (id: string) => {
     setFirstId(id)
-    if (id === secondId) {
-      const replacement = rows.find((row) => row.id !== id)?.id ?? ''
-      setSecondId(replacement)
-      setKeepId(id)
-    } else if (keepId !== id && keepId !== secondId) setKeepId(id)
+    if (id === secondId) setSecondId('')
+    setKeepId('')
   }
   const chooseSecond = (id: string) => {
     setSecondId(id)
-    if (id === firstId) {
-      const replacement = rows.find((row) => row.id !== id)?.id ?? ''
-      setFirstId(replacement)
-      setKeepId(id)
-    } else if (keepId !== id && keepId !== firstId) setKeepId(firstId)
+    if (id === firstId) setFirstId('')
+    setKeepId('')
   }
 
   const submit = () => {
-    if (!first || !second || first.id === second.id || merge.isPending) return
+    if (!first || !second || !keepId || first.id === second.id || merge.isPending) return
     const survivor = keepId === second.id ? second : first
     const loser = survivor.id === first.id ? second : first
     const [nameKeyA, nameKeyB] = canonicalPairKeys(
@@ -165,14 +162,29 @@ export function MergeSeriesDialog({
 
   return (
     <Modal title="Merge series" onClose={onClose} wide>
-      {rows.length < 2 ? (
-        <p className="text-[13.5px] text-muted">You need at least two active series to merge.</p>
+      {eligibleRows.length < 2 ? (
+        <div className="text-[13.5px] leading-relaxed text-muted">
+          <p>You need at least two active, confirmed series to merge.</p>
+          {excludedCount > 0 ? (
+            <p className="mt-2">
+              {excludedCount} {excludedCount === 1 ? 'record is' : 'records are'} hidden because it
+              has no confirmed entries or still needs membership review.
+            </p>
+          ) : null}
+        </div>
       ) : (
         <div>
           <p className="text-[13px] leading-relaxed text-muted">
-            Select any two series. Every confirmed entry, missing-book slot, and removed slot is
-            preserved under the name you keep. Entries still awaiting membership review move too.
+            Choose two confirmed series, inspect their books, then deliberately choose the name to
+            keep. Records marked standalone, with only removed slots, or with unresolved memberships
+            are excluded.
           </p>
+          {excludedCount > 0 ? (
+            <p className="mt-2 text-[12px] text-muted">
+              {excludedCount} ineligible {excludedCount === 1 ? 'record is' : 'records are'} hidden
+              until its membership review is complete.
+            </p>
+          ) : null}
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <label className="text-[12.5px] font-semibold text-ink">
               First series
@@ -182,7 +194,8 @@ export function MergeSeriesDialog({
                 className="skin-control mt-1.5 h-11 w-full border border-line px-3 text-[13px] text-ink"
                 style={{ background: 'var(--field)' }}
               >
-                {rows.map((row) => (
+                <option value="">Choose a series…</option>
+                {eligibleRows.map((row) => (
                   <option key={row.id} value={row.id} disabled={row.id === secondId}>
                     {row.name}
                   </option>
@@ -197,7 +210,8 @@ export function MergeSeriesDialog({
                 className="skin-control mt-1.5 h-11 w-full border border-line px-3 text-[13px] text-ink"
                 style={{ background: 'var(--field)' }}
               >
-                {rows.map((row) => (
+                <option value="">Choose a series…</option>
+                {eligibleRows.map((row) => (
                   <option key={row.id} value={row.id} disabled={row.id === firstId}>
                     {row.name}
                   </option>
@@ -223,9 +237,9 @@ export function MergeSeriesDialog({
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-muted">Awaiting review</dt>
+                  <dt className="text-muted">Missing-book slots</dt>
                   <dd className="font-semibold text-ink">
-                    {first.unreviewedEntries} + {second.unreviewedEntries}
+                    {first.ghostEntries} + {second.ghostEntries}
                   </dd>
                 </div>
                 <div>
@@ -249,6 +263,23 @@ export function MergeSeriesDialog({
                   both series remains one personal book.
                 </p>
               ) : null}
+              <div className="mt-3 grid gap-3 border-t border-line pt-3 sm:grid-cols-2">
+                {[first, second].map((row) => (
+                  <div key={row.id}>
+                    <p className="break-words text-[12px] font-semibold text-ink">{row.name}</p>
+                    <ol className="mt-1.5 max-h-40 space-y-1 overflow-y-auto pr-1 text-[11.5px] text-muted">
+                      {row.entries.map((entry, index) => (
+                        <li key={entry.id} className="flex gap-2">
+                          <span className="w-14 flex-none tabular-nums">
+                            {index + 1} · Vol. {entry.position}
+                          </span>
+                          <span className="min-w-0 break-words text-ink">{entry.title}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                ))}
+              </div>
             </Surface>
           ) : null}
 
@@ -291,7 +322,7 @@ export function MergeSeriesDialog({
             </Button>
             <Button
               onClick={submit}
-              disabled={!first || !second || first.id === second.id || merge.isPending}
+              disabled={!first || !second || !keepId || first.id === second.id || merge.isPending}
             >
               {merge.isPending ? 'Merging…' : 'Merge series'}
             </Button>

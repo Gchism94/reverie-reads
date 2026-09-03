@@ -54,6 +54,8 @@ interface SeriesEntryRowT {
   id: string
   series_id: string
   position: number | string
+  sort_order?: number | string | null
+  sort_user_edited?: boolean
   label: string | null
   title: string
   author: string
@@ -89,6 +91,10 @@ const toUiSeries = (row: SeriesRowT): UiSeries => ({
 const toEntry = (row: SeriesEntryRowT): SeriesEntry => ({
   id: row.id,
   position: Number(row.position) || 0,
+  // Zero is a valid private key for an item moved before the first canonical volume. `||` would
+  // mistake it for an absent value and repaint the old order after a reload.
+  sortOrder: row.sort_order == null ? Number(row.position) || 0 : Number(row.sort_order),
+  sortUserEdited: row.sort_user_edited ?? row.user_edited,
   label: row.label,
   title: row.title,
   author: row.author,
@@ -303,6 +309,7 @@ export function useSeriesDetail(name: string) {
         .from('series_entries')
         .select('*')
         .eq('series_id', seriesRow.id)
+        .order('sort_order', { ascending: true })
         .order('position', { ascending: true })
         .order('id', { ascending: true })
       if (entryError) throw entryError
@@ -457,6 +464,11 @@ export interface SeriesSlot {
   label?: string | null
 }
 
+export interface SeriesReadingOrderSlot {
+  entryId: string
+  sortOrder: number
+}
+
 interface SeriesOrderResult {
   moved: number
   skipped_user_edited: number
@@ -504,47 +516,47 @@ async function writeSeriesOrder(input: {
   return data as SeriesOrderResult
 }
 
-/**
- * Reposition entries (drag, ▲▼, or a typed number). Manual order always wins: a reader-origin
- * write marks every slot it touches user-edited.
- *
- * ONE CALL, whatever the gesture. The renormalize case — the whole list renumbered to clean
- * integers when decimals get too tight — used to be a LOOP of single-row updates, each its own
- * transaction, and entries passing through each other's positions committed intermediate colliding
- * states. Under `series_entries_position_uidx` that loop would fail partway and leave the reader
- * looking at a half-applied reorder; the RPC parks the affected rows above the max and writes the
- * finals in one transaction, so the whole arrangement lands or none of it does.
- */
+/** Reposition entries without changing their canonical volume numbers. Midpoint values live only
+ * in `sort_order`; readers see ordinal shelf order plus the independent volume number. */
 export function useMoveEntry(name: string) {
   const invalidate = useSeriesInvalidate(name)
   return useMutation({
     meta: { action: 'The series' },
-    mutationFn: (input: { seriesId: string; slots: SeriesSlot[] }) =>
-      writeSeriesOrder({ seriesId: input.seriesId, slots: input.slots, origin: 'reader' }),
+    mutationFn: async (input: { seriesId: string; slots: SeriesReadingOrderSlot[] }) => {
+      const { data, error } = await supabase.rpc('set_series_reading_order', {
+        p_series: input.seriesId,
+        p_slots: input.slots.map((slot) => ({
+          entry_id: slot.entryId,
+          sort_order: slot.sortOrder,
+        })),
+      })
+      if (error) throw error
+      return data as { moved: number }
+    },
     onSuccess: () => invalidate(),
   })
 }
 
 /**
- * Tag a slot — "novella", "prequel". Label only.
- *
- * This used to take `position` and `bookId` too, and route them through `syncBookPosition`. That
- * branch had no production caller: the only `updateEntry.mutate` in the app (SeriesRoute's
- * `editLabel`) passes a label and nothing else, and the position path was reached solely from
- * `seriesSeedProvenance.test.tsx`. It was an exported code path kept alive by its own test, so it
- * is gone rather than re-pointed through the new RPC for the sake of symmetry.
+ * Edit the canonical volume number and optional label together. This deliberately uses the
+ * established position writer so the primary book projection and position provenance remain
+ * transactional, while `sort_order` stays untouched.
  */
 export function useUpdateEntry(name: string) {
   const invalidate = useSeriesInvalidate(name)
   return useMutation({
     meta: { action: 'The series' },
-    mutationFn: async (input: { entryId: string; label: string | null }) => {
-      const { error } = await supabase
-        .from('series_entries')
-        .update({ label: input.label, user_edited: true })
-        .eq('id', input.entryId)
-      if (error) throw error
-    },
+    mutationFn: (input: {
+      seriesId: string
+      entryId: string
+      position: number
+      label: string | null
+    }) =>
+      writeSeriesOrder({
+        seriesId: input.seriesId,
+        slots: [{ entryId: input.entryId, position: input.position, label: input.label }],
+        origin: 'reader',
+      }),
     onSuccess: () => invalidate(),
   })
 }
@@ -684,6 +696,8 @@ async function revivedTombstone(
       removed_at: null,
       book_id: bookId,
       position,
+      sort_order: position,
+      sort_user_edited: true,
       is_primary: false,
       membership_claim: makeSeriesClaim('reader', 'series_builder', {
         at: new Date().toISOString(),
@@ -750,6 +764,8 @@ export function useAddGhostEntry(name: string) {
         series_id: input.seriesId,
         owner_id: uid,
         position: input.position,
+        sort_order: input.position,
+        sort_user_edited: true,
         title: input.title,
         author: input.author,
         source: 'manual',
@@ -891,10 +907,13 @@ export function useApplySeriesSource(name: string) {
       )
       let added = 0
       for (const s of inserts) {
+        const sourcePosition = s.position > 0 ? s.position : ++nextFree
         const { error: iErr } = await supabase.from('series_entries').insert({
           series_id: detail.series.id,
           owner_id: uid,
-          position: s.position > 0 ? s.position : ++nextFree,
+          position: sourcePosition,
+          sort_order: sourcePosition,
+          sort_user_edited: false,
           title: s.title,
           author: s.author,
           source: 'hardcover',

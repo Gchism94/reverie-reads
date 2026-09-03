@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   normalizeSeriesStatus,
   seriesStatusBadge,
+  SERIES_LIFECYCLE_STATUS_VALUES,
   SERIES_STATUS_LABELS,
   SERIES_STATUS_VALUES,
 } from './seriesStatus'
@@ -17,6 +18,15 @@ describe('series status', () => {
       'cancelled',
       'interconnected_standalone',
       'interconnected_series',
+    ])
+  })
+
+  it('keeps work classifications out of the series lifecycle editor', () => {
+    expect(SERIES_LIFECYCLE_STATUS_VALUES).toEqual([
+      'ongoing',
+      'completed',
+      'on_hiatus',
+      'cancelled',
     ])
   })
 
