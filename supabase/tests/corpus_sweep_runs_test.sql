@@ -1,5 +1,5 @@
 begin;
-select plan(60);
+select plan(64);
 
 -- Dirty every new-object ACL first. This reproduces the production project's legacy defaults and
 -- proves the explicit resets, rather than letting a clean local default make negative tests vacuous.
@@ -295,21 +295,53 @@ select public.start_corpus_sweep() as cancelled_run \gset
 select is(
   public.request_corpus_sweep_cancel(:'cancelled_run'),
   :'cancelled_run'::uuid,
-  'an administrator can request cancellation of an active run'
+  'an administrator can cancel an active run'
+);
+select ok((
+  select status = 'cancelled' and phase = 'complete'
+    and cancel_requested_at is not null and completed_at is not null
+  from public.corpus_sweep_runs where id = :'cancelled_run'
+), 'cancellation is terminal even if the Workflow cannot reach another checkpoint');
+select is(
+  public.request_corpus_sweep_cancel(:'cancelled_run'),
+  :'cancelled_run'::uuid,
+  'a repeated cancellation reconnects to the same terminal result'
 );
 reset role;
 set local role service_role;
-select is(
-  public.service_begin_corpus_sweep(
-    :'cancelled_run', array['a0000000-0000-4000-8000-000000000001']::uuid[], 1
+select throws_ok(
+  format(
+    'select public.service_begin_corpus_sweep(%L::uuid, array[''a0000000-0000-4000-8000-000000000001'']::uuid[], 1)',
+    :'cancelled_run'
   ),
-  1,
-  'a pre-start cancellation still records the intended candidate snapshot'
+  'P0002', null, 'a cancelled run cannot initialize new checkpoint work'
 );
+
+reset role;
+set local role authenticated;
+select public.start_corpus_sweep() as stale_run \gset
+reset role;
+set local role service_role;
+select public.service_claim_corpus_sweep_launch(:'stale_run') as stale_launch_claimed \gset
+update public.corpus_sweep_runs
+set status = 'running', started_at = now() - interval '31 minutes',
+    heartbeat_at = now() - interval '31 minutes', updated_at = now() - interval '31 minutes'
+where id = :'stale_run';
+
+reset role;
+set local role authenticated;
+select public.start_corpus_sweep() as replacement_run \gset
+select isnt(:'replacement_run'::uuid, :'stale_run'::uuid,
+  'an administrator start replaces a run whose heartbeat expired');
 select ok((
-  select status = 'cancelled' and completed_at is not null
-  from public.corpus_sweep_runs where id = :'cancelled_run'
-), 'initialization honors a cancellation requested while the workflow was launching');
+  select status = 'failed' and phase = 'complete' and completed_at is not null
+    and error_message = 'workflow heartbeat expired before completion'
+  from public.corpus_sweep_runs where id = :'stale_run'
+), 'stale-run recovery records an explicit terminal failure');
+select ok((
+  select status = 'queued' and completed_at is null
+  from public.corpus_sweep_runs where id = :'replacement_run'
+), 'stale-run recovery creates one fresh queued replacement');
 
 select * from finish();
 rollback;

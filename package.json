@@ -46,6 +46,7 @@
     "prettier": "^3.4.2",
     "typescript": "^5.7.2",
     "typescript-eslint": "^8.18.0",
-    "vite-node": "^2.1.9"
+    "vite-node": "^2.1.9",
+    "workflow": "4.8.5"
   }
 }
