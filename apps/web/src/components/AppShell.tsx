@@ -238,7 +238,7 @@ function MobileBar({ pathname }: { pathname: string }) {
     <header className="rv-mobile-header flex min-h-[66px] items-center justify-between gap-3 px-4 py-2.5 lg:hidden">
       <Link to="/" className="min-w-0" aria-label={`${APP_NAME} home`}>
         <span
-          className="rv-mobile-wordmark block text-[24px] italic leading-none text-ink"
+          className="rv-mobile-wordmark block text-[24px] italic leading-[1.1] text-ink"
           style={{ fontFamily: 'var(--font-display)', fontWeight: 600, letterSpacing: '0.5px' }}
         >
           {APP_NAME}
