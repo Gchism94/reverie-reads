@@ -130,6 +130,30 @@ describe('opening a series cannot seed membership', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(inserted.filter((capture) => capture.table === 'series_entries')).toEqual([])
   })
+
+  it('keeps zero as a valid private key for an item moved before the first volume', async () => {
+    entryRows = [
+      {
+        id: 'entry-zero',
+        series_id: 'ser-1',
+        position: 3,
+        sort_order: 0,
+        sort_user_edited: true,
+        label: null,
+        title: 'Third, read first',
+        author: '',
+        book_id: null,
+        source: 'manual',
+        user_edited: false,
+        removed_at: null,
+        membership_claim: { origin: 'reader' },
+        position_claim: { origin: 'corpus' },
+      },
+    ]
+    const { result } = renderHook(() => useSeriesDetail('The Empyrean'), { wrapper: wrapper() })
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(result.current.data?.entries[0]?.sortOrder).toBe(0)
+  })
 })
 
 describe('adding a library book to another series', () => {
@@ -149,32 +173,31 @@ describe('adding a library book to another series', () => {
 })
 
 describe('every reader gesture still claims the row', () => {
-  // A drag no longer stamps the flag from here — set_series_order does it server-side, from
-  // `p_origin`, so a stale client cannot talk the source into overwriting a reader's placement.
-  // What this file can still prove is that the drag path declares itself a READER gesture, which
-  // is the input the server's rule turns on. Asserting the absence of a client-side
-  // `user_edited: true` patch would be the proxy: it would pass just as well if the drag stopped
-  // writing anything at all.
-  it('a drag goes through the provenance-aware order RPC as a reader gesture', async () => {
+  it('a drag changes only the private reading-order key', async () => {
     const { result } = renderHook(() => useMoveEntry('The Empyrean'), { wrapper: wrapper() })
-    result.current.mutate({ seriesId: 'ser-1', slots: [{ entryId: 'e1', position: 2 }] })
+    result.current.mutate({ seriesId: 'ser-1', slots: [{ entryId: 'e1', sortOrder: 2 }] })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    const call = rpcCalls.find((c) => c.fn === 'set_series_order_claimed')
+    const call = rpcCalls.find((c) => c.fn === 'set_series_reading_order')
     expect(call).toBeDefined()
-    expect(call?.args.p_origin).toBe('reader')
-    expect(call?.args.p_slots).toEqual([{ entry_id: 'e1', position: 2 }])
-    // ...and no direct series_entries UPDATE rode alongside it. The whole point of the re-point is
-    // that this is now ONE write, not an RPC plus the old dual-write.
+    expect(call?.args.p_slots).toEqual([{ entry_id: 'e1', sort_order: 2 }])
     expect(patched.filter((p) => p.table === 'series_entries')).toHaveLength(0)
   })
 
-  it('a label edit still claims the row user_edited', async () => {
+  it('a volume and label edit goes through the canonical position writer', async () => {
     const { result } = renderHook(() => useUpdateEntry('The Empyrean'), { wrapper: wrapper() })
-    result.current.mutate({ entryId: 'e1', label: 'novella' })
+    result.current.mutate({
+      seriesId: 'ser-1',
+      entryId: 'e1',
+      position: 3.5,
+      label: 'novella',
+    })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    const patch = patched.find((p) => p.table === 'series_entries')?.patch
-    expect(patch?.user_edited).toBe(true)
-    expect(patch?.label).toBe('novella')
+    const call = rpcCalls.find((c) => c.fn === 'set_series_order_claimed')
+    expect(call?.args).toMatchObject({
+      p_series: 'ser-1',
+      p_origin: 'reader',
+      p_slots: [{ entry_id: 'e1', position: 3.5, label: 'novella' }],
+    })
   })
 
   it('a manually added ghost slot is user_edited from birth', async () => {
@@ -184,5 +207,7 @@ describe('every reader gesture still claims the row', () => {
     const ghost = inserted.find((c) => c.table === 'series_entries')?.rows[0]
     expect(ghost).toBeDefined()
     expect(ghost?.user_edited).toBe(true)
+    expect(ghost?.sort_order).toBe(3)
+    expect(ghost?.sort_user_edited).toBe(true)
   })
 })

@@ -41,13 +41,9 @@ import { useMoveEntry, useSeriesDetail } from '../data/series'
  * a visible button is discoverable in a way a lifted-drag convention is not. They are not redundant:
  * the buttons call the same reposition the drag does, so neither can drift from the other.
  *
- * POSITIONS ARE WRITTEN BY MIDPOINT INSERTION through the SAME `positionBetween` + `useMoveEntry`
- * that the series page uses. Nothing here reimplements position math and nothing here writes
- * `series_entries` directly: `useMoveEntry` goes through `set_series_order`, which mirrors a linked
- * entry's position onto `books.position` in the same transaction, and five surfaces read that
- * mirror — the book page's "#N of M" eyebrow, BookDetailRail, the edit dialog's prefill, the merge
- * preview, the book-detail series strip, and the canonical Series browser. Bypassing it would leave
- * those surfaces disagreeing with this list.
+ * READING ORDER IS WRITTEN BY MIDPOINT INSERTION through the SAME `positionBetween` +
+ * `useMoveEntry` path that the full series page uses. The midpoint is a private `sort_order` key;
+ * dragging never changes the canonical volume number or its books.position compatibility mirror.
  */
 
 /** Ghost slots ARE draggable — a ghost is a position with no book yet, and its place in the reading
@@ -108,6 +104,7 @@ function Row({
       data-testid="arrange-row"
       data-entry-id={entry.id}
       data-position={entry.position}
+      data-sort-order={entry.sortOrder ?? entry.position}
     >
       {/* The grip is the drag handle AND the keyboard sensor's activator — never the cover, so a
           cover press stays a cover press (the drag-hijack guard the shelf surfaces already keep). */}
@@ -124,10 +121,11 @@ function Row({
         ⠿
       </button>
       <span
-        className="w-9 flex-none text-[13px] font-semibold tabular-nums"
+        className="w-16 flex-none text-[11.5px] font-semibold tabular-nums"
         style={{ color: TOK.meta }}
       >
-        #{entry.position}
+        {index + 1} in order
+        <span className="block text-[12.5px] text-ink">Vol. {entry.position}</span>
       </span>
       <span
         className="h-[46px] w-8 flex-none overflow-hidden rounded-md border border-line"
@@ -200,14 +198,13 @@ export function SeriesArranger({
   const entries = useMemo(() => detail?.entries ?? [], [detail])
   const ids = useMemo(() => entries.map((e) => e.id), [entries])
 
-  /** Reposition the entry at `from` so it lands at visual slot `to` — the series page's own
-   *  `placeAt`, deliberately identical: `positionBetween` for the midpoint, a whole-list renumber
-   *  when neighbours are too tight for a clean decimal, and `bookId` riding along so the mirror runs. */
+  /** Reposition the entry at `from` so it lands at visual slot `to`. Dense keys renumber only the
+   *  private order; canonical volume numbers remain unchanged. */
   const placeAt = (from: number, to: number) => {
     if (from === to || from < 0 || to < 0 || from >= entries.length || to >= entries.length) return
     const rest = entries.filter((_, i) => i !== from)
-    const prev = rest[to - 1]?.position ?? null
-    const nextPos = rest[to]?.position ?? null
+    const prev = rest[to - 1] ? (rest[to - 1]!.sortOrder ?? rest[to - 1]!.position) : null
+    const nextPos = rest[to] ? (rest[to]!.sortOrder ?? rest[to]!.position) : null
     const moved = entries[from]!
     const { position, renumber } = positionBetween(prev, nextPos)
     const title = moved.bookId ? (books.get(moved.bookId)?.title ?? moved.title) : moved.title
@@ -216,9 +213,9 @@ export function SeriesArranger({
     const slots = renumber
       ? [...rest.slice(0, to), moved, ...rest.slice(to)].map((e, i) => ({
           entryId: e.id,
-          position: i + 1,
+          sortOrder: i + 1,
         }))
-      : [{ entryId: moved.id, position }]
+      : [{ entryId: moved.id, sortOrder: position }]
     moveEntry.mutate({ seriesId: detail.series.id, slots })
   }
 

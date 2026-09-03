@@ -14,6 +14,15 @@ export const SERIES_STATUS_VALUES: readonly SeriesStatus[] = [
   'interconnected_series',
 ]
 
+/** Publication lifecycle values that belong on a series record. Standalone and connected-world
+ * classifications describe a work relationship, not whether a series is still being published. */
+export const SERIES_LIFECYCLE_STATUS_VALUES: readonly SeriesStatus[] = [
+  'ongoing',
+  'completed',
+  'on_hiatus',
+  'cancelled',
+]
+
 /** Display copy for each status (stored values are snake_case; readers see these). */
 export const SERIES_STATUS_LABELS: Record<SeriesStatus, string> = {
   standalone: 'Standalone',

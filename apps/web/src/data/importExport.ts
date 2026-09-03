@@ -246,6 +246,9 @@ export interface BackupSeriesEntryRow {
   id: string
   series_id: string
   position: number
+  /** v8+: private reading order, separate from the canonical volume number. */
+  sort_order?: number
+  sort_user_edited?: boolean
   label: string | null
   title: string
   author: string
@@ -459,7 +462,7 @@ export function seriesRulingRows(
 }
 
 /**
- * Serialize the WHOLE account to a JSON backup (v7): books (incl. genre/tags/intensity/owned
+ * Serialize the WHOLE account to a JSON backup (v8): books (incl. genre/tags/intensity/owned
  * formats), per-book contributors, assigned tropes (with emphasis) and moods, reads, lists +
  * memberships, the user's reviews, merge verdicts, followed/muted authors,
  * the reader's REFUSALS (removed series slots and dismissed trope suggestions), and the profile
@@ -583,7 +586,7 @@ export async function buildBackup(): Promise<string> {
       pageAll<BackupSeriesEntryRow>('series_entries', (from, to) =>
         supabase
           .from('series_entries')
-          .select('id, series_id, position, label, title, author, book_id, source, user_edited, removed_at, is_primary, membership_claim, position_claim', { count: 'exact' })
+          .select('id, series_id, position, sort_order, sort_user_edited, label, title, author, book_id, source, user_edited, removed_at, is_primary, membership_claim, position_claim', { count: 'exact' })
           .order('series_id')
           .order('position')
           .order('id')
@@ -755,7 +758,7 @@ interface BackupShape {
    *  'related_but_separate' only. A 'same' ruling never appears here; see buildBackup. */
   series_merge_decisions?: { name_key_a: string; name_key_b: string; ruling: string }[]
   /** v7+: complete structured series authority, including primary/secondary memberships, ghosts,
-   *  tombstones, and the independent membership/order claims. */
+   *  tombstones, and the independent membership/order claims. v8 adds `sort_order`. */
   series?: BackupSeriesRow[]
   series_entries?: BackupSeriesEntryRow[]
   /** v5+: the reader's refusals. */
@@ -892,6 +895,8 @@ async function restoreStructuredSeries(
       series_id: seriesId,
       owner_id: ownerId,
       position: restoredPosition,
+      sort_order: entry.sort_order ?? restoredPosition,
+      sort_user_edited: entry.sort_user_edited ?? entry.user_edited,
       label: entry.label,
       title: entry.title,
       author: entry.author,

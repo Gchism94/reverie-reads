@@ -3,14 +3,15 @@ import { createRoute, useNavigate } from '@tanstack/react-router'
 import {
   entryState,
   isPossessed,
+  isStandardSeriesVolume,
   nextUp,
   positionBetween,
   progressLine,
   seriesProgress,
   sortEntries,
   stateSuffix,
+  SERIES_LIFECYCLE_STATUS_VALUES,
   SERIES_STATUS_LABELS,
-  SERIES_STATUS_VALUES,
   type Book,
   type SeriesEntry,
   type SeriesStatus,
@@ -40,11 +41,20 @@ import {
 
 const fmtPos = (n: number): string => `#${n}`
 
+const ordinal = (value: number): string => {
+  const mod100 = value % 100
+  if (mod100 >= 11 && mod100 <= 13) return `${value}th`
+  if (value % 10 === 1) return `${value}st`
+  if (value % 10 === 2) return `${value}nd`
+  if (value % 10 === 3) return `${value}rd`
+  return `${value}th`
+}
+
 /**
  * The series page IS the reading order (docs/archive/task-series-experience.md §1) — one ordered shelf,
  * every canonical entry including ghost slots for books the reader doesn't have, the reader's
- * own state woven inline, Next Up elevated as the page's emotional center. Drag (or ▲▼) writes
- * decimal positions — between #2 and #3 lands #2.5 — and manual order always wins over source.
+ * own state woven inline, Next Up elevated as the page's emotional center. Drag (or ▲▼) writes a
+ * private sort key; the canonical volume number remains independent and editable in half steps.
  */
 function SeriesScreen() {
   const { seriesName } = seriesRoute.useParams()
@@ -73,6 +83,10 @@ function SeriesScreen() {
   const [dragIdx, setDragIdx] = useState<number | null>(null)
   const [sourceNote, setSourceNote] = useState<string | null>(null)
   const [renaming, setRenaming] = useState(false)
+  const [acknowledgedReview, setAcknowledgedReview] = useState('')
+  const [editingEntry, setEditingEntry] = useState<SeriesEntry | null>(null)
+  const [editedPosition, setEditedPosition] = useState('')
+  const [editedLabel, setEditedLabel] = useState('')
 
   const byId = useMemo(() => new Map((books ?? []).map((b) => [b.id, b])), [books])
   const tbrs = useMemo(() => (lists ?? []).filter((l) => l.kind === 'tbr'), [lists])
@@ -104,6 +118,12 @@ function SeriesScreen() {
       ),
     [books, name, structuredBookIds],
   )
+  const membershipReviewKey = [
+    name,
+    ...(detail?.unreviewed ?? []).map((entry) => entry.id),
+    ...legacyBooks.map((book) => book.id),
+  ].join('\u0000')
+  const reviewAcknowledged = acknowledgedReview === membershipReviewKey
   const progress = useMemo(() => seriesProgress(entries, byId), [entries, byId])
   const next = useMemo(() => nextUp(entries, byId), [entries, byId])
   const memberIds = useMemo(
@@ -113,6 +133,7 @@ function SeriesScreen() {
   // the genre a ghost-born record inherits — its siblings know the shelf
   const siblingGenre =
     entries.map((e) => (e.bookId ? byId.get(e.bookId)?.genre : '')).find(Boolean) ?? ''
+  const openBook = (id: string) => void navigate({ to: '/book/$bookId', params: { bookId: id } })
 
   if (isLoading)
     return (
@@ -147,16 +168,47 @@ function SeriesScreen() {
                 series, but that older library text has not been confirmed as structured membership.
                 Review it once before Reverie uses it for order, progress, or gaps.
               </p>
+              <ul className="mt-3 divide-y divide-line border border-line">
+                {legacyBooks.map((book) => (
+                  <li key={book.id} className="flex items-center justify-between gap-3 px-3 py-2.5">
+                    <span className="min-w-0">
+                      <span className="block break-words text-[13px] font-semibold text-ink">
+                        {book.title}
+                      </span>
+                      <span className="block text-[11.5px] text-muted">
+                        {[book.first, book.last].filter(Boolean).join(' ') || 'Author not set'}
+                        {book.position ? ` · Volume ${book.position}` : ' · Volume not set'}
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => openBook(book.id)}
+                      className="skin-control flex-none border border-line px-2.5 py-1.5 text-[11.5px] font-semibold text-ink"
+                    >
+                      Open book
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <label className="mt-3 flex items-start gap-2 text-[12.5px] text-ink">
+                <input
+                  type="checkbox"
+                  className="mt-0.5"
+                  checked={reviewAcknowledged}
+                  onChange={(event) =>
+                    setAcknowledgedReview(event.target.checked ? membershipReviewKey : '')
+                  }
+                />
+                <span>I reviewed every membership shown above.</span>
+              </label>
               <button
                 type="button"
                 onClick={() => reviewClaims.mutate(undefined)}
-                disabled={reviewClaims.isPending}
+                disabled={reviewClaims.isPending || !reviewAcknowledged}
                 className="mt-4 skin-control px-4 py-2.5 text-[13.5px] font-semibold disabled:opacity-50"
                 style={{ background: 'var(--accent-fill)', color: 'var(--on-primary)' }}
               >
-                {reviewClaims.isPending
-                  ? 'Confirming…'
-                  : `Confirm ${legacyBooks.length === 1 ? 'this membership' : 'these memberships'}`}
+                {reviewClaims.isPending ? 'Confirming…' : `Confirm all ${legacyBooks.length} shown`}
               </button>
             </>
           ) : (
@@ -170,35 +222,29 @@ function SeriesScreen() {
     )
   }
 
-  const openBook = (id: string) => void navigate({ to: '/book/$bookId', params: { bookId: id } })
-
-  /** Reposition `from` so it lands at visual slot `to`; decimals stay human, ugly gaps renumber. */
+  /** Reposition `from` so it lands at visual slot `to`; canonical volume numbers never move. */
   const placeAt = (from: number, to: number) => {
     if (from === to || from < 0 || to < 0 || from >= entries.length || to >= entries.length) return
     const rest = entries.filter((_, i) => i !== from)
-    const prev = rest[to - 1]?.position ?? null
-    const nextPos = rest[to]?.position ?? null
+    const prev = rest[to - 1] ? (rest[to - 1]!.sortOrder ?? rest[to - 1]!.position) : null
+    const nextPos = rest[to] ? (rest[to]!.sortOrder ?? rest[to]!.position) : null
     const moved = entries[from]!
     const { position, renumber } = positionBetween(prev, nextPos)
-    // ONE call either way. `bookId` no longer rides along: set_series_order reads it from the entry
-    // row inside its own transaction, so the books.position mirror cannot be aimed at a book this
-    // component's cache is wrong about.
+    // ONE call either way. A dense private key renumbers only sort_order; the canonical volume and
+    // books.position projection are never touched by a drag.
     const slots = renumber
       ? [...rest.slice(0, to), moved, ...rest.slice(to)].map((e, i) => ({
           entryId: e.id,
-          position: i + 1,
+          sortOrder: i + 1,
         }))
-      : [{ entryId: moved.id, position }]
+      : [{ entryId: moved.id, sortOrder: position }]
     moveEntry.mutate({ seriesId: detail.series.id, slots })
   }
 
-  const editLabel = (e: SeriesEntry) => {
-    const label = window.prompt(
-      'Tag this position — “novella”, “prequel”… (empty clears it)',
-      e.label ?? '',
-    )
-    if (label == null) return
-    updateEntry.mutate({ entryId: e.id, label: label.trim() || null })
+  const editEntry = (entry: SeriesEntry) => {
+    setEditingEntry(entry)
+    setEditedPosition(String(entry.position))
+    setEditedLabel(entry.label ?? '')
   }
 
   const addGhostSlot = () => {
@@ -251,6 +297,10 @@ function SeriesScreen() {
     const book = entry.bookId ? byId.get(entry.bookId) : undefined
     return book ? [book] : []
   })
+  const lifecycleStatus =
+    detail.series.status && SERIES_LIFECYCLE_STATUS_VALUES.includes(detail.series.status)
+      ? detail.series.status
+      : null
   const managementRow: SeriesManagementRow = {
     id: detail.series.id,
     name: detail.series.name,
@@ -288,7 +338,7 @@ function SeriesScreen() {
           </h1>
           {/* the SERIES' publication status — the reader's own position lives in the shelf below */}
           <select
-            value={detail.series.status ?? ''}
+            value={lifecycleStatus ?? ''}
             onChange={(e) =>
               updateSeries.mutate({
                 id: detail.series.id,
@@ -300,7 +350,7 @@ function SeriesScreen() {
             style={{ background: 'var(--card)' }}
           >
             <option value="">Status…</option>
-            {SERIES_STATUS_VALUES.map((s) => (
+            {SERIES_LIFECYCLE_STATUS_VALUES.map((s) => (
               <option key={s} value={s}>
                 {SERIES_STATUS_LABELS[s]}
               </option>
@@ -311,8 +361,8 @@ function SeriesScreen() {
         {/* progress lockup: "Read 3 of 7 · 2 to get" + a subtle rule */}
         <p className="mt-2 text-[14px] text-ink">
           {progressLine(progress)}
-          {detail.series.status && (
-            <span className="text-muted"> · {SERIES_STATUS_LABELS[detail.series.status]}</span>
+          {lifecycleStatus && (
+            <span className="text-muted"> · {SERIES_STATUS_LABELS[lifecycleStatus]}</span>
           )}
         </p>
         <div
@@ -375,14 +425,74 @@ function SeriesScreen() {
             older, unconfirmed series data. They are excluded from progress and gaps until you
             confirm them; their existing slots and removals stay intact.
           </p>
+          <ul className="mt-3 divide-y divide-line border border-line">
+            {detail.unreviewed.map((entry) => {
+              const book = entry.bookId ? byId.get(entry.bookId) : undefined
+              return (
+                <li key={entry.id} className="flex items-center justify-between gap-3 px-3 py-2.5">
+                  <span className="min-w-0">
+                    <span className="block break-words text-[13px] font-semibold text-ink">
+                      {book?.title ?? entry.title}
+                    </span>
+                    <span className="block text-[11.5px] text-muted">
+                      {book
+                        ? [book.first, book.last].filter(Boolean).join(' ') || 'Author not set'
+                        : entry.author || 'Author not set'}{' '}
+                      · Volume {entry.position}
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setRemoving(entry)}
+                    className="skin-control flex-none border border-line px-2.5 py-1.5 text-[11.5px] font-semibold text-ink"
+                  >
+                    Not in series
+                  </button>
+                </li>
+              )
+            })}
+            {legacyBooks.map((book) => (
+              <li key={book.id} className="flex items-center justify-between gap-3 px-3 py-2.5">
+                <span className="min-w-0">
+                  <span className="block break-words text-[13px] font-semibold text-ink">
+                    {book.title}
+                  </span>
+                  <span className="block text-[11.5px] text-muted">
+                    {[book.first, book.last].filter(Boolean).join(' ') || 'Author not set'}
+                    {book.position ? ` · Volume ${book.position}` : ' · Volume not set'}
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => openBook(book.id)}
+                  className="skin-control flex-none border border-line px-2.5 py-1.5 text-[11.5px] font-semibold text-ink"
+                >
+                  Open book
+                </button>
+              </li>
+            ))}
+          </ul>
+          <label className="mt-3 flex items-start gap-2 text-[12.5px] text-ink">
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={reviewAcknowledged}
+              onChange={(event) =>
+                setAcknowledgedReview(event.target.checked ? membershipReviewKey : '')
+              }
+            />
+            <span>I reviewed every membership shown above.</span>
+          </label>
           <button
             type="button"
             onClick={() => reviewClaims.mutate(detail.series.id)}
-            disabled={reviewClaims.isPending}
+            disabled={reviewClaims.isPending || !reviewAcknowledged}
             className="mt-3 skin-control border border-line px-3.5 py-2 text-[12.5px] font-semibold text-ink disabled:opacity-50"
             style={{ background: 'var(--chip)' }}
           >
-            {reviewClaims.isPending ? 'Confirming…' : 'Confirm these memberships'}
+            {reviewClaims.isPending
+              ? 'Confirming…'
+              : `Confirm all ${detail.unreviewed.length + legacyBooks.length} shown`}
           </button>
         </div>
       )}
@@ -441,14 +551,17 @@ function SeriesScreen() {
                 </p>
               )}
               <div className="flex items-center gap-3">
-                {/* position badge (+ optional label tag) — tap to tag: novella, prequel, … */}
+                {/* Reading order and canonical volume are separate; tap to edit the latter. */}
                 <button
                   type="button"
-                  onClick={() => editLabel(e)}
-                  aria-label={`Position ${fmtPos(e.position)}${e.label ? `, ${e.label}` : ''} — edit label`}
-                  className="flex w-12 flex-none flex-col items-center"
+                  onClick={() => editEntry(e)}
+                  aria-label={`${ordinal(i + 1)} in reading order, volume ${e.position}${e.label ? `, ${e.label}` : ''} — edit volume and label`}
+                  className="flex w-20 flex-none flex-col items-center"
                 >
-                  <span className="text-[15px] font-bold text-ink">{fmtPos(e.position)}</span>
+                  <span className="text-[10.5px] font-semibold uppercase tracking-wide text-muted">
+                    {ordinal(i + 1)} in order
+                  </span>
+                  <span className="text-[14px] font-bold text-ink">Vol. {e.position}</span>
                   {e.label && (
                     <span
                       className="mt-0.5 skin-control px-1.5 py-px text-[9.5px] font-semibold uppercase tracking-wide"
@@ -686,6 +799,97 @@ function SeriesScreen() {
             })
           }}
         />
+      ) : null}
+
+      {editingEntry ? (
+        <Modal
+          title={`Edit ${editingEntry.title || 'series entry'}`}
+          onClose={() => setEditingEntry(null)}
+        >
+          <form
+            onSubmit={(event) => {
+              event.preventDefault()
+              const position = Number(editedPosition)
+              const validVolume =
+                position === editingEntry.position || isStandardSeriesVolume(position)
+              if (!validVolume) return
+              updateEntry.mutate(
+                {
+                  seriesId: detail.series.id,
+                  entryId: editingEntry.id,
+                  position,
+                  label: editedLabel.trim() || null,
+                },
+                { onSuccess: () => setEditingEntry(null) },
+              )
+            }}
+          >
+            <label
+              htmlFor="series-volume-number"
+              className="block text-[12.5px] font-semibold text-ink"
+            >
+              Volume number
+            </label>
+            <input
+              id="series-volume-number"
+              type="number"
+              min="0.5"
+              step="0.5"
+              value={editedPosition}
+              onChange={(event) => setEditedPosition(event.target.value)}
+              className="skin-field mt-1.5 h-11 w-full border border-line px-3 text-[14px] text-ink"
+              style={{ background: 'var(--field)' }}
+            />
+            <p className="mt-1.5 text-[12px] leading-relaxed text-muted">
+              Whole numbers and .5 are the normal choices. Moving a book changes only its reading
+              order, not this number.
+            </p>
+            <label
+              htmlFor="series-volume-label"
+              className="mt-4 block text-[12.5px] font-semibold text-ink"
+            >
+              Label (optional)
+            </label>
+            <input
+              id="series-volume-label"
+              value={editedLabel}
+              onChange={(event) => setEditedLabel(event.target.value)}
+              placeholder="Novella, prequel…"
+              className="skin-field mt-1.5 h-11 w-full border border-line px-3 text-[14px] text-ink"
+              style={{ background: 'var(--field)' }}
+            />
+            {updateEntry.isError ? (
+              <p role="alert" className="mt-3 text-[12.5px] text-primary">
+                {updateEntry.error instanceof Error
+                  ? updateEntry.error.message
+                  : 'The volume could not be saved.'}
+              </p>
+            ) : null}
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setEditingEntry(null)}
+                className="skin-control border border-line px-4 py-2 text-[13px] font-semibold text-ink"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={
+                  updateEntry.isPending ||
+                  !Number.isFinite(Number(editedPosition)) ||
+                  Number(editedPosition) <= 0 ||
+                  (Number(editedPosition) !== editingEntry.position &&
+                    !isStandardSeriesVolume(Number(editedPosition)))
+                }
+                className="skin-control px-4 py-2 text-[13px] font-semibold disabled:opacity-50"
+                style={{ background: 'var(--accent-fill)', color: 'var(--on-primary)' }}
+              >
+                {updateEntry.isPending ? 'Saving…' : 'Save volume'}
+              </button>
+            </div>
+          </form>
+        </Modal>
       ) : null}
     </section>
   )

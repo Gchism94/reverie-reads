@@ -135,20 +135,27 @@ describe('series management actions', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('That series name is already in use.')
   })
 
-  it('merges any selected pair with the chosen survivor and narrates hidden cargo', () => {
+  it('requires deliberate pair and survivor choices and previews the entries', () => {
     const alpha = row('a', 'Alpha Saga', {
       liveEntries: 3,
-      unreviewedEntries: 2,
       removedEntries: 1,
     })
-    const beta = row('b', 'Beta Cycle', { liveEntries: 4, unreviewedEntries: 1, removedEntries: 2 })
+    const beta = row('b', 'Beta Cycle', { liveEntries: 4, removedEntries: 2 })
     render(<MergeSeriesDialog rows={[alpha, beta]} onClose={() => {}} />)
 
-    const reviewCargo = screen.getByText('Awaiting review').parentElement
+    expect(screen.queryByText('Merge preview')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Merge series' })).toBeDisabled()
+
+    fireEvent.change(screen.getByLabelText('First series'), { target: { value: 'a' } })
+    fireEvent.change(screen.getByLabelText('Second series'), { target: { value: 'b' } })
+
+    expect(screen.getByText('Alpha Saga One')).toBeInTheDocument()
+    expect(screen.getByText('Beta Cycle One')).toBeInTheDocument()
+    const ghostCargo = screen.getByText('Missing-book slots').parentElement
     const removedCargo = screen.getByText('Removed slots preserved').parentElement
-    expect(reviewCargo).not.toBeNull()
+    expect(ghostCargo).not.toBeNull()
     expect(removedCargo).not.toBeNull()
-    expect(within(reviewCargo!).getByText('2 + 1')).toBeInTheDocument()
+    expect(within(ghostCargo!).getByText('1 + 1')).toBeInTheDocument()
     expect(within(removedCargo!).getByText('1 + 2')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('radio', { name: 'Beta Cycle' }))
@@ -161,6 +168,23 @@ describe('series management actions', () => {
       }),
       expect.objectContaining({ onSuccess: expect.any(Function) }),
     )
+  })
+
+  it('does not offer tombstone-only or unreviewed records as merge targets', () => {
+    const alpha = row('a', 'Alpha Saga')
+    const unresolved = row('u', '1Q84', { liveEntries: 0, unreviewedEntries: 7 })
+    const tombstoneOnly = row('t', 'Old Label', {
+      liveEntries: 0,
+      removedEntries: 2,
+      series: { ...row('t', 'Old Label').series, status: 'standalone' },
+    })
+    render(<MergeSeriesDialog rows={[alpha, unresolved, tombstoneOnly]} onClose={() => {}} />)
+
+    expect(
+      screen.getByText('You need at least two active, confirmed series to merge.'),
+    ).toBeVisible()
+    expect(screen.getByText(/2 records are hidden/)).toBeVisible()
+    expect(screen.queryByRole('option', { name: '1Q84' })).not.toBeInTheDocument()
   })
 
   it('deletes through the reversible archive action and explains a universe refusal', () => {

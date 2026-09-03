@@ -255,7 +255,8 @@ test('opening an unreviewed series is read-only until the reader confirms member
     ).data as { membership_claim: { origin: string }; is_primary: boolean }
     expect(before).toEqual({ membership_claim: { origin: 'unknown' }, is_primary: false })
 
-    await page.getByRole('button', { name: 'Confirm these memberships' }).click()
+    await page.getByRole('checkbox', { name: 'I reviewed every membership shown above.' }).check()
+    await page.getByRole('button', { name: 'Confirm all 1 shown' }).click()
     await expect(page.locator('ol li').filter({ hasText: 'Historical Probe' })).toBeVisible({
       timeout: 20_000,
     })

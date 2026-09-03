@@ -212,11 +212,14 @@ async function dbOrder(c: Client, series: string) {
   if (!s) return []
   const { data } = await c.sb
     .from('series_entries')
-    .select('title, position')
+    .select('title, position, sort_order')
     .eq('series_id', (s as { id: string }).id)
     .is('removed_at', null)
+    .order('sort_order')
     .order('position')
-  return ((data ?? []) as { title: string; position: number }[]).map((e) => e.title)
+  return ((data ?? []) as { title: string; position: number; sort_order: number }[]).map(
+    (e) => e.title,
+  )
 }
 
 /** Drag row `from` onto row `to` by its grip, with pointer events — the touch-capable path. */
@@ -258,7 +261,19 @@ test('a drag reorders the series and the new order persists across a reload', as
       .poll(async () => dbOrder(c, ALPHA), { timeout: 20_000 })
       .toEqual(['Alpha Three', 'Alpha One', 'Alpha Two'])
 
-    // The reload is the assertion: it re-reads from Postgres, so a position that only ever existed
+    const { data: canonical } = await c.sb
+      .from('series_entries')
+      .select('title, position')
+      .eq('owner_id', c.uid)
+      .is('removed_at', null)
+      .order('position')
+    expect(canonical).toEqual([
+      { title: 'Alpha One', position: 1 },
+      { title: 'Alpha Two', position: 2 },
+      { title: 'Alpha Three', position: 3 },
+    ])
+
+    // The reload is the assertion: it re-reads from Postgres, so an order that only ever existed
     // in the query cache fails here.
     await page.reload()
     await openIndex(page)
@@ -328,8 +343,7 @@ test('a ghost slot reorders alongside real books and keeps its new place', async
       .poll(async () => dbOrder(c, ALPHA), { timeout: 20_000 })
       .toEqual(['Alpha Ghost', 'Alpha One', 'Alpha Two'])
 
-    // A ghost has no book, so nothing was mirrored onto books.position — and the two real books'
-    // positions are untouched, which is what midpoint insertion promises.
+    // A ghost has no book, and reading-order moves never rewrite canonical books.position.
     const { data: booksAfter } = await c.sb
       .from('books')
       .select('title, position')
