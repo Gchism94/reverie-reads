@@ -290,34 +290,34 @@ async function setProfileSkinMode(skin: string, mode: string) {
  * it. If a silently-broken pre-seed reintroduces the boot-light-then-flip sequence, this fails
  * loudly instead of the suite passing on a `data-mode` read that was never wrong to begin with.
  */
-async function assertInkSettled(page: Page, skin: string, mode: string, where: string) {
+async function assertControlMaterialSettled(page: Page, skin: string, mode: string, where: string) {
   const result = await page.evaluate(
     ({ skin, mode }) => {
-      const probe = document.createElement('div')
-      probe.dataset.skin = skin
-      probe.dataset.mode = mode
-      probe.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none'
-      document.body.appendChild(probe)
-      const expectedInk = getComputedStyle(probe).getPropertyValue('--ink').trim()
-      probe.remove()
-
       // .skin-btn-primary is EXCLUDED on purpose — its color is --cta-ink, a different token, and
-      // matching it here produced a guaranteed false mismatch against the --ink expectation below.
-      // Two DIFFERENT ways a control ends up --ink-colored: skin-kit's base rules set it directly
-      // (.skin-btn-secondary / .skin-btn-icon); AppShell's nav chrome does it via Tailwind's
-      // text-ink utility (--color-ink: var(--ink) in globals.css) on a bare .skin-control. Either
-      // is present on every authenticated route via AppShell alone.
+      // matching it here would compare a CTA state rather than persistent shell chrome. Secondary
+      // and icon controls are deliberately allowed their own per-skin ink: Aphelion's instrument
+      // controls use --primary, while Marrow's engraved controls use --muted. Comparing all of them
+      // to --ink would reject the character system this sweep exists to protect.
       const control = document.querySelector(
         '.skin-btn-secondary, .skin-btn-icon, .skin-control.text-ink',
-      )
+      ) as HTMLElement | null
       const renderedColor = control ? getComputedStyle(control).color : null
-      // Resolve the expected value through the SAME parse path (a live element's computed style)
-      // so an rgb()-vs-hex string mismatch can't produce a false failure.
-      const expectedProbe = document.createElement('div')
-      expectedProbe.style.cssText = `position:absolute;visibility:hidden;color:${expectedInk}`
-      document.body.appendChild(expectedProbe)
-      const expectedColor = getComputedStyle(expectedProbe).color
-      expectedProbe.remove()
+
+      // Render that exact control contract in an isolated target-skin scope. A fresh element has no
+      // in-flight transition, so this preserves the original race guard while respecting each
+      // skin's intentional control ink instead of hardcoding one token for every material.
+      const expectedScope = document.createElement('div')
+      expectedScope.dataset.skin = skin
+      expectedScope.dataset.mode = mode
+      expectedScope.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none'
+      const expectedControl = control?.cloneNode(false) as HTMLElement | undefined
+      if (expectedControl) {
+        expectedControl.style.transition = 'none'
+        expectedScope.appendChild(expectedControl)
+      }
+      document.body.appendChild(expectedScope)
+      const expectedColor = expectedControl ? getComputedStyle(expectedControl).color : null
+      expectedScope.remove()
 
       return { controlFound: !!control, renderedColor, expectedColor }
     },
@@ -326,7 +326,7 @@ async function assertInkSettled(page: Page, skin: string, mode: string, where: s
   expect(result.controlFound, `${where}: no .skin-control present to check`).toBe(true)
   expect(
     result.renderedColor,
-    `${where}: a .skin-control's rendered color has not settled to the ${skin}/${mode} ink token`,
+    `${where}: a .skin-control's rendered color has not settled to its ${skin}/${mode} material`,
   ).toBe(result.expectedColor)
 }
 
@@ -557,7 +557,7 @@ test.describe('axe sweep', () => {
         await page.locator('main').waitFor({ state: 'visible' })
         await expect(page.locator('html')).toHaveAttribute('data-skin', skin)
         await expect(page.locator('html')).toHaveAttribute('data-mode', mode)
-        await assertInkSettled(page, skin, mode, `${skin}/${mode} ${name}`)
+        await assertControlMaterialSettled(page, skin, mode, `${skin}/${mode} ${name}`)
 
         const results = await new AxeBuilder({ page })
           .withTags(['wcag2a', 'wcag2aa'])
