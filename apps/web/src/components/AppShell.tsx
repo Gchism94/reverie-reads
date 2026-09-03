@@ -243,7 +243,10 @@ function MobileBar({ pathname }: { pathname: string }) {
         >
           {APP_NAME}
         </span>
-        <span className="skin-label mt-1 block break-words text-[10.5px] leading-[1.25] text-muted">
+        <span
+          data-testid="mobile-chrome-context"
+          className="skin-label mt-1 block break-words text-[10.5px] leading-[1.25] text-muted"
+        >
           {pageLabel} · {skinLabel}
         </span>
       </Link>

@@ -279,20 +279,26 @@ test('the shell brand text remains fully visible', async ({ page }) => {
     return
   }
 
-  const mobileName = page.locator('header a[aria-label="Reverie home"] span')
-  await expect(mobileName).toBeVisible()
-  const box = await mobileName.evaluate((el) => ({
-    clientWidth: el.clientWidth,
-    scrollWidth: el.scrollWidth,
-    clientHeight: el.clientHeight,
-    scrollHeight: el.scrollHeight,
-  }))
-  expect(box.scrollWidth, 'the mobile brand name must not be cut horizontally').toBeLessThanOrEqual(
-    box.clientWidth + 1,
-  )
-  expect(box.scrollHeight, 'the mobile brand name must not be cut vertically').toBeLessThanOrEqual(
-    box.clientHeight + 1,
-  )
+  const mobileLabels = [
+    ['brand name', page.locator('.rv-mobile-wordmark')],
+    ['page and skin context', page.getByTestId('mobile-chrome-context')],
+  ] as const
+
+  for (const [label, element] of mobileLabels) {
+    await expect(element).toBeVisible()
+    const box = await element.evaluate((el) => ({
+      clientWidth: el.clientWidth,
+      scrollWidth: el.scrollWidth,
+      clientHeight: el.clientHeight,
+      scrollHeight: el.scrollHeight,
+    }))
+    expect(box.scrollWidth, `the mobile ${label} must not be cut horizontally`).toBeLessThanOrEqual(
+      box.clientWidth + 1,
+    )
+    expect(box.scrollHeight, `the mobile ${label} must not be cut vertically`).toBeLessThanOrEqual(
+      box.clientHeight + 1,
+    )
+  }
 })
 
 test('every route lays out at the viewport — no page-level horizontal overflow', async ({
