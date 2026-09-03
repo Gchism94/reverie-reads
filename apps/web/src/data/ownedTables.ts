@@ -155,6 +155,24 @@ export const USER_OWNED_TABLES: OwnedTable[] = [
     },
   },
   {
+    table: 'corpus_sweep_runs',
+    owner: 'requested_by',
+    collective: true,
+    plan: {
+      backup: false,
+      why: 'Operational history for a shared corpus workflow. The administrator id is audit attribution; restoring the row would fabricate an active or completed production job.',
+    },
+  },
+  {
+    table: 'corpus_sweep_run_items',
+    owner: 'run_id',
+    collective: true,
+    plan: {
+      backup: false,
+      why: 'Derived per-work checkpoints for a shared corpus sweep. They belong to their live run and must never be replayed by a personal restore.',
+    },
+  },
+  {
     table: 'work_tropes',
     owner: 'added_by',
     collective: true,

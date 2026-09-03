@@ -14,11 +14,14 @@ describe('durable corpus cover boundary', () => {
     expect(edge).toContain('const base = corpusScope ? `w/${targetId}` : `u/${uid}/${targetId}`')
   })
 
-  it('checks exact corpus edit authority before a corpus ingest', () => {
-    expect(edge).toMatch(/corpusScope && !\(await canEditCorpusWork\(req, targetId\)\)/)
-    expect(edge.indexOf('corpusScope && !(await canEditCorpusWork(req, targetId))')).toBeLessThan(
-      edge.indexOf('const base = corpusScope'),
-    )
+  it('checks exact user or durable-run authority before a corpus ingest', () => {
+    const authorityGate = edge.indexOf('if (corpusScope)')
+    expect(authorityGate).toBeGreaterThan(-1)
+    expect(authorityGate).toBeLessThan(edge.indexOf('const base = corpusScope'))
+    expect(edge).toContain('const actor = await corpusSweepActor(req, fields.sweepRunId, targetId)')
+    expect(edge).toContain("if (!actor) return json({ error: 'corpus_sweep_required' }, 403)")
+    expect(edge).toContain('else if (!(await canEditCorpusWork(req, targetId)))')
+    expect(edge).toContain('/rest/v1/rpc/service_authorize_corpus_sweep_work')
     expect(edge).toContain('/rest/v1/rpc/can_edit_corpus_work')
     expect(edge).toContain('Authorization: authorization')
     expect(edge).toContain('body: JSON.stringify({ p_work: workId })')
@@ -28,6 +31,13 @@ describe('durable corpus cover boundary', () => {
 
   it('refuses mixed personal/corpus targets', () => {
     expect(edge).toContain("return json({ error: 'ambiguous_target' }, 400)")
+  })
+
+  it('uses the durable run capability as the corpus object idempotency key', () => {
+    expect(edge).toContain(
+      'const rev = fields.sweepRunId ? `sweep-${fields.sweepRunId}` : Date.now().toString(36)',
+    )
+    expect(edge).toContain("'x-upsert': 'true'")
   })
 
   it('revalidates the terminal redirect URL before reading or storing response bytes', () => {

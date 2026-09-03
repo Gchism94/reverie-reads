@@ -9,6 +9,9 @@ export default tseslint.config(
   {
     ignores: [
       '**/dist/**',
+      '**/.output/**',
+      '**/.vercel/**',
+      '**/.swc/**',
       '**/node_modules/**',
       '**/playwright-report/**',
       '**/test-results/**',

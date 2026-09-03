@@ -15,7 +15,13 @@ import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import process from 'node:process'
 
-const DIST = new URL('../dist', import.meta.url).pathname
+// Nitro owns the production artifact once Vercel Workflow is enabled. Its public directory is the
+// exact browser payload that Vite previously emitted at dist/, so all existing deploy assertions
+// continue to inspect shipped bytes rather than source code.
+const DIST = new URL(
+  process.env.VERCEL ? '../.vercel/output/static' : '../.output/public',
+  import.meta.url,
+).pathname
 const SCAN_EXT = /\.(js|mjs|css|html|json|webmanifest|txt)$/
 const PATTERNS = [
   /(https?|wss?):\/\/(localhost|127\.0\.0\.1)(:\d+)?/gi,
@@ -52,7 +58,7 @@ let dist
 try {
   dist = [...walk(DIST)]
 } catch {
-  console.error(`assert-dist-clean: no dist/ at ${DIST} — run vite build first`)
+  console.error(`assert-dist-clean: no public build at ${DIST} — run vite build first`)
   process.exit(1)
 }
 

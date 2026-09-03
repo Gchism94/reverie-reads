@@ -21,13 +21,16 @@ import {
   type BulkProgress,
 } from '../data/enrichLibrary'
 import {
-  corpusCoverRecoverySummary,
   corpusEnrichmentCandidatesKey,
-  runCorpusCompletionPipeline,
   useCorpusAdminStatus,
   useCorpusEnrichmentCandidates,
-  type CorpusBulkProgress,
 } from '../data/enrichCorpus'
+import {
+  cancelCorpusSweep,
+  corpusSweepStatusText,
+  startCorpusSweep,
+  useCurrentCorpusSweep,
+} from '../data/corpusSweepRuns'
 import { resharpenCovers, resharpenSource, type ResharpenProgress } from '../data/resharpenCovers'
 import { sweepCountText } from '../data/sweepProgress'
 import { DuplicateReview } from '../components/DuplicateReview'
@@ -103,10 +106,8 @@ function SettingsScreen() {
   const [tracing, setTracing] = useState(false)
   const [progress, setProgress] = useState<BulkProgress | null>(null)
   const stopRef = useRef(false)
-  const [corpusCompleting, setCorpusCompleting] = useState(false)
-  const [corpusProgress, setCorpusProgress] = useState<CorpusBulkProgress | null>(null)
   const [corpusStatus, setCorpusStatus] = useState<string | null>(null)
-  const corpusStopRef = useRef(false)
+  const completedCorpusRun = useRef<string | null>(null)
   const [sharpening, setSharpening] = useState(false)
   const [sharpProgress, setSharpProgress] = useState<ResharpenProgress | null>(null)
   const sharpStopRef = useRef(false)
@@ -132,6 +133,30 @@ function SettingsScreen() {
   const { data: isCorpusAdmin = false } = useCorpusAdminStatus()
   const { data: corpusCandidates } = useCorpusEnrichmentCandidates(isCorpusAdmin)
   const corpusEligibleCount = corpusCandidates?.length ?? null
+  const corpusRunQuery = useCurrentCorpusSweep(isCorpusAdmin, session?.access_token)
+  const corpusRun = corpusRunQuery.data
+  const corpusCompleting = corpusRun?.status === 'queued' || corpusRun?.status === 'running'
+  const corpusProgress = corpusRun
+    ? {
+        scanned: corpusRun.scanned,
+        total: corpusRun.total,
+        filled: corpusRun.filled,
+        recoveryScanned: corpusRun.recoveryScanned,
+        phase:
+          corpusRun.phase === 'recovering' ? ('recovering' as const) : ('classifying' as const),
+      }
+    : null
+
+  useEffect(() => {
+    if (!corpusRun || corpusCompleting || completedCorpusRun.current === corpusRun.id) return
+    completedCorpusRun.current = corpusRun.id
+    setCorpusStatus(corpusSweepStatusText(corpusRun))
+    void Promise.all([
+      qc.invalidateQueries({ queryKey: corpusEnrichmentCandidatesKey }),
+      qc.invalidateQueries({ queryKey: ['works-browse'] }),
+      qc.invalidateQueries({ queryKey: ['household'] }),
+    ])
+  }, [corpusCompleting, corpusRun, qc])
   // Covers whose STORED pixels can be improved from a larger source (Google/OL) — the re-sharpen set.
   const sharpenableCount = (books ?? []).filter((b) => resharpenSource(b) !== null).length
 
@@ -369,42 +394,27 @@ function SettingsScreen() {
   }
 
   async function runCorpusComplete() {
-    corpusStopRef.current = false
-    setCorpusCompleting(true)
-    setCorpusProgress(null)
     setCorpusStatus(null)
     try {
-      const { recovery, result } = await runCorpusCompletionPipeline(
-        setCorpusProgress,
-        () => corpusStopRef.current,
-      )
-      let prefix = 'Corpus sweep complete — '
-      if (result.stopReason === 'error') prefix = '⚠ Corpus sweep stopped early — '
-      else if (result.stopReason === 'rate_limited') {
-        prefix = 'Corpus sweep paused — the book data sources are busy. '
-      } else if (result.stopReason === 'limit') {
-        prefix = 'Corpus sweep paused at the per-run limit — run it again to continue. '
-      } else if (result.stopReason === 'user') prefix = 'Corpus sweep stopped — '
-      else if (recovery.failedBatches) {
-        prefix = 'Corpus classification complete; cover recovery paused — '
-      }
-      const failed = result.failed
-        ? ` · ${result.failed} couldn’t be checked and remain eligible to retry`
-        : ''
-      const recovered = corpusCoverRecoverySummary(recovery)
-      setCorpusStatus(
-        `${prefix}checked ${result.scanned} of ${result.total} · filled ${result.filled} · ${result.nothing} had nothing new${recovered}${failed}${result.errorMessage ? ` · ${result.errorMessage}` : ''}.`,
-      )
-      await Promise.all([
-        qc.invalidateQueries({ queryKey: corpusEnrichmentCandidatesKey }),
-        qc.invalidateQueries({ queryKey: ['works-browse'] }),
-        qc.invalidateQueries({ queryKey: ['household'] }),
-      ])
+      const token = session?.access_token
+      if (!token) throw new Error('Sign in again before starting the corpus sweep')
+      await startCorpusSweep(token)
+      setCorpusStatus('Corpus sweep queued. You can leave this page; progress will reconnect here.')
+      await corpusRunQuery.refetch()
     } catch (error) {
-      setCorpusStatus(`Couldn’t finish the corpus sweep: ${(error as Error).message}`)
-    } finally {
-      setCorpusCompleting(false)
-      setCorpusProgress(null)
+      setCorpusStatus(`Couldn’t start the corpus sweep: ${(error as Error).message}`)
+    }
+  }
+
+  async function stopCorpusComplete() {
+    const token = session?.access_token
+    if (!token || !corpusRun) return
+    try {
+      await cancelCorpusSweep(token, corpusRun.id)
+      setCorpusStatus('Stop requested. The current work will finish before the sweep stops.')
+      await corpusRunQuery.refetch()
+    } catch (error) {
+      setCorpusStatus(`Couldn’t stop the corpus sweep: ${(error as Error).message}`)
     }
   }
 
@@ -637,7 +647,7 @@ function SettingsScreen() {
                 eligibleCount={corpusEligibleCount}
                 status={corpusStatus}
                 onRun={() => void runCorpusComplete()}
-                onStop={() => (corpusStopRef.current = true)}
+                onStop={() => void stopCorpusComplete()}
               />
             )}
             {isCorpusAdmin && !corpusCompleting && (

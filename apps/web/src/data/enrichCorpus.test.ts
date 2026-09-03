@@ -4,6 +4,7 @@ import {
   corpusCoverNeedsDurableOwnership,
   corpusPatchFromEnrichment,
   corpusSeriesCheckDue,
+  corpusSweepCandidateSnapshot,
   corpusWorkIsIncomplete,
   corpusWorkShouldCheck,
   personalCoverIsReviewed,
@@ -124,6 +125,38 @@ describe('corpus enrichment eligibility', () => {
     ).toBe(true)
     expect(corpusWorkShouldCheck(completeWork({ description: '', enrichedAt: twentyDaysAgo }), now)).toBe(false)
     expect(corpusWorkShouldCheck(completeWork({ description: '', enrichedAt: fortyDaysAgo }), now)).toBe(true)
+  })
+
+  it('snapshots no more than 400 works while retaining the full eligible count', () => {
+    const rows = Array.from({ length: 401 }, (_, index) => {
+      const id = `a0000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`
+      const work = completeWork({ id, seriesCheckState: 'unknown', seriesCheckedAt: null })
+      return {
+        id: work.id,
+        title: work.title,
+        author_text: work.authorText,
+        contributors: work.contributors,
+        series: work.series,
+        position: work.position,
+        pages: work.pages,
+        pub_y: work.publicationYear,
+        publisher: work.publisher,
+        language: work.language,
+        description: work.description,
+        isbns: work.isbns,
+        genre: work.genre,
+        genres: work.genres,
+        cover_url: work.cover,
+        enriched_at: work.enrichedAt,
+        series_check_state: work.seriesCheckState,
+        series_checked_at: work.seriesCheckedAt,
+      }
+    })
+
+    expect(corpusSweepCandidateSnapshot(rows)).toEqual({
+      total: 401,
+      workIds: rows.slice(0, 400).map(({ id }) => id),
+    })
   })
 })
 
