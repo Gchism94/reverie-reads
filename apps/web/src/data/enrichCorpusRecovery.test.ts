@@ -101,7 +101,7 @@ describe('corpus cover recovery', () => {
       maybeMore: true,
       errorMessage: 'one source was invalid',
     })
-    expect(mocks.rpc).toHaveBeenCalledWith('admin_recover_corpus_cover_batch', { p_limit: 25 })
+    expect(mocks.rpc).toHaveBeenCalledWith('admin_recover_corpus_cover_batch', { p_limit: 5 })
   })
 
   it('reports published alternatives even when the corpus already had a default cover', () => {
@@ -351,27 +351,17 @@ describe('corpus cover recovery', () => {
     })
   })
 
-  it('interleaves cover recovery and refreshed classification in groups of 25', async () => {
+  it('interleaves cover recovery and refreshed classification in groups of 5', async () => {
     const order: string[] = []
     const candidates = Array.from({ length: 26 }, (_, index) => workAt(index + 1))
-    const recoveryResults = [
-      {
-        scanned: 25,
-        failed: 0,
-        failedBatches: 0,
-        recoveredCovers: 4,
-        recoveredOptions: 6,
-        maybeMore: true,
-      },
-      {
-        scanned: 2,
-        failed: 0,
-        failedBatches: 0,
-        recoveredCovers: 1,
-        recoveredOptions: 1,
-        maybeMore: false,
-      },
-    ]
+    const recoveryResults = Array.from({ length: 6 }, (_, index) => ({
+      scanned: index === 5 ? 2 : 5,
+      failed: 0,
+      failedBatches: 0,
+      recoveredCovers: index === 0 ? 4 : index === 5 ? 1 : 0,
+      recoveredOptions: index === 0 ? 6 : index === 5 ? 1 : 0,
+      maybeMore: index < 5,
+    }))
     const progress = vi.fn()
     const complete = vi.fn(async (batch, onProgress) => {
       order.push(`complete:${batch.length}`)
@@ -413,8 +403,20 @@ describe('corpus cover recovery', () => {
     expect(order).toEqual([
       'fetch',
       'recover',
-      'refresh:25',
-      'complete:25',
+      'refresh:5',
+      'complete:5',
+      'recover',
+      'refresh:5',
+      'complete:5',
+      'recover',
+      'refresh:5',
+      'complete:5',
+      'recover',
+      'refresh:5',
+      'complete:5',
+      'recover',
+      'refresh:5',
+      'complete:5',
       'recover',
       'refresh:1',
       'complete:1',

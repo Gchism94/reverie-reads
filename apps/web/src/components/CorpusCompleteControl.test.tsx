@@ -34,6 +34,9 @@ describe('CorpusCompleteControl', () => {
           total: 100,
           filled: 3,
           recoveryScanned: 50,
+          failed: 2,
+          recoveryFailed: 1,
+          recoveryFailedBatches: 1,
           phase: 'recovering',
         }}
         eligibleCount={100}
@@ -44,7 +47,7 @@ describe('CorpusCompleteControl', () => {
     )
 
     expect(screen.getByRole('status')).toHaveTextContent(
-      'Recovering household covers in small batches · 50 cover sources checked · 25 of 100 shared works classified.',
+      'Recovering household covers in small batches · 50 cover sources checked · 25 of 100 shared works classified · 2 works deferred to retry · 1 cover source deferred · 1 cover recovery batch has failed.',
     )
 
     rerender(

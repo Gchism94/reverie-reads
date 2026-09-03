@@ -193,7 +193,7 @@ async function currentItemIsRunning(
   return data?.status === 'running'
 }
 
-async function ingestCorpusCoverForSweep(input: {
+export async function ingestCorpusCoverForSweep(input: {
   runId: string
   workId: string
   source: string
@@ -211,15 +211,17 @@ async function ingestCorpusCoverForSweep(input: {
     })
     return result.cover ? result : null
   } catch (error) {
-    // Cover ingestion is best-effort in the established pipeline. An unsafe, unavailable, or
-    // display-only image must not prevent metadata and series classification from advancing.
-    if (
-      error instanceof FunctionHttpError &&
-      (error.status === 400 || error.status === 413 || error.status === 422)
-    ) {
-      return null
-    }
-    throw error
+    // Cover ingestion is best-effort in the established pipeline. That boundary includes an Edge
+    // worker exhausting its memory or timing out: the separate recovery queue owns cover retries,
+    // while this item must still reach metadata and series classification. Re-throwing a 5xx here
+    // made one oversized image consume every Workflow retry and kept `scanned_count` at zero.
+    const reason = error instanceof Error ? error.message : String(error)
+    console.warn('Corpus sweep deferred non-blocking cover ingestion', {
+      runId: input.runId,
+      workId: input.workId,
+      reason,
+    })
+    return null
   }
 }
 

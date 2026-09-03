@@ -142,6 +142,10 @@ function SettingsScreen() {
         total: corpusRun.total,
         filled: corpusRun.filled,
         recoveryScanned: corpusRun.recoveryScanned,
+        failed: corpusRun.failed,
+        recoveryFailed: corpusRun.recoveryFailed,
+        recoveryFailedBatches: corpusRun.recoveryFailedBatches,
+        errorMessage: corpusRun.errorMessage,
         phase:
           corpusRun.phase === 'recovering' ? ('recovering' as const) : ('classifying' as const),
       }
