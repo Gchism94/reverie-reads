@@ -480,8 +480,7 @@ function BookDetailScreen() {
             <button
               type="button"
               onClick={() => setDialog('edit')}
-              className="skin-control h-10 border border-line px-4 text-[12px] font-semibold text-ink"
-              style={{ background: 'var(--card)' }}
+              className="skin-control skin-btn-secondary h-10 px-4 text-[12px] font-semibold"
             >
               Edit details
             </button>

@@ -1,8 +1,22 @@
 import { useState, type CSSProperties } from 'react'
 import { SKINS, SKIN_LIST, type ResolvedMode, type SkinId } from '@reverie/core'
-import { ProductStage, RoomThumbnail } from './ProductStage'
+import { SkinAtmosphereCanvas } from '../../components/SkinAtmosphereCanvas'
+import { AppRoomPreview } from '../../components/AppRoomPreview'
+import { ProductStage } from './ProductStage'
 
 const display = { fontFamily: 'var(--font-display)', fontWeight: 600 } as const
+
+const ATMOSPHERE_NOTE: Record<SkinId, string> = {
+  tryst: 'Still velvet light and gilt-paper grain',
+  grimoire: 'Settled vellum and illuminated edges',
+  aphelion: 'A quiet telemetry grid with no decorative scan',
+  marrow: 'Edge fractures surface rarely, then recede',
+  umbra: 'A near-imperceptible bank of office fog',
+  folio: 'A steady proof page and editorial margin',
+  hearth: 'Still linen, warm paper, and stitched edges',
+  almanac: 'A stable field index built for reference',
+  bloom: 'Dark-mode stars breathe without drifting',
+}
 
 /** Nine Reading Rooms makes skins legible as complete places. Every tile and the expanded stage
  * reads the real registry-driven token bundle: palette, type, radii, control silhouette, material,
@@ -86,24 +100,22 @@ export function SkinShowcase() {
                   transform: selected ? 'translateY(-2px)' : undefined,
                 }}
               >
-                <RoomThumbnail />
+                <AppRoomPreview />
                 <span className="mt-3 flex min-w-0 items-start justify-between gap-2 px-1 pb-0.5">
                   <span className="min-w-0">
                     <span
-                      className="block truncate text-[17px] leading-none text-ink"
+                      className="block break-words text-[16px] leading-[1.05] text-ink sm:text-[17px]"
                       style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
                     >
                       {room.label}
                     </span>
-                    <span className="mt-1 block text-[9px] font-semibold uppercase tracking-[0.12em] text-muted">
+                    <span className="mt-1.5 block text-[10.5px] font-semibold uppercase tracking-[0.1em] text-muted">
                       {room.genre}
                     </span>
                   </span>
-                  <span
-                    aria-hidden
-                    className="mt-0.5 h-4 w-4 flex-none rounded-full border border-line"
-                    style={{ background: 'var(--primary)' }}
-                  />
+                  <span className="skin-label mt-0.5 flex-none text-[8.5px] leading-[1.3] text-muted">
+                    Enter →
+                  </span>
                 </span>
               </button>
             )
@@ -140,10 +152,14 @@ export function SkinShowcase() {
             maskImage: 'var(--ambient-texture-mask)',
           }}
         />
+        <SkinAtmosphereCanvas skin={active} mode={mode} />
         <div className="relative z-[1] mx-auto max-w-[1180px]">
           <div className="flex flex-wrap items-start justify-between gap-5">
             <div>
-              <p className="skin-label text-[10px]" style={{ color: 'var(--accent-ink)' }}>
+              <p
+                className="skin-label text-[11px] leading-[1.4]"
+                style={{ color: 'var(--accent-ink)' }}
+              >
                 {skin.genre} · {skin.chromeLine}
               </p>
               <h3
@@ -152,9 +168,12 @@ export function SkinShowcase() {
               >
                 The {skin.label} room
               </h3>
-              <p className="mt-3 max-w-[48ch] text-[14px] leading-relaxed text-muted">
+              <p className="mt-4 max-w-[52ch] text-[15px] leading-[1.65] text-muted">
                 {skin.tagline} The books stay the same; the place they live becomes unmistakably its
                 own.
+              </p>
+              <p className="mt-3 max-w-[52ch] text-[12.5px] leading-[1.55] text-muted">
+                Atmosphere: {ATMOSPHERE_NOTE[active]}.
               </p>
             </div>
             <div
@@ -169,12 +188,9 @@ export function SkinShowcase() {
                   type="button"
                   onClick={() => setMode(nextMode)}
                   aria-pressed={mode === nextMode}
-                  className="skin-control min-h-10 px-4 text-[11px] font-semibold"
-                  style={
-                    mode === nextMode
-                      ? { background: 'var(--accent-fill)', color: 'var(--on-primary)' }
-                      : { color: 'var(--muted)' }
-                  }
+                  className={`skin-control min-h-10 px-4 text-[12px] font-semibold ${
+                    mode === nextMode ? 'skin-btn-primary' : 'skin-btn-secondary'
+                  }`}
                 >
                   {nextMode === 'dark' ? 'Night' : 'Day'}
                 </button>
@@ -196,8 +212,8 @@ export function SkinShowcase() {
               ['Shelf language', `${skin.genre} · ${skin.labels.tags}`],
             ].map(([term, value]) => (
               <div key={term} className="min-w-0 bg-card p-4">
-                <dt className="skin-label text-[8px] text-muted">{term}</dt>
-                <dd className="mt-2 break-words text-[13px] text-ink" style={display}>
+                <dt className="skin-label text-[9.5px] leading-[1.35] text-muted">{term}</dt>
+                <dd className="mt-2 break-words text-[14px] leading-[1.4] text-ink" style={display}>
                   {value}
                 </dd>
               </div>

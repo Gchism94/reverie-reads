@@ -18,8 +18,9 @@ import { adaptiveVars, generateAdaptiveBundle } from '../skin/adaptive'
 import { SkinDivider } from '../components/SkinDivider'
 import { Surface } from '../components/Surface'
 import { Spine } from '../components/Spine'
-import { SignatureRing } from '../components/Structure'
+import { Frame, ProgressMeter, SectionHeader, StatusTag } from '../components/Structure'
 import { PageHeader } from '../components/PageHeader'
+import { AppRoomPreview } from '../components/AppRoomPreview'
 
 function SkinCard({
   skin,
@@ -48,7 +49,7 @@ function SkinCard({
     >
       <div className="rv-skin-texture" />
       <div className="relative p-5">
-        <div className="skin-label text-[10px]" style={{ color: 'var(--accent-ink)' }}>
+        <div className="skin-label text-[11px]" style={{ color: 'var(--accent-ink)' }}>
           {skin.genre}
         </div>
         <div
@@ -58,74 +59,57 @@ function SkinCard({
           {skin.label}
         </div>
         <div
-          className="mt-2 min-h-[38px] text-[12px] leading-relaxed"
+          className="mt-2 min-h-[42px] text-[13px] leading-relaxed"
           style={{ color: 'var(--muted)' }}
         >
           {skin.tagline}
         </div>
 
-        <div
-          className="mt-4 grid grid-cols-[40px_minmax(0,1fr)] gap-3 border p-3"
-          style={{
-            borderColor: 'var(--line)',
-            borderRadius: 'var(--radius-card)',
-            background: 'var(--panel-fill)',
-          }}
-        >
-          <div
-            className="flex flex-col items-center gap-3 border-r pt-1"
-            style={{ borderColor: 'var(--line)' }}
-          >
-            <span
-              className="h-2 w-2"
-              style={{ borderRadius: 'var(--radius-control)', background: 'var(--primary)' }}
-            />
-            <span
-              className="h-2 w-2 opacity-50"
-              style={{ borderRadius: 'var(--radius-control)', background: 'var(--muted)' }}
-            />
-            <span
-              className="h-2 w-2 opacity-50"
-              style={{ borderRadius: 'var(--radius-control)', background: 'var(--muted)' }}
+        <AppRoomPreview className="mt-4" />
+
+        <Frame skin={skin.id} className="mt-4 grid grid-cols-[62px_minmax(0,1fr)] gap-3 p-3.5">
+          <div className="flex h-[150px] items-end justify-center overflow-hidden">
+            <Spine
+              book={{
+                id: `gallery-${skin.id}`,
+                title: 'Crimson Letters',
+                first: 'D',
+                last: 'Marchand',
+              }}
+              skin={skin.id}
             />
           </div>
-          <div className="grid grid-cols-[54px_minmax(0,1fr)] items-center gap-3">
-            <div className="flex h-[154px] items-end justify-center overflow-hidden">
-              <Spine
-                book={{
-                  id: `gallery-${skin.id}`,
-                  title: 'Crimson Letters',
-                  first: 'D',
-                  last: 'Marchand',
-                }}
-                skin={skin.id}
-              />
+          <div className="min-w-0 self-center">
+            <SectionHeader skin={skin.id} label="Reading now" readout="42%" />
+            <div
+              className="mt-3 text-[17px] font-semibold leading-[1.08]"
+              style={{ color: 'var(--ink)', fontFamily: 'var(--font-display)' }}
+            >
+              Crimson Letters
             </div>
-            <div className="min-w-0">
-              <div className="skin-label text-[8px]" style={{ color: 'var(--accent-ink)' }}>
-                Currently reading
-              </div>
-              <div
-                className="mt-2 text-[16px] font-semibold leading-[1.05]"
-                style={{ color: 'var(--ink)', fontFamily: 'var(--font-display)' }}
-              >
-                Crimson Letters
-              </div>
-              <div className="mt-2">
-                <SignatureRing value={42} max={60} size={58} skin={skin.id} />
-              </div>
-              <span className="skin-control skin-btn-primary mt-3 inline-grid h-8 place-items-center px-3 text-[9px]">
+            <ProgressMeter value={42} max={100} skin={skin.id} className="mt-3" />
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              <StatusTag skin={skin.id}>Owned</StatusTag>
+              <StatusTag skin={skin.id} tone="muted">
+                Fantasy
+              </StatusTag>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              <span className="skin-control skin-btn-primary inline-grid min-h-8 place-items-center px-3 text-[10.5px]">
                 Continue
+              </span>
+              <span className="skin-control skin-btn-secondary inline-grid min-h-8 place-items-center px-3 text-[10.5px]">
+                Details
               </span>
             </div>
           </div>
-        </div>
+        </Frame>
 
         <div className="mt-4 flex flex-wrap gap-1.5">
           {['Typography', 'Material', 'Controls'].map((label) => (
             <span
               key={label}
-              className="skin-control border px-2 py-1 text-[8px]"
+              className="skin-control border px-2 py-1 text-[9.5px]"
               style={{
                 borderColor: 'var(--chip-border)',
                 background: 'var(--chip)',
@@ -226,11 +210,11 @@ function AdaptiveCard({
           >
             Sample tag
           </span>
-          <span
-            className="skin-control px-3 py-1 text-[12px] font-semibold"
-            style={{ background: 'var(--accent-fill)', color: 'var(--on-primary)' }}
-          >
+          <span className="skin-control skin-btn-primary px-3 py-1 text-[12px] font-semibold">
             Primary
+          </span>
+          <span className="skin-control skin-btn-secondary px-3 py-1 text-[12px] font-semibold">
+            Secondary
           </span>
           <span className="text-[12px]" style={{ color: 'var(--primary)' }}>
             A link
@@ -266,8 +250,7 @@ function AdaptiveSection({ mode }: { mode: ResolvedMode }) {
           <button
             type="button"
             onClick={() => regenerate()}
-            className="skin-control px-4 py-2 text-[13px] font-semibold"
-            style={{ background: 'var(--accent-fill)', color: 'var(--on-primary)' }}
+            className="skin-control skin-btn-primary px-4 py-2 text-[13px] font-semibold"
           >
             {isActive ? 'Regenerate from my reading' : 'Generate & use this'}
           </button>
@@ -275,8 +258,7 @@ function AdaptiveSection({ mode }: { mode: ResolvedMode }) {
             <button
               type="button"
               onClick={() => revert(preview.dominant)}
-              className="skin-control border border-line px-4 py-2 text-[13px] font-semibold text-ink"
-              style={{ background: 'var(--field)' }}
+              className="skin-control skin-btn-secondary px-4 py-2 text-[13px] font-semibold"
             >
               Revert to {SKINS[preview.dominant].label}
             </button>
@@ -284,8 +266,7 @@ function AdaptiveSection({ mode }: { mode: ResolvedMode }) {
           <button
             type="button"
             onClick={() => setLocked(!locked)}
-            className="skin-control border border-line px-4 py-2 text-[13px] font-semibold text-ink"
-            style={{ background: 'var(--field)' }}
+            className="skin-control skin-btn-secondary px-4 py-2 text-[13px] font-semibold"
           >
             {locked ? '🔒 Locked — unlock to evolve' : '🔓 Lock this skin'}
           </button>
@@ -329,16 +310,9 @@ function SkinGalleryScreen() {
             type="button"
             onClick={() => setMode(value)}
             aria-pressed={activeMode === value}
-            className="skin-control border px-3 py-1.5 text-[12.5px] font-semibold"
-            style={
-              activeMode === value
-                ? {
-                    background: 'var(--accent-fill)',
-                    color: 'var(--on-primary)',
-                    borderColor: 'transparent',
-                  }
-                : { background: 'var(--field)', color: 'var(--ink)', borderColor: 'var(--line)' }
-            }
+            className={`skin-control px-3 py-1.5 text-[12.5px] font-semibold ${
+              activeMode === value ? 'skin-btn-primary' : 'skin-btn-secondary'
+            }`}
           >
             {label}
           </button>

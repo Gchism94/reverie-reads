@@ -186,9 +186,14 @@
 }
 .skin-btn-secondary {
   clip-path: var(--ctl-clip);
-  background: transparent;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--cta-hi) 7%, var(--card-solid)),
+    color-mix(in srgb, var(--cta-lo) 5%, var(--card-solid))
+  );
   color: var(--ink);
-  border: var(--border-width) solid var(--line);
+  border: var(--border-width) solid color-mix(in srgb, var(--cta-border) 45%, var(--line));
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--paper) 8%, transparent);
 }
 .skin-btn-icon {
   background: var(--field);
@@ -294,11 +299,8 @@
   clip-path: var(--ctl-clip);
   border: 0;
   background: color-mix(in srgb, var(--card-solid) 88%, var(--ink));
-  color: var(--muted);
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.4);
-}
-[data-skin='marrow'] .skin-btn-secondary:hover {
   color: var(--ink);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.4);
 }
 [data-skin='marrow'] .skin-btn-icon {
   clip-path: none;
@@ -514,6 +516,393 @@
 /* Firstlight's stars come out in dark mode only — the light sky has none. */
 [data-skin='bloom'][data-mode='light'] .rv-sky-star {
   display: none;
+}
+
+/* ── Navigation rooms ──────────────────────────────────────────────────────────────────────────
+   The destinations and hit targets stay stable; material, silhouette, density and active-state
+   grammar change with the room. These rules are shared by AppShell and the landing playground so
+   the public preview cannot drift into a second, fictional product. */
+.rv-nav-surface {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--bg1) 91%, transparent);
+  border-right: 1px solid var(--line);
+  box-shadow: 12px 0 34px color-mix(in srgb, var(--vignette) 32%, transparent);
+}
+.rv-nav-surface::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: var(--ambient-texture);
+  background-size: var(--ambient-texture-size);
+  background-position: center;
+  mix-blend-mode: var(--ambient-texture-blend);
+  opacity: var(--ambient-texture-opacity);
+  -webkit-mask-image: var(--ambient-texture-mask);
+  mask-image: var(--ambient-texture-mask);
+}
+.rv-nav-surface > * {
+  position: relative;
+  z-index: 1;
+}
+.rv-nav-monogram {
+  color: var(--gold);
+  background: var(--card-solid);
+  border: var(--border-width) solid color-mix(in srgb, var(--gold) 74%, var(--line));
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow);
+}
+.rv-nav-wordmark,
+.rv-mobile-wordmark {
+  text-wrap: balance;
+}
+.rv-nav-group-label {
+  opacity: 0.78;
+}
+.rv-nav-item {
+  border-radius: var(--radius-control);
+  font-family: var(--label-font);
+  letter-spacing: 0.01em;
+}
+.rv-nav-item:hover {
+  color: var(--ink) !important;
+  background: color-mix(in srgb, var(--chip) 72%, transparent);
+}
+.rv-nav-item:focus-visible,
+.rv-mobile-tab:focus-visible,
+.rv-mobile-add:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.rv-nav-item-active {
+  color: var(--ink) !important;
+  background: var(--chip);
+  box-shadow: inset 2px 0 0 var(--primary);
+}
+.rv-nav-glyph,
+.rv-mobile-tab-glyph {
+  color: currentColor;
+  opacity: 0.82;
+}
+.rv-nav-item-active .rv-nav-glyph,
+.rv-mobile-tab-active .rv-mobile-tab-glyph {
+  opacity: 1;
+}
+.rv-mobile-header {
+  position: relative;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--bg0) 78%, transparent);
+  backdrop-filter: blur(18px);
+}
+.rv-mobile-dock {
+  color: var(--muted);
+  background: color-mix(in srgb, var(--bg0) 88%, transparent);
+  border-top: 1px solid var(--line);
+  box-shadow: 0 -12px 32px color-mix(in srgb, var(--vignette) 26%, transparent);
+}
+.rv-mobile-tab {
+  position: relative;
+  color: var(--muted);
+  font-family: var(--label-font);
+  letter-spacing: 0.045em;
+  text-transform: var(--label-transform);
+}
+.rv-mobile-tab-active {
+  color: var(--primary) !important;
+}
+.rv-mobile-add {
+  box-shadow:
+    var(--cta-shadow),
+    0 8px 22px color-mix(in srgb, var(--primary) 24%, transparent);
+}
+
+/* Tryst · a standing invitation: gilt edge, generous labels, open ticket active state. */
+[data-skin='tryst'] .rv-nav-surface {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--card-solid) 92%, var(--gold)),
+    color-mix(in srgb, var(--bg1) 94%, var(--violet))
+  );
+  border-right: 3px double var(--hair);
+}
+[data-skin='tryst'] .rv-nav-item {
+  border-radius: 0;
+}
+[data-skin='tryst'] .rv-nav-item-active {
+  background: color-mix(in srgb, var(--gold) 7%, transparent);
+  border-top: 1px solid var(--hair);
+  border-bottom: 1px solid var(--hair);
+  box-shadow: none;
+  font-family: var(--font-display);
+  font-style: italic;
+}
+[data-skin='tryst'] .rv-mobile-header {
+  border-bottom: 3px double var(--hair);
+}
+[data-skin='tryst'] .rv-mobile-dock {
+  inset-inline: 10px;
+  bottom: 8px;
+  overflow: hidden;
+  border: 1px solid var(--hair);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--card-solid) 92%, transparent);
+}
+[data-skin='tryst'] .rv-mobile-tab-active::after {
+  content: '';
+  position: absolute;
+  right: 22%;
+  bottom: 3px;
+  left: 22%;
+  height: 1px;
+  background: var(--gold);
+}
+
+/* Grimoire · a bound index: page edge, manuscript type and a rubricated active leaf. */
+[data-skin='grimoire'] .rv-nav-surface {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--card-solid) 96%, var(--gold)),
+    color-mix(in srgb, var(--bg1) 94%, var(--card-solid))
+  );
+  border-right: 4px double var(--hair);
+}
+[data-skin='grimoire'] .rv-nav-item {
+  border-radius: 2px;
+}
+[data-skin='grimoire'] .rv-nav-item-active {
+  background: var(--panel-fill);
+  box-shadow:
+    inset 3px 0 0 var(--rubric),
+    inset 0 0 0 1px var(--ornament-frame);
+  font-family: var(--font-display);
+}
+[data-skin='grimoire'] .rv-mobile-header,
+[data-skin='grimoire'] .rv-mobile-dock {
+  border-color: var(--hair);
+  border-style: double;
+  border-width: 3px 0 0;
+  background: color-mix(in srgb, var(--card-solid) 94%, transparent);
+}
+[data-skin='grimoire'] .rv-mobile-header {
+  border-width: 0 0 3px;
+}
+
+/* Aphelion · an instrument console: strict grid, clipped plate, precise illuminated channel. */
+[data-skin='aphelion'] .rv-nav-surface {
+  background: color-mix(in srgb, var(--plate) 92%, transparent);
+  border-right: 1px solid color-mix(in srgb, var(--primary) 58%, var(--line));
+  box-shadow: 12px 0 36px color-mix(in srgb, var(--primary) 8%, transparent);
+}
+[data-skin='aphelion'] .rv-nav-group {
+  border-top: 1px solid color-mix(in srgb, var(--primary) 16%, transparent);
+  padding-top: 8px;
+}
+[data-skin='aphelion'] .rv-nav-item-active {
+  clip-path: var(--ctl-clip);
+  background: color-mix(in srgb, var(--primary) 10%, var(--plate));
+  box-shadow: inset 3px 0 0 var(--primary);
+}
+[data-skin='aphelion'] .rv-mobile-header {
+  border-bottom-color: color-mix(in srgb, var(--primary) 55%, var(--line));
+}
+[data-skin='aphelion'] .rv-mobile-dock {
+  inset-inline: 8px;
+  bottom: 8px;
+  clip-path: polygon(
+    0 0,
+    calc(100% - 11px) 0,
+    100% 11px,
+    100% 100%,
+    11px 100%,
+    0 calc(100% - 11px)
+  );
+  border: 1px solid color-mix(in srgb, var(--primary) 55%, var(--line));
+  background: color-mix(in srgb, var(--plate) 94%, transparent);
+}
+[data-skin='aphelion'] .rv-mobile-tab-active {
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+}
+
+/* Marrow · a cut specimen tray: ashen slab, brittle edges and an inset label channel. */
+[data-skin='marrow'] .rv-nav-surface {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--card-solid) 90%, var(--slate)),
+    color-mix(in srgb, var(--bg1) 92%, var(--ink))
+  );
+  border-right: 1px solid color-mix(in srgb, var(--primary) 40%, var(--line));
+}
+[data-skin='marrow'] .rv-nav-monogram,
+[data-skin='marrow'] .rv-nav-item-active {
+  clip-path: var(--ctl-clip);
+}
+[data-skin='marrow'] .rv-nav-item-active {
+  background: color-mix(in srgb, var(--card-solid) 82%, var(--slate));
+  box-shadow:
+    inset 3px 0 0 var(--primary),
+    inset 0 0 0 1px color-mix(in srgb, var(--ink) 12%, transparent);
+}
+[data-skin='marrow'] .rv-mobile-header {
+  border-bottom-color: color-mix(in srgb, var(--primary) 45%, var(--line));
+}
+[data-skin='marrow'] .rv-mobile-dock {
+  inset-inline: 7px;
+  bottom: 7px;
+  clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%, 0 8px);
+  border: 1px solid color-mix(in srgb, var(--primary) 42%, var(--line));
+  background: color-mix(in srgb, var(--card-solid) 94%, transparent);
+}
+
+/* Gaslight · a case-file edge: smoked office glass, brass indexing and typed channels. */
+[data-skin='umbra'] .rv-nav-surface {
+  background: linear-gradient(
+    150deg,
+    color-mix(in srgb, var(--card-solid) 92%, var(--slate)),
+    color-mix(in srgb, var(--bg1) 96%, var(--card-solid))
+  );
+  border-right: 1px solid color-mix(in srgb, var(--gold) 38%, var(--line));
+}
+[data-skin='umbra'] .rv-nav-item-active {
+  border-radius: 2px 8px 2px 2px;
+  background: color-mix(in srgb, var(--slate) 20%, var(--card-solid));
+  box-shadow:
+    inset 2px 0 0 var(--gold),
+    inset 0 -1px 0 color-mix(in srgb, var(--gold) 28%, transparent);
+}
+[data-skin='umbra'] .rv-mobile-header {
+  border-bottom-color: color-mix(in srgb, var(--gold) 38%, var(--line));
+}
+[data-skin='umbra'] .rv-mobile-dock {
+  inset-inline: 8px;
+  bottom: 8px;
+  border: 1px solid color-mix(in srgb, var(--gold) 32%, var(--line));
+  border-radius: 3px 10px 3px 3px;
+  background: color-mix(in srgb, var(--card-solid) 94%, transparent);
+}
+[data-skin='umbra'] .rv-mobile-tab-active {
+  box-shadow: inset 0 -2px 0 var(--gold);
+}
+
+/* Marginalia · a proof margin: paper column, editorial rule and handwritten correction. */
+[data-skin='folio'] .rv-nav-surface {
+  background:
+    linear-gradient(
+      90deg,
+      transparent 0 24px,
+      color-mix(in srgb, var(--accent-fill) 28%, transparent) 24px 25px,
+      transparent 25px
+    ),
+    color-mix(in srgb, var(--card-solid) 96%, transparent);
+  border-right: 1px solid color-mix(in srgb, var(--gold) 50%, var(--line));
+}
+[data-skin='folio'] .rv-nav-item-active {
+  border-radius: 0;
+  background: color-mix(in srgb, var(--accent-fill) 5%, transparent);
+  box-shadow: inset 0 -1.5px 0 var(--accent-fill);
+  font-family: var(--font-display);
+  font-style: italic;
+}
+[data-skin='folio'] .rv-mobile-header,
+[data-skin='folio'] .rv-mobile-dock {
+  background:
+    linear-gradient(
+      90deg,
+      transparent 0 28px,
+      color-mix(in srgb, var(--accent-fill) 26%, transparent) 28px 29px,
+      transparent 29px
+    ),
+    color-mix(in srgb, var(--card-solid) 95%, transparent);
+  border-color: color-mix(in srgb, var(--gold) 55%, var(--line));
+}
+[data-skin='folio'] .rv-mobile-tab-active {
+  box-shadow: inset 0 -1.5px 0 var(--accent-fill);
+}
+
+/* Hearth · a stitched table runner: soft edge, woven material and a held active patch. */
+[data-skin='hearth'] .rv-nav-surface {
+  background: color-mix(in srgb, var(--card-solid) 94%, var(--thread));
+  border-right: 1px dashed color-mix(in srgb, var(--thread) 62%, var(--line));
+}
+[data-skin='hearth'] .rv-nav-item-active {
+  border: 1px dashed color-mix(in srgb, var(--thread) 68%, var(--line));
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--thread) 9%, var(--card-solid));
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--paper) 24%, transparent);
+}
+[data-skin='hearth'] .rv-mobile-header {
+  border-bottom: 1px dashed color-mix(in srgb, var(--thread) 62%, var(--line));
+}
+[data-skin='hearth'] .rv-mobile-dock {
+  inset-inline: 8px;
+  bottom: 8px;
+  overflow: hidden;
+  border: 1px dashed color-mix(in srgb, var(--thread) 66%, var(--line));
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--card-solid) 95%, transparent);
+}
+[data-skin='hearth'] .rv-mobile-tab-active {
+  background: color-mix(in srgb, var(--thread) 9%, transparent);
+}
+
+/* Almanac · a field index: dense manual edge, double rule and a decisive indexed selection. */
+[data-skin='almanac'] .rv-nav-surface {
+  background: color-mix(in srgb, var(--card-solid) 96%, var(--ink));
+  border-right: 4px double color-mix(in srgb, var(--ink) 58%, var(--line));
+}
+[data-skin='almanac'] .rv-nav-item-active {
+  border-radius: 0;
+  color: var(--cta-ink) !important;
+  background: var(--cta-lo);
+  box-shadow: inset 4px 0 0 var(--accent);
+}
+[data-skin='almanac'] .rv-mobile-header {
+  border-bottom: 4px double color-mix(in srgb, var(--ink) 58%, var(--line));
+}
+[data-skin='almanac'] .rv-mobile-dock {
+  border-top: 4px double color-mix(in srgb, var(--ink) 58%, var(--line));
+  background: color-mix(in srgb, var(--card-solid) 97%, transparent);
+}
+[data-skin='almanac'] .rv-mobile-tab-active {
+  color: var(--cta-ink) !important;
+  background: var(--cta-lo);
+  box-shadow: inset 0 3px 0 var(--accent);
+}
+
+/* Firstlight · a late-night dock: soft glass edge, roomy rhythm and a gel-lit selection. */
+[data-skin='bloom'] .rv-nav-surface {
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--card-solid) 90%, var(--primary)),
+    color-mix(in srgb, var(--bg1) 92%, var(--violet))
+  );
+  border-right: 1px solid color-mix(in srgb, var(--accent-fill) 30%, var(--line));
+  box-shadow: 14px 0 42px color-mix(in srgb, var(--primary) 12%, transparent);
+}
+[data-skin='bloom'] .rv-nav-item-active {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-fill) 13%, var(--card-solid));
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--accent-fill) 22%, transparent),
+    0 4px 16px color-mix(in srgb, var(--accent-fill) 10%, transparent);
+}
+[data-skin='bloom'] .rv-mobile-header {
+  border-bottom-color: color-mix(in srgb, var(--accent-fill) 28%, var(--line));
+}
+[data-skin='bloom'] .rv-mobile-dock {
+  inset-inline: 8px;
+  bottom: 8px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--accent-fill) 28%, var(--line));
+  border-radius: 24px;
+  background: color-mix(in srgb, var(--card-solid) 88%, transparent);
+  box-shadow: 0 -8px 34px color-mix(in srgb, var(--accent-fill) 13%, transparent);
+}
+[data-skin='bloom'] .rv-mobile-tab-active {
+  background: color-mix(in srgb, var(--accent-fill) 11%, transparent);
+  border-radius: 18px;
 }
 
 /* ── The CHROME layer (chunk-4 composed screens, MVP polish part 2) ──────────────────────────

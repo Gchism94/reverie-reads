@@ -19,8 +19,7 @@ export function ThemeToggle({ compact = false }: { compact?: boolean }) {
         onClick={() => setMode(isDark ? 'light' : 'dark')}
         title="Toggle light / dark"
         aria-label={ariaLabel}
-        className="skin-control grid h-9 w-9 shrink-0 place-items-center border border-line text-[14px] text-ink backdrop-blur"
-        style={{ background: 'color-mix(in srgb, var(--card) 70%, transparent)' }}
+        className="skin-control skin-btn-icon grid h-9 w-9 shrink-0 place-items-center text-[14px] backdrop-blur"
       >
         <span aria-hidden>{icon}</span>
       </button>
@@ -33,7 +32,7 @@ export function ThemeToggle({ compact = false }: { compact?: boolean }) {
       onClick={() => setMode(isDark ? 'light' : 'dark')}
       title="Toggle light / dark"
       aria-label={ariaLabel}
-      className="skin-control flex h-[38px] items-center gap-2 border border-line bg-card pl-3.5 pr-1.5 text-[12.5px] text-ink backdrop-blur"
+      className="skin-control skin-btn-secondary flex h-[38px] items-center gap-2 pl-3.5 pr-1.5 text-[12.5px] backdrop-blur"
     >
       <span>{label}</span>
       <span

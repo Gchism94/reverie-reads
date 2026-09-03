@@ -71,18 +71,13 @@ function EmptyState() {
       <div className="mt-6 flex flex-wrap items-center justify-center gap-2.5">
         <Link
           to="/add"
-          className="skin-control flex h-11 items-center px-6 text-[14px]"
-          style={{
-            background: 'linear-gradient(135deg, var(--primary), var(--gold))',
-            color: 'var(--on-primary)',
-          }}
+          className="skin-control skin-btn-primary flex h-11 items-center px-6 text-[14px]"
         >
           ＋ {voice.empty.cta}
         </Link>
         <Link
           to="/settings"
-          className="skin-control flex h-11 items-center border border-line px-5 text-[14px] text-ink"
-          style={{ background: 'var(--field)' }}
+          className="skin-control skin-btn-secondary flex h-11 items-center px-5 text-[14px]"
         >
           Import books
         </Link>

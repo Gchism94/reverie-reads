@@ -11,27 +11,14 @@ import { ThemeToggle } from './ThemeToggle'
 import { Surface } from './Surface'
 import { PowerGlyph } from './PowerGlyph'
 import { isHouseholdAddContext } from './appShellScope'
-
-// Primary navigation. Glyph icons (token-coloured, no raster) echo the desktop design's rail.
-const NAV = [
-  { label: 'Home', to: '/', icon: '⌂' },
-  { label: 'Library', to: '/library', icon: '▦' },
-  { label: 'Shelves', to: '/shelves', icon: '≣' },
-  { label: 'Series', to: '/series', icon: '◫' },
-  { label: 'Tropes', to: '/tropes', icon: '❦' },
-  { label: 'Planner', to: '/planner', icon: '◷' },
-  { label: 'Stats', to: '/stats', icon: '◔' },
-  { label: 'Match', to: '/match', icon: '✦' },
-  { label: 'Discover', to: '/discover', icon: '✧' },
-  { label: 'Clubs', to: '/clubs', icon: '❀' },
-  { label: 'Indies', to: '/indie', icon: '☞' },
-] as const
-
-const NAV_GROUPS = [
-  { label: 'Your books', items: NAV.slice(0, 5) },
-  { label: 'Reading life', items: NAV.slice(5, 8) },
-  { label: 'Explore', items: NAV.slice(8) },
-] as const
+import { NavigationGlyph } from './NavigationGlyph'
+import {
+  MOBILE_TAB_ITEMS,
+  MORE_NAVIGATION_ITEMS,
+  NAVIGATION_GROUPS,
+  navigationLabelForPath,
+  type NavigationItem,
+} from './navigation'
 
 const COLLAPSE_KEY = 'reverie.sidebar.collapsed'
 
@@ -51,18 +38,18 @@ function useSkinLabel(): string {
 }
 
 const navBase =
-  'relative flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-[13.5px] font-medium transition-colors'
+  'rv-nav-item relative flex min-h-10 items-center gap-3 px-3 py-2.5 text-[14px] font-medium transition-colors'
 
 function NavLinks({ collapsed }: { collapsed: boolean }) {
   return (
     <nav
-      className="flex flex-1 flex-col gap-4 overflow-y-auto overflow-x-hidden"
+      className="rv-primary-nav flex flex-1 flex-col gap-4 overflow-y-auto overflow-x-hidden"
       aria-label="Primary"
     >
-      {NAV_GROUPS.map((group) => (
-        <div key={group.label} className="flex flex-col gap-0.5">
+      {NAVIGATION_GROUPS.map((group) => (
+        <div key={group.label} className="rv-nav-group flex flex-col gap-0.5">
           {!collapsed ? (
-            <div className="skin-label px-3 pb-1 text-[9px] text-muted opacity-70">
+            <div className="rv-nav-group-label skin-label px-3 pb-1 text-[10.5px] leading-[1.35] text-muted">
               {group.label}
             </div>
           ) : null}
@@ -76,16 +63,15 @@ function NavLinks({ collapsed }: { collapsed: boolean }) {
               className={`${navBase} ${collapsed ? 'justify-center' : ''}`}
               style={{ color: 'var(--muted)' }}
               activeProps={{
+                className: 'rv-nav-item-active',
                 style: {
                   color: 'var(--ink)',
                   fontWeight: 650,
-                  background: 'var(--chip)',
-                  boxShadow: 'inset 2px 0 0 var(--primary)',
                 },
               }}
             >
-              <span className="grid w-5 shrink-0 place-items-center text-[14px]" aria-hidden>
-                {item.icon}
+              <span className="rv-nav-glyph grid w-5 shrink-0 place-items-center" aria-hidden>
+                <NavigationGlyph name={item.icon} className="h-[18px] w-[18px]" />
               </span>
               {!collapsed ? <span className="break-words">{item.label}</span> : null}
             </Link>
@@ -114,11 +100,10 @@ function Sidebar({ householdAdd }: { householdAdd: boolean }) {
 
   return (
     <div
-      className="sticky top-0 hidden h-dvh shrink-0 flex-col px-3.5 py-4 backdrop-blur-lg transition-[width] duration-200 ease-out motion-reduce:transition-none lg:flex"
+      data-collapsed={collapsed ? 'true' : 'false'}
+      className="rv-nav-surface rv-sidebar sticky top-0 hidden h-dvh shrink-0 flex-col px-3.5 py-4 backdrop-blur-lg transition-[width] duration-200 ease-out motion-reduce:transition-none lg:flex"
       style={{
         width: collapsed ? 76 : 232,
-        background: 'color-mix(in srgb, var(--bg1) 90%, transparent)',
-        borderRight: '1px solid var(--line)',
       }}
     >
       {/* Brand */}
@@ -127,34 +112,26 @@ function Sidebar({ householdAdd }: { householdAdd: boolean }) {
           skin's chrome material as a rail beneath (`.rv-chrome`, per-skin rules in skin-kit.css). */}
       <Link
         to="/"
-        className="rv-chrome flex items-center gap-2.5 px-1 py-1 pb-2.5"
+        className="rv-chrome rv-nav-brand flex items-center gap-2.5 px-1 py-1 pb-2.5"
         aria-label={`${APP_NAME} home`}
       >
         <span
-          className="grid h-[36px] w-[36px] shrink-0 place-items-center text-[18px] italic"
-          style={{
-            background: 'var(--card)',
-            color: 'var(--gold)',
-            border: '1px solid var(--gold)',
-            borderRadius: 'var(--radius-card)',
-            fontFamily: 'var(--font-display)',
-            fontWeight: 600,
-            boxShadow: 'var(--shadow)',
-          }}
+          className="rv-nav-monogram grid h-[38px] w-[38px] shrink-0 place-items-center text-[18px] italic"
+          style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
         >
           {APP_NAME.charAt(0)}
         </span>
         {!collapsed && (
           <span className="min-w-0 flex-1">
             <span
-              className="block text-[17px] leading-none text-ink"
+              className="rv-nav-wordmark block text-[18px] leading-none text-ink"
               style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
             >
               {APP_NAME}
             </span>
             <span
               data-testid="sidebar-chrome-line"
-              className="skin-label mt-1 block break-words text-[10px] leading-[1.35] text-muted"
+              className="skin-label mt-1.5 block break-words text-[10.5px] leading-[1.4] text-muted"
             >
               {chromeLine}
             </span>
@@ -171,7 +148,7 @@ function Sidebar({ householdAdd }: { householdAdd: boolean }) {
         search={householdAdd ? { scope: 'household' } : {}}
         title={collapsed ? (householdAdd ? 'Add to household' : 'Add a book') : undefined}
         aria-label={householdAdd ? 'Add to household' : 'Add a book'}
-        className={`skin-control skin-btn-primary mb-3 flex h-10 items-center justify-center gap-1.5 text-[13px] ${
+        className={`rv-sidebar-primary skin-control skin-btn-primary mb-3 flex h-10 items-center justify-center gap-1.5 text-[13.5px] ${
           collapsed ? 'px-0' : 'px-4'
         }`}
       >
@@ -183,7 +160,7 @@ function Sidebar({ householdAdd }: { householdAdd: boolean }) {
 
       {/* Footer controls */}
       <div
-        className="mt-3 flex flex-col gap-2 border-t pt-3"
+        className="rv-sidebar-footer mt-3 flex flex-col gap-2 border-t pt-3"
         style={{ borderColor: 'var(--line)' }}
       >
         <div className={`flex items-center gap-1.5 ${collapsed ? 'flex-col' : ''}`}>
@@ -191,10 +168,9 @@ function Sidebar({ householdAdd }: { householdAdd: boolean }) {
             to="/skins"
             title="Choose skin"
             aria-label="Choose skin"
-            className={`flex min-h-9 items-center justify-center gap-2 skin-control border border-line py-1 text-[12px] text-ink ${
+            className={`rv-sidebar-utility skin-control skin-btn-secondary flex min-h-9 items-center justify-center gap-2 py-1 text-[12.5px] ${
               collapsed ? 'w-9' : 'flex-1'
             }`}
-            style={{ background: 'color-mix(in srgb, var(--card) 70%, transparent)' }}
           >
             <span
               aria-hidden
@@ -213,10 +189,9 @@ function Sidebar({ householdAdd }: { householdAdd: boolean }) {
             to="/settings"
             title="Settings"
             aria-label="Settings"
-            className={`flex h-9 items-center justify-center gap-2 skin-control border border-line text-[12px] text-ink ${
+            className={`rv-sidebar-utility skin-control skin-btn-secondary flex h-9 items-center justify-center gap-2 text-[12.5px] ${
               collapsed ? 'w-9' : 'flex-1'
             }`}
-            style={{ background: 'color-mix(in srgb, var(--card) 70%, transparent)' }}
           >
             <span aria-hidden>⚙</span>
             {!collapsed && <span>Settings</span>}
@@ -226,10 +201,9 @@ function Sidebar({ householdAdd }: { householdAdd: boolean }) {
             onClick={() => void signOut()}
             title="Sign out"
             aria-label="Sign out"
-            className={`flex h-9 items-center justify-center skin-control border border-line text-[12px] text-muted hover:text-ink ${
+            className={`rv-sidebar-utility skin-control skin-btn-secondary flex h-9 items-center justify-center text-[12.5px] ${
               collapsed ? 'w-9' : 'px-3'
             }`}
-            style={{ background: 'color-mix(in srgb, var(--card) 70%, transparent)' }}
           >
             <span className={collapsed ? '' : 'hidden'}>
               <PowerGlyph />
@@ -241,7 +215,7 @@ function Sidebar({ householdAdd }: { householdAdd: boolean }) {
         <button
           type="button"
           onClick={() => setCollapsed((v) => !v)}
-          className={`flex items-center gap-2 rounded-[10px] px-2 py-1.5 text-[12px] text-muted hover:text-ink ${
+          className={`skin-control skin-btn-secondary flex items-center gap-2 px-2 py-1.5 text-[12px] ${
             collapsed ? 'justify-center' : ''
           }`}
           aria-pressed={collapsed}
@@ -256,15 +230,24 @@ function Sidebar({ householdAdd }: { householdAdd: boolean }) {
 }
 
 /** Compact top bar for narrow screens — brand and theme only. Navigation lives in the tab bar. */
-function MobileBar() {
+function MobileBar({ pathname }: { pathname: string }) {
+  const skinLabel = useSkinLabel()
+  const pageLabel = navigationLabelForPath(pathname)
+
   return (
-    <header className="flex items-center justify-between gap-3 px-4 py-3 lg:hidden">
-      <Link to="/" className="shrink-0" aria-label={`${APP_NAME} home`}>
+    <header className="rv-mobile-header flex min-h-[66px] items-center justify-between gap-3 px-4 py-2.5 lg:hidden">
+      <Link to="/" className="min-w-0" aria-label={`${APP_NAME} home`}>
         <span
-          className="text-[24px] italic leading-none text-ink"
+          className="rv-mobile-wordmark block text-[24px] italic leading-[1.1] text-ink"
           style={{ fontFamily: 'var(--font-display)', fontWeight: 600, letterSpacing: '0.5px' }}
         >
           {APP_NAME}
+        </span>
+        <span
+          data-testid="mobile-chrome-context"
+          className="skin-label mt-1 block break-words text-[10.5px] leading-[1.25] text-muted"
+        >
+          {pageLabel} · {skinLabel}
         </span>
       </Link>
       <ThemeToggle compact />
@@ -272,28 +255,20 @@ function MobileBar() {
   )
 }
 
-// The tab bar keeps the daily surfaces; everything else sits one tap away in the More sheet.
-const TAB_NAV = [NAV[0], NAV[1], NAV[4]] as const // Home, Library, Planner
-const MORE_NAV = [
-  ...NAV.filter((n) => !(TAB_NAV as readonly (typeof NAV)[number][]).includes(n)),
-  { label: 'Skins', to: '/skins', icon: '◐' },
-  { label: 'Settings', to: '/settings', icon: '⚙' },
-] as const
-
 const tabLink =
-  'flex flex-col items-center justify-center gap-1 pb-1.5 pt-2 text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors'
+  'rv-mobile-tab flex min-h-[58px] flex-col items-center justify-center gap-1 px-1 pb-1.5 pt-2 text-[12px] font-semibold transition-colors'
 
-function TabLink({ item }: { item: { label: string; to: string; icon: string } }) {
+function TabLink({ item }: { item: NavigationItem }) {
   return (
     <Link
       to={item.to}
       activeOptions={{ exact: item.to === '/' }}
       className={tabLink}
       style={{ color: 'var(--muted)' }}
-      activeProps={{ style: { color: 'var(--primary)' } }}
+      activeProps={{ className: 'rv-mobile-tab-active', style: { color: 'var(--primary)' } }}
     >
-      <span className="text-[17px] leading-none" aria-hidden>
-        {item.icon}
+      <span className="rv-mobile-tab-glyph leading-none" aria-hidden>
+        <NavigationGlyph name={item.icon} className="h-[19px] w-[19px]" />
       </span>
       <span className="skin-label">{item.label}</span>
     </Link>
@@ -318,7 +293,9 @@ function MobileTabBar({ householdAdd }: { householdAdd: boolean }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [moreOpen])
 
-  const moreActive = MORE_NAV.some((m) => pathname === m.to || pathname.startsWith(`${m.to}/`))
+  const moreActive = MORE_NAVIGATION_ITEMS.some(
+    (item) => pathname === item.to || pathname.startsWith(`${item.to}/`),
+  )
 
   return (
     <>
@@ -349,21 +326,21 @@ function MobileTabBar({ householdAdd }: { householdAdd: boolean }) {
           style={{ bottom: 'calc(76px + env(safe-area-inset-bottom))' }}
         >
           <nav className="grid grid-cols-3 gap-1" aria-label="More destinations">
-            {MORE_NAV.map((item) => (
+            {MORE_NAVIGATION_ITEMS.map((item) => (
               <Link
                 key={item.to}
                 to={item.to}
-                className="flex flex-col items-center gap-1.5 rounded-xl px-2 py-3 text-[13px] font-medium"
+                className="rv-nav-item flex min-h-[62px] flex-col items-center justify-center gap-1.5 px-2 py-2.5 text-[13px] font-medium"
                 style={{ color: 'var(--muted)' }}
                 activeProps={{
+                  className: 'rv-nav-item-active',
                   style: {
                     color: 'var(--ink)',
-                    background: 'color-mix(in srgb, var(--primary) 14%, transparent)',
                   },
                 }}
               >
-                <span className="text-[18px] leading-none" aria-hidden>
-                  {item.icon}
+                <span className="rv-nav-glyph leading-none" aria-hidden>
+                  <NavigationGlyph name={item.icon} className="h-5 w-5" />
                 </span>
                 <span className="skin-label">{item.label}</span>
               </Link>
@@ -373,7 +350,7 @@ function MobileTabBar({ householdAdd }: { householdAdd: boolean }) {
             <button
               type="button"
               onClick={() => void signOut()}
-              className="skin-control flex w-full items-center justify-center gap-2 px-2 py-2.5 text-[13px] font-semibold text-muted"
+              className="skin-control skin-btn-secondary flex w-full items-center justify-center gap-2 px-2 py-2.5 text-[13px] font-semibold"
             >
               <PowerGlyph /> Sign out
             </button>
@@ -383,39 +360,32 @@ function MobileTabBar({ householdAdd }: { householdAdd: boolean }) {
 
       <nav
         aria-label="Primary"
-        className="fixed inset-x-0 bottom-0 z-40 border-t backdrop-blur-lg lg:hidden"
+        className="rv-mobile-dock fixed inset-x-0 bottom-0 z-40 backdrop-blur-lg lg:hidden"
         style={{
-          borderColor: 'var(--line)',
-          background: 'color-mix(in srgb, var(--bg) 84%, transparent)',
           paddingBottom: 'env(safe-area-inset-bottom)',
         }}
       >
-        <div className="grid grid-cols-5">
-          <TabLink item={TAB_NAV[0]} />
-          <TabLink item={TAB_NAV[1]} />
+        <div className="rv-mobile-dock-grid grid grid-cols-5">
+          <TabLink item={MOBILE_TAB_ITEMS[0]} />
+          <TabLink item={MOBILE_TAB_ITEMS[1]} />
           <div className="flex items-start justify-center">
             <Link
               to="/add"
               data-testid="persistent-add"
               search={householdAdd ? { scope: 'household' } : {}}
               aria-label={householdAdd ? 'Add to household' : 'Add a book'}
-              className="grid h-11 w-11 -translate-y-3 place-items-center rounded-full text-[20px]"
-              style={{
-                background: 'var(--accent-fill)',
-                color: 'var(--on-primary)',
-                boxShadow: 'var(--shadow)',
-              }}
+              className="rv-mobile-add skin-control skin-btn-primary grid h-12 w-12 -translate-y-3 place-items-center text-[20px]"
             >
               <span aria-hidden>＋</span>
             </Link>
           </div>
-          <TabLink item={TAB_NAV[2]} />
+          <TabLink item={MOBILE_TAB_ITEMS[2]} />
           <button
             type="button"
             onClick={() => setMoreOpen((v) => !v)}
             aria-expanded={moreOpen}
             aria-controls="mobile-more-sheet"
-            className={tabLink}
+            className={`${tabLink} ${moreOpen || moreActive ? 'rv-mobile-tab-active' : ''}`}
             style={{ color: moreOpen || moreActive ? 'var(--primary)' : 'var(--muted)' }}
           >
             <span className="text-[17px] leading-none" aria-hidden>
@@ -454,7 +424,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <Sidebar householdAdd={householdAdd} />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <MobileBar />
+        <MobileBar pathname={pathname} />
         <div className="relative z-[1] px-4 lg:px-5">
           <SkinEvolveReveal />
         </div>
