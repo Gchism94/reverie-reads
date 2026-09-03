@@ -1,7 +1,7 @@
 // The series page IS the reading order (docs/archive/task-series-experience.md). A series' canonical
 // entries — including books the reader doesn't have yet, rendered as GHOST SLOTS — live on the
 // series_entries relation; this module is the pure logic under that page: ordering, per-entry
-// state, Next Up, progress, and the decimal positioning used by drag-reorder.
+// state, Next Up, progress, and the private ordering key used by drag-reorder.
 //
 // One order per series by decision (see docs/decisions/0001-series-single-order.md): alternate
 // orders (publication vs chronological) are deferred; an `order_variant` dimension would attach
@@ -15,8 +15,16 @@ import { authorOf } from './normalize'
 
 export interface SeriesEntry {
   id: string
-  /** numeric, decimals first-class — #0.5 prequels and #2.5 novellas are real positions */
+  /** Canonical volume number. Decimals are first-class — #0.5 prequels and #2.5 novellas are real. */
   position: number
+  /**
+   * Reader-controlled shelf order, deliberately separate from the canonical volume number.
+   * Midpoint decimals are an internal persistence detail and are never presented as a volume.
+   * Optional keeps older backups and fixtures readable; absent values fall back to `position`.
+   */
+  sortOrder?: number
+  /** Whether the reader has arranged the private shelf order. */
+  sortUserEdited?: boolean
   /** optional short tag rendered with the position badge: 'novella', 'prequel', … */
   label: string | null
   /** ghost display fields — a linked book renders from the book record instead */
@@ -26,8 +34,9 @@ export interface SeriesEntry {
   bookId: string | null
   source: 'manual' | 'hardcover'
   /**
-   * A READER GESTURE placed this row — a drag, a hand-typed position, a manual add, a removal.
-   * Source refreshes never touch it; manual order always wins.
+   * A READER GESTURE established this membership's canonical number or label — a hand-typed
+   * volume, a manual add, or a removal. Source refreshes never overwrite those claims. Shelf
+   * reordering is tracked independently by `sortUserEdited`.
    *
    * It does NOT mean "this row exists because of the reader". Reconciliation seeds an entry for
    * every library book naming the series, and those positions come from `seedSeriesPositions`, a
@@ -44,9 +53,21 @@ export interface SeriesEntry {
   positionClaim?: SeriesClaim
 }
 
-/** Entries in reading order (position, then title for stable ties). */
+/** Entries in reading order (private order key, then canonical volume and title for stable ties). */
 export const sortEntries = (entries: readonly SeriesEntry[]): SeriesEntry[] =>
-  [...entries].sort((a, b) => a.position - b.position || a.title.localeCompare(b.title))
+  [...entries].sort(
+    (a, b) =>
+      (a.sortOrder ?? a.position) - (b.sortOrder ?? b.position) ||
+      a.position - b.position ||
+      a.title.localeCompare(b.title),
+  )
+
+/**
+ * The standard volume-number vocabulary offered by the editor. Existing imported exceptions stay
+ * editable without coercion, but a newly chosen value must be a positive whole or half number.
+ */
+export const isStandardSeriesVolume = (position: number): boolean =>
+  Number.isFinite(position) && position > 0 && Number.isInteger(position * 2)
 
 /** The reader's relationship to one slot: read ✓ / reading / on a TBR / in-hand-unread /
  *  wishlist ("to get" — a book you want or haven't sorted, not in hand) / ghost (not in the
@@ -116,9 +137,9 @@ export function progressLine(p: SeriesProgress): string {
 }
 
 /**
- * A position for a slot dropped between two neighbours. Prefers HUMAN decimals — between #2 and
- * #3 lands exactly 2.5, not 2.4999 — trying one decimal place, then two. When neighbours are too
- * tight for a clean value, the caller renumbers the whole list (renormalize silently, per task).
+ * An internal sort key for a slot dropped between two neighbours. These midpoint decimals are not
+ * canonical volume numbers and must never be rendered as such. When neighbours are too tight for a
+ * clean value, the caller renumbers the private order keys without changing `position`.
  */
 export function positionBetween(
   prev: number | null,
