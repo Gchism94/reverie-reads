@@ -17,8 +17,9 @@
      whole radius migration being inert.
      The list below is what a control is MEANT to animate: how it feels under a pointer. Shape, type
      and layout are identity, not feedback, and should land instantly. */
-  transition-property:
-    color, background-color, border-color, outline-color, box-shadow, opacity, transform;
+  /* Theme and skin colours land atomically. Interpolating foreground and background separately can
+     create an unreadable midpoint even when both endpoints clear AA. */
+  transition-property: box-shadow, opacity, transform;
   transition-timing-function: var(--motion-ease);
   transition-duration: var(--motion-duration);
 }
@@ -51,8 +52,7 @@
      whole radius migration being inert.
      The list below is what a control is MEANT to animate: how it feels under a pointer. Shape, type
      and layout are identity, not feedback, and should land instantly. */
-  transition-property:
-    color, background-color, border-color, outline-color, box-shadow, opacity, transform;
+  transition-property: box-shadow, opacity, transform;
   transition-timing-function: var(--motion-ease);
   transition-duration: var(--motion-duration);
 }
@@ -173,62 +173,73 @@
   pointer-events: none;
 }
 
-/* ── Fable 5 controls layer — objects, not widgets (chunk 1). The Button variants read these
-   material classes; every value is a token, so each skin casts its own object: Tryst an ivory
-   calling card / ticket rule / wax seal, Aphelion a machined key / unpowered cut / instrument plate.
-   The corner notch (--ctl-clip) belongs to the buttons alone — never chips, selects, or tags. ── */
+/* ── Fable 5 controls layer ───────────────────────────────────────────────────────────────────
+   One legible interaction hierarchy across all rooms. The primary keeps each skin's authored CTA
+   palette; secondary and icon actions use an opaque card surface with a strong control boundary.
+   Room identity comes from restrained geometry, type and edge treatment—not tiny skeuomorphic
+   objects that stop reading as buttons at mobile size. ── */
 .skin-btn-primary {
   clip-path: var(--ctl-clip);
-  background: linear-gradient(180deg, var(--cta-hi), var(--cta-lo));
+  background: var(--cta-lo);
   color: var(--cta-ink);
   border: var(--border-width) solid var(--cta-border);
-  box-shadow: var(--cta-shadow);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--cta-hi) 42%, transparent),
+    0 5px 14px color-mix(in srgb, var(--accent-fill) 18%, transparent);
 }
 .skin-btn-secondary {
   clip-path: var(--ctl-clip);
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--cta-hi) 7%, var(--card-solid)),
-    color-mix(in srgb, var(--cta-lo) 5%, var(--card-solid))
-  );
+  background: var(--card-solid);
   color: var(--ink);
-  border: var(--border-width) solid color-mix(in srgb, var(--cta-border) 45%, var(--line));
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--paper) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ink) 64%, var(--card-solid));
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--paper) 10%, transparent);
 }
 .skin-btn-icon {
-  background: var(--field);
+  background: var(--card-solid);
   color: var(--ink);
-  border: var(--border-width) solid var(--line);
+  border: 1px solid color-mix(in srgb, var(--ink) 64%, var(--card-solid));
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--paper) 10%, transparent);
+}
+.skin-btn-primary:hover:not(:disabled),
+.skin-btn-secondary:hover:not(:disabled),
+.skin-btn-icon:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+.skin-btn-primary:hover:not(:disabled) {
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--cta-hi) 55%, transparent),
+    0 7px 18px color-mix(in srgb, var(--accent-fill) 24%, transparent);
+}
+.skin-btn-secondary:hover:not(:disabled),
+.skin-btn-icon:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--primary) 9%, var(--card-solid));
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--paper) 12%, transparent),
+    0 4px 10px color-mix(in srgb, var(--vignette) 14%, transparent);
+}
+.skin-btn-primary:active:not(:disabled),
+.skin-btn-secondary:active:not(:disabled),
+.skin-btn-icon:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: inset 0 2px 4px color-mix(in srgb, var(--vignette) 18%, transparent);
+}
+.skin-btn-primary:disabled,
+.skin-btn-secondary:disabled,
+.skin-btn-icon:disabled {
+  cursor: not-allowed;
 }
 
-/* Tryst · the standing invitation — CTA is a letterpressed calling card (4px, gilt edge), the
-   secondary a ticket rule (hairlines top + bottom, open sides), the icon action a wax seal. */
+/* Tryst · an invitation: compact corners and a quiet gilt edge. */
 [data-skin='tryst'] .skin-btn-primary {
-  border-radius: 4px;
+  border-radius: 6px;
 }
 [data-skin='tryst'] .skin-btn-secondary {
-  border-radius: 0;
-  border: 0;
-  border-top: 1px solid var(--hair);
-  border-bottom: 1px solid var(--hair);
-}
-[data-skin='tryst'] .skin-btn-secondary:hover {
-  background: color-mix(in srgb, var(--gold) 8%, transparent);
+  border-radius: 6px;
+  border-color: color-mix(in srgb, var(--gold) 68%, var(--card-solid));
 }
 [data-skin='tryst'] .skin-btn-icon {
-  border-radius: 50%;
-  border: 1px solid rgba(0, 0, 0, 0.3);
-  background: radial-gradient(
-    circle at 35% 28%,
-    var(--seal-hi),
-    var(--seal-mid) 58%,
-    var(--seal-lo)
-  );
-  color: var(--seal-ink);
-  box-shadow:
-    inset 0 2px 0 rgba(255, 255, 255, 0.16),
-    inset 0 -4px 9px rgba(0, 0, 0, 0.45),
-    0 8px 18px color-mix(in srgb, var(--seal-mid) 40%, transparent);
+  border-radius: 6px;
+  border-color: color-mix(in srgb, var(--gold) 68%, var(--card-solid));
 }
 /* the guest-book line: an underline, not a box; typed text stays as typed but the field speaks italic serif */
 [data-skin='tryst'] .skin-field {
@@ -240,44 +251,29 @@
   font-style: italic;
 }
 
-/* Aphelion · the cold archive — primary is the machined key (the ONE notched cut, engraved mono);
-   secondary is the same cut unpowered; the icon action is a plain instrument plate (2px, no notch). */
+/* Aphelion · machined and notched, with a cyan instrument edge. */
 [data-skin='aphelion'] .skin-btn-primary {
-  letter-spacing: 0.18em;
+  letter-spacing: 0.11em;
 }
 [data-skin='aphelion'] .skin-btn-secondary {
-  background: color-mix(in srgb, var(--plate) 60%, transparent);
-  color: var(--primary);
-  border: 1px solid color-mix(in srgb, var(--primary) 55%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 72%, var(--card-solid));
 }
 [data-skin='aphelion'] .skin-btn-icon {
   border-radius: 2px;
-  background: var(--plate);
-  color: var(--primary);
-  border: 1px solid color-mix(in srgb, var(--primary) 55%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 72%, var(--card-solid));
 }
 
-/* Grimoire · the working spellbook — primary is a gilt cartouche (3px, Cormorant, illuminated edge);
-   secondary a ruled incantation (written on the line, no box); the icon action a bronze clasp. */
+/* Grimoire · a vellum control with a precise gilt rule. */
 [data-skin='grimoire'] .skin-btn-primary {
-  border-radius: 3px;
+  border-radius: 5px;
 }
 [data-skin='grimoire'] .skin-btn-secondary {
-  border-radius: 0;
-  border: 0;
-  border-bottom: 1px solid var(--hair);
-}
-[data-skin='grimoire'] .skin-btn-secondary:hover {
-  background: color-mix(in srgb, var(--gold) 7%, transparent);
+  border-radius: 5px;
+  border-color: color-mix(in srgb, var(--gold) 68%, var(--card-solid));
 }
 [data-skin='grimoire'] .skin-btn-icon {
-  border-radius: 8px;
-  border: 1px solid rgba(0, 0, 0, 0.45);
-  background: linear-gradient(160deg, #a8843c, #6e5420 60%, #8a6a2f);
-  color: #f6ecd2;
-  box-shadow:
-    inset 0 2px 0 rgba(255, 235, 180, 0.3),
-    inset 0 -4px 8px rgba(0, 0, 0, 0.4);
+  border-radius: 5px;
+  border-color: color-mix(in srgb, var(--gold) 68%, var(--card-solid));
 }
 /* the ruled manuscript line under a pilcrow */
 [data-skin='grimoire'] .skin-field {
@@ -289,33 +285,18 @@
   font-style: italic;
 }
 
-/* Marrow · the specimen archive — primary is a bone plaque (chamfer-cut); secondary is carved into
-   the granite (engraved, no border); the icon action is a specimen pin. Everything cut, never round. */
+/* Marrow · hard chamfers and a dark specimen edge. */
 [data-skin='marrow'] .skin-btn-primary {
   border-radius: 0;
-  border: 0;
 }
 [data-skin='marrow'] .skin-btn-secondary {
   clip-path: var(--ctl-clip);
-  border: 0;
-  background: color-mix(in srgb, var(--card-solid) 88%, var(--ink));
-  color: var(--ink);
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.4);
+  border-color: color-mix(in srgb, var(--ink) 70%, var(--card-solid));
 }
 [data-skin='marrow'] .skin-btn-icon {
-  clip-path: none;
-  border-radius: 50%;
-  border: 1px solid rgba(0, 0, 0, 0.5);
-  background: radial-gradient(
-    circle at 34% 28%,
-    var(--slate),
-    color-mix(in srgb, var(--slate) 62%, #000) 62%,
-    color-mix(in srgb, var(--slate) 45%, #000)
-  );
-  color: var(--paper);
-  box-shadow:
-    inset 0 2px 0 rgba(255, 255, 255, 0.3),
-    inset 0 -4px 8px rgba(0, 0, 0, 0.4);
+  clip-path: var(--ctl-clip);
+  border-radius: 0;
+  border-color: color-mix(in srgb, var(--ink) 70%, var(--card-solid));
 }
 /* the ledger line */
 [data-skin='marrow'] .skin-field {
@@ -326,8 +307,7 @@
   background: transparent;
 }
 
-/* Gaslight (umbra) · the unsolved case — primary is a brass door plate (beveled, engraved, screwed at
-   both ends); secondary a typed order on its own underline; the icon action a brass tack. */
+/* Gaslight (umbra) · a compact brass-edged case label. */
 [data-skin='umbra'] .skin-btn-primary {
   position: relative;
   border-radius: 2px;
@@ -335,44 +315,15 @@
 }
 [data-skin='umbra'] .skin-btn-primary::before,
 [data-skin='umbra'] .skin-btn-primary::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  transform: translateY(-50%);
-  background: color-mix(in srgb, var(--cta-ink) 55%, var(--cta-lo));
-  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.5);
-}
-[data-skin='umbra'] .skin-btn-primary::before {
-  left: 7px;
-}
-[data-skin='umbra'] .skin-btn-primary::after {
-  right: 7px;
+  content: none;
 }
 [data-skin='umbra'] .skin-btn-secondary {
-  border-radius: 0;
-  border: 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--slate) 60%, transparent);
-  color: var(--ink);
-}
-[data-skin='umbra'] .skin-btn-secondary:hover {
-  background: color-mix(in srgb, var(--slate) 10%, transparent);
+  border-radius: 3px;
+  border-color: color-mix(in srgb, var(--gold) 68%, var(--card-solid));
 }
 [data-skin='umbra'] .skin-btn-icon {
-  border-radius: 50%;
-  border: 1px solid rgba(0, 0, 0, 0.5);
-  background: radial-gradient(
-    circle at 34% 28%,
-    var(--cta-hi),
-    var(--cta-lo) 58%,
-    color-mix(in srgb, var(--cta-lo) 70%, #000)
-  );
-  color: var(--cta-ink);
-  box-shadow:
-    inset 0 2px 0 rgba(255, 244, 205, 0.5),
-    inset 0 -4px 8px rgba(70, 50, 10, 0.4);
+  border-radius: 3px;
+  border-color: color-mix(in srgb, var(--gold) 68%, var(--card-solid));
 }
 /* the typewriter SUBJECT line */
 [data-skin='umbra'] .skin-field {
@@ -383,26 +334,18 @@
   font-family: var(--font-mono);
 }
 
-/* Folio ("Marginalia") · an editor's marks, not widgets — primary is a grease-pencil stamp in
-   proof-red; secondary a pencilled correction (italic text on its own red rule); the icon action
-   a paper clip; the field a manuscript line with the caret cursor. */
+/* Folio ("Marginalia") · a proof-red editorial edge, never a loose underline. */
 [data-skin='folio'] .skin-btn-primary {
   border-radius: 3px;
 }
 [data-skin='folio'] .skin-btn-secondary {
-  border-radius: 0;
-  border: 0;
-  border-bottom: 1.5px solid var(--accent-fill);
+  border-radius: 5px;
+  border-color: color-mix(in srgb, var(--accent-fill) 70%, var(--card-solid));
   font-style: italic;
 }
-[data-skin='folio'] .skin-btn-secondary:hover {
-  background: color-mix(in srgb, var(--accent-fill) 7%, transparent);
-}
 [data-skin='folio'] .skin-btn-icon {
-  border-radius: 999px;
-  border: 2px solid color-mix(in srgb, var(--ink) 45%, transparent);
-  background: transparent;
-  color: var(--ink);
+  border-radius: 5px;
+  border-color: color-mix(in srgb, var(--accent-fill) 70%, var(--card-solid));
 }
 /* the manuscript line — a pencil rule, the editor's italic hand for placeholder text */
 [data-skin='folio'] .skin-field {
@@ -414,30 +357,14 @@
   font-style: italic;
 }
 
-/* Hearth · things off the table, not widgets — primary is a jam-lid button ringed like a preserve
-   label; secondary a stitched underline; the icon action a sewn wooden button (four thread holes
-   drawn as background dots); the field a paper recipe line. */
+/* Hearth · a softly squared label with a restrained stitched edge. */
 [data-skin='hearth'] .skin-btn-secondary {
-  border-radius: 0;
-  border: 0;
-  border-bottom: 2px dashed color-mix(in srgb, var(--thread) 70%, transparent);
-}
-[data-skin='hearth'] .skin-btn-secondary:hover {
-  background: color-mix(in srgb, var(--thread) 10%, transparent);
+  border-radius: 10px;
+  border: 1px dashed color-mix(in srgb, var(--thread) 74%, var(--card-solid));
 }
 [data-skin='hearth'] .skin-btn-icon {
-  border-radius: 50%;
-  border: 1px solid rgba(0, 0, 0, 0.35);
-  background:
-    radial-gradient(circle at 38% 38%, rgba(40, 28, 12, 0.7) 1px, transparent 1.6px),
-    radial-gradient(circle at 62% 38%, rgba(40, 28, 12, 0.7) 1px, transparent 1.6px),
-    radial-gradient(circle at 38% 62%, rgba(40, 28, 12, 0.7) 1px, transparent 1.6px),
-    radial-gradient(circle at 62% 62%, rgba(40, 28, 12, 0.7) 1px, transparent 1.6px),
-    radial-gradient(circle at 35% 30%, var(--gold), var(--gold-deep));
-  color: #fdf3ea;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 244, 205, 0.4),
-    0 2px 5px rgba(0, 0, 0, 0.3);
+  border-radius: 10px;
+  border: 1px dashed color-mix(in srgb, var(--thread) 74%, var(--card-solid));
 }
 /* the recipe line on paper */
 [data-skin='hearth'] .skin-field {
@@ -447,36 +374,25 @@
   background: transparent;
 }
 
-/* Almanac · the field kit, not widgets — primary is an ink stamp block wearing the view's orange
-   notch; secondary a double-ruled action; the icon action a brass grommet; the field a labelled
-   form line with a block cursor. */
+/* Almanac · compact field labels with a measured double-rule edge. */
 [data-skin='almanac'] .skin-btn-primary {
   position: relative;
   border-radius: 2px;
   letter-spacing: 0.12em;
 }
 [data-skin='almanac'] .skin-btn-primary::before {
-  content: '';
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  margin-right: 9px;
-  background: var(--accent); /* the one orange tab per view rides the primary action */
-  flex: none;
+  content: none;
 }
 [data-skin='almanac'] .skin-btn-secondary {
-  border-radius: 0;
-  border: 0;
-  border-bottom: 3px double color-mix(in srgb, var(--ink) 65%, transparent);
-}
-[data-skin='almanac'] .skin-btn-secondary:hover {
-  background: color-mix(in srgb, var(--ink) 6%, transparent);
+  border-radius: 2px;
+  border-color: color-mix(in srgb, var(--ink) 68%, var(--card-solid));
+  box-shadow:
+    inset 0 -3px 0 var(--card-solid),
+    inset 0 -4px 0 color-mix(in srgb, var(--ink) 68%, var(--card-solid));
 }
 [data-skin='almanac'] .skin-btn-icon {
-  border-radius: 50%;
-  border: 3px solid color-mix(in srgb, var(--ink) 70%, transparent);
-  background: transparent;
-  color: var(--ink);
+  border-radius: 2px;
+  border-color: color-mix(in srgb, var(--ink) 68%, var(--card-solid));
 }
 /* the labelled form line */
 [data-skin='almanac'] .skin-field {
@@ -486,24 +402,14 @@
   background: transparent;
 }
 
-/* Bloom ("Firstlight") · a desk at 2 a.m., not widgets — primary is a gel pill; secondary a gel
-   underline; the icon action a star sticker (white, gel ring); the field a gel-pen line. */
+/* Bloom ("Firstlight") · softly rounded gel edges without sticker silhouettes. */
 [data-skin='bloom'] .skin-btn-secondary {
-  border-radius: 0 0 2px 2px;
-  border: 0;
-  border-bottom: 2.5px solid var(--accent-fill);
-}
-[data-skin='bloom'] .skin-btn-secondary:hover {
-  background: color-mix(in srgb, var(--accent-fill) 8%, transparent);
+  border-radius: 12px;
+  border-color: color-mix(in srgb, var(--accent-fill) 64%, var(--card-solid));
 }
 [data-skin='bloom'] .skin-btn-icon {
-  border-radius: 999px;
-  border: 0;
-  background: var(--paper);
-  color: var(--accent-fill);
-  box-shadow:
-    0 0 0 2px color-mix(in srgb, var(--accent-fill) 30%, transparent),
-    0 2px 6px rgba(40, 40, 80, 0.2);
+  border-radius: 12px;
+  border-color: color-mix(in srgb, var(--accent-fill) 64%, var(--card-solid));
 }
 /* the gel-pen line */
 [data-skin='bloom'] .skin-field {

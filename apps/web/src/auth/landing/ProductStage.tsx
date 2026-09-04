@@ -81,7 +81,7 @@ function Cover({
               'linear-gradient(150deg, color-mix(in srgb, var(--primary) 68%, var(--card)), color-mix(in srgb, var(--violet, var(--primary)) 58%, var(--card)))',
           }}
         >
-          <span className="text-[9px] italic leading-tight text-ink" style={display}>
+          <span className="text-[10.5px] italic leading-[1.25] text-ink" style={display}>
             {book.title}
           </span>
         </div>
@@ -103,8 +103,10 @@ function Cover({
 function BrowserBar() {
   return (
     <div className="flex h-8 items-center justify-between border-b border-line bg-card px-3 sm:h-10">
-      <span className="skin-label text-[7px] text-muted sm:text-[8px]">Live product preview</span>
-      <span className="hidden border-b border-line px-6 py-1 text-center text-[8px] text-muted sm:block">
+      <span className="skin-label text-[10px] text-muted sm:text-[10.5px]">
+        Live product preview
+      </span>
+      <span className="hidden border-b border-line px-6 py-1 text-center text-[10.5px] text-muted sm:block">
         reverie · library
       </span>
     </div>
@@ -140,12 +142,12 @@ function DesktopLibrary({ compact = false }: { compact?: boolean }) {
               >
                 {APP_NAME}
               </span>
-              <span className="skin-label mt-1 block truncate text-[8.5px] leading-[1.3] text-muted">
+              <span className="skin-label mt-1 block truncate text-[10px] leading-[1.35] text-muted">
                 Your living library
               </span>
             </span>
           </div>
-          <span className="skin-control skin-btn-primary mt-2.5 flex min-h-8 items-center justify-center gap-1.5 px-2 text-[10.5px]">
+          <span className="skin-control skin-btn-primary mt-2.5 flex min-h-9 items-center justify-center gap-1.5 px-2 text-[11.5px]">
             <span aria-hidden>＋</span> Add a book
           </span>
           <nav
@@ -154,13 +156,13 @@ function DesktopLibrary({ compact = false }: { compact?: boolean }) {
           >
             {NAVIGATION_GROUPS.map((group) => (
               <div key={group.label} className="rv-nav-group flex flex-col gap-0.5">
-                <div className="rv-nav-group-label skin-label px-2 text-[8.5px] leading-[1.3] text-muted">
+                <div className="rv-nav-group-label skin-label px-2 text-[10px] leading-[1.35] text-muted">
                   {group.label}
                 </div>
                 {group.items.map((item) => (
                   <span
                     key={item.to}
-                    className={`rv-nav-item flex items-center gap-2 px-2 py-1 text-[11px] font-medium ${
+                    className={`rv-nav-item flex min-h-8 items-center gap-2 px-2 py-1 text-[12px] font-medium ${
                       item.to === '/library' ? 'rv-nav-item-active' : ''
                     }`}
                     style={{ color: item.to === '/library' ? 'var(--ink)' : 'var(--muted)' }}
@@ -179,17 +181,17 @@ function DesktopLibrary({ compact = false }: { compact?: boolean }) {
         <div className="min-w-0 p-3 sm:p-5 lg:p-6">
           <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line pb-3 sm:pb-4">
             <div>
-              <div className="skin-label text-[9px] text-muted sm:text-[10.5px]">
+              <div className="skin-label text-[11px] text-muted sm:text-[12px]">
                 34 books · 7 faves
               </div>
               <h2 className="mt-1 text-[20px] leading-none text-ink sm:text-[30px]" style={display}>
                 Your library
               </h2>
-              <p className="mt-2 hidden max-w-[50ch] text-[11px] leading-[1.55] text-muted sm:block">
+              <p className="mt-2 hidden max-w-[50ch] text-[12.5px] leading-[1.55] text-muted sm:block">
                 Search, filter, and rediscover the books you’ve made part of your reading life.
               </p>
             </div>
-            <div className="flex items-center gap-2 text-[9px] font-semibold sm:text-[10.5px]">
+            <div className="flex items-center gap-2 text-[10.5px] font-semibold sm:text-[11.5px]">
               <div
                 className="flex border border-line p-0.5"
                 style={{ borderRadius: 'var(--radius-control)' }}
@@ -215,7 +217,7 @@ function DesktopLibrary({ compact = false }: { compact?: boolean }) {
             {['On your shelf', 'Unread', 'Fantasy', 'Sort: recent'].map((item, index) => (
               <span
                 key={item}
-                className="border border-line px-2 py-1 text-[8.5px] text-muted sm:text-[9.5px]"
+                className="border border-line px-2 py-1 text-[10.5px] text-muted sm:text-[11px]"
                 style={{
                   background: index === 0 ? 'var(--chip)' : 'transparent',
                   color: index === 0 ? 'var(--ink)' : 'var(--muted)',
@@ -235,7 +237,7 @@ function DesktopLibrary({ compact = false }: { compact?: boolean }) {
                 <div className="relative">
                   <Cover book={book} eager={index < 2} />
                   <span
-                    className="absolute bottom-1 right-1 px-1.5 py-0.5 text-[7.5px] font-semibold text-ink sm:text-[8px]"
+                    className="absolute bottom-1 right-1 px-1.5 py-0.5 text-[9.5px] font-semibold text-ink sm:text-[10px]"
                     style={{
                       background: 'var(--card-solid)',
                       borderRadius: 'var(--radius-control)',
@@ -244,10 +246,10 @@ function DesktopLibrary({ compact = false }: { compact?: boolean }) {
                     {book.state}
                   </span>
                 </div>
-                <h3 className="mt-1.5 line-clamp-2 text-[9px] font-semibold leading-[1.25] text-ink sm:text-[10.5px]">
+                <h3 className="mt-1.5 line-clamp-2 text-[10.5px] font-semibold leading-[1.35] text-ink sm:text-[11.5px]">
                   {book.title}
                 </h3>
-                <p className="mt-1 truncate text-[8px] leading-[1.35] text-muted sm:text-[9px]">
+                <p className="mt-1 truncate text-[10px] leading-[1.4] text-muted sm:text-[10.5px]">
                   {book.author}
                 </p>
               </article>
@@ -274,13 +276,13 @@ function MobileBook() {
           <span className="rv-mobile-wordmark text-[16px] italic text-ink" style={display}>
             Reverie
           </span>
-          <span className="skin-label text-[8px] text-muted">Library</span>
+          <span className="skin-label text-[10px] text-muted">Library</span>
         </div>
         <div className="px-4 pb-[68px] pt-3.5">
-          <div className="text-[10px] text-muted">← Library</div>
+          <div className="text-[11.5px] text-muted">← Library</div>
           <Cover book={book} eager className="mx-auto mt-3 w-[92px]" />
           <div className="mt-3 text-center">
-            <div className="skin-label text-[8px] leading-[1.35] text-ink">
+            <div className="skin-label text-[10px] leading-[1.4] text-ink">
               Book record · The Court series #1
             </div>
             <h2
@@ -289,13 +291,13 @@ function MobileBook() {
             >
               {book.title}
             </h2>
-            <p className="mt-1.5 text-[10.5px] leading-[1.4] text-muted">{book.author}</p>
+            <p className="mt-1.5 text-[12px] leading-[1.45] text-muted">{book.author}</p>
           </div>
           <div className="mt-3 flex flex-wrap justify-center gap-1">
             {['Owned', 'Physical', 'Fantasy'].map((item) => (
               <span
                 key={item}
-                className="bg-chip px-2 py-1 text-[8px] text-ink"
+                className="bg-chip px-2 py-1 text-[10.5px] text-ink"
                 style={{ borderRadius: 'var(--radius-control)' }}
               >
                 {item}
@@ -306,18 +308,18 @@ function MobileBook() {
             className="mt-4 border border-line bg-card p-2.5"
             style={{ borderRadius: 'var(--radius-card)' }}
           >
-            <div className="flex items-center justify-between text-[9.5px] text-ink">
+            <div className="flex items-center justify-between text-[11.5px] text-ink">
               <span>Reading now</span>
               <span>62%</span>
             </div>
             <div className="mt-2 h-1 overflow-hidden rounded-full bg-chip">
               <div className="h-full w-[62%] rounded-full bg-primary" />
             </div>
-            <div className="mt-2 text-[8.5px] leading-[1.4] text-muted">
+            <div className="mt-2 text-[10.5px] leading-[1.45] text-muted">
               Chapter eleven · started August 18
             </div>
           </div>
-          <div className="mt-3 grid grid-cols-2 gap-2 text-center text-[9px] font-semibold">
+          <div className="mt-3 grid grid-cols-2 gap-2 text-center text-[11.5px] font-semibold">
             <span className="skin-control skin-btn-secondary px-2 py-2 text-ink">Log progress</span>
             <span className="skin-control skin-btn-primary px-2 py-2">Edit details</span>
           </div>
@@ -327,7 +329,7 @@ function MobileBook() {
             {MOBILE_TAB_ITEMS.slice(0, 2).map((item) => (
               <span
                 key={item.to}
-                className={`rv-mobile-tab flex min-h-[50px] flex-col items-center justify-center gap-1 text-[9px] ${
+                className={`rv-mobile-tab flex min-h-[54px] flex-col items-center justify-center gap-1 text-[10.5px] ${
                   item.to === '/library' ? 'rv-mobile-tab-active' : ''
                 }`}
               >
@@ -336,15 +338,15 @@ function MobileBook() {
               </span>
             ))}
             <span className="flex items-start justify-center">
-              <span className="rv-mobile-add skin-control skin-btn-primary grid h-9 w-9 -translate-y-2 place-items-center text-[14px]">
+              <span className="rv-mobile-add skin-control skin-btn-primary grid h-11 w-11 -translate-y-2 place-items-center text-[16px]">
                 ＋
               </span>
             </span>
-            <span className="rv-mobile-tab flex min-h-[50px] flex-col items-center justify-center gap-1 text-[9px]">
+            <span className="rv-mobile-tab flex min-h-[54px] flex-col items-center justify-center gap-1 text-[10.5px]">
               <NavigationGlyph name={MOBILE_TAB_ITEMS[2].icon} className="h-4 w-4" />
               <span className="skin-label">{MOBILE_TAB_ITEMS[2].label}</span>
             </span>
-            <span className="rv-mobile-tab flex min-h-[50px] flex-col items-center justify-center gap-1 text-[9px]">
+            <span className="rv-mobile-tab flex min-h-[54px] flex-col items-center justify-center gap-1 text-[10.5px]">
               <span className="text-[15px] leading-none">···</span>
               <span className="skin-label">More</span>
             </span>
@@ -382,18 +384,18 @@ export function ReadingRecordStage() {
     >
       <BrowserBar />
       <div aria-hidden className="p-4 sm:p-6 lg:p-8">
-        <div className="text-[9px] text-muted sm:text-[11px]">← Library</div>
+        <div className="text-[11.5px] text-muted sm:text-[12.5px]">← Library</div>
         <div className="mt-4 grid gap-6 md:grid-cols-[190px_1fr] lg:grid-cols-[230px_1fr] lg:gap-9">
           <div>
             <Cover book={book} eager className="mx-auto w-full max-w-[190px] md:max-w-none" />
-            <div className="mt-3 grid grid-cols-2 gap-2 text-center text-[8px] font-semibold sm:text-[10px]">
+            <div className="mt-3 grid grid-cols-2 gap-2 text-center text-[10.5px] font-semibold sm:text-[11.5px]">
               <span className="skin-control skin-btn-secondary px-2 py-2">♡ Favourite</span>
               <span className="skin-control skin-btn-primary px-2 py-2">Edit details</span>
             </div>
           </div>
 
           <div className="min-w-0">
-            <div className="skin-label text-[8px] text-ink sm:text-[10px]">
+            <div className="skin-label text-[10px] text-ink sm:text-[11.5px]">
               Book record · The Court series #1
             </div>
             <h3
@@ -408,7 +410,7 @@ export function ReadingRecordStage() {
               {['Owned', 'Physical', 'Fantasy', 'High intensity'].map((item) => (
                 <span
                   key={item}
-                  className="border border-line bg-chip px-3 py-1.5 text-[8px] text-ink sm:text-[10px]"
+                  className="border border-line bg-chip px-3 py-1.5 text-[10.5px] text-ink sm:text-[11.5px]"
                   style={{ borderRadius: 'var(--radius-control)' }}
                 >
                   {item}
@@ -421,12 +423,12 @@ export function ReadingRecordStage() {
                 className="border border-line bg-card p-4"
                 style={{ borderRadius: 'var(--radius-card)' }}
               >
-                <div className="skin-label text-[8px] text-muted">Reading now</div>
+                <div className="skin-label text-[10.5px] text-muted">Reading now</div>
                 <div className="mt-2 flex items-end justify-between gap-3">
                   <span className="text-[22px] text-ink" style={display}>
                     62%
                   </span>
-                  <span className="text-[8px] text-muted">Chapter eleven</span>
+                  <span className="text-[10.5px] text-muted">Chapter eleven</span>
                 </div>
                 <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-chip">
                   <div className="h-full w-[62%] rounded-full bg-primary" />
@@ -436,10 +438,10 @@ export function ReadingRecordStage() {
                 className="border border-line bg-card p-4"
                 style={{ borderRadius: 'var(--radius-card)' }}
               >
-                <div className="skin-label text-[8px] text-muted">Your copies</div>
+                <div className="skin-label text-[10.5px] text-muted">Your copies</div>
                 <div className="mt-2 text-[13px] font-semibold text-ink">Hardcover · owned</div>
-                <div className="mt-1 text-[9px] text-muted">Audiobook · borrowed</div>
-                <div className="mt-3 text-[8px] text-muted">
+                <div className="mt-1 text-[11px] text-muted">Audiobook · borrowed</div>
+                <div className="mt-3 text-[10.5px] leading-[1.45] text-muted">
                   Formats stay separate from reading history.
                 </div>
               </div>
@@ -451,14 +453,14 @@ export function ReadingRecordStage() {
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <div className="skin-label text-[8px] text-muted">Reading history</div>
-                  <div className="mt-1 text-[12px] font-semibold text-ink">
+                  <div className="skin-label text-[10.5px] text-muted">Reading history</div>
+                  <div className="mt-1 text-[12.5px] font-semibold text-ink">
                     One active read · two rereads kept
                   </div>
                 </div>
-                <span className="text-[8px] text-muted">2023 · 2025 · now</span>
+                <span className="text-[10.5px] text-muted">2023 · 2025 · now</span>
               </div>
-              <div className="relative mt-4 grid grid-cols-3 gap-3 text-center text-[8px] text-muted">
+              <div className="relative mt-4 grid grid-cols-3 gap-3 text-center text-[10.5px] text-muted">
                 <span className="absolute left-[16%] right-[16%] top-2 h-px bg-line" />
                 {['First read', 'Reread', 'Reading now'].map((item, index) => (
                   <div key={item} className="relative">
@@ -490,17 +492,17 @@ export function HouseholdStage() {
       <div aria-hidden className="p-4 sm:p-6 lg:p-8">
         <div className="flex flex-wrap items-end justify-between gap-4 border-b border-line pb-4">
           <div>
-            <div className="skin-label text-[8px] text-muted sm:text-[10px]">
+            <div className="skin-label text-[10px] text-muted sm:text-[11.5px]">
               Household · shared
             </div>
             <h3 className="mt-1 text-[24px] leading-none text-ink sm:text-[34px]" style={display}>
               Household library
             </h3>
-            <p className="mt-2 max-w-[58ch] text-[9px] leading-relaxed text-muted sm:text-[11px]">
+            <p className="mt-2 max-w-[58ch] text-[11px] leading-[1.5] text-muted sm:text-[12.5px]">
               The books shared across your household, with every reader’s copy kept distinct.
             </p>
           </div>
-          <div className="flex items-center gap-2 text-[8px] font-semibold sm:text-[10px]">
+          <div className="flex items-center gap-2 text-[10px] font-semibold sm:text-[11.5px]">
             <span className="border border-line px-2.5 py-1.5 text-muted">Personal</span>
             <span
               className="px-2.5 py-1.5 text-on-primary"
@@ -520,23 +522,23 @@ export function HouseholdStage() {
               <div className="relative">
                 <Cover book={book} />
                 <span
-                  className="absolute left-1.5 top-1.5 max-w-[calc(100%-12px)] truncate px-2 py-1 text-[7px] font-semibold text-ink sm:text-[8px]"
+                  className="absolute left-1.5 top-1.5 max-w-[calc(100%-12px)] truncate px-2 py-1 text-[9.5px] font-semibold text-ink sm:text-[10.5px]"
                   style={{ background: 'var(--card-solid)', borderRadius: 'var(--radius-control)' }}
                 >
                   {book.owner}
                 </span>
                 <span
-                  className="absolute bottom-1.5 right-1.5 px-2 py-1 text-[7px] font-semibold text-ink sm:text-[8px]"
+                  className="absolute bottom-1.5 right-1.5 px-2 py-1 text-[9.5px] font-semibold text-ink sm:text-[10.5px]"
                   style={{ background: 'var(--card-solid)', borderRadius: 'var(--radius-control)' }}
                 >
                   {book.state}
                 </span>
               </div>
-              <h4 className="mt-2 line-clamp-2 text-[10px] font-semibold leading-tight text-ink sm:text-[12px]">
+              <h4 className="mt-2 line-clamp-2 text-[11px] font-semibold leading-[1.35] text-ink sm:text-[12.5px]">
                 {book.title}
               </h4>
-              <p className="mt-1 truncate text-[8px] text-muted sm:text-[10px]">{book.author}</p>
-              <p className="mt-1 truncate text-[8px] font-semibold text-muted sm:text-[10px]">
+              <p className="mt-1 truncate text-[10.5px] text-muted sm:text-[11px]">{book.author}</p>
+              <p className="mt-1 truncate text-[10.5px] font-semibold text-muted sm:text-[11px]">
                 {book.owner}
               </p>
             </article>
@@ -579,17 +581,17 @@ export function ConnectedStage() {
       <div aria-hidden className="p-4 sm:p-6 lg:p-8">
         <div className="flex flex-wrap items-start justify-between gap-4 border-b border-line pb-4">
           <div>
-            <div className="skin-label text-[8px] text-muted sm:text-[10px]">
+            <div className="skin-label text-[10px] text-muted sm:text-[11.5px]">
               Series universe · Pro
             </div>
             <h3 className="mt-1 text-[24px] leading-none text-ink sm:text-[34px]" style={display}>
               The Starlit Courts
             </h3>
-            <p className="mt-2 max-w-[60ch] text-[9px] leading-relaxed text-muted sm:text-[11px]">
+            <p className="mt-2 max-w-[60ch] text-[11px] leading-[1.5] text-muted sm:text-[12.5px]">
               Three distinct series, one reviewed universe order. Series positions remain their own.
             </p>
           </div>
-          <span className="border border-line bg-chip px-3 py-1.5 text-[8px] font-semibold text-ink sm:text-[10px]">
+          <span className="border border-line bg-chip px-3 py-1.5 text-[10.5px] font-semibold text-ink sm:text-[11.5px]">
             Publication order
           </span>
         </div>
@@ -603,11 +605,11 @@ export function ConnectedStage() {
                 style={{ borderRadius: 'var(--radius-card)' }}
               >
                 <div>
-                  <span className="inline-flex min-h-7 items-center border border-line bg-chip px-2.5 text-[8px] font-bold uppercase tracking-[0.14em] text-ink">
+                  <span className="inline-flex min-h-8 items-center border border-line bg-chip px-2.5 text-[10px] font-bold uppercase tracking-[0.1em] text-ink">
                     Series {lane.code}
                   </span>
-                  <div className="mt-2 text-[11px] font-semibold text-ink">{lane.name}</div>
-                  <div className="text-[8px] text-muted">{lane.relation}</div>
+                  <div className="mt-2 text-[12px] font-semibold text-ink">{lane.name}</div>
+                  <div className="text-[10px] text-muted">{lane.relation}</div>
                 </div>
                 <div className="flex min-w-0 items-center gap-2">
                   {lane.books.map((book, index) => (
@@ -616,10 +618,10 @@ export function ConnectedStage() {
                       <div className="flex min-w-0 flex-1 items-center gap-2">
                         <Cover book={book} className="w-[42px] flex-none" />
                         <div className="min-w-0">
-                          <div className="line-clamp-2 text-[8px] font-semibold leading-tight text-ink">
+                          <div className="line-clamp-2 text-[10px] font-semibold leading-[1.3] text-ink">
                             {book.title}
                           </div>
-                          <div className="mt-1 text-[7px] text-muted">#{index + 1}</div>
+                          <div className="mt-1 text-[9.5px] text-muted">#{index + 1}</div>
                         </div>
                       </div>
                     </div>
@@ -627,7 +629,7 @@ export function ConnectedStage() {
                 </div>
                 <div className="relative h-full min-h-16">
                   <span className="absolute left-0 right-[-33px] top-1/2 h-px bg-primary" />
-                  <span className="absolute right-0 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-full border border-primary bg-bg0 text-[8px] font-bold text-primary">
+                  <span className="absolute right-0 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-full border border-primary bg-bg0 text-[10px] font-bold text-primary">
                     {lane.code}
                   </span>
                 </div>
@@ -636,8 +638,8 @@ export function ConnectedStage() {
           </div>
 
           <section className="relative border-l border-primary pl-7">
-            <div className="skin-label text-[8px] text-muted">Central timeline</div>
-            <div className="mt-1 text-[13px] font-semibold text-ink">Reviewed universe order</div>
+            <div className="skin-label text-[10px] text-muted">Central timeline</div>
+            <div className="mt-1 text-[13.5px] font-semibold text-ink">Reviewed universe order</div>
             <ol className="mt-4 space-y-2.5">
               {UNIVERSE_ORDER.map((entry, index) => (
                 <li
@@ -646,16 +648,16 @@ export function ConnectedStage() {
                 >
                   <span className="absolute -left-[34px] h-3 w-3 rounded-full border border-primary bg-bg0" />
                   <span
-                    className="grid h-6 w-6 place-items-center rounded-full text-[7px] font-bold text-on-primary"
+                    className="grid h-7 w-7 place-items-center rounded-full text-[9.5px] font-bold text-on-primary"
                     style={{ background: 'var(--stage-action-fill, var(--primary))' }}
                   >
                     {index + 1}
                   </span>
                   <div className="min-w-0">
-                    <div className="truncate text-[8px] font-semibold text-ink">
+                    <div className="truncate text-[10px] font-semibold text-ink">
                       {entry.book.title}
                     </div>
-                    <div className="text-[7px] text-muted">
+                    <div className="text-[9.5px] text-muted">
                       Series {entry.lane} · #{entry.position}
                     </div>
                   </div>
@@ -675,8 +677,8 @@ export function ConnectedStage() {
                 {index + 1}
               </span>
               <div>
-                <div className="text-[10px] font-semibold text-ink">{entry.book.title}</div>
-                <div className="mt-1 text-[8px] text-muted">
+                <div className="text-[11.5px] font-semibold text-ink">{entry.book.title}</div>
+                <div className="mt-1 text-[10.5px] text-muted">
                   Series {entry.lane} · position {entry.position}
                 </div>
               </div>

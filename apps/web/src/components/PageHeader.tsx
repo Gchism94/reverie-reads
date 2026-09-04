@@ -20,7 +20,10 @@ export function PageHeader({
     >
       <div className="min-w-0">
         {eyebrow ? (
-          <div className="skin-label mb-2 text-[11px]" style={{ color: 'var(--accent-ink)' }}>
+          <div
+            className="skin-label mb-2 text-[12px] leading-[1.4]"
+            style={{ color: 'var(--accent-ink)' }}
+          >
             {eyebrow}
           </div>
         ) : null}

@@ -5,6 +5,7 @@ import { rootRoute } from './RootRoute'
 import { Nameplate } from '../components/Nameplate'
 import { loadAllSkinFonts } from '../skin/fonts'
 import { Surface } from '../components/Surface'
+import { SignatureRing } from '../components/Structure'
 
 /**
  * Skin-character eyeball (Stage 1b). Renders Tryst vs Aphelion side by side, in both modes, on a
@@ -38,7 +39,7 @@ const CELLS: { skin: SkinId; mode: 'dark' | 'light'; label: string }[] = [
   { skin: 'bloom', mode: 'light', label: 'Bloom · light' },
 ]
 
-const SCRIM = 'rgba(0,0,0,0.45)'
+const SCRIM = 'rgba(0,0,0,0.62)'
 
 /** A book card matching CoverCard's idiom: `skin-card` radius, accent + `--mark-radius` marks. */
 function LabCard() {
@@ -60,10 +61,10 @@ function LabCard() {
           CL
         </div>
         <span
-          className="absolute left-1.5 top-1.5 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide"
+          className="absolute left-1.5 top-1.5 px-1.5 py-0.5 text-[10.5px] font-bold uppercase tracking-wide"
           style={{
             background: SCRIM,
-            color: 'var(--mark-accent)',
+            color: 'var(--mark-on-ph)',
             borderRadius: 'var(--mark-radius)',
           }}
         >
@@ -73,14 +74,14 @@ function LabCard() {
           className="absolute right-1.5 top-1.5 grid h-7 w-7 place-items-center text-[14px]"
           style={{
             background: SCRIM,
-            color: 'var(--mark-accent)',
+            color: 'var(--mark-on-ph)',
             borderRadius: 'var(--mark-radius)',
           }}
         >
           ♥
         </span>
         <div
-          className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 text-[9px]"
+          className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 text-[10.5px]"
           style={{ background: SCRIM, color: '#fff', borderRadius: 'var(--mark-radius)' }}
         >
           🌶🌶🌶
@@ -96,64 +97,44 @@ function Stat({ n, l }: { n: string; l: string }) {
   return (
     <div>
       <div className="skin-numeral text-[26px] font-bold leading-none text-ink">{n}</div>
-      <div className="skin-label mt-1.5 text-[10px] text-muted">{l}</div>
+      <div className="skin-label mt-1.5 text-[11.5px] text-muted">{l}</div>
     </div>
   )
 }
 
-/** Mini goal ring matching HomeRoute's GoalRing — Aphelion reads as a segmented instrument gauge. */
-function LabRing({ aph }: { aph: boolean }) {
-  const C = 2 * Math.PI * 20
-  return (
-    <div className="relative h-14 w-14 flex-none">
-      <svg width="56" height="56" className="-rotate-90">
-        <circle
-          cx="28"
-          cy="28"
-          r="20"
-          fill="none"
-          stroke="var(--chip-border)"
-          strokeWidth="6"
-          strokeDasharray={aph ? '1 4' : undefined}
-        />
-        <circle
-          cx="28"
-          cy="28"
-          r="20"
-          fill="none"
-          stroke="var(--primary)"
-          strokeWidth="6"
-          strokeLinecap={aph ? 'butt' : 'round'}
-          strokeDasharray={C}
-          strokeDashoffset={C * 0.3}
-        />
-      </svg>
-      <div className="absolute inset-0 grid place-items-center">
-        <span className="skin-numeral text-[13px] font-bold text-ink">42</span>
-      </div>
-    </div>
-  )
-}
-
-/** The 1c control silhouette fan-out: button · search field · select · toggle · goal ring. */
+/** The real control hierarchy: primary · secondary · icon · field · selection · goal ring. */
 function LabControls({ skin }: { skin: SkinId }) {
   return (
     <div className="flex flex-wrap items-center gap-2.5">
+      <button type="button" className="skin-control skin-btn-primary min-h-11 px-4 text-[13px]">
+        Begin
+      </button>
+      <button type="button" className="skin-control skin-btn-secondary min-h-11 px-4 text-[13px]">
+        Details
+      </button>
       <button
         type="button"
-        className="skin-control px-3.5 py-2 text-[12px]"
-        style={{ background: 'var(--accent-fill)', color: 'var(--on-primary)' }}
+        className="skin-control skin-btn-icon grid h-11 w-11 place-items-center"
+        aria-label="Next sample"
       >
-        Begin
+        <svg aria-hidden viewBox="0 0 24 24" className="h-5 w-5" fill="none">
+          <path
+            d="M5 12h13M13 7l5 5-5 5"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
       </button>
       <input
         readOnly
         placeholder="Search…"
-        className="skin-field h-9 w-32 border border-line px-3 text-[12px] text-ink outline-none"
+        className="skin-field h-11 w-32 border border-line px-3 text-[13px] text-ink outline-none"
         style={{ background: 'var(--field)' }}
       />
       <span
-        className="skin-control inline-flex items-center border border-line px-3 py-2 text-[12px] text-ink"
+        className="skin-control inline-flex min-h-11 items-center border border-line px-3 py-2 text-[13px] text-ink"
         style={{ background: 'var(--card)' }}
       >
         Sort ▾
@@ -170,7 +151,7 @@ function LabControls({ skin }: { skin: SkinId }) {
           style={{ left: 'calc(100% - 20px)', borderRadius: 'var(--radius-control)' }}
         />
       </span>
-      <LabRing aph={skin === 'aphelion'} />
+      <SignatureRing skin={skin} value={42} max={60} size={64} />
     </div>
   )
 }
@@ -188,7 +169,7 @@ function Cell({ skin, mode, label }: { skin: SkinId; mode: 'dark' | 'light'; lab
     >
       <div className="rv-skin-texture" />
       <div className="relative flex flex-col gap-5">
-        <div className="skin-label text-[10px] text-muted">{label}</div>
+        <div className="skin-label text-[11.5px] text-muted">{label}</div>
         <div className="flex flex-wrap items-start gap-5">
           <LabCard />
           <div className="flex min-w-[220px] flex-1 flex-col gap-4">
@@ -216,7 +197,7 @@ function SkinLab() {
   // Each cell forces a skin via data-skin; load every pairing so they render in their true type.
   useEffect(() => loadAllSkinFonts(), [])
   return (
-    <div
+    <main
       className="mx-auto min-h-dvh max-w-[1120px] px-6 py-10"
       style={{ background: 'var(--bg0)' }}
     >
@@ -225,14 +206,14 @@ function SkinLab() {
       </h1>
       <p className="mt-1 text-[13px] text-muted">
         All nine skins, dark + light. Texture · card marks · nameplate · stat panel · controls
-        (button · search · select · toggle · goal ring) — all from the token contract.
+        (primary · secondary · icon · search · selection · goal ring) — all from the token contract.
       </p>
       <div className="mt-7 grid gap-6 lg:grid-cols-2">
         {CELLS.map((c) => (
           <Cell key={`${c.skin}/${c.mode}`} {...c} />
         ))}
       </div>
-    </div>
+    </main>
   )
 }
 

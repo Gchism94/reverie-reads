@@ -27,15 +27,15 @@ export function AppRoomPreview({ className = '' }: { className?: string }) {
       className={`overflow-hidden border border-line bg-bg0 ${className}`}
       style={{ borderRadius: 'var(--radius-card)' }}
     >
-      <div className="flex h-7 items-center justify-between border-b border-line bg-card px-2.5">
-        <span className="skin-label text-[8px] leading-none text-muted">Library room</span>
-        <span className="text-[8px] leading-none text-muted">reverie · library</span>
+      <div className="flex h-8 items-center justify-between border-b border-line bg-card px-2.5">
+        <span className="skin-label text-[10px] leading-none text-muted">Library room</span>
+        <span className="text-[10px] leading-none text-muted">reverie · library</span>
       </div>
 
-      <div aria-hidden className="grid min-h-[112px] grid-cols-[54px_1fr]">
+      <div aria-hidden className="grid min-h-[128px] grid-cols-[62px_1fr]">
         <div className="rv-nav-surface flex flex-col p-2">
           <span
-            className="rv-nav-monogram grid h-5 w-5 place-items-center text-[8px] italic"
+            className="rv-nav-monogram grid h-6 w-6 place-items-center text-[10px] italic"
             style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
           >
             {APP_NAME.charAt(0)}
@@ -66,15 +66,15 @@ export function AppRoomPreview({ className = '' }: { className?: string }) {
         <div className="min-w-0 p-2.5">
           <div className="flex items-end justify-between gap-2">
             <div>
-              <div className="skin-label text-[8px] leading-none text-muted">Your books</div>
+              <div className="skin-label text-[10px] leading-none text-muted">Your books</div>
               <div
-                className="mt-1 text-[11px] leading-none text-ink"
+                className="mt-1.5 text-[12px] leading-none text-ink"
                 style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
               >
                 Your library
               </div>
             </div>
-            <span className="skin-control skin-btn-primary grid h-5 place-items-center px-2 text-[7.5px] leading-none">
+            <span className="skin-control skin-btn-primary grid h-7 place-items-center px-2 text-[9.5px] leading-none">
               Add
             </span>
           </div>

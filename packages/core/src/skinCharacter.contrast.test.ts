@@ -11,11 +11,12 @@ import { FABLE5, SKIN_TOKENS, WHITE_MARK_IN_DARK } from './skinTokens.fixture'
 // deep mark scrim, never the raw grain/mesh). Keyed off the SKINS registry, so a new skin with no row
 // here fails loudly, not in the sweep.
 //
-// Mirrors apps/web/src/styles/tokens.css. on-primary/accent-fill = button + active-chip; ink/muted on
-// card-solid + bg0 = numerals, labels, body on the kit's surfaces. accentInk = the Nameplate eyebrow;
-// markAccent = the card-mark accent (= --accent), shown only over dark scrims (see the marks note).
+// Mirrors apps/web/src/styles/tokens.css. cta-ink/cta-lo = primary button; ink/card-solid =
+// secondary and icon controls; on-primary/accent-fill = active chip. accentInk = the Nameplate
+// eyebrow; markAccent = the card-mark accent (= --accent), shown only over dark scrims.
 
 const AA = 4.5
+const UI_BOUNDARY = 3
 
 // Token samples live in skinTokens.fixture.ts (shared with spineTint.contrast.test.ts) — a mirror of
 // apps/web/src/styles/tokens.css, keyed off the SKINS registry.
@@ -69,6 +70,15 @@ describe('skin character kit contrast (text on the kit surfaces ≥ AA, every sk
         })
       }
 
+      it(`${skin}/${mode} · secondary/icon control edge clears ${UI_BOUNDARY}:1`, () => {
+        const edge = mixSrgb(t.ink, t.cardSolid, 0.64)
+        const r = ratio(edge, t.cardSolid)
+        expect(
+          r,
+          `${skin}/${mode} control edge: ${edge} on ${t.cardSolid} = ${r.toFixed(2)}:1`,
+        ).toBeGreaterThanOrEqual(UI_BOUNDARY)
+      })
+
       // Spine slot — Tryst (leather) + Aphelion (brushed) have a textured binding, but the title +
       // author/callsign sit CENTRED, over the opaque --card-solid base (the gradient's dark shifts live
       // at the spine edges, away from the type). So the spine text holds AA on card-solid, at the min
@@ -96,7 +106,7 @@ describe('skin character kit contrast (text on the kit surfaces ≥ AA, every sk
       const f5 = FABLE5[`${skin}/${mode}`]
       if (f5) {
         const f5pairs: [string, string, string][] = [
-          ['CTA text on the CTA card', f5.ctaInk, mixSrgb(f5.ctaHi, f5.ctaLo, 0.5)],
+          ['CTA text on the CTA low surface', f5.ctaInk, f5.ctaLo],
           ['spine title on the binding (mid)', f5.spineTitle, mixSrgb(f5.spineLo, f5.spineHi, 0.5)],
           [
             'spine author on the binding (mid)',

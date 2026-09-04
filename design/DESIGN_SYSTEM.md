@@ -1,97 +1,92 @@
-# Design system
+# Reverie design system
 
-Gothic New Orleans — the Vieux Carré after dark: gaslight on wet cobblestone, wrought
-iron, magnolias, a warm night sky that never quite holds still. Romantic and a little
-witchy, but legible and cozy, never cluttered.
+Reverie is one living library expressed through nine reading rooms. Content, navigation, and
+interaction semantics remain stable; typography, material, geometry, atmosphere, and voice change
+with the active skin. A skin is an interface language, not a color swap.
 
-The live, animated reference is `Reverie_Theme_Studio.html` in this folder.
+The shipping token values live in `packages/core/src/skins.ts` and
+`apps/web/src/styles/tokens.css`. The structural and component contract lives in
+`docs/reference/SKIN_CHARACTER_CONTRACT.md`. Design-tool exports, when present, are references; the
+shipped app is authoritative.
 
----
+## Nine rooms, two modes
 
-## Themes (exactly two)
+Every room supports light and dark modes independently of skin selection.
 
-One shared accent family — magenta, plum/violet, indigo/midnight-blue, and gold — so
-both modes read as one product. **Lead with magenta + gold in both.**
+| Skin       | Room character                   | Control character                               |
+| ---------- | -------------------------------- | ----------------------------------------------- |
+| `tryst`    | intimate, gaslit, gilt           | compact invitation with a quiet gilt edge       |
+| `grimoire` | scholarly, arcane, vellum        | precise manuscript control with a gilt rule     |
+| `aphelion` | cold, orbital, instrumented      | machined notch and cyan instrument edge         |
+| `marrow`   | forensic, mineral, severe        | hard chamfer and specimen-dark boundary         |
+| `umbra`    | investigative, nocturnal, brass  | compact case label with a brass edge            |
+| `folio`    | literary, editorial, tactile     | proof-red editorial edge                        |
+| `hearth`   | domestic, warm, handmade         | softly squared label with restrained stitching  |
+| `almanac`  | practical, field-recorded, exact | squared field label with a measured double rule |
+| `bloom`    | youthful, luminous, optimistic   | softly rounded gel edge without sticker bulk    |
 
-### Nocturne — dark mode (default)
+Prototype-era “Nocturne” and “Magnolia Dawn” do not name shipping themes. Their atmosphere survives
+inside Tryst; mode remains `light`, `dark`, or `system` for every skin.
 
-Deep gaslit midnight. **No red/crimson** (removed — magenta carries the warmth).
+## Typography and readability
 
-| Token       | Hex                     | Use                                                      |
-| ----------- | ----------------------- | -------------------------------------------------------- |
-| `--bg0`     | `#0b0612`               | base background                                          |
-| `--bg1`     | `#15091f`               | gradient end                                             |
-| `--ink`     | `#f6e9f1`               | primary text                                             |
-| `--muted`   | `#b08fae`               | secondary text                                           |
-| `--primary` | `#e83a78`               | magenta — primary actions                                |
-| `--violet`  | `#7b3fa0`               | violet accent                                            |
-| `--blue`    | `#16266a`               | midnight blue accent                                     |
-| `--gold`    | `#f0b14e`               | gaslamp gold — the only warm accent, hairlines, filigree |
-| `--panel`   | `rgba(26,14,36,.52)`    | glass panels                                             |
-| `--line`    | `rgba(246,233,241,.14)` | borders                                                  |
+- Display typography gives each room identity; body and control typography must remain immediately
+  readable.
+- Primary reading text should be at least 14px in the product. Supporting labels should normally be
+  12px or larger. Smaller type is reserved for nonessential cover marks and very narrow book spines.
+- Body copy uses a 1.5–1.65 line height. Display headings may tighten to 1.04–1.15 when their size and
+  measure make the grouping unambiguous.
+- Letter spacing is restrained at small sizes. Uppercase labels use shorter words and no more
+  tracking than their skin needs.
+- Text never relies on atmosphere or texture for contrast. It sits on an opaque authored surface or
+  a tested scrim.
 
-Night-sky glows: magenta, violet, midnight-blue (no crimson glow).
+## Controls
 
-### Magnolia Dawn — light mode
+All skins share one interaction hierarchy:
 
-Warm parchment daylight, morning light through lace. Same jewels, dressed for day.
+- Primary: the room's authored CTA fill and ink, a clear edge, and restrained depth.
+- Secondary: opaque `--card-solid`, `--ink`, and a control boundary that clears 3:1 against its own
+  surface.
+- Icon: the same material as secondary, with a minimum 44×44px target in navigation and primary
+  product flows.
+- Ghost: reserved for low-emphasis actions whose location and label make interactivity clear.
 
-| Token       | Hex                     | Use                   |
-| ----------- | ----------------------- | --------------------- |
-| `--bg0`     | `#fbeee9`               | parchment background  |
-| `--bg1`     | `#f5e0e4`               | gradient end          |
-| `--ink`     | `#2a1320`               | deep aubergine text   |
-| `--muted`   | `#9a6b86`               | secondary text        |
-| `--primary` | `#d4396f`               | bougainvillea magenta |
-| `--violet`  | `#7b3fa0`               | plum accent           |
-| `--blue`    | `#2e3a73`               | indigo accent         |
-| `--gold`    | `#c9842f`               | antique gilt          |
-| `--panel`   | `rgba(255,251,248,.66)` | panels                |
-| `--line`    | `rgba(42,19,32,.13)`    | borders               |
+Skin identity comes from corners, cut geometry, border rhythm, type, and accent treatment. Icon
+buttons must not become wax seals, grommets, wooden buttons, or other decorative silhouettes whose
+meaning disappears at small size. Theme and skin color changes land atomically so foreground and
+background never animate through a low-contrast midpoint.
 
-Dawn glows: soft rose, lavender, peach, periwinkle on parchment.
+Every control has a visible `:focus-visible` outline, a clear disabled state, and conventional
+hover/pressed feedback. Motion is disabled under `prefers-reduced-motion`.
 
-> Gloaming (the dusk middle palette) is retired from the shipping set — kept in the
-> theme studio as a reference only. The product ships Nocturne + Magnolia Dawn.
+## Atmosphere and background
 
----
+Atmosphere lives behind content. It may drift, breathe, pulse, or reveal room-specific structure,
+but it must remain subtle, low-frequency, and nonessential. The opaque component surface is the
+readability floor; texture, grid, crack, grain, or glow never becomes the text background.
 
-## Typography
-
-- **Display:** Fraunces (high-contrast, optical sizing). Use the _italic_ for romance
-  softness on titles, section headers, and palette names. Large, tight, generous space.
-- **Body / UI:** Hanken Grotesk.
-- Type is part of the identity, not a neutral delivery vehicle — make headings memorable.
-
-## Motion & texture (the signature)
-
-A living night sky behind content: large soft radial-gradient glows that slowly drift
-and breathe (20–45s loops), faint twinkling stars, a slow drifting fog layer, plus
-subtle film grain and a vignette. Nocturne = magenta/violet/blue nebula on near-black;
-Magnolia Dawn = rose/lavender/peach dawn clouds on parchment. Keep it gentle. **Respect
-`prefers-reduced-motion`** (disable the drift/twinkle/fog).
-
-**Ornament:** a thin wrought-iron **filigree divider** in gold under the wordmark and at
-section breaks. Hairline rules in gold.
+Use the room's atmosphere only where it improves orientation or emotional continuity. Avoid an
+effect when it competes with a cover, makes scrolling feel unstable, or exists only to prove the
+skin is different.
 
 ## Signature components
 
-- **Spine-shelf bookcases** — lists as a horizontal row of book _spines_ (vertical
-  titles) that flip to the cover when centered/scrolled. Used for TBRs, collections,
-  priority shelf.
-- **Cover cards** with small spice (🌶️) and favorite (♥) marks.
-- **Reading-goal ring** — circular yearly progress.
-
-## Component inventory
-
-Buttons (primary = magenta→gold gradient; soft; ghost), chips/filters (on/off),
-segmented toggles, search bar, modals/sheets, cards, the spine shelf, progress bars,
-the goal ring, calendar cells, stat bars. Provide hover + visible keyboard focus, and an
-empty state for at least Library and Clubs. Empty states invite action in the app's
-voice ("Mark a book 'Reading' and your home comes alive").
+- Spine shelves: real skin-specific book spines that reveal a selected cover without changing the
+  shelf's layout width.
+- Cover cards: authentic book information and restrained status marks; never aggregate ratings.
+- Reading-goal ring: a skin-specific progress motif with a guaranteed center surface/ink pair.
+- Navigation: stable destinations and hit targets, with each room's material and active-state
+  grammar.
+- Landing playgrounds: use the same components, tokens, and synthetic fixtures as the app. They may
+  be scaled, but informative text remains readable and the preview must not invent a second UI.
 
 ## Quality floor
 
-Mobile-first, responsive to desktop; adequate contrast in both themes; visible focus;
-reduced motion respected; sentence case, plain verbs, no filler copy. Spend the boldness
-on the living sky + filigree + spine shelves; keep everything else quiet.
+- Mobile-first and visually checked at narrow mobile, large mobile, tablet, and desktop widths.
+- WCAG AA text contrast in all nine skins × both modes; 3:1 boundaries for controls and focus cues.
+- 44px targets for primary/icon navigation controls; never allow arrow or toggle controls to shrink.
+- Visible keyboard focus, usable zoom, meaningful names, logical focus order, and reduced motion.
+- Sentence case, plain verbs, honest product claims, and empty states that invite a concrete action.
+- Automated contrast/axe checks are necessary but not sufficient: inspect wrapping, clipping,
+  density, line spacing, and transient mode changes in the rendered interface.
