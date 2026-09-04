@@ -35,6 +35,7 @@
     "corpus:admins": "vite-node scripts/set-corpus-admins.mjs --",
     "household:reconcile": "vite-node scripts/reconcile-chism-household.mjs --",
     "series:trial": "pnpm --filter @reverie/series-source-trial trial",
+    "series:resolve": "pnpm --filter @reverie/series-source-trial resolver",
     "series:trial:score": "pnpm --filter @reverie/series-source-trial score",
     "db:test:household-concurrency": "bash scripts/stack-lock.sh node scripts/test-household-unlink-concurrency.mjs"
   },

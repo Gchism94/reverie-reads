@@ -16,7 +16,12 @@
         "confidence": "high",
         "providerWorkId": "replace-with-provider-id",
         "matchedTitle": "Hunting Adeline",
-        "matchedAuthors": ["H. D. Carlton"]
+        "matchedAuthors": ["H. D. Carlton"],
+        "sourceLineage": {
+          "originProvider": "vendor-name",
+          "originEntityId": "replace-with-provider-id",
+          "observedVia": "vendor-name"
+        }
       },
       "seriesClaims": [
         {
@@ -26,7 +31,12 @@
           "position": 2,
           "orderType": "publication",
           "role": "primary",
-          "sourceRef": "replace-with-record-reference"
+          "sourceRef": "replace-with-record-reference",
+          "sourceLineage": {
+            "originProvider": "vendor-name",
+            "originEntityId": "replace-with-series-id",
+            "observedVia": "vendor-name"
+          }
         }
       ]
     }

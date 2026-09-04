@@ -2,10 +2,15 @@ import { normalize } from './normalize.mjs'
 
 const sourcePriority = new Map([
   ['hardcover', 0],
-  ['wikidata', 1],
-  ['openlibrary', 2],
-  ['google-books', 3],
+  ['inventaire', 1],
+  ['bookbrainz', 2],
+  ['wikidata', 3],
+  ['openlibrary', 4],
+  ['google-books', 5],
 ])
+
+const lineageKey = (lineage) =>
+  [lineage?.originProvider ?? '', lineage?.originEntityId ?? ''].join(':')
 
 const eligibleClaims = (result) => {
   if (!result?.workMatch?.matched || !['high', 'medium'].includes(result.workMatch.confidence)) {
@@ -49,6 +54,19 @@ const mergeSeriesClaims = (claims) => {
       ),
     ]
     const sourceRefs = [...new Set(group.map(({ claim }) => claim.sourceRef).filter(Boolean))]
+    const lineages = new Map()
+    for (const lineage of group.map(({ claim }) => claim.sourceLineage).filter(Boolean)) {
+      const key = lineageKey(lineage)
+      const current = lineages.get(key)
+      lineages.set(key, {
+        originProvider: lineage.originProvider,
+        originEntityId: lineage.originEntityId,
+        observedVia: [
+          ...new Set([...(current?.observedVia ?? []), lineage.observedVia].filter(Boolean)),
+        ],
+      })
+    }
+    const supportingLineages = [...lineages.values()]
 
     return {
       ...preferred.claim,
@@ -56,6 +74,7 @@ const mergeSeriesClaims = (claims) => {
       orderType: 'unspecified',
       sourceRef: preferred.claim.sourceRef ?? sourceRefs[0] ?? null,
       supportingProviders: [...new Set(group.map(({ provider }) => provider))],
+      supportingLineages,
       sourceRefs,
       positionConflict: positions.length > 1,
     }
@@ -134,25 +153,17 @@ export function supplementalEnsembles(runs) {
   const baseline = ['openlibrary', 'wikidata'].map((name) => byProvider.get(name)).filter(Boolean)
   if (baseline.length !== 2) return []
 
+  const supplements = ['inventaire', 'bookbrainz', 'google-books', 'hardcover']
+  const marginal = supplements
+    .filter((name) => byProvider.has(name))
+    .map((name) =>
+      combineRuns([...baseline, byProvider.get(name)], `strategy:openlibrary+wikidata+${name}`),
+    )
+  const all = [...byProvider.values()]
+
   return [
     combineRuns(baseline, 'strategy:openlibrary+wikidata'),
-    byProvider.has('google-books')
-      ? combineRuns(
-          [...baseline, byProvider.get('google-books')],
-          'strategy:openlibrary+wikidata+google-books',
-        )
-      : null,
-    byProvider.has('hardcover')
-      ? combineRuns(
-          [...baseline, byProvider.get('hardcover')],
-          'strategy:openlibrary+wikidata+hardcover',
-        )
-      : null,
-    byProvider.has('google-books') && byProvider.has('hardcover')
-      ? combineRuns(
-          [...baseline, byProvider.get('google-books'), byProvider.get('hardcover')],
-          'strategy:all-four',
-        )
-      : null,
+    ...marginal,
+    all.length > baseline.length ? combineRuns(all, 'strategy:all-providers') : null,
   ].filter(Boolean)
 }

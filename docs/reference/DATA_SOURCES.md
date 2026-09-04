@@ -71,6 +71,41 @@ are added; unavailable sources remain retryable and cannot become a negative rul
 own guidance reserves its APIs for low-volume real-time use and points bulk consumers to monthly
 dumps, so a future corpus-wide connector must use the dumps rather than request every work live.
 
+Inventaire and BookBrainz are implemented in the reproducible trial only, not production
+classification. Inventaire's CC0 graph can add work-to-series relationships beyond Wikidata, but a
+`wd:` entity observed through Inventaire retains Wikidata lineage and is not independent
+corroboration. BookBrainz's CC0 relationship graph is useful corroboration but its alpha API and
+sparse target-corpus coverage keep it supplemental. Both adapters verify the exact work through an
+author relationship and then inside the provider's series roster; a one-member roster remains
+review-only evidence.
+
+The trial's LLM resolver is also not a source. It receives only already-fetched provider evidence,
+has no browsing tools or truth labels, emits strict structured proposals, and has no Supabase write
+path. A deterministic validator rejects any field or citation absent from the evidence packet and
+keeps singletons, conflicts, and unsupported order/role claims out of automatic fills. Production
+use remains blocked until the authority-reviewed accuracy, standalone-safety, provenance, privacy,
+latency, and cost gates pass.
+
+Provider data is cleaned before it reaches that resolver. Google contributes identity only.
+Open Library, Wikidata, Inventaire, and BookBrainz contribute a membership only after the exact
+author-matched work appears in a structured relationship; mirrored Wikidata observations share one
+lineage. Hardcover is a high-coverage candidate supplement, not an automatic authority: its
+relationship needs corroboration from an independently originated open-graph claim. A self-titled
+Hardcover relation is flagged, a relation labeled or typed as a universe is quarantined, and an
+unknown provider cannot corroborate anything until its policy profile is defined. Every current
+community source needs independent agreement before an ordinal is automatic; a position conflict
+keeps the membership but clears the order.
+
+The same profiles keep data-use boundaries visible to the resolver: Wikidata, Inventaire, and
+BookBrainz claims are durable CC0 inputs; Google is live identity-only; Open Library remains trial
+input pending its rights review; and Hardcover remains decision input pending usable terms. A
+model-generated restatement does not change a source's license or storage boundary.
+
+That cleaning layer addresses false positives by preventing them from becoming corpus defaults; it
+does not manufacture a negative fact. A resolver may route a suspect Hardcover relation to review
+or abstain, but “standalone” still requires affirmative author/publisher evidence. Missing Open
+Library, Wikidata, Inventaire, or BookBrainz data remains an observation only.
+
 ### Fantastic Fiction boundary
 
 Fantastic Fiction is conflict/omission discovery and administrator corroboration only. Reverie may
