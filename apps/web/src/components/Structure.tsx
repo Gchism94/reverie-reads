@@ -495,11 +495,13 @@ export function Frame({
   }
   if (s.frame === 'sticker-ring') {
     // the sticker card: opaque white in BOTH modes, the 3px ring is the border — nothing else
-    // outlines it. The sticker re-scopes the ink vars so children keep AA on white at 2 a.m.
+    // outlines it. Re-scope the opaque control surface with the ink: pairing paper ink with the
+    // root dark-mode card surface made secondary controls dark-on-dark inside Bloom's night sticker.
     const stickerVars = {
       '--ink': 'var(--paper-ink)',
       '--muted': 'var(--ph-muted)',
       '--accent-ink': 'var(--accent-fill)',
+      '--card-solid': 'var(--paper)',
     } as CSSProperties
     return (
       <div
