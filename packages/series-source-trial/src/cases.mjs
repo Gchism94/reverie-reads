@@ -27,9 +27,10 @@ const assertCase = (testCase) => {
 const loadJson = async (path) => JSON.parse(await readFile(path, 'utf8'))
 
 export async function loadTrialCases() {
-  const [seed, gold] = await Promise.all([
+  const [seed, gold, externalCandidates] = await Promise.all([
     loadJson(resolve(repositoryRoot, 'data/corpus_seed.json')),
     loadJson(resolve(packageRoot, 'data/authority-gold.json')),
+    loadJson(resolve(packageRoot, 'data/authority-candidates.json')),
   ])
 
   const highestBySeries = new Map()
@@ -76,6 +77,8 @@ export async function loadTrialCases() {
       },
     }
   })
+
+  cases.push(...externalCandidates.cases)
 
   for (const reviewed of gold.cases) {
     if (!includedGoldIds.has(reviewed.id)) cases.push(reviewed)

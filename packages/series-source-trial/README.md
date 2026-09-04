@@ -151,6 +151,54 @@ The first live 10-case shadow, the prompt/lineage correction it exposed, and the
 23-case pilot are recorded in
 `reports/resolver-shadow-pilot-2026-09-04.md`.
 
+## Build the 200-case authority set
+
+Audit the sample before running another provider or resolver comparison:
+
+```sh
+pnpm series:sample:audit
+```
+
+The audit reports selection coverage and authority-review coverage separately. The current 57
+Reverie seed candidates count as selected works, but never as truth and never toward an accuracy
+gate. It also validates that every reviewed result has affirmative author or publisher evidence,
+that a reviewed standalone has no memberships, and that a reviewed series work has at least one.
+
+`data/authority-sample-plan.json` owns the fixed targets and stratum definitions.
+`data/authority-candidates.json` is the queue for additional works; moving a work into
+`data/authority-gold.json` is a human evidence-review action. A candidate has the ordinary case
+identity plus a truth placeholder:
+
+```json
+{
+  "id": "candidate-example",
+  "title": "Example",
+  "authors": ["Example Author"],
+  "sampleOrigin": "external_sample",
+  "strata": ["recent_independent_or_kindle_first"],
+  "publicationYear": 2025,
+  "publicationPath": "independent",
+  "truth": {
+    "status": "candidate",
+    "standalone": null,
+    "memberships": [],
+    "sources": []
+  }
+}
+```
+
+Allowed publication paths are `independent`, `kindle_first`, and `traditional`. Complex cases also
+carry `riskFeatures` containing `multi_series` or `connected_universe`. Once reviewed, a complex
+case must set `truth.membershipsComplete` to `true`; this is the reviewer attestation that all
+in-scope memberships—not only the provider's preferred one—were checked. Strata may overlap, which
+is how the minimums fit within 200 distinct works without weakening any category.
+
+An authority source is an author page, publisher page, or publisher catalog. A shared authority
+page may be declared under the gold file's `sharedSources` and referenced by `truth.sourceGroups`;
+the existing standalone controls retain the equivalent legacy stratum reference. An archived copy
+may preserve provenance, but does not turn a non-authority page into authority evidence. Provider
+output and LLM output can prioritize the review queue; neither can write gold truth.
+
 ## Decision rule
 
 Accuracy is a hard constraint. A provider cannot pass by trading false claims for lower price or
