@@ -205,7 +205,9 @@ anon, authenticated, service_role` later put an explicit `anon=X` back on all
   check, since the change that caused it arrived with no deploy of ours. The convention half is
   now closed — AGENTS.md's RPC-grant rule requires revoking `anon`/`authenticated` by name.
 
-- **The deploy guard's `y/N` is the only real gate, and it is not the last one.**
+- ~~**The deploy guard's `y/N` is the only real gate, and it is not the last one.**~~ **CLOSED —
+  the guard now passes explicit downstream approval only after its own human `y/N` succeeds, and a
+  mock-CLI regression asserts the exact invocation.**
   After the guard confirms, `supabase db push` asks its own question — _do you
   want to push these migrations_ — defaulting to **yes**, and it takes EOF as
   yes. So in any non-interactive invocation (a piped confirmation, CI, a script)
@@ -217,7 +219,7 @@ anon, authenticated, service_role` later put an explicit `anon=X` back on all
   `--yes` so the second prompt is acknowledged rather than accidental, or feed
   the CLI its own confirmation and stop depending on EOF semantics we don't
   control. Recorded during `fix/deploy-guard`, deliberately not fixed there.
-  <sub>**verified 2026-08-20** — still OPEN: `scripts/deploy-guard.sh:244` still builds `supabase db push` with no `--yes`, so the CLI's own prompt remains downstream of the guard's `y/N`.</sub>
+  <sub>Historical observation verified 2026-08-20; closed 2026-09-04.</sub>
 - ~~**Every `security definer` RPC in the repo is anon-callable, and the ownership `raise` is the
   only thing stopping it.**~~ **CLOSED — verified against source 2026-08-15.** Closed by `9f338d9`
   (#110), which is the migration this entry proposes: `20260801010000_revoke_public_execute.sql`

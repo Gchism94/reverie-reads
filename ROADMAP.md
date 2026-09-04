@@ -82,7 +82,9 @@ The remaining items are ordered within P2, but they do not block the P0/P1 seque
    duplicate confirmation, bounded Supabase-start recovery/cleanup, e2e TypeScript coverage,
    resilient fixture cleanup, Deno-function execution coverage, and useful/non-corrupt browser
    artifacts as narrow follow-ups. The check-topology simplification itself is complete; do not
-   reopen it as a second redesign without new evidence.
+   reopen it as a second redesign without new evidence. The deploy guard's downstream confirmation
+   ambiguity is closed: after its human `y/N`, it explicitly acknowledges the CLI prompt instead of
+   depending on EOF-as-consent.
 2. **Spine reveal band.** Implement the already-decided shared, fixed-height reveal band only after
    revalidating `docs/tasks/task-spine-reveal-band.md` against the current UI.
 3. **Calendar/Releases cluster.** The sparse calendar pass shipped. Revalidate the remaining

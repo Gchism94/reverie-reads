@@ -47,7 +47,7 @@ mock() {
 #!/usr/bin/env bash
 if [ "\$1" = "migration" ] && [ "\$2" = "list" ]; then
   case "$mode" in
-    valid)
+    valid|deploy)
       echo '{"migrations":[{"local":"20260726010000","remote":"20260726010000","time":"2026-07-26 01:00:00"},{"local":"20260728010000","remote":"","time":"2026-07-28 01:00:00"}],"message":"Migrations listed"}'
       exit 0 ;;
     auth)
@@ -75,6 +75,10 @@ if [ "\$1" = "migration" ] && [ "\$2" = "list" ]; then
       exit 1 ;;
   esac
 fi
+if [ "\$1" = "db" ] && [ "\$2" = "push" ] && [ "$mode" = "deploy" ]; then
+  printf '%s\n' "\$*" > "\${DEPLOY_GUARD_MOCK_LOG:?}"
+  exit 0
+fi
 echo "MOCK REFUSES: \$*" >&2
 exit 99
 MOCK
@@ -85,8 +89,8 @@ MOCK
 # run <mode> <stdin-reply> [extra guard args...]
 run() {
   local mode="$1" reply="$2"; shift 2
-  printf '%s\n' "$reply" | SUPABASE_BIN="$(mock "$mode")" bash "$GUARD" migrations --force "$@" \
-    > "$TMP/out" 2>&1
+  printf '%s\n' "$reply" | DEPLOY_GUARD_MOCK_LOG="$TMP/push-log" \
+    SUPABASE_BIN="$(mock "$mode")" bash "$GUARD" migrations --force "$@" > "$TMP/out" 2>&1
   printf '%s' $?
 }
 
@@ -161,6 +165,14 @@ printf '\nclassification is not fooled by a 0403 timestamp\n'
 status="$(run timestamp403 y)"
 assert_has  "still classified as network"            "$TMP/out" 'network failure'
 assert_lacks "not misread as authentication"         "$TMP/out" 'authentication failure'
+
+# ── 6. the guard owns the only human confirmation ──────────────────────────────────────────────
+printf '\napproved migration deploy\n'
+rm -f "$TMP/push-log"
+status="$(run deploy y --include-all)"
+assert_eq   "approved deploy exits 0"                         "$status" "0"
+assert_has  "reports deploy completion"                       "$TMP/out" 'deploy complete.'
+assert_eq   "passes exact downstream approval after y/N"      "$(cat "$TMP/push-log")" 'db push --yes --include-all'
 
 printf '\n%s passed, %s failed\n\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

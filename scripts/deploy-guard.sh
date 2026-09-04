@@ -241,7 +241,11 @@ else
   # The `${arr[@]+"${arr[@]}"}` idiom expands to nothing when empty and to the elements otherwise, on
   # every bash. Use it for any UNGUARDED possibly-empty array expansion. (The `names` array below is
   # instead guarded by a `die` on empty — deploying zero functions should error, not silently run.)
-  DEPLOY_CMD=("$SUPABASE_BIN" db push "${PASSTHRU[@]+"${PASSTHRU[@]}"}")
+  # The guard's prompt below is the one deliberate human gate. Tell the CLI that confirmation has
+  # already happened so its own downstream prompt cannot interpret EOF as approval. This does not
+  # make the guard non-interactive: execution still cannot reach this command until the operator
+  # answers the guard's y/N.
+  DEPLOY_CMD=("$SUPABASE_BIN" db push --yes "${PASSTHRU[@]+"${PASSTHRU[@]}"}")
 fi
 
 say ""

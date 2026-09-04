@@ -54,8 +54,9 @@ scripts below). It refuses to run unless you are on `main`, the tree is clean, a
 sync with `origin/main`; it then prints exactly what it will touch and waits for a `y/N`.
 
 - **Schema**: `pnpm deploy:migrations` (wraps `supabase db push`; the guard shows the
-  `supabase migration list` local↔remote table first). Local dev uses `pnpm db:migrate` (adds the
-  PostgREST schema reload).
+  `supabase migration list` local↔remote table first). After the operator answers the guard's human
+  `y/N`, it passes explicit downstream approval to the CLI so a second prompt cannot treat EOF as
+  consent. Local dev uses `pnpm db:migrate` (adds the PostgREST schema reload).
 - **Edge functions**: `pnpm deploy:functions` (all) or `pnpm deploy:functions embed` (one) — wraps
   `supabase functions deploy`.
 - **Web**: Vercel deploy (git-connected or `vercel --prod`).
