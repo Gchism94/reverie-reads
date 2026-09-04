@@ -156,4 +156,23 @@ describe('the Deno runtime mirrors this policy exactly', () => {
       'String(e).includes(',
     )
   })
+
+  it('and production search preserves provider HTTP failures instead of returning an empty hit list', () => {
+    const searchSrc = readFileSync(
+      join(__dirname, '../../../supabase/functions/search/index.ts'),
+      'utf8',
+    )
+    const code = searchSrc
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .split('\n')
+      .filter((line) => !line.trim().startsWith('//'))
+      .join('\n')
+
+    expect(code).toContain('new SourceHttpError(r.status, url)')
+    expect(code).toContain('new SourceHttpError(r.status, endpoint)')
+    expect(code).toContain("json({ error: 'search providers unavailable' }, 502)")
+    expect(code).not.toMatch(/if \(!r\.ok\) return (null|\[\])/)
+    expect(code).not.toContain('new SourceHttpError(r.status, requestUrl)')
+    expect(code).toContain('Google Books network failure for ${endpoint}')
+  })
 })
