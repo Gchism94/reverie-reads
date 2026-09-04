@@ -18,3 +18,5 @@ apps/web/public/fonts/
 
 # Generated source-trial evidence. The writer owns stable JSON/Markdown formatting.
 packages/series-source-trial/reports/
+packages/series-source-trial/private-inputs/
+packages/series-source-trial/private-results/

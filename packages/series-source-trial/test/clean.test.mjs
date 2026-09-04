@@ -95,6 +95,27 @@ test('does not count an Inventaire mirror as independent Wikidata evidence', () 
   assert.equal(graded[0].quality.positionEligible, false)
 })
 
+test('does not count differently formatted Wikidata identifiers as independent evidence', () => {
+  const evidence = [
+    membership('wikidata', 'The Sequence', {
+      originProvider: 'wikidata',
+      originEntityId: 'https://www.wikidata.org/entity/Q12345',
+    }),
+    membership('inventaire', 'The Sequence', {
+      originProvider: 'wikidata',
+      originEntityId: 'wd:Q12345',
+    }),
+  ]
+  const graded = gradeMembershipEvidence(
+    { title: 'Second Book', authors: ['Ada Reader'] },
+    evidence,
+    [identity('wikidata'), identity('inventaire')],
+  )
+
+  assert.equal(graded[0].quality.independentOriginCount, 1)
+  assert.equal(graded[0].quality.positionEligible, false)
+})
+
 test('keeps membership but withholds order when independent positions conflict', () => {
   const evidence = [
     membership('openlibrary', 'The Sequence', { position: 4 }),

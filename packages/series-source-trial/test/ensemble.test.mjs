@@ -131,3 +131,34 @@ test('deduplicates mirrored providers by source lineage', () => {
     },
   ])
 })
+
+test('deduplicates Wikidata URI and wd mirror lineage spellings', () => {
+  const wikidata = run('wikidata', [
+    result('book', 'Q2', [
+      {
+        ...claim('Series', 1, 'wikidata:book'),
+        sourceLineage: {
+          originProvider: 'wikidata',
+          originEntityId: 'https://www.wikidata.org/entity/Q1',
+          observedVia: 'wikidata',
+        },
+      },
+    ]),
+  ])
+  const inventaire = run('inventaire', [
+    result('book', 'wd:Q2', [
+      {
+        ...claim('Series', 1, 'inventaire:book'),
+        sourceLineage: {
+          originProvider: 'wikidata',
+          originEntityId: 'wd:Q1',
+          observedVia: 'inventaire',
+        },
+      },
+    ]),
+  ])
+
+  const [series] = combineRuns([wikidata, inventaire]).results[0].seriesClaims
+  assert.equal(series.supportingLineages.length, 1)
+  assert.deepEqual(series.supportingLineages[0].observedVia, ['wikidata', 'inventaire'])
+})

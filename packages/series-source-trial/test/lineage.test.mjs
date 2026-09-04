@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { annotateProviderResults, entityLineage } from '../src/lineage.mjs'
+import { annotateProviderResults, entityLineage, lineageKey } from '../src/lineage.mjs'
 
 test('marks Inventaire Wikidata mirrors as Wikidata lineage', () => {
   assert.deepEqual(entityLineage('inventaire', 'wd:Q2136877', 'inventaire'), {
     originProvider: 'wikidata',
-    originEntityId: 'wd:Q2136877',
+    originEntityId: 'Q2136877',
     observedVia: 'inventaire',
   })
   assert.deepEqual(entityLineage('inventaire', 'inv:abc', 'inventaire'), {
@@ -39,4 +39,20 @@ test('fills ordinary provider lineage without overwriting a declared origin', ()
 
   assert.deepEqual(result.workMatch.sourceLineage, declared)
   assert.equal(result.seriesClaims[0].sourceLineage.originProvider, 'inventaire')
+})
+
+test('normalizes Wikidata URI and Inventaire wd identifiers to one origin', () => {
+  const direct = {
+    originProvider: 'wikidata',
+    originEntityId: 'https://www.wikidata.org/entity/Q12345',
+    observedVia: 'wikidata',
+  }
+  const mirrored = {
+    originProvider: 'Wikidata',
+    originEntityId: 'wd:Q12345',
+    observedVia: 'inventaire',
+  }
+
+  assert.equal(lineageKey(direct), 'wikidata:Q12345')
+  assert.equal(lineageKey(direct), lineageKey(mirrored))
 })

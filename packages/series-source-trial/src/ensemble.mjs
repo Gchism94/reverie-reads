@@ -1,4 +1,5 @@
 import { normalize } from './normalize.mjs'
+import { lineageKey } from './lineage.mjs'
 
 const sourcePriority = new Map([
   ['hardcover', 0],
@@ -8,9 +9,6 @@ const sourcePriority = new Map([
   ['openlibrary', 4],
   ['google-books', 5],
 ])
-
-const lineageKey = (lineage) =>
-  [lineage?.originProvider ?? '', lineage?.originEntityId ?? ''].join(':')
 
 const eligibleClaims = (result) => {
   if (!result?.workMatch?.matched || !['high', 'medium'].includes(result.workMatch.confidence)) {
