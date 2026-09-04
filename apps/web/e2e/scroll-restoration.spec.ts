@@ -198,10 +198,13 @@ test('back navigation restores where the reader was', async ({ page, isMobile })
     await page.getByRole('button', { name: new RegExp('^Open Scroll Probe 01') }).click()
     await page.waitForURL(/\/book\//)
   } else {
-    await page
-      .getByRole('link', { name: /shelves/i })
-      .first()
-      .click()
+    const shelves = page
+      .getByRole('navigation', { name: 'Primary', exact: true })
+      .getByRole('link', { name: 'Shelves', exact: true })
+    // A reader clicks the persistent sidebar where they are. Playwright must not scroll the
+    // entire library back to a vanished sidebar before clicking and change the position to save.
+    await expect(shelves).toBeInViewport({ ratio: 1 })
+    await shelves.click()
     await page.waitForURL(/\/shelves/)
   }
   await page.locator('main').waitFor({ state: 'visible' })
