@@ -7,6 +7,7 @@
     "trial": "node src/run.mjs",
     "resolver": "node src/resolve.mjs",
     "score": "node src/score-file.mjs",
+    "sample:audit": "node src/audit-authority-sample.mjs",
     "test": "node --test test/*.test.mjs"
   }
 }

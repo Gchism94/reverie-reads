@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "selectionTarget": 200,
+  "recentPublicationYearFloor": 2021,
+  "authoritySourceKinds": ["author", "publisher", "publisher_catalog"],
+  "strata": [
+    {
+      "id": "reverie_series",
+      "label": "Reverie seeded series",
+      "minimumReviewed": 69,
+      "description": "One difficult work from each distinct series represented in Reverie's seed."
+    },
+    {
+      "id": "recent_independent_or_kindle_first",
+      "label": "Recent independent or Kindle-first",
+      "minimumReviewed": 50,
+      "description": "Works first published from 2021 onward through an independent or Kindle-first path."
+    },
+    {
+      "id": "recent_traditional",
+      "label": "Recent traditionally published",
+      "minimumReviewed": 50,
+      "description": "Works first published from 2021 onward through a traditional publisher."
+    },
+    {
+      "id": "multi_series_or_connected_universe",
+      "label": "Multi-series or connected-universe",
+      "minimumReviewed": 20,
+      "description": "Works likely to expose primary-series, secondary-series, or universe false positives."
+    },
+    {
+      "id": "standalone_control",
+      "label": "Authority-declared standalone controls",
+      "minimumReviewed": 50,
+      "description": "Works affirmatively described as standalone by an author or publisher."
+    }
+  ]
+}
