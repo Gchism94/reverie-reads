@@ -1,7 +1,8 @@
 // Discover Search Edge Function (docs/archive/task-discover-search.md) — one search backend, two surfaces
 // (the Discover field + the shelf picker's "search everywhere" seam).
 //
-//   POST { q: string }  →  { results: SearchResult[], source?: 'cache' }
+//   POST { q: string }  →  { results: SearchResult[], source?: 'cache', degraded?: true }
+//                         or 502 { error: 'search providers unavailable' }
 //
 // Sources, in order:
 //  · Hardcover (PRIMARY) — backend-only per architecture. Text search (query_type "Book"), scored
@@ -22,6 +23,8 @@
 
 import { envInt, rateLimit, tooMany } from '../_shared/ratelimit.ts'
 import { captureEdgeError } from '../_shared/observe.ts'
+import { SourceBodyError, SourceHttpError } from '../_shared/httpClassify.ts'
+import { runSearchProviders } from './orchestrate.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -97,13 +100,21 @@ async function hardcoverGql(query: string, variables: Record<string, unknown>): 
   const auth = hardcoverAuth()
   if (!auth) return null
   if (!(await globalBudget('hardcover', envInt('HARDCOVER_RATE_MAX', 60), 60))) return null
-  const r = await fetch('https://api.hardcover.app/v1/graphql', {
+  const url = 'https://api.hardcover.app/v1/graphql'
+  const r = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: auth },
     body: JSON.stringify({ query, variables }),
   })
-  if (!r.ok) return null
-  return ((await r.json()) as { data?: unknown }).data ?? null
+  if (!r.ok) throw new SourceHttpError(r.status, url)
+  let payload: { data?: unknown; errors?: unknown[] }
+  try {
+    payload = (await r.json()) as { data?: unknown; errors?: unknown[] }
+  } catch {
+    throw new SourceBodyError(r.status, url)
+  }
+  if (payload.errors?.length) throw new Error('Hardcover GraphQL response contained errors')
+  return payload.data ?? null
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -152,12 +163,24 @@ async function googleSearch(q: string): Promise<SearchResult[]> {
   const isbnQ = cleanIsbn(q)
   const looksIsbn = isbnQ.length >= 10 && /^[0-9Xx\- ]+$/.test(q)
   const query = looksIsbn ? `isbn:${isbnQ}` : `${encodeURIComponent(q)}`
-  const r = await fetch(
-    `https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=${RESULT_LIMIT}&printType=books&langRestrict=en${googleKey()}`,
-    { headers: googleHeaders() },
-  )
-  if (!r.ok) return []
-  const j = (await r.json()) as { items?: { volumeInfo?: Record<string, unknown> }[] }
+  const endpoint = 'https://www.googleapis.com/books/v1/volumes'
+  const requestUrl = `${endpoint}?q=${query}&maxResults=${RESULT_LIMIT}&printType=books&langRestrict=en${googleKey()}`
+  let r: Response
+  try {
+    r = await fetch(requestUrl, { headers: googleHeaders() })
+  } catch {
+    // A runtime fetch error may repeat its full request URL. Replace it before observability sees it
+    // because this URL contains the Google key.
+    throw new Error(`Google Books network failure for ${endpoint}`)
+  }
+  // Keep the key-bearing request URL out of errors, structured logs, and Sentry payloads.
+  if (!r.ok) throw new SourceHttpError(r.status, endpoint)
+  let j: { items?: { volumeInfo?: Record<string, unknown> }[] }
+  try {
+    j = (await r.json()) as { items?: { volumeInfo?: Record<string, unknown> }[] }
+  } catch {
+    throw new SourceBodyError(r.status, endpoint)
+  }
   const out: SearchResult[] = []
   for (const it of j.items ?? []) {
     const v = it.volumeInfo ?? {}
@@ -256,19 +279,21 @@ async function handleSearch(q: string, refresh: boolean): Promise<Response> {
     if (cached) return json({ results: cached, source: 'cache' })
   }
 
-  const hc = await hardcoverSearch(q).catch(() => [] as SearchResult[])
-  let results = hc
-  // Fill from Google only when Hardcover is thin/absent — keeps Hardcover primary, quota low.
-  if (results.length < HC_FILL_THRESHOLD) {
-    const gb = await googleSearch(q).catch(() => [] as SearchResult[])
-    results = dedupe([...hc, ...gb])
-  } else {
-    results = dedupe(hc)
+  const outcome = await runSearchProviders({
+    hardcoverEnabled: hardcoverAuth() !== null,
+    runHardcover: () => hardcoverSearch(q),
+    runGoogle: () => googleSearch(q),
+    hardcoverFillThreshold: HC_FILL_THRESHOLD,
+    resultLimit: RESULT_LIMIT,
+    dedupe,
+  })
+  for (const failure of outcome.failures) {
+    captureEdgeError('search', failure.error, { provider: failure.provider })
   }
-  results = results.slice(0, RESULT_LIMIT)
+  if (outcome.unavailable) return json({ error: 'search providers unavailable' }, 502)
 
-  if (results.length) await writeCache(key, results)
-  return json({ results })
+  if (outcome.results.length) await writeCache(key, outcome.results)
+  return json({ results: outcome.results, ...(outcome.degraded ? { degraded: true } : {}) })
 }
 
 // ── entry ──
