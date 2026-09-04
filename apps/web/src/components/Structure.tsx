@@ -562,7 +562,7 @@ export function StatusTag({
     // the illuminator's marks — set on point (a lozenge leads, the chip is cut vellum)
     return (
       <span
-        className="inline-flex items-center gap-1.5 border px-2 py-1 text-[11px] font-semibold"
+        className="inline-flex min-h-8 items-center gap-1.5 border px-2.5 py-1 text-[12.5px] font-semibold"
         style={{ borderRadius: '2px', borderColor: border, color }}
       >
         <span
@@ -585,13 +585,13 @@ export function StatusTag({
       'polygon(5px 0, calc(100% - 5px) 0, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0 calc(100% - 5px), 0 5px)'
     return (
       <span
-        className="inline-flex items-center gap-1 px-2.5 py-1 text-[10.5px] font-bold uppercase"
+        className="inline-flex min-h-8 items-center gap-1 px-2.5 py-1 text-[12px] font-bold uppercase"
         style={{
           clipPath: cham,
           background: 'color-mix(in srgb, var(--ink) 8%, transparent)',
           boxShadow: 'inset 0 0 0 1px color-mix(in srgb, var(--ink) 20%, transparent)',
           color,
-          letterSpacing: '0.1em',
+          letterSpacing: '0.075em',
           fontFamily: 'var(--font-sans)',
         }}
       >
@@ -604,12 +604,12 @@ export function StatusTag({
     // rubber-stamped, landed a degree or two off true
     return (
       <span
-        className="inline-flex items-center gap-1 px-2.5 py-1 text-[10.5px] font-bold uppercase"
+        className="inline-flex min-h-8 items-center gap-1 px-2.5 py-1 text-[12px] font-bold uppercase"
         style={{
           borderRadius: '999px',
           border: `1.5px solid ${border}`,
           color,
-          letterSpacing: '0.1em',
+          letterSpacing: '0.075em',
           fontFamily: 'var(--font-mono)',
           transform: 'rotate(-2deg)',
         }}
@@ -624,7 +624,7 @@ export function StatusTag({
     // italic Garamond over its own red underline (set a degree off true)
     return (
       <span
-        className="relative inline-flex items-baseline gap-1.5 px-0.5 text-[12.5px]"
+        className="relative inline-flex min-h-8 items-center gap-1.5 px-1 text-[13px]"
         style={{
           fontFamily: 'var(--font-display)',
           fontStyle: 'italic',
@@ -658,13 +658,13 @@ export function StatusTag({
     // sewn and stuck, never printed — a jar label with dashed-thread stitching
     return (
       <span
-        className="inline-flex items-center gap-1 px-3 py-1 text-[10.5px] font-bold"
+        className="inline-flex min-h-8 items-center gap-1 px-3 py-1 text-[12.5px] font-bold"
         style={{
           borderRadius: 8,
           background: 'color-mix(in srgb, var(--ink) 8%, transparent)',
           border: '1.5px dashed color-mix(in srgb, var(--thread) 55%, transparent)',
           color,
-          letterSpacing: '0.08em',
+          letterSpacing: '0.06em',
           fontFamily: 'var(--font-sans)',
         }}
       >
@@ -677,12 +677,12 @@ export function StatusTag({
     // an index tab racked off the edge — squared, 3px outer radius, boxed (the one skin allowed)
     return (
       <span
-        className="inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold uppercase"
+        className="inline-flex min-h-8 items-center gap-1 px-2.5 py-1 text-[12px] font-bold uppercase"
         style={{
           borderRadius: '2px 6px 6px 2px',
           border: `1.5px solid ${border}`,
           color,
-          letterSpacing: '0.12em',
+          letterSpacing: '0.08em',
           fontFamily: 'var(--font-sans)',
         }}
       >
@@ -695,7 +695,7 @@ export function StatusTag({
     // a puffy sticker — white, gel-ringed, fully round
     return (
       <span
-        className="inline-flex items-center gap-1 px-3 py-1 text-[11.5px] font-bold"
+        className="inline-flex min-h-8 items-center gap-1 px-3 py-1 text-[12.5px] font-bold"
         style={{
           borderRadius: 999,
           background: 'var(--paper)',
@@ -712,7 +712,7 @@ export function StatusTag({
   if (s.tag === 'squared-bracket') {
     return (
       <span
-        className="skin-label inline-flex items-center gap-1 border px-2 py-1 text-[10px]"
+        className="skin-label inline-flex min-h-8 items-center gap-1 border px-2.5 py-1 text-[12px]"
         style={{ borderRadius: '2px', borderColor: border, color }}
       >
         {glyph != null && (
@@ -728,7 +728,7 @@ export function StatusTag({
   }
   return (
     <span
-      className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11.5px] font-semibold"
+      className="inline-flex min-h-8 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12.5px] font-semibold"
       style={{ borderColor: border, color }}
     >
       {glyph != null && <span style={{ color: 'var(--accent)' }}>{glyph}</span>}
@@ -1057,26 +1057,26 @@ export function SignatureRing({
   const s = useStructure(skin)
   const pct = max > 0 ? Math.max(0, Math.min(1, value / max)) : 0
   const deg = Math.round(pct * 360)
+  const centerSurface = s.motif === 'sun' ? 'var(--paper)' : 'var(--card-solid)'
+  const centerInk = s.motif === 'sun' ? 'var(--paper-ink)' : 'var(--ink)'
   const center = (
     <div
       className="absolute grid place-items-center rounded-full"
       style={{
         inset: Math.round(size * 0.09),
-        background: 'var(--card-solid)',
+        background: centerSurface,
         border: s.motif === 'radar' ? '1px solid var(--line)' : undefined,
       }}
     >
       <div className="text-center leading-none">
         <span
-          className="skin-numeral font-bold text-ink"
-          style={{ fontSize: Math.round(size * 0.23) }}
+          className="skin-numeral font-bold"
+          style={{ color: centerInk, fontSize: Math.round(size * 0.23) }}
         >
           {value}
         </span>
         {max > 0 && (
-          <span className="text-muted" style={{ fontSize: Math.round(size * 0.14) }}>
-            /{max}
-          </span>
+          <span style={{ color: centerInk, fontSize: Math.round(size * 0.14) }}>/{max}</span>
         )}
       </div>
     </div>

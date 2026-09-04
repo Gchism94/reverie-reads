@@ -66,6 +66,25 @@ const RING_W = 2
  *  box never stabilised. With intent, transit never pins — only dwell does — so boxes hold still
  *  for anything aiming at them. Click/tap/focus picks stay instant. */
 const HOVER_INTENT_MS = 80
+
+function ShelfArrow({ direction }: { direction: 'previous' | 'next' }) {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 24 24"
+      className={`h-5 w-5 ${direction === 'previous' ? 'rotate-180' : ''}`}
+      fill="none"
+    >
+      <path
+        d="M5 12h13M13 7l5 5-5 5"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
 /** VERTICAL HEADROOM (fix/spine-reveal-window): the revealed cover's peak extent above the spine
  *  baseline is a CONSTANT — MAG_H + LIFT + RING_W = 186px — yet the row's height was
  *  content-derived (tallest spine + padding), so shelves whose tallest spine fell short clipped
@@ -507,7 +526,7 @@ export function SpineShelf({
               <CoverImage book={shownBook} />
             </button>
             <div className="min-w-0">
-              <span className="skin-label text-[10px]" style={{ color: 'var(--accent-ink)' }}>
+              <span className="skin-label text-[12px]" style={{ color: 'var(--accent-ink)' }}>
                 Volume {String(shownIndex + 1).padStart(2, '0')} · {books.length}
               </span>
               <h3
@@ -516,12 +535,12 @@ export function SpineShelf({
               >
                 {shownBook.title}
               </h3>
-              <p className="mt-1 break-words text-[12px] text-muted">
+              <p className="mt-1 break-words text-[13px] leading-[1.45] text-muted">
                 {authorOf(shownBook) || 'Author not set'}
               </p>
               <div className="mt-3 max-w-[360px]">
                 <ProgressMeter value={shownBook.progress} max={100} />
-                <div className="mt-1.5 flex items-center justify-between gap-3 text-[11px] text-muted">
+                <div className="mt-1.5 flex items-center justify-between gap-3 text-[12.5px] text-muted">
                   <span>{shownBook.readStatus}</span>
                   <span className="skin-numeral">{shownBook.progress}%</span>
                 </div>
@@ -531,28 +550,28 @@ export function SpineShelf({
               <button
                 type="button"
                 onClick={() => onOpen(shownBook.id)}
-                className="skin-control skin-btn-primary h-10 flex-1 px-4 text-[12px] sm:flex-none"
+                className="skin-control skin-btn-primary h-11 flex-1 px-4 text-[13.5px] sm:flex-none"
               >
                 Open book
               </button>
-              <div className="flex gap-2">
+              <div className="flex flex-none gap-2">
                 <button
                   type="button"
                   onClick={() => scrollToIndex(shownIndex - 1)}
                   disabled={shownIndex === 0}
-                  className="skin-control skin-btn-icon grid h-10 flex-1 place-items-center disabled:opacity-30 sm:w-10"
+                  className="skin-control skin-btn-icon grid h-11 w-11 flex-none place-items-center disabled:opacity-45"
                   aria-label="Previous book"
                 >
-                  ←
+                  <ShelfArrow direction="previous" />
                 </button>
                 <button
                   type="button"
                   onClick={() => scrollToIndex(shownIndex + 1)}
                   disabled={shownIndex === books.length - 1}
-                  className="skin-control skin-btn-icon grid h-10 flex-1 place-items-center disabled:opacity-30 sm:w-10"
+                  className="skin-control skin-btn-icon grid h-11 w-11 flex-none place-items-center disabled:opacity-45"
                   aria-label="Next book"
                 >
-                  →
+                  <ShelfArrow direction="next" />
                 </button>
               </div>
             </div>
@@ -560,7 +579,7 @@ export function SpineShelf({
         ) : (
           <div className="flex items-center justify-between gap-4 border-b border-line p-5">
             <div>
-              <span className="skin-label text-[10px]" style={{ color: 'var(--accent-ink)' }}>
+              <span className="skin-label text-[12px]" style={{ color: 'var(--accent-ink)' }}>
                 The shelf is waiting
               </span>
               <p className="mt-1 text-[13px] text-muted">Add the first volume to begin.</p>
@@ -569,7 +588,7 @@ export function SpineShelf({
               <button
                 type="button"
                 onClick={onAdd}
-                className="skin-control skin-btn-primary h-10 px-4 text-[12px]"
+                className="skin-control skin-btn-primary h-11 px-4 text-[13.5px]"
               >
                 ＋ Add a book
               </button>
@@ -579,13 +598,15 @@ export function SpineShelf({
 
       <div className="flex items-end justify-between gap-4 px-4 pb-1 pt-4 sm:px-5">
         <div>
-          <span className="skin-label text-[10px]" style={{ color: 'var(--accent-ink)' }}>
+          <span className="skin-label text-[12px]" style={{ color: 'var(--accent-ink)' }}>
             Browse the shelf
           </span>
-          <p className="mt-1 text-[11px] text-muted">Drag, swipe, or use the arrows</p>
+          <p className="mt-1 text-[12.5px] leading-[1.45] text-muted">
+            Drag, swipe, or use the arrows
+          </p>
         </div>
         {shownBook ? (
-          <span className="skin-numeral text-[11px] text-muted">
+          <span className="skin-numeral text-[12.5px] text-muted">
             {shownIndex + 1} / {books.length}
           </span>
         ) : null}

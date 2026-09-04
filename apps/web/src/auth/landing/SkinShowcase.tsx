@@ -32,7 +32,7 @@ export function SkinShowcase() {
         <div className="grid gap-6 lg:grid-cols-[0.72fr_1.28fr] lg:items-end">
           <div>
             <p
-              className="text-[11px] font-semibold uppercase tracking-[0.22em]"
+              className="text-[12px] font-semibold uppercase tracking-[0.18em]"
               style={{ color: 'var(--eyebrow)' }}
             >
               Nine reading rooms
@@ -54,7 +54,7 @@ export function SkinShowcase() {
         <div
           role="tablist"
           aria-label="Reverie reading rooms"
-          className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4"
+          className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
         >
           {SKIN_LIST.map((room) => {
             const selected = room.id === active
@@ -104,16 +104,16 @@ export function SkinShowcase() {
                 <span className="mt-3 flex min-w-0 items-start justify-between gap-2 px-1 pb-0.5">
                   <span className="min-w-0">
                     <span
-                      className="block break-words text-[16px] leading-[1.05] text-ink sm:text-[17px]"
+                      className="block break-words text-[18px] leading-[1.1] text-ink"
                       style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
                     >
                       {room.label}
                     </span>
-                    <span className="mt-1.5 block text-[10.5px] font-semibold uppercase tracking-[0.1em] text-muted">
+                    <span className="mt-1.5 block text-[11.5px] font-semibold uppercase tracking-[0.08em] text-muted">
                       {room.genre}
                     </span>
                   </span>
-                  <span className="skin-label mt-0.5 flex-none text-[8.5px] leading-[1.3] text-muted">
+                  <span className="skin-label mt-0.5 flex-none text-[11px] leading-[1.35] text-muted">
                     Enter →
                   </span>
                 </span>
@@ -132,7 +132,7 @@ export function SkinShowcase() {
         data-active-mode={mode}
         data-skin={active}
         data-mode={mode}
-        className="relative mx-auto mt-10 max-w-[1380px] overflow-hidden border-y border-line px-4 py-12 text-left transition-colors motion-reduce:transition-none sm:px-8 sm:py-16 lg:px-14"
+        className="relative mx-auto mt-10 max-w-[1380px] overflow-hidden border-y border-line px-4 py-12 text-left sm:px-8 sm:py-16 lg:px-14"
         style={
           {
             background: 'var(--bg0)',
@@ -172,7 +172,7 @@ export function SkinShowcase() {
                 {skin.tagline} The books stay the same; the place they live becomes unmistakably its
                 own.
               </p>
-              <p className="mt-3 max-w-[52ch] text-[12.5px] leading-[1.55] text-muted">
+              <p className="mt-3 max-w-[52ch] text-[13.5px] leading-[1.6] text-muted">
                 Atmosphere: {ATMOSPHERE_NOTE[active]}.
               </p>
             </div>
@@ -188,7 +188,7 @@ export function SkinShowcase() {
                   type="button"
                   onClick={() => setMode(nextMode)}
                   aria-pressed={mode === nextMode}
-                  className={`skin-control min-h-10 px-4 text-[12px] font-semibold ${
+                  className={`skin-control min-h-11 px-4 text-[13px] font-semibold ${
                     mode === nextMode ? 'skin-btn-primary' : 'skin-btn-secondary'
                   }`}
                 >
@@ -212,7 +212,7 @@ export function SkinShowcase() {
               ['Shelf language', `${skin.genre} · ${skin.labels.tags}`],
             ].map(([term, value]) => (
               <div key={term} className="min-w-0 bg-card p-4">
-                <dt className="skin-label text-[9.5px] leading-[1.35] text-muted">{term}</dt>
+                <dt className="skin-label text-[11.5px] leading-[1.4] text-muted">{term}</dt>
                 <dd className="mt-2 break-words text-[14px] leading-[1.4] text-ink" style={display}>
                   {value}
                 </dd>
@@ -231,7 +231,7 @@ export function SkinShowcase() {
               'conic-gradient(from 210deg, var(--gold), var(--violet), var(--primary), var(--gold))',
           }}
         />
-        <p className="text-[13px] leading-relaxed text-muted">
+        <p className="text-[14px] leading-[1.55] text-muted">
           Prefer not to choose? Adaptive quietly evolves from the same nine rooms as your reading
           changes, without changing the books or data underneath them.
         </p>

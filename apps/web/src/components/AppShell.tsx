@@ -38,7 +38,7 @@ function useSkinLabel(): string {
 }
 
 const navBase =
-  'rv-nav-item relative flex min-h-10 items-center gap-3 px-3 py-2.5 text-[14px] font-medium transition-colors'
+  'rv-nav-item relative flex min-h-10 items-center gap-3 px-3 py-2.5 text-[14px] font-medium'
 
 function NavLinks({ collapsed }: { collapsed: boolean }) {
   return (
@@ -131,7 +131,7 @@ function Sidebar({ householdAdd }: { householdAdd: boolean }) {
             </span>
             <span
               data-testid="sidebar-chrome-line"
-              className="skin-label mt-1.5 block break-words text-[10.5px] leading-[1.4] text-muted"
+              className="skin-label mt-1.5 block break-words text-[12px] leading-[1.4] text-muted"
             >
               {chromeLine}
             </span>
@@ -148,7 +148,7 @@ function Sidebar({ householdAdd }: { householdAdd: boolean }) {
         search={householdAdd ? { scope: 'household' } : {}}
         title={collapsed ? (householdAdd ? 'Add to household' : 'Add a book') : undefined}
         aria-label={householdAdd ? 'Add to household' : 'Add a book'}
-        className={`rv-sidebar-primary skin-control skin-btn-primary mb-3 flex h-10 items-center justify-center gap-1.5 text-[13.5px] ${
+        className={`rv-sidebar-primary skin-control skin-btn-primary mb-3 flex h-11 items-center justify-center gap-1.5 text-[13.5px] ${
           collapsed ? 'px-0' : 'px-4'
         }`}
       >
@@ -168,8 +168,8 @@ function Sidebar({ householdAdd }: { householdAdd: boolean }) {
             to="/skins"
             title="Choose skin"
             aria-label="Choose skin"
-            className={`rv-sidebar-utility skin-control skin-btn-secondary flex min-h-9 items-center justify-center gap-2 py-1 text-[12.5px] ${
-              collapsed ? 'w-9' : 'flex-1'
+            className={`rv-sidebar-utility skin-control skin-btn-secondary flex min-h-11 items-center justify-center gap-2 py-1 text-[13px] ${
+              collapsed ? 'w-11' : 'flex-1'
             }`}
           >
             <span
@@ -189,8 +189,8 @@ function Sidebar({ householdAdd }: { householdAdd: boolean }) {
             to="/settings"
             title="Settings"
             aria-label="Settings"
-            className={`rv-sidebar-utility skin-control skin-btn-secondary flex h-9 items-center justify-center gap-2 text-[12.5px] ${
-              collapsed ? 'w-9' : 'flex-1'
+            className={`rv-sidebar-utility skin-control skin-btn-secondary flex h-11 items-center justify-center gap-2 text-[13px] ${
+              collapsed ? 'w-11' : 'flex-1'
             }`}
           >
             <span aria-hidden>⚙</span>
@@ -201,8 +201,8 @@ function Sidebar({ householdAdd }: { householdAdd: boolean }) {
             onClick={() => void signOut()}
             title="Sign out"
             aria-label="Sign out"
-            className={`rv-sidebar-utility skin-control skin-btn-secondary flex h-9 items-center justify-center text-[12.5px] ${
-              collapsed ? 'w-9' : 'px-3'
+            className={`rv-sidebar-utility skin-control skin-btn-secondary flex h-11 items-center justify-center text-[13px] ${
+              collapsed ? 'w-11' : 'px-3'
             }`}
           >
             <span className={collapsed ? '' : 'hidden'}>
@@ -215,7 +215,7 @@ function Sidebar({ householdAdd }: { householdAdd: boolean }) {
         <button
           type="button"
           onClick={() => setCollapsed((v) => !v)}
-          className={`skin-control skin-btn-secondary flex items-center gap-2 px-2 py-1.5 text-[12px] ${
+          className={`skin-control skin-btn-secondary flex min-h-11 items-center gap-2 px-2 py-1.5 text-[13px] ${
             collapsed ? 'justify-center' : ''
           }`}
           aria-pressed={collapsed}
@@ -245,7 +245,7 @@ function MobileBar({ pathname }: { pathname: string }) {
         </span>
         <span
           data-testid="mobile-chrome-context"
-          className="skin-label mt-1 block break-words text-[10.5px] leading-[1.25] text-muted"
+          className="skin-label mt-1 block break-words text-[12px] leading-[1.35] text-muted"
         >
           {pageLabel} · {skinLabel}
         </span>
@@ -256,7 +256,7 @@ function MobileBar({ pathname }: { pathname: string }) {
 }
 
 const tabLink =
-  'rv-mobile-tab flex min-h-[58px] flex-col items-center justify-center gap-1 px-1 pb-1.5 pt-2 text-[12px] font-semibold transition-colors'
+  'rv-mobile-tab flex min-h-[58px] flex-col items-center justify-center gap-1 px-1 pb-1.5 pt-2 text-[12px] font-semibold'
 
 function TabLink({ item }: { item: NavigationItem }) {
   return (

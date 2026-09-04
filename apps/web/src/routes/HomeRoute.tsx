@@ -147,7 +147,7 @@ function HomeScreen() {
           <button
             type="button"
             onClick={() => void navigate({ to: '/add' })}
-            className="skin-control skin-btn-primary h-10 px-4 text-[13px]"
+            className="skin-control skin-btn-primary h-11 px-4 text-[14px]"
           >
             ＋ Add a book
           </button>
@@ -164,11 +164,11 @@ function HomeScreen() {
           <SignatureRing value={uniqueThisYear} max={goalTarget} size={112} />
         </button>
         <div className="min-w-[230px] flex-1">
-          <span className="skin-label text-[10px]" style={{ color: 'var(--accent-ink)' }}>
+          <span className="skin-label text-[12px]" style={{ color: 'var(--accent-ink)' }}>
             Your reading year
           </span>
           <h2
-            className="mt-2 max-w-[24ch] text-balance text-[24px] font-semibold leading-[1.08] text-ink sm:text-[30px]"
+            className="mt-2 max-w-[24ch] text-balance text-[26px] font-semibold leading-[1.12] text-ink sm:text-[32px]"
             style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
           >
             {reading.length
@@ -177,7 +177,7 @@ function HomeScreen() {
                 ? 'Your next great read is already here.'
                 : 'Build a reading life that feels like yours.'}
           </h2>
-          <p className="mt-2 max-w-[62ch] text-[13px] leading-relaxed text-muted">
+          <p className="mt-2 max-w-[62ch] text-[14.5px] leading-[1.55] text-muted">
             {yearReads.length} read{yearReads.length !== 1 ? 's' : ''} logged in {YEAR}
             {yearReads.length !== uniqueThisYear ? ` across ${uniqueThisYear} books` : ''}.{' '}
             {unread.length} unread waiting.
@@ -185,7 +185,7 @@ function HomeScreen() {
           {goalTarget > 0 && uniqueThisYear >= goalTarget && (
             /* the milestone line, spoken in the skin's voice (Fable 5 voice-pack quartet) */
             <div
-              className="mt-1 text-[13px] italic"
+              className="mt-1.5 text-[14px] leading-[1.5] italic"
               style={{ color: 'var(--accent-ink)', fontFamily: 'var(--font-display)' }}
             >
               {voice.milestone}
@@ -195,7 +195,7 @@ function HomeScreen() {
             /* the SEASON strip (chunk-4, verdict-approved, minimal scope): the live count + the
                skin's mid-progress tail — "Thirty-five books this year. A tidy ledger." */
             <div
-              className="mt-1 text-[13px] italic"
+              className="mt-1.5 text-[14px] leading-[1.5] italic"
               style={{ color: 'var(--accent-ink)', fontFamily: 'var(--font-display)' }}
             >
               <span className="skin-numeral not-italic">{uniqueThisYear}</span> of{' '}
@@ -215,7 +215,7 @@ function HomeScreen() {
           <button
             type="button"
             onClick={() => void navigate({ to: '/match' })}
-            className="skin-control skin-btn-primary h-10 flex-1 px-4 text-[12px] sm:flex-none"
+            className="skin-control skin-btn-primary h-11 flex-1 px-4 text-[13.5px] sm:flex-none"
           >
             Find my next read
           </button>
@@ -226,7 +226,7 @@ function HomeScreen() {
               const pick = unread[Math.floor(Math.random() * unread.length)]
               if (pick) openBook(pick.id)
             }}
-            className="skin-control skin-btn-secondary h-10 flex-1 px-4 text-[12px] sm:flex-none"
+            className="skin-control skin-btn-secondary h-11 flex-1 px-4 text-[13.5px] sm:flex-none"
           >
             Surprise me
           </button>
@@ -241,8 +241,7 @@ function HomeScreen() {
             <button
               type="button"
               onClick={() => setReadingPickerOpen(true)}
-              className="skin-control mb-0.5 flex-none border border-line px-3 py-1.5 text-[12.5px] font-semibold text-ink"
-              style={{ background: 'var(--card)' }}
+              className="skin-control skin-btn-secondary mb-0.5 min-h-10 flex-none px-3 text-[13px] font-semibold"
             >
               ＋ Add
             </button>
@@ -272,7 +271,9 @@ function HomeScreen() {
                       <div className="break-words text-[14px] font-semibold text-ink">
                         {b.title}
                       </div>
-                      <div className="break-words text-[12px] text-muted">{authorOf(b)}</div>
+                      <div className="break-words text-[13px] leading-[1.45] text-muted">
+                        {authorOf(b)}
+                      </div>
                     </div>
                     <span className="flex flex-none items-center gap-0.5">
                       {reading.length > 1 && (
@@ -281,7 +282,7 @@ function HomeScreen() {
                             type="button"
                             onClick={() => moveReading(i, -1)}
                             aria-label={`Move ${b.title} earlier`}
-                            className="px-1 text-[12px] leading-none text-muted"
+                            className="grid h-8 w-8 place-items-center text-[12px] leading-none text-muted hover:text-ink"
                           >
                             ▲
                           </button>
@@ -289,7 +290,7 @@ function HomeScreen() {
                             type="button"
                             onClick={() => moveReading(i, 1)}
                             aria-label={`Move ${b.title} later`}
-                            className="px-1 text-[12px] leading-none text-muted"
+                            className="grid h-8 w-8 place-items-center text-[12px] leading-none text-muted hover:text-ink"
                           >
                             ▼
                           </button>
@@ -299,7 +300,7 @@ function HomeScreen() {
                         type="button"
                         onClick={() => setRemoving(b)}
                         aria-label={`Remove ${b.title} from Reading now`}
-                        className="px-1 text-[13px] leading-none text-muted hover:text-primary"
+                        className="grid h-8 w-8 place-items-center text-[13px] leading-none text-muted hover:text-primary"
                       >
                         ✕
                       </button>
@@ -307,13 +308,13 @@ function HomeScreen() {
                   </div>
                   <ProgressMeter value={b.progress} max={100} className="mt-2" />
                   <div className="mt-1.5 flex items-center gap-2">
-                    <span className="text-[12px] font-semibold text-muted">{b.progress}%</span>
+                    <span className="text-[13px] font-semibold text-muted">{b.progress}%</span>
                     <div className="ml-auto flex gap-1.5">
                       <button
                         type="button"
                         onClick={() => nudge(b, -5)}
                         aria-label="Less progress"
-                        className="h-7 w-7 rounded-full border border-line text-ink"
+                        className="skin-control skin-btn-icon grid h-9 w-9 place-items-center text-ink"
                       >
                         −
                       </button>
@@ -321,7 +322,7 @@ function HomeScreen() {
                         type="button"
                         onClick={() => nudge(b, 5)}
                         aria-label="More progress"
-                        className="h-7 w-7 rounded-full border border-line text-ink"
+                        className="skin-control skin-btn-icon grid h-9 w-9 place-items-center text-ink"
                       >
                         ＋
                       </button>
@@ -329,7 +330,7 @@ function HomeScreen() {
                     <button
                       type="button"
                       onClick={() => setFinishing(b)}
-                      className="skin-control px-3 py-1 text-[12px] font-semibold"
+                      className="skin-control min-h-9 px-3 py-1 text-[13px] font-semibold"
                       style={{ background: 'var(--chip)', color: 'var(--ink)' }}
                     >
                       Finish ✓
@@ -362,7 +363,7 @@ function HomeScreen() {
               />
             </button>
             {shelfBooks.length > 0 && (
-              <p className="mb-3 mt-1 text-[12px] text-muted">
+              <p className="mb-3 mt-1 text-[13px] leading-[1.5] text-muted">
                 Your hand-picked next reads. Swipe the shelf and open one when it feels right.
               </p>
             )}
@@ -380,7 +381,7 @@ function HomeScreen() {
       {soon.length > 0 && (
         <div className="mt-8">
           <SectionHeader label="Coming soon" readout={soon.length} />
-          <p className="mb-3 mt-1 text-[12px] text-muted">
+          <p className="mb-3 mt-1 text-[13px] leading-[1.5] text-muted">
             Releases you’re tracking over the next four months.
           </p>
           <div
@@ -401,8 +402,10 @@ function HomeScreen() {
                 >
                   <CoverImage book={b} />
                 </div>
-                <div className="mt-2 break-words text-[12px] font-semibold text-ink">{b.title}</div>
-                <div className="mt-0.5 text-[11px] text-primary">
+                <div className="mt-2 break-words text-[13px] font-semibold leading-[1.35] text-ink">
+                  {b.title}
+                </div>
+                <div className="mt-0.5 text-[12px] text-primary">
                   {b.pub.m ? `${MONTHS[b.pub.m - 1]} ` : ''}
                   {b.pub.y}
                 </div>
@@ -427,7 +430,7 @@ function HomeScreen() {
           <button
             type="button"
             onClick={() => void navigate({ to: '/library' })}
-            className="skin-control skin-btn-primary mt-5 h-10 px-5 text-[12px]"
+            className="skin-control skin-btn-primary mt-5 h-11 px-5 text-[13.5px]"
           >
             Browse your library
           </button>

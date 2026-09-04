@@ -277,12 +277,10 @@ async function setProfileSkinMode(skin: string, mode: string) {
 }
 
 /**
- * Guard against the exact regression class the pre-seed above exists to remove: `data-skin` /
- * `data-mode` land synchronously with the attribute write, but a `.skin-control`'s own rendered
- * `color` (`color: var(--ink)`, `transition: all var(--motion-duration)`) can still be mid-flight
- * toward that value — `data-mode` alone was already correct at the exact instant CI read an
- * unsettled color, so it cannot catch this. This checks the RENDERED color a control is actually
- * painting, not the attribute.
+ * Guard the rendered material itself, not merely `data-skin` / `data-mode`. Control colours now
+ * switch atomically, specifically to prevent a low-contrast transition midpoint; this comparison
+ * keeps that contract honest if a later component reintroduces an authored transition or a
+ * skin-specific override drifts from the resolved token.
  *
  * The expected value is never hardcoded: a detached element stamped fresh with the target
  * `data-skin`/`data-mode` has no prior state to transition FROM, so its first computed `--ink` is
@@ -293,11 +291,10 @@ async function setProfileSkinMode(skin: string, mode: string) {
 async function assertControlMaterialSettled(page: Page, skin: string, mode: string, where: string) {
   const result = await page.evaluate(
     ({ skin, mode }) => {
-      // .skin-btn-primary is EXCLUDED on purpose — its color is --cta-ink, a different token, and
-      // matching it here would compare a CTA state rather than persistent shell chrome. Secondary
-      // and icon controls are deliberately allowed their own per-skin ink: Aphelion's instrument
-      // controls use --primary, while Marrow's engraved controls use --muted. Comparing all of them
-      // to --ink would reject the character system this sweep exists to protect.
+      // .skin-btn-primary is excluded on purpose—its color is --cta-ink, a different token, and
+      // matching it here would compare a CTA state rather than persistent shell chrome. Clone the
+      // actual secondary/icon class instead of hardcoding --ink so future intentional material
+      // changes remain testable without creating a second token table here.
       const control = document.querySelector(
         '.skin-btn-secondary, .skin-btn-icon, .skin-control.text-ink',
       ) as HTMLElement | null
@@ -614,6 +611,7 @@ test.describe('axe sweep', () => {
 test('unauthenticated landing + auth pass axe', async ({ page }) => {
   const routes: [string, string][] = [
     ['Landing', '/'],
+    ['Skin character · all 18 states', '/lab/skins'],
     ['Auth · sign in', '/auth?mode=signin'],
     ['Auth · sign up', '/auth?mode=signup'],
     // The email-link landing (/welcome): the expired-link view and the set-new-password form

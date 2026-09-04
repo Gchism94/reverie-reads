@@ -95,10 +95,10 @@ function SkinCard({
               </StatusTag>
             </div>
             <div className="mt-3 flex flex-wrap gap-1.5">
-              <span className="skin-control skin-btn-primary inline-grid min-h-8 place-items-center px-3 text-[10.5px]">
+              <span className="skin-control skin-btn-primary inline-grid min-h-10 place-items-center px-3 text-[12px]">
                 Continue
               </span>
-              <span className="skin-control skin-btn-secondary inline-grid min-h-8 place-items-center px-3 text-[10.5px]">
+              <span className="skin-control skin-btn-secondary inline-grid min-h-10 place-items-center px-3 text-[12px]">
                 Details
               </span>
             </div>
@@ -109,7 +109,7 @@ function SkinCard({
           {['Typography', 'Material', 'Controls'].map((label) => (
             <span
               key={label}
-              className="skin-control border px-2 py-1 text-[9.5px]"
+              className="skin-control border px-2 py-1 text-[11px]"
               style={{
                 borderColor: 'var(--chip-border)',
                 background: 'var(--chip)',
@@ -145,7 +145,7 @@ function SkinCard({
           type="button"
           onClick={onSelect}
           disabled={active}
-          className="skin-control skin-btn-primary h-9 px-4 text-[11px] disabled:opacity-50"
+          className="skin-control skin-btn-primary h-11 px-4 text-[12.5px] disabled:opacity-50"
         >
           {active ? 'In use' : 'Use this skin'}
         </button>
@@ -297,7 +297,7 @@ function SkinGalleryScreen() {
       />
 
       <div className="mt-5 flex flex-wrap items-center gap-2">
-        <span className="text-[11px] uppercase tracking-[0.15em] text-muted">Preview in</span>
+        <span className="text-[12px] uppercase tracking-[0.12em] text-muted">Preview in</span>
         {(
           [
             ['light', '☀ Light'],
@@ -310,7 +310,7 @@ function SkinGalleryScreen() {
             type="button"
             onClick={() => setMode(value)}
             aria-pressed={activeMode === value}
-            className={`skin-control px-3 py-1.5 text-[12.5px] font-semibold ${
+            className={`skin-control min-h-11 px-3 py-1.5 text-[13px] font-semibold ${
               activeMode === value ? 'skin-btn-primary' : 'skin-btn-secondary'
             }`}
           >

@@ -71,14 +71,20 @@ back to white over a light-mode placeholder, the one solid surface where a brigh
 The remaining components, all consuming the existing contract (no new character invented):
 
 - `.skin-control` — labelled controls (buttons, selects, toggles, chips, nav actions): silhouette +
-  label font/transform/weight + motion.
+  label font/transform/weight + physical feedback motion. Skin/mode color changes are atomic;
+  foreground and background do not interpolate through an untested contrast midpoint.
+- `.skin-btn-primary` — the authored `--cta-lo`/`--cta-ink` pair with a restrained highlight and
+  depth. `.skin-btn-secondary` and `.skin-btn-icon` share opaque `--card-solid`/`--ink` material and
+  a registry-tested 3:1 edge. Room identity is carried by modest geometry and edge treatment, never
+  by wax-seal, grommet, button-hole, or sticker silhouettes.
 - `.skin-field` — free-text inputs (search): silhouette **only** (no forced uppercase / display serif —
   typed text stays as typed).
 - **Focus ring** — `.skin-control` / `.skin-field` get a `:focus-visible` outline in `--accent`
   (affordance: a notched/squared control still reads + behaves as a control).
 - **Goal ring** (`HomeRoute`) — number uses `--numeral-font` / `--numeral-feature` (matches `StatNumber`);
   Aphelion reads as a segmented instrument gauge (ticked track + square cap).
-- **Nav** (`AppShell`) — labels via `.skin-label`; action buttons via `.skin-control`.
+- **Nav** (`AppShell`) — labels via `.skin-label`; action buttons via `.skin-control`; icon and
+  navigation actions keep a 44px target and cannot flex below it.
 - **Empty states** — copy from the `useVoice` pack (`empty.heading/body/cta` + `motif`), never generic.
 - **Toast** — ⚠️ _no toast component exists in the app yet._ When one is built it should use `.skin-plate`
   / `--radius-panel` + `--panel-fill`, `--accent` for status, and ride `.rv-anim`. Flagged, not invented.
