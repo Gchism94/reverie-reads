@@ -1,14 +1,13 @@
 # Task: corpus-administrator enrichment and durable corpus metadata
 
-Status: **The cover and household rollout is live through PR #371. The owner deployed migrations
-through `20260905010000`; the read-only production report returned 74/74 true; and web build
-`e7a6809` is promoted at `reveriereads.app`. PRs #368–#370 provide exact personal and household
-cover review, fail-closed unavailable status, additive missing-default promotion, owner-scoped
-bulk recovery, and the responsive shared-details editor. The report initially observed one
-assigned corpus administrator. The owner-run exact-roster dry run then found one existing grant,
-one addition, and no unexpected account; the reviewed write verified both requested grants and the
-exact roster. Private CSV reconciliation, backup approval, owner write, and post-write smoke checks
-remain pending.**
+Status: **live through the durable/recoverable administrator workflow and current production build.
+PRs #368–#376 established review, promotion, destination, and authorization boundaries; PRs
+#387 and #392–#395 made cover recovery bounded and sweeps durable across navigation and runtime
+failure; PR #400 surfaces provider failures. Migrations through `20260923010000` are deployed and
+the exact two-profile administrator roster is verified. The owner has parked four repeatedly
+deferred works; they remain unresolved but are not an active retry/release gate. Household
+reconciliation has owner-accepted operational closure with the formal evidence limitation recorded
+in `docs/audits/household-reconciliation-evidence-2026-09.md`.**
 
 ## Objective
 

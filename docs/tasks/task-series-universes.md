@@ -1,6 +1,7 @@
 # Task: Pro connected-series universes
 
-Status: **blueprint complete; implementation not started**.
+Status: **implemented and deployed in the private Pro overlay. Secondary-account product review is
+deferred until that reader is available; it is feedback work, not an implementation blocker.**
 
 Decision: [`ADR 0007`](../decisions/0007-series-universes.md). Monetization boundary:
 [`ADR 0006`](../decisions/0006-monetization-boundary.md).
@@ -15,7 +16,7 @@ membership. Corpus administrators receive the same effective Pro access for test
 Ordinary series tracking remains complete and free. The open app has no empty universe tab when the
 private premium module is absent.
 
-## What exists today
+## Pre-implementation evidence
 
 | Signal                                           | Useful evidence                                          | Missing authority                                              |
 | ------------------------------------------------ | -------------------------------------------------------- | -------------------------------------------------------------- |
@@ -76,8 +77,8 @@ Revocation cases are part of done:
 
 ## Model blueprint
 
-Names below are contracts for the private implementation, not tables that exist in the public
-schema today.
+Names below are the contracts implemented by the private overlay. They deliberately do not exist in
+the public/free schema.
 
 ### `series_universes`
 
@@ -301,27 +302,27 @@ Keep `data/fixtures/library_connected_series.csv` as the standing representative
 
 ## Delivery order
 
-1. **Public prerequisite — series truth Phase 2B.** Make structured membership the reliable
-   authority, decide multiple membership, and stop page views from materializing unproven series.
-   **Implemented in the Phase 2B follow-up branch; production rollout pending.** Historical changes
-   still wait for the owner-run aggregate inventory.
-2. **Private platform prerequisite.** Select the subscription source and implement one server-side
-   effective Pro entitlement with the corpus-administrator override. Expose only the narrow host
-   contract the public app needs. **The public positive-proof combiner and provider registration
-   seam are implemented; subscription selection and server-side premium-write enforcement remain
-   private work.**
+1. **Public prerequisite — series truth Phase 2B.** Complete. Structured membership is the reliable
+   authority and page views do not materialize unproven series.
+2. **Private platform prerequisite.** Complete for the current administrator/testing boundary. The
+   server-side effective entitlement includes the corpus-administrator override and premium writes
+   fail closed when no positive entitlement can be established. Commercial subscription checkout
+   remains a separate monetization program.
    The shared series-metadata seeder is implemented separately in
    `docs/tasks/task-series-metadata-seeder.md`; universe work may consume reviewed structured series
    truth but must not bypass its personal/shared adoption boundary.
-3. **Private universe model.** Add the four owner-scoped relations and RPCs, with model and database
-   tests. Additive schema only; no historical backfill.
-4. **Private creation/editor and import review.** Ship behind entitlement, test Chrome desktop and
-   mobile, and keep ordinary imports unchanged.
-5. **Private presentation.** Universe page, series breadcrumb, Library section, progress and gaps.
+3. **Private universe model.** Complete in private PR #1 with additive owner-scoped relations and
+   server-authorized RPCs.
+4. **Private creation/editor and import review.** Complete through private PRs #1 and #4; ordinary
+   imports remain usable without the Pro module.
+5. **Private presentation.** Complete through private PRs #3–#5 with braided timelines, lifecycle
+   editing, and confirmed-series membership safeguards.
 6. **Optional curated templates.** Design separately after personal universes prove useful. A
    template is adoptable input, never a global overwrite.
 
-No production deployment or data reconciliation belongs to this blueprint branch.
+The blueprint branch itself performed no production deployment or data reconciliation. Its private
+implementation later shipped via PRs #1 and #3–#5 with migrations `20260912010000`,
+`20260915010000`, `20260916010000`, and `20260918010000`.
 
 ## Completion gate
 
