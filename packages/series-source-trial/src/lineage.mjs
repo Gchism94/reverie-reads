@@ -2,10 +2,23 @@ const inventaireOrigin = (entityId) =>
   String(entityId ?? '').startsWith('wd:') ? 'wikidata' : 'inventaire'
 
 export const sourceLineage = (originProvider, originEntityId, observedVia = originProvider) => ({
-  originProvider,
-  originEntityId: originEntityId == null ? null : String(originEntityId),
+  originProvider: String(originProvider).trim().toLowerCase(),
+  originEntityId: normalizeOriginEntityId(originProvider, originEntityId),
   observedVia,
 })
+
+const normalizeLineage = (lineage) =>
+  sourceLineage(lineage.originProvider, lineage.originEntityId, lineage.observedVia)
+
+export const normalizeOriginEntityId = (originProvider, originEntityId) => {
+  if (originEntityId == null) return null
+  const value = String(originEntityId).trim()
+  if (String(originProvider).toLowerCase() === 'wikidata') {
+    const entityId = value.match(/\b([pq]\d+)\b/i)?.[1]
+    if (entityId) return entityId.toUpperCase()
+  }
+  return value
+}
 
 export const entityLineage = (provider, entityId, observedVia = provider) =>
   sourceLineage(
@@ -15,7 +28,10 @@ export const entityLineage = (provider, entityId, observedVia = provider) =>
   )
 
 export const lineageKey = (lineage) =>
-  [lineage?.originProvider ?? '', lineage?.originEntityId ?? ''].join(':')
+  [
+    String(lineage?.originProvider ?? '').toLowerCase(),
+    normalizeOriginEntityId(lineage?.originProvider, lineage?.originEntityId) ?? '',
+  ].join(':')
 
 const fallbackEntityId = (claim, workMatch) =>
   claim?.providerSeriesId ?? claim?.sourceRef ?? workMatch?.providerWorkId ?? null
@@ -32,7 +48,8 @@ export function annotateProviderResults(provider, results) {
       ? {
           ...workMatch,
           sourceLineage:
-            workMatch.sourceLineage ?? entityLineage(provider, workMatch.providerWorkId),
+            (workMatch.sourceLineage && normalizeLineage(workMatch.sourceLineage)) ??
+            entityLineage(provider, workMatch.providerWorkId),
         }
       : workMatch
 
@@ -42,7 +59,8 @@ export function annotateProviderResults(provider, results) {
       seriesClaims: (result.seriesClaims ?? []).map((claim) => ({
         ...claim,
         sourceLineage:
-          claim.sourceLineage ?? entityLineage(provider, fallbackEntityId(claim, workMatch)),
+          (claim.sourceLineage && normalizeLineage(claim.sourceLineage)) ??
+          entityLineage(provider, fallbackEntityId(claim, workMatch)),
       })),
     }
   })

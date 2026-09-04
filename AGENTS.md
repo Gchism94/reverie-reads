@@ -134,7 +134,8 @@ wishlist` was the pre-#68 model and is long wrong. Format flags **suppress, neve
   Inventaire `wd:` mirrors retain Wikidata lineage; and Hardcover membership requires an
   independently originated open-graph corroborator. Self-titled Hardcover relations are flagged,
   universe groupings are quarantined, and current community-source order needs independent
-  agreement. Unknown providers cannot corroborate until profiled. The model may select, explain,
+  agreement. Wikidata entity URLs and Inventaire `wd:` identifiers normalize to the same lineage.
+  Unknown providers cannot corroborate until profiled. The model may select, explain,
   review, or abstain, but only deterministic eligibility can make a proposal automatic and only
   affirmative authority evidence can establish standalone status. The model uses strict structured
   output, has no Supabase write path, and cannot invent a field or citation absent from the packet.
