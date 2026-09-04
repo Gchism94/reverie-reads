@@ -129,6 +129,18 @@ wishlist` was the pre-#68 model and is long wrong. Format flags **suppress, neve
   corpus tuple is still a reconciliation event: it must repair eligible personal defaults and their
   structured membership rather than becoming a tuple-equality no-op. See
   `docs/reference/DATA_SOURCES.md`.
+- **LLM resolution consumes cleaned evidence; it never upgrades source risk by itself.** In the
+  trial, Google is identity-only; open graph claims require exact-work relational evidence;
+  Inventaire `wd:` mirrors retain Wikidata lineage; and Hardcover membership requires an
+  independently originated open-graph corroborator. Self-titled Hardcover relations are flagged,
+  universe groupings are quarantined, and current community-source order needs independent
+  agreement. Unknown providers cannot corroborate until profiled. The model may select, explain,
+  review, or abstain, but only deterministic eligibility can make a proposal automatic and only
+  affirmative authority evidence can establish standalone status. The model uses strict structured
+  output, has no Supabase write path, and cannot invent a field or citation absent from the packet.
+  Inventaire, BookBrainz, and the resolver stay trial-only until the reviewed accuracy,
+  standalone-safety, rights, privacy, latency, and cost gates pass. See
+  `docs/reference/DATA_SOURCES.md`.
 - **Corpus cover recovery is bounded, resumable, and independent of classification.** The
   administrator completion pipeline never walks the whole household library in one RPC. It calls
   `admin_recover_corpus_cover_batch` in groups of at most 25, records a source fingerprint after
@@ -176,6 +188,7 @@ pnpm e2e            # Playwright (includes the axe sweep — four skins x both m
 pnpm lint           # ESLint
 pnpm typecheck      # tsc --noEmit, all packages
 pnpm series:trial -- --scope all --providers openlibrary,wikidata  # provider evidence trial
+pnpm series:resolve -- --input <trial-report.json> --scope gold     # no-write LLM shadow trial
 pnpm db:start       # local Supabase stack   (db:stop / db:reset / db:status)
 pnpm db:migrate     # apply migrations + reload the PostgREST schema
 pnpm db:seed        # load the dev library

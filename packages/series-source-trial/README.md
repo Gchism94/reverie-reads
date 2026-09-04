@@ -29,6 +29,17 @@ From the repository root:
 pnpm series:trial -- --scope all --providers openlibrary,wikidata
 ```
 
+The expanded open-data comparison adds Inventaire and BookBrainz:
+
+```sh
+pnpm series:trial -- --scope all --providers openlibrary,wikidata,inventaire,bookbrainz
+```
+
+Inventaire results preserve their origin: an `inv:` entity is distinct Inventaire evidence, while
+a `wd:` entity observed through Inventaire remains Wikidata evidence. BookBrainz relationships are
+also checked against the series roster. Neither adapter promotes a one-member provider series into
+automatic evidence.
+
 The Open Library adapter intentionally runs at roughly one request per second. Reports are written
 under `packages/series-source-trial/reports/` and ignored by default because ad-hoc results are not
 stable fixtures.
@@ -81,6 +92,61 @@ pnpm series:trial:score -- packages/series-source-trial/private-results/vendor.j
 `private-inputs/` and `private-results/` are ignored deliberately. Do not commit a vendor sample
 until its contract explicitly permits publication.
 
+## Run the evidence resolver in shadow mode
+
+The resolver is an optional, no-write interpretation layer over a completed JSON trial report. It
+cannot browse, receives no authority truth labels, and cannot modify Supabase or Reverie's corpus.
+It may only return fields and evidence IDs present in the supplied provider packet; deterministic
+validation rejects unsupported values and keeps singleton or conflicting relationships in review.
+
+Before a packet reaches the model, a deterministic cleaner assigns each claim a source role,
+membership rule, lineage, risk flags, and separate membership/order eligibility:
+
+| Source       | Usable resolver input               | Automatic membership rule                     | Automatic order rule                    |
+| ------------ | ----------------------------------- | --------------------------------------------- | --------------------------------------- |
+| Google Books | Work identity only                  | Never                                         | Never                                   |
+| Open Library | Exact structured relationship       | Non-singleton exact-work relation             | Independent agreement                   |
+| Wikidata     | Exact P179 relationship             | Non-singleton exact-work relation             | Independent agreement on P1545          |
+| Inventaire   | Exact `serie-parts` roster relation | Non-singleton; `wd:` mirrors remain Wikidata  | Independent non-mirror agreement        |
+| BookBrainz   | Exact series-roster relation        | Non-singleton exact-work relation             | Never until dependable order is exposed |
+| Hardcover    | Exact `book_series` relation        | Independent open-graph corroboration required | Independent agreement                   |
+
+This is deliberately asymmetric. Hardcover adds broad candidate coverage, but a Hardcover-only
+relationship cannot become an automatic fact. Self-titled relationships are flagged, connected
+“universe” groupings are quarantined, and series order is withheld when sources disagree. An
+Inventaire view of the same Wikidata entity is one lineage, not two votes. Unknown providers cannot
+corroborate a source until a profile is added.
+
+The LLM's job is to select, explain, or route these cleaned claims—not to make an unsafe
+claim true. It can suppress a Hardcover false positive by choosing review or abstain. Declaring a
+book standalone still requires affirmative author/publisher evidence; silence from another dataset
+is never enough.
+
+Put the server-side API key in `packages/series-source-trial/.env.local`:
+
+```dotenv
+OPENAI_API_KEY=your-server-side-key
+BOOK_RESOLVER_MODEL=gpt-5.6-luna
+```
+
+Then run a small reviewed shadow sample before spending against the whole report:
+
+```sh
+pnpm series:resolve -- \
+  --input packages/series-source-trial/reports/your-trial.json \
+  --scope gold \
+  --max 10
+```
+
+Requests use strict JSON Schema output and `store: false`. Responses are cached by the complete
+evidence packet, model, and prompt version under ignored `private-results/resolver-cache/`, so an
+unchanged evaluation does not pay twice. The generated score reports citation faithfulness,
+unsupported fields, policy violations, membership precision/recall, and false-standalone behavior.
+Only policy-safe proposals count as automatic fills; review and abstain decisions do not.
+
+This shadow harness is intentionally not a production Edge Function. Production integration waits
+until the authority-reviewed sample meets the gates below.
+
 ## Decision rule
 
 Accuracy is a hard constraint. A provider cannot pass by trading false claims for lower price or
@@ -88,14 +154,14 @@ greater coverage. After all hard gates pass, compare eligible providers using th
 `data/evaluation-policy.json`.
 
 The current gold set is a pre-pilot. Procurement remains blocked until at least 200 cases are
-authority-reviewed, including at least 100 positive series cases and 10 standalone controls.
-The intended 200-case stratification is:
+authority-reviewed, including at least 100 positive series cases and 50 standalone controls.
+The intended 200-case minimum stratification is:
 
 - the current 69-series Reverie sample;
 - 50 recent independent or Kindle-first works;
 - 50 recent traditionally published works;
 - 20 multi-series or connected-universe cases;
-- 11 standalone negative controls.
+- at least 50 standalone negative controls, with overlaps rebalanced across the other strata.
 
 Overlap should be resolved while preserving the intended stratum counts. A work with multiple
 memberships needs every in-scope membership annotated before claim-level precision is fair.
@@ -112,6 +178,10 @@ evidence from another provider.
 - Open Library, Wikidata, and Hardcover are live adapters. For Open Library, only the structured
   `series_name` relationship counts as membership; its legacy `series` field is retained as a
   candidate label.
+- Inventaire is a live CC0 adapter. Its work-to-series claim is checked against `serie-parts`; `wd:`
+  entities retain Wikidata lineage and do not become a second independent vote.
+- BookBrainz is a live CC0 corroboration adapter. Its API is alpha and its observed series roster
+  does not provide dependable order, so the adapter leaves position blank.
 - Hardcover labels count only after the exact matched book's `book_series` relationship confirms
   them.
 - Google Books is an identity comparison, not a durable corpus source.
@@ -119,3 +189,5 @@ evidence from another provider.
   negotiated.
 - The Internet Archive/Wayback Machine may be stored as provenance for an authority page, but it is
   not a series provider.
+- The LLM resolver is not a provider. It can select and explain supplied claims, but its
+  output is never source evidence and never bypasses the deterministic review policy.

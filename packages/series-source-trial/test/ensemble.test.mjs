@@ -77,19 +77,57 @@ test('deduplicates corroborating membership and blanks a disputed position', () 
   ])
 })
 
-test('creates baseline and marginal supplement strategies', () => {
-  const providers = ['openlibrary', 'wikidata', 'google-books', 'hardcover'].map((provider) =>
-    run(provider, [result('book', `${provider}-1`)]),
-  )
+test('creates baseline, open-data, and marginal supplement strategies', () => {
+  const providers = [
+    'openlibrary',
+    'wikidata',
+    'inventaire',
+    'bookbrainz',
+    'google-books',
+    'hardcover',
+  ].map((provider) => run(provider, [result('book', `${provider}-1`)]))
   const ensembles = supplementalEnsembles(providers)
 
   assert.deepEqual(
     ensembles.map((entry) => entry.provider),
     [
       'strategy:openlibrary+wikidata',
+      'strategy:openlibrary+wikidata+inventaire',
+      'strategy:openlibrary+wikidata+bookbrainz',
       'strategy:openlibrary+wikidata+google-books',
       'strategy:openlibrary+wikidata+hardcover',
-      'strategy:all-four',
+      'strategy:all-providers',
     ],
   )
+})
+
+test('deduplicates mirrored providers by source lineage', () => {
+  const wikidataLineage = {
+    originProvider: 'wikidata',
+    originEntityId: 'wd:Q1',
+    observedVia: 'wikidata',
+  }
+  const wikidata = run('wikidata', [
+    result('book', 'wd:book', [
+      { ...claim('Series', 1, 'wd:book'), sourceLineage: wikidataLineage },
+    ]),
+  ])
+  const inventaire = run('inventaire', [
+    result('book', 'wd:book', [
+      {
+        ...claim('Series', 1, 'inventaire:book'),
+        sourceLineage: { ...wikidataLineage, observedVia: 'inventaire' },
+      },
+    ]),
+  ])
+
+  const combined = combineRuns([wikidata, inventaire])
+  assert.equal(combined.results[0].seriesClaims[0].supportingProviders.length, 2)
+  assert.deepEqual(combined.results[0].seriesClaims[0].supportingLineages, [
+    {
+      originProvider: 'wikidata',
+      originEntityId: 'wd:Q1',
+      observedVia: ['wikidata', 'inventaire'],
+    },
+  ])
 })

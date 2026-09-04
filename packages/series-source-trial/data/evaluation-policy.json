@@ -7,7 +7,7 @@
     "relationalMembershipEvidence": true,
     "minimumReviewedCases": 200,
     "minimumReviewedPositiveCases": 100,
-    "minimumReviewedStandaloneCases": 10,
+    "minimumReviewedStandaloneCases": 50,
     "minimumMembershipPrecision": 0.99,
     "maximumFalseStandaloneRate": 0.005
   },
