@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "provider": "vendor-name",
+  "observedAt": "2026-09-03T00:00:00.000Z",
+  "rights": {
+    "commercialUsePermitted": null,
+    "persistentStoragePermitted": null,
+    "claimLevelProvenance": true
+  },
+  "results": [
+    {
+      "caseId": "gold-hunting-adeline",
+      "latencyMs": null,
+      "workMatch": {
+        "matched": true,
+        "confidence": "high",
+        "providerWorkId": "replace-with-provider-id",
+        "matchedTitle": "Hunting Adeline",
+        "matchedAuthors": ["H. D. Carlton"]
+      },
+      "seriesClaims": [
+        {
+          "evidenceKind": "relational_membership",
+          "providerSeriesId": "replace-with-series-id",
+          "series": "Cat & Mouse Duet",
+          "position": 2,
+          "orderType": "publication",
+          "role": "primary",
+          "sourceRef": "replace-with-record-reference"
+        }
+      ]
+    }
+  ]
+}

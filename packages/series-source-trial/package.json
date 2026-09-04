@@ -1,0 +1,11 @@
+{
+  "name": "@reverie/series-source-trial",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "trial": "node src/run.mjs",
+    "score": "node src/score-file.mjs",
+    "test": "node --test test/*.test.mjs"
+  }
+}

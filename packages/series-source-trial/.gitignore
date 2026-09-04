@@ -1,0 +1,13 @@
+# Commercial samples and normalized commercial results may have contractual restrictions.
+private-inputs/
+private-results/
+
+# Keep ad-hoc runs local. Curated baseline reports may be force-added deliberately.
+reports/*.json
+reports/*.md
+!reports/.gitkeep
+!reports/open-baseline-final-2026-09-03.json
+!reports/open-baseline-final-2026-09-03.md
+!reports/google-quota-observation-2026-09-03.md
+!reports/open-combined-baseline-2026-09-03.md
+!reports/supplemental-live-results-2026-09-03.md

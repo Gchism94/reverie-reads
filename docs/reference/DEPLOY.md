@@ -12,6 +12,20 @@ the runbook for shipping to it. Owner decisions: **Reverie** is the name (2026-0
 | Web app       | Vercel — https://reveriereads.vercel.app            | custom domain: reveriereads.app                                    |
 | External APIs | Google Books (keyed, server-side)                   | `GOOGLE_BOOKS_KEY` is a Supabase function secret, never in web env |
 
+The existing `search`, `enrich`, `covers`, `series`, and `releases` Edge Functions read provider
+credentials from project-wide Supabase secrets. Configure these once in Supabase; never copy them
+into the web environment or commit them:
+
+```text
+GOOGLE_BOOKS_KEY=<Books API key>
+BOOKS_KEY_REFERER=https://reveriereads.app/
+HARDCOVER_TOKEN=<backend-only personal token>
+```
+
+Adding or rotating a Supabase function secret does not require a function redeploy. Verify the
+change through the real reader search flow before enabling a corpus-wide run. A token exposed in a
+terminal, report, or task transcript must be revoked and replaced rather than reused.
+
 ## Web env (Vercel project settings)
 
 ```
@@ -82,8 +96,9 @@ production steps or answer the deploy guard's confirmation:
 - [ ] Google Cloud console → Books API key referrers: `https://reveriereads.vercel.app/*`,
       `https://reveriereads.app/*`, plus localhost patterns (`http://localhost:4317/*`,
       `http://localhost:5173/*`) so local dev keeps the key's quota.
-- [ ] Optional fn secrets (`supabase secrets set`): `HARDCOVER_TOKEN` (enrichment source),
-      `ISBNDB_ENABLED`/`ISBNDB_KEY` (paid, off by default), `SENTRY_DSN` (edge observability).
+- [ ] Function secrets: `GOOGLE_BOOKS_KEY`, `BOOKS_KEY_REFERER`, and `HARDCOVER_TOKEN` for the
+      configured metadata providers; optional `ISBNDB_ENABLED`/`ISBNDB_KEY` (paid, off by default)
+      and `SENTRY_DSN` (edge observability).
 
 ## Smoke test
 

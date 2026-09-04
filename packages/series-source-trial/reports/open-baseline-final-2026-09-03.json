@@ -1,0 +1,6688 @@
+{
+  "schemaVersion": 1,
+  "caseSet": {
+    "schemaVersion": 1,
+    "methodology": {
+      "seedWorks": 290,
+      "distinctSeedSeries": 69,
+      "reviewedCases": 23,
+      "candidateCases": 57,
+      "note": "Candidate references measure agreement only. They are not ground truth."
+    },
+    "sharedSources": {
+      "standalone_negative": [
+        {
+          "kind": "publisher",
+          "url": "https://www.penguinrandomhouse.com/the-read-down/standalone-scifi-fantasy-books",
+          "note": "The publisher explicitly describes every listed title as a stand-alone work."
+        }
+      ]
+    },
+    "cases": [
+      {
+        "id": "gold-a-court-of-silver-flames",
+        "title": "A Court of Silver Flames",
+        "authors": [
+          "Sarah J. Maas"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "authority_positive",
+        "truth": {
+          "status": "reviewed",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "A Court of Thorns and Roses",
+              "aliases": [
+                "ACOTAR"
+              ],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 5,
+                  "orderType": "publication"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "publisher",
+              "url": "https://www.bloomsbury.com/uk/court-of-silver-flames-9781526602305/"
+            }
+          ]
+        }
+      },
+      {
+        "id": "gold-a-curse-carved-in-bone",
+        "title": "A Curse Carved in Bone",
+        "authors": [
+          "Danielle L. Jensen"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "authority_positive",
+        "truth": {
+          "status": "reviewed",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Saga of the Unfated",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 2,
+                  "orderType": "publication"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "publisher",
+              "url": "https://www.penguinrandomhouse.ca/series/SU4/saga-of-the-unfated"
+            }
+          ]
+        }
+      },
+      {
+        "id": "gold-divine-rivals",
+        "title": "Divine Rivals",
+        "authors": [
+          "Rebecca Ross"
+        ],
+        "identifiers": {
+          "isbn13": [
+            "9781250857446"
+          ]
+        },
+        "sampleOrigin": "reverie",
+        "stratum": "authority_positive",
+        "truth": {
+          "status": "reviewed",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Letters of Enchantment",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 1,
+                  "orderType": "publication"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "publisher",
+              "url": "https://us.macmillan.com/books/9781250857446/divinerivals/"
+            }
+          ]
+        }
+      },
+      {
+        "id": "gold-fifty-shades-darker",
+        "title": "Fifty Shades Darker",
+        "authors": [
+          "E. L. James"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "authority_positive",
+        "truth": {
+          "status": "reviewed",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Fifty Shades Trilogy",
+              "aliases": [
+                "Fifty Shades",
+                "Fifty Shades of Grey"
+              ],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 2,
+                  "orderType": "publication"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "author",
+              "url": "https://www.eljamesauthor.com/books/fifty-shades-darker/"
+            }
+          ]
+        }
+      },
+      {
+        "id": "gold-grey",
+        "title": "Grey",
+        "authors": [
+          "E. L. James"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "authority_positive",
+        "truth": {
+          "status": "reviewed",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Fifty Shades as Told by Christian",
+              "aliases": [
+                "Fifty Shades by Christian",
+                "Fifty Shades"
+              ],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 1,
+                  "orderType": "publication"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "author",
+              "url": "https://www.eljamesauthor.com/books/grey/"
+            },
+            {
+              "kind": "author",
+              "url": "https://www.eljamesauthor.com/books/"
+            }
+          ]
+        }
+      },
+      {
+        "id": "gold-hunting-adeline",
+        "title": "Hunting Adeline",
+        "authors": [
+          "H. D. Carlton"
+        ],
+        "identifiers": {
+          "isbn13": [
+            "9781638932475"
+          ]
+        },
+        "sampleOrigin": "reverie",
+        "stratum": "authority_positive",
+        "truth": {
+          "status": "reviewed",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Cat & Mouse Duet",
+              "aliases": [
+                "Cat and Mouse Duet",
+                "Cat and Mouse"
+              ],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 2,
+                  "orderType": "publication"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "publisher",
+              "url": "https://www.penguinrandomhouseretail.com/book/?isbn=9781638932475"
+            }
+          ]
+        }
+      },
+      {
+        "id": "gold-king-of-envy",
+        "title": "King of Envy",
+        "authors": [
+          "Ana Huang"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "authority_positive",
+        "truth": {
+          "status": "reviewed",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Kings of Sin",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 5,
+                  "orderType": "publication"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "author",
+              "url": "https://anahuang.com/books/king-of-envy/"
+            }
+          ]
+        }
+      },
+      {
+        "id": "gold-kingdom-of-ash",
+        "title": "Kingdom of Ash",
+        "authors": [
+          "Sarah J. Maas"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "authority_positive",
+        "truth": {
+          "status": "reviewed",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Throne of Glass",
+              "aliases": [],
+              "role": "primary",
+              "positions": []
+            }
+          ],
+          "sources": [
+            {
+              "kind": "author",
+              "url": "https://sarahjmaas.com/reading-guide/"
+            },
+            {
+              "kind": "author",
+              "url": "https://sarahjmaas.com/books/kingdom-of-ash/"
+            }
+          ]
+        }
+      },
+      {
+        "id": "gold-onyx-storm",
+        "title": "Onyx Storm",
+        "authors": [
+          "Rebecca Yarros"
+        ],
+        "identifiers": {
+          "asin": [
+            "B0CW1GZXZT"
+          ]
+        },
+        "sampleOrigin": "reverie",
+        "stratum": "authority_positive",
+        "truth": {
+          "status": "reviewed",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Empyrean",
+              "aliases": [
+                "The Empyrean"
+              ],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 3,
+                  "orderType": "publication"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "author",
+              "url": "https://rebeccayarros.com/onyxstorm"
+            }
+          ]
+        }
+      },
+      {
+        "id": "gold-standalone-a-brightness-long-ago",
+        "title": "A Brightness Long Ago",
+        "authors": [
+          "Guy Gavriel Kay"
+        ],
+        "sampleOrigin": "authority_negative_control",
+        "stratum": "standalone_negative",
+        "truth": {
+          "status": "reviewed",
+          "standalone": true,
+          "memberships": [],
+          "sources": []
+        }
+      },
+      {
+        "id": "gold-standalone-black-water-sister",
+        "title": "Black Water Sister",
+        "authors": [
+          "Zen Cho"
+        ],
+        "sampleOrigin": "authority_negative_control",
+        "stratum": "standalone_negative",
+        "truth": {
+          "status": "reviewed",
+          "standalone": true,
+          "memberships": [],
+          "sources": []
+        }
+      },
+      {
+        "id": "gold-standalone-fevre-dream",
+        "title": "Fevre Dream",
+        "authors": [
+          "George R. R. Martin"
+        ],
+        "sampleOrigin": "authority_negative_control",
+        "stratum": "standalone_negative",
+        "truth": {
+          "status": "reviewed",
+          "standalone": true,
+          "memberships": [],
+          "sources": []
+        }
+      },
+      {
+        "id": "gold-standalone-mexican-gothic",
+        "title": "Mexican Gothic",
+        "authors": [
+          "Silvia Moreno-Garcia"
+        ],
+        "sampleOrigin": "authority_negative_control",
+        "stratum": "standalone_negative",
+        "truth": {
+          "status": "reviewed",
+          "standalone": true,
+          "memberships": [],
+          "sources": []
+        }
+      },
+      {
+        "id": "gold-standalone-salvation-day",
+        "title": "Salvation Day",
+        "authors": [
+          "Kali Wallace"
+        ],
+        "sampleOrigin": "authority_negative_control",
+        "stratum": "standalone_negative",
+        "truth": {
+          "status": "reviewed",
+          "standalone": true,
+          "memberships": [],
+          "sources": []
+        }
+      },
+      {
+        "id": "gold-standalone-snow-crash",
+        "title": "Snow Crash",
+        "authors": [
+          "Neal Stephenson"
+        ],
+        "sampleOrigin": "authority_negative_control",
+        "stratum": "standalone_negative",
+        "truth": {
+          "status": "reviewed",
+          "standalone": true,
+          "memberships": [],
+          "sources": []
+        }
+      },
+      {
+        "id": "gold-standalone-stranger-in-a-strange-land",
+        "title": "Stranger in a Strange Land",
+        "authors": [
+          "Robert A. Heinlein"
+        ],
+        "sampleOrigin": "authority_negative_control",
+        "stratum": "standalone_negative",
+        "truth": {
+          "status": "reviewed",
+          "standalone": true,
+          "memberships": [],
+          "sources": []
+        }
+      },
+      {
+        "id": "gold-standalone-the-space-between-worlds",
+        "title": "The Space Between Worlds",
+        "authors": [
+          "Micaiah Johnson"
+        ],
+        "sampleOrigin": "authority_negative_control",
+        "stratum": "standalone_negative",
+        "truth": {
+          "status": "reviewed",
+          "standalone": true,
+          "memberships": [],
+          "sources": []
+        }
+      },
+      {
+        "id": "gold-standalone-uprooted",
+        "title": "Uprooted",
+        "authors": [
+          "Naomi Novik"
+        ],
+        "sampleOrigin": "authority_negative_control",
+        "stratum": "standalone_negative",
+        "truth": {
+          "status": "reviewed",
+          "standalone": true,
+          "memberships": [],
+          "sources": []
+        }
+      },
+      {
+        "id": "gold-standalone-version-zero",
+        "title": "Version Zero",
+        "authors": [
+          "David Yoon"
+        ],
+        "sampleOrigin": "authority_negative_control",
+        "stratum": "standalone_negative",
+        "truth": {
+          "status": "reviewed",
+          "standalone": true,
+          "memberships": [],
+          "sources": []
+        }
+      },
+      {
+        "id": "gold-standalone-we-are-satellites",
+        "title": "We Are Satellites",
+        "authors": [
+          "Sarah Pinsker"
+        ],
+        "sampleOrigin": "authority_negative_control",
+        "stratum": "standalone_negative",
+        "truth": {
+          "status": "reviewed",
+          "standalone": true,
+          "memberships": [],
+          "sources": []
+        }
+      },
+      {
+        "id": "gold-twisted-lies",
+        "title": "Twisted Lies",
+        "authors": [
+          "Ana Huang"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "authority_positive",
+        "truth": {
+          "status": "reviewed",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Twisted",
+              "aliases": [
+                "Twisted Series"
+              ],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 4,
+                  "orderType": "publication"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "author",
+              "url": "https://anahuang.com/reading-order/"
+            }
+          ]
+        }
+      },
+      {
+        "id": "gold-two-twisted-crowns",
+        "title": "Two Twisted Crowns",
+        "authors": [
+          "Rachel Gillig"
+        ],
+        "identifiers": {
+          "isbn13": [
+            "9780356528762"
+          ]
+        },
+        "sampleOrigin": "reverie",
+        "stratum": "authority_positive",
+        "truth": {
+          "status": "reviewed",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "The Shepherd King",
+              "aliases": [
+                "Shepherd King",
+                "The Shepherd King Duology"
+              ],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 2,
+                  "orderType": "publication"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "publisher",
+              "url": "https://www.hachette.co.uk/titles/rachel-gillig/two-twisted-crowns/9780356528762/"
+            }
+          ]
+        }
+      },
+      {
+        "id": "gold-when-the-moon-hatched",
+        "title": "When the Moon Hatched",
+        "authors": [
+          "Sarah A. Parker"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "authority_positive",
+        "truth": {
+          "status": "reviewed",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Moonfall",
+              "aliases": [
+                "The Moonfall Series",
+                "Moonfall Series"
+              ],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 1,
+                  "orderType": "publication"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "author",
+              "url": "https://sarahaparker.net/pages/news"
+            },
+            {
+              "kind": "publisher_catalog",
+              "url": "https://www.harperreach.com/wp-content/uploads/sites/70/2025/03/2025_LBF_Catalogue_SCREENspreads.pdf"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-assistant-to-the-villain-accomplice-to-the-villain",
+        "title": "Accomplice to the Villain",
+        "authors": [
+          "Hannah Nicole"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Assistant to The Villain",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 3,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-bellinger-series-it-happened-one-summer",
+        "title": "It Happened One Summer",
+        "authors": [
+          "Tessa Bailey"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Bellinger Series",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 0,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-beneath-the-mask-distance",
+        "title": "Distance",
+        "authors": [
+          "Luna Mason"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Beneath the Mask",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 1,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-blood-and-ash-the-primal-of-blood-and-bone",
+        "title": "The Primal of Blood and Bone",
+        "authors": [
+          "Jennifer L. Armentrout"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Blood and Ash",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 6,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-bloodline-vampires-court-of-the-vampire-queen",
+        "title": "Court of the Vampire Queen",
+        "authors": [
+          "Katee Robert"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Bloodline Vampires",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 0,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-boys-of-tommen-keeping-13",
+        "title": "Keeping 13",
+        "authors": [
+          "Chloe Walsh"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Boys of Tommen",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 2,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-bride-mate",
+        "title": "Mate",
+        "authors": [
+          "Ali Hazelwood"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Bride",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 2,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-chestnut-springs-hopeless",
+        "title": "Hopeless",
+        "authors": [
+          "Elsie Silver"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Chestnut Springs",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 5,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-crimson-moth-rebel-witch",
+        "title": "Rebel Witch",
+        "authors": [
+          "Kristen Ciccarelli"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Crimson Moth",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 2,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-crowns-of-nyaxia-slaying-the-vampire-conqueror",
+        "title": "Slaying the Vampire Conqueror",
+        "authors": [
+          "Carissa Broadbent"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Crowns of Nyaxia",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 0,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-cruel-castaways-ruthless-rival",
+        "title": "Ruthless Rival",
+        "authors": [
+          "L.J. Shen"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Cruel Castaways",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 1,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-dark-forces-bulletproof",
+        "title": "Bulletproof",
+        "authors": [
+          "K.M. Moronova"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Dark Forces",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 4,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-dreamland-billionaires-final-offer",
+        "title": "Final Offer",
+        "authors": [
+          "Lauren Asher"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Dreamland Billionaires",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 3,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-ever-seas-series-the-ever-king",
+        "title": "The Ever King",
+        "authors": [
+          "L.J. Andrews"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Ever Seas Series",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 1,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-fae-and-alchemy-brimstone",
+        "title": "Brimstone",
+        "authors": [
+          "Callie Hart"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Fae & Alchemy",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 2,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-flame-and-thorns-war-of-fire-and-fury",
+        "title": "War of Fire and Fury",
+        "authors": [
+          "Marion Blackwood"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Flame and Thorns",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 5,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-flame-and-throns-realm-of-wind-and-vines",
+        "title": "Realm of Wind and Vines",
+        "authors": [
+          "Marion Blackwood"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Flame and Throns",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 4,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-gods-of-the-dame-the-defender",
+        "title": "The Defender",
+        "authors": [
+          "Ana Huang"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Gods of the Dame",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 2,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-gods-of-the-game-the-striker",
+        "title": "The Striker",
+        "authors": [
+          "Ana Huang"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Gods of the Game",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 1,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-gold-rush-ranch-off-to-the-races",
+        "title": "Off to the Races",
+        "authors": [
+          "Elsie Silver"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Gold Rush Ranch",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 1,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-green-creek-wolfsong",
+        "title": "Wolfsong",
+        "authors": [
+          "TJ Klune"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Green Creek",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 1,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-hades-x-persephone-sage-a-touch-of-chaos",
+        "title": "A Touch of Chaos",
+        "authors": [
+          "Scarlett St. Clair"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Hades x Persephone Sage",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 4,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-heartstrings-first-time-caller",
+        "title": "First -Time Caller",
+        "authors": [
+          "B.K. Borison"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Heartstrings",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 1,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-hell-bent-my-demon-hunter",
+        "title": "My Demon Hunter",
+        "authors": [
+          "Aurora Ascher"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Hell Bent",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 2,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-into-darkness-game-on",
+        "title": "Game on",
+        "authors": [
+          "Navessa Allen"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Into Darkness",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 3,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-lords-the-sacrifice",
+        "title": "The Sacrifice",
+        "authors": [
+          "Shantel Tessier"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "LORDS",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 3,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-lucky-river-ranch-wyatt",
+        "title": "Wyatt",
+        "authors": [
+          "Jessica Peterson"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Lucky River Ranch",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 2,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-lyonesse-honey-cut",
+        "title": "Honey Cut",
+        "authors": [
+          "Sierra Simone"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Lyonesse",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 2,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-merciless-all-he-ll-ever-be",
+        "title": "All He'll Ever Be",
+        "authors": [
+          "W Winters"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Merciless",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 0,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-never-after-hooked",
+        "title": "Hooked",
+        "authors": [
+          "Emily McIntire"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Never After",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 1,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-playing-for-keeps-fall-with-me",
+        "title": "Fall With Me",
+        "authors": [
+          "Becka Mack"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Playing For Keeps",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 4,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-priest-priest",
+        "title": "Priest",
+        "authors": [
+          "Sierra Simone"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Priest",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 1,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-pucked-up-omegaverse-one-pucked-up-pack",
+        "title": "One Pucked Up Pack",
+        "authors": [
+          "Sarah Blue"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Pucked Up Omegaverse",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 1,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-rebel-blue-ranch-lost-and-lassoed",
+        "title": "Lost and Lassoed",
+        "authors": [
+          "Iyla Sage"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Rebel Blue Ranch",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 3,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-rose-hill-wild-card",
+        "title": "Wild Card",
+        "authors": [
+          "Elsie Silver"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Rose Hill",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 4,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-sinful-manor-keep-me",
+        "title": "Keep Me",
+        "authors": [
+          "Sara Cate"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Sinful Manor",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 1,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-souls-trilogy-her-soul-to-take",
+        "title": "Her Soul to Take",
+        "authors": [
+          "Harley Laroux"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Souls Trilogy",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 1,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-sparrow-falls-secret-haven",
+        "title": "Secret Haven",
+        "authors": [
+          "Catherine Cowles"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Sparrow Falls",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 5,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-spit-or-swallow-between-two-kings",
+        "title": "Between Two Kings",
+        "authors": [
+          "Lindsay Straube"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Spit or Swallow",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 2,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-stay-a-spell-wolf-gone-wild",
+        "title": "Wolf Gone Wild",
+        "authors": [
+          "Juliette Cross"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Stay a Spell",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 1,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-sugerlake-beneath-the-stars",
+        "title": "Beneath the Stars",
+        "authors": [
+          "Emily McIntire"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Sugerlake",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 1,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-the-broken-blades-five-broken-blades",
+        "title": "Five Broken Blades",
+        "authors": [
+          "Mai Corland"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "The Broken Blades",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 1,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-the-edge-of-darkness-trilogy-restitution",
+        "title": "Restitution",
+        "authors": [
+          "Leigh Rivers"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "The Edge of Darkness Trilogy",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 3,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-the-ever-seas-the-ever-queen",
+        "title": "The Ever Queen",
+        "authors": [
+          "L.J. Andrews"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "The Ever Seas",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 2,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-the-eye-of-the-goddess-a-tribute-of-fire",
+        "title": "A Tribute of Fire",
+        "authors": [
+          "Sariah Wilson"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "The Eye of the Goddess",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 1,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-the-kindred-s-curse-heat-of-the-everflame",
+        "title": "Heat of the Everflame",
+        "authors": [
+          "Penn Cole"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "The Kindred's Curse",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 3,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-the-kindred-s-curse-saga-spark-of-the-everflame",
+        "title": "Spark of the Everflame",
+        "authors": [
+          "Penn Cole"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "The Kindred's Curse Saga",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 1,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-the-kingdom-of-crows-house-of-striking-oaths",
+        "title": "House of Striking Oaths",
+        "authors": [
+          "Olivia Wildenstein"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "The Kingdom of Crows",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 3,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-the-plated-prisoner-goldfinch",
+        "title": "Goldfinch",
+        "authors": [
+          "Raven Kennedy"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "The Plated Prisoner",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 6,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-the-ravenhood-series-flock",
+        "title": "Flock",
+        "authors": [
+          "Kate Stewart"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "The Ravenhood Series",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 1,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-the-ravenhood-the-finish-line",
+        "title": "The Finish Line",
+        "authors": [
+          "Kate Stewart"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "The Ravenhood",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 3,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-the-wolves-of-ruin-dire-bound",
+        "title": "Dire Bound",
+        "authors": [
+          "Sable Sorensen"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "The Wolves of Ruin",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 1,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-time-of-iron-long-live-evil",
+        "title": "Long Live Evil",
+        "authors": [
+          "Sarah Rees Brennan"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Time of Iron",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 1,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-vicious-lost-boys-the-fae-princes",
+        "title": "The Fae Princes",
+        "authors": [
+          "Nikki St. Crowe"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Vicious Lost Boys",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 4,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-villians-of-lore-bonds-of-hercules",
+        "title": "Bonds of Hercules",
+        "authors": [
+          "Jasmine Mas"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Villians of Lore",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 2,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-wicked-games-enchantra",
+        "title": "Enchantra",
+        "authors": [
+          "Kaylie Smith"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Wicked Games",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 2,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reverie-windy-city-play-along",
+        "title": "Play Along",
+        "authors": [
+          "Liz Tomforde"
+        ],
+        "sampleOrigin": "reverie",
+        "stratum": "reverie_seed_candidate",
+        "truth": {
+          "status": "candidate",
+          "standalone": false,
+          "memberships": [
+            {
+              "series": "Windy City",
+              "aliases": [],
+              "role": "primary",
+              "positions": [
+                {
+                  "value": 4,
+                  "orderType": "unspecified"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "kind": "reverie_seed",
+              "ref": "data/corpus_seed.json"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "runs": [
+    {
+      "schemaVersion": 1,
+      "provider": "openlibrary",
+      "observedAt": "2026-09-03T20:49:28.067Z",
+      "completedAt": "2026-09-03T20:51:30.552Z",
+      "rights": {
+        "commercialUsePermitted": null,
+        "persistentStoragePermitted": null,
+        "claimLevelProvenance": true,
+        "note": "Open Library warns that underlying contributions may carry pre-existing rights."
+      },
+      "results": [
+        {
+          "caseId": "gold-a-court-of-silver-flames",
+          "latencyMs": 1637,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL21703979W",
+            "matchedTitle": "A Court of Silver Flames",
+            "matchedAuthors": [
+              "Sarah J. Maas"
+            ]
+          },
+          "seriesClaims": [
+            {
+              "evidenceKind": "relational_membership",
+              "providerSeriesId": "OL327003L",
+              "series": "A Court of Thorns and Roses",
+              "position": 5,
+              "orderType": "unspecified",
+              "role": "unknown",
+              "sourceRef": "https://openlibrary.org/works/OL21703979W"
+            }
+          ]
+        },
+        {
+          "caseId": "gold-a-curse-carved-in-bone",
+          "latencyMs": 377,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL45346716W",
+            "matchedTitle": "A Curse Carved in Bone",
+            "matchedAuthors": [
+              "Danielle L. Jensen"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "gold-divine-rivals",
+          "latencyMs": 270,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL27893158W",
+            "matchedTitle": "Divine Rivals",
+            "matchedAuthors": [
+              "Rebecca Ross"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "gold-fifty-shades-darker",
+          "latencyMs": 519,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL16550681W",
+            "matchedTitle": "Fifty Shades Darker",
+            "matchedAuthors": [
+              "E. L. James"
+            ]
+          },
+          "seriesClaims": [
+            {
+              "evidenceKind": "relational_membership",
+              "providerSeriesId": "OL330466L",
+              "series": "Fifty Shades",
+              "position": 2,
+              "orderType": "unspecified",
+              "role": "unknown",
+              "sourceRef": "https://openlibrary.org/works/OL16550681W"
+            }
+          ]
+        },
+        {
+          "caseId": "gold-grey",
+          "latencyMs": 622,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL17183968W",
+            "matchedTitle": "Grey",
+            "matchedAuthors": [
+              "E. L. James"
+            ]
+          },
+          "seriesClaims": [
+            {
+              "evidenceKind": "relational_membership",
+              "providerSeriesId": "OL330468L",
+              "series": "Fifty Shades as told by Christian",
+              "position": 1,
+              "orderType": "unspecified",
+              "role": "unknown",
+              "sourceRef": "https://openlibrary.org/works/OL17183968W"
+            }
+          ]
+        },
+        {
+          "caseId": "gold-hunting-adeline",
+          "latencyMs": 236,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL27297240W",
+            "matchedTitle": "Hunting Adeline",
+            "matchedAuthors": [
+              "H. D. Carlton"
+            ]
+          },
+          "seriesClaims": [
+            {
+              "evidenceKind": "relational_membership",
+              "providerSeriesId": "OL330244L",
+              "series": "Cat and Mouse Duet",
+              "position": 2,
+              "orderType": "unspecified",
+              "role": "unknown",
+              "sourceRef": "https://openlibrary.org/works/OL27297240W"
+            }
+          ]
+        },
+        {
+          "caseId": "gold-king-of-envy",
+          "latencyMs": 284,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL42393184W",
+            "matchedTitle": "King of Envy",
+            "matchedAuthors": [
+              "Ana Huang"
+            ]
+          },
+          "seriesClaims": [
+            {
+              "evidenceKind": "relational_membership",
+              "providerSeriesId": "OL327422L",
+              "series": "Kings of Sin",
+              "position": 5,
+              "orderType": "unspecified",
+              "role": "unknown",
+              "sourceRef": "https://openlibrary.org/works/OL42393184W"
+            }
+          ]
+        },
+        {
+          "caseId": "gold-kingdom-of-ash",
+          "latencyMs": 387,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL19352982W",
+            "matchedTitle": "Kingdom of Ash",
+            "matchedAuthors": [
+              "Sarah J. Maas"
+            ]
+          },
+          "seriesClaims": [
+            {
+              "evidenceKind": "relational_membership",
+              "providerSeriesId": "OL334582L",
+              "series": "Throne of Glass",
+              "position": 7,
+              "orderType": "unspecified",
+              "role": "unknown",
+              "sourceRef": "https://openlibrary.org/works/OL19352982W"
+            }
+          ]
+        },
+        {
+          "caseId": "gold-onyx-storm",
+          "latencyMs": 376,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL44311526W",
+            "matchedTitle": "Onyx Storm",
+            "matchedAuthors": [
+              "Rebecca Yarros"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "gold-standalone-a-brightness-long-ago",
+          "latencyMs": 749,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL20150505W",
+            "matchedTitle": "A Brightness Long Ago",
+            "matchedAuthors": [
+              "Guy Gavriel Kay"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "gold-standalone-black-water-sister",
+          "latencyMs": 419,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL24459799W",
+            "matchedTitle": "Black Water Sister",
+            "matchedAuthors": [
+              "Zen Cho"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "gold-standalone-fevre-dream",
+          "latencyMs": 899,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL1955940W",
+            "matchedTitle": "Fevre Dream",
+            "matchedAuthors": [
+              "George R. R. Martin"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "gold-standalone-mexican-gothic",
+          "latencyMs": 294,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL20759125W",
+            "matchedTitle": "Mexican Gothic",
+            "matchedAuthors": [
+              "Silvia Moreno-Garcia"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "gold-standalone-salvation-day",
+          "latencyMs": 866,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL20145794W",
+            "matchedTitle": "Salvation Day",
+            "matchedAuthors": [
+              "Kali Wallace"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "gold-standalone-snow-crash",
+          "latencyMs": 247,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL38501W",
+            "matchedTitle": "Snow Crash",
+            "matchedAuthors": [
+              "Neal Stephenson"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "gold-standalone-stranger-in-a-strange-land",
+          "latencyMs": 460,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL59688W",
+            "matchedTitle": "Stranger in a Strange Land",
+            "matchedAuthors": [
+              "Robert A. Heinlein"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "gold-standalone-the-space-between-worlds",
+          "latencyMs": 289,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL20884745W",
+            "matchedTitle": "The Space Between Worlds",
+            "matchedAuthors": [
+              "Micaiah Johnson"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "gold-standalone-uprooted",
+          "latencyMs": 553,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL17345493W",
+            "matchedTitle": "Uprooted",
+            "matchedAuthors": [
+              "Naomi Novik"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "gold-standalone-version-zero",
+          "latencyMs": 187,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL24508088W",
+            "matchedTitle": "Version Zero",
+            "matchedAuthors": [
+              "David Yoon"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "gold-standalone-we-are-satellites",
+          "latencyMs": 318,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL21040215W",
+            "matchedTitle": "We Are Satellites",
+            "matchedAuthors": [
+              "Sarah Pinsker"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "gold-twisted-lies",
+          "latencyMs": 516,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL27818823W",
+            "matchedTitle": "Twisted Lies",
+            "matchedAuthors": [
+              "Ana Huang"
+            ]
+          },
+          "seriesClaims": [
+            {
+              "evidenceKind": "relational_membership",
+              "providerSeriesId": "OL327005L",
+              "series": "Twisted",
+              "position": 4,
+              "orderType": "unspecified",
+              "role": "unknown",
+              "sourceRef": "https://openlibrary.org/works/OL27818823W"
+            }
+          ]
+        },
+        {
+          "caseId": "gold-two-twisted-crowns",
+          "latencyMs": 381,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL35780604W",
+            "matchedTitle": "Two Twisted Crowns",
+            "matchedAuthors": [
+              "Rachel Gillig"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "gold-when-the-moon-hatched",
+          "latencyMs": 214,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL38010057W",
+            "matchedTitle": "When the Moon Hatched",
+            "matchedAuthors": [
+              "Sarah A. Parker"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-assistant-to-the-villain-accomplice-to-the-villain",
+          "latencyMs": 386,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": []
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-bellinger-series-it-happened-one-summer",
+          "latencyMs": 809,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL23563282W",
+            "matchedTitle": "It Happened One Summer",
+            "matchedAuthors": [
+              "Tessa Bailey"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-beneath-the-mask-distance",
+          "latencyMs": 321,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": []
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-blood-and-ash-the-primal-of-blood-and-bone",
+          "latencyMs": 279,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL44128555W",
+            "matchedTitle": "The Primal of Blood and Bone",
+            "matchedAuthors": [
+              "Jennifer L. Armentrout"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-bloodline-vampires-court-of-the-vampire-queen",
+          "latencyMs": 409,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL27296863W",
+            "matchedTitle": "Court of the Vampire Queen",
+            "matchedAuthors": [
+              "Katee Robert",
+              "Aud Koch"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-boys-of-tommen-keeping-13",
+          "latencyMs": 288,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL27965945W",
+            "matchedTitle": "Keeping 13",
+            "matchedAuthors": [
+              "Chloe Walsh"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-bride-mate",
+          "latencyMs": 477,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL44250916W",
+            "matchedTitle": "Mate",
+            "matchedAuthors": [
+              "Ali Hazelwood"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-chestnut-springs-hopeless",
+          "latencyMs": 299,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL36460031W",
+            "matchedTitle": "Hopeless",
+            "matchedAuthors": [
+              "Elsie Silver"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-crimson-moth-rebel-witch",
+          "latencyMs": 470,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL42402317W",
+            "matchedTitle": "Rebel Witch",
+            "matchedAuthors": [
+              "Kristen Ciccarelli"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-crowns-of-nyaxia-slaying-the-vampire-conqueror",
+          "latencyMs": 1006,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL42410050W",
+            "matchedTitle": "Slaying the Vampire Conqueror",
+            "matchedAuthors": [
+              "Carissa Broadbent"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-cruel-castaways-ruthless-rival",
+          "latencyMs": 324,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL27732742W",
+            "matchedTitle": "Ruthless Rival",
+            "matchedAuthors": [
+              "L.J. Shen"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-dark-forces-bulletproof",
+          "latencyMs": 276,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": []
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-dreamland-billionaires-final-offer",
+          "latencyMs": 192,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL28703803W",
+            "matchedTitle": "Final Offer",
+            "matchedAuthors": [
+              "Lauren Asher"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-ever-seas-series-the-ever-king",
+          "latencyMs": 341,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": []
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-fae-and-alchemy-brimstone",
+          "latencyMs": 445,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL42445468W",
+            "matchedTitle": "Brimstone",
+            "matchedAuthors": [
+              "Callie Hart"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-flame-and-thorns-war-of-fire-and-fury",
+          "latencyMs": 573,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL45586710W",
+            "matchedTitle": "War of Fire and Fury",
+            "matchedAuthors": [
+              "Marion Blackwood"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-flame-and-throns-realm-of-wind-and-vines",
+          "latencyMs": 409,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL45586705W",
+            "matchedTitle": "Realm of Wind and Vines",
+            "matchedAuthors": [
+              "Marion Blackwood"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-gods-of-the-dame-the-defender",
+          "latencyMs": 628,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL42540562W",
+            "matchedTitle": "The Defender",
+            "matchedAuthors": [
+              "Ana Huang"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-gods-of-the-game-the-striker",
+          "latencyMs": 593,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL42288211W",
+            "matchedTitle": "The Striker",
+            "matchedAuthors": [
+              "Ana Huang"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-gold-rush-ranch-off-to-the-races",
+          "latencyMs": 741,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL30904222W",
+            "matchedTitle": "Off to the Races",
+            "matchedAuthors": [
+              "Elsie Silver"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-green-creek-wolfsong",
+          "latencyMs": 196,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL20565280W",
+            "matchedTitle": "Wolfsong",
+            "matchedAuthors": [
+              "T. J. Klune"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-hades-x-persephone-sage-a-touch-of-chaos",
+          "latencyMs": 848,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL35717461W",
+            "matchedTitle": "A Touch of Chaos",
+            "matchedAuthors": [
+              "Scarlett St. Clair"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-heartstrings-first-time-caller",
+          "latencyMs": 579,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL42397881W",
+            "matchedTitle": "First Time Caller",
+            "matchedAuthors": [
+              "B.K. Borison"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-hell-bent-my-demon-hunter",
+          "latencyMs": 434,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL27281308W",
+            "matchedTitle": "My Demon Hunter",
+            "matchedAuthors": [
+              "Aurora Ascher"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-into-darkness-game-on",
+          "latencyMs": 704,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL45106192W",
+            "matchedTitle": "Game On",
+            "matchedAuthors": [
+              "Navessa Allen"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-lords-the-sacrifice",
+          "latencyMs": 725,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL35769285W",
+            "matchedTitle": "The Sacrifice",
+            "matchedAuthors": [
+              "Shantel Tessier"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-lucky-river-ranch-wyatt",
+          "latencyMs": 305,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL42457347W",
+            "matchedTitle": "Wyatt",
+            "matchedAuthors": [
+              "Jessica Peterson"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-lyonesse-honey-cut",
+          "latencyMs": 691,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL37576353W",
+            "matchedTitle": "Honey Cut",
+            "matchedAuthors": [
+              "Sierra Simone"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-merciless-all-he-ll-ever-be",
+          "latencyMs": 243,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL24153842W",
+            "matchedTitle": "All He'll Ever Be",
+            "matchedAuthors": [
+              "Willow Winters"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-never-after-hooked",
+          "latencyMs": 255,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL25555522W",
+            "matchedTitle": "Hooked",
+            "matchedAuthors": [
+              "Emily McIntire"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-playing-for-keeps-fall-with-me",
+          "latencyMs": 995,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL39192322W",
+            "matchedTitle": "Fall with Me",
+            "matchedAuthors": [
+              "Becka Mack"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-priest-priest",
+          "latencyMs": 395,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL21833211W",
+            "matchedTitle": "Priest",
+            "matchedAuthors": [
+              "Sierra Simone"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-pucked-up-omegaverse-one-pucked-up-pack",
+          "latencyMs": 267,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": []
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-rebel-blue-ranch-lost-and-lassoed",
+          "latencyMs": 519,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": []
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-rose-hill-wild-card",
+          "latencyMs": 734,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL44123197W",
+            "matchedTitle": "Wild Card",
+            "matchedAuthors": [
+              "Elsie Silver"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-sinful-manor-keep-me",
+          "latencyMs": 321,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL38009435W",
+            "matchedTitle": "Keep Me",
+            "matchedAuthors": [
+              "Sara Cate"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-souls-trilogy-her-soul-to-take",
+          "latencyMs": 706,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL25088743W",
+            "matchedTitle": "Her Soul to Take",
+            "matchedAuthors": [
+              "Harley Laroux"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-sparrow-falls-secret-haven",
+          "latencyMs": 550,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL44544180W",
+            "matchedTitle": "Secret Haven",
+            "matchedAuthors": [
+              "Catherine Cowles"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-spit-or-swallow-between-two-kings",
+          "latencyMs": 300,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL44586728W",
+            "matchedTitle": "Between Two Kings",
+            "matchedAuthors": [
+              "Lindsay Straube"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-stay-a-spell-wolf-gone-wild",
+          "latencyMs": 180,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL22485717W",
+            "matchedTitle": "Wolf Gone Wild",
+            "matchedAuthors": [
+              "Juliette Cross"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-sugerlake-beneath-the-stars",
+          "latencyMs": 293,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL24930759W",
+            "matchedTitle": "Beneath the Stars",
+            "matchedAuthors": [
+              "Emily McIntire",
+              "Ellie McLove",
+              "Clarise Tan"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-the-broken-blades-five-broken-blades",
+          "latencyMs": 495,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL37623479W",
+            "matchedTitle": "Five Broken Blades",
+            "matchedAuthors": [
+              "Mai Corland"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-the-edge-of-darkness-trilogy-restitution",
+          "latencyMs": 371,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL38077501W",
+            "matchedTitle": "Restitution",
+            "matchedAuthors": [
+              "Leigh Rivers"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-the-ever-seas-the-ever-queen",
+          "latencyMs": 528,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": []
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-the-eye-of-the-goddess-a-tribute-of-fire",
+          "latencyMs": 273,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": []
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-the-kindred-s-curse-heat-of-the-everflame",
+          "latencyMs": 233,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL42401621W",
+            "matchedTitle": "Heat of the Everflame",
+            "matchedAuthors": [
+              "Penn Cole"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-the-kindred-s-curse-saga-spark-of-the-everflame",
+          "latencyMs": 193,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL39130913W",
+            "matchedTitle": "Spark of the Everflame",
+            "matchedAuthors": [
+              "Penn Cole"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-the-kingdom-of-crows-house-of-striking-oaths",
+          "latencyMs": 420,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL36233879W",
+            "matchedTitle": "House of Striking Oaths",
+            "matchedAuthors": [
+              "Olivia Wildenstein"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-the-plated-prisoner-goldfinch",
+          "latencyMs": 216,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL37565677W",
+            "matchedTitle": "Goldfinch",
+            "matchedAuthors": [
+              "Raven Kennedy"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-the-ravenhood-series-flock",
+          "latencyMs": 152,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL28804781W",
+            "matchedTitle": "Flock",
+            "matchedAuthors": [
+              "Kate Stewart"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-the-ravenhood-the-finish-line",
+          "latencyMs": 536,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": []
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-the-wolves-of-ruin-dire-bound",
+          "latencyMs": 450,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL42457466W",
+            "matchedTitle": "Dire Bound",
+            "matchedAuthors": [
+              "Sable Sorensen"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-time-of-iron-long-live-evil",
+          "latencyMs": 697,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL37585362W",
+            "matchedTitle": "Long Live Evil",
+            "matchedAuthors": [
+              "Sarah Rees Brennan"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-vicious-lost-boys-the-fae-princes",
+          "latencyMs": 298,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": []
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-villians-of-lore-bonds-of-hercules",
+          "latencyMs": 230,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL39195890W",
+            "matchedTitle": "Bonds of Hercules",
+            "matchedAuthors": [
+              "Jasmine Mas"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-wicked-games-enchantra",
+          "latencyMs": 492,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL43920629W",
+            "matchedTitle": "Enchantra",
+            "matchedAuthors": [
+              "Kaylie Smith"
+            ]
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-windy-city-play-along",
+          "latencyMs": 3152,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "/works/OL37583785W",
+            "matchedTitle": "Play Along",
+            "matchedAuthors": [
+              "Liz Tomforde"
+            ]
+          },
+          "seriesClaims": []
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "provider": "wikidata",
+      "observedAt": "2026-09-03T20:51:30.552Z",
+      "completedAt": "2026-09-03T20:51:36.007Z",
+      "rights": {
+        "commercialUsePermitted": true,
+        "persistentStoragePermitted": true,
+        "claimLevelProvenance": true,
+        "note": "Wikidata structured data is published under CC0."
+      },
+      "results": [
+        {
+          "caseId": "gold-a-court-of-silver-flames",
+          "latencyMs": 169,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "http://www.wikidata.org/entity/Q101988654",
+            "matchedTitle": "A Court of Silver Flames",
+            "matchedAuthors": [
+              "Sarah J. Maas"
+            ],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": [
+            {
+              "evidenceKind": "relational_membership",
+              "providerSeriesId": "http://www.wikidata.org/entity/Q60979203",
+              "series": "A Court of Thorns and Roses",
+              "position": 4,
+              "orderType": "unspecified",
+              "role": "unknown",
+              "sourceRef": "http://www.wikidata.org/entity/Q101988654"
+            }
+          ]
+        },
+        {
+          "caseId": "gold-a-curse-carved-in-bone",
+          "latencyMs": 169,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "http://www.wikidata.org/entity/Q131727677",
+            "matchedTitle": "A Curse Carved in Bone",
+            "matchedAuthors": [
+              "Danielle L. Jensen"
+            ],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": [
+            {
+              "evidenceKind": "relational_membership",
+              "providerSeriesId": "http://www.wikidata.org/entity/Q131727672",
+              "series": "Saga of the Unfated",
+              "position": 2,
+              "orderType": "unspecified",
+              "role": "unknown",
+              "sourceRef": "http://www.wikidata.org/entity/Q131727677"
+            }
+          ]
+        },
+        {
+          "caseId": "gold-divine-rivals",
+          "latencyMs": 169,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "http://www.wikidata.org/entity/Q125360420",
+            "matchedTitle": "Divine Rivals",
+            "matchedAuthors": [
+              "Rebecca Ross"
+            ],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": [
+            {
+              "evidenceKind": "relational_membership",
+              "providerSeriesId": "http://www.wikidata.org/entity/Q131036817",
+              "series": "Letters of Enchantment",
+              "position": null,
+              "orderType": "unspecified",
+              "role": "unknown",
+              "sourceRef": "http://www.wikidata.org/entity/Q125360420"
+            }
+          ]
+        },
+        {
+          "caseId": "gold-fifty-shades-darker",
+          "latencyMs": 169,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "http://www.wikidata.org/entity/Q2195511",
+            "matchedTitle": "Fifty Shades Darker",
+            "matchedAuthors": [
+              "E. L. James"
+            ],
+            "rejectedTitleCollisionCount": 3
+          },
+          "seriesClaims": [
+            {
+              "evidenceKind": "relational_membership",
+              "providerSeriesId": "http://www.wikidata.org/entity/Q16357152",
+              "series": "Fifty Shades",
+              "position": null,
+              "orderType": "unspecified",
+              "role": "unknown",
+              "sourceRef": "http://www.wikidata.org/entity/Q2195511"
+            }
+          ]
+        },
+        {
+          "caseId": "gold-grey",
+          "latencyMs": 169,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 28
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "gold-hunting-adeline",
+          "latencyMs": 169,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "gold-king-of-envy",
+          "latencyMs": 169,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "gold-kingdom-of-ash",
+          "latencyMs": 169,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "http://www.wikidata.org/entity/Q101986242",
+            "matchedTitle": "Kingdom of Ash",
+            "matchedAuthors": [
+              "Sarah J. Maas"
+            ],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": [
+            {
+              "evidenceKind": "relational_membership",
+              "providerSeriesId": "http://www.wikidata.org/entity/Q7798359",
+              "series": "Throne of Glass",
+              "position": 7,
+              "orderType": "unspecified",
+              "role": "unknown",
+              "sourceRef": "http://www.wikidata.org/entity/Q101986242"
+            }
+          ]
+        },
+        {
+          "caseId": "gold-onyx-storm",
+          "latencyMs": 169,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "http://www.wikidata.org/entity/Q130681191",
+            "matchedTitle": "Onyx Storm",
+            "matchedAuthors": [
+              "Rebecca Yarros"
+            ],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": [
+            {
+              "evidenceKind": "relational_membership",
+              "providerSeriesId": "http://www.wikidata.org/entity/Q124618108",
+              "series": "The Empyrean",
+              "position": 3,
+              "orderType": "unspecified",
+              "role": "unknown",
+              "sourceRef": "http://www.wikidata.org/entity/Q130681191"
+            }
+          ]
+        },
+        {
+          "caseId": "gold-standalone-a-brightness-long-ago",
+          "latencyMs": 169,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "http://www.wikidata.org/entity/Q109421985",
+            "matchedTitle": "A Brightness Long Ago",
+            "matchedAuthors": [
+              "Guy Gavriel Kay"
+            ],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "gold-standalone-black-water-sister",
+          "latencyMs": 169,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "http://www.wikidata.org/entity/Q116693001",
+            "matchedTitle": "Black Water Sister",
+            "matchedAuthors": [
+              "Zen Cho"
+            ],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "gold-standalone-fevre-dream",
+          "latencyMs": 169,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "http://www.wikidata.org/entity/Q2915854",
+            "matchedTitle": "Fevre Dream",
+            "matchedAuthors": [
+              "George R. R. Martin"
+            ],
+            "rejectedTitleCollisionCount": 3
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "gold-standalone-mexican-gothic",
+          "latencyMs": 169,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "http://www.wikidata.org/entity/Q99838669",
+            "matchedTitle": "Mexican Gothic",
+            "matchedAuthors": [
+              "Silvia Moreno-Garcia"
+            ],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "gold-standalone-salvation-day",
+          "latencyMs": 169,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "http://www.wikidata.org/entity/Q134080822",
+            "matchedTitle": "Salvation Day",
+            "matchedAuthors": [
+              "Kali Wallace"
+            ],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "gold-standalone-snow-crash",
+          "latencyMs": 169,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "http://www.wikidata.org/entity/Q768389",
+            "matchedTitle": "Snow Crash",
+            "matchedAuthors": [
+              "Neal Stephenson"
+            ],
+            "rejectedTitleCollisionCount": 1
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "gold-standalone-stranger-in-a-strange-land",
+          "latencyMs": 54,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "http://www.wikidata.org/entity/Q929821",
+            "matchedTitle": "Stranger in a Strange Land",
+            "matchedAuthors": [
+              "Robert A. Heinlein"
+            ],
+            "rejectedTitleCollisionCount": 10
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "gold-standalone-the-space-between-worlds",
+          "latencyMs": 54,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "http://www.wikidata.org/entity/Q122962380",
+            "matchedTitle": "The Space Between Worlds",
+            "matchedAuthors": [
+              "Micaiah Johnson"
+            ],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "gold-standalone-uprooted",
+          "latencyMs": 54,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "http://www.wikidata.org/entity/Q20992497",
+            "matchedTitle": "Uprooted",
+            "matchedAuthors": [
+              "Naomi Novik"
+            ],
+            "rejectedTitleCollisionCount": 10
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "gold-standalone-version-zero",
+          "latencyMs": 54,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "http://www.wikidata.org/entity/Q139799323",
+            "matchedTitle": "Version Zero",
+            "matchedAuthors": [
+              "David Yoon"
+            ],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "gold-standalone-we-are-satellites",
+          "latencyMs": 54,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 1
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "gold-twisted-lies",
+          "latencyMs": 54,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "gold-two-twisted-crowns",
+          "latencyMs": 54,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "http://www.wikidata.org/entity/Q130747147",
+            "matchedTitle": "Two Twisted Crowns",
+            "matchedAuthors": [
+              "Rachel Gillig"
+            ],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": [
+            {
+              "evidenceKind": "relational_membership",
+              "providerSeriesId": "http://www.wikidata.org/entity/Q130754363",
+              "series": "The Shepherd King",
+              "position": 2,
+              "orderType": "unspecified",
+              "role": "unknown",
+              "sourceRef": "http://www.wikidata.org/entity/Q130747147"
+            }
+          ]
+        },
+        {
+          "caseId": "gold-when-the-moon-hatched",
+          "latencyMs": 54,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "http://www.wikidata.org/entity/Q140003714",
+            "matchedTitle": "When the Moon Hatched",
+            "matchedAuthors": [
+              "Sarah A. Parker"
+            ],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": [
+            {
+              "evidenceKind": "relational_membership",
+              "providerSeriesId": "http://www.wikidata.org/entity/Q141254680",
+              "series": "Moonfall",
+              "position": null,
+              "orderType": "unspecified",
+              "role": "unknown",
+              "sourceRef": "http://www.wikidata.org/entity/Q140003714"
+            }
+          ]
+        },
+        {
+          "caseId": "reverie-assistant-to-the-villain-accomplice-to-the-villain",
+          "latencyMs": 54,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-bellinger-series-it-happened-one-summer",
+          "latencyMs": 54,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-beneath-the-mask-distance",
+          "latencyMs": 54,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 39
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-blood-and-ash-the-primal-of-blood-and-bone",
+          "latencyMs": 54,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "http://www.wikidata.org/entity/Q140136042",
+            "matchedTitle": "The Primal of Blood and Bone",
+            "matchedAuthors": [
+              "Jennifer Armentrout"
+            ],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-bloodline-vampires-court-of-the-vampire-queen",
+          "latencyMs": 54,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-boys-of-tommen-keeping-13",
+          "latencyMs": 54,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-bride-mate",
+          "latencyMs": 54,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 17
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-chestnut-springs-hopeless",
+          "latencyMs": 50,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 12
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-crimson-moth-rebel-witch",
+          "latencyMs": 50,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "http://www.wikidata.org/entity/Q134604149",
+            "matchedTitle": "Rebel Witch",
+            "matchedAuthors": [
+              "Kristen Ciccarelli"
+            ],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-crowns-of-nyaxia-slaying-the-vampire-conqueror",
+          "latencyMs": 50,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-cruel-castaways-ruthless-rival",
+          "latencyMs": 50,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-dark-forces-bulletproof",
+          "latencyMs": 50,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 34
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-dreamland-billionaires-final-offer",
+          "latencyMs": 50,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 1
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-ever-seas-series-the-ever-king",
+          "latencyMs": 50,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-fae-and-alchemy-brimstone",
+          "latencyMs": 50,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "http://www.wikidata.org/entity/Q137104400",
+            "matchedTitle": "Brimstone",
+            "matchedAuthors": [
+              "Callie Hart"
+            ],
+            "rejectedTitleCollisionCount": 23
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-flame-and-thorns-war-of-fire-and-fury",
+          "latencyMs": 50,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-flame-and-throns-realm-of-wind-and-vines",
+          "latencyMs": 50,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-gods-of-the-dame-the-defender",
+          "latencyMs": 50,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 13
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-gods-of-the-game-the-striker",
+          "latencyMs": 50,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "http://www.wikidata.org/entity/Q131293388",
+            "matchedTitle": "The Striker",
+            "matchedAuthors": [
+              "Ana Huang"
+            ],
+            "rejectedTitleCollisionCount": 1
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-gold-rush-ranch-off-to-the-races",
+          "latencyMs": 50,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 10
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-green-creek-wolfsong",
+          "latencyMs": 50,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "http://www.wikidata.org/entity/Q134450435",
+            "matchedTitle": "Wolfsong",
+            "matchedAuthors": [
+              "TJ Klune"
+            ],
+            "rejectedTitleCollisionCount": 1
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-hades-x-persephone-sage-a-touch-of-chaos",
+          "latencyMs": 50,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "http://www.wikidata.org/entity/Q134533831",
+            "matchedTitle": "A Touch of Chaos",
+            "matchedAuthors": [
+              "Scarlett St. Clair"
+            ],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-heartstrings-first-time-caller",
+          "latencyMs": 47,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-hell-bent-my-demon-hunter",
+          "latencyMs": 47,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-into-darkness-game-on",
+          "latencyMs": 47,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-lords-the-sacrifice",
+          "latencyMs": 47,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 37
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-lucky-river-ranch-wyatt",
+          "latencyMs": 47,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 16
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-lyonesse-honey-cut",
+          "latencyMs": 47,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-merciless-all-he-ll-ever-be",
+          "latencyMs": 47,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-never-after-hooked",
+          "latencyMs": 47,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 20
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-playing-for-keeps-fall-with-me",
+          "latencyMs": 47,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-priest-priest",
+          "latencyMs": 47,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 29
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-pucked-up-omegaverse-one-pucked-up-pack",
+          "latencyMs": 47,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-rebel-blue-ranch-lost-and-lassoed",
+          "latencyMs": 47,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-rose-hill-wild-card",
+          "latencyMs": 47,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 21
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-sinful-manor-keep-me",
+          "latencyMs": 47,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-souls-trilogy-her-soul-to-take",
+          "latencyMs": 47,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-sparrow-falls-secret-haven",
+          "latencyMs": 54,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-spit-or-swallow-between-two-kings",
+          "latencyMs": 54,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-stay-a-spell-wolf-gone-wild",
+          "latencyMs": 54,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-sugerlake-beneath-the-stars",
+          "latencyMs": 54,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 2
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-the-broken-blades-five-broken-blades",
+          "latencyMs": 54,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 1
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-the-edge-of-darkness-trilogy-restitution",
+          "latencyMs": 54,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 6
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-the-ever-seas-the-ever-queen",
+          "latencyMs": 54,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-the-eye-of-the-goddess-a-tribute-of-fire",
+          "latencyMs": 54,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-the-kindred-s-curse-heat-of-the-everflame",
+          "latencyMs": 54,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-the-kindred-s-curse-saga-spark-of-the-everflame",
+          "latencyMs": 54,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-the-kingdom-of-crows-house-of-striking-oaths",
+          "latencyMs": 54,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-the-plated-prisoner-goldfinch",
+          "latencyMs": 54,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "http://www.wikidata.org/entity/Q138576400",
+            "matchedTitle": "Goldfinch",
+            "matchedAuthors": [
+              "Raven Kennedy"
+            ],
+            "rejectedTitleCollisionCount": 6
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-the-ravenhood-series-flock",
+          "latencyMs": 54,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 13
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-the-ravenhood-the-finish-line",
+          "latencyMs": 54,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 3
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-the-wolves-of-ruin-dire-bound",
+          "latencyMs": 54,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-time-of-iron-long-live-evil",
+          "latencyMs": 50,
+          "workMatch": {
+            "matched": true,
+            "confidence": "high",
+            "providerWorkId": "http://www.wikidata.org/entity/Q135085092",
+            "matchedTitle": "Long Live Evil",
+            "matchedAuthors": [
+              "Sarah Rees Brennan"
+            ],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-vicious-lost-boys-the-fae-princes",
+          "latencyMs": 50,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-villians-of-lore-bonds-of-hercules",
+          "latencyMs": 50,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-wicked-games-enchantra",
+          "latencyMs": 50,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": []
+        },
+        {
+          "caseId": "reverie-windy-city-play-along",
+          "latencyMs": 50,
+          "workMatch": {
+            "matched": false,
+            "confidence": "none",
+            "providerWorkId": null,
+            "matchedTitle": null,
+            "matchedAuthors": [],
+            "rejectedTitleCollisionCount": 0
+          },
+          "seriesClaims": []
+        }
+      ]
+    }
+  ],
+  "scores": [
+    {
+      "schemaVersion": 1,
+      "provider": "openlibrary",
+      "observedAt": "2026-09-03T20:49:28.067Z",
+      "scope": {
+        "evaluatedCases": 80,
+        "reviewedCases": 23,
+        "reviewedPositiveCases": 12,
+        "reviewedStandaloneCases": 11,
+        "candidateCases": 57
+      },
+      "coverage": {
+        "workMatchCoverage": 0.875,
+        "relationalMembershipCoverage": 0.0875,
+        "referenceAgreement": 0.10144927536231885
+      },
+      "accuracy": {
+        "membershipPrecision": 1,
+        "membershipRecall": 0.5833333333333334,
+        "falseStandaloneRate": 0,
+        "orderAccuracy": 1,
+        "truePositiveClaims": 7,
+        "falsePositiveClaims": 0,
+        "recoveredPositiveCases": 7,
+        "falseStandaloneCases": 0,
+        "orderComparableClaims": 6,
+        "correctOrderClaims": 6
+      },
+      "operations": {
+        "errorCount": 0,
+        "latencyMs": {
+          "p50": 409,
+          "p95": 995,
+          "measuredCount": 80
+        }
+      },
+      "procurementGate": {
+        "passes": false,
+        "checks": {
+          "commercialUsePermitted": false,
+          "persistentStoragePermitted": false,
+          "claimLevelProvenance": true,
+          "relationalMembershipEvidence": true,
+          "minimumReviewedCases": false,
+          "minimumReviewedPositiveCases": false,
+          "minimumReviewedStandaloneCases": true,
+          "minimumMembershipPrecision": true,
+          "maximumFalseStandaloneRate": true
+        },
+        "failed": [
+          "commercialUsePermitted",
+          "persistentStoragePermitted",
+          "minimumReviewedCases",
+          "minimumReviewedPositiveCases"
+        ]
+      },
+      "details": [
+        {
+          "caseId": "gold-a-court-of-silver-flames",
+          "truthStatus": "reviewed",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 1,
+          "referenceMatched": true,
+          "claims": [
+            {
+              "evidenceKind": "relational_membership",
+              "providerSeriesId": "OL327003L",
+              "series": "A Court of Thorns and Roses",
+              "position": 5,
+              "orderType": "unspecified",
+              "role": "unknown",
+              "sourceRef": "https://openlibrary.org/works/OL21703979W"
+            }
+          ],
+          "error": null
+        },
+        {
+          "caseId": "gold-a-curse-carved-in-bone",
+          "truthStatus": "reviewed",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "gold-divine-rivals",
+          "truthStatus": "reviewed",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "gold-fifty-shades-darker",
+          "truthStatus": "reviewed",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 1,
+          "referenceMatched": true,
+          "claims": [
+            {
+              "evidenceKind": "relational_membership",
+              "providerSeriesId": "OL330466L",
+              "series": "Fifty Shades",
+              "position": 2,
+              "orderType": "unspecified",
+              "role": "unknown",
+              "sourceRef": "https://openlibrary.org/works/OL16550681W"
+            }
+          ],
+          "error": null
+        },
+        {
+          "caseId": "gold-grey",
+          "truthStatus": "reviewed",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 1,
+          "referenceMatched": true,
+          "claims": [
+            {
+              "evidenceKind": "relational_membership",
+              "providerSeriesId": "OL330468L",
+              "series": "Fifty Shades as told by Christian",
+              "position": 1,
+              "orderType": "unspecified",
+              "role": "unknown",
+              "sourceRef": "https://openlibrary.org/works/OL17183968W"
+            }
+          ],
+          "error": null
+        },
+        {
+          "caseId": "gold-hunting-adeline",
+          "truthStatus": "reviewed",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 1,
+          "referenceMatched": true,
+          "claims": [
+            {
+              "evidenceKind": "relational_membership",
+              "providerSeriesId": "OL330244L",
+              "series": "Cat and Mouse Duet",
+              "position": 2,
+              "orderType": "unspecified",
+              "role": "unknown",
+              "sourceRef": "https://openlibrary.org/works/OL27297240W"
+            }
+          ],
+          "error": null
+        },
+        {
+          "caseId": "gold-king-of-envy",
+          "truthStatus": "reviewed",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 1,
+          "referenceMatched": true,
+          "claims": [
+            {
+              "evidenceKind": "relational_membership",
+              "providerSeriesId": "OL327422L",
+              "series": "Kings of Sin",
+              "position": 5,
+              "orderType": "unspecified",
+              "role": "unknown",
+              "sourceRef": "https://openlibrary.org/works/OL42393184W"
+            }
+          ],
+          "error": null
+        },
+        {
+          "caseId": "gold-kingdom-of-ash",
+          "truthStatus": "reviewed",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 1,
+          "referenceMatched": true,
+          "claims": [
+            {
+              "evidenceKind": "relational_membership",
+              "providerSeriesId": "OL334582L",
+              "series": "Throne of Glass",
+              "position": 7,
+              "orderType": "unspecified",
+              "role": "unknown",
+              "sourceRef": "https://openlibrary.org/works/OL19352982W"
+            }
+          ],
+          "error": null
+        },
+        {
+          "caseId": "gold-onyx-storm",
+          "truthStatus": "reviewed",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "gold-standalone-a-brightness-long-ago",
+          "truthStatus": "reviewed",
+          "standalone": true,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "gold-standalone-black-water-sister",
+          "truthStatus": "reviewed",
+          "standalone": true,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "gold-standalone-fevre-dream",
+          "truthStatus": "reviewed",
+          "standalone": true,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "gold-standalone-mexican-gothic",
+          "truthStatus": "reviewed",
+          "standalone": true,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "gold-standalone-salvation-day",
+          "truthStatus": "reviewed",
+          "standalone": true,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "gold-standalone-snow-crash",
+          "truthStatus": "reviewed",
+          "standalone": true,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "gold-standalone-stranger-in-a-strange-land",
+          "truthStatus": "reviewed",
+          "standalone": true,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "gold-standalone-the-space-between-worlds",
+          "truthStatus": "reviewed",
+          "standalone": true,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "gold-standalone-uprooted",
+          "truthStatus": "reviewed",
+          "standalone": true,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "gold-standalone-version-zero",
+          "truthStatus": "reviewed",
+          "standalone": true,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "gold-standalone-we-are-satellites",
+          "truthStatus": "reviewed",
+          "standalone": true,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "gold-twisted-lies",
+          "truthStatus": "reviewed",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 1,
+          "referenceMatched": true,
+          "claims": [
+            {
+              "evidenceKind": "relational_membership",
+              "providerSeriesId": "OL327005L",
+              "series": "Twisted",
+              "position": 4,
+              "orderType": "unspecified",
+              "role": "unknown",
+              "sourceRef": "https://openlibrary.org/works/OL27818823W"
+            }
+          ],
+          "error": null
+        },
+        {
+          "caseId": "gold-two-twisted-crowns",
+          "truthStatus": "reviewed",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "gold-when-the-moon-hatched",
+          "truthStatus": "reviewed",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-assistant-to-the-villain-accomplice-to-the-villain",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-bellinger-series-it-happened-one-summer",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-beneath-the-mask-distance",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-blood-and-ash-the-primal-of-blood-and-bone",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-bloodline-vampires-court-of-the-vampire-queen",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-boys-of-tommen-keeping-13",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-bride-mate",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-chestnut-springs-hopeless",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-crimson-moth-rebel-witch",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-crowns-of-nyaxia-slaying-the-vampire-conqueror",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-cruel-castaways-ruthless-rival",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-dark-forces-bulletproof",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-dreamland-billionaires-final-offer",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-ever-seas-series-the-ever-king",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-fae-and-alchemy-brimstone",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-flame-and-thorns-war-of-fire-and-fury",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-flame-and-throns-realm-of-wind-and-vines",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-gods-of-the-dame-the-defender",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-gods-of-the-game-the-striker",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-gold-rush-ranch-off-to-the-races",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-green-creek-wolfsong",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-hades-x-persephone-sage-a-touch-of-chaos",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-heartstrings-first-time-caller",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-hell-bent-my-demon-hunter",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-into-darkness-game-on",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-lords-the-sacrifice",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-lucky-river-ranch-wyatt",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-lyonesse-honey-cut",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-merciless-all-he-ll-ever-be",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-never-after-hooked",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-playing-for-keeps-fall-with-me",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-priest-priest",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-pucked-up-omegaverse-one-pucked-up-pack",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-rebel-blue-ranch-lost-and-lassoed",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-rose-hill-wild-card",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-sinful-manor-keep-me",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-souls-trilogy-her-soul-to-take",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-sparrow-falls-secret-haven",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-spit-or-swallow-between-two-kings",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-stay-a-spell-wolf-gone-wild",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-sugerlake-beneath-the-stars",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-the-broken-blades-five-broken-blades",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-the-edge-of-darkness-trilogy-restitution",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-the-ever-seas-the-ever-queen",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-the-eye-of-the-goddess-a-tribute-of-fire",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-the-kindred-s-curse-heat-of-the-everflame",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-the-kindred-s-curse-saga-spark-of-the-everflame",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-the-kingdom-of-crows-house-of-striking-oaths",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-the-plated-prisoner-goldfinch",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-the-ravenhood-series-flock",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-the-ravenhood-the-finish-line",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-the-wolves-of-ruin-dire-bound",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-time-of-iron-long-live-evil",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-vicious-lost-boys-the-fae-princes",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-villians-of-lore-bonds-of-hercules",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-wicked-games-enchantra",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-windy-city-play-along",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "provider": "wikidata",
+      "observedAt": "2026-09-03T20:51:30.552Z",
+      "scope": {
+        "evaluatedCases": 80,
+        "reviewedCases": 23,
+        "reviewedPositiveCases": 12,
+        "reviewedStandaloneCases": 11,
+        "candidateCases": 57
+      },
+      "coverage": {
+        "workMatchCoverage": 0.325,
+        "relationalMembershipCoverage": 0.1,
+        "referenceAgreement": 0.11594202898550725
+      },
+      "accuracy": {
+        "membershipPrecision": 1,
+        "membershipRecall": 0.6666666666666666,
+        "falseStandaloneRate": 0,
+        "orderAccuracy": 0.75,
+        "truePositiveClaims": 8,
+        "falsePositiveClaims": 0,
+        "recoveredPositiveCases": 8,
+        "falseStandaloneCases": 0,
+        "orderComparableClaims": 4,
+        "correctOrderClaims": 3
+      },
+      "operations": {
+        "errorCount": 0,
+        "latencyMs": {
+          "p50": 54,
+          "p95": 169,
+          "measuredCount": 80
+        }
+      },
+      "procurementGate": {
+        "passes": false,
+        "checks": {
+          "commercialUsePermitted": true,
+          "persistentStoragePermitted": true,
+          "claimLevelProvenance": true,
+          "relationalMembershipEvidence": true,
+          "minimumReviewedCases": false,
+          "minimumReviewedPositiveCases": false,
+          "minimumReviewedStandaloneCases": true,
+          "minimumMembershipPrecision": true,
+          "maximumFalseStandaloneRate": true
+        },
+        "failed": [
+          "minimumReviewedCases",
+          "minimumReviewedPositiveCases"
+        ]
+      },
+      "details": [
+        {
+          "caseId": "gold-a-court-of-silver-flames",
+          "truthStatus": "reviewed",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 1,
+          "referenceMatched": true,
+          "claims": [
+            {
+              "evidenceKind": "relational_membership",
+              "providerSeriesId": "http://www.wikidata.org/entity/Q60979203",
+              "series": "A Court of Thorns and Roses",
+              "position": 4,
+              "orderType": "unspecified",
+              "role": "unknown",
+              "sourceRef": "http://www.wikidata.org/entity/Q101988654"
+            }
+          ],
+          "error": null
+        },
+        {
+          "caseId": "gold-a-curse-carved-in-bone",
+          "truthStatus": "reviewed",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 1,
+          "referenceMatched": true,
+          "claims": [
+            {
+              "evidenceKind": "relational_membership",
+              "providerSeriesId": "http://www.wikidata.org/entity/Q131727672",
+              "series": "Saga of the Unfated",
+              "position": 2,
+              "orderType": "unspecified",
+              "role": "unknown",
+              "sourceRef": "http://www.wikidata.org/entity/Q131727677"
+            }
+          ],
+          "error": null
+        },
+        {
+          "caseId": "gold-divine-rivals",
+          "truthStatus": "reviewed",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 1,
+          "referenceMatched": true,
+          "claims": [
+            {
+              "evidenceKind": "relational_membership",
+              "providerSeriesId": "http://www.wikidata.org/entity/Q131036817",
+              "series": "Letters of Enchantment",
+              "position": null,
+              "orderType": "unspecified",
+              "role": "unknown",
+              "sourceRef": "http://www.wikidata.org/entity/Q125360420"
+            }
+          ],
+          "error": null
+        },
+        {
+          "caseId": "gold-fifty-shades-darker",
+          "truthStatus": "reviewed",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 1,
+          "referenceMatched": true,
+          "claims": [
+            {
+              "evidenceKind": "relational_membership",
+              "providerSeriesId": "http://www.wikidata.org/entity/Q16357152",
+              "series": "Fifty Shades",
+              "position": null,
+              "orderType": "unspecified",
+              "role": "unknown",
+              "sourceRef": "http://www.wikidata.org/entity/Q2195511"
+            }
+          ],
+          "error": null
+        },
+        {
+          "caseId": "gold-grey",
+          "truthStatus": "reviewed",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "gold-hunting-adeline",
+          "truthStatus": "reviewed",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "gold-king-of-envy",
+          "truthStatus": "reviewed",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "gold-kingdom-of-ash",
+          "truthStatus": "reviewed",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 1,
+          "referenceMatched": true,
+          "claims": [
+            {
+              "evidenceKind": "relational_membership",
+              "providerSeriesId": "http://www.wikidata.org/entity/Q7798359",
+              "series": "Throne of Glass",
+              "position": 7,
+              "orderType": "unspecified",
+              "role": "unknown",
+              "sourceRef": "http://www.wikidata.org/entity/Q101986242"
+            }
+          ],
+          "error": null
+        },
+        {
+          "caseId": "gold-onyx-storm",
+          "truthStatus": "reviewed",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 1,
+          "referenceMatched": true,
+          "claims": [
+            {
+              "evidenceKind": "relational_membership",
+              "providerSeriesId": "http://www.wikidata.org/entity/Q124618108",
+              "series": "The Empyrean",
+              "position": 3,
+              "orderType": "unspecified",
+              "role": "unknown",
+              "sourceRef": "http://www.wikidata.org/entity/Q130681191"
+            }
+          ],
+          "error": null
+        },
+        {
+          "caseId": "gold-standalone-a-brightness-long-ago",
+          "truthStatus": "reviewed",
+          "standalone": true,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "gold-standalone-black-water-sister",
+          "truthStatus": "reviewed",
+          "standalone": true,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "gold-standalone-fevre-dream",
+          "truthStatus": "reviewed",
+          "standalone": true,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "gold-standalone-mexican-gothic",
+          "truthStatus": "reviewed",
+          "standalone": true,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "gold-standalone-salvation-day",
+          "truthStatus": "reviewed",
+          "standalone": true,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "gold-standalone-snow-crash",
+          "truthStatus": "reviewed",
+          "standalone": true,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "gold-standalone-stranger-in-a-strange-land",
+          "truthStatus": "reviewed",
+          "standalone": true,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "gold-standalone-the-space-between-worlds",
+          "truthStatus": "reviewed",
+          "standalone": true,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "gold-standalone-uprooted",
+          "truthStatus": "reviewed",
+          "standalone": true,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "gold-standalone-version-zero",
+          "truthStatus": "reviewed",
+          "standalone": true,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "gold-standalone-we-are-satellites",
+          "truthStatus": "reviewed",
+          "standalone": true,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "gold-twisted-lies",
+          "truthStatus": "reviewed",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "gold-two-twisted-crowns",
+          "truthStatus": "reviewed",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 1,
+          "referenceMatched": true,
+          "claims": [
+            {
+              "evidenceKind": "relational_membership",
+              "providerSeriesId": "http://www.wikidata.org/entity/Q130754363",
+              "series": "The Shepherd King",
+              "position": 2,
+              "orderType": "unspecified",
+              "role": "unknown",
+              "sourceRef": "http://www.wikidata.org/entity/Q130747147"
+            }
+          ],
+          "error": null
+        },
+        {
+          "caseId": "gold-when-the-moon-hatched",
+          "truthStatus": "reviewed",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 1,
+          "referenceMatched": true,
+          "claims": [
+            {
+              "evidenceKind": "relational_membership",
+              "providerSeriesId": "http://www.wikidata.org/entity/Q141254680",
+              "series": "Moonfall",
+              "position": null,
+              "orderType": "unspecified",
+              "role": "unknown",
+              "sourceRef": "http://www.wikidata.org/entity/Q140003714"
+            }
+          ],
+          "error": null
+        },
+        {
+          "caseId": "reverie-assistant-to-the-villain-accomplice-to-the-villain",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-bellinger-series-it-happened-one-summer",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-beneath-the-mask-distance",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-blood-and-ash-the-primal-of-blood-and-bone",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-bloodline-vampires-court-of-the-vampire-queen",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-boys-of-tommen-keeping-13",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-bride-mate",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-chestnut-springs-hopeless",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-crimson-moth-rebel-witch",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-crowns-of-nyaxia-slaying-the-vampire-conqueror",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-cruel-castaways-ruthless-rival",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-dark-forces-bulletproof",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-dreamland-billionaires-final-offer",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-ever-seas-series-the-ever-king",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-fae-and-alchemy-brimstone",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-flame-and-thorns-war-of-fire-and-fury",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-flame-and-throns-realm-of-wind-and-vines",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-gods-of-the-dame-the-defender",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-gods-of-the-game-the-striker",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-gold-rush-ranch-off-to-the-races",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-green-creek-wolfsong",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-hades-x-persephone-sage-a-touch-of-chaos",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-heartstrings-first-time-caller",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-hell-bent-my-demon-hunter",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-into-darkness-game-on",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-lords-the-sacrifice",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-lucky-river-ranch-wyatt",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-lyonesse-honey-cut",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-merciless-all-he-ll-ever-be",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-never-after-hooked",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-playing-for-keeps-fall-with-me",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-priest-priest",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-pucked-up-omegaverse-one-pucked-up-pack",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-rebel-blue-ranch-lost-and-lassoed",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-rose-hill-wild-card",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-sinful-manor-keep-me",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-souls-trilogy-her-soul-to-take",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-sparrow-falls-secret-haven",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-spit-or-swallow-between-two-kings",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-stay-a-spell-wolf-gone-wild",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-sugerlake-beneath-the-stars",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-the-broken-blades-five-broken-blades",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-the-edge-of-darkness-trilogy-restitution",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-the-ever-seas-the-ever-queen",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-the-eye-of-the-goddess-a-tribute-of-fire",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-the-kindred-s-curse-heat-of-the-everflame",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-the-kindred-s-curse-saga-spark-of-the-everflame",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-the-kingdom-of-crows-house-of-striking-oaths",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-the-plated-prisoner-goldfinch",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-the-ravenhood-series-flock",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-the-ravenhood-the-finish-line",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-the-wolves-of-ruin-dire-bound",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-time-of-iron-long-live-evil",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": true,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-vicious-lost-boys-the-fae-princes",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-villians-of-lore-bonds-of-hercules",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-wicked-games-enchantra",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        },
+        {
+          "caseId": "reverie-windy-city-play-along",
+          "truthStatus": "candidate",
+          "standalone": false,
+          "workMatched": false,
+          "eligibleClaimCount": 0,
+          "referenceMatched": false,
+          "claims": [],
+          "error": null
+        }
+      ]
+    }
+  ]
+}

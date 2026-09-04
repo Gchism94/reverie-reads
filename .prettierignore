@@ -15,3 +15,6 @@ design/Reverie_Theme_Studio.html
 # is the only writer; fontSubsetContract.test.ts guards the content). Reformatting would make every
 # re-fetch a spurious diff against upstream.
 apps/web/public/fonts/
+
+# Generated source-trial evidence. The writer owns stable JSON/Markdown formatting.
+packages/series-source-trial/reports/
