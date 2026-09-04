@@ -15,6 +15,7 @@ const reviewReasons = new Set([
   'insufficient_evidence',
   'source_requires_corroboration',
   'possible_universe_relation',
+  'possible_reading_order_relation',
   'self_titled_relation',
   'position_uncorroborated',
 ])

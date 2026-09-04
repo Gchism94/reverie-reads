@@ -114,3 +114,20 @@ export function selectCases(caseSet, scope) {
   if (scope === 'all') return caseSet.cases
   throw new Error(`Unknown scope ${scope}; expected all, gold, or reverie`)
 }
+
+export function refreshRecordedCaseSet(recordedCaseSet, currentCaseSet) {
+  const currentById = new Map(currentCaseSet.cases.map((entry) => [entry.id, entry]))
+  const cases = recordedCaseSet.cases.map((entry) => currentById.get(entry.id) ?? entry)
+
+  return {
+    ...recordedCaseSet,
+    sharedSources: currentCaseSet.sharedSources ?? recordedCaseSet.sharedSources ?? {},
+    cases,
+    methodology: {
+      ...recordedCaseSet.methodology,
+      reviewedCases: cases.filter((entry) => entry.truth.status === 'reviewed').length,
+      candidateCases: cases.filter((entry) => entry.truth.status === 'candidate').length,
+      note: currentCaseSet.methodology?.note ?? recordedCaseSet.methodology?.note,
+    },
+  }
+}

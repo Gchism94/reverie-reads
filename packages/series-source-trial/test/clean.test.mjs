@@ -40,7 +40,6 @@ test('quarantines the observed Hardcover universe false-positive pattern', () =>
 
   assert.equal(graded.quality.membershipEligible, false)
   assert.ok(graded.quality.riskFlags.includes('possible_universe_not_series'))
-  assert.ok(graded.quality.riskFlags.includes('independent_corroboration_required'))
   assert.ok(graded.quality.riskFlags.includes('position_uncorroborated'))
 })
 
@@ -54,10 +53,22 @@ test('quarantines an uncorroborated self-titled Hardcover relation', () => {
 
   assert.equal(graded.quality.membershipEligible, false)
   assert.ok(graded.quality.riskFlags.includes('self_titled_relation'))
-  assert.ok(graded.quality.riskFlags.includes('independent_corroboration_required'))
 })
 
-test('allows Hardcover membership only after an independent open graph corroborates it', () => {
+test('allows an ordinary exact non-singleton Hardcover relationship as decision input', () => {
+  const evidence = [membership('hardcover', 'The Sequence', { position: 2 })]
+  const [graded] = gradeMembershipEvidence(
+    { title: 'Second Book', authors: ['Ada Reader'] },
+    evidence,
+    [identity('hardcover')],
+  )
+
+  assert.equal(graded.quality.membershipEligible, true)
+  assert.equal(graded.quality.positionEligible, false)
+  assert.ok(graded.quality.riskFlags.includes('position_uncorroborated'))
+})
+
+test('lets independent open-graph evidence corroborate Hardcover order', () => {
   const evidence = [
     membership('hardcover', 'The Sequence', { position: 2 }),
     membership('wikidata', 'The Sequence', { position: 2 }),
@@ -71,6 +82,25 @@ test('allows Hardcover membership only after an independent open graph corrobora
   assert.equal(graded[0].quality.membershipEligible, true)
   assert.equal(graded[0].quality.positionEligible, true)
   assert.deepEqual(graded[0].quality.corroboratingEvidenceIds, ['wikidata:membership:0'])
+})
+
+test('quarantines a Hardcover reading-order list without blocking its ordinary series', () => {
+  const evidence = [
+    membership('hardcover', 'Blood and Ash', { position: 6 }),
+    {
+      ...membership('hardcover', 'Blood and Ash World Reading Order', { position: 11 }),
+      evidenceId: 'hardcover:membership:1',
+    },
+  ]
+  const graded = gradeMembershipEvidence(
+    { title: 'The Primal of Blood and Bone', authors: ['Jennifer L. Armentrout'] },
+    evidence,
+    [identity('hardcover')],
+  )
+
+  assert.equal(graded[0].quality.membershipEligible, true)
+  assert.equal(graded[1].quality.membershipEligible, false)
+  assert.ok(graded[1].quality.riskFlags.includes('possible_reading_order_not_series'))
 })
 
 test('does not count an Inventaire mirror as independent Wikidata evidence', () => {

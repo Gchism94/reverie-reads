@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 import { access, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { loadTrialCases, refreshRecordedCaseSet } from './cases.mjs'
 import { loadLocalEnvironment } from './env.mjs'
 import { annotateProviderResults } from './lineage.mjs'
 import {
@@ -73,8 +74,9 @@ const renderMarkdown = (score) => {
 await loadLocalEnvironment(resolve(packageRoot, '.env.local'))
 const options = parseArgs(process.argv.slice(2))
 const inputPath = await resolveExisting(options.input)
-const [trial, policy] = await Promise.all([
+const [trial, currentCaseSet, policy] = await Promise.all([
   readFile(inputPath, 'utf8').then(JSON.parse),
+  loadTrialCases(),
   readFile(resolve(packageRoot, 'data/evaluation-policy.json'), 'utf8').then(JSON.parse),
 ])
 if (!trial.caseSet?.cases || !Array.isArray(trial.runs)) {
@@ -82,7 +84,8 @@ if (!trial.caseSet?.cases || !Array.isArray(trial.runs)) {
 }
 
 const model = process.env.BOOK_RESOLVER_MODEL ?? 'gpt-5.6-luna'
-const cases = trial.caseSet.cases
+const refreshedCaseSet = refreshRecordedCaseSet(trial.caseSet, currentCaseSet)
+const cases = refreshedCaseSet.cases
   .filter((entry) => {
     if (options.scope === 'gold') return entry.truth?.status === 'reviewed'
     if (options.scope === 'candidate') return entry.truth?.status === 'candidate'
@@ -91,10 +94,10 @@ const cases = trial.caseSet.cases
   .slice(0, options.max ?? undefined)
 const selectedIds = new Set(cases.map((entry) => entry.id))
 const caseSet = {
-  ...trial.caseSet,
+  ...refreshedCaseSet,
   cases,
   methodology: {
-    ...trial.caseSet.methodology,
+    ...refreshedCaseSet.methodology,
     reviewedCases: cases.filter((entry) => entry.truth?.status === 'reviewed').length,
     candidateCases: cases.filter((entry) => entry.truth?.status === 'candidate').length,
   },

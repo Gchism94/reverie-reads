@@ -44,11 +44,11 @@ export const PROVIDER_PROFILES = {
   },
   hardcover: {
     sourceRole: 'high_coverage_supplement',
-    membershipRule: 'independent_corroboration_required',
+    membershipRule: 'relational_non_singleton_with_semantic_quarantine',
     positionRule: 'independent_corroboration_required',
     mayCorroborate: false,
     dataUse: 'decision_input_pending_terms',
-    note: 'Exact book_series rows are candidates, but automatic membership requires an independent origin.',
+    note: 'Exact non-singleton book_series rows may supply membership; reading-order, universe, self-titled, and conflicting relationships remain review-only.',
   },
 }
 
@@ -119,6 +119,9 @@ export function gradeMembershipEvidence(target, evidence, identityEvidence = [])
     if (entry.role === 'universe' || /\buniverse\b/i.test(entry.series)) {
       riskFlags.push('possible_universe_not_series')
     }
+    if (/\breading order\b/i.test(entry.series)) {
+      riskFlags.push('possible_reading_order_not_series')
+    }
     if (clusterKey(entry.series) === clusterKey(target.title))
       riskFlags.push('self_titled_relation')
     if (positions.size > 1) riskFlags.push('position_conflict')
@@ -144,6 +147,8 @@ export function gradeMembershipEvidence(target, evidence, identityEvidence = [])
       isRelational(entry) &&
       !riskFlags.includes('singleton') &&
       !riskFlags.includes('possible_universe_not_series') &&
+      !riskFlags.includes('possible_reading_order_not_series') &&
+      !riskFlags.includes('self_titled_relation') &&
       !riskFlags.includes('independent_corroboration_required') &&
       profile.membershipRule !== 'never'
     const positionEligible =

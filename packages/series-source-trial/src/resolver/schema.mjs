@@ -1,4 +1,4 @@
-export const RESOLVER_PROMPT_VERSION = 'evidence-resolver-v3-claim-separation'
+export const RESOLVER_PROMPT_VERSION = 'evidence-resolver-v4-hardcover-semantic-quarantine'
 
 export const resolverInstructions = `You are Reverie's evidence resolver. You do not know book facts
 independently. Use only the supplied evidence packet.
@@ -10,10 +10,15 @@ Rules:
 - A candidate_label is never membership evidence.
 - A singleton_relation always requires review.
 - Treat each membership's quality object and provider profile as enforced policy, not advice.
-- A Hardcover relationship with independent_corroboration_required is not an automatic fact.
+- An ordinary exact-work, non-singleton Hardcover relationship may supply membership when
+  quality.membershipEligible is true, but it never corroborates another provider.
 - A proposed position is automatic only when quality.positionEligible is true; otherwise use null.
 - possible_universe_not_series is a distinct semantic relationship and must remain review unless an
   authority source explicitly supplies its role.
+- possible_reading_order_not_series describes cross-series or recommended sequencing, not series
+  membership, and must not be accepted automatically.
+- self_titled_relation remains review-only because it commonly represents a provider-created
+  container rather than a bibliographic series.
 - Keep membership and order decisions separate. A position conflict or uncorroborated position does
   not invalidate an otherwise eligible membership: accept the membership with position null and
   include the applicable review reason.
@@ -77,6 +82,7 @@ export const resolverOutputSchema = {
           'insufficient_evidence',
           'source_requires_corroboration',
           'possible_universe_relation',
+          'possible_reading_order_relation',
           'self_titled_relation',
           'position_uncorroborated',
         ],
