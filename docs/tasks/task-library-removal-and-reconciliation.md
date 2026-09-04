@@ -1,14 +1,11 @@
 # Task: corpus-preserving library removal and owner reconciliation
 
-Status: **The prerequisite cover and household rollout is live. The owner deployed migrations
-through `20260905010000`, the production report returned 74/74 true, and web build `e7a6809` is
-promoted at `reveriereads.app`. The owner-run exact-roster administrator dry run found one existing
-grant, one addition, and no unexpected account; the reviewed write then verified both requested
-grants and the exact roster. The first private reconciliation dry run found 10 missing exact
-title/author identities. Rerun it now and resolve any that remain through Household Add, then
-produce and approve a fresh deterministic dry run and transaction-consistent backup. The
-reconciliation write and post-write Account A/B, household, removal, corpus-preservation, cover,
-and trope smoke checks remain owner-only and pending.**
+Status: **the membership/removal product boundary is live. On 2026-09-04 the owner accepted the
+current production household outcome and closed reconciliation as an active release blocker. Formal
+operator proof remains incomplete: the retained dry run had 10 unmatched identities and
+`canWrite = false`, and no writable dry run, transaction backup, or post-write verification artifact
+was found. This is owner-accepted operational closure, not a claim that the historical CSV plan was
+applied exactly. See `docs/audits/household-reconciliation-evidence-2026-09.md`.**
 
 ## Production migration performance hotfix — 2026-08-26
 
@@ -137,15 +134,16 @@ The PR review hardening pass also closes the following privacy boundaries:
 - household trope overlays are typed and rendered, including when a trope is the overlay's only
   content.
 
-Still pending and intentionally not performed:
+Historical operator closure not evidenced:
 
-- independent review, integration, owner deployment, and smoke verification of the household-only
-  catalog-entry boundary;
-- resolution of the 10 aggregate corpus-missing dry-run rows through the normal app path, without
-  committing private title-level artifacts;
-- owner rerun and approval of a new deterministic private dry run and rollback artifact;
-- owner-executed reconciliation;
-- production Account A/B and household smoke verification.
+- resolution of the 10 aggregate corpus-missing rows in the retained dry run;
+- an approved writable dry run and transaction-consistent rollback artifact;
+- a retained post-write verification report proving exact convergence;
+- exact Account A/B counts and a complete production removal/corpus-preservation smoke record.
+
+These are no longer roadmap blockers after the owner's operational acceptance. They remain the
+required evidence if the exact historical CSV transformation is ever described as formally
+verified.
 
 ## Stage 02 operator revalidation — 2026-08-28
 

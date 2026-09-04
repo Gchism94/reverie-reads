@@ -1,6 +1,8 @@
 # Shared series metadata seeder
 
-Status: source discovery is deployed; canonical shared-catalog integration is in implementation.
+Status: **deployed through the canonical shared catalog, durable completion workflow, and independent
+series reading order. Four repeatedly deferred corpus works are parked by owner decision and are no
+longer an active retry or release gate.**
 
 ## Problem
 
@@ -43,6 +45,17 @@ Series discovery is a shared corpus operation, not repeated work for every reade
 Corpus administrators use **Settings → Complete shared corpus & series info**. The eligible count is
 computed from both the ordinary metadata clock and the independent series clock. Uncertain positive
 matches appear under **Review → Corpus series matches**.
+
+PRs #390 and #392–#397 completed the shared catalog, durable/recoverable sweep, independent cover
+batch behavior, reading-order model, and reviewable editing. Migration `20260923010000` is live in
+production. The owner reports that the Hardcover credential was rotated; authenticated aggregate
+search succeeds without a surfaced provider error, but provider-specific attribution remains a
+separate diagnostic question.
+
+The four parked works are not considered successfully enriched. Do not repeatedly start another
+corpus-wide run only to revisit them. They become actionable again when objective/source input
+changes, an administrator reviews them directly, or instrumentation identifies a concrete retryable
+failure.
 
 This deliberately does not fabricate a complete reading order from the books one household owns.
 The canonical shared-series catalog now consumes reviewed corpus facts once, groups them by stable

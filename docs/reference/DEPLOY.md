@@ -72,6 +72,11 @@ sync with `origin/main`; it then prints exactly what it will touch and waits for
 
 ### Durable corpus-sweep rollout order
 
+Current production status (2026-09-04): the workflow rollout and recovery follow-up are live through
+`20260922010000`, the shared-series reading-order follow-up is live through `20260923010000`, and
+the owner has parked four repeatedly deferred works rather than treating them as an endless release
+gate. Keep the sequence below for future workflow deployments.
+
 This change alters an administrator write path, so Codex prepares it but does not execute these
 production steps or answer the deploy guard's confirmation:
 
