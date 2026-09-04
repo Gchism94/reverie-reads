@@ -91,7 +91,10 @@ export function useAddRead(bookId: string) {
     onError: (_err, _entry, ctx) => {
       if (ctx?.previous) qc.setQueryData(key, ctx.previous)
     },
-    onSettled: () => qc.invalidateQueries({ queryKey: key }),
+    onSettled: () => Promise.all([
+      qc.invalidateQueries({ queryKey: key }),
+      qc.invalidateQueries({ queryKey: allReadsKey }),
+    ]),
   })
 }
 
@@ -114,6 +117,9 @@ export function useDeleteRead(bookId: string) {
     onError: (_err, _id, ctx) => {
       if (ctx?.previous) qc.setQueryData(key, ctx.previous)
     },
-    onSettled: () => qc.invalidateQueries({ queryKey: key }),
+    onSettled: () => Promise.all([
+      qc.invalidateQueries({ queryKey: key }),
+      qc.invalidateQueries({ queryKey: allReadsKey }),
+    ]),
   })
 }

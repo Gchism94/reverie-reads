@@ -6,8 +6,9 @@ vi.mock('@tanstack/react-router', () => ({
   Link: ({
     to,
     children,
+    search: _search,
     ...props
-  }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { to: string }) => (
+  }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { to: string; search?: unknown }) => (
     <a href={to} {...props}>
       {children}
     </a>
@@ -25,7 +26,7 @@ const { LibraryHeader } = await import('./LibraryRoute')
 const { Toolbar } = await import('../library/Toolbar')
 
 describe('Library stays book-focused', () => {
-  it('has no Grid/Series mode switch and offers a direct Series destination', () => {
+  it('keeps Books, Shelves, and Series as linked views of the personal library', () => {
     render(
       <>
         <LibraryHeader scope="personal" readout="12 books" />
@@ -36,6 +37,18 @@ describe('Library stays book-focused', () => {
     expect(screen.queryByRole('group', { name: 'View mode' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /^Grid$/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /^Series$/ })).not.toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Browse series' })).toHaveAttribute('href', '/series')
+    const navigation = screen.getByRole('navigation', { name: 'My library views' })
+    expect(navigation).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Books' })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('link', { name: 'Shelves' })).toHaveAttribute('href', '/shelves')
+    expect(screen.getByRole('link', { name: 'Series' })).toHaveAttribute('href', '/series')
+  })
+
+  it('does not imply personal shelves or series belong to the household catalog', () => {
+    render(<LibraryHeader scope="household" readout="Household · shared" />)
+
+    expect(screen.getByRole('heading', { name: 'Household library' })).toBeInTheDocument()
+    expect(screen.queryByRole('navigation', { name: 'My library views' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'My library' })).toBeInTheDocument()
   })
 })

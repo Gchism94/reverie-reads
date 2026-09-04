@@ -97,7 +97,9 @@ async function signIn(page: Page): Promise<void> {
     `/#access_token=${access_token}&refresh_token=${refresh_token}&expires_in=3600&token_type=bearer&type=magiclink`,
   )
   await page.getByRole('button', { name: /enter your library/i }).click({ timeout: 20_000 })
-  await expect(page.getByRole('navigation')).toBeVisible({ timeout: 20_000 })
+  await expect(page.getByRole('navigation', { name: 'Primary', exact: true })).toBeVisible({
+    timeout: 20_000,
+  })
 }
 
 async function stubBackgroundCalls(page: Page): Promise<void> {
@@ -196,7 +198,7 @@ test.describe('CoverCard fave toggle — quiet-until-hover contract (desktop onl
   })
 })
 
-test('MatchRoute "Not tonight" dismiss — visible and functional under a touch tap (mobile only)', async ({
+test('Next read "Show less often" — visible and functional under a touch tap (mobile only)', async ({
   page,
   isMobile,
 }) => {
@@ -209,11 +211,11 @@ test('MatchRoute "Not tonight" dismiss — visible and functional under a touch 
   await stubBackgroundCalls(page)
   await signIn(page)
   await page.goto('/match')
-  await page.getByRole('button', { name: /skip the quiz.*standing taste/i }).click()
+  await page.getByRole('combobox', { name: 'Choose from' }).selectOption('library')
 
   const card = page.getByRole('button', { name: `Open ${MATCH_TITLE}` })
   await expect(card).toBeVisible({ timeout: 20_000 })
-  const dismiss = page.getByRole('button', { name: `Not tonight — hide ${MATCH_TITLE}` })
+  const dismiss = page.getByRole('button', { name: `Show ${MATCH_TITLE} less often` })
   await expect(dismiss).toHaveCSS('opacity', '1')
 
   await dismiss.tap()

@@ -147,7 +147,9 @@ async function signInOnce(page: Page) {
     `/#access_token=${c.session.access_token}&refresh_token=${c.session.refresh_token}&expires_in=3600&token_type=bearer&type=magiclink`,
   )
   await page.getByRole('button', { name: /enter your library/i }).click({ timeout: 20_000 })
-  await expect(page.getByRole('navigation')).toBeVisible({ timeout: 20_000 })
+  await expect(page.getByRole('navigation', { name: 'Primary', exact: true })).toBeVisible({
+    timeout: 20_000,
+  })
 }
 
 async function gotoShelf(page: Page, listId: string, count: number) {

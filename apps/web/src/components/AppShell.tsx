@@ -38,7 +38,7 @@ function useSkinLabel(): string {
 }
 
 const navBase =
-  'rv-nav-item relative flex min-h-10 items-center gap-3 px-3 py-2.5 text-[14px] font-medium'
+  'rv-nav-item relative flex min-h-11 items-center gap-3 px-3 py-2.5 text-[14px] font-medium'
 
 function NavLinks({ collapsed }: { collapsed: boolean }) {
   return (
@@ -49,7 +49,7 @@ function NavLinks({ collapsed }: { collapsed: boolean }) {
       {NAVIGATION_GROUPS.map((group) => (
         <div key={group.label} className="rv-nav-group flex flex-col gap-0.5">
           {!collapsed ? (
-            <div className="rv-nav-group-label skin-label px-3 pb-1 text-[10.5px] leading-[1.35] text-muted">
+            <div className="rv-nav-group-label skin-label px-3 pb-1 text-[12px] leading-[1.35] text-muted">
               {group.label}
             </div>
           ) : null}
@@ -166,8 +166,8 @@ function Sidebar({ householdAdd }: { householdAdd: boolean }) {
         <div className={`flex items-center gap-1.5 ${collapsed ? 'flex-col' : ''}`}>
           <Link
             to="/skins"
-            title="Choose skin"
-            aria-label="Choose skin"
+            title="Appearance"
+            aria-label="Appearance"
             className={`rv-sidebar-utility skin-control skin-btn-secondary flex min-h-11 items-center justify-center gap-2 py-1 text-[13px] ${
               collapsed ? 'w-11' : 'flex-1'
             }`}
@@ -325,12 +325,15 @@ function MobileTabBar({ householdAdd }: { householdAdd: boolean }) {
           className="fixed inset-x-3 z-50 p-2 lg:hidden"
           style={{ bottom: 'calc(76px + env(safe-area-inset-bottom))' }}
         >
-          <nav className="grid grid-cols-3 gap-1" aria-label="More destinations">
+          <nav
+            className="grid grid-cols-2 gap-1 min-[480px]:grid-cols-3"
+            aria-label="More destinations"
+          >
             {MORE_NAVIGATION_ITEMS.map((item) => (
               <Link
                 key={item.to}
                 to={item.to}
-                className="rv-nav-item flex min-h-[62px] flex-col items-center justify-center gap-1.5 px-2 py-2.5 text-[13px] font-medium"
+                className="rv-nav-item flex min-h-[62px] min-w-0 flex-col items-center justify-center gap-1.5 px-2 py-2.5 text-[13px] font-medium"
                 style={{ color: 'var(--muted)' }}
                 activeProps={{
                   className: 'rv-nav-item-active',
@@ -350,7 +353,7 @@ function MobileTabBar({ householdAdd }: { householdAdd: boolean }) {
             <button
               type="button"
               onClick={() => void signOut()}
-              className="skin-control skin-btn-secondary flex w-full items-center justify-center gap-2 px-2 py-2.5 text-[13px] font-semibold"
+              className="skin-control skin-btn-secondary flex min-h-11 w-full items-center justify-center gap-2 px-2 py-2.5 text-[13px] font-semibold"
             >
               <PowerGlyph /> Sign out
             </button>
@@ -368,7 +371,7 @@ function MobileTabBar({ householdAdd }: { householdAdd: boolean }) {
         <div className="rv-mobile-dock-grid grid grid-cols-5">
           <TabLink item={MOBILE_TAB_ITEMS[0]} />
           <TabLink item={MOBILE_TAB_ITEMS[1]} />
-          <div className="flex items-start justify-center">
+          <div className="relative flex min-h-[58px] items-start justify-center">
             <Link
               to="/add"
               data-testid="persistent-add"
@@ -378,6 +381,12 @@ function MobileTabBar({ householdAdd }: { householdAdd: boolean }) {
             >
               <span aria-hidden>＋</span>
             </Link>
+            <span
+              aria-hidden
+              className="skin-label absolute bottom-1.5 text-[12px] font-semibold text-muted"
+            >
+              Add
+            </span>
           </div>
           <TabLink item={MOBILE_TAB_ITEMS[2]} />
           <button

@@ -5,7 +5,7 @@ import { genreKey, SKINS, SKIN_ORDER, splitName, type Book, type TasteAnchors } 
 import { rootRoute } from './RootRoute'
 import { useBooks } from '../data/books'
 import { useLists } from '../data/lists'
-import { useEffectiveSkin, useVoice } from '../skin/labels'
+import { useVoice } from '../skin/labels'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { useSearchEverywhere, useAddFromSearch } from '../data/search'
 import { Chip } from '../components/Chip'
@@ -30,9 +30,8 @@ import { TasteTier } from '../components/TasteTier'
 import { useTasteCalibration } from '../data/taste'
 import { Surface } from '../components/Surface'
 
-// Discover (owner-approved): browse the wider catalog by world — defaulting to the room the
-// reader is standing in — with every find one tap from Add. The nine genre chips are the same
-// canonical genres the taxonomies key on; "owned" detection keeps your own shelves out of the way.
+// Browse every catalog genre by default. A genre is a deliberate content filter, independent
+// of the current room; changing appearance never changes this selection.
 
 const GENRES: { key: string; label: string }[] = SKIN_ORDER.map((id) => ({
   key: SKINS[id].genre.toLowerCase(),
@@ -244,12 +243,11 @@ function SearchSection({ query, books }: { query: string; books: Book[] }) {
   )
 }
 
-function DiscoverScreen() {
+export function DiscoverScreen() {
   const voice = useVoice()
-  const skinGenre = SKINS[useEffectiveSkin()].genre.toLowerCase()
   const search = discoverRoute.useSearch()
   const navigate = useNavigate()
-  const genre = search.genre ?? skinGenre
+  const genre = search.genre ?? ''
   const { data: books } = useBooks()
   const owned = ownedKeys(books ?? [])
   // Seeded from the param, so a restored URL repopulates the box rather than only filtering.
@@ -270,6 +268,7 @@ function DiscoverScreen() {
   const q = useQuery({
     queryKey: ['discover', genreKey(genre)],
     queryFn: ({ signal }) => fetchDiscover(genre, signal),
+    enabled: Boolean(genre),
     staleTime: 1000 * 60 * 60 * 6, // a browse shelf, not a feed — a handful of calls per session
     retry: 1,
   })
@@ -389,6 +388,18 @@ function DiscoverScreen() {
       {!searching && (
         <>
           <div className="mb-5 flex flex-wrap gap-2" role="group" aria-label="Browse a genre">
+            <Chip
+              active={!genre}
+              onClick={() =>
+                void navigate({
+                  to: '/discover',
+                  search: { ...search, genre: undefined },
+                  replace: true,
+                })
+              }
+            >
+              All genres
+            </Chip>
             {GENRES.map((g) => (
               <Chip
                 key={g.key}
@@ -396,7 +407,7 @@ function DiscoverScreen() {
                 onClick={() =>
                   void navigate({
                     to: '/discover',
-                    search: g.key === skinGenre ? {} : { genre: g.key },
+                    search: { ...search, genre: g.key },
                     replace: true,
                   })
                 }
@@ -498,100 +509,111 @@ function DiscoverScreen() {
             )}
           </section>
 
-          {/* ── the external shelf — secondary now that the corpus leads ── */}
-          <h2 className="skin-label mb-3 text-[12px] uppercase tracking-[0.18em] text-muted">
-            New and notable from the wider shelves
-          </h2>
-
-          {q.isPending && (
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4" aria-hidden>
-              {Array.from({ length: 8 }, (_, i) => (
-                <div key={i} className="flex flex-col gap-2">
-                  <div
-                    className="aspect-[2/3] rounded-[8px] border border-line"
-                    style={{ background: 'var(--card)' }}
-                  />
-                  <div className="h-3 w-3/4 rounded" style={{ background: 'var(--card)' }} />
-                  <div className="h-3 w-1/2 rounded" style={{ background: 'var(--card)' }} />
-                </div>
-              ))}
-            </div>
-          )}
-
-          {q.isError && (
-            <Surface radius="card" tone="bare" pad={5} className="text-center">
-              <p className="text-[14px] text-ink">The wider shelves aren’t answering right now.</p>
-              <p className="mt-1 text-[12.5px] text-muted">
-                Usually a rate limit — it clears on its own.
-              </p>
-              <button
-                type="button"
-                onClick={() => void q.refetch()}
-                className="skin-control mt-3 border border-line px-4 py-1.5 text-[13px] font-semibold text-ink"
-                style={{ background: 'var(--chip)' }}
-              >
-                Try again
-              </button>
-            </Surface>
-          )}
-
-          {q.isSuccess && q.data.length === 0 && (
-            <Surface radius="card" tone="bare" pad={5} className="text-center">
-              <p className="text-[14px] text-ink">{voice.miss}</p>
-              <p className="mt-1 text-[12.5px] text-muted">
-                Try another genre — the smaller shelves run thin some weeks.
-              </p>
-            </Surface>
-          )}
-
-          {q.isSuccess && q.data.length > 0 && (
+          {!genre ? (
+            <p className="text-[14px] text-muted">
+              Choose a genre to see new and notable books from the wider shelves.
+            </p>
+          ) : (
             <>
-              <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
-                {/* the Hide-what-I-have chip lives in the corpus filter row above; one preference,
-                    one control, both sections obey it */}
-                {/* Only offered when there IS another batch. A single-batch shelf — the curated
-                    fn-down path, a thin genre, or an older deployed fn still returning 12 — shows
-                    no control rather than a button that re-renders the same twenty. */}
-                {batches > 1 && (
-                  <button
-                    type="button"
-                    data-testid="discover-new-batch"
-                    onClick={() => setBatchIndex((i) => i + 1)}
-                    className="skin-control-quiet border border-line px-3 py-1.5 text-[12.5px] text-ink"
-                    style={{ background: 'var(--chip)' }}
-                  >
-                    New batch{' '}
-                    <span className="skin-numeral text-muted">
-                      {(batchIndex % batches) + 1}/{batches}
-                    </span>
-                  </button>
-                )}
-              </div>
-              {rank.data && (
-                <p className="mb-3 text-[12px] text-muted">
-                  Closest to your taste first — learned from the books you love.
-                </p>
-              )}
-              {ordered.length === 0 ? (
-                // Reachable only with the toggle on: the pool had hits, the reader owns all of them.
-                <p
-                  className="px-2 py-10 text-center text-[14px] text-muted"
-                  data-testid="discover-all-owned"
-                >
-                  You already have everything on this shelf. Turn off “Hide what I have” to see it.
-                </p>
-              ) : (
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-                  {ordered.map(({ hit: h, taste }) => (
-                    <Card
-                      key={`${h.isbn}|${h.title}`}
-                      hit={h}
-                      owned={isOwned(h, owned)}
-                      taste={taste}
-                      anchors={anchors}
-                    />
+              {/* ── the external shelf — secondary now that the corpus leads ── */}
+              <h2 className="skin-label mb-3 text-[12px] uppercase tracking-[0.18em] text-muted">
+                New and notable from the wider shelves
+              </h2>
+
+              {q.isPending && (
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4" aria-hidden>
+                  {Array.from({ length: 8 }, (_, i) => (
+                    <div key={i} className="flex flex-col gap-2">
+                      <div
+                        className="aspect-[2/3] rounded-[8px] border border-line"
+                        style={{ background: 'var(--card)' }}
+                      />
+                      <div className="h-3 w-3/4 rounded" style={{ background: 'var(--card)' }} />
+                      <div className="h-3 w-1/2 rounded" style={{ background: 'var(--card)' }} />
+                    </div>
                   ))}
                 </div>
+              )}
+
+              {q.isError && (
+                <Surface radius="card" tone="bare" pad={5} className="text-center">
+                  <p className="text-[14px] text-ink">
+                    The wider shelves aren’t answering right now.
+                  </p>
+                  <p className="mt-1 text-[12.5px] text-muted">
+                    Usually a rate limit — it clears on its own.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => void q.refetch()}
+                    className="skin-control mt-3 border border-line px-4 py-1.5 text-[13px] font-semibold text-ink"
+                    style={{ background: 'var(--chip)' }}
+                  >
+                    Try again
+                  </button>
+                </Surface>
+              )}
+
+              {q.isSuccess && q.data.length === 0 && (
+                <Surface radius="card" tone="bare" pad={5} className="text-center">
+                  <p className="text-[14px] text-ink">{voice.miss}</p>
+                  <p className="mt-1 text-[12.5px] text-muted">
+                    Try another genre — the smaller shelves run thin some weeks.
+                  </p>
+                </Surface>
+              )}
+
+              {q.isSuccess && q.data.length > 0 && (
+                <>
+                  <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
+                    {/* the Hide-what-I-have chip lives in the corpus filter row above; one preference,
+                    one control, both sections obey it */}
+                    {/* Only offered when there IS another batch. A single-batch shelf — the curated
+                    fn-down path, a thin genre, or an older deployed fn still returning 12 — shows
+                    no control rather than a button that re-renders the same twenty. */}
+                    {batches > 1 && (
+                      <button
+                        type="button"
+                        data-testid="discover-new-batch"
+                        onClick={() => setBatchIndex((i) => i + 1)}
+                        className="skin-control-quiet border border-line px-3 py-1.5 text-[12.5px] text-ink"
+                        style={{ background: 'var(--chip)' }}
+                      >
+                        New batch{' '}
+                        <span className="skin-numeral text-muted">
+                          {(batchIndex % batches) + 1}/{batches}
+                        </span>
+                      </button>
+                    )}
+                  </div>
+                  {rank.data && (
+                    <p className="mb-3 text-[12px] text-muted">
+                      Closest to your taste first — learned from the books you love.
+                    </p>
+                  )}
+                  {ordered.length === 0 ? (
+                    // Reachable only with the toggle on: the pool had hits, the reader owns all of them.
+                    <p
+                      className="px-2 py-10 text-center text-[14px] text-muted"
+                      data-testid="discover-all-owned"
+                    >
+                      You already have everything on this shelf. Turn off “Hide what I have” to see
+                      it.
+                    </p>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                      {ordered.map(({ hit: h, taste }) => (
+                        <Card
+                          key={`${h.isbn}|${h.title}`}
+                          hit={h}
+                          owned={isOwned(h, owned)}
+                          taste={taste}
+                          anchors={anchors}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </>
               )}
             </>
           )}

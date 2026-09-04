@@ -29,6 +29,8 @@ import { BookmarkGlyph } from '../components/BookmarkGlyph'
 import { Switch } from '../components/Switch'
 import { useProfile, useUpdateProfile } from '../data/profile'
 import { Surface } from '../components/Surface'
+import { PageHeader } from '../components/PageHeader'
+import { LibraryNavigation } from '../components/LibraryNavigation'
 
 type Tab = 'tbr' | 'collection'
 
@@ -431,12 +433,12 @@ function ShelvesScreen() {
 
   return (
     <section className="px-4 py-6 sm:px-6">
-      <h1
-        className="mb-4 text-[22px] italic text-ink"
-        style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
-      >
-        Shelves
-      </h1>
+      <PageHeader
+        eyebrow="My library"
+        title="Shelves"
+        description="Browse your books by reading state, format, or the lists you make."
+      />
+      <LibraryNavigation current="shelves" className="mb-6 mt-4" />
 
       <DerivedShelves
         books={all}

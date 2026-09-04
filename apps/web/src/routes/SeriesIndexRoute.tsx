@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { createRoute, Link } from '@tanstack/react-router'
 import {
+  APP_NAME,
   claimedSeriesLength,
   isPossessed,
   seriesAuthorKeys,
@@ -28,6 +29,7 @@ import {
 } from '../series/SeriesManagement'
 import { isSeriesMergeEligible } from '../series/seriesManagementPolicy'
 import { SharedSeriesCatalogBrowser } from '../series/SharedSeriesCatalogBrowser'
+import { LibraryNavigation } from '../components/LibraryNavigation'
 
 interface StructuredSeriesSection {
   key: string
@@ -349,8 +351,8 @@ export function SeriesIndexScreen() {
           <div className="flex border border-line p-1" aria-label="Series catalog scope">
             {(
               [
-                ['personal', 'Yours'],
-                ['shared', 'Shared'],
+                ['personal', 'My series'],
+                ['shared', `${APP_NAME} catalog`],
               ] as const
             ).map(([value, label]) => (
               <button
@@ -358,7 +360,7 @@ export function SeriesIndexScreen() {
                 type="button"
                 aria-pressed={scope === value}
                 onClick={() => setScope(value)}
-                className="skin-control min-h-10 px-3 text-[12px] font-semibold text-ink"
+                className="skin-control min-h-11 px-3 text-[13px] font-semibold text-ink"
                 style={{
                   background: scope === value ? 'var(--accent-fill)' : 'transparent',
                   color: scope === value ? 'var(--on-primary)' : 'var(--ink)',
@@ -368,12 +370,6 @@ export function SeriesIndexScreen() {
               </button>
             ))}
           </div>
-          <Link
-            to="/library"
-            className="skin-control skin-btn-secondary inline-flex h-10 items-center px-4 text-[12px]"
-          >
-            View books
-          </Link>
           {scope === 'personal' ? (
             <Button disabled={mergeEligibleRows.length < 2} onClick={() => setMerging(true)}>
               Merge series
@@ -381,6 +377,7 @@ export function SeriesIndexScreen() {
           ) : null}
         </div>
       </header>
+      <LibraryNavigation current="series" className="mb-4 mt-4" />
 
       {scope === 'shared' ? (
         <SharedSeriesCatalogBrowser />

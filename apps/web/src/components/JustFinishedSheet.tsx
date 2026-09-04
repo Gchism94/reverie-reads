@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import {
+  beginReadingPatch,
+  isBookRead,
   cycleEmphasis,
   frequentTropes,
   PIN_CAP,
@@ -12,6 +14,7 @@ import { Modal } from './Modal'
 import { TropeChip } from './TropeChip'
 import { MoodPicker } from './MoodPicker'
 import { useBooks, useUpdateBook } from '../data/books'
+import { useReads } from '../data/reads'
 import { useAddListItem, useAllListItems } from '../data/listItems'
 import { useLists } from '../data/lists'
 import { useAcquireGhost } from '../data/series'
@@ -38,6 +41,7 @@ export function JustFinishedSheet() {
   const navigate = useNavigate()
   const labels = useLabels()
   const { data: books } = useBooks()
+  const nextReads = useReads(target?.next?.bookId ?? '')
   const { data: lists } = useLists()
   const { data: items } = useAllListItems()
   const { data: tropes } = useTropes()
@@ -47,7 +51,7 @@ export function JustFinishedSheet() {
   const unassign = useUnassignTrope()
   const fetchSuggestions = useFetchSuggestions()
   const resolveSuggestion = useResolveSuggestion()
-  const updateBook = useUpdateBook()
+  const updateBook = useUpdateBook(target?.next?.bookId ?? undefined)
   const addListItem = useAddListItem()
   const acquire = useAcquireGhost(target?.seriesName ?? '')
 
@@ -100,6 +104,9 @@ export function JustFinishedSheet() {
 
   // ── next-in-series actions (the #52 toast's actions, living inside the sheet) ──
   const linked = next?.bookId ? (books ?? []).find((b) => b.id === next.bookId) : undefined
+  const needsHistory =
+    linked && !isBookRead(linked) && linked.readStatus !== 'Reading' && linked.readStatus !== 'DNF'
+  const historyUnavailable = needsHistory && nextReads.data === undefined
   const tbr = (lists ?? []).find((l) => l.kind === 'tbr')
   const tbrMax = tbr
     ? Math.max(
@@ -109,14 +116,20 @@ export function JustFinishedSheet() {
     : 0
 
   const readNow = () => {
-    if (!next) return
+    if (!next || historyUnavailable) return
     if (linked) {
-      updateBook.mutate({
-        id: linked.id,
-        patch: { readStatus: 'Reading', readingNowHidden: false },
-      })
-      close()
-      void navigate({ to: '/book/$bookId', params: { bookId: linked.id } })
+      updateBook.mutate(
+        {
+          id: linked.id,
+          patch: beginReadingPatch({ ...linked, reads: nextReads.data ?? linked.reads }),
+        },
+        {
+          onSuccess: () => {
+            close()
+            void navigate({ to: '/book/$bookId', params: { bookId: linked.id } })
+          },
+        },
+      )
     } else {
       acquire.mutate(
         { entry: next, genre: target.genre },
@@ -124,7 +137,7 @@ export function JustFinishedSheet() {
           onSuccess: (bookId) => {
             updateBook.mutate({
               id: bookId,
-              patch: { readStatus: 'Reading', readingNowHidden: false },
+              patch: { readStatus: 'Reading', readingNowHidden: false, progress: 0 },
             })
             close()
             void navigate({ to: '/book/$bookId', params: { bookId } })
@@ -254,10 +267,15 @@ export function JustFinishedSheet() {
             <button
               type="button"
               onClick={readNow}
+              disabled={!!historyUnavailable || updateBook.isPending || acquire.isPending}
               className="skin-control px-3 py-1.5 text-[12px] font-semibold"
               style={{ background: 'var(--accent-fill)', color: 'var(--on-primary)' }}
             >
-              Reading now
+              {historyUnavailable
+                ? nextReads.isError
+                  ? 'Reading history unavailable'
+                  : 'Loading reading history…'
+                : 'Reading now'}
             </button>
             <button
               type="button"
@@ -276,6 +294,15 @@ export function JustFinishedSheet() {
                   : '⊹ Add to wishlist'}
             </button>
           </div>
+          {historyUnavailable && nextReads.isError && (
+            <button
+              type="button"
+              onClick={() => void nextReads.refetch()}
+              className="mt-2 min-h-11 text-[13px] text-primary"
+            >
+              Retry reading history
+            </button>
+          )}
         </div>
       )}
 

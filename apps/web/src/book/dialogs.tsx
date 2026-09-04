@@ -76,81 +76,121 @@ function Field({ label, children, error }: { label: string; children: ReactNode;
   )
 }
 
-export function LogReadForm({ book, onClose }: { book: Book; onClose: () => void }) {
+export function LogReadForm({
+  book,
+  onClose,
+  mode = 'finish',
+}: {
+  book: Book
+  onClose: () => void
+  mode?: 'finish' | 'past'
+}) {
   const addRead = useAddRead(book.id)
   const { data: books } = useBooks()
-  const updateBook = useUpdateBook()
+  const updateBook = useUpdateBook(book.id)
   // Local, not UTC — see localDate.ts. West of UTC in the evening, toISOString() already reports
   // tomorrow, and this default is what a reread finished tonight silently landed on.
   const [date, setDate] = useState(() => todayLocalDate())
   const [format, setFormat] = useState(book.format || 'Paperback')
   const [rating, setRating] = useState(0)
   const [notes, setNotes] = useState('')
+  const [savedRead, setSavedRead] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
 
-  function save() {
-    // The read's rating belongs to the READ. It used to be written onto books.rating as well, so
-    // logging a reread you merely liked silently overwrote the rating you gave the book — and with
-    // it the input to stats, taste matching and recommendations. The two are separate judgements:
-    // this one is "how was this time through", the book's own rating stays the reader's to set on
-    // the book page. Only the read STATUS follows from logging a read.
-    addRead.mutate({ date, format, rating, notes: notes.trim() })
-    updateBook.mutate({ id: book.id, patch: { readStatus: 'Read' } })
-    void maybeChainPrompt(book, books ?? [])
-    onClose()
+  async function save() {
+    if (saving) return
+    setSaving(true)
+    setSaveError('')
+    let readSaved = savedRead
+    try {
+      // The completion and its rating belong to this read. A status retry must not append it twice.
+      if (!readSaved) {
+        await addRead.mutateAsync({ date, format, rating, notes: notes.trim() })
+        readSaved = true
+        setSavedRead(true)
+      }
+      if (mode === 'finish') {
+        await updateBook.mutateAsync({ id: book.id, patch: { readStatus: 'Read', progress: 100 } })
+      }
+      onClose()
+      if (mode === 'finish') void maybeChainPrompt(book, books ?? [])
+    } catch {
+      setSaveError(
+        readSaved
+          ? 'Your read is saved, but the current reading status could not be updated. Try again to finish that update.'
+          : 'The read could not be saved. Your entries are still here; please try again.',
+      )
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
-    <Modal title="Log a read" onClose={onClose}>
-      <p className="-mt-2 mb-4 text-[13px] text-muted">{book.title} — add a reread anytime.</p>
+    <Modal
+      title={mode === 'past' ? 'Log a past read' : 'Log a read'}
+      onClose={() => {
+        if (!saving) onClose()
+      }}
+    >
+      <p className="-mt-2 mb-4 text-[13px] text-muted">
+        {mode === 'past'
+          ? `Record an earlier read of ${book.title}. Your current reading status and progress stay as they are.`
+          : `${book.title} — add a reread anytime.`}
+      </p>
       <div className="flex flex-col gap-3">
-        <Field label="Date finished">
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className={fieldClass}
-            style={fieldStyle}
-          />
-        </Field>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Format">
-            <select
-              value={format}
-              onChange={(e) => setFormat(e.target.value)}
+        <fieldset disabled={saving || savedRead} className="flex min-w-0 flex-col gap-3">
+          <Field label="Date finished">
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
               className={fieldClass}
               style={fieldStyle}
-            >
-              {FORMATS.map((f) => (
-                <option key={f}>{f}</option>
-              ))}
-            </select>
+            />
           </Field>
-          <Field label="Rating">
-            <div className="flex h-10 items-center">
-              <Stars value={rating} step={0.5} onChange={setRating} />
-            </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Format">
+              <select
+                value={format}
+                onChange={(e) => setFormat(e.target.value)}
+                className={fieldClass}
+                style={fieldStyle}
+              >
+                {FORMATS.map((f) => (
+                  <option key={f}>{f}</option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Rating">
+              <div className="flex h-10 items-center">
+                <Stars value={rating} step={0.5} onChange={setRating} />
+              </div>
+            </Field>
+          </div>
+          <Field label="Your thoughts on this read">
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={3}
+              placeholder="How was this time through? Optional."
+              className="skin-field w-full border border-line p-3 text-[14px] text-ink outline-none"
+              style={fieldStyle}
+            />
           </Field>
-        </div>
-        <Field label="Your thoughts on this read">
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={3}
-            placeholder="How was this time through? Optional."
-            className="skin-field w-full border border-line p-3 text-[14px] text-ink outline-none"
-            style={fieldStyle}
-          />
-        </Field>
+        </fieldset>
+        {saveError && (
+          <p role="alert" className="text-[14px] text-ink">
+            {saveError}
+          </p>
+        )}
         <button
           type="button"
-          onClick={save}
-          className="mt-1 h-11 skin-control text-[14px] font-semibold"
-          style={{
-            background: 'linear-gradient(135deg, var(--primary), var(--gold))',
-            color: 'var(--on-primary)',
-          }}
+          disabled={saving}
+          onClick={() => void save()}
+          className="mt-1 h-11 skin-control skin-btn-primary text-[14px] font-semibold"
         >
-          Save to read log
+          {saving ? 'Saving…' : savedRead ? 'Retry status update' : 'Save to read log'}
         </button>
       </div>
     </Modal>

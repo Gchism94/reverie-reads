@@ -103,7 +103,9 @@ async function signIn(page: Page) {
   )
   // An auth-callback arrival lands on /welcome ("You're in"); the button confirms the session is set.
   await page.getByRole('button', { name: /enter your library/i }).click({ timeout: 20_000 })
-  await expect(page.getByRole('navigation')).toBeVisible({ timeout: 20_000 })
+  await expect(page.getByRole('navigation', { name: 'Primary', exact: true })).toBeVisible({
+    timeout: 20_000,
+  })
 }
 
 async function setupFixtures(): Promise<{
@@ -434,7 +436,7 @@ test.describe('axe sweep', () => {
     ['Shelves', '/shelves'],
     ['Planner', '/planner'],
     ['Stats', '/stats'],
-    ['Match', '/match'],
+    ['Next read', '/match'],
     ['Discover', '/discover'],
     ['Add', '/add'],
     ['Settings', '/settings'],
@@ -442,14 +444,23 @@ test.describe('axe sweep', () => {
     ['Club', `/club/${f.clubId}`],
     ['SharedList', `/list/${f.listCode}`],
     ['Shelf detail', `/shelf/${f.shelfId}`],
-    ['Indie', '/indie'],
-    ['Skins', '/skins'],
+    ['Bookshops', '/indie'],
+    ['Appearance', '/skins'],
     ['Series index', '/series'],
     ['Series detail', `/series/${encodeURIComponent('A11y Saga')}`],
     ['Tropes', '/tropes'],
     ['Trope detail', `/tropes/${f.tropeId}`],
   ]
-  const CORE = ['Home', 'Library', 'Book detail', 'Stats', 'Settings', 'Skins', 'Clubs', 'Indie']
+  const CORE = [
+    'Home',
+    'Library',
+    'Book detail',
+    'Stats',
+    'Settings',
+    'Appearance',
+    'Clubs',
+    'Bookshops',
+  ]
 
   // ── The sweep plan: every skin in the registry, derived from SKIN_ORDER so this spec can never
   // hold a second, driftable copy of the skin list. Tryst — the default skin, whose full-route

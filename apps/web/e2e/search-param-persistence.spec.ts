@@ -93,7 +93,9 @@ async function signIn(page: Page, session: { access_token: string; refresh_token
     `/#access_token=${session.access_token}&refresh_token=${session.refresh_token}&expires_in=3600&token_type=bearer&type=magiclink`,
   )
   await page.getByRole('button', { name: /enter your library/i }).click({ timeout: 20_000 })
-  await expect(page.getByRole('navigation')).toBeVisible({ timeout: 20_000 })
+  await expect(page.getByRole('navigation', { name: 'Primary', exact: true })).toBeVisible({
+    timeout: 20_000,
+  })
 }
 
 async function stub(page: Page) {
@@ -217,6 +219,7 @@ test.describe('/match keeps the vibe it ran', () => {
     await stub(page)
 
     await page.goto('/match')
+    await page.getByText('Refine choices', { exact: true }).click()
     await page.getByLabel(FIELD).fill('cozy rivals')
     // Long enough that a debounce, if one existed, would have fired. The field means "the search
     // you ran"; a half-typed phrase is not that.
@@ -230,13 +233,15 @@ test.describe('/match keeps the vibe it ran', () => {
     await stub(page)
 
     await page.goto('/match')
+    await page.getByText('Refine choices', { exact: true }).click()
     await page.getByLabel(FIELD).fill('cozy rivals')
-    await page.getByRole('button', { name: /match it/i }).click()
+    await page.getByRole('button', { name: 'Find this mood' }).click()
     await expect.poll(() => page.url(), { timeout: 10_000 }).toContain('vibeQ=cozy')
 
     await page.goto('/library')
     await page.locator('main').waitFor({ state: 'visible' })
     await page.goBack()
+    await page.getByText('Refine choices', { exact: true }).click()
 
     await expect(page.getByLabel(FIELD)).toHaveValue('cozy rivals')
   })
@@ -247,6 +252,7 @@ test.describe('/match keeps the vibe it ran', () => {
     await stub(page)
 
     await page.goto('/match?vibeQ[]=a&vibeQ[]=b')
+    await page.getByText('Refine choices', { exact: true }).click()
     await expect(page.locator('main')).toBeVisible()
     await expect(page.getByLabel(FIELD)).toHaveValue('')
   })

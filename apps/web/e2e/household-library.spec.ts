@@ -230,7 +230,9 @@ async function signIn(page: Page, session: Session) {
     `/#access_token=${session.access_token}&refresh_token=${session.refresh_token}&expires_in=3600&token_type=bearer&type=magiclink`,
   )
   await page.getByRole('button', { name: /enter your library/i }).click({ timeout: 20_000 })
-  await expect(page.getByRole('navigation')).toBeVisible({ timeout: 20_000 })
+  await expect(page.getByRole('navigation', { name: 'Primary', exact: true })).toBeVisible({
+    timeout: 20_000,
+  })
 }
 
 test.beforeAll(async ({ browserName }, workerInfo) => {
@@ -268,11 +270,11 @@ test('scope controls remain available through personal and household loading fai
   })
   await signIn(page, owner.session)
   await page.goto('/library')
-  await expect(page.getByRole('button', { name: 'Personal' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Household' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'My library', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Household library', exact: true })).toBeVisible()
   releasePersonal()
   await expect(page.getByText(/couldn’t load your library/i)).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Household' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Household library', exact: true })).toBeVisible()
   await page.unroute(booksPattern)
 
   let releaseHousehold!: () => void
@@ -291,11 +293,11 @@ test('scope controls remain available through personal and household loading fai
   )
   await page.goto('/library?scope=household')
   await expect(page.getByText('Loading the household library…')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Personal' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'My library', exact: true })).toBeVisible()
   await expect(page.locator('aside[aria-label="Household book details"]')).toHaveCount(0)
   releaseHousehold()
   await expect(page.getByText(/couldn’t load the household library/i)).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Personal' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'My library', exact: true })).toBeVisible()
   await expect(page.locator('aside[aria-label="Household book details"]')).toHaveCount(0)
   await page.unroute(rosterPattern)
 })
@@ -308,13 +310,13 @@ test('two linked personal libraries appear together without exposing personal co
 
   // Unknown query values fail closed to the personal library.
   await page.goto('/library?scope=not-a-scope')
-  await expect(page.getByRole('button', { name: 'Personal' })).toHaveAttribute(
+  await expect(page.getByRole('button', { name: 'My library', exact: true })).toHaveAttribute(
     'aria-pressed',
     'true',
   )
 
   // A reader can enter the scope before being linked, even with an empty personal library.
-  await page.getByRole('button', { name: 'Household' }).click()
+  await page.getByRole('button', { name: 'Household library', exact: true }).click()
   await expect(page.getByText('No household linked')).toBeVisible()
   await expect(page.locator('aside[aria-label="Household book details"]')).toHaveCount(0)
 
@@ -357,10 +359,9 @@ test('two linked personal libraries appear together without exposing personal co
 
   await page.reload()
 
-  await expect(page.getByRole('button', { name: 'Household' })).toHaveAttribute(
-    'aria-pressed',
-    'true',
-  )
+  await expect(
+    page.getByRole('button', { name: 'Household library', exact: true }),
+  ).toHaveAttribute('aria-pressed', 'true')
   await expect(page.getByTestId('household-book-card')).toHaveCount(1)
 
   const ownerCard = page.locator(`[data-owners~="${owner.uid}"]`)
@@ -410,7 +411,7 @@ test('two linked personal libraries appear together without exposing personal co
       }),
     ).toBe(true)
     const backgroundBlocked = await page
-      .getByRole('button', { name: 'Personal' })
+      .getByRole('button', { name: 'My library', exact: true })
       .click({ trial: true, timeout: 500 })
       .then(
         () => false,
@@ -946,8 +947,8 @@ test('an already-open tab never repaints a revoked household while a replacement
   const oldHouseholdName = `Household Library ${projectName}`
 
   // Leaving household scope must evict its authorization-sensitive in-memory queries.
-  await page.getByRole('button', { name: 'Personal', exact: true }).click()
-  await expect(page.getByRole('button', { name: 'Personal', exact: true })).toHaveAttribute(
+  await page.getByRole('button', { name: 'My library', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'My library', exact: true })).toHaveAttribute(
     'aria-pressed',
     'true',
   )
@@ -1011,7 +1012,7 @@ test('an already-open tab never repaints a revoked household while a replacement
     await route.continue()
   })
 
-  await page.getByRole('button', { name: 'Household', exact: true }).click()
+  await page.getByRole('button', { name: 'Household library', exact: true }).click()
   await expect(page.getByText('Loading the household library…')).toBeVisible()
   await expect(page.locator(`[data-owners~="${member.uid}"]`)).toHaveCount(0)
   await expect(page.getByText(oldHouseholdName, { exact: true })).toHaveCount(0)

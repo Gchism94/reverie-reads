@@ -1,9 +1,16 @@
 import { useEffect, useState } from 'react'
 import { createRoute, useNavigate } from '@tanstack/react-router'
-import { authorOf, isPossessed, type Book } from '@reverie/core'
+import {
+  authorOf,
+  beginReadingPatch,
+  isPossessed,
+  nextReadCandidates,
+  type Book,
+} from '@reverie/core'
 import { rootRoute } from './RootRoute'
 import { CoverImage } from '../components/CoverImage'
-import { useBooks, useUpdateBook } from '../data/books'
+import { useUpdateBook } from '../data/books'
+import { useReaderBooks } from '../data/readerBooks'
 import { useAllReads } from '../data/reads'
 import { useLists, type UiList } from '../data/lists'
 import { useAddListItem, useAllListItems } from '../data/listItems'
@@ -29,17 +36,10 @@ import { PageHeader } from '../components/PageHeader'
 
 const YEAR = new Date().getFullYear()
 
-function greeting(): string {
-  const h = new Date().getHours()
-  if (h < 5) return 'Up late reading?'
-  if (h < 12) return 'Good morning'
-  if (h < 18) return 'Good afternoon'
-  return 'Good evening'
-}
-
 function HomeScreen() {
   const navigate = useNavigate()
-  const { data: books } = useBooks()
+  const booksQuery = useReaderBooks()
+  const { data: books } = booksQuery
   const { data: reads } = useAllReads()
   const { data: lists } = useLists()
   const { data: items } = useAllListItems()
@@ -58,7 +58,7 @@ function HomeScreen() {
   const openBook = (id: string) => void navigate({ to: '/book/$bookId', params: { bookId: id } })
 
   // First-run: a brand-new reader (no books, hasn't been through onboarding) is sent to the
-  // character-vocabulary first-run flow once. Existing libraries and anyone who finished/skipped
+  // book-first onboarding flow once. Existing libraries and anyone who finished/skipped
   // are left alone (honor-based flag in OnboardingRoute).
   useEffect(() => {
     if (books && books.length === 0 && !hasOnboarded()) {
@@ -74,7 +74,7 @@ function HomeScreen() {
   const reading = all
     .filter((b) => b.readStatus === 'Reading' && !b.readingNowHidden)
     .sort((a, b) => (a.readingPosition ?? 1e15) - (b.readingPosition ?? 1e15))
-  const unread = all.filter((b) => b.readStatus === 'Unread')
+  const available = nextReadCandidates(all)
   // ALL priority-flagged shelves + TBRs, in the user's manual order (useLists sorts by sort_order).
   const priorityLists = (lists ?? []).filter((l) => l.priority)
   const booksFor = (listId: string): Book[] =>
@@ -126,11 +126,10 @@ function HomeScreen() {
     const maxPos = Math.max(0, ...reading.map((x) => x.readingPosition ?? 0))
     updateBook.mutate({
       id: b.id,
-      patch: { readStatus: 'Reading', readingNowHidden: false, readingPosition: maxPos + 1000 },
+      patch: { ...beginReadingPatch(b), readingPosition: maxPos + 1000 },
     })
   }
 
-  const firstName = profile?.displayName ? profile.displayName.split(' ')[0] : ''
   const todayLabel = new Intl.DateTimeFormat(undefined, {
     weekday: 'long',
     month: 'long',
@@ -141,97 +140,44 @@ function HomeScreen() {
     <section className="mx-auto w-full max-w-[1240px] px-4 py-6 sm:px-6 lg:py-8">
       <PageHeader
         eyebrow={todayLabel}
-        title={`${greeting()}${firstName ? `, ${firstName}` : ''}.`}
-        description="Pick up where you left off, then decide what deserves your attention next."
+        title="Welcome back."
+        description="Continue reading or choose something from your library."
         actions={
-          <button
-            type="button"
-            onClick={() => void navigate({ to: '/add' })}
-            className="skin-control skin-btn-primary h-11 px-4 text-[14px]"
-          >
-            ＋ Add a book
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={() => void navigate({ to: '/library' })}
+              className="skin-control skin-btn-secondary h-11 px-4 text-[14px]"
+            >
+              Browse library
+            </button>
+            <button
+              type="button"
+              onClick={() => void navigate({ to: '/add' })}
+              className="skin-control skin-btn-primary h-11 px-4 text-[14px]"
+            >
+              ＋ Add a book
+            </button>
+          </>
         }
       />
 
-      {/* hero — framed per skin (Aphelion corner-bracket callsign plate · Tryst gilt plate), with the
-          signature goal-ring (radar cycle-ring vs gilt fleuron ring) and structural status tags. */}
-      <Frame
-        className="mt-6 flex flex-wrap items-center gap-6 p-5 backdrop-blur sm:p-7"
-        style={{ boxShadow: 'var(--shadow)' }}
-      >
-        <button type="button" onClick={setGoal} aria-label={`Set your ${YEAR} reading goal`}>
-          <SignatureRing value={uniqueThisYear} max={goalTarget} size={112} />
-        </button>
-        <div className="min-w-[230px] flex-1">
-          <span className="skin-label text-[12px]" style={{ color: 'var(--accent-ink)' }}>
-            Your reading year
-          </span>
-          <h2
-            className="mt-2 max-w-[24ch] text-balance text-[26px] font-semibold leading-[1.12] text-ink sm:text-[32px]"
-            style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
-          >
-            {reading.length
-              ? 'Another chapter is waiting.'
-              : unread.length
-                ? 'Your next great read is already here.'
-                : 'Build a reading life that feels like yours.'}
-          </h2>
-          <p className="mt-2 max-w-[62ch] text-[14.5px] leading-[1.55] text-muted">
-            {yearReads.length} read{yearReads.length !== 1 ? 's' : ''} logged in {YEAR}
-            {yearReads.length !== uniqueThisYear ? ` across ${uniqueThisYear} books` : ''}.{' '}
-            {unread.length} unread waiting.
+      {!books && (booksQuery.isPending || booksQuery.isError) && (
+        <Surface tone="card" radius="panel" pad={5} className="mt-6">
+          <p role={booksQuery.isError ? 'alert' : 'status'} className="text-[16px] text-ink">
+            {booksQuery.isError ? 'Your library could not be loaded.' : 'Loading your library…'}
           </p>
-          {goalTarget > 0 && uniqueThisYear >= goalTarget && (
-            /* the milestone line, spoken in the skin's voice (Fable 5 voice-pack quartet) */
-            <div
-              className="mt-1.5 text-[14px] leading-[1.5] italic"
-              style={{ color: 'var(--accent-ink)', fontFamily: 'var(--font-display)' }}
+          {booksQuery.isError && (
+            <button
+              type="button"
+              onClick={() => void booksQuery.refetch()}
+              className="skin-control skin-btn-secondary mt-4 min-h-11 px-4 text-[14px]"
             >
-              {voice.milestone}
-            </div>
+              Try again
+            </button>
           )}
-          {goalTarget > 0 && uniqueThisYear > 0 && uniqueThisYear < goalTarget && (
-            /* the SEASON strip (chunk-4, verdict-approved, minimal scope): the live count + the
-               skin's mid-progress tail — "Thirty-five books this year. A tidy ledger." */
-            <div
-              className="mt-1.5 text-[14px] leading-[1.5] italic"
-              style={{ color: 'var(--accent-ink)', fontFamily: 'var(--font-display)' }}
-            >
-              <span className="skin-numeral not-italic">{uniqueThisYear}</span> of{' '}
-              <span className="skin-numeral not-italic">{goalTarget}</span> this year ·{' '}
-              {voice.season}
-            </div>
-          )}
-          <div className="mt-4 flex flex-wrap gap-1.5">
-            <StatusTag tone="muted">{all.filter(isPossessed).length} books</StatusTag>
-            <StatusTag glyph="♥">{all.filter((b) => b.fave).length} faves</StatusTag>
-            {priorityLists.length > 0 && (
-              <StatusTag glyph={<BookmarkGlyph />}>{priorityTotal} priority</StatusTag>
-            )}
-          </div>
-        </div>
-        <div className="flex w-full gap-2 sm:w-auto sm:flex-col">
-          <button
-            type="button"
-            onClick={() => void navigate({ to: '/match' })}
-            className="skin-control skin-btn-primary h-11 flex-1 px-4 text-[13.5px] sm:flex-none"
-          >
-            Find my next read
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              if (!unread.length) return
-              const pick = unread[Math.floor(Math.random() * unread.length)]
-              if (pick) openBook(pick.id)
-            }}
-            className="skin-control skin-btn-secondary h-11 flex-1 px-4 text-[13.5px] sm:flex-none"
-          >
-            Surprise me
-          </button>
-        </div>
-      </Frame>
+        </Surface>
+      )}
 
       {/* reading now — editable in place: add a current read, set one aside, reorder */}
       {reading.length > 0 && (
@@ -241,7 +187,7 @@ function HomeScreen() {
             <button
               type="button"
               onClick={() => setReadingPickerOpen(true)}
-              className="skin-control skin-btn-secondary mb-0.5 min-h-10 flex-none px-3 text-[13px] font-semibold"
+              className="skin-control skin-btn-secondary mb-0.5 min-h-11 flex-none px-3 text-[13px] font-semibold"
             >
               ＋ Add
             </button>
@@ -266,23 +212,23 @@ function HomeScreen() {
                   <CoverImage book={b} />
                 </button>
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="min-w-[12ch] flex-1">
                       <div className="break-words text-[14px] font-semibold text-ink">
                         {b.title}
                       </div>
-                      <div className="break-words text-[13px] leading-[1.45] text-muted">
+                      <div className="break-words text-[13px] leading-[1.45] text-ink">
                         {authorOf(b)}
                       </div>
                     </div>
-                    <span className="flex flex-none items-center gap-0.5">
+                    <span className="flex flex-none flex-wrap items-center justify-end gap-0.5">
                       {reading.length > 1 && (
                         <>
                           <button
                             type="button"
                             onClick={() => moveReading(i, -1)}
                             aria-label={`Move ${b.title} earlier`}
-                            className="grid h-8 w-8 place-items-center text-[12px] leading-none text-muted hover:text-ink"
+                            className="grid h-11 w-11 place-items-center text-[12px] leading-none text-ink hover:text-ink"
                           >
                             ▲
                           </button>
@@ -290,7 +236,7 @@ function HomeScreen() {
                             type="button"
                             onClick={() => moveReading(i, 1)}
                             aria-label={`Move ${b.title} later`}
-                            className="grid h-8 w-8 place-items-center text-[12px] leading-none text-muted hover:text-ink"
+                            className="grid h-11 w-11 place-items-center text-[12px] leading-none text-ink hover:text-ink"
                           >
                             ▼
                           </button>
@@ -300,37 +246,37 @@ function HomeScreen() {
                         type="button"
                         onClick={() => setRemoving(b)}
                         aria-label={`Remove ${b.title} from Reading now`}
-                        className="grid h-8 w-8 place-items-center text-[13px] leading-none text-muted hover:text-primary"
+                        className="grid h-11 w-11 place-items-center text-[13px] leading-none text-ink hover:text-primary"
                       >
                         ✕
                       </button>
                     </span>
                   </div>
                   <ProgressMeter value={b.progress} max={100} className="mt-2" />
-                  <div className="mt-1.5 flex items-center gap-2">
-                    <span className="text-[13px] font-semibold text-muted">{b.progress}%</span>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                    <span className="text-[13px] font-semibold text-ink">{b.progress}%</span>
                     <div className="ml-auto flex gap-1.5">
                       <button
                         type="button"
                         onClick={() => nudge(b, -5)}
-                        aria-label="Less progress"
-                        className="skin-control skin-btn-icon grid h-9 w-9 place-items-center text-ink"
+                        aria-label={`Less progress for ${b.title}`}
+                        className="skin-control skin-btn-icon grid h-11 w-11 place-items-center text-ink"
                       >
                         −
                       </button>
                       <button
                         type="button"
                         onClick={() => nudge(b, 5)}
-                        aria-label="More progress"
-                        className="skin-control skin-btn-icon grid h-9 w-9 place-items-center text-ink"
+                        aria-label={`Update progress for ${b.title}`}
+                        className="skin-control skin-btn-secondary min-h-11 px-3 text-[14px] text-ink"
                       >
-                        ＋
+                        ＋ 5%
                       </button>
                     </div>
                     <button
                       type="button"
                       onClick={() => setFinishing(b)}
-                      className="skin-control min-h-9 px-3 py-1 text-[13px] font-semibold"
+                      className="skin-control min-h-11 px-3 py-1 text-[13px] font-semibold"
                       style={{ background: 'var(--chip)', color: 'var(--ink)' }}
                     >
                       Finish ✓
@@ -341,6 +287,53 @@ function HomeScreen() {
             ))}
           </div>
         </div>
+      )}
+
+      {books && (
+        <Frame className="mt-6 p-5 sm:p-6" style={{ boxShadow: 'var(--shadow)' }}>
+          <h2
+            className="text-[25px] font-semibold leading-tight text-ink sm:text-[30px]"
+            style={{ fontFamily: 'var(--font-display)' }}
+          >
+            {all.length ? 'Choose a next read' : 'Start with a book you want to read.'}
+          </h2>
+          <p className="mt-2 max-w-[60ch] text-[16px] leading-relaxed text-ink">
+            {available.length
+              ? `${available.length} unread ${available.length === 1 ? 'book is' : 'books are'} marked owned or borrowed. Choose what fits now, or try a random pick.`
+              : all.length
+                ? 'No new unread books are marked owned or borrowed. Browse your library to check what you have, or explore other choices in Next read.'
+                : 'Add one book or bring an existing file. You can choose a room and set a goal later.'}
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => void navigate({ to: all.length ? '/match' : '/add' })}
+              className="skin-control skin-btn-primary min-h-11 px-4 text-[14px]"
+            >
+              {all.length ? 'Choose a next read' : 'Add a book'}
+            </button>
+            {available.length > 0 ? (
+              <button
+                type="button"
+                onClick={() => {
+                  const pick = available[Math.floor(Math.random() * available.length)]
+                  if (pick) openBook(pick.id)
+                }}
+                className="skin-control skin-btn-secondary min-h-11 px-4 text-[14px]"
+              >
+                Surprise me
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => void navigate({ to: all.length ? '/library' : '/onboarding' })}
+                className="skin-control skin-btn-secondary min-h-11 px-4 text-[14px]"
+              >
+                {all.length ? 'Review your library' : 'Import a file'}
+              </button>
+            )}
+          </div>
+        </Frame>
       )}
 
       {/* priority shelves — every flagged shelf/TBR, in the reader's manual order */}
@@ -415,27 +408,55 @@ function HomeScreen() {
         </div>
       )}
 
-      {reading.length === 0 && priorityTotal === 0 && (
-        <Surface tone="card" radius="panel" pad={5} raised className="mt-9 text-center">
-          <h2
-            className="text-[23px] font-semibold text-ink"
-            style={{ fontFamily: 'var(--font-display)' }}
-          >
-            Give Home something to remember.
-          </h2>
-          <p className="mx-auto mt-2 max-w-[46ch] text-[14px] leading-relaxed text-muted">
-            Mark a book as Reading or make a TBR your priority shelf. Your next chapter will live
-            here.
-          </p>
+      {goalTarget > 0 || yearReads.length > 0 ? (
+        <Frame className="mt-8 flex flex-wrap items-center gap-5 p-5">
+          {goalTarget > 0 && (
+            <button type="button" onClick={setGoal} aria-label={`Set your ${YEAR} reading goal`}>
+              <SignatureRing value={uniqueThisYear} max={goalTarget} size={96} />
+            </button>
+          )}
+          <div className="min-w-0 flex-1">
+            <h2 className="text-[20px] font-semibold text-ink">Your reading year</h2>
+            <p className="mt-1 text-[14px] leading-relaxed text-ink">
+              {yearReads.length} read{yearReads.length !== 1 ? 's' : ''} logged in {YEAR}
+              {yearReads.length !== uniqueThisYear ? ` across ${uniqueThisYear} books` : ''}.
+              {goalTarget > 0 ? ` ${uniqueThisYear} of ${goalTarget} books in your goal.` : ''}
+            </p>
+            {goalTarget > 0 && uniqueThisYear >= goalTarget && (
+              <p className="mt-2 text-[14px] italic text-[color:var(--accent-ink)]">
+                {voice.milestone}
+              </p>
+            )}
+            {goalTarget > 0 && uniqueThisYear > 0 && uniqueThisYear < goalTarget && (
+              <p className="mt-2 text-[14px] italic text-[color:var(--accent-ink)]">
+                {voice.season}
+              </p>
+            )}
+            <div className="mt-3 flex flex-wrap gap-2">
+              <StatusTag tone="muted">{all.filter(isPossessed).length} owned or borrowed</StatusTag>
+              <StatusTag glyph="♥">{all.filter((b) => b.fave).length} faves</StatusTag>
+              {priorityLists.length > 0 && (
+                <StatusTag glyph={<BookmarkGlyph />}>{priorityTotal} priority</StatusTag>
+              )}
+            </div>
+          </div>
           <button
             type="button"
-            onClick={() => void navigate({ to: '/library' })}
-            className="skin-control skin-btn-primary mt-5 h-11 px-5 text-[13.5px]"
+            onClick={setGoal}
+            className="skin-control skin-btn-secondary min-h-11 px-4 text-[14px]"
           >
-            Browse your library
+            {goalTarget > 0 ? 'Edit goal' : 'Set a reading goal'}
           </button>
-        </Surface>
-      )}
+        </Frame>
+      ) : books ? (
+        <button
+          type="button"
+          onClick={setGoal}
+          className="skin-control mt-8 min-h-11 px-3 text-[14px] text-muted"
+        >
+          Set a reading goal
+        </button>
+      ) : null}
 
       {finishing && <LogReadForm book={finishing} onClose={() => setFinishing(null)} />}
 

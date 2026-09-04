@@ -45,7 +45,7 @@ export function LibraryScopeControl({
           type="button"
           onClick={() => onChange(value)}
           aria-pressed={scope === value}
-          className="skin-control h-8 px-3 text-[12.5px] font-semibold capitalize"
+          className="skin-control min-h-11 px-3 text-[13px] font-semibold"
           // A profile-driven skin/mode change repaints the parent card immediately. Letting
           // skin-control animate the old label colour over that new card creates a brief sub-AA
           // pairing, so this two-state control switches its already-guarded token pairs atomically.
@@ -59,7 +59,7 @@ export function LibraryScopeControl({
               : { background: 'transparent', color: 'var(--ink)', transition: 'none' }
           }
         >
-          {value.charAt(0).toUpperCase() + value.slice(1)}
+          {value === 'personal' ? 'My library' : 'Household library'}
         </button>
       ))}
     </Surface>

@@ -172,6 +172,15 @@ wishlist` was the pre-#68 model and is long wrong. Format flags **suppress, neve
   progress, taste and stats, where an abandoned book must not count as read. `hasReadingHistory`
   adds DNF and feeds **visibility only** (`inDefaultLibrary`), so a book you started and gave up
   on stops being invisible. Do not collapse them.
+- **Next read separates candidate scope from taste context.** Reader-facing `/match` is Next read.
+  Build taste/series context from the full personal library hydrated with actual read logs
+  (`useReaderBooks`), then select candidates with `nextReadCandidates`. Available means owned OR
+  borrowed; latent format flags do not count. Rereads and stopped books are independent opt-ins;
+  active reads stay on Home. Every start/resume entry point uses `beginReadingPatch` where it has
+  a Book, preserving possession and completed history. Finishing appends a completed read before
+  marking the current read finished; retrying only a failed status update must not append again.
+  Mood search returns a bounded shortlist, so label supplemental library picks honestly and apply
+  saved feedback to semantic ordering too. Appearance never supplies a Discover genre filter.
 - **No aggregate rating.** Never compute or display an averaged star rating anywhere.
   Keep the reader's own rating (`rating` on the book + per-read). Others' opinions appear only
   as an opt-in list of **individual** reviews on the book screen — never a single number.

@@ -2,6 +2,8 @@ import { useState, type ReactNode, useRef, useMemo } from 'react'
 import { Link, createRoute, useNavigate } from '@tanstack/react-router'
 import {
   authorOf,
+  beginReadingPatch,
+  isBookRead,
   bookGenres,
   bookSubgenres,
   CORE_GENRES,
@@ -227,13 +229,68 @@ export function ProgressSlider({ book }: { book: Pick<Book, 'id' | 'progress'> }
   )
 }
 
-type Dialog = 'trope' | 'mood' | 'log' | 'edit' | 'merge' | 'cover' | null
+/** Starting changes current reading state only; completed reads are logged separately. */
+export function BookReadingActions({
+  book,
+  onUpdateProgress,
+  onLogPastRead,
+  startUnavailable,
+  onRetryHistory,
+}: {
+  book: Book
+  onUpdateProgress: () => void
+  onLogPastRead: () => void
+  startUnavailable?: 'loading' | 'error'
+  onRetryHistory?: () => void
+}) {
+  const updateBook = useUpdateBook(book.id)
+  const reading = book.readStatus === 'Reading'
+  const action = reading ? 'Update progress' : isBookRead(book) ? 'Read again' : 'Start reading'
+  return (
+    <div className="mt-5 flex flex-wrap gap-2">
+      <button
+        type="button"
+        disabled={updateBook.isPending || !!startUnavailable}
+        onClick={() =>
+          reading
+            ? onUpdateProgress()
+            : updateBook.mutate({ id: book.id, patch: beginReadingPatch(book) })
+        }
+        className="skin-control skin-btn-primary min-h-11 px-4 text-[14px] disabled:opacity-50"
+      >
+        {startUnavailable === 'loading'
+          ? 'Loading reading history…'
+          : startUnavailable === 'error'
+            ? 'Reading history unavailable'
+            : action}
+      </button>
+      {startUnavailable === 'error' && (
+        <button
+          type="button"
+          onClick={onRetryHistory}
+          className="skin-control skin-btn-secondary min-h-11 px-4 text-[14px] font-semibold"
+        >
+          Retry reading history
+        </button>
+      )}
+      <button
+        type="button"
+        onClick={onLogPastRead}
+        className="skin-control skin-btn-secondary min-h-11 px-4 text-[14px] font-semibold"
+      >
+        Log a past read
+      </button>
+    </div>
+  )
+}
 
-function BookDetailScreen() {
+type Dialog = 'trope' | 'mood' | 'log' | 'finish' | 'edit' | 'merge' | 'cover' | null
+
+export function BookDetailScreen() {
   const { bookId } = bookRoute.useParams()
   const navigate = useNavigate()
   const { data: books, isLoading } = useBooks()
-  const { data: reads } = useReads(bookId)
+  const { data: reads, isError: readsError, refetch: retryReads } = useReads(bookId)
   /** Which level axis is currently explaining itself, if any. One at a time: two open cards on a
    *  metadata row would push the page around and neither would be the answer to a single tap. */
   const [openLevel, setOpenLevel] = useState<'intensity' | 'darkness' | null>(null)
@@ -258,6 +315,7 @@ function BookDetailScreen() {
   const setAuthor = useFilters((s) => s.setAuthor)
   const [dialog, setDialog] = useState<Dialog>(null)
   const [tropesExpanded, setTropesExpanded] = useState(false)
+  const progressTarget = useRef<HTMLDivElement>(null)
 
   const filterByAuthor = (name: string) => {
     setAuthor(name)
@@ -313,6 +371,17 @@ function BookDetailScreen() {
   const collections = (lists ?? []).filter((l) => l.kind === 'collection')
 
   const seriesBadge = seriesStatusBadge(book)
+  // The base books query omits read rows. Until the log is known, unset/unread records may
+  // still be rereads; the explicit Read/Reading/DNF states already determine the safe patch.
+  const startUnavailable =
+    reads === undefined &&
+    !isBookRead(book) &&
+    book.readStatus !== 'Reading' &&
+    book.readStatus !== 'DNF'
+      ? readsError
+        ? 'error'
+        : 'loading'
+      : undefined
 
   return (
     <section className="mx-auto w-full max-w-4xl px-4 py-6 sm:px-6 lg:py-8">
@@ -406,7 +475,6 @@ function BookDetailScreen() {
               <span>{authorOf(book) || 'Unknown author'}</span>
             )}
           </div>
-          <SeriesStrip book={book} />
           <div className="mt-4 flex flex-wrap gap-1.5">
             {bookGenres(book).map((g) => (
               <Pill key={g}>{CORE_GENRES.find((cg) => cg.toLowerCase() === g) ?? g}</Pill>
@@ -469,400 +537,475 @@ function BookDetailScreen() {
             />
           )}
 
-          <div className="mt-5 flex flex-wrap gap-2">
+          <BookReadingActions
+            book={{ ...book, reads: reads ?? book.reads }}
+            startUnavailable={startUnavailable}
+            onRetryHistory={() => void retryReads()}
+            onUpdateProgress={() => {
+              progressTarget.current?.scrollIntoView({ block: 'center' })
+              progressTarget.current?.querySelector('input')?.focus({ preventScroll: true })
+            }}
+            onLogPastRead={() => setDialog('log')}
+          />
+        </div>
+      </div>
+
+      <section aria-labelledby="your-copy" className="mt-8 border-t border-line pt-6">
+        <h2
+          id="your-copy"
+          className="mb-4 text-[20px] font-semibold text-ink"
+          style={{ fontFamily: 'var(--font-display)' }}
+        >
+          Your copy
+        </h2>
+        {/* your copies (per-format ownership) */}
+        <div className="mt-6">
+          <OwnedCopies
+            possession={possessionState(book)}
+            owned={book.owned}
+            onChange={setOwned}
+            onPossessionChange={setPossession}
+          />
+        </div>
+
+        {book.ownership === 'owned' ? (
+          household.members.length > 0 && (
+            <Surface
+              tone="field"
+              radius="control"
+              pad={2}
+              className="mt-4 text-[12.5px] text-muted"
+            >
+              Included in the household library automatically because you own a copy.
+            </Surface>
+          )
+        ) : book.borrowed && household.members.length > 0 ? (
+          <button
+            type="button"
+            role="checkbox"
+            aria-checked={!!personalHouseholdShare}
+            disabled={
+              !household.authorized ||
+              shareWithHousehold.isPending ||
+              unshareFromHousehold.isPending
+            }
+            onClick={() =>
+              personalHouseholdShare
+                ? unshareFromHousehold.mutate(book.id)
+                : shareWithHousehold.mutate(book.id)
+            }
+            className="skin-control mt-4 flex w-full items-center justify-between border border-line px-3 py-2.5 text-left text-[13px] font-semibold text-ink disabled:opacity-50"
+            style={{ background: 'var(--field)' }}
+          >
+            <span>
+              Share this borrowed book with the household
+              <span className="mt-0.5 block text-[11.5px] font-normal text-muted">
+                Your wishlist choice stays personal.
+              </span>
+            </span>
+            <span aria-hidden>{personalHouseholdShare ? '✓' : '○'}</span>
+          </button>
+        ) : null}
+
+        {/* buy at an indie (discover + support — not live inventory) */}
+        <BuyAtIndie book={book} />
+      </section>
+
+      <section aria-labelledby="your-reading" className="mt-8 border-t border-line pt-6">
+        <h2
+          id="your-reading"
+          className="mb-4 text-[20px] font-semibold text-ink"
+          style={{ fontFamily: 'var(--font-display)' }}
+        >
+          Your reading
+        </h2>
+        {/* reading status — "Not set" is a real, selectable state; no forced choice */}
+        <Label>Reading status</Label>
+        <div className="flex flex-wrap gap-1.5">
+          {READ_STATUS_OPTIONS.map((s) =>
+            s === 'Reading' && startUnavailable ? (
+              <button
+                key={s}
+                type="button"
+                disabled
+                className="skin-control-quiet border border-line px-3 py-1.5 text-[12.5px] text-muted opacity-50"
+              >
+                {readStatusLabel(s)}
+              </button>
+            ) : (
+              <Chip
+                key={s}
+                active={book.readStatus === s}
+                onClick={() => {
+                  updateBook.mutate({
+                    id: book.id,
+                    patch:
+                      s === 'Reading'
+                        ? beginReadingPatch({ ...book, reads: reads ?? book.reads })
+                        : { readStatus: s },
+                  })
+                  if (s === 'Read') void maybeChainPrompt(book, books ?? [])
+                }}
+              >
+                {readStatusLabel(s)}
+              </Chip>
+            ),
+          )}
+        </div>
+
+        {book.readStatus === 'Reading' && (
+          <div ref={progressTarget}>
+            <ProgressSlider key={book.id} book={book} />
             <button
               type="button"
-              onClick={() => setDialog('log')}
-              className="skin-control skin-btn-primary h-10 px-4 text-[12px]"
+              onClick={() => setDialog('finish')}
+              className="skin-control skin-btn-secondary mt-3 min-h-11 px-4 text-[14px] font-semibold"
             >
-              Log a read
+              Finish this read
             </button>
+          </div>
+        )}
+
+        {/* rating */}
+        <Label
+          action={
             <button
               type="button"
               onClick={() => setDialog('edit')}
-              className="skin-control skin-btn-secondary h-10 px-4 text-[12px] font-semibold"
+              className="text-[12px] text-primary"
             >
-              Edit details
+              Edit rating
             </button>
-          </div>
-        </div>
-      </div>
-
-      {/* your copies (per-format ownership) */}
-      <div className="mt-6">
-        <OwnedCopies
-          possession={possessionState(book)}
-          owned={book.owned}
-          onChange={setOwned}
-          onPossessionChange={setPossession}
-        />
-      </div>
-
-      {isCorpusAdmin && book.cover && corpusWorkId ? (
-        <CorpusCoverReviewToggle
-          reviewed={coverReview.data === true}
-          loading={coverReview.isFetching}
-          unavailable={coverReviewUnavailable}
-          saving={reviewPersonalCover.isPending}
-          onReview={() =>
-            reviewPersonalCover.mutate({
-              bookId: book.id,
-              workId: corpusWorkId,
-              coverUrl: book.cover,
-            })
           }
-        />
-      ) : null}
-
-      {/* buy at an indie (discover + support — not live inventory) */}
-      <BuyAtIndie book={book} />
-
-      {/* reading status — "Not set" is a real, selectable state; no forced choice */}
-      <Label>Reading status</Label>
-      <div className="flex flex-wrap gap-1.5">
-        {READ_STATUS_OPTIONS.map((s) => (
-          <Chip
-            key={s}
-            active={book.readStatus === s}
-            onClick={() => {
-              updateBook.mutate({
-                id: book.id,
-                patch: { readStatus: s, ...(s === 'Reading' ? { readingNowHidden: false } : {}) },
-              })
-              if (s === 'Read') void maybeChainPrompt(book, books ?? [])
-            }}
-          >
-            {readStatusLabel(s)}
-          </Chip>
-        ))}
-      </div>
-
-      {book.readStatus === 'Reading' && <ProgressSlider book={book} />}
-
-      {/* rating */}
-      <Label
-        action={
-          <button
-            type="button"
-            onClick={() => setDialog('edit')}
-            className="text-[12px] text-primary"
-          >
-            Edit rating
-          </button>
-        }
-      >
-        Your rating
-      </Label>
-      <Stars
-        value={book.rating}
-        step={0.5}
-        onChange={(v) => updateBook.mutate({ id: book.id, patch: { rating: v } })}
-      />
-      <p className="mt-1 text-[11.5px] text-muted">
-        Your rating only — Reverie never shows an averaged score.
-      </p>
-      {/* Audiobook-vs-print: shown only when two or more formats carry rated reads. Most recent
-          rated read per format — the display rule and its reasons live on latestRatingByFormat. */}
-      {formatRatings.length > 0 && (
-        /*
-         * STAR AND REVIEW TOGETHER, PER FORMAT. Both halves come from the same read — see
-         * `FormatRating.notes` — so the sentence under a format's stars is the opinion that
-         * produced them, never a note from a different sitting. Previously the words lived only
-         * in the reread log further down the page, which meant the one surface that exists to
-         * answer "was the audiobook better" showed the scores and hid the reasons.
-         *
-         * A format with no note renders its stars alone rather than an empty line: notes are
-         * optional, and a blank row would read as a missing thing rather than an unwritten one.
-         */
-        <div className="mt-2 flex flex-col gap-1.5" data-testid="format-ratings">
-          {formatRatings.map((f) => (
-            <div key={f.format} data-testid={`format-rating-${f.format}`}>
-              <span className="flex items-center gap-1.5 text-[12.5px] text-muted">
-                {f.format}
-                <Stars value={f.rating} size={12} />
-              </span>
-              {f.notes && (
-                <p
-                  className="mt-0.5 text-[13px] text-ink"
-                  data-testid={`format-review-${f.format}`}
-                >
-                  {f.notes}
-                </p>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* reviews (opt-in, individual voices) */}
-      <div className="mt-4">
-        <ReviewsPanel workKey={workKey} reviewerName={reviewerName} />
-      </div>
-
-      {/* Tier 2: semantic neighbours from your own shelves (silent until embeddings exist) */}
-      <MoreLikeThis bookId={book.id} />
-
-      {/* tags (Tryst skin: "Tropes") */}
-      <Label
-        action={
-          <button
-            type="button"
-            onClick={() => setDialog('trope')}
-            className="text-[12px] text-primary"
-          >
-            + tag
-          </button>
-        }
-      >
-        {labels.tags}
-      </Label>
-      {/* pinned lead with the skin's ornament; the rest collapse behind a count (≤5 visible) */}
-      <div className="flex flex-wrap items-center gap-1.5">
-        {book.tropes.length ? (
-          <>
-            {(tropesExpanded ? book.tropes : book.tropes.slice(0, 5)).map((t) => (
-              <TropeChip key={t.id} name={t.name} emphasis={t.emphasis} to={`/tropes/${t.id}`} />
-            ))}
-            {book.tropes.length > 5 && (
-              <button
-                type="button"
-                onClick={() => setTropesExpanded((v) => !v)}
-                className="skin-control border border-line px-2.5 py-1 text-[12px] font-semibold text-muted"
-                style={{ background: 'var(--field)' }}
-              >
-                {tropesExpanded ? 'fewer' : `+${book.tropes.length - 5} more`}
-              </button>
-            )}
-          </>
-        ) : (
-          <span className="text-[13px] text-muted">No {labels.tags.toLowerCase()} yet</span>
-        )}
-      </div>
-
-      {/* Mood — the reader's OWN impression (how it landed), its own area, apart from the descriptive
-          tropes above. Never derived: empty is a valid, quiet state (docs/archive/task-mood.md). */}
-      <Label
-        action={
-          <button
-            type="button"
-            onClick={() => setDialog('mood')}
-            className="text-[12px] text-primary"
-          >
-            {book.moods.length ? 'edit' : '+ mood'}
-          </button>
-        }
-      >
-        Mood
-      </Label>
-      <div className="flex flex-wrap items-center gap-1.5">
-        {book.moods.length ? (
-          book.moods.map((m) => <MoodChip key={m.id} name={m.name} to={`/moods/${m.id}`} />)
-        ) : (
-          <span className="text-[13px] text-muted">No mood set — how did it land on you?</span>
-        )}
-      </div>
-
-      {/* read log */}
-      <Label
-        action={
-          <button
-            type="button"
-            onClick={() => setDialog('log')}
-            className="text-[12px] text-primary"
-          >
-            + log a read
-          </button>
-        }
-      >
-        Read log
-      </Label>
-      <div className="mb-2 text-[13px] text-muted">
-        {reads && reads.length
-          ? `Read ${reads.length} time${reads.length > 1 ? 's' : ''}`
-          : book.readStatus === 'Read'
-            ? 'Marked read — log a date to see it on your calendar'
-            : 'Not logged yet'}
-      </div>
-      <div className="flex flex-col gap-2">
-        {(reads ?? []).map((r) => (
-          <Surface key={r.id} tone="field" radius="card" pad={2}>
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-[13.5px] font-semibold text-ink">{fmtDate(r.date)}</span>
-              <button
-                type="button"
-                onClick={() => deleteRead.mutate(r.id)}
-                className="text-[12px] text-muted hover:text-primary"
-              >
-                remove
-              </button>
-            </div>
-            <div className="mt-0.5 flex items-center gap-2 text-[12.5px] text-muted">
-              {r.format}
-              {r.rating ? <Stars value={r.rating} size={12} /> : null}
-            </div>
-            {r.notes && <div className="mt-1 text-[13px] text-ink">{r.notes}</div>}
-          </Surface>
-        ))}
-      </div>
-
-      {/* lists & shelves */}
-      <Label
-        action={
-          <button
-            type="button"
-            onClick={async () => {
-              const name = window.prompt('Name the new shelf / collection:')
-              if (!name) return
-              const created = await createList.mutateAsync({
-                name: name.trim(),
-                kind: 'collection',
-              })
-              toggleListItem.mutate({ listId: created.id, member: false })
-            }}
-            className="text-[12px] text-primary"
-          >
-            + new shelf
-          </button>
-        }
-      >
-        Lists &amp; shelves
-      </Label>
-      <div className="mb-1 text-[12px] text-muted">TBR lists</div>
-      <div className="flex flex-wrap gap-1.5">
-        {tbrs.length ? (
-          tbrs.map((l) => (
-            <Chip
-              key={l.id}
-              active={memberIds.has(l.id)}
-              onClick={() => toggleListItem.mutate({ listId: l.id, member: memberIds.has(l.id) })}
-            >
-              {l.priority && (
-                <>
-                  <BookmarkGlyph />{' '}
-                </>
-              )}
-              {l.name} {memberIds.has(l.id) ? '✓' : '+'}
-            </Chip>
-          ))
-        ) : (
-          <span className="text-[13px] text-muted">No TBR lists yet</span>
-        )}
-      </div>
-      <div className="mb-1 mt-3 text-[12px] text-muted">Collections &amp; shelves</div>
-      <div className="flex flex-wrap gap-1.5">
-        {collections.length ? (
-          collections.map((l) => (
-            <Chip
-              key={l.id}
-              active={memberIds.has(l.id)}
-              onClick={() => toggleListItem.mutate({ listId: l.id, member: memberIds.has(l.id) })}
-            >
-              {l.name} {memberIds.has(l.id) ? '✓' : '+'}
-            </Chip>
-          ))
-        ) : (
-          <span className="text-[13px] text-muted">No shelves yet</span>
-        )}
-      </div>
-
-      {/* plan */}
-      <Label>Plan a read date</Label>
-      <PlanEditor book={book} />
-
-      {book.ownership === 'owned' ? (
-        household.members.length > 0 && (
-          <Surface tone="field" radius="control" pad={2} className="mt-4 text-[12.5px] text-muted">
-            Included in the household library automatically because you own a copy.
-          </Surface>
-        )
-      ) : book.borrowed && household.members.length > 0 ? (
-        <button
-          type="button"
-          role="checkbox"
-          aria-checked={!!personalHouseholdShare}
-          disabled={
-            !household.authorized || shareWithHousehold.isPending || unshareFromHousehold.isPending
-          }
-          onClick={() =>
-            personalHouseholdShare
-              ? unshareFromHousehold.mutate(book.id)
-              : shareWithHousehold.mutate(book.id)
-          }
-          className="skin-control mt-4 flex w-full items-center justify-between border border-line px-3 py-2.5 text-left text-[13px] font-semibold text-ink disabled:opacity-50"
-          style={{ background: 'var(--field)' }}
         >
-          <span>
-            Share this borrowed book with the household
-            <span className="mt-0.5 block text-[11.5px] font-normal text-muted">
-              Your wishlist choice stays personal.
-            </span>
-          </span>
-          <span aria-hidden>{personalHouseholdShare ? '✓' : '○'}</span>
-        </button>
-      ) : null}
+          Your rating
+        </Label>
+        <Stars
+          value={book.rating}
+          step={0.5}
+          onChange={(v) => updateBook.mutate({ id: book.id, patch: { rating: v } })}
+        />
+        <p className="mt-1 text-[11.5px] text-muted">
+          Your rating only — Reverie never shows an averaged score.
+        </p>
+        {/* Audiobook-vs-print: shown only when two or more formats carry rated reads. Most recent
+          rated read per format — the display rule and its reasons live on latestRatingByFormat. */}
+        {formatRatings.length > 0 && (
+          /*
+           * STAR AND REVIEW TOGETHER, PER FORMAT. Both halves come from the same read — see
+           * `FormatRating.notes` — so the sentence under a format's stars is the opinion that
+           * produced them, never a note from a different sitting. Previously the words lived only
+           * in the reread log further down the page, which meant the one surface that exists to
+           * answer "was the audiobook better" showed the scores and hid the reasons.
+           *
+           * A format with no note renders its stars alone rather than an empty line: notes are
+           * optional, and a blank row would read as a missing thing rather than an unwritten one.
+           */
+          <div className="mt-2 flex flex-col gap-1.5" data-testid="format-ratings">
+            {formatRatings.map((f) => (
+              <div key={f.format} data-testid={`format-rating-${f.format}`}>
+                <span className="flex items-center gap-1.5 text-[12.5px] text-muted">
+                  {f.format}
+                  <Stars value={f.rating} size={12} />
+                </span>
+                {f.notes && (
+                  <p
+                    className="mt-0.5 text-[13px] text-ink"
+                    data-testid={`format-review-${f.format}`}
+                  >
+                    {f.notes}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
 
-      {householdWork ? (
-        <Surface tone="field" radius="control" pad={2} className="mt-4 text-[12.5px] text-muted">
-          <p>
-            Shared catalog edits do not change your personal copy automatically. Ownership, reading
-            history, rating, ISBN, and private notes are never part of this merge.
-          </p>
-          {sharedDetailsDiffer ? (
+        {/* read log */}
+        <Label
+          action={
             <button
               type="button"
-              disabled={adoptCorpusDetails.isPending}
-              onClick={() => {
-                if (
-                  !window.confirm(
-                    'Use the shared catalog’s series, genre, cover, and publication details for your personal copy? Your ownership, reading history, rating, ISBN, and private notes stay unchanged.',
-                  )
-                )
-                  return
-                adoptCorpusDetails.mutate(book.id)
-              }}
-              className="skin-control mt-2 border border-line px-3 py-2 text-[12px] font-semibold text-ink disabled:opacity-50"
-              style={{ background: 'var(--card)' }}
+              onClick={() => setDialog('log')}
+              className="text-[12px] text-primary"
             >
-              {adoptCorpusDetails.isPending ? 'Using shared details…' : 'Use shared details'}
+              Log a past read
             </button>
-          ) : (
-            <p className="mt-1.5 text-[11.5px]">Your copy already matches the shared details.</p>
-          )}
-        </Surface>
-      ) : null}
+          }
+        >
+          Read log
+        </Label>
+        <div className="mb-2 text-[13px] text-muted">
+          {reads && reads.length
+            ? `Read ${reads.length} time${reads.length > 1 ? 's' : ''}`
+            : book.readStatus === 'Read'
+              ? 'Marked read — log a date to see it on your calendar'
+              : 'Not logged yet'}
+        </div>
+        <div className="flex flex-col gap-2">
+          {(reads ?? []).map((r) => (
+            <Surface key={r.id} tone="field" radius="card" pad={2}>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[13.5px] font-semibold text-ink">{fmtDate(r.date)}</span>
+                <button
+                  type="button"
+                  onClick={() => deleteRead.mutate(r.id)}
+                  className="text-[12px] text-muted hover:text-primary"
+                >
+                  remove
+                </button>
+              </div>
+              <div className="mt-0.5 flex items-center gap-2 text-[12.5px] text-muted">
+                {r.format}
+                {r.rating ? <Stars value={r.rating} size={12} /> : null}
+              </div>
+              {r.notes && <div className="mt-1 text-[13px] text-ink">{r.notes}</div>}
+            </Surface>
+          ))}
+        </div>
+      </section>
 
-      {/* actions */}
-      <div className="mt-8 flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={() => setDialog('merge')}
-          className="skin-control border border-line px-4 py-2 text-[13px] font-semibold text-ink"
-          style={{ background: 'var(--card)' }}
+      <section aria-labelledby="series-and-plans" className="mt-8 border-t border-line pt-6">
+        <h2
+          id="series-and-plans"
+          className="mb-4 text-[20px] font-semibold text-ink"
+          style={{ fontFamily: 'var(--font-display)' }}
         >
-          Merge…
-        </button>
+          Series and plans
+        </h2>
+        <SeriesStrip book={book} />
+        {!book.series && (
+          <p className="text-[14px] text-muted">
+            No personal series is set. You can add one in Edit details.
+          </p>
+        )}
+        {/* lists & shelves */}
+        <Label
+          action={
+            <button
+              type="button"
+              onClick={async () => {
+                const name = window.prompt('Name the new shelf / collection:')
+                if (!name) return
+                const created = await createList.mutateAsync({
+                  name: name.trim(),
+                  kind: 'collection',
+                })
+                toggleListItem.mutate({ listId: created.id, member: false })
+              }}
+              className="text-[12px] text-primary"
+            >
+              + new shelf
+            </button>
+          }
+        >
+          Lists &amp; shelves
+        </Label>
+        <div className="mb-1 text-[12px] text-muted">TBR lists</div>
+        <div className="flex flex-wrap gap-1.5">
+          {tbrs.length ? (
+            tbrs.map((l) => (
+              <Chip
+                key={l.id}
+                active={memberIds.has(l.id)}
+                onClick={() => toggleListItem.mutate({ listId: l.id, member: memberIds.has(l.id) })}
+              >
+                {l.priority && (
+                  <>
+                    <BookmarkGlyph />{' '}
+                  </>
+                )}
+                {l.name} {memberIds.has(l.id) ? '✓' : '+'}
+              </Chip>
+            ))
+          ) : (
+            <span className="text-[13px] text-muted">No TBR lists yet</span>
+          )}
+        </div>
+        <div className="mb-1 mt-3 text-[12px] text-muted">Collections &amp; shelves</div>
+        <div className="flex flex-wrap gap-1.5">
+          {collections.length ? (
+            collections.map((l) => (
+              <Chip
+                key={l.id}
+                active={memberIds.has(l.id)}
+                onClick={() => toggleListItem.mutate({ listId: l.id, member: memberIds.has(l.id) })}
+              >
+                {l.name} {memberIds.has(l.id) ? '✓' : '+'}
+              </Chip>
+            ))
+          ) : (
+            <span className="text-[13px] text-muted">No shelves yet</span>
+          )}
+        </div>
+
+        {/* plan */}
+        <Label>Plan a read date</Label>
+        <PlanEditor book={book} />
+
+        {householdWork ? (
+          <Surface tone="field" radius="control" pad={2} className="mt-4 text-[12.5px] text-muted">
+            <p>
+              Shared catalog edits do not change your personal copy automatically. Ownership,
+              reading history, rating, ISBN, and private notes are never part of this merge.
+            </p>
+            {sharedDetailsDiffer ? (
+              <button
+                type="button"
+                disabled={adoptCorpusDetails.isPending}
+                onClick={() => {
+                  if (
+                    !window.confirm(
+                      'Use the shared catalog’s series, genre, cover, and publication details for your personal copy? Your ownership, reading history, rating, ISBN, and private notes stay unchanged.',
+                    )
+                  )
+                    return
+                  adoptCorpusDetails.mutate(book.id)
+                }}
+                className="skin-control mt-2 border border-line px-3 py-2 text-[12px] font-semibold text-ink disabled:opacity-50"
+                style={{ background: 'var(--card)' }}
+              >
+                {adoptCorpusDetails.isPending ? 'Using shared details…' : 'Use shared details'}
+              </button>
+            ) : (
+              <p className="mt-1.5 text-[11.5px]">Your copy already matches the shared details.</p>
+            )}
+          </Surface>
+        ) : null}
+      </section>
+
+      <section aria-labelledby="more-about-book" className="mt-8 border-t border-line pt-6">
+        <h2
+          id="more-about-book"
+          className="mb-4 text-[20px] font-semibold text-ink"
+          style={{ fontFamily: 'var(--font-display)' }}
+        >
+          More about this book
+        </h2>
         <button
           type="button"
-          onClick={() => {
-            if (
-              !window.confirm(
-                'Remove this book from your personal library? Reading history is preserved, and any household entry stays in the household.',
+          onClick={() => setDialog('edit')}
+          className="skin-control skin-btn-secondary min-h-11 px-4 text-[14px] font-semibold"
+        >
+          Edit details
+        </button>
+        {/* tags (Tryst skin: "Tropes") */}
+        <Label
+          action={
+            <button
+              type="button"
+              onClick={() => setDialog('trope')}
+              className="text-[12px] text-primary"
+            >
+              + tag
+            </button>
+          }
+        >
+          {labels.tags}
+        </Label>
+        {/* pinned lead with the skin's ornament; the rest collapse behind a count (≤5 visible) */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          {book.tropes.length ? (
+            <>
+              {(tropesExpanded ? book.tropes : book.tropes.slice(0, 5)).map((t) => (
+                <TropeChip key={t.id} name={t.name} emphasis={t.emphasis} to={`/tropes/${t.id}`} />
+              ))}
+              {book.tropes.length > 5 && (
+                <button
+                  type="button"
+                  onClick={() => setTropesExpanded((v) => !v)}
+                  className="skin-control border border-line px-2.5 py-1 text-[12px] font-semibold text-muted"
+                  style={{ background: 'var(--field)' }}
+                >
+                  {tropesExpanded ? 'fewer' : `+${book.tropes.length - 5} more`}
+                </button>
+              )}
+            </>
+          ) : (
+            <span className="text-[13px] text-muted">No {labels.tags.toLowerCase()} yet</span>
+          )}
+        </div>
+
+        {/* Mood — the reader's OWN impression (how it landed), its own area, apart from the descriptive
+          tropes above. Never derived: empty is a valid, quiet state (docs/archive/task-mood.md). */}
+        <Label
+          action={
+            <button
+              type="button"
+              onClick={() => setDialog('mood')}
+              className="text-[12px] text-primary"
+            >
+              {book.moods.length ? 'edit' : '+ mood'}
+            </button>
+          }
+        >
+          Mood
+        </Label>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {book.moods.length ? (
+            book.moods.map((m) => <MoodChip key={m.id} name={m.name} to={`/moods/${m.id}`} />)
+          ) : (
+            <span className="text-[13px] text-muted">No mood set — how did it land on you?</span>
+          )}
+        </div>
+
+        {/* reviews (opt-in, individual voices) */}
+        <div className="mt-4">
+          <ReviewsPanel workKey={workKey} reviewerName={reviewerName} />
+        </div>
+
+        {/* Tier 2: semantic neighbours from your own shelves (silent until embeddings exist) */}
+        <MoreLikeThis bookId={book.id} />
+
+        {isCorpusAdmin && book.cover && corpusWorkId ? (
+          <CorpusCoverReviewToggle
+            reviewed={coverReview.data === true}
+            loading={coverReview.isFetching}
+            unavailable={coverReviewUnavailable}
+            saving={reviewPersonalCover.isPending}
+            onReview={() =>
+              reviewPersonalCover.mutate({
+                bookId: book.id,
+                workId: corpusWorkId,
+                coverUrl: book.cover,
+              })
+            }
+          />
+        ) : null}
+
+        {/* actions */}
+        <div className="mt-8 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setDialog('merge')}
+            className="skin-control border border-line px-4 py-2 text-[13px] font-semibold text-ink"
+            style={{ background: 'var(--card)' }}
+          >
+            Merge…
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (
+                !window.confirm(
+                  'Remove this book from your personal library? Reading history is preserved, and any household entry stays in the household.',
+                )
               )
-            )
-              return
-            deleteBook.mutate(book.id, { onSuccess: () => void navigate({ to: '/' }) })
-          }}
-          // accent-ink, not primary: on this --card background, hearth/dark's --primary measures
-          // 2.24:1 (a11y sweep, 2026-08-10). There is no dedicated destructive/danger token in
-          // tokens.css — this button was leaning on --primary's reddish hue as its only color
-          // signal, with the label as the real signal. A --danger token is a queued follow-up;
-          // not designed here.
-          className="skin-control border border-line px-4 py-2 text-[13px] font-semibold"
-          style={{ background: 'var(--card)', color: 'var(--accent-ink)' }}
-        >
-          Remove from personal library
-        </button>
-      </div>
+                return
+              deleteBook.mutate(book.id, { onSuccess: () => void navigate({ to: '/' }) })
+            }}
+            // accent-ink, not primary: on this --card background, hearth/dark's --primary measures
+            // 2.24:1 (a11y sweep, 2026-08-10). There is no dedicated destructive/danger token in
+            // tokens.css — this button was leaning on --primary's reddish hue as its only color
+            // signal, with the label as the real signal. A --danger token is a queued follow-up;
+            // not designed here.
+            className="skin-control border border-line px-4 py-2 text-[13px] font-semibold"
+            style={{ background: 'var(--card)', color: 'var(--accent-ink)' }}
+          >
+            Remove from personal library
+          </button>
+        </div>
+      </section>
 
       {dialog === 'trope' && <TropePicker book={book} onClose={() => setDialog(null)} />}
       {dialog === 'mood' && (
@@ -874,7 +1017,13 @@ function BookDetailScreen() {
           <MoodPicker book={book} />
         </Modal>
       )}
-      {dialog === 'log' && <LogReadForm book={book} onClose={() => setDialog(null)} />}
+      {(dialog === 'log' || dialog === 'finish') && (
+        <LogReadForm
+          book={book}
+          mode={dialog === 'log' ? 'past' : 'finish'}
+          onClose={() => setDialog(null)}
+        />
+      )}
       {dialog === 'edit' && (
         <EditDetails
           book={book}

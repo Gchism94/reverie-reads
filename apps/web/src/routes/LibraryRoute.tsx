@@ -44,6 +44,7 @@ import { useIsDesktop, useIsWide } from '../hooks/useMediaQuery'
 import { useVoice } from '../skin/labels'
 import { SectionHeader, SignatureEmblem } from '../components/Structure'
 import { PageHeader } from '../components/PageHeader'
+import { LibraryNavigation } from '../components/LibraryNavigation'
 import { useAdminAddCorpusWorkTrope, useCorpusAdminStatus } from '../data/enrichCorpus'
 
 function Centered({ children }: { children: ReactNode }) {
@@ -405,36 +406,31 @@ export function LibraryHeader({
   className?: string
 }) {
   return (
-    <PageHeader
-      className={className}
-      eyebrow={readout}
-      title={scope === 'household' ? 'Household library' : 'Your library'}
-      description={
-        scope === 'household'
-          ? 'The books shared across your household, with every reader’s copy kept distinct.'
-          : 'Search, filter, and rediscover the books you’ve made part of your reading life.'
-      }
-      actions={
-        <>
-          <ScopeSwitch scope={scope} />
-          {scope === 'personal' ? (
+    <>
+      <PageHeader
+        className={className}
+        eyebrow={readout}
+        title={scope === 'household' ? 'Household library' : 'My library'}
+        description={
+          scope === 'household'
+            ? 'The books shared across your household, with every reader’s copy kept distinct.'
+            : 'Search, filter, and rediscover the books you’ve made part of your reading life.'
+        }
+        actions={
+          <>
+            <ScopeSwitch scope={scope} />
             <Link
-              to="/series"
-              className="skin-control skin-btn-primary flex h-10 items-center px-4 text-[12px]"
+              to="/add"
+              search={scope === 'household' ? { scope: 'household' } : {}}
+              className="skin-control skin-btn-primary flex min-h-11 items-center px-4 text-[14px]"
             >
-              Browse series
+              ＋ Add books
             </Link>
-          ) : null}
-          <Link
-            to="/add"
-            search={scope === 'household' ? { scope: 'household' } : {}}
-            className="skin-control skin-btn-primary flex h-10 items-center px-4 text-[12px]"
-          >
-            ＋ Add books
-          </Link>
-        </>
-      }
-    />
+          </>
+        }
+      />
+      {scope === 'personal' && <LibraryNavigation current="books" className="mb-4 mt-4" />}
+    </>
   )
 }
 
@@ -578,7 +574,8 @@ function HouseholdLibraryScreen() {
         <HouseholdCentered>
           <h2 className="text-[18px] font-semibold text-ink">No household linked</h2>
           <p className="mt-2">
-            This account is not part of a household. Personal remains your active library.
+            Household access is not set up for this account. Your personal books remain in My
+            library.
           </p>
         </HouseholdCentered>
       ) : (
