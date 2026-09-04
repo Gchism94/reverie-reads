@@ -147,7 +147,8 @@ Only policy-safe proposals count as automatic fills; review and abstain decision
 This shadow harness is intentionally not a production Edge Function. Production integration waits
 until the authority-reviewed sample meets the gates below.
 
-The first live 10-case shadow and the prompt/lineage correction it exposed are recorded in
+The first live 10-case shadow, the prompt/lineage correction it exposed, and the corrected full
+23-case pilot are recorded in
 `reports/resolver-shadow-pilot-2026-09-04.md`.
 
 ## Decision rule
