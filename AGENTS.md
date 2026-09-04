@@ -47,6 +47,8 @@ Genre-specific language belongs in a skin, not in the core.
 apps/web/            React app (UI, routes, components) + Playwright e2e
 packages/core/       shared TS types + pure logic (merge, CSV import, spoiler gate, skins,
                      covers, taste) — everything testable without a browser
+packages/series-source-trial/ reproducible provider evaluation; reads local secrets, never writes
+                     Supabase or treats search labels as membership evidence
 supabase/            migrations, edge functions, seed
 prototype/ data/ design/ docs/ backend/   ← reference material, not shipped
 ```
@@ -173,6 +175,7 @@ pnpm test           # unit tests (Vitest, all packages)
 pnpm e2e            # Playwright (includes the axe sweep — four skins x both modes)
 pnpm lint           # ESLint
 pnpm typecheck      # tsc --noEmit, all packages
+pnpm series:trial -- --scope all --providers openlibrary,wikidata  # provider evidence trial
 pnpm db:start       # local Supabase stack   (db:stop / db:reset / db:status)
 pnpm db:migrate     # apply migrations + reload the PostgREST schema
 pnpm db:seed        # load the dev library

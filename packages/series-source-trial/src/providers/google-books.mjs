@@ -15,7 +15,11 @@ export const googleBooks = {
     note: 'Google API terms restrict permanent copying and database construction.',
   },
   async run(cases, progress = () => {}) {
-    const apiKey = process.env.GOOGLE_BOOKS_API_KEY ?? process.env.VITE_GOOGLE_BOOKS_KEY ?? ''
+    const apiKey =
+      process.env.GOOGLE_BOOKS_KEY ??
+      process.env.GOOGLE_BOOKS_API_KEY ??
+      process.env.VITE_GOOGLE_BOOKS_KEY ??
+      ''
     const referrer = process.env.GOOGLE_BOOKS_REFERRER ?? ''
     const results = Array(cases.length)
     let nextIndex = 0

@@ -41,6 +41,10 @@ GOOGLE_BOOKS_REFERRER=https://your-authorized-origin.example \
 pnpm series:trial -- --scope all --providers google-books
 ```
 
+`GOOGLE_BOOKS_KEY` is accepted as an alias for `GOOGLE_BOOKS_API_KEY`, matching the production
+Supabase secret name. Production uses `BOOKS_KEY_REFERER`; the trial uses
+`GOOGLE_BOOKS_REFERRER`. Both should name an origin allowed by the Google Cloud key restriction.
+
 Keys are read from the environment, are never written to reports, and must not be committed.
 The runner also loads `packages/series-source-trial/.env.local` when present; that path is ignored
 by Git.
