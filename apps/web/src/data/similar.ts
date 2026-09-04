@@ -59,7 +59,7 @@ export function useVibeSearch() {
   return useMutation({
     meta: { action: 'Similar books' },
     mutationFn: async (query: string): Promise<SimilarHit[]> => {
-      const { data, error } = await supabase.functions.invoke('embed', { body: { mode: 'vibe', query, count: 12 } })
+      const { data, error } = await supabase.functions.invoke('embed', { body: { mode: 'vibe', query, count: 24 } })
       if (error) throw error
       return ((data as { hits?: SimilarHit[] })?.hits ?? []).filter((h) => h && typeof h.book_id === 'string')
     },

@@ -68,7 +68,9 @@ async function signIn(page: Page, session: { access_token: string; refresh_token
     `/#access_token=${session.access_token}&refresh_token=${session.refresh_token}&expires_in=3600&token_type=bearer&type=magiclink`,
   )
   await page.getByRole('button', { name: /enter your library/i }).click({ timeout: 20_000 })
-  await expect(page.getByRole('navigation')).toBeVisible({ timeout: 20_000 })
+  await expect(page.getByRole('navigation', { name: 'Primary', exact: true })).toBeVisible({
+    timeout: 20_000,
+  })
 }
 
 async function stub(page: Page) {
@@ -244,9 +246,11 @@ test('gradient: a horror book whose first subgenre is Dark Romance does not tint
     await signIn(page, c.session)
 
     /** The first gradient stop on the cover frame, as the browser serialises it. */
-    const tintOf = async (id: string): Promise<[number, number, number]> => {
+    const tintOf = async (id: string, title: string): Promise<[number, number, number]> => {
       await page.goto(`/book/${id}`)
-      await expect(page.getByRole('heading')).toBeVisible({ timeout: 20_000 })
+      await expect(page.getByRole('heading', { level: 1, name: title, exact: true })).toBeVisible({
+        timeout: 20_000,
+      })
       const frame = page.getByRole('button', { name: /Change cover|Add a cover/ }).first()
       const style = (await frame.getAttribute('style')) ?? ''
       // The browser normalises the inline hsl() to rgb() on read-back, so compare the colour itself.
@@ -257,8 +261,8 @@ test('gradient: a horror book whose first subgenre is Dark Romance does not tint
 
     // Same subgenre, DIFFERENT genre → different colour. Pre-fix these were byte-identical, because
     // the tint came from subgenre[0] alone and both books' first pick was "Dark Romance".
-    const h = await tintOf(horror)
-    const r = await tintOf(romance)
+    const h = await tintOf(horror, 'Oxblood Probe')
+    const r = await tintOf(romance, 'Rose Probe')
     expect(h, 'the horror book must not wear the romance family').not.toEqual(r)
     // And horror reads as oxblood: red-dominant, not the rose the romance family uses.
     expect(h[0]).toBeGreaterThan(h[2])

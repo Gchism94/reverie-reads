@@ -15,9 +15,22 @@ describe('navigation contract', () => {
     const grouped = NAVIGATION_GROUPS.flatMap((group) => group.items)
     expect(grouped).toEqual(NAVIGATION_ITEMS)
     expect(new Set(NAVIGATION_ITEMS.map((item) => item.to)).size).toBe(NAVIGATION_ITEMS.length)
-    expect(MOBILE_TAB_ITEMS.map((item) => item.label)).toEqual(['Home', 'Library', 'Tropes'])
-    expect(MORE_NAVIGATION_ITEMS.some((item) => item.label === 'Skins')).toBe(true)
+    expect(MOBILE_TAB_ITEMS.map((item) => item.label)).toEqual(['Home', 'Library', 'Next read'])
+    expect(NAVIGATION_GROUPS[0].items).toEqual(MOBILE_TAB_ITEMS)
+    expect(MORE_NAVIGATION_ITEMS.some((item) => item.label === 'Appearance')).toBe(true)
     expect(MORE_NAVIGATION_ITEMS.some((item) => item.label === 'Settings')).toBe(true)
+    expect(MORE_NAVIGATION_ITEMS.map((item) => item.to)).toEqual([
+      '/shelves',
+      '/series',
+      '/planner',
+      '/stats',
+      '/tropes',
+      '/discover',
+      '/clubs',
+      '/indie',
+      '/skins',
+      '/settings',
+    ])
   })
 
   it('gives every registered skin a desktop surface, active state, and mobile dock', () => {
@@ -35,6 +48,10 @@ describe('navigation contract', () => {
   it('names primary and detail destinations in compact mobile chrome', () => {
     expect(navigationLabelForPath('/')).toBe('Home')
     expect(navigationLabelForPath('/library')).toBe('Library')
+    expect(navigationLabelForPath('/match')).toBe('Next read')
+    expect(navigationLabelForPath('/indie')).toBe('Bookshops')
+    expect(navigationLabelForPath('/skins')).toBe('Appearance')
+    expect(navigationLabelForPath('/settings')).toBe('Settings')
     expect(navigationLabelForPath('/series/the-court')).toBe('Series')
     expect(navigationLabelForPath('/tropes/slow-burn')).toBe('Trope')
     expect(navigationLabelForPath('/book/abc-123')).toBe('Book record')

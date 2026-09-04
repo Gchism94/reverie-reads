@@ -93,7 +93,9 @@ async function signIn(page: Page, session: { access_token: string; refresh_token
     `/#access_token=${session.access_token}&refresh_token=${session.refresh_token}&expires_in=3600&token_type=bearer&type=magiclink`,
   )
   await page.getByRole('button', { name: /enter your library/i }).click({ timeout: 20_000 })
-  await expect(page.getByRole('navigation')).toBeVisible({ timeout: 20_000 })
+  await expect(page.getByRole('navigation', { name: 'Primary', exact: true })).toBeVisible({
+    timeout: 20_000,
+  })
 }
 
 async function stub(page: Page) {
@@ -389,10 +391,10 @@ test('a rating in the reading log leaves the book’s own rating untouched', asy
     expect((await rowOf(c, id)).rating).toBe(5)
 
     await page
-      .getByRole('button', { name: /Log a read/i })
+      .getByRole('button', { name: /Log a past read/i })
       .first()
       .click()
-    const dlg = page.getByRole('dialog', { name: /Log a read/i })
+    const dlg = page.getByRole('dialog', { name: /Log a past read/i })
     await expect(dlg).toBeVisible({ timeout: 15_000 })
     // Give THIS read 2 stars — pre-fix that overwrote the book's 5. The control is the
     // WAI-ARIA slider now (half stars); drive it by keyboard, which doubles as e2e proof of
@@ -404,7 +406,7 @@ test('a rating in the reading log leaves the book’s own rating untouched', asy
     await dlg.getByRole('button', { name: /Save to read log/i }).click()
     await expect(dlg).toBeHidden({ timeout: 15_000 })
 
-    // The read carries the rating; the book keeps its own; logging still marks it read.
+    // A past read carries its rating without changing the book rating or current status.
     await expect
       .poll(
         async () =>
@@ -418,7 +420,7 @@ test('a rating in the reading log leaves the book’s own rating untouched', asy
     expect(reads[0]!.rating).toBe(2)
     const after = await rowOf(c, id)
     expect(after.rating, 'the book’s own rating must not move').toBe(5)
-    expect(after.read_status).toBe('Read')
+    expect(after.read_status).toBe('unset')
 
     // And it survives a reload — the book page still shows five stars.
     await page.reload()

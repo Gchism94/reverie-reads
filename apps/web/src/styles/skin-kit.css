@@ -436,6 +436,11 @@
   border-right: 1px solid var(--line);
   box-shadow: 12px 0 34px color-mix(in srgb, var(--vignette) 32%, transparent);
 }
+/* The live sidebar stays in reach while a library scrolls. The shared surface's relative
+   positioning is for its decoration and previews; it must not replace the app's sticky rail. */
+.rv-nav-surface.rv-sidebar {
+  position: sticky;
+}
 .rv-nav-surface::before {
   content: '';
   position: absolute;

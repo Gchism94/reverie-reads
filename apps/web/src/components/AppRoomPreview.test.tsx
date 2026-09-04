@@ -12,7 +12,7 @@ describe('AppRoomPreview', () => {
       }),
     ).toBeInTheDocument()
     expect(container.querySelector('.rv-nav-surface')).not.toBeNull()
-    expect(container.querySelectorAll('.rv-nav-item')).toHaveLength(4)
+    expect(container.querySelectorAll('.rv-nav-item')).toHaveLength(3)
     expect(container.querySelector('.rv-nav-item-active')).not.toBeNull()
     expect(container.querySelector('.skin-btn-primary')).not.toBeNull()
     expect(container.querySelectorAll('.skin-card')).toHaveLength(4)

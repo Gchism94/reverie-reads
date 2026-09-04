@@ -107,7 +107,9 @@ async function signIn(page: Page, session: { access_token: string; refresh_token
     `/#access_token=${session.access_token}&refresh_token=${session.refresh_token}&expires_in=3600&token_type=bearer&type=magiclink`,
   )
   await page.getByRole('button', { name: /enter your library/i }).click({ timeout: 20_000 })
-  await expect(page.getByRole('navigation')).toBeVisible({ timeout: 20_000 })
+  await expect(page.getByRole('navigation', { name: 'Primary', exact: true })).toBeVisible({
+    timeout: 20_000,
+  })
 }
 
 const scrollY = (page: Page) => page.evaluate(() => Math.round(window.scrollY))
@@ -196,10 +198,13 @@ test('back navigation restores where the reader was', async ({ page, isMobile })
     await page.getByRole('button', { name: new RegExp('^Open Scroll Probe 01') }).click()
     await page.waitForURL(/\/book\//)
   } else {
-    await page
-      .getByRole('link', { name: /shelves/i })
-      .first()
-      .click()
+    const shelves = page
+      .getByRole('navigation', { name: 'Primary', exact: true })
+      .getByRole('link', { name: 'Shelves', exact: true })
+    // A reader clicks the persistent sidebar where they are. Playwright must not scroll the
+    // entire library back to a vanished sidebar before clicking and change the position to save.
+    await expect(shelves).toBeInViewport({ ratio: 1 })
+    await shelves.click()
     await page.waitForURL(/\/shelves/)
   }
   await page.locator('main').waitFor({ state: 'visible' })
