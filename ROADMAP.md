@@ -68,30 +68,35 @@ not change the same state or bypass the earlier item's completion gate.
 
 ## P2 — planned product and reliability work
 
-These are ordered within P2, but they do not block the P0/P1 sequence above.
+The signed-out and accessibility coverage item is complete. `a11y.spec.ts` scans the landing page,
+the complete skin-character lab, sign-in, sign-up, expired-link, and password-recovery states with
+axe; the registry-backed sweep covers every skin in both modes. `landing.spec.ts` separately proves
+the desktop and mobile product stages, 390px viewport containment, touch-sized navigation, and
+reduced motion. Placeholder contrast remains guarded across every skin/mode/accent combination in
+core, while rendered no-cover imports retain browser-level axe coverage. Keep these tests; closing
+the roadmap item does not remove or weaken the regression boundary.
+
+The remaining items are ordered within P2, but they do not block the P0/P1 sequence above.
 
 1. **Deploy/CI safety residue.** Address production RPC ACL verification, the deploy guard's
    duplicate confirmation, bounded Supabase-start recovery/cleanup, e2e TypeScript coverage,
    resilient fixture cleanup, Deno-function execution coverage, and useful/non-corrupt browser
    artifacts as narrow follow-ups. The check-topology simplification itself is complete; do not
    reopen it as a second redesign without new evidence.
-2. **Signed-out and accessibility coverage.** Extend viewport coverage to landing/auth routes, put
-   the cover placeholder in the axe sweep, and retain real rendered-cover quality coverage. The
-   landing redesign should close its overlapping portion.
-3. **Spine reveal band.** Implement the already-decided shared, fixed-height reveal band only after
+2. **Spine reveal band.** Implement the already-decided shared, fixed-height reveal band only after
    revalidating `docs/tasks/task-spine-reveal-band.md` against the current UI.
-4. **Calendar/Releases cluster.** The sparse calendar pass shipped. Revalidate the remaining
+3. **Calendar/Releases cluster.** The sparse calendar pass shipped. Revalidate the remaining
    Calendar/Releases route, density, mobile, and heatmap decisions in
    `docs/tasks/task-calendar-cluster-scope.md` before another implementation branch.
-5. **Library state and synchronization.** Decide URL precedence for filters; fix realtime lifecycle
+4. **Library state and synchronization.** Decide URL precedence for filters; fix realtime lifecycle
    across sign-out and assess personal-book/list subscriptions. Treat a true offline write queue as
    its own subsystem, not a quick caching patch.
-6. **Reader safeguards and polish.** Add a restore preflight with real counts, eliminate fresh-device
+5. **Reader safeguards and polish.** Add a restore preflight with real counts, eliminate fresh-device
    mode flash, resolve dense-grid state indicators, and convert the remaining risky literal glyphs
    to controlled SVGs.
-7. **Reading progress.** Decide whether percent-only progress is sufficient; pages/chapters require
+6. **Reading progress.** Decide whether percent-only progress is sufficient; pages/chapters require
    schema, import/export, stats, and UI semantics together.
-8. **Cover pipeline efficiency.** Remove repeated image decodes only after measuring CPU/memory and
+7. **Cover pipeline efficiency.** Remove repeated image decodes only after measuring CPU/memory and
    preserving current cover-quality guards.
 
 ## P3 — deferred, scheduled, or evidence-triggered
