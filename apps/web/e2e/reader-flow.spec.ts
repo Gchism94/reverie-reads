@@ -181,13 +181,16 @@ test('on a compact phone a reread preserves history through start, progress, and
     await page.goto(`/book/${id}`)
     await page.getByRole('button', { name: 'Read again', exact: true }).click()
     await expect(page.getByRole('button', { name: 'Update progress', exact: true })).toBeVisible()
-    expect(await c.row(id)).toMatchObject({
-      read_status: 'Reading',
-      progress: 0,
-      rating: 5,
-      ownership: 'unowned',
-      wishlist: true,
-    })
+    // The button updates optimistically; verify the durable write instead of racing its response.
+    await expect
+      .poll(() => c.row(id))
+      .toMatchObject({
+        read_status: 'Reading',
+        progress: 0,
+        rating: 5,
+        ownership: 'unowned',
+        wishlist: true,
+      })
     expect(await c.reads(id)).toHaveLength(1)
     await page.getByRole('button', { name: 'Update progress', exact: true }).click()
     const progress = page.getByRole('slider', { name: 'Reading progress' })
