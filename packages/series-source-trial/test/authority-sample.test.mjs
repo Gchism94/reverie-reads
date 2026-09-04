@@ -52,16 +52,16 @@ test('reports the exact reviewed and sampling gaps in the current authority set'
   assert.equal(audit.ready, false)
   assert.deepEqual(audit.counts, {
     selected: 80,
-    reviewed: 23,
-    candidate: 57,
-    reviewedPositive: 12,
+    reviewed: 33,
+    candidate: 47,
+    reviewedPositive: 22,
     reviewedStandalone: 11,
     selectionTarget: 200,
     selectionGap: 120,
   })
   assert.deepEqual(Object.fromEntries(audit.targets.map((target) => [target.id, target.gap])), {
-    reviewed_cases: 177,
-    reviewed_positive_cases: 88,
+    reviewed_cases: 167,
+    reviewed_positive_cases: 78,
     reviewed_standalone_cases: 39,
   })
   assert.deepEqual(
@@ -71,10 +71,24 @@ test('reports the exact reviewed and sampling gaps in the current authority set'
       label: 'Reverie seeded series',
       minimumReviewed: 69,
       selected: 69,
-      reviewed: 12,
-      candidate: 57,
-      gap: 57,
+      reviewed: 22,
+      candidate: 47,
+      gap: 47,
       met: false,
+    },
+  )
+
+  assert.deepEqual(
+    Object.fromEntries(
+      audit.strata
+        .filter(({ id }) =>
+          ['recent_traditional', 'multi_series_or_connected_universe'].includes(id),
+        )
+        .map(({ id, reviewed, gap }) => [id, { reviewed, gap }]),
+    ),
+    {
+      recent_traditional: { reviewed: 6, gap: 44 },
+      multi_series_or_connected_universe: { reviewed: 2, gap: 18 },
     },
   )
 })
@@ -130,6 +144,7 @@ test('supports overlapping strata but requires their audit metadata', () => {
   const testCase = reviewedCase({
     publicationYear: 2025,
     publicationPath: 'independent',
+    sampleSources: [source],
     riskFeatures: ['connected_universe'],
     strata: ['recent_independent_or_kindle_first', 'multi_series_or_connected_universe'],
     truth: {
@@ -167,6 +182,31 @@ test('supports overlapping strata but requires their audit metadata', () => {
     smallPolicy(),
   )
   assert.ok(invalid.errors.some((error) => error.includes('membershipsComplete')))
+})
+
+test('requires first-party sampling provenance for a recent-publication stratum', () => {
+  const testCase = reviewedCase({
+    publicationYear: 2025,
+    publicationPath: 'traditional',
+    strata: ['recent_traditional'],
+  })
+  const samplePlan = smallPlan([
+    { id: 'recent_traditional', label: 'Traditional', minimumReviewed: 1 },
+  ])
+  const invalid = auditAuthoritySample(
+    { cases: [testCase], sharedSources: {} },
+    samplePlan,
+    smallPolicy(),
+  )
+
+  assert.ok(invalid.errors.some((error) => error.includes('sampleSources')))
+
+  const valid = auditAuthoritySample(
+    { cases: [{ ...testCase, sampleSources: [source] }], sharedSources: {} },
+    samplePlan,
+    smallPolicy(),
+  )
+  assert.equal(valid.valid, true)
 })
 
 test('rejects duplicate works even when their case ids differ', () => {

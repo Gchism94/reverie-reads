@@ -144,9 +144,26 @@ test('prevents the resolver from accepting a Hardcover-only self-titled relation
   const validation = validateResolution(packet, proposal)
   assert.equal(validation.valid, true)
   assert.equal(validation.policySafe, false)
+  assert.ok(validation.policyViolations.some((error) => error.includes('self_titled_relation')))
+})
+
+test('prevents the resolver from accepting a Hardcover reading-order relationship', () => {
+  const hardcoverRun = structuredClone(run)
+  hardcoverRun.provider = 'hardcover'
+  hardcoverRun.results[0].seriesClaims[0].series = 'The Sequence World Reading Order'
+  hardcoverRun.results[0].seriesClaims[0].memberCount = 12
+  const packet = buildEvidencePacket(testCase, [hardcoverRun])
+  const proposal = structuredClone(accepted)
+  proposal.memberships[0].series = 'The Sequence World Reading Order'
+  proposal.memberships[0].evidenceIds = ['hardcover:membership:0']
+  proposal.identity.evidenceIds = ['hardcover:identity']
+
+  const validation = validateResolution(packet, proposal)
+  assert.equal(validation.valid, true)
+  assert.equal(validation.policySafe, false)
   assert.ok(
     validation.policyViolations.some((error) =>
-      error.includes('independent_corroboration_required'),
+      error.includes('possible_reading_order_not_series'),
     ),
   )
 })

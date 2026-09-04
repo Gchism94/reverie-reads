@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "reviewedAt": "2026-09-03",
+  "reviewedAt": "2026-09-04",
   "cases": [
     {
       "id": "gold-a-court-of-silver-flames",
@@ -292,6 +292,343 @@
             "url": "https://www.harperreach.com/wp-content/uploads/sites/70/2025/03/2025_LBF_Catalogue_SCREENspreads.pdf"
           }
         ]
+      }
+    },
+    {
+      "id": "reverie-hades-x-persephone-sage-a-touch-of-chaos",
+      "title": "A Touch of Chaos",
+      "authors": ["Scarlett St. Clair"],
+      "identifiers": { "isbn13": ["9781728259765"] },
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "strata": ["recent_traditional", "multi_series_or_connected_universe"],
+      "publicationYear": 2024,
+      "publicationPath": "traditional",
+      "sampleSources": [
+        {
+          "kind": "publisher",
+          "url": "https://www.sourcebooks.com/9781728259765-a-touch-of-chaos-hc.html"
+        }
+      ],
+      "riskFeatures": ["connected_universe"],
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "membershipsComplete": true,
+        "memberships": [
+          {
+            "series": "Hades x Persephone Saga",
+            "aliases": ["Hades x Persephone"],
+            "role": "primary",
+            "positions": [{ "value": 7, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          {
+            "kind": "publisher",
+            "url": "https://www.sourcebooks.com/9781728259765-a-touch-of-chaos-hc.html"
+          },
+          { "kind": "author", "url": "https://www.scarlettstclair.com/book-atoc" }
+        ],
+        "reviewNote": "The publisher and author identify one combined Hades x Persephone sequence at book 7; the competing book-4 grouping is not a separate membership."
+      }
+    },
+    {
+      "id": "reverie-sugerlake-beneath-the-stars",
+      "title": "Beneath the Stars",
+      "authors": ["Emily McIntire"],
+      "identifiers": { "isbn13": ["9781464229718"] },
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Sugarlake",
+            "aliases": ["Sugarlake Series"],
+            "role": "primary",
+            "positions": [{ "value": 1, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          { "kind": "author", "url": "https://emilymcintire.com/books/" },
+          {
+            "kind": "publisher",
+            "url": "https://www.bloombooks.com/9781464229718-beneath-the-stars-tp.html"
+          }
+        ],
+        "reviewNote": "Both first-party sources identify Sugarlake book 1, correcting the seed spelling Sugerlake."
+      }
+    },
+    {
+      "id": "reverie-spit-or-swallow-between-two-kings",
+      "title": "Between Two Kings",
+      "authors": ["Lindsay Straube"],
+      "identifiers": { "isbn13": ["9781464247606"] },
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "strata": ["recent_traditional"],
+      "publicationYear": 2025,
+      "publicationPath": "traditional",
+      "sampleSources": [
+        {
+          "kind": "publisher",
+          "url": "https://www.sourcebooks.com/9781464247606-between-two-kings-deluxe-edition-tp.html"
+        }
+      ],
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Split or Swallow",
+            "aliases": ["Split or Swallow Series"],
+            "role": "primary",
+            "positions": [{ "value": 2, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          {
+            "kind": "publisher",
+            "url": "https://www.sourcebooks.com/9781464247606-between-two-kings-deluxe-edition-tp.html"
+          }
+        ],
+        "reviewNote": "The publisher identifies Split or Swallow book 2, correcting the seed spelling Spit or Swallow."
+      }
+    },
+    {
+      "id": "reverie-villians-of-lore-bonds-of-hercules",
+      "title": "Bonds of Hercules",
+      "authors": ["Jasmine Mas"],
+      "identifiers": { "isbn13": ["9780369764669"] },
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "strata": ["recent_traditional"],
+      "publicationYear": 2025,
+      "publicationPath": "traditional",
+      "sampleSources": [
+        {
+          "kind": "publisher",
+          "url": "https://harlequin.com/products/bonds-of-hercules"
+        }
+      ],
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Villains of Lore",
+            "aliases": ["Villains of Lore Series"],
+            "role": "primary",
+            "positions": [{ "value": 2, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          {
+            "kind": "publisher",
+            "url": "https://harlequin.com/products/bonds-of-hercules"
+          },
+          { "kind": "author", "url": "https://jasminemasbooks.com/" }
+        ],
+        "reviewNote": "The publisher identifies Villains of Lore book 2, correcting the seed spelling Villians of Lore."
+      }
+    },
+    {
+      "id": "reverie-bellinger-series-it-happened-one-summer",
+      "title": "It Happened One Summer",
+      "authors": ["Tessa Bailey"],
+      "identifiers": { "isbn13": ["9780063045668"] },
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "strata": ["recent_traditional"],
+      "publicationYear": 2021,
+      "publicationPath": "traditional",
+      "sampleSources": [
+        {
+          "kind": "publisher",
+          "url": "https://www.harpercollins.com/products/it-happened-one-summer-tessa-bailey"
+        }
+      ],
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Bellinger Sisters",
+            "aliases": ["Bellinger Sisters Series"],
+            "role": "primary",
+            "positions": [{ "value": 1, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          {
+            "kind": "author",
+            "url": "https://www.tessabailey.com/home/books/contemporary/bellinger-sisters/"
+          },
+          {
+            "kind": "publisher",
+            "url": "https://www.harpercollins.com/products/it-happened-one-summer-tessa-bailey"
+          }
+        ],
+        "reviewNote": "The author identifies the Bellinger Sisters series and calls this its first book, replacing the seed's zero position and generic series label."
+      }
+    },
+    {
+      "id": "reverie-flame-and-throns-realm-of-wind-and-vines",
+      "title": "Realm of Wind and Vines",
+      "authors": ["Marion Blackwood"],
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Flame and Thorns",
+            "aliases": [],
+            "role": "primary",
+            "positions": [{ "value": 4, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          { "kind": "author", "url": "https://www.marionblackwood.com/books" }
+        ],
+        "reviewNote": "The author's reading order identifies Flame and Thorns book 4, correcting the seed spelling Flame and Throns."
+      }
+    },
+    {
+      "id": "reverie-crimson-moth-rebel-witch",
+      "title": "Rebel Witch",
+      "authors": ["Kristen Ciccarelli"],
+      "identifiers": { "isbn13": ["9781250866929"] },
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "strata": ["recent_traditional"],
+      "publicationYear": 2025,
+      "publicationPath": "traditional",
+      "sampleSources": [
+        {
+          "kind": "publisher",
+          "url": "https://us.macmillan.com/books/9781250866929/rebelwitch/"
+        }
+      ],
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "The Crimson Moth",
+            "aliases": ["Crimson Moth", "The Crimson Moth Duology"],
+            "role": "primary",
+            "positions": [{ "value": 2, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          {
+            "kind": "publisher",
+            "url": "https://us.macmillan.com/books/9781250866929/rebelwitch/"
+          },
+          {
+            "kind": "publisher",
+            "url": "https://us.macmillan.com/series/thecrimsonmoth"
+          }
+        ],
+        "reviewNote": "Macmillan identifies The Crimson Moth volume 2 and describes the work as the duology's conclusion."
+      }
+    },
+    {
+      "id": "reverie-gods-of-the-dame-the-defender",
+      "title": "The Defender",
+      "authors": ["Ana Huang"],
+      "identifiers": { "isbn13": ["9781464223334"] },
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "strata": ["recent_traditional"],
+      "publicationYear": 2025,
+      "publicationPath": "traditional",
+      "sampleSources": [
+        {
+          "kind": "publisher",
+          "url": "https://www.bloombooks.com/9781464223334-the-defender-deluxe-edition-tp.html"
+        }
+      ],
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Gods of the Game",
+            "aliases": ["Gods of the Game Series"],
+            "role": "primary",
+            "positions": [{ "value": 2, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          { "kind": "author", "url": "https://anahuang.com/reading-order/" },
+          {
+            "kind": "publisher",
+            "url": "https://www.bloombooks.com/9781464223334-the-defender-deluxe-edition-tp.html"
+          }
+        ],
+        "reviewNote": "The author and publisher identify Gods of the Game book 2, correcting the seed spelling Gods of the Dame."
+      }
+    },
+    {
+      "id": "reverie-blood-and-ash-the-primal-of-blood-and-bone",
+      "title": "The Primal of Blood and Bone",
+      "authors": ["Jennifer L. Armentrout"],
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "strata": ["multi_series_or_connected_universe"],
+      "riskFeatures": ["connected_universe"],
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "membershipsComplete": true,
+        "memberships": [
+          {
+            "series": "Blood and Ash",
+            "aliases": ["Blood and Ash Series"],
+            "role": "primary",
+            "positions": [{ "value": 6, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          {
+            "kind": "author",
+            "url": "https://jenniferlarmentrout.com/books/the-primal-of-blood-and-bone/"
+          },
+          { "kind": "author", "url": "https://jenniferlarmentrout.com/faq/" }
+        ],
+        "reviewNote": "The author identifies Blood and Ash book 6; the cross-series Blood and Ash World reading order is guidance, not a second series membership."
+      }
+    },
+    {
+      "id": "reverie-green-creek-wolfsong",
+      "title": "Wolfsong",
+      "authors": ["TJ Klune"],
+      "identifiers": { "isbn13": ["9781250890313"] },
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Green Creek",
+            "aliases": ["Green Creek Series"],
+            "role": "primary",
+            "positions": [{ "value": 1, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          {
+            "kind": "publisher",
+            "url": "https://us.macmillan.com/books/9781250890313/wolfsong/"
+          }
+        ],
+        "reviewNote": "Macmillan identifies Wolfsong as Green Creek volume 1, providing a clean control for the agreeing Inventaire and Hardcover relationships."
       }
     },
     {

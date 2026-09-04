@@ -18,7 +18,7 @@ useful for measuring coverage and discovering disagreements, but they do not con
 accuracy until an authority source has been reviewed.
 
 The current first wave contains one difficult work from each of Reverie's 69 distinct seeded series,
-12 authority-reviewed positive cases, and 11 publisher-declared standalone controls. Some reviewed
+22 authority-reviewed positive cases, and 11 publisher-declared standalone controls. Some reviewed
 cases replace seed references, so the final distinct-case count is printed at runtime.
 
 ## Run the open-source baseline
@@ -102,20 +102,20 @@ validation rejects unsupported values and keeps singleton or conflicting relatio
 Before a packet reaches the model, a deterministic cleaner assigns each claim a source role,
 membership rule, lineage, risk flags, and separate membership/order eligibility:
 
-| Source       | Usable resolver input               | Automatic membership rule                     | Automatic order rule                    |
-| ------------ | ----------------------------------- | --------------------------------------------- | --------------------------------------- |
-| Google Books | Work identity only                  | Never                                         | Never                                   |
-| Open Library | Exact structured relationship       | Non-singleton exact-work relation             | Independent agreement                   |
-| Wikidata     | Exact P179 relationship             | Non-singleton exact-work relation             | Independent agreement on P1545          |
-| Inventaire   | Exact `serie-parts` roster relation | Non-singleton; `wd:` mirrors remain Wikidata  | Independent non-mirror agreement        |
-| BookBrainz   | Exact series-roster relation        | Non-singleton exact-work relation             | Never until dependable order is exposed |
-| Hardcover    | Exact `book_series` relation        | Independent open-graph corroboration required | Independent agreement                   |
+| Source       | Usable resolver input               | Automatic membership rule                    | Automatic order rule                    |
+| ------------ | ----------------------------------- | -------------------------------------------- | --------------------------------------- |
+| Google Books | Work identity only                  | Never                                        | Never                                   |
+| Open Library | Exact structured relationship       | Non-singleton exact-work relation            | Independent agreement                   |
+| Wikidata     | Exact P179 relationship             | Non-singleton exact-work relation            | Independent agreement on P1545          |
+| Inventaire   | Exact `serie-parts` roster relation | Non-singleton; `wd:` mirrors remain Wikidata | Independent non-mirror agreement        |
+| BookBrainz   | Exact series-roster relation        | Non-singleton exact-work relation            | Never until dependable order is exposed |
+| Hardcover    | Exact `book_series` relation        | Non-singleton after semantic quarantine      | Independent agreement                   |
 
-This is deliberately asymmetric. Hardcover adds broad candidate coverage, but a Hardcover-only
-relationship cannot become an automatic fact. Self-titled relationships are flagged, connected
-“universe” groupings are quarantined, and series order is withheld when sources disagree. An
-Inventaire view of the same Wikidata entity is one lineage, not two votes. Unknown providers cannot
-corroborate a source until a profile is added.
+This is deliberately asymmetric. Hardcover adds broad candidate coverage, and an ordinary
+exact-work, non-singleton relationship may supply membership. Self-titled containers, reading-order
+lists, connected “universe” groupings, and competing relationships are quarantined; Hardcover order
+still needs independent agreement. An Inventaire view of the same Wikidata entity is one lineage,
+not two votes. Unknown providers cannot corroborate a source until a profile is added.
 
 The LLM's job is to select, explain, or route these cleaned claims—not to make an unsafe
 claim true. It can suppress a Hardcover false positive by choosing review or abstain. Declaring a
@@ -144,12 +144,18 @@ unchanged evaluation does not pay twice. The generated score reports citation fa
 unsupported fields, policy violations, membership precision/recall, and false-standalone behavior.
 Only policy-safe proposals count as automatic fills; review and abstain decisions do not.
 
+The resolver refreshes the report's case metadata and authority truth from the current sample by
+stable case ID. That lets a newly reviewed candidate reuse the provider observations already stored
+in an older trial report; only a genuinely new evidence packet needs a model request.
+
 This shadow harness is intentionally not a production Edge Function. Production integration waits
 until the authority-reviewed sample meets the gates below.
 
 The first live 10-case shadow, the prompt/lineage correction it exposed, and the corrected full
 23-case pilot are recorded in
 `reports/resolver-shadow-pilot-2026-09-04.md`.
+The first 10-case authority expansion, zero-request provider rescore, and Hardcover semantic-policy
+revision are recorded in `reports/authority-review-batch-1-2026-09-04.md`.
 
 ## Build the 200-case authority set
 
@@ -159,7 +165,7 @@ Audit the sample before running another provider or resolver comparison:
 pnpm series:sample:audit
 ```
 
-The audit reports selection coverage and authority-review coverage separately. The current 57
+The audit reports selection coverage and authority-review coverage separately. The current 47
 Reverie seed candidates count as selected works, but never as truth and never toward an accuracy
 gate. It also validates that every reviewed result has affirmative author or publisher evidence,
 that a reviewed standalone has no memberships, and that a reviewed series work has at least one.
@@ -178,6 +184,12 @@ identity plus a truth placeholder:
   "strata": ["recent_independent_or_kindle_first"],
   "publicationYear": 2025,
   "publicationPath": "independent",
+  "sampleSources": [
+    {
+      "kind": "author",
+      "url": "https://author.example/books/example"
+    }
+  ],
   "truth": {
     "status": "candidate",
     "standalone": null,
@@ -187,11 +199,19 @@ identity plus a truth placeholder:
 }
 ```
 
+Keep the candidate's `id` unchanged when its reviewed record moves into the gold file. Stable case
+IDs let the scorer apply new authority truth to previously captured provider observations without
+paying for another API run.
+
 Allowed publication paths are `independent`, `kindle_first`, and `traditional`. Complex cases also
 carry `riskFeatures` containing `multi_series` or `connected_universe`. Once reviewed, a complex
 case must set `truth.membershipsComplete` to `true`; this is the reviewer attestation that all
 in-scope memberships—not only the provider's preferred one—were checked. Strata may overlap, which
 is how the minimums fit within 200 distinct works without weakening any category.
+
+Recent-publication strata require a first-party `sampleSources` entry supporting the year and
+publication path. This keeps sampling labels subject to the same provenance discipline as series
+truth instead of letting an unsupported tag satisfy a coverage minimum.
 
 An authority source is an author page, publisher page, or publisher catalog. A shared authority
 page may be declared under the gold file's `sharedSources` and referenced by `truth.sourceGroups`;

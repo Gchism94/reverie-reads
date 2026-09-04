@@ -6,6 +6,16 @@ const riskFeatures = new Set(['multi_series', 'connected_universe'])
 const asArray = (value) => (Array.isArray(value) ? value : [])
 const difference = (minimum, actual) => Math.max(0, minimum - actual)
 
+const usableAuthoritySources = (sources, plan) => {
+  const authorityKinds = new Set(asArray(plan?.authoritySourceKinds))
+  return asArray(sources).filter(
+    (source) =>
+      authorityKinds.has(source?.kind) &&
+      typeof source?.url === 'string' &&
+      /^https:\/\//.test(source.url),
+  )
+}
+
 export const authorityWorkKey = (testCase) =>
   [
     normalize(testCase?.title ?? ''),
@@ -63,6 +73,10 @@ const validateRecentStratum = (testCase, stratum, plan, errors) => {
   if (stratum === 'recent_traditional' && testCase.publicationPath !== 'traditional') {
     errors.push(`${testCase.id}: ${stratum} requires traditional`)
   }
+
+  if (!usableAuthoritySources(testCase.sampleSources, plan).length) {
+    errors.push(`${testCase.id}: ${stratum} requires an authority-backed sampleSources entry`)
+  }
 }
 
 const validateReviewedTruth = (testCase, sharedSources, plan, errors) => {
@@ -79,14 +93,8 @@ const validateReviewedTruth = (testCase, sharedSources, plan, errors) => {
     errors.push(`${testCase.id}: a reviewed series work requires at least one membership`)
   }
 
-  const authorityKinds = new Set(asArray(plan.authoritySourceKinds))
   const sources = resolveAuthoritySources(testCase, sharedSources)
-  const usableSources = sources.filter(
-    (source) =>
-      authorityKinds.has(source?.kind) &&
-      typeof source?.url === 'string' &&
-      /^https:\/\//.test(source.url),
-  )
+  const usableSources = usableAuthoritySources(sources, plan)
   if (!usableSources.length) {
     errors.push(`${testCase.id}: reviewed truth requires an author or publisher authority source`)
   }
