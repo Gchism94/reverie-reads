@@ -1,6 +1,6 @@
 # ADR 0009 — Bounded authority retrieval gateway
 
-Status: proposed for trial implementation, 2026-09-05.
+Status: accepted for bounded trial implementation, 2026-09-05.
 
 ## Context
 
@@ -18,8 +18,8 @@ without granting the model general network access or relaxing the existing evide
 
 ## Decision
 
-Build, if this proposal is accepted, a **trial-only, single-hop authority retrieval gateway**. It is
-not a general crawler and it is not a Supabase Edge Function.
+Build a **trial-only, single-hop authority retrieval gateway**. It is not a general crawler and it
+is not a Supabase Edge Function.
 
 The gateway may run only when the first scout request:
 
@@ -35,6 +35,12 @@ from model output to a usable proposal.
 The first implementation belongs only in `packages/series-source-trial`. It has no database client,
 service-role credential, corpus writer, browser engine, JavaScript runtime for fetched content, or
 production route.
+
+The first implementation slice supplies the deterministic network, origin-profile, robots, static
+HTML selection/extraction, provenance, redaction, and failure primitives under
+`src/authority/retrieval/`. It is intentionally not yet connected to the acquisition command or a
+second model call, and no real origin is approved by the repository. That keeps this security
+boundary independently reviewable before a live source can enter it.
 
 ## Retrieval contract
 

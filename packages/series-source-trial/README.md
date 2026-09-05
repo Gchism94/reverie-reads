@@ -212,11 +212,24 @@ Even a policy-safe result is always review-only and cannot write authority gold,
 corpus.
 
 Hosted search can miss a first-party page that is visible only through site navigation. Do not add
-an arbitrary URL fetcher to compensate. The proposed follow-up is the trial-only, single-hop
+an arbitrary URL fetcher to compensate. The bounded follow-up is the trial-only, single-hop
 gateway in [`docs/decisions/0009-authority-retrieval-gateway.md`](../../docs/decisions/0009-authority-retrieval-gateway.md):
 it accepts only a consulted-manifest URL on a reviewed origin, selects one same-origin child
-deterministically, returns sanitized evidence, and fails unresolved. That gateway is design-only
-today; it is not implemented by this harness.
+deterministically, returns sanitized evidence, and fails unresolved. Its security boundary is now
+implemented, but it is not yet connected to live acquisition.
+
+The first bounded implementation slice now lives in `src/authority/retrieval/`. It provides the
+reviewed-origin gate, public-address validation and connection pinning, manual redirect checks,
+robots evaluation and 24-hour cache, single-child navigation selection, static HTML extraction,
+provenance hashes, and persistence redaction. It deliberately has no acquisition-command or model
+integration and the repository activates no real origin profile. Exercise the boundary with:
+
+```sh
+node --test packages/series-source-trial/test/authority-retrieval-*.test.mjs
+```
+
+Activating an origin or passing the sanitized packet to the model is a later reviewed slice, not a
+configuration toggle hidden in this one.
 
 Run a small gold holdout before a broader capability evaluation:
 
