@@ -169,9 +169,15 @@ wishlist` was the pre-#68 model and is long wrong. Format flags **suppress, neve
   unresolved—never standalone; an RFC-defined 4xx absence still requires an approved profile. Every
   actual redirect hop uses that hop's origin-specific robots policy. The retriever fetches one
   parent and at most one deterministic same-origin child, loads no subresources or JavaScript,
-  retains no raw page text in reports/caches, and has no Supabase or corpus writer. Its first slice
-  under `packages/series-source-trial` is intentionally not wired to the acquisition CLI or a second
-  model call and activates no real origin. See
+  retains no raw page text in reports/caches, and has no Supabase or corpus writer. The optional
+  `--retrieval` trial path invokes a second strict-output, no-tools model call only for unresolved or
+  quarantined first-pass cases; it can cite only the retrieved child and the reviewed profile owns
+  source kind. The packet is hash-checked and must contain the exact target title and author before
+  interpretation; proposed identity, series names, standalone language, and positions must also be
+  present in the packet before selection. Unsupported retrieved position is cleared and unsupported
+  membership role becomes unknown without discarding otherwise direct membership. Page text is
+  redacted before persistence.
+  The repository still activates no real origin. See
   `docs/decisions/0009-authority-retrieval-gateway.md`.
 - **Corpus cover recovery is bounded, resumable, and independent of classification.** The
   administrator completion pipeline never walks the whole household library in one RPC. It calls

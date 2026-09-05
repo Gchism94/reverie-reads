@@ -38,9 +38,14 @@ production route.
 
 The first implementation slice supplies the deterministic network, origin-profile, robots, static
 HTML selection/extraction, provenance, redaction, and failure primitives under
-`src/authority/retrieval/`. It is intentionally not yet connected to the acquisition command or a
-second model call, and no real origin is approved by the repository. That keeps this security
-boundary independently reviewable before a live source can enter it.
+`src/authority/retrieval/`. A second slice connects those primitives to the acquisition command
+behind `--retrieval` and adds a strict, no-tools interpretation pass. The second pass receives only
+the exact target, hash-bound child packet, reviewed source kind, and provenance versions. It may
+replace the first proposal only when the packet contains the exact target title and author and
+deterministic post-validation finds packet support for the claimed author identity, series name,
+standalone language, and position. Unsupported position becomes null and unsupported membership
+role becomes unknown without discarding a direct relationship. No real origin is approved by the
+repository.
 
 ## Retrieval contract
 
@@ -115,14 +120,16 @@ omitted range.
 ### Model and evidence boundary
 
 The optional second model request receives the minimal case identity, the sanitized packet, and its
-gateway manifest. It uses the existing strict authority schema and may cite only the parent or child
+gateway manifest. It uses the existing strict authority schema and may cite only the terminal child
 URL present in that manifest. It cannot request another page, broaden the origin, or treat the
 gateway's successful fetch as source eligibility.
 
-All current cleaning remains in force. In particular, a direct bibliographic statement is required
-for series membership; a universe, trope, trigger warning, reading order, shared character,
-companion, or spin-off statement cannot be reversed into membership. Standalone still requires an
-affirmative first-party statement. The gateway changes reachability, not authority.
+All current cleaning remains in force. In particular, one non-heading extracted evidence line must
+join the exact target title to each claimed bibliographic series or affirmative standalone
+statement. Position and membership role survive only on that same relationship line. This blocks a
+model from assembling the target identity and another book's series facts across a multi-book page.
+A universe, trope, trigger warning, reading order, shared character, companion, or spin-off
+statement cannot be reversed into membership. The gateway changes reachability, not authority.
 
 Every outcome remains review-only. A timeout, block, miss, parse failure, or absent label means
 unresolved, never standalone and never “not in a series.”
@@ -167,6 +174,21 @@ second-pass model cost so the feature can be disabled without obscuring spend.
 
 The gateway is optional. Any internal error returns the typed unresolved result and leaves the
 original scout proposal intact for review; it cannot make an unsafe proposal valid.
+
+## First live-origin candidate
+
+`https://www.pipwritesfiction.com` remains `pending`; it is evidence about the gateway, not an
+activated source profile. A 2026-09-05 request with the named trial user agent found an explicit
+`User-agent: *` allow rule in `/robots.txt`, a canonical redirect from the non-`www` origin, no
+linked site-specific terms or privacy page, and no authentication challenge. Robots permission is
+not a rights grant, so this observation does not satisfy the human source review.
+
+The same probe measured 903,233 encoded bytes for `/` and 627,478 for `/series`; both exceed the
+512 KiB limit. The safe static extraction from `/series` names The Leamington Bloom Series but does
+not directly place _Pyg_ inside it. A `PYG, GOODREADS` control label and an outbound store URL are
+not exact-work relational evidence. The correct result is therefore unresolved. The limit and
+extractor are unchanged: a future decision to accommodate Wix-sized pages or treat accessible
+control labels as evidence needs separate justification, tests, and security review.
 
 ## Trial acceptance gates
 

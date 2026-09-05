@@ -97,14 +97,21 @@ The model cannot assign authority to its own source. Scout output never writes a
 Supabase, or the corpus and remains production-blocked by the same safety, rights, privacy, latency,
 cost, and fixed-sample gates as the resolver.
 
-Search-index recall is not repaired by letting the model fetch arbitrary URLs. The proposed next
-trial is a single-hop, navigation-aware retrieval gateway: only a hosted-search-manifest URL on a
+Search-index recall is not repaired by letting the model fetch arbitrary URLs. The bounded trial
+uses a single-hop, navigation-aware retrieval gateway: only a hosted-search-manifest URL on a
 reviewed author/publisher origin may enter it; deterministic code may fetch that parent and one
 same-origin child under strict SSRF, robots, size, timeout, privacy, and provenance controls. The
-model may interpret only the sanitized packet and cannot choose another URL. The design and its
-acceptance gates are in [ADR 0009](../decisions/0009-authority-retrieval-gateway.md). The
-deterministic gateway boundary now exists in the trial package, but no real origin is active and it
-is not connected to the acquisition command, a model call, or production.
+optional second model pass has no tools, may interpret only the hash-bound sanitized child packet,
+and cannot choose another URL or source kind. The exact target title and author must occur before
+the model is called; deterministic post-validation then requires one non-heading evidence line to
+join the exact target title to each claimed bibliographic series or affirmative standalone
+statement. A position or membership role survives only on that same relationship line, preventing
+cross-book fact assembly on multi-book pages. It runs only for an unresolved or quarantined first
+pass, and its result replaces the first proposal only after those checks and ordinary validation
+pass. Reports and caches retain the applicable selected-source manifest and structured
+paraphrase, never page text. The design and acceptance gates are in
+[ADR 0009](../decisions/0009-authority-retrieval-gateway.md). The trial CLI exposes this path only
+behind `--retrieval`; no real origin is active and nothing is connected to production.
 
 Acquisition cleaning also distinguishes bibliographic membership from reading dependence. When an
 author or publisher both assigns the exact work to a named series and markets it as independently

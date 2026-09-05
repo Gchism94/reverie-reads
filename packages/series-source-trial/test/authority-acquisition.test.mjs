@@ -3,6 +3,7 @@ import { test } from 'node:test'
 import {
   authorityAcquisitionCacheMaterial,
   authorityPolicyForCase,
+  authorityPolicyForRetrievedSource,
   buildAuthorityTarget,
   canonicalizeAuthorityAcquisition,
   scoreAuthorityAcquisition,
@@ -81,6 +82,35 @@ test('accepts only consulted authority URLs that support each proposed field', (
   assert.equal(validation.groundedUrlCount, 3)
 })
 
+test('keeps reviewed origin kind deterministic for retrieved evidence', () => {
+  const modelRelabelled = structuredClone(seriesOutput)
+  modelRelabelled.authoritySources[0].kind = 'author'
+  const policy = authorityPolicyForRetrievedSource(
+    {},
+    {
+      url: publisherUrl,
+      sourceKind: 'publisher',
+    },
+  )
+
+  const rawValidation = validateAuthorityAcquisition(
+    buildAuthorityTarget(testCase),
+    modelRelabelled,
+    [publisherUrl],
+    policy,
+  )
+  assert.equal(rawValidation.valid, false)
+  assert.ok(rawValidation.errors.some((error) => error.includes('reviewed origin profile')))
+
+  const cleaned = canonicalizeAuthorityAcquisition(modelRelabelled, [publisherUrl], policy)
+  assert.equal(cleaned.authoritySources[0].kind, 'publisher')
+  assert.equal(
+    validateAuthorityAcquisition(buildAuthorityTarget(testCase), cleaned, [publisherUrl], policy)
+      .policySafe,
+    true,
+  )
+})
+
 test('rejects an authority URL the search response did not consult', () => {
   const validation = validateAuthorityAcquisition(buildAuthorityTarget(testCase), seriesOutput, [
     'https://publisher.example/books/a-different-book',
@@ -88,7 +118,7 @@ test('rejects an authority URL the search response did not consult', () => {
 
   assert.equal(validation.valid, false)
   assert.equal(validation.policySafe, false)
-  assert.ok(validation.errors.some((error) => error.includes('not consulted')))
+  assert.ok(validation.errors.some((error) => error.includes('consulted-source manifest')))
 })
 
 test('canonicalizes citations to the declared source manifest without inventing support', () => {
