@@ -184,6 +184,45 @@ test('a larger CSV stays browsable without stretching the landing into a wall of
   ).toBeAttached()
 })
 
+test.describe('phone library navigation', () => {
+  test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
+  test('opening a lower book and paging brings the active view into the screen', async ({
+    page,
+  }) => {
+    await page.goto('/')
+    const full = page.getByTestId('guest-library-full')
+    await full.getByRole('button', { name: 'Add books', exact: true }).tap()
+    await full.getByRole('button', { name: 'Upload CSV', exact: true }).tap()
+    await full.getByLabel('Choose a CSV file').setInputFiles({
+      name: 'dozen.csv',
+      mimeType: 'text/csv',
+      buffer: Buffer.from(
+        'Title,Author\n' +
+          Array.from({ length: 12 }, (_, i) => `Visitor book ${i + 1},Sample Author`).join('\n'),
+      ),
+    })
+    await full.getByRole('button', { name: 'Visitor book 1 Sample Author', exact: true }).tap()
+    // A reader taps the last row and expects the newly opened record to be on screen.
+    // Do not scroll it into view from the test: that would hide the product failure.
+    const details = full.getByRole('heading', { name: 'Book details', exact: true })
+    await expect(details).toBeFocused()
+    await expect(details).toBeInViewport({ ratio: 1 })
+    await expect(full.getByRole('heading', { name: 'Visitor book 1', exact: true })).toBeInViewport(
+      { ratio: 1 },
+    )
+    await full.getByRole('button', { name: 'Back to library', exact: true }).tap()
+    const library = full.getByRole('heading', { name: 'Library', exact: true })
+    await expect(library).toBeFocused()
+    await expect(library).toBeInViewport({ ratio: 1 })
+    await full.getByRole('button', { name: 'Next books', exact: true }).tap()
+    await expect(library).toBeFocused()
+    await expect(library).toBeInViewport({ ratio: 1 })
+    await expect(
+      full.getByRole('button', { name: 'Jane Eyre Charlotte Brontë', exact: true }),
+    ).toBeInViewport({ ratio: 1 })
+  })
+})
+
 test.describe('small phone rating', () => {
   test.use({ viewport: { width: 320, height: 700 }, isMobile: true, hasTouch: true })
   test('the nested note example keeps half-star targets large enough for a thumb', async ({

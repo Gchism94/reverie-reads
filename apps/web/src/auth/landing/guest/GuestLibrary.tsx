@@ -20,6 +20,11 @@ const icons: Record<GuestView, NavigationIconName> = {
   history: 'planner',
 }
 
+function showHeading(heading: HTMLHeadingElement | null) {
+  heading?.focus({ preventScroll: true })
+  heading?.scrollIntoView({ block: 'start', behavior: 'instant' })
+}
+
 /** The public library has real state and shared app controls, with no account or persistence. */
 export function GuestLibrary({ compact = false }: { compact?: boolean }) {
   const { state, dispatch } = useGuestLibrary()
@@ -40,7 +45,7 @@ export function GuestLibrary({ compact = false }: { compact?: boolean }) {
         : GUEST_VIEWS[state.page]
   useEffect(() => {
     if (focusAfterChange.current) {
-      heading.current?.focus({ preventScroll: true })
+      showHeading(heading.current)
       focusAfterChange.current = false
     }
   }, [state.page, state.selected])
@@ -132,7 +137,7 @@ export function GuestLibrary({ compact = false }: { compact?: boolean }) {
           id={headingId}
           ref={heading}
           tabIndex={-1}
-          className="text-2xl font-semibold leading-[1.3]"
+          className="scroll-mt-24 text-2xl font-semibold leading-[1.3]"
           style={{ fontFamily: 'var(--font-display)' }}
         >
           {title}
@@ -331,7 +336,7 @@ export function GuestLibrary({ compact = false }: { compact?: boolean }) {
               disabled={pageIndex === 0}
               onClick={() => {
                 setPagination({ key: pageKey, index: pageIndex - 1 })
-                heading.current?.focus({ preventScroll: true })
+                showHeading(heading.current)
               }}
             >
               Previous books
@@ -342,7 +347,7 @@ export function GuestLibrary({ compact = false }: { compact?: boolean }) {
               disabled={from + pageSize >= total}
               onClick={() => {
                 setPagination({ key: pageKey, index: pageIndex + 1 })
-                heading.current?.focus({ preventScroll: true })
+                showHeading(heading.current)
               }}
             >
               Next books

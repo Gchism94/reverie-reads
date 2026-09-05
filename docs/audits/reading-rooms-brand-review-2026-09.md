@@ -205,6 +205,44 @@ After the visual direction is approved, carry it into the app icon, share images
 materials together. Those assets should follow the accepted brand rather than become competing
 experiments during this review.
 
+## Verification of the guest-library candidate
+
+The complete candidate at `58c3058` passed the full local and hosted checks:
+
+- Lint, type checking, repository formatting, and the production build passed. All **3,405**
+  unit/integration tests passed, including the compiled Workflow integration.
+- A fresh local database passed **43 SQL files and 1,323 assertions**, including all 22 assertions
+  for permanent personal-series removal.
+- The complete local browser run used **one worker and zero retries** after that fresh database
+  reset: **236 passed, 10 skipped, no failures** in 31.6 minutes. Desktop Back restoration and
+  permanent-series removal both passed. The existing mobile Back test remains skipped; the earlier
+  intermittent scroll issue is retained below, and its cause is not claimed fixed.
+- [Hosted CI run 33953238014](https://github.com/Reverie-Reads/reverie-reads/actions/runs/33953238014)
+  also passed on that exact commit: 189 ordinary browser journeys, 35 mobile journeys, and 12 route
+  accessibility journeys, with the same 10 skips and no reported flaky tests.
+- The room audit rendered **36 captures**: nine skins, Day/Night, desktop/phone. Its 18 complete
+  landing scans and the guest audit's 72 book, catalog, manual-entry, and dock scans reported
+  **zero Axe violations across 90 scans**. All three examples followed room selection. The landing
+  had no horizontal overflow at 320, 390, 768, or 1,440 pixels.
+- Real touch measurements at 320 and 390 pixels confirmed each half-star target remained at least
+  24 pixels wide. The guest walkthrough also passed against the compiled production preview:
+  add a book, start, note, finish, journal, then switch all three examples into Aphelion.
+
+A final phone probe after the full run found a separate guest-navigation defect: opening a book
+from the last row of a larger import left its details above the viewport. The focused heading now
+scrolls into view in the workspace the visitor used; paging does the same. The second workspace
+does not take focus. The new touch regression asserts the heading and book title are actually
+inside the viewport, without a test-side scroll. This final navigation adjustment is verified
+separately from the full `58c3058` run; it does not claim to fix signed-in Back restoration.
+All **seven guest browser journeys passed** after the adjustment, with one worker and zero retries,
+including the new touch navigation regression, desktop/phone reading, CSV intake, and note focus.
+
+The guest audit is reproducible with `node scripts/audit-guest-library.mjs` against a local preview.
+Its screenshots and machine-readable results are under `output/playwright/guest-experience/`.
+Full local logs and the preserved browser evidence are under `output/playwright/`, excluded from
+source control. No production database writes, private synchronization, merge, or deployment were
+performed for this review.
+
 ## Verification of the initial review candidate
 
 - Lint, type checking, formatting, and the production build passed.
