@@ -9,6 +9,22 @@ The shipping token values live in `packages/core/src/skins.ts` and
 `docs/reference/SKIN_CHARACTER_CONTRACT.md`. Design-tool exports, when present, are references; the
 shipped app is authoritative.
 
+## The Reverie brand
+
+The front door is a personal library: deep blue-green ink, warm paper, and a sea-glass accent.
+Newsreader supplies the editorial display voice; Hanken Grotesk keeps navigation and body copy
+plain and welcoming. The open-book wordmark belongs to Reverie across genres. Tryst retains its
+own romance identity inside the product.
+
+Brand tokens live in `apps/web/src/styles/brand.css`. They scope the landing page and account
+screens independently of the reader's saved skin. Product examples have their own complete
+skin/mode scopes, including structural components and backgrounds. One room selection updates
+every example without changing the visitor's saved appearance or sample reading choices.
+
+The brand promise is “A personal library that feels like home.” Explain that through concrete
+actions: keep your books together, remember your reading, and find something you want to read.
+Warmth comes from familiarity and permission, without romance-only language or reading pressure.
+
 ## Nine rooms, two modes
 
 Every room supports light and dark modes independently of skin selection.
@@ -34,8 +50,8 @@ inside Tryst; mode remains `light`, `dark`, or `system` for every skin.
   readable.
 - Primary reading text should be at least 14px in the product. Supporting labels should normally be
   12px or larger. Smaller type is reserved for nonessential cover marks and very narrow book spines.
-- Body copy uses a 1.5–1.65 line height. Display headings may tighten to 1.04–1.15 when their size and
-  measure make the grouping unambiguous.
+- Body copy uses a 1.5–1.65 line height. Multiline display headings on the landing page use at least
+  1.14; inspect ascenders, descenders, and wrapping in the actual fonts at every breakpoint.
 - Letter spacing is restrained at small sizes. Uppercase labels use shorter words and no more
   tracking than their skin needs.
 - Text never relies on atmosphere or texture for contrast. It sits on an opaque authored surface or
@@ -69,6 +85,12 @@ readability floor; texture, grid, crack, grain, or glow never becomes the text b
 Use the room's atmosphere only where it improves orientation or emotional continuity. Avoid an
 effect when it competes with a cover, makes scrolling feel unstable, or exists only to prove the
 skin is different.
+
+The shared Canvas 2D renderer authors a separate scene for each room: a lamplit salon, tower
+study, orbital alcove, sheltered archive, rainy study, writing desk, window seat, field study,
+and dawn corner. Architectural details stay around the margins. Day mode is still; night mode
+adds a slow, slight change in local light. Reduced motion, hidden pages, and offscreen previews
+rest. Static scene caching and a bounded canvas resolution keep the effect inexpensive.
 
 ## Signature components
 

@@ -1,27 +1,28 @@
 import { APP_NAME } from '@reverie/core'
 
-/** The master-brand wordmark: a small gold crescent (CSS, no raster) + the app name in the display
- *  serif. Used on the landing and the auth screen. Name comes from APP_NAME so a rename is one edit. */
+/** A quiet open-book mark belongs to every kind of reader; individual rooms keep their motifs. */
 export function Wordmark({ className }: { className?: string }) {
   return (
-    <span className={`flex items-center gap-2 ${className ?? ''}`}>
-      <span
-        aria-hidden
-        className="relative h-[18px] w-[18px] shrink-0 rounded-full"
-        style={{
-          background: 'var(--gold)',
-          boxShadow: '0 0 14px color-mix(in srgb, var(--gold) 55%, transparent)',
-        }}
+    <span className={`flex items-center gap-2.5 ${className ?? ''}`}>
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 28 26"
+        className="h-7 w-7 shrink-0"
+        fill="none"
+        stroke="var(--gold)"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       >
-        {/* crescent: a bg-coloured disc nudged over the gold one */}
-        <span
-          className="absolute h-[14px] w-[14px] rounded-full"
-          style={{ background: 'var(--bg0)', top: '1px', left: '5px' }}
+        <path d="M14 22V6C11 3 6 3 2 4v16c4-1 9-1 12 2Zm0 0V6c3-3 8-3 12-2v16c-4-1-9-1-12 2Z" />
+        <path
+          d="M6 8c2-.1 3 .2 4 1M6 12c2-.1 3 .2 4 1M18 9c1-.8 2-1.1 4-1M18 13c1-.8 2-1.1 4-1"
+          opacity=".55"
         />
-      </span>
+      </svg>
       <span
-        className="text-[19px] leading-none text-ink"
-        style={{ fontFamily: 'var(--font-display)', fontWeight: 600, letterSpacing: '0.2px' }}
+        className="text-[24px] leading-[1.2] text-ink"
+        style={{ fontFamily: 'var(--font-display)', fontWeight: 500, letterSpacing: '-.3px' }}
       >
         {APP_NAME}
       </span>

@@ -156,12 +156,12 @@ async function openDiscover(page: Page) {
  *  rendered, not what was requested. */
 async function paintedCover(page: Page, title: string) {
   return page.evaluate((t) => {
-    // The Discover card is `div.flex.flex-col` > [aspect-ratio cover box, title block]; scope the
-    // image query to THIS card's cover box so a neighbouring card's img can never satisfy it.
+    // Scope the image query to the semantic card containing this title, so a neighbouring
+    // card's image can never satisfy it.
     const leaf = [...document.querySelectorAll<HTMLElement>('main *')].find(
       (n) => n.childElementCount === 0 && n.textContent?.trim() === t,
     )
-    const card = leaf?.closest<HTMLElement>('div.flex.flex-col') ?? null
+    const card = leaf?.closest<HTMLElement>('article') ?? null
     const coverBox = card?.querySelector<HTMLElement>('[class*="aspect-"]') ?? null
     const img = coverBox?.querySelector('img') ?? null
     return {
@@ -184,6 +184,7 @@ test('rendered covers: upgraded where real, zoom=1 where degenerate, placeholder
   // modern ebook: the upgrade is the point — it must STAY upgraded (a fix that quietly stopped
   // upgrading would pass every fallback assertion below; this one pins the win).
   const modern = await paintedCover(page, 'Modern Ebook')
+  expect(modern.found, 'modern: the card cover must exist').toBe(true)
   expect(modern.hasImg, 'modern: an image must paint').toBe(true)
   expect(
     [modern.naturalW, modern.naturalH],
@@ -193,6 +194,7 @@ test('rendered covers: upgraded where real, zoom=1 where degenerate, placeholder
   // old-scan: zoom=2 serves a 300×48 strip — the structural aspect test must reject it and the
   // chain must recover the REAL zoom=1 cover, not paint the strip, not fall to the placeholder.
   const oldscan = await paintedCover(page, 'Old Scan')
+  expect(oldscan.found, 'oldscan: the card cover must exist').toBe(true)
   expect(oldscan.hasImg, 'oldscan: an image must paint (the zoom=1 real cover)').toBe(true)
   expect(
     [oldscan.naturalW, oldscan.naturalH],
@@ -202,6 +204,7 @@ test('rendered covers: upgraded where real, zoom=1 where degenerate, placeholder
   // metadata-only (the Dracula case): zoom=2 serves the plate at 300×391 — the size the original
   // no-cover fix never knew. The enumerated plate list must reject it and recover zoom=1.
   const metaonly = await paintedCover(page, 'Metadata Only')
+  expect(metaonly.found, 'metaonly: the card cover must exist').toBe(true)
   expect(metaonly.hasImg, 'metaonly: an image must paint (the zoom=1 real cover)').toBe(true)
   expect(
     [metaonly.naturalW, metaonly.naturalH],
@@ -211,6 +214,7 @@ test('rendered covers: upgraded where real, zoom=1 where degenerate, placeholder
   // no usable asset at either zoom: both rungs reject, the honest placeholder shows, and no
   // Google image remains painted in the card.
   const noasset = await paintedCover(page, 'No Asset')
+  expect(noasset.found, 'noasset: the card cover must exist').toBe(true)
   expect(
     noasset.hasImg,
     `noasset must show CoverPlaceholder — no plate may remain painted (src ${noasset.src})`,

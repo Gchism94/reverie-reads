@@ -19,4 +19,35 @@ describe('Modal', () => {
     fireEvent.keyDown(document, { key: 'Escape' })
     expect(close).toHaveBeenCalledOnce()
   })
+  it('keeps focus while details arrive, uses the current close handler, and returns to the opener', () => {
+    const opener = document.createElement('button')
+    document.body.append(opener)
+    opener.focus()
+    const oldClose = vi.fn()
+    const currentClose = vi.fn()
+    const { rerender, unmount } = render(
+      <Modal title="Book" onClose={oldClose}>
+        <div>
+          <button>Keep browsing</button>
+        </div>
+      </Modal>,
+    )
+    const action = screen.getByRole('button', { name: 'Keep browsing' })
+    action.focus()
+    rerender(
+      <Modal title="Book" onClose={currentClose}>
+        <div>
+          <button>Keep browsing</button>
+          <p>Description arrived</p>
+        </div>
+      </Modal>,
+    )
+    expect(action).toHaveFocus()
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(oldClose).not.toHaveBeenCalled()
+    expect(currentClose).toHaveBeenCalledOnce()
+    unmount()
+    expect(opener).toHaveFocus()
+    opener.remove()
+  })
 })

@@ -686,7 +686,9 @@ function MatchScreen() {
               className={`${quietButton} mt-4`}
               onClick={() => setShowMore(!showMore)}
             >
-              {showMore ? 'Show shortlist' : `See ${visiblePicks.length - 3} more picks`}
+              {showMore
+                ? 'Show shortlist'
+                : `See ${visiblePicks.length - 3} more ${visiblePicks.length === 4 ? 'book' : 'books'}`}
             </button>
           )}
           <p className="mt-4 text-sm text-muted">

@@ -5,7 +5,7 @@
   },
   "hankengrotesk": {
     "version": "v12",
-    "files": 20
+    "files": 40
   },
   "cormorantgaramond": {
     "version": "v21",
@@ -70,5 +70,9 @@
   "karla": {
     "version": "v33",
     "files": 10
+  },
+  "newsreader": {
+    "version": "v26",
+    "files": 9
   }
 }

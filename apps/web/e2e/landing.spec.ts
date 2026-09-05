@@ -167,3 +167,40 @@ test.describe('signed-out landing', () => {
     await expect(rooms.getByRole('tab', { name: /Marginalia/i })).toBeFocused()
   })
 })
+
+test('room selection reaches earlier examples, changes real cover structures, and keeps sample state', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.goto('/')
+  const demo = page.getByRole('region', { name: 'A place to start' })
+  await demo
+    .getByRole('article', { name: 'The Lantern Atlas' })
+    .getByRole('button', { name: 'Save for later' })
+    .click()
+  await page.getByRole('tab', { name: /Aphelion/ }).click()
+  const examples = page.getByTestId('room-example')
+  await expect(examples).toHaveCount(3)
+  for (const example of await examples.all())
+    await expect(example).toHaveAttribute('data-skin', 'aphelion')
+  await expect(demo.getByRole('img', { name: /The Lantern Atlas.*placeholder/ })).toContainText(
+    'APH·',
+  )
+  await expect(demo.getByText('Saved for later:', { exact: true }).locator('..')).toContainText(
+    'The Lantern Atlas',
+  )
+  await page.getByTestId('active-reading-room').getByRole('button', { name: 'Night' }).click()
+  for (const example of await examples.all())
+    await expect(example).toHaveAttribute('data-mode', 'dark')
+  const still = await examples
+    .first()
+    .locator('canvas')
+    .evaluate((canvas) => (canvas as HTMLCanvasElement).toDataURL())
+  await page.waitForTimeout(350)
+  expect(
+    await examples
+      .first()
+      .locator('canvas')
+      .evaluate((canvas) => (canvas as HTMLCanvasElement).toDataURL()),
+  ).toBe(still)
+})

@@ -1,11 +1,14 @@
 import { SKINS, SKIN_VOICE, type FieldLabels, type SkinId, type SkinVoice } from '@reverie/core'
+import { useContext } from 'react'
+import { SkinPreviewContext } from './SkinPreviewContext'
 import { useSkin } from './useSkin'
 
 /** The active Tier-1 skin id, resolving the adaptive skin to its dominant Tier-1 skin. */
 export function useEffectiveSkin(): SkinId {
   const skin = useSkin((s) => s.skin)
   const dominant = useSkin((s) => s.adaptiveBundle?.dominant)
-  return skin === 'adaptive' ? (dominant ?? 'tryst') : skin
+  const preview = useContext(SkinPreviewContext)
+  return preview ?? (skin === 'adaptive' ? (dominant ?? 'tryst') : skin)
 }
 
 /**

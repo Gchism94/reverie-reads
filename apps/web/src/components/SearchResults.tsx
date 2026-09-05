@@ -55,13 +55,17 @@ export function SearchResults({
   books,
   layout = 'grid',
   renderActions,
+  onPreview,
 }: {
   results: SearchResult[]
   books: Book[]
   layout?: 'grid' | 'list'
+  /** Discover can open details; other search surfaces retain their plain result summary. */
+  onPreview?: (result: SearchResult) => void
   /** actions for a result NOT already in the library (in-library results show their shelf state) */
   renderActions: (result: SearchResult) => ReactNode
 }) {
+  const Preview = onPreview ? 'button' : 'div'
   if (layout === 'list') {
     return (
       <ul className="flex flex-col gap-1.5">
@@ -103,20 +107,40 @@ export function SearchResults({
       {results.map((r) => {
         const inLib = libraryMatch(r, books)
         return (
-          <div key={`${r.isbn}|${r.title}`} className="flex flex-col">
-            <div
-              className="aspect-[2/3] overflow-hidden rounded-[8px] border border-line"
-              style={{ background: 'var(--card)' }}
+          <div key={`${r.isbn}|${r.title}`} className="flex min-w-0 flex-col">
+            <Preview
+              {...(onPreview
+                ? {
+                    type: 'button' as const,
+                    onClick: () => onPreview(r),
+                    'aria-label': `View details for ${r.title}`,
+                  }
+                : {})}
+              className="text-left"
             >
-              <CoverImage book={coverBook(r)} thumb />
-            </div>
-            <div className="mt-2 min-w-0">
-              <div className="break-words text-[13px] font-semibold leading-snug text-ink">
-                {r.title}
+              <div
+                className="aspect-[2/3] overflow-hidden rounded-[8px] border border-line"
+                style={{ background: 'var(--card)' }}
+              >
+                <CoverImage book={coverBook(r)} thumb />
               </div>
-              <ResultMeta result={r} />
-            </div>
+              <div className="mt-2 min-w-0">
+                <div className="break-words text-[13px] font-semibold leading-snug text-ink">
+                  {r.title}
+                </div>
+                <ResultMeta result={r} />
+              </div>
+            </Preview>
             <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {onPreview && (
+                <button
+                  type="button"
+                  onClick={() => onPreview(r)}
+                  className="min-h-11 text-sm text-ink underline underline-offset-4"
+                >
+                  Book details
+                </button>
+              )}
               {inLib ? <OnShelf book={inLib} /> : renderActions(r)}
             </div>
           </div>

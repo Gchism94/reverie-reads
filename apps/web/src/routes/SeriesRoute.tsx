@@ -21,7 +21,11 @@ import { BackLink } from '../components/BackLink'
 import { CoverImage } from '../components/CoverImage'
 import { LibraryPicker } from '../components/LibraryPicker'
 import { Modal } from '../components/Modal'
-import { RenameSeriesDialog, type SeriesManagementRow } from '../series/SeriesManagement'
+import {
+  DeleteSeriesDialog,
+  RenameSeriesDialog,
+  type SeriesManagementRow,
+} from '../series/SeriesManagement'
 import { useBooks } from '../data/books'
 import { useAllListItems } from '../data/listItems'
 import { useLists } from '../data/lists'
@@ -83,6 +87,7 @@ function SeriesScreen() {
   const [dragIdx, setDragIdx] = useState<number | null>(null)
   const [sourceNote, setSourceNote] = useState<string | null>(null)
   const [renaming, setRenaming] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [acknowledgedReview, setAcknowledgedReview] = useState('')
   const [editingEntry, setEditingEntry] = useState<SeriesEntry | null>(null)
   const [editedPosition, setEditedPosition] = useState('')
@@ -358,6 +363,13 @@ function SeriesScreen() {
           </select>
         </div>
 
+        <button
+          type="button"
+          onClick={() => setDeleting(true)}
+          className="mt-3 min-h-11 text-sm font-semibold text-muted underline underline-offset-4 hover:text-ink"
+        >
+          Not a series? Remove this category
+        </button>
         {/* progress lockup: "Read 3 of 7 · 2 to get" + a subtle rule */}
         <p className="mt-2 text-[14px] text-ink">
           {progressLine(progress)}
@@ -787,6 +799,14 @@ function SeriesScreen() {
         </Modal>
       )}
 
+      {deleting && (
+        <DeleteSeriesDialog
+          row={managementRow}
+          initialPermanent
+          onClose={() => setDeleting(false)}
+          onDeleted={() => void navigate({ to: '/series' })}
+        />
+      )}
       {renaming ? (
         <RenameSeriesDialog
           row={managementRow}

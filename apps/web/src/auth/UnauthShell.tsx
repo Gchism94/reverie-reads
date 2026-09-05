@@ -4,7 +4,7 @@ import { Landing } from './Landing'
 import { AuthScreen } from './AuthScreen'
 import { takeLocalSignOutNotice } from '../lib/offlineSignOut'
 
-/** The unauthenticated front door, scoped to the gold master brand (which paints its own night sky).
+/** The unauthenticated front door, scoped to Reverie's genre-neutral library brand.
  *  Routes by path: /auth → the auth screen, anything else → the public landing. App routes aren't
  *  reachable while signed out — the root layout renders this in place of the app outlet. */
 export function UnauthShell() {

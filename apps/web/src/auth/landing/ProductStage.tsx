@@ -11,6 +11,7 @@ interface DemoBook {
   author: string
   state: string
   owner?: string
+  cover?: string
 }
 
 const BOOKS: DemoBook[] = [
@@ -22,23 +23,26 @@ const BOOKS: DemoBook[] = [
     owner: 'You',
   },
   {
-    id: 'everflame',
-    title: 'Spark of the Everflame',
-    author: 'Penn Cole',
+    id: 'left-hand-of-darkness',
+    cover: 'https://covers.openlibrary.org/b/id/284550-M.jpg?default=false',
+    title: 'The Left Hand of Darkness',
+    author: 'Ursula K. Le Guin',
     state: 'Owned',
     owner: 'Mara',
   },
   {
-    id: 'king-of-wrath',
-    title: 'King of Wrath',
-    author: 'Ana Huang',
+    id: 'jane-eyre',
+    cover: 'https://covers.openlibrary.org/b/id/109090-M.jpg?default=false',
+    title: 'Jane Eyre',
+    author: 'Charlotte Brontë',
     state: 'Read',
     owner: 'You · Mara',
   },
   {
-    id: 'never-king',
-    title: 'The Never King',
-    author: 'Nikki St. Crowe',
+    id: 'frankenstein',
+    cover: 'https://covers.openlibrary.org/b/id/11466753-M.jpg?default=false',
+    title: 'Frankenstein',
+    author: 'Mary Shelley',
     state: 'To get',
     owner: 'You',
   },
@@ -50,9 +54,10 @@ const BOOKS: DemoBook[] = [
     owner: 'Mara',
   },
   {
-    id: 'mile-high',
-    title: 'Mile High',
-    author: 'Liz Tomforde',
+    id: 'braiding-sweetgrass',
+    cover: 'https://covers.openlibrary.org/b/id/12836879-M.jpg?default=false',
+    title: 'Braiding Sweetgrass',
+    author: 'Robin Wall Kimmerer',
     state: 'Read',
     owner: 'You',
   },
@@ -87,7 +92,7 @@ function Cover({
         </div>
       ) : (
         <img
-          src={`/landing-covers/${book.id}.jpg`}
+          src={book.cover ?? `/landing-covers/${book.id}.jpg`}
           alt=""
           loading={eager ? 'eager' : 'lazy'}
           fetchPriority={eager ? 'high' : 'auto'}
@@ -197,7 +202,7 @@ function DesktopLibrary({ compact = false }: { compact?: boolean }) {
                 <span
                   className="px-2 py-1 text-on-primary"
                   style={{
-                    background: 'var(--stage-action-fill, var(--primary))',
+                    background: 'var(--accent-fill)',
                     borderRadius: 'var(--radius-control)',
                   }}
                 >
@@ -212,7 +217,7 @@ function DesktopLibrary({ compact = false }: { compact?: boolean }) {
           </div>
 
           <div className="mt-3 flex flex-wrap gap-1.5 sm:mt-4">
-            {['On your shelf', 'Unread', 'Fantasy', 'Sort: recent'].map((item, index) => (
+            {['On your shelf', 'Unread', 'All genres', 'Sort: recent'].map((item, index) => (
               <span
                 key={item}
                 className="border border-line px-2 py-1 text-[10.5px] text-muted sm:text-[11px]"
@@ -276,7 +281,7 @@ function MobileBook() {
           </span>
           <span className="skin-label text-[10px] text-muted">Library</span>
         </div>
-        <div className="px-4 pb-[68px] pt-3.5">
+        <div className="px-4 pb-6 pt-3.5">
           <div className="text-[11.5px] text-muted">← Library</div>
           <Cover book={book} eager className="mx-auto mt-3 w-[92px]" />
           <div className="mt-3 text-center">
@@ -284,7 +289,7 @@ function MobileBook() {
               Book record · The Court series #1
             </div>
             <h2
-              className="mx-auto mt-1.5 max-w-[16ch] text-[19px] leading-[1.08] text-ink"
+              className="mx-auto mt-1.5 max-w-[16ch] text-[19px] leading-[1.2] text-ink"
               style={display}
             >
               {book.title}
@@ -322,7 +327,7 @@ function MobileBook() {
             <span className="skin-control skin-btn-primary px-2 py-2">Edit details</span>
           </div>
         </div>
-        <div className="rv-mobile-dock rv-preview-mobile-dock absolute inset-x-0 bottom-0">
+        <div className="rv-mobile-dock rv-preview-mobile-dock relative">
           <div className="rv-mobile-dock-grid grid grid-cols-5">
             {MOBILE_TAB_ITEMS.slice(0, 2).map((item) => (
               <span
@@ -332,7 +337,7 @@ function MobileBook() {
                 }`}
               >
                 <NavigationGlyph name={item.icon} className="h-4 w-4" />
-                <span className="skin-label">{item.label}</span>
+                <span className="skin-label text-[9px] tracking-normal">{item.label}</span>
               </span>
             ))}
             <span className="flex items-start justify-center">
@@ -342,11 +347,13 @@ function MobileBook() {
             </span>
             <span className="rv-mobile-tab flex min-h-[54px] flex-col items-center justify-center gap-1 text-[10.5px]">
               <NavigationGlyph name={MOBILE_TAB_ITEMS[2].icon} className="h-4 w-4" />
-              <span className="skin-label">{MOBILE_TAB_ITEMS[2].label}</span>
+              <span className="skin-label text-[9px] tracking-normal">
+                {MOBILE_TAB_ITEMS[2].label}
+              </span>
             </span>
             <span className="rv-mobile-tab flex min-h-[54px] flex-col items-center justify-center gap-1 text-[10.5px]">
               <span className="text-[15px] leading-none">···</span>
-              <span className="skin-label">More</span>
+              <span className="skin-label text-[9px] tracking-normal">More</span>
             </span>
           </div>
         </div>
@@ -360,13 +367,20 @@ function MobileBook() {
  * public front door never reads an account merely to demonstrate the product. */
 export function ProductStage({ compact = false }: { compact?: boolean }) {
   return (
-    <div className="relative grid items-end gap-5 sm:grid-cols-[minmax(0,1fr)_244px] sm:gap-0">
-      <div className="min-w-0 sm:pb-9 sm:pr-10">
+    <div className="relative grid items-end gap-5 xl:grid-cols-[minmax(0,1fr)_244px] xl:gap-5">
+      <div className="min-w-0 xl:pb-9">
         <DesktopLibrary compact={compact} />
       </div>
-      <div className="relative z-[2] sm:-ml-16">
+      <div className="relative z-[2]">
         <MobileBook />
       </div>
+      <p className="text-xs leading-relaxed text-muted xl:col-span-2">
+        Sample reading records. Selected covers from{' '}
+        <a href="https://openlibrary.org" className="underline underline-offset-4">
+          Open Library
+        </a>
+        .
+      </p>
     </div>
   )
 }
@@ -397,7 +411,7 @@ export function ReadingRecordStage() {
               Book record · The Court series #1
             </div>
             <h3
-              className="mt-2 max-w-[17ch] text-[clamp(30px,5vw,52px)] leading-[0.98] text-ink"
+              className="mt-2 max-w-[17ch] text-[clamp(30px,5vw,52px)] leading-[1.14] text-ink"
               style={display}
             >
               {book.title}

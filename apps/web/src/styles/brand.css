@@ -1,90 +1,70 @@
-/* Genre-neutral GOLD master brand — the unauthenticated front door (landing + auth). This is the
-   pre-skin master identity, NOT one of the four genre skins: a fixed gold-on-night palette so the
-   front door reads the same for everyone before they pick (or are given) a skin. Scope it with the
-   `.gold-brand` class; the subtree then reads these token values through the normal utilities.
-
-   The one rule that matters: gold CTAs use DARK text (--on-primary: #1a0f14) — white-on-gold fails
-   AA (the same lesson as the cover marks). Values mirror the handed-off auth design's :root. */
+/* Reverie's genre-neutral front door: blue-green ink, warm paper, sea glass.
+   The legacy class name stays compatible with auth; product previews own separate token scopes. */
 .gold-brand {
-  --bg0: #0b0612;
-  --bg1: #15091f;
-  --ink: #f6e9f1;
-  --muted: #b3a6c6;
-  --faint: #8a7d9e;
-  --primary: #f0b14e;
-  --gold: #f0b14e;
-  --on-primary: #1a0f14; /* dark text on the luminous gold CTA (~8.9:1 AA) */
-  --card: #17112a;
-  --card-2: #1f1636;
-  --card-solid: #17112a;
-  --line: rgba(240, 177, 78, 0.18);
-  --field: rgba(246, 233, 241, 0.06);
-  --chip: rgba(246, 233, 241, 0.06);
-  --ok: #7ecb9a;
-  --violet: #7b3fa0;
-  --danger: #e8866b;
-  --star: #f0b14e;
-  --shadow: 0 22px 60px rgba(0, 0, 0, 0.5);
-  --font-display: 'Fraunces', ui-serif, Georgia, serif;
+  --bg0: #102b2e;
+  --bg1: #193a3c;
+  --ink: #f3f1e9;
+  --muted: #c0cec8;
+  --faint: #aec2b9;
+  --primary: #b9d7cb;
+  --gold: #b9d7cb;
+  --on-primary: #102b2e;
+  --eyebrow: #b9d7cb;
+  --card: #193639;
+  --card-2: #234548;
+  --card-solid: #193639;
+  --line: rgba(185, 215, 203, 0.24);
+  --field: #214346;
+  --chip: #214346;
+  --ok: #afd0ac;
+  --violet: #739e9d;
+  --danger: #f2b7a5;
+  --star: #b9d7cb;
+  --shadow: 0 18px 56px rgba(5, 24, 26, 0.25);
+  --font-display: 'Newsreader', ui-serif, Georgia, serif;
   --font-sans: 'Hanken Grotesk', system-ui, sans-serif;
-
-  /* The front door paints its OWN night sky so it's gold-on-night for everyone, independent of any
-     skin a returning visitor may have persisted on <html>. Static stars — no animation, so it's
-     reduced-motion-safe by construction (no twinkle to suppress). */
+  --accent: var(--primary);
+  --accent-fill: var(--primary);
+  --accent-ink: var(--ink);
+  --panel-fill: var(--card-solid);
+  --label-font: var(--font-sans);
+  --label-transform: none;
+  --label-tracking: 0.04em;
+  --ctl-clip: none;
+  --cta-hi: var(--primary);
+  --cta-lo: var(--primary);
+  --cta-ink: var(--on-primary);
+  --cta-border: transparent;
+  --cta-shadow: none;
+  --control-font: var(--font-sans);
+  --control-transform: none;
+  --control-tracking: 0;
+  --radius-control: 8px;
+  --radius-panel: 16px;
+  --radius-card: 10px;
   min-height: 100dvh;
+  font-family: var(--font-sans);
   color: var(--ink);
-  background-color: #0b0612;
-  background-image:
-    radial-gradient(1.5px 1.5px at 18% 22%, rgba(240, 177, 78, 0.7), transparent),
-    radial-gradient(1.5px 1.5px at 73% 16%, rgba(240, 177, 78, 0.5), transparent),
-    radial-gradient(1.5px 1.5px at 36% 68%, rgba(240, 177, 78, 0.6), transparent),
-    radial-gradient(2px 2px at 82% 60%, rgba(240, 177, 78, 0.6), transparent),
-    radial-gradient(1.5px 1.5px at 55% 38%, rgba(246, 233, 241, 0.5), transparent),
-    radial-gradient(1.5px 1.5px at 9% 78%, rgba(246, 233, 241, 0.4), transparent),
-    radial-gradient(140% 120% at 50% -10%, #15091f, #0b0612);
-  background-attachment: fixed;
+  background-color: var(--bg0);
+  background-image: radial-gradient(ellipse at 0% 0%, var(--bg1), transparent 52%);
 }
-
-/* Explicit placeholder colour so it clears AA on the dark field (browser defaults can be too faint). */
 .gold-brand input::placeholder {
   color: var(--faint);
   opacity: 1;
 }
-
-/* Eyebrow/label accent — gold on the dark brand, a deep amber on light bands (both clear AA as
-   small text on their surface). Components read var(--eyebrow). */
-.gold-brand {
-  --eyebrow: #f0b14e;
-}
-
-/* Light marketing band (Features / For every reader) — the landing alternates dark and cream
-   sections for rhythm. Cream surface with dark ink + a deep-amber accent so small text stays AA;
-   gold CTAs keep their dark text and clear AA on either surface. Scope a section with `.band-light`. */
 .gold-brand .band-light {
-  --bg0: #f7f1e6;
-  --bg1: #efe6d4;
-  --ink: #241a12;
-  --muted: #6a5c46;
-  --faint: #8a7a60;
-  --eyebrow: #7a4f12;
-  --card: #fffaf1;
-  --card-2: #f3ead9;
-  --card-solid: #fffaf1;
-  --line: rgba(122, 79, 18, 0.2);
-  --field: rgba(36, 26, 18, 0.05);
-  --chip: rgba(36, 26, 18, 0.05);
-  /* gold CTAs + their dark text are unchanged (AA on gold regardless of band) */
+  --bg0: #f3f0e7;
+  --bg1: #e8e7dc;
+  --ink: #203b3d;
+  --muted: #52635f;
+  --faint: #52635f;
+  --eyebrow: #345d56;
+  --card: #faf8f1;
+  --card-2: #e8e7dc;
+  --card-solid: #faf8f1;
+  --line: rgba(32, 59, 61, 0.2);
+  --field: #e8e7dc;
+  --chip: #e8e7dc;
   background: var(--bg0);
   color: var(--ink);
-}
-
-/* Drifting nebula glows for the living night sky — motion via the project's .rv-anim convention,
-   which prefers-reduced-motion already disables (tokens.css). Decorative, aria-hidden. */
-.gold-brand .nebula {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(70px);
-  opacity: 0.18;
-  pointer-events: none;
-  mix-blend-mode: screen;
 }

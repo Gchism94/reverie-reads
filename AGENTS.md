@@ -25,7 +25,9 @@ Genre-specific language belongs in a skin, not in the core.
   source. The shipped app has long since passed it (skins, moods, tropes-as-join, four-state
   ownership, series entries). Where they differ, the shipped app is right; do not "restore
   parity" with the prototype.
-- Design: canonical tokens/components in `design/DESIGN_SYSTEM.md`; design exports, if any,
+- Design: canonical tokens/components in `design/DESIGN_SYSTEM.md`; the genre-neutral public brand
+  is scoped in `apps/web/src/styles/brand.css`, while examples and app backgrounds share the
+  room renderer in `apps/web/src/components/roomScene.ts`. Design exports, if any,
   in `design/from-design-tool/`.
 
 ## Stack (decided — don't re-litigate without asking)

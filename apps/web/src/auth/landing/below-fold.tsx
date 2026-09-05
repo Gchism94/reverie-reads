@@ -4,7 +4,8 @@ import { APP_NAME, revenueCopy } from '@reverie/core'
 import { buyConfig } from '../../lib/buyConfig'
 import { Wordmark } from '../Wordmark'
 import { ReadingRecordStage } from './ProductStage'
-import { SkinShowcase } from './SkinShowcase'
+import { SkinShowcase, type SkinShowcaseProps } from './SkinShowcase'
+import { ReadingRoomPreview, RoomCaption } from './ReadingRoomPreview'
 
 const display = { fontFamily: 'var(--font-display)', fontWeight: 600 } as const
 
@@ -98,7 +99,7 @@ function ChapterHeader({
       <div>
         <Eyebrow>{eyebrow}</Eyebrow>
         <h2
-          className="mt-3 max-w-[14ch] text-balance text-[clamp(36px,5.5vw,64px)] leading-[0.98] text-ink"
+          className="mt-3 max-w-[14ch] text-balance text-[clamp(36px,5.5vw,64px)] leading-[1.14] text-ink"
           style={display}
         >
           {title}
@@ -138,7 +139,7 @@ function PracticalLedger() {
           <div>
             <Eyebrow>The working library</Eyebrow>
             <h2
-              className="mt-3 max-w-[14ch] text-balance text-[clamp(32px,4.7vw,50px)] leading-[1.01] text-ink"
+              className="mt-3 max-w-[14ch] text-balance text-[clamp(32px,4.7vw,50px)] leading-[1.14] text-ink"
               style={display}
             >
               Room for the rest of your reading life.
@@ -196,7 +197,7 @@ function Privacy() {
           <div>
             <Eyebrow>Yours, privately</Eyebrow>
             <h2
-              className="mt-3 max-w-[13ch] text-balance text-[clamp(32px,4.7vw,50px)] leading-[1.02] text-ink"
+              className="mt-3 max-w-[13ch] text-balance text-[clamp(32px,4.7vw,50px)] leading-[1.14] text-ink"
               style={display}
             >
               A library is personal. The product should know that.
@@ -223,14 +224,19 @@ function Privacy() {
 }
 
 /** Everything below the hero — lazy-loaded so the first invitation paints before this chunk. */
-export default function LandingBelowFold() {
+export default function LandingBelowFold({
+  skin,
+  mode,
+  onSkinChange,
+  onModeChange,
+}: SkinShowcaseProps) {
   return (
     <>
       <section id="how-it-works" className="scroll-mt-20 border-y border-line">
         <div className="mx-auto max-w-[1180px] px-6 py-16 sm:py-20">
           <Eyebrow>Settle into your next book</Eyebrow>
           <h2
-            className="mt-3 max-w-[22ch] text-balance text-[clamp(32px,4.7vw,50px)] leading-[1.06] text-ink"
+            className="mt-3 max-w-[22ch] text-balance text-[clamp(32px,4.7vw,50px)] leading-[1.14] text-ink"
             style={display}
           >
             A few books. A place to begin.
@@ -273,7 +279,12 @@ export default function LandingBelowFold() {
             body="A thought in the margin. The date you finished. A different feeling on a second read. Keep your notes, ratings, and rereads alongside the books, with room for your reading life to change."
           />
           <div className="mt-12 sm:mt-16">
-            <ReadingRecordStage />
+            <ReadingRoomPreview skin={skin} mode={mode} className="border border-line p-4 sm:p-6">
+              <RoomCaption skin={skin} mode={mode} />
+              <div className="mt-4">
+                <ReadingRecordStage />
+              </div>
+            </ReadingRoomPreview>
           </div>
           <ProofStrip>
             {[
@@ -294,7 +305,12 @@ export default function LandingBelowFold() {
         </div>
       </section>
 
-      <SkinShowcase />
+      <SkinShowcase
+        skin={skin}
+        mode={mode}
+        onSkinChange={onSkinChange}
+        onModeChange={onModeChange}
+      />
 
       <PracticalLedger />
       <Privacy />
@@ -311,7 +327,7 @@ export default function LandingBelowFold() {
           />
           <Eyebrow>The shelf is waiting</Eyebrow>
           <h2
-            className="mx-auto mt-3 max-w-[16ch] text-balance text-[clamp(34px,5vw,54px)] leading-[1.01] text-ink"
+            className="mx-auto mt-3 max-w-[16ch] text-balance text-[clamp(34px,5vw,54px)] leading-[1.14] text-ink"
             style={display}
           >
             Your next read may already be waiting.

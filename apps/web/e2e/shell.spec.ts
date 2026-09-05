@@ -1,10 +1,10 @@
 import { expect, test } from './support/fixtures'
 
-// The signed-out front door is now the gold master-brand landing + a password/social auth screen
+// The signed-out front door is now the Reverie brand landing + a password/social auth screen
 // (the magic-link screen is gone). The a11y sweep's seeded signInWithPassword exercises the same
 // password path these screens use.
 
-test('signed-out landing shows the gold front door', async ({ page }) => {
+test('signed-out landing shows the personal-library front door', async ({ page }) => {
   await page.goto('/')
   await expect(
     page.getByRole('heading', { name: 'Find your next read in your own library.' }),
@@ -12,37 +12,33 @@ test('signed-out landing shows the gold front door', async ({ page }) => {
   await expect(page.locator('#top').getByRole('link', { name: 'Start your library' })).toBeVisible()
 })
 
-// Fraunces is Tryst's #1 character lever and the landing's display face. The css2 era asserted the
-// injected href NAMED Fraunces, because the URL's query string was the only place the request said
-// what it was for. Self-hosted (feat/selfhost-webfonts), the pairing is /fonts/tryst.css and the
-// family lives in the stylesheet's own @font-face rules — so "asks for Fraunces" is now asserted
-// where it's actually stated: the skin's local stylesheet is requested, and the browser registers
-// the Fraunces faces it declares.
-//
+// Reverie's Newsreader display face belongs to the brand; the sample rooms keep their own fonts.
 // The mechanism (served vs. dead stylesheet, both directions) is covered once in e2e/fonts.spec.ts;
 // the all-nine-skins matrix lives in src/skin/fontConfig.test.ts.
-test('the landing asks for Fraunces and applies it to the display face', async ({ page }) => {
+test('the landing asks for Newsreader and applies it to the display face', async ({ page }) => {
   await page.goto('/')
   const heading = page.getByTestId('landing-display-heading')
   await expect(heading).toBeVisible()
 
-  // Requested: the pre-paint boot script injected tryst's self-hosted pairing…
+  // The brand stylesheet is loaded independently of the active room.
   const hrefs = await page.evaluate(() =>
-    [...document.querySelectorAll('link[data-skin-font]')].map((l) => l.getAttribute('href') ?? ''),
+    [...document.querySelectorAll('link[rel="stylesheet"]')].map(
+      (l) => l.getAttribute('href') ?? '',
+    ),
   )
-  expect(hrefs).toContain('/fonts/tryst.css')
+  expect(hrefs).toContain('/fonts/brand.css')
 
-  // …whose @font-face rules the browser parsed into registered Fraunces faces.
+  // …whose @font-face rules the browser parsed into registered Newsreader faces.
   await page.evaluate(() => (document as Document & { fonts: FontFaceSet }).fonts.ready)
   const families = await page.evaluate(() =>
     [...(document as Document & { fonts: FontFaceSet }).fonts].map((f) => f.family),
   )
-  expect(families).toContain('Fraunces')
+  expect(families).toContain('Newsreader')
 
-  // Applied: the display element resolves to a stack led by Fraunces, with a real generic behind
+  // Applied: the display element resolves to a stack led by Newsreader, with a real generic behind
   // it — so a missing font file degrades to system serif rather than to nothing.
   const stack = await heading.evaluate((el) => getComputedStyle(el).fontFamily)
-  expect(stack).toContain('Fraunces')
+  expect(stack).toContain('Newsreader')
   expect(stack.toLowerCase()).toMatch(/serif/)
 })
 

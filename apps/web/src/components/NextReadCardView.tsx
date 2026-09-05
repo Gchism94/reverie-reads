@@ -36,7 +36,7 @@ export function NextReadCardView({
       </div>
       <div className="min-w-0">
         <h3
-          className="break-words text-lg font-semibold text-ink"
+          className="break-words text-lg font-semibold leading-[1.3] text-ink"
           style={{ fontFamily: 'var(--font-display)' }}
         >
           {book.title}

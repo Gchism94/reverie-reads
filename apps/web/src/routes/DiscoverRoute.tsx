@@ -12,7 +12,8 @@ import { Chip } from '../components/Chip'
 import { Modal } from '../components/Modal'
 import { CoverImage } from '../components/CoverImage'
 import { SearchResults } from '../components/SearchResults'
-import type { SearchResult } from '../lib/search'
+import { libraryMatch, type SearchResult } from '../lib/search'
+import { DiscoverBookPreview } from '../components/DiscoverBookPreview'
 import {
   batchCount,
   batchOf,
@@ -43,8 +44,10 @@ function Card({
   owned,
   taste,
   anchors,
+  onOpen,
 }: {
   hit: DiscoverHit
+  onOpen: () => void
   owned: boolean
   taste?: number
   anchors?: TasteAnchors | null
@@ -55,32 +58,46 @@ function Card({
   const { first, last } = splitName(author)
 
   return (
-    <div className="flex flex-col">
-      <div
-        className="aspect-[2/3] overflow-hidden rounded-[8px] border border-line"
-        style={{ background: 'var(--card)' }}
+    <article className="flex min-w-0 flex-col rounded-[var(--radius-card)] border border-line bg-card p-3">
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-label={`View details for ${hit.title}`}
+        className="w-full text-left"
       >
-        {/* Same cover chain as the library grid: upgraded → original → skin placeholder, with the
+        <div
+          className="aspect-[2/3] overflow-hidden rounded-[8px] border border-line"
+          style={{ background: 'var(--card)' }}
+        >
+          {/* Same cover chain as the library grid: upgraded → original → skin placeholder, with the
             Google "no image" plate rejected on load (a Discover hit has no library id → no telemetry). */}
-        <CoverImage book={{ title: hit.title, first, last, cover: hit.cover }} thumb />
-      </div>
-      <div className="mt-2 min-w-0">
-        <div className="break-words text-[13px] font-semibold leading-snug text-ink">
-          {hit.title}
+          <CoverImage book={{ title: hit.title, first, last, cover: hit.cover }} thumb />
         </div>
-        <div className="break-words text-[12px] text-muted">
-          {author}
-          {year ? <span style={{ color: 'var(--faint, var(--muted))' }}> · {year}</span> : null}
-        </div>
-        {taste != null && anchors && (
-          /* Tier 2b: the named taste tier (fixed per-user anchors) — stable per book, comparable
-             across shelves. The anchored % rides underneath as the drill-down (tooltip), not here. */
-          <div className="mt-0.5">
-            <TasteTier cos={taste} anchors={anchors} />
+        <div className="mt-2 min-w-0">
+          <div className="break-words text-[13px] font-semibold leading-snug text-ink">
+            {hit.title}
           </div>
-        )}
-      </div>
-      <div className="mt-1.5">
+          <div className="break-words text-[12px] text-muted">
+            {author}
+            {year ? <span style={{ color: 'var(--faint, var(--muted))' }}> · {year}</span> : null}
+          </div>
+          {taste != null && anchors && (
+            /* Tier 2b: the named taste tier (fixed per-user anchors) — stable per book, comparable
+             across shelves. The anchored % rides underneath as the drill-down (tooltip), not here. */
+            <div className="mt-0.5">
+              <TasteTier cos={taste} anchors={anchors} />
+            </div>
+          )}
+        </div>
+      </button>
+      <div className="mt-auto flex flex-wrap gap-2 pt-3">
+        <button
+          type="button"
+          onClick={onOpen}
+          className="min-h-11 text-sm font-semibold text-ink underline underline-offset-4"
+        >
+          Book details
+        </button>
         {owned ? (
           <Surface
             as="span"
@@ -116,7 +133,7 @@ function Card({
           </button>
         )}
       </div>
-    </div>
+    </article>
   )
 }
 
@@ -199,7 +216,15 @@ function ResultActions({ result }: { result: SearchResult }) {
 }
 
 /** The Discover search surface — shown only while a query is active; the taste rail returns on clear. */
-function SearchSection({ query, books }: { query: string; books: Book[] }) {
+function SearchSection({
+  query,
+  books,
+  onOpen,
+}: {
+  query: string
+  books: Book[]
+  onOpen: (hit: DiscoverHit) => void
+}) {
   const voice = useVoice()
   const q = useSearchEverywhere(query)
   return (
@@ -234,6 +259,9 @@ function SearchSection({ query, books }: { query: string; books: Book[] }) {
       )}
       {q.isSuccess && q.data.length > 0 && (
         <SearchResults
+          onPreview={(result) =>
+            onOpen({ ...result, pub: result.year, isbn: result.isbn13 ?? result.isbn })
+          }
           results={q.data}
           books={books}
           renderActions={(r) => <ResultActions result={r} />}
@@ -250,6 +278,7 @@ export function DiscoverScreen() {
   const genre = search.genre ?? ''
   const { data: books } = useBooks()
   const owned = ownedKeys(books ?? [])
+  const [preview, setPreview] = useState<DiscoverHit | null>(null)
   // Seeded from the param, so a restored URL repopulates the box rather than only filtering.
   const [query, setQuery] = useState(search.query ?? '')
   const debounced = useDebouncedValue(query, 400)
@@ -335,13 +364,14 @@ export function DiscoverScreen() {
   return (
     <section className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6">
       <h1
-        className="text-[22px] italic text-ink"
+        className="text-[clamp(30px,4vw,44px)] leading-[1.2] text-ink"
         style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
       >
         Discover
       </h1>
-      <p className="mb-4 text-[13px] text-muted">
-        New and notable from the wider shelves — one tap from your library.
+      <p className="mb-6 mt-3 max-w-[65ch] text-base leading-relaxed text-muted">
+        Find a book you want to spend time with. Open a cover, read a little about it, then decide
+        whether to make room on your shelf.
       </p>
 
       {/* Search the wider catalog — title, author, or ISBN. An active query replaces the browse rail
@@ -354,7 +384,7 @@ export function DiscoverScreen() {
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search title, author, or ISBN…"
             aria-label="Search the wider catalog"
-            className="h-11 w-full skin-card border border-line pl-10 pr-3 text-[14px] text-ink outline-none"
+            className="h-11 w-full skin-card border border-line pl-10 pr-14 text-[14px] text-ink outline-none"
             style={{ background: 'var(--field)' }}
           />
           <span
@@ -368,7 +398,7 @@ export function DiscoverScreen() {
               type="button"
               onClick={() => setQuery('')}
               aria-label="Clear search"
-              className="skin-control absolute right-2 top-1/2 -translate-y-1/2 px-2 py-0.5 text-[13px] text-muted hover:text-ink"
+              className="skin-control absolute right-0 top-1/2 h-11 w-11 -translate-y-1/2 text-[13px] text-muted hover:text-ink"
             >
               ✕
             </button>
@@ -382,7 +412,7 @@ export function DiscoverScreen() {
       </div>
 
       {/* ── search results (query active) ── */}
-      {searching && <SearchSection query={debounced} books={books ?? []} />}
+      {searching && <SearchSection query={debounced} books={books ?? []} onOpen={setPreview} />}
 
       {/* ── the taste-ranked browse rail (empty search) ── */}
       {!searching && (
@@ -422,6 +452,11 @@ export function DiscoverScreen() {
               which CYCLES a fixed cached pool and replaces twenty with the next twenty. Same page
               size, opposite accumulation; both sit on this screen, so the difference is stated. */}
           <section aria-label="Browse the catalog" className="mb-8">
+            <h2 className="mb-2 text-xl font-semibold leading-snug text-ink">The shared shelves</h2>
+            <p className="mb-4 text-sm leading-relaxed text-muted">
+              Browse what’s here, or search above for a particular book. Your own books are marked
+              so you can return to them.
+            </p>
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <input
                 type="search"
@@ -430,7 +465,7 @@ export function DiscoverScreen() {
                 placeholder="Filter the catalog — title or author…"
                 aria-label="Filter the catalog by title or author"
                 data-testid="corpus-filter"
-                className="skin-field h-9 min-w-[180px] flex-1 border border-line px-3 text-[13px] text-ink outline-none"
+                className="skin-field min-h-11 min-w-[180px] flex-1 border border-line px-3 text-[13px] text-ink outline-none"
                 style={{ background: 'var(--field)' }}
               />
               <input
@@ -440,7 +475,7 @@ export function DiscoverScreen() {
                 placeholder="Tag…"
                 aria-label="Filter the catalog by tag"
                 data-testid="corpus-tag-filter"
-                className="skin-field h-9 w-32 border border-line px-3 text-[13px] text-ink outline-none"
+                className="skin-field min-h-11 w-32 border border-line px-3 text-[13px] text-ink outline-none"
                 style={{ background: 'var(--field)' }}
               />
               <Chip
@@ -466,6 +501,20 @@ export function DiscoverScreen() {
               </div>
             )}
 
+            {corpus.isError && (
+              <div
+                role="alert"
+                className="mb-4 rounded-[var(--radius-card)] border border-line bg-card p-4 text-sm text-muted"
+              >
+                <p>The shared catalog couldn’t be loaded.</p>
+                <button
+                  className="min-h-11 text-ink underline"
+                  onClick={() => void corpus.refetch()}
+                >
+                  Try again
+                </button>
+              </div>
+            )}
             {corpus.isSuccess && corpusVisible.length === 0 && (
               <p
                 className="px-2 py-8 text-center text-[13.5px] text-muted"
@@ -477,7 +526,7 @@ export function DiscoverScreen() {
               </p>
             )}
 
-            {corpusVisible.length > 0 && (
+            {(corpusVisible.length > 0 || corpus.hasNextPage) && (
               <>
                 <div
                   className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4"
@@ -487,6 +536,7 @@ export function DiscoverScreen() {
                     <Card
                       key={`${h.title}|${h.authors[0] ?? ''}`}
                       hit={h}
+                      onOpen={() => setPreview(h)}
                       owned={isOwned(h, owned)}
                     />
                   ))}
@@ -606,6 +656,7 @@ export function DiscoverScreen() {
                         <Card
                           key={`${h.isbn}|${h.title}`}
                           hit={h}
+                          onOpen={() => setPreview(h)}
                           owned={isOwned(h, owned)}
                           taste={taste}
                           anchors={anchors}
@@ -623,6 +674,19 @@ export function DiscoverScreen() {
             always know better.
           </p>
         </>
+      )}
+      {preview && (
+        <DiscoverBookPreview
+          hit={preview}
+          book={
+            (books ?? []).find(
+              (book) => preview.corpusWorkId && book.corpusWorkId === preview.corpusWorkId,
+            ) ??
+            libraryMatch({ ...preview, source: 'google', year: preview.pub }, books ?? []) ??
+            undefined
+          }
+          onClose={() => setPreview(null)}
+        />
       )}
     </section>
   )

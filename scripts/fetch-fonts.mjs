@@ -14,14 +14,14 @@
 // After a re-run: re-run the unit suite (the subset contract test), re-check NOTICES.md's font
 // entries, and treat it as a rendering-layer change (surface-visual sweep + baseline recapture).
 //
-// LICENSING. All 18 families are SIL OFL 1.1 (verified against the google/fonts repo — every one
+// LICENSING. All 19 families are SIL OFL 1.1 (verified against the google/fonts repo — every one
 // lives under ofl/). OFL permits redistribution, bundled with software, provided the license and
 // copyright notices ride along: NOTICES.md carries the per-family entries, and the OFL text ships
 // at public/fonts/OFL.txt. The woff2 instances are Google's mechanical subsets of the upstream
 // fonts (their modification, served by them under the same license); we redistribute them
 // unmodified, so no Reserved Font Name is exercised.
 
-import { mkdirSync, writeFileSync, existsSync } from 'node:fs'
+import { mkdirSync, writeFileSync, existsSync, readFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -32,6 +32,8 @@ const FILES_DIR = join(FONTS_DIR, 'files')
 // The upstream css2 URLs, verbatim from the pre-selfhost FONT_CSS map (src/skin/fonts.ts at
 // 52c668a). This is the provenance record: the app no longer references these hosts anywhere.
 const SOURCES = {
+  brand:
+    'https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap',
   tryst:
     'https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,500;1,9..144,600&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap',
   grimoire:
@@ -66,11 +68,14 @@ function localName(gstaticUrl) {
   return `${m[1]}-${m[2]}-${m[3]}`
 }
 
+const only = process.argv.find((arg) => arg.startsWith('--only='))?.slice(7)
+if (only && !Object.hasOwn(SOURCES, only)) throw new Error('Unknown font pairing')
 const manifest = {}
 let downloaded = 0
 let reused = 0
 
 for (const [skin, url] of Object.entries(SOURCES)) {
+  if (only && skin !== only) continue
   const res = await fetch(url, { headers: { 'User-Agent': UA } })
   if (!res.ok) throw new Error(`css2 ${skin}: HTTP ${res.status}`)
   let css = await res.text()
@@ -88,10 +93,6 @@ for (const [skin, url] of Object.entries(SOURCES)) {
       reused++
     }
     css = css.replaceAll(`url(${f})`, `url(/fonts/files/${name})`)
-    const fam = name.split('-')[0]
-    const version = f.match(/\/s\/[^/]+\/(v\d+)\//)?.[1] ?? '?'
-    manifest[fam] = manifest[fam] ?? { version, files: 0 }
-    manifest[fam].files++
   }
 
   // The upstream URL deliberately does NOT ride in the shipped file: SOURCES above is the
@@ -109,5 +110,15 @@ for (const [skin, url] of Object.entries(SOURCES)) {
   console.log(`${skin}.css written (${files.length} font refs)`)
 }
 
+// Count the shipped references, including untouched pairings during a selective refresh.
+// Starting from the old totals would inflate shared-family counts every time --only is repeated.
+for (const pairing of Object.keys(SOURCES)) {
+  const css = readFileSync(join(FONTS_DIR, `${pairing}.css`), 'utf8')
+  for (const match of css.matchAll(/url\(\/fonts\/files\/([^-]+)-(v\d+)-[^)]+\)/g)) {
+    const [, family, version] = match
+    manifest[family] ??= { version, files: 0 }
+    manifest[family].files++
+  }
+}
 writeFileSync(join(FONTS_DIR, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n')
 console.log(`done: ${downloaded} woff2 downloaded, ${reused} reused across skins`)

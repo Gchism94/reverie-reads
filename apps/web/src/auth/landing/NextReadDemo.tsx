@@ -39,7 +39,7 @@ export function NextReadDemo() {
             ref={heading}
             tabIndex={-1}
             id="sample-next-read"
-            className="text-3xl font-semibold text-ink"
+            className="text-3xl font-semibold leading-[1.2] text-ink"
             style={{ fontFamily: 'var(--font-display)' }}
           >
             A place to start
@@ -66,7 +66,7 @@ export function NextReadDemo() {
           </select>
         </label>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,245px),1fr))] gap-4">
         {picks.map((book) => (
           <NextReadCardView
             key={book.id}

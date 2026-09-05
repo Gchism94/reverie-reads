@@ -481,3 +481,42 @@ test('rename, merge, delete, and restore preserve every series entry through the
     await reset(c)
   }
 })
+
+test('an incorrect category can be permanently deleted from its series page while its books stay', async ({
+  page,
+}, testInfo) => {
+  const c = await client()
+  await reset(c)
+  await seed(c, ALPHA, ['Keep This Book', 'Keep This Too'])
+  await stubBackends(page)
+  try {
+    await signIn(page, c.session)
+    await page.goto(`/series/${encodeURIComponent(ALPHA)}`)
+    await page.getByRole('button', { name: 'Not a series? Remove this category' }).click()
+    const dialog = page.getByRole('dialog', { name: `Not a series: ${ALPHA}` })
+    await expect(dialog.getByRole('radio', { name: /This is not a series/ })).toBeChecked()
+    await page.screenshot({ path: testInfo.outputPath('remove-series-category.png') })
+    await dialog.getByRole('button', { name: 'Keep series' }).click()
+    expect(await dbOrder(c, ALPHA)).toEqual(['Keep This Book', 'Keep This Too'])
+    await page.getByRole('button', { name: 'Not a series? Remove this category' }).click()
+    await dialog.getByRole('button', { name: 'Permanently delete category' }).click()
+    await expect(page).toHaveURL(/\/series$/)
+    await page.reload()
+    await expect(page.getByTestId('series-browser-card').filter({ hasText: ALPHA })).toHaveCount(0)
+    const rows = await c.sb
+      .from('books')
+      .select('title,series,series_user_chosen')
+      .eq('owner_id', c.uid)
+      .order('title')
+    expect(rows.error).toBeNull()
+    expect(rows.data).toEqual([
+      { title: 'Keep This Book', series: null, series_user_chosen: true },
+      { title: 'Keep This Too', series: null, series_user_chosen: true },
+    ])
+    const archived = await c.sb.rpc('list_archived_personal_series')
+    expect(archived.error).toBeNull()
+    expect(archived.data).toEqual([])
+  } finally {
+    await reset(c)
+  }
+})

@@ -336,41 +336,95 @@ export function MergeSeriesDialog({
 export function DeleteSeriesDialog({
   row,
   onClose,
+  onDeleted,
+  initialPermanent = false,
 }: {
   row: SeriesManagementRow
   onClose: () => void
+  onDeleted?: () => void
+  initialPermanent?: boolean
 }) {
-  const archive = useArchiveSeries()
+  const [permanent, setPermanent] = useState(initialPermanent)
+  const archive = useArchiveSeries(permanent)
+  const close = () => {
+    if (!archive.isPending) onClose()
+  }
   return (
-    <Modal title={`Delete ${row.name}?`} onClose={onClose}>
-      <p className="text-[13.5px] leading-relaxed text-muted">
-        This removes the series from your active collection. Your books, reading history, confirmed
-        entries, missing-book slots, and manual order are preserved so the series can be restored.
+    <Modal title={permanent ? `Not a series: ${row.name}` : `Delete ${row.name}?`} onClose={close}>
+      <p className="text-base leading-relaxed text-ink">
+        Your books stay in your library, with their notes, ratings, copies, and reading history.
       </p>
-      <Surface tone="field" radius="control" pad={2} className="mt-4 text-[12.5px] text-muted">
-        {row.liveEntries} confirmed {row.liveEntries === 1 ? 'entry' : 'entries'} ·{' '}
-        {row.unreviewedEntries} awaiting review · {row.possessedBooks} in hand · {row.ghostEntries}{' '}
-        missing-book {row.ghostEntries === 1 ? 'slot' : 'slots'} · {row.removedEntries} removed{' '}
-        {row.removedEntries === 1 ? 'slot' : 'slots'}
-      </Surface>
-      {archive.isError ? (
-        <div role="alert" className="mt-4 text-[12.5px] leading-relaxed text-primary">
-          <p>{messageOf(archive.error)}</p>
-          <p className="mt-1 text-muted">
-            If this series belongs to a connected universe, remove it from that universe first and
-            try again.
-          </p>
-        </div>
-      ) : null}
+      <fieldset className="mt-5 space-y-3" disabled={archive.isPending}>
+        <legend className="mb-3 text-sm font-semibold text-ink">
+          What should happen to this category?
+        </legend>
+        <label className="flex min-h-11 cursor-pointer items-start gap-3 rounded-[var(--radius-card)] border border-line p-3 text-sm leading-relaxed text-ink">
+          <input
+            type="radio"
+            name="series-removal"
+            checked={permanent}
+            onChange={() => setPermanent(true)}
+            className="mt-1"
+          />
+          <span>
+            <strong>This is not a series</strong>
+            <span className="mt-1 block text-muted">
+              Permanently delete the category, its order, and missing-book slots. Remove this series
+              label from your books; other series memberships stay. This cannot be restored.
+            </span>
+          </span>
+        </label>
+        <label className="flex min-h-11 cursor-pointer items-start gap-3 rounded-[var(--radius-card)] border border-line p-3 text-sm leading-relaxed text-ink">
+          <input
+            type="radio"
+            name="series-removal"
+            checked={!permanent}
+            onChange={() => setPermanent(false)}
+            className="mt-1"
+          />
+          <span>
+            <strong>Keep it for later</strong>
+            <span className="mt-1 block text-muted">
+              Remove it from the active collection, but keep its entries and order in Deleted series
+              so you can restore it.
+            </span>
+          </span>
+        </label>
+      </fieldset>
+      <p className="mt-4 text-sm leading-relaxed text-muted">
+        This changes only your personal series category. It does not change the shared catalog or
+        classify these books as standalone.
+      </p>
+      {archive.isError && (
+        <p role="alert" className="mt-4 text-sm leading-relaxed text-primary">
+          {messageOf(archive.error)}
+          {/universe/i.test(messageOf(archive.error)) && (
+            <span className="mt-1 block text-muted">
+              To remove this category, remove it from that universe first.
+            </span>
+          )}
+        </p>
+      )}
       <div className="mt-5 flex flex-wrap justify-end gap-2">
-        <Button variant="secondary" onClick={onClose} disabled={archive.isPending}>
-          Cancel
+        <Button variant="secondary" onClick={close} disabled={archive.isPending}>
+          Keep series
         </Button>
         <Button
-          onClick={() => archive.mutate(row.series, { onSuccess: onClose })}
+          onClick={() =>
+            archive.mutate(row.series, {
+              onSuccess: () => {
+                onDeleted?.()
+                onClose()
+              },
+            })
+          }
           disabled={archive.isPending}
         >
-          {archive.isPending ? 'Deleting…' : 'Delete series'}
+          {archive.isPending
+            ? 'Removing…'
+            : permanent
+              ? 'Permanently delete category'
+              : 'Delete series'}
         </Button>
       </div>
     </Modal>
