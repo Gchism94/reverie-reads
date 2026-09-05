@@ -152,6 +152,25 @@ describe('merge unions subgenres', () => {
   })
 })
 
+describe('merge unions genres', () => {
+  it('collapses casing variants without collapsing distinct descriptive labels', () => {
+    const primary = makeBook({
+      id: 'p',
+      title: 'Primary',
+      genres: ['romance', 'Thriller'],
+    })
+    const loser = makeBook({
+      id: 'l',
+      title: 'Duplicate',
+      genres: ['Romance', 'Mystery', 'thriller'],
+    })
+    const merged = mergeBooks({ books: [primary, loser], tbrs: [], collections: [] }, 'p', ['l'])
+      .books[0]!
+
+    expect(merged.genres).toEqual(['romance', 'Thriller', 'mystery'])
+  })
+})
+
 describe('merge keeps series provenance attached to the winning value', () => {
   it('takes the loser claim when its series fills a blank primary', () => {
     const primary = makeBook({
