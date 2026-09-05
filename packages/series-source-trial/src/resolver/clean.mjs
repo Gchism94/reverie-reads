@@ -75,10 +75,39 @@ const originKey = (evidence) => {
 
 const isRelational = (evidence) => evidence.evidenceKind === 'relational_membership'
 
-export function gradeMembershipEvidence(target, evidence, identityEvidence = []) {
-  const relational = evidence.filter(isRelational)
+const providerSeriesLabel = (target, entry) => {
+  const series = String(entry.series ?? '').trim()
+  if (entry.provider !== 'hardcover') return { series }
 
-  return evidence.map((entry) => {
+  const parenthetical = series.match(/^(.*?)\s*\(([^()]+)\)\s*$/)
+  if (!parenthetical) return { series }
+
+  const authorQualifiers = new Set(
+    (target.authors ?? []).flatMap((author) => {
+      const full = normalize(author)
+      const surname = full.split(' ').at(-1)
+      return [full, surname].filter(Boolean)
+    }),
+  )
+  if (!authorQualifiers.has(normalize(parenthetical[2]))) return { series }
+
+  const canonicalSeries = parenthetical[1].trim()
+  if (!canonicalSeries) return { series }
+
+  return {
+    series: canonicalSeries,
+    reportedSeries: series,
+  }
+}
+
+export function gradeMembershipEvidence(target, evidence, identityEvidence = []) {
+  const cleanedEvidence = evidence.map((entry) => ({
+    ...entry,
+    ...providerSeriesLabel(target, entry),
+  }))
+  const relational = cleanedEvidence.filter(isRelational)
+
+  return cleanedEvidence.map((entry) => {
     const riskFlags = []
     const profile = providerProfile(entry.provider)
     const sameSeries = relational.filter(
