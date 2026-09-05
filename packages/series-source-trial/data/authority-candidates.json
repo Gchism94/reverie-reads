@@ -2,25 +2,6 @@
   "schemaVersion": 1,
   "cases": [
     {
-      "id": "kindle-storyteller-2022-midsummer-house",
-      "title": "Midsummer House",
-      "authors": ["Rachael Lucas"],
-      "identifiers": { "isbn13": ["9781739804022"], "asin": ["B09JXJV2BM"] },
-      "sampleOrigin": "external_sample",
-      "strata": ["recent_independent_or_kindle_first"],
-      "publicationYear": 2022,
-      "publicationPath": "kindle_first",
-      "selectionFrame": "kindle_storyteller_2022_shortlist",
-      "sampleSources": [
-        {
-          "kind": "platform_award",
-          "url": "https://www.aboutamazon.co.uk/news/retail/amazons-kindle-storyteller-award-2022-shortlist-announced"
-        }
-      ],
-      "truth": { "status": "candidate", "standalone": null, "memberships": [], "sources": [] },
-      "reviewNote": "Selected as one of all five 2022 finalists. Provider catalogs describe Applemore placement, but no sufficiently explicit author or original-publisher relationship source has been captured yet."
-    },
-    {
       "id": "kindle-storyteller-2023-my-brothers-keeper",
       "title": "My Brother's Keeper",
       "authors": ["ML Rose"],
@@ -57,24 +38,6 @@
       ],
       "truth": { "status": "candidate", "standalone": null, "memberships": [], "sources": [] },
       "reviewNote": "Selected as one of all five 2023 finalists. The author's catalog groups the Midlife books visually and Amazon calls this the third Midlife Trilogy story, but the author page does not expose an explicit text relationship suitable for gold review."
-    },
-    {
-      "id": "kindle-storyteller-2025-pyg",
-      "title": "Pyg",
-      "authors": ["Pip Landers-Letts"],
-      "sampleOrigin": "external_sample",
-      "strata": ["recent_independent_or_kindle_first"],
-      "publicationYear": 2025,
-      "publicationPath": "kindle_first",
-      "selectionFrame": "kindle_storyteller_2025_shortlist",
-      "sampleSources": [
-        {
-          "kind": "platform_award",
-          "url": "https://www.aboutamazon.co.uk/news/books-and-authors/how-to-enter-amazons-kindle-storyteller-award"
-        }
-      ],
-      "truth": { "status": "candidate", "standalone": null, "memberships": [], "sources": [] },
-      "reviewNote": "Selected as one of all five 2025 finalists. The author says Chameleon is a Pyg spin-off and groups both under The Leamington Bloom Series, but the captured page does not explicitly state Pyg's own membership or order strongly enough for gold truth."
     },
     {
       "id": "kindle-storyteller-2025-the-bed-in-the-shed",

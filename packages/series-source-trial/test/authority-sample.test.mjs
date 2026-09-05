@@ -59,16 +59,16 @@ test('reports the exact reviewed and sampling gaps in the current authority set'
   assert.equal(audit.ready, false)
   assert.deepEqual(audit.counts, {
     selected: 108,
-    reviewed: 97,
-    candidate: 11,
-    reviewedPositive: 76,
+    reviewed: 99,
+    candidate: 9,
+    reviewedPositive: 78,
     reviewedStandalone: 21,
     selectionTarget: 200,
     selectionGap: 92,
   })
   assert.deepEqual(Object.fromEntries(audit.targets.map((target) => [target.id, target.gap])), {
-    reviewed_cases: 103,
-    reviewed_positive_cases: 24,
+    reviewed_cases: 101,
+    reviewed_positive_cases: 22,
     reviewed_standalone_cases: 29,
   })
   assert.deepEqual(
@@ -99,9 +99,9 @@ test('reports the exact reviewed and sampling gaps in the current authority set'
         .map(({ id, reviewed, gap }) => [id, { reviewed, gap }]),
     ),
     {
-      recent_independent_or_kindle_first: { reviewed: 16, gap: 34 },
+      recent_independent_or_kindle_first: { reviewed: 18, gap: 32 },
       recent_traditional: { reviewed: 27, gap: 23 },
-      multi_series_or_connected_universe: { reviewed: 12, gap: 8 },
+      multi_series_or_connected_universe: { reviewed: 13, gap: 7 },
       standalone_control: { reviewed: 24, gap: 26 },
     },
   )
@@ -238,6 +238,40 @@ test('promotes the final unambiguous seed candidates while preserving ambiguous 
   assert.equal(byId.get('reverie-the-wolves-of-ruin-dire-bound')?.publicationPath, 'independent')
   assert.equal(byId.get('reverie-dark-forces-bulletproof')?.truth.status, 'candidate')
   assert.equal(byId.get('reverie-lords-the-sacrifice')?.truth.status, 'candidate')
+})
+
+test('promotes explicit external series evidence without inferring order or standalone status', async () => {
+  const caseSet = await loadTrialCases()
+  const byId = new Map(caseSet.cases.map((testCase) => [testCase.id, testCase]))
+
+  const midsummer = byId.get('kindle-storyteller-2022-midsummer-house')
+  assert.equal(midsummer?.truth.status, 'reviewed')
+  assert.equal(midsummer?.truth.standalone, false)
+  assert.equal(midsummer?.truth.memberships[0]?.series, 'Applemore Bay')
+  assert.deepEqual(midsummer?.truth.memberships[0]?.positions, [
+    { value: 3, orderType: 'publication' },
+  ])
+  assert.equal(midsummer?.truth.sources.length, 2)
+
+  const pyg = byId.get('kindle-storyteller-2025-pyg')
+  assert.equal(pyg?.truth.status, 'reviewed')
+  assert.equal(pyg?.truth.standalone, false)
+  assert.equal(pyg?.truth.membershipsComplete, true)
+  assert.equal(pyg?.truth.memberships[0]?.series, 'The Leamington Bloom')
+  assert.deepEqual(pyg?.truth.memberships[0]?.positions, [])
+  assert.deepEqual(pyg?.riskFeatures, ['connected_universe'])
+
+  for (const id of [
+    'kindle-storyteller-2023-my-brothers-keeper',
+    'kindle-storyteller-2023-a-midlife-gamble',
+    'kindle-storyteller-2025-the-bed-in-the-shed',
+    'hachette-standalone-romantasy-the-honey-witch',
+    'hachette-standalone-romantasy-wild-and-wicked-things',
+    'hachette-standalone-romantasy-the-carnivale-of-curiosities',
+    'hachette-standalone-romantasy-the-princess-of-thornwood-drive',
+  ]) {
+    assert.equal(byId.get(id)?.truth.status, 'candidate')
+  }
 })
 
 test('never counts an unreviewed candidate toward an authority gate', () => {
