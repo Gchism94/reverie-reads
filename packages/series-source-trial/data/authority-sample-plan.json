@@ -38,6 +38,19 @@
       "selectionRule": "Include all five shortlisted titles, with no provider-result filtering."
     },
     {
+      "id": "kindle_storyteller_2025_shortlist",
+      "label": "Complete 2025 Kindle Storyteller Award shortlist",
+      "expectedCases": 5,
+      "strata": ["recent_independent_or_kindle_first"],
+      "publicationYear": 2025,
+      "publicationPath": "kindle_first",
+      "source": {
+        "kind": "platform_award",
+        "url": "https://www.aboutamazon.co.uk/news/books-and-authors/how-to-enter-amazons-kindle-storyteller-award"
+      },
+      "selectionRule": "Include all five shortlisted titles, with no provider-result filtering."
+    },
+    {
       "id": "prh_standalone_scifi_fantasy_2026_09_04",
       "label": "Complete Penguin Random House stand-alone science fiction and fantasy list observed 2026-09-04",
       "expectedCases": 16,
@@ -48,6 +61,18 @@
         "url": "https://www.penguinrandomhouse.com/the-read-down/standalone-scifi-fantasy-books"
       },
       "selectionRule": "Include all sixteen titles present on the publisher list at the observation date, with no provider-result filtering."
+    },
+    {
+      "id": "hachette_standalone_romantasy_2026_09_04",
+      "label": "Complete Hachette standalone books for romantasy fans list observed 2026-09-04",
+      "expectedCases": 8,
+      "strata": ["standalone_control"],
+      "observedOn": "2026-09-04",
+      "source": {
+        "kind": "publisher",
+        "url": "https://www.hachettebookgroup.com/book-list/best-books-for-romantasy-fans/"
+      },
+      "selectionRule": "Include all eight titles under the publisher's standalone heading at the observation date, including any label contradicted by stronger current relational evidence, with no provider-result filtering."
     }
   ],
   "strata": [
@@ -77,9 +102,9 @@
     },
     {
       "id": "standalone_control",
-      "label": "Authority-declared standalone controls",
+      "label": "Publisher or author standalone challenges",
       "minimumReviewed": 50,
-      "description": "Works affirmatively described as standalone by an author or publisher."
+      "description": "Works selected from affirmative standalone labels, including labels later disproved by stronger current relational evidence; the separate standalone hard gate counts only reviewed true negatives."
     }
   ]
 }

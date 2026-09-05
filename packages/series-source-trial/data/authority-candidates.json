@@ -57,6 +57,134 @@
       ],
       "truth": { "status": "candidate", "standalone": null, "memberships": [], "sources": [] },
       "reviewNote": "Selected as one of all five 2023 finalists. The author's catalog groups the Midlife books visually and Amazon calls this the third Midlife Trilogy story, but the author page does not expose an explicit text relationship suitable for gold review."
+    },
+    {
+      "id": "kindle-storyteller-2025-pyg",
+      "title": "Pyg",
+      "authors": ["Pip Landers-Letts"],
+      "sampleOrigin": "external_sample",
+      "strata": ["recent_independent_or_kindle_first"],
+      "publicationYear": 2025,
+      "publicationPath": "kindle_first",
+      "selectionFrame": "kindle_storyteller_2025_shortlist",
+      "sampleSources": [
+        {
+          "kind": "platform_award",
+          "url": "https://www.aboutamazon.co.uk/news/books-and-authors/how-to-enter-amazons-kindle-storyteller-award"
+        }
+      ],
+      "truth": { "status": "candidate", "standalone": null, "memberships": [], "sources": [] },
+      "reviewNote": "Selected as one of all five 2025 finalists. The author says Chameleon is a Pyg spin-off and groups both under The Leamington Bloom Series, but the captured page does not explicitly state Pyg's own membership or order strongly enough for gold truth."
+    },
+    {
+      "id": "kindle-storyteller-2025-the-bed-in-the-shed",
+      "title": "The Bed in the Shed",
+      "authors": ["Izzy Bromley"],
+      "sampleOrigin": "external_sample",
+      "strata": ["recent_independent_or_kindle_first"],
+      "publicationYear": 2025,
+      "publicationPath": "kindle_first",
+      "selectionFrame": "kindle_storyteller_2025_shortlist",
+      "sampleSources": [
+        {
+          "kind": "platform_award",
+          "url": "https://www.aboutamazon.co.uk/news/books-and-authors/how-to-enter-amazons-kindle-storyteller-award"
+        }
+      ],
+      "truth": { "status": "candidate", "standalone": null, "memberships": [], "sources": [] },
+      "reviewNote": "Selected as one of all five 2025 finalists. The author's site calls it the third Izzy Bromley book and anticipates a fourth, but does not expose a stable named series relationship suitable for gold truth."
+    },
+    {
+      "id": "hachette-standalone-romantasy-the-honey-witch",
+      "title": "The Honey Witch",
+      "authors": ["Sydney J. Shields"],
+      "identifiers": { "isbn13": ["9780316568869"] },
+      "sampleOrigin": "external_sample",
+      "strata": ["recent_traditional", "standalone_control"],
+      "publicationYear": 2024,
+      "publicationPath": "traditional",
+      "selectionFrame": "hachette_standalone_romantasy_2026_09_04",
+      "sampleSources": [
+        {
+          "kind": "publisher",
+          "url": "https://www.hachettebookgroup.com/book-list/best-books-for-romantasy-fans/"
+        },
+        {
+          "kind": "publisher",
+          "url": "https://www.hachettebookgroup.com/titles/sydney-j-shields/the-honey-witch/9780316568869/"
+        }
+      ],
+      "truth": { "status": "candidate", "standalone": null, "memberships": [], "sources": [] },
+      "reviewNote": "Selected under Hachette's standalone heading, but that same list contains disproven labels. The author's current catalog shows this as a distinct 2024 work without affirmatively calling it standalone, so the negative claim remains unresolved."
+    },
+    {
+      "id": "hachette-standalone-romantasy-wild-and-wicked-things",
+      "title": "Wild and Wicked Things",
+      "authors": ["Francesca May"],
+      "identifiers": { "isbn13": ["9780356517582", "9780316287265"] },
+      "sampleOrigin": "external_sample",
+      "strata": ["recent_traditional", "standalone_control"],
+      "publicationYear": 2022,
+      "publicationPath": "traditional",
+      "selectionFrame": "hachette_standalone_romantasy_2026_09_04",
+      "sampleSources": [
+        {
+          "kind": "publisher",
+          "url": "https://www.hachettebookgroup.com/book-list/best-books-for-romantasy-fans/"
+        },
+        {
+          "kind": "publisher",
+          "url": "https://www.hachette.co.uk/titles/francesca-may/wild-and-wicked-things/9780356517582/"
+        }
+      ],
+      "truth": { "status": "candidate", "standalone": null, "memberships": [], "sources": [] },
+      "reviewNote": "Selected under Hachette's standalone heading, but that same list contains disproven labels. The captured author and title pages do not independently make an affirmative standalone claim, so the negative truth remains unresolved."
+    },
+    {
+      "id": "hachette-standalone-romantasy-the-carnivale-of-curiosities",
+      "title": "The Carnivale of Curiosities",
+      "authors": ["Amiee Gibbs"],
+      "identifiers": { "isbn13": ["9781538723937", "9781538723944"] },
+      "sampleOrigin": "external_sample",
+      "strata": ["recent_traditional", "standalone_control"],
+      "publicationYear": 2023,
+      "publicationPath": "traditional",
+      "selectionFrame": "hachette_standalone_romantasy_2026_09_04",
+      "sampleSources": [
+        {
+          "kind": "publisher",
+          "url": "https://www.hachettebookgroup.com/book-list/best-books-for-romantasy-fans/"
+        },
+        {
+          "kind": "publisher",
+          "url": "https://www.hachettebookgroup.com/titles/amiee-gibbs/the-carnivale-of-curiosities/9781538723944/"
+        }
+      ],
+      "truth": { "status": "candidate", "standalone": null, "memberships": [], "sources": [] },
+      "reviewNote": "Selected under Hachette's standalone heading, but that same list contains disproven labels. The author and title pages establish the debut work and publication path without independently affirming standalone status."
+    },
+    {
+      "id": "hachette-standalone-romantasy-the-princess-of-thornwood-drive",
+      "title": "The Princess of Thornwood Drive",
+      "authors": ["Khalia Moreau"],
+      "identifiers": { "isbn13": ["9781538725269"] },
+      "sampleOrigin": "external_sample",
+      "strata": ["recent_traditional", "standalone_control"],
+      "publicationYear": 2023,
+      "publicationPath": "traditional",
+      "selectionFrame": "hachette_standalone_romantasy_2026_09_04",
+      "sampleSources": [
+        {
+          "kind": "publisher",
+          "url": "https://www.hachettebookgroup.com/book-list/best-books-for-romantasy-fans/"
+        },
+        {
+          "kind": "publisher",
+          "url": "https://www.hachettebookgroup.com/titles/khalia-moreau/the-princess-of-thornwood-drive/9781538725269/"
+        }
+      ],
+      "truth": { "status": "candidate", "standalone": null, "memberships": [], "sources": [] },
+      "reviewNote": "Selected under Hachette's standalone heading, but that same list contains disproven labels. The title page establishes the work and publication path without a second affirmative standalone source."
     }
   ]
 }

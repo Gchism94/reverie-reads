@@ -116,6 +116,19 @@ test('quarantines a Hardcover reading-order list without blocking its ordinary s
   assert.ok(graded[1].quality.riskFlags.includes('possible_reading_order_not_series'))
 })
 
+test('quarantines a Hardcover companion collection as review-only evidence', () => {
+  const evidence = [membership('hardcover', 'Vampire Companion', { memberCount: 3 })]
+  const [graded] = gradeMembershipEvidence(
+    { title: 'A Dowry of Blood', authors: ['S. T. Gibson'] },
+    evidence,
+    [identity('hardcover')],
+  )
+
+  assert.equal(graded.quality.membershipEligible, false)
+  assert.equal(graded.quality.positionEligible, false)
+  assert.ok(graded.quality.riskFlags.includes('possible_companion_collection_not_series'))
+})
+
 test('does not count an Inventaire mirror as independent Wikidata evidence', () => {
   const evidence = [
     membership('wikidata', 'The Sequence', {

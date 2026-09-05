@@ -1627,6 +1627,408 @@
         }
       ],
       "truth": { "status": "reviewed", "standalone": true, "memberships": [], "sources": [] }
+    },
+    {
+      "id": "kindle-storyteller-2025-when-death-calls",
+      "title": "When Death Calls",
+      "authors": ["J M Dalgliesh"],
+      "identifiers": { "isbn13": ["9781529991772"] },
+      "sampleOrigin": "external_sample",
+      "strata": ["recent_independent_or_kindle_first"],
+      "publicationYear": 2025,
+      "publicationPath": "kindle_first",
+      "selectionFrame": "kindle_storyteller_2025_shortlist",
+      "sampleSources": [
+        {
+          "kind": "platform_award",
+          "url": "https://www.aboutamazon.co.uk/news/books-and-authors/how-to-enter-amazons-kindle-storyteller-award"
+        }
+      ],
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Hidden Norfolk",
+            "aliases": ["Hidden Norfolk Murder Mystery"],
+            "role": "primary",
+            "positions": [{ "value": 16, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          {
+            "kind": "publisher",
+            "url": "https://www.penguin.co.uk/books/481534/when-death-calls-by-dalgliesh-j-m/9781529991772"
+          }
+        ],
+        "reviewNote": "Penguin identifies When Death Calls as Hidden Norfolk book 16. The complete Amazon shortlist selects the case but is not used as series truth."
+      }
+    },
+    {
+      "id": "kindle-storyteller-2025-the-gathering-of-clan-mcfee",
+      "title": "The Gathering of Clan McFee",
+      "authors": ["Karen Baugh Menuhin"],
+      "sampleOrigin": "external_sample",
+      "strata": ["recent_independent_or_kindle_first"],
+      "publicationYear": 2025,
+      "publicationPath": "kindle_first",
+      "selectionFrame": "kindle_storyteller_2025_shortlist",
+      "sampleSources": [
+        {
+          "kind": "platform_award",
+          "url": "https://www.aboutamazon.co.uk/news/books-and-authors/how-to-enter-amazons-kindle-storyteller-award"
+        }
+      ],
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Heathcliff Lennox",
+            "aliases": ["Heathcliff Lennox Series", "Heathcliff Lennox Mysteries"],
+            "role": "primary",
+            "positions": [{ "value": 14, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          {
+            "kind": "author",
+            "url": "https://karenmenuhin.com/titles/the-gathering-of-clan-mcfee/"
+          }
+        ],
+        "reviewNote": "The author's catalog identifies The Gathering of Clan McFee as Heathcliff Lennox book 14."
+      }
+    },
+    {
+      "id": "kindle-storyteller-2025-tales-of-the-witchs-cat-escape-from-petopia",
+      "title": "Tales of The Witch's Cat: Escape From Petopia",
+      "authors": ["Kirstie Watson"],
+      "sampleOrigin": "external_sample",
+      "strata": ["recent_independent_or_kindle_first"],
+      "publicationYear": 2025,
+      "publicationPath": "kindle_first",
+      "selectionFrame": "kindle_storyteller_2025_shortlist",
+      "sampleSources": [
+        {
+          "kind": "platform_award",
+          "url": "https://www.aboutamazon.co.uk/news/books-and-authors/how-to-enter-amazons-kindle-storyteller-award"
+        }
+      ],
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Tales of The Witch's Cat",
+            "aliases": ["Tales of the Witch's Cat"],
+            "role": "primary",
+            "positions": [{ "value": 2, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          {
+            "kind": "author",
+            "url": "https://www.kirstiewatsonauthor.co.uk/product-page/tales-of-the-witch-s-cat-escape-from-petopia"
+          }
+        ],
+        "reviewNote": "The author's product page explicitly calls Escape From Petopia the second instalment in Tales of The Witch's Cat."
+      }
+    },
+    {
+      "id": "hachette-standalone-romantasy-a-dowry-of-blood",
+      "title": "A Dowry of Blood",
+      "authors": ["S. T. Gibson"],
+      "sampleOrigin": "authority_negative_control",
+      "strata": ["recent_independent_or_kindle_first", "standalone_control"],
+      "publicationYear": 2021,
+      "publicationPath": "independent",
+      "selectionFrame": "hachette_standalone_romantasy_2026_09_04",
+      "sampleSources": [
+        {
+          "kind": "publisher",
+          "url": "https://www.hachettebookgroup.com/book-list/best-books-for-romantasy-fans/"
+        },
+        {
+          "kind": "publisher",
+          "url": "https://www.nyxpublishing.com/posts/a-dowry-of-blood-by-s-t-gibson-to-be-published-by-nyx-publishing/"
+        }
+      ],
+      "truth": {
+        "status": "reviewed",
+        "standalone": true,
+        "memberships": [],
+        "sources": [{ "kind": "author", "url": "https://stgibson.com/works/" }],
+        "reviewNote": "The author's current catalog explicitly places A Dowry of Blood under Vampire Standalones. The original Nyx announcement supports the 2021 independent publication path; Hachette's list selected the challenge case."
+      }
+    },
+    {
+      "id": "hachette-standalone-romantasy-the-undertaking-of-hart-and-mercy",
+      "title": "The Undertaking of Hart and Mercy",
+      "authors": ["Megan Bannen"],
+      "identifiers": { "isbn13": ["9780316394314"] },
+      "sampleOrigin": "external_sample",
+      "strata": [
+        "recent_traditional",
+        "multi_series_or_connected_universe",
+        "standalone_control"
+      ],
+      "riskFeatures": ["connected_universe"],
+      "publicationYear": 2022,
+      "publicationPath": "traditional",
+      "selectionFrame": "hachette_standalone_romantasy_2026_09_04",
+      "sampleSources": [
+        {
+          "kind": "publisher",
+          "url": "https://www.hachettebookgroup.com/book-list/best-books-for-romantasy-fans/"
+        },
+        {
+          "kind": "publisher",
+          "url": "https://www.hachettebookgroup.com/titles/megan-bannen/the-undertaking-of-hart-and-mercy/9780316394314/"
+        }
+      ],
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "membershipsComplete": true,
+        "memberships": [
+          {
+            "series": "Hart and Mercy",
+            "aliases": ["Hart and Mercy Series"],
+            "role": "primary",
+            "positions": [{ "value": 1, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          {
+            "kind": "author",
+            "url": "https://www.meganbannen.com/uploads/7/1/9/9/7199229/the_undermining_of_twyla_and_frank_discussion_guide.pdf"
+          },
+          { "kind": "author", "url": "https://www.meganbannen.com/rosieandadam.html" }
+        ],
+        "reviewNote": "Hachette places the work under a standalone heading, but the author's second-book guide explicitly calls The Undertaking the first book in the series and the third-book page confirms the continuing Hart and Mercy series."
+      }
+    },
+    {
+      "id": "hachette-standalone-romantasy-half-a-soul",
+      "title": "Half a Soul",
+      "authors": ["Olivia Atwater"],
+      "identifiers": { "isbn13": ["9780316462808"] },
+      "sampleOrigin": "external_sample",
+      "strata": ["multi_series_or_connected_universe", "standalone_control"],
+      "riskFeatures": ["connected_universe"],
+      "selectionFrame": "hachette_standalone_romantasy_2026_09_04",
+      "sampleSources": [
+        {
+          "kind": "publisher",
+          "url": "https://www.hachettebookgroup.com/book-list/best-books-for-romantasy-fans/"
+        }
+      ],
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "membershipsComplete": true,
+        "memberships": [
+          {
+            "series": "Regency Faerie Tales",
+            "aliases": ["Regency Faerie Tales Series"],
+            "role": "primary",
+            "positions": [{ "value": 1, "orderType": "publication" }]
+          }
+        ],
+        "sources": [{ "kind": "author", "url": "https://oliviaatwater.com/book/half-a-soul" }],
+        "reviewNote": "Hachette places the work under a standalone heading, while the author's current page explicitly identifies Regency Faerie Tales series number 1."
+      }
+    },
+    {
+      "id": "hachette-standalone-romantasy-immortal-dark",
+      "title": "Immortal Dark",
+      "authors": ["Tigest Girma"],
+      "identifiers": { "isbn13": ["9780316570381", "9780316570404"] },
+      "sampleOrigin": "external_sample",
+      "strata": ["recent_traditional", "standalone_control"],
+      "publicationYear": 2024,
+      "publicationPath": "traditional",
+      "selectionFrame": "hachette_standalone_romantasy_2026_09_04",
+      "sampleSources": [
+        {
+          "kind": "publisher",
+          "url": "https://www.hachettebookgroup.com/book-list/best-books-for-romantasy-fans/"
+        },
+        {
+          "kind": "publisher",
+          "url": "https://www.hachettebookgroup.com/titles/tigest-girma/immortal-dark/9780316570404/"
+        }
+      ],
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Immortal Dark",
+            "aliases": ["Immortal Dark Trilogy"],
+            "role": "primary",
+            "positions": [{ "value": 1, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          {
+            "kind": "publisher_catalog",
+            "url": "https://www.hachettebookgroup.com/series/tigest-girma/immortal-dark/"
+          }
+        ],
+        "reviewNote": "The same publisher page that lists a deluxe edition under standalone links to a current three-work Immortal Dark series catalog, with the work first in publication order."
+      }
+    },
+    {
+      "id": "reverie-the-edge-of-darkness-trilogy-restitution",
+      "title": "Restitution",
+      "authors": ["Leigh Rivers"],
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "The Edge of Darkness Trilogy",
+            "aliases": ["Edge of Darkness Trilogy"],
+            "role": "primary",
+            "positions": [{ "value": 3, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          {
+            "kind": "publisher",
+            "url": "https://www.penguinrandomhouse.com/books/830415/restitution-by-leigh-rivers/"
+          }
+        ],
+        "reviewNote": "Penguin Random House identifies Restitution as the third and concluding Edge of Darkness novel."
+      }
+    },
+    {
+      "id": "reverie-the-plated-prisoner-goldfinch",
+      "title": "Goldfinch",
+      "authors": ["Raven Kennedy"],
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "The Plated Prisoner",
+            "aliases": ["Plated Prisoner", "The Plated Prisoner Series"],
+            "role": "primary",
+            "positions": [{ "value": 6, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          {
+            "kind": "author",
+            "url": "https://www.ravenkennedybooks.com/the-plated-prisoner-series"
+          }
+        ],
+        "reviewNote": "The author's series page identifies Goldfinch as book 6 and the finale of The Plated Prisoner."
+      }
+    },
+    {
+      "id": "reverie-the-kingdom-of-crows-house-of-striking-oaths",
+      "title": "House of Striking Oaths",
+      "authors": ["Olivia Wildenstein"],
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "The Kingdom of Crows",
+            "aliases": ["Kingdom of Crows"],
+            "role": "primary",
+            "positions": [{ "value": 3, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          {
+            "kind": "author",
+            "url": "https://oliviawildenstein.com/books/house-of-striking-oaths/"
+          }
+        ],
+        "reviewNote": "The author's title page identifies House of Striking Oaths as The Kingdom of Crows book 3."
+      }
+    },
+    {
+      "id": "reverie-vicious-lost-boys-the-fae-princes",
+      "title": "The Fae Princes",
+      "authors": ["Nikki St. Crowe"],
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Vicious Lost Boys",
+            "aliases": ["Vicious Lost Boys Series"],
+            "role": "primary",
+            "positions": [{ "value": 4, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          {
+            "kind": "author",
+            "url": "https://www.nikkistcrowe.com/vicious-lost-boys-series/the-fae-princes"
+          }
+        ],
+        "reviewNote": "The author's series page identifies The Fae Princes as book IV of IV in Vicious Lost Boys."
+      }
+    },
+    {
+      "id": "reverie-windy-city-play-along",
+      "title": "Play Along",
+      "authors": ["Liz Tomforde"],
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Windy City",
+            "aliases": ["Windy City Series"],
+            "role": "primary",
+            "positions": [{ "value": 4, "orderType": "publication" }]
+          }
+        ],
+        "sources": [{ "kind": "author", "url": "https://liztomforde.com/play-along" }],
+        "reviewNote": "The author's title page identifies Play Along as Windy City book 4."
+      }
+    },
+    {
+      "id": "reverie-souls-trilogy-her-soul-to-take",
+      "title": "Her Soul to Take",
+      "authors": ["Harley Laroux"],
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Souls Trilogy",
+            "aliases": ["The Souls Trilogy"],
+            "role": "primary",
+            "positions": [{ "value": 1, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          {
+            "kind": "publisher_catalog",
+            "url": "https://www.penguinrandomhouse.com/series/H8T/souls-trilogy/"
+          }
+        ],
+        "reviewNote": "Penguin Random House identifies Her Soul to Take as the start of the Souls Trilogy."
+      }
     }
   ],
   "sharedSources": {
