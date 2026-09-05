@@ -127,10 +127,11 @@ function Hero({ skin, mode }: RoomSelection) {
           </p>
           <h1
             data-testid="landing-display-heading"
-            className="mt-5 max-w-[16ch] text-balance text-[clamp(42px,4.8vw,68px)] leading-[1.14] text-ink"
-            style={display}
+            className="mt-5 max-w-[16ch] text-balance text-[clamp(42px,4.8vw,68px)] leading-[1.14] tracking-[-0.022em] text-ink"
+            style={{ ...display, fontWeight: 500 }}
           >
-            Find your next read in your <span style={{ color: 'var(--gold)' }}>own library.</span>
+            Find your next read in your{' '}
+            <span style={{ color: 'var(--gold)', fontStyle: 'italic' }}>own library.</span>
           </h1>
           <p className="mt-6 max-w-[42ch] text-base leading-relaxed text-muted sm:text-lg">
             A quiet place for your books, your notes, and the way a story stays with you. Settle in,
@@ -172,8 +173,8 @@ function Hero({ skin, mode }: RoomSelection) {
   )
 }
 
-/** The public marketing landing — matched to the Reverie Landing design, on the gold master brand
- *  (UnauthShell wraps it in `.gold-brand`). Net-new pre-login entry point for logged-out visitors. */
+/** The public front door, in Reverie’s midnight-and-lamplight brand. Its sample rooms
+ * keep their own identities while the surrounding brand stays steady. */
 export function Landing() {
   const [skin, setSkin] = useState<SkinId>('folio')
   const [mode, setMode] = useState<ResolvedMode>('light')

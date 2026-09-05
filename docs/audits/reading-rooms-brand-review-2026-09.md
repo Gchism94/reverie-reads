@@ -7,22 +7,33 @@ Review candidate on `codex/reading-rooms-cohesion`. This pass is not a productio
 Reverie should feel like opening the door to your own library. The brand makes that promise;
 the nine rooms let a reader decide how it feels to spend time there.
 
-The proposed brand uses deep blue-green ink, warm paper, and sea glass. Newsreader is the
-display face, paired with Hanken Grotesk for everyday reading and controls. An open-book mark
+The selected brand is **Midnight & Lamplight**: blue-black ink, parchment, and aged brass.
+Newsreader at 500 is the display face, with genuine italic emphasis, paired with Hanken Grotesk
+for everyday reading and controls. The earlier green proposal moved too far from the atmosphere
+the owner liked; three rendered concepts led back to a darker, luminous library. An open-book mark
 replaces the crescent. These choices give the landing and account screens an identity distinct
 from Tryst's plum, gilt, and romance associations.
 
 | Role        | Color     | Use                                         |
 | ----------- | --------- | ------------------------------------------- |
-| Library ink | `#102b2e` | The front door and dark editorial sections  |
-| Sea glass   | `#b9d7cb` | Primary actions and restrained emphasis     |
-| Warm paper  | `#f3f0e7` | Long explanations and quiet section changes |
-| Reading ink | `#203b3d` | Text on paper                               |
+| Library ink | `#10121c` | The front door and dark editorial sections  |
+| Aged brass  | `#d7bc88` | Primary actions and restrained emphasis     |
+| Parchment   | `#f1eadc` | Long explanations and quiet section changes |
+| Reading ink | `#302c37` | Text on paper                               |
 
 The brand remains steady as someone browses. Selecting a room changes the sample shortlist,
 the book record, and the complete library preview. The controls say what changes, show the
 selected room beside each example, and give a direct route back to the selector. Choosing a
 room does not reset the sample reading actions or change a stored appearance preference.
+
+The front door now includes a restrained pool of animated lamplight. Its 24-second outward
+movement and 24-second return change only a decorative layer's opacity and transform. Text,
+controls and room examples remain steady. Hidden tabs pause it; reduced motion cancels the
+animation and leaves the authored still. It uses the browser's JavaScript
+[Web Animations API](https://developer.mozilla.org/en-US/docs/Web/API/Element/animate) and
+[pause control](https://developer.mozilla.org/en-US/docs/Web/API/Animation/pause), without a frame
+loop or animation dependency. Three lifecycle tests and 12 focused browser journeys passed,
+including real movement, stable text, live reduced-motion changes, and the actual italic font.
 
 ## Aesthetic findings and changes
 
@@ -157,7 +168,7 @@ After the visual direction is approved, carry it into the app icon, share images
 materials together. Those assets should follow the accepted brand rather than become competing
 experiments during this review.
 
-## Verification of this review candidate
+## Verification of the initial review candidate
 
 - Lint, type checking, formatting, and the production build passed.
 - The unit run passed 3,393 tests across core, web, the compiled Workflow integration, and the

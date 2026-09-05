@@ -87,6 +87,13 @@ test('the app loads its self-hosted brand stylesheet, and the real face arrives'
   // (d) …and the intended stack is applied to the element that carries the brand's voice.
   const stack = await heading.evaluate((el) => getComputedStyle(el).fontFamily)
   expect(stack).toContain(BRAND_DISPLAY)
+  const italic = await page.evaluate(() => ({
+    registered: [...document.fonts].some(
+      (face) => face.family === 'Newsreader' && face.style === 'italic',
+    ),
+    loaded: document.fonts.check("italic 500 60px 'Newsreader'", 'own library'),
+  }))
+  expect(italic).toEqual({ registered: true, loaded: true })
 })
 
 test('a dead font path degrades to the declared fallback — readable, never tofu', async ({

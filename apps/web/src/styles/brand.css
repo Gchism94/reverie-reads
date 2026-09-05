@@ -1,26 +1,26 @@
-/* Reverie's genre-neutral front door: blue-green ink, warm paper, sea glass.
+/* Reverie's genre-neutral front door: midnight ink, parchment, aged brass.
    The legacy class name stays compatible with auth; product previews own separate token scopes. */
 .gold-brand {
-  --bg0: #102b2e;
-  --bg1: #193a3c;
-  --ink: #f3f1e9;
-  --muted: #c0cec8;
-  --faint: #aec2b9;
-  --primary: #b9d7cb;
-  --gold: #b9d7cb;
-  --on-primary: #102b2e;
-  --eyebrow: #b9d7cb;
-  --card: #193639;
-  --card-2: #234548;
-  --card-solid: #193639;
-  --line: rgba(185, 215, 203, 0.24);
-  --field: #214346;
-  --chip: #214346;
+  --bg0: #10121c;
+  --bg1: #202336;
+  --ink: #f4ecdd;
+  --muted: #c2bbc7;
+  --faint: #b3afbe;
+  --primary: #d7bc88;
+  --gold: #d7bc88;
+  --on-primary: #19151d;
+  --eyebrow: #d7bc88;
+  --card: #20212e;
+  --card-2: #292938;
+  --card-solid: #20212e;
+  --line: rgba(215, 188, 136, 0.24);
+  --field: #292938;
+  --chip: #292938;
   --ok: #afd0ac;
-  --violet: #739e9d;
+  --violet: #777795;
   --danger: #f2b7a5;
-  --star: #b9d7cb;
-  --shadow: 0 18px 56px rgba(5, 24, 26, 0.25);
+  --star: #d7bc88;
+  --shadow: 0 18px 56px rgba(0, 0, 0, 0.4);
   --font-display: 'Newsreader', ui-serif, Georgia, serif;
   --font-sans: 'Hanken Grotesk', system-ui, sans-serif;
   --accent: var(--primary);
@@ -42,29 +42,57 @@
   --radius-control: 8px;
   --radius-panel: 16px;
   --radius-card: 10px;
+  --brand-glow-cool: rgba(106, 103, 154, 0.22);
+  --brand-glow-warm: rgba(192, 139, 72, 0.16);
+  --brand-lamplight: rgba(216, 169, 101, 0.2);
+  --brand-dust: rgba(245, 227, 191, 0.28);
+  position: relative;
+  isolation: isolate;
   min-height: 100dvh;
   font-family: var(--font-sans);
   color: var(--ink);
   background-color: var(--bg0);
-  background-image: radial-gradient(ellipse at 0% 0%, var(--bg1), transparent 52%);
+  background-image:
+    radial-gradient(ellipse at 82% 42%, var(--brand-glow-warm), transparent 48%),
+    radial-gradient(ellipse at 14% 3%, var(--brand-glow-cool), transparent 62%),
+    radial-gradient(1px 1px at 8% 28%, var(--brand-dust), transparent),
+    radial-gradient(1px 1px at 41% 15%, var(--brand-dust), transparent),
+    radial-gradient(1px 1px at 92% 78%, var(--brand-dust), transparent);
+  background-attachment: fixed;
 }
 .gold-brand input::placeholder {
   color: var(--faint);
   opacity: 1;
 }
 .gold-brand .band-light {
-  --bg0: #f3f0e7;
-  --bg1: #e8e7dc;
-  --ink: #203b3d;
-  --muted: #52635f;
-  --faint: #52635f;
-  --eyebrow: #345d56;
-  --card: #faf8f1;
-  --card-2: #e8e7dc;
-  --card-solid: #faf8f1;
-  --line: rgba(32, 59, 61, 0.2);
-  --field: #e8e7dc;
-  --chip: #e8e7dc;
+  --bg0: #f1eadc;
+  --bg1: #e8dfd0;
+  --ink: #302c37;
+  --muted: #675e68;
+  --faint: #675e68;
+  --eyebrow: #514351;
+  --card: #f8f1e7;
+  --card-2: #e8dfd0;
+  --card-solid: #f8f1e7;
+  --line: rgba(48, 44, 55, 0.2);
+  --field: #e8dfd0;
+  --chip: #e8dfd0;
   background: var(--bg0);
   color: var(--ink);
+}
+
+/* One fixed, clipped light layer; no blur filter, particles, or movement on reading surfaces.
+   The static opacity is also the no-JavaScript and reduced-motion appearance. */
+.brand-atmosphere {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.brand-lamplight {
+  position: absolute;
+  inset: -4%;
+  opacity: 0.52;
+  background: radial-gradient(ellipse at 72% 66%, var(--brand-lamplight), transparent 55%);
 }

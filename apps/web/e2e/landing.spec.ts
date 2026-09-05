@@ -135,6 +135,9 @@ test.describe('signed-out landing', () => {
     await expect(
       page.getByRole('heading', { name: 'Find a room that feels like you.' }),
     ).toBeAttached()
+    const light = page.getByTestId('brand-lamplight')
+    await expect(light).toHaveCount(1)
+    expect(await light.evaluate((el) => el.getAnimations().length)).toBe(0)
     const animations = await page.locator('.rv-anim').evaluateAll((nodes) =>
       nodes.map((node) => ({
         name: getComputedStyle(node).animationName,
@@ -144,6 +147,40 @@ test.describe('signed-out landing', () => {
     expect(animations.every(({ name, duration }) => name === 'none' || duration === '0s')).toBe(
       true,
     )
+  })
+
+  test('lamplight moves gently behind steady text and stops when reduced motion is requested', async ({
+    page,
+  }) => {
+    await page.emulateMedia({ reducedMotion: 'no-preference' })
+    await page.goto('/')
+    const light = page.getByTestId('brand-lamplight')
+    const heading = page.getByTestId('landing-display-heading')
+    await expect(heading).toBeVisible()
+    await page.evaluate(() => document.fonts.ready)
+    const before = await heading.boundingBox()
+    await expect
+      .poll(() => light.evaluate((el) => el.getAnimations()[0]?.playState))
+      .toBe('running')
+    const transform = await light.evaluate((el) => getComputedStyle(el).transform)
+    await expect
+      .poll(() => light.evaluate((el) => getComputedStyle(el).transform))
+      .not.toBe(transform)
+    expect(
+      await light.evaluate((el) => Number(el.getAnimations()[0]?.effect?.getTiming().duration)),
+    ).toBeGreaterThanOrEqual(10000)
+    expect(await heading.boundingBox()).toEqual(before)
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await expect.poll(() => light.evaluate((el) => el.getAnimations().length)).toBe(0)
+    expect(await light.evaluate((el) => getComputedStyle(el).transform)).toBe('none')
+    await page
+      .getByRole('region', { name: 'A place to start' })
+      .getByRole('button', { name: 'Save for later' })
+      .first()
+      .click()
+    await expect(
+      page.getByRole('region', { name: 'A place to start' }).getByRole('status'),
+    ).toContainText('Saved The Lantern Atlas')
   })
 
   test('the nine-room atlas changes the complete product stage and its mode', async ({ page }) => {

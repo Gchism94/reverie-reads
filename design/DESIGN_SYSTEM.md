@@ -11,10 +11,16 @@ shipped app is authoritative.
 
 ## The Reverie brand
 
-The front door is a personal library: deep blue-green ink, warm paper, and a sea-glass accent.
-Newsreader supplies the editorial display voice; Hanken Grotesk keeps navigation and body copy
+The front door is a personal library after the world quiets down: midnight ink, parchment, and
+aged-brass light. Newsreader at 500, with restrained genuine italic emphasis, supplies the display voice; Hanken Grotesk keeps navigation and body copy
 plain and welcoming. The open-book wordmark belongs to Reverie across genres. Tryst retains its
 own romance identity inside the product.
+
+Midnight & Lamplight uses `#10121c` ink, `#d7bc88` aged brass, and `#f1eadc` parchment.
+A soft pool of warm light moves behind the signed-out landing and account screens over 24 seconds
+in each direction. Only the decorative layer's opacity and transform animate; text, controls and
+room previews stay steady. The browser runs the animation without a JavaScript frame loop.
+Hidden tabs pause it; reduced motion and unsupported browsers retain a still light.
 
 Brand tokens live in `apps/web/src/styles/brand.css`. They scope the landing page and account
 screens independently of the reader's saved skin. Product examples have their own complete
