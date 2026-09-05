@@ -3,7 +3,7 @@ import { Link } from '@tanstack/react-router'
 import { APP_NAME, revenueCopy } from '@reverie/core'
 import { buyConfig } from '../../lib/buyConfig'
 import { Wordmark } from '../Wordmark'
-import { ReadingRecordStage } from './ProductStage'
+import { GuestReadingRecord } from './guest/GuestReadingRecord'
 import { SkinShowcase, type SkinShowcaseProps } from './SkinShowcase'
 import { ReadingRoomPreview, RoomCaption } from './ReadingRoomPreview'
 
@@ -279,10 +279,14 @@ export default function LandingBelowFold({
             body="A thought in the margin. The date you finished. A different feeling on a second read. Keep your notes, ratings, and rereads alongside the books, with room for your reading life to change."
           />
           <div className="mt-12 sm:mt-16">
-            <ReadingRoomPreview skin={skin} mode={mode} className="border border-line p-4 sm:p-6">
+            <ReadingRoomPreview
+              skin={skin}
+              mode={mode}
+              className="border border-line p-2 min-[360px]:p-4 sm:p-6"
+            >
               <RoomCaption skin={skin} mode={mode} />
               <div className="mt-4">
-                <ReadingRecordStage />
+                <GuestReadingRecord />
               </div>
             </ReadingRoomPreview>
           </div>

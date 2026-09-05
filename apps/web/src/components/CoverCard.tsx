@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import {
   formatAuthors,
   bookOwnedFormats,
@@ -17,6 +18,7 @@ const FORMAT_ICON = { physical: '📖', ebook: '📱', audiobook: '🎧' } as co
 /** A library cover card with small spice (🌶️) and favorite (♥) marks — design signature. */
 export function CoverCard({
   book,
+  reportCoverErrors = true,
   onOpen,
   onToggleFave,
   onAddCover,
@@ -24,6 +26,7 @@ export function CoverCard({
   hideIntensity = false,
 }: {
   book: Book
+  reportCoverErrors?: boolean
   onOpen: () => void
   onToggleFave: () => void
   /** When set, a no-cover placeholder carries a quiet "add a cover" affordance opening the sheet. */
@@ -51,8 +54,9 @@ export function CoverCard({
   // Almanac's buff manual) keep light placeholders at night and override it to white in tokens.css.
   // Scrim deepens over placeholders to hold the text. The mark silhouette follows --mark-radius
   // (Tryst round pills · Aphelion squared instrument tags) — the two-worlds signal.
+  const [failedCover, setFailedCover] = useState<string | null>(null)
   const brokenIds = useBrokenCoverIds()
-  const showsPlaceholder = !book.cover || brokenIds.has(book.id)
+  const showsPlaceholder = !book.cover || failedCover === book.cover || brokenIds.has(book.id)
   const markInk = showsPlaceholder ? 'var(--mark-on-ph)' : 'var(--mark-accent)'
   const markBg = showsPlaceholder ? 'rgba(0,0,0,0.62)' : 'rgba(0,0,0,0.45)'
   // Possession, read through the derived word (docs/archive/task-shelf-model.md). A book NOT in hand gets
@@ -92,7 +96,13 @@ export function CoverCard({
           {/* cover → skin placeholder fallback + dead-link detection (Cover Studio). The ghost dim
               lives INSIDE CoverImage so it never lands on the placeholder's type — the dashed frame
               above already carries "not in hand". */}
-          <CoverImage book={book} thumb ghost={ghost} />
+          <CoverImage
+            onExhausted={() => setFailedCover(book.cover)}
+            reportErrors={reportCoverErrors}
+            book={book}
+            thumb
+            ghost={ghost}
+          />
         </button>
 
         {/* the honest placeholder invites — a quiet affordance, not a restyle (import-quality owns

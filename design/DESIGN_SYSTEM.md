@@ -26,6 +26,11 @@ Brand tokens live in `apps/web/src/styles/brand.css`. They scope the landing pag
 screens independently of the reader's saved skin. Product examples have their own complete
 skin/mode scopes, including structural components and backgrounds. One room selection updates
 every example without changing the visitor's saved appearance or sample reading choices.
+The landing examples share a temporary guest library with real book selection, bounded CSV intake,
+copy flags, reading transitions, and notes. Reuse product presentation and core logic; keep sample
+state in memory and label any planned configuration explicitly. Catalog facts are public; reader
+history is fictional until the visitor supplies it. Do not use production account screenshots or
+private reader seed data. Guest book covers must not emit visitor titles to error telemetry.
 
 The brand promise is “A personal library that feels like home.” Explain that through concrete
 actions: keep your books together, remember your reading, and find something you want to read.

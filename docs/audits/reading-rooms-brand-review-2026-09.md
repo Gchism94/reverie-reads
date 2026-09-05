@@ -21,8 +21,8 @@ from Tryst's plum, gilt, and romance associations.
 | Parchment   | `#f1eadc` | Long explanations and quiet section changes |
 | Reading ink | `#302c37` | Text on paper                               |
 
-The brand remains steady as someone browses. Selecting a room changes the sample shortlist,
-the book record, and the complete library preview. The controls say what changes, show the
+The brand remains steady as someone browses. Selecting a room changes the working guest library,
+its book record, and the larger library workspace. The controls say what changes, show the
 selected room beside each example, and give a direct route back to the selector. Choosing a
 room does not reset the sample reading actions or change a stored appearance preference.
 
@@ -38,9 +38,9 @@ including real movement, stable text, live reduced-motion changes, and the actua
 ## Aesthetic findings and changes
 
 Large headings needed room for the real fonts to breathe. The landing now uses a 1.14 display
-line height and a smaller, more manageable hero measure. The sample shortlist adapts to the
-width of its own panel. The desktop and phone examples no longer overlap, and the phone's
-navigation follows its content instead of covering taller text.
+line height and a smaller, more manageable hero measure. The working library adapts to the
+width of its own panel. On phones, dock icons sit above their labels. Books paginate so a CSV
+upload cannot turn the hero into an unbroken wall of covers.
 
 The old room gallery asked visitors to pass nine large previews before discovering the active
 test. Nine compact, keyboard-operable choices now lead directly into the selected room. Day and
@@ -50,6 +50,43 @@ horror, nonfiction, and fantasy alongside romance; the appearance is independent
 The first rendering of the new daylight art produced a metallic shading band. The redundant
 center gradient caused it and was removed. The daylight scenes now retain their paper and
 linen character without that sheen.
+
+## A library visitors can actually use
+
+The static desktop/phone composition and fictional shortlist have been replaced with one shared,
+temporary guest library. It begins with Jane Eyre underway and a borrowed audiobook of The Left
+Hand of Darkness. The visitor can:
+
+- Select several titles from a curated six-book catalog sample, or enter a title, author, and ISBN.
+- Choose owned, borrowed, wishlist, or decide later, then record independent copy and format flags.
+- Upload a Goodreads, StoryGraph, or Reverie CSV: at most 50 rows and 1 MB, with a 60-book guest cap.
+  Strong identities merge through the app's existing importer; fuzzy matches remain separate.
+- Open a book, start reading, save progress, leave a note, and set their own half-star rating.
+- Finish a read and see its date, format, rating, and note in the journal. Rereading preserves
+  completed history and possession; retrying a completed finish does not append another read.
+- Use Next read with available, wishlist, or whole-library scope, save a pick for later, and
+  deliberately include rereads. These are honest eligibility examples, not a simulated personalized
+  taste or mood score.
+- Try three dock arrangements, reorder destinations with accessible buttons, or hide/restore them.
+  This is explicitly labeled a preview: customizable docks are planned for the signed-in app.
+- Write a note in the lower landing example and open the same saved note in either library view.
+
+The two library workspaces and the note example use the same state. Room selection changes their
+appearance without changing books. Small pages keep larger imports browsable. Reset clears the
+session after a local confirmation; refreshing or leaving the landing discards it. Signing up does
+not claim to transfer these books. No dummy account, production corpus mutation, localStorage,
+sessionStorage, or IndexedDB book persistence is involved.
+
+The catalog is a bundled sample of public bibliographic facts, not an anonymous query against the
+entire live corpus. It contains no private reader seed or real person's notes or history. Shared
+CoverCard, CoverImage, Nameplate, Stars, navigation glyphs, NextReadCardView, CSV mapping, identity
+matching, merge logic, and reading transitions keep the demonstration close to the product. Guest
+cover failures do not send visitor-entered titles to cover telemetry. Cover URLs in uploaded CSVs
+are omitted so private exports do not initiate those requests.
+
+The next step after this review is deciding whether a visitor should be able to deliberately carry
+this session into account creation. That requires an explicit, tested import handoff; it should not
+be implied by a signup button before it exists.
 
 ## Each room's atmosphere
 

@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { loadAllSkinFonts } from '../../skin/fonts'
 import { SKINS, SKIN_LIST, type SkinId, type ResolvedMode } from '@reverie/core'
 import { ReadingRoomPreview, type RoomSelection } from './ReadingRoomPreview'
-import { ProductStage } from './ProductStage'
+import { GuestLibrary } from './guest/GuestLibrary'
 
 const ATMOSPHERE_NOTE: Record<SkinId, string> = {
   tryst: 'Velvet shadows, warm lamplight, and a little gold.',
@@ -150,7 +150,7 @@ export function SkinShowcase({
                 ))}
               </div>
             </div>
-            <ProductStage compact />
+            <GuestLibrary />
           </ReadingRoomPreview>
         </div>
         <p className="mx-auto mt-6 max-w-[70ch] text-sm leading-relaxed text-muted">

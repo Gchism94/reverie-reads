@@ -3,7 +3,8 @@ import { Link } from '@tanstack/react-router'
 import { APP_NAME, type SkinId, type ResolvedMode } from '@reverie/core'
 import { Wordmark } from './Wordmark'
 import { ChunkBoundary } from '../components/ChunkBoundary'
-import { NextReadDemo } from './landing/NextReadDemo'
+import { GuestLibrary } from './landing/guest/GuestLibrary'
+import { GuestLibraryProvider } from './landing/guest/GuestLibraryProvider'
 import { ReadingRoomPreview, RoomCaption, type RoomSelection } from './landing/ReadingRoomPreview'
 
 // Below-the-fold sections are a separate chunk so the hero paints first for new visitors.
@@ -166,7 +167,7 @@ function Hero({ skin, mode }: RoomSelection) {
           className="min-w-0 border border-line p-4 shadow-[var(--shadow)] sm:p-6"
         >
           <RoomCaption skin={skin} mode={mode} />
-          <NextReadDemo />
+          <GuestLibrary compact />
         </ReadingRoomPreview>
       </div>
     </header>
@@ -179,20 +180,27 @@ export function Landing() {
   const [skin, setSkin] = useState<SkinId>('folio')
   const [mode, setMode] = useState<ResolvedMode>('light')
   return (
-    <main className="relative z-[1]">
-      <Nav />
-      <Hero skin={skin} mode={mode} />
-      {/* The below-fold chunk is the one piece of this page that has to be fetched. If it can't be
+    <GuestLibraryProvider>
+      <main className="relative z-[1]">
+        <Nav />
+        <Hero skin={skin} mode={mode} />
+        {/* The below-fold chunk is the one piece of this page that has to be fetched. If it can't be
           — offline, or a stale client after a deploy — the hero, nav and CTA above have already
           rendered and must stay. Before this, that single failed import unwound to the app-wide
           boundary and replaced a working page with "Something went wrong!". */}
-      <ChunkBoundary label="landing-below-fold">
-        <Suspense
-          fallback={<div className="py-24 text-center text-[13px] text-muted">Loading…</div>}
-        >
-          <LandingBelowFold skin={skin} mode={mode} onSkinChange={setSkin} onModeChange={setMode} />
-        </Suspense>
-      </ChunkBoundary>
-    </main>
+        <ChunkBoundary label="landing-below-fold">
+          <Suspense
+            fallback={<div className="py-24 text-center text-[13px] text-muted">Loading…</div>}
+          >
+            <LandingBelowFold
+              skin={skin}
+              mode={mode}
+              onSkinChange={setSkin}
+              onModeChange={setMode}
+            />
+          </Suspense>
+        </ChunkBoundary>
+      </main>
+    </GuestLibraryProvider>
   )
 }
