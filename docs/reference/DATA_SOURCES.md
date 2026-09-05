@@ -86,6 +86,17 @@ keeps singletons, conflicts, and unsupported order/role claims out of automatic 
 use remains blocked until the authority-reviewed accuracy, standalone-safety, provenance, privacy,
 latency, and cost gates pass.
 
+The authority-source acquisition scout is a separate truth-blind shadow capability. It receives
+only title, author, and optional publication year, then uses bounded live search to propose author
+or publisher evidence for human review. Existing truth labels, known authority URLs, selection
+sources, and provider packets are withheld. Every cited URL must appear in the API's consulted-source
+manifest, but URL grounding alone does not make the page eligible evidence: deterministic source
+policy blocks a case's selection-frame pages, known conflicting marketing taxonomies, unsupported
+positions, and standalone conclusions without an affirmative first-party standalone statement.
+The model cannot assign authority to its own source. Scout output never writes authority gold,
+Supabase, or the corpus and remains production-blocked by the same safety, rights, privacy, latency,
+cost, and fixed-sample gates as the resolver.
+
 Provider data is cleaned before it reaches that resolver. Google contributes identity only.
 Open Library, Wikidata, Inventaire, and BookBrainz contribute a membership only after the exact
 author-matched work appears in a structured relationship; mirrored Wikidata observations share one
