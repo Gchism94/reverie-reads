@@ -58,18 +58,18 @@ test('reports the exact reviewed and sampling gaps in the current authority set'
   assert.equal(audit.valid, true)
   assert.equal(audit.ready, false)
   assert.deepEqual(audit.counts, {
-    selected: 90,
-    reviewed: 50,
-    candidate: 40,
-    reviewedPositive: 35,
-    reviewedStandalone: 15,
+    selected: 95,
+    reviewed: 61,
+    candidate: 34,
+    reviewedPositive: 41,
+    reviewedStandalone: 20,
     selectionTarget: 200,
-    selectionGap: 110,
+    selectionGap: 105,
   })
   assert.deepEqual(Object.fromEntries(audit.targets.map((target) => [target.id, target.gap])), {
-    reviewed_cases: 150,
-    reviewed_positive_cases: 65,
-    reviewed_standalone_cases: 35,
+    reviewed_cases: 139,
+    reviewed_positive_cases: 59,
+    reviewed_standalone_cases: 30,
   })
   assert.deepEqual(
     audit.strata.find((stratum) => stratum.id === 'reverie_series'),
@@ -78,9 +78,9 @@ test('reports the exact reviewed and sampling gaps in the current authority set'
       label: 'Reverie seeded series',
       minimumReviewed: 69,
       selected: 69,
-      reviewed: 32,
-      candidate: 37,
-      gap: 37,
+      reviewed: 38,
+      candidate: 31,
+      gap: 31,
       met: false,
     },
   )
@@ -99,8 +99,8 @@ test('reports the exact reviewed and sampling gaps in the current authority set'
     ),
     {
       recent_independent_or_kindle_first: { reviewed: 9, gap: 41 },
-      recent_traditional: { reviewed: 7, gap: 43 },
-      multi_series_or_connected_universe: { reviewed: 7, gap: 13 },
+      recent_traditional: { reviewed: 13, gap: 37 },
+      multi_series_or_connected_universe: { reviewed: 8, gap: 12 },
     },
   )
 })
@@ -249,6 +249,43 @@ test('keeps selection-frame provenance separate from truth authority', () => {
     smallPolicy(),
   )
   assert.ok(missingFinalist.errors.some((error) => error.includes('requires 1 cases; found 0')))
+})
+
+test('supports a complete-list frame whose cases span publication years and paths', () => {
+  const listSource = {
+    kind: 'publisher',
+    url: 'https://publisher.example/complete-list',
+  }
+  const standalone = reviewedCase({
+    selectionFrame: 'complete-list',
+    sampleSources: [listSource],
+    truth: {
+      status: 'reviewed',
+      standalone: true,
+      memberships: [],
+      sources: [source],
+    },
+  })
+  const samplePlan = {
+    ...smallPlan([{ id: 'standalone_control', label: 'Standalone', minimumReviewed: 1 }]),
+    selectionFrames: [
+      {
+        id: 'complete-list',
+        expectedCases: 1,
+        strata: ['standalone_control'],
+        source: listSource,
+      },
+    ],
+  }
+
+  const audit = auditAuthoritySample(
+    { cases: [standalone], sharedSources: {} },
+    samplePlan,
+    smallPolicy({ minimumReviewedPositiveCases: 0, minimumReviewedStandaloneCases: 1 }),
+  )
+
+  assert.equal(audit.valid, true)
+  assert.equal(audit.ready, true)
 })
 
 test('requires recognized sampling provenance for a recent-publication stratum', () => {

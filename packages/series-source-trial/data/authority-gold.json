@@ -1149,11 +1149,252 @@
       }
     },
     {
+      "id": "reverie-assistant-to-the-villain-accomplice-to-the-villain",
+      "title": "Accomplice to the Villain",
+      "authors": ["Hannah Nicole Maehrer"],
+      "identifiers": { "isbn13": ["9781649375544"] },
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "strata": ["recent_traditional"],
+      "publicationYear": 2025,
+      "publicationPath": "traditional",
+      "sampleSources": [
+        {
+          "kind": "publisher",
+          "url": "https://www.entangledpublishing.com/books/accomplice-to-the-villain"
+        }
+      ],
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Assistant and the Villain",
+            "aliases": ["Assistant to the Villain", "Assistant and the Villain Series"],
+            "role": "primary",
+            "positions": [{ "value": 3, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          {
+            "kind": "publisher",
+            "url": "https://www.entangledpublishing.com/books/accomplice-to-the-villain"
+          }
+        ],
+        "reviewNote": "The publisher identifies Assistant and the Villain book 3 and the author as Hannah Nicole Maehrer, correcting the seed's shortened author name and series label."
+      }
+    },
+    {
+      "id": "reverie-fae-and-alchemy-brimstone",
+      "title": "Brimstone",
+      "authors": ["Callie Hart"],
+      "identifiers": { "isbn13": ["9781399745499"] },
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "strata": ["recent_traditional"],
+      "publicationYear": 2025,
+      "publicationPath": "traditional",
+      "sampleSources": [
+        {
+          "kind": "publisher",
+          "url": "https://www.hachette.co.uk/titles/callie-hart/brimstone/9781399745499/"
+        }
+      ],
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Fae & Alchemy",
+            "aliases": ["Fae and Alchemy"],
+            "role": "primary",
+            "positions": [{ "value": 2, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          {
+            "kind": "publisher",
+            "url": "https://www.hachette.co.uk/titles/callie-hart/brimstone/9781399745499/"
+          }
+        ],
+        "reviewNote": "The publisher identifies Brimstone as the second book and second volume in the Fae & Alchemy series and dates the original edition to 2025."
+      }
+    },
+    {
+      "id": "reverie-heartstrings-first-time-caller",
+      "title": "First-Time Caller",
+      "authors": ["B.K. Borison"],
+      "identifiers": { "isbn13": ["9780593641200"] },
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "strata": ["recent_traditional"],
+      "publicationYear": 2025,
+      "publicationPath": "traditional",
+      "sampleSources": [
+        {
+          "kind": "publisher",
+          "url": "https://www.penguinrandomhouse.com/books/737660/first-time-caller-by-bk-borison/9780593641200/"
+        }
+      ],
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Heartstrings",
+            "aliases": ["Heartstrings Series"],
+            "role": "primary",
+            "positions": [{ "value": 1, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          {
+            "kind": "publisher",
+            "url": "https://www.penguinrandomhouse.com/series/HRT/heartstrings/"
+          },
+          {
+            "kind": "publisher",
+            "url": "https://www.penguinrandomhouse.com/books/737660/first-time-caller-by-bk-borison/9780593641200/"
+          }
+        ],
+        "reviewNote": "The publisher lists First-Time Caller as Heartstrings book 1 and confirms the 2025 publication, correcting the seed's malformed title spacing."
+      }
+    },
+    {
+      "id": "reverie-rebel-blue-ranch-lost-and-lassoed",
+      "title": "Lost and Lassoed",
+      "authors": ["Lyla Sage"],
+      "identifiers": { "isbn13": ["9780593732458"] },
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "strata": ["recent_traditional"],
+      "publicationYear": 2024,
+      "publicationPath": "traditional",
+      "sampleSources": [
+        {
+          "kind": "publisher",
+          "url": "https://www.penguinrandomhouse.com/books/750327/lost-and-lassoed-by-lyla-sage/"
+        }
+      ],
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Rebel Blue Ranch",
+            "aliases": ["Rebel Blue Ranch Series"],
+            "role": "primary",
+            "positions": [{ "value": 3, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          { "kind": "author", "url": "https://lylasage.com/books" },
+          {
+            "kind": "publisher",
+            "url": "https://www.penguinrandomhouse.com/series/F3Q/rebel-blue-ranch/"
+          },
+          {
+            "kind": "publisher",
+            "url": "https://www.penguinrandomhouse.com/books/750327/lost-and-lassoed-by-lyla-sage/"
+          }
+        ],
+        "reviewNote": "The author identifies Lost and Lassoed as Rebel Blue Ranch book 3; the publisher confirms the series, 2024 edition, and author Lyla Sage, correcting the seed's author typo."
+      }
+    },
+    {
+      "id": "reverie-time-of-iron-long-live-evil",
+      "title": "Long Live Evil",
+      "authors": ["Sarah Rees Brennan"],
+      "identifiers": { "isbn13": ["9780316568715"] },
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "strata": ["recent_traditional"],
+      "publicationYear": 2024,
+      "publicationPath": "traditional",
+      "sampleSources": [
+        {
+          "kind": "publisher",
+          "url": "https://www.hachettebookgroup.com/titles/sarah-rees-brennan/long-live-evil/9780316568715/"
+        }
+      ],
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Time of Iron",
+            "aliases": ["Time of Iron Series"],
+            "role": "primary",
+            "positions": [{ "value": 1, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          { "kind": "author", "url": "https://www.sarahreesbrennan.com/" },
+          {
+            "kind": "publisher",
+            "url": "https://www.hachettebookgroup.com/series/sarah-rees-brennan/time-of-iron/"
+          },
+          {
+            "kind": "publisher",
+            "url": "https://www.hachettebookgroup.com/titles/sarah-rees-brennan/long-live-evil/9780316568715/"
+          }
+        ],
+        "reviewNote": "The publisher places Long Live Evil in Time of Iron and identifies its sequel as book 2; the author independently calls All Hail Chaos the sequel to Long Live Evil."
+      }
+    },
+    {
+      "id": "reverie-gods-of-the-game-the-striker",
+      "title": "The Striker",
+      "authors": ["Ana Huang"],
+      "identifiers": { "isbn13": ["9781464223327"] },
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "strata": ["recent_traditional", "multi_series_or_connected_universe"],
+      "publicationYear": 2024,
+      "publicationPath": "traditional",
+      "sampleSources": [
+        {
+          "kind": "publisher",
+          "url": "https://www.sourcebooks.com/9781464223327-the-striker-deluxe-edition-tp.html"
+        }
+      ],
+      "riskFeatures": ["connected_universe"],
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "membershipsComplete": true,
+        "memberships": [
+          {
+            "series": "Gods of the Game",
+            "aliases": ["Gods of the Game Series"],
+            "role": "primary",
+            "positions": [{ "value": 1, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          { "kind": "author", "url": "https://anahuang.com/reading-order/" },
+          { "kind": "author", "url": "https://anahuang.com/faqs/" },
+          {
+            "kind": "publisher",
+            "url": "https://www.sourcebooks.com/9781464223327-the-striker-deluxe-edition-tp.html"
+          }
+        ],
+        "reviewNote": "The author and publisher identify The Striker as Gods of the Game book 1. The author's wider shared universe and the publisher's interconnected-standalone language do not create a second series membership."
+      }
+    },
+    {
       "id": "gold-standalone-salvation-day",
       "title": "Salvation Day",
       "authors": ["Kali Wallace"],
       "sampleOrigin": "authority_negative_control",
       "stratum": "standalone_negative",
+      "selectionFrame": "prh_standalone_scifi_fantasy_2026_09_04",
+      "sampleSources": [
+        {
+          "kind": "publisher",
+          "url": "https://www.penguinrandomhouse.com/the-read-down/standalone-scifi-fantasy-books"
+        }
+      ],
       "truth": { "status": "reviewed", "standalone": true, "memberships": [], "sources": [] }
     },
     {
@@ -1162,6 +1403,13 @@
       "authors": ["Robert A. Heinlein"],
       "sampleOrigin": "authority_negative_control",
       "stratum": "standalone_negative",
+      "selectionFrame": "prh_standalone_scifi_fantasy_2026_09_04",
+      "sampleSources": [
+        {
+          "kind": "publisher",
+          "url": "https://www.penguinrandomhouse.com/the-read-down/standalone-scifi-fantasy-books"
+        }
+      ],
       "truth": { "status": "reviewed", "standalone": true, "memberships": [], "sources": [] }
     },
     {
@@ -1170,6 +1418,13 @@
       "authors": ["Sarah Pinsker"],
       "sampleOrigin": "authority_negative_control",
       "stratum": "standalone_negative",
+      "selectionFrame": "prh_standalone_scifi_fantasy_2026_09_04",
+      "sampleSources": [
+        {
+          "kind": "publisher",
+          "url": "https://www.penguinrandomhouse.com/the-read-down/standalone-scifi-fantasy-books"
+        }
+      ],
       "truth": { "status": "reviewed", "standalone": true, "memberships": [], "sources": [] }
     },
     {
@@ -1178,6 +1433,13 @@
       "authors": ["Silvia Moreno-Garcia"],
       "sampleOrigin": "authority_negative_control",
       "stratum": "standalone_negative",
+      "selectionFrame": "prh_standalone_scifi_fantasy_2026_09_04",
+      "sampleSources": [
+        {
+          "kind": "publisher",
+          "url": "https://www.penguinrandomhouse.com/the-read-down/standalone-scifi-fantasy-books"
+        }
+      ],
       "truth": { "status": "reviewed", "standalone": true, "memberships": [], "sources": [] }
     },
     {
@@ -1186,6 +1448,13 @@
       "authors": ["Naomi Novik"],
       "sampleOrigin": "authority_negative_control",
       "stratum": "standalone_negative",
+      "selectionFrame": "prh_standalone_scifi_fantasy_2026_09_04",
+      "sampleSources": [
+        {
+          "kind": "publisher",
+          "url": "https://www.penguinrandomhouse.com/the-read-down/standalone-scifi-fantasy-books"
+        }
+      ],
       "truth": { "status": "reviewed", "standalone": true, "memberships": [], "sources": [] }
     },
     {
@@ -1194,6 +1463,13 @@
       "authors": ["Neal Stephenson"],
       "sampleOrigin": "authority_negative_control",
       "stratum": "standalone_negative",
+      "selectionFrame": "prh_standalone_scifi_fantasy_2026_09_04",
+      "sampleSources": [
+        {
+          "kind": "publisher",
+          "url": "https://www.penguinrandomhouse.com/the-read-down/standalone-scifi-fantasy-books"
+        }
+      ],
       "truth": { "status": "reviewed", "standalone": true, "memberships": [], "sources": [] }
     },
     {
@@ -1202,6 +1478,13 @@
       "authors": ["Zen Cho"],
       "sampleOrigin": "authority_negative_control",
       "stratum": "standalone_negative",
+      "selectionFrame": "prh_standalone_scifi_fantasy_2026_09_04",
+      "sampleSources": [
+        {
+          "kind": "publisher",
+          "url": "https://www.penguinrandomhouse.com/the-read-down/standalone-scifi-fantasy-books"
+        }
+      ],
       "truth": { "status": "reviewed", "standalone": true, "memberships": [], "sources": [] }
     },
     {
@@ -1210,6 +1493,13 @@
       "authors": ["George R. R. Martin"],
       "sampleOrigin": "authority_negative_control",
       "stratum": "standalone_negative",
+      "selectionFrame": "prh_standalone_scifi_fantasy_2026_09_04",
+      "sampleSources": [
+        {
+          "kind": "publisher",
+          "url": "https://www.penguinrandomhouse.com/the-read-down/standalone-scifi-fantasy-books"
+        }
+      ],
       "truth": { "status": "reviewed", "standalone": true, "memberships": [], "sources": [] }
     },
     {
@@ -1218,6 +1508,13 @@
       "authors": ["Guy Gavriel Kay"],
       "sampleOrigin": "authority_negative_control",
       "stratum": "standalone_negative",
+      "selectionFrame": "prh_standalone_scifi_fantasy_2026_09_04",
+      "sampleSources": [
+        {
+          "kind": "publisher",
+          "url": "https://www.penguinrandomhouse.com/the-read-down/standalone-scifi-fantasy-books"
+        }
+      ],
       "truth": { "status": "reviewed", "standalone": true, "memberships": [], "sources": [] }
     },
     {
@@ -1226,6 +1523,13 @@
       "authors": ["Micaiah Johnson"],
       "sampleOrigin": "authority_negative_control",
       "stratum": "standalone_negative",
+      "selectionFrame": "prh_standalone_scifi_fantasy_2026_09_04",
+      "sampleSources": [
+        {
+          "kind": "publisher",
+          "url": "https://www.penguinrandomhouse.com/the-read-down/standalone-scifi-fantasy-books"
+        }
+      ],
       "truth": { "status": "reviewed", "standalone": true, "memberships": [], "sources": [] }
     },
     {
@@ -1234,6 +1538,94 @@
       "authors": ["David Yoon"],
       "sampleOrigin": "authority_negative_control",
       "stratum": "standalone_negative",
+      "selectionFrame": "prh_standalone_scifi_fantasy_2026_09_04",
+      "sampleSources": [
+        {
+          "kind": "publisher",
+          "url": "https://www.penguinrandomhouse.com/the-read-down/standalone-scifi-fantasy-books"
+        }
+      ],
+      "truth": { "status": "reviewed", "standalone": true, "memberships": [], "sources": [] }
+    },
+    {
+      "id": "gold-standalone-deerskin",
+      "title": "Deerskin",
+      "authors": ["Robin McKinley"],
+      "sampleOrigin": "authority_negative_control",
+      "stratum": "standalone_negative",
+      "selectionFrame": "prh_standalone_scifi_fantasy_2026_09_04",
+      "sampleSources": [
+        {
+          "kind": "publisher",
+          "url": "https://www.penguinrandomhouse.com/the-read-down/standalone-scifi-fantasy-books"
+        }
+      ],
+      "truth": { "status": "reviewed", "standalone": true, "memberships": [], "sources": [] }
+    },
+    {
+      "id": "gold-standalone-the-once-and-future-king",
+      "title": "The Once and Future King",
+      "authors": ["T. H. White"],
+      "sampleOrigin": "authority_negative_control",
+      "stratum": "standalone_negative",
+      "selectionFrame": "prh_standalone_scifi_fantasy_2026_09_04",
+      "sampleSources": [
+        {
+          "kind": "publisher",
+          "url": "https://www.penguinrandomhouse.com/the-read-down/standalone-scifi-fantasy-books"
+        }
+      ],
+      "truth": { "status": "reviewed", "standalone": true, "memberships": [], "sources": [] }
+    },
+    {
+      "id": "gold-standalone-the-gone-world",
+      "title": "The Gone World",
+      "authors": ["Tom Sweterlitsch"],
+      "sampleOrigin": "authority_negative_control",
+      "stratum": "standalone_negative",
+      "selectionFrame": "prh_standalone_scifi_fantasy_2026_09_04",
+      "sampleSources": [
+        {
+          "kind": "publisher",
+          "url": "https://www.penguinrandomhouse.com/the-read-down/standalone-scifi-fantasy-books"
+        }
+      ],
+      "truth": { "status": "reviewed", "standalone": true, "memberships": [], "sources": [] }
+    },
+    {
+      "id": "gold-standalone-project-hail-mary",
+      "title": "Project Hail Mary",
+      "authors": ["Andy Weir"],
+      "sampleOrigin": "authority_negative_control",
+      "stratum": "standalone_negative",
+      "selectionFrame": "prh_standalone_scifi_fantasy_2026_09_04",
+      "sampleSources": [
+        {
+          "kind": "publisher",
+          "url": "https://www.penguinrandomhouse.com/the-read-down/standalone-scifi-fantasy-books"
+        }
+      ],
+      "truth": {
+        "status": "reviewed",
+        "standalone": true,
+        "memberships": [],
+        "sources": [],
+        "reviewNote": "The observed publisher list surfaces the current movie-tie-in edition; the authority truth is recorded at the underlying Project Hail Mary work level."
+      }
+    },
+    {
+      "id": "gold-standalone-orleans",
+      "title": "Orleans",
+      "authors": ["Sherri L. Smith"],
+      "sampleOrigin": "authority_negative_control",
+      "stratum": "standalone_negative",
+      "selectionFrame": "prh_standalone_scifi_fantasy_2026_09_04",
+      "sampleSources": [
+        {
+          "kind": "publisher",
+          "url": "https://www.penguinrandomhouse.com/the-read-down/standalone-scifi-fantasy-books"
+        }
+      ],
       "truth": { "status": "reviewed", "standalone": true, "memberships": [], "sources": [] }
     }
   ],
