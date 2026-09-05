@@ -59,17 +59,17 @@ test('reports the exact reviewed and sampling gaps in the current authority set'
   assert.equal(audit.ready, false)
   assert.deepEqual(audit.counts, {
     selected: 90,
-    reviewed: 40,
-    candidate: 50,
-    reviewedPositive: 26,
-    reviewedStandalone: 14,
+    reviewed: 50,
+    candidate: 40,
+    reviewedPositive: 35,
+    reviewedStandalone: 15,
     selectionTarget: 200,
     selectionGap: 110,
   })
   assert.deepEqual(Object.fromEntries(audit.targets.map((target) => [target.id, target.gap])), {
-    reviewed_cases: 160,
-    reviewed_positive_cases: 74,
-    reviewed_standalone_cases: 36,
+    reviewed_cases: 150,
+    reviewed_positive_cases: 65,
+    reviewed_standalone_cases: 35,
   })
   assert.deepEqual(
     audit.strata.find((stratum) => stratum.id === 'reverie_series'),
@@ -78,9 +78,9 @@ test('reports the exact reviewed and sampling gaps in the current authority set'
       label: 'Reverie seeded series',
       minimumReviewed: 69,
       selected: 69,
-      reviewed: 22,
-      candidate: 47,
-      gap: 47,
+      reviewed: 32,
+      candidate: 37,
+      gap: 37,
       met: false,
     },
   )
@@ -98,9 +98,9 @@ test('reports the exact reviewed and sampling gaps in the current authority set'
         .map(({ id, reviewed, gap }) => [id, { reviewed, gap }]),
     ),
     {
-      recent_independent_or_kindle_first: { reviewed: 7, gap: 43 },
-      recent_traditional: { reviewed: 6, gap: 44 },
-      multi_series_or_connected_universe: { reviewed: 2, gap: 18 },
+      recent_independent_or_kindle_first: { reviewed: 9, gap: 41 },
+      recent_traditional: { reviewed: 7, gap: 43 },
+      multi_series_or_connected_universe: { reviewed: 7, gap: 13 },
     },
   )
 })

@@ -122,6 +122,14 @@ export function gradeMembershipEvidence(target, evidence, identityEvidence = [])
     if (/\breading order\b/i.test(entry.series)) {
       riskFlags.push('possible_reading_order_not_series')
     }
+    if (
+      entry.provider === 'hardcover' &&
+      entry.position !== null &&
+      Number.isFinite(Number(entry.position)) &&
+      !Number.isInteger(Number(entry.position))
+    ) {
+      riskFlags.push('fractional_position_requires_review')
+    }
     if (clusterKey(entry.series) === clusterKey(target.title))
       riskFlags.push('self_titled_relation')
     if (positions.size > 1) riskFlags.push('position_conflict')
@@ -148,6 +156,7 @@ export function gradeMembershipEvidence(target, evidence, identityEvidence = [])
       !riskFlags.includes('singleton') &&
       !riskFlags.includes('possible_universe_not_series') &&
       !riskFlags.includes('possible_reading_order_not_series') &&
+      !riskFlags.includes('fractional_position_requires_review') &&
       !riskFlags.includes('self_titled_relation') &&
       !riskFlags.includes('independent_corroboration_required') &&
       profile.membershipRule !== 'never'

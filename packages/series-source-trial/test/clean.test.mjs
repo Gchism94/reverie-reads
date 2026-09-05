@@ -68,6 +68,19 @@ test('allows an ordinary exact non-singleton Hardcover relationship as decision 
   assert.ok(graded.quality.riskFlags.includes('position_uncorroborated'))
 })
 
+test('quarantines a fractional Hardcover position as possible reading-order placement', () => {
+  const evidence = [membership('hardcover', 'The Sequence', { position: 2.5 })]
+  const [graded] = gradeMembershipEvidence(
+    { title: 'Side Story', authors: ['Ada Reader'] },
+    evidence,
+    [identity('hardcover')],
+  )
+
+  assert.equal(graded.quality.membershipEligible, false)
+  assert.equal(graded.quality.positionEligible, false)
+  assert.ok(graded.quality.riskFlags.includes('fractional_position_requires_review'))
+})
+
 test('lets independent open-graph evidence corroborate Hardcover order', () => {
   const evidence = [
     membership('hardcover', 'The Sequence', { position: 2 }),
