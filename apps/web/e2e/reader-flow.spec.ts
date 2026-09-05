@@ -179,6 +179,10 @@ test('on a compact phone a reread preserves history through start, progress, and
     })
     if (inserted.error) throw inserted.error
     await page.goto(`/book/${id}`)
+    const memory = page.getByRole('region', { name: 'From your reading journal' })
+    await expect(memory).toContainText('Keep my first impression')
+    await expect(memory).toContainText('Paperback')
+    await expect(memory.getByRole('img', { name: 'Rated 4 stars of 5' })).toBeVisible()
     await page.getByRole('button', { name: 'Read again', exact: true }).click()
     await expect(page.getByRole('button', { name: 'Update progress', exact: true })).toBeVisible()
     // The button updates optimistically; verify the durable write instead of racing its response.
@@ -192,6 +196,17 @@ test('on a compact phone a reread preserves history through start, progress, and
         wishlist: true,
       })
     expect(await c.reads(id)).toHaveLength(1)
+    await page.goto('/')
+    const cover = page.getByRole('button', { name: 'Open A book worth returning to', exact: true })
+    for (const width of [390, 1440]) {
+      await page.setViewportSize({ width, height: 1000 })
+      await expect(cover).toBeVisible()
+      const bounds = await cover.boundingBox()
+      expect(bounds!.height / bounds!.width).toBeCloseTo(1.5, 1)
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width)
+    }
+    await page.setViewportSize({ width: 390, height: 844 })
+    await cover.click()
     await page.getByRole('button', { name: 'Update progress', exact: true }).click()
     const progress = page.getByRole('slider', { name: 'Reading progress' })
     await expect(progress).toBeFocused()
@@ -285,6 +300,16 @@ test('the reading navigation and shortlist remain usable in compact rooms', asyn
         const bounds = await nextRead.boundingBox()
         expect(bounds!.height).toBeGreaterThanOrEqual(44)
         expect(bounds!.width).toBeGreaterThanOrEqual(44)
+        const labelCenters = await nextRead.evaluate((link) => {
+          const icon = link.querySelector('svg')!.getBoundingClientRect()
+          const text = document.createRange()
+          text.selectNodeContents(link.querySelector('.skin-label')!)
+          return [...text.getClientRects()].map((line) =>
+            Math.abs(line.left + line.width / 2 - (icon.left + icon.width / 2)),
+          )
+        })
+        expect(labelCenters.length).toBeGreaterThan(0)
+        for (const distance of labelCenters) expect(distance).toBeLessThanOrEqual(1.5)
         await primary.getByRole('button', { name: 'More', exact: true }).click()
         const more = page.getByRole('navigation', { name: 'More destinations' })
         const appearance = more.getByRole('link', { name: 'Appearance' })
@@ -311,6 +336,67 @@ test('the reading navigation and shortlist remain usable in compact rooms', asyn
           path: `test-results/reader-flow-${skin}-${width}-next-read.png`,
           fullPage: true,
         })
+      }
+    }
+  } finally {
+    await c.cleanup()
+  }
+})
+
+test('Appearance shows the complete binding of every spine in both modes', async ({ page }) => {
+  test.setTimeout(120_000)
+  const c = await setup(page)
+  try {
+    for (const width of [320, 1440]) {
+      await page.setViewportSize({ width, height: 1000 })
+      await page.goto('/skins')
+      for (const mode of ['light', 'dark']) {
+        const toggle = page.getByRole('button', {
+          name: mode === 'light' ? '☀ Light' : '☾ Dark',
+          exact: true,
+        })
+        await toggle.click()
+        await expect(page.getByTestId('appearance-room').first()).toHaveAttribute('data-mode', mode)
+        await page.evaluate(() => document.fonts.ready)
+        const previews = page.getByTestId('appearance-spine')
+        await expect(previews).toHaveCount(9)
+        for (const preview of await previews.all()) {
+          const geometry = await preview.evaluate((wrapper) => {
+            const spine = wrapper.firstElementChild!
+            const box = spine.getBoundingClientRect()
+            const clips = []
+            for (let parent = spine.parentElement; parent; parent = parent.parentElement) {
+              const style = getComputedStyle(parent)
+              if (
+                [style.overflowX, style.overflowY].some((value) =>
+                  ['hidden', 'clip'].includes(value),
+                )
+              ) {
+                const area = parent.getBoundingClientRect()
+                clips.push(
+                  box.left >= area.left - 1 &&
+                    box.right <= area.right + 1 &&
+                    box.top >= area.top - 1 &&
+                    box.bottom <= area.bottom + 1,
+                )
+              }
+            }
+            const frame = wrapper.getBoundingClientRect()
+            return {
+              height: box.height,
+              contained: box.top >= frame.top && box.bottom <= frame.bottom,
+              clips,
+            }
+          })
+          expect(geometry.height).toBeGreaterThanOrEqual(150)
+          expect(geometry.contained).toBe(true)
+          expect(geometry.clips.every(Boolean)).toBe(true)
+        }
+        expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width)
+        for (const room of await page.getByTestId('appearance-room').all()) {
+          const skin = await room.getAttribute('data-skin')
+          await room.screenshot({ path: `test-results/appearance-${skin}-${mode}-${width}.png` })
+        }
       }
     }
   } finally {
