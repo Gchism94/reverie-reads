@@ -2504,6 +2504,207 @@
         ],
         "reviewNote": "The author calls Game On book three of Into Darkness; Zando independently gives the same series and position with the exact author, 2026 sale date, and ISBN."
       }
+    },
+    {
+      "id": "reverie-lucky-river-ranch-wyatt",
+      "title": "Wyatt",
+      "authors": ["Jessica Peterson"],
+      "identifiers": { "isbn13": ["9781464249518"] },
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "strata": ["recent_traditional"],
+      "publicationYear": 2025,
+      "publicationPath": "traditional",
+      "sampleSources": [
+        {
+          "kind": "publisher",
+          "url": "https://www.sourcebooks.com/fiction/9781464249518-wyatt-deluxe-edition-tp.html"
+        }
+      ],
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Lucky River Ranch",
+            "aliases": ["Lucky River Ranch Series"],
+            "role": "primary",
+            "positions": [{ "value": 2, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          { "kind": "author", "url": "https://jessicapeterson.com/wyatt" },
+          {
+            "kind": "publisher",
+            "url": "https://www.sourcebooks.com/fiction/9781464249518-wyatt-deluxe-edition-tp.html"
+          }
+        ],
+        "reviewNote": "The author's exact title page labels Wyatt as Lucky River Ranch book 2, and Sourcebooks independently supplies the same series number with the exact author and ISBN. Interconnected-standalone wording describes reading independence and does not negate the numbered membership."
+      }
+    },
+    {
+      "id": "reverie-lyonesse-honey-cut",
+      "title": "Honey Cut",
+      "authors": ["Sierra Simone"],
+      "identifiers": { "isbn13": ["9781728276663"] },
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "strata": ["recent_traditional", "multi_series_or_connected_universe"],
+      "riskFeatures": ["connected_universe"],
+      "publicationYear": 2024,
+      "publicationPath": "traditional",
+      "sampleSources": [
+        {
+          "kind": "publisher",
+          "url": "https://www.sourcebooks.com/9781728276663-honey-cut-tp.html"
+        }
+      ],
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "membershipsComplete": true,
+        "memberships": [
+          {
+            "series": "Lyonesse",
+            "aliases": ["Lyonesse Trilogy"],
+            "role": "primary",
+            "positions": [{ "value": 2, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          {
+            "kind": "author",
+            "url": "https://store.thesierrasimone.com/collections/lyonesse"
+          },
+          {
+            "kind": "publisher",
+            "url": "https://www.sourcebooks.com/9781728276663-honey-cut-tp.html"
+          }
+        ],
+        "reviewNote": "The author's Lyonesse catalog and Sourcebooks both identify Honey Cut as Lyonesse book 2. The author also says Lyonesse shares a world with New Camelot, but that connected-world statement does not establish a second series membership."
+      }
+    },
+    {
+      "id": "reverie-playing-for-keeps-fall-with-me",
+      "title": "Fall With Me",
+      "authors": ["Becka Mack"],
+      "identifiers": { "isbn13": ["9781638932444"] },
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "strata": ["recent_traditional"],
+      "publicationYear": 2024,
+      "publicationPath": "traditional",
+      "sampleSources": [
+        {
+          "kind": "publisher",
+          "url": "https://www.penguinrandomhouse.com/books/814799/fall-with-me-by-becka-mack/"
+        }
+      ],
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Playing for Keeps",
+            "aliases": ["Playing For Keeps"],
+            "role": "primary",
+            "positions": [{ "value": 4, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          { "kind": "author", "url": "https://www.beckamack.com/home-1" },
+          {
+            "kind": "publisher",
+            "url": "https://www.penguinrandomhouse.com/books/814799/fall-with-me-by-becka-mack/"
+          },
+          {
+            "kind": "publisher_catalog",
+            "url": "https://www.penguinrandomhouse.com/series/PF3/playing-for-keeps/"
+          }
+        ],
+        "reviewNote": "The author's catalog, Penguin Random House title page, and publisher series catalog all identify Fall With Me as Playing for Keeps book 4. This corrects the seed's contradictory Standalone status while preserving its series tuple."
+      }
+    },
+    {
+      "id": "reverie-rose-hill-wild-card",
+      "title": "Wild Card",
+      "authors": ["Elsie Silver"],
+      "identifiers": { "isbn13": ["9781464220845"] },
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "strata": ["recent_traditional"],
+      "publicationYear": 2025,
+      "publicationPath": "traditional",
+      "sampleSources": [
+        {
+          "kind": "publisher",
+          "url": "https://www.sourcebooks.com/9781464220845-wild-card-deluxe-edition-tp.html"
+        }
+      ],
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Rose Hill",
+            "aliases": ["Rose Hill Series"],
+            "role": "primary",
+            "positions": [{ "value": 4, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          { "kind": "author", "url": "https://www.elsiesilver.com/books" },
+          {
+            "kind": "publisher",
+            "url": "https://www.sourcebooks.com/9781464220845-wild-card-deluxe-edition-tp.html"
+          }
+        ],
+        "reviewNote": "The author's catalog groups the exact work under Rose Hill, and Sourcebooks supplies Rose Hill series number 4 with the exact author and ISBN. This disproves the seed's contradictory Standalone status."
+      }
+    },
+    {
+      "id": "reverie-sparrow-falls-secret-haven",
+      "title": "Secret Haven",
+      "authors": ["Catherine Cowles"],
+      "identifiers": { "isbn13": ["9781464241666"] },
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "strata": ["recent_traditional"],
+      "publicationYear": 2025,
+      "publicationPath": "traditional",
+      "sampleSources": [
+        {
+          "kind": "publisher",
+          "url": "https://www.sourcebooks.com/9781464241666-secret-haven-standard-edition-tp.html"
+        }
+      ],
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Sparrow Falls",
+            "aliases": ["Sparrow Falls Series"],
+            "role": "primary",
+            "positions": [{ "value": 6, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          {
+            "kind": "author",
+            "url": "https://catherinecowles.com/pages/secret-haven"
+          },
+          {
+            "kind": "author",
+            "url": "https://catherinecowles.com/pages/reading-order"
+          },
+          {
+            "kind": "publisher",
+            "url": "https://www.sourcebooks.com/9781464241666-secret-haven-standard-edition-tp.html"
+          }
+        ],
+        "reviewNote": "The author's title and reading-order pages place Secret Haven in Sparrow Falls, while Sourcebooks provides exact series number 6 with the author and ISBN. This corrects the seed's unsupported number 5 rather than carrying it into gold truth."
+      }
     }
   ],
   "sharedSources": {

@@ -18,8 +18,8 @@ useful for measuring coverage and discovering disagreements, but they do not con
 accuracy until an authority source has been reviewed.
 
 The current sample contains one difficult work from each of Reverie's 69 distinct seeded series
-plus external sampling frames: 108 selected works, of which 89 are authority-reviewed. The reviewed
-set contains 68 positive series cases and 21 confirmed standalone controls. Some reviewed cases
+plus external sampling frames: 108 selected works, of which 94 are authority-reviewed. The reviewed
+set contains 73 positive series cases and 21 confirmed standalone controls. Some reviewed cases
 replace seed references, so the final distinct-case count is printed at runtime.
 
 ## Run the open-source baseline
@@ -183,6 +183,8 @@ The fifth Reverie seed batch, complete 108-case provider refresh, and 84-case re
 recorded in `reports/authority-seed-batch-5-2026-09-05.md`.
 The sixth Reverie seed batch, complete provider refresh, and 89-case resolver score are recorded in
 `reports/authority-seed-batch-6-2026-09-05.md`.
+The seventh Reverie seed batch, false-standalone controls, connected-world boundary, and corrected
+seed position are recorded in `reports/authority-seed-batch-7-2026-09-05.md`.
 
 ## Test LLM authority-source acquisition
 
@@ -249,7 +251,7 @@ Audit the sample before running another provider or resolver comparison:
 pnpm series:sample:audit
 ```
 
-The audit reports selection coverage and authority-review coverage separately. The current 20
+The audit reports selection coverage and authority-review coverage separately. The current five
 Reverie seed candidates and nine external candidates count as selected works, but never as truth
 and never toward an accuracy gate. It also validates that every reviewed result has
 affirmative author or publisher evidence, that a reviewed standalone has no memberships, and that

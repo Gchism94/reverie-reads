@@ -200,6 +200,38 @@ test('prevents the resolver from accepting a Hardcover-only self-titled relation
   assert.ok(validation.policyViolations.some((error) => error.includes('self_titled_relation')))
 })
 
+test('removes a Hardcover author disambiguator without rewriting other parentheticals', () => {
+  const hardcoverRun = structuredClone(run)
+  hardcoverRun.provider = 'hardcover'
+  hardcoverRun.results[0].seriesClaims[0].series = 'Rose Hill (Silver)'
+  hardcoverRun.results[0].seriesClaims[0].memberCount = 4
+  const target = { id: 'book', title: 'Wild Card', authors: ['Elsie Silver'] }
+  const packet = buildEvidencePacket(target, [hardcoverRun])
+
+  assert.equal(packet.membershipEvidence[0].series, 'Rose Hill')
+  assert.equal(packet.membershipEvidence[0].reportedSeries, 'Rose Hill (Silver)')
+
+  const proposal = structuredClone(accepted)
+  proposal.identity.evidenceIds = ['hardcover:identity']
+  proposal.memberships[0].series = 'Rose Hill'
+  proposal.memberships[0].evidenceIds = ['hardcover:membership:0']
+  const validation = validateResolution(packet, proposal)
+  assert.equal(validation.valid, true)
+  assert.equal(validation.policySafe, true)
+
+  const geographicRun = structuredClone(hardcoverRun)
+  geographicRun.results[0].seriesClaims[0].series = 'Rose Hill (Montana)'
+  const geographic = buildEvidencePacket(target, [geographicRun])
+  assert.equal(geographic.membershipEvidence[0].series, 'Rose Hill (Montana)')
+  assert.equal(geographic.membershipEvidence[0].reportedSeries, undefined)
+
+  const emptyRun = structuredClone(hardcoverRun)
+  emptyRun.results[0].seriesClaims[0].series = '(Silver)'
+  const empty = buildEvidencePacket(target, [emptyRun])
+  assert.equal(empty.membershipEvidence[0].series, '(Silver)')
+  assert.equal(empty.membershipEvidence[0].reportedSeries, undefined)
+})
+
 test('prevents the resolver from accepting a Hardcover reading-order relationship', () => {
   const hardcoverRun = structuredClone(run)
   hardcoverRun.provider = 'hardcover'

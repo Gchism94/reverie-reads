@@ -59,16 +59,16 @@ test('reports the exact reviewed and sampling gaps in the current authority set'
   assert.equal(audit.ready, false)
   assert.deepEqual(audit.counts, {
     selected: 108,
-    reviewed: 89,
-    candidate: 19,
-    reviewedPositive: 68,
+    reviewed: 94,
+    candidate: 14,
+    reviewedPositive: 73,
     reviewedStandalone: 21,
     selectionTarget: 200,
     selectionGap: 92,
   })
   assert.deepEqual(Object.fromEntries(audit.targets.map((target) => [target.id, target.gap])), {
-    reviewed_cases: 111,
-    reviewed_positive_cases: 32,
+    reviewed_cases: 106,
+    reviewed_positive_cases: 27,
     reviewed_standalone_cases: 29,
   })
   assert.deepEqual(
@@ -78,9 +78,9 @@ test('reports the exact reviewed and sampling gaps in the current authority set'
       label: 'Reverie seeded series',
       minimumReviewed: 69,
       selected: 69,
-      reviewed: 59,
-      candidate: 10,
-      gap: 10,
+      reviewed: 64,
+      candidate: 5,
+      gap: 5,
       met: false,
     },
   )
@@ -100,8 +100,8 @@ test('reports the exact reviewed and sampling gaps in the current authority set'
     ),
     {
       recent_independent_or_kindle_first: { reviewed: 15, gap: 35 },
-      recent_traditional: { reviewed: 20, gap: 30 },
-      multi_series_or_connected_universe: { reviewed: 10, gap: 10 },
+      recent_traditional: { reviewed: 25, gap: 25 },
+      multi_series_or_connected_universe: { reviewed: 11, gap: 9 },
       standalone_control: { reviewed: 24, gap: 26 },
     },
   )
@@ -172,6 +172,33 @@ test('records independently confirmed series positions for the sixth Reverie see
     assert.equal(testCase?.truth.memberships[0]?.positions[0]?.orderType, 'publication')
     assert.ok(testCase?.truth.sources.length >= 2)
   }
+})
+
+test('corrects false standalones, connected-world noise, and the seventh batch seed position', async () => {
+  const caseSet = await loadTrialCases()
+  const byId = new Map(caseSet.cases.map((testCase) => [testCase.id, testCase]))
+  const reviewedMemberships = new Map([
+    ['reverie-lucky-river-ranch-wyatt', ['Lucky River Ranch', 2]],
+    ['reverie-lyonesse-honey-cut', ['Lyonesse', 2]],
+    ['reverie-playing-for-keeps-fall-with-me', ['Playing for Keeps', 4]],
+    ['reverie-rose-hill-wild-card', ['Rose Hill', 4]],
+    ['reverie-sparrow-falls-secret-haven', ['Sparrow Falls', 6]],
+  ])
+
+  for (const [id, [series, position]] of reviewedMemberships) {
+    const testCase = byId.get(id)
+    assert.equal(testCase?.truth.status, 'reviewed')
+    assert.equal(testCase?.truth.standalone, false)
+    assert.equal(testCase?.truth.memberships[0]?.series, series)
+    assert.equal(testCase?.truth.memberships[0]?.positions[0]?.value, position)
+    assert.equal(testCase?.truth.memberships[0]?.positions[0]?.orderType, 'publication')
+    assert.ok(testCase?.truth.sources.length >= 2)
+  }
+
+  const honeyCut = byId.get('reverie-lyonesse-honey-cut')
+  assert.equal(honeyCut?.truth.membershipsComplete, true)
+  assert.equal(honeyCut?.truth.memberships.length, 1)
+  assert.deepEqual(honeyCut?.riskFeatures, ['connected_universe'])
 })
 
 test('never counts an unreviewed candidate toward an authority gate', () => {
