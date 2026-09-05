@@ -211,6 +211,13 @@ taxonomies, and unlabelled headings. “Valid” therefore means well-formed and
 Even a policy-safe result is always review-only and cannot write authority gold, Supabase, or the
 corpus.
 
+Hosted search can miss a first-party page that is visible only through site navigation. Do not add
+an arbitrary URL fetcher to compensate. The proposed follow-up is the trial-only, single-hop
+gateway in [`docs/decisions/0009-authority-retrieval-gateway.md`](../../docs/decisions/0009-authority-retrieval-gateway.md):
+it accepts only a consulted-manifest URL on a reviewed origin, selects one same-origin child
+deterministically, returns sanitized evidence, and fails unresolved. That gateway is design-only
+today; it is not implemented by this harness.
+
 Run a small gold holdout before a broader capability evaluation:
 
 ```sh

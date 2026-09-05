@@ -1,0 +1,203 @@
+# ADR 0009 — Bounded authority retrieval gateway
+
+Status: proposed for trial implementation, 2026-09-05.
+
+## Context
+
+The authority scout uses hosted web search to find author and publisher evidence without receiving
+the case truth or known authority URLs. That is a useful discovery layer, but search cannot reliably
+reach a first-party series page that is linked from a consulted site and absent from the search
+index. The same-origin experiment for _Pyg_ demonstrated both sides of the failure: search missed
+the author's `/series` page, then a repeat incorrectly reversed a spin-off statement into series
+membership without consulting that page.
+
+Another prompt revision cannot make an unreturned page available. Letting application code fetch an
+arbitrary model- or user-supplied URL would instead create an SSRF-capable crawler, a new privacy and
+rights boundary, and evidence that is difficult to reproduce. The next experiment needs more recall
+without granting the model general network access or relaxing the existing evidence policy.
+
+## Decision
+
+Build, if this proposal is accepted, a **trial-only, single-hop authority retrieval gateway**. It is
+not a general crawler and it is not a Supabase Edge Function.
+
+The gateway may run only when the first scout request:
+
+1. is unresolved or has no classification-eligible source;
+2. consulted an exact HTTPS author or publisher URL recorded in the hosted-search manifest; and
+3. resolved that URL to an origin whose automated-access profile is currently approved.
+
+It will fetch the consulted page, deterministically choose at most one same-origin navigation link,
+fetch that page, and reduce it to a small, inert evidence packet. A second strict-output model call
+may interpret the packet. Existing deterministic validation and human review remain the only path
+from model output to a usable proposal.
+
+The first implementation belongs only in `packages/series-source-trial`. It has no database client,
+service-role credential, corpus writer, browser engine, JavaScript runtime for fetched content, or
+production route.
+
+## Retrieval contract
+
+### Inputs
+
+The gateway accepts only:
+
+- the case id, title, author, and optional publication year already supplied to the scout;
+- one `consultedUrl` copied exactly from that response's consulted-source manifest; and
+- a versioned origin profile selected by normalized origin, never by the model.
+
+It rejects an arbitrary URL from a user, an LLM field, a provider packet, or an ungrounded citation.
+The origin profile records the canonical HTTPS origin, explicitly accepted canonical aliases,
+source kind, access status, terms/robots review references, review time, expiry, and reviewer. A new
+origin begins `pending`; pending, expired, blocked, authenticated, paywalled, or technically guarded
+origins are not fetched.
+
+### Network boundary
+
+Every request, including `robots.txt` and every redirect hop, must pass the same checks:
+
+- Parse with the WHATWG URL implementation. Permit HTTPS on the default port only. Reject embedded
+  credentials and IP-literal hosts, strip fragments before comparison or logging, and reject every
+  non-HTTPS scheme.
+- Resolve every A and AAAA answer and reject the request if any answer is loopback, private,
+  link-local, multicast, reserved, documentation, unspecified, carrier-grade NAT, or cloud metadata
+  space. Pin the connection to a validated public answer while preserving TLS hostname validation;
+  do not validate with one DNS result and connect through a later lookup.
+- Disable automatic redirects. Follow at most two manually, re-running URL, origin-profile, and DNS
+  checks at each hop. A redirect may use only a canonical alias declared in the profile; content
+  navigation after canonicalization must stay on the canonical origin.
+- Send a named, contactable `ReverieAuthorityScout` user agent with no cookies, authorization,
+  referrer, user-specific headers, or browser state. Do not bypass CAPTCHAs, rate limits, access
+  controls, or bot challenges.
+- Honor RFC 9309 before content retrieval. A matching disallow blocks the request. A robots network
+  error or 5xx fails closed. A 4xx robots response may be unavailable under the RFC, but access still
+  requires an approved origin profile. Cache robots decisions for no more than 24 hours.
+- Use one attempt with no automatic retry, a five-second connection/header deadline, and a
+  ten-second total deadline. Limit each origin to one active request and one request per second.
+- Accept only a successful HTML or plain-text response. Stop after 512 KiB of encoded bytes or
+  512 KiB of decoded text, regardless of `Content-Length`; reject type mismatches, archive formats,
+  XML with external entities, and decompression expansion beyond the cap.
+
+The limits are deliberately tighter than a browser's. A normal author page that cannot fit this
+contract becomes a manual-review source; it does not justify widening the network surface silently.
+
+### Link selection and extraction
+
+The parent document is untrusted data. Parse static markup without loading scripts, styles,
+iframes, images, fonts, forms, feeds, manifests, or subresources. Resolve anchors with the same URL
+parser and keep only links on the canonical origin that also pass robots policy.
+
+Rank navigation candidates deterministically from visible anchor text, accessible label, and path:
+
+- prefer exact title links and explicit `series`, `books`, `bibliography`, `catalog`, or
+  `publications` language;
+- demote store, cart, account, event, tour, press, contact, privacy, and social links;
+- reject downloads, query-heavy URLs, fragments of the parent, and logout or mutation-looking paths.
+
+Fetch only one unique highest-scoring candidate above a fixed threshold. A tie or no qualifying link
+is unresolved. The model does not choose the URL, and the child page is terminal: the gateway never
+follows its links.
+
+Reduce the child to its document title, headings, list/table labels, and nearby visible prose with
+source order preserved. Remove scripts, styles, templates, forms, comments, hidden text, structured
+prompts, and control characters. Cap the packet at 8,000 Unicode characters and mark every omitted
+range. The packet is evidence to inspect, not instructions to follow.
+
+### Model and evidence boundary
+
+The optional second model request receives the minimal case identity, the sanitized packet, and its
+gateway manifest. It uses the existing strict authority schema and may cite only the parent or child
+URL present in that manifest. It cannot request another page, broaden the origin, or treat the
+gateway's successful fetch as source eligibility.
+
+All current cleaning remains in force. In particular, a direct bibliographic statement is required
+for series membership; a universe, trope, trigger warning, reading order, shared character,
+companion, or spin-off statement cannot be reversed into membership. Standalone still requires an
+affirmative first-party statement. The gateway changes reachability, not authority.
+
+Every outcome remains review-only. A timeout, block, miss, parse failure, or absent label means
+unresolved, never standalone and never “not in a series.”
+
+## Provenance and privacy
+
+The result manifest records:
+
+- case id and extractor/policy/profile versions;
+- grounded parent URL, selected anchor text and URL, canonical final URL, and redirect chain;
+- retrieval time, status, declared media type, encoded/decoded byte counts, truncation state, and
+  response `ETag`/`Last-Modified` when present;
+- validated public connection address, robots decision and cache age, deterministic selection
+  score, and SHA-256 hashes of the fetched and sanitized representations; and
+- a typed terminal result such as `retrieved`, `origin_pending`, `robots_disallow`,
+  `robots_unreachable`, `unsafe_url`, `unsafe_dns`, `redirect_outside_profile`, `too_large`,
+  `unsupported_media`, `timeout`, `no_candidate`, `ambiguous_candidate`, or `parse_failure`.
+
+Raw HTML and sanitized page text are ephemeral and excluded from committed reports and ordinary
+caches. Reports retain the URL, hashes, retrieval metadata, short model paraphrase, and decision so a
+reviewer can re-open the public source. A future need to retain source text requires its own rights,
+retention, and access-control decision.
+
+The request contains no user id, household id, library contents, ownership, rating, reading history,
+notes, moods, or matching profile. User book matching may consume a later reviewed corpus fact; it
+must not send private matching context through this acquisition path.
+
+Robots rules are an automated-access signal, not authorization. An origin profile therefore also
+requires a terms/data-use review, and a technical refusal remains a refusal. A source owner can be
+blocked immediately by profile without a code release.
+
+## Cost and failure budget
+
+For one eligible unresolved case, the gateway permits at most one robots cache miss, two content
+GETs (parent and one child), and one additional model call. There are no recursive links or retries.
+The sanitized packet and second prompt together should keep that additional call below 12,000 input
+tokens and the existing 1,400-output-token ceiling. Reports must separate first-pass search cost,
+retrieval cost, and second-pass model cost so the feature can be disabled without obscuring spend.
+
+The gateway is optional. Any internal error returns the typed unresolved result and leaves the
+original scout proposal intact for review; it cannot make an unsafe proposal valid.
+
+## Trial acceptance gates
+
+Implementation is not ready for a production pilot until all of these are demonstrated:
+
+1. **Network safety:** unit/integration fixtures cover IPv4 and IPv6 special ranges, alternative IP
+   encodings, credentials and ports, mixed DNS answers, DNS rebinding/connection pinning, every
+   redirect hop, metadata targets, oversized/chunked/compressed bodies, MIME mismatch, slow headers,
+   slow bodies, malformed markup, and subresource non-fetching. No subsequent request is sent after
+   an unsafe target is identified.
+2. **Access policy:** deterministic tests cover allow/disallow precedence, robots 4xx/5xx/network
+   outcomes, 24-hour expiry, pending/expired/blocked origins, canonical aliases, and immediate
+   operator opt-out.
+3. **Evidence integrity:** every cited URL exists in the same retrieval manifest, every packet hash
+   is reproducible from its fixture, raw content is absent from reports/caches, and prompt-like page
+   text cannot alter the schema or cause another fetch.
+4. **Accuracy:** run a paired, truth-blind evaluation on the fixed authority sample and a separately
+   declared navigation-needed stratum. Membership precision and standalone safety must remain 100%,
+   with no newly accepted false positive. The navigation-needed stratum must reduce unresolved
+   authority misses by at least 25%; otherwise the added boundary is not justified.
+5. **Efficiency:** across the fixed sample, the mean must remain at or below 1.25 model calls per
+   selected case, retrieval p95 must remain below ten seconds, and the request/byte/token ceilings
+   above must hold without exceptions.
+6. **Review:** the implementation receives a security-focused diff review and a source-rights review,
+   and the live report documents failures as well as successes. Production integration still waits
+   for the existing 200-case accuracy, rights, privacy, latency, and cost gates.
+
+## Consequences
+
+- The scout can reach a navigation-linked first-party series page without depending on search-index
+  recall.
+- The model remains an interpreter of a bounded packet, not a browser or fetch authority.
+- Long-tail author sites require a lightweight origin review before retrieval; some cases will stay
+  unresolved rather than being fetched optimistically.
+- The design adds engineering and review work, but caps it at one non-recursive hop and makes the
+  failure modes observable and reversible.
+- No production, Supabase, corpus, authority-gold, or user-matching behavior changes by accepting
+  this ADR or implementing its trial.
+
+## References
+
+- [OWASP SSRF Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html)
+- [OWASP SSRF Prevention in Node.js](https://owasp.org/www-community/pages/controls/SSRF_Prevention_in_Nodejs.html)
+- [RFC 9309 — Robots Exclusion Protocol](https://www.rfc-editor.org/rfc/rfc9309.html)
+- [WHATWG URL Standard](https://url.spec.whatwg.org/)
+- [WHATWG Fetch Standard](https://fetch.spec.whatwg.org/)
