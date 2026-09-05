@@ -18,8 +18,8 @@ useful for measuring coverage and discovering disagreements, but they do not con
 accuracy until an authority source has been reviewed.
 
 The current sample contains one difficult work from each of Reverie's 69 distinct seeded series
-plus external sampling frames: 108 selected works, of which 84 are authority-reviewed. The reviewed
-set contains 63 positive series cases and 21 confirmed standalone controls. Some reviewed cases
+plus external sampling frames: 108 selected works, of which 89 are authority-reviewed. The reviewed
+set contains 68 positive series cases and 21 confirmed standalone controls. Some reviewed cases
 replace seed references, so the final distinct-case count is printed at runtime.
 
 ## Run the open-source baseline
@@ -181,6 +181,8 @@ The high-risk semantic batch, its intentionally unresolved connected-world cases
 zero-request rescore are recorded in `reports/authority-high-risk-review-2026-09-04.md`.
 The fifth Reverie seed batch, complete 108-case provider refresh, and 84-case resolver score are
 recorded in `reports/authority-seed-batch-5-2026-09-05.md`.
+The sixth Reverie seed batch, complete provider refresh, and 89-case resolver score are recorded in
+`reports/authority-seed-batch-6-2026-09-05.md`.
 
 ## Test LLM authority-source acquisition
 

@@ -59,16 +59,16 @@ test('reports the exact reviewed and sampling gaps in the current authority set'
   assert.equal(audit.ready, false)
   assert.deepEqual(audit.counts, {
     selected: 108,
-    reviewed: 84,
-    candidate: 24,
-    reviewedPositive: 63,
+    reviewed: 89,
+    candidate: 19,
+    reviewedPositive: 68,
     reviewedStandalone: 21,
     selectionTarget: 200,
     selectionGap: 92,
   })
   assert.deepEqual(Object.fromEntries(audit.targets.map((target) => [target.id, target.gap])), {
-    reviewed_cases: 116,
-    reviewed_positive_cases: 37,
+    reviewed_cases: 111,
+    reviewed_positive_cases: 32,
     reviewed_standalone_cases: 29,
   })
   assert.deepEqual(
@@ -78,9 +78,9 @@ test('reports the exact reviewed and sampling gaps in the current authority set'
       label: 'Reverie seeded series',
       minimumReviewed: 69,
       selected: 69,
-      reviewed: 54,
-      candidate: 15,
-      gap: 15,
+      reviewed: 59,
+      candidate: 10,
+      gap: 10,
       met: false,
     },
   )
@@ -100,7 +100,7 @@ test('reports the exact reviewed and sampling gaps in the current authority set'
     ),
     {
       recent_independent_or_kindle_first: { reviewed: 15, gap: 35 },
-      recent_traditional: { reviewed: 18, gap: 32 },
+      recent_traditional: { reviewed: 20, gap: 30 },
       multi_series_or_connected_universe: { reviewed: 10, gap: 10 },
       standalone_control: { reviewed: 24, gap: 26 },
     },
@@ -149,6 +149,28 @@ test('records exact first-party series numbers without mistaking readable standa
     assert.equal(testCase?.truth.memberships[0]?.series, series)
     assert.equal(testCase?.truth.memberships[0]?.positions[0]?.value, position)
     assert.equal(testCase?.truth.memberships[0]?.positions[0]?.orderType, 'publication')
+  }
+})
+
+test('records independently confirmed series positions for the sixth Reverie seed batch', async () => {
+  const caseSet = await loadTrialCases()
+  const byId = new Map(caseSet.cases.map((testCase) => [testCase.id, testCase]))
+  const reviewedMemberships = new Map([
+    ['reverie-beneath-the-mask-distance', ['Beneath the Mask', 1]],
+    ['reverie-cruel-castaways-ruthless-rival', ['Cruel Castaways', 1]],
+    ['reverie-flame-and-thorns-war-of-fire-and-fury', ['Flame and Thorns', 5]],
+    ['reverie-hell-bent-my-demon-hunter', ['Hell Bent', 2]],
+    ['reverie-into-darkness-game-on', ['Into Darkness', 3]],
+  ])
+
+  for (const [id, [series, position]] of reviewedMemberships) {
+    const testCase = byId.get(id)
+    assert.equal(testCase?.truth.status, 'reviewed')
+    assert.equal(testCase?.truth.standalone, false)
+    assert.equal(testCase?.truth.memberships[0]?.series, series)
+    assert.equal(testCase?.truth.memberships[0]?.positions[0]?.value, position)
+    assert.equal(testCase?.truth.memberships[0]?.positions[0]?.orderType, 'publication')
+    assert.ok(testCase?.truth.sources.length >= 2)
   }
 })
 
