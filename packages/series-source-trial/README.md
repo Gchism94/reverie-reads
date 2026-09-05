@@ -178,6 +178,57 @@ The complete 2025 Kindle Storyteller shortlist, Hachette standalone-label challe
 Reverie seed batch, and 74-case capability score are recorded in
 `reports/authority-challenge-batch-4-2026-09-04.md`.
 
+## Test LLM authority-source acquisition
+
+The authority acquisition harness tests the next layer of the proposed production tool: can the
+model find an author or publisher page for the exact work, distinguish bibliographic series from
+connected-world noise, and cite only pages it actually consulted? It uses the Responses API's
+hosted `web_search` tool with live access, strict structured output, `store: false`, and at most
+three web-search calls per book by default.
+
+This remains a shadow evaluation. The model receives only title, author, and an optional publication
+year; existing truth labels, authority URLs, sample sources, and provider packets are withheld.
+Deterministic validation rejects an unconsulted URL, an unsupported membership or position, and a
+standalone conclusion without affirmative author/publisher evidence. A separate source-policy check
+prevents a selection-frame page from validating the case it selected and quarantines known
+conflicting source taxonomies such as Hachette's standalone marketing lists. “Valid” therefore
+means well-formed and grounded; “policy-safe” additionally means the proposed evidence survived
+those deterministic source rules. Even a policy-safe result is always review-only and cannot write
+authority gold, Supabase, or the corpus.
+
+Run a small gold holdout before a broader capability evaluation:
+
+```sh
+pnpm series:authority:acquire -- --scope gold --max 10
+```
+
+Target exact stable case IDs when constructing a balanced holdout:
+
+```sh
+pnpm series:authority:acquire -- \
+  --scope gold \
+  --ids gold-divine-rivals,gold-standalone-mexican-gothic
+```
+
+Results and per-case caches are written under ignored `private-results/`. Repeating an unchanged
+run is free; pass `--refresh` only when intentionally testing live-source drift. The report separates
+resolution rate from accuracy, and reports membership precision/recall, false standalone, false
+series, URL grounding, tool calls, and token usage. A candidate run can prioritize human review but
+does not convert candidate output into truth:
+
+```sh
+pnpm series:authority:acquire -- --scope candidate --max 10
+```
+
+The current design keeps acquisition and resolution separate on purpose. This scout proposes
+first-party evidence for review; the existing resolver reconciles approved provider evidence under
+its deterministic source profiles. A future production orchestrator may call both, but neither model
+is allowed to promote its own output into trusted corpus data.
+
+The first 12-case balanced gold holdout, nine-candidate queue trial, cost measurement, and
+source-policy correction are recorded in
+`reports/authority-acquisition-pilot-2026-09-04.md`.
+
 ## Build the 200-case authority set
 
 Audit the sample before running another provider or resolver comparison:

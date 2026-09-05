@@ -47,8 +47,9 @@ Genre-specific language belongs in a skin, not in the core.
 apps/web/            React app (UI, routes, components) + Playwright e2e
 packages/core/       shared TS types + pure logic (merge, CSV import, spoiler gate, skins,
                      covers, taste) — everything testable without a browser
-packages/series-source-trial/ reproducible provider evaluation; reads local secrets, never writes
-                     Supabase or treats search labels as membership evidence
+packages/series-source-trial/ reproducible provider, resolver, and authority-source acquisition
+                     evaluation; reads local secrets, never writes Supabase or treats search
+                     labels/model output as membership evidence
 supabase/            migrations, edge functions, seed
 prototype/ data/ design/ docs/ backend/   ← reference material, not shipped
 ```
@@ -143,6 +144,15 @@ wishlist` was the pre-#68 model and is long wrong. Format flags **suppress, neve
   Inventaire, BookBrainz, and the resolver stay trial-only until the reviewed accuracy,
   standalone-safety, rights, privacy, latency, and cost gates pass. See
   `docs/reference/DATA_SOURCES.md`.
+- **LLM authority-source acquisition is a separate, truth-blind shadow capability.** The scout gets
+  only title, author, and optional publication year; uses bounded live search; and proposes cited
+  author/publisher evidence. It does not receive the case truth, known authority URLs, sample
+  sources, or provider packet. Deterministic validation requires every cited URL to appear in the
+  API's consulted-source manifest, blocks the case's selection-frame URLs from establishing its
+  classification, and quarantines known conflicting marketing taxonomies. A grounded URL proves
+  consultation, not source eligibility: the model cannot declare its own evidence authoritative.
+  Output stays review-only and cannot write authority gold, Supabase, or the corpus. See
+  `docs/reference/DATA_SOURCES.md`.
 - **Corpus cover recovery is bounded, resumable, and independent of classification.** The
   administrator completion pipeline never walks the whole household library in one RPC. It calls
   `admin_recover_corpus_cover_batch` in groups of at most 25, records a source fingerprint after
@@ -200,6 +210,7 @@ pnpm lint           # ESLint
 pnpm typecheck      # tsc --noEmit, all packages
 pnpm series:trial -- --scope all --providers openlibrary,wikidata  # provider evidence trial
 pnpm series:resolve -- --input <trial-report.json> --scope gold     # no-write LLM shadow trial
+pnpm series:authority:acquire -- --scope gold --max 10              # no-write source scout
 pnpm db:start       # local Supabase stack   (db:stop / db:reset / db:status)
 pnpm db:migrate     # apply migrations + reload the PostgREST schema
 pnpm db:seed        # load the dev library
