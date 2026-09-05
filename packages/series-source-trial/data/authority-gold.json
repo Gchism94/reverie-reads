@@ -2834,6 +2834,83 @@
         ],
         "reviewNote": "The author's catalog and Penguin series roster identify Dire Bound as The Wolves of Ruin book 1. Hachette describes it as the first book of the trilogy and records that its February 2025 self-publication preceded the Requited acquisition, so its sampling path remains independent rather than being rewritten by the later edition."
       }
+    },
+    {
+      "id": "kindle-storyteller-2022-midsummer-house",
+      "title": "Midsummer House",
+      "authors": ["Rachael Lucas"],
+      "identifiers": { "isbn13": ["9781739804022"], "asin": ["B09JXJV2BM"] },
+      "sampleOrigin": "external_sample",
+      "strata": ["recent_independent_or_kindle_first"],
+      "publicationYear": 2022,
+      "publicationPath": "kindle_first",
+      "selectionFrame": "kindle_storyteller_2022_shortlist",
+      "sampleSources": [
+        {
+          "kind": "platform_award",
+          "url": "https://www.aboutamazon.co.uk/news/retail/amazons-kindle-storyteller-award-2022-shortlist-announced"
+        }
+      ],
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Applemore Bay",
+            "aliases": ["Applemore", "Applemore Series", "Das Erbe von Applemore"],
+            "role": "primary",
+            "positions": [{ "value": 3, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          {
+            "kind": "publisher",
+            "url": "https://www.suhrkamp.de/buch/rachael-lucas-midsummer-house-t-9783458683629"
+          },
+          {
+            "kind": "publisher_catalog",
+            "url": "https://www.zomerenkeuning.nl/series/applemore-bay/"
+          }
+        ],
+        "reviewNote": "Insel's exact translated-edition page retains the English title Midsummer House and identifies it as Applemore volume 3. Zomer & Keuning's publisher series catalog names the relationship Applemore Bay and includes its translated edition. Standalone wording attached to the English work describes reading independence and does not negate the publisher-assigned series membership."
+      }
+    },
+    {
+      "id": "kindle-storyteller-2025-pyg",
+      "title": "Pyg",
+      "authors": ["Pip Landers-Letts"],
+      "sampleOrigin": "external_sample",
+      "strata": [
+        "recent_independent_or_kindle_first",
+        "multi_series_or_connected_universe"
+      ],
+      "riskFeatures": ["connected_universe"],
+      "publicationYear": 2025,
+      "publicationPath": "kindle_first",
+      "selectionFrame": "kindle_storyteller_2025_shortlist",
+      "sampleSources": [
+        {
+          "kind": "platform_award",
+          "url": "https://www.aboutamazon.co.uk/news/books-and-authors/how-to-enter-amazons-kindle-storyteller-award"
+        }
+      ],
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "membershipsComplete": true,
+        "memberships": [
+          {
+            "series": "The Leamington Bloom",
+            "aliases": ["Leamington Bloom", "The Leamington Bloom Series"],
+            "role": "primary",
+            "positions": []
+          }
+        ],
+        "sources": [
+          { "kind": "author", "url": "https://www.pipwritesfiction.com/series" }
+        ],
+        "reviewNote": "The author's dedicated series page says The Leamington Bloom brings together two standalone sapphic novels and presents Pyg within that catalog. Here standalone means independently readable: the same first-party source affirmatively assigns the bibliographic series. No sequence number is stated, so order remains unknown."
+      }
     }
   ],
   "sharedSources": {
