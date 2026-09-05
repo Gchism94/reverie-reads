@@ -44,8 +44,9 @@ export function SkinShowcase({
             Find a room that feels like you.
           </h2>
           <p className="max-w-[58ch] text-base leading-relaxed text-muted">
-            The same books, a different place to settle in. Choose a room to change the live preview
-            below and every example above. Your room never limits the genres you can read.
+            The same books, a different place to settle in. Each room is a private reverie: choose
+            one to change the live preview below and every example above. Your room never limits the
+            genres you can read.
           </p>
         </div>
         <div
@@ -122,7 +123,7 @@ export function SkinShowcase({
           data-active-skin={active}
           data-active-mode={mode}
         >
-          <ReadingRoomPreview skin={active} mode={mode} className="border border-line p-4 sm:p-8">
+          <ReadingRoomPreview skin={active} mode={mode} className="p-4 sm:p-8">
             <div className="mb-7 flex flex-wrap items-start justify-between gap-5">
               <div className="max-w-[55ch]">
                 <p className="text-xs font-semibold leading-relaxed text-muted">

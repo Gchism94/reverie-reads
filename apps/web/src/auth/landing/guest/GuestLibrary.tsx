@@ -20,9 +20,18 @@ const icons: Record<GuestView, NavigationIconName> = {
   history: 'planner',
 }
 
-function showHeading(heading: HTMLHeadingElement | null) {
+function focusHeading(heading: HTMLHeadingElement | null) {
+  // Announce the new internal view without moving the surrounding landing page. On a phone only,
+  // bring a genuinely offscreen destination back into view; this keeps long, tapped lists usable
+  // without pulling either desktop demo under the sticky header on every action.
   heading?.focus({ preventScroll: true })
-  heading?.scrollIntoView({ block: 'start', behavior: 'instant' })
+  if (!heading || !window.matchMedia('(max-width: 480px)').matches) return
+  window.requestAnimationFrame(() => {
+    if (!heading.isConnected) return
+    const bounds = heading.getBoundingClientRect()
+    if (bounds.top < 0 || bounds.bottom > window.innerHeight)
+      heading.scrollIntoView({ block: 'start', behavior: 'instant' })
+  })
 }
 
 /** The public library has real state and shared app controls, with no account or persistence. */
@@ -45,7 +54,7 @@ export function GuestLibrary({ compact = false }: { compact?: boolean }) {
         : GUEST_VIEWS[state.page]
   useEffect(() => {
     if (focusAfterChange.current) {
-      showHeading(heading.current)
+      focusHeading(heading.current)
       focusAfterChange.current = false
     }
   }, [state.page, state.selected])
@@ -77,7 +86,7 @@ export function GuestLibrary({ compact = false }: { compact?: boolean }) {
       id={compact ? 'try-next-read' : 'try-library'}
       aria-label={compact ? 'Your guest library' : 'Try your library'}
       data-testid={compact ? 'guest-library-compact' : 'guest-library-full'}
-      className="min-w-0 scroll-mt-24 text-ink"
+      className={`min-w-0 scroll-mt-24 text-ink ${compact ? 'guest-library-compact-viewport' : ''}`}
       onBlurCapture={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget)) focusAfterChange.current = false
       }}
@@ -336,7 +345,7 @@ export function GuestLibrary({ compact = false }: { compact?: boolean }) {
               disabled={pageIndex === 0}
               onClick={() => {
                 setPagination({ key: pageKey, index: pageIndex - 1 })
-                showHeading(heading.current)
+                focusHeading(heading.current)
               }}
             >
               Previous books
@@ -347,7 +356,7 @@ export function GuestLibrary({ compact = false }: { compact?: boolean }) {
               disabled={from + pageSize >= total}
               onClick={() => {
                 setPagination({ key: pageKey, index: pageIndex + 1 })
-                showHeading(heading.current)
+                focusHeading(heading.current)
               }}
             >
               Next books

@@ -97,11 +97,28 @@ Use the room's atmosphere only where it improves orientation or emotional contin
 effect when it competes with a cover, makes scrolling feel unstable, or exists only to prove the
 skin is different.
 
-The shared Canvas 2D renderer authors a separate scene for each room: a lamplit salon, tower
-study, orbital alcove, sheltered archive, rainy study, writing desk, window seat, field study,
-and dawn corner. Architectural details stay around the margins. Day mode is still; night mode
-adds a slow, slight change in local light. Reduced motion, hidden pages, and offscreen previews
-rest. Static scene caching and a bounded canvas resolution keep the effect inexpensive.
+Each room uses a material field rather than a literal illustration of a room. The renderer builds
+fine-grained height and light maps in WebGL where available, copies the result to Canvas, and then
+releases the WebGL context. Canvas supplies the room-specific detail and the quiet animated light.
+That hybrid keeps the field tactile without reserving a scarce graphics context for every preview.
+
+| Skin       | Atmospheric material                                                |
+| ---------- | ------------------------------------------------------------------- |
+| `tryst`    | plum-dark sky with the original layered stars and warm haze         |
+| `grimoire` | illuminated vellum, worn pigment, and a restrained marginal rule    |
+| `aphelion` | deep instrument sky with its original 46px orbital grid             |
+| `marrow`   | weathered tombstone with branching fractures and mineral pits       |
+| `umbra`    | rain crossing wet slate under a distant brass street glow           |
+| `folio`    | fibrous cotton paper, deckled edges, and a faint editorial wash     |
+| `hearth`   | woven linen, dark timber, and an intimate pool of lamplight         |
+| `almanac`  | field paper with surveyed contours, grain, and a pressed fern trace |
+| `bloom`    | translucent dawn cloud strata with a soft pearlescent horizon       |
+
+Atmosphere moves like light on a familiar surface, never like scenery sliding behind the reader.
+Reduced motion, hidden pages, and offscreen previews rest. Static material caching and a bounded
+canvas resolution keep the effect inexpensive. Landing previews use the same renderer and tokens as
+the signed-in app; their soft, curved threshold should feel like looking through a reverie rather
+than placing the product inside a hard mock-device frame.
 
 ## Signature components
 

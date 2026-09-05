@@ -2,7 +2,7 @@ import { useEffectiveSkin } from '../skin/labels'
 import { useSkin } from '../skin/useSkin'
 import { SkinAtmosphereCanvas } from './SkinAtmosphereCanvas'
 
-/** Every room owns its light, architecture and material. The same scene runs in public previews. */
+/** Every room owns its light, surface and authored detail. The same scene runs in public previews. */
 export function Sky() {
   const skin = useEffectiveSkin()
   const mode = useSkin((state) => state.resolvedMode)

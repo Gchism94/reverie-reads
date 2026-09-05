@@ -18,15 +18,18 @@ export function ReadingRoomPreview({
   useEffect(() => loadSkinFont(skin), [skin])
   return (
     <SkinPreviewContext.Provider value={skin}>
-      <div
-        data-skin={skin}
-        data-mode={mode}
-        data-testid="room-example"
-        className={`relative isolate overflow-hidden bg-bg0 text-ink ${className}`}
-        style={{ fontFamily: 'var(--font-sans)', borderRadius: 'var(--radius-panel)' }}
-      >
-        <SkinAtmosphereCanvas skin={skin} mode={mode} />
-        <div className="relative z-[1]">{children}</div>
+      <div className="rv-reverie-window" data-skin={skin} data-mode={mode}>
+        <div aria-hidden className="rv-reverie-window-mist" />
+        <div
+          data-skin={skin}
+          data-mode={mode}
+          data-testid="room-example"
+          className={`rv-reverie-window-surface relative isolate overflow-hidden bg-bg0 text-ink ${className}`}
+          style={{ fontFamily: 'var(--font-sans)' }}
+        >
+          <SkinAtmosphereCanvas skin={skin} mode={mode} />
+          <div className="relative z-[1]">{children}</div>
+        </div>
       </div>
     </SkinPreviewContext.Provider>
   )

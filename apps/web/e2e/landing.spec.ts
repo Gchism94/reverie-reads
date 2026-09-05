@@ -195,6 +195,10 @@ test('room selection reaches earlier examples, changes real cover structures, an
   await expect(examples).toHaveCount(3)
   for (const example of await examples.all())
     await expect(example).toHaveAttribute('data-skin', 'aphelion')
+  for (const canvas of await page.getByTestId('skin-atmosphere').all()) {
+    await expect(canvas).toHaveAttribute('data-atmosphere', 'instrument-grid-starfield')
+    await expect(canvas).toHaveAttribute('data-renderer', /Canvas restored sky/)
+  }
   await expect(demo.getByRole('img', { name: /A book of my own.*placeholder/ })).toContainText(
     'APH·',
   )
@@ -213,4 +217,26 @@ test('room selection reaches earlier examples, changes real cover structures, an
       .locator('canvas')
       .evaluate((canvas) => (canvas as HTMLCanvasElement).toDataURL()),
   ).toBe(still)
+})
+
+test('guest-library actions keep each landing preview anchored in the viewport', async ({
+  page,
+}) => {
+  await page.goto('/')
+
+  const compact = page.getByTestId('guest-library-compact')
+  await compact.getByRole('button', { name: 'Next read', exact: true }).scrollIntoViewIfNeeded()
+  const heroScroll = await page.evaluate(() => window.scrollY)
+  await compact.getByRole('button', { name: 'Next read', exact: true }).click()
+  await expect(compact.getByRole('heading', { name: 'Next read' })).toBeFocused()
+  expect(Math.abs((await page.evaluate(() => window.scrollY)) - heroScroll)).toBeLessThanOrEqual(1)
+
+  const full = page.getByTestId('guest-library-full')
+  await full.getByRole('button', { name: 'Reading journal', exact: true }).scrollIntoViewIfNeeded()
+  const showcaseScroll = await page.evaluate(() => window.scrollY)
+  await full.getByRole('button', { name: 'Reading journal', exact: true }).click()
+  await expect(full.getByRole('heading', { name: 'Reading journal' })).toBeFocused()
+  expect(
+    Math.abs((await page.evaluate(() => window.scrollY)) - showcaseScroll),
+  ).toBeLessThanOrEqual(1)
 })

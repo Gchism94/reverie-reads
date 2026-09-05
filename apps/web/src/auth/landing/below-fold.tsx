@@ -279,11 +279,7 @@ export default function LandingBelowFold({
             body="A thought in the margin. The date you finished. A different feeling on a second read. Keep your notes, ratings, and rereads alongside the books, with room for your reading life to change."
           />
           <div className="mt-12 sm:mt-16">
-            <ReadingRoomPreview
-              skin={skin}
-              mode={mode}
-              className="border border-line p-2 min-[360px]:p-4 sm:p-6"
-            >
+            <ReadingRoomPreview skin={skin} mode={mode} className="p-2 min-[360px]:p-4 sm:p-6">
               <RoomCaption skin={skin} mode={mode} />
               <div className="mt-4">
                 <GuestReadingRecord />
