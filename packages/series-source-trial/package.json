@@ -10,5 +10,8 @@
     "score": "node src/score-file.mjs",
     "sample:audit": "node src/audit-authority-sample.mjs",
     "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "parse5": "^7.3.0"
   }
 }

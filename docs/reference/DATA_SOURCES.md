@@ -102,8 +102,9 @@ trial is a single-hop, navigation-aware retrieval gateway: only a hosted-search-
 reviewed author/publisher origin may enter it; deterministic code may fetch that parent and one
 same-origin child under strict SSRF, robots, size, timeout, privacy, and provenance controls. The
 model may interpret only the sanitized packet and cannot choose another URL. The design and its
-acceptance gates are in [ADR 0009](../decisions/0009-authority-retrieval-gateway.md); no gateway or
-production integration exists yet.
+acceptance gates are in [ADR 0009](../decisions/0009-authority-retrieval-gateway.md). The
+deterministic gateway boundary now exists in the trial package, but no real origin is active and it
+is not connected to the acquisition command, a model call, or production.
 
 Acquisition cleaning also distinguishes bibliographic membership from reading dependence. When an
 author or publisher both assigns the exact work to a named series and markets it as independently
