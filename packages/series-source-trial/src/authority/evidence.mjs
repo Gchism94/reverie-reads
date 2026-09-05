@@ -110,6 +110,12 @@ const genericSeriesKey = (value) => {
   return words.join(' ')
 }
 
+const selfTitleKey = (value) => {
+  const words = genericSeriesKey(value).split(' ').filter(Boolean)
+  while (['a', 'an', 'the'].includes(words[0])) words.shift()
+  return words.join(' ')
+}
+
 const authoritySeriesMatches = (membership, actualSeries) =>
   seriesMatches(membership, actualSeries) ||
   [membership.series, ...(membership.aliases ?? [])]
@@ -328,6 +334,27 @@ export function validateAuthorityAcquisition(target, output, consultedUrls, poli
   if (output.classification === 'series') {
     if (!identityResolved) errors.push('series classification requires a matched identity')
     if (!output.memberships.length) errors.push('series classification requires a membership')
+    for (const membership of output.memberships) {
+      if (
+        !isObject(membership) ||
+        !selfTitleKey(membership.series) ||
+        selfTitleKey(membership.series) !== selfTitleKey(target.target?.title)
+      ) {
+        continue
+      }
+      const exactWorkCorroboration = asArray(membership.evidenceUrls)
+        .map((url) => citedSource(sources, url, 'series_membership'))
+        .filter(Boolean)
+        .some(
+          (source) =>
+            source.kind !== 'publisher_catalog' && asArray(source.supports).includes('identity'),
+        )
+      if (!exactWorkCorroboration) {
+        policyViolations.push(
+          'self-titled series relationship requires exact-work membership corroboration',
+        )
+      }
+    }
   }
   if (output.classification === 'standalone') {
     if (!identityResolved) errors.push('standalone classification requires a matched identity')

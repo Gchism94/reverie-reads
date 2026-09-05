@@ -59,16 +59,16 @@ test('reports the exact reviewed and sampling gaps in the current authority set'
   assert.equal(audit.ready, false)
   assert.deepEqual(audit.counts, {
     selected: 108,
-    reviewed: 94,
-    candidate: 14,
-    reviewedPositive: 73,
+    reviewed: 97,
+    candidate: 11,
+    reviewedPositive: 76,
     reviewedStandalone: 21,
     selectionTarget: 200,
     selectionGap: 92,
   })
   assert.deepEqual(Object.fromEntries(audit.targets.map((target) => [target.id, target.gap])), {
-    reviewed_cases: 106,
-    reviewed_positive_cases: 27,
+    reviewed_cases: 103,
+    reviewed_positive_cases: 24,
     reviewed_standalone_cases: 29,
   })
   assert.deepEqual(
@@ -78,9 +78,9 @@ test('reports the exact reviewed and sampling gaps in the current authority set'
       label: 'Reverie seeded series',
       minimumReviewed: 69,
       selected: 69,
-      reviewed: 64,
-      candidate: 5,
-      gap: 5,
+      reviewed: 67,
+      candidate: 2,
+      gap: 2,
       met: false,
     },
   )
@@ -99,9 +99,9 @@ test('reports the exact reviewed and sampling gaps in the current authority set'
         .map(({ id, reviewed, gap }) => [id, { reviewed, gap }]),
     ),
     {
-      recent_independent_or_kindle_first: { reviewed: 15, gap: 35 },
-      recent_traditional: { reviewed: 25, gap: 25 },
-      multi_series_or_connected_universe: { reviewed: 11, gap: 9 },
+      recent_independent_or_kindle_first: { reviewed: 16, gap: 34 },
+      recent_traditional: { reviewed: 27, gap: 23 },
+      multi_series_or_connected_universe: { reviewed: 12, gap: 8 },
       standalone_control: { reviewed: 24, gap: 26 },
     },
   )
@@ -129,6 +129,16 @@ test('records high-risk membership without inventing order and preserves ambiguo
 
   assert.equal(byId.get('reverie-dark-forces-bulletproof')?.truth.status, 'candidate')
   assert.equal(byId.get('reverie-lords-the-sacrifice')?.truth.status, 'candidate')
+
+  const grey = byId.get('gold-grey')
+  assert.equal(grey?.truth.membershipsComplete, true)
+  assert.deepEqual(
+    grey?.truth.memberships.map(({ series, role }) => [series, role]),
+    [
+      ['Fifty Shades as Told by Christian', 'primary'],
+      ['Fifty Shades of Grey', 'secondary'],
+    ],
+  )
 })
 
 test('records exact first-party series numbers without mistaking readable standalones for non-membership', async () => {
@@ -199,6 +209,35 @@ test('corrects false standalones, connected-world noise, and the seventh batch s
   assert.equal(honeyCut?.truth.membershipsComplete, true)
   assert.equal(honeyCut?.truth.memberships.length, 1)
   assert.deepEqual(honeyCut?.riskFeatures, ['connected_universe'])
+})
+
+test('promotes the final unambiguous seed candidates while preserving ambiguous controls', async () => {
+  const caseSet = await loadTrialCases()
+  const byId = new Map(caseSet.cases.map((testCase) => [testCase.id, testCase]))
+  const reviewedMemberships = new Map([
+    ['reverie-sinful-manor-keep-me', ['Sinful Manor', 1]],
+    ['reverie-the-eye-of-the-goddess-a-tribute-of-fire', ['The Eye of the Goddess', 1]],
+    ['reverie-the-wolves-of-ruin-dire-bound', ['The Wolves of Ruin', 1]],
+  ])
+
+  for (const [id, [series, position]] of reviewedMemberships) {
+    const testCase = byId.get(id)
+    assert.equal(testCase?.truth.status, 'reviewed')
+    assert.equal(testCase?.truth.standalone, false)
+    assert.equal(testCase?.truth.memberships[0]?.series, series)
+    assert.equal(testCase?.truth.memberships[0]?.positions[0]?.value, position)
+    assert.equal(testCase?.truth.memberships[0]?.positions[0]?.orderType, 'publication')
+    assert.ok(testCase?.truth.sources.length >= 2)
+  }
+
+  assert.equal(byId.get('reverie-sinful-manor-keep-me')?.publicationPath, 'traditional')
+  assert.equal(
+    byId.get('reverie-the-eye-of-the-goddess-a-tribute-of-fire')?.publicationPath,
+    'traditional',
+  )
+  assert.equal(byId.get('reverie-the-wolves-of-ruin-dire-bound')?.publicationPath, 'independent')
+  assert.equal(byId.get('reverie-dark-forces-bulletproof')?.truth.status, 'candidate')
+  assert.equal(byId.get('reverie-lords-the-sacrifice')?.truth.status, 'candidate')
 })
 
 test('never counts an unreviewed candidate toward an authority gate', () => {

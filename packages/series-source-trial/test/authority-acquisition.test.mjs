@@ -262,6 +262,38 @@ test('demotes blocked sources to identity without withholding independent member
   assert.equal(validation.policySafe, true)
 })
 
+test('quarantines a self-titled publisher grouping without exact-work membership corroboration', () => {
+  const catalogUrl = 'https://publisher.example/series/only-book'
+  const selfTitled = structuredClone(seriesOutput)
+  selfTitled.memberships[0].series = 'Second Book Series'
+  selfTitled.memberships[0].position = null
+  selfTitled.memberships[0].evidenceUrls = [catalogUrl]
+  selfTitled.authoritySources[0].supports = ['identity']
+  selfTitled.authoritySources.push({
+    url: catalogUrl,
+    kind: 'publisher_catalog',
+    supports: ['series_membership'],
+    evidenceSummary: 'The publisher catalog groups the exact work under a self-titled series.',
+  })
+
+  const quarantined = validateAuthorityAcquisition(buildAuthorityTarget(testCase), selfTitled, [
+    publisherUrl,
+    catalogUrl,
+  ])
+  assert.equal(quarantined.valid, true)
+  assert.equal(quarantined.policySafe, false)
+  assert.ok(quarantined.policyViolations.some((error) => error.includes('self-titled series')))
+
+  selfTitled.memberships[0].evidenceUrls.push(publisherUrl)
+  selfTitled.authoritySources[0].supports.push('series_membership')
+  const corroborated = validateAuthorityAcquisition(buildAuthorityTarget(testCase), selfTitled, [
+    publisherUrl,
+    catalogUrl,
+  ])
+  assert.equal(corroborated.valid, true)
+  assert.equal(corroborated.policySafe, true)
+})
+
 test('sends a bounded, stateless web-search request and captures all consulted URLs', async () => {
   const target = buildAuthorityTarget(testCase)
   let requestBody
