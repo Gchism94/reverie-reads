@@ -41,7 +41,14 @@ const smallPlan = (strata = []) => ({
   schemaVersion: 1,
   selectionTarget: 1,
   recentPublicationYearFloor: 2021,
-  authoritySourceKinds: ['author', 'publisher', 'publisher_catalog'],
+  authoritySourceKinds: ['author', 'author_post', 'publisher', 'publisher_catalog'],
+  samplingSourceKinds: [
+    'author',
+    'author_post',
+    'publisher',
+    'publisher_catalog',
+    'platform_award',
+  ],
   strata,
 })
 
@@ -51,18 +58,18 @@ test('reports the exact reviewed and sampling gaps in the current authority set'
   assert.equal(audit.valid, true)
   assert.equal(audit.ready, false)
   assert.deepEqual(audit.counts, {
-    selected: 80,
-    reviewed: 33,
-    candidate: 47,
-    reviewedPositive: 22,
-    reviewedStandalone: 11,
+    selected: 90,
+    reviewed: 40,
+    candidate: 50,
+    reviewedPositive: 26,
+    reviewedStandalone: 14,
     selectionTarget: 200,
-    selectionGap: 120,
+    selectionGap: 110,
   })
   assert.deepEqual(Object.fromEntries(audit.targets.map((target) => [target.id, target.gap])), {
-    reviewed_cases: 167,
-    reviewed_positive_cases: 78,
-    reviewed_standalone_cases: 39,
+    reviewed_cases: 160,
+    reviewed_positive_cases: 74,
+    reviewed_standalone_cases: 36,
   })
   assert.deepEqual(
     audit.strata.find((stratum) => stratum.id === 'reverie_series'),
@@ -82,11 +89,16 @@ test('reports the exact reviewed and sampling gaps in the current authority set'
     Object.fromEntries(
       audit.strata
         .filter(({ id }) =>
-          ['recent_traditional', 'multi_series_or_connected_universe'].includes(id),
+          [
+            'recent_independent_or_kindle_first',
+            'recent_traditional',
+            'multi_series_or_connected_universe',
+          ].includes(id),
         )
         .map(({ id, reviewed, gap }) => [id, { reviewed, gap }]),
     ),
     {
+      recent_independent_or_kindle_first: { reviewed: 7, gap: 43 },
       recent_traditional: { reviewed: 6, gap: 44 },
       multi_series_or_connected_universe: { reviewed: 2, gap: 18 },
     },
@@ -184,7 +196,62 @@ test('supports overlapping strata but requires their audit metadata', () => {
   assert.ok(invalid.errors.some((error) => error.includes('membershipsComplete')))
 })
 
-test('requires first-party sampling provenance for a recent-publication stratum', () => {
+test('keeps selection-frame provenance separate from truth authority', () => {
+  const awardSource = {
+    kind: 'platform_award',
+    url: 'https://platform.example/complete-shortlist',
+  }
+  const testCase = reviewedCase({
+    publicationYear: 2025,
+    publicationPath: 'kindle_first',
+    selectionFrame: 'complete-shortlist',
+    sampleSources: [awardSource],
+    strata: ['recent_independent_or_kindle_first'],
+  })
+  const samplePlan = {
+    ...smallPlan([
+      {
+        id: 'recent_independent_or_kindle_first',
+        label: 'Independent',
+        minimumReviewed: 1,
+      },
+    ]),
+    selectionFrames: [
+      {
+        id: 'complete-shortlist',
+        expectedCases: 1,
+        strata: ['recent_independent_or_kindle_first'],
+        publicationYear: 2025,
+        publicationPath: 'kindle_first',
+        source: awardSource,
+      },
+    ],
+  }
+  const valid = auditAuthoritySample(
+    { cases: [testCase], sharedSources: {} },
+    samplePlan,
+    smallPolicy(),
+  )
+  assert.equal(valid.valid, true)
+
+  const platformTruth = structuredClone(testCase)
+  platformTruth.truth.sources = [awardSource]
+  const invalidTruth = auditAuthoritySample(
+    { cases: [platformTruth], sharedSources: {} },
+    samplePlan,
+    smallPolicy(),
+  )
+  assert.ok(invalidTruth.errors.some((error) => error.includes('authority source')))
+
+  const missingFinalist = auditAuthoritySample(
+    { cases: [], sharedSources: {} },
+    samplePlan,
+    smallPolicy(),
+  )
+  assert.ok(missingFinalist.errors.some((error) => error.includes('requires 1 cases; found 0')))
+})
+
+test('requires recognized sampling provenance for a recent-publication stratum', () => {
   const testCase = reviewedCase({
     publicationYear: 2025,
     publicationPath: 'traditional',
@@ -199,7 +266,7 @@ test('requires first-party sampling provenance for a recent-publication stratum'
     smallPolicy(),
   )
 
-  assert.ok(invalid.errors.some((error) => error.includes('sampleSources')))
+  assert.ok(invalid.errors.some((error) => error.includes('sampling-provenance')))
 
   const valid = auditAuthoritySample(
     { cases: [{ ...testCase, sampleSources: [source] }], sharedSources: {} },

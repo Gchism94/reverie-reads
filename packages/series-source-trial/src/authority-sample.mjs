@@ -16,6 +16,20 @@ const usableAuthoritySources = (sources, plan) => {
   )
 }
 
+const usableSamplingSources = (sources, plan) => {
+  const samplingKinds = new Set(
+    asArray(plan?.samplingSourceKinds).length
+      ? asArray(plan.samplingSourceKinds)
+      : asArray(plan?.authoritySourceKinds),
+  )
+  return asArray(sources).filter(
+    (source) =>
+      samplingKinds.has(source?.kind) &&
+      typeof source?.url === 'string' &&
+      /^https:\/\//.test(source.url),
+  )
+}
+
 export const authorityWorkKey = (testCase) =>
   [
     normalize(testCase?.title ?? ''),
@@ -74,8 +88,38 @@ const validateRecentStratum = (testCase, stratum, plan, errors) => {
     errors.push(`${testCase.id}: ${stratum} requires traditional`)
   }
 
-  if (!usableAuthoritySources(testCase.sampleSources, plan).length) {
-    errors.push(`${testCase.id}: ${stratum} requires an authority-backed sampleSources entry`)
+  if (!usableSamplingSources(testCase.sampleSources, plan).length) {
+    errors.push(`${testCase.id}: ${stratum} requires a recognized sampling-provenance source`)
+  }
+}
+
+const validateSelectionFrame = (testCase, plan, errors) => {
+  if (!testCase.selectionFrame) return
+
+  const frame = asArray(plan?.selectionFrames).find(({ id }) => id === testCase.selectionFrame)
+  if (!frame) {
+    errors.push(`${testCase.id}: unknown selectionFrame ${testCase.selectionFrame}`)
+    return
+  }
+
+  const sourceMatches = usableSamplingSources(testCase.sampleSources, plan).some(
+    (source) => source.kind === frame.source?.kind && source.url === frame.source?.url,
+  )
+  if (!sourceMatches) {
+    errors.push(`${testCase.id}: selectionFrame ${frame.id} requires its declared source`)
+  }
+  if (testCase.publicationYear !== frame.publicationYear) {
+    errors.push(`${testCase.id}: selectionFrame ${frame.id} publicationYear does not match`)
+  }
+  if (testCase.publicationPath !== frame.publicationPath) {
+    errors.push(`${testCase.id}: selectionFrame ${frame.id} publicationPath does not match`)
+  }
+
+  const caseStrata = new Set(authorityCaseStrata(testCase, plan))
+  for (const stratum of asArray(frame.strata)) {
+    if (!caseStrata.has(stratum)) {
+      errors.push(`${testCase.id}: selectionFrame ${frame.id} requires stratum ${stratum}`)
+    }
   }
 }
 
@@ -162,8 +206,21 @@ export function auditAuthoritySample(caseSet, plan, policy) {
       }
     }
 
+    validateSelectionFrame(testCase, plan, errors)
+
     if (testCase.truth.status === 'reviewed') {
       validateReviewedTruth(testCase, caseSet.sharedSources, plan, errors)
+    }
+  }
+
+  for (const frame of asArray(plan?.selectionFrames)) {
+    const selected = cases.filter((testCase) => testCase.selectionFrame === frame.id).length
+    if (!Number.isInteger(frame.expectedCases) || frame.expectedCases < 1) {
+      errors.push(`${frame.id}: selection frame requires a positive expectedCases value`)
+    } else if (selected !== frame.expectedCases) {
+      errors.push(
+        `${frame.id}: complete selection frame requires ${frame.expectedCases} cases; found ${selected}`,
+      )
     }
   }
 

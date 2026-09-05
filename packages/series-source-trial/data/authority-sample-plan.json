@@ -2,7 +2,42 @@
   "schemaVersion": 1,
   "selectionTarget": 200,
   "recentPublicationYearFloor": 2021,
-  "authoritySourceKinds": ["author", "publisher", "publisher_catalog"],
+  "authoritySourceKinds": ["author", "author_post", "publisher", "publisher_catalog"],
+  "samplingSourceKinds": [
+    "author",
+    "author_post",
+    "publisher",
+    "publisher_catalog",
+    "platform_award"
+  ],
+  "selectionFrames": [
+    {
+      "id": "kindle_storyteller_2022_shortlist",
+      "label": "Complete 2022 Kindle Storyteller Award shortlist",
+      "expectedCases": 5,
+      "strata": ["recent_independent_or_kindle_first"],
+      "publicationYear": 2022,
+      "publicationPath": "kindle_first",
+      "source": {
+        "kind": "platform_award",
+        "url": "https://www.aboutamazon.co.uk/news/retail/amazons-kindle-storyteller-award-2022-shortlist-announced"
+      },
+      "selectionRule": "Include all five shortlisted titles, with no provider-result filtering."
+    },
+    {
+      "id": "kindle_storyteller_2023_shortlist",
+      "label": "Complete 2023 Kindle Storyteller Award shortlist",
+      "expectedCases": 5,
+      "strata": ["recent_independent_or_kindle_first"],
+      "publicationYear": 2023,
+      "publicationPath": "kindle_first",
+      "source": {
+        "kind": "platform_award",
+        "url": "https://www.aboutamazon.co.uk/news/books-and-authors/amazon-self-publishing-awards-2023"
+      },
+      "selectionRule": "Include all five shortlisted titles, with no provider-result filtering."
+    }
+  ],
   "strata": [
     {
       "id": "reverie_series",

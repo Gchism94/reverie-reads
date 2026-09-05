@@ -90,11 +90,19 @@ Provider data is cleaned before it reaches that resolver. Google contributes ide
 Open Library, Wikidata, Inventaire, and BookBrainz contribute a membership only after the exact
 author-matched work appears in a structured relationship; mirrored Wikidata observations share one
 lineage. Hardcover is a high-coverage candidate supplement, not an automatic authority: its
-relationship needs corroboration from an independently originated open-graph claim. A self-titled
-Hardcover relation is flagged, a relation labeled or typed as a universe is quarantined, and an
-unknown provider cannot corroborate anything until its policy profile is defined. Every current
-community source needs independent agreement before an ordinal is automatic; a position conflict
-keeps the membership but clears the order.
+ordinary exact-work, non-singleton relationship may supply membership after semantic quarantine,
+but it never corroborates another provider. Self-titled, singleton, universe, reading-order, and
+competing relationships remain review-only. Every current community source needs independent
+agreement before an ordinal is automatic; a position conflict keeps an otherwise eligible
+membership but clears the order. A deterministic post-pass corrects an LLM `review` to
+`accept_membership` only when every review reason is order-only, every proposed position is null,
+and the ordinary validator independently proves the membership policy-safe.
+
+The current default resolver study uses Open Library, Wikidata, Google Books, and Hardcover.
+Inventaire and BookBrainz remain useful discovery and administrator-review inputs, but adding both
+to the routine decision packet reduced safe automatic recall on the first 40 reviewed cases without
+improving precision or standalone safety. Keep them out of the default automatic packet until the
+larger authority set shows a net benefit; their evidence remains available for conflict discovery.
 
 The same profiles keep data-use boundaries visible to the resolver: Wikidata, Inventaire, and
 BookBrainz claims are durable CC0 inputs; Google is live identity-only; Open Library remains trial

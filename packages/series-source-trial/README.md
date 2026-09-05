@@ -156,6 +156,9 @@ The first live 10-case shadow, the prompt/lineage correction it exposed, and the
 `reports/resolver-shadow-pilot-2026-09-04.md`.
 The first 10-case authority expansion, zero-request provider rescore, and Hardcover semantic-policy
 revision are recorded in `reports/authority-review-batch-1-2026-09-04.md`.
+The first recent independent/Kindle-first cohort, complete-shortlist sampling frames, and
+production-shaped four-provider comparison are recorded in
+`reports/authority-indie-batch-1-2026-09-04.md`.
 
 ## Build the 200-case authority set
 
@@ -166,9 +169,10 @@ pnpm series:sample:audit
 ```
 
 The audit reports selection coverage and authority-review coverage separately. The current 47
-Reverie seed candidates count as selected works, but never as truth and never toward an accuracy
-gate. It also validates that every reviewed result has affirmative author or publisher evidence,
-that a reviewed standalone has no memberships, and that a reviewed series work has at least one.
+Reverie seed candidates and three external shortlist candidates count as selected works, but never
+as truth and never toward an accuracy gate. It also validates that every reviewed result has
+affirmative author or publisher evidence, that a reviewed standalone has no memberships, and that
+a reviewed series work has at least one.
 
 `data/authority-sample-plan.json` owns the fixed targets and stratum definitions.
 `data/authority-candidates.json` is the queue for additional works; moving a work into
@@ -209,15 +213,19 @@ case must set `truth.membershipsComplete` to `true`; this is the reviewer attest
 in-scope memberships—not only the provider's preferred one—were checked. Strata may overlap, which
 is how the minimums fit within 200 distinct works without weakening any category.
 
-Recent-publication strata require a first-party `sampleSources` entry supporting the year and
-publication path. This keeps sampling labels subject to the same provenance discipline as series
-truth instead of letting an unsupported tag satisfy a coverage minimum.
+Recent-publication strata require a recognized `sampleSources` entry supporting the year and
+publication path. `selectionFrames` can name a complete, externally defined list such as an award
+shortlist; the audit checks its expected case count, common year/path, required stratum, and source.
+This makes selection reproducible without pretending that the list organizer is the authority for
+series truth.
 
-An authority source is an author page, publisher page, or publisher catalog. A shared authority
-page may be declared under the gold file's `sharedSources` and referenced by `truth.sourceGroups`;
-the existing standalone controls retain the equivalent legacy stratum reference. An archived copy
-may preserve provenance, but does not turn a non-authority page into authority evidence. Provider
-output and LLM output can prioritize the review queue; neither can write gold truth.
+An authority source is an author page, a verified author-controlled post, a publisher page, or a
+publisher catalog. A shared authority page may be declared under the gold file's `sharedSources`
+and referenced by `truth.sourceGroups`; the existing standalone controls retain the equivalent
+legacy stratum reference. A sampling source such as a platform award may select a case but cannot
+validate its truth. An archived copy may preserve provenance, but does not turn a non-authority
+page into authority evidence. Provider output and LLM output can prioritize the review queue;
+neither can write gold truth.
 
 ## Decision rule
 

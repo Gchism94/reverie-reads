@@ -7,6 +7,7 @@ import { loadLocalEnvironment } from './env.mjs'
 import { annotateProviderResults } from './lineage.mjs'
 import {
   buildEvidencePacket,
+  canonicalizeResolutionDecision,
   scoreResolutionRun,
   validateResolution,
 } from './resolver/evidence.mjs'
@@ -124,12 +125,14 @@ const runOne = async (packet) => {
   const path = cachePath(packet)
   try {
     const cached = JSON.parse(await readFile(path, 'utf8'))
+    const output = canonicalizeResolutionDecision(packet, cached.output)
     return {
       caseId: packet.caseId,
       status: 'completed',
       ...cached,
+      output,
       cached: true,
-      validation: validateResolution(packet, cached.output),
+      validation: validateResolution(packet, output),
     }
   } catch (error) {
     if (error?.code !== 'ENOENT') throw error
@@ -137,13 +140,15 @@ const runOne = async (packet) => {
 
   try {
     const resolved = await resolveEvidencePacket(packet, { model })
-    await writeFile(path, `${JSON.stringify(resolved, null, 2)}\n`)
+    const output = canonicalizeResolutionDecision(packet, resolved.output)
+    const canonical = { ...resolved, output }
+    await writeFile(path, `${JSON.stringify(canonical, null, 2)}\n`)
     return {
       caseId: packet.caseId,
       status: 'completed',
-      ...resolved,
+      ...canonical,
       cached: false,
-      validation: validateResolution(packet, resolved.output),
+      validation: validateResolution(packet, output),
     }
   } catch (error) {
     return {
