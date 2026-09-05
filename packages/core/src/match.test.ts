@@ -177,6 +177,21 @@ describe('mergeImport', () => {
     expect(newReads.map((r) => r.date)).toEqual(['2025-06-01'])
   })
 
+  it('does not duplicate a genre when import casing differs', () => {
+    const mixed = makeBook({
+      id: 'mixed-genres',
+      title: 'Mixed Genres',
+      genre: 'romance',
+      genres: ['romance', 'Romance'],
+    })
+    const { patch } = mergeImport(mixed, {
+      title: mixed.title,
+      genres: ['ROMANCE', 'Fantasy'],
+    })
+
+    expect(patch.genres).toEqual(['romance', 'fantasy'])
+  })
+
   // ── mergeDifferences: what the merge DISCARDS ────────────────────────────────────────────────
   //
   // Deliberately sharing `existing` with the mergeImport cases above, per the brief: the shared
