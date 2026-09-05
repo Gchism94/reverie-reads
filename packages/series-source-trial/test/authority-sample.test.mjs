@@ -59,16 +59,16 @@ test('reports the exact reviewed and sampling gaps in the current authority set'
   assert.equal(audit.ready, false)
   assert.deepEqual(audit.counts, {
     selected: 108,
-    reviewed: 79,
-    candidate: 29,
-    reviewedPositive: 58,
+    reviewed: 84,
+    candidate: 24,
+    reviewedPositive: 63,
     reviewedStandalone: 21,
     selectionTarget: 200,
     selectionGap: 92,
   })
   assert.deepEqual(Object.fromEntries(audit.targets.map((target) => [target.id, target.gap])), {
-    reviewed_cases: 121,
-    reviewed_positive_cases: 42,
+    reviewed_cases: 116,
+    reviewed_positive_cases: 37,
     reviewed_standalone_cases: 29,
   })
   assert.deepEqual(
@@ -78,9 +78,9 @@ test('reports the exact reviewed and sampling gaps in the current authority set'
       label: 'Reverie seeded series',
       minimumReviewed: 69,
       selected: 69,
-      reviewed: 49,
-      candidate: 20,
-      gap: 20,
+      reviewed: 54,
+      candidate: 15,
+      gap: 15,
       met: false,
     },
   )
@@ -99,8 +99,8 @@ test('reports the exact reviewed and sampling gaps in the current authority set'
         .map(({ id, reviewed, gap }) => [id, { reviewed, gap }]),
     ),
     {
-      recent_independent_or_kindle_first: { reviewed: 14, gap: 36 },
-      recent_traditional: { reviewed: 17, gap: 33 },
+      recent_independent_or_kindle_first: { reviewed: 15, gap: 35 },
+      recent_traditional: { reviewed: 18, gap: 32 },
       multi_series_or_connected_universe: { reviewed: 10, gap: 10 },
       standalone_control: { reviewed: 24, gap: 26 },
     },
@@ -129,6 +129,27 @@ test('records high-risk membership without inventing order and preserves ambiguo
 
   assert.equal(byId.get('reverie-dark-forces-bulletproof')?.truth.status, 'candidate')
   assert.equal(byId.get('reverie-lords-the-sacrifice')?.truth.status, 'candidate')
+})
+
+test('records exact first-party series numbers without mistaking readable standalones for non-membership', async () => {
+  const caseSet = await loadTrialCases()
+  const byId = new Map(caseSet.cases.map((testCase) => [testCase.id, testCase]))
+  const reviewedMemberships = new Map([
+    ['reverie-gold-rush-ranch-off-to-the-races', ['Gold Rush Ranch', 1]],
+    ['reverie-never-after-hooked', ['Never After', 1]],
+    ['reverie-priest-priest', ['The Priest Collection', 1]],
+    ['reverie-stay-a-spell-wolf-gone-wild', ['Stay A Spell', 1]],
+    ['reverie-the-broken-blades-five-broken-blades', ['The Broken Blades', 1]],
+  ])
+
+  for (const [id, [series, position]] of reviewedMemberships) {
+    const testCase = byId.get(id)
+    assert.equal(testCase?.truth.status, 'reviewed')
+    assert.equal(testCase?.truth.standalone, false)
+    assert.equal(testCase?.truth.memberships[0]?.series, series)
+    assert.equal(testCase?.truth.memberships[0]?.positions[0]?.value, position)
+    assert.equal(testCase?.truth.memberships[0]?.positions[0]?.orderType, 'publication')
+  }
 })
 
 test('never counts an unreviewed candidate toward an authority gate', () => {

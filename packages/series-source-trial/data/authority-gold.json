@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "reviewedAt": "2026-09-04",
+  "reviewedAt": "2026-09-05",
   "cases": [
     {
       "id": "gold-a-court-of-silver-flames",
@@ -2193,6 +2193,151 @@
           }
         ],
         "reviewNote": "Hachette assigns Enchantra to Wicked Games in both its title metadata and series catalog. The same publisher's standalone-readable marketing does not negate that explicit bibliographic relationship; the reviewed catalog does not expose a reliable numeric position."
+      }
+    },
+    {
+      "id": "reverie-gold-rush-ranch-off-to-the-races",
+      "title": "Off to the Races",
+      "authors": ["Elsie Silver"],
+      "identifiers": { "isbn13": ["9781464220777"] },
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Gold Rush Ranch",
+            "aliases": [],
+            "role": "primary",
+            "positions": [{ "value": 1, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          {
+            "kind": "publisher",
+            "url": "https://www.sourcebooks.com/9781464220777-off-to-the-races-tp.html"
+          },
+          { "kind": "author", "url": "https://www.elsiesilver.com/books" }
+        ],
+        "reviewNote": "Sourcebooks identifies the exact title, author, and ISBN as Gold Rush Ranch series number 1; the author's reading-order page independently groups the work under Gold Rush Ranch."
+      }
+    },
+    {
+      "id": "reverie-never-after-hooked",
+      "title": "Hooked",
+      "authors": ["Emily McIntire"],
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "strata": ["recent_independent_or_kindle_first"],
+      "publicationYear": 2021,
+      "publicationPath": "independent",
+      "sampleSources": [{ "kind": "author", "url": "https://emilymcintire.com/about/" }],
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Never After",
+            "aliases": ["Never After Series"],
+            "role": "primary",
+            "positions": [{ "value": 1, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          { "kind": "author", "url": "https://emilymcintire.com/" },
+          { "kind": "author", "url": "https://emilymcintire.com/press-kit/" }
+        ],
+        "reviewNote": "The author's site identifies Hooked as Never After book one, and its press-kit reading order lists Hooked first in the six-book series. Calling the books complete standalones describes reading independence, not absence of series membership."
+      }
+    },
+    {
+      "id": "reverie-priest-priest",
+      "title": "Priest",
+      "authors": ["Sierra Simone"],
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "The Priest Collection",
+            "aliases": ["Priest Collection", "Priest"],
+            "role": "primary",
+            "positions": [{ "value": 1, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          { "kind": "author", "url": "https://www.thesierrasimone.com/priest" },
+          {
+            "kind": "author",
+            "url": "https://www.thesierrasimone.com/priest-series"
+          }
+        ],
+        "reviewNote": "The author's exact title page labels Priest as collection number 1, and the dedicated Priest Collection page identifies it as number 1 in the named group. Its complete-standalone wording is a reading-independence claim, not a standalone bibliographic classification."
+      }
+    },
+    {
+      "id": "reverie-stay-a-spell-wolf-gone-wild",
+      "title": "Wolf Gone Wild",
+      "authors": ["Juliette Cross"],
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Stay A Spell",
+            "aliases": ["The Stay A Spell Series", "Stay A Spell Series"],
+            "role": "primary",
+            "positions": [{ "value": 1, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          {
+            "kind": "author",
+            "url": "https://juliettecross.com/pages/stay-a-spell-series"
+          }
+        ],
+        "reviewNote": "The author's dedicated Stay A Spell series page lists the exact work and labels Wolf Gone Wild as book one."
+      }
+    },
+    {
+      "id": "reverie-the-broken-blades-five-broken-blades",
+      "title": "Five Broken Blades",
+      "authors": ["Mai Corland"],
+      "identifiers": { "isbn13": ["9781649376749"] },
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "strata": ["recent_traditional"],
+      "publicationYear": 2024,
+      "publicationPath": "traditional",
+      "sampleSources": [
+        {
+          "kind": "publisher",
+          "url": "https://entangledpublishing.com/books/five-broken-blades"
+        }
+      ],
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "The Broken Blades",
+            "aliases": ["Broken Blades"],
+            "role": "primary",
+            "positions": [{ "value": 1, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          {
+            "kind": "publisher",
+            "url": "https://entangledpublishing.com/books/five-broken-blades"
+          }
+        ],
+        "reviewNote": "Entangled Publishing identifies the exact title, author, ISBN, and release as The Broken Blades book 1."
       }
     }
   ],

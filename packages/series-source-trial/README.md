@@ -18,8 +18,8 @@ useful for measuring coverage and discovering disagreements, but they do not con
 accuracy until an authority source has been reviewed.
 
 The current sample contains one difficult work from each of Reverie's 69 distinct seeded series
-plus external sampling frames: 108 selected works, of which 74 are authority-reviewed. The reviewed
-set contains 53 positive series cases and 21 confirmed standalone controls. Some reviewed cases
+plus external sampling frames: 108 selected works, of which 84 are authority-reviewed. The reviewed
+set contains 63 positive series cases and 21 confirmed standalone controls. Some reviewed cases
 replace seed references, so the final distinct-case count is printed at runtime.
 
 ## Run the open-source baseline
@@ -177,6 +177,10 @@ correction, and 61-case score are recorded in
 The complete 2025 Kindle Storyteller shortlist, Hachette standalone-label challenge frame, fourth
 Reverie seed batch, and 74-case capability score are recorded in
 `reports/authority-challenge-batch-4-2026-09-04.md`.
+The high-risk semantic batch, its intentionally unresolved connected-world cases, and the first
+zero-request rescore are recorded in `reports/authority-high-risk-review-2026-09-04.md`.
+The fifth Reverie seed batch, complete 108-case provider refresh, and 84-case resolver score are
+recorded in `reports/authority-seed-batch-5-2026-09-05.md`.
 
 ## Test LLM authority-source acquisition
 
