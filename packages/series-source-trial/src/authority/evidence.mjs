@@ -5,6 +5,14 @@ const confidenceValues = new Set(['high', 'medium', 'low', 'none'])
 const roles = new Set(['primary', 'secondary', 'unknown'])
 const sourceKinds = new Set(['author', 'author_post', 'publisher', 'publisher_catalog'])
 const supportsValues = new Set(['identity', 'series_membership', 'position', 'standalone'])
+const discoveryOnlyHosts = new Set([
+  'amazon.com',
+  'barnesandnoble.com',
+  'goodreads.com',
+  'linktr.ee',
+  'target.com',
+  'wikipedia.org',
+])
 
 const asArray = (value) => (Array.isArray(value) ? value : [])
 const isObject = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value)
@@ -70,6 +78,10 @@ const knownClassificationRisk = (source) => {
   const comparable = comparableUrl(source?.url)
   if (!comparable) return null
   const url = new URL(comparable)
+  const rootHost = url.hostname.replace(/^www\./, '')
+  if (discoveryOnlyHosts.has(rootHost) || rootHost.endsWith('.fandom.com')) {
+    return 'known_discovery_only_host'
+  }
   if (
     url.hostname === 'www.hachettebookgroup.com' &&
     /\/(?:orbit-books\/standalone-sff-books|landing-page\/standalone-sff-books|book-list\/best-books-for-romantasy-fans)\/?$/i.test(
@@ -104,15 +116,38 @@ const authoritySeriesMatches = (membership, actualSeries) =>
     .map(genericSeriesKey)
     .includes(genericSeriesKey(actualSeries))
 
-export function canonicalizeAuthorityAcquisition(output) {
+export function canonicalizeAuthorityAcquisition(output, consultedUrls = null, policy = {}) {
   if (!isObject(output) || !Array.isArray(output.authoritySources)) return output
+  const consulted = Array.isArray(consultedUrls)
+    ? new Set(consultedUrls.map(comparableUrl).filter(Boolean))
+    : null
+  const classificationBlocked = new Set(
+    asArray(policy.classificationBlockedUrls).map(comparableUrl).filter(Boolean),
+  )
   const sources = output.authoritySources
+    .filter((source) => !consulted || consulted.has(comparableUrl(source?.url)))
+    .map((source) => {
+      if (!isObject(source)) return source
+      const supports = asArray(source.supports)
+      if (
+        !knownClassificationRisk(source) &&
+        !classificationBlocked.has(comparableUrl(source.url))
+      ) {
+        return { ...source, supports }
+      }
+      return {
+        ...source,
+        supports: supports.filter((support) => support === 'identity'),
+      }
+    })
+    .filter((source) => !isObject(source) || source.supports.length)
   const filterFor = (urls, support) => [
     ...new Set(asArray(urls).filter((url) => citedSource(sources, url, support))),
   ]
   const identityUrls = filterFor(output.identity?.evidenceUrls, 'identity')
   return {
     ...output,
+    authoritySources: sources,
     identity: isObject(output.identity)
       ? {
           ...output.identity,
@@ -213,6 +248,7 @@ export function validateAuthorityAcquisition(target, output, consultedUrls, poli
       policyViolations.push(`authority source ${index} is selection provenance, not truth evidence`)
     }
     if (
+      output.classification === 'standalone' &&
       asArray(source.supports).includes('standalone') &&
       !/\bstand-?alones?\b/i.test(source.evidenceSummary ?? '')
     ) {

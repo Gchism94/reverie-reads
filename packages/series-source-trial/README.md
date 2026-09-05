@@ -211,10 +211,11 @@ pnpm series:authority:acquire -- \
 ```
 
 Results and per-case caches are written under ignored `private-results/`. Repeating an unchanged
-run is free; pass `--refresh` only when intentionally testing live-source drift. The report separates
-resolution rate from accuracy, and reports membership precision/recall, false standalone, false
-series, URL grounding, tool calls, and token usage. A candidate run can prioritize human review but
-does not convert candidate output into truth:
+run is free; pass `--refresh` only when intentionally testing live-source drift. The cache preserves
+the raw model response and consulted-source manifest, then applies current deterministic policy on
+every replay. The report separates resolution rate from accuracy, and reports membership
+precision/recall, false standalone, false series, URL grounding, tool calls, and token usage. A
+candidate run can prioritize human review but does not convert candidate output into truth:
 
 ```sh
 pnpm series:authority:acquire -- --scope candidate --max 10
@@ -228,6 +229,11 @@ is allowed to promote its own output into trusted corpus data.
 The first 12-case balanced gold holdout, nine-candidate queue trial, cost measurement, and
 source-policy correction are recorded in
 `reports/authority-acquisition-pilot-2026-09-04.md`.
+
+The complete 25-work Reverie seed-candidate run, explicit-series/standalone semantic correction,
+and expanded 24-case gold holdout are recorded in
+`reports/authority-seed-candidate-pilot-2026-09-04.md`. That later report supersedes the first
+pilot's v2 prompt for ongoing acquisition experiments.
 
 ## Build the 200-case authority set
 

@@ -112,6 +112,53 @@ test('canonicalizes citations to the declared source manifest without inventing 
   ])
 })
 
+test('drops unconsulted redundant sources but never salvages an unsupported claim', () => {
+  const inventedUrl = 'https://publisher.example/books/invented-deep-link'
+  const redundant = structuredClone(seriesOutput)
+  redundant.authoritySources.push({
+    url: inventedUrl,
+    kind: 'publisher',
+    supports: ['identity'],
+    evidenceSummary: 'A redundant identity page.',
+  })
+  redundant.identity.evidenceUrls.push(inventedUrl)
+
+  const cleaned = canonicalizeAuthorityAcquisition(redundant, [publisherUrl])
+  assert.deepEqual(
+    cleaned.authoritySources.map((source) => source.url),
+    [publisherUrl],
+  )
+  assert.deepEqual(cleaned.identity.evidenceUrls, [publisherUrl])
+  assert.equal(
+    validateAuthorityAcquisition(buildAuthorityTarget(testCase), cleaned, [publisherUrl]).valid,
+    true,
+  )
+
+  const unsupported = structuredClone(seriesOutput)
+  unsupported.authoritySources[0].url = inventedUrl
+  unsupported.identity.evidenceUrls = [inventedUrl]
+  unsupported.memberships[0].evidenceUrls = [inventedUrl]
+  const rejected = canonicalizeAuthorityAcquisition(unsupported, [publisherUrl])
+  assert.equal(rejected.authoritySources.length, 0)
+  assert.equal(
+    validateAuthorityAcquisition(buildAuthorityTarget(testCase), rejected, [publisherUrl]).valid,
+    false,
+  )
+})
+
+test('leaves malformed source entries for validation instead of throwing during cleanup', () => {
+  const malformed = structuredClone(seriesOutput)
+  malformed.authoritySources.push(null, { url: 'https://publisher.example/books/no-supports' })
+
+  const cleaned = canonicalizeAuthorityAcquisition(malformed)
+  const validation = validateAuthorityAcquisition(buildAuthorityTarget(testCase), cleaned, [
+    publisherUrl,
+  ])
+
+  assert.equal(validation.valid, false)
+  assert.ok(validation.errors.includes('authority source 1 must be an object'))
+})
+
 test('requires affirmative authority evidence before calling a work standalone', () => {
   const output = {
     ...structuredClone(seriesOutput),
@@ -128,6 +175,20 @@ test('requires affirmative authority evidence before calling a work standalone',
   assert.equal(validation.valid, true)
   assert.equal(validation.policySafe, false)
   assert.ok(validation.policyViolations.some((error) => error.includes('affirmative authority')))
+})
+
+test('does not let an irrelevant reading-independence tag quarantine a series claim', () => {
+  const output = structuredClone(seriesOutput)
+  output.authoritySources[0].supports.push('standalone')
+  output.authoritySources[0].evidenceSummary =
+    'The publisher identifies the series and says the volume is independently readable.'
+
+  const validation = validateAuthorityAcquisition(buildAuthorityTarget(testCase), output, [
+    publisherUrl,
+  ])
+
+  assert.equal(validation.valid, true)
+  assert.equal(validation.policySafe, true)
 })
 
 test('keeps selection frames and known marketing taxonomies out of truth evidence', () => {
@@ -160,6 +221,45 @@ test('keeps selection frames and known marketing taxonomies out of truth evidenc
   assert.ok(
     marketing.policyViolations.some((error) => error.includes('known_marketing_taxonomy_conflict')),
   )
+
+  const linkHub = structuredClone(output)
+  const linkHubUrl = 'https://linktr.ee/example-author'
+  linkHub.identity.evidenceUrls = [linkHubUrl]
+  linkHub.authoritySources[0].url = linkHubUrl
+  const discoveryOnly = validateAuthorityAcquisition(buildAuthorityTarget(testCase), linkHub, [
+    linkHubUrl,
+  ])
+  assert.equal(discoveryOnly.valid, true)
+  assert.equal(discoveryOnly.policySafe, false)
+  assert.ok(
+    discoveryOnly.policyViolations.some((error) => error.includes('known_discovery_only_host')),
+  )
+})
+
+test('demotes blocked sources to identity without withholding independent membership evidence', () => {
+  const authorUrl = 'https://author.example/books/second-book'
+  const output = structuredClone(seriesOutput)
+  output.identity.evidenceUrls.push(authorUrl)
+  output.memberships[0].evidenceUrls.push(authorUrl)
+  output.authoritySources.push({
+    url: authorUrl,
+    kind: 'author',
+    supports: ['identity', 'series_membership', 'position'],
+    evidenceSummary: 'The author identifies the exact work as Sequence book two.',
+  })
+  const policy = authorityPolicyForCase({ sampleSources: [{ url: publisherUrl }] })
+  const cleaned = canonicalizeAuthorityAcquisition(output, [publisherUrl, authorUrl], policy)
+
+  assert.deepEqual(cleaned.authoritySources[0].supports, ['identity'])
+  assert.deepEqual(cleaned.memberships[0].evidenceUrls, [authorUrl])
+  const validation = validateAuthorityAcquisition(
+    buildAuthorityTarget(testCase),
+    cleaned,
+    [publisherUrl, authorUrl],
+    policy,
+  )
+  assert.equal(validation.valid, true)
+  assert.equal(validation.policySafe, true)
 })
 
 test('sends a bounded, stateless web-search request and captures all consulted URLs', async () => {
