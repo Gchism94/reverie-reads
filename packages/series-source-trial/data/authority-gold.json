@@ -846,6 +846,309 @@
       }
     },
     {
+      "id": "reverie-boys-of-tommen-keeping-13",
+      "title": "Keeping 13",
+      "authors": ["Chloe Walsh"],
+      "identifiers": { "isbn13": ["9780349439273"] },
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Boys of Tommen",
+            "aliases": ["The Boys of Tommen"],
+            "role": "primary",
+            "positions": [{ "value": 2, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          {
+            "kind": "publisher",
+            "url": "https://www.hachette.co.uk/titles/chloe-walsh/keeping-13/9780349439273/"
+          }
+        ],
+        "reviewNote": "The publisher identifies Keeping 13 as book 2 of the Boys of Tommen series."
+      }
+    },
+    {
+      "id": "reverie-chestnut-springs-hopeless",
+      "title": "Hopeless",
+      "authors": ["Elsie Silver"],
+      "identifiers": { "isbn13": ["9781728297040"] },
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Chestnut Springs",
+            "aliases": ["Chestnut Springs Series"],
+            "role": "primary",
+            "positions": [{ "value": 5, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          {
+            "kind": "publisher",
+            "url": "https://www.sourcebooks.com/9781728297040-hopeless-tp.html"
+          }
+        ],
+        "reviewNote": "The publisher's structured catalog identifies Chestnut Springs and series number 5."
+      }
+    },
+    {
+      "id": "reverie-crowns-of-nyaxia-slaying-the-vampire-conqueror",
+      "title": "Slaying the Vampire Conqueror",
+      "authors": ["Carissa Broadbent"],
+      "identifiers": { "isbn13": ["9781250368928"] },
+      "sampleOrigin": "reverie",
+      "stratum": "authority_standalone",
+      "strata": ["multi_series_or_connected_universe"],
+      "riskFeatures": ["connected_universe"],
+      "truth": {
+        "status": "reviewed",
+        "standalone": true,
+        "membershipsComplete": true,
+        "memberships": [],
+        "sources": [
+          {
+            "kind": "publisher",
+            "url": "https://us.macmillan.com/books/9781250368928/slayingthevampireconqueror/"
+          }
+        ],
+        "reviewNote": "The publisher affirmatively calls this a standalone set in the Crowns of Nyaxia world and separates it under Crowns of Nyaxia Standalones. Setting and reading-order placement are not series membership."
+      }
+    },
+    {
+      "id": "reverie-dreamland-billionaires-final-offer",
+      "title": "Final Offer",
+      "authors": ["Lauren Asher"],
+      "identifiers": { "isbn13": ["9781728272221"] },
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "strata": ["recent_traditional"],
+      "publicationYear": 2023,
+      "publicationPath": "traditional",
+      "sampleSources": [
+        {
+          "kind": "publisher",
+          "url": "https://www.sourcebooks.com/9781728272221-final-offer-tp.html"
+        }
+      ],
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Dreamland Billionaires",
+            "aliases": ["Dreamland Billionaires Series"],
+            "role": "primary",
+            "positions": [{ "value": 3, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          { "kind": "author", "url": "https://laurenasher.com/books-final-offer/" },
+          {
+            "kind": "publisher",
+            "url": "https://www.sourcebooks.com/9781728272221-final-offer-tp.html"
+          }
+        ],
+        "reviewNote": "The author and publisher independently identify Dreamland Billionaires book 3."
+      }
+    },
+    {
+      "id": "reverie-ever-seas-series-the-ever-king",
+      "title": "The Ever King",
+      "authors": ["L.J. Andrews"],
+      "identifiers": { "isbn13": ["9780593955031"] },
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "strata": ["multi_series_or_connected_universe"],
+      "riskFeatures": ["connected_universe"],
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "membershipsComplete": true,
+        "memberships": [
+          {
+            "series": "The Ever Seas",
+            "aliases": ["Ever Seas", "Ever Seas Series", "The Ever Seas Series"],
+            "role": "primary",
+            "positions": [{ "value": 1, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          { "kind": "author", "url": "https://ljandrews.net/the-ever-seas/" },
+          {
+            "kind": "publisher",
+            "url": "https://www.penguinrandomhouse.com/books/787633/the-ever-king-by-lj-andrews/"
+          }
+        ],
+        "reviewNote": "The author identifies The Ever King as Ever Seas book 1. The Broken Kingdoms crossover is shared-world context, not a second membership."
+      }
+    },
+    {
+      "id": "reverie-the-ever-seas-the-ever-queen",
+      "title": "The Ever Queen",
+      "authors": ["L.J. Andrews"],
+      "identifiers": { "isbn13": ["9780593955062"] },
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "strata": ["multi_series_or_connected_universe"],
+      "riskFeatures": ["connected_universe"],
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "membershipsComplete": true,
+        "memberships": [
+          {
+            "series": "The Ever Seas",
+            "aliases": ["Ever Seas", "Ever Seas Series", "The Ever Seas Series"],
+            "role": "primary",
+            "positions": [{ "value": 2, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          { "kind": "author", "url": "https://ljandrews.net/the-ever-seas/" },
+          {
+            "kind": "publisher",
+            "url": "https://www.penguinrandomhouse.com/books/787634/the-ever-queen-by-lj-andrews/"
+          }
+        ],
+        "reviewNote": "The author identifies The Ever Queen as Ever Seas book 2, consolidating the seed's The Ever Seas and Ever Seas Series labels. The Broken Kingdoms crossover is not another membership."
+      }
+    },
+    {
+      "id": "reverie-the-kindred-s-curse-saga-spark-of-the-everflame",
+      "title": "Spark of the Everflame",
+      "authors": ["Penn Cole"],
+      "identifiers": { "isbn13": ["9781668085721"] },
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "strata": ["recent_independent_or_kindle_first"],
+      "publicationYear": 2023,
+      "publicationPath": "independent",
+      "sampleSources": [
+        { "kind": "author", "url": "https://www.penncole.com/press-kit-tkcs" }
+      ],
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "The Kindred's Curse Saga",
+            "aliases": ["Kindred's Curse", "Kindred's Curse Saga", "The Kindred's Curse"],
+            "role": "primary",
+            "positions": [{ "value": 1, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          { "kind": "author", "url": "https://www.penncole.com/spark-of-the-everflame" },
+          { "kind": "author", "url": "https://www.penncole.com/press-kit-tkcs" },
+          {
+            "kind": "publisher",
+            "url": "https://www.simonandschuster.com/books/Spark-of-the-Everflame/Penn-Cole/The-Kindred-s-Curse-Saga/9781668085721"
+          }
+        ],
+        "reviewNote": "The author and publisher identify The Kindred's Curse Saga book 1; the author's press kit records its original June 2023 independent publication."
+      }
+    },
+    {
+      "id": "reverie-the-kindred-s-curse-heat-of-the-everflame",
+      "title": "Heat of the Everflame",
+      "authors": ["Penn Cole"],
+      "identifiers": { "isbn13": ["9781668098264"] },
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "strata": ["recent_independent_or_kindle_first"],
+      "publicationYear": 2023,
+      "publicationPath": "independent",
+      "sampleSources": [
+        { "kind": "author", "url": "https://www.penncole.com/press-kit-tkcs" }
+      ],
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "The Kindred's Curse Saga",
+            "aliases": ["Kindred's Curse", "Kindred's Curse Saga", "The Kindred's Curse"],
+            "role": "primary",
+            "positions": [{ "value": 3, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          { "kind": "author", "url": "https://www.penncole.com/heat-of-the-everflame" },
+          { "kind": "author", "url": "https://www.penncole.com/press-kit-tkcs" },
+          {
+            "kind": "publisher_catalog",
+            "url": "https://www.simonandschuster.com/p/kindreds-curse-series"
+          }
+        ],
+        "reviewNote": "The author identifies Heat of the Everflame as The Kindred's Curse Saga book 3; the press kit records its original September 2023 independent publication and corrects the seed's shortened series label."
+      }
+    },
+    {
+      "id": "reverie-the-ravenhood-series-flock",
+      "title": "Flock",
+      "authors": ["Kate Stewart"],
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "strata": ["multi_series_or_connected_universe"],
+      "riskFeatures": ["connected_universe"],
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "membershipsComplete": true,
+        "memberships": [
+          {
+            "series": "The Ravenhood Series",
+            "aliases": ["The Ravenhood", "Ravenhood", "The Ravenhood Trilogy"],
+            "role": "primary",
+            "positions": [{ "value": 1, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          { "kind": "author", "url": "https://katestewartwrites.com/pages/reading-order" },
+          { "kind": "author", "url": "https://katestewartwrites.com/pages/about" }
+        ],
+        "reviewNote": "The author's reading order identifies Flock as the first Ravenhood book and lists Ravenhood Legacy separately as a spinoff sequence, not a second membership."
+      }
+    },
+    {
+      "id": "reverie-the-ravenhood-the-finish-line",
+      "title": "The Finish Line",
+      "authors": ["Kate Stewart"],
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "strata": ["multi_series_or_connected_universe"],
+      "riskFeatures": ["connected_universe"],
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "membershipsComplete": true,
+        "memberships": [
+          {
+            "series": "The Ravenhood Series",
+            "aliases": ["The Ravenhood", "Ravenhood", "The Ravenhood Trilogy"],
+            "role": "primary",
+            "positions": [{ "value": 3, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          { "kind": "author", "url": "https://katestewartwrites.com/pages/reading-order" },
+          {
+            "kind": "author",
+            "url": "https://katestewartwrites.com/products/one-last-rainy-day"
+          }
+        ],
+        "reviewNote": "The author's reading order identifies The Finish Line as Ravenhood book 3 and distinguishes the separately numbered Ravenhood Legacy spinoff, correcting the seed's shortened label."
+      }
+    },
+    {
       "id": "gold-standalone-salvation-day",
       "title": "Salvation Day",
       "authors": ["Kali Wallace"],

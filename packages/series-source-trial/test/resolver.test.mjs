@@ -109,6 +109,21 @@ test('canonicalizes an order-only review into an eligible membership decision', 
   assert.equal(canonicalizeResolutionDecision(packet, membershipConflict).decision, 'review')
 })
 
+test('removes explanatory memberships from an abstention', () => {
+  const packet = buildEvidencePacket(testCase, [run])
+  const abstention = {
+    ...structuredClone(accepted),
+    decision: 'abstain',
+    reviewReasons: ['insufficient_evidence'],
+  }
+
+  assert.ok(abstention.memberships.length > 0)
+  const canonical = canonicalizeResolutionDecision(packet, abstention)
+  assert.deepEqual(canonical.memberships, [])
+  assert.equal(canonical.decision, 'abstain')
+  assert.equal(validateResolution(packet, canonical).valid, true)
+})
+
 test('rejects facts and citations that do not occur in the evidence packet', () => {
   const packet = buildEvidencePacket(testCase, [run])
   const fabricated = structuredClone(accepted)

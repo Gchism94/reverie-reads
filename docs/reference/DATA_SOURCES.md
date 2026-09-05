@@ -92,17 +92,25 @@ author-matched work appears in a structured relationship; mirrored Wikidata obse
 lineage. Hardcover is a high-coverage candidate supplement, not an automatic authority: its
 ordinary exact-work, non-singleton relationship may supply membership after semantic quarantine,
 but it never corroborates another provider. Self-titled, singleton, universe, reading-order, and
-competing relationships remain review-only. Every current community source needs independent
-agreement before an ordinal is automatic; a position conflict keeps an otherwise eligible
-membership but clears the order. A deterministic post-pass corrects an LLM `review` to
-`accept_membership` only when every review reason is order-only, every proposed position is null,
-and the ordinary validator independently proves the membership policy-safe.
+competing relationships remain review-only. A fractional Hardcover position is also quarantined:
+it may describe a novella or a legitimate intermediate installment, but the 50-case trial found it
+on a publisher-declared standalone placed inside a connected-world reading order. Every current
+community source needs independent agreement before an ordinal is automatic; a position conflict
+keeps an otherwise eligible membership but clears the order. A deterministic post-pass corrects an
+LLM `review` to `accept_membership` only when every review reason is order-only, every proposed
+position is null, and the ordinary validator independently proves the membership policy-safe. An
+`abstain` response is normalized to an empty membership list, so explanatory echoes cannot become
+claims or make a conservative result structurally invalid.
 
 The current default resolver study uses Open Library, Wikidata, Google Books, and Hardcover.
 Inventaire and BookBrainz remain useful discovery and administrator-review inputs, but adding both
 to the routine decision packet reduced safe automatic recall on the first 40 reviewed cases without
 improving precision or standalone safety. Keep them out of the default automatic packet until the
 larger authority set shows a net benefit; their evidence remains available for conflict discovery.
+On the first 50 reviewed cases, that default packet plus deterministic validation produced 100%
+membership precision, 88.6% recall, and no false series assignments across 15 authority-declared
+standalones. This remains a pre-pilot result: production use is still blocked by the fixed 200-case
+sample gate and source data-use rights.
 
 The same profiles keep data-use boundaries visible to the resolver: Wikidata, Inventaire, and
 BookBrainz claims are durable CC0 inputs; Google is live identity-only; Open Library remains trial

@@ -17,9 +17,10 @@ A provider's search label never counts as series evidence. Candidate labels from
 useful for measuring coverage and discovering disagreements, but they do not contribute to claimed
 accuracy until an authority source has been reviewed.
 
-The current first wave contains one difficult work from each of Reverie's 69 distinct seeded series,
-22 authority-reviewed positive cases, and 11 publisher-declared standalone controls. Some reviewed
-cases replace seed references, so the final distinct-case count is printed at runtime.
+The current sample contains one difficult work from each of Reverie's 69 distinct seeded series
+plus external sampling frames: 90 selected works, of which 35 positive series cases and 15
+standalone controls are authority-reviewed. Some reviewed cases replace seed references, so the
+final distinct-case count is printed at runtime.
 
 ## Run the open-source baseline
 
@@ -113,9 +114,10 @@ membership rule, lineage, risk flags, and separate membership/order eligibility:
 
 This is deliberately asymmetric. Hardcover adds broad candidate coverage, and an ordinary
 exact-work, non-singleton relationship may supply membership. Self-titled containers, reading-order
-lists, connected “universe” groupings, and competing relationships are quarantined; Hardcover order
-still needs independent agreement. An Inventaire view of the same Wikidata entity is one lineage,
-not two votes. Unknown providers cannot corroborate a source until a profile is added.
+lists, connected “universe” groupings, fractional positions, and competing relationships are
+quarantined; Hardcover order still needs independent agreement. An Inventaire view of the same
+Wikidata entity is one lineage, not two votes. Unknown providers cannot corroborate a source until a
+profile is added.
 
 The LLM's job is to select, explain, or route these cleaned claims—not to make an unsafe
 claim true. It can suppress a Hardcover false positive by choosing review or abstain. Declaring a
@@ -159,6 +161,8 @@ revision are recorded in `reports/authority-review-batch-1-2026-09-04.md`.
 The first recent independent/Kindle-first cohort, complete-shortlist sampling frames, and
 production-shaped four-provider comparison are recorded in
 `reports/authority-indie-batch-1-2026-09-04.md`.
+The second Reverie seed batch, connected-world false-positive control, and 50-case resolver score
+are recorded in `reports/authority-seed-batch-2-2026-09-04.md`.
 
 ## Build the 200-case authority set
 
@@ -168,7 +172,7 @@ Audit the sample before running another provider or resolver comparison:
 pnpm series:sample:audit
 ```
 
-The audit reports selection coverage and authority-review coverage separately. The current 47
+The audit reports selection coverage and authority-review coverage separately. The current 37
 Reverie seed candidates and three external shortlist candidates count as selected works, but never
 as truth and never toward an accuracy gate. It also validates that every reviewed result has
 affirmative author or publisher evidence, that a reviewed standalone has no memberships, and that

@@ -279,7 +279,13 @@ export function validateResolution(packet, output) {
 }
 
 export function canonicalizeResolutionDecision(packet, output) {
-  if (!isObject(output) || output.decision !== 'review') return output
+  if (!isObject(output)) return output
+
+  if (output.decision === 'abstain' && asArray(output.memberships).length) {
+    return { ...output, memberships: [] }
+  }
+
+  if (output.decision !== 'review') return output
 
   const reasons = asArray(output.reviewReasons)
   const memberships = asArray(output.memberships)
