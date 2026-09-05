@@ -3,17 +3,15 @@ import { Link } from '@tanstack/react-router'
 import { APP_NAME } from '@reverie/core'
 import { Wordmark } from './Wordmark'
 import { ChunkBoundary } from '../components/ChunkBoundary'
-import { ProductStage } from './landing/ProductStage'
+import { NextReadDemo } from './landing/NextReadDemo'
 
 // Below-the-fold sections are a separate chunk so the hero paints first for new visitors.
 const LandingBelowFold = lazy(() => import('./landing/below-fold'))
 
 const display = { fontFamily: 'var(--font-display)', fontWeight: 600 } as const
 const NAV = [
+  ['How it works', '#how-it-works'],
   ['Rooms', '#skins'],
-  ['Keep it', '#keep'],
-  ['Share it', '#share'],
-  ['Connect it', '#connect'],
   ['Privacy', '#privacy'],
 ] as const
 
@@ -75,7 +73,7 @@ function Nav() {
             <a
               key={href}
               href={href}
-              className="text-[13.5px] font-medium text-muted hover:text-ink"
+              className="flex min-h-11 items-center text-sm font-medium text-muted hover:text-ink"
             >
               {label}
             </a>
@@ -86,14 +84,14 @@ function Nav() {
           <Link
             to="/auth"
             search={{ mode: 'signin' }}
-            className="text-[13.5px] font-semibold text-ink"
+            className="flex min-h-11 items-center text-sm font-semibold text-ink"
           >
             Log in
           </Link>
           <Link
             to="/auth"
             search={{ mode: 'signup' }}
-            className="skin-control flex h-9 items-center px-4 text-[13.5px] font-semibold"
+            className="skin-control flex min-h-11 items-center px-4 text-sm font-semibold"
             style={{ background: 'var(--gold)', color: 'var(--on-primary)' }}
           >
             Get started
@@ -153,77 +151,56 @@ function Hero() {
   return (
     <header
       id="top"
-      className="relative mx-auto max-w-[1380px] overflow-hidden px-4 pb-20 pt-14 sm:px-6 sm:pb-28 sm:pt-24"
+      className="relative mx-auto max-w-[1320px] px-5 pb-16 pt-12 sm:px-8 sm:pb-24 sm:pt-20"
     >
-      <div className="mx-auto max-w-[950px] text-center">
+      <div className="grid items-center gap-12 lg:grid-cols-[0.82fr_1.18fr] lg:gap-14">
         <div>
           <p
-            className="text-[12px] font-semibold uppercase tracking-[0.22em]"
+            className="text-xs font-semibold uppercase tracking-[0.2em]"
             style={{ color: 'var(--eyebrow)' }}
           >
-            Your library · in all its detail
+            A personal library that feels like home
           </p>
           <h1
             data-testid="landing-display-heading"
-            className="mx-auto mt-4 max-w-[15ch] text-balance text-[clamp(46px,8vw,82px)] leading-[0.94] text-ink"
+            className="mt-5 max-w-[13ch] text-balance text-[clamp(46px,5.6vw,74px)] leading-[1.02] text-ink"
             style={display}
           >
-            Keep the whole story of your{' '}
+            Find your next read in your{' '}
             <span className="italic" style={{ color: 'var(--gold)' }}>
-              reading life.
+              own library.
             </span>
           </h1>
-          <p className="mx-auto mt-7 max-w-[58ch] text-[16px] leading-relaxed text-muted sm:text-[18px]">
-            Books, rereads, series, plans, and the people you share a shelf with—organized without
-            losing what makes the library yours.
+          <p className="mt-6 max-w-[42ch] text-base leading-relaxed text-muted sm:text-lg">
+            A quiet place for your books, your notes, and the way a story stays with you. Settle in,
+            then find the next book for how you feel today.
           </p>
-          <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
+          <div className="mt-8 flex flex-wrap items-center gap-3">
             <Link
               to="/auth"
               search={{ mode: 'signup' }}
-              className="skin-control flex h-12 items-center px-7 text-[15px] font-semibold"
-              style={{
-                background: 'var(--gold)',
-                color: 'var(--on-primary)',
-                boxShadow: '0 10px 26px color-mix(in srgb, var(--gold) 36%, transparent)',
-              }}
+              className="skin-control skin-btn-primary flex min-h-12 items-center px-6 text-[15px] font-semibold"
+              style={{ background: 'var(--gold)', color: 'var(--on-primary)' }}
             >
-              Begin your library
+              Start your library
             </Link>
             <a
-              href="#skins"
-              className="skin-control flex h-12 items-center px-6 text-[15px] font-semibold text-ink"
-              style={{ border: '1px solid var(--line)' }}
+              href="#try-next-read"
+              className="skin-control flex min-h-12 items-center border border-line px-6 text-[15px] font-semibold text-ink"
             >
-              Enter the reading rooms
+              Try it here
             </a>
           </div>
-          <p className="mt-5 text-[13px]" style={{ color: 'var(--faint)' }}>
-            Private by default · export anytime · installs as an app
+          <p className="mt-5 max-w-[40ch] text-sm leading-relaxed text-muted">
+            Start with a few books. Bring the rest when you’re ready.
+          </p>
+          <p className="mt-5 text-xs leading-relaxed text-muted">
+            Private by default · Nine reading rooms · Export anytime
           </p>
         </div>
-      </div>
-
-      <div className="relative mx-auto mt-14 max-w-[1240px] sm:mt-20">
-        <div
-          aria-hidden
-          className="absolute inset-x-[10%] bottom-0 h-2/3 blur-3xl"
-          style={{ background: 'color-mix(in srgb, var(--gold) 12%, transparent)' }}
-        />
-        <div className="relative">
-          <ProductStage />
+        <div className="min-w-0 rounded-[var(--radius-panel)] border border-line bg-card p-4 shadow-[var(--shadow)] sm:p-6">
+          <NextReadDemo />
         </div>
-      </div>
-
-      <div className="mx-auto mt-10 grid max-w-[980px] grid-cols-2 border-y border-line sm:grid-cols-5">
-        {['Library', 'Household', 'Series', 'Universes', 'Nine rooms'].map((item) => (
-          <span
-            key={item}
-            className="flex min-h-14 items-center justify-center border-line px-3 text-center text-[10px] font-semibold uppercase tracking-[0.14em] text-muted [&:not(:last-child)]:border-r"
-          >
-            {item}
-          </span>
-        ))}
       </div>
     </header>
   )

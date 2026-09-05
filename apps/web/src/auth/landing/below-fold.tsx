@@ -3,7 +3,7 @@ import { Link } from '@tanstack/react-router'
 import { APP_NAME, revenueCopy } from '@reverie/core'
 import { buyConfig } from '../../lib/buyConfig'
 import { Wordmark } from '../Wordmark'
-import { ConnectedStage, HouseholdStage, ReadingRecordStage } from './ProductStage'
+import { ReadingRecordStage } from './ProductStage'
 import { SkinShowcase } from './SkinShowcase'
 
 const display = { fontFamily: 'var(--font-display)', fontWeight: 600 } as const
@@ -15,8 +15,8 @@ const MONEY = revenueCopy(buyConfig())
 const PRACTICAL = [
   {
     number: '01',
-    title: 'Bring the shelves',
-    body: 'Search, scan, add by hand, import a spreadsheet, or restore a Reverie backup. Duplicate intake is reviewed before it multiplies.',
+    title: 'Share a household shelf',
+    body: 'See the books in your household while keeping each reader’s copies, notes, and reading history distinct.',
   },
   {
     number: '02',
@@ -49,26 +49,26 @@ const PRACTICAL = [
 const PRIVACY = [
   {
     title: 'Private by default',
-    body: 'Your library lives in your account behind row-level access rules. It is not a public profile waiting to be discovered.',
+    body: 'Your books, notes, and reading history are private. You choose what to share and with whom.',
   },
   {
     title: 'Shared on purpose',
     body: 'A household, shared list, or club is an explicit space. Personal notes, ratings, and reading history stay personal.',
   },
   {
-    title: 'No attention market',
-    body: 'No ads, sponsored shelves, or aggregate star score. Reverie helps you understand your reading instead of ranking it for someone else.',
+    title: 'No public score to chase',
+    body: 'Your ratings reflect your own experience. Recommendations draw on your library and taste, with no aggregate star score.',
   },
   {
     title: 'Export anytime',
-    body: 'Take a complete JSON backup whenever you want it. Data control is a working button, not a line in a promise.',
+    body: 'Download a complete backup of your library, including your books, shelves, reading history, and notes.',
   },
 ] as const
 
 function Eyebrow({ children }: { children: ReactNode }) {
   return (
     <p
-      className="text-[11px] font-semibold uppercase tracking-[0.22em]"
+      className="text-xs font-semibold uppercase tracking-[0.22em]"
       style={{ color: 'var(--eyebrow)' }}
     >
       {children}
@@ -123,7 +123,7 @@ function ProofStrip({ children }: { children: Array<[string, string]> }) {
           className={`bg-card p-5 ${index > 0 ? 'border-t border-line sm:border-l sm:border-t-0' : ''}`}
         >
           <dt className="text-[13px] font-semibold text-ink">{term}</dt>
-          <dd className="mt-2 text-[12.5px] leading-relaxed text-muted">{detail}</dd>
+          <dd className="mt-2 text-sm leading-relaxed text-muted">{detail}</dd>
         </div>
       ))}
     </dl>
@@ -141,12 +141,12 @@ function PracticalLedger() {
               className="mt-3 max-w-[14ch] text-balance text-[clamp(32px,4.7vw,50px)] leading-[1.01] text-ink"
               style={display}
             >
-              Beautiful is not the same as precious.
+              Room for the rest of your reading life.
             </h2>
           </div>
           <p className="max-w-[58ch] text-[15px] leading-relaxed text-muted lg:justify-self-end">
-            Under the rooms is a practical system for getting books in, deciding what comes next,
-            reading together, and taking the entire record with you.
+            Start with your next book. Your library can grow to hold reading plans, shared shelves,
+            and the record you want to look back on.
           </p>
         </div>
 
@@ -226,28 +226,51 @@ function Privacy() {
 export default function LandingBelowFold() {
   return (
     <>
-      <section className="border-y border-line">
-        <div className="mx-auto max-w-[940px] px-6 py-16 text-center sm:py-24">
-          <Eyebrow>Made for the life around the books</Eyebrow>
-          <p
-            className="mx-auto mt-5 max-w-[25ch] text-balance text-[clamp(29px,4.4vw,46px)] leading-[1.07] text-ink"
+      <section id="how-it-works" className="scroll-mt-20 border-y border-line">
+        <div className="mx-auto max-w-[1180px] px-6 py-16 sm:py-20">
+          <Eyebrow>Settle into your next book</Eyebrow>
+          <h2
+            className="mt-3 max-w-[22ch] text-balance text-[clamp(32px,4.7vw,50px)] leading-[1.06] text-ink"
             style={display}
           >
-            A title can be owned, borrowed, reread, shared, abandoned, loved, or still waiting. It
-            should not become less specific just to fit an app.
-          </p>
+            A few books. A place to begin.
+          </h2>
+          <ol className="mt-10 grid gap-8 md:grid-cols-3">
+            {[
+              [
+                'Bring a few books',
+                'Add books you own or have borrowed. Search, scan a barcode, or bring a Goodreads or StoryGraph CSV when you’re ready.',
+              ],
+              [
+                'Find your next read',
+                'Start with what’s available in your library. Refine your shortlist by mood, or explore your wishlist when you want something new.',
+              ],
+              [
+                'Make yourself at home',
+                'Start reading, keep a note, come back to an old favorite. Your reading history gives your next choice more to go on.',
+              ],
+            ].map(([title, body], index) => (
+              <li key={title} className="border-t border-line pt-5">
+                <span aria-hidden className="text-sm font-semibold text-muted">
+                  0{index + 1}
+                </span>
+                <h3 className="mt-3 text-xl font-semibold text-ink" style={display}>
+                  {title}
+                </h3>
+                <p className="mt-3 text-sm leading-relaxed text-muted">{body}</p>
+              </li>
+            ))}
+          </ol>
         </div>
       </section>
-
-      <SkinShowcase />
 
       <section id="keep" className="scroll-mt-20 px-4 py-20 sm:px-6 sm:py-28">
         <div className="mx-auto max-w-[1240px]">
           <ChapterHeader
             number="I"
-            eyebrow="Keep it"
-            title="Keep every version of the story."
-            body="A cover grid is only the doorway. Reverie keeps the copies, formats, progress, rereads, notes, and context that make a book part of your reading life—without forcing them into one status."
+            eyebrow="As you read"
+            title="Keep what the book leaves with you."
+            body="A thought in the margin. The date you finished. A different feeling on a second read. Keep your notes, ratings, and rereads alongside the books, with room for your reading life to change."
           />
           <div className="mt-12 sm:mt-16">
             <ReadingRecordStage />
@@ -255,84 +278,23 @@ export default function LandingBelowFold() {
           <ProofStrip>
             {[
               [
-                'Five independent possession facts',
-                'Owned, borrowed, wishlist, and formats can tell the truth at the same time.',
+                'Your copies, your way',
+                'Own the paperback, borrow the audio, wish for a special edition. Keep each detail.',
               ],
               [
                 'Every read keeps its own history',
                 'Progress, dates, format, rating, and notes remain attached to the right reading.',
               ],
               [
-                'Shared details are an invitation',
-                'A personal copy adopts corpus details only when its owner chooses to use them.',
+                'A place in the series',
+                'Keep track of series order and gaps. Missing details stay unknown until there’s evidence.',
               ],
             ]}
           </ProofStrip>
         </div>
       </section>
 
-      <section
-        id="share"
-        className="band-light scroll-mt-20 border-y border-line px-4 py-20 sm:px-6 sm:py-28"
-      >
-        <div className="mx-auto max-w-[1240px]">
-          <ChapterHeader
-            number="II"
-            eyebrow="Share it"
-            title="Share a shelf without merging lives."
-            body="A household can hold one shared catalog while every reader’s copy stays distinct. Reverie knows the difference between a book being in the house, belonging to you, and being added for someone else."
-          />
-          <div className="mt-12 sm:mt-16">
-            <HouseholdStage />
-          </div>
-          <ProofStrip>
-            {[
-              [
-                'One work, distinct copies',
-                'The household sees the shared title once; each reader keeps their own possession and reading state.',
-              ],
-              [
-                'Choose the destination',
-                'Add to Personal, Household, both, or an allowed household member with the scope shown up front.',
-              ],
-              [
-                'Removal stays local',
-                'Removing a shared entry does not quietly erase a personal library or the corpus record beneath it.',
-              ],
-            ]}
-          </ProofStrip>
-        </div>
-      </section>
-
-      <section id="connect" className="scroll-mt-20 px-4 py-20 sm:px-6 sm:py-28">
-        <div className="mx-auto max-w-[1240px]">
-          <ChapterHeader
-            number="III"
-            eyebrow="Connect it · Pro"
-            title="Connect series without flattening them."
-            body="Follow each series in its own order, then see where several reading paths meet inside one universe. Evidence and administrator review stay visible, so a useful timeline never has to pretend certainty."
-          />
-          <div className="mt-12 sm:mt-16">
-            <ConnectedStage />
-          </div>
-          <ProofStrip>
-            {[
-              [
-                'Series keep their own lanes',
-                'Primary and secondary memberships coexist when a book truly belongs to more than one path.',
-              ],
-              [
-                'Universes reveal the crossing',
-                'Connected series join a reviewed central reading order without losing their internal chronology.',
-              ],
-              [
-                'Corrections are part of the product',
-                'Administrators can rename, merge, and reversibly remove series instead of repairing rows by hand.',
-              ],
-            ]}
-          </ProofStrip>
-        </div>
-      </section>
+      <SkinShowcase />
 
       <PracticalLedger />
       <Privacy />
@@ -352,7 +314,7 @@ export default function LandingBelowFold() {
             className="mx-auto mt-3 max-w-[16ch] text-balance text-[clamp(34px,5vw,54px)] leading-[1.01] text-ink"
             style={display}
           >
-            Make room for every book you’ve lived with.
+            Your next read may already be waiting.
           </h2>
           <p className="mx-auto mt-5 max-w-[50ch] text-[15px] leading-relaxed text-muted">
             Start with one title or bring the shelves you already have. Reverie runs in your browser
@@ -369,7 +331,7 @@ export default function LandingBelowFold() {
                 boxShadow: '0 10px 26px color-mix(in srgb, var(--gold) 36%, transparent)',
               }}
             >
-              Begin your library
+              Start your library
             </Link>
             <Link
               to="/auth"
@@ -387,15 +349,14 @@ export default function LandingBelowFold() {
           <div className="max-w-[36ch]">
             <Wordmark />
             <p className="mt-2 text-[13px] leading-relaxed text-muted">
-              The whole story of your reading life, kept in a room that feels like yours.
+              Find your next read in your own library. Stay for the room that feels like yours.
             </p>
           </div>
           <nav aria-label="Landing sections" className="flex flex-wrap gap-x-6 gap-y-2 text-[13px]">
             {[
               ['Rooms', '#skins'],
-              ['Keep it', '#keep'],
-              ['Share it', '#share'],
-              ['Connect it', '#connect'],
+              ['How it works', '#how-it-works'],
+              ['Your library', '#features'],
               ['Privacy', '#privacy'],
             ].map(([label, href]) => (
               <a key={href} href={href} className="text-muted hover:text-ink">
