@@ -36,7 +36,7 @@ test('returns unresolved for tied, query-heavy, download, and mutation candidate
   assert.equal(tied.status, 'ambiguous_candidate')
 
   const blocked = selectNavigationCandidate(
-    '<a href="/series?a=1&b=2&c=3">Series</a><a href="/books?action=delete">Books</a><a href="/checkout">Books</a><a href="/list.pdf">Series</a>',
+    '<a href="/series?a=1&b=2&c=3">Series</a><a href="/books?action=delete">Books</a><a href="/checkout">Books</a><a href="/%63heckout">Books</a><a href="/list.pdf">Series</a><a href="/list.%70df">Series</a>',
     options,
   )
   assert.equal(blocked.status, 'no_candidate')

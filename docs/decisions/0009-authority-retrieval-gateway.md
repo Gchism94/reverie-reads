@@ -75,9 +75,11 @@ Every request, including `robots.txt` and every redirect hop, must pass the same
 - Send a named, contactable `ReverieAuthorityScout` user agent with no cookies, authorization,
   referrer, user-specific headers, or browser state. Do not bypass CAPTCHAs, rate limits, access
   controls, or bot challenges.
-- Honor RFC 9309 before content retrieval. A matching disallow blocks the request. A robots network
-  error or 5xx fails closed. A 4xx robots response may be unavailable under the RFC, but access still
-  requires an approved origin profile. Cache robots decisions for no more than 24 hours.
+- Honor RFC 9309 before every actual content request, including a redirect destination, using that
+  request's origin-specific policy. A matching disallow blocks the request. A robots network error
+  or 5xx fails closed. A 4xx robots response may be unavailable under the RFC, but access still
+  requires an approved origin profile. Share in-flight and completed decisions across cases in the
+  process and cache completed decisions for no more than 24 hours.
 - Use one attempt with no automatic retry, a five-second connection/header deadline, and a
   ten-second total deadline. Limit each origin to one active request and one request per second.
 - Accept only a successful HTML or plain-text response. Stop after 512 KiB of encoded bytes or
@@ -105,9 +107,10 @@ is unresolved. The model does not choose the URL, and the child page is terminal
 follows its links.
 
 Reduce the child to its document title, headings, list/table labels, and nearby visible prose with
-source order preserved. Remove scripts, styles, templates, forms, comments, hidden text, structured
-prompts, and control characters. Cap the packet at 8,000 Unicode characters and mark every omitted
-range. The packet is evidence to inspect, not instructions to follow.
+source order preserved. Remove scripts, styles, templates, forms, comments, hidden or structured
+active content, and control characters. Ordinary visible prose—including prompt-like prose—remains
+inert evidence, never instructions. Cap the packet at 8,000 Unicode characters and mark every
+omitted range.
 
 ### Model and evidence boundary
 
@@ -136,7 +139,8 @@ The result manifest records:
   score, and SHA-256 hashes of the fetched and sanitized representations; and
 - a typed terminal result such as `retrieved`, `origin_pending`, `robots_disallow`,
   `robots_unreachable`, `unsafe_url`, `unsafe_dns`, `redirect_outside_profile`, `too_large`,
-  `unsupported_media`, `timeout`, `no_candidate`, `ambiguous_candidate`, or `parse_failure`.
+  `unsupported_media`, `timeout`, `request_limit`, `no_candidate`, `ambiguous_candidate`, or
+  `parse_failure`.
 
 Raw HTML and sanitized page text are ephemeral and excluded from committed reports and ordinary
 caches. Reports retain the URL, hashes, retrieval metadata, short model paraphrase, and decision so a
@@ -153,11 +157,13 @@ blocked immediately by profile without a code release.
 
 ## Cost and failure budget
 
-For one eligible unresolved case, the gateway permits at most one robots cache miss, two content
-GETs (parent and one child), and one additional model call. There are no recursive links or retries.
-The sanitized packet and second prompt together should keep that additional call below 12,000 input
-tokens and the existing 1,400-output-token ceiling. Reports must separate first-pass search cost,
-retrieval cost, and second-pass model cost so the feature can be disabled without obscuring spend.
+For one eligible unresolved case, the gateway permits at most nine actual GETs total and one
+additional model call. The ordinary canonical, no-redirect path uses one robots GET plus two content
+GETs. Redirects consume the same hard budget, and touching a reviewed canonical alias requires that
+origin's own robots decision. There are no recursive links or retries. The sanitized packet and
+second prompt together should keep that additional call below 12,000 input tokens and the existing
+1,400-output-token ceiling. Reports must separate first-pass search cost, retrieval cost, and
+second-pass model cost so the feature can be disabled without obscuring spend.
 
 The gateway is optional. Any internal error returns the typed unresolved result and leaves the
 original scout proposal intact for review; it cannot make an unsafe proposal valid.

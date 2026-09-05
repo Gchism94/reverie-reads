@@ -220,9 +220,10 @@ implemented, but it is not yet connected to live acquisition.
 
 The first bounded implementation slice now lives in `src/authority/retrieval/`. It provides the
 reviewed-origin gate, public-address validation and connection pinning, manual redirect checks,
-robots evaluation and 24-hour cache, single-child navigation selection, static HTML extraction,
-provenance hashes, and persistence redaction. It deliberately has no acquisition-command or model
-integration and the repository activates no real origin profile. Exercise the boundary with:
+per-hop robots evaluation with a process-shared 24-hour cache, process-shared origin pacing, a
+nine-request case ceiling, single-child navigation selection, static HTML extraction, provenance
+hashes, and persistence redaction. It deliberately has no acquisition-command or model integration
+and the repository activates no real origin profile. Exercise the boundary with:
 
 ```sh
 node --test packages/series-source-trial/test/authority-retrieval-*.test.mjs

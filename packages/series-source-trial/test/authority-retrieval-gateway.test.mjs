@@ -5,6 +5,10 @@ import {
   OriginRequestLimiter,
   redactRetrievalResult,
   retrieveAuthorityNavigation,
+  RetrievalRequestBudget,
+  RETRIEVAL_EXTRACTOR_VERSION,
+  RETRIEVAL_GATEWAY_VERSION,
+  RETRIEVAL_POLICY_VERSION,
   RETRIEVAL_USER_AGENT,
 } from '../src/authority/retrieval/gateway.mjs'
 
@@ -66,6 +70,7 @@ const run = (requestImpl, overrides = {}) =>
     now,
     robotsCache: overrides.robotsCache ?? new Map(),
     limiter: overrides.limiter ?? new OriginRequestLimiter({ intervalMs: 0 }),
+    requestBudget: overrides.requestBudget,
     resolveDns: resolver,
     requestImpl,
   })
@@ -77,12 +82,19 @@ test('retrieves one child into a review-only, provenance-bound evidence packet',
   assert.equal(result.status, 'retrieved')
   assert.equal(result.reviewOnly, true)
   assert.equal(result.manifest.terminalResult, 'retrieved')
+  assert.equal(result.manifest.gatewayVersion, RETRIEVAL_GATEWAY_VERSION)
+  assert.equal(result.manifest.policyVersion, RETRIEVAL_POLICY_VERSION)
+  assert.equal(result.manifest.extractorVersion, RETRIEVAL_EXTRACTOR_VERSION)
   assert.match(result.evidenceText, /Pyg is book one/)
   assert.doesNotMatch(result.evidenceText, /tracker|script/i)
   assert.equal(result.manifest.parentUrl, parentUrl)
   assert.equal(result.manifest.selectedUrl, childUrl)
   assert.equal(result.manifest.childFinalUrl, childUrl)
   assert.equal(result.manifest.sourceKind, 'author')
+  assert.deepEqual(result.manifest.robots, [
+    { origin: 'https://author.example', state: 'rules', cacheAgeMs: 0 },
+  ])
+  assert.deepEqual(result.manifest.requests, { used: 3, limit: 9 })
   assert.equal(result.manifest.response.mediaType, 'text/html')
   assert.equal(result.manifest.fetchedSha256, hash(child))
   assert.equal(result.manifest.sanitizedSha256, hash(result.evidenceText))
@@ -190,7 +202,7 @@ test('treats a 404 robots response as unavailable while retaining origin approva
     fixtureRequest([], { robots: makeResponse(404, 'text/plain', 'not found') }),
   )
   assert.equal(result.status, 'retrieved')
-  assert.equal(result.manifest.robots.state, 'unavailable')
+  assert.equal(result.manifest.robots[0].state, 'unavailable')
 })
 
 test('checks the child against cached robots before requesting it', async () => {
@@ -205,6 +217,91 @@ test('checks the child against cached robots before requesting it', async () => 
     calls.map((call) => call.url),
     ['https://author.example/robots.txt', parentUrl],
   )
+})
+
+test('checks every parent and child redirect destination against robots before requesting it', async () => {
+  for (const redirectingPath of ['/', '/series']) {
+    const calls = []
+    const result = await run(async (url) => {
+      calls.push(url.href)
+      if (url.pathname === '/robots.txt') {
+        return makeResponse(200, 'text/plain', 'User-agent: *\nDisallow: /blocked\n')
+      }
+      if (url.pathname === '/' && redirectingPath === '/') {
+        return makeResponse(302, 'text/plain', '', { location: '/blocked' })
+      }
+      if (url.pathname === '/') return makeResponse(200, 'text/html', parent)
+      if (url.pathname === '/series') {
+        return makeResponse(302, 'text/plain', '', { location: '/blocked' })
+      }
+      throw new Error(`Unexpected request ${url.href}`)
+    })
+
+    assert.equal(result.reason, 'robots_disallow')
+    assert.equal(calls.includes('https://author.example/blocked'), false)
+    assert.equal(calls.includes('https://author.example/series'), redirectingPath === '/series')
+  }
+})
+
+test('loads robots independently for a reviewed canonical alias', async () => {
+  const calls = []
+  const aliasUrl = 'https://www.author.example/'
+  const result = await retrieveAuthorityNavigation(
+    { ...input, consultedUrl: aliasUrl, consultedUrls: [aliasUrl] },
+    {
+      profiles: [profile],
+      now,
+      robotsCache: new Map(),
+      limiter: new OriginRequestLimiter({ intervalMs: 0 }),
+      resolveDns: resolver,
+      requestImpl: async (url) => {
+        calls.push(url.href)
+        if (url.href === 'https://www.author.example/robots.txt') {
+          return makeResponse(200, 'text/plain', 'User-agent: *\nDisallow: /\n')
+        }
+        if (url.href === 'https://author.example/robots.txt') {
+          return makeResponse(200, 'text/plain', 'User-agent: *\nAllow: /\n')
+        }
+        throw new Error(`Unexpected request ${url.href}`)
+      },
+    },
+  )
+
+  assert.equal(result.reason, 'robots_disallow')
+  assert.deepEqual(calls, ['https://www.author.example/robots.txt'])
+  assert.deepEqual(result.manifest.robots, [
+    { origin: 'https://www.author.example', state: 'rules', cacheAgeMs: 0 },
+  ])
+})
+
+test('checks a redirect to a reviewed alias against the alias robots policy', async () => {
+  const calls = []
+  const result = await run(async (url) => {
+    calls.push(url.href)
+    if (url.href === 'https://author.example/robots.txt') {
+      return makeResponse(200, 'text/plain', 'User-agent: *\nAllow: /\n')
+    }
+    if (url.href === 'https://www.author.example/robots.txt') {
+      return makeResponse(200, 'text/plain', 'User-agent: *\nDisallow: /blocked\n')
+    }
+    if (url.href === parentUrl) {
+      return makeResponse(302, 'text/plain', '', {
+        location: 'https://www.author.example/blocked',
+      })
+    }
+    throw new Error(`Unexpected request ${url.href}`)
+  })
+
+  assert.equal(result.reason, 'robots_disallow')
+  assert.deepEqual(calls, [
+    'https://author.example/robots.txt',
+    parentUrl,
+    'https://www.author.example/robots.txt',
+  ])
+  assert.deepEqual(result.manifest.robots, [
+    { origin: 'https://author.example', state: 'rules', cacheAgeMs: 0 },
+    { origin: 'https://www.author.example', state: 'rules', cacheAgeMs: 0 },
+  ])
 })
 
 test('caches robots for repeated retrievals but never caches page bodies', async () => {
@@ -240,6 +337,61 @@ test('refreshes robots at the 24-hour cache boundary', async () => {
   assert.equal(first.status, 'retrieved')
   assert.equal(second.status, 'retrieved')
   assert.equal(calls.filter((call) => call.url.endsWith('/robots.txt')).length, 2)
+})
+
+test('shares the default robots cache and rate limiter across concurrent calls', async () => {
+  const sharedProfile = {
+    ...profile,
+    profileVersion: 'shared-example-v1',
+    canonicalOrigin: 'https://shared.example',
+    canonicalAliases: [],
+  }
+  const sharedInput = {
+    ...input,
+    consultedUrl: 'https://shared.example/',
+    consultedUrls: ['https://shared.example/'],
+  }
+  let active = 0
+  let maximumActive = 0
+  const starts = []
+  const paths = []
+  const requestImpl = async (url) => {
+    active += 1
+    maximumActive = Math.max(maximumActive, active)
+    starts.push(Date.now())
+    paths.push(url.pathname)
+    await new Promise((resolve) => setTimeout(resolve, 10))
+    active -= 1
+    if (url.pathname === '/robots.txt') return makeResponse(200, 'text/plain', robots)
+    return makeResponse(200, 'text/html', '<main><p>No navigation link.</p></main>')
+  }
+  const dependencies = { profiles: [sharedProfile], now, resolveDns: resolver, requestImpl }
+  const [first, second] = await Promise.all([
+    retrieveAuthorityNavigation(sharedInput, dependencies),
+    retrieveAuthorityNavigation({ ...sharedInput, caseId: 'book-pyg-2' }, dependencies),
+  ])
+
+  assert.equal(first.reason, 'no_candidate')
+  assert.equal(second.reason, 'no_candidate')
+  assert.equal(paths.filter((path) => path === '/robots.txt').length, 1)
+  assert.equal(maximumActive, 1)
+  assert.equal(starts.length, 3)
+  assert.ok(starts[1] - starts[0] >= 900)
+  assert.ok(starts[2] - starts[1] >= 900)
+})
+
+test('fails unresolved before exceeding the total wire-request budget', async () => {
+  const calls = []
+  const result = await run(fixtureRequest(calls), {
+    requestBudget: new RetrievalRequestBudget({ maxRequests: 2 }),
+  })
+
+  assert.equal(result.reason, 'request_limit')
+  assert.deepEqual(
+    calls.map((call) => call.url),
+    ['https://author.example/robots.txt', parentUrl],
+  )
+  assert.deepEqual(result.manifest.requests, { used: 2, limit: 2 })
 })
 
 test('fails unresolved on unsafe media, oversized bodies, and ambiguous navigation', async () => {

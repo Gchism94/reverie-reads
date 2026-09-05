@@ -118,7 +118,7 @@ export function selectNavigationCandidate(
   walk(document, (node) => {
     if (node.tagName !== 'a') return
     const attrs = attributes(node)
-    if (!attrs.href || DOWNLOAD_SUFFIX.test(attrs.href) || MUTATION_PATH.test(attrs.href)) return
+    if (!attrs.href) return
     let url
     try {
       url = new URL(attrs.href, parent)
@@ -127,7 +127,15 @@ export function selectNavigationCandidate(
     }
     if (url.protocol !== 'https:' || url.origin !== canonicalOrigin || url.username || url.password)
       return
+    let decodedPath
+    try {
+      decodedPath = decodeURIComponent(url.pathname)
+    } catch {
+      return
+    }
     if (
+      DOWNLOAD_SUFFIX.test(decodedPath) ||
+      MUTATION_PATH.test(decodedPath) ||
       url.searchParams.size > 2 ||
       [...url.searchParams.keys()].some((key) => MUTATION_QUERY.test(key)) ||
       url.href === parent.href

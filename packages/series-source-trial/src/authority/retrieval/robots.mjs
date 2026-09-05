@@ -1,8 +1,22 @@
-const normalizeOctets = (input) =>
-  encodeURI(input).replace(/%([0-9a-f]{2})/gi, (encoded, value) => {
-    const character = String.fromCharCode(Number.parseInt(value, 16))
-    return /^[A-Za-z0-9._~-]$/.test(character) ? character : encoded.toUpperCase()
-  })
+const UNRESERVED = /^[A-Za-z0-9._~-]$/
+
+const normalizeOctets = (input) => {
+  let normalized = ''
+  for (let index = 0; index < input.length; ) {
+    const encoded = input.slice(index).match(/^%([0-9a-f]{2})/i)
+    if (encoded) {
+      const character = String.fromCharCode(Number.parseInt(encoded[1], 16))
+      normalized += UNRESERVED.test(character) ? character : `%${encoded[1].toUpperCase()}`
+      index += encoded[0].length
+      continue
+    }
+    const codePoint = input.codePointAt(index)
+    const character = String.fromCodePoint(codePoint)
+    normalized += encodeURI(character)
+    index += character.length
+  }
+  return normalized
+}
 
 const matchesRule = (target, rawPattern) => {
   const pattern = rawPattern.endsWith('$') ? rawPattern.slice(0, -1) : rawPattern
@@ -39,7 +53,16 @@ const matchesRule = (target, rawPattern) => {
 const ruleSpecificity = (pattern) => {
   const endAnchored = pattern.endsWith('$')
   const withoutEnd = endAnchored ? pattern.slice(0, -1) : pattern
-  return Buffer.byteLength(withoutEnd.replaceAll('*', ''))
+  let octets = 0
+  for (let index = 0; index < withoutEnd.length; ) {
+    if (withoutEnd[index] === '*') {
+      index += 1
+      continue
+    }
+    octets += 1
+    index += /^%[0-9a-f]{2}/i.test(withoutEnd.slice(index)) ? 3 : 1
+  }
+  return octets
 }
 
 export function parseRobots(text) {

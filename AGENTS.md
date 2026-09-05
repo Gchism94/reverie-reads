@@ -164,12 +164,14 @@ wishlist` was the pre-#68 model and is long wrong. Format flags **suppress, neve
 - **Navigation-aware authority retrieval is a bounded trial primitive, not a crawler.** Only an
   exact URL from the scout's consulted-source manifest and a current, human-reviewed origin profile
   may enter it. Every DNS answer and redirect hop must remain public and profile-approved, and the
-  validated DNS result is pinned to the TLS connection. Robots denial or unavailability, an unsafe
-  URL, ambiguous navigation, timeout, size/type failure, or missing profile returns unresolved—never
-  standalone. The retriever fetches one parent and at most one deterministic same-origin child,
-  loads no subresources or JavaScript, retains no raw page text in reports/caches, and has no
-  Supabase or corpus writer. Its first slice under `packages/series-source-trial` is intentionally
-  not wired to the acquisition CLI or a second model call and activates no real origin. See
+  validated DNS result is pinned to the TLS connection. Robots denial, network/5xx failure, an
+  unsafe URL, ambiguous navigation, timeout, request/size/type failure, or missing profile returns
+  unresolved—never standalone; an RFC-defined 4xx absence still requires an approved profile. Every
+  actual redirect hop uses that hop's origin-specific robots policy. The retriever fetches one
+  parent and at most one deterministic same-origin child, loads no subresources or JavaScript,
+  retains no raw page text in reports/caches, and has no Supabase or corpus writer. Its first slice
+  under `packages/series-source-trial` is intentionally not wired to the acquisition CLI or a second
+  model call and activates no real origin. See
   `docs/decisions/0009-authority-retrieval-gateway.md`.
 - **Corpus cover recovery is bounded, resumable, and independent of classification.** The
   administrator completion pipeline never walks the whole household library in one RPC. It calls
