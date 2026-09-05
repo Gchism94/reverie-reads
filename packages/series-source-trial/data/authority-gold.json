@@ -2029,6 +2029,171 @@
         ],
         "reviewNote": "Penguin Random House identifies Her Soul to Take as the start of the Souls Trilogy."
       }
+    },
+    {
+      "id": "reverie-bloodline-vampires-court-of-the-vampire-queen",
+      "title": "Court of the Vampire Queen",
+      "authors": ["Katee Robert"],
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "strata": ["recent_independent_or_kindle_first"],
+      "publicationYear": 2022,
+      "publicationPath": "independent",
+      "sampleSources": [
+        {
+          "kind": "author",
+          "url": "https://www.kateerobert.com/books/court-of-the-vampire-queen"
+        }
+      ],
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Bloodline Vampires",
+            "aliases": ["Bloodline Vampires Trilogy"],
+            "role": "primary",
+            "positions": []
+          }
+        ],
+        "sources": [
+          {
+            "kind": "author",
+            "url": "https://www.kateerobert.com/books/court-of-the-vampire-queen"
+          }
+        ],
+        "reviewNote": "The author's page identifies the exact work as the collected Bloodline Vampires Trilogy and lists it among all books in that series. The separately numbered installments are Sacrifice, Heir, and Queen, so the collection has no installment position."
+      }
+    },
+    {
+      "id": "reverie-bride-mate",
+      "title": "Mate",
+      "authors": ["Ali Hazelwood"],
+      "identifiers": { "isbn13": ["9780593955017"] },
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "strata": ["recent_traditional"],
+      "publicationYear": 2025,
+      "publicationPath": "traditional",
+      "sampleSources": [
+        {
+          "kind": "publisher",
+          "url": "https://www.penguinrandomhouse.com/books/775877/mate-by-ali-hazelwood/"
+        }
+      ],
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Bride",
+            "aliases": ["Bride Series"],
+            "role": "primary",
+            "positions": []
+          }
+        ],
+        "sources": [
+          { "kind": "author", "url": "https://alihazelwood.com/mate/" },
+          {
+            "kind": "publisher",
+            "url": "https://www.penguinrandomhouse.com/books/775877/mate-by-ali-hazelwood/"
+          },
+          {
+            "kind": "publisher",
+            "url": "https://www.penguinrandomhouse.com/books/841853/ali-hazelwoods-bride-and-mate-bookmark-by-out-of-print/"
+          }
+        ],
+        "reviewNote": "The author and book publisher identify Mate as Bride's companion novel, while Penguin Random House's Bride-and-Mate merchandise page explicitly describes both couples as part of the Bride series. No first-party source reviewed here assigns a book number."
+      }
+    },
+    {
+      "id": "reverie-merciless-all-he-ll-ever-be",
+      "title": "All He'll Ever Be",
+      "authors": ["Willow Winters"],
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Merciless Series",
+            "aliases": ["Merciless"],
+            "role": "primary",
+            "positions": []
+          }
+        ],
+        "sources": [
+          {
+            "kind": "author",
+            "url": "https://willowwinterswrites.com/pages/merciless-world"
+          }
+        ],
+        "reviewNote": "The author's reading-order page explicitly maps the Merciless Series collection to All He'll Ever Be. It is a collection of the four Carter and Aria installments, so it has no installment position."
+      }
+    },
+    {
+      "id": "reverie-pucked-up-omegaverse-one-pucked-up-pack",
+      "title": "One Pucked Up Pack",
+      "authors": ["Sarah Blue"],
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Pucked Up Omegaverse",
+            "aliases": ["The Pucked Omegaverse"],
+            "role": "primary",
+            "positions": []
+          }
+        ],
+        "sources": [
+          { "kind": "author", "url": "https://authorsarahblue.com/pucked-ov/" }
+        ],
+        "reviewNote": "The author's dedicated Pucked Omegaverse page lists One Pucked Up Pack inside the named book group and describes the group as interconnected. Its statement that these books can be read as standalones describes reading independence, not bibliographic non-membership; the reviewed page does not number this exact work."
+      }
+    },
+    {
+      "id": "reverie-wicked-games-enchantra",
+      "title": "Enchantra",
+      "authors": ["Kaylie Smith"],
+      "identifiers": { "isbn13": ["9781538770801"] },
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "strata": ["recent_traditional"],
+      "publicationYear": 2025,
+      "publicationPath": "traditional",
+      "sampleSources": [
+        {
+          "kind": "publisher",
+          "url": "https://www.hachettebookgroup.com/titles/kaylie-smith/enchantra/9781538770801/"
+        }
+      ],
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Wicked Games",
+            "aliases": [],
+            "role": "primary",
+            "positions": []
+          }
+        ],
+        "sources": [
+          {
+            "kind": "publisher",
+            "url": "https://www.hachettebookgroup.com/titles/kaylie-smith/enchantra/9781538770801/"
+          },
+          {
+            "kind": "publisher_catalog",
+            "url": "https://www.hachettebookgroup.com/series/kaylie-smith/wicked-games/"
+          }
+        ],
+        "reviewNote": "Hachette assigns Enchantra to Wicked Games in both its title metadata and series catalog. The same publisher's standalone-readable marketing does not negate that explicit bibliographic relationship; the reviewed catalog does not expose a reliable numeric position."
+      }
     }
   ],
   "sharedSources": {
