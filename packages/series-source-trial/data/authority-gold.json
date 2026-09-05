@@ -632,6 +632,220 @@
       }
     },
     {
+      "id": "kindle-storyteller-2022-king-of-war",
+      "title": "King of War",
+      "authors": ["Peter Gibbons"],
+      "identifiers": { "asin": ["B09Z77DNTG"] },
+      "sampleOrigin": "external_sample",
+      "strata": ["recent_independent_or_kindle_first"],
+      "publicationYear": 2022,
+      "publicationPath": "kindle_first",
+      "selectionFrame": "kindle_storyteller_2022_shortlist",
+      "sampleSources": [
+        {
+          "kind": "platform_award",
+          "url": "https://www.aboutamazon.co.uk/news/retail/amazons-kindle-storyteller-award-2022-shortlist-announced"
+        }
+      ],
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Viking Blood and Blade Saga",
+            "aliases": ["The Viking Blood and Blade Saga", "Viking Blood & Blade Saga"],
+            "role": "primary",
+            "positions": [{ "value": 4, "orderType": "publication" }]
+          }
+        ],
+        "sources": [{ "kind": "author", "url": "https://petermgibbons.com/king-of-war/" }],
+        "reviewNote": "The author's catalog identifies King of War as book 4 in the Viking Blood and Blade Saga. The Amazon shortlist selects the case and supports its 2022 Kindle-first path, but is not used as truth authority."
+      }
+    },
+    {
+      "id": "kindle-storyteller-2022-the-woman-in-room-19",
+      "title": "The Woman in Room 19",
+      "authors": ["Ann Girdharry"],
+      "identifiers": { "asin": ["B0B3MJ1V2B"] },
+      "sampleOrigin": "external_sample",
+      "strata": ["recent_independent_or_kindle_first"],
+      "publicationYear": 2022,
+      "publicationPath": "kindle_first",
+      "selectionFrame": "kindle_storyteller_2022_shortlist",
+      "sampleSources": [
+        {
+          "kind": "platform_award",
+          "url": "https://www.aboutamazon.co.uk/news/retail/amazons-kindle-storyteller-award-2022-shortlist-announced"
+        }
+      ],
+      "truth": {
+        "status": "reviewed",
+        "standalone": true,
+        "memberships": [],
+        "sources": [
+          {
+            "kind": "author_post",
+            "url": "https://www.goodreads.com/author/show/14179591.Ann_Girdharry/blog?page=1"
+          }
+        ],
+        "reviewNote": "The verified Goodreads Author blog records Ann Girdharry's own June 2022 launch post explicitly calling the work a standalone psychological thriller."
+      }
+    },
+    {
+      "id": "kindle-storyteller-2022-city-of-scars",
+      "title": "City of Scars",
+      "authors": ["JD Kirk"],
+      "identifiers": { "asin": ["B09XMX1QVH"] },
+      "sampleOrigin": "external_sample",
+      "strata": ["recent_independent_or_kindle_first"],
+      "publicationYear": 2022,
+      "publicationPath": "kindle_first",
+      "selectionFrame": "kindle_storyteller_2022_shortlist",
+      "sampleSources": [
+        {
+          "kind": "platform_award",
+          "url": "https://www.aboutamazon.co.uk/news/retail/amazons-kindle-storyteller-award-2022-shortlist-announced"
+        }
+      ],
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "DCI Logan",
+            "aliases": ["DCI Logan Scottish Crime Fiction"],
+            "role": "primary",
+            "positions": [{ "value": 14, "orderType": "publication" }]
+          }
+        ],
+        "sources": [{ "kind": "author", "url": "https://jdkirk.com/readingorder/" }],
+        "reviewNote": "The author's reading order identifies City of Scars as DCI Logan book 14."
+      }
+    },
+    {
+      "id": "kindle-storyteller-2022-it-started-with-a-kiss",
+      "title": "It Started with a Kiss",
+      "authors": ["Clare Lydon"],
+      "identifiers": { "asin": ["B0B3TV2D85"] },
+      "sampleOrigin": "external_sample",
+      "strata": ["recent_independent_or_kindle_first"],
+      "publicationYear": 2022,
+      "publicationPath": "kindle_first",
+      "selectionFrame": "kindle_storyteller_2022_shortlist",
+      "sampleSources": [
+        {
+          "kind": "platform_award",
+          "url": "https://www.aboutamazon.co.uk/news/retail/amazons-kindle-storyteller-award-2022-shortlist-announced"
+        }
+      ],
+      "truth": {
+        "status": "reviewed",
+        "standalone": true,
+        "memberships": [],
+        "sources": [{ "kind": "author", "url": "https://www.clarelydon.co.uk/books/" }],
+        "reviewNote": "The author's catalog lists It Started with a Kiss under Standalone Novels and outside both named series."
+      }
+    },
+    {
+      "id": "kindle-storyteller-2023-greek-secret",
+      "title": "Greek Secret",
+      "authors": ["Francesca Catlow"],
+      "identifiers": { "isbn13": ["9781915208255"], "asin": ["B0BYSXTJS7"] },
+      "sampleOrigin": "external_sample",
+      "strata": ["recent_independent_or_kindle_first"],
+      "publicationYear": 2023,
+      "publicationPath": "kindle_first",
+      "selectionFrame": "kindle_storyteller_2023_shortlist",
+      "sampleSources": [
+        {
+          "kind": "platform_award",
+          "url": "https://www.aboutamazon.co.uk/news/books-and-authors/amazon-self-publishing-awards-2023"
+        }
+      ],
+      "truth": {
+        "status": "reviewed",
+        "standalone": true,
+        "memberships": [],
+        "sources": [
+          { "kind": "author", "url": "https://francescacatlow.co.uk/books" },
+          {
+            "kind": "catalog_listing",
+            "url": "https://books.google.com/books/about/Greek_Secret.html?id=hAU80AEACAAJ"
+          }
+        ],
+        "reviewNote": "The author's catalog separates Greek Secret from the Little Blue Door sequence, and the original Gaia & Fenrir publisher description preserved in Google Books explicitly calls it a standalone. Shared setting or characters are not relational series evidence."
+      }
+    },
+    {
+      "id": "kindle-storyteller-2023-forsaken-commander",
+      "title": "Forsaken Commander",
+      "authors": ["G J Ogden"],
+      "identifiers": { "asin": ["B0BZ2L46CH"] },
+      "sampleOrigin": "external_sample",
+      "strata": ["recent_independent_or_kindle_first"],
+      "publicationYear": 2023,
+      "publicationPath": "kindle_first",
+      "selectionFrame": "kindle_storyteller_2023_shortlist",
+      "sampleSources": [
+        {
+          "kind": "platform_award",
+          "url": "https://www.aboutamazon.co.uk/news/books-and-authors/amazon-self-publishing-awards-2023"
+        }
+      ],
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Aternien Wars",
+            "aliases": ["The Aternien Wars", "Aternien Wars series"],
+            "role": "primary",
+            "positions": [{ "value": 1, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          { "kind": "author", "url": "https://www.gjogden.com/product-page/forsaken-commander" }
+        ],
+        "reviewNote": "The author's product catalog explicitly identifies the series as Aternien Wars and the book number as 1."
+      }
+    },
+    {
+      "id": "kindle-storyteller-2023-silent-ruin",
+      "title": "Silent Ruin",
+      "authors": ["David J. Gatward"],
+      "identifiers": { "asin": ["B0BWNF3MMT"] },
+      "sampleOrigin": "external_sample",
+      "strata": ["recent_independent_or_kindle_first"],
+      "publicationYear": 2023,
+      "publicationPath": "kindle_first",
+      "selectionFrame": "kindle_storyteller_2023_shortlist",
+      "sampleSources": [
+        {
+          "kind": "platform_award",
+          "url": "https://www.aboutamazon.co.uk/news/books-and-authors/amazon-self-publishing-awards-2023"
+        }
+      ],
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "DCI Harry Grimm Crime Thrillers",
+            "aliases": ["DCI Harry Grimm", "DCI Harry Grimm Series"],
+            "role": "primary",
+            "positions": [{ "value": 14, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          {
+            "kind": "author",
+            "url": "https://dciharrygrimm.com/book-series/book-14-silent-ruin/"
+          }
+        ],
+        "reviewNote": "The author's dedicated series site identifies Silent Ruin as DCI Harry Grimm Crime Thrillers book 14."
+      }
+    },
+    {
       "id": "gold-standalone-salvation-day",
       "title": "Salvation Day",
       "authors": ["Kali Wallace"],

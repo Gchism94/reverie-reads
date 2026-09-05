@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
   buildEvidencePacket,
+  canonicalizeResolutionDecision,
   scoreResolutionRun,
   validateResolution,
 } from '../src/resolver/evidence.mjs'
@@ -87,6 +88,25 @@ test('requires independent order corroboration even when one relationship suppli
   assert.equal(validation.valid, true)
   assert.equal(validation.policySafe, false)
   assert.ok(validation.policyViolations.some((error) => error.includes('position')))
+})
+
+test('canonicalizes an order-only review into an eligible membership decision', () => {
+  const packet = buildEvidencePacket(testCase, [run])
+  const orderOnlyReview = {
+    ...structuredClone(accepted),
+    decision: 'review',
+    reviewReasons: ['position_uncorroborated'],
+  }
+
+  const canonical = canonicalizeResolutionDecision(packet, orderOnlyReview)
+  assert.equal(canonical.decision, 'accept_membership')
+  assert.equal(validateResolution(packet, canonical).policySafe, true)
+
+  const membershipConflict = {
+    ...orderOnlyReview,
+    reviewReasons: ['membership_conflict', 'position_uncorroborated'],
+  }
+  assert.equal(canonicalizeResolutionDecision(packet, membershipConflict).decision, 'review')
 })
 
 test('rejects facts and citations that do not occur in the evidence packet', () => {

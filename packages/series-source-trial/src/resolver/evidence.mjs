@@ -19,6 +19,7 @@ const reviewReasons = new Set([
   'self_titled_relation',
   'position_uncorroborated',
 ])
+const orderOnlyReviewReasons = new Set(['position_conflict', 'position_uncorroborated'])
 
 const isObject = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value)
 const asArray = (value) => (Array.isArray(value) ? value : [])
@@ -275,6 +276,24 @@ export function validateResolution(packet, output) {
     validEvidenceCitationCount,
     unsupportedMembershipCount,
   }
+}
+
+export function canonicalizeResolutionDecision(packet, output) {
+  if (!isObject(output) || output.decision !== 'review') return output
+
+  const reasons = asArray(output.reviewReasons)
+  const memberships = asArray(output.memberships)
+  if (
+    reasons.length === 0 ||
+    !memberships.length ||
+    !reasons.every((reason) => orderOnlyReviewReasons.has(reason)) ||
+    memberships.some((membership) => membership?.position !== null)
+  ) {
+    return output
+  }
+
+  const accepted = { ...output, decision: 'accept_membership' }
+  return validateResolution(packet, accepted).policySafe ? accepted : output
 }
 
 const safeClaims = (packet, resolution) => {
