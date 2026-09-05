@@ -243,7 +243,7 @@ Audit the sample before running another provider or resolver comparison:
 pnpm series:sample:audit
 ```
 
-The audit reports selection coverage and authority-review coverage separately. The current 25
+The audit reports selection coverage and authority-review coverage separately. The current 20
 Reverie seed candidates and nine external candidates count as selected works, but never as truth
 and never toward an accuracy gate. It also validates that every reviewed result has
 affirmative author or publisher evidence, that a reviewed standalone has no memberships, and that
