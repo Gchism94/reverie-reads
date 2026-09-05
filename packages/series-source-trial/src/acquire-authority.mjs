@@ -13,13 +13,26 @@ import {
   validateAuthorityAcquisition,
 } from './authority/evidence.mjs'
 import { acquireAuthorityEvidence } from './authority/openai.mjs'
+import { interpretRetrievedAuthorityEvidenceWithCache } from './authority/retrieval/cache.mjs'
+import { augmentAuthorityAcquisition } from './authority/retrieval/pipeline.mjs'
+import {
+  AUTHORITY_RETRIEVAL_PROFILES_VERSION,
+  authorityRetrievalProfiles,
+} from './authority/retrieval/profiles.mjs'
 import { AUTHORITY_ACQUISITION_PROMPT_VERSION } from './authority/schema.mjs'
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const repositoryRoot = resolve(packageRoot, '../..')
 
 const parseArgs = (argv) => {
-  const options = { scope: 'gold', max: null, ids: null, out: null, refresh: false }
+  const options = {
+    scope: 'gold',
+    max: null,
+    ids: null,
+    out: null,
+    refresh: false,
+    retrieval: false,
+  }
   for (let index = 0; index < argv.length; index += 1) {
     const value = argv[index]
     if (value === '--') continue
@@ -28,6 +41,7 @@ const parseArgs = (argv) => {
     else if (value === '--ids') options.ids = argv[++index].split(',').filter(Boolean)
     else if (value === '--out') options.out = argv[++index]
     else if (value === '--refresh') options.refresh = true
+    else if (value === '--retrieval') options.retrieval = true
     else throw new Error(`Unknown argument ${value}`)
   }
   if (!['all', 'gold', 'candidate'].includes(options.scope)) {
@@ -55,6 +69,7 @@ const renderMarkdown = (score) =>
     `| ${percent(score.capability.validResponseRate)} | ${percent(score.capability.policySafeResponseRate)} | ${percent(score.capability.sourceGroundingRate)} | ${percent(score.capability.resolutionRate)} | ${percent(score.capability.resolvedAccuracy)} | ${percent(score.capability.effectiveAccuracy)} | ${percent(score.capability.membershipPrecision)} | ${percent(score.capability.membershipRecall)} | ${percent(score.capability.falseStandaloneRate)} | ${percent(score.capability.falseSeriesRate)} |`,
     '',
     `Model calls: ${score.operations.modelCalls}; cached: ${score.operations.cached}; web-search calls: ${score.operations.webSearchCalls}; input/output tokens: ${score.operations.inputTokens}/${score.operations.outputTokens}; errors: ${score.operations.errors}.`,
+    `Retrieval: ${score.operations.retrievalAttempts} attempted; ${score.operations.retrievalSucceeded} retrieved; ${score.operations.retrievalSelected} selected; ${score.operations.retrievalRequests} HTTP requests; ${score.operations.retrievalEncodedBytes} encoded bytes; ${score.operations.secondModelCalls} second model calls; ${score.operations.secondCached} cached; ${score.operations.secondInputTokens}/${score.operations.secondOutputTokens} second-pass input/output tokens.`,
     ...(score.scope.candidateCases
       ? [
           `Candidate queue: ${score.candidateQueue.seriesProposals} series proposals; ${score.candidateQueue.standaloneProposals} standalone proposals; ${score.candidateQueue.unresolved} unresolved; ${score.candidateQueue.quarantined} quarantined.`,
@@ -85,6 +100,11 @@ if (!cases.length) throw new Error('Authority acquisition selection is empty')
 const model = process.env.BOOK_AUTHORITY_MODEL ?? 'gpt-5.6-luna'
 const cacheRoot = resolve(packageRoot, 'private-results/authority-acquisition-cache')
 await mkdir(cacheRoot, { recursive: true })
+const retrievalCacheRoot = resolve(
+  packageRoot,
+  'private-results/authority-retrieval-interpretation-cache',
+)
+if (options.retrieval) await mkdir(retrievalCacheRoot, { recursive: true })
 const cacheKey = (target) =>
   createHash('sha256')
     .update(
@@ -97,9 +117,27 @@ const cacheKey = (target) =>
     )
     .digest('hex')
 
+const interpretWithCache = async (target, retrieval, interpretOptions) => {
+  return interpretRetrievedAuthorityEvidenceWithCache(target, retrieval, {
+    cacheRoot: retrievalCacheRoot,
+    model,
+    refresh: options.refresh,
+    interpretOptions,
+  })
+}
+
 const runOne = async (testCase) => {
   const target = buildAuthorityTarget(testCase)
   const policy = authorityPolicyForCase(testCase)
+  const finalize = (firstPass) =>
+    options.retrieval
+      ? augmentAuthorityAcquisition(target, firstPass, {
+          profiles: authorityRetrievalProfiles,
+          policy,
+          interpret: interpretWithCache,
+          interpretOptions: { model },
+        })
+      : firstPass
   const cachePath = resolve(cacheRoot, `${cacheKey(target)}.json`)
   if (!options.refresh) {
     try {
@@ -109,14 +147,14 @@ const runOne = async (testCase) => {
       const cachedMetadata = { ...cached }
       delete cachedMetadata.output
       delete cachedMetadata.rawOutput
-      return {
+      return await finalize({
         caseId: target.caseId,
         status: 'completed',
         ...cachedMetadata,
         output,
         cached: true,
         validation: validateAuthorityAcquisition(target, output, cached.consultedUrls, policy),
-      }
+      })
     } catch (error) {
       if (error?.code !== 'ENOENT') throw error
     }
@@ -127,14 +165,14 @@ const runOne = async (testCase) => {
     const { output: rawOutput, ...acquiredMetadata } = acquired
     const output = canonicalizeAuthorityAcquisition(rawOutput, acquired.consultedUrls, policy)
     await writeFile(cachePath, `${JSON.stringify({ ...acquiredMetadata, rawOutput }, null, 2)}\n`)
-    return {
+    return await finalize({
       caseId: target.caseId,
       status: 'completed',
       ...acquiredMetadata,
       output,
       cached: false,
       validation: validateAuthorityAcquisition(target, output, acquired.consultedUrls, policy),
-    }
+    })
   } catch (error) {
     return {
       caseId: target.caseId,
@@ -178,6 +216,8 @@ await Promise.all([
         schemaVersion: 1,
         model,
         promptVersion: AUTHORITY_ACQUISITION_PROMPT_VERSION,
+        retrievalEnabled: options.retrieval,
+        retrievalProfilesVersion: AUTHORITY_RETRIEVAL_PROFILES_VERSION,
         targets: cases.map(buildAuthorityTarget),
         results,
         score,

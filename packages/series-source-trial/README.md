@@ -216,21 +216,36 @@ an arbitrary URL fetcher to compensate. The bounded follow-up is the trial-only,
 gateway in [`docs/decisions/0009-authority-retrieval-gateway.md`](../../docs/decisions/0009-authority-retrieval-gateway.md):
 it accepts only a consulted-manifest URL on a reviewed origin, selects one same-origin child
 deterministically, returns sanitized evidence, and fails unresolved. Its security boundary is now
-implemented, but it is not yet connected to live acquisition.
+implemented and its interpreter can be enabled explicitly for the no-write trial.
 
 The first bounded implementation slice now lives in `src/authority/retrieval/`. It provides the
 reviewed-origin gate, public-address validation and connection pinning, manual redirect checks,
 per-hop robots evaluation with a process-shared 24-hour cache, process-shared origin pacing, a
 nine-request case ceiling, single-child navigation selection, static HTML extraction, provenance
-hashes, and persistence redaction. It deliberately has no acquisition-command or model integration
-and the repository activates no real origin profile. Exercise the boundary with:
+hashes, and persistence redaction. It deliberately has no production integration, and the
+repository activates no real origin profile. The opt-in pipeline adds a second strict, no-tools
+model pass only when the first pass is unresolved or quarantined. It binds citations and source
+kind to the retrieved child manifest, hash-checks the packet, and skips the model entirely when the
+exact target title or author is absent. Post-validation requires the packet to contain the claimed
+series name, standalone language, position, and target-author identity. The packet is stripped
+before returning or caching results. Unsupported position becomes null and unsupported membership
+role becomes unknown without losing a direct series relationship. Exercise the boundary with:
 
 ```sh
 node --test packages/series-source-trial/test/authority-retrieval-*.test.mjs
 ```
 
-Activating an origin or passing the sanitized packet to the model is a later reviewed slice, not a
-configuration toggle hidden in this one.
+Run the integrated path explicitly:
+
+```sh
+pnpm series:authority:acquire -- --scope gold --max 10 --retrieval
+```
+
+With the committed registry this remains a no-network retrieval dry run: its only real origin
+candidate is pending, so the command records `origin_pending` and does not fetch it. An unchanged
+successful second-pass interpretation is cached by packet hash without retaining evidence text.
+Origin activation requires a separate human rights/access review and cannot be supplied by model
+output or a CLI flag.
 
 Run a small gold holdout before a broader capability evaluation:
 
@@ -274,6 +289,10 @@ pilot's v2 prompt for ongoing acquisition experiments.
 The failed prompt-only and allowed-domain same-origin recall experiments, the Pyg false-positive
 audit, and the resulting deterministic quarantine are recorded in
 `reports/authority-same-origin-scout-2026-09-05.md`.
+
+The bounded second-pass wiring, Pyg live-source limit, cache/redaction proof, and synthetic no-tools
+model check are recorded in
+`reports/authority-retrieval-interpretation-pilot-2026-09-05.md`.
 
 ## Build the 200-case authority set
 

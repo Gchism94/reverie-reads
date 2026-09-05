@@ -126,6 +126,22 @@ const sourceClassificationEligible = (source, blockedUrls, support) => {
   return true
 }
 
+const reviewedSourceKind = (policy, url) => {
+  const wanted = comparableUrl(url)
+  return asArray(policy.retrievedSources).find((source) => comparableUrl(source?.url) === wanted)
+    ?.sourceKind
+}
+
+export const authorityPolicyForRetrievedSource = (policy = {}, { url, sourceKind }) => ({
+  ...policy,
+  retrievedSources: [
+    ...asArray(policy.retrievedSources).filter(
+      (source) => comparableUrl(source?.url) !== comparableUrl(url),
+    ),
+    { url, sourceKind },
+  ],
+})
+
 const genericSeriesKey = (value) => {
   const words = normalize(value).split(' ').filter(Boolean)
   while (words.length > 1 && genericSeriesTail.has(words.at(-1))) words.pop()
@@ -156,14 +172,16 @@ export function canonicalizeAuthorityAcquisition(output, consultedUrls = null, p
     .filter((source) => !consulted || consulted.has(comparableUrl(source?.url)))
     .map((source) => {
       if (!isObject(source)) return source
+      const reviewedKind = reviewedSourceKind(policy, source.url)
+      const normalizedSource = reviewedKind ? { ...source, kind: reviewedKind } : source
       const supports = asArray(source.supports)
       if (
-        !knownClassificationRisk(source) &&
-        !classificationBlocked.has(comparableUrl(source.url))
+        !knownClassificationRisk(normalizedSource) &&
+        !classificationBlocked.has(comparableUrl(normalizedSource.url))
       ) {
-        const relationshipRisk = knownMembershipEvidenceRisk(source)
+        const relationshipRisk = knownMembershipEvidenceRisk(normalizedSource)
         return {
-          ...source,
+          ...normalizedSource,
           supports: relationshipRisk
             ? supports.filter(
                 (support) => support !== 'series_membership' && support !== 'position',
@@ -172,7 +190,7 @@ export function canonicalizeAuthorityAcquisition(output, consultedUrls = null, p
         }
       }
       return {
-        ...source,
+        ...normalizedSource,
         supports: supports.filter((support) => support === 'identity'),
       }
     })
@@ -256,8 +274,12 @@ export function validateAuthorityAcquisition(target, output, consultedUrls, poli
     const comparable = comparableUrl(source.url)
     if (!comparable) errors.push(`authority source ${index} requires an HTTPS URL`)
     else if (consulted.has(comparable)) groundedUrlCount += 1
-    else errors.push(`authority source ${index} URL was not consulted by web search`)
+    else errors.push(`authority source ${index} URL is absent from the consulted-source manifest`)
     if (!sourceKinds.has(source.kind)) errors.push(`authority source ${index} kind is invalid`)
+    const reviewedKind = reviewedSourceKind(policy, source.url)
+    if (reviewedKind && source.kind !== reviewedKind) {
+      errors.push(`authority source ${index} kind does not match its reviewed origin profile`)
+    }
     if (!Array.isArray(source.supports) || !source.supports.length) {
       errors.push(`authority source ${index} requires at least one support type`)
     }
@@ -538,6 +560,32 @@ export function scoreAuthorityAcquisition(caseSet, results, model) {
       ),
       inputTokens,
       outputTokens,
+      retrievalAttempts: results.filter((result) => result.retrieval?.manifest?.startedAt).length,
+      retrievalSucceeded: results.filter((result) => result.retrieval?.status === 'retrieved')
+        .length,
+      retrievalSelected: results.filter((result) => result.selectedPass === 'retrieval').length,
+      retrievalRequests: results.reduce(
+        (total, result) => total + Number(result.retrieval?.manifest?.requests?.used ?? 0),
+        0,
+      ),
+      retrievalEncodedBytes: results.reduce(
+        (total, result) => total + Number(result.retrieval?.manifest?.response?.encodedBytes ?? 0),
+        0,
+      ),
+      secondModelCalls: results.filter(
+        (result) =>
+          result.retrievalInterpretation?.output && !result.retrievalInterpretation.cached,
+      ).length,
+      secondCached: results.filter((result) => result.retrievalInterpretation?.cached).length,
+      secondInputTokens: results.reduce(
+        (total, result) => total + Number(result.retrievalInterpretation?.usage?.input_tokens ?? 0),
+        0,
+      ),
+      secondOutputTokens: results.reduce(
+        (total, result) =>
+          total + Number(result.retrievalInterpretation?.usage?.output_tokens ?? 0),
+        0,
+      ),
     },
     candidateQueue: {
       seriesProposals: candidates.filter(
