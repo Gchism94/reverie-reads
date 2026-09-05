@@ -2339,6 +2339,171 @@
         ],
         "reviewNote": "Entangled Publishing identifies the exact title, author, ISBN, and release as The Broken Blades book 1."
       }
+    },
+    {
+      "id": "reverie-beneath-the-mask-distance",
+      "title": "Distance",
+      "authors": ["Luna Mason"],
+      "identifiers": { "isbn13": ["9781496757463"] },
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Beneath the Mask",
+            "aliases": ["Beneath the Mask Series"],
+            "role": "primary",
+            "positions": [{ "value": 1, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          {
+            "kind": "publisher",
+            "url": "https://www.kensingtonbooks.com/shop/distance/"
+          },
+          {
+            "kind": "publisher_catalog",
+            "url": "https://www.penguinrandomhouse.com/series/18W/beneath-the-mask/"
+          }
+        ],
+        "reviewNote": "Kensington identifies the exact title, author, ISBN, and Beneath the Mask membership; Penguin Random House's publisher catalog independently lists Distance as book 1 of the series."
+      }
+    },
+    {
+      "id": "reverie-cruel-castaways-ruthless-rival",
+      "title": "Ruthless Rival",
+      "authors": ["L.J. Shen"],
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "strata": ["recent_traditional"],
+      "publicationYear": 2022,
+      "publicationPath": "traditional",
+      "sampleSources": [
+        {
+          "kind": "author",
+          "url": "https://www.authorljshen.com/books/ruthless-rival/"
+        }
+      ],
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Cruel Castaways",
+            "aliases": [],
+            "role": "primary",
+            "positions": [{ "value": 1, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          {
+            "kind": "author",
+            "url": "https://www.authorljshen.com/books/ruthless-rival/"
+          },
+          {
+            "kind": "author",
+            "url": "https://www.authorljshen.com/reading-order-2/"
+          }
+        ],
+        "reviewNote": "The author's exact title page identifies Ruthless Rival as Cruel Castaways number 1 with a 2022 release date; the author's reading order independently groups it under the named Montlake series."
+      }
+    },
+    {
+      "id": "reverie-flame-and-thorns-war-of-fire-and-fury",
+      "title": "War of Fire and Fury",
+      "authors": ["Marion Blackwood"],
+      "identifiers": { "isbn13": ["9798347115570"] },
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Flame and Thorns",
+            "aliases": [],
+            "role": "primary",
+            "positions": [{ "value": 5, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          { "kind": "author", "url": "https://www.marionblackwood.com/books" },
+          {
+            "kind": "publisher",
+            "url": "https://www.simonandschuster.com/books/War-of-Fire-and-Fury/Marion-Blackwood/Flame-and-Thorns/9798347115570"
+          }
+        ],
+        "reviewNote": "The author's reading-order page places War of Fire and Fury fifth in the five-book Flame and Thorns series, and Simon & Schuster's exact publisher record independently labels it book 5."
+      }
+    },
+    {
+      "id": "reverie-hell-bent-my-demon-hunter",
+      "title": "My Demon Hunter",
+      "authors": ["Aurora Ascher"],
+      "identifiers": {
+        "isbn13": ["9781496755865", "9781496756763", "9781496755926"]
+      },
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Hell Bent",
+            "aliases": ["Hell Bent Series"],
+            "role": "primary",
+            "positions": [{ "value": 2, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          { "kind": "author", "url": "https://auroraascher.com/hell-bent/" },
+          {
+            "kind": "publisher",
+            "url": "https://www.kensingtonbooks.com/shop/my-demon-hunter/"
+          }
+        ],
+        "reviewNote": "The author's Hell Bent page labels the exact work book two, while Kensington's exact title record independently confirms the series and three edition ISBNs."
+      }
+    },
+    {
+      "id": "reverie-into-darkness-game-on",
+      "title": "Game on",
+      "authors": ["Navessa Allen"],
+      "identifiers": { "isbn13": ["9781638932277"] },
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "strata": ["recent_traditional"],
+      "publicationYear": 2026,
+      "publicationPath": "traditional",
+      "sampleSources": [
+        {
+          "kind": "publisher",
+          "url": "https://zandoprojects.com/books/game-on-paperback"
+        }
+      ],
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Into Darkness",
+            "aliases": ["Into Darkness Series"],
+            "role": "primary",
+            "positions": [{ "value": 3, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          { "kind": "author", "url": "https://navessaallen.com/books-option-1/" },
+          {
+            "kind": "publisher",
+            "url": "https://zandoprojects.com/books/game-on-paperback"
+          }
+        ],
+        "reviewNote": "The author calls Game On book three of Into Darkness; Zando independently gives the same series and position with the exact author, 2026 sale date, and ISBN."
+      }
     }
   ],
   "sharedSources": {
