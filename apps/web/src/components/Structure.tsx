@@ -419,9 +419,8 @@ export function Frame({
           className="pointer-events-none absolute right-3 top-2 text-[12px] leading-none"
           style={{
             fontFamily: 'var(--font-hand)',
-            color: 'var(--violet)',
+            color: 'var(--muted)',
             transform: 'rotate(-4deg)',
-            opacity: 0.85,
           }}
         >
           clarify?

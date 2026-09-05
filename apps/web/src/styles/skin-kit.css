@@ -522,7 +522,7 @@
   text-transform: var(--label-transform);
 }
 .rv-mobile-tab-active {
-  color: var(--primary) !important;
+  color: var(--accent-ink) !important;
 }
 .rv-mobile-add {
   box-shadow:
@@ -755,7 +755,7 @@
   background: color-mix(in srgb, var(--card-solid) 95%, transparent);
 }
 [data-skin='hearth'] .rv-mobile-tab-active {
-  background: color-mix(in srgb, var(--thread) 9%, transparent);
+  background: var(--card-solid);
 }
 
 /* Almanac · a field index: dense manual edge, double rule and a decisive indexed selection. */

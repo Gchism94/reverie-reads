@@ -240,16 +240,23 @@ export function useArchivedSeriesList() {
   })
 }
 
-export function useArchiveSeries() {
+export function useArchiveSeries(permanent = false) {
   const qc = useQueryClient()
   return useMutation({
     meta: { action: 'The series deletion' },
     mutationFn: async (series: Pick<UiSeries, 'id' | 'name'>) => {
-      const { data, error } = await supabase.rpc('archive_personal_series', {
-        p_series: series.id,
-      })
-      if (error) throw error
-      return data as { series_id: string; entries_preserved: number; books_cleared: number }
+      const { data, error } = await supabase.rpc(
+        permanent ? 'delete_personal_series' : 'archive_personal_series',
+        { p_series: series.id },
+      )
+      if (error) {
+        if (permanent && (error.code === 'PGRST202' || error.code === '42883'))
+          throw new Error(
+            'Permanent series deletion is not available on this server yet. Your series and books have not changed.',
+          )
+        throw error
+      }
+      return data as { series_id: string }
     },
     onSuccess: (_data, series) => {
       void qc.invalidateQueries({ queryKey: seriesListKey })

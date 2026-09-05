@@ -104,7 +104,7 @@ export function AuthScreen() {
           <span aria-hidden className="text-[34px]">
             ✉️
           </span>
-          <h1 className="mt-3 text-[26px] italic leading-tight text-ink" style={displayFont}>
+          <h1 className="mt-3 text-[26px] leading-[1.2] text-ink" style={displayFont}>
             Check your inbox
           </h1>
           <p className="mt-3 text-[14px] leading-relaxed text-muted">
@@ -135,14 +135,14 @@ export function AuthScreen() {
         : 'Welcome back'
   const sub =
     mode === 'signup'
-      ? 'Start your library tonight. Your shelves, yours alone.'
+      ? 'Make a little room for your books. Your library starts here.'
       : mode === 'forgot'
         ? 'Enter your email and we’ll send a link to set a new one.'
         : 'Your shelves are just as you left them.'
 
   return (
     <Shell>
-      <h1 className="text-[27px] italic leading-tight text-ink" style={displayFont}>
+      <h1 className="text-[27px] leading-[1.2] text-ink" style={displayFont}>
         {title}
       </h1>
       <p className="mt-2 text-[14px] text-muted">{sub}</p>

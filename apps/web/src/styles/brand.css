@@ -1,90 +1,98 @@
-/* Genre-neutral GOLD master brand — the unauthenticated front door (landing + auth). This is the
-   pre-skin master identity, NOT one of the four genre skins: a fixed gold-on-night palette so the
-   front door reads the same for everyone before they pick (or are given) a skin. Scope it with the
-   `.gold-brand` class; the subtree then reads these token values through the normal utilities.
-
-   The one rule that matters: gold CTAs use DARK text (--on-primary: #1a0f14) — white-on-gold fails
-   AA (the same lesson as the cover marks). Values mirror the handed-off auth design's :root. */
+/* Reverie's genre-neutral front door: midnight ink, parchment, aged brass.
+   The legacy class name stays compatible with auth; product previews own separate token scopes. */
 .gold-brand {
-  --bg0: #0b0612;
-  --bg1: #15091f;
-  --ink: #f6e9f1;
-  --muted: #b3a6c6;
-  --faint: #8a7d9e;
-  --primary: #f0b14e;
-  --gold: #f0b14e;
-  --on-primary: #1a0f14; /* dark text on the luminous gold CTA (~8.9:1 AA) */
-  --card: #17112a;
-  --card-2: #1f1636;
-  --card-solid: #17112a;
-  --line: rgba(240, 177, 78, 0.18);
-  --field: rgba(246, 233, 241, 0.06);
-  --chip: rgba(246, 233, 241, 0.06);
-  --ok: #7ecb9a;
-  --violet: #7b3fa0;
-  --danger: #e8866b;
-  --star: #f0b14e;
-  --shadow: 0 22px 60px rgba(0, 0, 0, 0.5);
-  --font-display: 'Fraunces', ui-serif, Georgia, serif;
+  --bg0: #10121c;
+  --bg1: #202336;
+  --ink: #f4ecdd;
+  --muted: #c2bbc7;
+  --faint: #b3afbe;
+  --primary: #d7bc88;
+  --gold: #d7bc88;
+  --on-primary: #19151d;
+  --eyebrow: #d7bc88;
+  --card: #20212e;
+  --card-2: #292938;
+  --card-solid: #20212e;
+  --line: rgba(215, 188, 136, 0.24);
+  --field: #292938;
+  --chip: #292938;
+  --ok: #afd0ac;
+  --violet: #777795;
+  --danger: #f2b7a5;
+  --star: #d7bc88;
+  --shadow: 0 18px 56px rgba(0, 0, 0, 0.4);
+  --font-display: 'Newsreader', ui-serif, Georgia, serif;
   --font-sans: 'Hanken Grotesk', system-ui, sans-serif;
-
-  /* The front door paints its OWN night sky so it's gold-on-night for everyone, independent of any
-     skin a returning visitor may have persisted on <html>. Static stars — no animation, so it's
-     reduced-motion-safe by construction (no twinkle to suppress). */
+  --accent: var(--primary);
+  --accent-fill: var(--primary);
+  --accent-ink: var(--ink);
+  --panel-fill: var(--card-solid);
+  --label-font: var(--font-sans);
+  --label-transform: none;
+  --label-tracking: 0.04em;
+  --ctl-clip: none;
+  --cta-hi: var(--primary);
+  --cta-lo: var(--primary);
+  --cta-ink: var(--on-primary);
+  --cta-border: transparent;
+  --cta-shadow: none;
+  --control-font: var(--font-sans);
+  --control-transform: none;
+  --control-tracking: 0;
+  --radius-control: 8px;
+  --radius-panel: 16px;
+  --radius-card: 10px;
+  --brand-glow-cool: rgba(106, 103, 154, 0.22);
+  --brand-glow-warm: rgba(192, 139, 72, 0.16);
+  --brand-lamplight: rgba(216, 169, 101, 0.2);
+  --brand-dust: rgba(245, 227, 191, 0.28);
+  position: relative;
+  isolation: isolate;
   min-height: 100dvh;
+  font-family: var(--font-sans);
   color: var(--ink);
-  background-color: #0b0612;
+  background-color: var(--bg0);
   background-image:
-    radial-gradient(1.5px 1.5px at 18% 22%, rgba(240, 177, 78, 0.7), transparent),
-    radial-gradient(1.5px 1.5px at 73% 16%, rgba(240, 177, 78, 0.5), transparent),
-    radial-gradient(1.5px 1.5px at 36% 68%, rgba(240, 177, 78, 0.6), transparent),
-    radial-gradient(2px 2px at 82% 60%, rgba(240, 177, 78, 0.6), transparent),
-    radial-gradient(1.5px 1.5px at 55% 38%, rgba(246, 233, 241, 0.5), transparent),
-    radial-gradient(1.5px 1.5px at 9% 78%, rgba(246, 233, 241, 0.4), transparent),
-    radial-gradient(140% 120% at 50% -10%, #15091f, #0b0612);
+    radial-gradient(ellipse at 82% 42%, var(--brand-glow-warm), transparent 48%),
+    radial-gradient(ellipse at 14% 3%, var(--brand-glow-cool), transparent 62%),
+    radial-gradient(1px 1px at 8% 28%, var(--brand-dust), transparent),
+    radial-gradient(1px 1px at 41% 15%, var(--brand-dust), transparent),
+    radial-gradient(1px 1px at 92% 78%, var(--brand-dust), transparent);
   background-attachment: fixed;
 }
-
-/* Explicit placeholder colour so it clears AA on the dark field (browser defaults can be too faint). */
 .gold-brand input::placeholder {
   color: var(--faint);
   opacity: 1;
 }
-
-/* Eyebrow/label accent — gold on the dark brand, a deep amber on light bands (both clear AA as
-   small text on their surface). Components read var(--eyebrow). */
-.gold-brand {
-  --eyebrow: #f0b14e;
-}
-
-/* Light marketing band (Features / For every reader) — the landing alternates dark and cream
-   sections for rhythm. Cream surface with dark ink + a deep-amber accent so small text stays AA;
-   gold CTAs keep their dark text and clear AA on either surface. Scope a section with `.band-light`. */
 .gold-brand .band-light {
-  --bg0: #f7f1e6;
-  --bg1: #efe6d4;
-  --ink: #241a12;
-  --muted: #6a5c46;
-  --faint: #8a7a60;
-  --eyebrow: #7a4f12;
-  --card: #fffaf1;
-  --card-2: #f3ead9;
-  --card-solid: #fffaf1;
-  --line: rgba(122, 79, 18, 0.2);
-  --field: rgba(36, 26, 18, 0.05);
-  --chip: rgba(36, 26, 18, 0.05);
-  /* gold CTAs + their dark text are unchanged (AA on gold regardless of band) */
+  --bg0: #f1eadc;
+  --bg1: #e8dfd0;
+  --ink: #302c37;
+  --muted: #675e68;
+  --faint: #675e68;
+  --eyebrow: #514351;
+  --card: #f8f1e7;
+  --card-2: #e8dfd0;
+  --card-solid: #f8f1e7;
+  --line: rgba(48, 44, 55, 0.2);
+  --field: #e8dfd0;
+  --chip: #e8dfd0;
   background: var(--bg0);
   color: var(--ink);
 }
 
-/* Drifting nebula glows for the living night sky — motion via the project's .rv-anim convention,
-   which prefers-reduced-motion already disables (tokens.css). Decorative, aria-hidden. */
-.gold-brand .nebula {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(70px);
-  opacity: 0.18;
+/* One fixed, clipped light layer; no blur filter, particles, or movement on reading surfaces.
+   The static opacity is also the no-JavaScript and reduced-motion appearance. */
+.brand-atmosphere {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
   pointer-events: none;
-  mix-blend-mode: screen;
+}
+.brand-lamplight {
+  position: absolute;
+  inset: -4%;
+  opacity: 0.52;
+  background: radial-gradient(ellipse at 72% 66%, var(--brand-lamplight), transparent 55%);
 }

@@ -1,11 +1,15 @@
 {
+  "hankengrotesk": {
+    "version": "v12",
+    "files": 40
+  },
+  "newsreader": {
+    "version": "v26",
+    "files": 12
+  },
   "fraunces": {
     "version": "v38",
     "files": 21
-  },
-  "hankengrotesk": {
-    "version": "v12",
-    "files": 20
   },
   "cormorantgaramond": {
     "version": "v21",

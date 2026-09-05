@@ -1,47 +1,27 @@
 import { expect, test } from '@playwright/test'
 
 test.describe('signed-out landing', () => {
-  test('sample scopes, saving, and starting work without an account or persistent writes', async ({
-    page,
-  }) => {
+  test('the guest library works without an account or persistent writes', async ({ page }) => {
     const writes: string[] = []
     page.on('request', (request) => {
-      if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method())) {
+      if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method()))
         writes.push(`${request.method()} ${new URL(request.url()).pathname}`)
-      }
     })
     await page.goto('/')
-    const demo = page.getByRole('region', { name: 'A place to start' })
-    const atlas = demo.getByRole('article', { name: 'The Lantern Atlas' })
-    const planet = demo.getByRole('article', { name: 'Notes from a Quiet Planet' })
-    await expect(demo.getByRole('article')).toHaveCount(2)
-    await expect(planet).toContainText('borrowed')
-    await atlas.getByRole('button', { name: 'Save for later' }).click()
-    await expect(demo.getByRole('status')).toContainText(
-      'Saved The Lantern Atlas for later in this sample.',
-    )
-    await expect(demo.getByText('Saved for later:', { exact: true }).locator('..')).toContainText(
-      'The Lantern Atlas',
-    )
-    await planet.getByRole('button', { name: 'Start reading' }).click()
-    await expect(planet).toHaveCount(0)
-    await expect(demo.getByRole('heading', { name: 'A place to start' })).toBeFocused()
-    await expect(demo.getByText('Reading now:', { exact: true }).locator('..')).toContainText(
-      'Notes from a Quiet Planet',
-    )
-    await demo.getByRole('combobox', { name: 'Choose from' }).selectOption('wishlist')
-    await expect(demo.getByRole('article')).toHaveCount(1)
-    await expect(demo.getByRole('article', { name: 'A Garden in Winter' })).toContainText(
-      'wishlist',
-    )
-    await demo.getByRole('button', { name: 'Reset sample' }).click()
-    await expect(demo.getByRole('article')).toHaveCount(2)
-    await expect(demo.getByText('Reading now:', { exact: true })).toHaveCount(0)
-    await expect(demo.getByText('Saved for later:', { exact: true })).toHaveCount(0)
-    await atlas.getByRole('button', { name: 'Start reading' }).click()
+    const demo = page.getByTestId('guest-library-compact')
+    await demo.getByRole('button', { name: 'Next read', exact: true }).click()
+    const book = demo.getByRole('article', { name: 'The Left Hand of Darkness' })
+    await book.getByRole('button', { name: 'Save for later' }).click()
+    await expect(demo.getByTestId('guest-notice')).toContainText('saved for later')
+    await book.getByRole('button', { name: 'Start reading' }).click()
+    await expect(demo.getByRole('heading', { name: 'Book details' })).toBeFocused()
+    await expect(demo.getByRole('checkbox', { name: 'Borrowed', exact: true })).toBeChecked()
+    await expect(demo.getByRole('checkbox', { name: 'Owned', exact: true })).not.toBeChecked()
     await page.reload()
-    await expect(demo.getByRole('article')).toHaveCount(2)
-    await expect(demo.getByText('Reading now:', { exact: true })).toHaveCount(0)
+    await expect(demo).toContainText('2 books')
+    await demo.getByRole('button', { name: 'Next read', exact: true }).click()
+    await expect(book).toBeVisible()
+    await expect(book).toContainText('Already in your hands')
     expect(writes).toEqual([])
   })
 
@@ -53,8 +33,8 @@ test.describe('signed-out landing', () => {
     await expect(
       page.getByRole('heading', { level: 1, name: 'Find your next read in your own library.' }),
     ).toBeVisible()
-    await expect(page.getByTestId('landing-desktop-screen').first()).toBeVisible()
-    await expect(page.getByTestId('landing-mobile-screen').first()).toBeVisible()
+    await expect(page.getByTestId('guest-library-compact')).toBeVisible()
+    await expect(page.getByTestId('guest-library-full')).toBeAttached()
     for (const heading of [
       'Find a room that feels like you.',
       'Keep what the book leaves with you.',
@@ -135,6 +115,9 @@ test.describe('signed-out landing', () => {
     await expect(
       page.getByRole('heading', { name: 'Find a room that feels like you.' }),
     ).toBeAttached()
+    const light = page.getByTestId('brand-lamplight')
+    await expect(light).toHaveCount(1)
+    expect(await light.evaluate((el) => el.getAnimations().length)).toBe(0)
     const animations = await page.locator('.rv-anim').evaluateAll((nodes) =>
       nodes.map((node) => ({
         name: getComputedStyle(node).animationName,
@@ -144,6 +127,36 @@ test.describe('signed-out landing', () => {
     expect(animations.every(({ name, duration }) => name === 'none' || duration === '0s')).toBe(
       true,
     )
+  })
+
+  test('lamplight moves gently behind steady text and stops when reduced motion is requested', async ({
+    page,
+  }) => {
+    await page.emulateMedia({ reducedMotion: 'no-preference' })
+    await page.goto('/')
+    const light = page.getByTestId('brand-lamplight')
+    const heading = page.getByTestId('landing-display-heading')
+    await expect(heading).toBeVisible()
+    await page.evaluate(() => document.fonts.ready)
+    const before = await heading.boundingBox()
+    await expect
+      .poll(() => light.evaluate((el) => el.getAnimations()[0]?.playState))
+      .toBe('running')
+    const transform = await light.evaluate((el) => getComputedStyle(el).transform)
+    await expect
+      .poll(() => light.evaluate((el) => getComputedStyle(el).transform))
+      .not.toBe(transform)
+    expect(
+      await light.evaluate((el) => Number(el.getAnimations()[0]?.effect?.getTiming().duration)),
+    ).toBeGreaterThanOrEqual(10000)
+    expect(await heading.boundingBox()).toEqual(before)
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await expect.poll(() => light.evaluate((el) => el.getAnimations().length)).toBe(0)
+    expect(await light.evaluate((el) => getComputedStyle(el).transform)).toBe('none')
+    const demo = page.getByTestId('guest-library-compact')
+    await demo.getByRole('button', { name: 'Next read', exact: true }).click()
+    await demo.getByRole('button', { name: 'Save for later' }).click()
+    await expect(demo.getByTestId('guest-notice')).toContainText('saved for later')
   })
 
   test('the nine-room atlas changes the complete product stage and its mode', async ({ page }) => {
@@ -156,8 +169,7 @@ test.describe('signed-out landing', () => {
     const stage = page.getByTestId('active-reading-room')
     await expect(stage).toHaveAttribute('data-active-skin', 'umbra')
     await expect(stage.getByRole('heading', { name: 'The Gaslight room' })).toBeVisible()
-    await expect(stage.getByTestId('landing-desktop-screen')).toBeVisible()
-    await expect(stage.getByTestId('landing-mobile-screen')).toBeVisible()
+    await expect(stage.getByTestId('guest-library-full')).toBeVisible()
 
     await stage.getByRole('button', { name: 'Day' }).click()
     await expect(stage).toHaveAttribute('data-active-mode', 'light')
@@ -166,4 +178,39 @@ test.describe('signed-out landing', () => {
     await expect(stage).toHaveAttribute('data-active-skin', 'folio')
     await expect(rooms.getByRole('tab', { name: /Marginalia/i })).toBeFocused()
   })
+})
+
+test('room selection reaches earlier examples, changes real cover structures, and keeps sample state', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.goto('/')
+  const demo = page.getByTestId('guest-library-compact')
+  await demo.getByRole('button', { name: 'Add books', exact: true }).click()
+  await demo.getByRole('button', { name: 'Enter a book', exact: true }).click()
+  await demo.getByRole('textbox', { name: 'Book title' }).fill('A book of my own')
+  await demo.getByRole('button', { name: 'Add this book', exact: true }).click()
+  await page.getByRole('tab', { name: /Aphelion/ }).click()
+  const examples = page.getByTestId('room-example')
+  await expect(examples).toHaveCount(3)
+  for (const example of await examples.all())
+    await expect(example).toHaveAttribute('data-skin', 'aphelion')
+  await expect(demo.getByRole('img', { name: /A book of my own.*placeholder/ })).toContainText(
+    'APH·',
+  )
+  await expect(demo).toContainText('3 books')
+  await page.getByTestId('active-reading-room').getByRole('button', { name: 'Night' }).click()
+  for (const example of await examples.all())
+    await expect(example).toHaveAttribute('data-mode', 'dark')
+  const still = await examples
+    .first()
+    .locator('canvas')
+    .evaluate((canvas) => (canvas as HTMLCanvasElement).toDataURL())
+  await page.waitForTimeout(350)
+  expect(
+    await examples
+      .first()
+      .locator('canvas')
+      .evaluate((canvas) => (canvas as HTMLCanvasElement).toDataURL()),
+  ).toBe(still)
 })

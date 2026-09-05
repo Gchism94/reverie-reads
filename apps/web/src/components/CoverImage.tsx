@@ -23,6 +23,8 @@ export function CoverImage({
   className = 'h-full w-full object-cover',
   thumb = false,
   ghost = false,
+  reportErrors = true,
+  onExhausted,
 }: {
   book: {
     id?: string
@@ -45,6 +47,9 @@ export function CoverImage({
    * placeholder shows, the ghost signal is carried by the caller's dashed frame instead.
    */
   ghost?: boolean
+  /** Temporary public examples must not send visitor-entered titles to cover telemetry. */
+  reportErrors?: boolean
+  onExhausted?: () => void
 }) {
   const [failed, setFailed] = useState<Set<string>>(() => new Set())
   const chain = coverCandidates(book.cover, {
@@ -58,7 +63,8 @@ export function CoverImage({
   const isLast = candidates.length === 1
   const fail = (): void => {
     setFailed((prev) => new Set(prev).add(src))
-    if (book.id && isLast)
+    if (isLast) onExhausted?.()
+    if (reportErrors && book.id && isLast)
       markCoverBroken({ id: book.id, title: book.title, first: book.first, last: book.last })
   }
   return (

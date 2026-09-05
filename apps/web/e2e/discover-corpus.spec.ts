@@ -125,7 +125,7 @@ async function stub(page: Page) {
 }
 
 const grid = (page: Page) => page.getByTestId('corpus-grid')
-const cards = (page: Page) => grid(page).locator(':scope > div')
+const cards = (page: Page) => grid(page).locator(':scope > article')
 
 async function openMystery(page: Page) {
   const c = await client()
@@ -194,4 +194,42 @@ test('a corpus pick IS an Add prefill — same contract as an external hit', asy
   await expect(page.getByPlaceholder('Title', { exact: true })).toHaveValue(T(2), {
     timeout: 10_000,
   })
+})
+
+test('a catalog cover opens details without adding a book and restores focus on close', async ({
+  page,
+}, testInfo) => {
+  const c = await client()
+  await openMystery(page)
+  await ok(
+    c.admin
+      .from('works')
+      .update({
+        description: 'A quiet journey through an unfamiliar city.',
+        publisher: 'Example Press',
+      })
+      .eq('title', T(2)),
+    'preview description fixture',
+  )
+  const before = await c.sb.from('books').select('id').eq('owner_id', c.uid)
+  const opener = page.getByRole('button', { name: `View details for ${T(2)}`, exact: true })
+  await opener.click()
+  const dialog = page.getByRole('dialog', { name: T(2), exact: true })
+  await expect(dialog.getByText('A quiet journey through an unfamiliar city.')).toBeVisible()
+  await expect(dialog.getByText('Example Press')).toBeVisible()
+  await page.screenshot({ path: testInfo.outputPath('discover-book-details.png') })
+  await expect(dialog.getByRole('link', { name: 'Add to wishlist' })).toHaveAttribute(
+    'href',
+    /want=true/,
+  )
+  await dialog.getByRole('button', { name: 'Keep browsing' }).click()
+  await expect(dialog).toHaveCount(0)
+  await expect(opener).toBeFocused()
+  const after = await c.sb.from('books').select('id').eq('owner_id', c.uid)
+  expect(after.error).toBeNull()
+  expect(after.data).toEqual(before.data)
+  await page.getByRole('button', { name: `View details for ${T(1)}`, exact: true }).click()
+  await expect(
+    page.getByRole('dialog').getByRole('link', { name: 'Open your book' }),
+  ).toHaveAttribute('href', /\/book\//)
 })

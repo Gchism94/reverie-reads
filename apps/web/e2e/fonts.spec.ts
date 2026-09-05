@@ -8,7 +8,7 @@ import { expect, test, type Page } from './support/fixtures'
 // The two directions this file has always owned survive the move, re-aimed at the local path:
 //   · SERVED — the app requests its skin stylesheet, the browser registers the family, real bytes
 //     load (document.fonts.check goes true only once a REGISTERED face has its data), and the
-//     intended stack lands on the element carrying the skin's voice. This is the direction the old
+//     intended stack lands on the element carrying the brand's voice. This is the direction the old
 //     suite-wide stub could have silently masked: a broken /fonts/ path — a deploy that dropped
 //     public/fonts, a renamed file, a bad rewrite — fails here, loudly, and nowhere else vacuously.
 //   · DEAD — the stylesheet request fails (a broken deploy artifact is the local analogue of the
@@ -19,8 +19,8 @@ import { expect, test, type Page } from './support/fixtures'
 
 const FONT_CSS_ROUTE = '**/fonts/*.css'
 
-/** The families the landing page's skin (tryst) depends on — see FONT_CSS.tryst. */
-const TRYST_DISPLAY = 'Fraunces'
+/** The landing brand is independent of the reader's selected room. */
+const BRAND_DISPLAY = 'Newsreader'
 
 const registeredFamilies = (page: Page): Promise<string[]> =>
   page.evaluate(() =>
@@ -33,7 +33,7 @@ const skinFontHrefs = (page: Page): Promise<string[]> =>
     [...document.querySelectorAll('link[data-skin-font]')].map((l) => l.getAttribute('href') ?? ''),
   )
 
-test('the app loads its self-hosted skin stylesheet, and the real face arrives', async ({
+test('the app loads its self-hosted brand stylesheet, and the real face arrives', async ({
   page,
 }) => {
   // No interception in this direction — the entire point is that the real, shipped files serve.
@@ -49,11 +49,12 @@ test('the app loads its self-hosted skin stylesheet, and the real face arrives',
     'no link[data-skin-font] — the boot script did not inject a pairing',
   ).toBeGreaterThan(0)
   expect(hrefs.every((h) => h.startsWith('/fonts/'))).toBe(true)
+  await expect(page.locator('link[rel="stylesheet"][href="/fonts/brand.css"]')).toHaveCount(1)
   expect(hrefs.some((h) => h.includes('googleapis') || h.includes('gstatic'))).toBe(false)
 
   // (b) THE BROWSER acted on it: stylesheet parsed, family registered.
   await page.evaluate(() => (document as Document & { fonts: FontFaceSet }).fonts.ready)
-  expect(await registeredFamilies(page)).toContain(TRYST_DISPLAY)
+  expect(await registeredFamilies(page)).toContain(BRAND_DISPLAY)
 
   // (c) REAL BYTES loaded — not just a parsed rule. For a REGISTERED face, `fonts.check()` is
   //     true only once its data is available, so this is the assertion that catches a stylesheet
@@ -62,7 +63,7 @@ test('the app loads its self-hosted skin stylesheet, and the real face arrives',
   //     product defect and exactly what this spec exists to catch.)
   //
   // Probe the face the heading ACTUALLY renders, including weight and style. A bare
-  // `16px 'Fraunces'` asks FontFaceSet for the default 400/normal face instead; when the page only
+  // `16px 'Newsreader'` asks FontFaceSet for the default 400/normal face instead; when the page only
   // uses 600, that unused face correctly remains unloaded and the proxy reports false even though
   // the rendered face and its bytes are present.
   const renderedFace = await heading.evaluate((el) => {
@@ -75,17 +76,24 @@ test('the app loads its self-hosted skin stylesheet, and the real face arrives',
         page.evaluate(
           ({ family, fontStyle, fontWeight }) =>
             document.fonts.check(`${fontStyle} ${fontWeight} 16px '${family}'`, 'Reverie'),
-          { family: TRYST_DISPLAY, ...renderedFace },
+          { family: BRAND_DISPLAY, ...renderedFace },
         ),
       {
-        message: `the rendered ${TRYST_DISPLAY} face never finished loading from /fonts/files/`,
+        message: `the rendered ${BRAND_DISPLAY} face never finished loading from /fonts/files/`,
       },
     )
     .toBe(true)
 
-  // (d) …and the intended stack is applied to the element that carries the skin's voice.
+  // (d) …and the intended stack is applied to the element that carries the brand's voice.
   const stack = await heading.evaluate((el) => getComputedStyle(el).fontFamily)
-  expect(stack).toContain(TRYST_DISPLAY)
+  expect(stack).toContain(BRAND_DISPLAY)
+  const italic = await page.evaluate(() => ({
+    registered: [...document.fonts].some(
+      (face) => face.family === 'Newsreader' && face.style === 'italic',
+    ),
+    loaded: document.fonts.check("italic 500 60px 'Newsreader'", 'own library'),
+  }))
+  expect(italic).toEqual({ registered: true, loaded: true })
 })
 
 test('a dead font path degrades to the declared fallback — readable, never tofu', async ({
@@ -101,7 +109,7 @@ test('a dead font path degrades to the declared fallback — readable, never tof
   await expect(heading).toBeVisible()
 
   // The webfont genuinely did not arrive. Asserted on REGISTRATION, not `fonts.check()`: with the
-  // stylesheet aborted no @font-face exists, the browser treats 'Fraunces' as an unknown system
+  // stylesheet aborted no @font-face exists, the browser treats 'Newsreader' as an unknown system
   // family, and `check()` would return TRUE (nothing to load). The registered-face set has no such
   // ambiguity. (Measured in this spec's CDN era: the check() form passed for the wrong reason.)
   await page.evaluate(() =>
@@ -110,7 +118,7 @@ test('a dead font path degrades to the declared fallback — readable, never tof
   expect(
     await registeredFamilies(page),
     'the font stylesheet was supposed to be blocked — no @font-face should have registered',
-  ).not.toContain(TRYST_DISPLAY)
+  ).not.toContain(BRAND_DISPLAY)
 
   // The declared fallback is still in the cascade (fontConfig.test.ts enforces a generic tail for
   // every skin), so the browser has something real to render with.

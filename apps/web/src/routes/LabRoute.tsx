@@ -1,3 +1,4 @@
+import { SkinAtmosphereCanvas } from '../components/SkinAtmosphereCanvas'
 import { useEffect } from 'react'
 import { createRoute } from '@tanstack/react-router'
 import { type SkinId } from '@reverie/core'
@@ -167,7 +168,7 @@ function Cell({ skin, mode, label }: { skin: SkinId; mode: 'dark' | 'light'; lab
       className="relative overflow-hidden"
       style={{ background: 'var(--bg0)', color: 'var(--ink)' }}
     >
-      <div className="rv-skin-texture" />
+      <SkinAtmosphereCanvas skin={skin} mode={mode} />
       <div className="relative flex flex-col gap-5">
         <div className="skin-label text-[11.5px] text-muted">{label}</div>
         <div className="flex flex-wrap items-start gap-5">

@@ -10,6 +10,7 @@ const primaryButton =
 /** Shared presentation; the reader route owns persistence and the public sample owns only memory. */
 export function NextReadCardView({
   book,
+  reportCoverErrors = true,
   reason,
   isRead = false,
   onOpen,
@@ -20,6 +21,7 @@ export function NextReadCardView({
   startError = false,
 }: {
   book: Book
+  reportCoverErrors?: boolean
   reason: string
   isRead?: boolean
   onOpen?: () => void
@@ -32,11 +34,11 @@ export function NextReadCardView({
   const identity = (
     <>
       <div className="aspect-[2/3] w-20 shrink-0 overflow-hidden rounded-lg border border-line bg-[color:var(--field)]">
-        <CoverImage book={book} />
+        <CoverImage reportErrors={reportCoverErrors} book={book} />
       </div>
       <div className="min-w-0">
         <h3
-          className="break-words text-lg font-semibold text-ink"
+          className="break-words text-lg font-semibold leading-[1.3] text-ink"
           style={{ fontFamily: 'var(--font-display)' }}
         >
           {book.title}

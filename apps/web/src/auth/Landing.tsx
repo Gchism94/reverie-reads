@@ -1,9 +1,11 @@
 import { Suspense, lazy, useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { APP_NAME } from '@reverie/core'
+import { APP_NAME, type SkinId, type ResolvedMode } from '@reverie/core'
 import { Wordmark } from './Wordmark'
 import { ChunkBoundary } from '../components/ChunkBoundary'
-import { NextReadDemo } from './landing/NextReadDemo'
+import { GuestLibrary } from './landing/guest/GuestLibrary'
+import { GuestLibraryProvider } from './landing/guest/GuestLibraryProvider'
+import { ReadingRoomPreview, RoomCaption, type RoomSelection } from './landing/ReadingRoomPreview'
 
 // Below-the-fold sections are a separate chunk so the hero paints first for new visitors.
 const LandingBelowFold = lazy(() => import('./landing/below-fold'))
@@ -15,43 +17,6 @@ const NAV = [
   ['Privacy', '#privacy'],
 ] as const
 
-/** Drifting nebula glows over the brand's static starfield — the living night sky. Motion via the
- *  project's `.rv-anim` convention, which prefers-reduced-motion disables. Decorative. */
-function NightSky() {
-  return (
-    <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-      <div
-        className="nebula rv-anim"
-        style={{
-          width: '52vmax',
-          height: '52vmax',
-          top: '-14%',
-          left: '-8%',
-          background: 'var(--gold)',
-          animationName: 'rv-drift-a',
-          animationDuration: '40s',
-          animationTimingFunction: 'ease-in-out',
-          animationIterationCount: 'infinite',
-        }}
-      />
-      <div
-        className="nebula rv-anim"
-        style={{
-          width: '46vmax',
-          height: '46vmax',
-          top: '10%',
-          right: '-12%',
-          background: 'var(--violet)',
-          animationName: 'rv-drift-b',
-          animationDuration: '47s',
-          animationTimingFunction: 'ease-in-out',
-          animationIterationCount: 'infinite',
-        }}
-      />
-    </div>
-  )
-}
-
 function Nav() {
   const [open, setOpen] = useState(false)
   return (
@@ -59,7 +24,7 @@ function Nav() {
       aria-label="Landing"
       className="sticky top-0 z-20 backdrop-blur-lg"
       style={{
-        background: 'color-mix(in srgb, var(--bg0) 72%, transparent)',
+        background: 'var(--bg0)',
         borderBottom: '1px solid var(--line)',
       }}
     >
@@ -147,7 +112,7 @@ function Nav() {
   )
 }
 
-function Hero() {
+function Hero({ skin, mode }: RoomSelection) {
   return (
     <header
       id="top"
@@ -163,13 +128,11 @@ function Hero() {
           </p>
           <h1
             data-testid="landing-display-heading"
-            className="mt-5 max-w-[13ch] text-balance text-[clamp(46px,5.6vw,74px)] leading-[1.02] text-ink"
-            style={display}
+            className="mt-5 max-w-[16ch] text-balance text-[clamp(42px,4.8vw,68px)] leading-[1.14] tracking-[-0.022em] text-ink"
+            style={{ ...display, fontWeight: 500 }}
           >
             Find your next read in your{' '}
-            <span className="italic" style={{ color: 'var(--gold)' }}>
-              own library.
-            </span>
+            <span style={{ color: 'var(--gold)', fontStyle: 'italic' }}>own library.</span>
           </h1>
           <p className="mt-6 max-w-[42ch] text-base leading-relaxed text-muted sm:text-lg">
             A quiet place for your books, your notes, and the way a story stays with you. Settle in,
@@ -198,33 +161,46 @@ function Hero() {
             Private by default · Nine reading rooms · Export anytime
           </p>
         </div>
-        <div className="min-w-0 rounded-[var(--radius-panel)] border border-line bg-card p-4 shadow-[var(--shadow)] sm:p-6">
-          <NextReadDemo />
-        </div>
+        <ReadingRoomPreview
+          skin={skin}
+          mode={mode}
+          className="min-w-0 border border-line p-4 shadow-[var(--shadow)] sm:p-6"
+        >
+          <RoomCaption skin={skin} mode={mode} />
+          <GuestLibrary compact />
+        </ReadingRoomPreview>
       </div>
     </header>
   )
 }
 
-/** The public marketing landing — matched to the Reverie Landing design, on the gold master brand
- *  (UnauthShell wraps it in `.gold-brand`). Net-new pre-login entry point for logged-out visitors. */
+/** The public front door, in Reverie’s midnight-and-lamplight brand. Its sample rooms
+ * keep their own identities while the surrounding brand stays steady. */
 export function Landing() {
+  const [skin, setSkin] = useState<SkinId>('folio')
+  const [mode, setMode] = useState<ResolvedMode>('light')
   return (
-    <main className="relative z-[1]">
-      <NightSky />
-      <Nav />
-      <Hero />
-      {/* The below-fold chunk is the one piece of this page that has to be fetched. If it can't be
+    <GuestLibraryProvider>
+      <main className="relative z-[1]">
+        <Nav />
+        <Hero skin={skin} mode={mode} />
+        {/* The below-fold chunk is the one piece of this page that has to be fetched. If it can't be
           — offline, or a stale client after a deploy — the hero, nav and CTA above have already
           rendered and must stay. Before this, that single failed import unwound to the app-wide
           boundary and replaced a working page with "Something went wrong!". */}
-      <ChunkBoundary label="landing-below-fold">
-        <Suspense
-          fallback={<div className="py-24 text-center text-[13px] text-muted">Loading…</div>}
-        >
-          <LandingBelowFold />
-        </Suspense>
-      </ChunkBoundary>
-    </main>
+        <ChunkBoundary label="landing-below-fold">
+          <Suspense
+            fallback={<div className="py-24 text-center text-[13px] text-muted">Loading…</div>}
+          >
+            <LandingBelowFold
+              skin={skin}
+              mode={mode}
+              onSkinChange={setSkin}
+              onModeChange={setMode}
+            />
+          </Suspense>
+        </ChunkBoundary>
+      </main>
+    </GuestLibraryProvider>
   )
 }

@@ -71,8 +71,8 @@ const PLATE: Partial<Record<SkinId, PlateOrnament>> = {
     ),
   },
   grimoire: {
-    // Fable 5: the incipit — manuscripts open in red; the ❖ sigil crowns the plate
-    eyebrowColor: 'var(--rubric)',
+    // The incipit uses the tested text accent; the ❖ sigil crowns the plate
+    eyebrowColor: 'var(--accent-ink)',
     subtitleStyle: { fontFamily: 'var(--font-display)', fontStyle: 'italic' },
     ornament: (
       <span

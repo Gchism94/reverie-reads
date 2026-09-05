@@ -1,3 +1,4 @@
+import { SkinAtmosphereCanvas } from '../components/SkinAtmosphereCanvas'
 import { useEffect, useMemo, type CSSProperties } from 'react'
 import { createRoute } from '@tanstack/react-router'
 import {
@@ -47,7 +48,7 @@ function SkinCard({
         boxShadow: active ? 'var(--shadow)' : undefined,
       }}
     >
-      <div className="rv-skin-texture" />
+      <SkinAtmosphereCanvas skin={skin.id} mode={mode} />
       <div className="relative p-5">
         <div className="skin-label text-[11px]" style={{ color: 'var(--accent-ink)' }}>
           {skin.genre}

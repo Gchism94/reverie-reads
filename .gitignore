@@ -72,3 +72,7 @@ corpus-dump/
 /.swc
 /apps/web/.workflow-data/
 /apps/web/.workflow-vitest/
+
+# Local visual review evidence and browser automation sessions.
+/output/
+/.playwright-cli/

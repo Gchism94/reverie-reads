@@ -132,14 +132,14 @@ after dependency changes to keep this current._
 
 ## Fonts
 
-**All eighteen typefaces are self-hosted and redistributed** (`apps/web/public/fonts/`,
+**All nineteen typefaces are self-hosted and redistributed** (`apps/web/public/fonts/`,
 fetched by `scripts/fetch-fonts.mjs` as byte-faithful mirrors of Google Fonts' woff2
 serving — their subsetting, their `unicode-range` descriptors, unmodified). That makes
 this repository a redistributor of the font software, so each family's license terms
 attach: every family is SIL Open Font License 1.1 (verified against the `google/fonts`
 repository — each lives under `ofl/`), which permits redistribution bundled with
 software provided the license and copyright notices accompany the fonts. They do: the
-full OFL text with all eighteen copyright notices ships at
+Newsreader license and copyright notice ships at `apps/web/public/fonts/Newsreader-OFL.txt`. The OFL text with the other eighteen copyright notices ships at
 `apps/web/public/fonts/OFL.txt`, inside the same directory as the font files.
 
 Two families carry Reserved Font Names (Playfair Display; Varela Round). RFNs restrict
@@ -149,6 +149,7 @@ performed upstream by Google and served by them under the same license.
 
 | Typeface (skin)               | Upstream copyright                                                                                                           |
 | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Newsreader (Reverie brand)    | Copyright 2020 The Newsreader Project Authors (github.com/productiontype/Newsreader)                                         |
 | Fraunces (tryst)              | Copyright 2018 The Fraunces Project Authors (github.com/undercasetype/Fraunces)                                              |
 | Hanken Grotesk (tryst)        | Copyright 2021 The Hanken Grotesk Project Authors (github.com/marcologous/hanken-grotesk)                                    |
 | Cormorant Garamond (grimoire) | Copyright 2015 the Cormorant Project Authors (github.com/CatharsisFonts/Cormorant)                                           |

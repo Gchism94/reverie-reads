@@ -22,21 +22,28 @@ export function Modal({
   // the element is not assumable — and focus() is all this ref ever asks of it.
   const panelRef = useRef<HTMLElement>(null)
 
+  const onCloseRef = useRef(onClose)
   useEffect(() => {
+    onCloseRef.current = onClose
+  }, [onClose])
+
+  useEffect(() => {
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null
     const dialog = dialogRef.current
     if (!dialog) return
     if (typeof dialog.showModal === 'function') dialog.showModal()
     else dialog.setAttribute('open', '')
     panelRef.current?.focus()
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') onCloseRef.current()
     }
     document.addEventListener('keydown', onKey)
     return () => {
       document.removeEventListener('keydown', onKey)
       if (dialog.open && typeof dialog.close === 'function') dialog.close()
+      if (opener?.isConnected) opener.focus({ preventScroll: true })
     }
-  }, [onClose])
+  }, [])
 
   return createPortal(
     <dialog
@@ -83,7 +90,7 @@ export function Modal({
               type="button"
               onClick={onClose}
               aria-label="Close"
-              className="flex h-8 w-8 flex-none items-center justify-center rounded-full border border-line text-muted hover:text-ink"
+              className="flex h-11 w-11 flex-none items-center justify-center rounded-full border border-line text-muted hover:text-ink"
             >
               ✕
             </button>
