@@ -27,6 +27,7 @@ const matchesRule = (target, rawPattern) => {
   let retryTargetIndex = -1
 
   while (targetIndex < target.length) {
+    if (!endAnchored && patternIndex === pattern.length) return true
     if (patternIndex < pattern.length && pattern[patternIndex] === target[targetIndex]) {
       patternIndex += 1
       targetIndex += 1

@@ -35,10 +35,15 @@ test('supports wildcards, terminal matches, comments, and query strings', () => 
   const groups = parseRobots(`
 User-agent: * # all crawlers
 Disallow: /*?preview=*
+Disallow: /*private
 Disallow: /draft$
 Allow: /draft/public
 `)
   assert.equal(robotsAccess(groups, 'https://author.example/books?preview=yes').allowed, false)
+  assert.equal(
+    robotsAccess(groups, 'https://author.example/books/private?view=full').allowed,
+    false,
+  )
   assert.equal(robotsAccess(groups, 'https://author.example/draft').allowed, false)
   assert.equal(robotsAccess(groups, 'https://author.example/drafts').allowed, true)
   assert.equal(robotsAccess(groups, 'https://author.example/draft/public').allowed, true)
