@@ -262,6 +262,95 @@ test('demotes blocked sources to identity without withholding independent member
   assert.equal(validation.policySafe, true)
 })
 
+test('quarantines series claims inferred only from a spin-off relationship', () => {
+  const authorUrl = 'https://author.example/'
+  const output = structuredClone(seriesOutput)
+  output.identity.evidenceUrls = [authorUrl]
+  output.memberships[0].series = 'The Leamington Bloom Series'
+  output.memberships[0].position = null
+  output.memberships[0].evidenceUrls = [authorUrl]
+  output.authoritySources = [
+    {
+      url: authorUrl,
+      kind: 'author',
+      supports: ['identity', 'series_membership'],
+      evidenceSummary:
+        'The author identifies Pyg and says Chameleon is a spin-off from Pyg while linking The Leamington Bloom Series.',
+    },
+  ]
+
+  const rawValidation = validateAuthorityAcquisition(buildAuthorityTarget(testCase), output, [
+    authorUrl,
+  ])
+  assert.equal(rawValidation.valid, true)
+  assert.equal(rawValidation.policySafe, false)
+  assert.ok(
+    rawValidation.policyViolations.some((error) =>
+      error.includes('indirect_relationship_inference'),
+    ),
+  )
+
+  const cleaned = canonicalizeAuthorityAcquisition(output, [authorUrl])
+  assert.deepEqual(cleaned.authoritySources[0].supports, ['identity'])
+  assert.deepEqual(cleaned.memberships[0].evidenceUrls, [])
+  assert.equal(
+    validateAuthorityAcquisition(buildAuthorityTarget(testCase), cleaned, [authorUrl]).valid,
+    false,
+  )
+})
+
+test('keeps membership when independent direct evidence survives a risky context source', () => {
+  const authorUrl = 'https://author.example/spin-off'
+  const output = structuredClone(seriesOutput)
+  output.identity.evidenceUrls.push(authorUrl)
+  output.memberships[0].evidenceUrls.push(authorUrl)
+  output.authoritySources.push({
+    url: authorUrl,
+    kind: 'author',
+    supports: ['identity', 'series_membership', 'position'],
+    evidenceSummary:
+      'The author identifies the exact work and describes a companion spin-off in the same setting.',
+  })
+
+  const cleaned = canonicalizeAuthorityAcquisition(output, [publisherUrl, authorUrl])
+  const validation = validateAuthorityAcquisition(buildAuthorityTarget(testCase), cleaned, [
+    publisherUrl,
+    authorUrl,
+  ])
+
+  assert.deepEqual(cleaned.authoritySources[1].supports, ['identity'])
+  assert.deepEqual(cleaned.memberships[0].evidenceUrls, [publisherUrl])
+  assert.equal(validation.valid, true)
+  assert.equal(validation.policySafe, true)
+})
+
+test('quarantines an unlabelled trigger-warning heading as series evidence', () => {
+  const authorUrl = 'https://author.example/triggers/second-book'
+  const output = structuredClone(seriesOutput)
+  output.identity.evidenceUrls = [authorUrl]
+  output.memberships[0].series = 'A Dark College Romance'
+  output.memberships[0].position = null
+  output.memberships[0].evidenceUrls = [authorUrl]
+  output.authoritySources = [
+    {
+      url: authorUrl,
+      kind: 'author',
+      supports: ['identity', 'series_membership'],
+      evidenceSummary:
+        'The author trigger-warning page places the exact work under A Dark College Romance alongside related titles.',
+    },
+  ]
+
+  const validation = validateAuthorityAcquisition(buildAuthorityTarget(testCase), output, [
+    authorUrl,
+  ])
+  assert.equal(validation.valid, true)
+  assert.equal(validation.policySafe, false)
+  assert.ok(
+    validation.policyViolations.some((error) => error.includes('non_bibliographic_taxonomy')),
+  )
+})
+
 test('quarantines a self-titled publisher grouping without exact-work membership corroboration', () => {
   const catalogUrl = 'https://publisher.example/series/only-book'
   const selfTitled = structuredClone(seriesOutput)

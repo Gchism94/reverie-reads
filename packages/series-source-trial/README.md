@@ -204,10 +204,12 @@ year; existing truth labels, authority URLs, sample sources, and provider packet
 Deterministic validation rejects an unconsulted URL, an unsupported membership or position, and a
 standalone conclusion without affirmative author/publisher evidence. A separate source-policy check
 prevents a selection-frame page from validating the case it selected and quarantines known
-conflicting source taxonomies such as Hachette's standalone marketing lists. “Valid” therefore
-means well-formed and grounded; “policy-safe” additionally means the proposed evidence survived
-those deterministic source rules. Even a policy-safe result is always review-only and cannot write
-authority gold, Supabase, or the corpus.
+conflicting source taxonomies such as Hachette's standalone marketing lists. It also strips
+membership support inferred only from spin-off/companion context, trigger-warning or trope
+taxonomies, and unlabelled headings. “Valid” therefore means well-formed and grounded;
+“policy-safe” additionally means the proposed evidence survived those deterministic source rules.
+Even a policy-safe result is always review-only and cannot write authority gold, Supabase, or the
+corpus.
 
 Run a small gold holdout before a broader capability evaluation:
 
@@ -247,6 +249,10 @@ The complete 25-work Reverie seed-candidate run, explicit-series/standalone sema
 and expanded 24-case gold holdout are recorded in
 `reports/authority-seed-candidate-pilot-2026-09-04.md`. That later report supersedes the first
 pilot's v2 prompt for ongoing acquisition experiments.
+
+The failed prompt-only and allowed-domain same-origin recall experiments, the Pyg false-positive
+audit, and the resulting deterministic quarantine are recorded in
+`reports/authority-same-origin-scout-2026-09-05.md`.
 
 ## Build the 200-case authority set
 
