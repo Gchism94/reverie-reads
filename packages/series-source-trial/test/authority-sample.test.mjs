@@ -58,18 +58,18 @@ test('reports the exact reviewed and sampling gaps in the current authority set'
   assert.equal(audit.valid, true)
   assert.equal(audit.ready, false)
   assert.deepEqual(audit.counts, {
-    selected: 95,
-    reviewed: 61,
+    selected: 108,
+    reviewed: 74,
     candidate: 34,
-    reviewedPositive: 41,
-    reviewedStandalone: 20,
+    reviewedPositive: 53,
+    reviewedStandalone: 21,
     selectionTarget: 200,
-    selectionGap: 105,
+    selectionGap: 92,
   })
   assert.deepEqual(Object.fromEntries(audit.targets.map((target) => [target.id, target.gap])), {
-    reviewed_cases: 139,
-    reviewed_positive_cases: 59,
-    reviewed_standalone_cases: 30,
+    reviewed_cases: 126,
+    reviewed_positive_cases: 47,
+    reviewed_standalone_cases: 29,
   })
   assert.deepEqual(
     audit.strata.find((stratum) => stratum.id === 'reverie_series'),
@@ -78,9 +78,9 @@ test('reports the exact reviewed and sampling gaps in the current authority set'
       label: 'Reverie seeded series',
       minimumReviewed: 69,
       selected: 69,
-      reviewed: 38,
-      candidate: 31,
-      gap: 31,
+      reviewed: 44,
+      candidate: 25,
+      gap: 25,
       met: false,
     },
   )
@@ -93,14 +93,16 @@ test('reports the exact reviewed and sampling gaps in the current authority set'
             'recent_independent_or_kindle_first',
             'recent_traditional',
             'multi_series_or_connected_universe',
+            'standalone_control',
           ].includes(id),
         )
         .map(({ id, reviewed, gap }) => [id, { reviewed, gap }]),
     ),
     {
-      recent_independent_or_kindle_first: { reviewed: 9, gap: 41 },
-      recent_traditional: { reviewed: 13, gap: 37 },
-      multi_series_or_connected_universe: { reviewed: 8, gap: 12 },
+      recent_independent_or_kindle_first: { reviewed: 13, gap: 37 },
+      recent_traditional: { reviewed: 15, gap: 35 },
+      multi_series_or_connected_universe: { reviewed: 10, gap: 10 },
+      standalone_control: { reviewed: 24, gap: 26 },
     },
   )
 })

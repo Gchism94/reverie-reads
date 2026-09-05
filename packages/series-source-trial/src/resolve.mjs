@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto'
 import { access, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -12,6 +11,7 @@ import {
   validateResolution,
 } from './resolver/evidence.mjs'
 import { resolveEvidencePacket } from './resolver/openai.mjs'
+import { decisionPacketCacheKey, legacyPacketCacheKey } from './resolver/cache.mjs'
 import { RESOLVER_PROMPT_VERSION } from './resolver/schema.mjs'
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -114,35 +114,41 @@ const packets = cases.map((testCase) => buildEvidencePacket(testCase, runs))
 const cacheRoot = resolve(packageRoot, 'private-results/resolver-cache')
 await mkdir(cacheRoot, { recursive: true })
 
-const cachePath = (packet) => {
-  const hash = createHash('sha256')
-    .update(JSON.stringify({ model, promptVersion: RESOLVER_PROMPT_VERSION, packet }))
-    .digest('hex')
-  return resolve(cacheRoot, `${hash}.json`)
-}
+const cachePath = (key) => resolve(cacheRoot, `${key}.json`)
+
+const semanticCachePath = (packet) =>
+  cachePath(decisionPacketCacheKey({ model, promptVersion: RESOLVER_PROMPT_VERSION, packet }))
+
+const legacyCachePath = (packet) =>
+  cachePath(legacyPacketCacheKey({ model, promptVersion: RESOLVER_PROMPT_VERSION, packet }))
 
 const runOne = async (packet) => {
-  const path = cachePath(packet)
-  try {
-    const cached = JSON.parse(await readFile(path, 'utf8'))
-    const output = canonicalizeResolutionDecision(packet, cached.output)
-    return {
-      caseId: packet.caseId,
-      status: 'completed',
-      ...cached,
-      output,
-      cached: true,
-      validation: validateResolution(packet, output),
+  const semanticPath = semanticCachePath(packet)
+  for (const path of [semanticPath, legacyCachePath(packet)]) {
+    try {
+      const cached = JSON.parse(await readFile(path, 'utf8'))
+      const output = canonicalizeResolutionDecision(packet, cached.output)
+      const canonical = { ...cached, output }
+      if (path !== semanticPath) {
+        await writeFile(semanticPath, `${JSON.stringify(canonical, null, 2)}\n`)
+      }
+      return {
+        caseId: packet.caseId,
+        status: 'completed',
+        ...canonical,
+        cached: true,
+        validation: validateResolution(packet, output),
+      }
+    } catch (error) {
+      if (error?.code !== 'ENOENT') throw error
     }
-  } catch (error) {
-    if (error?.code !== 'ENOENT') throw error
   }
 
   try {
     const resolved = await resolveEvidencePacket(packet, { model })
     const output = canonicalizeResolutionDecision(packet, resolved.output)
     const canonical = { ...resolved, output }
-    await writeFile(path, `${JSON.stringify(canonical, null, 2)}\n`)
+    await writeFile(semanticPath, `${JSON.stringify(canonical, null, 2)}\n`)
     return {
       caseId: packet.caseId,
       status: 'completed',

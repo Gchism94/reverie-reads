@@ -221,6 +221,27 @@ test('prevents the resolver from accepting a Hardcover reading-order relationshi
   )
 })
 
+test('prevents the resolver from accepting a Hardcover companion collection', () => {
+  const hardcoverRun = structuredClone(run)
+  hardcoverRun.provider = 'hardcover'
+  hardcoverRun.results[0].seriesClaims[0].series = 'Vampire Companion'
+  hardcoverRun.results[0].seriesClaims[0].memberCount = 3
+  const packet = buildEvidencePacket(testCase, [hardcoverRun])
+  const proposal = structuredClone(accepted)
+  proposal.memberships[0].series = 'Vampire Companion'
+  proposal.memberships[0].evidenceIds = ['hardcover:membership:0']
+  proposal.identity.evidenceIds = ['hardcover:identity']
+
+  const validation = validateResolution(packet, proposal)
+  assert.equal(validation.valid, true)
+  assert.equal(validation.policySafe, false)
+  assert.ok(
+    validation.policyViolations.some((error) =>
+      error.includes('possible_companion_collection_not_series'),
+    ),
+  )
+})
+
 test('sends a stateless structured-output request to the resolver API', async () => {
   const packet = buildEvidencePacket(testCase, [run])
   let requestBody

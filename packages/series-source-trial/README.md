@@ -18,9 +18,9 @@ useful for measuring coverage and discovering disagreements, but they do not con
 accuracy until an authority source has been reviewed.
 
 The current sample contains one difficult work from each of Reverie's 69 distinct seeded series
-plus external sampling frames: 95 selected works, of which 41 positive series cases and 20
-standalone controls are authority-reviewed. Some reviewed cases replace seed references, so the
-final distinct-case count is printed at runtime.
+plus external sampling frames: 108 selected works, of which 74 are authority-reviewed. The reviewed
+set contains 53 positive series cases and 21 confirmed standalone controls. Some reviewed cases
+replace seed references, so the final distinct-case count is printed at runtime.
 
 ## Run the open-source baseline
 
@@ -114,7 +114,7 @@ membership rule, lineage, risk flags, and separate membership/order eligibility:
 
 This is deliberately asymmetric. Hardcover adds broad candidate coverage, and an ordinary
 exact-work, non-singleton relationship may supply membership. Self-titled containers, reading-order
-lists, connected “universe” groupings, fractional positions, and competing relationships are
+lists, companion collections, connected “universe” groupings, fractional positions, and competing relationships are
 quarantined; Hardcover order still needs independent agreement. An Inventaire view of the same
 Wikidata entity is one lineage, not two votes. Unknown providers cannot corroborate a source until a
 profile is added.
@@ -146,6 +146,14 @@ unchanged evaluation does not pay twice. The generated score reports citation fa
 unsupported fields, policy violations, membership precision/recall, and false-standalone behavior.
 Only policy-safe proposals count as automatic fills; review and abstain decisions do not.
 
+The trial measures the prospective production tool as a system, not the model in isolation. Source
+adapters perform explicit, auditable acquisition; the model interprets only the resulting evidence
+packet. A future production orchestrator may let the model choose which approved source tool to call
+next, but it must not hide source retrieval inside an unverifiable answer. Authority pages in the
+gold set are evaluation evidence, not facts trained into or memorized by the model. Repeatable
+failure patterns become source-profile or deterministic validation rules instead of title-specific
+prompt exceptions.
+
 The resolver refreshes the report's case metadata and authority truth from the current sample by
 stable case ID. That lets a newly reviewed candidate reuse the provider observations already stored
 in an older trial report; only a genuinely new evidence packet needs a model request.
@@ -166,6 +174,9 @@ are recorded in `reports/authority-seed-batch-2-2026-09-04.md`.
 The complete publisher-selected standalone frame, third Reverie seed batch, role-only resolver
 correction, and 61-case score are recorded in
 `reports/authority-seed-batch-3-2026-09-04.md`.
+The complete 2025 Kindle Storyteller shortlist, Hachette standalone-label challenge frame, fourth
+Reverie seed batch, and 74-case capability score are recorded in
+`reports/authority-challenge-batch-4-2026-09-04.md`.
 
 ## Build the 200-case authority set
 
@@ -175,9 +186,9 @@ Audit the sample before running another provider or resolver comparison:
 pnpm series:sample:audit
 ```
 
-The audit reports selection coverage and authority-review coverage separately. The current 31
-Reverie seed candidates and three external shortlist candidates count as selected works, but never
-as truth and never toward an accuracy gate. It also validates that every reviewed result has
+The audit reports selection coverage and authority-review coverage separately. The current 25
+Reverie seed candidates and nine external candidates count as selected works, but never as truth
+and never toward an accuracy gate. It also validates that every reviewed result has
 affirmative author or publisher evidence, that a reviewed standalone has no memberships, and that
 a reviewed series work has at least one.
 
