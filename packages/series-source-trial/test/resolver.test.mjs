@@ -90,7 +90,7 @@ test('requires independent order corroboration even when one relationship suppli
   assert.ok(validation.policyViolations.some((error) => error.includes('position')))
 })
 
-test('canonicalizes an order-only review into an eligible membership decision', () => {
+test('canonicalizes a review that only withholds order or a single membership role', () => {
   const packet = buildEvidencePacket(testCase, [run])
   const orderOnlyReview = {
     ...structuredClone(accepted),
@@ -102,11 +102,29 @@ test('canonicalizes an order-only review into an eligible membership decision', 
   assert.equal(canonical.decision, 'accept_membership')
   assert.equal(validateResolution(packet, canonical).policySafe, true)
 
+  const roleUnknownReview = {
+    ...orderOnlyReview,
+    reviewReasons: ['position_uncorroborated', 'series_role_unclear'],
+  }
+  assert.equal(
+    canonicalizeResolutionDecision(packet, roleUnknownReview).decision,
+    'accept_membership',
+  )
+
   const membershipConflict = {
     ...orderOnlyReview,
     reviewReasons: ['membership_conflict', 'position_uncorroborated'],
   }
   assert.equal(canonicalizeResolutionDecision(packet, membershipConflict).decision, 'review')
+
+  const competingRun = structuredClone(run)
+  competingRun.provider = 'bookbrainz'
+  competingRun.results[0].seriesClaims[0].series = 'A Different Sequence'
+  const competingPacket = buildEvidencePacket(testCase, [run, competingRun])
+  assert.equal(
+    canonicalizeResolutionDecision(competingPacket, roleUnknownReview).decision,
+    'review',
+  )
 })
 
 test('removes explanatory memberships from an abstention', () => {

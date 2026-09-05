@@ -19,7 +19,11 @@ const reviewReasons = new Set([
   'self_titled_relation',
   'position_uncorroborated',
 ])
-const orderOnlyReviewReasons = new Set(['position_conflict', 'position_uncorroborated'])
+const nonMembershipBlockingReviewReasons = new Set([
+  'position_conflict',
+  'position_uncorroborated',
+  'series_role_unclear',
+])
 
 const isObject = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value)
 const asArray = (value) => (Array.isArray(value) ? value : [])
@@ -292,7 +296,7 @@ export function canonicalizeResolutionDecision(packet, output) {
   if (
     reasons.length === 0 ||
     !memberships.length ||
-    !reasons.every((reason) => orderOnlyReviewReasons.has(reason)) ||
+    !reasons.every((reason) => nonMembershipBlockingReviewReasons.has(reason)) ||
     memberships.some((membership) => membership?.position !== null)
   ) {
     return output

@@ -36,6 +36,18 @@
         "url": "https://www.aboutamazon.co.uk/news/books-and-authors/amazon-self-publishing-awards-2023"
       },
       "selectionRule": "Include all five shortlisted titles, with no provider-result filtering."
+    },
+    {
+      "id": "prh_standalone_scifi_fantasy_2026_09_04",
+      "label": "Complete Penguin Random House stand-alone science fiction and fantasy list observed 2026-09-04",
+      "expectedCases": 16,
+      "strata": ["standalone_control"],
+      "observedOn": "2026-09-04",
+      "source": {
+        "kind": "publisher",
+        "url": "https://www.penguinrandomhouse.com/the-read-down/standalone-scifi-fantasy-books"
+      },
+      "selectionRule": "Include all sixteen titles present on the publisher list at the observation date, with no provider-result filtering."
     }
   ],
   "strata": [

@@ -108,10 +108,10 @@ const validateSelectionFrame = (testCase, plan, errors) => {
   if (!sourceMatches) {
     errors.push(`${testCase.id}: selectionFrame ${frame.id} requires its declared source`)
   }
-  if (testCase.publicationYear !== frame.publicationYear) {
+  if (frame.publicationYear !== undefined && testCase.publicationYear !== frame.publicationYear) {
     errors.push(`${testCase.id}: selectionFrame ${frame.id} publicationYear does not match`)
   }
-  if (testCase.publicationPath !== frame.publicationPath) {
+  if (frame.publicationPath !== undefined && testCase.publicationPath !== frame.publicationPath) {
     errors.push(`${testCase.id}: selectionFrame ${frame.id} publicationPath does not match`)
   }
 
