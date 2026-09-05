@@ -7,15 +7,15 @@ import { ProductStage } from './ProductStage'
 const display = { fontFamily: 'var(--font-display)', fontWeight: 600 } as const
 
 const ATMOSPHERE_NOTE: Record<SkinId, string> = {
-  tryst: 'Still velvet light and gilt-paper grain',
-  grimoire: 'Settled vellum and illuminated edges',
-  aphelion: 'A quiet telemetry grid with no decorative scan',
-  marrow: 'Edge fractures surface rarely, then recede',
-  umbra: 'A near-imperceptible bank of office fog',
-  folio: 'A steady proof page and editorial margin',
-  hearth: 'Still linen, warm paper, and stitched edges',
-  almanac: 'A stable field index built for reference',
-  bloom: 'Dark-mode stars breathe without drifting',
+  tryst: 'Velvet shadows, warm lamplight, and a little gold.',
+  grimoire: 'Vellum pages and illuminated edges, like a book left open in an old study.',
+  aphelion: 'A quiet observatory, with a little distance from the everyday.',
+  marrow: 'Ash, bone, and a held breath at the edge of the room.',
+  umbra: 'Brass, fog, and the hush of a study after midnight.',
+  folio: 'Cream paper, penciled margins, and room to linger over a sentence.',
+  hearth: 'Warm linen and familiar shelves, with nowhere else you need to be.',
+  almanac: 'Field notes and indexed pages for following a question wherever it leads.',
+  bloom: 'The first light of a new day, with a little possibility in the margins.',
 }
 
 /** Nine Reading Rooms makes skins legible as complete places. Every tile and the expanded stage
@@ -41,20 +41,20 @@ export function SkinShowcase() {
               className="mt-3 max-w-[13ch] text-balance text-[clamp(34px,5vw,56px)] leading-[1.01] text-ink"
               style={display}
             >
-              The whole room changes with the shelf.
+              Find a room that feels like you.
             </h2>
           </div>
           <p className="max-w-[58ch] text-[15px] leading-relaxed text-muted lg:justify-self-end">
-            These are not color swatches. Each room changes the typography, materials, controls,
-            spacing, cover treatment, and atmosphere of the same Reverie library. Pick one, then
-            inspect the actual desktop and phone composition below.
+            A candlelit corner, an observatory after dark, a quiet desk by the window. Explore nine
+            rooms shaped by reading genres, then settle into the one that suits you. Every room
+            holds the same library; your choice of atmosphere never limits your books.
           </p>
         </div>
 
         <div
           role="tablist"
           aria-label="Reverie reading rooms"
-          className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+          className="mt-10 grid auto-cols-[minmax(150px,42vw)] grid-flow-col gap-4 overflow-x-auto px-1 py-2 sm:grid-flow-row sm:grid-cols-3"
         >
           {SKIN_LIST.map((room) => {
             const selected = room.id === active
@@ -160,7 +160,7 @@ export function SkinShowcase() {
                 className="skin-label text-[11px] leading-[1.4]"
                 style={{ color: 'var(--accent-ink)' }}
               >
-                {skin.genre} · {skin.chromeLine}
+                {skin.genre}
               </p>
               <h3
                 className="mt-2 text-[clamp(32px,5vw,54px)] leading-none text-ink"
@@ -169,11 +169,7 @@ export function SkinShowcase() {
                 The {skin.label} room
               </h3>
               <p className="mt-4 max-w-[52ch] text-[15px] leading-[1.65] text-muted">
-                {skin.tagline} The books stay the same; the place they live becomes unmistakably its
-                own.
-              </p>
-              <p className="mt-3 max-w-[52ch] text-[13.5px] leading-[1.6] text-muted">
-                Atmosphere: {ATMOSPHERE_NOTE[active]}.
+                {ATMOSPHERE_NOTE[active]}
               </p>
             </div>
             <div
@@ -201,24 +197,6 @@ export function SkinShowcase() {
           <div className="mt-9">
             <ProductStage compact />
           </div>
-
-          <dl
-            className="mt-9 grid gap-px overflow-hidden border border-line bg-line sm:grid-cols-3"
-            style={{ borderRadius: 'var(--radius-panel)' }}
-          >
-            {[
-              ['Display voice', skin.displayFont],
-              ['Room signature', skin.chromeLine],
-              ['Shelf language', `${skin.genre} · ${skin.labels.tags}`],
-            ].map(([term, value]) => (
-              <div key={term} className="min-w-0 bg-card p-4">
-                <dt className="skin-label text-[11.5px] leading-[1.4] text-muted">{term}</dt>
-                <dd className="mt-2 break-words text-[14px] leading-[1.4] text-ink" style={display}>
-                  {value}
-                </dd>
-              </div>
-            ))}
-          </dl>
         </div>
       </div>
 
@@ -232,8 +210,8 @@ export function SkinShowcase() {
           }}
         />
         <p className="text-[14px] leading-[1.55] text-muted">
-          Prefer not to choose? Adaptive quietly evolves from the same nine rooms as your reading
-          changes, without changing the books or data underneath them.
+          Prefer not to choose? Adaptive lets the room follow your reading tastes. You can choose a
+          favorite room and stay there whenever you like.
         </p>
       </div>
     </section>

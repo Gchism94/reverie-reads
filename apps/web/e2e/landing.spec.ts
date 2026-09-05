@@ -1,26 +1,69 @@
 import { expect, test } from '@playwright/test'
 
 test.describe('signed-out landing', () => {
+  test('sample scopes, saving, and starting work without an account or persistent writes', async ({
+    page,
+  }) => {
+    const writes: string[] = []
+    page.on('request', (request) => {
+      if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method())) {
+        writes.push(`${request.method()} ${new URL(request.url()).pathname}`)
+      }
+    })
+    await page.goto('/')
+    const demo = page.getByRole('region', { name: 'A place to start' })
+    const atlas = demo.getByRole('article', { name: 'The Lantern Atlas' })
+    const planet = demo.getByRole('article', { name: 'Notes from a Quiet Planet' })
+    await expect(demo.getByRole('article')).toHaveCount(2)
+    await expect(planet).toContainText('borrowed')
+    await atlas.getByRole('button', { name: 'Save for later' }).click()
+    await expect(demo.getByRole('status')).toContainText(
+      'Saved The Lantern Atlas for later in this sample.',
+    )
+    await expect(demo.getByText('Saved for later:', { exact: true }).locator('..')).toContainText(
+      'The Lantern Atlas',
+    )
+    await planet.getByRole('button', { name: 'Start reading' }).click()
+    await expect(planet).toHaveCount(0)
+    await expect(demo.getByRole('heading', { name: 'A place to start' })).toBeFocused()
+    await expect(demo.getByText('Reading now:', { exact: true }).locator('..')).toContainText(
+      'Notes from a Quiet Planet',
+    )
+    await demo.getByRole('combobox', { name: 'Choose from' }).selectOption('wishlist')
+    await expect(demo.getByRole('article')).toHaveCount(1)
+    await expect(demo.getByRole('article', { name: 'A Garden in Winter' })).toContainText(
+      'wishlist',
+    )
+    await demo.getByRole('button', { name: 'Reset sample' }).click()
+    await expect(demo.getByRole('article')).toHaveCount(2)
+    await expect(demo.getByText('Reading now:', { exact: true })).toHaveCount(0)
+    await expect(demo.getByText('Saved for later:', { exact: true })).toHaveCount(0)
+    await atlas.getByRole('button', { name: 'Start reading' }).click()
+    await page.reload()
+    await expect(demo.getByRole('article')).toHaveCount(2)
+    await expect(demo.getByText('Reading now:', { exact: true })).toHaveCount(0)
+    expect(writes).toEqual([])
+  })
+
   test('tells the shipped product story and preserves explicit auth destinations', async ({
     page,
   }) => {
     await page.goto('/')
 
     await expect(
-      page.getByRole('heading', { level: 1, name: 'Keep the whole story of your reading life.' }),
+      page.getByRole('heading', { level: 1, name: 'Find your next read in your own library.' }),
     ).toBeVisible()
     await expect(page.getByTestId('landing-desktop-screen').first()).toBeVisible()
     await expect(page.getByTestId('landing-mobile-screen').first()).toBeVisible()
     for (const heading of [
-      'The whole room changes with the shelf.',
-      'Keep every version of the story.',
-      'Share a shelf without merging lives.',
-      'Connect series without flattening them.',
+      'Find a room that feels like you.',
+      'Keep what the book leaves with you.',
+      'A few books. A place to begin.',
     ]) {
       await expect(page.getByRole('heading', { level: 2, name: heading })).toBeAttached()
     }
 
-    await expect(page.getByRole('link', { name: 'Begin your library' }).first()).toHaveAttribute(
+    await expect(page.getByRole('link', { name: 'Start your library' }).first()).toHaveAttribute(
       'href',
       '/auth?mode=signup',
     )
@@ -29,14 +72,14 @@ test.describe('signed-out landing', () => {
       '/auth?mode=signin',
     )
 
-    await expect(page).toHaveTitle('Reverie — Your reading life, kept in full')
+    await expect(page).toHaveTitle('Reverie — Find your next read in your own library')
     await expect(page.locator('meta[name="description"]')).toHaveAttribute(
       'content',
-      /books, rereads, series, plans/i,
+      /books you own or have borrowed/i,
     )
     await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
       'content',
-      'https://reveriereads.app/reverie-share.png',
+      'https://reveriereads.app/reverie-next-read-share.png',
     )
 
     const shareSize = await page.evaluate(async () => {
@@ -47,7 +90,7 @@ test.describe('signed-out landing', () => {
           once: true,
         })
       })
-      image.src = '/reverie-share.png'
+      image.src = '/reverie-next-read-share.png'
       await loaded
       return { width: image.naturalWidth, height: image.naturalHeight }
     })
@@ -59,11 +102,9 @@ test.describe('signed-out landing', () => {
   }) => {
     await page.setViewportSize({ width: 390, height: 844 })
     await page.goto('/')
-    await page
-      .getByRole('heading', { name: 'Make room for every book you’ve lived with.' })
-      .waitFor({
-        state: 'attached',
-      })
+    await page.getByRole('heading', { name: 'Your next read may already be waiting.' }).waitFor({
+      state: 'attached',
+    })
 
     const nav = page.getByRole('navigation', { name: 'Landing', exact: true })
     const menu = nav.getByRole('button', { name: 'Menu' })
@@ -72,15 +113,19 @@ test.describe('signed-out landing', () => {
 
     await menu.click()
     await expect(nav.getByRole('link', { name: 'Rooms' })).toBeVisible()
-    await expect(nav.getByRole('link', { name: 'Connect it' })).toBeVisible()
+    await expect(nav.getByRole('link', { name: 'How it works' })).toBeVisible()
     await expect(nav.getByRole('link', { name: 'Log in' })).toBeVisible()
+    await menu.click()
 
-    const width = await page.evaluate(() => ({
-      viewport: window.innerWidth,
-      root: document.documentElement.scrollWidth,
-      body: document.body.scrollWidth,
-    }))
-    expect(width).toEqual({ viewport: 390, root: 390, body: 390 })
+    for (const viewport of [320, 390, 768, 1440]) {
+      await page.setViewportSize({ width: viewport, height: 844 })
+      const width = await page.evaluate(() => ({
+        viewport: window.innerWidth,
+        root: document.documentElement.scrollWidth,
+        body: document.body.scrollWidth,
+      }))
+      expect(width).toEqual({ viewport, root: viewport, body: viewport })
+    }
   })
 
   test('reduced motion keeps the page still without removing its story', async ({ page }) => {
@@ -88,7 +133,7 @@ test.describe('signed-out landing', () => {
     await page.goto('/')
 
     await expect(
-      page.getByRole('heading', { name: 'The whole room changes with the shelf.' }),
+      page.getByRole('heading', { name: 'Find a room that feels like you.' }),
     ).toBeAttached()
     const animations = await page.locator('.rv-anim').evaluateAll((nodes) =>
       nodes.map((node) => ({

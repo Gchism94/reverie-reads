@@ -6,7 +6,6 @@ import {
   buildMatchContext,
   isBookRead,
   nextReadCandidates,
-  possessionState,
   type NextReadOptions,
   type NextReadScope,
   CORE_GENRES,
@@ -17,7 +16,7 @@ import {
 } from '@reverie/core'
 import { Surface } from '../components/Surface'
 import { rootRoute } from './RootRoute'
-import { CoverImage } from '../components/CoverImage'
+import { NextReadCardView } from '../components/NextReadCardView'
 import { useUpdateBook } from '../data/books'
 import { useReaderBooks } from '../data/readerBooks'
 import { useCreateList, useLists } from '../data/lists'
@@ -278,57 +277,17 @@ function NextReadCard({
     }
   }
   return (
-    <Surface tone="card" radius="panel" pad={4}>
-      <article aria-label={b.title} className="flex h-full flex-col gap-4">
-        <button
-          type="button"
-          onClick={open}
-          className="flex w-full items-start gap-4 text-left"
-          aria-label={`Open ${b.title}`}
-        >
-          <div className="aspect-[2/3] w-20 shrink-0 overflow-hidden rounded-lg border border-line bg-[color:var(--field)]">
-            <CoverImage book={b} />
-          </div>
-          <div className="min-w-0">
-            <h3
-              className="break-words text-lg font-semibold text-ink"
-              style={{ fontFamily: 'var(--font-display)' }}
-            >
-              {b.title}
-            </h3>
-            <p className="mt-1 text-sm text-ink">{[b.first, b.last].filter(Boolean).join(' ')}</p>
-            <p className="mt-2 text-sm capitalize text-ink">
-              {possessionState(b) === 'unset' ? 'No copy recorded' : possessionState(b)}
-              {isRead ? ' · Reread' : b.readStatus === 'DNF' ? ' · Previously stopped' : ''}
-            </p>
-          </div>
-        </button>
-        <p className="text-sm leading-relaxed text-ink">{why}</p>
-        <div className="mt-auto flex flex-wrap gap-2">
-          <button
-            type="button"
-            disabled={update.isPending}
-            className={primaryButton}
-            onClick={() => void start()}
-          >
-            {update.isPending ? 'Starting…' : isRead ? 'Read again' : 'Start reading'}
-          </button>
-          <button
-            type="button"
-            className={quietButton}
-            disabled={saving}
-            onClick={() => save([b.id])}
-          >
-            Save for later
-          </button>
-        </div>
-        {update.isError && (
-          <p role="alert" className="text-sm text-muted">
-            Could not start this read. Please try again.
-          </p>
-        )}
-      </article>
-    </Surface>
+    <NextReadCardView
+      book={b}
+      reason={why}
+      isRead={isRead}
+      onOpen={open}
+      onStart={() => void start()}
+      onSave={() => save([b.id])}
+      starting={update.isPending}
+      saving={saving}
+      startError={update.isError}
+    />
   )
 }
 
