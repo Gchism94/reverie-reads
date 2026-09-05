@@ -1,4 +1,4 @@
-import { APP_NAME } from '@reverie/core'
+import { ReverieMark } from './ReverieMark'
 import { NavigationGlyph } from './NavigationGlyph'
 import { NAVIGATION_GROUPS } from './navigation'
 
@@ -38,7 +38,7 @@ export function AppRoomPreview({ className = '' }: { className?: string }) {
             className="rv-nav-monogram grid h-6 w-6 place-items-center text-[10px] italic"
             style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
           >
-            {APP_NAME.charAt(0)}
+            <ReverieMark className="h-4 w-4" />
           </span>
           <div className="rv-nav-group mt-2 flex flex-col gap-1">
             {firstGroup.items.slice(0, 4).map((item) => (

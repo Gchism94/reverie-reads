@@ -1,4 +1,5 @@
 import type { SkinId, ResolvedMode } from '@reverie/core'
+import { drawRoomMaterials } from './roomMaterials'
 
 export interface RoomPalette {
   base: string
@@ -99,6 +100,8 @@ export function drawRoomScene(
   }
   fill(p.base, 1)
   c.fillRect(0, 0, 1200, 900)
+  // A separate seed keeps Aphelion's authored sky exactly unchanged as other materials evolve.
+  drawRoomMaterials(c, skin, night, p, random(908))
   switch (skin) {
     case 'tryst': {
       glow(95, 370, 560, 640, p.light, night ? 0.19 : 0.1)
@@ -212,28 +215,7 @@ export function drawRoomScene(
     case 'marrow': {
       glow(160, 170, 420, 440, p.paper, 0.12)
       glow(1180, 870, 470, 650, p.depth, 0.8)
-      // A safe pool of light within a deep archive. Broken mineral seams stay at the perimeter.
-      for (let i = 0; i < 8; i++) {
-        let x = i % 2 ? 1195 : 5
-        let y = 60 + i * 108
-        const pts = [[x, y]]
-        for (let j = 0; j < 5; j++) {
-          x += (i % 2 ? -1 : 1) * (8 + rng() * 18)
-          y += rng() * 34 - 12
-          pts.push([x, y])
-        }
-        path(pts, p.ink, 0.075)
-      }
-      path(
-        [
-          [1020, 0],
-          [1020, 800],
-          [1200, 850],
-        ],
-        p.paper,
-        0.08,
-        2,
-      )
+      // Weathered stone and branching fractures are cached in the material layer below this light.
       glow(118, 240, 100, 270, p.light, 0.05)
       break
     }
