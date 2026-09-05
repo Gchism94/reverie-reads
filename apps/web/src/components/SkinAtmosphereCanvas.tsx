@@ -1,9 +1,10 @@
 import { useEffect, useRef } from 'react'
 import type { AdaptiveBundle, ResolvedMode, SkinId } from '@reverie/core'
-import { drawRoomScene, ROOM_SCENES, type RoomPalette } from './roomScene'
+import { paintRoomMaterial, paintRoomMotion, ROOM_SCENES, type RoomPalette } from './roomMaterials'
 
-/** Bounded, cached Canvas 2D room art shared by the app and landing. No WebGL, image downloads,
- * pointer tracking, or per-frame React renders. Hidden previews and reduced-motion views rest. */
+/** The approved material study shared by the app and landing. A small WebGL shader lights a
+ * bounded height map once and releases its context; the visible canvas only redraws its cached
+ * still plus quiet lamplight. Hidden previews and reduced-motion views rest. */
 export function SkinAtmosphereCanvas({
   skin,
   mode,
@@ -36,23 +37,10 @@ export function SkinAtmosphereCanvas({
     const paint = (time = 0) => {
       context.clearRect(0, 0, width, height)
       context.drawImage(still, 0, 0, width, height)
-      // A slow change in local light, always behind the reading surface; under reduced motion the
-      // exact authored still remains. Day rooms need no continuous rendering at all.
-      if (time && mode === 'dark') {
-        const x = skin === 'aphelion' || skin === 'bloom' ? width * 0.95 : width * 0.06
-        const y = height * (skin === 'umbra' ? 0.68 : 0.36)
-        const radius = Math.min(width, height) * 0.38
-        const glow = context.createRadialGradient(x, y, 0, x, y, radius)
-        glow.addColorStop(0, palette.light)
-        glow.addColorStop(1, 'transparent')
-        context.globalAlpha = 0.018 + 0.012 * Math.sin(time / 14000)
-        context.fillStyle = glow
-        context.fillRect(0, 0, width, height)
-        context.globalAlpha = 1
-      }
+      if (time) paintRoomMotion(context, width, height, skin, palette, time)
     }
     const tick = () => {
-      if (!visible || document.hidden || motion.matches || mode === 'light') return
+      if (!visible || document.hidden || motion.matches) return
       frame = window.requestAnimationFrame((time) => {
         paint(time)
         timer = window.setTimeout(tick, 125)
@@ -64,17 +52,19 @@ export function SkinAtmosphereCanvas({
       tick()
     }
     const resize = () => {
+      const started = performance.now()
       const rect = canvas.getBoundingClientRect()
       width = Math.max(1, rect.width)
       height = Math.max(1, rect.height)
-      // Cap both density and total pixels: long landing sections cannot allocate giant buffers.
+      // Match the reviewed material bound: previews and long app surfaces never retain more than
+      // 900,000 material pixels, even on a high-density display.
       const ratio = Math.min(
         1.5,
         window.devicePixelRatio || 1,
-        Math.sqrt(1_800_000 / (width * height)),
+        Math.sqrt(900_000 / (width * height)),
       )
-      canvas.width = still.width = Math.max(1, Math.round(width * ratio))
-      canvas.height = still.height = Math.max(1, Math.round(height * ratio))
+      canvas.width = still.width = Math.max(1, Math.floor(width * ratio))
+      canvas.height = still.height = Math.max(1, Math.floor(height * ratio))
       context.setTransform(ratio, 0, 0, ratio, 0, 0)
       const styles = getComputedStyle(canvas)
       const value = (key: string) => styles.getPropertyValue(key).trim()
@@ -82,12 +72,20 @@ export function SkinAtmosphereCanvas({
         base: value('--bg0'),
         depth: value('--bg1'),
         ink: value('--ink'),
-        light: value('--gold'),
+        gold: value('--gold'),
         accent: value('--primary'),
-        cool: value('--glow-a'),
         paper: value('--card-solid'),
+        star: value('--star'),
+        fog: value('--fog'),
+        vignette: value('--vignette'),
+        glowA: value('--glow-a'),
+        glowB: value('--glow-b'),
+        glowC: value('--glow-c'),
+        glowD: value('--glow-d'),
       }
-      drawRoomScene(scene, still.width, still.height, skin, mode, palette)
+      canvas.dataset.renderer = paintRoomMaterial(still, skin, mode, palette, width)
+      canvas.dataset.materialPixels = String(still.width * still.height)
+      canvas.dataset.paintMs = (performance.now() - started).toFixed(1)
       start()
     }
     const resizeObserver = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(resize)

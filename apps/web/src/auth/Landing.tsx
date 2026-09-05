@@ -161,11 +161,7 @@ function Hero({ skin, mode }: RoomSelection) {
             Private by default · Nine reading rooms · Export anytime
           </p>
         </div>
-        <ReadingRoomPreview
-          skin={skin}
-          mode={mode}
-          className="min-w-0 border border-line p-4 shadow-[var(--shadow)] sm:p-6"
-        >
+        <ReadingRoomPreview skin={skin} mode={mode} className="min-w-0 p-4 sm:p-6">
           <RoomCaption skin={skin} mode={mode} />
           <GuestLibrary compact />
         </ReadingRoomPreview>
