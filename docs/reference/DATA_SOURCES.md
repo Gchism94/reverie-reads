@@ -103,10 +103,12 @@ readable or “standalone,” the bibliographic series controls and the reading 
 A genre, trope, shared-world, trigger-warning, or merchandising heading does not establish a
 series unless the authority explicitly names a series/collection/duology/trilogy or numbers the
 work inside it. Link hubs and known discovery-only hosts cannot establish classification. A
-consulted source that is blocked for classification is demoted to identity-only before validation;
-the proposal survives only when separate eligible evidence still supports every membership and
-position. An unconsulted redundant source may be removed, but removing it must expose—not repair—an
-otherwise unsupported claim.
+spin-off, companion, shared-character, or same-world statement also cannot be reversed into
+membership for the related work; that contextual source is demoted to identity-only unless separate
+direct evidence supports the membership. A consulted source that is blocked for classification is
+demoted to identity-only before validation; the proposal survives only when separate eligible
+evidence still supports every membership and position. An unconsulted redundant source may be
+removed, but removing it must expose—not repair—an otherwise unsupported claim.
 
 Provider data is cleaned before it reaches that resolver. Google contributes identity only.
 Open Library, Wikidata, Inventaire, and BookBrainz contribute a membership only after the exact

@@ -93,11 +93,33 @@ const knownClassificationRisk = (source) => {
   return null
 }
 
+const knownMembershipEvidenceRisk = (source) => {
+  const summary = source?.evidenceSummary ?? ''
+  if (/\b(?:trigger[- ]?warnings?|tropes?)\b/i.test(summary)) {
+    return 'non_bibliographic_taxonomy'
+  }
+  if (
+    /\bheading\b/i.test(summary) &&
+    !/\b(?:series|trilogy|duology|collection|saga|cycle)\b/i.test(summary)
+  ) {
+    return 'unlabelled_grouping'
+  }
+  if (
+    /\b(?:spin[- ]?off|companion|shared characters?|same (?:world|universe|setting))\b/i.test(
+      summary,
+    )
+  ) {
+    return 'indirect_relationship_inference'
+  }
+  return null
+}
+
 const sourceClassificationEligible = (source, blockedUrls, support) => {
   if (!source || !asArray(source.supports).includes(support)) return false
   const blocked = new Set(asArray(blockedUrls).map(comparableUrl).filter(Boolean))
   if (blocked.has(comparableUrl(source.url))) return false
   if (knownClassificationRisk(source)) return false
+  if (support === 'series_membership' && knownMembershipEvidenceRisk(source)) return false
   if (support === 'standalone' && !/\bstand-?alones?\b/i.test(source.evidenceSummary ?? '')) {
     return false
   }
@@ -139,7 +161,15 @@ export function canonicalizeAuthorityAcquisition(output, consultedUrls = null, p
         !knownClassificationRisk(source) &&
         !classificationBlocked.has(comparableUrl(source.url))
       ) {
-        return { ...source, supports }
+        const relationshipRisk = knownMembershipEvidenceRisk(source)
+        return {
+          ...source,
+          supports: relationshipRisk
+            ? supports.filter(
+                (support) => support !== 'series_membership' && support !== 'position',
+              )
+            : supports,
+        }
       }
       return {
         ...source,
@@ -246,6 +276,10 @@ export function validateAuthorityAcquisition(target, output, consultedUrls, poli
     const risk = knownClassificationRisk(source)
     if (risk && asArray(source.supports).some((support) => support !== 'identity')) {
       policyViolations.push(`authority source ${index} has ${risk}`)
+    }
+    const membershipRisk = knownMembershipEvidenceRisk(source)
+    if (membershipRisk && asArray(source.supports).includes('series_membership')) {
+      policyViolations.push(`authority source ${index} has ${membershipRisk}`)
     }
     if (
       asArray(policy.classificationBlockedUrls).map(comparableUrl).includes(comparable) &&

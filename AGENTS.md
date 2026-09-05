@@ -157,8 +157,10 @@ wishlist` was the pre-#68 model and is long wrong. Format flags **suppress, neve
   source is demoted to identity-only; an independently supported claim may survive, but a claim
   that depended on that source must not. “Standalone” language means reading independence when the
   same authority also assigns a bibliographic series; an unlabelled genre, trope, world, or
-  trigger-warning heading is not series evidence. Output stays review-only and cannot write
-  authority gold, Supabase, or the corpus. See `docs/reference/DATA_SOURCES.md`.
+  trigger-warning heading is not series evidence. A spin-off, companion, shared-character, or
+  same-world statement cannot be reversed into membership for the related work; require separate
+  direct evidence. Output stays review-only and cannot write authority gold, Supabase, or the
+  corpus. See `docs/reference/DATA_SOURCES.md`.
 - **Corpus cover recovery is bounded, resumable, and independent of classification.** The
   administrator completion pipeline never walks the whole household library in one RPC. It calls
   `admin_recover_corpus_cover_batch` in groups of at most 25, records a source fingerprint after
