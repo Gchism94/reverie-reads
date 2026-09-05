@@ -20,9 +20,9 @@ real candidate, Pip Landers-Letts's author site, correctly remains unresolved.
   that child URL. The reviewed profile—not the model—owns source kind.
 - The model call is skipped unless the packet contains the normalized exact title and a target
   author identity.
-- Post-validation requires packet support for every proposed series name, standalone statement,
-  and position before the result can replace the first proposal. Unsupported position becomes null
-  and unsupported membership role becomes unknown without discarding a direct relationship.
+- Post-validation requires one non-heading evidence line to join the exact target title to every
+  proposed bibliographic series or affirmative standalone statement. Position and membership role
+  survive only when supported on that same relationship line.
 - The returned result and cache omit page text. The second response is cached by target, model,
   prompt version, profile/policy/extractor versions, child URL, source kind, and sanitized-packet
   hash.
@@ -55,6 +55,10 @@ pilot does neither.
 Replaying the earlier Pyg scout false positive through the current canonicalizer removes
 `series_membership` from both spin-off summaries. The membership then has no evidence URL and fails
 validation instead of becoming a usable proposal.
+
+A separate adversarial replay places the Pyg title/author on one line and an unrelated book's
+Leamington Bloom series and position on another. The deterministic same-line relationship check
+rejects that cross-book assembly and keeps the original unresolved proposal selected.
 
 The real CLI dry run used the cached Pyg scout response with `--retrieval`. It returned the current
 unresolved first pass plus `origin_pending`: zero HTTP retrieval requests, zero retrieved bytes,

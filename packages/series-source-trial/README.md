@@ -226,10 +226,11 @@ hashes, and persistence redaction. It deliberately has no production integration
 repository activates no real origin profile. The opt-in pipeline adds a second strict, no-tools
 model pass only when the first pass is unresolved or quarantined. It binds citations and source
 kind to the retrieved child manifest, hash-checks the packet, and skips the model entirely when the
-exact target title or author is absent. Post-validation requires the packet to contain the claimed
-series name, standalone language, position, and target-author identity. The packet is stripped
-before returning or caching results. Unsupported position becomes null and unsupported membership
-role becomes unknown without losing a direct series relationship. Exercise the boundary with:
+exact target title or author is absent. Post-validation requires a non-heading evidence line to join
+the exact target title to each claimed bibliographic series or affirmative standalone statement;
+position and membership role survive only on that same relationship line. This prevents a model
+from joining one book's identity to another book's series facts on a multi-book page. The packet is
+stripped before returning or caching results. Exercise the boundary with:
 
 ```sh
 node --test packages/series-source-trial/test/authority-retrieval-*.test.mjs

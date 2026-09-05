@@ -33,6 +33,32 @@ const authorOccurs = (text, authors) =>
     return lastName?.length > 2 && phraseOccurs(text, lastName)
   })
 
+const evidenceLines = (text) =>
+  String(text ?? '')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+
+const bibliographicRelationshipOccurs = (text) =>
+  /\b(?:series|trilogy|duology|collection|saga|cycle)\b/i.test(text)
+
+const directMembershipLine = (target, membership, retrieval) =>
+  evidenceLines(retrieval?.evidenceText).find(
+    (line) =>
+      !/^(?:TITLE|H[1-6]):/i.test(line) &&
+      phraseOccurs(line, target?.target?.title) &&
+      phraseOccurs(line, membership?.series) &&
+      bibliographicRelationshipOccurs(line),
+  )
+
+const directStandaloneLine = (target, retrieval) =>
+  evidenceLines(retrieval?.evidenceText).find(
+    (line) =>
+      !/^(?:TITLE|H[1-6]):/i.test(line) &&
+      phraseOccurs(line, target?.target?.title) &&
+      /\bstand[ -]?alone\b/i.test(line),
+  )
+
 const ordinalWords = new Map([
   [1, ['one', 'first']],
   [2, ['two', 'second']],
@@ -68,19 +94,20 @@ export const evidencePacketContainsTargetIdentity = (target, retrieval) =>
   evidencePacketContainsTargetTitle(target, retrieval) &&
   authorOccurs(retrieval?.evidenceText, target?.target?.authors)
 
-export function canonicalizeRetrievedAuthoritySemantics(output, retrieval) {
+export function canonicalizeRetrievedAuthoritySemantics(target, output, retrieval) {
   if (!output || typeof output !== 'object' || !Array.isArray(output.memberships)) return output
-  const text = retrieval?.evidenceText
   const memberships = output.memberships.map((membership) => {
     if (!membership || typeof membership !== 'object') return membership
+    const relationshipLine = directMembershipLine(target, membership, retrieval)
     const position =
       membership.position === null ||
       !Number.isFinite(membership.position) ||
-      explicitPositionOccurs(text, membership.position)
+      (relationshipLine && explicitPositionOccurs(relationshipLine, membership.position))
         ? membership.position
         : null
     const role =
-      ['primary', 'secondary'].includes(membership.role) && !phraseOccurs(text, membership.role)
+      ['primary', 'secondary'].includes(membership.role) &&
+      (!relationshipLine || !phraseOccurs(relationshipLine, membership.role))
         ? 'unknown'
         : membership.role
     return { ...membership, position, role }
@@ -120,15 +147,19 @@ export function validateRetrievedAuthoritySemantics(target, output, retrieval, v
   const memberships = Array.isArray(output.memberships) ? output.memberships : []
   for (const [index, membership] of memberships.entries()) {
     if (!membership || typeof membership !== 'object') continue
-    if (!phraseOccurs(text, membership.series)) {
-      violations.push(`membership ${index} series name is absent from the retrieved packet`)
+    const relationshipLine = directMembershipLine(target, membership, retrieval)
+    if (!relationshipLine) {
+      violations.push(`membership ${index} lacks a same-line exact-work bibliographic relationship`)
     }
-    if (membership.position !== null && !explicitPositionOccurs(text, membership.position)) {
+    if (
+      membership.position !== null &&
+      (!relationshipLine || !explicitPositionOccurs(relationshipLine, membership.position))
+    ) {
       violations.push(`membership ${index} position is not explicit in the retrieved packet`)
     }
   }
-  if (output.classification === 'standalone' && !/\bstand[ -]?alone\b/i.test(text)) {
-    violations.push('standalone language is absent from the retrieved packet')
+  if (output.classification === 'standalone' && !directStandaloneLine(target, retrieval)) {
+    violations.push('standalone claim lacks a same-line exact-work statement')
   }
   return {
     ...validation,
@@ -165,6 +196,11 @@ export const shouldAttemptAuthorityRetrieval = (firstPass) =>
   firstPass?.status === 'completed' &&
   (firstPass.output?.classification === 'unresolved' || !firstPass.validation?.policySafe)
 
+const firstPassSourceManifest = (firstPass) => ({
+  kind: 'hosted_search',
+  urls: [...(firstPass?.consultedUrls ?? [])],
+})
+
 export async function augmentAuthorityAcquisition(
   target,
   firstPass,
@@ -182,6 +218,7 @@ export async function augmentAuthorityAcquisition(
     return {
       ...firstPass,
       selectedPass: 'first',
+      selectedSourceManifest: firstPassSourceManifest(firstPass),
       retrieval: { status: 'skipped', reason: 'first_pass_resolved', reviewOnly: true },
     }
   }
@@ -191,6 +228,7 @@ export async function augmentAuthorityAcquisition(
     return {
       ...firstPass,
       selectedPass: 'first',
+      selectedSourceManifest: firstPassSourceManifest(firstPass),
       retrieval: { ...selected, reviewOnly: true },
     }
   }
@@ -212,6 +250,7 @@ export async function augmentAuthorityAcquisition(
     return {
       ...firstPass,
       selectedPass: 'first',
+      selectedSourceManifest: firstPassSourceManifest(firstPass),
       retrieval: { status: 'unresolved', reason: 'internal_error', reviewOnly: true },
     }
   }
@@ -220,6 +259,7 @@ export async function augmentAuthorityAcquisition(
     return {
       ...firstPass,
       selectedPass: 'first',
+      selectedSourceManifest: firstPassSourceManifest(firstPass),
       retrieval: persistedRetrieval,
     }
   }
@@ -228,6 +268,7 @@ export async function augmentAuthorityAcquisition(
     return {
       ...firstPass,
       selectedPass: 'first',
+      selectedSourceManifest: firstPassSourceManifest(firstPass),
       retrieval: persistedRetrieval,
       retrievalInterpretation: {
         status: 'skipped',
@@ -245,6 +286,7 @@ export async function augmentAuthorityAcquisition(
     }
     const retrievalPolicy = authorityPolicyForRetrievedSource(policy, source)
     const output = canonicalizeRetrievedAuthoritySemantics(
+      target,
       canonicalizeAuthorityAcquisition(interpreted.output, [source.url], retrievalPolicy),
       retrieval,
     )
@@ -259,6 +301,9 @@ export async function augmentAuthorityAcquisition(
       ...firstPass,
       ...(useRetrieval ? { output, validation } : {}),
       selectedPass: useRetrieval ? 'retrieval' : 'first',
+      selectedSourceManifest: useRetrieval
+        ? { kind: 'retrieval', urls: [source.url] }
+        : firstPassSourceManifest(firstPass),
       retrieval: persistedRetrieval,
       retrievalInterpretation: {
         ...interpreted,
@@ -272,6 +317,7 @@ export async function augmentAuthorityAcquisition(
     return {
       ...firstPass,
       selectedPass: 'first',
+      selectedSourceManifest: firstPassSourceManifest(firstPass),
       retrieval: persistedRetrieval,
       retrievalInterpretation: {
         status: 'error',

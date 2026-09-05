@@ -120,14 +120,16 @@ omitted range.
 ### Model and evidence boundary
 
 The optional second model request receives the minimal case identity, the sanitized packet, and its
-gateway manifest. It uses the existing strict authority schema and may cite only the parent or child
+gateway manifest. It uses the existing strict authority schema and may cite only the terminal child
 URL present in that manifest. It cannot request another page, broaden the origin, or treat the
 gateway's successful fetch as source eligibility.
 
-All current cleaning remains in force. In particular, a direct bibliographic statement is required
-for series membership; a universe, trope, trigger warning, reading order, shared character,
-companion, or spin-off statement cannot be reversed into membership. Standalone still requires an
-affirmative first-party statement. The gateway changes reachability, not authority.
+All current cleaning remains in force. In particular, one non-heading extracted evidence line must
+join the exact target title to each claimed bibliographic series or affirmative standalone
+statement. Position and membership role survive only on that same relationship line. This blocks a
+model from assembling the target identity and another book's series facts across a multi-book page.
+A universe, trope, trigger warning, reading order, shared character, companion, or spin-off
+statement cannot be reversed into membership. The gateway changes reachability, not authority.
 
 Every outcome remains review-only. A timeout, block, miss, parse failure, or absent label means
 unresolved, never standalone and never “not in a series.”

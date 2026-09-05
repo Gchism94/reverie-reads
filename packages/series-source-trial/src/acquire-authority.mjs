@@ -76,7 +76,7 @@ const renderMarkdown = (score) =>
         ]
       : []),
     '',
-    'Gold labels and known authority URLs were withheld from the model. A URL is grounded only when the API reports that it was consulted during the same response. Policy-safe also excludes selection-frame evidence and known conflicting marketing taxonomies.',
+    'Gold labels and known authority URLs were withheld from the model. A URL is grounded only when it appears in the applicable same-run source manifest: hosted search for the first pass or the retrieved child for the second. Policy-safe also excludes selection-frame evidence and known conflicting marketing taxonomies.',
     'Every result is review-only. This tool cannot write authority gold, Supabase, or Reverie corpus data.',
   ].join('\n')}\n`
 

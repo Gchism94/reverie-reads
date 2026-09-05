@@ -191,7 +191,7 @@ test('quarantines a series or position invented outside the packet', () => {
   invented.memberships[0].series = 'A Different Series'
   invented.memberships[0].position = 2
   invented.authoritySources[0].supports.push('position')
-  const cleaned = canonicalizeRetrievedAuthoritySemantics(invented, retrieval)
+  const cleaned = canonicalizeRetrievedAuthoritySemantics(target, invented, retrieval)
   const validation = validateRetrievedAuthoritySemantics(target, cleaned, retrieval, {
     valid: true,
     policySafe: true,
@@ -199,7 +199,7 @@ test('quarantines a series or position invented outside the packet', () => {
   })
 
   assert.equal(validation.policySafe, false)
-  assert.ok(validation.policyViolations.some((entry) => entry.includes('series name')))
+  assert.ok(validation.policyViolations.some((entry) => entry.includes('same-line')))
   assert.equal(cleaned.memberships[0].position, null)
   assert.equal(cleaned.memberships[0].role, 'unknown')
   assert.deepEqual(cleaned.authoritySources[0].supports, ['identity', 'series_membership'])
@@ -214,7 +214,7 @@ test('keeps only a position and role explicitly present in the packet', () => {
     'P: Pip Landers-Letts lists Pyg as book two in The Leamington Bloom Series, a secondary series.'
   const positionedRetrieval = { ...retrieval, evidenceText: positionedText }
 
-  const cleaned = canonicalizeRetrievedAuthoritySemantics(positioned, positionedRetrieval)
+  const cleaned = canonicalizeRetrievedAuthoritySemantics(target, positioned, positionedRetrieval)
 
   assert.equal(cleaned.memberships[0].position, 2)
   assert.equal(cleaned.memberships[0].role, 'secondary')
@@ -225,7 +225,7 @@ test('does not hide a structurally invalid membership role', () => {
   const malformed = structuredClone(directOutput)
   malformed.memberships[0].role = 'leader'
 
-  const cleaned = canonicalizeRetrievedAuthoritySemantics(malformed, retrieval)
+  const cleaned = canonicalizeRetrievedAuthoritySemantics(target, malformed, retrieval)
 
   assert.equal(cleaned.memberships[0].role, 'leader')
 })
@@ -249,6 +249,7 @@ test('selects policy-safe retrieved evidence and strips the packet before return
   assert.equal(retrievedInput.consultedUrl, parentUrl)
   assert.deepEqual(retrievedInput.consultedUrls, [parentUrl])
   assert.equal(result.selectedPass, 'retrieval')
+  assert.deepEqual(result.selectedSourceManifest, { kind: 'retrieval', urls: [childUrl] })
   assert.equal(result.output.classification, 'series')
   assert.equal(result.output.authoritySources[0].kind, 'author')
   assert.equal(result.output.memberships[0].role, 'unknown')
@@ -283,6 +284,66 @@ test('lets a grounded unresolved second pass replace a false-positive first pass
   assert.equal(result.selectedPass, 'retrieval')
   assert.equal(result.output.classification, 'unresolved')
   assert.equal(result.validation.policySafe, true)
+})
+
+test('rejects a series relationship assembled from different books in the packet', async () => {
+  const disconnectedText = [
+    'P: Pip Landers-Letts wrote Pyg.',
+    'H1: The Leamington Bloom Series',
+    'P: Chameleon is book two in The Leamington Bloom Series.',
+  ].join('\n')
+  const disconnectedRetrieval = { ...retrieval, evidenceText: disconnectedText }
+  const positioned = structuredClone(directOutput)
+  positioned.memberships[0].position = 2
+  positioned.authoritySources[0].supports.push('position')
+  const result = await augmentAuthorityAcquisition(target, firstPass, {
+    profiles: [profile],
+    now,
+    retrieve: async () => disconnectedRetrieval,
+    interpret: async () => ({ output: positioned }),
+  })
+
+  assert.equal(result.selectedPass, 'first')
+  assert.deepEqual(result.selectedSourceManifest, { kind: 'hosted_search', urls: [parentUrl] })
+  assert.equal(result.retrievalInterpretation.output.memberships[0].position, null)
+  assert.equal(result.retrievalInterpretation.validation.policySafe, false)
+  assert.ok(
+    result.retrievalInterpretation.validation.policyViolations.some((entry) =>
+      entry.includes('same-line'),
+    ),
+  )
+})
+
+test('rejects a standalone term that is disconnected from the target title', () => {
+  const standalone = {
+    ...directOutput,
+    classification: 'standalone',
+    memberships: [],
+    authoritySources: [
+      {
+        ...directOutput.authoritySources[0],
+        supports: ['identity', 'standalone'],
+        evidenceSummary: 'The author calls the book a standalone.',
+      },
+    ],
+  }
+  const disconnectedRetrieval = {
+    ...retrieval,
+    evidenceText: 'P: Pip Landers-Letts wrote Pyg.\nP: Chameleon is a stand-alone novel.',
+  }
+  const validation = validateRetrievedAuthoritySemantics(
+    target,
+    standalone,
+    disconnectedRetrieval,
+    {
+      valid: true,
+      policySafe: true,
+      policyViolations: [],
+    },
+  )
+
+  assert.equal(validation.policySafe, false)
+  assert.ok(validation.policyViolations.some((entry) => entry.includes('same-line')))
 })
 
 test('rejects parent citations and keeps an unsafe second pass out of selection', async () => {

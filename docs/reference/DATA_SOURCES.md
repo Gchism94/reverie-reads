@@ -103,12 +103,12 @@ reviewed author/publisher origin may enter it; deterministic code may fetch that
 same-origin child under strict SSRF, robots, size, timeout, privacy, and provenance controls. The
 optional second model pass has no tools, may interpret only the hash-bound sanitized child packet,
 and cannot choose another URL or source kind. The exact target title and author must occur before
-the model is called; deterministic post-validation also requires packet support for identity,
-series names, standalone language, and positions. It runs only for an unresolved or quarantined
-first pass, and its result replaces the first proposal only after those checks and ordinary
-validation pass.
-Unsupported retrieved order is cleared and unsupported membership role becomes unknown without
-discarding an otherwise direct relationship. Reports and caches retain the manifest and structured
+the model is called; deterministic post-validation then requires one non-heading evidence line to
+join the exact target title to each claimed bibliographic series or affirmative standalone
+statement. A position or membership role survives only on that same relationship line, preventing
+cross-book fact assembly on multi-book pages. It runs only for an unresolved or quarantined first
+pass, and its result replaces the first proposal only after those checks and ordinary validation
+pass. Reports and caches retain the applicable selected-source manifest and structured
 paraphrase, never page text. The design and acceptance gates are in
 [ADR 0009](../decisions/0009-authority-retrieval-gateway.md). The trial CLI exposes this path only
 behind `--retrieval`; no real origin is active and nothing is connected to production.
