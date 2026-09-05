@@ -254,6 +254,12 @@ export function SpineShelf({
       const cu = (widths[i]! * sx[i]!) / MAG_W
       nodes.cover.style.transform = `translateX(-50%) scale(${(cu / sx[i]!).toFixed(4)}, ${(cu / sy[i]!).toFixed(4)})`
     }
+    // The add end cap is the next shelf item after the final spine, so it must take the same
+    // right-side displacement as every item after the wave. Leaving it at its layout position let
+    // the magnified final spine paint across the entire + control. The trailing reserved slack
+    // already contains this paint-space movement, preserving the fixed scrollWidth contract.
+    const add = el.querySelector<HTMLElement>('[data-shelf-add]')
+    if (add) add.style.transform = `translateX(${(total / 2).toFixed(2)}px)`
   }
   const renderWaveRef = useRef(renderWave)
   renderWaveRef.current = renderWave
@@ -791,11 +797,13 @@ export function SpineShelf({
           })}
           {onAdd && (
             <button
+              data-shelf-add
               type="button"
               onClick={onAdd}
               aria-label={addLabel}
               title={addLabel}
               className="flex-none self-end"
+              style={{ transformOrigin: '50% 100%', willChange: 'transform' }}
             >
               <span
                 className="flex h-36 w-9 items-center justify-center rounded-md border border-dashed border-line text-[18px]"

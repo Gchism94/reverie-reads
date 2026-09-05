@@ -2,6 +2,7 @@ import type { Book, List, ReadEntry } from './types'
 import { norm } from './normalize'
 import { mergePossession } from './ownership'
 import { hasDate } from './partialDate'
+import { normalizeBookGenres } from './genreNormalize'
 
 /** The slice of library state the merge engine reads and rewrites. */
 export interface LibraryState {
@@ -73,7 +74,7 @@ export function mergeBooks(
   const p: Book = { ...source }
   p.reads = reads
   p.tags = [...new Set(all.flatMap((b) => b.tags ?? []))]
-  p.genres = [...new Set(all.flatMap((b) => b.genres ?? []))]
+  p.genres = normalizeBookGenres(all.flatMap((b) => b.genres ?? []))
   p.fave = all.some((b) => b.fave)
   const intensities = all.map((b) => b.intensity).filter((x): x is number => x != null)
   p.intensity = intensities.length ? Math.max(...intensities) : null

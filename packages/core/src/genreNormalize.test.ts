@@ -4,8 +4,10 @@ import {
   genreKey,
   normalizeImportGenres,
   SPICE_INTENSITY,
+  bookGenres,
   bookSubgenres,
   inferGenreFromSubgenre,
+  normalizeBookGenres,
 } from './genreNormalize'
 
 // Real distinct genre strings from Chism_Books.xlsx (the "Library" sheet), as extracted.
@@ -236,5 +238,27 @@ describe('bookSubgenres', () => {
     ])
     expect(bookSubgenres({ subgenre: 'Noir', subgenres: [] })).toEqual(['Noir'])
     expect(bookSubgenres({ subgenre: '', subgenres: [] })).toEqual([])
+  })
+})
+
+describe('bookGenres', () => {
+  it('dedupes mixed-case repeats and uses canonical core keys', () => {
+    expect(normalizeBookGenres([' Romance ', 'romance', 'Fantasy', 'fantasy', ''])).toEqual([
+      'romance',
+      'fantasy',
+    ])
+    expect(bookGenres({ genre: 'romance', genres: ['Romance', 'romance', 'Fantasy'] })).toEqual([
+      'romance',
+      'fantasy',
+    ])
+  })
+
+  it('keeps distinct descriptive labels that file into the same room', () => {
+    expect(normalizeBookGenres(['Thriller', 'Mystery'])).toEqual(['Thriller', 'mystery'])
+  })
+
+  it('falls back to the legacy primary genre', () => {
+    expect(bookGenres({ genre: 'Science fiction', genres: [] })).toEqual(['science fiction'])
+    expect(bookGenres({ genre: '', genres: [] })).toEqual([])
   })
 })

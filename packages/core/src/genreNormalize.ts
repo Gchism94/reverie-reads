@@ -313,10 +313,33 @@ export function bookSubgenres(b: Pick<Book, 'subgenre' | 'subgenres'>): string[]
   return b.subgenres.length ? b.subgenres : b.subgenre ? [b.subgenre] : []
 }
 
+/** Normalize the genre array at every read/write boundary.
+ *
+ * Core genre labels have one stored spelling (the lowercase key used by filters and skins), while
+ * provider-only labels such as "Thriller" remain intact. Identity is case/space-insensitive so a
+ * mixed source cannot turn `romance` + `Romance` into two tags. This deliberately does not resolve
+ * aliases through genreKey: "Thriller" and "Mystery" are distinct descriptive labels even though
+ * both file into the Mystery room. */
+export function normalizeBookGenres(values: readonly string[]): string[] {
+  const out: string[] = []
+  const seen = new Set<string>()
+  for (const raw of values) {
+    const trimmed = raw.trim()
+    if (!trimmed) continue
+    const core = CORE_GENRES.find((genre) => genre.toLowerCase() === trimmed.toLowerCase())
+    const value = core ? core.toLowerCase() : trimmed
+    const key = value.toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push(value)
+  }
+  return out
+}
+
 /** Every CORE genre a book carries (lowercased keys, e.g. 'romance'). New records store genres[];
  *  pre-migration singles ride in `genre`. Mirrors bookSubgenres — read genres through this
  *  everywhere a book's full genre set is filtered, tallied, or displayed, rather than reading the
  *  single `genre` field directly and silently dropping any additional tags. */
 export function bookGenres(b: Pick<Book, 'genre' | 'genres'>): string[] {
-  return b.genres.length ? b.genres : b.genre ? [b.genre] : []
+  return normalizeBookGenres(b.genres.length ? b.genres : b.genre ? [b.genre] : [])
 }

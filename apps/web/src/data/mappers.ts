@@ -6,6 +6,7 @@ import {
   sortBookMoods,
   normalizeSeriesStatus,
   normalizeSeriesClaim,
+  normalizeBookGenres,
   toFirstLast,
   type Book,
   type Contributor,
@@ -53,7 +54,7 @@ export function toBook(row: BookRow): Book {
     genre: row.genre ?? '',
     subgenre: row.subgenre ?? '',
     subgenres: row.subgenres?.length ? row.subgenres : row.subgenre ? [row.subgenre] : [],
-    genres: row.genres ?? [],
+    genres: normalizeBookGenres(row.genres ?? []),
     tags: row.tags ?? [],
     tropesSuggestedAt: row.tropes_suggested_at,
     tropes: sortBookTropes(
@@ -147,7 +148,7 @@ export function toBookRow(patch: Partial<Book>): Partial<BookRow> {
     row.subgenre = kept || null
     row.subgenres = kept ? [kept] : []
   }
-  if (patch.genres !== undefined) row.genres = patch.genres
+  if (patch.genres !== undefined) row.genres = normalizeBookGenres(patch.genres)
   if (patch.tags !== undefined) row.tags = patch.tags
   if (patch.intensity !== undefined) row.intensity = patch.intensity
   if (patch.darkness !== undefined) row.darkness = patch.darkness
