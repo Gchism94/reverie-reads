@@ -8,6 +8,7 @@ import type { ImportExportResult } from '../data/importLibrary'
 const state = vi.hoisted(() => ({
   books: [] as Book[] | undefined,
   isPending: false,
+  isFetching: false,
   isError: false,
   navigate: vi.fn(),
   importFile: vi.fn(),
@@ -29,6 +30,7 @@ vi.mock('../data/readerBooks', () => ({
   useReaderBooks: () => ({
     data: state.books,
     isPending: state.isPending,
+    isFetching: state.isFetching,
     isError: state.isError,
     refetch: state.refetch,
   }),
@@ -107,6 +109,7 @@ beforeEach(() => {
   localStorage.clear()
   state.books = []
   state.isPending = false
+  state.isFetching = false
   state.isError = false
   state.authorized = false
   state.convert.mockResolvedValue('Title\nNew')
@@ -115,6 +118,24 @@ beforeEach(() => {
 })
 
 describe('book-first onboarding', () => {
+  it('acknowledges a saved import while refresh is pending and waits for actual reading choices', async () => {
+    state.invalidate.mockReturnValue(new Promise(() => {}))
+    const view = render(<Onboarding />)
+    upload()
+    expect(await screen.findByRole('heading', { name: 'Your books are here.' })).toBeInTheDocument()
+    state.isFetching = true
+    fireEvent.click(screen.getByRole('button', { name: 'Continue →' }))
+    expect(screen.getByRole('heading', { name: 'Checking your library…' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Add a book' })).not.toBeInTheDocument()
+    state.isFetching = false
+    state.isError = true
+    view.rerender(<Onboarding />)
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+    expect(state.refetch).toHaveBeenCalledOnce()
+    expect(state.importFile).toHaveBeenCalledOnce()
+    expect(screen.getByRole('button', { name: 'Open my library' })).toBeEnabled()
+  })
+
   it('offers import and Add immediately, and room preview is optional without resetting the skin', () => {
     render(<Onboarding />)
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Start with some books.')

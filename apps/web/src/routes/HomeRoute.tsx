@@ -142,6 +142,7 @@ function HomeScreen() {
         eyebrow={todayLabel}
         title="Welcome back."
         description="Continue reading or choose something from your library."
+        showDescriptionOnMobile
         actions={
           <>
             <button
@@ -205,7 +206,7 @@ function HomeScreen() {
                 <button
                   type="button"
                   onClick={() => openBook(b.id)}
-                  className={`flex-none overflow-hidden rounded-md border border-line ${i === 0 ? 'h-24 w-16 sm:h-auto sm:w-[112px] sm:self-stretch' : 'h-20 w-14'}`}
+                  className={`aspect-[2/3] flex-none self-start overflow-hidden rounded-md border border-line ${i === 0 ? 'w-20 sm:w-[112px]' : 'w-16'}`}
                   style={{ background: 'var(--field)' }}
                   aria-label={`Open ${b.title}`}
                 >
@@ -214,9 +215,12 @@ function HomeScreen() {
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div className="min-w-[12ch] flex-1">
-                      <div className="break-words text-[14px] font-semibold text-ink">
+                      <h3
+                        className={`break-words font-semibold leading-[1.3] text-ink ${i === 0 ? 'text-[22px] sm:text-[26px]' : 'text-[19px]'}`}
+                        style={{ fontFamily: 'var(--font-display)' }}
+                      >
                         {b.title}
-                      </div>
+                      </h3>
                       <div className="break-words text-[13px] leading-[1.45] text-ink">
                         {authorOf(b)}
                       </div>

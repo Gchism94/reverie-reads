@@ -11,6 +11,30 @@
 Outputs land in design/from-design-tool/<set>/ (code export + screenshots). coding agent implements
 against them on the token system (no hardcoded colors from the mockup).
 
+## Current design queue — 2026-09-05
+
+The owner approved the Midnight & Lamplight brand, nine authored reading rooms, and working guest
+library in public PR #418. That public change is merged; production release and signed-in visual
+verification are in progress. The older landing entry below is historical context, not a request
+to begin another landing redesign. Current execution order lives in `ROADMAP.md`.
+
+1. **MODULAR LIBRARY ARRANGEMENTS — DESIGN TO DO, P1.** Design personalized navigation docks/rails
+   and Home module arrangements around keeping a library, choosing a next read, and remembering
+   reading. The landing already offers three temporary dock arrangements; account-level
+   customization has not shipped. Define defaults, accessible reorder/hide/restore, preview/reset,
+   mobile/desktop behavior, persistence, and the guest-to-account handoff. Hiding a destination
+   must not delete its data or make it impossible to find again. Keep the room's atmosphere
+   independent of the arrangement and of recommendation scope. Deliver a reviewed interaction
+   specification before implementation. See
+   `docs/backlog/task-modular-library-arrangements.md`.
+2. **DISCOVER AS A READING DECISION — P1 after the first-use handoff.** Book details now open from
+   Discover. Design a small set of useful paths, with credible descriptions and reasons, visible
+   library/copy relationships, and reliable return to the previous browse. Follow catalog quality
+   work; do not draw a feed that needs data the corpus does not contain.
+3. **ACCEPTED BRAND ASSETS — P2.** Carry the approved open-book mark and typography into app/share
+   icons, onboarding material, and one accurate demonstration. Preserve each room's own interface
+   language. Do not reopen the chosen palette as a new concept exercise.
+
 ## Reopened by owner — 2026-08-25
 
 - **LANDING / MARKETING PAGE REDESIGN — P1 after the series overhaul.** The existing page shipped

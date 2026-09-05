@@ -88,6 +88,25 @@ beforeEach(() => {
 })
 
 describe('book detail reading journey', () => {
+  it('brings an actual journal entry ahead of copy management without inventing missing details', () => {
+    const view = render(<BookDetailScreen />)
+    expect(screen.queryByRole('region', { name: 'From your reading journal' })).toBeNull()
+    state.reads = [{ id: 'undated', date: '', format: '', rating: 0, notes: 'A thought I kept.' }]
+    view.rerender(<BookDetailScreen />)
+    const memory = screen.getByRole('region', { name: 'From your reading journal' })
+    expect(within(memory).getByText('Date not set')).toBeInTheDocument()
+    expect(within(memory).getByText('A thought I kept.')).toBeInTheDocument()
+    expect(within(memory).queryByRole('img')).toBeNull()
+    expect(
+      within(memory).getByRole('link', { name: 'View your full reading history' }),
+    ).toHaveAttribute('href', '#personal-read-log')
+    expect(
+      memory.compareDocumentPosition(screen.getByRole('region', { name: 'Your copy' })) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    expect(state.mutate).not.toHaveBeenCalled()
+  })
+
   it('waits for an unknown read log, offers retry on failure, and starts the recovered history as a reread', () => {
     state.book = { readStatus: 'unset', progress: 100 }
     state.reads = undefined

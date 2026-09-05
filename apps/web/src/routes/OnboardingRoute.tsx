@@ -100,7 +100,9 @@ function OnboardingFlow() {
           autoMerge: true,
           addToHousehold: household.authorized && importDestination === 'both',
         })
-        await qc.invalidateQueries()
+        // Import has committed. A slow or retrying refresh must not keep reporting an active
+        // write; the next-step view independently waits for the actual books and handles errors.
+        void qc.invalidateQueries()
         markOnboarded() // they've brought a library in — don't re-onboard
         setImp({ phase: 'done', r })
         // Cover handoff: backfill missing covers for the imported books in the background (§3).
@@ -385,7 +387,7 @@ function OnboardingFlow() {
     )
   }
 
-  const waitingForBooks = booksQuery.isPending || !booksQuery.data
+  const waitingForBooks = booksQuery.isPending || booksQuery.isFetching || !booksQuery.data
   const completionTitle = currentRead
     ? 'Pick up where you left off.'
     : available.length

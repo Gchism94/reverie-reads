@@ -38,6 +38,7 @@ function SkinCard({
   // (and the chosen preview mode) — a true live preview independent of the active app skin.
   return (
     <div
+      data-testid="appearance-room"
       data-skin={skin.id}
       data-mode={mode}
       className="relative isolate overflow-hidden border"
@@ -69,7 +70,10 @@ function SkinCard({
         <AppRoomPreview className="mt-4" />
 
         <Frame skin={skin.id} className="mt-4 grid grid-cols-[62px_minmax(0,1fr)] gap-3 p-3.5">
-          <div className="flex h-[150px] items-end justify-center overflow-hidden">
+          <div
+            data-testid="appearance-spine"
+            className="flex min-h-[184px] items-center justify-center py-2"
+          >
             <Spine
               book={{
                 id: `gallery-${skin.id}`,
@@ -81,14 +85,15 @@ function SkinCard({
             />
           </div>
           <div className="min-w-0 self-center">
-            <SectionHeader skin={skin.id} label="Reading now" readout="42%" />
+            <SectionHeader skin={skin.id} label="Reading" />
             <div
-              className="mt-3 text-[17px] font-semibold leading-[1.08]"
+              className="mt-3 text-[17px] font-semibold leading-[1.25]"
               style={{ color: 'var(--ink)', fontFamily: 'var(--font-display)' }}
             >
               Crimson Letters
             </div>
             <ProgressMeter value={42} max={100} skin={skin.id} className="mt-3" />
+            <p className="mt-1 text-[12px] leading-relaxed text-muted">42% read</p>
             <div className="mt-3 flex flex-wrap gap-1.5">
               <StatusTag skin={skin.id}>Owned</StatusTag>
               <StatusTag skin={skin.id} tone="muted">

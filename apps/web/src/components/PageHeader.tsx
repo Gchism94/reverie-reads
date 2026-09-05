@@ -6,12 +6,14 @@ export function PageHeader({
   title,
   description,
   actions,
+  showDescriptionOnMobile = false,
   className = '',
 }: {
   eyebrow?: ReactNode
   title: ReactNode
   description?: ReactNode
   actions?: ReactNode
+  showDescriptionOnMobile?: boolean
   className?: string
 }) {
   return (
@@ -28,13 +30,15 @@ export function PageHeader({
           </div>
         ) : null}
         <h1
-          className="max-w-[24ch] text-balance text-[30px] font-semibold leading-[1.04] text-ink sm:text-[38px]"
+          className="max-w-[24ch] text-balance text-[30px] font-semibold leading-[1.14] text-ink sm:text-[38px]"
           style={{ fontFamily: 'var(--font-display)', letterSpacing: '-0.025em' }}
         >
           {title}
         </h1>
         {description ? (
-          <p className="mt-2 hidden max-w-[64ch] text-[14px] leading-relaxed text-muted sm:block">
+          <p
+            className={`mt-2 max-w-[64ch] text-[14px] leading-relaxed text-muted ${showDescriptionOnMobile ? '' : 'hidden sm:block'}`}
+          >
             {description}
           </p>
         ) : null}

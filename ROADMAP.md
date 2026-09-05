@@ -1,6 +1,6 @@
 # Reverie Reads roadmap
 
-Current as of 2026-09-04. This file is the ordered project status. Historical briefs remain in
+Current product priorities updated 2026-09-05. This file is the ordered project status. Historical briefs remain in
 `docs/archive/`; detailed proposals that are not yet active remain in `docs/backlog/`; only work
 actually in flight belongs in `docs/tasks/`.
 
@@ -11,7 +11,7 @@ Priorities mean:
 - **P2 — planned:** valuable work with no current blocking dependency.
 - **P3 — deferred/monitor:** revisit on evidence, schedule, or an explicit owner decision.
 
-## Shipped production baseline
+## Production baseline recorded before this release
 
 The original prototype-to-product roadmap is complete. Reverie Reads is a React/TypeScript,
 Supabase-backed application at `reveriereads.app`, with authentication, personal libraries,
@@ -19,7 +19,7 @@ imports and exports, corpus-backed works and edition identity, enrichment and co
 search and discovery, shelves, series tooling, planner/calendar, stats, Match, nine skins,
 accessibility coverage, offline read caching, clubs/shared lists, and a read-only household view.
 
-Public repository `origin/main` is now `333e3a8`. PRs #377–#397 established structured series
+The 2026-09-04 structural audit recorded public `origin/main` at `333e3a8`. PRs #377–#397 established structured series
 authority and source provenance, added safe corpus series classification and review, unified series
 browsing with rename/merge/reversible removal, reconciled confirmed canonical defaults, and made
 corpus cover recovery bounded and resumable, durable across navigation, and recoverable after a
@@ -50,8 +50,36 @@ provider error, although that aggregate search check does not attribute the resu
 
 ## Ordered execution plan
 
-Do these in order. A later item may be researched while an earlier one is executing, but it must
-not change the same state or bypass the earlier item's completion gate.
+### Current product queue after the app and landing redesign
+
+Public PR #408 delivered the reading flow, navigation, and first-use improvements; PR #412 aligned
+Home. Public PR #418 is merged and adds Midnight & Lamplight, a real temporary guest library,
+the shared nine-room renderer, Discover details, and permanent personal-series removal. Its private
+production release is in progress. Those implementations replace the earlier mockup-stage plans;
+do not schedule them again because a historical brief still says proposed.
+
+The order below supersedes the older product ordering within P2/P3. Safety regressions still take
+precedence. Keep one product implementation and one small reader experiment active at a time.
+
+| Order | Priority  | Next outcome                                                            | Completion gate                                                                                                                                                                                                                                                                                                                               |
+| ----: | :-------: | ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|     1 |    P1     | Finish the approved release and verify app/landing aesthetics           | Matching private production build; all nine rooms use the same scenes, typography, and shared book controls; phone/desktop signed-in views are checked. The series-removal migration follows its owner-operated production gate.                                                                                                              |
+|     2 |    P1     | Keep a guest's chosen books, notes, and room through signup             | Explicit opt-in handoff, accurate preview/counts, duplicate and retry handling, cancellation and expiry, and a useful first reading action after authentication. Do not silently persist private guest notes or lose them behind a signup promise.                                                                                            |
+|     3 | P1 design | Design modular library arrangements                                     | Reviewed mobile/desktop presets, dock/rail ordering, Home module choices, hide/restore/defaults, accessible controls, and account persistence rules. Account-level implementation stays a later reviewed change. See `docs/backlog/task-modular-library-arrangements.md`.                                                                     |
+|     4 |    P1     | Make Discover worth spending time in                                    | First improve a bounded set of covers/descriptions and edition identity; preserve browse/filter/scroll context through addressable details; then add a few transparent author, feeling, or change-of-pace paths. Never infer genre from appearance or invent recommendation reasons.                                                          |
+|     5 |    P1     | Validate the complete first-use and return loop with readers            | Begin with five observed usability sessions, then use the original small-cohort validation plan. Separate assisted actions from independent outcomes and return from prompted check-ins. Import/reimport, possession, retained history, and Back navigation issues outrank cosmetic expansion. No invitations are sent without authorization. |
+|     6 |    P2     | Finish accepted brand assets and publish one accurate demonstration     | App/share icons and onboarding material follow Midnight & Lamplight; the clip uses the deployed guest experience and leads to a working destination. Publish only approved content, then judge useful outcomes rather than visits alone.                                                                                                      |
+|     7 |    P2     | Implement the reviewed arrangements and only evidence-backed paid depth | Use the design and reader findings; retain Free's core library, nine rooms, accessibility, export, and correction. Verify paid purchase/entitlement/cancellation before selling a new promise. Expand only within the profitable-side-business operating envelope.                                                                            |
+
+The separate series-source trial continues within its evidence and rights gates. Its results may
+support catalog quality but are not automatic permission to write production classifications.
+The four parked corpus works remain parked unless new evidence makes a retry meaningful.
+
+### Completed foundation
+
+The table below preserves the earlier dependency sequence. It is a completion record, not a second
+active queue. Older production commit references above describe the September 4 baseline; current
+release evidence will be recorded with the reading-room delivery.
 
 | Order | Priority | Task                                                     | State                  | Dependency and completion gate                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | ----: | :------: | -------------------------------------------------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

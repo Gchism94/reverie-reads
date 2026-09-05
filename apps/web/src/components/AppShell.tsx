@@ -12,6 +12,7 @@ import { Surface } from './Surface'
 import { PowerGlyph } from './PowerGlyph'
 import { isHouseholdAddContext } from './appShellScope'
 import { NavigationGlyph } from './NavigationGlyph'
+import { ReverieMark } from './ReverieMark'
 import {
   MOBILE_TAB_ITEMS,
   MORE_NAVIGATION_ITEMS,
@@ -119,7 +120,7 @@ function Sidebar({ householdAdd }: { householdAdd: boolean }) {
           className="rv-nav-monogram grid h-[38px] w-[38px] shrink-0 place-items-center text-[18px] italic"
           style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
         >
-          {APP_NAME.charAt(0)}
+          <ReverieMark className="h-6 w-6" />
         </span>
         {!collapsed && (
           <span className="min-w-0 flex-1">
@@ -238,9 +239,10 @@ function MobileBar({ pathname }: { pathname: string }) {
     <header className="rv-mobile-header flex min-h-[66px] items-center justify-between gap-3 px-4 py-2.5 lg:hidden">
       <Link to="/" className="min-w-0" aria-label={`${APP_NAME} home`}>
         <span
-          className="rv-mobile-wordmark block text-[24px] italic leading-[1.1] text-ink"
+          className="rv-mobile-wordmark flex items-center gap-2 text-[24px] italic leading-[1.2] text-ink"
           style={{ fontFamily: 'var(--font-display)', fontWeight: 600, letterSpacing: '0.5px' }}
         >
+          <ReverieMark className="h-6 w-6" />
           {APP_NAME}
         </span>
         <span
@@ -256,7 +258,7 @@ function MobileBar({ pathname }: { pathname: string }) {
 }
 
 const tabLink =
-  'rv-mobile-tab flex min-h-[58px] flex-col items-center justify-center gap-1 px-1 pb-1.5 pt-2 text-[12px] font-semibold'
+  'rv-mobile-tab flex min-h-[58px] min-w-0 flex-col items-center justify-center gap-1 px-1 pb-1.5 pt-2 text-center text-[12px] font-semibold'
 
 function TabLink({ item }: { item: NavigationItem }) {
   return (
@@ -270,7 +272,7 @@ function TabLink({ item }: { item: NavigationItem }) {
       <span className="rv-mobile-tab-glyph leading-none" aria-hidden>
         <NavigationGlyph name={item.icon} className="h-[19px] w-[19px]" />
       </span>
-      <span className="skin-label">{item.label}</span>
+      <span className="skin-label block w-full leading-[1.25]">{item.label}</span>
     </Link>
   )
 }

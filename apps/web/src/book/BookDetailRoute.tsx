@@ -371,6 +371,7 @@ export function BookDetailScreen() {
   const collections = (lists ?? []).filter((l) => l.kind === 'collection')
 
   const seriesBadge = seriesStatusBadge(book)
+  const journalRead = reads?.[0]
   // The base books query omits read rows. Until the log is known, unset/unread records may
   // still be rereads; the explicit Read/Reading/DNF states already determine the safe patch.
   const startUnavailable =
@@ -550,6 +551,41 @@ export function BookDetailScreen() {
         </div>
       </div>
 
+      {journalRead && (
+        <section
+          aria-labelledby="reading-memory"
+          className="skin-card mt-6 border border-line bg-[color:var(--card-solid)] p-5 sm:p-6"
+        >
+          <h2
+            id="reading-memory"
+            className="text-[22px] font-semibold leading-[1.3] text-ink"
+            style={{ fontFamily: 'var(--font-display)' }}
+          >
+            From your reading journal
+          </h2>
+          <p className="mt-2 text-[14px] leading-relaxed text-muted">
+            {fmtDate(journalRead.date)}
+            {journalRead.format ? ` · ${journalRead.format}` : ''}
+          </p>
+          {journalRead.rating > 0 && (
+            <div className="mt-3">
+              <Stars value={journalRead.rating} size={18} />
+            </div>
+          )}
+          {journalRead.notes && (
+            <p className="mt-3 line-clamp-5 whitespace-pre-wrap break-words text-[16px] leading-relaxed text-ink">
+              {journalRead.notes}
+            </p>
+          )}
+          <a
+            href="#personal-read-log"
+            className="mt-3 inline-flex min-h-11 items-center text-[14px] font-semibold text-ink underline underline-offset-4"
+          >
+            View your full reading history
+          </a>
+        </section>
+      )}
+
       <section aria-labelledby="your-copy" className="mt-8 border-t border-line pt-6">
         <h2
           id="your-copy"
@@ -722,6 +758,7 @@ export function BookDetailScreen() {
         )}
 
         {/* read log */}
+        <div id="personal-read-log" className="scroll-mt-24" />
         <Label
           action={
             <button
