@@ -109,21 +109,39 @@
       "authors": ["E. L. James"],
       "sampleOrigin": "reverie",
       "stratum": "authority_positive",
+      "strata": ["multi_series_or_connected_universe"],
+      "riskFeatures": ["multi_series"],
       "truth": {
         "status": "reviewed",
         "standalone": false,
+        "membershipsComplete": true,
         "memberships": [
           {
             "series": "Fifty Shades as Told by Christian",
             "aliases": ["Fifty Shades by Christian", "Fifty Shades"],
             "role": "primary",
             "positions": [{ "value": 1, "orderType": "publication" }]
+          },
+          {
+            "series": "Fifty Shades of Grey",
+            "aliases": ["Fifty Shades of Grey Series"],
+            "role": "secondary",
+            "positions": [{ "value": 4, "orderType": "publication" }]
           }
         ],
         "sources": [
           { "kind": "author", "url": "https://www.eljamesauthor.com/books/grey/" },
-          { "kind": "author", "url": "https://www.eljamesauthor.com/books/" }
-        ]
+          { "kind": "author", "url": "https://www.eljamesauthor.com/books/" },
+          {
+            "kind": "publisher",
+            "url": "https://www.penguinrandomhouse.com/books/258951/grey-by-e-l-james/paperback/"
+          },
+          {
+            "kind": "publisher_catalog",
+            "url": "https://www.penguinrandomhouse.com/series/FS3/fifty-shades-of-grey-series/"
+          }
+        ],
+        "reviewNote": "The author groups Grey first in the Christian-perspective sequence, while Penguin Random House also identifies the exact work as book 4 of its six-book Fifty Shades of Grey series. Both explicit memberships are retained rather than scoring the publisher umbrella as a false positive."
       }
     },
     {
@@ -2704,6 +2722,117 @@
           }
         ],
         "reviewNote": "The author's title and reading-order pages place Secret Haven in Sparrow Falls, while Sourcebooks provides exact series number 6 with the author and ISBN. This corrects the seed's unsupported number 5 rather than carrying it into gold truth."
+      }
+    },
+    {
+      "id": "reverie-sinful-manor-keep-me",
+      "title": "Keep Me",
+      "authors": ["Sara Cate"],
+      "identifiers": { "isbn13": ["9781728282190"] },
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "strata": ["recent_traditional"],
+      "publicationYear": 2024,
+      "publicationPath": "traditional",
+      "sampleSources": [
+        {
+          "kind": "publisher",
+          "url": "https://www.sourcebooks.com/9781728282190-keep-me-tp.html"
+        }
+      ],
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "Sinful Manor",
+            "aliases": ["Sinful Manor Series"],
+            "role": "primary",
+            "positions": [{ "value": 1, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          {
+            "kind": "author",
+            "url": "https://saracate.shop/collections/sinful-manor-series"
+          },
+          {
+            "kind": "publisher",
+            "url": "https://www.sourcebooks.com/9781728282190-keep-me-tp.html"
+          }
+        ],
+        "reviewNote": "The author's store groups Keep Me in the Sinful Manor series, and Sourcebooks independently identifies the exact author and ISBN as Sinful Manor book 1."
+      }
+    },
+    {
+      "id": "reverie-the-eye-of-the-goddess-a-tribute-of-fire",
+      "title": "A Tribute of Fire",
+      "authors": ["Sariah Wilson"],
+      "identifiers": { "isbn13": ["9781662525148"] },
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "strata": ["recent_traditional"],
+      "publicationYear": 2024,
+      "publicationPath": "traditional",
+      "sampleSources": [
+        { "kind": "author", "url": "https://www.sariahwilson.com/book/32" }
+      ],
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "The Eye of the Goddess",
+            "aliases": ["Eye of the Goddess", "The Eye of the Goddess Trilogy"],
+            "role": "primary",
+            "positions": [{ "value": 1, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          { "kind": "author", "url": "https://www.sariahwilson.com/book/32" },
+          { "kind": "author", "url": "https://www.sariahwilson.com/" }
+        ],
+        "reviewNote": "The author's exact title page identifies A Tribute of Fire as The Eye of the Goddess number 1 with its Montlake imprint and ISBN; her catalog independently presents it as book 1 of the three-book trilogy."
+      }
+    },
+    {
+      "id": "reverie-the-wolves-of-ruin-dire-bound",
+      "title": "Dire Bound",
+      "authors": ["Sable Sorensen"],
+      "sampleOrigin": "reverie",
+      "stratum": "authority_positive",
+      "strata": ["recent_independent_or_kindle_first"],
+      "publicationYear": 2025,
+      "publicationPath": "independent",
+      "sampleSources": [
+        {
+          "kind": "publisher",
+          "url": "https://www.hachettebookgroup.com/little-brown-young-readers/requited-imprint-to-launch-with-major-new-acquisition-dire-bound-by-sable-sorensen/"
+        }
+      ],
+      "truth": {
+        "status": "reviewed",
+        "standalone": false,
+        "memberships": [
+          {
+            "series": "The Wolves of Ruin",
+            "aliases": ["Wolves of Ruin", "The Wolves of Ruin Trilogy"],
+            "role": "primary",
+            "positions": [{ "value": 1, "orderType": "publication" }]
+          }
+        ],
+        "sources": [
+          { "kind": "author", "url": "https://sablesorensen.com/books" },
+          {
+            "kind": "publisher_catalog",
+            "url": "https://www.penguin.co.uk/series/WOLVRUIN/the-wolves-of-ruin"
+          },
+          {
+            "kind": "publisher",
+            "url": "https://www.hachettebookgroup.com/little-brown-young-readers/requited-imprint-to-launch-with-major-new-acquisition-dire-bound-by-sable-sorensen/"
+          }
+        ],
+        "reviewNote": "The author's catalog and Penguin series roster identify Dire Bound as The Wolves of Ruin book 1. Hachette describes it as the first book of the trilogy and records that its February 2025 self-publication preceded the Requited acquisition, so its sampling path remains independent rather than being rewritten by the later edition."
       }
     }
   ],
