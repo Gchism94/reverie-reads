@@ -99,23 +99,23 @@ const cacheKey = (target) =>
 
 const runOne = async (testCase) => {
   const target = buildAuthorityTarget(testCase)
+  const policy = authorityPolicyForCase(testCase)
   const cachePath = resolve(cacheRoot, `${cacheKey(target)}.json`)
   if (!options.refresh) {
     try {
       const cached = JSON.parse(await readFile(cachePath, 'utf8'))
-      const output = canonicalizeAuthorityAcquisition(cached.output)
+      const rawOutput = cached.rawOutput ?? cached.output
+      const output = canonicalizeAuthorityAcquisition(rawOutput, cached.consultedUrls, policy)
+      const cachedMetadata = { ...cached }
+      delete cachedMetadata.output
+      delete cachedMetadata.rawOutput
       return {
         caseId: target.caseId,
         status: 'completed',
-        ...cached,
+        ...cachedMetadata,
         output,
         cached: true,
-        validation: validateAuthorityAcquisition(
-          target,
-          output,
-          cached.consultedUrls,
-          authorityPolicyForCase(testCase),
-        ),
+        validation: validateAuthorityAcquisition(target, output, cached.consultedUrls, policy),
       }
     } catch (error) {
       if (error?.code !== 'ENOENT') throw error
@@ -124,20 +124,16 @@ const runOne = async (testCase) => {
 
   try {
     const acquired = await acquireAuthorityEvidence(target, { model })
-    const output = canonicalizeAuthorityAcquisition(acquired.output)
-    const canonical = { ...acquired, output }
-    await writeFile(cachePath, `${JSON.stringify(canonical, null, 2)}\n`)
+    const { output: rawOutput, ...acquiredMetadata } = acquired
+    const output = canonicalizeAuthorityAcquisition(rawOutput, acquired.consultedUrls, policy)
+    await writeFile(cachePath, `${JSON.stringify({ ...acquiredMetadata, rawOutput }, null, 2)}\n`)
     return {
       caseId: target.caseId,
       status: 'completed',
-      ...canonical,
+      ...acquiredMetadata,
+      output,
       cached: false,
-      validation: validateAuthorityAcquisition(
-        target,
-        output,
-        acquired.consultedUrls,
-        authorityPolicyForCase(testCase),
-      ),
+      validation: validateAuthorityAcquisition(target, output, acquired.consultedUrls, policy),
     }
   } catch (error) {
     return {

@@ -151,8 +151,12 @@ wishlist` was the pre-#68 model and is long wrong. Format flags **suppress, neve
   API's consulted-source manifest, blocks the case's selection-frame URLs from establishing its
   classification, and quarantines known conflicting marketing taxonomies. A grounded URL proves
   consultation, not source eligibility: the model cannot declare its own evidence authoritative.
-  Output stays review-only and cannot write authority gold, Supabase, or the corpus. See
-  `docs/reference/DATA_SOURCES.md`.
+  Link hubs and known discovery-only domains cannot establish classification. A blocked or risky
+  source is demoted to identity-only; an independently supported claim may survive, but a claim
+  that depended on that source must not. “Standalone” language means reading independence when the
+  same authority also assigns a bibliographic series; an unlabelled genre, trope, world, or
+  trigger-warning heading is not series evidence. Output stays review-only and cannot write
+  authority gold, Supabase, or the corpus. See `docs/reference/DATA_SOURCES.md`.
 - **Corpus cover recovery is bounded, resumable, and independent of classification.** The
   administrator completion pipeline never walks the whole household library in one RPC. It calls
   `admin_recover_corpus_cover_batch` in groups of at most 25, records a source fingerprint after
